@@ -1,4 +1,4 @@
-VerifiedSCION
+* VerifiedSCION
 
 This is a repository forked from [[https://github.com/scionproto/scion][SCION]] at commit [[https://github.com/scionproto/scion/tree/cc378aaf5ac028995b3697d6ed9ad98d9a166227][cc378aaf5ac028995b3697d6ed9ad98d9a166227]].
 
