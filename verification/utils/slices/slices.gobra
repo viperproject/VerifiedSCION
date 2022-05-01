@@ -17,8 +17,8 @@
 package slices
 
 pred AccElemsByte(s []byte) {
-    // Maybe, it is worth having different versions with
-    // different triggers, or using a different trigger
-    // than the one that is inferred.
-    forall i int :: 0 <= i && i < len(s) ==> acc(&s[i])
+	// Maybe, it is worth having different versions with
+	// different triggers, or using a different trigger
+	// than the one that is inferred.
+	forall i int :: 0 <= i && i < len(s) ==> acc(&s[i])
 }

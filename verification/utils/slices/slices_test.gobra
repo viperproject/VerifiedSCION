@@ -15,6 +15,6 @@
 package slices
 
 func AccElemsByte_satisfiable_test() {
-    s := make([]byte, 10)
-    fold AccElemsByte(s)
+	s := make([]byte, 10)
+	fold AccElemsByte(s)
 }
