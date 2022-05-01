@@ -1,0 +1,35 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package definitions
+
+ensures typeOf(v) == type[bool] ==> res
+ensures typeOf(v) == type[byte] ==> res
+ensures typeOf(v) == type[rune] ==> res
+ensures typeOf(v) == type[int]  ==> res
+// FIX: uncommenting the following causes an exception
+// ensures typeOf(v) == type[int8] ==> res
+ensures typeOf(v) == type[int16] ==> res
+ensures typeOf(v) == type[int32] ==> res
+ensures typeOf(v) == type[int64] ==> res
+ensures typeOf(v) == type[uint] ==> res
+ensures typeOf(v) == type[uint8] ==> res
+ensures typeOf(v) == type[uint16] ==> res
+ensures typeOf(v) == type[uint32] ==> res
+ensures typeOf(v) == type[uint64] ==> res
+ensures typeOf(v) == type[uintptr] ==> res
+ensures typeOf(v) == type[string] ==> res
+pure func IsOfPrimitiveType(v interface{}) (res bool)
