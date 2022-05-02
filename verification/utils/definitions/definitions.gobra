@@ -20,8 +20,7 @@ ensures typeOf(v) == type[bool] ==> res
 ensures typeOf(v) == type[byte] ==> res
 ensures typeOf(v) == type[rune] ==> res
 ensures typeOf(v) == type[int]  ==> res
-// FIX: uncommenting the following causes an exception
-// ensures typeOf(v) == type[int8] ==> res
+ensures typeOf(v) == type[int8] ==> res
 ensures typeOf(v) == type[int16] ==> res
 ensures typeOf(v) == type[int32] ==> res
 ensures typeOf(v) == type[int64] ==> res
