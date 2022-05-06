@@ -18,13 +18,14 @@
 package addr
 
 import (
-	"encoding"
-	"flag"
+	//"encoding"
+	//"flag"
 	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/scionproto/scion/pkg/private/serrors"
+	//"github.com/scionproto/scion/pkg/private/serrors"
+	"serrors"
 )
 
 const (
@@ -83,6 +84,8 @@ func parseAS(as string, sep string) (AS, error) {
 		return 0, serrors.New("wrong number of separators", "sep", sep, "value", as)
 	}
 	var parsed AS
+	//@ invariant 0 <= i && i <= asParts
+	//@ invariant forall j int :: 0 <= j && j < len(parts) ==> acc(&parts[j])
 	for i := 0; i < asParts; i++ {
 		parsed <<= asPartBits
 		v, err := strconv.ParseUint(parts[i], asPartBase, asPartBits)
@@ -107,10 +110,12 @@ func asParseBGP(s string) (AS, error) {
 	return AS(as), nil
 }
 
+//@ decreases _
 func (as AS) String() string {
 	return fmtAS(as, ":")
 }
 
+//@ decreases
 func (as AS) inRange() bool {
 	return as <= MaxAS
 }
@@ -122,6 +127,8 @@ func (as AS) MarshalText() ([]byte, error) {
 	return []byte(as.String()), nil
 }
 
+//@ preserves acc(as)
+//@ preserves forall i int :: 0 <= i && i < len(text) ==> acc(&text[i])
 func (as *AS) UnmarshalText(text []byte) error {
 	parsed, err := ParseAS(string(text))
 	if err != nil {
@@ -131,9 +138,9 @@ func (as *AS) UnmarshalText(text []byte) error {
 	return nil
 }
 
-var _ fmt.Stringer = IA(0)
-var _ encoding.TextUnmarshaler = (*IA)(nil)
-var _ flag.Value = (*IA)(nil)
+//var _ fmt.Stringer = IA(0)
+//var _ encoding.TextUnmarshaler = (*IA)(nil)
+//var _ flag.Value = (*IA)(nil)
 
 // IA represents the ISD (ISolation Domain) and AS (Autonomous System) Id of a given SCION AS.
 // The highest 16 bit form the ISD number and the lower 48 bits form the AS number.
@@ -151,7 +158,7 @@ func MustIAFrom(isd ISD, as AS) IA {
 }
 
 // IAFrom creates an IA from the ISD and AS number.
-func IAFrom(isd ISD, as AS) (IA, error) {
+func IAFrom(isd ISD, as AS) (ia IA, err error) {
 	if !as.inRange() {
 		return 0, serrors.New("AS out of range", "max", MaxAS, "value", as)
 	}
@@ -187,6 +194,8 @@ func (ia IA) MarshalText() ([]byte, error) {
 	return []byte(ia.String()), nil
 }
 
+//@ preserves acc(ia)
+//@ preserves forall i int :: o <= i && i < len(b) ==> acc(&b[i], 1/1000)
 func (ia *IA) UnmarshalText(b []byte) error {
 	parsed, err := ParseIA(string(b))
 	if err != nil {
