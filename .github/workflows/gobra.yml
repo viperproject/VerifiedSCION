@@ -14,8 +14,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     env:
-      gobraImage: 'ghcr.io/viperproject/gobra'
-      imageVersion: 'latest'
+      gobraImage: ghcr.io/viperproject/gobra
+      imageVersion: latest
       headerOnly: 1
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -41,5 +41,5 @@ jobs:
           globalTimeout: 10m
           packageTimeout: 5m
           headerOnly: $headerOnly
-          imageName: $gobraImage
-          imageVersion: $imageVersion 
+          imageName: "$gobraImage"
+          imageVersion: "$imageVersion"
