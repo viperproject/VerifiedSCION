@@ -16,7 +16,7 @@ jobs:
     env:
       headerOnly: 1
       module: 'github.com/scionproto/scion'
-      includePaths: 'VerifiedSCION VerifiedSCION/verification/dependencies'
+      includePaths: '. verification/dependencies'
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
