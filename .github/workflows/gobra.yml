@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       headerOnly: 1
-      module: "github.com/scionproto/scion"
-      includePaths: "VerifiedSCION VerifiedSCION/verification/dependencies"
+      module: 'github.com/scionproto/scion'
+      includePaths: 'VerifiedSCION VerifiedSCION/verification/dependencies'
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
