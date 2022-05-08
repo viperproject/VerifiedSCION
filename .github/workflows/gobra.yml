@@ -38,4 +38,4 @@ jobs:
           recursive: 1
           globalTimeout: 10m
           packageTimeout: 5m
-          headerOnly: $headerOnly
+          headerOnly: "$headerOnly"
