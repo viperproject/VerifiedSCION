@@ -41,6 +41,7 @@ jobs:
           globalTimeout: 10m
           packageTimeout: 5m
           headerOnly: ${{ env.headerOnly }}
+          includePaths: ${{ env.includePaths }}
       - name: Verify package 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
