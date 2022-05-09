@@ -51,11 +51,11 @@ const (
 //
 // Implementations must not retain p.
 type Reader interface {
-    pred Mem()
+	pred Mem()
 
-    preserves Mem() 
-    preserves acc(p)
-    ensures 0 <= n && n <= len(p)
+	preserves Mem() 
+	preserves acc(p)
+	ensures 0 <= n && n <= len(p)
 	Read(p []byte) (n int, err error)
 }
 
@@ -69,12 +69,12 @@ type Reader interface {
 //
 // Implementations must not retain p.
 type Writer interface {
-    pred Mem()
+	pred Mem()
 
-    preserves Mem() 
-    preserves acc(p, 1/1000)
-    ensures 0 <= n && n <= len(p)
-    ensures (n < len(p)) == (err != nil)
+	preserves Mem() 
+	preserves acc(p, 1/1000)
+	ensures 0 <= n && n <= len(p)
+	ensures (n < len(p)) == (err != nil)
 	Write(p []byte) (n int, err error)
 }
 
@@ -83,8 +83,8 @@ type Writer interface {
 // The behavior of Close after the first call is undefined.
 // Specific implementations may document their own behavior.
 type Closer interface {
-    pred Mem()
+	pred Mem()
 
-    requires Mem()
+	requires Mem()
 	Close() error
 }
