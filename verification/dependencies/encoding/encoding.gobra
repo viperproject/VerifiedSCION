@@ -19,7 +19,7 @@ package encoding
 type TextUnmarshaler interface {
 	pred Mem()
 	
-	preserves acc(Mem()) && (forall i int :: 0 <= i && i < len(text) ==> acc(&text[i]))
+	preserves Mem() && acc(text)
 	decreases
 	UnmarshalText(text []byte) error
 }

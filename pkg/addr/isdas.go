@@ -262,6 +262,7 @@ func (ia IA) String() string {
 
 // Set implements flag.Value interface
 //@ preserves acc(ia)
+//@ decreases
 func (ia *IA) Set(s string) error {
 	pIA, err := ParseIA(s)
 	if err != nil {
