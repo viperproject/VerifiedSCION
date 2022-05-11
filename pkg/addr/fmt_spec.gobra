@@ -12,20 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file provides a specification to the functions 'New' and 'WrapStr'.
-// The specification cannot currently be added to the file 'errors.go'
-// where the original definition of 'New' and 'WrapStr' is because that file tries to
-// import a third-party package for which we do not yet provide
-// specification ("go.uber.org/zap/zapcore").
-
 // +gobra
 
-package serrors
+package addr
 
-ensures err != nil
 decreases
-func New(msg string, errCtx ...interface{}) (err error)
-
-ensures err != nil
-decreases
-func WrapStr(msg string, cause error, errCtx ...interface{}) (err error)
+func fmtAS(as AS, sep string) string

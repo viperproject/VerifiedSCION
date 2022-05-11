@@ -12,20 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file provides a specification to the functions 'New' and 'WrapStr'.
-// The specification cannot currently be added to the file 'errors.go'
-// where the original definition of 'New' and 'WrapStr' is because that file tries to
-// import a third-party package for which we do not yet provide
-// specification ("go.uber.org/zap/zapcore").
-
 // +gobra
 
-package serrors
 
-ensures err != nil
-decreases
-func New(msg string, errCtx ...interface{}) (err error)
+package addr
 
-ensures err != nil
-decreases
-func WrapStr(msg string, cause error, errCtx ...interface{}) (err error)
+import (
+	"fmt"
+	"strings"
+	"encoding"
+)
+
+pred (ia IA) Mem() { true }
+
+IA implements fmt.Stringer {
+	
+	(ia IA) String() string {
+		return ia.String()
+	}
+}
+
+pred (as *AS) Mem() { acc(as) }
+
+(*AS) implements encoding.TextUnmarshaler {
+
+	(as *AS) UnmarshalText(text []byte) (err error) {
+		unfold as.Mem()
+		err = as.UnmarshalText(text)
+		fold as.Mem()
+	}
+}
+
+pred (ia *IA) Mem() { acc(ia) }
+
+(*IA) implements encoding.TextUnmarshaler {
+
+	(ia *IA) UnmarshalText(text []byte) (err error) {
+		unfold ia.Mem()
+		err = ia.UnmarshalText(text)
+		fold ia.Mem()
+	}
+}
