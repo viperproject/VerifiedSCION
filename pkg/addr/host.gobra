@@ -47,4 +47,13 @@ HostNone implements HostAddr {
 	(h HostNone) Equal(o HostAddr) (res bool) {
 		res = h.Equal(o)
 	}
+
+	(h HostNone) String() (res string) {
+		res = h.String()
+	}
+}
+
+
+pred (h HostIPv4) Mem() {
+	len(h) == HostLenIPv4 && acc(h)
 }

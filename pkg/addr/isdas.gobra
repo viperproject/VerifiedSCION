@@ -24,9 +24,22 @@ import (
 	"flag"
 )
 
-pred (ia IA) Mem() { true }
+pred (ia *IA) Mem() { acc(ia) }
+
+(*IA) implements encoding.TextUnmarshaler {
+
+	(ia *IA) UnmarshalText(text []byte) (err error) {
+		unfold ia.Mem()
+		err = ia.UnmarshalText(text)
+		fold ia.Mem()
+	}
+}
+
+pred MemForStringer(ia IA) { true }
 
 IA implements fmt.Stringer {
+
+	pred Mem := MemForStringer
 	
 	(ia IA) String() string {
 		return ia.String()
@@ -44,28 +57,17 @@ pred (as *AS) Mem() { acc(as) }
 	}
 }
 
-pred (ia *IA) Mem() { acc(ia) }
+(*IA) implements flag.Value {
 
-//(*IA) implements encoding.TextUnmarshaler {
-//
-//	(ia *IA) UnmarshalText(text []byte) (err error) {
-//		unfold ia.Mem()
-//		err = ia.UnmarshalText(text)
-//		fold ia.Mem()
-//	}
-//}
-
-//(*IA) implements flag.Value {
-//
-//	(ia *IA) String() (str string) {
-//		unfold ia.Mem()
-//		str = ia.String()
-//		fold ia.Mem()
-//	}
-//	
-//	(ia *IA) Set(s string) (err error) {
-//		unfold ia.Mem()
-//		err = ia.Set(s)
-//		fold ia.Mem()
-//	}
-//}
+	(ia *IA) String() (str string) {
+		unfold ia.Mem()
+		str = ia.String()
+		fold ia.Mem()
+	}
+	
+	(ia *IA) Set(s string) (err error) {
+		unfold ia.Mem()
+		err = ia.Set(s)
+		fold ia.Mem()
+	}
+}

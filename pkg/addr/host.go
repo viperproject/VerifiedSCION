@@ -66,6 +66,9 @@ const (
 	HostLenSVC  = 2
 )
 
+// (VerifiedSCION) The following variables are not mutated by any functions so
+//they are replaced by functions until we have support for globals
+
 //var (
 //	// ErrBadHostAddrType indicates an invalid host address type.
 //	ErrBadHostAddrType = serrors.New("unsupported host address type")
@@ -74,7 +77,19 @@ const (
 //	// ErrUnsupportedSVCAddress indicates an unsupported SVC address.
 //	ErrUnsupportedSVCAddress = serrors.New("unsupported SVC address")
 //)
-//
+
+func ErrBadHostAddrType () error {
+	return serrors.New("unsupported host address type")
+}
+
+func ErrMalformedHostAddrType () error {
+	return serrors.New("malformed host address type")
+}
+
+func ErrUnsupportedSVCAddress () error {
+	return serrors.New("unsupported SVC address")
+}
+
 const (
 	SvcDS       HostSVC = 0x0001
 	SvcCS       HostSVC = 0x0002
@@ -87,32 +102,39 @@ const (
 type HostAddr interface {
 	//@ pred Mem()
 
-	//@ requires acc(Mem(), _)
+	//@ preserves acc(Mem(), 1/10000)
 	//@ decreases
 	Size() int
 
-	//@ requires acc(Mem(), _)
+	//@ preserves acc(Mem(), 1/10000)
 	//@ decreases
 	Type() HostAddrType
 
-	//@ requires acc(Mem(), 1/2)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/2)
+	//@ requires acc(Mem(), 1/10000)
+	//@ ensures acc(res, 1/10000)
 	Pack() (res []byte)
 
-	//@ requires acc(Mem(), 1/2)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/2)
+	//@ requires acc(Mem(), 1/10000)
+	//@ ensures acc(res, 1/10000)
 	IP() (res net.IP)
 
-	//@ preserves acc(Mem(), 1/2)
+	//@ preserves acc(Mem(), 1/10000)
 	//@ ensures res.Mem()
 	Copy() (res HostAddr)
 
-	//@ preserves acc(Mem(), 1/2) && acc(o.Mem(), 1/2)
+	//@ preserves acc(Mem(), 1/10000) && acc(o.Mem(), 1/10000)
 	Equal(o HostAddr) bool
-	// Can't use imported types as interface fields yet
+	
+	// (VerifiedSCION) Can't use imported types as interface fields yet
+	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
+
+	//@ preserves acc(Mem())
+	//@ decreases
+	String() string
 }
 
+// (VerifiedSCION) Replaced with implementation proof in host.gobra
 //var _ HostAddr = (HostNone)(nil)
 
 type HostNone net.IP
@@ -127,23 +149,23 @@ func (h HostNone) Type() HostAddrType {
 	return HostTypeNone
 }
 
+//@ ensures acc(res)
 //@ decreases
-//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
 func (h HostNone) Pack() (res []byte) {
 	return []byte{}
 }
 
+//@ ensures acc(res)
 //@ decreases
-//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
 func (h HostNone) IP() (res net.IP) {
 	return nil
 }
 
-//@ preserves acc(h.Mem(), 1/2)
+//@ preserves acc(h.Mem(), 1/10000)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostNone) Copy() (res HostAddr) {
-	//(joao) introduce tmp
+	//(VerifiedSCION) introduce tmp
 	tmp := HostNone{}
 	//@ fold tmp.Mem()
 	return tmp
@@ -161,40 +183,62 @@ func (h HostNone) String() string {
 	return "<None>"
 }
 
+// (VerifiedSCION) Replaced with implementation proof in host.gobra
 //var _ HostAddr = (HostIPv4)(nil)
-//
-//type HostIPv4 net.IP
-//
-//func (h HostIPv4) Size() int {
-//	return HostLenIPv4
-//}
-//
-//func (h HostIPv4) Type() HostAddrType {
-//	return HostTypeIPv4
-//}
-//
-//func (h HostIPv4) Pack() []byte {
-//	return []byte(h.IP())
-//}
-//
-//func (h HostIPv4) IP() net.IP {
-//	// XXX(kormat): ensure the reply is the 4-byte representation.
-//	return net.IP(h).To4()
-//}
-//
-//func (h HostIPv4) Copy() HostAddr {
-//	return HostIPv4(append(net.IP(nil), h...))
-//}
-//
-//func (h HostIPv4) Equal(o HostAddr) bool {
-//	ha, ok := o.(HostIPv4)
-//	return ok && net.IP(h).Equal(net.IP(ha))
-//}
-//
-//func (h HostIPv4) String() string {
-//	return h.IP().String()
-//}
-//
+
+type HostIPv4 net.IP
+
+//@ preserves acc(h.Mem(), 1/10000)
+//@ decreases
+func (h HostIPv4) Size() int {
+	return HostLenIPv4
+}
+
+//@ preserves acc(h.Mem(), 1/10000)
+//@ decreases
+func (h HostIPv4) Type() HostAddrType {
+	return HostTypeIPv4
+}
+
+//@ requires acc(h.Mem(), 1/10000)
+//@ ensures acc(res, 1/10000)
+//@ decreases
+func (h HostIPv4) Pack() (res []byte) {
+	return []byte(h.IP())
+}
+
+//@ requires acc(h.Mem(), 1/10000)
+//@ ensures acc(res, 1/10000)
+//@ decreases
+func (h HostIPv4) IP() (res net.IP) {
+	// XXX(kormat): ensure the reply is the 4-byte representation.
+	//@ unfold acc(h.Mem(), 1/10000)
+	return net.IP(h).To4()
+}
+
+//@ preserves acc(h.Mem(), 1/10000)
+//@ ensures acc(res.Mem())
+//@ decreases
+func (h HostIPv4) Copy() (res HostAddr) {
+	var tmp HostIPv4 = HostIPv4(append(net.IP(nil), h...))
+	//@ fold tmp.Mem()
+	return tmp
+}
+
+//@ preserves acc(h.Mem(), 1/10000)
+//@ preserves acc(o.Mem(), 1/10000)
+//@ decreases
+func (h HostIPv4) Equal(o HostAddr) bool {
+	ha, ok := o.(HostIPv4)
+	return ok && net.IP(h).Equal(net.IP(ha))
+}
+
+//@ preserves acc(h.Mem(), 1/10000)
+//@ decreases
+func (h HostIPv4) String() string {
+	return h.IP().String()
+}
+
 //var _ HostAddr = (HostIPv6)(nil)
 //
 //type HostIPv6 net.IP
