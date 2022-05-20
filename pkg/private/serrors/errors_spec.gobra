@@ -29,3 +29,7 @@ func New(msg string, errCtx ...interface{}) (err error)
 ensures err != nil
 decreases
 func WrapStr(msg string, cause error, errCtx ...interface{}) (err error)
+
+ensures res != nil
+decreases
+func WithCtx(err error, logCtx ...interface{}) (res error)

@@ -22,37 +22,7 @@ import (
 
 pred (h HostNone) Mem() { len(h) == HostLenNone }
 
-HostNone implements HostAddr {
-
-	(h HostNone) Size() (res int) {
-		res = h.Size()
-	}
-
-	(h HostNone) Type() (res HostAddrType) {
-		res = h.Type()
-	}
-
-	(h HostNone) Pack() (res []byte) {
-		res = h.Pack()
-	}
-
-	(h HostNone) IP() (res net.IP) {
-		res = h.IP()
-	}
-
-	(h HostNone) Copy() (res HostAddr) {
-		res = h.Copy()
-	}
-
-	(h HostNone) Equal(o HostAddr) (res bool) {
-		res = h.Equal(o)
-	}
-
-	(h HostNone) String() (res string) {
-		res = h.String()
-	}
-}
-
+HostNone implements HostAddr
 
 pred (h HostIPv4) Mem() {
 	len(h) == HostLenIPv4 && acc(h)
@@ -87,6 +57,44 @@ HostIPv4 implements HostAddr {
 	}
 
 	(h HostIPv4) String() (res string) {
+		res = h.String()
+	}
+}
+
+pred (h HostIPv6) Mem() {
+	len(h) == HostLenIPv6 && acc(h)
+}
+
+HostIPv6 implements HostAddr
+
+pred (h HostSVC) Mem() { true }
+
+HostSVC implements HostAddr {
+	(h HostSVC) Size() (res int) {
+		res = h.Size()
+	}
+
+	(h HostSVC) Type() (res HostAddrType) {
+		res = h.Type()
+	}
+
+	(h HostSVC) Pack() (res []byte) {
+		res = h.Pack()
+	}
+
+	(h HostSVC) IP() (res net.IP) {
+		res = h.IP()
+	}
+
+	(h HostSVC) Copy() (res HostAddr) {
+		res = h.Copy()
+	}
+
+	(h HostSVC) Equal(o HostAddr) (res bool) {
+		res = h.Equal(o)
+	}
+
+	(h HostSVC) String() (res string) {
 		res = h.String()
 	}
 }
