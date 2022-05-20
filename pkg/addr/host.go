@@ -111,11 +111,11 @@ type HostAddr interface {
 	Type() HostAddrType
 
 	//@ requires acc(Mem(), 1/10000)
-	//@ ensures acc(res, 1/10000)
+	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
 	Pack() (res []byte)
 
 	//@ requires acc(Mem(), 1/10000)
-	//@ ensures acc(res, 1/10000)
+	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
 	IP() (res net.IP)
 
 	//@ preserves acc(Mem(), 1/10000)
@@ -129,7 +129,7 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
-	//@ preserves acc(Mem())
+	//@ preserves acc(Mem(), 1/10000)
 	//@ decreases
 	String() string
 }
@@ -201,26 +201,37 @@ func (h HostIPv4) Type() HostAddrType {
 }
 
 //@ requires acc(h.Mem(), 1/10000)
-//@ ensures acc(res, 1/10000)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
 //@ decreases
 func (h HostIPv4) Pack() (res []byte) {
 	return []byte(h.IP())
 }
 
 //@ requires acc(h.Mem(), 1/10000)
-//@ ensures acc(res, 1/10000)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000) && &res[i] == &h[i]
+//@ ensures len(res) == HostLenIPv4
 //@ decreases
 func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
 	//@ unfold acc(h.Mem(), 1/10000)
-	return net.IP(h).To4()
+	// (VerifiedSCION) assing to res
+	//return net.IP(h).To4()
+	res = net.IP(h).To4()
+	//@ assert len(res) == HostLenIPv4
+	//@ assert forall i int :: 0 <= i && i < len(h) ==> &h[i] == &res[i]
+	//@ assert forall i int :: 0 <= i && i < len(h) ==> acc(&res[i], 1/10000)
+	return res
 }
 
 //@ preserves acc(h.Mem(), 1/10000)
 //@ ensures acc(res.Mem())
 //@ decreases
 func (h HostIPv4) Copy() (res HostAddr) {
-	var tmp HostIPv4 = HostIPv4(append(net.IP(nil), h...))
+	// (VerifiedSCION) we need permissions for the append, introducing tmp
+	// var tmp HostIPv4 = HostIPv4(append(net.IP(nil), h...))
+	//@ unfold acc(h.Mem(), 1/10000)
+	var tmp HostIPv4 = HostIPv4(append(/*@ perm(1/10000), @*/net.IP(nil), h...))
+	//@ fold acc(h.Mem(), 1/10000)
 	//@ fold tmp.Mem()
 	return tmp
 }
@@ -229,14 +240,30 @@ func (h HostIPv4) Copy() (res HostAddr) {
 //@ preserves acc(o.Mem(), 1/10000)
 //@ decreases
 func (h HostIPv4) Equal(o HostAddr) bool {
+	//@ unfold acc(h.Mem(), 1/10000)
+	//@ unfold acc(o.Mem(), 1/10000)
 	ha, ok := o.(HostIPv4)
-	return ok && net.IP(h).Equal(net.IP(ha))
+	// (VerifiedSCION) introduce tmp
+	//retury ok && net.IP(h).Equal(net.IP(ha))
+	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
+	//@ fold acc(h.Mem(), 1/10000)
+	//@ fold acc(o.Mem(), 1/10000)
+	return tmp
 }
 
 //@ preserves acc(h.Mem(), 1/10000)
 //@ decreases
 func (h HostIPv4) String() string {
-	return h.IP().String()
+	// (VerifiedSCION) introduce tmp
+	//return h.IP().String()
+	//@ assert unfolding acc(h.Mem(), 1/10000) in len(h) == HostLenIPv4
+	tmp1 := h.IP()
+	//@ assert forall i int :: 0 <= i && i < len(h) ==> acc(&h[i], 1/10000)
+	tmp2 := tmp1.String()
+	//@ assert forall i int :: 0 <= i && i < len(h) ==> &h[i] == &tmp1[i]
+	//@ assert forall i int :: 0 <= i && i < len(h) ==> acc(&h[i], 1/10000)
+	//@ fold acc(h.Mem(), 1/10000)
+	return tmp2
 }
 
 //var _ HostAddr = (HostIPv6)(nil)

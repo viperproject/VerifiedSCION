@@ -57,3 +57,36 @@ HostNone implements HostAddr {
 pred (h HostIPv4) Mem() {
 	len(h) == HostLenIPv4 && acc(h)
 }
+
+HostIPv4 implements HostAddr {
+
+	(h HostIPv4) Size() (res int) {
+		res = h.Size()
+	}
+
+	(h HostIPv4) Type() (res HostAddrType) {
+		res = h.Type()
+	}
+
+	(h HostIPv4) Pack() (res []byte) {
+		assert unfolding acc(h.Mem(), 1/10000) in len(h) == HostLenIPv4
+		res = h.Pack()
+	}
+
+	(h HostIPv4) IP() (res net.IP) {
+		assert unfolding acc(h.Mem(), 1/10000) in len(h) == HostLenIPv4
+		res = h.IP()
+	}
+
+	(h HostIPv4) Copy() (res HostAddr) {
+		res = h.Copy()
+	}
+
+	(h HostIPv4) Equal(o HostAddr) (res bool) {
+		res = h.Equal(o)
+	}
+
+	(h HostIPv4) String() (res string) {
+		res = h.String()
+	}
+}
