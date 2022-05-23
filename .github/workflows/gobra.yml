@@ -7,7 +7,7 @@
 name: Verify the specified codebase
 
 on:
-  push: # run this workflow on every push
+  # push: # run this workflow on every push
   pull_request: # run this workflow on every pull_request
 
 jobs:
@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       headerOnly: 1
+      module: 'github.com/scionproto/scion'
+      includePaths: '. verification/dependencies'
+      assumeInjectivityOnInhale: '1'
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
@@ -39,3 +42,14 @@ jobs:
           globalTimeout: 10m
           packageTimeout: 5m
           headerOnly: ${{ env.headerOnly }}
+          includePaths: './dependencies/' # relative to project location
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+      - name: Verify package 'pkg/slayers/path'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path'
+          packageTimeout: 10m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}

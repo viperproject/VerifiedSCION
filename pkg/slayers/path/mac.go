@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package path
 
 import (
@@ -25,10 +27,13 @@ const MACBufferSize = 16
 // https://docs.scion.org/en/latest/protocols/scion-header.html#hop-field-mac-computation
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
+//@ requires  h != nil && h.Mem() && h.Size() >= 16
+//@ preserves acc(buffer)
+//@ decreases
 func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 	mac := FullMAC(h, info, hf, buffer)
-	var res [MacLen]byte
-	copy(res[:], mac[:MacLen])
+	var res /*@ @ @*/ [MacLen]byte
+	copy(res[:], mac[:MacLen] /*@, perm(1/2)@*/)
 	return res
 }
 
@@ -37,7 +42,12 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // In contrast to MAC(), FullMAC returns all the 16 bytes instead of only 6 bytes of the MAC.
-func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) []byte {
+//@ requires   h != nil && h.Mem() && h.Size() >= 16
+//@ preserves  acc(buffer)
+//@ ensures    h.Mem()
+//@ ensures    acc(res) && len(res) == MACBufferSize
+//@ decreases
+func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byte) {
 	if len(buffer) < MACBufferSize {
 		buffer = make([]byte, MACBufferSize)
 	}
@@ -49,6 +59,7 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) []byte {
 	if _, err := h.Write(buffer); err != nil {
 		panic(err)
 	}
+	//@ assert h.Size() >= 16
 	return h.Sum(buffer[:0])[:16]
 }
 
@@ -66,15 +77,25 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) []byte {
 //   |          ConsEgress           |               0               |
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
+//@ requires  len(buffer) >= 16
+//@ preserves acc(buffer)
+//@ decreases
 func MACInput(segID uint16, timestamp uint32, expTime uint8,
 	consIngress, consEgress uint16, buffer []byte) {
 
+	//@ assert &buffer[0:2][0] == &buffer[0] && &buffer[0:2][1] == &buffer[1]
 	binary.BigEndian.PutUint16(buffer[0:2], 0)
+	//@ assert &buffer[2:4][0] == &buffer[2] && &buffer[2:4][1] == &buffer[3]
 	binary.BigEndian.PutUint16(buffer[2:4], segID)
+	//@ assert &buffer[4:8][0] == &buffer[4] && &buffer[4:8][1] == &buffer[5]
+	//@ assert &buffer[4:8][2] == &buffer[6] && &buffer[4:8][3] == &buffer[7]
 	binary.BigEndian.PutUint32(buffer[4:8], timestamp)
 	buffer[8] = 0
 	buffer[9] = expTime
+	//@ assert &buffer[10:12][0] == &buffer[10] && &buffer[10:12][1] == &buffer[11]
 	binary.BigEndian.PutUint16(buffer[10:12], consIngress)
+	//@ assert &buffer[12:14][0] == &buffer[12] && &buffer[12:14][1] == &buffer[13]
 	binary.BigEndian.PutUint16(buffer[12:14], consEgress)
+	//@ assert &buffer[14:16][0] == &buffer[14] && &buffer[14:16][1] == &buffer[15]
 	binary.BigEndian.PutUint16(buffer[14:16], 0)
 }
