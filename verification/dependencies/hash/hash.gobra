@@ -40,6 +40,7 @@ type Hash interface {
 	// the last conjunct comes from the spec of io.Writer
 	ensures   err == nil && n == len(p)
 	ensures   Size() >= old(Size())
+	decreases
 	Write(p []byte) (n int, err error)
 
 	// Sum appends the current hash to b and returns the resulting slice.
@@ -47,16 +48,19 @@ type Hash interface {
 	preserves acc(Mem(), 1/1000)
 	requires acc(b)
 	ensures  acc(res) && len(res) == Size()
+	decreases
 	Sum(b []byte) (res []byte)
 
 	// Reset resets the Hash to its initial state.
 	preserves Mem()
 	ensures   Size() >= old(Size())
+	decreases
 	Reset()
 
 	// Size returns the number of bytes Sum will return.
 	requires acc(Mem(), _)
 	ensures  res >= 0
+	decreases
 	pure Size() (res int)
 
 	// BlockSize returns the hash's underlying block size.
@@ -65,5 +69,6 @@ type Hash interface {
 	// are a multiple of the block size.
 	requires acc(Mem(), _)
 	ensures  res >= 0
+	decreases
 	BlockSize() (res int)
 }
