@@ -42,7 +42,7 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // In contrast to MAC(), FullMAC returns all the 16 bytes instead of only 6 bytes of the MAC.
-//@ requires   requires  h != nil && h.Mem() && h.Size() >= 16
+//@ requires   h != nil && h.Mem() && h.Size() >= 16
 //@ preserves  acc(buffer)
 //@ ensures    h.Mem()
 //@ ensures    acc(res) && len(res) == MACBufferSize
