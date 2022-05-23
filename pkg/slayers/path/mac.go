@@ -29,6 +29,7 @@ const MACBufferSize = 16
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 //@ requires  h.Mem() && h.Size() >= 16
 //@ preserves acc(buffer)
+//@ decreases
 func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 	mac := FullMAC(h, info, hf, buffer)
 	var res /*@ @ @*/ [MacLen]byte
@@ -45,6 +46,7 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 //@ preserves  acc(buffer)
 //@ ensures    h.Mem()
 //@ ensures    acc(res) && len(res) == MACBufferSize
+//@ decreases
 func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byte) {
 	if len(buffer) < MACBufferSize {
 		buffer = make([]byte, MACBufferSize)
@@ -77,6 +79,7 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byt
 //
 //@ requires  len(buffer) >= 16
 //@ preserves acc(buffer)
+//@ decreases
 func MACInput(segID uint16, timestamp uint32, expTime uint8,
 	consIngress, consEgress uint16, buffer []byte) {
 

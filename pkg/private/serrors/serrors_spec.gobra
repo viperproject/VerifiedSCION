@@ -29,6 +29,12 @@ import "github.com/scionproto/scion/verification/utils/definitions"
 // with this method.
 preserves forall i int :: 0 <= i && i < len(errCtx) ==>
   acc(&errCtx[i], 1/1000) && definitions.IsOfPrimitiveType(errCtx[i])
-ensures  err != nil
+ensures err != nil && err.Mem()
 decreases
 func New(msg string, errCtx ...interface{}) (err error)
+
+// TODO:
+func WrapStr(msg string, cause error, errCtx ...interface{}) (err error)
+
+// TODO:
+func WithCtx(err error, logCtx ...interface{}) (res error)

@@ -81,6 +81,7 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 //@ preserves acc(inf, 1/2)
 //@ preserves acc(b)
 //@ ensures   err == nil
+//@ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	if len(b) < InfoLen {
 		return serrors.New("buffer for InfoField too short", "expected", InfoLen,
