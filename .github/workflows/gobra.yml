@@ -16,6 +16,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     env:
+      gobraAction: 'viperproject/gobra-action'
+      gobraActionVersion: 'main'
       headerOnly: 1
       module: 'github.com/scionproto/scion'
       includePaths: '. verification/dependencies'
@@ -37,17 +39,16 @@ jobs:
       # point could be also be solved by adapting the action to allow
       # per package config).
       - name: Verify the packages in the 'verification' directory
-        uses: viperproject/gobra-action@main
+        uses: ${{ env.gobraAction }}@${{ env.gobraActionVersion }}
         with:
           projectLocation: 'VerifiedSCION/verification'
           recursive: 1
-          globalTimeout: 10m
           packageTimeout: 5m
           headerOnly: ${{ env.headerOnly }}
           includePaths: './dependencies/' # relative to project location
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
       - name: Verify package 'pkg/slayers/path'
-        uses: viperproject/gobra-action@main
+        uses: ${{ env.gobraAction }}@${{ env.gobraActionVersion }}
         with:
           packages: 'pkg/slayers/path'
           packageTimeout: 10m
