@@ -18,15 +18,15 @@
 package addr
 
 import (
-	//"encoding"
-	//"flag"
+	"encoding"
+	"flag"
 	"fmt"
 	"strconv"
 	"strings"
 	//"github.com/scionpronto/scion/verification/utils/definitions"
 	//"github.com/scionproto/scion/pkg/private/serrors"
-	"definitions"
 	"serrors"
+	"definitions"
 )
 
 const (

@@ -21,9 +21,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
-
-	//"github.com/scionproto/scion/pkg/private/serrors"
-	"serrors"
+	"github.com/scionproto/scion/pkg/private/serrors"
 )
 
 type HostAddrType uint8
