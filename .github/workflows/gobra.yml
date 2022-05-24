@@ -41,7 +41,6 @@ jobs:
         with:
           projectLocation: 'VerifiedSCION/verification'
           recursive: 1
-          globalTimeout: 10m
           packageTimeout: 5m
           headerOnly: ${{ env.headerOnly }}
           includePaths: './dependencies/' # relative to project location
