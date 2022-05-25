@@ -18,7 +18,7 @@ jobs:
     env:
       headerOnly: 1
       module: 'github.com/scionproto/scion'
-      includePaths: '. verification/dependencies'
+      includePaths: '. verification/dependencies verification/utils/'
       assumeInjectivityOnInhale: '1'
     steps:
       - name: Checkout the VerifiedSCION repository
