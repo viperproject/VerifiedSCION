@@ -18,8 +18,6 @@
 // import a third-party package for which we do not yet provide
 // specification ("go.uber.org/zap/zapcore").
 
-// +gobra
-
 package serrors
 
 ensures err != nil

@@ -23,10 +23,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	//"github.com/scionpronto/scion/verification/utils/definitions"
-	//"github.com/scionproto/scion/pkg/private/serrors"
-	"serrors"
-	"definitions"
+	"github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/pkg/private/serrors"
 )
 
 const (

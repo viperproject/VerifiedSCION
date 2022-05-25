@@ -26,18 +26,11 @@ import (
 
 type HostAddrType uint8
 
-//const (
-//	HostTypeNone HostAddrType = iota
-//	HostTypeIPv4										
-//	HostTypeIPv6										
-//	HostTypeSVC											
-//)
-
 const (
-	HostTypeNone HostAddrType = 0
-	HostTypeIPv4 HostAddrType = 1
-	HostTypeIPv6 HostAddrType = 2
-	HostTypeSVC  HostAddrType = 3
+	HostTypeNone HostAddrType = iota
+	HostTypeIPv4
+	HostTypeIPv6
+	HostTypeSVC
 )
 
 //@ decreases
