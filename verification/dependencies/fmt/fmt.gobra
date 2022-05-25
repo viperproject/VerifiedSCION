@@ -16,7 +16,7 @@
 
 package fmt
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import "definitions"
 
 
 preserves forall i int :: 0 <= i && i < len(v) ==>
