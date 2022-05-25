@@ -52,6 +52,7 @@ type ISD uint16
 func ParseISD(s string) (ISD, error) {
 	isd, err := strconv.ParseUint(s, 10, ISDBits)
 	if err != nil {
+		//@ fold err.ErrorMem()
 		return 0, serrors.WrapStr("parsing ISD", err)
 	}
 	return ISD(isd), nil
