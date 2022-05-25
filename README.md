@@ -1,4 +1,4 @@
-# VerifiedSCION test
+# VerifiedSCION
 
 This package contains the **verified** implementation of the
 [SCION](http://www.scion-architecture.net) protocol, a future Internet architecture.
