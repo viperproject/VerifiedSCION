@@ -5,6 +5,8 @@
 // Signatures for the public declarations in file
 // https://github.com/golang/go/blob/master/src/time/sleep.go
 
+// +gobra
+
 package time
 
 // Sleep pauses the current goroutine for at least the duration d.

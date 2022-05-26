@@ -5,6 +5,8 @@
 // Signatures for the public declarations in file
 // https://github.com/golang/go/blob/master/src/strings/strings.go
 
+// +gobra
+
 package strings
 
 import (

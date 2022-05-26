@@ -5,6 +5,8 @@
 // Signatures for the public declarations in file
 // https://github.com/golang/go/blob/master/src/time/time.go
 
+// +gobra
+
 package time
 
 type Time struct {

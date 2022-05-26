@@ -5,6 +5,8 @@
 // Signatures for the public declarations in file
 // https://github.com/golang/go/blob/master/src/strconv/atoi.go
 
+// +gobra
+
 package strconv
 
 // import "errors" //(joao) stub errors package still not implemented
