@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
 	"github.com/scionproto/scion/pkg/private/serrors"
 )
 
@@ -93,21 +94,17 @@ func parseAS(as string, sep string) (retAs AS, retErr error) {
 	//@ invariant acc(parts)
 	//@ decreases asParts - i
 	for i := 0; i < asParts; i++ {
-		//(VerifiedSCION) leads to error, types not compatible with <<
-		//parsed <<= asPartBits
-		parsed = AS(uint64(parsed) << asPartBits) // (VerifiedSCION) rewritten version
+		parsed <<= asPartBits
 		v, err := strconv.ParseUint(parts[i], asPartBase, asPartBits)
 		if err != nil {
 			return 0, serrors.WrapStr("parsing AS part", err, "index", i, "value", as)
 		}
-		//(VerifiedSCION) leads to error, types not compatible with |
-		//parsed |= AS(v)
-		parsed = AS(uint64(parsed) | v) // rewritten version
+		parsed |= AS(v)
 	}
 	// This should not be reachable. However, we leave it here to protect
 	// against future refactor mistakes.
 	if !parsed.inRange() {
-		// (VerifiedSCION) adding cast so MaxAS is directly of primitive types
+		// (VerifiedSCION) Added cast around MaxAS to be able to call serrors.New
 		//return 0, serrors.New("AS out of range", "max", MaxAS, "value", as)
 		return 0, serrors.New("AS out of range", "max", uint64(MaxAS), "value", as)
 	}
@@ -124,6 +121,7 @@ func asParseBGP(s string) (retAs AS, retErr error) {
 	return AS(as), nil
 }
 
+//@ requires as.inRange()
 //@ decreases
 func (as AS) String() string {
 	return fmtAS(as, ":")
@@ -138,8 +136,7 @@ func (as AS) inRange() bool {
 //@ decreases
 func (as AS) MarshalText() ([]byte, error) {
 	if !as.inRange() {
-		// (VerifiedSCION) add cast to uint64 so MaxAS and as are directly a primitive type
-		//return nil, serrors.New("AS out of range", "max", MaxAS, "value", as)
+		// (VerifiedSCION) Added cast around MaxAS and as to be able to call serrors.New
 		return nil, serrors.New("AS out of range", "max", uint64(MaxAS), "value", uint64(as))
 	}
 	return []byte(as.String()), nil
@@ -157,7 +154,7 @@ func (as *AS) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// (dionisis) The following 3 assignments act as an implementation of an
+// (VerifiedSCION) The following 3 assignments act as an implementation of an
 // interface check. They are replaced by an implementation proof
 //var _ fmt.Stringer = IA(0)
 //var _ encoding.TextUnmarshaler = (*IA)(nil)
@@ -188,9 +185,7 @@ func IAFrom(isd ISD, as AS) (ia IA, err error) {
 	if !as.inRange() {
 		return 0, serrors.New("AS out of range", "max", MaxAS, "value", as)
 	}
-	// (dionisis) typecasting to uint64 until gobra can handle this
-	//return IA(isd)<<ASBits | IA(as&MaxAS), nil
-	return IA(uint64(isd) << ASBits | uint64(as&MaxAS)), nil //rewritten version
+	return IA(isd)<<ASBits | IA(as&MaxAS), nil
 }
 
 // ParseIA parses an IA from a string of the format 'isd-as'.
@@ -256,9 +251,8 @@ func (ia IA) IsWildcard() bool {
 
 //@ decreases
 func (ia IA) String() string {
-	// Gobra: This will produce an error because ISD and AS are not considered primitive types
-	//return fmt.Sprintf("%d-%s", ia.ISD(), ia.AS())
-	return fmt.Sprintf("%d-%s", uint16(ia.ISD()), uint64(ia.AS())) // rewritten version
+	// (VerifiedSCION) Added casts around ia.ISD() and ia.AS() to be able to pass them to 'fmt.Sprintf'
+	return fmt.Sprintf("%d-%s", uint16(ia.ISD()), uint64(ia.AS()))
 }
 
 // Set implements flag.Value interface
