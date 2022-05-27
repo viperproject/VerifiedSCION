@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package addr
 
 import (
@@ -33,6 +35,8 @@ const (
 	HostTypeSVC
 )
 
+//@ requires isValidHostAddrType(t)
+//@ decreases
 func (t HostAddrType) String() string {
 	switch t {
 	case HostTypeNone:
@@ -54,14 +58,35 @@ const (
 	HostLenSVC  = 2
 )
 
-var (
-	// ErrBadHostAddrType indicates an invalid host address type.
-	ErrBadHostAddrType = serrors.New("unsupported host address type")
-	// ErrMalformedHostAddrType indicates a malformed host address type.
-	ErrMalformedHostAddrType = serrors.New("malformed host address type")
-	// ErrUnsupportedSVCAddress indicates an unsupported SVC address.
-	ErrUnsupportedSVCAddress = serrors.New("unsupported SVC address")
-)
+// (VerifiedSCION) The following variables are not mutated by any functions so
+// they are replaced by functions until we have support for globals
+
+//var (
+//	// ErrBadHostAddrType indicates an invalid host address type.
+//	ErrBadHostAddrType = serrors.New("unsupported host address type")
+//	// ErrMalformedHostAddrType indicates a malformed host address type.
+//	ErrMalformedHostAddrType = serrors.New("malformed host address type")
+//	// ErrUnsupportedSVCAddress indicates an unsupported SVC address.
+//	ErrUnsupportedSVCAddress = serrors.New("unsupported SVC address")
+//)
+
+//@ ensures res.ErrorMem()
+//@ decreases
+func ErrBadHostAddrType () (res error) {
+	return serrors.New("unsupported host address type")
+}
+
+//@ ensures res.ErrorMem()
+//@ decreases
+func ErrMalformedHostAddrType () (res error) {
+	return serrors.New("malformed host address type")
+}
+
+//@ ensures res.ErrorMem()
+//@ decreases
+func ErrUnsupportedSVCAddress () (res error) {
+	return serrors.New("unsupported SVC address")
+}
 
 const (
 	SvcDS       HostSVC = 0x0001
@@ -73,116 +98,228 @@ const (
 )
 
 type HostAddr interface {
+	//@ pred Mem()
+
+	//@ decreases
+	//@ pure
 	Size() int
+
+	//@ decreases
+	//@ pure
 	Type() HostAddrType
-	Pack() []byte
-	IP() net.IP
-	Copy() HostAddr
-	Equal(HostAddr) bool
-	fmt.Stringer
+
+	//@ requires acc(Mem(), 1/10000)
+	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
+	Pack() (res []byte)
+
+	//@ requires acc(Mem(), 1/10000)
+	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
+	IP() (res net.IP)
+
+	//@ preserves acc(Mem(), 1/10000)
+	//@ ensures res.Mem()
+	Copy() (res HostAddr)
+
+	//@ preserves acc(Mem(), 1/10000) && acc(o.Mem(), 1/10000)
+	Equal(o HostAddr) bool
+	
+	// (VerifiedSCION) Can't use imported types as interface fields yet
+	// Issue: https://github.com/viperproject/gobra/issues/461
+	// replaced by the String() method which is the one that should be implemented
+	//fmt.Stringer
+
+	//@ preserves acc(Mem(), 1/10000)
+	//@ decreases
+	String() string
 }
 
-var _ HostAddr = (HostNone)(nil)
+// (VerifiedSCION) Replaced with implementation proof in host_spec.gobra
+//var _ HostAddr = (HostNone)(nil)
 
 type HostNone net.IP
 
+//@ decreases
+//@ pure
 func (h HostNone) Size() int {
 	return HostLenNone
 }
 
+//@ decreases
+//@ pure
 func (h HostNone) Type() HostAddrType {
 	return HostTypeNone
 }
 
-func (h HostNone) Pack() []byte {
+//@ ensures acc(res)
+//@ ensures len(res) == 0
+//@ decreases
+func (h HostNone) Pack() (res []byte) {
 	return []byte{}
 }
 
-func (h HostNone) IP() net.IP {
+//@ ensures acc(res)
+//@ decreases
+func (h HostNone) IP() (res net.IP) {
 	return nil
 }
 
-func (h HostNone) Copy() HostAddr {
-	return HostNone{}
+//@ preserves acc(h.Mem(), 1/10000)
+//@ ensures res.Mem()
+//@ decreases
+func (h HostNone) Copy() (res HostAddr) {
+	tmp := HostNone{}
+	//@ fold tmp.Mem()
+	return tmp
 }
 
-func (h HostNone) Equal(o HostAddr) bool {
+//@ ensures res == (typeOf(o) == type[HostNone])
+//@ decreases
+func (h HostNone) Equal(o HostAddr) (res bool) {
 	_, ok := o.(HostNone)
 	return ok
 }
 
+//@decreases
 func (h HostNone) String() string {
 	return "<None>"
 }
 
-var _ HostAddr = (HostIPv4)(nil)
+// (VerifiedSCION) Replaced with implementation proof in host_spec.gobra
+//var _ HostAddr = (HostIPv4)(nil)
 
 type HostIPv4 net.IP
 
+//@ decreases
+//@ pure
 func (h HostIPv4) Size() int {
 	return HostLenIPv4
 }
 
+//@ decreases
+//@ pure
 func (h HostIPv4) Type() HostAddrType {
 	return HostTypeIPv4
 }
 
-func (h HostIPv4) Pack() []byte {
+//@ requires acc(h.Mem(), 1/10000)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
+//@ decreases
+func (h HostIPv4) Pack() (res []byte) {
 	return []byte(h.IP())
 }
 
-func (h HostIPv4) IP() net.IP {
+//@ requires acc(h.Mem(), 1/10000)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000) && &res[i] == &h[i]
+//@ ensures len(res) == HostLenIPv4
+//@ decreases
+func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
+	//@ unfold acc(h.Mem(), 1/10000)
 	return net.IP(h).To4()
 }
 
-func (h HostIPv4) Copy() HostAddr {
-	return HostIPv4(append(net.IP(nil), h...))
+//@ preserves acc(h.Mem(), 1/10000)
+//@ ensures acc(res.Mem())
+//@ decreases
+func (h HostIPv4) Copy() (res HostAddr) {
+	//@ unfold acc(h.Mem(), 1/10000)
+	var tmp HostIPv4 = HostIPv4(append(/*@ perm(1/10000), @*/net.IP(nil), h...))
+	//@ fold acc(h.Mem(), 1/10000)
+	//@ fold tmp.Mem()
+	return tmp
 }
 
+//@ preserves acc(h.Mem(), 1/10000)
+//@ preserves acc(o.Mem(), 1/10000)
+//@ decreases
 func (h HostIPv4) Equal(o HostAddr) bool {
+	//@ unfold acc(h.Mem(), 1/10000)
+	//@ unfold acc(o.Mem(), 1/10000)
 	ha, ok := o.(HostIPv4)
-	return ok && net.IP(h).Equal(net.IP(ha))
+	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
+	//@ fold acc(h.Mem(), 1/10000)
+	//@ fold acc(o.Mem(), 1/10000)
+	return tmp
 }
 
+//@ preserves acc(h.Mem(), 1/10000)
+//@ decreases
 func (h HostIPv4) String() string {
-	return h.IP().String()
+	//@ assert unfolding acc(h.Mem(), 1/10000) in len(h) == HostLenIPv4
+	tmp := h.IP().String()
+	//@ fold acc(h.Mem(), 1/10000)
+	return tmp
 }
 
-var _ HostAddr = (HostIPv6)(nil)
+// (VerifiedSCION) Replaced with implementation proof in host_spec.gobra
+//var _ HostAddr = (HostIPv6)(nil)
 
 type HostIPv6 net.IP
 
+//@ decreases
+//@ pure
 func (h HostIPv6) Size() int {
 	return HostLenIPv6
 }
 
+//@ decreases
+//@ pure
 func (h HostIPv6) Type() HostAddrType {
 	return HostTypeIPv6
 }
 
-func (h HostIPv6) Pack() []byte {
+//@ requires acc(h.Mem(), 1/10000)
+//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
+//@ decreases
+func (h HostIPv6) Pack() (res []byte) {
+	//@ unfold acc(h.Mem(), 1/10000)
 	return []byte(h)[:HostLenIPv6]
 }
 
-func (h HostIPv6) IP() net.IP {
+//@ requires acc(h.Mem(), 1/10000)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000) && &res[i] == &h[i]
+//@ ensures len(res) == HostLenIPv6
+//@ decreases
+func (h HostIPv6) IP() (res net.IP) {
+	//@ unfold acc(h.Mem(), 1/10000)
 	return net.IP(h)
 }
 
-func (h HostIPv6) Copy() HostAddr {
-	return HostIPv6(append(net.IP(nil), h...))
+//@ preserves acc(h.Mem(), 1/10000)
+//@ ensures acc(res.Mem())
+//@ decreases
+func (h HostIPv6) Copy() (res HostAddr) {
+	//@ unfold acc(h.Mem(), 1/10000)
+	var tmp HostIPv6 = HostIPv6(append(/*@ perm(1/10000), @*/net.IP(nil), h...))
+	//@ fold acc(h.Mem(), 1/10000)
+	//@ fold tmp.Mem()
+	return tmp
 }
 
+//@ preserves acc(h.Mem(), 1/10000)
+//@ preserves acc(o.Mem(), 1/10000)
+//@ decreases
 func (h HostIPv6) Equal(o HostAddr) bool {
+	//@ unfold acc(h.Mem(), 1/10000)
+	//@ unfold acc(o.Mem(), 1/10000)
 	ha, ok := o.(HostIPv6)
-	return ok && net.IP(h).Equal(net.IP(ha))
+	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
+	//@ fold acc(h.Mem(), 1/10000)
+	//@ fold acc(o.Mem(), 1/10000)
+	return tmp
 }
 
+//@ preserves acc(h.Mem(), 1/10000)
+//@ decreases
 func (h HostIPv6) String() string {
-	return h.IP().String()
+	//@ assert unfolding acc(h.Mem(), 1/10000) in len(h) == HostLenIPv6
+	tmp := h.IP().String()
+	//@ fold acc(h.Mem(), 1/10000)
+	return tmp
 }
 
-var _ HostAddr = (*HostSVC)(nil)
+
+//var _ HostAddr = (*HostSVC)(nil)
 
 type HostSVC uint16
 
@@ -190,6 +327,7 @@ type HostSVC uint16
 // SVC addresses, use BS_A, PS_A, CS_A, and SB_A; shorthand versions without
 // the _A suffix (e.g., PS) also return anycast SVC addresses. For multicast,
 // use BS_M, PS_M, CS_M, and SB_M.
+//@ decreases
 func HostSVCFromString(str string) HostSVC {
 	var m HostSVC
 	switch {
@@ -211,51 +349,70 @@ func HostSVCFromString(str string) HostSVC {
 	}
 }
 
+//@ decreases
+//@ pure
 func (h HostSVC) Size() int {
 	return HostLenSVC
 }
 
+//@ decreases
+//@ pure
 func (h HostSVC) Type() HostAddrType {
 	return HostTypeSVC
 }
 
-func (h HostSVC) Pack() []byte {
+//@ ensures acc(res)
+//@ decreases
+func (h HostSVC) Pack() (res []byte) {
 	out := make([]byte, HostLenSVC)
 	binary.BigEndian.PutUint16(out, uint16(h))
 	return out
 }
 
-func (h HostSVC) PackWithPad(pad int) []byte {
+//@ requires pad >= 0
+//@ ensures acc(res)
+//@ decreases
+func (h HostSVC) PackWithPad(pad int) (res []byte) {
 	out := make([]byte, HostLenSVC+pad)
 	binary.BigEndian.PutUint16(out, uint16(h))
 	return out
 }
 
-func (h HostSVC) IP() net.IP {
+//@ ensures acc(res)
+//@ decreases
+func (h HostSVC) IP() (res net.IP) {
 	return nil
 }
 
+//@ decreases
 func (h HostSVC) IsMulticast() bool {
 	return (h & SVCMcast) != 0
 }
 
+//@ decreases
 func (h HostSVC) Base() HostSVC {
 	return h & ^SVCMcast
 }
 
+//@ decreases
 func (h HostSVC) Multicast() HostSVC {
 	return h | SVCMcast
 }
 
-func (h HostSVC) Copy() HostAddr {
+//@ ensures res.Mem()
+//@ decreases
+func (h HostSVC) Copy() (res HostAddr) {
+	//@ fold h.Mem()
 	return h
 }
 
+//@ decreases
 func (h HostSVC) Equal(o HostAddr) bool {
 	ha, ok := o.(HostSVC)
 	return ok && h == ha
 }
 
+//@ decreases
 func (h HostSVC) String() string {
 	name := h.BaseString()
 	cast := 'A'
@@ -267,6 +424,7 @@ func (h HostSVC) String() string {
 
 // BaseString returns the upper case name of the service. For hosts or unrecognized services, it
 // returns UNKNOWN.
+//@ decreases
 func (h HostSVC) BaseString() string {
 	switch h.Base() {
 	case SvcDS:
@@ -280,49 +438,77 @@ func (h HostSVC) BaseString() string {
 	}
 }
 
+//@ decreases
 func (h HostSVC) Network() string {
 	return ""
 }
 
-func HostFromRaw(b []byte, htype HostAddrType) (HostAddr, error) {
+//@ requires acc(b)
+//@ requires isValidHostAddrType(htype)
+//@ requires len(b) == sizeOfHostAddrType(htype)
+//@ ensures err == nil ==> res.Mem()
+//@ decreases
+func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 	switch htype {
 	case HostTypeNone:
-		return HostNone{}, nil
+		tmp := HostNone{}
+		//@ fold tmp.Mem()
+		return tmp, nil
 	case HostTypeIPv4:
 		if len(b) < HostLenIPv4 {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
 		}
-		return HostIPv4(b[:HostLenIPv4]), nil
+		tmp := HostIPv4(b[:HostLenIPv4])
+		//@ fold tmp.Mem()
+		return tmp, nil
 	case HostTypeIPv6:
 		if len(b) < HostLenIPv6 {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
 		}
-		return HostIPv6(b[:HostLenIPv6]), nil
+		tmp := HostIPv6(b[:HostLenIPv6])
+		//@ fold tmp.Mem()
+		return tmp, nil
 	case HostTypeSVC:
 		if len(b) < HostLenSVC {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
 		}
-		return HostSVC(binary.BigEndian.Uint16(b)), nil
+		tmp := HostSVC(binary.BigEndian.Uint16(b))
+		//@ fold tmp.Mem()
+		return tmp, nil
 	default:
-		return nil, serrors.WithCtx(ErrBadHostAddrType, "type", htype)
+		return nil, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
 	}
 }
 
-func HostFromIP(ip net.IP) HostAddr {
+//@ requires acc(ip)
+//@ requires len(ip) == HostLenIPv4 || len(ip) == HostLenIPv6
+//@ ensures res.Mem()
+//@ decreases
+func HostFromIP(ip net.IP) (res HostAddr) {
 	if ip4 := ip.To4(); ip4 != nil {
-		return HostIPv4(ip4)
+		tmp := HostIPv4(ip4)
+		//@ fold tmp.Mem()
+		return tmp
 	}
-	return HostIPv6(ip)
+	tmp := HostIPv6(ip)
+	//@ fold tmp.Mem()
+	return tmp
 }
 
-func HostFromIPStr(s string) HostAddr {
+//@ ensures res.Mem()
+//@ decreases
+func HostFromIPStr(s string) (res HostAddr) {
 	ip := net.ParseIP(s)
 	if ip == nil {
-		return nil
+		tmp := HostNone(nil)
+		//@ fold tmp.Mem()
+		return tmp
 	}
 	return HostFromIP(ip)
 }
 
+//@ requires isValidHostAddrType(htype)
+//@ decreases
 func HostLen(htype HostAddrType) (uint8, error) {
 	var length uint8
 	switch htype {
@@ -335,11 +521,12 @@ func HostLen(htype HostAddrType) (uint8, error) {
 	case HostTypeSVC:
 		length = HostLenSVC
 	default:
-		return 0, serrors.WithCtx(ErrBadHostAddrType, "type", htype)
+		return 0, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
 	}
 	return length, nil
 }
 
+//@ decreases
 func HostTypeCheck(t HostAddrType) bool {
 	switch t {
 	case HostTypeIPv6, HostTypeIPv4, HostTypeSVC:

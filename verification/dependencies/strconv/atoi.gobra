@@ -54,6 +54,7 @@ pure func Exp(base int, exp int) (res int) {
 requires base == 0 || (2 <= base && base <= 36)
 requires bitSize > 0 && bitSize <= 64
 ensures retErr == nil ==> (ret >= 0 && ret < Exp(2, bitSize))
+ensures retErr != nil ==> retErr.ErrorMem()
 decreases _
 func ParseUint(s string, base int, bitSize int) (ret uint64, retErr error)
 

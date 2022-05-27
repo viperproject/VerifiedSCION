@@ -244,6 +244,7 @@ func (n *IPNet) String() string
 
 // ParseIP parses s as an IP address, returning the result.
 ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
+ensures res != nil ==> len(res) == IPv4len || len(res) == IPv6len
 decreases _
 func ParseIP(s string) (res IP)
 
@@ -253,3 +254,8 @@ func ParseIP(s string) (res IP)
 ensures err == nil ==> acc(ipnet)
 ensures forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i])
 func ParseCIDR(s string) (ip IP, ipnet *IPNet, err error)
+
+requires acc(ip, 1/10000)
+ensures acc(res, 1/10000) && (acc(res, 1/10000) --* acc(ip, 1/10000))
+decreases _
+func (ip IP) To4() (res IP)
