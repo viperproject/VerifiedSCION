@@ -49,7 +49,7 @@ ensures htype == HostTypeIPv6 ==> res == HostLenIPv6
 ensures htype == HostTypeSVC ==> res == HostLenSVC
 pure func sizeOfHostAddrType(htype HostAddrType) (res int) {
 	return htype == HostTypeNone ?
-	  HostLenNone : htype == HostTypeIPv4 ?
-	  HostLenIPv4 : htype == HostTypeIPv6 ?
-	  HostLenIPv6 : HostLenSVC
+		HostLenNone : htype == HostTypeIPv4 ?
+		HostLenIPv4 : htype == HostTypeIPv6 ?
+		HostLenIPv6 : HostLenSVC
 }
