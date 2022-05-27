@@ -43,6 +43,7 @@ jobs:
           recursive: 1
           packageTimeout: 5m
           headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
           includePaths: './dependencies/' # relative to project location
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
       - name: Verify package 'pkg/slayers/path'
