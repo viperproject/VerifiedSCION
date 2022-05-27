@@ -172,12 +172,11 @@ func WithCtx(err error, errCtx ...interface{}) (res error) {
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 requires msg.ErrorMem() && cause.ErrorMem()
-requires  isComparable(msg)
 preserves forall i int :: 0 <= i && i < len(errCtx) ==>
   acc(&errCtx[i], 1/1000) && definitions.IsOfPrimitiveType(errCtx[i])
 ensures res != nil && res.ErrorMem()
 ensures typeOf(res) == type[basicError]
-ensures res.(basicError).msg.err == msg
+ensures isComparable(msg) ==> res.(basicError).msg.err == msg
 ensures isComparable(cause) ==> res.(basicError).cause == cause
 ensures isComparable(cause) ==> (res.ErrorMem() && res.(basicError).msg.err == msg && res.(basicError).cause == cause) --* (msg.ErrorMem() && cause.ErrorMem())
 decreases

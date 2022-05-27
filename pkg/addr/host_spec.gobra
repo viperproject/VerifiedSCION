@@ -22,15 +22,11 @@ pred (h HostNone) Mem() { len(h) == HostLenNone }
 
 HostNone implements HostAddr
 
-pred (h HostIPv4) Mem() {
-	len(h) == HostLenIPv4 && acc(h)
-}
+pred (h HostIPv4) Mem() { len(h) == HostLenIPv4 && acc(h) }
 
 HostIPv4 implements HostAddr
 
-pred (h HostIPv6) Mem() {
-	len(h) == HostLenIPv6 && acc(h)
-}
+pred (h HostIPv6) Mem() { len(h) == HostLenIPv6 && acc(h) }
 
 HostIPv6 implements HostAddr
 
@@ -39,7 +35,10 @@ pred (h HostSVC) Mem() { true }
 HostSVC implements HostAddr
 
 ghost pure func isValidHostAddrType(htype HostAddrType) bool {
-	return htype == HostTypeNone || htype == HostTypeIPv4 || htype == HostTypeIPv6 || htype == HostTypeSVC
+	return htype == HostTypeNone ||
+		htype == HostTypeIPv4 ||
+		htype == HostTypeIPv6 ||
+		htype == HostTypeSVC
 }
 
 ghost
@@ -49,5 +48,8 @@ ensures htype == HostTypeIPv4 ==> res == HostLenIPv4
 ensures htype == HostTypeIPv6 ==> res == HostLenIPv6
 ensures htype == HostTypeSVC ==> res == HostLenSVC
 pure func sizeOfHostAddrType(htype HostAddrType) (res int) {
-	return htype == HostTypeNone ? HostLenNone : htype == HostTypeIPv4 ? HostLenIPv4 : htype == HostTypeIPv6 ? HostLenIPv6 : HostLenSVC
+	return htype == HostTypeNone ?
+	  HostLenNone : htype == HostTypeIPv4 ?
+	  HostLenIPv4 : htype == HostTypeIPv6 ?
+	  HostLenIPv6 : HostLenSVC
 }

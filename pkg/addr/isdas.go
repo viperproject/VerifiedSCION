@@ -63,6 +63,7 @@ func (isd ISD) String() string {
 	return strconv.FormatUint(uint64(isd), 10)
 }
 
+// (VerifiedSCION) Replaced with implementation proof in isdas_spec.gobra
 //var _ encoding.TextUnmarshaler = (*AS)(nil)
 
 // AS is the Autonomous System identifier. See formatting and allocations here:
@@ -105,7 +106,6 @@ func parseAS(as string, sep string) (retAs AS, retErr error) {
 	// against future refactor mistakes.
 	if !parsed.inRange() {
 		// (VerifiedSCION) Added cast around MaxAS to be able to call serrors.New
-		//return 0, serrors.New("AS out of range", "max", MaxAS, "value", as)
 		return 0, serrors.New("AS out of range", "max", uint64(MaxAS), "value", as)
 	}
 	return parsed, nil
@@ -266,4 +266,3 @@ func (ia *IA) Set(s string) error {
 	*ia = pIA
 	return nil
 }
-

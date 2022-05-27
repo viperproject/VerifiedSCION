@@ -59,7 +59,7 @@ const (
 )
 
 // (VerifiedSCION) The following variables are not mutated by any functions so
-//they are replaced by functions until we have support for globals
+// they are replaced by functions until we have support for globals
 
 //var (
 //	// ErrBadHostAddrType indicates an invalid host address type.
@@ -124,6 +124,7 @@ type HostAddr interface {
 	Equal(o HostAddr) bool
 	
 	// (VerifiedSCION) Can't use imported types as interface fields yet
+	// Issue: https://github.com/viperproject/gobra/issues/461
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
@@ -132,7 +133,7 @@ type HostAddr interface {
 	String() string
 }
 
-// (VerifiedSCION) Replaced with implementation proof in host.gobra
+// (VerifiedSCION) Replaced with implementation proof in host_spec.gobra
 //var _ HostAddr = (HostNone)(nil)
 
 type HostNone net.IP
@@ -183,7 +184,7 @@ func (h HostNone) String() string {
 	return "<None>"
 }
 
-// (VerifiedSCION) Replaced with implementation proof in host.gobra
+// (VerifiedSCION) Replaced with implementation proof in host_spec.gobra
 //var _ HostAddr = (HostIPv4)(nil)
 
 type HostIPv4 net.IP
@@ -246,11 +247,11 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), 1/10000) in len(h) == HostLenIPv4
 	tmp := h.IP().String()
-	//@ assert forall i int :: 0 <= i && i < len(h) ==> acc(&h[i], 1/10000)
 	//@ fold acc(h.Mem(), 1/10000)
 	return tmp
 }
 
+// (VerifiedSCION) Replaced with implementation proof in host_spec.gobra
 //var _ HostAddr = (HostIPv6)(nil)
 
 type HostIPv6 net.IP
