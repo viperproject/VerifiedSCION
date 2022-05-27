@@ -52,7 +52,6 @@ type ISD uint16
 func ParseISD(s string) (ISD, error) {
 	isd, err := strconv.ParseUint(s, 10, ISDBits)
 	if err != nil {
-		//@ fold err.ErrorMem()
 		return 0, serrors.WrapStr("parsing ISD", err)
 	}
 	return ISD(isd), nil
@@ -95,21 +94,23 @@ func parseAS(as string, sep string) (retAs AS, retErr error) {
 	//@ invariant acc(parts)
 	//@ decreases asParts - i
 	for i := 0; i < asParts; i++ {
-		//(joao) leads to error, types not compatible with <<
+		//(VerifiedSCION) leads to error, types not compatible with <<
 		//parsed <<= asPartBits
-		parsed = AS(uint64(parsed) << asPartBits) // (joao) rewritten version
+		parsed = AS(uint64(parsed) << asPartBits) // (VerifiedSCION) rewritten version
 		v, err := strconv.ParseUint(parts[i], asPartBase, asPartBits)
 		if err != nil {
 			return 0, serrors.WrapStr("parsing AS part", err, "index", i, "value", as)
 		}
-		//(joao) leads to error, types not compatible with |
+		//(VerifiedSCION) leads to error, types not compatible with |
 		//parsed |= AS(v)
 		parsed = AS(uint64(parsed) | v) // rewritten version
 	}
 	// This should not be reachable. However, we leave it here to protect
 	// against future refactor mistakes.
 	if !parsed.inRange() {
-		return 0, serrors.New("AS out of range", "max", MaxAS, "value", as)
+		// (VerifiedSCION) adding cast so MaxAS is directly of primitive types
+		//return 0, serrors.New("AS out of range", "max", MaxAS, "value", as)
+		return 0, serrors.New("AS out of range", "max", uint64(MaxAS), "value", as)
 	}
 	return parsed, nil
 }
@@ -138,7 +139,9 @@ func (as AS) inRange() bool {
 //@ decreases
 func (as AS) MarshalText() ([]byte, error) {
 	if !as.inRange() {
-		return nil, serrors.New("AS out of range", "max", MaxAS, "value", as)
+		// (VerifiedSCION) add cast to uint64 so MaxAS and as are directly a primitive type
+		//return nil, serrors.New("AS out of range", "max", MaxAS, "value", as)
+		return nil, serrors.New("AS out of range", "max", uint64(MaxAS), "value", uint64(as))
 	}
 	return []byte(as.String()), nil
 }

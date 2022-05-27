@@ -139,12 +139,12 @@ func (e basicError) ctxPairs() (res []ctxPair) {
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 requires  err.ErrorMem()
-requires  isComparable(err)
 preserves forall i int :: 0 <= i && i < len(errCtx) ==>
   acc(&errCtx[i], 1/1000) && definitions.IsOfPrimitiveType(errCtx[i])
 ensures res != nil && res.ErrorMem()
-ensures typeOf(res) == type[basicError] && res.(basicError).msg.err == err
-ensures (res.ErrorMem() && res.(basicError).msg.err == err) --* err.ErrorMem()
+ensures typeOf(res) == type[basicError]
+ensures isComparable(err) ==> res.(basicError).msg.err == err
+ensures isComparable(err) ==> ((res.ErrorMem() && res.(basicError).msg.err == err) --* err.ErrorMem())
 decreases
 func WithCtx(err error, errCtx ...interface{}) (res error) {
 	errMsg := errOrMsg{err: err}
@@ -154,9 +154,11 @@ func WithCtx(err error, errCtx ...interface{}) (res error) {
 		fields: errCtxToFields(errCtx),
 	}
 	fold res.ErrorMem()
-	package ((res.ErrorMem() && res.(basicError).msg.err == err) --* err.ErrorMem()) {
-		unfold res.ErrorMem()
-		unfold res.(basicError).msg.ErrorMem()
+	ghost if isComparable(res) {
+		package ((res.ErrorMem() && res.(basicError).msg.err == err) --* err.ErrorMem()) {
+			unfold res.ErrorMem()
+			unfold res.(basicError).msg.ErrorMem()
+		}
 	}
 	return res
 }
@@ -239,6 +241,7 @@ preserves forall i int :: 0 <= i && i < len(errCtx) ==>
   acc(&errCtx[i], 1/1000) && definitions.IsOfPrimitiveType(errCtx[i])
 ensures res != nil && res.ErrorMem()
 ensures typeOf(res) == type[basicError]
+decreases
 func New(msg string, errCtx ...interface{}) (res error) {
 	if len(errCtx) == 0 {
 		return &basicError{

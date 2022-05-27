@@ -69,18 +69,21 @@ const (
 //	ErrUnsupportedSVCAddress = serrors.New("unsupported SVC address")
 //)
 
+//@ ensures res.ErrorMem()
 //@ decreases
-func ErrBadHostAddrType () error {
+func ErrBadHostAddrType () (res error) {
 	return serrors.New("unsupported host address type")
 }
 
+//@ ensures res.ErrorMem()
 //@ decreases
-func ErrMalformedHostAddrType () error {
+func ErrMalformedHostAddrType () (res error) {
 	return serrors.New("malformed host address type")
 }
 
+//@ ensures res.ErrorMem()
 //@ decreases
-func ErrUnsupportedSVCAddress () error {
+func ErrUnsupportedSVCAddress () (res error) {
 	return serrors.New("unsupported SVC address")
 }
 
@@ -471,7 +474,9 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		return tmp, nil
 	case HostTypeIPv4:
 		if len(b) < HostLenIPv4 {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			// (VerifiedSCION) add cast to uint8 so htype is directly a primitive type
+			//return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", uint8(htype))
 		}
 		// (VerifiedSCION) introduce tmp
 		//return HostIPv4(b[:HostLenIPv4]), nil
@@ -480,7 +485,9 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		return tmp, nil
 	case HostTypeIPv6:
 		if len(b) < HostLenIPv6 {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			// (VerifiedSCION) add cast to uint8 so htype is directly a primitive type
+			//return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", uint8(htype))
 		}
 		// (VerifiedSCION) introduce tmp
 		//return HostIPv6(b[:HostLenIPv6]), nil
@@ -489,7 +496,9 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		return tmp, nil
 	case HostTypeSVC:
 		if len(b) < HostLenSVC {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			// (VerifiedSCION) add cast to uint8 so htype is directly a primitive type
+			//return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", uint8(htype))
 		}
 		// (VerifiedSCION) introduce tmp
 		//return HostSVC(binary.BigEndian.Uint16(b)), nil
@@ -497,7 +506,9 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		//@ fold tmp.Mem()
 		return tmp, nil
 	default:
-		return nil, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
+		// (VerifiedSCION) add cast to uint8 so htype is directly a primitive type
+		//return nil, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
+		return nil, serrors.WithCtx(ErrBadHostAddrType(), "type", uint8(htype))
 	}
 }
 
@@ -547,7 +558,9 @@ func HostLen(htype HostAddrType) (uint8, error) {
 	case HostTypeSVC:
 		length = HostLenSVC
 	default:
-		return 0, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
+		// (VerifiedSCION) add cast to uint8 so htype is directly a primitive type
+		//return 0, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
+		return 0, serrors.WithCtx(ErrBadHostAddrType(), "type", uint8(htype))
 	}
 	return length, nil
 }
