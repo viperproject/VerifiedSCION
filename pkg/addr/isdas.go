@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/pkg/private/serrors"
 )
 
