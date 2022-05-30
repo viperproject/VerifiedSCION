@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	"github.com/scionproto/scion/verification/utils/definitions"
 )
 
 type HostAddrType uint8
@@ -108,19 +109,23 @@ type HostAddr interface {
 	//@ pure
 	Type() HostAddrType
 
-	//@ requires acc(Mem(), 1/10000)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
+	//@ requires acc(Mem(), definitions.ScionReadPerm)
+	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm)
+	//@ decreases
 	Pack() (res []byte)
 
-	//@ requires acc(Mem(), 1/10000)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
+	//@ requires acc(Mem(), definitions.ScionReadPerm)
+	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm)
+	//@ decreases
 	IP() (res net.IP)
 
-	//@ preserves acc(Mem(), 1/10000)
+	//@ preserves acc(Mem(), definitions.ScionReadPerm)
 	//@ ensures res.Mem()
+	//@ decreases
 	Copy() (res HostAddr)
 
-	//@ preserves acc(Mem(), 1/10000) && acc(o.Mem(), 1/10000)
+	//@ preserves acc(Mem(), definitions.ScionReadPerm) && acc(o.Mem(), definitions.ScionReadPerm)
+	//@ decreases
 	Equal(o HostAddr) bool
 	
 	// (VerifiedSCION) Can't use imported types as interface fields yet
@@ -128,13 +133,12 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
-	//@ preserves acc(Mem(), 1/10000)
+	//@ preserves acc(Mem(), definitions.ScionReadPerm)
 	//@ decreases
 	String() string
 }
 
-// (VerifiedSCION) Replaced with implementation proof in host_spec.gobra
-//var _ HostAddr = (HostNone)(nil)
+var _ HostAddr = (HostNone)(nil)
 
 type HostNone net.IP
 
@@ -163,7 +167,7 @@ func (h HostNone) IP() (res net.IP) {
 	return nil
 }
 
-//@ preserves acc(h.Mem(), 1/10000)
+//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostNone) Copy() (res HostAddr) {
@@ -184,8 +188,7 @@ func (h HostNone) String() string {
 	return "<None>"
 }
 
-// (VerifiedSCION) Replaced with implementation proof in host_spec.gobra
-//var _ HostAddr = (HostIPv4)(nil)
+var _ HostAddr = (HostIPv4)(nil)
 
 type HostIPv4 net.IP
 
@@ -201,58 +204,57 @@ func (h HostIPv4) Type() HostAddrType {
 	return HostTypeIPv4
 }
 
-//@ requires acc(h.Mem(), 1/10000)
-//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
+//@ requires acc(h.Mem(), definitions.ScionReadPerm)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm)
 //@ decreases
 func (h HostIPv4) Pack() (res []byte) {
 	return []byte(h.IP())
 }
 
-//@ requires acc(h.Mem(), 1/10000)
-//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000) && &res[i] == &h[i]
+//@ requires acc(h.Mem(), definitions.ScionReadPerm)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm) && &res[i] == &h[i]
 //@ ensures len(res) == HostLenIPv4
 //@ decreases
 func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
-	//@ unfold acc(h.Mem(), 1/10000)
+	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
 	return net.IP(h).To4()
 }
 
-//@ preserves acc(h.Mem(), 1/10000)
+//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
 //@ ensures acc(res.Mem())
 //@ decreases
 func (h HostIPv4) Copy() (res HostAddr) {
-	//@ unfold acc(h.Mem(), 1/10000)
-	var tmp HostIPv4 = HostIPv4(append(/*@ perm(1/10000), @*/net.IP(nil), h...))
-	//@ fold acc(h.Mem(), 1/10000)
+	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
+	var tmp HostIPv4 = HostIPv4(append(/*@ definitions.ScionReadPerm, @*/net.IP(nil), h...))
+	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
 	//@ fold tmp.Mem()
 	return tmp
 }
 
-//@ preserves acc(h.Mem(), 1/10000)
-//@ preserves acc(o.Mem(), 1/10000)
+//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
+//@ preserves acc(o.Mem(), definitions.ScionReadPerm)
 //@ decreases
 func (h HostIPv4) Equal(o HostAddr) bool {
-	//@ unfold acc(h.Mem(), 1/10000)
-	//@ unfold acc(o.Mem(), 1/10000)
+	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ unfold acc(o.Mem(), definitions.ScionReadPerm)
 	ha, ok := o.(HostIPv4)
 	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), 1/10000)
-	//@ fold acc(o.Mem(), 1/10000)
+	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ fold acc(o.Mem(), definitions.ScionReadPerm)
 	return tmp
 }
 
-//@ preserves acc(h.Mem(), 1/10000)
+//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
 //@ decreases
 func (h HostIPv4) String() string {
-	//@ assert unfolding acc(h.Mem(), 1/10000) in len(h) == HostLenIPv4
+	//@ assert unfolding acc(h.Mem(), definitions.ScionReadPerm) in len(h) == HostLenIPv4
 	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), 1/10000)
+	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
 	return tmp
 }
 
-// (VerifiedSCION) Replaced with implementation proof in host_spec.gobra
-//var _ HostAddr = (HostIPv6)(nil)
+var _ HostAddr = (HostIPv6)(nil)
 
 type HostIPv6 net.IP
 
@@ -268,56 +270,55 @@ func (h HostIPv6) Type() HostAddrType {
 	return HostTypeIPv6
 }
 
-//@ requires acc(h.Mem(), 1/10000)
-//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
+//@ requires acc(h.Mem(), definitions.ScionReadPerm)
+//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm)
 //@ decreases
 func (h HostIPv6) Pack() (res []byte) {
-	//@ unfold acc(h.Mem(), 1/10000)
+	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
 	return []byte(h)[:HostLenIPv6]
 }
 
-//@ requires acc(h.Mem(), 1/10000)
-//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000) && &res[i] == &h[i]
+//@ requires acc(h.Mem(), definitions.ScionReadPerm)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm) && &res[i] == &h[i]
 //@ ensures len(res) == HostLenIPv6
 //@ decreases
 func (h HostIPv6) IP() (res net.IP) {
-	//@ unfold acc(h.Mem(), 1/10000)
+	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
 	return net.IP(h)
 }
 
-//@ preserves acc(h.Mem(), 1/10000)
+//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
 //@ ensures acc(res.Mem())
 //@ decreases
 func (h HostIPv6) Copy() (res HostAddr) {
-	//@ unfold acc(h.Mem(), 1/10000)
-	var tmp HostIPv6 = HostIPv6(append(/*@ perm(1/10000), @*/net.IP(nil), h...))
-	//@ fold acc(h.Mem(), 1/10000)
+	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
+	var tmp HostIPv6 = HostIPv6(append(/*@ definitions.ScionReadPerm, @*/net.IP(nil), h...))
+	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
 	//@ fold tmp.Mem()
 	return tmp
 }
 
-//@ preserves acc(h.Mem(), 1/10000)
-//@ preserves acc(o.Mem(), 1/10000)
+//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
+//@ preserves acc(o.Mem(), definitions.ScionReadPerm)
 //@ decreases
 func (h HostIPv6) Equal(o HostAddr) bool {
-	//@ unfold acc(h.Mem(), 1/10000)
-	//@ unfold acc(o.Mem(), 1/10000)
+	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ unfold acc(o.Mem(), definitions.ScionReadPerm)
 	ha, ok := o.(HostIPv6)
 	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), 1/10000)
-	//@ fold acc(o.Mem(), 1/10000)
+	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ fold acc(o.Mem(), definitions.ScionReadPerm)
 	return tmp
 }
 
-//@ preserves acc(h.Mem(), 1/10000)
+//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
 //@ decreases
 func (h HostIPv6) String() string {
-	//@ assert unfolding acc(h.Mem(), 1/10000) in len(h) == HostLenIPv6
+	//@ assert unfolding acc(h.Mem(), definitions.ScionReadPerm) in len(h) == HostLenIPv6
 	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), 1/10000)
+	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
 	return tmp
 }
-
 
 //var _ HostAddr = (*HostSVC)(nil)
 

@@ -34,6 +34,46 @@ pred (h HostSVC) Mem() { true }
 
 HostSVC implements HostAddr
 
+/*pred MemForHostSVC(h *HostSVC) { acc(h) }
+
+(*HostSVC) implements HostAddr {
+	pred Mem := MemForHostSVC
+
+	(h *HostSVC) Size() int {
+		return h.Size()
+	}
+
+	(h *HostSVC) Type() HostAddrType {
+		return h.Type()
+	}
+	
+	(h *HostSVC) Pack() (res []byte) {
+		unfold h.Mem()
+		res = h.Pack()
+		fold h.Mem()
+	}
+
+	(h *HostSVC) Copy() (res HostAddr) {
+		unfold h.Mem()
+		res = h.Copy()
+		fold h.Mem()
+		fold res.Mem()
+	}
+
+	(h *HostSVC) Equal(o HostAddr) (res bool) {
+		unfold h.Mem()
+		res = h.Equal(o)
+		fold h.Mem()
+	}
+
+	(h *HostSVC) String() (res string) {
+		unfold h.Mem()
+		res = h.String()
+		fold h.Mem()
+	}
+
+  }*/
+
 ghost pure func isValidHostAddrType(htype HostAddrType) bool {
 	return htype == HostTypeNone ||
 		htype == HostTypeIPv4 ||

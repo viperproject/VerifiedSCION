@@ -32,3 +32,5 @@ ensures typeOf(v) == type[uint64] ==> res
 ensures typeOf(v) == type[uintptr] ==> res
 ensures typeOf(v) == type[string] ==> res
 pure func IsOfPrimitiveType(v interface{}) (res bool)
+
+const ScionReadPerm perm = 1/10000
