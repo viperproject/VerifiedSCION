@@ -16,7 +16,11 @@
 
 package addr
 
-import "net"
+import (
+	"net"
+
+	"github.com/scionproto/scion/verification/utils/definitions"
+)
 
 pred (h HostNone) Mem() { len(h) == HostLenNone }
 
@@ -34,17 +38,19 @@ pred (h HostSVC) Mem() { true }
 
 HostSVC implements HostAddr
 
-/*pred MemForHostSVC(h *HostSVC) { acc(h) }
+pred MemForHostSVC(h *HostSVC) { acc(h) }
 
 (*HostSVC) implements HostAddr {
 	pred Mem := MemForHostSVC
 
-	(h *HostSVC) Size() int {
-		return h.Size()
+	(h *HostSVC) Size() (res int) {
+		unfold acc(h.Mem(), definitions.ScionReadPerm)
+		res = h.Size()
+		fold acc(h.Mem(), definitions.ScionReadPerm)
 	}
 
-	(h *HostSVC) Type() HostAddrType {
-		return h.Type()
+	(h *HostSVC) Type() (res HostAddrType) {
+		res = h.Type()
 	}
 	
 	(h *HostSVC) Pack() (res []byte) {
@@ -62,7 +68,9 @@ HostSVC implements HostAddr
 
 	(h *HostSVC) Equal(o HostAddr) (res bool) {
 		unfold h.Mem()
+		unfold o.Mem()
 		res = h.Equal(o)
+		fold o.Mem()
 		fold h.Mem()
 	}
 
@@ -72,7 +80,7 @@ HostSVC implements HostAddr
 		fold h.Mem()
 	}
 
-  }*/
+}
 
 ghost pure func isValidHostAddrType(htype HostAddrType) bool {
 	return htype == HostTypeNone ||

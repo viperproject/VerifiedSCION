@@ -101,12 +101,12 @@ const (
 type HostAddr interface {
 	//@ pred Mem()
 
+	//@ preserves acc(Mem(), definitions.ScionReadPerm)
 	//@ decreases
-	//@ pure
 	Size() int
 
+	//@ preserves acc(Mem(), definitions.ScionReadPerm)
 	//@ decreases
-	//@ pure
 	Type() HostAddrType
 
 	//@ requires acc(Mem(), definitions.ScionReadPerm)
@@ -143,13 +143,11 @@ var _ HostAddr = (HostNone)(nil)
 type HostNone net.IP
 
 //@ decreases
-//@ pure
 func (h HostNone) Size() int {
 	return HostLenNone
 }
 
 //@ decreases
-//@ pure
 func (h HostNone) Type() HostAddrType {
 	return HostTypeNone
 }
@@ -193,13 +191,11 @@ var _ HostAddr = (HostIPv4)(nil)
 type HostIPv4 net.IP
 
 //@ decreases
-//@ pure
 func (h HostIPv4) Size() int {
 	return HostLenIPv4
 }
 
 //@ decreases
-//@ pure
 func (h HostIPv4) Type() HostAddrType {
 	return HostTypeIPv4
 }
@@ -259,13 +255,11 @@ var _ HostAddr = (HostIPv6)(nil)
 type HostIPv6 net.IP
 
 //@ decreases
-//@ pure
 func (h HostIPv6) Size() int {
 	return HostLenIPv6
 }
 
 //@ decreases
-//@ pure
 func (h HostIPv6) Type() HostAddrType {
 	return HostTypeIPv6
 }
@@ -320,7 +314,7 @@ func (h HostIPv6) String() string {
 	return tmp
 }
 
-//var _ HostAddr = (*HostSVC)(nil)
+var _ HostAddr = (*HostSVC)(nil)
 
 type HostSVC uint16
 
@@ -351,13 +345,11 @@ func HostSVCFromString(str string) HostSVC {
 }
 
 //@ decreases
-//@ pure
 func (h HostSVC) Size() int {
 	return HostLenSVC
 }
 
 //@ decreases
-//@ pure
 func (h HostSVC) Type() HostAddrType {
 	return HostTypeSVC
 }
