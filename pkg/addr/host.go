@@ -101,11 +101,11 @@ const (
 type HostAddr interface {
 	//@ pred Mem()
 
-	////@ preserves acc(Mem(), definitions.ReadL13)
+	//@ preserves acc(Mem(), definitions.ReadL13)
 	//@ decreases
 	Size() int
 
-	////@ preserves acc(Mem(), definitions.ReadL13)
+	//@ preserves acc(Mem(), definitions.ReadL13)
 	//@ decreases
 	Type() HostAddrType
 
@@ -314,7 +314,7 @@ func (h HostIPv6) String() string {
 	return tmp
 }
 
-//var _ HostAddr = (*HostSVC)(nil)
+var _ HostAddr = (*HostSVC)(nil)
 
 type HostSVC uint16
 
@@ -392,6 +392,7 @@ func (h HostSVC) Multicast() HostSVC {
 	return h | SVCMcast
 }
 
+//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostSVC) Copy() (res HostAddr) {

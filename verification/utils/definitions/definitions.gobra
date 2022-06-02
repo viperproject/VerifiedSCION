@@ -33,24 +33,25 @@ ensures typeOf(v) == type[uintptr] ==> res
 ensures typeOf(v) == type[string] ==> res
 pure func IsOfPrimitiveType(v interface{}) (res bool)
 
-const ReadL1 perm = 1/2
-const ReadL2 perm = 1/4
-const ReadL3 perm = 1/8
-const ReadL4 perm = 1/16
-const ReadL5 perm = 1/32
-const ReadL6 perm = 1/64
-const ReadL7 perm = 1/128
-const ReadL8 perm = 1/256
-const ReadL9 perm = 1/512
-const ReadL10 perm = 1/1024
-const ReadL11 perm = 1/2048
-const ReadL12 perm = 1/4096
-const ReadL13 perm = 1/8192
-const ReadL14 perm = 1/16384
-const ReadL15 perm = 1/32768
-const ReadL16 perm = 1/65536
-const ReadL17 perm = 1/131072
-const ReadL18 perm = 1/262144
-const ReadL19 perm = 1/524288
-const ReadL20 perm = 1/1048576
-
+const (
+	ReadL1 perm = 1/(2 << iota)
+	ReadL2
+	ReadL3
+	ReadL4
+	ReadL5
+	ReadL6
+	ReadL7
+	ReadL8
+	ReadL9
+	ReadL10
+	ReadL11
+	ReadL12
+	ReadL13
+	ReadL14
+	ReadL15
+	ReadL16
+	ReadL17
+	ReadL18
+	ReadL19
+	ReadL20
+)
