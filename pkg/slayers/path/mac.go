@@ -19,6 +19,7 @@ package path
 import (
 	"encoding/binary"
 	"hash"
+	//@ "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 const MACBufferSize = 16
@@ -33,7 +34,7 @@ const MACBufferSize = 16
 func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 	mac := FullMAC(h, info, hf, buffer)
 	var res /*@ @ @*/ [MacLen]byte
-	copy(res[:], mac[:MacLen] /*@, perm(1/2)@*/)
+	copy(res[:], mac[:MacLen] /*@, definitions.ReadL1@*/)
 	return res
 }
 

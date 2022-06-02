@@ -32,3 +32,26 @@ ensures typeOf(v) == type[uint64] ==> res
 ensures typeOf(v) == type[uintptr] ==> res
 ensures typeOf(v) == type[string] ==> res
 pure func IsOfPrimitiveType(v interface{}) (res bool)
+
+const (
+	ReadL1 perm = 1/(2 << iota)
+	ReadL2
+	ReadL3
+	ReadL4
+	ReadL5
+	ReadL6
+	ReadL7
+	ReadL8
+	ReadL9
+	ReadL10
+	ReadL11
+	ReadL12
+	ReadL13
+	ReadL14
+	ReadL15
+	ReadL16
+	ReadL17
+	ReadL18
+	ReadL19
+	ReadL20
+)

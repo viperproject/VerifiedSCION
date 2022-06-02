@@ -63,8 +63,7 @@ func (isd ISD) String() string {
 	return strconv.FormatUint(uint64(isd), 10)
 }
 
-// (VerifiedSCION) Replaced with implementation proof in isdas_spec.gobra
-//var _ encoding.TextUnmarshaler = (*AS)(nil)
+var _ encoding.TextUnmarshaler = (*AS)(nil)
 
 // AS is the Autonomous System identifier. See formatting and allocations here:
 // https://github.com/scionproto/scion/wiki/ISD-and-AS-numbering#as-numbers
@@ -154,11 +153,9 @@ func (as *AS) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// (VerifiedSCION) The following 3 assignments act as an implementation of an
-// interface check. They are replaced by an implementation proof
-//var _ fmt.Stringer = IA(0)
-//var _ encoding.TextUnmarshaler = (*IA)(nil)
-//var _ flag.Value = (*IA)(nil)
+var _ fmt.Stringer = IA(0)
+var _ encoding.TextUnmarshaler = (*IA)(nil)
+var _ flag.Value = (*IA)(nil)
 
 // IA represents the ISD (ISolation Domain) and AS (Autonomous System) Id of a given SCION AS.
 // The highest 16 bit form the ISD number and the lower 48 bits form the AS number.
