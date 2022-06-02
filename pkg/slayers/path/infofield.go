@@ -22,6 +22,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/private/util"
+	//@ "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 // InfoLen is the size of an InfoField in bytes.
@@ -58,7 +59,7 @@ type InfoField struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // path.InfoLen.
 //@ requires  len(raw) >= InfoLen
-//@ preserves acc(inf) && acc(raw, 1/2)
+//@ preserves acc(inf) && acc(raw, definitions.ReadL1)
 //@ ensures   err == nil
 //@ decreases
 func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
@@ -78,7 +79,7 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.InfoLen.
 //@ requires  len(b) >= InfoLen
-//@ preserves acc(inf, 1/2)
+//@ preserves acc(inf, definitions.ReadL1)
 //@ preserves acc(b)
 //@ ensures   err == nil
 //@ decreases
