@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
-	"github.com/scionproto/scion/verification/utils/definitions"
+	//@ "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 type HostAddrType uint8
@@ -101,30 +101,30 @@ const (
 type HostAddr interface {
 	//@ pred Mem()
 
-	//@ preserves acc(Mem(), definitions.ScionReadPerm)
+	////@ preserves acc(Mem(), definitions.ReadL13)
 	//@ decreases
 	Size() int
 
-	//@ preserves acc(Mem(), definitions.ScionReadPerm)
+	////@ preserves acc(Mem(), definitions.ReadL13)
 	//@ decreases
 	Type() HostAddrType
 
-	//@ requires acc(Mem(), definitions.ScionReadPerm)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm)
+	//@ requires acc(Mem(), definitions.ReadL13)
+	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
 	//@ decreases
 	Pack() (res []byte)
 
-	//@ requires acc(Mem(), definitions.ScionReadPerm)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm)
+	//@ requires acc(Mem(), definitions.ReadL13)
+	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
 	//@ decreases
 	IP() (res net.IP)
 
-	//@ preserves acc(Mem(), definitions.ScionReadPerm)
+	//@ preserves acc(Mem(), definitions.ReadL13)
 	//@ ensures res.Mem()
 	//@ decreases
 	Copy() (res HostAddr)
 
-	//@ preserves acc(Mem(), definitions.ScionReadPerm) && acc(o.Mem(), definitions.ScionReadPerm)
+	//@ preserves acc(Mem(), definitions.ReadL13) && acc(o.Mem(), definitions.ReadL13)
 	//@ decreases
 	Equal(o HostAddr) bool
 	
@@ -133,7 +133,7 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
-	//@ preserves acc(Mem(), definitions.ScionReadPerm)
+	//@ preserves acc(Mem(), definitions.ReadL13)
 	//@ decreases
 	String() string
 }
@@ -165,7 +165,7 @@ func (h HostNone) IP() (res net.IP) {
 	return nil
 }
 
-//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
+//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostNone) Copy() (res HostAddr) {
@@ -200,53 +200,53 @@ func (h HostIPv4) Type() HostAddrType {
 	return HostTypeIPv4
 }
 
-//@ requires acc(h.Mem(), definitions.ScionReadPerm)
-//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm)
+//@ requires acc(h.Mem(), definitions.ReadL13)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
 //@ decreases
 func (h HostIPv4) Pack() (res []byte) {
 	return []byte(h.IP())
 }
 
-//@ requires acc(h.Mem(), definitions.ScionReadPerm)
-//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm) && &res[i] == &h[i]
+//@ requires acc(h.Mem(), definitions.ReadL13)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13) && &res[i] == &h[i]
 //@ ensures len(res) == HostLenIPv4
 //@ decreases
 func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
-	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	return net.IP(h).To4()
 }
 
-//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
+//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures acc(res.Mem())
 //@ decreases
 func (h HostIPv4) Copy() (res HostAddr) {
-	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
-	var tmp HostIPv4 = HostIPv4(append(/*@ definitions.ScionReadPerm, @*/net.IP(nil), h...))
-	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ unfold acc(h.Mem(), definitions.ReadL13)
+	var tmp HostIPv4 = HostIPv4(append(/*@ definitions.ReadL13, @*/net.IP(nil), h...))
+	//@ fold acc(h.Mem(), definitions.ReadL13)
 	//@ fold tmp.Mem()
 	return tmp
 }
 
-//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
-//@ preserves acc(o.Mem(), definitions.ScionReadPerm)
+//@ preserves acc(h.Mem(), definitions.ReadL13)
+//@ preserves acc(o.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv4) Equal(o HostAddr) bool {
-	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
-	//@ unfold acc(o.Mem(), definitions.ScionReadPerm)
+	//@ unfold acc(h.Mem(), definitions.ReadL13)
+	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv4)
 	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
-	//@ fold acc(o.Mem(), definitions.ScionReadPerm)
+	//@ fold acc(h.Mem(), definitions.ReadL13)
+	//@ fold acc(o.Mem(), definitions.ReadL13)
 	return tmp
 }
 
-//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
+//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv4) String() string {
-	//@ assert unfolding acc(h.Mem(), definitions.ScionReadPerm) in len(h) == HostLenIPv4
+	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv4
 	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ fold acc(h.Mem(), definitions.ReadL13)
 	return tmp
 }
 
@@ -264,57 +264,57 @@ func (h HostIPv6) Type() HostAddrType {
 	return HostTypeIPv6
 }
 
-//@ requires acc(h.Mem(), definitions.ScionReadPerm)
-//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm)
+//@ requires acc(h.Mem(), definitions.ReadL13)
+//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
 //@ decreases
 func (h HostIPv6) Pack() (res []byte) {
-	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	return []byte(h)[:HostLenIPv6]
 }
 
-//@ requires acc(h.Mem(), definitions.ScionReadPerm)
-//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ScionReadPerm) && &res[i] == &h[i]
+//@ requires acc(h.Mem(), definitions.ReadL13)
+//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13) && &res[i] == &h[i]
 //@ ensures len(res) == HostLenIPv6
 //@ decreases
 func (h HostIPv6) IP() (res net.IP) {
-	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	return net.IP(h)
 }
 
-//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
+//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures acc(res.Mem())
 //@ decreases
 func (h HostIPv6) Copy() (res HostAddr) {
-	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
-	var tmp HostIPv6 = HostIPv6(append(/*@ definitions.ScionReadPerm, @*/net.IP(nil), h...))
-	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ unfold acc(h.Mem(), definitions.ReadL13)
+	var tmp HostIPv6 = HostIPv6(append(/*@ definitions.ReadL13, @*/net.IP(nil), h...))
+	//@ fold acc(h.Mem(), definitions.ReadL13)
 	//@ fold tmp.Mem()
 	return tmp
 }
 
-//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
-//@ preserves acc(o.Mem(), definitions.ScionReadPerm)
+//@ preserves acc(h.Mem(), definitions.ReadL13)
+//@ preserves acc(o.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv6) Equal(o HostAddr) bool {
-	//@ unfold acc(h.Mem(), definitions.ScionReadPerm)
-	//@ unfold acc(o.Mem(), definitions.ScionReadPerm)
+	//@ unfold acc(h.Mem(), definitions.ReadL13)
+	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv6)
 	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
-	//@ fold acc(o.Mem(), definitions.ScionReadPerm)
+	//@ fold acc(h.Mem(), definitions.ReadL13)
+	//@ fold acc(o.Mem(), definitions.ReadL13)
 	return tmp
 }
 
-//@ preserves acc(h.Mem(), definitions.ScionReadPerm)
+//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv6) String() string {
-	//@ assert unfolding acc(h.Mem(), definitions.ScionReadPerm) in len(h) == HostLenIPv6
+	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv6
 	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), definitions.ScionReadPerm)
+	//@ fold acc(h.Mem(), definitions.ReadL13)
 	return tmp
 }
 
-var _ HostAddr = (*HostSVC)(nil)
+//var _ HostAddr = (*HostSVC)(nil)
 
 type HostSVC uint16
 

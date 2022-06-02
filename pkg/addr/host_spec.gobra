@@ -38,49 +38,51 @@ pred (h HostSVC) Mem() { true }
 
 HostSVC implements HostAddr
 
-pred MemForHostSVC(h *HostSVC) { acc(h) }
+/*pred MemForHostSVC(h *HostSVC) { acc(h) }
 
 (*HostSVC) implements HostAddr {
 	pred Mem := MemForHostSVC
 
 	(h *HostSVC) Size() (res int) {
-		unfold acc(h.Mem(), definitions.ScionReadPerm)
+		unfold acc(MemForHostSVC(h), definitions.ReadL13)
 		res = h.Size()
-		fold acc(h.Mem(), definitions.ScionReadPerm)
+		fold acc(MemForHostSVC(h), definitions.ReadL13)
 	}
 
 	(h *HostSVC) Type() (res HostAddrType) {
+		unfold acc(MemForHostSVC(h), definitions.ReadL13)
 		res = h.Type()
+		fold acc(MemForHostSVC(h), definitions.ReadL13)
 	}
 	
 	(h *HostSVC) Pack() (res []byte) {
-		unfold h.Mem()
+		unfold MemForHostSVC(h)
 		res = h.Pack()
-		fold h.Mem()
+		fold MemForHostSVC(h)
 	}
 
 	(h *HostSVC) Copy() (res HostAddr) {
-		unfold h.Mem()
+		unfold MemForHostSVC(h)
 		res = h.Copy()
-		fold h.Mem()
+		fold MemForHostSVC(h)
 		fold res.Mem()
 	}
 
 	(h *HostSVC) Equal(o HostAddr) (res bool) {
-		unfold h.Mem()
+		unfold MemForHostSVC(h)
 		unfold o.Mem()
 		res = h.Equal(o)
 		fold o.Mem()
-		fold h.Mem()
+		fold MemForHostSVC(h)
 	}
 
 	(h *HostSVC) String() (res string) {
-		unfold h.Mem()
+		unfold MemForHostSVC(h)
 		res = h.String()
-		fold h.Mem()
+		fold MemForHostSVC(h)
 	}
 
-}
+}*/
 
 ghost pure func isValidHostAddrType(htype HostAddrType) bool {
 	return htype == HostTypeNone ||
