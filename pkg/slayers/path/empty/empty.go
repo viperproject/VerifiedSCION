@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package empty
 
 import (
@@ -24,6 +26,7 @@ const PathLen = 0
 
 const PathType path.Type = 0
 
+/*
 func RegisterPath() {
 	path.RegisterPath(path.Metadata{
 		Type: PathType,
@@ -33,30 +36,52 @@ func RegisterPath() {
 		},
 	})
 }
+*/
 
 // Path encodes an empty path. An empty path is a special path that takes zero
 // bytes on the wire and is used for AS internal communication.
 type Path struct{}
 
-func (o Path) DecodeFromBytes(r []byte) error {
+//@ ensures len(r) != 0 ==> (e != nil && e.ErrorMem())
+//@ ensures len(r) == 0 ==> e == nil
+//@ ensures o.Mem() && (o.Mem() --* o.NonInitMem())
+//@ decreases
+func (o Path) DecodeFromBytes(r []byte) (e error) {
+	//@ fold o.Mem()
+	//@ package o.Mem() --* o.NonInitMem() {
+	//@ 	unfold o.Mem()
+	//@		fold o.NonInitMem()
+	//@ }
 	if len(r) != 0 {
-		return serrors.New("decoding an empty path", "len", len(r))
+		// TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
+		return serrors.New("decoding an empty path", "len", int(len(r)))
 	}
 	return nil
 }
 
-func (o Path) SerializeTo(b []byte) error {
+//@ ensures e == nil
+//@ decreases
+func (o Path) SerializeTo(b []byte) (e error) {
 	return nil
 }
 
-func (o Path) Reverse() (path.Path, error) {
+//@ ensures p == o
+//@ ensures e == nil
+//@ decreases
+func (o Path) Reverse() (p path.Path, e error) {
 	return o, nil
 }
 
-func (o Path) Len() int {
+//@ pure
+//@ ensures r >= 0
+//@ decreases
+func (o Path) Len() (r int) {
 	return PathLen
 }
 
-func (o Path) Type() path.Type {
+//@ pure
+//@ ensures r == PathType
+//@ decreases
+func (o Path) Type() (r path.Type) {
 	return PathType
 }
