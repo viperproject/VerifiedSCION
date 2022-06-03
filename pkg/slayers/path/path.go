@@ -12,25 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package path
 
 import (
-	"fmt"
+	// "fmt" // no support for globals yet
 
+	//@ "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/pkg/private/serrors"
 )
 
 // PathType is uint8 so 256 values max.
 const maxPathType = 256
 
+// No support for globals yet
+/*
 var (
 	registeredPaths [maxPathType]metadata
 	strictDecoding  bool = true
 )
+*/
 
 // Type indicates the type of the path contained in the SCION header.
 type Type uint8
 
+// No support for globals yet
+/*
 func (t Type) String() string {
 	pm := registeredPaths[t]
 	if !pm.inUse {
@@ -38,23 +46,55 @@ func (t Type) String() string {
 	}
 	return fmt.Sprintf("%v (%d)", pm.Desc, t)
 }
+*/
+
+// TODO:
+// - make the functions in Path non partial if possible
 
 // Path is the path contained in the SCION header.
 type Path interface {
+	//  Must hold in every valid of Path.
+	//@ pred Mem()
+	//  Must imply the resources required to initialize
+	//  a new instance of a predicate.
+	//@ pred NonInitMem()
 	// SerializeTo serializes the path into the provided buffer.
+	//  There are implementations of this interface that modify the underlying
+	//  structure when serializing (e.g. scion.Raw)
+	//@ preserves Mem() && acc(b)
+	//@ decreases
 	SerializeTo(b []byte) error
 	// DecodesFromBytes decodes the path from the provided buffer.
+	//  There are implementations of this interface (e.g. scion.Raw) that store
+	//  b and use it as internal data.
+	//@ requires NonInitMem()
+	//@ requires acc(b)
+	//@ ensures  Mem()
+	//@ ensures  Mem() --* NonInitMem()
+	//@ decreases
 	DecodeFromBytes(b []byte) error
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	//
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
-	Reverse() (Path, error)
+	//@ requires Mem()
+	//@ ensures e == nil ==> Mem()
+	//@ decreases
+	Reverse() (p Path, e error)
 	// Len returns the length of a path in bytes.
-	Len() int
+	//@ pure
+	//@ requires acc(Mem(), _)
+	//  ensures l >= 0 // TODO: open issue, this causes exception
+	//@ decreases
+	Len() (l int)
 	// Type returns the type of a path.
+	//@ pure
+	//@ requires acc(Mem(), _)
+	//@ decreases
 	Type() Type
 }
 
+// (verifiedscion) no support for closures yet
+/*
 type metadata struct {
 	inUse bool
 	Metadata
@@ -69,9 +109,12 @@ type Metadata struct {
 	// New is a path constructor function.
 	New func() Path
 }
+*/
 
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
+// No support for globals yet
+/*
 func RegisterPath(pathMeta Metadata) {
 	pm := registeredPaths[pathMeta.Type]
 	if pm.inUse {
@@ -80,6 +123,7 @@ func RegisterPath(pathMeta Metadata) {
 	registeredPaths[pathMeta.Type].inUse = true
 	registeredPaths[pathMeta.Type].Metadata = pathMeta
 }
+*/
 
 // StrictDecoding enables or disables strict path decoding. If enabled, unknown
 // path types fail to decode. If disabled, unknown path types are decoded into a
@@ -88,6 +132,7 @@ func RegisterPath(pathMeta Metadata) {
 // Strict parsing is enabled by default.
 //
 // Experimental: This function is experimental and might be subject to change.
+/*
 func StrictDecoding(strict bool) {
 	strictDecoding = strict
 }
@@ -103,6 +148,7 @@ func NewPath(pathType Type) (Path, error) {
 	}
 	return pm.New(), nil
 }
+*/
 
 // NewRawPath returns a new raw path that can hold any path type.
 func NewRawPath() Path {
@@ -114,24 +160,50 @@ type rawPath struct {
 	pathType Type
 }
 
-func (p *rawPath) SerializeTo(b []byte) error {
-	copy(b, p.raw)
+//@ preserves acc(p.Mem(), definitions.ReadL10) && acc(b)
+//@ ensures   e == nil
+//@ decreases
+func (p *rawPath) SerializeTo(b []byte) (e error) {
+	//@ unfold acc(p.Mem(), definitions.ReadL10)
+	copy(b, p.raw /*@, definitions.ReadL10 @*/)
+	//@ fold acc(p.Mem(), definitions.ReadL10)
 	return nil
 }
 
-func (p *rawPath) DecodeFromBytes(b []byte) error {
+//@ requires p.NonInitMem() && acc(b)
+//@ ensures  p.Mem()
+//@ ensures  p.Mem() --* p.NonInitMem()
+//@ ensures  e == nil
+//@ decreases
+func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
+	//@ unfold p.NonInitMem()
 	p.raw = b
+	//@ fold p.Mem()
+	//@ package p.Mem() --* p.NonInitMem() {
+	//@ 	unfold p.Mem()
+	//@		fold p.NonInitMem()
+	//@ }
 	return nil
 }
 
-func (p *rawPath) Reverse() (Path, error) {
+//@ requires p.Mem()
+//@ ensures e != nil && e.ErrorMem()
+//@ decreases
+func (p *rawPath) Reverse() (r Path, e error) {
 	return nil, serrors.New("not supported")
 }
 
-func (p *rawPath) Len() int {
-	return len(p.raw)
+//@ pure
+//@ requires acc(p.Mem(), _)
+//@ ensures l >= 0
+//@ decreases
+func (p *rawPath) Len() (l int) {
+	return /*@ unfolding p.Mem() in @*/ len(p.raw)
 }
 
+//@ pure
+//@ requires acc(p.Mem(), _)
+//@ decreases
 func (p *rawPath) Type() Type {
-	return p.pathType
+	return /*@ unfolding p.Mem() in @*/ p.pathType
 }
