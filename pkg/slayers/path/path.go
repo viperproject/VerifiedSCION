@@ -49,7 +49,8 @@ func (t Type) String() string {
 */
 
 // TODO:
-// - make the functions in Path non partial if possible
+// - make the functions in Path non partial if possible, make them require
+//   the passed slice to have the expected length
 
 // Path is the path contained in the SCION header.
 type Path interface {
