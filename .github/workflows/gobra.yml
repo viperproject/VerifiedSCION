@@ -64,6 +64,15 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+      - name: Verify package 'pkg/slayers/path/scion'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path/scion'
+          packageTimeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
