@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package scion
 
 import (
@@ -20,6 +22,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
+	//@ "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 // MetaLen is the length of the PathMetaHeader.
@@ -27,6 +30,7 @@ const MetaLen = 4
 
 const PathType path.Type = 1
 
+/*
 func RegisterPath() {
 	path.RegisterPath(path.Metadata{
 		Type: PathType,
@@ -36,6 +40,7 @@ func RegisterPath() {
 		},
 	})
 }
+*/
 
 // Base holds the basic information that is used by both raw and fully decoded paths.
 type Base struct {
@@ -48,7 +53,13 @@ type Base struct {
 	NumHops int
 }
 
-func (s *Base) DecodeFromBytes(data []byte) error {
+//@ requires  acc(s)
+//@ requires  len(data) >= MetaLen
+//@ preserves acc(data, definitions.ReadL10)
+//@ ensures r != nil ==> (acc(s) && r.ErrorMem())
+//@ ensures r == nil ==> s.Mem()
+//@ decreases
+func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// PathMeta takes care of bounds check.
 	err := s.PathMeta.DecodeFromBytes(data)
 	if err != nil {
@@ -56,6 +67,13 @@ func (s *Base) DecodeFromBytes(data []byte) error {
 	}
 	s.NumINF = 0
 	s.NumHops = 0
+	//@ invariant -1 <= i && i <= 2
+	//@ invariant acc(&s.PathMeta.SegLen)
+	//@ invariant acc(&s.NumHops)
+	//@ invariant acc(&s.NumINF)
+	//@ invariant 0 <= s.NumHops && 0 <= s.NumINF && s.NumINF <= 3
+	//@ invariant 0 < s.NumINF ==> 0 < s.NumHops
+	//@ decreases i
 	for i := 2; i >= 0; i-- {
 		if s.PathMeta.SegLen[i] == 0 && s.NumINF > 0 {
 			return serrors.New(
@@ -64,13 +82,23 @@ func (s *Base) DecodeFromBytes(data []byte) error {
 		if s.PathMeta.SegLen[i] > 0 && s.NumINF == 0 {
 			s.NumINF = i + 1
 		}
+		//  Cannot assert bounds of uint:
+		//  https://github.com/viperproject/gobra/issues/192
+		//@ assume int(s.PathMeta.SegLen[i]) >= 0
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
+	//@ fold s.Mem()
 	return nil
 }
 
 // IncPath increases the currHF index and currINF index if appropriate.
-func (s *Base) IncPath() error {
+//@ requires s.Mem()
+//@ requires unfolding s.Mem() in s.NumINF > 0
+//@ requires unfolding s.Mem() in int(s.PathMeta.CurrHF) < s.NumHops-1
+//@ ensures  s.Mem()
+//@ ensures  e == nil
+func (s *Base) IncPath() (e error) {
+	//@ unfold s.Mem()
 	if s.NumINF == 0 {
 		return serrors.New("empty path cannot be increased")
 	}
@@ -81,16 +109,30 @@ func (s *Base) IncPath() error {
 	s.PathMeta.CurrHF++
 	// Update CurrINF
 	s.PathMeta.CurrINF = s.infIndexForHF(s.PathMeta.CurrHF)
+	//@ fold s.Mem()
 	return nil
 }
 
 // IsXover returns whether we are at a crossover point.
-func (s *Base) IsXover() bool {
-	return s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1)
+//@ preserves acc(s.Mem(), definitions.ReadL10)
+//@ decreases
+func (s *Base) IsXover() (r bool) {
+	//@ unfold acc(s.Mem(), definitions.ReadL10)
+	r = s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1)
+	//@ fold acc(s.Mem(), definitions.ReadL10)
+	return r
 }
 
-func (s *Base) infIndexForHF(hf uint8) uint8 {
+//@ preserves acc(s, definitions.ReadL11)
+//@ preserves 0 <= s.NumINF && s.NumINF <= 3 && 0 <= s.NumHops
+//@ ensures   0 < s.NumINF ==> (0 <= r && r < s.NumINF)
+//@ decreases
+func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 	left := uint8(0)
+	//@ invariant acc(s, definitions.ReadL11)
+	//@ invariant s.NumINF >= 0 && s.NumINF <= 3 && s.NumHops >= 0
+	//@ invariant 0 <= i && i <= 3
+	//@ decreases s.NumINF-i
 	for i := 0; i < s.NumINF; i++ {
 		if hf >= left {
 			if hf < left+s.PathMeta.SegLen[i] {
@@ -104,12 +146,20 @@ func (s *Base) infIndexForHF(hf uint8) uint8 {
 }
 
 // Len returns the length of the path in bytes.
-func (s *Base) Len() int {
-	return MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
+//@ pure
+//@ requires acc(s.Mem(), _)
+//@ ensures r >= MetaLen
+//@ ensures r == (unfolding acc(s.Mem(), _) in (MetaLen + int(s.NumINF)*path.InfoLen + int(s.NumHops)*path.HopLen))
+//@ decreases
+func (s *Base) Len() (r int) {
+	return /*@ unfolding acc(s.Mem(), _) in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
 }
 
 // Type returns the type of the path.
-func (s *Base) Type() path.Type {
+//@ pure
+//@ ensures t == PathType
+//@ decreases
+func (s *Base) Type() (t path.Type) {
 	return PathType
 }
 
@@ -122,13 +172,21 @@ type MetaHdr struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
-func (m *MetaHdr) DecodeFromBytes(raw []byte) error {
+//@ requires len(raw) >= MetaLen
+//@ preserves acc(m) && acc(raw, definitions.ReadL10)
+//@ ensures m.CurrINF >= 0 && m.CurrHF >= 0
+//@ ensures e == nil
+//@ decreases
+func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	if len(raw) < MetaLen {
 		return serrors.New("MetaHdr raw too short", "expected", MetaLen, "actual", len(raw))
 	}
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
+	//  The following assumption is guaranteed by Go but still
+	//  not modeled in Gobra.
+	//@ assume m.CurrINF >= 0 && m.CurrHF >= 0
 	m.SegLen[0] = uint8(line>>12) & 0x3F
 	m.SegLen[1] = uint8(line>>6) & 0x3F
 	m.SegLen[2] = uint8(line) & 0x3F
@@ -138,7 +196,11 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) error {
 
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // scion.MetaLen.
-func (m *MetaHdr) SerializeTo(b []byte) error {
+//@ requires len(b) >= MetaLen
+//@ preserves acc(m, definitions.ReadL10) && acc(b)
+//@ ensures e == nil
+//@ decreases
+func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	if len(b) < MetaLen {
 		return serrors.New("buffer for MetaHdr too short", "expected", MetaLen, "actual", len(b))
 	}
@@ -151,6 +213,9 @@ func (m *MetaHdr) SerializeTo(b []byte) error {
 	return nil
 }
 
+//  The spec of fmt.Sprintf is still too limited to verify this method.
+//@ trusted
+//@ decreases
 func (m MetaHdr) String() string {
 	return fmt.Sprintf("{CurrInf: %d, CurrHF: %d, SegLen: %v}", m.CurrINF, m.CurrHF, m.SegLen)
 }
