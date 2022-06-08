@@ -8,9 +8,7 @@
 
 package layers
 
-import (
-	"github.com/VerifiedSCION/verification/dependencies/gopacket"
-)
+import "gopacket"
 
 // (VerifiedSCION) No support for global variables yet
 /*
