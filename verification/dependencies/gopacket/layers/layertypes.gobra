@@ -9,7 +9,7 @@
 package layers
 
 import (
-	"github.com/google/gopacket"
+	"github.com/VerifiedSCION/verification/dependencies/gopacket"
 )
 
 // (VerifiedSCION) No support for global variables yet
