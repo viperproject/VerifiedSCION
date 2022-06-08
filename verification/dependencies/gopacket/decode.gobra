@@ -4,6 +4,8 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+// +gobra
+
 package gopacket
 
 import (
@@ -53,7 +55,6 @@ type PacketBuilder interface {
 	preserves Mem()
 	decreases
 	SetTruncated()
-
 	// AddLayer should be called by a decoder immediately upon successful
 	// decoding of a layer.
 	requires l.Mem()
@@ -84,16 +85,18 @@ type PacketBuilder interface {
 	DecodeOptions() *DecodeOptions
 }
 
-//// Decoder is an interface for logic to decode a packet layer.  Users may
-//// implement a Decoder to handle their own strange packet types, or may use one
-//// of the many decoders available in the 'layers' subpackage to decode things
-//// for them.
-//type Decoder interface {
-//	// Decode decodes the bytes of a packet, sending decoded values and other
-//	// information to PacketBuilder, and returning an error if unsuccessful.  See
-//	// the PacketBuilder documentation for more details.
-//	Decode([]byte, PacketBuilder) error
-//}
+// Decoder is an interface for logic to decode a packet layer.  Users may
+// implement a Decoder to handle their own strange packet types, or may use one
+// of the many decoders available in the 'layers' subpackage to decode things
+// for them.
+type Decoder interface {
+	pred Mem()
+	// Decode decodes the bytes of a packet, sending decoded values and other
+	// information to PacketBuilder, and returning an error if unsuccessful.  See
+	// the PacketBuilder documentation for more details.
+	preserves Mem()
+	Decode([]byte, PacketBuilder) error
+}
 //
 //// DecodeFunc wraps a function to make it a Decoder.
 //type DecodeFunc func([]byte, PacketBuilder) error
@@ -124,14 +127,14 @@ type PacketBuilder interface {
 //// LayerTypeDecodeFailure is the layer type for the default error layer.
 //pure func LayerTypeDecodeFailure() LayerType
 //
-//// LayerTypePayload is the layer type for a payload that we don't try to decode
-//// but treat as a success, IE: an application-level payload.
-//pure func LayerTypePayload() LayerType
-//
-//// LayerTypeFragment is the layer type for a fragment of a layer transported
-//// by an underlying layer that supports fragmentation.
+// LayerTypePayload is the layer type for a payload that we don't try to decode
+// but treat as a success, IE: an application-level payload.
+pure func LayerTypePayload() LayerType
+
+// LayerTypeFragment is the layer type for a fragment of a layer transported
+// by an underlying layer that supports fragmentation.
 //pure func LayerTypeFragment() LayerType
-//
+
 //// DecodeFailure is a packet layer created if decoding of the packet data failed
 //// for some reason.  It implements ErrorLayer.  LayerContents will be the entire
 //// set of bytes that failed to parse, and Error will return the reason parsing
