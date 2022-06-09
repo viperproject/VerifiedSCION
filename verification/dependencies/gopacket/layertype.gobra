@@ -8,45 +8,15 @@
 
 package gopacket
 
-// LayerType is a unique identifier for each type of layer.  This enumeration
-// does not match with any externally available numbering scheme... it's solely
-// usable/useful within this library as a means for requesting layer types
-// (see Packet.Layer) and determining which types of layers have been decoded.
-//
-// New LayerTypes may be created by calling gopacket.RegisterLayerType.
 type LayerType int64
 
-// LayerTypeMetadata contains metadata associated with each LayerType.
 type LayerTypeMetadata struct {
-	// Name is the string returned by each layer type's String method.
 	Name string
-	// Decoder is the decoder to use when the layer type is passed in as a
-	// Decoder.
 	Decoder Decoder
 }
 
 const maxLayerType = 2000
 
-// (VerifiedSCION) no support for globals yet
-//var ltMeta [maxLayerType]layerTypeMetadata
-//var ltMetaMap = map[LayerType]layerTypeMetadata{}
-
-// RegisterLayerType creates a new layer type and registers it globally.
-// The number passed in must be unique, or a runtime panic will occur.  Numbers
-// 0-999 are reserved for the gopacket library.  Numbers 1000-1999 should be
-// used for common application-specific types, and are very fast.  Any other
-// number (negative or >= 2000) may be used for uncommon application-specific
-// types, and are somewhat slower (they require a map lookup over an array
-// index).
-func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType /* {
-	if 0 <= num && num < maxLayerType {
-		if ltMeta[num].inUse {
-			panic("Layer type already exists")
-		}
-	} else {
-		if ltMetaMap[LayerType(num)].inUse {
-			panic("Layer type already exists")
-		}
-	}
-	return OverrideLayerType(num, meta)
-} */
+requires meta.Decoder.Mem()
+decreases
+func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType

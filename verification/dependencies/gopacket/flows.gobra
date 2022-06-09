@@ -8,62 +8,31 @@
 
 package gopacket
 
-// MaxEndpointSize determines the maximum size in bytes of an endpoint address.
-//
-// Endpoints/Flows have a problem:  They need to be hashable.  Therefore, they
-// can't use a byte slice.  The two obvious choices are to use a string or a
-// byte array.  Strings work great, but string creation requires memory
-// allocation, which can be slow.  Arrays work great, but have a fixed size.  We
-// originally used the former, now we've switched to the latter.  Use of a fixed
-// byte-array doubles the speed of constructing a flow (due to not needing to
-// allocate).  This is a huge increase... too much for us to pass up.
-//
-// The end result of this, though, is that an endpoint/flow can't be created
-// using more than MaxEndpointSize bytes per address.
 const MaxEndpointSize = 16
 
-// EndpointTypeMetadata is used to register a new endpoint type.
 type EndpointTypeMetadata struct {
-	// Name is the string returned by an EndpointType's String function.
 	Name string
-	// Formatter is called from an Endpoint's String function to format the raw
-	// bytes in an Endpoint into a human-readable string.
 	// (VerifiedSCION) closures not supported yet
 	//Formatter func([]byte) string
 }
 
-// EndpointType is the type of a gopacket Endpoint.  This type determines how
-// the bytes stored in the endpoint should be interpreted.
 type EndpointType int64
 
-// RegisterEndpointType creates a new EndpointType and registers it globally.
-// It MUST be passed a unique number, or it will panic.  Numbers 0-999 are
-// reserved for gopacket's use.
-func RegisterEndpointType(num int, meta EndpointTypeMetadata) EndpointType /*{
-	t := EndpointType(num)
-	if _, ok := endpointTypes[t]; ok {
-		panic("Endpoint type number already in use")
-	}
-	endpointTypes[t] = meta
-	return t
-}*/
+decreases
+func RegisterEndpointType(num int, meta EndpointTypeMetadata) EndpointType
 
-// Flow represents the direction of traffic for a packet layer, as a source and destination Endpoint.
-// Flows are usable as map keys.
 type Flow struct {
 	typ        EndpointType
 	slen, dlen int
 	src, dst   [MaxEndpointSize]byte
 }
 
-func NewFlow(t EndpointType, src, dst []byte) (f Flow) /*{
-	f.slen = len(src)
-	f.dlen = len(dst)
-	if f.slen > MaxEndpointSize || f.dlen > MaxEndpointSize {
-		panic("flow raw byte length greater than MaxEndpointSize")
-	}
-	f.typ = t
-	copy(f.src[:], src)
-	copy(f.dst[:], dst)
-	return
-}*/
+preserves acc(src) && acc(dst)
+requires len(src) <= MaxEndpointSize && len(dst) <= MaxEndpointSize
+ensures f.slen == len(src)
+ensures f.dlen == len(dst)
+ensures forall i int :: 0 <= i && i < len(src) ==> f.src[i] == src[i]
+ensures forall i int :: 0 <= i && i < len(dst) ==> f.dst[i] == dst[i]
+ensures f.typ == t
+decreases
+func NewFlow(t EndpointType, src, dst []byte) (f Flow)

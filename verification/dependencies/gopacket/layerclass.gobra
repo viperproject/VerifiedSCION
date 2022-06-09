@@ -8,14 +8,14 @@
 
 package gopacket
 
-// LayerClass is a set of LayerTypes, used for grabbing one of a number of
-// different types from a packet.
 type LayerClass interface {
-	// Contains returns true if the given layer type should be considered part
-	// of this layer class.
+	pred Mem()
+
+	preserves Mem()
+	decreases
 	Contains(LayerType) bool
-	// LayerTypes returns the set of all layer types in this layer class.
-	// Note that this may not be a fast operation on all LayerClass
-	// implementations.
+
+	preserves Mem()
+	decreases
 	LayerTypes() []LayerType
 }

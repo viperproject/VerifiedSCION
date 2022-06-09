@@ -10,180 +10,121 @@ package gopacket
 
 import "time"
 
-// CaptureInfo provides standardized information about a packet captured off
-// the wire or read from a file.
 type CaptureInfo struct {
-	// Timestamp is the time the packet was captured, if that is known.
 	Timestamp time.Time
-	// CaptureLength is the total number of bytes read off of the wire.
 	CaptureLength int
-	// Length is the size of the original packet.  Should always be >=
-	// CaptureLength.
 	Length int
-	// InterfaceIndex
 	InterfaceIndex int
-	// The packet source can place ancillary data of various types here.
-	// For example, the afpacket source can report the VLAN of captured
-	// packets this way.
 	AncillaryData []interface{}
 }
 
-// PacketMetadata contains metadata for a packet.
+pred ValidCaptureInfo(c CaptureInfo) {
+	c.Length >= c.CaptureLength && acc(c.AncillaryData)
+}
+
 type PacketMetadata struct {
-	//CaptureInfo
-	// Timestamp is the time the packet was captured, if that is known.
 	Timestamp time.Time
-	// CaptureLength is the total number of bytes read off of the wire.
 	CaptureLength int
-	// Length is the size of the original packet.  Should always be >=
-	// CaptureLength.
 	Length int
-	// InterfaceIndex
 	InterfaceIndex int
-	// The packet source can place ancillary data of various types here.
-	// For example, the afpacket source can report the VLAN of captured
-	// packets this way.
 	AncillaryData []interface{}
-	
-	// Truncated is true if packet decoding logic detects that there are fewer
-	// bytes in the packet than are detailed in various headers (for example, if
-	// the number of bytes in the IPv4 contents/payload is less than IPv4.Length).
-	// This is also set automatically for packets captured off the wire if
-	// CaptureInfo.CaptureLength < CaptureInfo.Length.
 	Truncated bool
 }
 
-//// Packet is the primary object used by gopacket.  Packets are created by a
-//// Decoder's Decode call.  A packet is made up of a set of Data, which
-//// is broken into a number of Layers as it is decoded.
+pred ValidPacketMetadata(p PacketMetadata) {
+	p.Length >= p.CaptureLength && acc(p.AncillaryData)
+}
+
 type Packet interface {
-	//// Functions for outputting the packet as a human-readable string:
-	//// ------------------------------------------------------------------
-	// String returns a human-readable string representation of the packet.
-	// It uses LayerString on each layer to output the layer.
+	pred Mem()
+
+	preserves Mem()
+	decreases
 	String() string
-	// Dump returns a verbose human-readable string representation of the packet,
-	// including a hex dump of all layers.  It uses LayerDump on each layer to
-	// output the layer.
+
+	preserves Mem()
+	decreases
 	Dump() string
 
-	//// Functions for accessing arbitrary packet layers:
-	//// ------------------------------------------------------------------
-	// Layers returns all layers in this packet, computing them as necessary
-	Layers() []Layer
-	// Layer returns the first layer in this packet of the given type, or nil
-	Layer(LayerType) Layer
-	// LayerClass returns the first layer in this packet of the given class,
-	// or nil.
-	LayerClass(LayerClass) Layer
+	requires Mem()
+	ensures acc(res)
+	ensures forall i int :: 0 <= i && i < len(res) ==> res[i].Mem()
+	ensures forall i int :: 0 <= i && i < len(res) ==> res[i].Mem() --* Mem()
+	decreases
+	Layers() (res []Layer)
 
-	//// Functions for accessing specific types of packet layers.  These functions
-	//// return the first layer of each type found within the packet.
-	//// ------------------------------------------------------------------
-	// LinkLayer returns the first link layer in the packet
-	LinkLayer() LinkLayer
-	// NetworkLayer returns the first network layer in the packet
-	NetworkLayer() NetworkLayer
-	// TransportLayer returns the first transport layer in the packet
-	TransportLayer() TransportLayer
-	// ApplicationLayer returns the first application layer in the packet
-	ApplicationLayer() ApplicationLayer
-	// ErrorLayer is particularly useful, since it returns nil if the packet
-	// was fully decoded successfully, and non-nil if an error was encountered
-	// in decoding and the packet was only partially decoded.  Thus, its output
-	// can be used to determine if the entire packet was able to be decoded.
-	ErrorLayer() ErrorLayer
+	requires Mem()
+	ensures res.Mem()
+	ensures res.Mem() --* Mem()
+	decreases
+	Layer(LayerType) (res Layer)
 
-	//// Functions for accessing data specific to the packet:
-	//// ------------------------------------------------------------------
-	// Data returns the set of bytes that make up this entire packet.
-	Data() []byte
-	// Metadata returns packet metadata associated with this packet.
-	Metadata() *PacketMetadata
+	requires Mem()
+	ensures res.Mem()
+	ensures res.Mem() --* Mem()
+	decreases
+	LayerClass(LayerClass) (res Layer)
+
+	requires Mem()
+	ensures res.Mem()
+	ensures res.Mem() --* Mem()
+	decreases
+	LinkLayer() (res LinkLayer)
+
+	requires Mem()
+	ensures res.Mem()
+	ensures res.Mem() --* Mem()
+	decreases
+	NetworkLayer() (res NetworkLayer)
+
+	requires Mem()
+	ensures res.Mem()
+	ensures res.Mem() --* Mem()
+	decreases
+	TransportLayer() (res TransportLayer)
+
+	requires Mem()
+	ensures res.Mem()
+	ensures res.Mem() --* Mem()
+	decreases
+	ApplicationLayer() (res ApplicationLayer)
+
+	requires Mem()
+	ensures res.Mem()
+	ensures res.Mem() --* Mem()
+	decreases
+	ErrorLayer() (res ErrorLayer)
+
+	requires Mem()
+	ensures acc(res)
+	ensures acc(res) --* Mem()
+	decreases
+	Data() (res []byte)
+	
+	requires Mem()
+	ensures acc(res)
+	ensures acc(res) --* Mem()
+	decreases
+	Metadata() (res *PacketMetadata)
 }
-// LayerString outputs an individual layer as a string.  The layer is output
-// in a single line, with no trailing newline.  This function is specifically
-// designed to do the right thing for most layers... it follows the following
-// rules:
-//  * If the Layer has a String function, just output that.
-//  * Otherwise, output all exported fields in the layer, recursing into
-//    exported slices and structs.
-// NOTE:  This is NOT THE SAME AS fmt's "%#v".  %#v will output both exported
-// and unexported fields... many times packet layers contain unexported stuff
-// that would just mess up the output of the layer, see for example the
-// Payload layer and it's internal 'data' field, which contains a large byte
-// array that would really mess up formatting.
-func LayerString(l Layer) string /*{
-	return fmt.Sprintf("%v\t%s", l.LayerType(), layerString(reflect.ValueOf(l), false, false))
-}*/
 
-// DecodeOptions tells gopacket how to decode a packet.
+preserves l.Mem()
+decreases
+func LayerString(l Layer) string
+
 type DecodeOptions struct {
-	// Lazy decoding decodes the minimum number of layers needed to return data
-	// for a packet at each function call.  Be careful using this with concurrent
-	// packet processors, as each call to packet.* could mutate the packet, and
-	// two concurrent function calls could interact poorly.
 	Lazy bool
-	// NoCopy decoding doesn't copy its input buffer into storage that's owned by
-	// the packet.  If you can guarantee that the bytes underlying the slice
-	// passed into NewPacket aren't going to be modified, this can be faster.  If
-	// there's any chance that those bytes WILL be changed, this will invalidate
-	// your packets.
 	NoCopy bool
-	// SkipDecodeRecovery skips over panic recovery during packet decoding.
-	// Normally, when packets decode, if a panic occurs, that panic is captured
-	// by a recover(), and a DecodeFailure layer is added to the packet detailing
-	// the issue.  If this flag is set, panics are instead allowed to continue up
-	// the stack.
 	SkipDecodeRecovery bool
-	// DecodeStreamsAsDatagrams enables routing of application-level layers in the TCP
-	// decoder. If true, we should try to decode layers after TCP in single packets.
-	// This is disabled by default because the reassembly package drives the decoding
-	// of TCP payload data after reassembly.
 	DecodeStreamsAsDatagrams bool
 }
 
-// Default decoding provides the safest (but slowest) method for decoding
-// packets.  It eagerly processes all layers (so it's concurrency-safe) and it
-// copies its input buffer upon creation of the packet (so the packet remains
-// valid if the underlying slice is modified.  Both of these take time,
-// though, so beware.  If you can guarantee that the packet will only be used
-// by one goroutine at a time, set Lazy decoding.  If you can guarantee that
-// the underlying slice won't change, set NoCopy decoding.
-//var Default = DecodeOptions{}
+decreases
 pure func Default() DecodeOptions { return DecodeOptions{} }
 
-// NewPacket creates a new Packet object from a set of bytes.  The
-// firstLayerDecoder tells it how to interpret the first layer from the bytes,
-// future layers will be generated from that first layer automatically.
-func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) Packet /*{
-	if !options.NoCopy {
-		dataCopy := make([]byte, len(data))
-		copy(dataCopy, data)
-		data = dataCopy
-	}
-	if options.Lazy {
-		p := &lazyPacket{
-			packet: packet{data: data, decodeOptions: options},
-			next:   firstLayerDecoder,
-		}
-		p.layers = p.initialLayers[:0]
-		// Crazy craziness:
-		// If the following return statemet is REMOVED, and Lazy is FALSE, then
-		// eager packet processing becomes 17% FASTER.  No, there is no logical
-		// explanation for this.  However, it's such a hacky micro-optimization that
-		// we really can't rely on it.  It appears to have to do with the size the
-		// compiler guesses for this function's stack space, since one symptom is
-		// that with the return statement in place, we more than double calls to
-		// runtime.morestack/runtime.lessstack.  We'll hope the compiler gets better
-		// over time and we get this optimization for free.  Until then, we'll have
-		// to live with slower packet processing.
-		return p
-	}
-	p := &eagerPacket{
-		packet: packet{data: data, decodeOptions: options},
-	}
-	p.layers = p.initialLayers[:0]
-	p.initialDecode(firstLayerDecoder)
-	return p
-}*/
+requires acc(data)
+requires firstLayerDecoder.Mem()
+ensures !options.NoCopy ==> acc(data)
+ensures res.Mem()
+decreases
+func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) (res Packet)

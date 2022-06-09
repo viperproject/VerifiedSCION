@@ -8,102 +8,63 @@
 
 package gopacket
 
-
-// DecodingLayer is an interface for packet layers that can decode themselves.
-//
-// The important part of DecodingLayer is that they decode themselves in-place.
-// Calling DecodeFromBytes on a DecodingLayer totally resets the entire layer to
-// the new state defined by the data passed in.  A returned error leaves the
-// DecodingLayer in an unknown intermediate state, thus its fields should not be
-// trusted.
-//
-// Because the DecodingLayer is resetting its own fields, a call to
-// DecodeFromBytes should normally not require any memory allocation.
 type DecodingLayer interface {
-	// DecodeFromBytes resets the internal state of this layer to the state
-	// defined by the passed-in bytes.  Slices in the DecodingLayer may
-	// reference the passed-in data, so care should be taken to copy it
-	// first should later modification of data be required before the
-	// DecodingLayer is discarded.
-	DecodeFromBytes(data []byte, df DecodeFeedback) error
-	// CanDecode returns the set of LayerTypes this DecodingLayer can
-	// decode.  For Layers that are also DecodingLayers, this will most
-	// often be that Layer's LayerType().
-	CanDecode() LayerClass
-	// NextLayerType returns the LayerType which should be used to decode
-	// the LayerPayload.
+	pred Mem()
+
+	requires acc(data)
+	requires Mem()
+	requires df.Mem()
+	decreases
+	DecodeFromBytes(data []byte, df DecodeFeedback) (res error)
+
+	preserves Mem()
+	ensures res.Mem()
+	decreases
+	CanDecode() (res LayerClass)
+
+	preserves Mem()
+	decreases
 	NextLayerType() LayerType
-	// LayerPayload is the set of bytes remaining to decode after a call to
-	// DecodeFromBytes.
-	LayerPayload() []byte
+
+	requires Mem()
+	ensures acc(res)
+	ensures acc(res) --* Mem()
+	decreases
+	LayerPayload() (res []byte)
 }
 
-// DecodingLayerContainer stores all DecodingLayer-s and serves as a
-// searching tool for DecodingLayerParser.
 type DecodingLayerContainer interface {
-	// Put adds new DecodingLayer to container. The new instance of
-	// the same DecodingLayerContainer is returned so it may be
-	// implemented as a value receiver.
-	Put(DecodingLayer) DecodingLayerContainer
-	// Decoder returns DecodingLayer to decode given LayerType and
-	// true if it was found. If no decoder found, return false.
-	Decoder(LayerType) (DecodingLayer, bool)
-	// LayersDecoder returns DecodingLayerFunc which decodes given
-	// packet, starting with specified LayerType and DecodeFeedback.
+	pred Mem()
+	
+	requires Mem()
+	requires d.Mem()
+	ensures res.Mem()
+	decreases
+	Put(d DecodingLayer) (res DecodingLayerContainer)
+
+	preserves Mem()
+	ensures d.Mem()
+	decreases
+	Decoder(LayerType) (d DecodingLayer, b bool)
+
 	// (VerifiedSCION) no support for closures yet
 	//LayersDecoder(first LayerType, df DecodeFeedback) DecodingLayerFunc
 }
 
-// DecodingLayerParser parses a given set of layer types.  See DecodeLayers for
-// more information on how DecodingLayerParser should be used.
 type DecodingLayerParser struct {
-	// DecodingLayerParserOptions is the set of options available to the
-	// user to define the parser's behavior.
-	// IgnorePanic determines whether a DecodingLayerParser should stop
-	// panics on its own (by returning them as an error from DecodeLayers)
-	// or should allow them to raise up the stack.  Handling errors does add
-	// latency to the process of decoding layers, but is much safer for
-	// callers.  IgnorePanic defaults to false, thus if the caller does
-	// nothing decode panics will be returned as errors.
 	IgnorePanic bool
-	// IgnoreUnsupported will stop parsing and return a nil error when it
-	// encounters a layer it doesn't have a parser for, instead of returning an
-	// UnsupportedLayerType error.  If this is true, it's up to the caller to make
-	// sure that all expected layers have been parsed (by checking the decoded
-	// slice).
 	IgnoreUnsupported bool
 	dlc   DecodingLayerContainer
 	first LayerType
 	df    DecodeFeedback
-
 	// (VerifiedSCION) no support for closures yet
 	//decodeFunc DecodingLayerFunc
-
-	// Truncated is set when a decode layer detects that the packet has been
-	// truncated.
 	Truncated bool
 }
 
-// NewDecodingLayerParser creates a new DecodingLayerParser and adds in all
-// of the given DecodingLayers with AddDecodingLayer.
-//
-// Each call to DecodeLayers will attempt to decode the given bytes first by
-// treating them as a 'first'-type layer, then by using NextLayerType on
-// subsequently decoded layers to find the next relevant decoder.  Should a
-// deoder not be available for the layer type returned by NextLayerType,
-// decoding will stop.
-//
-// NewDecodingLayerParser uses DecodingLayerMap container by
-// default.
-func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) *DecodingLayerParser /*{
-	dlp := &DecodingLayerParser{first: first}
-	dlp.df = dlp // Cast this once to the interface
-	// default container
-	dlc := DecodingLayerContainer(DecodingLayerMap(make(map[LayerType]DecodingLayer)))
-	for _, d := range decoders {
-		dlc = dlc.Put(d)
-	}
-
-	dlp.SetDecodingLayerContainer(dlc)
-	return dlp
-}*/
+requires forall i int :: 0 <= i && i < len(decoders) ==> acc(&decoders[i])
+requires forall i int :: 0 <= i && i < len(decoders) ==> decoders[i].Mem()
+ensures forall i int :: 0 <= i && i < len(decoders) ==> acc(&decoders[i])
+ensures acc(res)
+decreases
+func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) (res *DecodingLayerParser)
