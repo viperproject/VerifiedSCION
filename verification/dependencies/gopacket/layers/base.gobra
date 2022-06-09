@@ -8,10 +8,6 @@
 
 package layers
 
-//import (
-//	"github.com/google/gopacket"
-//)
-
 // BaseLayer is a convenience struct which implements the LayerData and
 // LayerPayload functions of the Layer interface.
 type BaseLayer struct {
@@ -44,25 +40,3 @@ ensures acc(b.Payload, 1/10000)
 ensures acc(res, 1/10000)
 ensures forall i int :: 0 <= i && i < cap(b.Payload) ==> &res[i] == &(b.Payload[i])
 func (b *BaseLayer) LayerPayload() (res []byte) { return b.Payload }
-
-//type layerDecodingLayer interface {
-//	gopacket.Layer
-//	DecodeFromBytes([]byte, gopacket.DecodeFeedback) error
-//	NextLayerType() gopacket.LayerType
-//}
-
-//func decodingLayerDecoder(d layerDecodingLayer, data []byte, p gopacket.PacketBuilder) error {
-//	err := d.DecodeFromBytes(data, p)
-//	if err != nil {
-//		return err
-//	}
-//	p.AddLayer(d)
-//	next := d.NextLayerType()
-//	if next == gopacket.LayerTypeZero {
-//		return nil
-//	}
-//	return p.NextDecoder(next)
-//}
-//
-//// hacky way to zero out memory... there must be a better way?
-//var lotsOfZeros [1024]byte
