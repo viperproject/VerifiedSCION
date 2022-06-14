@@ -69,3 +69,9 @@ jobs:
         with:
           name: verification_statistics
           path: ${{ runner.workspace }}/VerifiedSCION/.gobra/stats.json
+      - name: Debug
+        run: |
+          ls
+          ls ${{ runner.workspace }}
+          ls ${{ runner.workspace }}/.gobra/
+          
