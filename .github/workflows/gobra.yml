@@ -64,3 +64,8 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+      - name: Upload the verification report
+        uses: actions/upload-artifact@v2
+        with:
+          name: verification_statistics
+          path: ${{ runner.workspace }}/.gobra/stats.json
