@@ -72,5 +72,5 @@ jobs:
       - name: Debug
         run: |
           ls ${{ runner.workspace }}
-          ls ${{ runner.workspace }}/../.gobra/
+          ls ${{ runner.workspace }}/VerifiedSCION/
           
