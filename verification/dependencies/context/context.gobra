@@ -50,7 +50,10 @@
 
 package context
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import (
+	"time"
+	"github.com/scionproto/scion/verification/utils/definitions"
+)
 
 // A Context carries a deadline, a cancellation signal, and other values across
 // API boundaries.
@@ -60,8 +63,8 @@ type Context interface {
 
 	pred Mem()
 
-	requires acc(Mem(), definitions.ReadL20)
-	pure Deadline() (deadline time.Time, ok bool)
+	preserves acc(Mem(), definitions.ReadL20)
+	Deadline() (deadline time.Time, ok bool)
 
 	preserves acc(Mem(), definitions.ReadL20)
 	ensures isClosed ==> c.Closed()
@@ -69,93 +72,40 @@ type Context interface {
 		acc(c.RecvChannel(), definitions.ReadL20)
 	Done() (c <-chan struct{}, ghost isClosed bool)
 
-	// XXX do we need write permissions?
-	// In certain cases Err() will acquire a lock for thread
-	// safety, but then releases directly after.
-	// Could we view this as a pure function?
-	//
-	// NOTE the types of returned errors are:
-	// - Canceled if the context was cancelled.
-	// - DeadlineExceeded if the context timed out.
-	//
-	// This means that `e` cannot hold pointers to memory contained
-	// within the context (i.e. no aliasing).
-	// However, I don't think Err() can be labeled pure because it will
-	// change return value depending on the state of `Done()`.
-	//
 	preserves acc(Mem(), definitions.ReadL20)
-	ensures e != nil ==> e.ErrorMem()
+	ensures isClosed ==> e != nil && e.ErrorMem()
 	Err() (e error, ghost isClosed bool)
 
-	requires acc(Mem(), _)
-	requires definitions.isOfPrimitiveType(key)
+	preserves acc(Mem(), definitions.ReadL20)
+	requires acc(key.Mem(), _)
+	ensures acc(key.Mem(), _)
 	ensures acc(val.Mem(), _)
-	pure Value(key any) (val interface{ pred Mem() })
+	Value(key interface{ pred Mem() }) (val interface{ pred Mem() })
 }
 
-/* XXX
-	The provided key must be comparable and should
-
-  <<not be of type string or any other built-in type>>
-
-  to avoid collisions between packages using context. Users of
-  WithValue should define their own types for keys. To avoid allocating when
-  assigning to an interface{}, context keys often have concrete type struct{}.
-  Alternatively, exported context key variables' static type should be a pointer
-  or interface.
-*/
-
 preserves acc(parent.Mem(), definitions.ReadL20)
-requires definitions.isOfPrimitiveType(key) // HACK see above
+preserves acc(key.Mem(), definitions.ReadL20)
 requires acc(val.Mem(), _)
+ensures acc(val.Mem(), _) // `child` keeps partial permissions.
+func WithValue(parent Context, key, val interface{ pred Mem() }) (child Context)
 
-ensures acc(val.Mem(), _)
-ensures forall k any :: definitions.isOfPrimitiveType(k) ==>
-	parent.Value(k) == child.Value(k)
-ensures res.Value(key) != nil
+/* TODO ignoring closure dependent code for now.
 
-WithValue(parent Context, key, val interface{ pred Mem() }) (child Context)
-
-// ---
-
-// XXX! used in dataplane.go
-requires acc(parent.Mem(), definitions.ReadL20)
-
-ensures acc(parent.Mem(), definitions.ReadL20)
-ensures acc(child.Mem(), definitions.ReadL20)
-
-WithCancel(parent Context) (child Context, cancel CancelFunc)
-
-// ---
+type CancelFunc func()
 
 requires acc(parent.Mem(), definitions.ReadL20)
-
 ensures acc(parent.Mem(), definitions.ReadL20)
 ensures acc(child.Mem(), definitions.ReadL20)
+func WithCancel(parent Context) (child Context, cancel CancelFunc)
 
-WithDeadline(parent Context, d time.Time) (child Context, cancel CancelFunc)
-
-// ---
-
-// XXX! used frequently but not in the router
-
-// WithTimeout returns WithDeadline(parent, time.Now().Add(timeout)).
-// calling CancelFunc will release resources if the operations in context
-// finish before the timeout. Example usage:
-//
-// ```go
-//
-// func slowOperationWithTimeout(ctx context.Context) (Result, error) {
-//  ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
-//  defer cancel() // <-- Early resource release.
-//	return slowOperation(ctx)
-// }
-//
-// ```
-//
 requires acc(parent.Mem(), definitions.ReadL20)
-
 ensures acc(parent.Mem(), definitions.ReadL20)
 ensures acc(child.Mem(), definitions.ReadL20)
+func WithDeadline(parent Context, d time.Time) (child Context, cancel CancelFunc)
 
-WithTimeout(parent Context, timeout time.Duration) (child Context, cancel CancelFunc)
+requires acc(parent.Mem(), definitions.ReadL20)
+ensures acc(parent.Mem(), definitions.ReadL20)
+ensures acc(child.Mem(), definitions.ReadL20)
+func WithTimeout(parent Context, timeout time.Duration) (child Context, cancel CancelFunc)
+
+*/
