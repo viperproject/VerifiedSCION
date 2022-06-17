@@ -1,0 +1,161 @@
+// Copyright 2014 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package context defines the Context type, which carries deadlines,
+// cancellation signals, and other request-scoped values across API boundaries
+// and between processes.
+//
+// Incoming requests to a server should create a Context, and outgoing
+// calls to servers should accept a Context. The chain of function
+// calls between them must propagate the Context, optionally replacing
+// it with a derived Context created using WithCancel, WithDeadline,
+// WithTimeout, or WithValue. When a Context is canceled, all
+// Contexts derived from it are also canceled.
+//
+// The WithCancel, WithDeadline, and WithTimeout functions take a
+// Context (the parent) and return a derived Context (the child) and a
+// CancelFunc. Calling the CancelFunc cancels the child and its
+// children, removes the parent's reference to the child, and stops
+// any associated timers. Failing to call the CancelFunc leaks the
+// child and its children until the parent is canceled or the timer
+// fires. The go vet tool checks that CancelFuncs are used on all
+// control-flow paths.
+//
+// Programs that use Contexts should follow these rules to keep interfaces
+// consistent across packages and enable static analysis tools to check context
+// propagation:
+//
+// Do not store Contexts inside a struct type; instead, pass a Context
+// explicitly to each function that needs it. The Context should be the first
+// parameter, typically named ctx:
+//
+// 	func DoSomething(ctx context.Context, arg Arg) error {
+// 		// ... use ctx ...
+// 	}
+//
+// Do not pass a nil Context, even if a function permits it. Pass context.TODO
+// if you are unsure about which Context to use.
+//
+// Use context Values only for request-scoped data that transits processes and
+// APIs, not for passing optional parameters to functions.
+//
+// The same Context may be passed to functions running in different goroutines;
+// Contexts are safe for simultaneous use by multiple goroutines.
+//
+// See https://blog.golang.org/context for example code for a server that uses
+// Contexts.
+
+// +gobra
+
+package context
+
+import "github.com/scionproto/scion/verification/utils/definitions"
+
+// A Context carries a deadline, a cancellation signal, and other values across
+// API boundaries.
+//
+// Context's methods may be called by multiple goroutines simultaneously.
+type Context interface {
+
+	pred Mem()
+
+	requires acc(Mem(), definitions.ReadL20)
+	pure Deadline() (deadline time.Time, ok bool)
+
+	preserves acc(Mem(), definitions.ReadL20)
+	ensures isClosed ==> c.Closed()
+	ensures !isClosed && c != nil ==>
+		acc(c.RecvChannel(), definitions.ReadL20)
+	Done() (c <-chan struct{}, ghost isClosed bool)
+
+	// XXX do we need write permissions?
+	// In certain cases Err() will acquire a lock for thread
+	// safety, but then releases directly after.
+	// Could we view this as a pure function?
+	//
+	// NOTE the types of returned errors are:
+	// - Canceled if the context was cancelled.
+	// - DeadlineExceeded if the context timed out.
+	//
+	// This means that `e` cannot hold pointers to memory contained
+	// within the context (i.e. no aliasing).
+	// However, I don't think Err() can be labeled pure because it will
+	// change return value depending on the state of `Done()`.
+	//
+	preserves acc(Mem(), definitions.ReadL20)
+	ensures e != nil ==> e.ErrorMem()
+	Err() (e error, ghost isClosed bool)
+
+	requires acc(Mem(), _)
+	requires definitions.isOfPrimitiveType(key)
+	ensures acc(val.Mem(), _)
+	pure Value(key any) (val interface{ pred Mem() })
+}
+
+/* XXX
+	The provided key must be comparable and should
+
+  <<not be of type string or any other built-in type>>
+
+  to avoid collisions between packages using context. Users of
+  WithValue should define their own types for keys. To avoid allocating when
+  assigning to an interface{}, context keys often have concrete type struct{}.
+  Alternatively, exported context key variables' static type should be a pointer
+  or interface.
+*/
+
+preserves acc(parent.Mem(), definitions.ReadL20)
+requires definitions.isOfPrimitiveType(key) // HACK see above
+requires acc(val.Mem(), _)
+
+ensures acc(val.Mem(), _)
+ensures forall k any :: definitions.isOfPrimitiveType(k) ==>
+	parent.Value(k) == child.Value(k)
+ensures res.Value(key) != nil
+
+WithValue(parent Context, key, val interface{ pred Mem() }) (child Context)
+
+// ---
+
+// XXX! used in dataplane.go
+requires acc(parent.Mem(), definitions.ReadL20)
+
+ensures acc(parent.Mem(), definitions.ReadL20)
+ensures acc(child.Mem(), definitions.ReadL20)
+
+WithCancel(parent Context) (child Context, cancel CancelFunc)
+
+// ---
+
+requires acc(parent.Mem(), definitions.ReadL20)
+
+ensures acc(parent.Mem(), definitions.ReadL20)
+ensures acc(child.Mem(), definitions.ReadL20)
+
+WithDeadline(parent Context, d time.Time) (child Context, cancel CancelFunc)
+
+// ---
+
+// XXX! used frequently but not in the router
+
+// WithTimeout returns WithDeadline(parent, time.Now().Add(timeout)).
+// calling CancelFunc will release resources if the operations in context
+// finish before the timeout. Example usage:
+//
+// ```go
+//
+// func slowOperationWithTimeout(ctx context.Context) (Result, error) {
+//  ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+//  defer cancel() // <-- Early resource release.
+//	return slowOperation(ctx)
+// }
+//
+// ```
+//
+requires acc(parent.Mem(), definitions.ReadL20)
+
+ensures acc(parent.Mem(), definitions.ReadL20)
+ensures acc(child.Mem(), definitions.ReadL20)
+
+WithTimeout(parent Context, timeout time.Duration) (child Context, cancel CancelFunc)
