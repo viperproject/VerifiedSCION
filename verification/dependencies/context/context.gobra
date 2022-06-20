@@ -1,0 +1,86 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// The signatures for the public declarations in this file were taken from file
+// https://github.com/golang/go/blob/master/src/context/context.go
+
+// +gobra
+
+package context
+
+import (
+	"time"
+	"github.com/scionproto/scion/verification/utils/definitions"
+)
+
+type Context interface {
+
+	pred Mem()
+
+	preserves acc(Mem(), definitions.ReadL20)
+	decreases
+	Deadline() (deadline time.Time, ok bool)
+
+	preserves acc(Mem(), definitions.ReadL20)
+	ensures isClosed ==> c.Closed()
+	ensures (!isClosed && c != nil) ==>
+		acc(c.RecvChannel(), _)
+	decreases
+	Done() (c <-chan struct{}, ghost isClosed bool)
+
+	preserves acc(Mem(), definitions.ReadL20)
+	ensures isClosed ==> (e != nil && e.ErrorMem())
+	decreases
+	Err() (e error, ghost isClosed bool)
+
+	preserves acc(Mem(), definitions.ReadL20)
+	requires acc(key.Mem(), _)
+	requires isComparable(key)
+	ensures acc(val.Mem(), _)
+	decreases
+	Value(key interface{ pred Mem() }) (val interface{ pred Mem() })
+}
+
+preserves acc(key.Mem(), definitions.ReadL20)
+requires parent.Mem()
+requires isComparable(key)
+requires acc(val.Mem(), _)
+ensures child.Mem()
+ensures child.Mem() --* parent.Mem()
+decreases _
+func WithValue(parent Context, key, val interface{ pred Mem() }) (child Context)
+
+/* Below functions are closure-dependent and currently unsupported.
+
+type CancelFunc func()
+
+requires parent.Mem()
+ensures child.Mem()
+ensures child.Mem() --* parent.Mem()
+decreases _
+func WithCancel(parent Context) (child Context, cancel CancelFunc)
+
+requires parent.Mem()
+ensures child.Mem()
+ensures child.Mem() --* parent.Mem()
+decreases _
+func WithDeadline(parent Context, d time.Time) (child Context, cancel CancelFunc)
+
+requires parent.Mem()
+ensures child.Mem()
+ensures child.Mem() --* parent.Mem()
+decreases _
+func WithTimeout(parent Context, timeout time.Duration) (child Context, cancel CancelFunc)
+
+*/
