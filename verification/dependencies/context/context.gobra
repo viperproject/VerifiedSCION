@@ -1,50 +1,19 @@
-// Copyright 2014 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-// Package context defines the Context type, which carries deadlines,
-// cancellation signals, and other request-scoped values across API boundaries
-// and between processes.
-//
-// Incoming requests to a server should create a Context, and outgoing
-// calls to servers should accept a Context. The chain of function
-// calls between them must propagate the Context, optionally replacing
-// it with a derived Context created using WithCancel, WithDeadline,
-// WithTimeout, or WithValue. When a Context is canceled, all
-// Contexts derived from it are also canceled.
-//
-// The WithCancel, WithDeadline, and WithTimeout functions take a
-// Context (the parent) and return a derived Context (the child) and a
-// CancelFunc. Calling the CancelFunc cancels the child and its
-// children, removes the parent's reference to the child, and stops
-// any associated timers. Failing to call the CancelFunc leaks the
-// child and its children until the parent is canceled or the timer
-// fires. The go vet tool checks that CancelFuncs are used on all
-// control-flow paths.
-//
-// Programs that use Contexts should follow these rules to keep interfaces
-// consistent across packages and enable static analysis tools to check context
-// propagation:
-//
-// Do not store Contexts inside a struct type; instead, pass a Context
-// explicitly to each function that needs it. The Context should be the first
-// parameter, typically named ctx:
-//
-// 	func DoSomething(ctx context.Context, arg Arg) error {
-// 		// ... use ctx ...
-// 	}
-//
-// Do not pass a nil Context, even if a function permits it. Pass context.TODO
-// if you are unsure about which Context to use.
-//
-// Use context Values only for request-scoped data that transits processes and
-// APIs, not for passing optional parameters to functions.
-//
-// The same Context may be passed to functions running in different goroutines;
-// Contexts are safe for simultaneous use by multiple goroutines.
-//
-// See https://blog.golang.org/context for example code for a server that uses
-// Contexts.
+// The signatures for the public declarations in this file were taken from file
+// https://github.com/golang/go/blob/master/src/context/context.go
 
 // +gobra
 
@@ -55,57 +24,65 @@ import (
 	"github.com/scionproto/scion/verification/utils/definitions"
 )
 
-// A Context carries a deadline, a cancellation signal, and other values across
-// API boundaries.
-//
-// Context's methods may be called by multiple goroutines simultaneously.
 type Context interface {
 
 	pred Mem()
 
 	preserves acc(Mem(), definitions.ReadL20)
+	decreases
 	Deadline() (deadline time.Time, ok bool)
 
 	preserves acc(Mem(), definitions.ReadL20)
 	ensures isClosed ==> c.Closed()
-	ensures !isClosed && c != nil ==>
+	ensures (!isClosed && c != nil) ==>
 		acc(c.RecvChannel(), definitions.ReadL20)
+	decreases
 	Done() (c <-chan struct{}, ghost isClosed bool)
 
 	preserves acc(Mem(), definitions.ReadL20)
-	ensures isClosed ==> e != nil && e.ErrorMem()
+	ensures isClosed ==> (e != nil && e.ErrorMem())
+	decreases
 	Err() (e error, ghost isClosed bool)
 
 	preserves acc(Mem(), definitions.ReadL20)
 	requires acc(key.Mem(), _)
+	requires isComparable(key)
 	ensures acc(key.Mem(), _)
 	ensures acc(val.Mem(), _)
+	decreases
 	Value(key interface{ pred Mem() }) (val interface{ pred Mem() })
 }
 
-preserves acc(parent.Mem(), definitions.ReadL20)
 preserves acc(key.Mem(), definitions.ReadL20)
+requires parent.Mem()
+requires isComparable(key)
 requires acc(val.Mem(), _)
-ensures acc(val.Mem(), _) // `child` keeps partial permissions.
+ensures child.Mem()
+ensures child.Mem() --* parent.Mem()
+ensures acc(val.Mem(), _)
+decreases _
 func WithValue(parent Context, key, val interface{ pred Mem() }) (child Context)
 
-/* TODO ignoring closure dependent code for now.
+/* Below functions are closure-dependent and currently unsupported.
 
 type CancelFunc func()
 
-requires acc(parent.Mem(), definitions.ReadL20)
-ensures acc(parent.Mem(), definitions.ReadL20)
-ensures acc(child.Mem(), definitions.ReadL20)
+requires parent.Mem()
+ensures child.Mem()
+ensures child.Mem() --* parent.Mem()
+decreases _
 func WithCancel(parent Context) (child Context, cancel CancelFunc)
 
-requires acc(parent.Mem(), definitions.ReadL20)
-ensures acc(parent.Mem(), definitions.ReadL20)
-ensures acc(child.Mem(), definitions.ReadL20)
+requires parent.Mem()
+ensures child.Mem()
+ensures child.Mem() --* parent.Mem()
+decreases _
 func WithDeadline(parent Context, d time.Time) (child Context, cancel CancelFunc)
 
-requires acc(parent.Mem(), definitions.ReadL20)
-ensures acc(parent.Mem(), definitions.ReadL20)
-ensures acc(child.Mem(), definitions.ReadL20)
+requires parent.Mem()
+ensures child.Mem()
+ensures child.Mem() --* parent.Mem()
+decreases _
 func WithTimeout(parent Context, timeout time.Duration) (child Context, cancel CancelFunc)
 
 */
