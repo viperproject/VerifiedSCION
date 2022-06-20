@@ -35,7 +35,7 @@ type Context interface {
 	preserves acc(Mem(), definitions.ReadL20)
 	ensures isClosed ==> c.Closed()
 	ensures (!isClosed && c != nil) ==>
-		acc(c.RecvChannel(), definitions.ReadL20)
+		acc(c.RecvChannel(), _)
 	decreases
 	Done() (c <-chan struct{}, ghost isClosed bool)
 
@@ -47,7 +47,6 @@ type Context interface {
 	preserves acc(Mem(), definitions.ReadL20)
 	requires acc(key.Mem(), _)
 	requires isComparable(key)
-	ensures acc(key.Mem(), _)
 	ensures acc(val.Mem(), _)
 	decreases
 	Value(key interface{ pred Mem() }) (val interface{ pred Mem() })
@@ -59,7 +58,6 @@ requires isComparable(key)
 requires acc(val.Mem(), _)
 ensures child.Mem()
 ensures child.Mem() --* parent.Mem()
-ensures acc(val.Mem(), _)
 decreases _
 func WithValue(parent Context, key, val interface{ pred Mem() }) (child Context)
 
