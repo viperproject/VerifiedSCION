@@ -73,8 +73,13 @@ type HopField struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // path.HopLen.
+//@ requires acc(h)
+//@ requires forall i int :: 0 <= i && i < len(h.Mac) ==>
+//@     acc(&h.Mac[i])
 //@ requires  len(raw) >= HopLen
-//@ preserves acc(h) && acc(raw, definitions.ReadL1)
+//@ preserves forall i int :: 0 <= i && i < len(raw) ==>
+//@     acc(&raw[i], definitions.ReadL1)
+//@ ensures h.Mem()
 //@ ensures   err == nil
 //@ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
@@ -93,19 +98,21 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert forall i int :: 0 <= i && i < len(raw[6:6+MacLen]) ==>
 	//@     &raw[6:6+MacLen][i] == &raw[i+6]
 	copy(h.Mac[:], raw[6:6+MacLen] /*@, definitions.ReadL1@*/)
+	//@ fold h.Mem()
 	return nil
 }
 
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.HopLen.
 //@ requires  len(b) >= HopLen
-//@ preserves acc(h, definitions.ReadL1) && acc(b)
+//@ preserves acc(h.Mem(), definitions.ReadL1) && acc(b)
 //@ ensures   err == nil
 //@ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {
 	if len(b) < HopLen {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
 	}
+	//@ unfold acc(h.Mem(), definitions.ReadL1)
 	b[0] = 0
 	if h.EgressRouterAlert {
 		b[0] |= 0x1
@@ -123,7 +130,7 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	//@ assert forall i int :: 0 <= i && i < MacLen ==>
 	//@     &b[6:6+MacLen][i] == &b[i+6]
 	copy(b[6:6+MacLen], h.Mac[:] /*@, definitions.ReadL1 @*/)
-
+	//@ fold acc(h.Mem(), definitions.ReadL1)
 	return nil
 }
 
