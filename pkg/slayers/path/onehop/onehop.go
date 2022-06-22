@@ -49,7 +49,8 @@ type Path struct {
 
 //@ requires o.NonInitMem()
 //@ requires len(data) >= PathLen
-//@ preserves acc(data, definitions.ReadL1)
+//@ preserves forall i int :: 0 <= i && i < len(data) ==>
+//@     acc(&data[i], definitions.ReadL1)
 //@ ensures r != nil ==> (o.NonInitMem() && r.ErrorMem())
 //@ ensures r == nil ==> o.Mem()
 //@ decreases
@@ -82,7 +83,9 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 }
 
 //@ requires len(b) >= PathLen
-//@ preserves acc(b) && acc(o.Mem(), definitions.ReadL1)
+//@ preserves acc(o.Mem(), definitions.ReadL1)
+//@ preserves forall i int :: 0 <= i && i < len(b) ==>
+//@     acc(&b[i])
 //@ ensures err == nil
 //@ decreases
 func (o *Path) SerializeTo(b []byte) (err error) {
@@ -106,17 +109,12 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 	//@ assert 0 <= offset && offset + path.HopLen <= len(b)
 	//@ assert forall i int :: 0 <= i && i < path.HopLen ==>
 	//@     &b[offset : offset+path.HopLen][i] == &b[offset + i]
-	if err := o.SecondHop.SerializeTo(b[offset : offset+path.HopLen]); err != nil {
-		return err
-	}
-
-	//@ fold acc(o.Mem(), definitions.ReadL1)
-	return nil
+	err = o.SecondHop.SerializeTo(b[offset : offset+path.HopLen])
+	//@ ghost if err == nil {
+	//@   fold acc(o.Mem(), definitions.ReadL1)
+  //@ }
+	return err
 }
-
-// (gavin) the methods ToSCIONDecoded and Reverse require
-// the use of the verified scion.Decoded
-// These can be finished once the package 'scion' is finished.
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
