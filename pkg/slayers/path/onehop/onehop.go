@@ -173,7 +173,7 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 // }
 
 //@ pure
-//@ ensures l == PathLen
+//@ ensures 0 <= l
 //@ decreases
 func (o *Path) Len() (l int) {
 	return PathLen
