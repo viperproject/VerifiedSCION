@@ -74,11 +74,8 @@ type HopField struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // path.HopLen.
 //@ requires acc(h)
-//@ requires forall i int :: 0 <= i && i < len(h.Mac) ==>
-//@     acc(&h.Mac[i])
 //@ requires  len(raw) >= HopLen
-//@ preserves forall i int :: 0 <= i && i < len(raw) ==>
-//@     acc(&raw[i], definitions.ReadL1)
+//@ preserves acc(raw, definitions.ReadL1)
 //@ ensures h.Mem()
 //@ ensures   err == nil
 //@ decreases

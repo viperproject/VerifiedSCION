@@ -16,11 +16,19 @@
 
 package path
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+)
 
-pred (h *HopField) Mem() {
-	acc(h)
-	// h.ConsIngress >= 0 &&
-	// h.ConsEgress >= 0 &&
-	// forall i int :: 0 <= i && i < len(h.Mac) ==> acc(&h.Mac[i])
+func TestHopSerializeDecode() {
+	p := &path.HopField{
+		IngressRouterAlert: true,
+		EgressRouterAlert:  true,
+		ExpTime:            63,
+		ConsIngress:        1,
+		ConsEgress:         0,
+		Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+	}
+	fold p.Mem()
+	return
 }

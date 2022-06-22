@@ -14,13 +14,24 @@
 
 // +gobra
 
-package path
+package onehop
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
+)
 
-pred (h *HopField) Mem() {
-	acc(h)
-	// h.ConsIngress >= 0 &&
-	// h.ConsEgress >= 0 &&
-	// forall i int :: 0 <= i && i < len(h.Mac) ==> acc(&h.Mac[i])
+func canAllocatePath() {
+	fh := path.HopField{}
+	sh := path.HopField{}
+	p := &Path{
+		FirstHop: fh,
+		SecondHop: sh,
+	}
+
+	fold p.FirstHop.Mem()
+	fold p.SecondHop.Mem()
+	fold p.Mem()
+
+	return
 }
