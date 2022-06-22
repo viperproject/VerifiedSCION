@@ -21,6 +21,5 @@ import "github.com/scionproto/scion/verification/utils/definitions"
 pred (h *HopField) Mem() {
 	acc(h)
 	// h.ConsIngress >= 0 &&
-	// h.ConsEgress >= 0 &&
-	// forall i int :: 0 <= i && i < len(h.Mac) ==> acc(&h.Mac[i])
+	// h.ConsEgress >= 0
 }
