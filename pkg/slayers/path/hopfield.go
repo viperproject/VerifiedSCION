@@ -75,7 +75,8 @@ type HopField struct {
 // path.HopLen.
 //@ requires acc(h)
 //@ requires  len(raw) >= HopLen
-//@ preserves acc(raw, definitions.ReadL1)
+//@ preserves forall i int :: 0 <= i && i < len(raw) ==>
+//@     acc(&raw[i], definitions.ReadL1)
 //@ ensures h.Mem()
 //@ ensures   err == nil
 //@ decreases
@@ -102,7 +103,9 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.HopLen.
 //@ requires  len(b) >= HopLen
-//@ preserves acc(h.Mem(), definitions.ReadL1) && acc(b)
+//@ preserves acc(h.Mem(), definitions.ReadL1)
+//@ preserves forall i int :: 0 <= i && i < len(b) ==>
+//@     acc(&b[i])
 //@ ensures   err == nil
 //@ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {

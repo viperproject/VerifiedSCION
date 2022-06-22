@@ -21,6 +21,11 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 )
 
+func testAllocateNonInitMem() {
+	p := &Path{}
+	fold p.NonInitMem()
+}
+
 func canAllocatePath() {
 	fh := path.HopField{}
 	sh := path.HopField{}
