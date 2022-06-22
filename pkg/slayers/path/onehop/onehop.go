@@ -49,9 +49,7 @@ type Path struct {
 
 //@ requires o.NonInitMem()
 //@ requires len(data) >= PathLen
-// preserves acc(data, definitions.ReadL1)
-//@ preserves forall i int :: 0 <= i && i < len(data) ==>
-//@	    acc(&data[i], definitions.ReadL1)
+//@ preserves acc(data, definitions.ReadL1)
 //@ ensures r != nil ==> (o.NonInitMem() && r.ErrorMem())
 //@ ensures r == nil ==> o.Mem()
 //@ decreases
@@ -72,22 +70,19 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	if err := o.FirstHop.DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 		return err
 	}
-	// (gavin) introduced pattern if for checking err
 	offset += path.HopLen
 	//@ assert 0 <= offset && offset + path.HopLen <= len(data)
 	//@ assert forall i int :: 0 <= i && i < path.HopLen ==>
 	//@     &data[offset : offset+path.HopLen][i] == &data[offset + i]
-	if err := o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
-		return err
-	}
-	//@ fold o.Mem()
-	return nil
+	r = o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen])
+	//@ ghost if r == nil {
+	//@     fold o.Mem()
+  //@ }
+	return r
 }
 
 //@ requires len(b) >= PathLen
-//@ preserves acc(o.Mem(), definitions.ReadL1)
-//@ preserves forall i int :: 0 <= i && i < len(b) ==>
-//@     acc(&b[i])
+//@ preserves acc(b) && acc(o.Mem(), definitions.ReadL1)
 //@ ensures err == nil
 //@ decreases
 func (o *Path) SerializeTo(b []byte) (err error) {
@@ -180,14 +175,15 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 // }
 
 //@ pure
-//@ ensures 0 <= l
+//@ ensures l == PathLen
 //@ decreases
 func (o *Path) Len() (l int) {
 	return PathLen
 }
 
 //@ pure
+//@ ensures t == PathType
 //@ decreases
-func (o *Path) Type() path.Type {
+func (o *Path) Type() (t path.Type) {
 	return PathType
 }
