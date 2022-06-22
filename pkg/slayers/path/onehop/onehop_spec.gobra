@@ -24,17 +24,10 @@ import (
 // This predicate is required by the Path interface when calling
 // DecodeFromBytes and exchanged for a Mem predicate on success.
 pred (o *Path) NonInitMem() {
-	acc(o) &&
-		(forall i int :: 0 <= i && i < len(o.FirstHop.Mac) ==>
-			acc(&o.FirstHop.Mac[i])) &&
-		(forall i int :: 0 <= i && i < len(o.SecondHop.Mac) ==>
-			acc(&o.SecondHop.Mac[i]))
+	acc(o)
 }
 
 // This predicate is established right after DecodeFromBytes.
-// Because this method does not perform any bounds checks, it
-// is not possible to have assertions in this invariant about
-// how the fileds of Base compare to those of its MetaHdr field.
 pred (o *Path) Mem() {
 	acc(&o.Info) &&
 		o.FirstHop.Mem() &&
