@@ -16,8 +16,6 @@
 
 package path
 
-import "github.com/scionproto/scion/pkg/slayers/path"
-
 func testAllocateHopField() {
 	p := &path.HopField{}
 	fold p.Mem()
