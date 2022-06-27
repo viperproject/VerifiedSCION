@@ -17,7 +17,7 @@
 package path
 
 func testAllocateHopField() {
-	p := &path.HopField{}
+	p := &HopField{}
 	fold p.Mem()
 	return
 }
