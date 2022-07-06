@@ -14,14 +14,19 @@
 
 // +gobra
 
-package onehop
+package scion
 
-pred (o *Path) NonInitMem() {
-	acc(o)
+func testAllocateNonInitRaw() {
+	r := &Raw{}
+	fold r.Base.NonInitMem()
+	fold r.NonInitMem()
+	return
 }
 
-pred (o *Path) Mem() {
-	acc(&o.Info) &&
-		o.FirstHop.Mem() &&
-		o.SecondHop.Mem()
+func testAllocateRaw() {
+	r := &Raw{}
+	fold r.Base.Mem()
+	// Required to satisfy length predicate
+	r.Raw = make([]byte, r.Base.Len())
+	fold r.Mem()
 }
