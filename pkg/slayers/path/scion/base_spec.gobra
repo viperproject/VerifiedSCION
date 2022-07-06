@@ -16,6 +16,10 @@
 
 package scion
 
+pred (b *Base) NonInitMem() {
+	acc(b)
+}
+
 // This predicate is established right after DecodeFromBytes.
 // Because this method does not perform any bounds checks, it
 // is not possible to have assertions in this invariant about
@@ -30,6 +34,14 @@ pred (b *Base) Mem() {
 	(0 < b.NumINF ==> 0 < b.NumHops)
 }
 
+/* (gavin) predicate proposal
+pred (m *MetaHdr) Mem(maxINF, maxHop int) {
+	acc(m) && 0 <= maxINF && 0 <= maxHop &&
+		maxINF > 0 ==> (0 <= m.CurrIF && m.CurrIF < maxINF &&)
+		maxHop > 0 ==> (0 <= m.CurrHF  && m.CurrHF < maxHop)
+}
+*/
+
 // The following conjuncts were previously added to Mem()
 // by a student, but are unsound:
 // (b.NumINF  == 0 ==> b.PathMeta.CurrINF == 0) &&
@@ -38,3 +50,23 @@ pred (b *Base) Mem() {
 // (b.NumHops  > 0 ==> b.PathMeta.CurrHF >= 0)
 // TODO: Maybe we can put them in a separate predicate 
 //       established after performing bounds check.
+
+requires acc(b.Mem(), _)
+ensures  0 <= res && res <= 3
+decreases
+pure func (b *Base) getNumINF() (res int) {
+	return unfolding acc(b.Mem(), _) in b.NumINF
+}
+
+requires acc(b.Mem(), _)
+ensures  0 <= res
+decreases
+pure func (b *Base) getNumHops() (res int) {
+	return unfolding acc(b.Mem(), _) in b.NumHops
+}
+
+ghost
+requires b.Mem()
+ensures  b.NonInitMem()
+decreases
+func (b *Base) exchangePred()

@@ -14,14 +14,16 @@
 
 // +gobra
 
-package onehop
+package scion
 
-pred (o *Path) NonInitMem() {
-	acc(o)
+pred (s *Raw) NonInitMem() {
+	acc(&s.Raw) && s.Base.NonInitMem()
 }
 
-pred (o *Path) Mem() {
-	acc(&o.Info) &&
-		o.FirstHop.Mem() &&
-		o.SecondHop.Mem()
+pred (s *Raw) Mem() {
+	s.Base.Mem() && acc(&s.Raw) &&
+		len(s.Raw) >= s.Len() &&
+		(forall i int :: 0 <= i && i < len(s.Raw) ==>
+			acc(&s.Raw[i]))
 }
+

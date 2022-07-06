@@ -14,14 +14,18 @@
 
 // +gobra
 
-package onehop
+package scion
 
-pred (o *Path) NonInitMem() {
-	acc(o)
+import "github.com/scionproto/scion/pkg/slayers/path"
+
+func testAllocateNonInitDecoded() {
+  d := &Decoded{}
+  fold d.Base.NonInitMem()
+  fold d.NonInitMem()
 }
 
-pred (o *Path) Mem() {
-	acc(&o.Info) &&
-		o.FirstHop.Mem() &&
-		o.SecondHop.Mem()
+func testAllocateDecoded() {
+  d := &Decoded{}
+  fold d.Base.Mem()
+  fold d.Mem()
 }
