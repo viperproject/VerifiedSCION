@@ -37,7 +37,6 @@ pred (d *Decoded) Mem() {
 		(forall i int :: 0 <= i && i < len(d.HopFields) ==>
 			d.HopFields[i].Mem()) &&
 		len(d.HopFields) == d.Base.getNumHops()
-
 }
 
 requires acc(d.Mem(), _)
@@ -51,38 +50,3 @@ decreases
 pure func (d *Decoded) getLenHopFields() int {
 	return unfolding acc(d.Mem(), _) in len(d.HopFields)
 }
-
-/*
-
-(*Decoded) implements path.Path {
-	(d *Decoded) SerializeTo(b []byte) (err error) {
-		unfold d.Mem()
-		err = d.SerializeTo(b)
-		fold d.Mem()
-		return
-	}
-
-	(d *Decoded) DecodeFromBytes(b []byte) (err error) {
-		unfold d.Mem()
-		err = d.DecodeFromBytes(b)
-		fold d.Mem()
-		return
-	}
-
-	(d *Decoded) Reverse() (p path.Path, err error) {
-		unfold d.Mem()
-		p, err = d.Reverse()
-		fold d.Mem()
-		return
-	}
-
-	pure (d *Decoded) Len() int {
-		return unfolding acc(d.Mem(), _) in d.Len()
-	}
-
-	pure (d *Decoded) Type() path.Type {
-		return unfolding acc(d.Mem(), _) in d.Type()
-	}
-}
-
-*/
