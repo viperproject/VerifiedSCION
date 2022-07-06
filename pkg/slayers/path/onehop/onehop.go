@@ -118,59 +118,76 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
-// func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
-// 	if o.SecondHop.ConsIngress == 0 {
-// 		return nil, serrors.New("incomplete path can't be converted")
-// 	}
-// 	p := &scion.Decoded{
-// 		Base: scion.Base{
-// 			PathMeta: scion.MetaHdr{
-// 				SegLen: [3]uint8{2, 0, 0},
-// 			},
-// 			NumHops: 2,
-// 			NumINF:  1,
-// 		},
-// 		InfoFields: []path.InfoField{
-// 			{
-// 				ConsDir:   true,
-// 				SegID:     o.Info.SegID,
-// 				Timestamp: o.Info.Timestamp,
-// 			},
-// 		},
-// 		HopFields: []path.HopField{
-// 			{
-// 				IngressRouterAlert: o.FirstHop.IngressRouterAlert,
-// 				EgressRouterAlert:  o.FirstHop.EgressRouterAlert,
-// 				ConsIngress:        o.FirstHop.ConsIngress,
-// 				ConsEgress:         o.FirstHop.ConsEgress,
-// 				ExpTime:            o.FirstHop.ExpTime,
-// 				Mac:                o.FirstHop.Mac,
-// 			},
-// 			{
-// 				IngressRouterAlert: o.SecondHop.IngressRouterAlert,
-// 				EgressRouterAlert:  o.SecondHop.EgressRouterAlert,
-// 				ConsIngress:        o.SecondHop.ConsIngress,
-// 				ConsEgress:         o.SecondHop.ConsEgress,
-// 				ExpTime:            o.SecondHop.ExpTime,
-// 				Mac:                o.SecondHop.Mac,
-// 			},
-// 		},
-// 	}
-// 	return p, nil
-// }
+//@ requires o.Mem()
+//@ ensures err == nil ==> sd.Mem()
+//@ decreases
+func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
+	//@ unfold o.Mem()
+	//@ unfold o.SecondHop.Mem()
+	if o.SecondHop.ConsIngress == 0 {
+		//@ fold o.SecondHop.Mem()
+		//@ fold o.Mem()
+		return nil, serrors.New("incomplete path can't be converted")
+	}
+	//@ unfold o.FirstHop.Mem()
+	p := &scion.Decoded{
+		Base: scion.Base{
+			PathMeta: scion.MetaHdr{
+				SegLen: [3]uint8{2, 0, 0},
+			},
+			NumHops: 2,
+			NumINF:  1,
+		},
+		// InfoFields: []path.InfoField{
+			// {
+				// ConsDir:   true,
+				// SegID:     o.Info.SegID,
+				// Timestamp: o.Info.Timestamp,
+			// },
+		// },
+		HopFields: []path.HopField{
+		// 	{
+		// 		IngressRouterAlert: o.FirstHop.IngressRouterAlert,
+		// 		EgressRouterAlert:  o.FirstHop.EgressRouterAlert,
+		// 		ConsIngress:        o.FirstHop.ConsIngress,
+		// 		ConsEgress:         o.FirstHop.ConsEgress,
+		// 		ExpTime:            o.FirstHop.ExpTime,
+		// 		Mac:                o.FirstHop.Mac,
+		// 	},
+		// 	{
+		// 		IngressRouterAlert: o.SecondHop.IngressRouterAlert,
+		// 		EgressRouterAlert:  o.SecondHop.EgressRouterAlert,
+		// 		ConsIngress:        o.SecondHop.ConsIngress,
+		// 		ConsEgress:         o.SecondHop.ConsEgress,
+		// 		ExpTime:            o.SecondHop.ExpTime,
+		// 		Mac:                o.SecondHop.Mac,
+		// 	},
+		},
+	}
+	//@ fold p.Base.Mem()
+	//@ fold p.Mem()
+	return p, nil
+}
 
 // Reverse a OneHop path that returns a reversed SCION path.
-// func (o Path) Reverse() (p path.Path, err error) {
-// 	sp, err := o.ToSCIONDecoded()
-// 	if err != nil {
-// 		return nil, serrors.WrapStr("converting to scion path", err)
-// 	}
-// 	// increment the path, since we are at the receiver side.
-// 	if err := sp.IncPath(); err != nil {
-// 		return nil, serrors.WrapStr("incrementing path", err)
-// 	}
-// 	return sp.Reverse()
-// }
+/*
+//@ decreases
+func (o Path) Reverse() (p path.Path, err error) {
+	//@ share o
+	oRef := &o
+	// (gavin) changed to use explicit *Path
+	sp, err := oRef.ToSCIONDecoded()
+	if err != nil {
+		return nil, serrors.WrapStr("converting to scion path", err)
+	}
+	//@ assert sp.Mem()
+	// increment the path, since we are at the receiver side.
+	if err := sp.IncPath(); err != nil {
+		return nil, serrors.WrapStr("incrementing path", err)
+	}
+	return sp.Reverse()
+}
+*/
 
 //@ pure
 //@ ensures l == PathLen
