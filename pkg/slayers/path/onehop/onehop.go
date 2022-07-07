@@ -47,6 +47,7 @@ type Path struct {
 	SecondHop path.HopField
 }
 
+//@ trusted
 //@ requires o.NonInitMem()
 //@ requires len(data) >= PathLen
 //@ preserves forall i int :: 0 <= i && i < len(data) ==>
@@ -120,6 +121,7 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 // decoded format.
 //@ requires o.Mem()
 //@ ensures err == nil ==> sd.Mem()
+//@ ensures err != nil ==> s.Mem()
 //@ decreases
 func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 	//@ unfold o.Mem()
@@ -138,30 +140,30 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 			NumHops: 2,
 			NumINF:  1,
 		},
-		// InfoFields: []path.InfoField{
-			// {
-				// ConsDir:   true,
-				// SegID:     o.Info.SegID,
-				// Timestamp: o.Info.Timestamp,
-			// },
-		// },
+		InfoFields: []path.InfoField{
+			{
+				ConsDir:   true,
+				SegID:     o.Info.SegID,
+				Timestamp: o.Info.Timestamp,
+			},
+		},
 		HopFields: []path.HopField{
-		// 	{
-		// 		IngressRouterAlert: o.FirstHop.IngressRouterAlert,
-		// 		EgressRouterAlert:  o.FirstHop.EgressRouterAlert,
-		// 		ConsIngress:        o.FirstHop.ConsIngress,
-		// 		ConsEgress:         o.FirstHop.ConsEgress,
-		// 		ExpTime:            o.FirstHop.ExpTime,
-		// 		Mac:                o.FirstHop.Mac,
-		// 	},
-		// 	{
-		// 		IngressRouterAlert: o.SecondHop.IngressRouterAlert,
-		// 		EgressRouterAlert:  o.SecondHop.EgressRouterAlert,
-		// 		ConsIngress:        o.SecondHop.ConsIngress,
-		// 		ConsEgress:         o.SecondHop.ConsEgress,
-		// 		ExpTime:            o.SecondHop.ExpTime,
-		// 		Mac:                o.SecondHop.Mac,
-		// 	},
+			{
+				IngressRouterAlert: o.FirstHop.IngressRouterAlert,
+				EgressRouterAlert:  o.FirstHop.EgressRouterAlert,
+				ConsIngress:        o.FirstHop.ConsIngress,
+				ConsEgress:         o.FirstHop.ConsEgress,
+				ExpTime:            o.FirstHop.ExpTime,
+				Mac:                o.FirstHop.Mac,
+			},
+			{
+				IngressRouterAlert: o.SecondHop.IngressRouterAlert,
+				EgressRouterAlert:  o.SecondHop.EgressRouterAlert,
+				ConsIngress:        o.SecondHop.ConsIngress,
+				ConsEgress:         o.SecondHop.ConsEgress,
+				ExpTime:            o.SecondHop.ExpTime,
+				Mac:                o.SecondHop.Mac,
+			},
 		},
 	}
 	//@ fold p.Base.Mem()

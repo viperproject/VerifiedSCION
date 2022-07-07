@@ -55,6 +55,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		return err
 	}
 	if minLen := s.Len(); len(data) < minLen {
+		//@ s.Base.exchangePred()
+		//@ fold s.NonInitMem()
 		return serrors.New("DecodedPath raw too short", "expected", minLen, "actual", int(len(data)))
 	}
 	//@ assert s.Base.Mem()
