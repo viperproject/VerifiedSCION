@@ -121,7 +121,7 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 // decoded format.
 //@ requires o.Mem()
 //@ ensures err == nil ==> sd.Mem()
-//@ ensures err != nil ==> s.Mem()
+//@ ensures err != nil ==> o.Mem()
 //@ decreases
 func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 	//@ unfold o.Mem()
