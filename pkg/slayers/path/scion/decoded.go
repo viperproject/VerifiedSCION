@@ -43,12 +43,19 @@ type Decoded struct {
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 //@ requires s.NonInitMem()
 //@ requires len(data) >= MetaLen
-//@ preserves forall i int :: 0 <= i && i < len(data) ==>
-//@   acc(&data[i], definitions.ReadL1)
+//@ requires MetaLen == 4
+// preserves forall i int :: 0 <= i && i < len(data) ==>
+//   acc(&data[i], definitions.ReadL1)
+//@ preserves acc(&data[0], definitions.ReadL1)
+//@ preserves acc(&data[1], definitions.ReadL1)
+//@ preserves acc(&data[2], definitions.ReadL1)
+//@ preserves acc(&data[3], definitions.ReadL1)
 //@ ensures r == nil ==> s.Mem()
 //@ ensures r != nil ==> s.NonInitMem()
 //@ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
+	//@ assert path.InfoLen == 8
+	//@ assert path.HopLen == 12
 	//@ unfold s.NonInitMem()
 	if err := s.Base.DecodeFromBytes(data); err != nil {
 		//@ fold s.NonInitMem()
@@ -78,8 +85,6 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ 	acc(&s.InfoFields[j])
 	//@ invariant forall j int :: 0 <= j && j < len(data) ==>
 	//@   acc(&data[j], definitions.ReadL1)
-
-	//@ invariant path.InfoLen == 8
 	//@ decreases s.Base.getNumINF() - i
 	// (gavin) changed to use pure func and avoid unfolding
 	// for i := 0; i < s.NumINF; i++ {
@@ -90,7 +95,6 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		//
 		// (gavin) unroll quantifiers
 		// assert forall j int :: 0 <= j && j < path.InfoLen ==> &data[offset : offset+path.InfoLen][j] == &data[offset + j]
-		//@ assert path.InfoLen == 8
 		//@ assert &data[offset : offset+path.InfoLen][0] == &data[offset + 0]
 		//@ assert &data[offset : offset+path.InfoLen][1] == &data[offset + 1]
 		//@ assert &data[offset : offset+path.InfoLen][2] == &data[offset + 2]
@@ -99,6 +103,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		//@ assert &data[offset : offset+path.InfoLen][5] == &data[offset + 5]
 		//@ assert &data[offset : offset+path.InfoLen][6] == &data[offset + 6]
 		//@ assert &data[offset : offset+path.InfoLen][7] == &data[offset + 7]
+		//@ assert path.InfoLen <= len(data[offset : offset+path.InfoLen])
 		if err := s.InfoFields[i].DecodeFromBytes(data[offset : offset+path.InfoLen]); err != nil {
 			//@ ghost s.Base.exchangePred()
 			//@ fold s.NonInitMem()
@@ -120,7 +125,6 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant offset == MetaLen + s.Base.getNumINF() * path.InfoLen + i * path.HopLen
 	//@ invariant forall j int :: 0 <= j && j < len(data) ==>
 	//@   acc(&data[j], definitions.ReadL1)
-	//@ invariant path.HopLen == 12
 	//@ decreases s.Base.getNumHops() - i
 	// (gavin) changed to use pure func and avoid unfolding
 	// for i := 0; i < s.NumHops; i++ {
@@ -145,6 +149,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		//@ assert &(data[offset : offset+path.HopLen][9]) == &data[offset + 9]
 		//@ assert &(data[offset : offset+path.HopLen][10]) == &data[offset + 10]
 		//@ assert &(data[offset : offset+path.HopLen][11]) == &data[offset + 11]
+		//@ assert path.HopLen <= len(data[offset : offset+path.HopLen])
 		if err := s.HopFields[i].DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 			//@ ghost s.Base.exchangePred()
 			//@ fold s.NonInitMem()
@@ -158,16 +163,20 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-//@ preserves acc(s.Mem(), definitions.ReadL1)
+
+//@ requires acc(s.Mem(), definitions.ReadL1)
+//@ requires len(b) >= s.Len()
 //@ preserves forall i int :: 0 <= i && i < len(b) ==>
 //@   acc(&b[i])
+//@ ensures acc(s.Mem(), definitions.ReadL1)
 //@ decreases
 func (s *Decoded) SerializeTo(b []byte) error {
+	//@ assert path.HopLen == 12
+	//@ assert path.InfoLen == 8
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	if len(b) < s.Len() {
-		//@ assume false // TODO ask Joao / Dion
 		ret := serrors.New("buffer too small to serialize path.", "expected", s.Len(),
-			"actual", len(b))
+			"actual", int(len(b)))
 		//@ fold acc(s.Mem(), definitions.ReadL1)
 		return ret
 	}
@@ -199,7 +208,6 @@ func (s *Decoded) SerializeTo(b []byte) error {
 	//@ invariant 0 <= i && i <= s.getLenInfoFields()
 	//@ invariant offset == MetaLen + i * path.InfoLen
 	//@ invariant len(b) >= MetaLen + s.getLenInfoFields() * path.InfoLen + s.getLenHopFields() * path.HopLen
-	//@ invariant path.InfoLen == 8
 	//@ decreases s.getLenInfoFields() - i
 	// --- TODO reinstate the original range clause
 	// for _, info := range s.InfoFields {
@@ -241,7 +249,6 @@ func (s *Decoded) SerializeTo(b []byte) error {
 	//@ invariant 0 <= i && i <= s.getLenHopFields()
 	//@ invariant offset == MetaLen + s.getLenInfoFields() * path.InfoLen + i * path.HopLen
 	//@ invariant len(b) >= MetaLen + s.getLenInfoFields() * path.InfoLen + s.getLenHopFields() * path.HopLen
-	//@ invariant path.HopLen == 12
 	//@ decreases s.getLenHopFields() - i
 	// --- TODO reinstate the original range clause
 	// for _, hop := range s.HopFields {

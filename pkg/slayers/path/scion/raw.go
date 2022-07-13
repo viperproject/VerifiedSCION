@@ -32,9 +32,14 @@ type Raw struct {
 // DecodeFromBytes only decodes the PathMetaHeader. Otherwise the nothing is decoded and simply kept
 // as raw bytes.
 //@ requires s.NonInitMem()
-//@ requires forall i int :: 0 <= i && i < len(data) ==>
-//@   acc(&data[i])
 //@ requires len(data) >= MetaLen
+//@ requires MetaLen == 4
+//@ requires acc(&data[0])
+//@ requires acc(&data[1])
+//@ requires acc(&data[2])
+//@ requires acc(&data[3])
+// requires forall i int :: 0 <= i && i < len(data) ==>
+//   acc(&data[i])
 //@ ensures res == nil ==> s.Mem()
 //@ ensures res != nil ==> (s.NonInitMem() && res.ErrorMem())
 //@ decreases
@@ -62,11 +67,14 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-//@ preserves s.Mem()
+//@ requires s.Mem()
+//@ requires len(b) >= s.Len()
 //@ preserves forall i int :: 0 <= i && i < len(b) ==>
 //@   acc(&b[i])
+//@ ensures s.Mem()
 //@ decreases
 func (s *Raw) SerializeTo(b []byte) error {
+	//@ assert MetaLen == 4
 	//@ unfold s.Mem()
 	if s.Raw == nil {
 		//@ fold s.Mem()
@@ -83,7 +91,6 @@ func (s *Raw) SerializeTo(b []byte) error {
 	// (gavin) unroll quantifiers
 	// assert forall i int :: 0 <= i && i < MetaLen ==>
 	//   &s.Raw[i] == &s.Raw[:MetaLen][i]
-	//@ assert MetaLen == 4
 	//@ assert &s.Raw[0] == &s.Raw[:MetaLen][0]
 	//@ assert &s.Raw[1] == &s.Raw[:MetaLen][1]
 	//@ assert &s.Raw[2] == &s.Raw[:MetaLen][2]
@@ -147,6 +154,7 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 	//@ assert &s.Raw[:MetaLen][1] == &s.Raw[1]
 	//@ assert &s.Raw[:MetaLen][2] == &s.Raw[2]
 	//@ assert &s.Raw[:MetaLen][3] == &s.Raw[3]
+	//@ assert len(s.Raw[:MetaLen]) >= MetaLen
 	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		//@ fold s.Base.Mem()
@@ -191,6 +199,7 @@ func (s *Raw) IncPath() error {
 //@ ensures  acc(s.Mem(), definitions.ReadL1)
 //@ decreases
 func (s *Raw) GetInfoField(idx int) (ifield path.InfoField, err error) {
+	//@ assert path.InfoLen == 8
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	// (gavin) changed to pure method to avoid unfolding
@@ -207,7 +216,6 @@ func (s *Raw) GetInfoField(idx int) (ifield path.InfoField, err error) {
 	// (gavin) unroll quantifiers
 	// assert forall i int :: 0 <= i && i < path.InfoLen ==>
 	//   &s.Raw[infOffset : infOffset+path.InfoLen][i] == &s.Raw[infOffset + i]
-	//@ assert path.InfoLen == 8
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][0] == &s.Raw[infOffset + 0]
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][1] == &s.Raw[infOffset + 1]
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][2] == &s.Raw[infOffset + 2]
@@ -216,6 +224,7 @@ func (s *Raw) GetInfoField(idx int) (ifield path.InfoField, err error) {
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][5] == &s.Raw[infOffset + 5]
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][6] == &s.Raw[infOffset + 6]
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][7] == &s.Raw[infOffset + 7]
+	//@ assert len(s.Raw[infOffset : infOffset+path.InfoLen]) >= path.InfoLen
 	if err := info.DecodeFromBytes(s.Raw[infOffset : infOffset+path.InfoLen]); err != nil {
 		//@ fold acc(s.Mem(), definitions.ReadL1)
 		return path.InfoField{}, err
@@ -248,6 +257,7 @@ func (s *Raw) GetCurrentInfoField() (path.InfoField, error) {
 func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
 	//@ share info
 	infoRef := &info
+	//@ assert path.InfoLen == 8
 	//@ unfold s.Mem()
 	//@ unfold s.Base.Mem()
 	if idx >= s.NumINF {
@@ -260,7 +270,6 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
 	// (gavin) unroll quantifiers
 	// assert forall i int :: 0 <= i && i < path.InfoLen ==>
 	//   &s.Raw[infOffset : infOffset+path.InfoLen][i] == &s.Raw[infOffset + i]
-	//@ assert path.InfoLen == 8
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][0] == &s.Raw[infOffset + 0]
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][1] == &s.Raw[infOffset + 1]
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][2] == &s.Raw[infOffset + 2]
@@ -269,6 +278,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][5] == &s.Raw[infOffset + 5]
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][6] == &s.Raw[infOffset + 6]
 	//@ assert &s.Raw[infOffset : infOffset+path.InfoLen][7] == &s.Raw[infOffset + 7]
+	//@ assert len(s.Raw[infOffset : infOffset+path.InfoLen]) >= path.InfoLen
 	ret := infoRef.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
 	//@ fold s.Base.Mem()
 	//@ fold s.Mem()
@@ -280,6 +290,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
 //@ preserves acc(s.Mem(), definitions.ReadL1)
 //@ decreases
 func (s *Raw) GetHopField(idx int) (path.HopField, error) {
+	//@ assert path.HopLen == 12
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	if idx >= s.NumHops {
@@ -308,6 +319,7 @@ func (s *Raw) GetHopField(idx int) (path.HopField, error) {
 	//@ assert &s.Raw[hopOffset:hopOffset+path.HopLen][9] == &s.Raw[hopOffset +  9]
 	//@ assert &s.Raw[hopOffset:hopOffset+path.HopLen][10] == &s.Raw[hopOffset + 10]
 	//@ assert &s.Raw[hopOffset:hopOffset+path.HopLen][11] == &s.Raw[hopOffset + 11]
+	//@ assert len(s.Raw[hopOffset : hopOffset+path.HopLen]) >= path.HopLen
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
 		//@ fold acc(s.Mem(), definitions.ReadL1)
 		return path.HopField{}, err
@@ -339,6 +351,7 @@ func (s *Raw) GetCurrentHopField() (path.HopField, error) {
 func (s *Raw) SetHopField(hop path.HopField, idx int) error {
 	//@ share hop
 	hopRef := &hop // (gavin) introduced `hopRef`
+	//@ assert path.HopLen == 12
 	//@ fold hopRef.Mem()
 	//@ unfold s.Mem()
 	//@ unfold s.Base.Mem()
@@ -355,7 +368,6 @@ func (s *Raw) SetHopField(hop path.HopField, idx int) error {
 	// (gavin) unroll quantifiers
 	// assert forall i int :: 0 <= i && i < path.HopLen ==>
 	//   &s.Raw[hopOffset:hopOffset+path.HopLen][i] == &s.Raw[hopOffset + i]
-	//@ assert path.HopLen == 12
 	//@ assert &s.Raw[hopOffset:hopOffset+path.HopLen][0] == &s.Raw[hopOffset +  0]
 	//@ assert &s.Raw[hopOffset:hopOffset+path.HopLen][1] == &s.Raw[hopOffset +  1]
 	//@ assert &s.Raw[hopOffset:hopOffset+path.HopLen][2] == &s.Raw[hopOffset +  2]
@@ -368,6 +380,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int) error {
 	//@ assert &s.Raw[hopOffset:hopOffset+path.HopLen][9] == &s.Raw[hopOffset +  9]
 	//@ assert &s.Raw[hopOffset:hopOffset+path.HopLen][10] == &s.Raw[hopOffset + 10]
 	//@ assert &s.Raw[hopOffset:hopOffset+path.HopLen][11] == &s.Raw[hopOffset + 11]
+	//@ assert len(s.Raw[hopOffset : hopOffset+path.HopLen]) >= path.HopLen
 	ret := hopRef.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
 	//@ fold s.Mem()
 	return ret
