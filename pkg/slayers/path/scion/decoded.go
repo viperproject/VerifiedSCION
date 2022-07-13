@@ -78,6 +78,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ 	acc(&s.InfoFields[j])
 	//@ invariant forall j int :: 0 <= j && j < len(data) ==>
 	//@   acc(&data[j], definitions.ReadL1)
+
+	//@ invariant path.InfoLen == 8
 	//@ decreases s.Base.getNumINF() - i
 	// (gavin) changed to use pure func and avoid unfolding
 	// for i := 0; i < s.NumINF; i++ {
@@ -85,7 +87,18 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		//@ assert acc(&s.InfoFields[i])
 		//@ assert 0 <= offset && offset < len(data)
 		//@ assert 0 <= offset+path.InfoLen && offset+path.InfoLen <= len(data)
-		//@ assert forall j int :: 0 <= j && j < path.InfoLen ==> &data[offset : offset+path.InfoLen][j] == &data[offset + j]
+		//
+		// (gavin) unroll quantifiers
+		// assert forall j int :: 0 <= j && j < path.InfoLen ==> &data[offset : offset+path.InfoLen][j] == &data[offset + j]
+		//@ assert path.InfoLen == 8
+		//@ assert &data[offset : offset+path.InfoLen][0] == &data[offset + 0]
+		//@ assert &data[offset : offset+path.InfoLen][1] == &data[offset + 1]
+		//@ assert &data[offset : offset+path.InfoLen][2] == &data[offset + 2]
+		//@ assert &data[offset : offset+path.InfoLen][3] == &data[offset + 3]
+		//@ assert &data[offset : offset+path.InfoLen][4] == &data[offset + 4]
+		//@ assert &data[offset : offset+path.InfoLen][5] == &data[offset + 5]
+		//@ assert &data[offset : offset+path.InfoLen][6] == &data[offset + 6]
+		//@ assert &data[offset : offset+path.InfoLen][7] == &data[offset + 7]
 		if err := s.InfoFields[i].DecodeFromBytes(data[offset : offset+path.InfoLen]); err != nil {
 			//@ ghost s.Base.exchangePred()
 			//@ fold s.NonInitMem()
@@ -107,6 +120,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant offset == MetaLen + s.Base.getNumINF() * path.InfoLen + i * path.HopLen
 	//@ invariant forall j int :: 0 <= j && j < len(data) ==>
 	//@   acc(&data[j], definitions.ReadL1)
+	//@ invariant path.HopLen == 12
 	//@ decreases s.Base.getNumHops() - i
 	// (gavin) changed to use pure func and avoid unfolding
 	// for i := 0; i < s.NumHops; i++ {
@@ -114,8 +128,23 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		//@ assert acc(&s.HopFields[i])
 		//@ assert 0 <= offset && offset < len(data)
 		//@ assert 0 <= offset+path.InfoLen && offset+path.HopLen <= len(data)
-		//@ assert forall j int :: 0 <= j && j < int(path.HopLen) ==>
-		//@   &(data[offset : offset+path.HopLen][j]) == &data[offset + j]
+		//
+		// (gavin) unroll quantifiers
+		// assert forall j int :: 0 <= j && j < int(path.HopLen) ==>
+		//   &(data[offset : offset+path.HopLen][j]) == &data[offset + j]
+		//@ assert path.HopLen == 12
+		//@ assert &(data[offset : offset+path.HopLen][0]) == &data[offset + 0]
+		//@ assert &(data[offset : offset+path.HopLen][1]) == &data[offset + 1]
+		//@ assert &(data[offset : offset+path.HopLen][2]) == &data[offset + 2]
+		//@ assert &(data[offset : offset+path.HopLen][3]) == &data[offset + 3]
+		//@ assert &(data[offset : offset+path.HopLen][4]) == &data[offset + 4]
+		//@ assert &(data[offset : offset+path.HopLen][5]) == &data[offset + 5]
+		//@ assert &(data[offset : offset+path.HopLen][6]) == &data[offset + 6]
+		//@ assert &(data[offset : offset+path.HopLen][7]) == &data[offset + 7]
+		//@ assert &(data[offset : offset+path.HopLen][8]) == &data[offset + 8]
+		//@ assert &(data[offset : offset+path.HopLen][9]) == &data[offset + 9]
+		//@ assert &(data[offset : offset+path.HopLen][10]) == &data[offset + 10]
+		//@ assert &(data[offset : offset+path.HopLen][11]) == &data[offset + 11]
 		if err := s.HopFields[i].DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 			//@ ghost s.Base.exchangePred()
 			//@ fold s.NonInitMem()
@@ -170,6 +199,7 @@ func (s *Decoded) SerializeTo(b []byte) error {
 	//@ invariant 0 <= i && i <= s.getLenInfoFields()
 	//@ invariant offset == MetaLen + i * path.InfoLen
 	//@ invariant len(b) >= MetaLen + s.getLenInfoFields() * path.InfoLen + s.getLenHopFields() * path.HopLen
+	//@ invariant path.InfoLen == 8
 	//@ decreases s.getLenInfoFields() - i
 	// --- TODO reinstate the original range clause
 	// for _, info := range s.InfoFields {
@@ -181,8 +211,19 @@ func (s *Decoded) SerializeTo(b []byte) error {
 		//@ assert offset < offset+path.InfoLen
 		info := &s.InfoFields[i]
 		//@ assert len(b[offset : offset + path.InfoLen]) == path.InfoLen
-		//@ assert forall j int :: 0 <= j && j < len(b[offset : offset + path.InfoLen]) ==>
-		//@   &b[offset : offset + path.InfoLen][j] == &b[offset + j]
+		//
+		// (gavin) unroll quantifiers
+		// assert forall j int :: 0 <= j && j < len(b[offset : offset + path.InfoLen]) ==>
+		//   &b[offset : offset + path.InfoLen][j] == &b[offset + j]
+		//@ assert path.InfoLen == 8
+		//@ assert &b[offset : offset + path.InfoLen][0] == &b[offset + 0]
+		//@ assert &b[offset : offset + path.InfoLen][1] == &b[offset + 1]
+		//@ assert &b[offset : offset + path.InfoLen][2] == &b[offset + 2]
+		//@ assert &b[offset : offset + path.InfoLen][3] == &b[offset + 3]
+		//@ assert &b[offset : offset + path.InfoLen][4] == &b[offset + 4]
+		//@ assert &b[offset : offset + path.InfoLen][5] == &b[offset + 5]
+		//@ assert &b[offset : offset + path.InfoLen][6] == &b[offset + 6]
+		//@ assert &b[offset : offset + path.InfoLen][7] == &b[offset + 7]
 		if err := info.SerializeTo(b[offset : offset+path.InfoLen]); err != nil {
 			//@ fold acc(s.Mem(), definitions.ReadL1)
 			return err
@@ -200,6 +241,7 @@ func (s *Decoded) SerializeTo(b []byte) error {
 	//@ invariant 0 <= i && i <= s.getLenHopFields()
 	//@ invariant offset == MetaLen + s.getLenInfoFields() * path.InfoLen + i * path.HopLen
 	//@ invariant len(b) >= MetaLen + s.getLenInfoFields() * path.InfoLen + s.getLenHopFields() * path.HopLen
+	//@ invariant path.HopLen == 12
 	//@ decreases s.getLenHopFields() - i
 	// --- TODO reinstate the original range clause
 	// for _, hop := range s.HopFields {
@@ -211,8 +253,23 @@ func (s *Decoded) SerializeTo(b []byte) error {
 		//@ assert offset < offset + path.HopLen
 		hop := &s.HopFields[i]
 		//@ assert len(b[offset : offset + path.HopLen]) == path.HopLen
-		//@ assert forall j int :: 0 <= j && j < len(b[offset : offset + path.HopLen]) ==>
-		//@   &b[offset : offset + path.HopLen][j] == &b[offset + j]
+		//
+		// (gavin) unroll quantifiers
+		// assert forall j int :: 0 <= j && j < len(b[offset : offset + path.HopLen]) ==>
+		//   &b[offset : offset + path.HopLen][j] == &b[offset + j]
+		//@ assert path.HopLen == 12
+		//@ assert &b[offset : offset + path.HopLen][0] == &b[offset +  0]
+		//@ assert &b[offset : offset + path.HopLen][1] == &b[offset +  1]
+		//@ assert &b[offset : offset + path.HopLen][2] == &b[offset +  2]
+		//@ assert &b[offset : offset + path.HopLen][3] == &b[offset +  3]
+		//@ assert &b[offset : offset + path.HopLen][4] == &b[offset +  4]
+		//@ assert &b[offset : offset + path.HopLen][5] == &b[offset +  5]
+		//@ assert &b[offset : offset + path.HopLen][6] == &b[offset +  6]
+		//@ assert &b[offset : offset + path.HopLen][7] == &b[offset +  7]
+		//@ assert &b[offset : offset + path.HopLen][8] == &b[offset +  8]
+		//@ assert &b[offset : offset + path.HopLen][9] == &b[offset +  9]
+		//@ assert &b[offset : offset + path.HopLen][10] == &b[offset + 10]
+		//@ assert &b[offset : offset + path.HopLen][11] == &b[offset + 11]
 		if err := hop.SerializeTo(b[offset : offset+path.HopLen]); err != nil {
 			//@ fold acc(s.Mem(), definitions.ReadL1)
 			return err

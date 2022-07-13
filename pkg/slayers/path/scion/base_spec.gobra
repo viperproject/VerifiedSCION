@@ -25,7 +25,14 @@ pred (b *Base) NonInitMem() {
 // is not possible to have assertions in this invariant about
 // how the fileds of Base compare to those of its MetaHdr field.
 pred (b *Base) Mem() {
-	acc(b) &&
+	acc(&b.NumINF) &&
+	acc(&b.NumHops) &&
+	// acc(&b.PathMeta) &&
+	acc(&b.PathMeta.CurrINF) &&
+	acc(&b.PathMeta.CurrHF) &&
+	acc(&b.PathMeta.SegLen[0]) &&
+	acc(&b.PathMeta.SegLen[1]) &&
+	acc(&b.PathMeta.SegLen[2]) &&
 	// 3 is the value of MaxINFs and 64 is the number of MaxHops.
 	0 <= b.NumINF && b.NumINF <= 3 && // TODO: rewrite 3 as MaxInfs
 	// the Code defines 64 as the maximum number of hops,
@@ -33,14 +40,6 @@ pred (b *Base) Mem() {
 	0 <= b.NumHops && // && b.NumHops <= 64 &&
 	(0 < b.NumINF ==> 0 < b.NumHops)
 }
-
-/* (gavin) predicate proposal
-pred (m *MetaHdr) Mem(maxINF, maxHop int) {
-	acc(m) && 0 <= maxINF && 0 <= maxHop &&
-		maxINF > 0 ==> (0 <= m.CurrIF && m.CurrIF < maxINF &&)
-		maxHop > 0 ==> (0 <= m.CurrHF  && m.CurrHF < maxHop)
-}
-*/
 
 // The following conjuncts were previously added to Mem()
 // by a student, but are unsound:
