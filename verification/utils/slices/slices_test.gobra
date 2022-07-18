@@ -14,7 +14,9 @@
 
 package slices
 
-func AccElemsByte_satisfiable_test() {
+func AbstractSlice_Bytes_test() {
 	s := make([]byte, 10)
-	fold AccElemsByte(s)
+    ghost contents := NewSeq_Bytes(10)
+	fold AbstractSlice_Bytes(s, 0, 10, contents)
+    // assert false // fails
 }

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
 )
 
@@ -76,39 +77,61 @@ type HopField struct {
 //@ requires acc(h)
 //@ requires  len(raw) >= HopLen
 //@ requires  HopLen == 12
-// preserves forall i int :: 0 <= i && i < len(raw) ==>
-//     acc(&raw[i], definitions.ReadL1)
-//@ preserves acc(&raw[0], definitions.ReadL1)
-//@ preserves acc(&raw[1], definitions.ReadL1)
-//@ preserves acc(&raw[2], definitions.ReadL1)
-//@ preserves acc(&raw[3], definitions.ReadL1)
-//@ preserves acc(&raw[4], definitions.ReadL1)
-//@ preserves acc(&raw[5], definitions.ReadL1)
-//@ preserves acc(&raw[6], definitions.ReadL1)
-//@ preserves acc(&raw[7], definitions.ReadL1)
-//@ preserves acc(&raw[8], definitions.ReadL1)
-//@ preserves acc(&raw[9], definitions.ReadL1)
-//@ preserves acc(&raw[10], definitions.ReadL1)
-//@ preserves acc(&raw[11], definitions.ReadL1)
+//@ preserves acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+//@    definitions.ReadL1)
 //@ ensures h.Mem()
 //@ ensures   err == nil
 //@ decreases
-func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
+func (h *HopField) DecodeFromBytes(raw []byte /*@, ghost contents seq[byte] @*/) (err error) {
 	if len(raw) < HopLen {
 		return serrors.New("HopField raw too short", "expected", HopLen, "actual", len(raw))
 	}
+	//@ preserves acc(h)
+	//@ preserves acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+	//@    definitions.ReadL1)
+	//@ decreases
+	//@ outline(
+	//@ unfold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+	//@    definitions.ReadL1)
 	h.EgressRouterAlert = raw[0]&0x1 == 0x1
 	h.IngressRouterAlert = raw[0]&0x2 == 0x2
 	h.ExpTime = raw[1]
+	//@ fold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+	//@    definitions.ReadL1)
+	//@ )
+	//@ preserves acc(h)
+	//@ preserves acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+	//@    definitions.ReadL1)
+	//@ decreases
+	//@ outline(
+	//@ unfold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+	//@    definitions.ReadL1)
 	//@ assert &raw[2:4][0] == &raw[2] && &raw[2:4][1] == &raw[3]
 	h.ConsIngress = binary.BigEndian.Uint16(raw[2:4])
 	//@ assert &raw[4:6][0] == &raw[4] && &raw[4:6][1] == &raw[5]
 	h.ConsEgress = binary.BigEndian.Uint16(raw[4:6])
+	//@ fold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+	//@    definitions.ReadL1)
+	//@ )
+	//@ preserves acc(&h.Mac)
+	//@ preserves acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+	//@    definitions.ReadL1)
+	//@ decreases
+	//@ outline(
+	//@ unfold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+	//@    definitions.ReadL1)
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac[:]) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
 	//@ assert forall i int :: 0 <= i && i < len(raw[6:6+MacLen]) ==>
 	//@     &raw[6:6+MacLen][i] == &raw[i+6]
+	//@ assert forall i int :: 0 <= i && i < len(raw[6:6+MacLen]) ==>
+	//@     acc(&raw[6:6+MacLen][i])
+	// BUG: this assume false seems to be generated after the call to copy in the outlined method(!!!)
+	//@ assume false
 	copy(h.Mac[:], raw[6:6+MacLen] /*@, definitions.ReadL1@*/)
+	//@ fold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
+	//@    definitions.ReadL1)
+	//@ )
 	//@ fold h.Mem()
 	return nil
 }

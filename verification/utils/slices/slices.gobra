@@ -16,9 +16,81 @@
 
 package slices
 
-pred AccElemsByte(s []byte) {
+// TODO: version of this predicates without "contents"
+
+
+pred AbstractSlice_Bytes(s []byte, start int, end int, ghost contents seq[byte]) {
+	// start inclusive
+	0 <= start &&
+	start < end &&
+	// end exclusive
+	end <= cap(s) &&
+	len(contents) == end - start &&
 	// Maybe, it is worth having different versions with
 	// different triggers, or using a different trigger
 	// than the one that is inferred.
-	forall i int :: 0 <= i && i < len(s) ==> acc(&s[i])
+	forall i int :: start <= i && i < end ==> (acc(&s[i]) && s[i] == contents[i - start])
+}
+
+ghost
+requires size >= 0
+ensures len(res) == size
+ensures forall i int :: 0 <= i && i < size ==> res[i] == 0
+pure func NewSeq_Bytes(size int) (res seq[byte])
+
+// TODO:
+// func ToSeq
+
+ghost
+requires AbstractSlice_Bytes(s, start, end, contents)
+requires start < idx && idx < end
+ensures  AbstractSlice_Bytes(s, start, idx, contents[:idx-start]) && AbstractSlice_Bytes(s, idx, end, contents[idx-start:])
+func SplitByIndex_Bytes(s []byte, start int, end int, idx int, contents seq[byte]) {
+	unfold AbstractSlice_Bytes(s, start, end, contents)
+	assert len(contents) == end - start
+	fold   AbstractSlice_Bytes(s, start, idx, contents[:idx-start])
+	fold   AbstractSlice_Bytes(s, idx, end, contents[idx-start:])
+}
+
+ghost
+requires AbstractSlice_Bytes(s, start, idx, contents1)
+requires AbstractSlice_Bytes(s, idx,   end, contents2)
+ensures  AbstractSlice_Bytes(s, start, end, contents1 ++ contents2)
+func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, contents1 seq[byte], contents2 seq[byte]) {
+	unfold AbstractSlice_Bytes(s, start, idx, contents1)
+	unfold AbstractSlice_Bytes(s, idx,   end, contents2)
+	fold   AbstractSlice_Bytes(s, start, end, contents1 ++ contents2)
+}
+
+ghost
+requires AbstractSlice_Bytes(s, start, end, contents)
+// the following precondition convinces Gobra that
+// the slice operation is well-formed
+requires unfolding AbstractSlice_Bytes(s, start, end, contents) in true
+ensures  AbstractSlice_Bytes(s[start:end], 0, len(s[start:end]), contents)
+func Reslice_Bytes(s []byte, start int, end int, contents seq[byte]) {
+	unfold AbstractSlice_Bytes(s, start, end, contents)
+	assert forall i int :: 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
+	fold  AbstractSlice_Bytes(s[start:end], 0, len(s[start:end]), contents)
+}
+
+ghost
+// The slice axiomatization seems to be very incomplete.
+// The following body cannot be verified yet.
+trusted // TODO
+requires 0 <= start && start < end && end <= cap(s)
+requires len(s[start:end]) <= cap(s)
+requires AbstractSlice_Bytes(s[start:end], 0, len(s[start:end]), contents)
+ensures  AbstractSlice_Bytes(s, start, end, contents)
+func Unslice_Bytes(s []byte, start int, end int, contents seq[byte]) {
+	unfold AbstractSlice_Bytes(s[start:end], 0, len(s[start:end]), contents)
+	assert 0 <= start && start < end && end <= cap(s)
+	assert len(contents) == end - start
+	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i])
+	// failling assertion:
+	assert forall i int :: start <= i && i < end ==> acc(&s[i])
+	assert forall i int :: start <= i && i < end ==> s[i] == contents[i - start]
+	fold   AbstractSlice_Bytes(s, start, end, contents)
 }
