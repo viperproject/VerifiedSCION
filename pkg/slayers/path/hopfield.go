@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 const (
@@ -76,22 +76,19 @@ type HopField struct {
 // path.HopLen.
 //@ requires  acc(h)
 //@ requires  len(raw) >= HopLen
-//@ preserves acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-//@    definitions.ReadL1)
+//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), definitions.ReadL1)
 //@ ensures h.Mem()
 //@ ensures   err == nil
 //@ decreases
-func (h *HopField) DecodeFromBytes(raw []byte /*@, ghost contents seq[byte] @*/) (err error) {
+func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < HopLen {
 		return serrors.New("HopField raw too short", "expected", HopLen, "actual", len(raw))
 	}
 	//@ preserves acc(h)
-	//@ preserves acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-	//@    definitions.ReadL1)
+	//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), definitions.ReadL1)
 	//@ decreases
 	//@ outline(
-	//@ unfold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-	//@    definitions.ReadL1)
+	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), definitions.ReadL1)
 	h.EgressRouterAlert = raw[0]&0x1 == 0x1
 	h.IngressRouterAlert = raw[0]&0x2 == 0x2
 	h.ExpTime = raw[1]
@@ -99,23 +96,19 @@ func (h *HopField) DecodeFromBytes(raw []byte /*@, ghost contents seq[byte] @*/)
 	h.ConsIngress = binary.BigEndian.Uint16(raw[2:4])
 	//@ assert &raw[4:6][0] == &raw[4] && &raw[4:6][1] == &raw[5]
 	h.ConsEgress = binary.BigEndian.Uint16(raw[4:6])
-	//@ fold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-	//@    definitions.ReadL1)
+	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), definitions.ReadL1)
 	//@ )
 	//@ preserves acc(&h.Mac)
-	//@ preserves acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-	//@    definitions.ReadL1)
+	//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), definitions.ReadL1)
 	//@ decreases
 	//@ outline(
-	//@ unfold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-	//@    definitions.ReadL1)
+	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), definitions.ReadL1)
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac[:]) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
 	//@ assert forall i int :: { &raw[6:6+MacLen][i] } 0 <= i && i < len(raw[6:6+MacLen]) ==>
 	//@     &raw[6:6+MacLen][i] == &raw[i+6]
-	copy(h.Mac[:], raw[6:6+MacLen] /*@, definitions.ReadL2@*/)
-	//@ fold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-	//@    definitions.ReadL1)
+	copy(h.Mac[:], raw[6:6+MacLen] /*@ , definitions.ReadL2 @*/)
+	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), definitions.ReadL1)
 	//@ )
 	//@ fold h.Mem()
 	return nil
@@ -125,45 +118,51 @@ func (h *HopField) DecodeFromBytes(raw []byte /*@, ghost contents seq[byte] @*/)
 // path.HopLen.
 //@ requires  len(b) >= HopLen
 //@ preserves acc(h.Mem(), definitions.ReadL1)
-//@ preserves slices.AbstractSlice_Bytes(b, 0, HopLen, contents)
+//@ preserves slices.AbsSlice_Bytes(b, 0, HopLen)
 //@ ensures   err == nil
 //@ decreases
-func (h *HopField) SerializeTo(b []byte /*@, ghost contents seq[byte] @*/) (err error) {
+func (h *HopField) SerializeTo(b []byte) (err error) {
 	if len(b) < HopLen {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
 	}
 	//@ requires  len(b) >= HopLen
 	//@ preserves acc(h.Mem(), definitions.ReadL1)
-	//@ preserves slices.AbstractSlice_Bytes(b, 0, HopLen, contents)
+	//@ preserves slices.AbsSlice_Bytes(b, 0, HopLen)
 	//@ decreases
 	//@ outline(
-	//@ unfold slices.AbstractSlice_Bytes(b, 0, HopLen, contents)
+	//@ unfold slices.AbsSlice_Bytes(b, 0, HopLen)
 	//@ unfold acc(h.Mem(), definitions.ReadL1)
 	b[0] = 0
-	//@ contents[0] = 0
 	if h.EgressRouterAlert {
 		b[0] |= 0x1
-		//@ contents[0] |= 0x1
 	}
 	if h.IngressRouterAlert {
 		b[0] |= 0x2
-		//@ contents[0] |= 0x2
 	}
 	b[1] = h.ExpTime
-	//@ contents[1] = h.ExpTime
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]
 	binary.BigEndian.PutUint16(b[2:4], h.ConsIngress)
 	//@ assert &b[4:6][0] == &b[4] && &b[4:6][1] == &b[5]
 	binary.BigEndian.PutUint16(b[4:6], h.ConsEgress)
-	//@ fold slices.AbstractSlice_Bytes(b, 0, HopLen, contents)
+	//@ assert forall i int :: { &b[i] } 0 <= i && i < HopLen ==> acc(&b[i])
+	//@ fold slices.AbsSlice_Bytes(b, 0, HopLen)
 	//@ fold acc(h.Mem(), definitions.ReadL1)
 	//@ )
+	//@ requires  len(b) >= HopLen
+	//@ preserves acc(h.Mem(), definitions.ReadL1)
+	//@ preserves slices.AbsSlice_Bytes(b, 0, HopLen)
+	//@ decreases
+	//@ outline(
+	//@ unfold slices.AbsSlice_Bytes(b, 0, HopLen)
+	//@ unfold acc(h.Mem(), definitions.ReadL1)
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
 	//@ assert forall i int :: 0 <= i && i < MacLen ==>
 	//@     &b[6:6+MacLen][i] == &b[i+6]
 	copy(b[6:6+MacLen], h.Mac[:] /*@, definitions.ReadL1 @*/)
+	//@ fold slices.AbsSlice_Bytes(b, 0, HopLen)
 	//@ fold acc(h.Mem(), definitions.ReadL1)
+	//@ )
 	return nil
 }
 

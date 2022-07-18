@@ -14,9 +14,15 @@
 
 package slices
 
-func AbstractSlice_Bytes_test() {
+func AbsSliceC_Bytes_test() {
 	s := make([]byte, 10)
     ghost contents := NewSeq_Bytes(10)
-	fold AbstractSlice_Bytes(s, 0, 10, contents)
+	fold AbsSliceC_Bytes(s, 0, 10, contents)
+    // assert false // fails
+}
+
+func AbsSlice_Bytes_test() {
+	s := make([]byte, 10)
+	fold AbsSlice_Bytes(s, 0, 10)
     // assert false // fails
 }
