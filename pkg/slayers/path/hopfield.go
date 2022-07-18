@@ -74,9 +74,8 @@ type HopField struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // path.HopLen.
-//@ requires acc(h)
+//@ requires  acc(h)
 //@ requires  len(raw) >= HopLen
-//@ requires  HopLen == 12
 //@ preserves acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
 //@    definitions.ReadL1)
 //@ ensures h.Mem()
@@ -96,16 +95,6 @@ func (h *HopField) DecodeFromBytes(raw []byte /*@, ghost contents seq[byte] @*/)
 	h.EgressRouterAlert = raw[0]&0x1 == 0x1
 	h.IngressRouterAlert = raw[0]&0x2 == 0x2
 	h.ExpTime = raw[1]
-	//@ fold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-	//@    definitions.ReadL1)
-	//@ )
-	//@ preserves acc(h)
-	//@ preserves acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-	//@    definitions.ReadL1)
-	//@ decreases
-	//@ outline(
-	//@ unfold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
-	//@    definitions.ReadL1)
 	//@ assert &raw[2:4][0] == &raw[2] && &raw[2:4][1] == &raw[3]
 	h.ConsIngress = binary.BigEndian.Uint16(raw[2:4])
 	//@ assert &raw[4:6][0] == &raw[4] && &raw[4:6][1] == &raw[5]
@@ -122,13 +111,9 @@ func (h *HopField) DecodeFromBytes(raw []byte /*@, ghost contents seq[byte] @*/)
 	//@    definitions.ReadL1)
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac[:]) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
-	//@ assert forall i int :: 0 <= i && i < len(raw[6:6+MacLen]) ==>
+	//@ assert forall i int :: { &raw[6:6+MacLen][i] } 0 <= i && i < len(raw[6:6+MacLen]) ==>
 	//@     &raw[6:6+MacLen][i] == &raw[i+6]
-	//@ assert forall i int :: 0 <= i && i < len(raw[6:6+MacLen]) ==>
-	//@     acc(&raw[6:6+MacLen][i])
-	// BUG: this assume false seems to be generated after the call to copy in the outlined method(!!!)
-	//@ assume false
-	copy(h.Mac[:], raw[6:6+MacLen] /*@, definitions.ReadL1@*/)
+	copy(h.Mac[:], raw[6:6+MacLen] /*@, definitions.ReadL2@*/)
 	//@ fold acc(slices.AbstractSlice_Bytes(raw, 0, HopLen, contents),
 	//@    definitions.ReadL1)
 	//@ )
@@ -139,41 +124,40 @@ func (h *HopField) DecodeFromBytes(raw []byte /*@, ghost contents seq[byte] @*/)
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.HopLen.
 //@ requires  len(b) >= HopLen
-//@ requires  HopLen == 12
 //@ preserves acc(h.Mem(), definitions.ReadL1)
-// preserves forall i int :: 0 <= i && i < len(b) ==>
-//     acc(&b[i])
-//@ preserves acc(&b[0])
-//@ preserves acc(&b[1])
-//@ preserves acc(&b[2])
-//@ preserves acc(&b[3])
-//@ preserves acc(&b[4])
-//@ preserves acc(&b[5])
-//@ preserves acc(&b[6])
-//@ preserves acc(&b[7])
-//@ preserves acc(&b[8])
-//@ preserves acc(&b[9])
-//@ preserves acc(&b[10])
-//@ preserves acc(&b[11])
+//@ preserves slices.AbstractSlice_Bytes(b, 0, HopLen, contents)
 //@ ensures   err == nil
 //@ decreases
-func (h *HopField) SerializeTo(b []byte) (err error) {
+func (h *HopField) SerializeTo(b []byte /*@, ghost contents seq[byte] @*/) (err error) {
 	if len(b) < HopLen {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
 	}
+	//@ requires  len(b) >= HopLen
+	//@ preserves acc(h.Mem(), definitions.ReadL1)
+	//@ preserves slices.AbstractSlice_Bytes(b, 0, HopLen, contents)
+	//@ decreases
+	//@ outline(
+	//@ unfold slices.AbstractSlice_Bytes(b, 0, HopLen, contents)
 	//@ unfold acc(h.Mem(), definitions.ReadL1)
 	b[0] = 0
+	//@ contents[0] = 0
 	if h.EgressRouterAlert {
 		b[0] |= 0x1
+		//@ contents[0] |= 0x1
 	}
 	if h.IngressRouterAlert {
 		b[0] |= 0x2
+		//@ contents[0] |= 0x2
 	}
 	b[1] = h.ExpTime
+	//@ contents[1] = h.ExpTime
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]
 	binary.BigEndian.PutUint16(b[2:4], h.ConsIngress)
 	//@ assert &b[4:6][0] == &b[4] && &b[4:6][1] == &b[5]
 	binary.BigEndian.PutUint16(b[4:6], h.ConsEgress)
+	//@ fold slices.AbstractSlice_Bytes(b, 0, HopLen, contents)
+	//@ fold acc(h.Mem(), definitions.ReadL1)
+	//@ )
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
 	//@ assert forall i int :: 0 <= i && i < MacLen ==>
