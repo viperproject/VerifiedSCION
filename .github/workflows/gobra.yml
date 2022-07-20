@@ -66,9 +66,14 @@ jobs:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
       - name: Debug
         run: |
-          ls ${{ runner.workspace }}
-          ls ${{ runner.workspace }}/VerifiedSCION/
-          ls ${{ runner.workspace }}/viperproject/
+          echo 'runner.workspace'
+          ls -l ${{ runner.workspace }}
+          echo 'runner.workspace/VerifiedSCION'
+          ls -l ${{ runner.workspace }}/VerifiedSCION/
+          echo 'runner.workspace/viperproject'
+          ls -l ${{ runner.workspace }}/viperproject/
+          echo 'runner.workspace/..'
+          ls -l ${{ runner.workspace }}/../
       - name: Upload the verification report
         uses: actions/upload-artifact@v2
         with:
