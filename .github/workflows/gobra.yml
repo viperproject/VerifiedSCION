@@ -64,14 +64,15 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+      - name: Debug
+        run: |
+          ls ${{ runner.workspace }}
+          ls ${{ runner.workspace }}/VerifiedSCION/
+          ls ${{ runner.workspace }}/viperproject/
       - name: Upload the verification report
         uses: actions/upload-artifact@v2
         with:
           name: verification_statistics
           path: ${{ runner.workspace }}/.gobra/stats.json
           if-no-files-found: error # could also be 'warn' or 'ignore'
-      - name: Debug
-        run: |
-          ls ${{ runner.workspace }}
-          ls ${{ runner.workspace }}/VerifiedSCION/
 
