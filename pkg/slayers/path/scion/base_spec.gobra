@@ -25,14 +25,7 @@ pred (b *Base) NonInitMem() {
 // is not possible to have assertions in this invariant about
 // how the fileds of Base compare to those of its MetaHdr field.
 pred (b *Base) Mem() {
-	acc(&b.NumINF) &&
-	acc(&b.NumHops) &&
-	// acc(&b.PathMeta) &&
-	acc(&b.PathMeta.CurrINF) &&
-	acc(&b.PathMeta.CurrHF) &&
-	acc(&b.PathMeta.SegLen[0]) &&
-	acc(&b.PathMeta.SegLen[1]) &&
-	acc(&b.PathMeta.SegLen[2]) &&
+	acc(b) &&
 	// 3 is the value of MaxINFs and 64 is the number of MaxHops.
 	0 <= b.NumINF && b.NumINF <= 3 && // TODO: rewrite 3 as MaxInfs
 	// the Code defines 64 as the maximum number of hops,
@@ -48,7 +41,6 @@ pred (b *Base) Mem() {
 // (b.NumHops == 0 ==> b.PathMeta.CurrHF == 0)  &&
 // (b.NumHops  > 0 ==> b.PathMeta.CurrHF >= 0)
 // TODO: Maybe we can put them in a separate predicate 
-//       established after performing bounds check.
 
 requires acc(b.Mem(), _)
 ensures  0 <= res && res <= 3
