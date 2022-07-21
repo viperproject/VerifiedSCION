@@ -32,33 +32,33 @@ type PacketBuilder interface {
 	decreases
 	SetTruncated()
 
-	requires l.Mem()
+	requires l.LayerMem() && l.PayloadMem()
 	preserves Mem()
 	decreases
 	AddLayer(l Layer)
 
 	preserves Mem()
-	requires l.Mem()
+	requires l.LayerMem() && l.PayloadMem()
 	decreases
 	SetLinkLayer(l LinkLayer)
 
 	preserves Mem()
-	requires l.Mem()
+	requires l.LayerMem() && l.PayloadMem()
 	decreases
 	SetNetworkLayer(l NetworkLayer)
 
 	preserves Mem()
-	requires l.Mem()
+	requires l.LayerMem() && l.PayloadMem()
 	decreases
 	SetTransportLayer(l TransportLayer)
 
 	preserves Mem()
-	requires l.Mem()
+	requires l.LayerMem() && l.PayloadMem()
 	decreases
 	SetApplicationLayer(l ApplicationLayer)
 
 	preserves Mem()
-	requires l.Mem()
+	requires l.LayerMem() && l.PayloadMem()
 	decreases
 	SetErrorLayer(l ErrorLayer)
 

@@ -9,19 +9,21 @@
 package gopacket
 
 type Layer interface {
-	pred Mem()
+	pred LayerMem()
+	pred PayloadMem()
 
+	decreases
 	pure LayerType() LayerType
 
-	requires Mem()
+	requires LayerMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* LayerMem()
 	decreases
 	LayerContents() (res []byte)
 
-	requires Mem()
+	requires PayloadMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* PayloadMem()
 	decreases
 	LayerPayload() (res []byte)
 }
@@ -57,116 +59,105 @@ func (p Payload) Payload() (res []byte) {
 }
 
 type LinkLayer interface {
-	pred Mem()
+	pred LayerMem()
+	pred PayloadMem()
 
 	decreases
 	pure LayerType() LayerType
 
-	requires Mem()
+	requires LayerMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* LayerMem()
 	decreases
 	LayerContents() (res []byte)
 
-	requires Mem()
+	requires PayloadMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* PayloadMem()
 	decreases
 	LayerPayload() (res []byte)
 
-	preserves Mem()
+	preserves LayerMem() && PayloadMem()
 	decreases
 	LinkFlow() Flow
 }
 
 type NetworkLayer interface {
-	pred Mem()
+	pred LayerMem()
+	pred PayloadMem()
 
 	decreases
 	pure LayerType() LayerType
 
-	requires Mem()
+	requires LayerMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* LayerMem()
 	decreases
 	LayerContents() (res []byte)
 
-	requires Mem()
+	requires PayloadMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* PayloadMem()
 	decreases
 	LayerPayload() (res []byte)
 
-	preserves Mem()
+	preserves LayerMem() && PayloadMem()
 	decreases
 	NetworkFlow() Flow
 }
 
 type TransportLayer interface {
-	pred Mem()
+	pred LayerMem()
+	pred PayloadMem()
 
 	decreases
 	pure LayerType() LayerType
 
-	requires Mem()
+	requires LayerMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* LayerMem()
 	decreases
 	LayerContents() (res []byte)
 
-	requires Mem()
+	requires PayloadMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* PayloadMem()
 	decreases
 	LayerPayload() (res []byte)
 
-	preserves Mem()
+	preserves LayerMem() && PayloadMem()
 	decreases
 	TransportFlow() Flow
 }
 
 type ApplicationLayer interface {
-	pred Mem()
+	pred LayerMem()
+	pred PayloadMem()
 
 	decreases
 	pure LayerType() LayerType
 
-	requires Mem()
+	requires LayerMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* LayerMem()
 	decreases
 	LayerContents() (res []byte)
 
-	requires Mem()
+	requires PayloadMem()
 	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures acc(res) --* PayloadMem()
 	decreases
 	LayerPayload() (res []byte)
 
-	preserves Mem()
+	preserves LayerMem() && PayloadMem()
 	decreases
 	Payload() []byte
 }
 
 type ErrorLayer interface {
-	pred Mem()
+	Layer
 
-	decreases
-	pure LayerType() LayerType
-
-	requires Mem()
-	ensures acc(res)
-	ensures acc(res) --* Mem()
-	decreases
-	LayerContents() (res []byte)
-
-	requires Mem()
-	ensures acc(res)
-	ensures acc(res) --* Mem()
-	decreases
-	LayerPayload() (res []byte)
-
-	preserves Mem()
+	preserves LayerMem() && PayloadMem()
 	decreases
 	Error() error
 }

@@ -48,50 +48,50 @@ type Packet interface {
 
 	requires Mem()
 	ensures acc(res)
-	ensures forall i int :: 0 <= i && i < len(res) ==> res[i].Mem()
-	ensures forall i int :: 0 <= i && i < len(res) ==> res[i].Mem() --* Mem()
+	ensures forall i int :: 0 <= i && i < len(res) ==> res[i].LayerMem() && res[i].PayloadMem()
+	ensures forall i int :: 0 <= i && i < len(res) ==> (res[i].LayerMem() && res[i].PayloadMem()) --* Mem()
 	decreases
 	Layers() (res []Layer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	ensures res.LayerMem() && res.PayloadMem()
+	ensures res.LayerMem() && res.PayloadMem() --* Mem()
 	decreases
 	Layer(LayerType) (res Layer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	ensures res.LayerMem() && res.PayloadMem()
+	ensures res.LayerMem() && res.PayloadMem() --* Mem()
 	decreases
 	LayerClass(LayerClass) (res Layer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	ensures res.LayerMem() && res.PayloadMem()
+	ensures res.LayerMem() && res.PayloadMem() --* Mem()
 	decreases
 	LinkLayer() (res LinkLayer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	ensures res.LayerMem() && res.PayloadMem()
+	ensures res.LayerMem() && res.PayloadMem() --* Mem()
 	decreases
 	NetworkLayer() (res NetworkLayer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	ensures res.LayerMem() && res.PayloadMem()
+	ensures res.LayerMem() && res.PayloadMem() --* Mem()
 	decreases
 	TransportLayer() (res TransportLayer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	ensures res.LayerMem() && res.PayloadMem()
+	ensures res.LayerMem() && res.PayloadMem() --* Mem()
 	decreases
 	ApplicationLayer() (res ApplicationLayer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	ensures res.LayerMem() && res.PayloadMem()
+	ensures res.LayerMem() && res.PayloadMem() --* Mem()
 	decreases
 	ErrorLayer() (res ErrorLayer)
 
@@ -108,7 +108,7 @@ type Packet interface {
 	Metadata() (res *PacketMetadata)
 }
 
-preserves l.Mem()
+preserves l.LayerMem() && l.PayloadMem()
 decreases
 func LayerString(l Layer) string
 
