@@ -59,7 +59,10 @@ type InfoField struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // path.InfoLen.
 //@ requires  len(raw) >= InfoLen
-//@ preserves acc(inf) && acc(raw, definitions.ReadL1)
+//@ requires InfoLen == 8
+//@ preserves acc(inf)
+//@ preserves forall i int :: 0 <= i && i < InfoLen ==>
+//@     acc(&raw[i], definitions.ReadL1)
 //@ ensures   err == nil
 //@ decreases
 func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
@@ -80,7 +83,8 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // path.InfoLen.
 //@ requires  len(b) >= InfoLen
 //@ preserves acc(inf, definitions.ReadL1)
-//@ preserves acc(b)
+//@ preserves forall i int :: 0 <= i && i < InfoLen ==>
+//@     acc(&b[i])
 //@ ensures   err == nil
 //@ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {

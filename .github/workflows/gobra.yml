@@ -64,6 +64,24 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+      - name: Verify package 'pkg/slayers/path/epic'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path/epic'
+          packageTimeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+      - name: Verify package 'pkg/slayers/path/onehop'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path/onehop'
+          packageTimeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
       - name: Verify package 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:

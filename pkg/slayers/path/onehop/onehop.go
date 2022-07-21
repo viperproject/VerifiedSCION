@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package onehop
 
 import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
+	//@ "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 // PathLen is the length of a serialized one hop path in bytes.
@@ -25,15 +28,15 @@ const PathLen = path.InfoLen + 2*path.HopLen
 
 const PathType path.Type = 2
 
-func RegisterPath() {
-	path.RegisterPath(path.Metadata{
-		Type: PathType,
-		Desc: "OneHop",
-		New: func() path.Path {
-			return &Path{}
-		},
-	})
-}
+// func RegisterPath() {
+// 	path.RegisterPath(path.Metadata{
+// 		Type: PathType,
+// 		Desc: "OneHop",
+// 		New: func() path.Path {
+// 			return &Path{}
+// 		},
+// 	})
+// }
 
 // Path encodes a one hop path. A one hop path is a special path that is created by a SCION router
 // in the first AS and completed by a SCION router in the second AS. It is used during beaconing
@@ -44,46 +47,91 @@ type Path struct {
 	SecondHop path.HopField
 }
 
-func (o *Path) DecodeFromBytes(data []byte) error {
+//@ trusted
+//@ requires o.NonInitMem()
+//@ requires len(data) >= PathLen
+//@ preserves forall i int :: 0 <= i && i < len(data) ==>
+//@     acc(&data[i], definitions.ReadL1)
+//@ ensures r != nil ==> (o.NonInitMem() && r.ErrorMem())
+//@ ensures r == nil ==> o.Mem()
+//@ decreases
+func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	if len(data) < PathLen {
 		return serrors.New("buffer too short for OneHop path", "expected", PathLen, "actual",
 			len(data))
 	}
 	offset := 0
+	//@ unfold o.NonInitMem()
 	if err := o.Info.DecodeFromBytes(data[:path.InfoLen]); err != nil {
 		return err
 	}
 	offset += path.InfoLen
+	//@ assert 0 <= offset && offset + path.HopLen <= len(data)
+	//@ assert forall i int :: 0 <= i && i < path.HopLen ==>
+	//@     &data[offset : offset+path.HopLen][i] == &data[offset + i]
 	if err := o.FirstHop.DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 		return err
 	}
 	offset += path.HopLen
-	return o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen])
+	//@ assert 0 <= offset && offset + path.HopLen <= len(data)
+	//@ assert forall i int :: 0 <= i && i < path.HopLen ==>
+	//@     &data[offset : offset+path.HopLen][i] == &data[offset + i]
+	r = o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen])
+	//@ ghost if r == nil {
+	//@     fold o.Mem()
+  //@ }
+	return r
 }
 
-func (o *Path) SerializeTo(b []byte) error {
+//@ requires len(b) >= PathLen
+//@ preserves acc(o.Mem(), definitions.ReadL1)
+//@ preserves forall i int :: 0 <= i && i < len(b) ==>
+//@     acc(&b[i])
+//@ ensures err == nil
+//@ decreases
+func (o *Path) SerializeTo(b []byte) (err error) {
 	if len(b) < PathLen {
 		return serrors.New("buffer too short for OneHop path", "expected", PathLen, "actual",
 			len(b))
 	}
 	offset := 0
+	//@ unfold acc(o.Mem(), definitions.ReadL1)
 	if err := o.Info.SerializeTo(b[:offset+path.InfoLen]); err != nil {
 		return err
 	}
 	offset += path.InfoLen
+	//@ assert 0 <= offset && offset + path.HopLen <= len(b)
+	//@ assert forall i int :: 0 <= i && i < path.HopLen ==>
+	//@     &b[offset : offset+path.HopLen][i] == &b[offset + i]
 	if err := o.FirstHop.SerializeTo(b[offset : offset+path.HopLen]); err != nil {
 		return err
 	}
 	offset += path.HopLen
-	return o.SecondHop.SerializeTo(b[offset : offset+path.HopLen])
+	//@ assert 0 <= offset && offset + path.HopLen <= len(b)
+	//@ assert forall i int :: 0 <= i && i < path.HopLen ==>
+	//@     &b[offset : offset+path.HopLen][i] == &b[offset + i]
+	err = o.SecondHop.SerializeTo(b[offset : offset+path.HopLen])
+	//@ ghost if err == nil {
+	//@   fold acc(o.Mem(), definitions.ReadL1)
+  //@ }
+	return err
 }
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
-func (o *Path) ToSCIONDecoded() (*scion.Decoded, error) {
+//@ requires o.Mem()
+//@ ensures err == nil ==> sd.Mem()
+//@ ensures err != nil ==> o.Mem()
+//@ decreases
+func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
+	//@ unfold o.Mem()
+	//@ unfold o.SecondHop.Mem()
 	if o.SecondHop.ConsIngress == 0 {
+		//@ fold o.SecondHop.Mem()
+		//@ fold o.Mem()
 		return nil, serrors.New("incomplete path can't be converted")
 	}
+	//@ unfold o.FirstHop.Mem()
 	p := &scion.Decoded{
 		Base: scion.Base{
 			PathMeta: scion.MetaHdr{
@@ -118,15 +166,24 @@ func (o *Path) ToSCIONDecoded() (*scion.Decoded, error) {
 			},
 		},
 	}
+	//@ fold p.Base.Mem()
+	//@ fold p.Mem()
 	return p, nil
 }
 
-// Rerverse a OneHop path that returns a reversed SCION path.
-func (o Path) Reverse() (path.Path, error) {
+// Reverse a OneHop path that returns a reversed SCION path.
+//@ requires o.Consistent()
+//@ decreases
+func (o/*@@@*/ Path) Reverse() (p path.Path, err error) {
+	//@ fold o.FirstHop.Mem()
+	//@ fold o.SecondHop.Mem()
+	//@ fold o.Mem()
+	// (gavin) changed to use explicit *Path
 	sp, err := o.ToSCIONDecoded()
 	if err != nil {
 		return nil, serrors.WrapStr("converting to scion path", err)
 	}
+	//@ assert sp.Mem()
 	// increment the path, since we are at the receiver side.
 	if err := sp.IncPath(); err != nil {
 		return nil, serrors.WrapStr("incrementing path", err)
@@ -134,10 +191,16 @@ func (o Path) Reverse() (path.Path, error) {
 	return sp.Reverse()
 }
 
-func (o *Path) Len() int {
+//@ pure
+//@ ensures l == PathLen
+//@ decreases
+func (o *Path) Len() (l int) {
 	return PathLen
 }
 
-func (o *Path) Type() path.Type {
+//@ pure
+//@ ensures t == PathType
+//@ decreases
+func (o *Path) Type() (t path.Type) {
 	return PathType
 }

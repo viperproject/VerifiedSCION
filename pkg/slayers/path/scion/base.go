@@ -53,31 +53,33 @@ type Base struct {
 	NumHops int
 }
 
-//@ requires  acc(s)
+//@ requires  s.NonInitMem()
 //@ requires  len(data) >= MetaLen
 //@ preserves acc(data, definitions.ReadL10)
-//@ ensures r != nil ==> (acc(s) && r.ErrorMem())
+//@ ensures r != nil ==> (s.NonInitMem() && r.ErrorMem())
 //@ ensures r == nil ==> s.Mem()
 //@ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// PathMeta takes care of bounds check.
+	//@ unfold s.NonInitMem()
 	err := s.PathMeta.DecodeFromBytes(data)
 	if err != nil {
+		//@ fold s.NonInitMem()
 		return err
 	}
 	s.NumINF = 0
 	s.NumHops = 0
 	//@ invariant -1 <= i && i <= 2
-	//@ invariant acc(&s.PathMeta.SegLen)
-	//@ invariant acc(&s.NumHops)
-	//@ invariant acc(&s.NumINF)
+	//@ invariant acc(s)
 	//@ invariant 0 <= s.NumHops && 0 <= s.NumINF && s.NumINF <= 3
 	//@ invariant 0 < s.NumINF ==> 0 < s.NumHops
 	//@ decreases i
 	for i := 2; i >= 0; i-- {
 		if s.PathMeta.SegLen[i] == 0 && s.NumINF > 0 {
-			return serrors.New(
+			e := serrors.New(
 				fmt.Sprintf("Meta.SegLen[%d] == 0, but Meta.SegLen[%d] > 0", i, s.NumINF-1))
+			//@ fold s.NonInitMem()
+			return e
 		}
 		if s.PathMeta.SegLen[i] > 0 && s.NumINF == 0 {
 			s.NumINF = i + 1
@@ -96,7 +98,9 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 //@ requires unfolding s.Mem() in s.NumINF > 0
 //@ requires unfolding s.Mem() in int(s.PathMeta.CurrHF) < s.NumHops-1
 //@ ensures  s.Mem()
+//@ ensures  s.Len() == old(s.Len())
 //@ ensures  e == nil
+//@ decreases
 func (s *Base) IncPath() (e error) {
 	//@ unfold s.Mem()
 	if s.NumINF == 0 {
