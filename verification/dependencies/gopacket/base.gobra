@@ -30,33 +30,48 @@ type Layer interface {
 
 type Payload []byte
 
-pred (p Payload) Mem() { acc(p) }
+pred (p Payload) LayerMem() { acc(p) }
+pred (p Payload) PayloadMem() { true }
 
 decreases
 pure func (p Payload) LayerType() LayerType { return LayerTypePayload() }
 
-requires acc(p)
+requires p.LayerMem()
 ensures acc(res)
-ensures acc(res) --* acc(p)
+ensures acc(res) --* p.LayerMem()
 decreases
 func (p Payload) LayerContents() (res []byte) {
+	unfold p.LayerMem()
 	res = []byte(p)
 	assert forall i int :: 0 <= i && i < len(p) ==> acc(&p[i])
-	package acc(res) --* acc(p)
+	package acc(res) --* p.LayerMem() { fold p.LayerMem() }
 }
 
-decreases
-func (p Payload) LayerPayload() []byte { return nil }
-
-requires acc(p)
+requires p.PayloadMem()
+ensures res == nil
 ensures acc(res)
-ensures acc(res) --* acc(p)
+ensures acc(res) --* p.PayloadMem()
+decreases
+func (p Payload) LayerPayload() (res []byte) {
+	unfold p.PayloadMem()
+	res = nil
+	package acc(res) --* p.PayloadMem() { fold p.PayloadMem() }
+}
+
+requires p.LayerMem()
+ensures acc(res)
+ensures acc(res) --* p.LayerMem()
+ensures res == []byte(p)
 decreases
 func (p Payload) Payload() (res []byte) {
+	unfold p.LayerMem()
 	res = []byte(p)
 	assert forall i int :: 0 <= i && i < len(p) ==> acc(&p[i])
-	package acc(res) --* acc(p)
+	package acc(res) --* p.LayerMem() { fold p.LayerMem() }
 }
+
+Payload implements Layer
+Payload implements ApplicationLayer
 
 type LinkLayer interface {
 	pred LayerMem()
@@ -77,7 +92,7 @@ type LinkLayer interface {
 	decreases
 	LayerPayload() (res []byte)
 
-	preserves LayerMem() && PayloadMem()
+	requires false
 	decreases
 	LinkFlow() Flow
 }
@@ -101,7 +116,7 @@ type NetworkLayer interface {
 	decreases
 	LayerPayload() (res []byte)
 
-	preserves LayerMem() && PayloadMem()
+	requires false
 	decreases
 	NetworkFlow() Flow
 }
@@ -125,7 +140,7 @@ type TransportLayer interface {
 	decreases
 	LayerPayload() (res []byte)
 
-	preserves LayerMem() && PayloadMem()
+	preserves acc(LayerMem(), 1/10000)
 	decreases
 	TransportFlow() Flow
 }
@@ -149,13 +164,31 @@ type ApplicationLayer interface {
 	decreases
 	LayerPayload() (res []byte)
 
-	preserves LayerMem() && PayloadMem()
+	requires LayerMem()
+	ensures acc(res)
+	ensures acc(res) --* LayerMem()
 	decreases
-	Payload() []byte
+	Payload() (res []byte)
 }
 
 type ErrorLayer interface {
-	Layer
+	pred LayerMem()
+	pred PayloadMem()
+
+	decreases
+	pure LayerType() LayerType
+
+	requires LayerMem()
+	ensures acc(res)
+	ensures acc(res) --* LayerMem()
+	decreases
+	LayerContents() (res []byte)
+
+	requires PayloadMem()
+	ensures acc(res)
+	ensures acc(res) --* PayloadMem()
+	decreases
+	LayerPayload() (res []byte)
 
 	preserves LayerMem() && PayloadMem()
 	decreases

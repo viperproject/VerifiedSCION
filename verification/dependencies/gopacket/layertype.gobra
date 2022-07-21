@@ -15,8 +15,7 @@ type LayerTypeMetadata struct {
 	Decoder Decoder
 }
 
-const maxLayerType = 2000
-
+// TODO: rewrite when we have globals
 requires meta.Decoder.Mem()
 decreases
 func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType

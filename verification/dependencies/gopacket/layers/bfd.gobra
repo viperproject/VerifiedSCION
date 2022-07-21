@@ -134,7 +134,7 @@ pred (b *BFDAuthHeader) Mem() {
 	acc(b) && acc(b.Data)
 }
 
-preserves acc(h)
+preserves acc(h, 1/10000)
 decreases
 func (h *BFDAuthHeader) Length() int {
 	switch h.AuthType {

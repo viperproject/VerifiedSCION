@@ -18,6 +18,7 @@ type EndpointTypeMetadata struct {
 
 type EndpointType int64
 
+// TODO: when globals get merged, make precondition such that this does not panic
 decreases
 func RegisterEndpointType(num int, meta EndpointTypeMetadata) EndpointType
 
@@ -27,7 +28,7 @@ type Flow struct {
 	src, dst   [MaxEndpointSize]byte
 }
 
-preserves acc(src) && acc(dst)
+preserves acc(src, 1/10000) && acc(dst, 1/10000)
 requires len(src) <= MaxEndpointSize && len(dst) <= MaxEndpointSize
 ensures f.slen == len(src)
 ensures f.dlen == len(dst)
