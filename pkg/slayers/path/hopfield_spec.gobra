@@ -16,8 +16,6 @@
 
 package path
 
-import "github.com/scionproto/scion/verification/utils/definitions"
-
 pred (h *HopField) Mem() {
 	acc(h)
 	// h.ConsIngress >= 0 &&

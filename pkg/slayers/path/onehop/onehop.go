@@ -79,7 +79,7 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	r = o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen])
 	//@ ghost if r == nil {
 	//@     fold o.Mem()
-  //@ }
+	//@ }
 	return r
 }
 
@@ -113,7 +113,7 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 	err = o.SecondHop.SerializeTo(b[offset : offset+path.HopLen])
 	//@ ghost if err == nil {
 	//@   fold acc(o.Mem(), definitions.ReadL1)
-  //@ }
+	//@ }
 	return err
 }
 
@@ -172,13 +172,14 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
-/*
+//@ trusted // TODO
 //@ decreases
-func (o Path) Reverse() (p path.Path, err error) {
-	//@ share o
-	oRef := &o
+func (o /*@@@*/ Path) Reverse() (p path.Path, err error) {
+	//@ fold o.FirstHop.Mem()
+	//@ fold o.SecondHop.Mem()
+	//@ fold o.Mem()
 	// (gavin) changed to use explicit *Path
-	sp, err := oRef.ToSCIONDecoded()
+	sp, err := o.ToSCIONDecoded()
 	if err != nil {
 		return nil, serrors.WrapStr("converting to scion path", err)
 	}
@@ -189,7 +190,6 @@ func (o Path) Reverse() (p path.Path, err error) {
 	}
 	return sp.Reverse()
 }
-*/
 
 //@ pure
 //@ ensures l == PathLen

@@ -14,7 +14,7 @@
 
 // +gobra
 
-package onehop
+package epic
 
 func testAllocateNonInitMem() {
 	p := &Path{}
@@ -23,7 +23,5 @@ func testAllocateNonInitMem() {
 
 func canAllocatePath() {
 	p := &Path{}
-	fold p.FirstHop.Mem()
-	fold p.SecondHop.Mem()
 	fold p.Mem()
 }

@@ -48,7 +48,6 @@ pred (b *Base) Mem() {
 // (b.NumHops == 0 ==> b.PathMeta.CurrHF == 0)  &&
 // (b.NumHops  > 0 ==> b.PathMeta.CurrHF >= 0)
 // TODO: Maybe we can put them in a separate predicate 
-//       established after performing bounds check.
 
 requires acc(b.Mem(), _)
 ensures  0 <= res && res <= 3

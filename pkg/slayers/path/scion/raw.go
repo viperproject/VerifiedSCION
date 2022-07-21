@@ -33,13 +33,8 @@ type Raw struct {
 // as raw bytes.
 //@ requires s.NonInitMem()
 //@ requires len(data) >= MetaLen
-//@ requires MetaLen == 4
-//@ requires acc(&data[0])
-//@ requires acc(&data[1])
-//@ requires acc(&data[2])
-//@ requires acc(&data[3])
-// requires forall i int :: 0 <= i && i < len(data) ==>
-//   acc(&data[i])
+//@ requires forall i int :: 0 <= i && i < len(data) ==>
+//@   acc(&data[i])
 //@ ensures res == nil ==> s.Mem()
 //@ ensures res != nil ==> (s.NonInitMem() && res.ErrorMem())
 //@ decreases
