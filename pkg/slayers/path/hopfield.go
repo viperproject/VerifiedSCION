@@ -76,20 +76,8 @@ type HopField struct {
 //@ requires acc(h)
 //@ requires  len(raw) >= HopLen
 //@ requires  HopLen == 12
-// preserves forall i int :: 0 <= i && i < len(raw) ==>
-//     acc(&raw[i], definitions.ReadL1)
-//@ preserves acc(&raw[0], definitions.ReadL1)
-//@ preserves acc(&raw[1], definitions.ReadL1)
-//@ preserves acc(&raw[2], definitions.ReadL1)
-//@ preserves acc(&raw[3], definitions.ReadL1)
-//@ preserves acc(&raw[4], definitions.ReadL1)
-//@ preserves acc(&raw[5], definitions.ReadL1)
-//@ preserves acc(&raw[6], definitions.ReadL1)
-//@ preserves acc(&raw[7], definitions.ReadL1)
-//@ preserves acc(&raw[8], definitions.ReadL1)
-//@ preserves acc(&raw[9], definitions.ReadL1)
-//@ preserves acc(&raw[10], definitions.ReadL1)
-//@ preserves acc(&raw[11], definitions.ReadL1)
+//@ preserves forall i int :: 0 <= i && i < len(raw) ==>
+//@     acc(&raw[i], definitions.ReadL1)
 //@ ensures h.Mem()
 //@ ensures   err == nil
 //@ decreases
@@ -109,6 +97,11 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert forall i int :: 0 <= i && i < len(raw[6:6+MacLen]) ==>
 	//@     &raw[6:6+MacLen][i] == &raw[i+6]
 	copy(h.Mac[:], raw[6:6+MacLen] /*@, definitions.ReadL1@*/)
+	// TODO REMOVE the types are uint but this has been
+	// fixed in the main branch.
+	//@ assume h.ConsEgress >= 0
+	//@ assume h.ConsIngress >= 0
+	//@ fold h.Consistent()
 	//@ fold h.Mem()
 	return nil
 }
@@ -116,29 +109,19 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.HopLen.
 //@ requires  len(b) >= HopLen
-//@ requires  HopLen == 12
-//@ preserves acc(h.Mem(), definitions.ReadL1)
-// preserves forall i int :: 0 <= i && i < len(b) ==>
-//     acc(&b[i])
-//@ preserves acc(&b[0])
-//@ preserves acc(&b[1])
-//@ preserves acc(&b[2])
-//@ preserves acc(&b[3])
-//@ preserves acc(&b[4])
-//@ preserves acc(&b[5])
-//@ preserves acc(&b[6])
-//@ preserves acc(&b[7])
-//@ preserves acc(&b[8])
-//@ preserves acc(&b[9])
-//@ preserves acc(&b[10])
-//@ preserves acc(&b[11])
+// preserves acc(h.Mem(), definitions.ReadL1)
+//@ preserves h.Mem()
+//@ preserves forall i int :: 0 <= i && i < len(b) ==>
+//@     acc(&b[i])
 //@ ensures   err == nil
 //@ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {
 	if len(b) < HopLen {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
 	}
-	//@ unfold acc(h.Mem(), definitions.ReadL1)
+	//@ unfold h.Mem()
+	// unfold acc(h.Mem(), definitions.ReadL1)
+	//@ unfold acc((*h).Consistent(), definitions.ReadL1)
 	b[0] = 0
 	if h.EgressRouterAlert {
 		b[0] |= 0x1
@@ -156,7 +139,9 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	//@ assert forall i int :: 0 <= i && i < MacLen ==>
 	//@     &b[6:6+MacLen][i] == &b[i+6]
 	copy(b[6:6+MacLen], h.Mac[:] /*@, definitions.ReadL1 @*/)
-	//@ fold acc(h.Mem(), definitions.ReadL1)
+	//@ fold acc(h.Consistent(), definitions.ReadL1)
+	// fold acc(h.Mem(), definitions.ReadL1)
+	//@ fold h.Mem()
 	return nil
 }
 

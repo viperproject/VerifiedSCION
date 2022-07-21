@@ -61,14 +61,8 @@ type InfoField struct {
 //@ requires  len(raw) >= InfoLen
 //@ requires InfoLen == 8
 //@ preserves acc(inf)
-//@ preserves acc(&raw[0], definitions.ReadL1)
-//@ preserves acc(&raw[1], definitions.ReadL1)
-//@ preserves acc(&raw[2], definitions.ReadL1)
-//@ preserves acc(&raw[3], definitions.ReadL1)
-//@ preserves acc(&raw[4], definitions.ReadL1)
-//@ preserves acc(&raw[5], definitions.ReadL1)
-//@ preserves acc(&raw[6], definitions.ReadL1)
-//@ preserves acc(&raw[7], definitions.ReadL1)
+//@ preserves forall i int :: 0 <= i && i < InfoLen ==>
+//@     acc(&raw[i], definitions.ReadL1)
 //@ ensures   err == nil
 //@ decreases
 func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
@@ -88,16 +82,9 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.InfoLen.
 //@ requires  len(b) >= InfoLen
-//@ requires  InfoLen == 8
 //@ preserves acc(inf, definitions.ReadL1)
-//@ preserves acc(&b[0])
-//@ preserves acc(&b[1])
-//@ preserves acc(&b[2])
-//@ preserves acc(&b[3])
-//@ preserves acc(&b[4])
-//@ preserves acc(&b[5])
-//@ preserves acc(&b[6])
-//@ preserves acc(&b[7])
+//@ preserves forall i int :: 0 <= i && i < InfoLen ==>
+//@     acc(&b[i])
 //@ ensures   err == nil
 //@ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {

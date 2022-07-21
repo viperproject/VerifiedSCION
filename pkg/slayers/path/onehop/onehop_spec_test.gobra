@@ -16,27 +16,14 @@
 
 package onehop
 
-import (
-	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/pkg/slayers/path/scion"
-)
-
 func testAllocateNonInitMem() {
 	p := &Path{}
 	fold p.NonInitMem()
 }
 
 func canAllocatePath() {
-	fh := path.HopField{}
-	sh := path.HopField{}
-	p := &Path{
-		FirstHop: fh,
-		SecondHop: sh,
-	}
-
+	p := &Path{}
 	fold p.FirstHop.Mem()
 	fold p.SecondHop.Mem()
 	fold p.Mem()
-
-	return
 }

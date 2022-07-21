@@ -16,6 +16,8 @@
 
 package onehop
 
+import "github.com/scionproto/scion/pkg/slayers/path"
+
 pred (o *Path) NonInitMem() {
 	acc(o)
 }
@@ -24,4 +26,9 @@ pred (o *Path) Mem() {
 	acc(&o.Info) &&
 		o.FirstHop.Mem() &&
 		o.SecondHop.Mem()
+}
+
+pred (o Path) Consistent() {
+	o.FirstHop.Consistent() &&
+		o.SecondHop.ConsistentHopField()
 }

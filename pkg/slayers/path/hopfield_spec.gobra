@@ -16,10 +16,12 @@
 
 package path
 
-import "github.com/scionproto/scion/verification/utils/definitions"
-
 pred (h *HopField) Mem() {
-	acc(h)
-	// h.ConsIngress >= 0 &&
-	// h.ConsEgress >= 0
+	acc(h) && (*h).Consistent()
 }
+
+pred (h HopField) Consistent() {
+	h.ConsIngress >= 0 &&
+		h.ConsEgress >= 0
+}
+

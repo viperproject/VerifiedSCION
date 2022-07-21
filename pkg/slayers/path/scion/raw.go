@@ -33,13 +33,8 @@ type Raw struct {
 // as raw bytes.
 //@ requires s.NonInitMem()
 //@ requires len(data) >= MetaLen
-//@ requires MetaLen == 4
-//@ requires acc(&data[0])
-//@ requires acc(&data[1])
-//@ requires acc(&data[2])
-//@ requires acc(&data[3])
-// requires forall i int :: 0 <= i && i < len(data) ==>
-//   acc(&data[i])
+//@ requires forall i int :: 0 <= i && i < len(data) ==>
+//@   acc(&data[i])
 //@ ensures res == nil ==> s.Mem()
 //@ ensures res != nil ==> (s.NonInitMem() && res.ErrorMem())
 //@ decreases
@@ -68,7 +63,7 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
 //@ requires s.Mem()
-//@ requires len(b) >= s.Len()
+// requires len(b) >= unfolding s.Mem() in s.Base.Len()
 //@ preserves forall i int :: 0 <= i && i < len(b) ==>
 //@   acc(&b[i])
 //@ ensures s.Mem()
