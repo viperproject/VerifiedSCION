@@ -17,11 +17,7 @@
 package path
 
 pred (h *HopField) Mem() {
-	acc(h) && (*h).Consistent()
+	acc(h)
+	// h.ConsIngress >= 0 &&
+	// h.ConsEgress >= 0
 }
-
-pred (h HopField) Consistent() {
-	h.ConsIngress >= 0 &&
-		h.ConsEgress >= 0
-}
-

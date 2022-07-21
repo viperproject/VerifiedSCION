@@ -63,7 +63,11 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
 //@ requires s.Mem()
+<<<<<<< HEAD
 // requires len(b) >= unfolding s.Mem() in s.Base.Len()
+=======
+//@ requires len(b) >= s.Len()
+>>>>>>> add-path-onehop
 //@ preserves forall i int :: 0 <= i && i < len(b) ==>
 //@   acc(&b[i])
 //@ ensures s.Mem()

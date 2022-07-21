@@ -66,8 +66,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ assert acc(&s.InfoFields)
 	//@ assert acc(&s.HopFields)
 	offset := MetaLen
-	// (gavin) changed to use pure func and avoid unfolding
-	s.InfoFields = make([]path.InfoField, /*@ unfolding s.Base.Mem() in @*/ s.NumINF)
+	s.InfoFields = make([]path.InfoField /*@ unfolding s.Base.Mem() in @*/, s.NumINF)
 	//@ invariant acc(&s.InfoFields)
 	//@ invariant acc(s.Base.Mem(), definitions.ReadL1)
 	//@ invariant len(s.InfoFields) == s.Base.getNumINF()
@@ -93,7 +92,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		}
 		offset += path.InfoLen
 	}
-	s.HopFields = make([]path.HopField, /*@ unfolding s.Base.Mem() in @*/ s.NumHops)
+	s.HopFields = make([]path.HopField /*@ unfolding s.Base.Mem() in @*/, s.NumHops)
 	//@ invariant acc(&s.HopFields)
 	//@ invariant acc(s.Base.Mem(), definitions.ReadL1)
 	//@ invariant len(s.HopFields) == s.Base.getNumHops()
@@ -130,7 +129,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 // otherwise an error is returned.
 
 //@ requires acc(s.Mem(), definitions.ReadL1)
-//@ requires len(b) >= unfolding acc(s.Mem(), definitions.ReadL1) in s.Len()
+//@ requires len(b) >= s.Len()
 //@ preserves forall i int :: 0 <= i && i < len(b) ==>
 //@   acc(&b[i])
 //@ ensures acc(s.Mem(), definitions.ReadL1)
