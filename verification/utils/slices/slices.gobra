@@ -155,8 +155,6 @@ func Reslice_Bytes(s []byte, start int, end int, p perm) {
 	fold  acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
 }
 
-// The slice axiomatization seems to be very incomplete.
-// The following body cannot be verified yet.
 ghost
 requires 0 <= p
 requires 0 <= start && start < end && end <= cap(s)
@@ -164,18 +162,29 @@ requires len(s[start:end]) <= cap(s)
 requires acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
 ensures  acc(AbsSlice_Bytes(s, start, end), p)
 decreases
-func Unslice_Bytes(s []byte, start int, end int, p perm)
-/* TODO
-{
-	unfold AbsSlice_Bytes(s[start:end], 0, len(s[start:end]))
+func Unslice_Bytes(s []byte, start int, end int, p perm) {
+	unfold acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
 	assert 0 <= start && start < end && end <= cap(s)
+	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
 	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
 	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i])
-	// failling assertion:
-	assert forall i int :: start <= i && i < end ==> acc(&s[i])
-	fold   AbsSlice_Bytes(s, start, end)
+
+	ghost {
+		invariant 0 <= j && j <= len(s[start:end])
+		invariant forall i int :: j <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
+		invariant forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+		invariant forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+		invariant forall i int :: start <= i && i < start+j ==> acc(&s[i], p)
+		decreases len(s[start:end]) - j
+		for j := 0; j < len(s[start:end]); j++ {
+			assert forall i int :: start <= i && i < start+j ==> acc(&s[i], p)
+			assert &s[start:end][j] == &s[start + j]
+			assert acc(&s[start + j], p)
+			assume false
+			assert forall i int :: start <= i && i <= start+j ==> acc(&s[i], p)
+		}
+	}
+	fold acc(AbsSlice_Bytes(s, start, end), p)
 }
-*/
 
 /** End of slices of Bytes without Contents **/
