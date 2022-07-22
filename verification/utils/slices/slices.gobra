@@ -180,7 +180,6 @@ func Unslice_Bytes(s []byte, start int, end int, p perm) {
 			assert forall i int :: start <= i && i < start+j ==> acc(&s[i], p)
 			assert &s[start:end][j] == &s[start + j]
 			assert acc(&s[start + j], p)
-			assume false
 			assert forall i int :: start <= i && i <= start+j ==> acc(&s[i], p)
 		}
 	}
