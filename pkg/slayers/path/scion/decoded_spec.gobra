@@ -16,7 +16,10 @@
 
 package scion
 
-import "github.com/scionproto/scion/pkg/slayers/path"
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
 
 pred (d *Decoded) NonInitMem() {
 	acc(&d.InfoFields) &&
@@ -26,13 +29,11 @@ pred (d *Decoded) NonInitMem() {
 
 pred (d *Decoded) Mem() {
 	d.Base.Mem() &&
-
-	acc(&d.InfoFields) &&
+		acc(&d.InfoFields) &&
 		(forall i int :: 0 <= i && i < len(d.InfoFields) ==>
 			acc(&d.InfoFields[i])) &&
 		len(d.InfoFields) == d.Base.getNumINF() &&
 		d.Base.getNumINF() <= MaxINFs &&
-
 		acc(&d.HopFields) &&
 		(forall i int :: 0 <= i && i < len(d.HopFields) ==>
 			d.HopFields[i].Mem()) &&

@@ -16,6 +16,8 @@
 
 package scion
 
+import "github.com/scionproto/scion/verification/utils/slices"
+
 func testAllocateNonInitRaw() {
 	r := &Raw{}
 	fold r.Base.NonInitMem()
@@ -28,5 +30,6 @@ func testAllocateRaw() {
 	fold r.Base.Mem()
 	// Required to satisfy length predicate
 	r.Raw = make([]byte, r.Base.Len())
+	fold slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
 	fold r.Mem()
 }

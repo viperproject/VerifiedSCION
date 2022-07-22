@@ -16,6 +16,8 @@
 
 package scion
 
+import "github.com/scionproto/scion/verification/utils/slices"
+
 pred (s *Raw) NonInitMem() {
 	acc(&s.Raw) && s.Base.NonInitMem()
 }
@@ -23,7 +25,5 @@ pred (s *Raw) NonInitMem() {
 pred (s *Raw) Mem() {
 	s.Base.Mem() && acc(&s.Raw) &&
 		len(s.Raw) >= s.Len() &&
-		(forall i int :: 0 <= i && i < len(s.Raw) ==>
-			acc(&s.Raw[i]))
+		slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
 }
-
