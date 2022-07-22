@@ -62,9 +62,3 @@ decreases
 pure func (b *Base) getNumHops() (res int) {
 	return unfolding acc(b.Mem(), _) in b.NumHops
 }
-
-ghost
-requires b.Mem()
-ensures  b.NonInitMem()
-decreases
-func (b *Base) exchangePred()

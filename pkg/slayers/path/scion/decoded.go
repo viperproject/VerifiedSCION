@@ -55,7 +55,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		return err
 	}
 	if minLen := s.Len(); len(data) < minLen {
-		//@ s.Base.exchangePred()
+		//@ apply s.Base.Mem() --* s.Base.NonInitMem()
 		//@ fold s.NonInitMem()
 		return serrors.New("DecodedPath raw too short", "expected", minLen, "actual", int(len(data)))
 	}
@@ -83,7 +83,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 			//@ ghost slices.Unslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL1)
 			//@ ghost slices.CombineAtIndex_Bytes(data, offset, len(data), offset + path.InfoLen, definitions.ReadL1)
 			//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
-			//@ ghost s.Base.exchangePred()
+			//@ apply s.Base.Mem() --* s.Base.NonInitMem()
 			//@ fold s.NonInitMem()
 			return err
 		}
@@ -115,7 +115,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 			//@ ghost slices.Unslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL1)
 			//@ ghost slices.CombineAtIndex_Bytes(data, offset, len(data), offset + path.HopLen, definitions.ReadL1)
 			//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
-			//@ ghost s.Base.exchangePred()
+			//@ apply s.Base.Mem() --* s.Base.NonInitMem()
 			//@ fold s.NonInitMem()
 			return err
 		}

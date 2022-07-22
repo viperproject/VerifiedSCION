@@ -58,7 +58,7 @@ type Base struct {
 //@ requires  s.NonInitMem()
 //@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
 //@ ensures r != nil ==> (s.NonInitMem() && r.ErrorMem())
-//@ ensures r == nil ==> s.Mem()
+//@ ensures r == nil ==> s.Mem() && (s.Mem() --* s.NonInitMem())
 //@ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// PathMeta takes care of bounds check.
@@ -91,6 +91,10 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
 	//@ fold s.Mem()
+	//@ package s.Mem() --* s.NonInitMem() {
+	//@   unfold s.Mem()
+	//@   fold   s.NonInitMem()
+	//@ }
 	return nil
 }
 
