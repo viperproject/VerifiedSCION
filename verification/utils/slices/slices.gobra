@@ -110,53 +110,63 @@ func UnsliceC_Bytes(s []byte, start int, end int, contents seq[byte]) {
 pred AbsSlice_Bytes(s []byte, start int, end int) {
 	// start inclusive
 	0 <= start &&
-	start < end &&
+	start <= end &&
 	// end exclusive
 	end <= cap(s) &&
 	forall i int :: start <= i && i < end ==> acc(&s[i])
 }
 
 ghost
-requires AbsSlice_Bytes(s, start, end)
-requires start < idx && idx < end
-ensures  AbsSlice_Bytes(s, start, idx) && AbsSlice_Bytes(s, idx, end)
-func SplitByIndex_Bytes(s []byte, start int, end int, idx int) {
-	unfold AbsSlice_Bytes(s, start, end)
-	fold   AbsSlice_Bytes(s, start, idx)
-	fold   AbsSlice_Bytes(s, idx, end)
+requires 0 <= p
+requires acc(AbsSlice_Bytes(s, start, end), p)
+requires start <= idx && idx <= end
+ensures  acc(AbsSlice_Bytes(s, start, idx), p)
+ensures  acc(AbsSlice_Bytes(s, idx, end), p)
+decreases
+func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
+	unfold acc(AbsSlice_Bytes(s, start, end), p)
+	fold   acc(AbsSlice_Bytes(s, start, idx), p)
+	fold   acc(AbsSlice_Bytes(s, idx, end), p)
 }
 
 ghost
-requires AbsSlice_Bytes(s, start, idx)
-requires AbsSlice_Bytes(s, idx,   end)
-ensures  AbsSlice_Bytes(s, start, end)
-func CombineAtIndex_Bytes(s []byte, start int, end int, idx int) {
-	unfold AbsSlice_Bytes(s, start, idx)
-	unfold AbsSlice_Bytes(s, idx,   end)
-	fold   AbsSlice_Bytes(s, start, end)
+requires 0 <= p
+requires acc(AbsSlice_Bytes(s, start, idx), p)
+requires acc(AbsSlice_Bytes(s, idx,   end), p)
+ensures  acc(AbsSlice_Bytes(s, start, end), p)
+decreases
+func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
+	unfold acc(AbsSlice_Bytes(s, start, idx), p)
+	unfold acc(AbsSlice_Bytes(s, idx,   end), p)
+	fold   acc(AbsSlice_Bytes(s, start, end), p)
 }
 
 ghost
-requires AbsSlice_Bytes(s, start, end)
+requires 0 <= p
+requires acc(AbsSlice_Bytes(s, start, end), p)
 // the following precondition convinces Gobra that
 // the slice operation is well-formed
-requires unfolding AbsSlice_Bytes(s, start, end) in true
-ensures  AbsSlice_Bytes(s[start:end], 0, len(s[start:end]))
-func Reslice_Bytes(s []byte, start int, end int) {
-	unfold AbsSlice_Bytes(s, start, end)
+requires unfolding acc(AbsSlice_Bytes(s, start, end), p) in true
+ensures  acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
+decreases
+func Reslice_Bytes(s []byte, start int, end int, p perm) {
+	unfold acc(AbsSlice_Bytes(s, start, end), p)
 	assert forall i int :: 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
-	fold  AbsSlice_Bytes(s[start:end], 0, len(s[start:end]))
+	fold  acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
 }
 
-/* TODO
 // The slice axiomatization seems to be very incomplete.
 // The following body cannot be verified yet.
 ghost
+requires 0 <= p
 requires 0 <= start && start < end && end <= cap(s)
 requires len(s[start:end]) <= cap(s)
-requires AbsSlice_Bytes(s[start:end], 0, len(s[start:end]))
-ensures  AbsSlice_Bytes(s, start, end)
-func Unslice_Bytes(s []byte, start int, end int) {
+requires acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
+ensures  acc(AbsSlice_Bytes(s, start, end), p)
+decreases
+func Unslice_Bytes(s []byte, start int, end int, p perm)
+/* TODO
+{
 	unfold AbsSlice_Bytes(s[start:end], 0, len(s[start:end]))
 	assert 0 <= start && start < end && end <= cap(s)
 	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
