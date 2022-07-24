@@ -16,13 +16,13 @@ package slices
 
 func AbsSliceC_Bytes_test() {
 	s := make([]byte, 10)
-    ghost contents := NewSeq_Bytes(10)
+	ghost contents := NewSeq_Bytes(10)
 	fold AbsSliceC_Bytes(s, 0, 10, contents)
-    // assert false // fails
+	// assert false // fails
 }
 
 func AbsSlice_Bytes_test() {
 	s := make([]byte, 10)
 	fold AbsSlice_Bytes(s, 0, 10)
-    // assert false // fails
+	// assert false // fails
 }
