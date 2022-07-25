@@ -66,12 +66,24 @@ jobs:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
       - name: Debug
         run: |
+          echo '------------------------------'
           echo 'runner.workspace'
           ls -l ${{ runner.workspace }}
+          echo '------------------------------'
+          echo '------------------------------'
+          echo 'runner.workspace.tmp'
+          ls -l ${{ runner.workspace/tmp }}
+          echo '------------------------------'
+
+          echo '------------------------------'
           echo 'runner.workspace/VerifiedSCION'
           ls -l ${{ runner.workspace }}/VerifiedSCION/
-          echo 'runner.workspace/viperproject'
-          ls -l ${{ runner.workspace }}/viperproject/
+          echo '------------------------------'
+          #echo '------------------------------'
+          #echo 'runner.workspace/viperproject'
+          #ls -l ${{ runner.workspace }}/viperproject/
+          #echo '------------------------------'
+          echo '------------------------------'
           echo 'runner.workspace/..'
           ls -l ${{ runner.workspace }}/../
       - name: Upload the verification report
