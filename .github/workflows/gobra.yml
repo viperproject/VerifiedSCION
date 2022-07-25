@@ -72,6 +72,6 @@ jobs:
       - name: Upload the verification report
         uses: actions/upload-artifact@v2
         with:
-          name: verification_statistics
+          name: stats_addr.json
           path: /stats/stats_addr.json
           if-no-files-found: error # could also be 'warn' or 'ignore'
