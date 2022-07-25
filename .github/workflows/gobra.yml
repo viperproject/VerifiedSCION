@@ -68,10 +68,10 @@ jobs:
         run: |
           echo 'runner.workspace'
           ls -l ${{ runner.workspace }}
-          echo 'runner.workspace.tmp'
-          ls -l ${{ runner.workspace/tmp }}
           echo 'runner.workspace/VerifiedSCION'
           ls -l ${{ runner.workspace }}/VerifiedSCION/
+          echo 'runner.workspace/viperproject'
+          ls -l ${{ runner.workspace }}/viperproject/
           echo 'runner.workspace/..'
           ls -l ${{ runner.workspace }}/../
       - name: Upload the verification report
@@ -80,3 +80,4 @@ jobs:
           name: verification_statistics
           path: ${{ runner.workspace }}/.gobra/stats.json
           if-no-files-found: error # could also be 'warn' or 'ignore'
+
