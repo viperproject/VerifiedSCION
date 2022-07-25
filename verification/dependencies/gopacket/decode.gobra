@@ -26,11 +26,7 @@ pred (n nilDecodeFeedback) Mem() { true }
 nilDecodeFeedback implements DecodeFeedback
 
 type PacketBuilder interface {
-	pred Mem()
-	
-	preserves Mem()
-	decreases
-	SetTruncated()
+	DecodeFeedback
 
 	requires l.LayerMem() && l.PayloadMem()
 	preserves Mem()

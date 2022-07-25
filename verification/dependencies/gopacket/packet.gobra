@@ -23,11 +23,7 @@ pred ValidCaptureInfo(c CaptureInfo) {
 }
 
 type PacketMetadata struct {
-	Timestamp time.Time
-	CaptureLength int
-	Length int
-	InterfaceIndex int
-	AncillaryData []interface{}
+	CaptureInfo
 	Truncated bool
 }
 

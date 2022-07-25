@@ -74,23 +74,7 @@ Payload implements Layer
 Payload implements ApplicationLayer
 
 type LinkLayer interface {
-	pred LayerMem()
-	pred PayloadMem()
-
-	decreases
-	pure LayerType() LayerType
-
-	requires LayerMem()
-	ensures acc(res)
-	ensures acc(res) --* LayerMem()
-	decreases
-	LayerContents() (res []byte)
-
-	requires PayloadMem()
-	ensures acc(res)
-	ensures acc(res) --* PayloadMem()
-	decreases
-	LayerPayload() (res []byte)
+	Layer
 
 	requires false
 	decreases
@@ -98,23 +82,7 @@ type LinkLayer interface {
 }
 
 type NetworkLayer interface {
-	pred LayerMem()
-	pred PayloadMem()
-
-	decreases
-	pure LayerType() LayerType
-
-	requires LayerMem()
-	ensures acc(res)
-	ensures acc(res) --* LayerMem()
-	decreases
-	LayerContents() (res []byte)
-
-	requires PayloadMem()
-	ensures acc(res)
-	ensures acc(res) --* PayloadMem()
-	decreases
-	LayerPayload() (res []byte)
+	Layer
 
 	requires false
 	decreases
@@ -122,23 +90,7 @@ type NetworkLayer interface {
 }
 
 type TransportLayer interface {
-	pred LayerMem()
-	pred PayloadMem()
-
-	decreases
-	pure LayerType() LayerType
-
-	requires LayerMem()
-	ensures acc(res)
-	ensures acc(res) --* LayerMem()
-	decreases
-	LayerContents() (res []byte)
-
-	requires PayloadMem()
-	ensures acc(res)
-	ensures acc(res) --* PayloadMem()
-	decreases
-	LayerPayload() (res []byte)
+	Layer
 
 	preserves acc(LayerMem(), 1/10000)
 	decreases
@@ -146,23 +98,7 @@ type TransportLayer interface {
 }
 
 type ApplicationLayer interface {
-	pred LayerMem()
-	pred PayloadMem()
-
-	decreases
-	pure LayerType() LayerType
-
-	requires LayerMem()
-	ensures acc(res)
-	ensures acc(res) --* LayerMem()
-	decreases
-	LayerContents() (res []byte)
-
-	requires PayloadMem()
-	ensures acc(res)
-	ensures acc(res) --* PayloadMem()
-	decreases
-	LayerPayload() (res []byte)
+	Layer
 
 	requires LayerMem()
 	ensures acc(res)
@@ -172,23 +108,7 @@ type ApplicationLayer interface {
 }
 
 type ErrorLayer interface {
-	pred LayerMem()
-	pred PayloadMem()
-
-	decreases
-	pure LayerType() LayerType
-
-	requires LayerMem()
-	ensures acc(res)
-	ensures acc(res) --* LayerMem()
-	decreases
-	LayerContents() (res []byte)
-
-	requires PayloadMem()
-	ensures acc(res)
-	ensures acc(res) --* PayloadMem()
-	decreases
-	LayerPayload() (res []byte)
+	Layer
 
 	preserves LayerMem() && PayloadMem()
 	decreases

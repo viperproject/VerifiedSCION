@@ -52,14 +52,18 @@ type DecodingLayerContainer interface {
 }
 
 type DecodingLayerParser struct {
-	IgnorePanic bool
-	IgnoreUnsupported bool
+	DecodingLayerParserOptions
 	dlc   DecodingLayerContainer
 	first LayerType
 	df    DecodeFeedback
 	// (VerifiedSCION) no support for closures yet
 	//decodeFunc DecodingLayerFunc
 	Truncated bool
+}
+
+type DecodingLayerParserOptions struct {
+	IgnorePanic bool
+	IgnoreUnsupported bool
 }
 
 requires forall i int :: 0 <= i && i < len(decoders) ==> acc(&decoders[i])

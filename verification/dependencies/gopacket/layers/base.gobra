@@ -17,14 +17,30 @@ pred (b *BaseLayer) Mem() {
 	acc(b) && acc(b.Contents) && acc(b.Payload)
 }
 
-requires b.Mem()
-ensures acc(res)
-ensures acc(res) --* b.Mem()
-decreases
-func (b *BaseLayer) LayerContents() (res []byte)
+pred (b *BaseLayer) LayerMem() {
+	acc(b) && acc(b.Contents)
+}
 
-requires b.Mem()
+pred (b *BaseLayer) PayloadMem() {
+	acc(b) && acc(b.Payload)
+}
+
+requires b.LayerMem()
 ensures acc(res)
-ensures acc(res) --* b.Mem()
+ensures acc(res) --* b.LayerMem()
 decreases
-func (b *BaseLayer) LayerPayload() (res []byte)
+func (b *BaseLayer) LayerContents() (res []byte) {
+	unfold b.LayerMem()
+	res = b.Contents
+	package acc(res) --* b.LayerMem() { fold b.LayerMem() }
+}
+
+requires b.PayloadMem()
+ensures acc(res)
+ensures acc(res) --* b.PayloadMem()
+decreases
+func (b *BaseLayer) LayerPayload() (res []byte) {
+	unfold b.PayloadMem()
+	res = b.Payload
+	package acc(res) --* b.PayloadMem() { fold b.PayloadMem() }
+}
