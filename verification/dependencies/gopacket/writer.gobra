@@ -8,6 +8,8 @@
 
 package gopacket
 
+import "slices"
+
 type SerializableLayer interface {
 	pred Mem()
 
@@ -32,25 +34,25 @@ type SerializeBuffer interface {
 	pred Mem()
 
 	requires Mem()
-	ensures acc(res)
-	ensures acc(res) --* Mem()
+	ensures slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
 	decreases
 	Bytes() (res []byte)
 
 	requires Mem()
 	requires num >= 0
-	ensures err == nil ==> acc(res)
+	ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res))
 	ensures err == nil ==> len(res) == num
-	ensures err == nil ==> acc(res) --* Mem()
+	ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
 	ensures err != nil ==> Mem()
 	decreases
 	PrependBytes(num int) (res []byte, err error)
 
 	requires Mem()
 	requires num >= 0
-	ensures err == nil ==> acc(res)
+	ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res))
 	ensures err == nil ==> len(res) == num
-	ensures err == nil ==> acc(res) --* Mem()
+	ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
 	ensures err != nil ==> Mem()
 	decreases
 	AppendBytes(num int) (res []byte, err error)

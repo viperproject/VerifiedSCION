@@ -8,6 +8,8 @@
 
 package layers
 
+import "slices"
+
 type BaseLayer struct {
 	Contents []byte
 	Payload []byte
@@ -26,21 +28,29 @@ pred (b *BaseLayer) PayloadMem() {
 }
 
 requires b.LayerMem()
-ensures acc(res)
-ensures acc(res) --* b.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
 decreases
 func (b *BaseLayer) LayerContents() (res []byte) {
 	unfold b.LayerMem()
 	res = b.Contents
-	package acc(res) --* b.LayerMem() { fold b.LayerMem() }
+	fold slices.AbsSlice_Bytes(res, 0, len(res))
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+		unfold slices.AbsSlice_Bytes(res, 0, len(res))
+		fold b.LayerMem()
+	}
 }
 
 requires b.PayloadMem()
-ensures acc(res)
-ensures acc(res) --* b.PayloadMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
 decreases
 func (b *BaseLayer) LayerPayload() (res []byte) {
 	unfold b.PayloadMem()
 	res = b.Payload
-	package acc(res) --* b.PayloadMem() { fold b.PayloadMem() }
+	fold slices.AbsSlice_Bytes(res, 0, len(res))
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+		unfold slices.AbsSlice_Bytes(res, 0, len(res))
+		fold b.PayloadMem()
+	}
 }

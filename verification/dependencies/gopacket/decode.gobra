@@ -8,6 +8,8 @@
 
 package gopacket
 
+import "slices"
+
 type DecodeFeedback interface {
 	pred Mem()
 
@@ -28,33 +30,33 @@ nilDecodeFeedback implements DecodeFeedback
 type PacketBuilder interface {
 	DecodeFeedback
 
-	requires l.LayerMem() && l.PayloadMem()
+	requires l.Mem()
 	preserves Mem()
 	decreases
 	AddLayer(l Layer)
 
 	preserves Mem()
-	requires l.LayerMem() && l.PayloadMem()
+	requires l.Mem()
 	decreases
 	SetLinkLayer(l LinkLayer)
 
 	preserves Mem()
-	requires l.LayerMem() && l.PayloadMem()
+	requires l.Mem()
 	decreases
 	SetNetworkLayer(l NetworkLayer)
 
 	preserves Mem()
-	requires l.LayerMem() && l.PayloadMem()
+	requires l.Mem()
 	decreases
 	SetTransportLayer(l TransportLayer)
 
 	preserves Mem()
-	requires l.LayerMem() && l.PayloadMem()
+	requires l.Mem()
 	decreases
 	SetApplicationLayer(l ApplicationLayer)
 
 	preserves Mem()
-	requires l.LayerMem() && l.PayloadMem()
+	requires l.Mem()
 	decreases
 	SetErrorLayer(l ErrorLayer)
 
@@ -75,7 +77,7 @@ type PacketBuilder interface {
 type Decoder interface {
 	pred Mem()
 
-	requires acc(b)
+	requires slices.AbsSlice_Bytes(b, 0, len(b))
 	preserves Mem()
 	preserves p.Mem()
 	decreases

@@ -1,0 +1,21 @@
+// Copyright 2017 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+//
+
+// +gobra
+
+package layers
+
+import "slices"
+
+func BFD_test() {
+	b := &BFDAuthHeader{BFDAuthType(1), BFDAuthKeyID(1), BFDAuthSequenceNumber(1), BFDAuthData([]byte{1,2,3})}
+	s := []byte{1, 2, 3}
+	fold slices.AbsSlice_Bytes(s, 0, 3)
+	s1 := []byte{1, 2, 3}
+	fold slices.AbsSlice_Bytes(s1, 0, 3)
+	bf := &BFD{ BaseLayer{s, s1}, BFDVersion(1), BFDDiagnostic(1), BFDState(1), true, true, true, true, true, true, BFDDetectMultiplier(1), BFDDiscriminator(1), BFDDiscriminator(1), BFDTimeInterval(1), BFDTimeInterval(1), BFDTimeInterval(1), b }
+}

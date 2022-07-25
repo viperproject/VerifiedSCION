@@ -1,0 +1,18 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package layers
+
+func base_layer_test() {
+	b := &BaseLayer{[]byte{1,2,3}, []byte{1,2,3}}
+	fold b.LayerMem()
+	unfold b.LayerMem()
+	fold b.PayloadMem()
+	unfold b.PayloadMem()
+	fold b.Mem()
+}

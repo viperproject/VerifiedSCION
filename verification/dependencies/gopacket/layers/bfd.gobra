@@ -9,7 +9,10 @@
 
 package layers
 
-import "gopacket"
+import (
+	"gopacket"
+	"slices"
+)
 
 type BFDVersion uint8
 
@@ -168,7 +171,7 @@ type BFD struct {
 }
 
 pred (b *BFD) Mem() {
-	acc(b) && (b.AuthPresent ==> b.AuthHeader.Mem())
+	acc(b) && acc(b.BaseLayer.Payload) && acc(b.Contents) && (b.AuthPresent ==> b.AuthHeader.Mem())
 }
 
 preserves acc(d, 1/10000)
@@ -180,7 +183,7 @@ pure func (d *BFD) LayerType() gopacket.LayerType
 
 requires d.Mem()
 requires df.Mem()
-preserves acc(data)
+preserves slices.AbsSlice_Bytes(data, 0, len(data))
 ensures df.Mem()
 ensures err == nil ==> d.Mem()
 decreases
@@ -197,7 +200,7 @@ pure func (d *BFD) CanDecode() gopacket.LayerClass
 decreases
 pure func (d *BFD) NextLayerType() gopacket.LayerType
 
-decreases
-func (d *BFD) Payload() []byte {
-	return nil
-}
+//decreases
+//func (d *BFD) Payload() []byte {
+//	return nil
+//}
