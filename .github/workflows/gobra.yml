@@ -79,10 +79,6 @@ jobs:
           echo 'runner.workspace/VerifiedSCION'
           ls -l ${{ runner.workspace }}/VerifiedSCION/
           echo '------------------------------'
-          #echo '------------------------------'
-          #echo 'runner.workspace/viperproject'
-          #ls -l ${{ runner.workspace }}/viperproject/
-          #echo '------------------------------'
           echo '------------------------------'
           echo 'runner.workspace/..'
           ls -l ${{ runner.workspace }}/../
