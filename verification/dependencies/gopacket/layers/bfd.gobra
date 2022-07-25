@@ -11,8 +11,6 @@ package layers
 
 import "gopacket"
 
-const bfdMinimumRecordSizeInBytes int = 24
-
 type BFDVersion uint8
 
 type BFDDiagnostic uint8

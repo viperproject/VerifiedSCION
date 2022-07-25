@@ -9,11 +9,16 @@
 
 package layers
 
-type UDP struct {
-	BaseLayer
-	SrcPort, DstPort UDPPort
-	Length           uint16
-	Checksum         uint16
-	sPort, dPort     []byte
-	tcpipchecksum
+import "gopacket"
+
+type tcpipchecksum struct {
+	pseudoheader tcpipPseudoHeader
+}
+
+type tcpipPseudoHeader interface {
+	pred Mem()
+
+	preserves acc(Mem(), 1/10000)
+	decreases
+	pseudoheaderChecksum() (uint32, error)
 }
