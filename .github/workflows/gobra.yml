@@ -66,6 +66,8 @@ jobs:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
       - name: Debug
         run: |
+          echo '/gobra'
+          ls -l /gobra/
           echo 'runner.workspace'
           ls -l ${{ runner.workspace }}
           echo 'runner.workspace/VerifiedSCION'
