@@ -254,8 +254,3 @@ func ParseIP(s string) (res IP)
 ensures err == nil ==> acc(ipnet)
 ensures forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i])
 func ParseCIDR(s string) (ip IP, ipnet *IPNet, err error)
-
-requires acc(ip, 1/10000)
-ensures acc(res, 1/10000) && (acc(res, 1/10000) --* acc(ip, 1/10000))
-decreases _
-func (ip IP) To4() (res IP)
