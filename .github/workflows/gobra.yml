@@ -68,3 +68,10 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          statsFile: '/stats/stats_addr.json'
+      - name: Upload the verification report
+        uses: actions/upload-artifact@v2
+        with:
+          name: stats_addr.json
+          path: /stats/stats_addr.json
+          if-no-files-found: error # could also be 'warn' or 'ignore'
