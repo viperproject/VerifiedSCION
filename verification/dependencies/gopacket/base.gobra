@@ -1,0 +1,136 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import "github.com/scionproto/scion/verification/utils/slices"
+
+type Layer interface {
+	// Since the resources abstracted in LayerMem and PayloadMem might overlap,
+	// it may not be possible to hold an instance of each at once.
+	// Hence, we have Mem that abstracts all the resources associated with
+	// the layer.
+	pred Mem()
+	pred LayerMem()
+	pred PayloadMem()
+
+	decreases
+	pure LayerType() LayerType
+
+	requires LayerMem()
+	ensures slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* LayerMem()
+	decreases
+	LayerContents() (res []byte)
+
+	requires PayloadMem()
+	ensures slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* PayloadMem()
+	decreases
+	LayerPayload() (res []byte)
+}
+
+type Payload []byte
+
+pred (p Payload) LayerMem() { acc(p) }
+pred (p Payload) PayloadMem() { true }
+pred (p Payload) Mem() { acc(p) }
+
+decreases
+pure func (p Payload) LayerType() LayerType { return LayerTypePayload() }
+
+requires p.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem()
+decreases
+func (p Payload) LayerContents() (res []byte) {
+	unfold p.LayerMem()
+	res = []byte(p)
+	assert forall i int :: 0 <= i && i < len(p) ==> acc(&p[i])
+	fold slices.AbsSlice_Bytes(res, 0, len(res))
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem() {
+		unfold slices.AbsSlice_Bytes(res, 0, len(res))
+		fold p.LayerMem()
+	}
+}
+
+requires p.PayloadMem()
+ensures res == nil
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.PayloadMem()
+decreases
+func (p Payload) LayerPayload() (res []byte) {
+	unfold p.PayloadMem()
+	res = nil
+	fold slices.AbsSlice_Bytes(res, 0, len(res))
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.PayloadMem() {
+		unfold slices.AbsSlice_Bytes(res, 0, len(res))
+		fold p.PayloadMem()
+	}
+}
+
+requires p.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem()
+ensures res == []byte(p)
+decreases
+func (p Payload) Payload() (res []byte) {
+	unfold p.LayerMem()
+	res = []byte(p)
+	assert forall i int :: 0 <= i && i < len(p) ==> acc(&p[i])
+	fold slices.AbsSlice_Bytes(res, 0, len(res))
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem() {
+		unfold slices.AbsSlice_Bytes(res, 0, len(res))
+		fold p.LayerMem()
+	}
+}
+
+Payload implements Layer
+Payload implements ApplicationLayer
+
+type LinkLayer interface {
+	Layer
+
+	requires false
+	decreases
+	LinkFlow() Flow
+}
+
+type NetworkLayer interface {
+	Layer
+
+	requires false
+	decreases
+	NetworkFlow() Flow
+}
+
+type TransportLayer interface {
+	Layer
+
+	preserves acc(LayerMem(), 1/10000)
+	decreases
+	TransportFlow() Flow
+}
+
+type ApplicationLayer interface {
+	Layer
+
+	requires LayerMem()
+	ensures slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* LayerMem()
+	decreases
+	Payload() (res []byte)
+}
+
+type ErrorLayer interface {
+	Layer
+
+	preserves Mem()
+	decreases
+	Error() error
+}

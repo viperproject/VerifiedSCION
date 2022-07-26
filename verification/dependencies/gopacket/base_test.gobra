@@ -1,0 +1,18 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+func payload_test() {
+	var p Payload = Payload([]byte{1,2,3})
+	fold p.Mem()
+	unfold p.Mem()
+	fold p.LayerMem()
+	unfold p.LayerMem()
+	fold p.PayloadMem()
+}

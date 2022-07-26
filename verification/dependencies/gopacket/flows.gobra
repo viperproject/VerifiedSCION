@@ -1,0 +1,41 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import "github.com/scionproto/scion/verification/utils/slices"
+
+const MaxEndpointSize = 16
+
+type EndpointTypeMetadata struct {
+	Name string
+	// (VerifiedSCION) closures not supported yet
+	//Formatter func([]byte) string
+}
+
+type EndpointType int64
+
+// TODO: when globals get merged, make precondition such that this does not panic
+decreases
+func RegisterEndpointType(num int, meta EndpointTypeMetadata) EndpointType
+
+type Flow struct {
+	typ        EndpointType
+	slen, dlen int
+	src, dst   [MaxEndpointSize]byte
+}
+
+preserves acc(slices.AbsSlice_Bytes(src, 0, len(src)), 1/10000) && acc(slices.AbsSlice_Bytes(dst, 0, len(dst)), 1/10000)
+requires len(src) <= MaxEndpointSize && len(dst) <= MaxEndpointSize
+ensures f.slen == len(src)
+ensures f.dlen == len(dst)
+ensures unfolding acc(slices.AbsSlice_Bytes(src, 0, len(src)), 1/10000) in forall i int :: 0 <= i && i < len(src) ==> f.src[i] == src[i]
+ensures unfolding acc(slices.AbsSlice_Bytes(dst, 0, len(dst)), 1/10000) in forall i int :: 0 <= i && i < len(dst) ==> f.dst[i] == dst[i]
+ensures f.typ == t
+decreases
+func NewFlow(t EndpointType, src, dst []byte) (f Flow)

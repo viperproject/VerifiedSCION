@@ -1,0 +1,206 @@
+// Copyright 2017 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+//
+
+// +gobra
+
+package layers
+
+import (
+	"gopacket"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+type BFDVersion uint8
+
+type BFDDiagnostic uint8
+
+const (
+	BFDDiagnosticNone               BFDDiagnostic = 0 // No Diagnostic
+	BFDDiagnosticTimeExpired        BFDDiagnostic = 1 // Control Detection Time Expired
+	BFDDiagnosticEchoFailed         BFDDiagnostic = 2 // Echo Function Failed
+	BFDDiagnosticNeighborSignalDown BFDDiagnostic = 3 // Neighbor Signaled Session Down
+	BFDDiagnosticForwardPlaneReset  BFDDiagnostic = 4 // Forwarding Plane Reset
+	BFDDiagnosticPathDown           BFDDiagnostic = 5 // Path Down
+	BFDDiagnosticConcatPathDown     BFDDiagnostic = 6 // Concatenated Path Down
+	BFDDiagnosticAdminDown          BFDDiagnostic = 7 // Administratively Down
+	BFDDiagnosticRevConcatPathDown  BFDDiagnostic = 8 // Reverse Concatenated Path Dow
+)
+
+decreases
+func (bd BFDDiagnostic) String() string {
+	switch bd {
+	default:
+		return "Unknown"
+	case BFDDiagnosticNone:
+		return "None"
+	case BFDDiagnosticTimeExpired:
+		return "Control Detection Time Expired"
+	case BFDDiagnosticEchoFailed:
+		return "Echo Function Failed"
+	case BFDDiagnosticNeighborSignalDown:
+		return "Neighbor Signaled Session Down"
+	case BFDDiagnosticForwardPlaneReset:
+		return "Forwarding Plane Reset"
+	case BFDDiagnosticPathDown:
+		return "Path Down"
+	case BFDDiagnosticConcatPathDown:
+		return "Concatenated Path Down"
+	case BFDDiagnosticAdminDown:
+		return "Administratively Down"
+	case BFDDiagnosticRevConcatPathDown:
+		return "Reverse Concatenated Path Down"
+	}
+}
+
+type BFDState uint8
+
+const (
+	BFDStateAdminDown BFDState = 0
+	BFDStateDown      BFDState = 1
+	BFDStateInit      BFDState = 2
+	BFDStateUp        BFDState = 3
+)
+
+decreases
+func (s BFDState) String() string {
+	switch s {
+	default:
+		return "Unknown"
+	case BFDStateAdminDown:
+		return "Admin Down"
+	case BFDStateDown:
+		return "Down"
+	case BFDStateInit:
+		return "Init"
+	case BFDStateUp:
+		return "Up"
+	}
+}
+
+type BFDDetectMultiplier uint8
+
+type BFDDiscriminator uint32
+
+type BFDTimeInterval uint32
+
+type BFDAuthType uint8
+
+const (
+	BFDAuthTypeNone                BFDAuthType = 0 // No Auth
+	BFDAuthTypePassword            BFDAuthType = 1 // Simple Password
+	BFDAuthTypeKeyedMD5            BFDAuthType = 2 // Keyed MD5
+	BFDAuthTypeMeticulousKeyedMD5  BFDAuthType = 3 // Meticulous Keyed MD5
+	BFDAuthTypeKeyedSHA1           BFDAuthType = 4 // Keyed SHA1
+	BFDAuthTypeMeticulousKeyedSHA1 BFDAuthType = 5 // Meticulous Keyed SHA1
+)
+
+decreases
+func (at BFDAuthType) String() string {
+	switch at {
+	default:
+		return "Unknown"
+	case BFDAuthTypeNone:
+		return "No Authentication"
+	case BFDAuthTypePassword:
+		return "Simple Password"
+	case BFDAuthTypeKeyedMD5:
+		return "Keyed MD5"
+	case BFDAuthTypeMeticulousKeyedMD5:
+		return "Meticulous Keyed MD5"
+	case BFDAuthTypeKeyedSHA1:
+		return "Keyed SHA1"
+	case BFDAuthTypeMeticulousKeyedSHA1:
+		return "Meticulous Keyed SHA1"
+	}
+}
+
+type BFDAuthKeyID uint8
+
+type BFDAuthSequenceNumber uint32
+
+type BFDAuthData []byte
+
+type BFDAuthHeader struct {
+	AuthType       BFDAuthType
+	KeyID          BFDAuthKeyID
+	SequenceNumber BFDAuthSequenceNumber
+	Data           BFDAuthData
+}
+
+pred (b *BFDAuthHeader) Mem() {
+	acc(b) && slices.AbsSlice_Bytes(b.Data, 0, len(b.Data))
+}
+
+preserves acc(h, 1/10000)
+decreases
+func (h *BFDAuthHeader) Length() int {
+	switch h.AuthType {
+	case BFDAuthTypePassword:
+		return 3 + len(h.Data)
+	case BFDAuthTypeKeyedMD5, BFDAuthTypeMeticulousKeyedMD5:
+		return 8 + len(h.Data)
+	case BFDAuthTypeKeyedSHA1, BFDAuthTypeMeticulousKeyedSHA1:
+		return 8 + len(h.Data)
+	default:
+		return 0
+	}
+}
+
+type BFD struct {
+	BaseLayer
+	Version                   BFDVersion          // Version of the BFD protocol.
+	Diagnostic                BFDDiagnostic       // Diagnostic code for last state change
+	State                     BFDState            // Current state
+	Poll                      bool                // Requesting verification
+	Final                     bool                // Responding to a received BFD Control packet that had the Poll (P) bit set.
+	ControlPlaneIndependent   bool                // BFD implementation does not share fate with its control plane
+	AuthPresent               bool                // Authentication Section is present and the session is to be authenticated
+	Demand                    bool                // Demand mode is active
+	Multipoint                bool                // For future point-to-multipoint extensions. Must always be zero
+	DetectMultiplier          BFDDetectMultiplier // Detection time multiplier
+	MyDiscriminator           BFDDiscriminator    // A unique, nonzero discriminator value
+	YourDiscriminator         BFDDiscriminator    // discriminator received from the remote system.
+	DesiredMinTxInterval      BFDTimeInterval     // Minimum interval, in microseconds,  the local system would like to use when transmitting BFD Control packets
+	RequiredMinRxInterval     BFDTimeInterval     // Minimum interval, in microseconds, between received BFD Control packets that this system is capable of supporting
+	RequiredMinEchoRxInterval BFDTimeInterval     // Minimum interval, in microseconds, between received BFD Echo packets that this system is capable of supporting
+	AuthHeader                *BFDAuthHeader      // Authentication data, variable length.
+}
+
+pred (b *BFD) Mem() {
+	acc(b) && slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload)) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) && (b.AuthPresent ==> b.AuthHeader.Mem())
+}
+
+preserves acc(d, 1/10000)
+decreases
+func (d *BFD) Length() int
+
+decreases
+pure func (d *BFD) LayerType() gopacket.LayerType
+
+requires d.Mem()
+requires df.Mem()
+preserves slices.AbsSlice_Bytes(data, 0, len(data))
+ensures df.Mem()
+ensures err == nil ==> d.Mem()
+decreases
+func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err error)
+
+requires d.Mem() && b.Mem()
+ensures err != nil ==> d.Mem() && b.Mem()
+decreases
+func (d *BFD) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) (err error)
+
+decreases
+pure func (d *BFD) CanDecode() gopacket.LayerClass
+
+decreases
+pure func (d *BFD) NextLayerType() gopacket.LayerType
+
+decreases
+func (d *BFD) Payload() []byte {
+	return nil
+}
