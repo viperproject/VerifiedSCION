@@ -30,14 +30,12 @@ pred (d *Decoded) NonInitMem() {
 pred (d *Decoded) Mem() {
 	d.Base.Mem() &&
 		acc(&d.InfoFields) &&
-		(forall i int :: 0 <= i && i < len(d.InfoFields) ==>
-			acc(&d.InfoFields[i])) &&
-		len(d.InfoFields) == d.Base.getNumINF() &&
 		d.Base.getNumINF() <= MaxINFs &&
+		len(d.InfoFields) == d.Base.getNumINF() &&
+		(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
 		acc(&d.HopFields) &&
-		(forall i int :: 0 <= i && i < len(d.HopFields) ==>
-			d.HopFields[i].Mem()) &&
-		len(d.HopFields) == d.Base.getNumHops()
+		len(d.HopFields) == d.Base.getNumHops() &&
+		(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
 requires acc(d.Mem(), _)

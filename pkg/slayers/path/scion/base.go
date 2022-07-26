@@ -54,11 +54,11 @@ type Base struct {
 	NumHops int
 }
 
-//@ requires len(data) >= MetaLen
+//@ requires  len(data) >= MetaLen
 //@ requires  s.NonInitMem()
 //@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-//@ ensures r != nil ==> (s.NonInitMem() && r.ErrorMem())
-//@ ensures r == nil ==> s.Mem() && (s.Mem() --* s.NonInitMem())
+//@ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
+//@ ensures   r == nil ==> s.Mem() && (s.Mem() --* s.NonInitMem())
 //@ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// PathMeta takes care of bounds check.
@@ -157,8 +157,8 @@ func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 // Len returns the length of the path in bytes.
 //@ pure
 //@ requires acc(s.Mem(), _)
-//@ ensures r >= MetaLen
-//@ ensures r == (unfolding acc(s.Mem(), _) in (MetaLen + int(s.NumINF)*path.InfoLen + int(s.NumHops)*path.HopLen))
+//@ ensures  r >= MetaLen
+//@ ensures  r == (unfolding acc(s.Mem(), _) in (MetaLen + int(s.NumINF)*path.InfoLen + int(s.NumHops)*path.HopLen))
 //@ decreases
 func (s *Base) Len() (r int) {
 	return /*@ unfolding acc(s.Mem(), _) in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
@@ -181,11 +181,11 @@ type MetaHdr struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
-//@ requires len(raw) >= MetaLen
+//@ requires  len(raw) >= MetaLen
 //@ preserves acc(m)
 //@ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
-//@ ensures m.CurrINF >= 0 && m.CurrHF >= 0
-//@ ensures e == nil
+//@ ensures   m.CurrINF >= 0 && m.CurrHF >= 0
+//@ ensures   e == nil
 //@ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	if len(raw) < MetaLen {
@@ -207,10 +207,10 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // scion.MetaLen.
-//@ requires len(b) >= MetaLen
+//@ requires  len(b) >= MetaLen
 //@ preserves acc(m, definitions.ReadL10)
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures e == nil
+//@ ensures   e == nil
 //@ decreases
 func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	if len(b) < MetaLen {

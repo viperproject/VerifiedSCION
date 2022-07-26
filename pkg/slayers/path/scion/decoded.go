@@ -42,11 +42,11 @@ type Decoded struct {
 }
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
-//@ requires s.NonInitMem()
-//@ requires len(data) >= MetaLen
+//@ requires  s.NonInitMem()
+//@ requires  len(data) >= MetaLen
 //@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-//@ ensures r == nil ==> s.Mem()
-//@ ensures r != nil ==> s.NonInitMem()
+//@ ensures   r == nil ==> s.Mem()
+//@ ensures   r != nil ==> s.NonInitMem()
 //@ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ unfold s.NonInitMem()
@@ -134,7 +134,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 //@ requires  acc(s.Mem(), definitions.ReadL1)
 //@ requires  len(b) >= unfolding acc(s.Mem(), definitions.ReadL1) in s.Base.Len()
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures acc(s.Mem(), definitions.ReadL1)
+//@ ensures   acc(s.Mem(), definitions.ReadL1)
 //@ decreases
 func (s *Decoded) SerializeTo(b []byte) error {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
@@ -223,14 +223,11 @@ func (s *Decoded) SerializeTo(b []byte) error {
 
 // Reverse reverses a SCION path.
 //
-// TODO this method suffers from the
-// same issue with embedded interfaces as:
-// https://github.com/viperproject/gobra/issues/461
-//
+// TODO
 //@ trusted
 //@ requires s.Mem()
-//@ ensures r != nil ==> s.Mem()
-//@ ensures r == nil ==> p.Mem()
+//@ ensures  r != nil ==> s.Mem()
+//@ ensures  r == nil ==> p.Mem()
 //@ decreases
 func (s *Decoded) Reverse() (p path.Path, r error) {
 	if s.NumINF == 0 {
@@ -260,6 +257,7 @@ func (s *Decoded) Reverse() (p path.Path, r error) {
 	return s, nil
 }
 
+/*
 // ToRaw tranforms scion.Decoded into scion.Raw.
 //@ preserves acc(s.Mem(), definitions.ReadL1)
 //@ ensures err == nil ==> r.Mem()
@@ -279,3 +277,4 @@ func (s *Decoded) ToRaw() (r *Raw, err error) {
 	}
 	return raw, nil
 }
+*/

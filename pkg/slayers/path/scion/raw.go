@@ -35,8 +35,8 @@ type Raw struct {
 //@ requires s.NonInitMem()
 //@ requires len(data) >= MetaLen
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ ensures res == nil ==> s.Mem()
-//@ ensures res != nil ==> (s.NonInitMem() && res.ErrorMem())
+//@ ensures  res == nil ==> s.Mem()
+//@ ensures  res != nil ==> (s.NonInitMem() && res.ErrorMem())
 //@ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()
@@ -72,10 +72,10 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 
 // SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-//@ requires s.Mem()
-//@ requires len(b) >= unfolding s.Mem() in s.Len()
+//@ requires  s.Mem()
+//@ requires  len(b) >= unfolding s.Mem() in s.Len()
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures s.Mem()
+//@ ensures   s.Mem()
 //@ decreases
 func (s *Raw) SerializeTo(b []byte) error {
 	//@ unfold s.Mem()
@@ -126,8 +126,8 @@ func (s *Raw) SerializeTo(b []byte) error {
 //
 //@ trusted
 //@ requires s.Mem()
-//@ ensures err == nil ==> p.Mem()
-//@ ensures err != nil ==> s.Mem()
+//@ ensures  err == nil ==> p.Mem()
+//@ ensures  err != nil ==> s.Mem()
 //@ decreases
 func (s *Raw) Reverse() (p path.Path, err error) {
 	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
@@ -152,8 +152,8 @@ func (s *Raw) Reverse() (p path.Path, err error) {
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
 //@ requires s.Mem()
 //@ requires unfolding s.Mem() in len(s.Raw) >= MetaLen
-//@ ensures s.Mem()
-//@ ensures err == nil ==> d.Mem()
+//@ ensures  s.Mem()
+//@ ensures  err == nil ==> d.Mem()
 //@ decreases
 func (s *Raw) ToDecoded() (d *Decoded, err error) {
 	//@ unfold s.Mem()
@@ -184,10 +184,10 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 
 // IncPath increments the path and writePerms it to the buffer.
 //@ requires s.Mem()
-//@ requires unfolding s.Mem() in
-//@   unfolding s.Base.Mem() in
+//@ requires unfolding s.Mem() in unfolding
+//@   s.Base.Mem() in
 //@     (s.NumINF > 0 && int(s.PathMeta.CurrHF) < s.NumHops-1)
-//@ ensures s.Mem()
+//@ ensures  s.Mem()
 //@ decreases
 func (s *Raw) IncPath() error {
 	//@ unfold s.Mem()
@@ -285,7 +285,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
 }
 
 // GetHopField returns the HopField at a given index.
-//@ requires 0 <= idx
+//@ requires  0 <= idx
 //@ preserves acc(s.Mem(), definitions.ReadL1)
 //@ decreases
 func (s *Raw) GetHopField(idx int) (path.HopField, error) {
@@ -334,8 +334,8 @@ func (s *Raw) GetCurrentHopField() (path.HopField, error) {
 }
 
 // SetHopField updates the HopField at a given index.
-//@ requires 0 <= idx
-//@  preserves s.Mem()
+//@ requires  0 <= idx
+//@ preserves s.Mem()
 //@ decreases
 func (s *Raw) SetHopField(hop path.HopField, idx int) error {
 	//@ share hop

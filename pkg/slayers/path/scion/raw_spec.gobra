@@ -27,3 +27,11 @@ pred (s *Raw) Mem() {
 		len(s.Raw) >= s.Len() &&
 		slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
 }
+
+ghost
+pure
+requires acc(s.Mem(), _)
+decreases
+func (s *Raw) RawLen() (l int) {
+	return unfolding acc(s.Mem(), _) in s.Base.Len()
+}
