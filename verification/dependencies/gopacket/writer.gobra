@@ -29,7 +29,7 @@ type SerializeOptions struct {
 	ComputeChecksums bool
 }
 
-// TODO: maybe change the spec of this buffer in the future
+// TODO: maybe change the spec of this buffer in the future to provide more information about the contents currently stored in the buffer.
 type SerializeBuffer interface {
 	pred Mem()
 

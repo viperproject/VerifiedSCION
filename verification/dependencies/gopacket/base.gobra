@@ -11,9 +11,10 @@ package gopacket
 import "github.com/scionproto/scion/verification/utils/slices"
 
 type Layer interface {
-	// Since LayerMem and PayloadMem might have some common resources needed the can't
-	// exist simultaneously. Hence, we have Mem that acts as the memory predicate of the
-	// whole layer
+	// Since the resources abstracted in LayerMem and PayloadMem might overlap,
+	// it may not be possible to hold an instance of each at once.
+	// Hence, we have Mem that abstracts all the resources associated with
+	// the layer.
 	pred Mem()
 	pred LayerMem()
 	pred PayloadMem()

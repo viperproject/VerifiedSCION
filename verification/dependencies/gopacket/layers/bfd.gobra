@@ -132,7 +132,7 @@ type BFDAuthHeader struct {
 }
 
 pred (b *BFDAuthHeader) Mem() {
-	acc(b) && acc(b.Data)
+	acc(b) && slices.AbsSlice_Bytes(b.Data, 0, len(b.Data))
 }
 
 preserves acc(h, 1/10000)
@@ -171,7 +171,7 @@ type BFD struct {
 }
 
 pred (b *BFD) Mem() {
-	acc(b) && acc(b.BaseLayer.Payload) && acc(b.Contents) && (b.AuthPresent ==> b.AuthHeader.Mem())
+	acc(b) && slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload)) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) && (b.AuthPresent ==> b.AuthHeader.Mem())
 }
 
 preserves acc(d, 1/10000)
@@ -200,7 +200,7 @@ pure func (d *BFD) CanDecode() gopacket.LayerClass
 decreases
 pure func (d *BFD) NextLayerType() gopacket.LayerType
 
-//decreases
-//func (d *BFD) Payload() []byte {
-//	return nil
-//}
+decreases
+func (d *BFD) Payload() []byte {
+	return nil
+}
