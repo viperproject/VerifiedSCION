@@ -23,11 +23,9 @@ pred (p *Path) NonInitMem() {
 pred (p *Path) Mem() {
 	acc(&p.PktID) &&
 		acc(&p.PHVF) &&
-		(forall i int :: 0 <= i && i < len(p.PHVF) ==>
-			acc(&p.PHVF[i])) &&
+		(forall i int :: 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i])) &&
 		acc(&p.LHVF) &&
-		(forall i int :: 0 <= i && i < len(p.LHVF) ==>
-			acc(&p.LHVF[i])) &&
+		(forall i int :: 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i])) &&
 		acc(&p.ScionPath) &&
 		(p.ScionPath != nil ==> p.ScionPath.Mem())
 }
@@ -46,4 +44,13 @@ ensures l >= 0
 decreases
 func (p *Path) getLHVFLen() (l int) {
 	return unfolding acc(p.Mem(), _) in len(p.LHVF)
+}
+
+trusted // TODO
+pure
+requires acc(p.Mem(), _)
+ensures  r ==> unfolding acc(p.Mem(), _) in p.ScionPath != nil
+decreases
+func (p *Path) hasScionPath() (r bool) {
+	return unfolding acc(p.Mem(), _) in p.ScionPath != nil
 }
