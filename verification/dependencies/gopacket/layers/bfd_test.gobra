@@ -9,7 +9,7 @@
 
 package layers
 
-import "slices"
+import "github.com/scionproto/scion/verification/utils/slices"
 
 func BFD_test() {
 	b := &BFDAuthHeader{BFDAuthType(1), BFDAuthKeyID(1), BFDAuthSequenceNumber(1), BFDAuthData([]byte{1,2,3})}

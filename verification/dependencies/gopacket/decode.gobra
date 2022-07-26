@@ -8,7 +8,7 @@
 
 package gopacket
 
-import "slices"
+import "github.com/scionproto/scion/verification/utils/slices"
 
 type DecodeFeedback interface {
 	pred Mem()

@@ -10,7 +10,7 @@ package gopacket
 
 import (
 	"time"
-	"slices"
+	"github.com/scionproto/scion/verification/utils/slices"
 )
 
 type CaptureInfo struct {

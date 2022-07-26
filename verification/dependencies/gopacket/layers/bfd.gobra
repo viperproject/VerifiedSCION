@@ -11,7 +11,7 @@ package layers
 
 import (
 	"gopacket"
-	"slices"
+	"github.com/scionproto/scion/verification/utils/slices"
 )
 
 type BFDVersion uint8
