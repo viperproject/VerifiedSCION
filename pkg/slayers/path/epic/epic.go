@@ -212,7 +212,7 @@ func (p *Path) Reverse() (ret path.Path, r error) {
 	//@ assert revScion.Mem()
 	ScionPath, ok := revScion.(*scion.Raw)
 	if !ok {
-		return nil, err
+		return nil, serrors.New("reversed path of type scion.Raw must not change type")
 	}
 	//@ assert ScionPath.Mem()
 	p.ScionPath = ScionPath

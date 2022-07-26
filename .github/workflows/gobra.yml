@@ -20,6 +20,7 @@ jobs:
       module: 'github.com/scionproto/scion'
       includePaths: '. verification/dependencies'
       assumeInjectivityOnInhale: '1'
+      checkConsistency: '1'
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
@@ -46,6 +47,7 @@ jobs:
           module: ${{ env.module }}
           includePaths: './dependencies/ ..' # relative to project location
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
       - name: Verify package 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
@@ -55,6 +57,7 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
       - name: Verify package 'pkg/slayers/path/empty'
         uses: viperproject/gobra-action@main
         with:
@@ -64,6 +67,7 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
       # - name: Verify package 'pkg/slayers/path/epic'
       #   uses: viperproject/gobra-action@main
       #   with:
@@ -73,6 +77,7 @@ jobs:
       #     module: ${{ env.module }}
       #     includePaths: ${{ env.includePaths }}
       #     assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+      #     checkConsistency: ${{ env.checkConsistency }}
       # - name: Verify package 'pkg/slayers/path/onehop'
       #   uses: viperproject/gobra-action@main
       #   with:
@@ -82,6 +87,7 @@ jobs:
       #     module: ${{ env.module }}
       #     includePaths: ${{ env.includePaths }}
       #     assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+      #     checkConsistency: ${{ env.checkConsistency }}
       - name: Verify package 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:
@@ -91,6 +97,7 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
@@ -100,3 +107,11 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          statsFile: '/stats/stats_addr.json'
+      - name: Upload the verification report
+        uses: actions/upload-artifact@v2
+        with:
+          name: stats_addr.json
+          path: /stats/stats_addr.json
+          if-no-files-found: error # could also be 'warn' or 'ignore'

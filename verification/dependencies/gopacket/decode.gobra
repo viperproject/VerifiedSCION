@@ -1,0 +1,93 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import "github.com/scionproto/scion/verification/utils/slices"
+
+type DecodeFeedback interface {
+	pred Mem()
+
+	preserves Mem()
+	decreases
+	SetTruncated()
+}
+
+type nilDecodeFeedback struct{}
+
+decreases
+func (nilDecodeFeedback) SetTruncated() {}
+
+pred (n nilDecodeFeedback) Mem() { true }
+
+nilDecodeFeedback implements DecodeFeedback
+
+type PacketBuilder interface {
+	DecodeFeedback
+
+	requires l.Mem()
+	preserves Mem()
+	decreases
+	AddLayer(l Layer)
+
+	preserves Mem()
+	requires l.Mem()
+	decreases
+	SetLinkLayer(l LinkLayer)
+
+	preserves Mem()
+	requires l.Mem()
+	decreases
+	SetNetworkLayer(l NetworkLayer)
+
+	preserves Mem()
+	requires l.Mem()
+	decreases
+	SetTransportLayer(l TransportLayer)
+
+	preserves Mem()
+	requires l.Mem()
+	decreases
+	SetApplicationLayer(l ApplicationLayer)
+
+	preserves Mem()
+	requires l.Mem()
+	decreases
+	SetErrorLayer(l ErrorLayer)
+
+	requires Mem()
+	requires next.Mem()
+	ensures Mem()
+	NextDecoder(next Decoder) error
+
+	preserves Mem()
+	decreases
+	DumpPacketData()
+
+	preserves Mem()
+	decreases
+	DecodeOptions() *DecodeOptions
+}
+
+type Decoder interface {
+	pred Mem()
+
+	requires slices.AbsSlice_Bytes(b, 0, len(b))
+	preserves Mem()
+	preserves p.Mem()
+	decreases
+	Decode(b []byte, p PacketBuilder) error
+}
+
+// TODO: change to a global variable once they are supported in Gobra
+decreases
+pure func LayerTypePayload() LayerType
+
+// TODO: change to a global variable once they are supported in Gobra
+decreases
+pure func LayerTypeFragment() LayerType

@@ -1,0 +1,81 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import "github.com/scionproto/scion/verification/utils/slices"
+
+type SerializableLayer interface {
+	pred Mem()
+
+	requires Mem()
+	requires b.Mem()
+	ensures (err == nil) ==> (Mem() && b.Mem())
+	decreases
+	SerializeTo(b SerializeBuffer, opts SerializeOptions) (err error)
+
+
+	decreases
+	pure LayerType() LayerType
+}
+
+type SerializeOptions struct {
+	FixLengths bool
+	ComputeChecksums bool
+}
+
+// TODO: maybe change the spec of this buffer in the future to provide more information about the contents currently stored in the buffer.
+type SerializeBuffer interface {
+	pred Mem()
+
+	requires Mem()
+	ensures slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
+	decreases
+	Bytes() (res []byte)
+
+	requires Mem()
+	requires num >= 0
+	ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures err == nil ==> len(res) == num
+	ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
+	ensures err != nil ==> Mem()
+	decreases
+	PrependBytes(num int) (res []byte, err error)
+
+	requires Mem()
+	requires num >= 0
+	ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures err == nil ==> len(res) == num
+	ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
+	ensures err != nil ==> Mem()
+	decreases
+	AppendBytes(num int) (res []byte, err error)
+
+	preserves Mem()
+	decreases
+	Clear() error
+
+	preserves Mem()
+	ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
+	decreases
+	Layers() (res []LayerType)
+
+	preserves Mem()
+	decreases
+	PushLayer(LayerType)
+}
+
+ensures res.Mem()
+decreases
+func NewSerializeBuffer() (res SerializeBuffer)
+
+preserves w.Mem()
+preserves forall i int :: 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem()
+decreases
+func SerializeLayers(w SerializeBuffer, opts SerializeOptions, layers ...SerializableLayer) error

@@ -1,0 +1,76 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import "github.com/scionproto/scion/verification/utils/slices"
+
+type DecodingLayer interface {
+	pred Mem()
+
+	requires slices.AbsSlice_Bytes(data, 0, len(data))
+	requires Mem()
+	requires df.Mem()
+	decreases
+	DecodeFromBytes(data []byte, df DecodeFeedback) (res error)
+
+	preserves Mem()
+	ensures res.Mem()
+	decreases
+	CanDecode() (res LayerClass)
+
+	preserves Mem()
+	decreases
+	NextLayerType() LayerType
+
+	requires Mem()
+	ensures slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
+	decreases
+	LayerPayload() (res []byte)
+}
+
+type DecodingLayerContainer interface {
+	pred Mem()
+	
+	requires Mem()
+	requires d.Mem()
+	ensures res.Mem()
+	decreases
+	Put(d DecodingLayer) (res DecodingLayerContainer)
+
+	preserves Mem()
+	ensures d.Mem()
+	decreases
+	Decoder(LayerType) (d DecodingLayer, b bool)
+
+	// (VerifiedSCION) no support for closures yet
+	//LayersDecoder(first LayerType, df DecodeFeedback) DecodingLayerFunc
+}
+
+type DecodingLayerParser struct {
+	DecodingLayerParserOptions
+	dlc   DecodingLayerContainer
+	first LayerType
+	df    DecodeFeedback
+	// (VerifiedSCION) no support for closures yet
+	//decodeFunc DecodingLayerFunc
+	Truncated bool
+}
+
+type DecodingLayerParserOptions struct {
+	IgnorePanic bool
+	IgnoreUnsupported bool
+}
+
+requires forall i int :: 0 <= i && i < len(decoders) ==> acc(&decoders[i])
+requires forall i int :: 0 <= i && i < len(decoders) ==> decoders[i].Mem()
+ensures forall i int :: 0 <= i && i < len(decoders) ==> acc(&decoders[i])
+ensures acc(res)
+decreases
+func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) (res *DecodingLayerParser)

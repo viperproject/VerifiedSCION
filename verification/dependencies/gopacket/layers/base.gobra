@@ -1,0 +1,56 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package layers
+
+import "github.com/scionproto/scion/verification/utils/slices"
+
+type BaseLayer struct {
+	Contents []byte
+	Payload []byte
+}
+
+pred (b *BaseLayer) Mem() {
+	acc(b) && acc(b.Contents) && acc(b.Payload)
+}
+
+pred (b *BaseLayer) LayerMem() {
+	acc(b) && acc(b.Contents)
+}
+
+pred (b *BaseLayer) PayloadMem() {
+	acc(b) && acc(b.Payload)
+}
+
+requires b.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+decreases
+func (b *BaseLayer) LayerContents() (res []byte) {
+	unfold b.LayerMem()
+	res = b.Contents
+	fold slices.AbsSlice_Bytes(res, 0, len(res))
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+		unfold slices.AbsSlice_Bytes(res, 0, len(res))
+		fold b.LayerMem()
+	}
+}
+
+requires b.PayloadMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+decreases
+func (b *BaseLayer) LayerPayload() (res []byte) {
+	unfold b.PayloadMem()
+	res = b.Payload
+	fold slices.AbsSlice_Bytes(res, 0, len(res))
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+		unfold slices.AbsSlice_Bytes(res, 0, len(res))
+		fold b.PayloadMem()
+	}
+}

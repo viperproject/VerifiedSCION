@@ -12,17 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package slices
+package drkey
 
-func AbsSliceC_Bytes_test() {
-	s := make([]byte, 10)
-	ghost contents := NewSeq_Bytes(10)
-	fold AbsSliceC_Bytes(s, 0, 10, contents)
-	// assert false // fails
-}
-
-func AbsSlice_Bytes_test() {
-	s := make([]byte, 10)
-	fold AbsSlice_Bytes(s, 0, 10)
-	// assert false // fails
-}
+const (
+	PromOpGetKey            = "get"
+	PromOpInsertKey         = "insert"
+	PromOpDeleteExpiredKeys = "delete"
+)
