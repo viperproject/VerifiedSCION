@@ -261,17 +261,10 @@ type PktID struct {
 //@ decreases
 func (i *PktID) DecodeFromBytes(raw []byte) {
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
-	//@ assert forall i int :: 0 <= i && i < 4 ==>
-	//@   &raw[:4][i] == &raw[i]
+	//@ assert forall i int :: 0 <= i && i < 4 ==> &raw[:4][i] == &raw[i]
 	i.Timestamp = binary.BigEndian.Uint32(raw[:4])
-	//@ assert forall i int :: 0 <= i && i < 4 ==>
-	//@   &raw[4:8][i] == &raw[4 + i]
+	//@ assert forall i int :: 0 <= i && i < 4 ==> &raw[4:8][i] == &raw[4 + i]
 	i.Counter = binary.BigEndian.Uint32(raw[4:8])
-	// (gavin) TODO why are these assumptions still needed?
-	// The post-condition of Uint32 is that the result is >= 0
-	// yet if the following are not present Gobra complains.
-	//@ assume i.Counter >= 0
-	//@ assume i.Timestamp >= 0
 	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 }
 
