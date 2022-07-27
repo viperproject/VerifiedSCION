@@ -46,7 +46,6 @@ func (p *Path) getLHVFLen() (l int) {
 	return unfolding acc(p.Mem(), _) in len(p.LHVF)
 }
 
-trusted // TODO
 pure
 requires acc(p.Mem(), _)
 ensures  r ==> unfolding acc(p.Mem(), _) in p.ScionPath != nil
