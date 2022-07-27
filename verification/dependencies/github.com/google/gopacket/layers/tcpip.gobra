@@ -9,7 +9,7 @@
 
 package layers
 
-import "gopacket"
+import "github.com/google/gopacket"
 
 type tcpipchecksum struct {
 	pseudoheader tcpipPseudoHeader
