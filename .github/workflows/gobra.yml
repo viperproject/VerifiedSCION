@@ -42,7 +42,7 @@ jobs:
         with:
           projectLocation: 'VerifiedSCION/verification'
           recursive: 1
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: './dependencies/ ..' # relative to project location
@@ -52,7 +52,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path'
-          packageTimeout: 10m
+          timeout: 10m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -62,7 +62,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/empty'
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -72,7 +72,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/epic'
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -82,7 +82,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/onehop'
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -92,7 +92,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/scion'
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -102,7 +102,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/addr'
-          packageTimeout: 10m
+          timeout: 10m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
