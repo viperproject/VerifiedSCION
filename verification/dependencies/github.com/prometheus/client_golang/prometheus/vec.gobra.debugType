@@ -1,9 +1,0 @@
-package prometheus
-
-
-type MetricVec (:: NamedType) struct {
-  
-}
-
-pred (m (:: ReceiverParameter) MetricVec (:: NamedType)) Mem (:: MPredicateImpl)()
-
