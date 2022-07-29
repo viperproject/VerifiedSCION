@@ -1,0 +1,5 @@
+package prometheus
+
+
+type Labels (:: NamedType) map[string]string
+

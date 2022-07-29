@@ -1,0 +1,103 @@
+// Copyright 2014 The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// This file was adapted from https://github.com/prometheus/client_golang/blob/master/prometheus/counter.go
+
+package prometheus
+
+import (
+	"time"
+)
+
+// (tlino) The Prometheus reference implementaiton of Counter ensures thread-safety
+// Counter is a Metric that represents a single numerical value that only ever
+// goes up. That implies that it cannot be used to count items whose number can
+// also go down, e.g. the number of currently running goroutines. Those
+// "counters" are represented by Gauges.
+//
+// A Counter is typically used to count requests served, tasks completed, errors
+// occurred, etc.
+//
+// To create Counter instances, use NewCounter.
+type Counter interface {
+	pred Mem()
+
+	// Metric
+	// Collector
+
+	// (joao) this method is from Metric because Gobra does not have good support
+	//        for composition of interfaces
+	preserves acc(Mem(), _)
+	ensures   d.Mem()
+	Desc() (d *Desc)
+
+	// (joao) this method is from Collector because Gobra does not have good support
+	//        for composition of interfaces
+	requires acc(c.SendChannel(), _) && c.SendGivenPerm() == (*Desc).Mem!<_!>;
+	preserves acc(Mem(), _)
+	Describe(c chan<- *Desc)
+
+	// (joao) this method is from Collector because Gobra does not have good support
+	//        for composition of interfaces
+	requires Mem() && acc(c.SendChannel(), _) && c.SendGivenPerm() == Metric.Mem!<_!>;
+	preserves acc(Mem(), _)
+	Collect(c chan<- Metric)
+
+	// Inc increments the counter by 1. Use Add to increment it by arbitrary
+	// non-negative values.
+	preserves acc(Mem(), _)
+	decreases
+	Inc()
+	// Add adds the given value to the counter. It panics if the value is <
+	// 0.
+	preserves acc(Mem(), _)
+	decreases
+	Add(float64)
+}
+
+// CounterOpts is an alias for Opts. See there for doc comments.
+type CounterOpts Opts
+
+// NewCounter creates a new Counter based on the provided CounterOpts.
+requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
+ensures c.Mem()
+func NewCounter(opts CounterOpts) (c Counter)
+
+// CounterVec is a Collector that bundles a set of Counters that all share the
+// same Desc, but have different values for their variable labels. This is used
+// if you want to count the same thing partitioned by various dimensions
+// (e.g. number of HTTP requests, partitioned by response code and
+// method). Create instances with NewCounterVec.
+type CounterVec struct {
+	// (joao) commented out field
+	// *MetricVec
+}
+
+pred (c *CounterVec) Mem()
+
+// NewCounterVec creates a new CounterVec based on the provided CounterOpts and
+// partitioned by the given label names.
+requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
+requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i], 1/1000)
+ensures  c.Mem()
+func NewCounterVec(opts CounterOpts, labelNames []string) (c *CounterVec)
+
+// (tlino) The Prometheus reference implementaiton of CounterVec and Counter ensures thread-safety
+// With works as GetMetricWith, but panics where GetMetricWithLabels would have
+// returned an error. Not returning an error allows shortcuts like
+//     myVec.With(prometheus.Labels{"code": "404", "method": "GET"}).Add(42)
+preserves acc(v.Mem(), _)
+preserves acc(labels, _)
+ensures acc(c.Mem(), _)
+decreases _
+func (v *CounterVec) With(labels Labels) (c Counter)
