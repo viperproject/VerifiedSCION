@@ -142,7 +142,7 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 // decoded format.
 //@ requires o.Mem()
 //@ ensures  err == nil ==> sd.Mem()
-//@ ensures  err != nil ==> o.Mem()
+//@ ensures  err != nil ==> err.ErrorMem() && o.Mem()
 //@ decreases
 func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 	//@ unfold o.Mem()
@@ -200,6 +200,7 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 // Reverse a OneHop path that returns a reversed SCION path.
 //@ trusted // TODO
 //@ ensures err == nil ==> p.Mem()
+//@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
 func (o /*@@@*/ Path) Reverse() (p path.Path, err error) {
 	//@ fold o.FirstHop.Mem()
