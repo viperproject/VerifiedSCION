@@ -71,9 +71,10 @@ type Path struct {
 //@ requires  p.getLHVFLen() == HVFLen
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures   p.Mem()
+//@ ensures   r != nil ==> r.ErrorMem()
 // ensures acc(p.Mem(), definitions.ReadL1)
 //@ decreases
-func (p *Path) SerializeTo(b []byte) error {
+func (p *Path) SerializeTo(b []byte) (r error) {
 	if len(b) < p.Len() {
 		return serrors.New("buffer too small to serialize path.", "expected", p.Len(),
 			"actual", len(b))
@@ -138,7 +139,7 @@ func (p *Path) SerializeTo(b []byte) error {
 //@ requires slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures slices.AbsSlice_Bytes(b, 0, MetadataLen)
 //@ ensures r == nil ==> p.Mem()
-//@ ensures r != nil ==> p.NonInitMem()
+//@ ensures r != nil ==> r.ErrorMem() && p.NonInitMem()
 //@ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	if len(b) < MetadataLen {
@@ -196,7 +197,7 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 //@ trusted // TODO
 //@ requires p.Mem()
 //@ ensures r == nil ==> p.Mem()
-//@ ensures r != nil ==> ret.Mem()
+//@ ensures r != nil ==> r.ErrorMem() && ret.Mem()
 //@ decreases
 func (p *Path) Reverse() (ret path.Path, r error) {
 	//@ unfold p.Mem()
