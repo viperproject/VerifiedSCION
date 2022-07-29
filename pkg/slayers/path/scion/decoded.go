@@ -46,7 +46,7 @@ type Decoded struct {
 //@ requires  len(data) >= MetaLen
 //@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
 //@ ensures   r == nil ==> s.Mem()
-//@ ensures   r != nil ==> s.NonInitMem()
+//@ ensures   r != nil ==> r.ErrorMem() && s.NonInitMem()
 //@ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ unfold s.NonInitMem()
@@ -135,8 +135,9 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 //@ requires  len(b) >= unfolding acc(s.Mem(), definitions.ReadL1) in s.Base.Len()
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures   acc(s.Mem(), definitions.ReadL1)
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Decoded) SerializeTo(b []byte) error {
+func (s *Decoded) SerializeTo(b []byte) (r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	if len(b) < s.Len() {
 		ret := serrors.New("buffer too small to serialize path.", "expected", s.Len(),
@@ -226,7 +227,7 @@ func (s *Decoded) SerializeTo(b []byte) error {
 // TODO
 //@ trusted
 //@ requires s.Mem()
-//@ ensures  r != nil ==> s.Mem()
+//@ ensures  r != nil ==> r.ErrorMem() && s.Mem()
 //@ ensures  r == nil ==> p.Mem()
 //@ decreases
 func (s *Decoded) Reverse() (p path.Path, r error) {

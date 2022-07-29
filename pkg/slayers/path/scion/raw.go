@@ -76,8 +76,9 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 //@ requires  len(b) >= unfolding s.Mem() in s.Len()
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures   s.Mem()
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) SerializeTo(b []byte) error {
+func (s *Raw) SerializeTo(b []byte) (r error) {
 	//@ unfold s.Mem()
 	if s.Raw == nil {
 		//@ fold s.Mem()
@@ -127,7 +128,7 @@ func (s *Raw) SerializeTo(b []byte) error {
 //@ trusted
 //@ requires s.Mem()
 //@ ensures  err == nil ==> p.Mem()
-//@ ensures  err != nil ==> s.Mem()
+//@ ensures  err != nil ==> err.ErrorMem() && s.Mem()
 //@ decreases
 func (s *Raw) Reverse() (p path.Path, err error) {
 	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
@@ -154,6 +155,7 @@ func (s *Raw) Reverse() (p path.Path, err error) {
 //@ requires unfolding s.Mem() in len(s.Raw) >= MetaLen
 //@ ensures  s.Mem()
 //@ ensures  err == nil ==> d.Mem()
+//@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *Raw) ToDecoded() (d *Decoded, err error) {
 	//@ unfold s.Mem()
@@ -188,8 +190,9 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 //@   s.Base.Mem() in
 //@     (s.NumINF > 0 && int(s.PathMeta.CurrHF) < s.NumHops-1)
 //@ ensures  s.Mem()
+//@ ensures  r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) IncPath() error {
+func (s *Raw) IncPath() (r error) {
 	//@ unfold s.Mem()
 	if err := s.Base.IncPath(); err != nil {
 		//@ fold s.Mem()
@@ -210,6 +213,7 @@ func (s *Raw) IncPath() error {
 //@ requires acc(s.Mem(), definitions.ReadL1)
 //@ requires 0 <= idx
 //@ ensures  acc(s.Mem(), definitions.ReadL1)
+//@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *Raw) GetInfoField(idx int) (ifield path.InfoField, err error) {
 	//@ assert path.InfoLen == 8
@@ -244,8 +248,9 @@ func (s *Raw) GetInfoField(idx int) (ifield path.InfoField, err error) {
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
 //@ preserves acc(s.Mem(), definitions.ReadL1)
+//@ ensures r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) GetCurrentInfoField() (path.InfoField, error) {
+func (s *Raw) GetCurrentInfoField() (res path.InfoField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	// (gavin) introduced idx variable
@@ -260,8 +265,9 @@ func (s *Raw) GetCurrentInfoField() (path.InfoField, error) {
 // SetInfoField updates the InfoField at a given index.
 //@ requires  0 <= idx
 //@ preserves s.Mem()
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
+func (s *Raw) SetInfoField(info path.InfoField, idx int) (r error) {
 	//@ share info
 	//@ unfold s.Mem()
 	//@ unfold s.Base.Mem()
@@ -287,8 +293,9 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
 // GetHopField returns the HopField at a given index.
 //@ requires  0 <= idx
 //@ preserves acc(s.Mem(), definitions.ReadL1)
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) GetHopField(idx int) (path.HopField, error) {
+func (s *Raw) GetHopField(idx int) (res path.HopField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	if idx >= s.NumHops {
@@ -321,8 +328,9 @@ func (s *Raw) GetHopField(idx int) (path.HopField, error) {
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
 //@ preserves acc(s.Mem(), definitions.ReadL1)
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) GetCurrentHopField() (path.HopField, error) {
+func (s *Raw) GetCurrentHopField() (res path.HopField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	idx := int(s.PathMeta.CurrHF)
@@ -336,8 +344,9 @@ func (s *Raw) GetCurrentHopField() (path.HopField, error) {
 // SetHopField updates the HopField at a given index.
 //@ requires  0 <= idx
 //@ preserves s.Mem()
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) SetHopField(hop path.HopField, idx int) error {
+func (s *Raw) SetHopField(hop path.HopField, idx int) (r error) {
 	//@ share hop
 	//@ fold hop.Mem()
 	//@ unfold s.Mem()
