@@ -16,7 +16,7 @@ import "github.com/scionproto/scion/verification/utils/slices"
 // is independent of the contents.
 preserves slices.AbsSlice_Bytes(x, 0, len(x))
 preserves slices.AbsSlice_Bytes(y, 0, len(y))
-ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> (forall i int :: 0 <= i && i < len(x) ==> x[i] == x[j]) ==> res == 1)
-ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> !(forall i int :: 0 <= i && i < len(x) ==> x[i] == x[j]) ==> res == 0)
+ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> (forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 1)
+ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> !(forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 0)
 ensures len(x) != len(y) ==> res == 0
 func ConstantTimeCompare(x, y []byte) (res int)
