@@ -2,18 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This file implements unsigned multi-precision integers (natural
-// numbers). They are the building blocks for the implementation
-// of signed integers, rationals, and floating-point numbers.
-//
-// Caution: This implementation relies on the function "alias"
-//          which assumes that (nat) slice capacities are never
-//          changed (no 3-operand slice expressions). If that
-//          changes, alias needs to be updated for correctness.
+// Signatures for the public declarations in file
+// https://go.dev/src/math/big/nat.go
 
 // +gobra
 
 package big
+
+import "github.com/scionproto/scion/verification/utils/definitions"
 
 // An unsigned integer x of the form
 //
@@ -29,18 +25,22 @@ package big
 type nat []Word
 
 pred (n nat) Mem() {
-	acc(n) && len(n) > 0
+	acc(n)
 }
 
+// TODO: This returns int64 when it should return a mathematical Integer
 ghost
-requires acc(n.Mem(), 1/10000)
+requires acc(n.Mem(), definitions.ReadL13)
+decreases
 pure func (n nat) toInt() int64 {
-	return unfolding acc(n.Mem(), 1/10000) in toIntHelper(n, 0)
+	return len(n) == 0 ? int64(0) : unfolding acc(n.Mem(), definitions.ReadL13) in toIntHelper(n, 0)
 }
 
+// TODO: This returns int64 when it should return a mathematical Integer
 ghost
-requires acc(n, 1/10000) && len(n) > 0
+requires acc(n, definitions.ReadL13)
 requires 0 <= i && i < len(n)
+decreases _
 pure func toIntHelper (n nat, i int) int64 {
-	return i == len(n) - 1 ? int64(n[i]) : int64(n[i]) + 32 * toIntHelper(n, i + 1)
+	return i == len(n) - 1 ? int64(n[i]) : int64(n[i]) + _W * toIntHelper(n, i + 1)
 }

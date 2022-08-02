@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This file implements signed multi-precision integers.
+// Signatures for the public declarations in file
+// https://go.dev/src/math/big/int.go
 
 // +gobra
 
 package big
+
+import "github.com/scionproto/scion/verification/utils/definitions"
 
 // An Int represents a signed multi-precision integer.
 // The zero value for an Int represents the value 0.
@@ -32,9 +35,22 @@ ensures n.toInt() == x
 decreases
 func NewInt(x int64) (n *Int)
 
+// Uint64 returns the uint64 representation of x.
+// If x cannot be represented in a uint64, the result is undefined.
+preserves acc(x.Mem(), definitions.ReadL13)
+ensures unfolding acc(x.Mem(), definitions.ReadL13) in len(x.abs) * _W <= 64 ==> toInt(res) == x.abs.toInt()
+decreases
+func (x *Int) Uint64() (res uint64)
 
+// TODO: This returns int64 when it should return a mathematical Integer
 ghost
-requires acc(i.Mem(), 1/10000)
+requires acc(i.Mem(), definitions.ReadL13)
+decreases
 pure func (i *Int) toInt() int64 {
-	return (unfolding acc(i.Mem(), 1/10000) in i.neg) ? -((unfolding acc(i.Mem(), 1/10000) in i.abs.toInt())) : (unfolding acc(i.Mem(), 1/10000) in i.abs.toInt())
+	return (unfolding acc(i.Mem(), definitions.ReadL13) in i.neg) ? -((unfolding acc(i.Mem(), definitions.ReadL13) in i.abs.toInt())) : (unfolding acc(i.Mem(), definitions.ReadL13) in i.abs.toInt())
 }
+
+// TODO: This returns int64 when it should return a mathematical Integer
+ghost
+decreases
+pure func toInt(n uint64) int64
