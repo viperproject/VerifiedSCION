@@ -19,8 +19,9 @@ package path
 import (
 	// "fmt" // no support for globals yet
 
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/pkg/private/serrors"
+	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // PathType is uint8 so 256 values max.
@@ -48,43 +49,40 @@ func (t Type) String() string {
 }
 */
 
-// TODO:
-// - make the functions in Path non partial if possible, make them require
-//   the passed slice to have the expected length
-
 // Path is the path contained in the SCION header.
 type Path interface {
-	//  Must hold in every valid of Path.
+	// (VerifiedSCION) Must hold in every valid of Path.
 	//@ pred Mem()
-	//  Must imply the resources required to initialize
-	//  a new instance of a predicate.
+	// (VerifiedSCION) Must imply the resources required to initialize
+	// a new instance of a predicate.
 	//@ pred NonInitMem()
 	// SerializeTo serializes the path into the provided buffer.
-	//  There are implementations of this interface that modify the underlying
-	//  structure when serializing (e.g. scion.Raw)
-	//@ preserves Mem() && acc(b)
+	// (VerifiedSCION) There are implementations of this interface that modify the underlying
+	// structure when serializing (e.g. scion.Raw)
+	//@ preserves Mem()
+	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ decreases
 	SerializeTo(b []byte) error
 	// DecodesFromBytes decodes the path from the provided buffer.
-	//  There are implementations of this interface (e.g. scion.Raw) that store
-	//  b and use it as internal data.
+	// (VerifiedSCION) There are implementations of this interface (e.g. scion.Raw) that
+	// store b and use it as internal data.
 	//@ requires NonInitMem()
-	//@ requires acc(b)
-	//@ ensures  Mem()
-	//@ ensures  Mem() --* NonInitMem()
+	//@ requires slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ ensures  err == nil ==> Mem()
+	//@ ensures  err == nil ==> (Mem() --* NonInitMem())
 	//@ decreases
-	DecodeFromBytes(b []byte) error
+	DecodeFromBytes(b []byte) (err error)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	//
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires Mem()
-	//@ ensures e == nil ==> Mem()
+	//@ ensures  e == nil ==> Mem()
 	//@ decreases
 	Reverse() (p Path, e error)
 	// Len returns the length of a path in bytes.
 	//@ pure
 	//@ requires acc(Mem(), _)
-	//  ensures l >= 0 // TODO: open issue, this causes exception
+	//  ensures  l >= 0 // TODO: open issue, this causes exception
 	//@ decreases
 	Len() (l int)
 	// Type returns the type of a path.
@@ -161,17 +159,22 @@ type rawPath struct {
 	pathType Type
 }
 
-//@ preserves acc(p.Mem(), definitions.ReadL10) && acc(b)
+//@ preserves acc(p.Mem(), definitions.ReadL10)
+//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures   e == nil
 //@ decreases
 func (p *rawPath) SerializeTo(b []byte) (e error) {
+	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ unfold acc(p.Mem(), definitions.ReadL10)
-	copy(b, p.raw /*@, definitions.ReadL10 @*/)
+	//@ unfold acc(slices.AbsSlice_Bytes(p.raw, 0, len(p.raw)), definitions.ReadL11)
+	copy(b, p.raw /*@, definitions.ReadL11 @*/)
+	//@ fold acc(slices.AbsSlice_Bytes(p.raw, 0, len(p.raw)), definitions.ReadL11)
 	//@ fold acc(p.Mem(), definitions.ReadL10)
+	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 	return nil
 }
 
-//@ requires p.NonInitMem() && acc(b)
+//@ requires p.NonInitMem() && slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures  p.Mem()
 //@ ensures  p.Mem() --* p.NonInitMem()
 //@ ensures  e == nil

@@ -16,6 +16,10 @@
 
 package epic
 
+import "github.com/scionproto/scion/pkg/slayers/path"
+
+(*Path) implements path.Path
+
 pred (p *Path) NonInitMem() {
 	acc(p)
 }

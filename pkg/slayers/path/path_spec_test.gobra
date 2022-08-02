@@ -1,4 +1,4 @@
-// Copyright 2022 ETH Zurich
+// Copyright 2022 Eth Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,19 @@
 
 // +gobra
 
-package empty
+package path
 
-import "github.com/scionproto/scion/pkg/slayers/path"
+import "github.com/scionproto/scion/verification/utils/slices"
 
-pred (e Path) Mem() {
-	true
+func foldMem_test() {
+	r := &rawPath{}
+	r.raw = make([]byte, 10)
+	fold slices.AbsSlice_Bytes(r.raw, 0, len(r.raw))
+	fold r.Mem()
 }
 
-pred (e Path) NonInitMem() {
-	true
-}
-
-Path implements path.Path
+func foldNonInitMem_test() {
+	r := &rawPath{}
+	r.raw = make([]byte, 10)
+	fold r.NonInitMem()
+} 

@@ -16,10 +16,14 @@
 
 package path
 
+import "github.com/scionproto/scion/verification/utils/slices"
+
 pred (r *rawPath) Mem() {
-	acc(r) && acc(r.raw)
+	acc(r) && slices.AbsSlice_Bytes(r.raw, 0, len(r.raw))
 }
 
 pred (r *rawPath) NonInitMem() {
 	acc(r)
-} 
+}
+
+(*rawPath) implements Path

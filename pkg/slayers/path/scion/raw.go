@@ -33,9 +33,9 @@ type Raw struct {
 // DecodeFromBytes only decodes the PathMetaHeader. Otherwise the nothing is decoded and simply kept
 // as raw bytes.
 //@ requires s.NonInitMem()
-//@ requires len(data) >= MetaLen
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures  res == nil ==> s.Mem()
+//@ ensures  res == nil ==> (s.Mem() --* s.NonInitMem())
 //@ ensures  res != nil ==> (s.NonInitMem() && res.ErrorMem())
 //@ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
@@ -50,23 +50,16 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 		//@ fold s.NonInitMem()
 		return serrors.New("RawPath raw too short", "expected", pathLen, "actual", int(len(data)))
 	}
-	// requires s.Base.Mem()
-	// requires  s.Len() == pathLen
-	// requires  len(data) >= pathLen
-	// requires  slices.AbsSlice_Bytes(data, 0, len(data))
-	// preserves acc(&s.Raw)
-	// ensures   s.Base.Mem()
-	// ensures   len(s.Raw) == s.Len()
-	// ensures   slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	// decreases
-	// outline (
 	//@ ghost slices.SplitByIndex_Bytes(data, 0, len(data), pathLen, writePerm)
 	//@ ghost slices.Reslice_Bytes(data, 0, pathLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data[:pathLen], 0, len(data[:pathLen]))
 	s.Raw = data[:pathLen]
 	//@ fold slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	// )
 	//@ fold s.Mem()
+	//@ package s.Mem() --* s.NonInitMem() {
+	//@ 	unfold s.Mem()
+	//@		fold s.NonInitMem()
+	//@ }
 	return nil
 }
 
@@ -120,12 +113,6 @@ func (s *Raw) SerializeTo(b []byte) (r error) {
 }
 
 // Reverse reverses the path such that it can be used in the reverse direction.
-//
-// TODO this method suffers from the
-// same issue with embedded interfaces as:
-// https://github.com/viperproject/gobra/issues/461
-//
-//@ trusted
 //@ requires s.Mem()
 //@ ensures  err == nil ==> p.Mem()
 //@ ensures  err != nil ==> err.ErrorMem() && s.Mem()

@@ -21,7 +21,5 @@ pred (o *Path) NonInitMem() {
 }
 
 pred (o *Path) Mem() {
-	acc(&o.Info) &&
-		o.FirstHop.Mem() &&
-		o.SecondHop.Mem()
+	acc(&o.Info) && o.FirstHop.Mem() && o.SecondHop.Mem()
 }

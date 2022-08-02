@@ -54,11 +54,11 @@ type Base struct {
 	NumHops int
 }
 
-//@ requires  len(data) >= MetaLen
 //@ requires  s.NonInitMem()
 //@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
 //@ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
 //@ ensures   r == nil ==> s.Mem() && (s.Mem() --* s.NonInitMem())
+//@ ensures   len(data) < MetaLen ==> r != nil
 //@ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// PathMeta takes care of bounds check.
@@ -181,15 +181,16 @@ type MetaHdr struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
-//@ requires  len(raw) >= MetaLen
 //@ preserves acc(m)
 //@ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 //@ ensures   m.CurrINF >= 0 && m.CurrHF >= 0
 //@ ensures   e == nil
+//@ ensures   (len(raw) >= MetaLen) == (e == nil)
 //@ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	if len(raw) < MetaLen {
-		return serrors.New("MetaHdr raw too short", "expected", MetaLen, "actual", len(raw))
+		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
+		return serrors.New("MetaHdr raw too short", "expected", MetaLen, "actual", int(len(raw)))
 	}
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 	line := binary.BigEndian.Uint32(raw)
