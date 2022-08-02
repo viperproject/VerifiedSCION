@@ -107,11 +107,11 @@ func (e basicError) Is(err error) bool {
 	}
 }
 
-requires  as != nil
+requires  _as != nil
 decreases
-func (e basicError) As(as interface{}) bool {
+func (e basicError) As(_as interface{}) bool {
 	if e.msg.err != nil {
-		return errors.As(e.msg.err, as)
+		return errors.As(e.msg.err, _as)
 	}
 	return false
 }
