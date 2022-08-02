@@ -73,21 +73,21 @@ type AS uint64
 // space) or ipv6-style hex (in the case of SCION-only AS numbers) string.
 //@ ensures retErr == nil ==> retAs.inRange()
 //@ decreases
-func ParseAS(as string) (retAs AS, retErr error) {
-	return parseAS(as, ":")
+func ParseAS(_as string) (retAs AS, retErr error) {
+	return parseAS(_as, ":")
 }
 
 //@ ensures retErr == nil ==> retAs.inRange()
 //@ decreases
-func parseAS(as string, sep string) (retAs AS, retErr error) {
-	parts := strings.Split(as, sep)
+func parseAS(_as string, sep string) (retAs AS, retErr error) {
+	parts := strings.Split(_as, sep)
 	if len(parts) == 1 {
 		// Must be a BGP AS, parse as 32-bit decimal number
-		return asParseBGP(as)
+		return asParseBGP(_as)
 	}
 
 	if len(parts) != asParts {
-		return 0, serrors.New("wrong number of separators", "sep", sep, "value", as)
+		return 0, serrors.New("wrong number of separators", "sep", sep, "value", _as)
 	}
 	var parsed AS
 	//@ invariant 0 <= i && i <= asParts
@@ -97,7 +97,7 @@ func parseAS(as string, sep string) (retAs AS, retErr error) {
 		parsed <<= asPartBits
 		v, err := strconv.ParseUint(parts[i], asPartBase, asPartBits)
 		if err != nil {
-			return 0, serrors.WrapStr("parsing AS part", err, "index", i, "value", as)
+			return 0, serrors.WrapStr("parsing AS part", err, "index", i, "value", _as)
 		}
 		parsed |= AS(v)
 	}
@@ -105,7 +105,7 @@ func parseAS(as string, sep string) (retAs AS, retErr error) {
 	// against future refactor mistakes.
 	if !parsed.inRange() {
 		// (VerifiedSCION) Added cast around MaxAS to be able to call serrors.New
-		return 0, serrors.New("AS out of range", "max", uint64(MaxAS), "value", as)
+		return 0, serrors.New("AS out of range", "max", uint64(MaxAS), "value", _as)
 	}
 	return parsed, nil
 }
@@ -113,43 +113,43 @@ func parseAS(as string, sep string) (retAs AS, retErr error) {
 //@ ensures retErr == nil ==> retAs.inRange()
 //@ decreases
 func asParseBGP(s string) (retAs AS, retErr error) {
-	as, err := strconv.ParseUint(s, 10, BGPASBits)
+	_as, err := strconv.ParseUint(s, 10, BGPASBits)
 	if err != nil {
 		return 0, serrors.WrapStr("parsing BGP AS", err)
 	}
-	return AS(as), nil
+	return AS(_as), nil
 }
 
-//@ requires as.inRange()
+//@ requires _as.inRange()
 //@ decreases
-func (as AS) String() string {
-	return fmtAS(as, ":")
+func (_as AS) String() string {
+	return fmtAS(_as, ":")
 }
 
 //@ decreases
 //@ pure
-func (as AS) inRange() bool {
-	return as <= MaxAS
+func (_as AS) inRange() bool {
+	return _as <= MaxAS
 }
 
 //@ decreases
-func (as AS) MarshalText() ([]byte, error) {
-	if !as.inRange() {
+func (_as AS) MarshalText() ([]byte, error) {
+	if !_as.inRange() {
 		// (VerifiedSCION) Added cast around MaxAS and as to be able to call serrors.New
-		return nil, serrors.New("AS out of range", "max", uint64(MaxAS), "value", uint64(as))
+		return nil, serrors.New("AS out of range", "max", uint64(MaxAS), "value", uint64(_as))
 	}
-	return []byte(as.String()), nil
+	return []byte(_as.String()), nil
 }
 
-//@ preserves acc(as)
+//@ preserves acc(_as)
 //@ preserves forall i int :: 0 <= i && i < len(text) ==> acc(&text[i])
 //@ decreases
-func (as *AS) UnmarshalText(text []byte) error {
+func (_as *AS) UnmarshalText(text []byte) error {
 	parsed, err := ParseAS(string(text))
 	if err != nil {
 		return err
 	}
-	*as = parsed
+	*_as = parsed
 	return nil
 }
 
@@ -164,10 +164,10 @@ type IA uint64
 // MustIAFrom creates an IA from the ISD and AS number. It panics if any error
 // is encountered. Callers must ensure that the values passed to this function
 // are valid.
-//@ requires as.inRange()
+//@ requires _as.inRange()
 //@ decreases
-func MustIAFrom(isd ISD, as AS) IA {
-	ia, err := IAFrom(isd, as)
+func MustIAFrom(isd ISD, _as AS) IA {
+	ia, err := IAFrom(isd, _as)
 	if err != nil {
 		panic(fmt.Sprintf("parsing ISD-AS: %s", err))
 	}
@@ -175,14 +175,14 @@ func MustIAFrom(isd ISD, as AS) IA {
 }
 
 // IAFrom creates an IA from the ISD and AS number.
-//@ requires as.inRange()
+//@ requires _as.inRange()
 //@ ensures err == nil
 //@ decreases
-func IAFrom(isd ISD, as AS) (ia IA, err error) {
-	if !as.inRange() {
-		return 0, serrors.New("AS out of range", "max", MaxAS, "value", as)
+func IAFrom(isd ISD, _as AS) (ia IA, err error) {
+	if !_as.inRange() {
+		return 0, serrors.New("AS out of range", "max", MaxAS, "value", _as)
 	}
-	return IA(isd)<<ASBits | IA(as&MaxAS), nil
+	return IA(isd)<<ASBits | IA(_as&MaxAS), nil
 }
 
 // ParseIA parses an IA from a string of the format 'isd-as'.
@@ -196,11 +196,11 @@ func ParseIA(ia string) (IA, error) {
 	if err != nil {
 		return 0, err
 	}
-	as, err := ParseAS(parts[1])
+	_as, err := ParseAS(parts[1])
 	if err != nil {
 		return 0, err
 	}
-	return MustIAFrom(isd, as), nil
+	return MustIAFrom(isd, _as), nil
 }
 
 //@ decreases
