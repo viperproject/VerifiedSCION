@@ -18,4 +18,4 @@ package addr
 
 requires as.inRange()
 decreases
-func fmtAS(as AS, sep string) string
+func fmtAS(_as AS, sep string) string

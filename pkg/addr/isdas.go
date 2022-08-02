@@ -73,7 +73,7 @@ type AS uint64
 // space) or ipv6-style hex (in the case of SCION-only AS numbers) string.
 //@ ensures retErr == nil ==> retAs.inRange()
 //@ decreases
-func ParseAS(as string) (retAs AS, retErr error) {
+func ParseAS(_as string) (retAs AS, retErr error) {
 	return parseAS(as, ":")
 }
 
