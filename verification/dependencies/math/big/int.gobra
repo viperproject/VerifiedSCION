@@ -26,7 +26,7 @@ type Int struct {
 }
 
 pred (i *Int) Mem() {
-	acc(i) && (i.abs).Mem()
+	acc(i) && i.abs.Mem()
 }
 
 // NewInt allocates and returns a new Int set to x.

@@ -12,12 +12,14 @@ package rand
 import (
 	"io"
 	"math/big"
+
+	"github.com/scionproto/scion/verification/utils/definitions/"
 )
 
 // Int returns a uniform random value in [0, max). It panics if max <= 0.
-preserves acc(max.Mem(), 1/10000)
-ensures err.ErrorMem()
-ensures err != nil ==> acc(n)
-ensures n.Mem()
-ensures n.toInt() >= 0 && n.toInt() < max.toInt()
+preserves acc(max.Mem(), definitions.ReadL13)
+preserves rand.Mem()
+ensures err != nil ==> err.ErrorMem()
+ensures err == nil ==> n.Mem()
+ensures err == nil ==> n.toInt() >= 0 && n.toInt() < max.toInt()
 func Int(rand io.Reader, max *big.Int) (n *big.Int, err error)
