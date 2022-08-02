@@ -74,7 +74,7 @@ type AS uint64
 //@ ensures retErr == nil ==> retAs.inRange()
 //@ decreases
 func ParseAS(_as string) (retAs AS, retErr error) {
-	return parseAS(as, ":")
+	return parseAS(_as, ":")
 }
 
 //@ ensures retErr == nil ==> retAs.inRange()

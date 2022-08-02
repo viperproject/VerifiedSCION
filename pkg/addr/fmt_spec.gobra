@@ -16,6 +16,6 @@
 
 package addr
 
-requires as.inRange()
+requires _as.inRange()
 decreases
 func fmtAS(_as AS, sep string) string
