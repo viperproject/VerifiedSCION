@@ -79,15 +79,15 @@ func ParseAS(_as string) (retAs AS, retErr error) {
 
 //@ ensures retErr == nil ==> retAs.inRange()
 //@ decreases
-func parseAS(as string, sep string) (retAs AS, retErr error) {
-	parts := strings.Split(as, sep)
+func parseAS(_as string, sep string) (retAs AS, retErr error) {
+	parts := strings.Split(_as, sep)
 	if len(parts) == 1 {
 		// Must be a BGP AS, parse as 32-bit decimal number
-		return asParseBGP(as)
+		return asParseBGP(_as)
 	}
 
 	if len(parts) != asParts {
-		return 0, serrors.New("wrong number of separators", "sep", sep, "value", as)
+		return 0, serrors.New("wrong number of separators", "sep", sep, "value", _as)
 	}
 	var parsed AS
 	//@ invariant 0 <= i && i <= asParts
@@ -97,7 +97,7 @@ func parseAS(as string, sep string) (retAs AS, retErr error) {
 		parsed <<= asPartBits
 		v, err := strconv.ParseUint(parts[i], asPartBase, asPartBits)
 		if err != nil {
-			return 0, serrors.WrapStr("parsing AS part", err, "index", i, "value", as)
+			return 0, serrors.WrapStr("parsing AS part", err, "index", i, "value", _as)
 		}
 		parsed |= AS(v)
 	}
@@ -105,7 +105,7 @@ func parseAS(as string, sep string) (retAs AS, retErr error) {
 	// against future refactor mistakes.
 	if !parsed.inRange() {
 		// (VerifiedSCION) Added cast around MaxAS to be able to call serrors.New
-		return 0, serrors.New("AS out of range", "max", uint64(MaxAS), "value", as)
+		return 0, serrors.New("AS out of range", "max", uint64(MaxAS), "value", _as)
 	}
 	return parsed, nil
 }
