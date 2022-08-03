@@ -86,6 +86,8 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	}
 	//@ preserves acc(h)
 	//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), definitions.ReadL1)
+	//@ ensures h.ConsIngress >= 0
+	//@ ensures h.ConsEgress >= 0
 	//@ decreases
 	//@ outline(
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), definitions.ReadL1)
