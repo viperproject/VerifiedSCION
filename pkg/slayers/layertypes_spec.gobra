@@ -1,0 +1,91 @@
+// Copyright 2020 Anapaya Systems
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slayers
+
+import (
+	"github.com/google/gopacket"
+)
+
+// NOTE [HACK] this file is *temporary* to avoid usage of globals until
+// support is merged into Gobra.
+
+decreases
+pure func getLayerTypeSCION() gopacket.LayerType
+
+pure
+decreases
+func getLayerClassSCION() gopacket.LayerClass
+
+pure
+decreases
+func getLayerClassSCIONUDP() gopacket.LayerClass
+
+pure
+decreases
+func getLayerTypeSCMP() gopacket.LayerType
+
+pure
+decreases
+func getLayerClassSCMP() gopacket.LayerClass
+
+pure
+decreases
+func getLayerClassHopByHopExtn() gopacket.LayerClass
+
+pure
+decreases
+func getLayerTypeEndToEndExtn() gopacket.LayerType
+
+pure
+decreases
+func getLayerClassEndToEndExtn() gopacket.LayerClass
+
+pure
+decreases
+func getLayerTypeSCMPExternalInterfaceDown() gopacket.LayerType
+
+pure
+decreases
+func getLayerTypeSCMPInternalConnectivityDown() gopacket.LayerType
+
+pure
+decreases
+func getLayerTypeSCMPParameterProblem() gopacket.LayerType
+
+pure
+decreases
+func getLayerTypeSCMPDestinationUnreachable() gopacket.LayerType
+
+pure
+decreases
+func getLayerTypeSCMPPacketTooBig() gopacket.LayerType
+
+pure
+decreases
+func getLayerTypeSCMPEcho() gopacket.LayerType
+
+pure
+decreases
+func getLayerTypeSCMPTraceroute() gopacket.LayerType
+
+pure
+decreases
+func getEndpointUDPPort() gopacket.EndpointType
+
+pure
+decreases
+func getlayerTypeBFD() gopacket.LayerType

@@ -21,6 +21,8 @@ import (
 	"github.com/google/gopacket"
 )
 
+/* TODO globals support
+
 var (
 	LayerTypeSCION = gopacket.RegisterLayerType(
 		1000,
@@ -133,3 +135,5 @@ var (
 	// where gopacket/layers is imported.
 	layerTypeBFD = gopacket.LayerType(122)
 )
+
+*/

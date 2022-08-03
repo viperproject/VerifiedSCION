@@ -1,0 +1,75 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slayers
+
+import "github.com/scionproto/scion/verification/utils/slices"
+
+pred (b *BaseLayer) Mem() {
+	acc(b) &&
+	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
+	slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+}
+
+pred (b *BaseLayer) LayerMem() {
+	acc(b) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
+}
+
+pred (b *BaseLayer) PayloadMem() {
+	acc(b) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+}
+
+pred (s *SCION) Mem() {
+		s.BaseLayer.Mem() &&
+			acc(&s.DstAddrType) &&
+			acc(&s.DstAddrLen) &&
+			acc(&s.SrcAddrType) &&
+			acc(&s.SrcAddrLen) &&
+			acc(&s.DstIA) &&
+			acc(&s.SrcIA) &&
+			acc(&s.RawDstAddr) &&
+			acc(&s.RawSrcAddr) &&
+			slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)) &&
+			slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
+		// forall i int :: 0 <= i && i < len(s.pathPool) ==> s.pathPool[i].Mem() &&
+		// s.Path.Mem() &&
+		// s.pathPoolRaw.Mem()
+
+			s.DstAddrLen >= 0 &&
+			s.SrcAddrLen >= 0
+}
+
+/* TODO add these fields as needed
+	Version uint8
+	TrafficClass uint8
+	FlowID uint32
+	NextHdr L4ProtocolType
+	HdrLen uint8
+	PayloadLen uint16
+	PathType path.Type
+	* DstAddrType AddrType
+	* DstAddrLen AddrLen
+	* SrcAddrType AddrType
+	* SrcAddrLen AddrLen
+	* DstIA addr.IA
+	* SrcIA addr.IA
+	* RawDstAddr []byte
+	* RawSrcAddr []byte
+	Path path.Path
+	pathPool    []path.Path
+	pathPoolRaw path.Path
+
+*/

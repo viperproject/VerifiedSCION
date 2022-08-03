@@ -27,6 +27,8 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path/epic"
 	"github.com/scionproto/scion/pkg/slayers/path/onehop"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
+	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 const (
@@ -39,12 +41,14 @@ const (
 	SCIONVersion = 0
 )
 
+/*
 func init() {
 	empty.RegisterPath()
 	scion.RegisterPath()
 	onehop.RegisterPath()
 	epic.RegisterPath()
 }
+*/
 
 // AddrLen indicates the length of a host address in the SCION header. The four possible lengths are
 // 4, 8, 12, or 16 bytes.
@@ -88,10 +92,34 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
-func (b *BaseLayer) LayerContents() []byte { return b.Contents }
+//@ requires b.LayerMem()
+//@ ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+//@ ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+func (b *BaseLayer) LayerContents() (res []byte) {
+	//@ unfold b.LayerMem()
+	//@ unfold slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
+	res = b.Contents
+	//@ fold slices.AbsSlice_Bytes(res, 0, len(res))
+	//@ package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+	//@   fold b.LayerMem()
+	//@ }
+	return res
+}
 
 // LayerPayload returns the bytes contained within the packet layer.
-func (b *BaseLayer) LayerPayload() []byte { return b.Payload }
+//@ requires b.PayloadMem()
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res))
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+func (b *BaseLayer) LayerPayload() (res []byte) {
+	//@ unfold b.PayloadMem()
+	//@ unfold slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+	res = b.Payload
+	//@ fold slices.AbsSlice_Bytes(res, 0, len(res))
+	//@ package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+	//@   fold b.PayloadMem()
+	//@ }
+	return res
+}
 
 // SCION is the header of a SCION packet.
 type SCION struct {
@@ -150,33 +178,71 @@ type SCION struct {
 	pathPoolRaw path.Path
 }
 
+//@ pure
+//@ requires acc(s.Mem(), _)
+//@ decreases
 func (s *SCION) LayerType() gopacket.LayerType {
-	return LayerTypeSCION
+	// TODO once the globals PR is merged uncomment the original statement
+	// return LayerTypeSCION
+	return getLayerTypeSCION()
 }
 
+//@ pure
+//@ requires acc(s.Mem(), _)
+//@ decreases
 func (s *SCION) CanDecode() gopacket.LayerClass {
-	return LayerClassSCION
+	// TODO once the globals PR is merged uncomment the original statement
+	// return LayerClassSCION
+	return getLayerClassSCION()
 }
 
-func (s *SCION) NextLayerType() gopacket.LayerType {
-	return scionNextLayerType(s.NextHdr)
+// pure
+// requires acc(s.Mem(), _)
+// decreases
+// func (s *SCION) NextLayerType() gopacket.LayerType {
+// 	return scionNextLayerType(s.NextHdr)
+// }
+
+// TODO in the previous code this method only returned /read/
+// access to the payload, do we still want that or is write access
+// desireable?
+//@ requires s.Mem()
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res))
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem()
+//@ decreases
+func (s *SCION) LayerPayload() (res []byte) {
+	//@ unfold s.Mem()
+	//@ unfold s.BaseLayer.Mem()
+	res = s.Payload
+	//@ package slices.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem() {
+	//@   fold s.BaseLayer.Mem()
+	//@   fold s.Mem()
+	//@ }
+	return res
 }
 
-func (s *SCION) LayerPayload() []byte {
-	return s.Payload
-}
-
+/*
 func (s *SCION) NetworkFlow() gopacket.Flow {
 	// TODO(shitz): Investigate how we can use gopacket.Flow.
 	return gopacket.Flow{}
 }
+*/
 
-func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
+/*
+
+//@ preserves s.Mem()
+//@ preserves b.Mem()
+//@ ensures   err != nil ==> err.ErrorMem()
+//@ decreases
+func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) (err error) {
 	scnLen := CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	buf, err := b.PrependBytes(scnLen)
 	if err != nil {
 		return err
 	}
+
+	//@ assume false
+
 	if opts.FixLengths {
 		s.HdrLen = uint8(scnLen / LineLen)
 		s.PayloadLen = uint16(len(b.Bytes()) - scnLen)
@@ -423,33 +489,112 @@ func packAddr(hostAddr net.Addr) (AddrLen, AddrType, []byte, error) {
 	return 0, 0, nil, serrors.New("unsupported address", "addr", hostAddr)
 }
 
+*/
+
 // AddrHdrLen returns the length of the address header (destination and source ISD-AS-Host triples)
 // in bytes.
-func (s *SCION) AddrHdrLen() int {
-	return 2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)
+//@ pure
+//@ requires acc(s.Mem(), _)
+//@ ensures unfolding acc(s.Mem(), _) in l == 2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)
+//@ ensures unfolding acc(s.Mem(), _) in addrBytes(s.DstAddrLen) >= 0
+//@ ensures unfolding acc(s.Mem(), _) in addrBytes(s.SrcAddrLen) >= 0
+//@ decreases
+func (s *SCION) AddrHdrLen() (l int) {
+	return /*@ unfolding acc(s.Mem(), _) in @*/ 2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)
 }
 
 // SerializeAddrHdr serializes destination and source ISD-AS-Host address triples into the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
-func (s *SCION) SerializeAddrHdr(buf []byte) error {
+//@ requires acc(s.Mem(), definitions.ReadL1)
+//@ requires len(buf) >= s.AddrHdrLen()
+//@ requires slices.AbsSlice_Bytes(buf, 0, len(buf))
+//@ ensures  acc(s.Mem(), definitions.ReadL1)
+//@ ensures  err != nil ==> err.ErrorMem()
+//@ decreases
+func (s *SCION) SerializeAddrHdr(buf []byte) (err error) {
 	if len(buf) < s.AddrHdrLen() {
 		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen(),
 			"actual", len(buf))
 	}
+	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	dstAddrBytes := addrBytes(s.DstAddrLen)
 	srcAddrBytes := addrBytes(s.SrcAddrLen)
 	offset := 0
+	//@ assert len(buf) >= 2*addr.IABytes + dstAddrBytes + srcAddrBytes
+	//@ preserves 0 <= offset && offset + addr.IABytes < len(buf)
+	//@ preserves  slices.AbsSlice_Bytes(buf, 0, len(buf))
+	//@ preserves acc(&s.DstIA, definitions.ReadL1)
+	//@ decreases
+	//@ outline(
+	//@ ghost slices.SplitByIndex_Bytes(buf, 0, len(buf), offset, writePerm)
+	//@ ghost slices.Reslice_Bytes(buf, offset, len(buf), writePerm)
+	//@ unfold slices.AbsSlice_Bytes(buf[offset:len(buf)], 0, len(buf[offset:len(buf)]))
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.DstIA))
+	//@ fold slices.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:len(buf)]))
+	//@ ghost slices.Unslice_Bytes(buf, offset, len(buf), writePerm)
+	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, len(buf), offset, writePerm)
+	//@ )
 	offset += addr.IABytes
+	//@ preserves 0 <= offset && offset + addr.IABytes < len(buf)
+	//@ preserves acc(&s.SrcIA, definitions.ReadL1)
+	//@ preserves slices.AbsSlice_Bytes(buf, 0, len(buf))
+	//@ decreases
+	//@ outline(
+	//@ ghost slices.SplitByIndex_Bytes(buf, 0, len(buf), offset, writePerm)
+	//@ ghost slices.Reslice_Bytes(buf, offset, len(buf), writePerm)
+	//@ unfold slices.AbsSlice_Bytes(buf[offset:len(buf)], 0, len(buf[offset:len(buf)]))
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.SrcIA))
+	//@ fold slices.AbsSlice_Bytes(buf[offset:len(buf)], 0, len(buf[offset:len(buf)]))
+	//@ ghost slices.Unslice_Bytes(buf, offset, len(buf), writePerm)
+	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, len(buf), offset, writePerm)
+	//@ )
 	offset += addr.IABytes
-	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr)
+	//@ ghost slices.SplitByIndex_Bytes(buf, 0, len(buf), offset, writePerm)
+	//@ ghost slices.SplitByIndex_Bytes(buf, offset, len(buf), offset+dstAddrBytes, writePerm)
+	//@ requires  0 < dstAddrBytes
+	//@ preserves 0 <= offset && offset + dstAddrBytes <= len(buf)
+	//@ preserves acc(&s.RawDstAddr, definitions.ReadL1)
+	//@ preserves acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL1)
+	//@ preserves slices.AbsSlice_Bytes(buf, offset, offset+dstAddrBytes)
+	//@ decreases
+	//@ outline (
+	//@ ghost slices.Reslice_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, dstAddrBytes)
+	//@ unfold acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL1)
+	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@, definitions.ReadL1 @*/)
+	//@ fold acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL1)
+	//@ fold slices.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, dstAddrBytes)
+	//@ assert offset < offset + dstAddrBytes
+	//@ ghost slices.Unslice_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
+	//@ )
+	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, offset+dstAddrBytes, offset, writePerm)
 	offset += dstAddrBytes
-	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr)
-
+	//@ requires 0 <= offset && offset + srcAddrBytes <= len(buf)
+	//@ requires 0 < srcAddrBytes
+	//@ requires  slices.AbsSlice_Bytes(buf, 0, offset)
+	//@ requires  slices.AbsSlice_Bytes(buf, offset, len(buf))
+	//@ preserves acc(&s.RawSrcAddr, definitions.ReadL1)
+	//@ preserves acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL1)
+	//@ ensures   slices.AbsSlice_Bytes(buf, 0, len(buf))
+	//@ decreases
+	//@ outline(
+	//@ ghost slices.SplitByIndex_Bytes(buf, offset, len(buf), offset+srcAddrBytes, writePerm)
+	//@ ghost slices.Reslice_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
+	//@ unfold acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL1)
+	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@, definitions.ReadL1 @*/)
+	//@ fold acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL1)
+	//@ fold slices.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
+	//@ ghost slices.Unslice_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
+	//@ ghost slices.CombineAtIndex_Bytes(buf, offset, len(buf), offset+srcAddrBytes, writePerm)
+	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, len(buf), offset, writePerm)
+	//@ )
+	//@ fold acc(s.Mem(), definitions.ReadL1)
 	return nil
 }
+
+/*
 
 // DecodeAddrHdr decodes the destination and source ISD-AS-Host address triples from the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
@@ -473,9 +618,22 @@ func (s *SCION) DecodeAddrHdr(data []byte) error {
 	return nil
 }
 
-func addrBytes(addrLen AddrLen) int {
+*/
+
+//@ trusted // TODO
+//@ pure
+//@ ensures l == (int(addrLen) + 1) * LineLen
+//@ ensures addrLen == AddrLen4 ==> l == 4
+//@ ensures addrLen == AddrLen8 ==> l == 8
+//@ ensures addrLen == AddrLen12 ==> l == 12
+//@ ensures addrLen == AddrLen16 ==> l == 16
+//@ ensures l > 0 && l % 2 == 0
+//@ decreases
+func addrBytes(addrLen AddrLen) (l int) {
 	return (int(addrLen) + 1) * LineLen
 }
+
+/*
 
 // computeChecksum computes the checksum with the SCION pseudo header.
 func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (uint16, error) {
@@ -543,3 +701,5 @@ func (s *SCION) foldChecksum(csum uint32) uint16 {
 	}
 	return ^uint16(csum)
 }
+
+**/
