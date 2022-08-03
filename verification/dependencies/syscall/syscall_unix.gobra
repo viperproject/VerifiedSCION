@@ -31,14 +31,15 @@ pred (e Errno) ErrorMem() { true }
 preserves e.ErrorMem()
 decreases
 func (e Errno) Error() string /*{
-	if 0 <= int(e) && int(e) < len(errorstr) {
-		s := errorstr[e]
+	if 0 <= int(e) && int(e) < len(errors) {
+		s := errors[e]
 		if s != "" {
 			return s
 		}
 	}
 	return "errno " + itoa.Itoa(int(e))
 }*/
+
 
 
 Errno implements error
