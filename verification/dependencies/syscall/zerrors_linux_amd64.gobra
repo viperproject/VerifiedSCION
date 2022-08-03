@@ -1,0 +1,14 @@
+// Specification for file in
+// https://cs.opensource.google/go/go/+/master:src/syscall/zerrors_linux_arm64.go
+
+// +gobra
+
+package syscall
+
+const MSG_DONTWAIT = 0x40
+
+// Errors
+const (
+	EAGAIN          = Errno(0xb)
+	EWOULDBLOCK     = Errno(0xb)
+)
