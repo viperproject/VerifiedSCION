@@ -24,3 +24,11 @@ package syscall
 //	_, _, err := syscall.Syscall(...)
 //	if errors.Is(err, fs.ErrNotExist) ...
 type Errno uintptr
+
+pred (e Errno) ErrorMem() { true }
+
+preserves e.ErrorMem()
+decreases
+func (e Errno) Error() string
+
+Errno implements error
