@@ -31,7 +31,7 @@ pred (i *Int) Mem() {
 
 // NewInt allocates and returns a new Int set to x.
 ensures n.Mem()
-ensures n.toInt() == x
+ensures n.toInt() == int(x)
 decreases
 func NewInt(x int64) (n *Int)
 
@@ -42,15 +42,15 @@ ensures unfolding acc(x.Mem(), definitions.ReadL13) in len(x.abs) * _W <= 64 ==>
 decreases
 func (x *Int) Uint64() (res uint64)
 
-// TODO: This returns int64 when it should return a mathematical Integer
+// TODO: This returns int when it should return a mathematical Integer
 ghost
 requires acc(i.Mem(), definitions.ReadL13)
 decreases
-pure func (i *Int) toInt() int64 {
+pure func (i *Int) toInt() int {
 	return (unfolding acc(i.Mem(), definitions.ReadL13) in i.neg) ? -((unfolding acc(i.Mem(), definitions.ReadL13) in i.abs.toInt())) : (unfolding acc(i.Mem(), definitions.ReadL13) in i.abs.toInt())
 }
 
-// TODO: This returns int64 when it should return a mathematical Integer
+// TODO: This returns int when it should return a mathematical Integer
 ghost
 decreases
-pure func toInt(n uint64) int64
+pure func toInt(n uint64) int

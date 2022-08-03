@@ -32,8 +32,8 @@ pred (n nat) Mem() {
 ghost
 requires acc(n.Mem(), definitions.ReadL13)
 decreases
-pure func (n nat) toInt() int64 {
-	return len(n) == 0 ? int64(0) : unfolding acc(n.Mem(), definitions.ReadL13) in toIntHelper(n, 0)
+pure func (n nat) toInt() int {
+	return len(n) == 0 ? int(0) : unfolding acc(n.Mem(), definitions.ReadL13) in toIntHelper(n, 0)
 }
 
 // TODO: This returns int64 when it should return a mathematical Integer
@@ -41,6 +41,6 @@ ghost
 requires acc(n, definitions.ReadL13)
 requires 0 <= i && i < len(n)
 decreases _
-pure func toIntHelper (n nat, i int) int64 {
-	return i == len(n) - 1 ? int64(n[i]) : int64(n[i]) + _W * toIntHelper(n, i + 1)
+pure func toIntHelper (n nat, i int) int {
+	return i == len(n) - 1 ? int(n[i]) : int(n[i]) + _W * toIntHelper(n, i + 1)
 }
