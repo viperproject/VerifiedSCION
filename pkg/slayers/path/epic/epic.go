@@ -228,8 +228,8 @@ func (p *Path) Reverse() (ret path.Path, r error) {
 //@ requires acc(p.Mem(), _)
 //@ requires p.hasScionPath()
 // ensures   unfolding acc(p.Mem(), _) in (p.ScionPath == nil ==> (l == MetadataLen))
-// ensures   unfolding acc(p.Mem(), _) in (p.ScionPath != nil ==> (l == MetadataLen + p.ScionPath.RawLen()))
-//@ ensures  unfolding acc(p.Mem(), _) in (l == MetadataLen + p.ScionPath.RawLen())
+// ensures   unfolding acc(p.Mem(), _) in (p.ScionPath != nil ==> (l == MetadataLen + p.ScionPath.Len()))
+//@ ensures  unfolding acc(p.Mem(), _) in (l == MetadataLen + p.ScionPath.Len())
 //@ decreases
 func (p *Path) Len() (l int) {
 	if p.ScionPath == nil {

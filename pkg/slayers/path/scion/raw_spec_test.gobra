@@ -22,7 +22,6 @@ func testAllocateNonInitRaw() {
 	r := &Raw{}
 	fold r.Base.NonInitMem()
 	fold r.NonInitMem()
-	return
 }
 
 func testAllocateRaw() {

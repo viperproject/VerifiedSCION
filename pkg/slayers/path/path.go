@@ -61,22 +61,25 @@ type Path interface {
 	// structure when serializing (e.g. scion.Raw)
 	//@ preserves Mem()
 	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
-	SerializeTo(b []byte) error
+	SerializeTo(b []byte) (e error)
 	// DecodesFromBytes decodes the path from the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface (e.g. scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires NonInitMem()
 	//@ requires slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures  err == nil ==> Mem()
-	//@ ensures  err == nil ==> (Mem() --* NonInitMem())
+	//@ ensures  err != nil ==> err.ErrorMem()
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	//
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires Mem()
-	//@ ensures  e == nil ==> Mem()
+	//@ ensures  e == nil ==> p.Mem()
+	//@ ensures  e == nil ==> p != nil
+	//@ ensures  e != nil ==> e.ErrorMem()
 	//@ decreases
 	Reverse() (p Path, e error)
 	// Len returns the length of a path in bytes.
@@ -90,10 +93,13 @@ type Path interface {
 	//@ requires acc(Mem(), _)
 	//@ decreases
 	Type() Type
+	//@ ghost
+	//@ requires Mem()
+	//@ ensures  NonInitMem()
+	//@ decreases
+	//@ DowngradePerm()
 }
 
-// (verifiedscion) no support for closures yet
-/*
 type metadata struct {
 	inUse bool
 	Metadata
@@ -108,7 +114,6 @@ type Metadata struct {
 	// New is a path constructor function.
 	New func() Path
 }
-*/
 
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
@@ -176,22 +181,17 @@ func (p *rawPath) SerializeTo(b []byte) (e error) {
 
 //@ requires p.NonInitMem() && slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures  p.Mem()
-//@ ensures  p.Mem() --* p.NonInitMem()
 //@ ensures  e == nil
 //@ decreases
 func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
 	//@ unfold p.NonInitMem()
 	p.raw = b
 	//@ fold p.Mem()
-	//@ package p.Mem() --* p.NonInitMem() {
-	//@ 	unfold p.Mem()
-	//@		fold p.NonInitMem()
-	//@ }
 	return nil
 }
 
 //@ requires p.Mem()
-//@ ensures e != nil && e.ErrorMem()
+//@ ensures  e != nil && e.ErrorMem()
 //@ decreases
 func (p *rawPath) Reverse() (r Path, e error) {
 	return nil, serrors.New("not supported")
@@ -202,12 +202,12 @@ func (p *rawPath) Reverse() (r Path, e error) {
 //@ ensures l >= 0
 //@ decreases
 func (p *rawPath) Len() (l int) {
-	return /*@ unfolding p.Mem() in @*/ len(p.raw)
+	return /*@ unfolding acc(p.Mem(), _) in @*/ len(p.raw)
 }
 
 //@ pure
 //@ requires acc(p.Mem(), _)
 //@ decreases
 func (p *rawPath) Type() Type {
-	return /*@ unfolding p.Mem() in @*/ p.pathType
+	return /*@ unfolding acc(p.Mem(), _) in @*/ p.pathType
 }

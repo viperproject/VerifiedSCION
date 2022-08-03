@@ -35,7 +35,6 @@ type Raw struct {
 //@ requires s.NonInitMem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures  res == nil ==> s.Mem()
-//@ ensures  res == nil ==> (s.Mem() --* s.NonInitMem())
 //@ ensures  res != nil ==> (s.NonInitMem() && res.ErrorMem())
 //@ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
@@ -44,7 +43,9 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 		//@ fold s.NonInitMem()
 		return err
 	}
-	pathLen := s.Len()
+	// (VerifiedSCION) Gobra expects a stronger contract for s.Len() when in fact
+	// what happens here is that we just call the same function in s.Base.
+	pathLen := s. /*@ Base. @*/ Len()
 	if len(data) < pathLen {
 		//@ apply s.Base.Mem() --* s.Base.NonInitMem()
 		//@ fold s.NonInitMem()
@@ -56,31 +57,23 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	s.Raw = data[:pathLen]
 	//@ fold slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
 	//@ fold s.Mem()
-	//@ package s.Mem() --* s.NonInitMem() {
-	//@ 	unfold s.Mem()
-	//@		fold s.NonInitMem()
-	//@ }
 	return nil
 }
 
 // SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-//@ requires  s.Mem()
-//@ requires  len(b) >= unfolding s.Mem() in s.Len()
+//@ preserves s.Mem()
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   s.Mem()
 //@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
 func (s *Raw) SerializeTo(b []byte) (r error) {
-	//@ unfold s.Mem()
-	if s.Raw == nil {
-		//@ fold s.Mem()
+	if /*@ unfolding s.Mem() in @*/ s.Raw == nil {
 		return serrors.New("raw is nil")
 	}
 	if minLen := s.Len(); len(b) < minLen {
-		//@ fold s.Mem()
 		return serrors.New("buffer too small", "expected", minLen, "actual", int(len(b)))
 	}
+	//@ unfold s.Mem()
 	// XXX(roosd): This modifies the underlying buffer. Consider writing to data
 	// directly.
 	//@ unfold s.Base.Mem()
@@ -115,7 +108,8 @@ func (s *Raw) SerializeTo(b []byte) (r error) {
 // Reverse reverses the path such that it can be used in the reverse direction.
 //@ requires s.Mem()
 //@ ensures  err == nil ==> p.Mem()
-//@ ensures  err != nil ==> err.ErrorMem() && s.Mem()
+//@ ensures  err == nil ==> p != nil
+//@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *Raw) Reverse() (p path.Path, err error) {
 	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
@@ -130,10 +124,14 @@ func (s *Raw) Reverse() (p path.Path, err error) {
 	if err != nil {
 		return nil, err
 	}
+	//@ unfold s.Mem()
 	if err := reversed.SerializeTo(s.Raw); err != nil {
 		return nil, err
 	}
-	err = s.DecodeFromBytes(s.Raw)
+	//@ unfold s.Base.Mem()
+	//@ fold s.Base.NonInitMem()
+	//@ fold s.NonInitMem()
+	err = s.DecodeFromBytes( /*@ unfolding s.NonInitMem() in @*/ s.Raw)
 	return s, err
 }
 
@@ -240,9 +238,8 @@ func (s *Raw) GetInfoField(idx int) (ifield path.InfoField, err error) {
 func (s *Raw) GetCurrentInfoField() (res path.InfoField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
-	// (gavin) introduced idx variable
 	idx := int(s.PathMeta.CurrINF)
-	// (gavin) CurrINF is a uint and must be positive
+	// (VerifiedSCION) the following assumption is safe because s.PathMeta.CurINF is an uint8
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ fold acc(s.Mem(), definitions.ReadL1)
@@ -321,7 +318,7 @@ func (s *Raw) GetCurrentHopField() (res path.HopField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	idx := int(s.PathMeta.CurrHF)
-	// NOTE CurrHF is guaranteed to be positive.
+	// (VerifiedSCION) the following assumption is safe because s.PathMeta.CurrHF is an uint8
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ fold acc(s.Mem(), definitions.ReadL1)

@@ -44,14 +44,10 @@ type Path struct{}
 
 //@ ensures len(r) != 0 ==> (e != nil && e.ErrorMem())
 //@ ensures len(r) == 0 ==> e == nil
-//@ ensures o.Mem() && (o.Mem() --* o.NonInitMem())
+//@ ensures o.Mem()
 //@ decreases
 func (o Path) DecodeFromBytes(r []byte) (e error) {
 	//@ fold o.Mem()
-	//@ package o.Mem() --* o.NonInitMem() {
-	//@ 	unfold o.Mem()
-	//@		fold o.NonInitMem()
-	//@ }
 	if len(r) != 0 {
 		// TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
 		return serrors.New("decoding an empty path", "len", int(len(r)))

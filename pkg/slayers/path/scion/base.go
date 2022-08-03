@@ -183,14 +183,14 @@ type MetaHdr struct {
 // scion.MetaLen.
 //@ preserves acc(m)
 //@ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
-//@ ensures   m.CurrINF >= 0 && m.CurrHF >= 0
-//@ ensures   e == nil
 //@ ensures   (len(raw) >= MetaLen) == (e == nil)
+//@ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrHF >= 0)
+//@ ensures   e != nil ==> e.ErrorMem()
 //@ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	if len(raw) < MetaLen {
 		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
-		return serrors.New("MetaHdr raw too short", "expected", MetaLen, "actual", int(len(raw)))
+		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 	line := binary.BigEndian.Uint32(raw)
