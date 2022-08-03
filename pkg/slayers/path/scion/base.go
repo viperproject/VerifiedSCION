@@ -85,8 +85,8 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		if s.PathMeta.SegLen[i] > 0 && s.NumINF == 0 {
 			s.NumINF = i + 1
 		}
-		//  Cannot assert bounds of uint:
-		//  https://github.com/viperproject/gobra/issues/192
+		// (VerifiedSCION) Cannot assert bounds of uint:
+		// https://github.com/viperproject/gobra/issues/192
 		//@ assume int(s.PathMeta.SegLen[i]) >= 0
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
@@ -200,8 +200,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
-	//  The following assumption is guaranteed by Go but still
-	//  not modeled in Gobra.
+	// (VerifiedSCION) The following assumption is guaranteed by Go but still not modeled in Gobra.
 	//@ assume m.CurrINF >= 0 && m.CurrHF >= 0
 	m.SegLen[0] = uint8(line>>12) & 0x3F
 	m.SegLen[1] = uint8(line>>6) & 0x3F
@@ -231,7 +230,7 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	return nil
 }
 
-//  The spec of fmt.Sprintf is still too limited to verify this method.
+// (VerifiedSCION) The spec of fmt.Sprintf is still too limited to verify this method.
 //@ trusted
 //@ decreases
 func (m MetaHdr) String() string {
