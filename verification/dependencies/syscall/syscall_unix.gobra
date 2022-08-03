@@ -25,7 +25,7 @@ package syscall
 //	if errors.Is(err, fs.ErrNotExist) ...
 type Errno uintptr
 
-pred (e Errno) ErrorMem() { true }
+pred (e Errno) ErrorMem() { e != 0 }
 
 preserves e.ErrorMem()
 decreases
