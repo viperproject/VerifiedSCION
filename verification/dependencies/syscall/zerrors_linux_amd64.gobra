@@ -12,8 +12,3 @@ const (
 	EAGAIN          = Errno(0xb)
 	EWOULDBLOCK     = Errno(0xb)
 )
-
-// TODO: Introduce when we have globals
-//var errors = [...]string{
-//	11:  "resource temporarily unavailable",
-//}
