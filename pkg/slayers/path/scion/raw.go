@@ -60,7 +60,7 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	return nil
 }
 
-// SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
+// SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
 //@ preserves s.Mem()
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
@@ -169,7 +169,7 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 	return decoded, nil
 }
 
-// IncPath increments the path and writePerms it to the buffer.
+// IncPath increments the path and writes it to the buffer.
 //@ requires s.Mem()
 //@ ensures old(unfolding s.Mem() in unfolding
 //@   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
