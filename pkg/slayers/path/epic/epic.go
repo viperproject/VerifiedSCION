@@ -192,7 +192,6 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 
 // Reverse reverses the EPIC path. In particular, this means that the SCION path type subheader
 // is reversed.
-//@ trusted // TODO
 //@ requires p.Mem()
 //@ ensures  r == nil ==> ret.Mem()
 //@ ensures  r == nil ==> ret != nil
