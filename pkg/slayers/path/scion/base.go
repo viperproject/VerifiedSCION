@@ -100,19 +100,23 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 
 // IncPath increases the currHF index and currINF index if appropriate.
 //@ requires s.Mem()
-//@ requires unfolding s.Mem() in s.NumINF > 0
-//@ requires unfolding s.Mem() in int(s.PathMeta.CurrHF) < s.NumHops-1
-//@ ensures  s.Mem()
-//@ ensures  s.Len() == old(s.Len())
-//@ ensures  e == nil
+//@ ensures  old(unfolding s.Mem() in s.NumINF == 0) ==> e != nil
+//@ ensures  old(unfolding s.Mem() in int(s.PathMeta.CurrHF) >= s.NumHops-1) ==> e != nil
+//@ ensures  e == nil ==> s.Mem()
+//@ ensures  e == nil ==> s.Len() == old(s.Len())
+//@ ensures  e == nil ==> s.getNumINF() == old(s.getNumINF())
+//@ ensures  e != nil ==> s.NonInitMem()
+//@ ensures  e != nil ==> e.ErrorMem()
 //@ decreases
 func (s *Base) IncPath() (e error) {
 	//@ unfold s.Mem()
 	if s.NumINF == 0 {
+		//@ fold s.NonInitMem()
 		return serrors.New("empty path cannot be increased")
 	}
 	if int(s.PathMeta.CurrHF) >= s.NumHops-1 {
 		s.PathMeta.CurrHF = uint8(s.NumHops - 1)
+		//@ fold s.NonInitMem()
 		return serrors.New("path already at end")
 	}
 	s.PathMeta.CurrHF++

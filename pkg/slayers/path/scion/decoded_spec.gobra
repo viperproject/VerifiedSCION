@@ -65,6 +65,30 @@ func (d *Decoded) Type() (t path.Type) {
 	return unfolding acc(d.Mem(), _) in d.Base.Type()
 }
 
+/**
+  * This method is not part of the original SCION codebase.
+  * This method creates an override of `IncPath` for `Decoded` which
+  * just provides a more suitable contract. All it does is to call `IncPath`
+  * on d.Base. Without this, one would need to unfold d.Mem() to call `IncPath`,
+  * which can be extremely cumbersome.
+  */
+requires d.Mem()
+ensures  e == nil ==> d.Mem()
+ensures  e == nil ==> d.Len() == old(d.Len())
+ensures  e != nil ==> d.NonInitMem()
+ensures  e != nil ==> e.ErrorMem()
+decreases
+func (d *Decoded) IncPath() (e error) {
+	unfold d.Mem()
+	e = d.Base.IncPath()
+	if e == nil {
+		fold d.Mem()
+	} else {
+		fold d.NonInitMem()
+	}
+	return e
+}
+
 ghost
 requires d.Mem()
 ensures  d.NonInitMem()

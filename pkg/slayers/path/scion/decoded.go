@@ -220,6 +220,7 @@ func (s *Decoded) SerializeTo(b []byte) (r error) {
 }
 
 // Reverse reverses a SCION path.
+//@ trusted // depends on the changes from https://github.com/scionproto/scion/issues/4241 to verify
 //@ requires s.Mem()
 //@ ensures  r == nil ==> p != nil
 //@ ensures  r == nil ==> p.Mem()

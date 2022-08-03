@@ -49,15 +49,15 @@ type Path struct {
 }
 
 //@ requires  o.NonInitMem()
-//@ requires  len(data) >= PathLen
 //@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-//@ ensures   r != nil ==> (o.NonInitMem() && r.ErrorMem())
+//@ ensures   (len(data) >= PathLen) == (r == nil)
 //@ ensures   r == nil ==> o.Mem()
+//@ ensures   r != nil ==> (o.NonInitMem() && r.ErrorMem())
 //@ decreases
 func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	if len(data) < PathLen {
-		return serrors.New("buffer too short for OneHop path", "expected", PathLen, "actual",
-			len(data))
+		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
+			int(len(data)))
 	}
 	offset := 0
 	//@ unfold o.NonInitMem()
@@ -96,15 +96,15 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	return r
 }
 
-//@ requires  len(b) >= PathLen
 //@ preserves acc(o.Mem(), definitions.ReadL1)
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   err == nil
+//@ ensures   (len(b) >= PathLen) == (err == nil)
+//@ ensures   err != nil ==> err.ErrorMem()
 //@ decreases
 func (o *Path) SerializeTo(b []byte) (err error) {
 	if len(b) < PathLen {
-		return serrors.New("buffer too short for OneHop path", "expected", PathLen, "actual",
-			len(b))
+		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
+			int(len(b)))
 	}
 	offset := 0
 	//@ unfold acc(o.Mem(), definitions.ReadL1)
@@ -140,8 +140,9 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
+//@ trusted //TODO
 //@ requires o.Mem()
-//@ ensures  err == nil ==> sd.Mem()
+//@ ensures  err == nil ==> (sd != nil && sd.Mem())
 //@ ensures  err != nil ==> err.ErrorMem() && o.Mem()
 //@ decreases
 func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
@@ -198,14 +199,20 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
-//@ trusted // TODO
 //@ ensures err == nil ==> p.Mem()
+//@ ensures err == nil ==> p != nil
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (o /*@@@*/ Path) Reverse() (p path.Path, err error) {
+func (o Path) Reverse() (p path.Path, err error) {
+	//@ share o
+	//@ requires acc(&o)
+	//@ ensures  (&o).Mem()
+	//@ decreases
+	//@ outline(
 	//@ fold o.FirstHop.Mem()
 	//@ fold o.SecondHop.Mem()
 	//@ fold o.Mem()
+	//@ )
 	sp, err := o.ToSCIONDecoded()
 	if err != nil {
 		return nil, serrors.WrapStr("converting to scion path", err)

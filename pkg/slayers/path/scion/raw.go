@@ -171,16 +171,16 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 
 // IncPath increments the path and writePerms it to the buffer.
 //@ requires s.Mem()
-//@ requires unfolding s.Mem() in unfolding
-//@   s.Base.Mem() in
-//@     (s.NumINF > 0 && int(s.PathMeta.CurrHF) < s.NumHops-1)
-//@ ensures  s.Mem()
+//@ ensures old(unfolding s.Mem() in unfolding
+//@   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
+//@ ensures  r == nil ==> s.Mem()
+//@ ensures  r != nil ==> s.NonInitMem()
 //@ ensures  r != nil ==> r.ErrorMem()
 //@ decreases
 func (s *Raw) IncPath() (r error) {
 	//@ unfold s.Mem()
 	if err := s.Base.IncPath(); err != nil {
-		//@ fold s.Mem()
+		//@ fold s.NonInitMem()
 		return err
 	}
 	//@ unfold s.Base.Mem()
