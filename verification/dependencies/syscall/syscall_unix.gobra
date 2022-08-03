@@ -27,8 +27,18 @@ type Errno uintptr
 
 pred (e Errno) ErrorMem() { true }
 
+// TODO: when we have globals, this can have a definition
 preserves e.ErrorMem()
 decreases
-func (e Errno) Error() string
+func (e Errno) Error() string /*{
+	if 0 <= int(e) && int(e) < len(errorstr) {
+		s := errorstr[e]
+		if s != "" {
+			return s
+		}
+	}
+	return "errno " + itoa.Itoa(int(e))
+}*/
+
 
 Errno implements error
