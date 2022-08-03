@@ -1,0 +1,18 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Signatures for the public declarations in file
+// https://go.dev/src/math/big/arith.go
+
+// +gobra
+
+package big
+
+// A Word represents a single digit of a multi-precision unsigned integer.
+type Word uint
+
+const (
+	_W = 64
+	_B = 1 << _W       // digit base
+)

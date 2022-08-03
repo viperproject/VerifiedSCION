@@ -1,0 +1,34 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Specification for file in
+// https://cs.opensource.google/go/go/+/master:src/syscall/syscall_unix.go
+
+// +gobra
+
+package syscall
+
+// An Errno is an unsigned number describing an error condition.
+// It implements the error interface. The zero Errno is by convention
+// a non-error, so code to convert from Errno to error should use:
+//
+//	err = nil
+//	if errno != 0 {
+//		err = errno
+//	}
+//
+// Errno values can be tested against error values from the os package
+// using errors.Is. For example:
+//
+//	_, _, err := syscall.Syscall(...)
+//	if errors.Is(err, fs.ErrNotExist) ...
+type Errno uintptr
+
+pred (e Errno) ErrorMem() { e != 0 }
+
+preserves e.ErrorMem()
+decreases
+func (e Errno) Error() string
+
+Errno implements error
