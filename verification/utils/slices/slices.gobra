@@ -228,16 +228,6 @@ func SplitByIndexC_Any(s []any, start int, end int, idx int, contents seq[any]) 
 	fold   AbsSliceC_Any(s, idx, end, contents[idx-start:])
 }
 
-ghost
-requires AbsSliceC_Any(s, start, idx, contents1)
-requires AbsSliceC_Any(s, idx,   end, contents2)
-ensures  AbsSliceC_Any(s, start, end, contents1 ++ contents2)
-func CombineAtIndexC_Any(s []any, start int, end int, idx int, contents1 seq[any], contents2 seq[any]) {
-	unfold AbsSliceC_Any(s, start, idx, contents1)
-	unfold AbsSliceC_Any(s, idx,   end, contents2)
-	fold   AbsSliceC_Any(s, start, end, contents1 ++ contents2)
-}
-
 /** End of slices of Any with Contents **/
 
 /** Slices of Any without Contents **/
