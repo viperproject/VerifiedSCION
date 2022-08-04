@@ -1,0 +1,46 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Signatures for the public declarations in file
+// https://go.dev/src/math/big/nat.go
+
+// +gobra
+
+package big
+
+import "github.com/scionproto/scion/verification/utils/definitions"
+
+// An unsigned integer x of the form
+//
+//	x = x[n-1]*_B^(n-1) + x[n-2]*_B^(n-2) + ... + x[1]*_B + x[0]
+//
+// with 0 <= x[i] < _B and 0 <= i < n is stored in a slice of length n,
+// with the digits x[i] as the slice elements.
+//
+// A number is normalized if the slice contains no leading 0 digits.
+// During arithmetic operations, denormalized values may occur but are
+// always normalized before returning the final result. The normalized
+// representation of 0 is the empty or nil slice (length = 0).
+type nat []Word
+
+pred (n nat) Mem() {
+	acc(n)
+}
+
+// TODO: This returns int when it should return a mathematical Integer
+ghost
+requires acc(n.Mem(), definitions.ReadL13)
+decreases
+pure func (n nat) toInt() int {
+	return len(n) == 0 ? int(0) : unfolding acc(n.Mem(), definitions.ReadL13) in toIntHelper(n, 0)
+}
+
+// TODO: This returns int when it should return a mathematical Integer
+ghost
+requires acc(n, definitions.ReadL13)
+requires 0 <= i && i < len(n)
+decreases _
+pure func toIntHelper (n nat, i int) int {
+	return i == len(n) - 1 ? int(n[i]) : int(n[i]) + _W * toIntHelper(n, i + 1)
+}

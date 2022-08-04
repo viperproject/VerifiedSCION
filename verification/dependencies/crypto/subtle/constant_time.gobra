@@ -1,0 +1,22 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Signatures for the public declarations in file
+// https://go.dev/src/crypto/subtle/constant_time.go
+
+// +gobra
+
+package subtle
+
+import "github.com/scionproto/scion/verification/utils/slices"
+
+// ConstantTimeCompare returns 1 if the two slices, x and y, have equal contents
+// and 0 otherwise. The time taken is a function of the length of the slices and
+// is independent of the contents.
+preserves slices.AbsSlice_Bytes(x, 0, len(x))
+preserves slices.AbsSlice_Bytes(y, 0, len(y))
+ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> (forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 1)
+ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> !(forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 0)
+ensures len(x) != len(y) ==> res == 0
+func ConstantTimeCompare(x, y []byte) (res int)

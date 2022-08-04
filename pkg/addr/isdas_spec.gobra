@@ -44,13 +44,13 @@ IA implements fmt.Stringer {
 	}
 }
 
-pred (as *AS) Mem() { acc(as) }
+pred (_as *AS) Mem() { acc(_as) }
 
 (*AS) implements encoding.TextUnmarshaler {
-	(as *AS) UnmarshalText(text []byte) (err error) {
-		unfold as.Mem()
-		err = as.UnmarshalText(text)
-		fold as.Mem()
+	(_as *AS) UnmarshalText(text []byte) (err error) {
+		unfold _as.Mem()
+		err = _as.UnmarshalText(text)
+		fold _as.Mem()
 	}
 }
 
