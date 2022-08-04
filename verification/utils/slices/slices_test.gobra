@@ -14,6 +14,7 @@
 
 package slices
 
+/** Bytes **/
 func AbsSliceC_Bytes_test() {
 	s := make([]byte, 10)
 	ghost contents := NewSeq_Bytes(10)
@@ -24,5 +25,21 @@ func AbsSliceC_Bytes_test() {
 func AbsSlice_Bytes_test() {
 	s := make([]byte, 10)
 	fold AbsSlice_Bytes(s, 0, 10)
+	// assert false // fails
+}
+
+/** Any **/
+func AbsSliceC_Any_test() {
+	s := make([]any, 1)
+	var elem interface{} = int(1)
+	ghost contents := seq[any]{elem}
+	s[0] = elem
+	fold AbsSliceC_Any(s, 0, 1, contents)
+	// assert false // fails
+}
+
+func AbsSlice_Any_test() {
+	s := make([]any, 10)
+	fold AbsSlice_Any(s, 0, 10)
 	// assert false // fails
 }

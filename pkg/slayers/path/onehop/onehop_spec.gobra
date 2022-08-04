@@ -65,3 +65,13 @@ func (p *Path) DowngradePerm() {
 		return p.Type()
 	}
 }
+
+ghost
+requires acc(o)
+ensures  o.Mem()
+decreases
+func FoldPathMem(o *Path) {
+	fold o.FirstHop.Mem()
+	fold o.SecondHop.Mem()
+	fold o.Mem()
+}

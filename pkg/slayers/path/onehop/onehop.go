@@ -140,7 +140,7 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
-//@ trusted //TODO
+//@ trusted // (VerifiedSCION) Currently takes a long time to verify
 //@ requires o.Mem()
 //@ ensures  err == nil ==> (sd != nil && sd.Mem())
 //@ ensures  err != nil ==> err.ErrorMem() && o.Mem()
@@ -153,7 +153,7 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 		//@ fold o.Mem()
 		return nil, serrors.New("incomplete path can't be converted")
 	}
-	//@ unfold o.FirstHop.Mem()
+	//@ fold o.SecondHop.Mem()
 	p := &scion.Decoded{
 		Base: scion.Base{
 			PathMeta: scion.MetaHdr{
@@ -188,7 +188,7 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 			},
 		},
 	}
-	// TODO (gavin) this verification times out. Even folding
+	// (VerifiedSCION) this verification times out. Even folding
 	// the base predicate and assuming false for the rest takes a
 	// significant amount of time.
 	//@ fold p.Base.Mem()
@@ -205,14 +205,8 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 //@ decreases
 func (o Path) Reverse() (p path.Path, err error) {
 	//@ share o
-	//@ requires acc(&o)
-	//@ ensures  (&o).Mem()
-	//@ decreases
-	//@ outline(
-	//@ fold o.FirstHop.Mem()
-	//@ fold o.SecondHop.Mem()
-	//@ fold o.Mem()
-	//@ )
+	//@ assert acc(&o)
+	//@ ghost FoldPathMem(&o)
 	sp, err := o.ToSCIONDecoded()
 	if err != nil {
 		return nil, serrors.WrapStr("converting to scion path", err)

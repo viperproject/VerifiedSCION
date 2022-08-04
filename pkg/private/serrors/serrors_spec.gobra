@@ -279,9 +279,9 @@ func (e List) Error() string {
 
 // ToError returns the object as error interface implementation.
 trusted
-requires  e.ErrorMem()
-ensures   len(e) == 0 ==> err == nil
-ensures   err.ErrorMem()
+requires e.ErrorMem()
+ensures  len(e) == 0 ==> err == nil
+ensures  err.ErrorMem()
 decreases
 func (e List) ToError() (err error) {
 	if len(e) == 0 {

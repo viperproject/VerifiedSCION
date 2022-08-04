@@ -187,3 +187,137 @@ func Unslice_Bytes(s []byte, start int, end int, p perm) {
 }
 
 /** End of slices of Bytes without Contents **/
+
+/** Auxiliar definitions Any **/
+ghost
+requires size >= 0
+ensures len(res) == size
+ensures forall i int :: 0 <= i && i < size ==> res[i] == nil
+pure func NewSeq_Any(size int) (res seq[any])
+
+// TODO:
+// func ToSeq_Any
+// ResliceC_Any
+
+/** End of Auxiliar definitions Any **/
+
+/** Slices of Any with Contents **/
+
+// The elements in contents are required to be comparable
+pred AbsSliceC_Any(s []any, start int, end int, ghost contents seq[any]) {
+	// start inclusive
+	0 <= start &&
+	start < end &&
+	// end exclusive
+	end <= cap(s) &&
+	len(contents) == end - start &&
+	// Maybe, it is worth having different versions with
+	// different triggers, or using a different trigger
+	// than the one that is inferred.
+	forall i int :: start <= i && i < end ==> (acc(&s[i]) && isComparable(s[i]) && s[i] == contents[i - start])
+}
+
+ghost
+requires AbsSliceC_Any(s, start, end, contents)
+requires start < idx && idx < end
+ensures  AbsSliceC_Any(s, start, idx, contents[:idx-start]) && AbsSliceC_Any(s, idx, end, contents[idx-start:])
+func SplitByIndexC_Any(s []any, start int, end int, idx int, contents seq[any]) {
+	unfold AbsSliceC_Any(s, start, end, contents)
+	assert len(contents) == end - start
+	fold   AbsSliceC_Any(s, start, idx, contents[:idx-start])
+	fold   AbsSliceC_Any(s, idx, end, contents[idx-start:])
+}
+
+ghost
+requires AbsSliceC_Any(s, start, idx, contents1)
+requires AbsSliceC_Any(s, idx,   end, contents2)
+ensures  AbsSliceC_Any(s, start, end, contents1 ++ contents2)
+func CombineAtIndexC_Any(s []any, start int, end int, idx int, contents1 seq[any], contents2 seq[any]) {
+	unfold AbsSliceC_Any(s, start, idx, contents1)
+	unfold AbsSliceC_Any(s, idx,   end, contents2)
+	fold   AbsSliceC_Any(s, start, end, contents1 ++ contents2)
+}
+
+/** End of slices of Any with Contents **/
+
+/** Slices of Any without Contents **/
+pred AbsSlice_Any(s []any, start int, end int) {
+	// start inclusive
+	0 <= start &&
+	start <= end &&
+	// end exclusive
+	end <= cap(s) &&
+	forall i int :: start <= i && i < end ==> acc(&s[i])
+}
+
+ghost
+requires 0 <= p
+requires acc(AbsSlice_Any(s, start, end), p)
+requires start <= idx && idx <= end
+ensures  acc(AbsSlice_Any(s, start, idx), p)
+ensures  acc(AbsSlice_Any(s, idx, end), p)
+decreases
+func SplitByIndex_Any(s []any, start int, end int, idx int, p perm) {
+	unfold acc(AbsSlice_Any(s, start, end), p)
+	fold   acc(AbsSlice_Any(s, start, idx), p)
+	fold   acc(AbsSlice_Any(s, idx, end), p)
+}
+
+ghost
+requires 0 <= p
+requires acc(AbsSlice_Any(s, start, idx), p)
+requires acc(AbsSlice_Any(s, idx,   end), p)
+ensures  acc(AbsSlice_Any(s, start, end), p)
+decreases
+func CombineAtIndex_Any(s []any, start int, end int, idx int, p perm) {
+	unfold acc(AbsSlice_Any(s, start, idx), p)
+	unfold acc(AbsSlice_Any(s, idx,   end), p)
+	fold   acc(AbsSlice_Any(s, start, end), p)
+}
+
+ghost
+requires 0 <= p
+requires acc(AbsSlice_Any(s, start, end), p)
+// the following precondition convinces Gobra that
+// the slice operation is well-formed
+requires unfolding acc(AbsSlice_Any(s, start, end), p) in true
+ensures  acc(AbsSlice_Any(s[start:end], 0, len(s[start:end])), p)
+decreases
+func Reslice_Any(s []any, start int, end int, p perm) {
+	unfold acc(AbsSlice_Any(s, start, end), p)
+	assert forall i int :: 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
+	fold  acc(AbsSlice_Any(s[start:end], 0, len(s[start:end])), p)
+}
+
+ghost
+requires 0 <= p
+requires 0 <= start && start < end && end <= cap(s)
+requires len(s[start:end]) <= cap(s)
+requires acc(AbsSlice_Any(s[start:end], 0, len(s[start:end])), p)
+ensures  acc(AbsSlice_Any(s, start, end), p)
+decreases
+func Unslice_Any(s []any, start int, end int, p perm) {
+	unfold acc(AbsSlice_Any(s[start:end], 0, len(s[start:end])), p)
+	assert 0 <= start && start < end && end <= cap(s)
+	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
+	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+
+	ghost {
+		invariant 0 <= j && j <= len(s[start:end])
+		invariant forall i int :: j <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
+		invariant forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+		invariant forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+		invariant forall i int :: start <= i && i < start+j ==> acc(&s[i], p)
+		decreases len(s[start:end]) - j
+		for j := 0; j < len(s[start:end]); j++ {
+			assert forall i int :: start <= i && i < start+j ==> acc(&s[i], p)
+			assert &s[start:end][j] == &s[start + j]
+			assert acc(&s[start + j], p)
+			assert forall i int :: start <= i && i <= start+j ==> acc(&s[i], p)
+		}
+	}
+	fold acc(AbsSlice_Any(s, start, end), p)
+}
+
+/** End of slices of Any without Contents **/
