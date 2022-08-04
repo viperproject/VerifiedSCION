@@ -332,6 +332,9 @@ func (s *Raw) GetCurrentHopField() (res path.HopField, r error) {
 //@ decreases
 func (s *Raw) SetHopField(hop path.HopField, idx int) (r error) {
 	//@ share hop
+	// (VerifiedSCION) Gobra cannot prove the following yet, even though they
+	// must be positive because of their type.
+	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
 	//@ fold hop.Mem()
 	//@ unfold s.Mem()
 	//@ unfold s.Base.Mem()

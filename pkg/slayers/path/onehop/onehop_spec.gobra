@@ -71,6 +71,9 @@ requires acc(o)
 ensures  o.Mem()
 decreases
 func FoldPathMem(o *Path) {
+	// The following must hold because of the type of ConsIngress and ConsEgress
+	assume 0 <= o.FirstHop.ConsIngress && 0 <= o.FirstHop.ConsEgress
+	assume 0 <= o.SecondHop.ConsIngress && 0 <= o.SecondHop.ConsEgress
 	fold o.FirstHop.Mem()
 	fold o.SecondHop.Mem()
 	fold o.Mem()

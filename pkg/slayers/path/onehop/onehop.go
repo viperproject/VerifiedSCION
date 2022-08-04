@@ -141,19 +141,19 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
 //@ trusted // (VerifiedSCION) Currently takes a long time to verify
-//@ requires o.Mem()
-//@ ensures  err == nil ==> (sd != nil && sd.Mem())
-//@ ensures  err != nil ==> err.ErrorMem() && o.Mem()
+//@ preserves acc(o.Mem(), definitions.ReadL10)
+//@ ensures   err == nil ==> (sd != nil && sd.Mem())
+//@ ensures   err != nil ==> err.ErrorMem() && o.Mem()
 //@ decreases
 func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
-	//@ unfold o.Mem()
-	//@ unfold o.SecondHop.Mem()
+	//@ unfold acc(o.Mem(), definitions.ReadL10)
+	//@ unfold acc(o.SecondHop.Mem(), definitions.ReadL10)
 	if o.SecondHop.ConsIngress == 0 {
-		//@ fold o.SecondHop.Mem()
-		//@ fold o.Mem()
+		//@ fold acc(o.SecondHop.Mem(), definitions.ReadL10)
+		//@ fold acc(o.Mem(), definitions.ReadL10)
 		return nil, serrors.New("incomplete path can't be converted")
 	}
-	//@ fold o.SecondHop.Mem()
+	//@ fold acc(o.SecondHop.Mem(), definitions.ReadL10)
 	p := &scion.Decoded{
 		Base: scion.Base{
 			PathMeta: scion.MetaHdr{
@@ -199,11 +199,20 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
+//@ trusted // (VerifiedSCION) the following currently takes a long time to verify
+// (VerifiedSCION) The main cause for the performance problem is the `share` statement,
+// together with the assert right after. This is translated to a huge chunk of inhales
+// and exhales in Viper involving quantifiers that cause verification to choke.
 //@ ensures err == nil ==> p.Mem()
 //@ ensures err == nil ==> p != nil
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
 func (o Path) Reverse() (p path.Path, err error) {
+	// (VerifiedSCION) this share would not be needed if we had passed a *Path as a parameter.
+	// From a performance standpoint (for SCION), this would also be preferrable, given that Reverse cannot
+	// be modified in these functions.
+	// From a verification stand-point, it would also make more sense to provide Mem() as a precondition.
+	// It would be easier to maintain.
 	//@ share o
 	//@ assert acc(&o)
 	//@ ghost FoldPathMem(&o)
