@@ -343,6 +343,7 @@ func (s *Raw) GetCurrentHopField() (res path.HopField, r error) {
 
 // SetHopField updates the HopField at a given index.
 //@ requires  0 <= idx
+//@ requires hop.ConsIngress >= 0 && hop.ConsEgress >= 0
 //@ preserves s.Mem()
 //@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
