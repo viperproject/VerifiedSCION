@@ -49,7 +49,7 @@ type Path struct{}
 func (o Path) DecodeFromBytes(r []byte) (e error) {
 	//@ fold o.Mem()
 	if len(r) != 0 {
-		// TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
+		// (VerifiedSCION) TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
 		return serrors.New("decoding an empty path", "len", int(len(r)))
 	}
 	return nil

@@ -165,7 +165,6 @@ func (h HostNone) IP() (res net.IP) {
 	return nil
 }
 
-//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostNone) Copy() (res HostAddr) {
@@ -235,19 +234,17 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv4)
-	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	//@ fold acc(o.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
 //@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv4
-	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return h.IP().String()
 }
 
 var _ HostAddr = (HostIPv6)(nil)
@@ -299,19 +296,17 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv6)
-	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	//@ fold acc(o.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
 //@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv6) String() string {
 	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv6
-	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return h.IP().String()
 }
 
 var _ HostAddr = (*HostSVC)(nil)
@@ -392,7 +387,6 @@ func (h HostSVC) Multicast() HostSVC {
 	return h | SVCMcast
 }
 
-//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostSVC) Copy() (res HostAddr) {

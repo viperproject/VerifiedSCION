@@ -122,11 +122,10 @@ func (p *Path) SerializeTo(b []byte) (r error) {
 	//@ )
 	//@ ghost slices.CombineAtIndex_Bytes(b, 0, MetadataLen, PktIDLen+HVFLen, writePerm)
 	//@ ghost slices.Reslice_Bytes(b, MetadataLen, len(b), writePerm)
-	ret := p.ScionPath.SerializeTo(b[MetadataLen:])
-	//@ ghost slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
-	//@ ghost slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
-	//@ fold p.Mem()
-	return ret
+	//@ defer fold p.Mem()
+	//@ ghost defer slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
+	//@ ghost defer slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
+	return p.ScionPath.SerializeTo(b[MetadataLen:])
 }
 
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
