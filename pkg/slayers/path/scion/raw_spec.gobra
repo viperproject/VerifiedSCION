@@ -1,0 +1,97 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package scion
+
+import "github.com/scionproto/scion/pkg/slayers/path"
+import "github.com/scionproto/scion/verification/utils/slices"
+
+(*Raw) implements path.Path {
+	(r *Raw) SerializeTo(b []byte) (e error) {
+		e = r.SerializeTo(b)
+	}
+
+	(r *Raw) DecodeFromBytes(b []byte) (e error) {
+		e = r.DecodeFromBytes(b)
+	}
+
+	(r *Raw) Reverse() (p path.Path, e error) {
+		p, e = r.Reverse()
+	}
+
+	(r *Raw) DowngradePerm() {
+		r.DowngradePerm()
+	}
+
+	pure (r *Raw) Len() int {
+		return r.Len()
+	}
+
+	pure (r *Raw) Type() path.Type {
+		return r.Type()
+	}
+}
+
+pred (s *Raw) NonInitMem() {
+	acc(&s.Raw) && s.Base.NonInitMem()
+}
+
+pred (s *Raw) Mem() {
+	s.Base.Mem() &&
+	acc(&s.Raw) &&
+	len(s.Raw) >= s.Base.Len() &&
+	slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
+}
+
+/**
+  * This method is not part of the original SCION codebase.
+  * Instead, `Len` was defined in `*Raw` via embedded structs.
+  * Unfortunately, Gobra does not fully support them yet, so we
+  * introduced this wrapper method which acts as a wrapper.
+  */
+pure
+requires acc(s.Mem(), _)
+ensures  unfolding acc(s.Mem(), _) in l == s.Base.Len()
+ensures  l >= 0
+decreases
+func (s *Raw) Len() (l int) {
+	return unfolding acc(s.Mem(), _) in s.Base.Len()
+}
+
+/**
+  * This method is not part of the original SCION codebase.
+  * Instead, `Len` was defined in `*Raw` via embedded structs.
+  * Unfortunately, Gobra does not fully support them yet, so we
+  * introduced this wrapper method which acts as a wrapper.
+  */
+pure
+requires acc(s.Mem(), _)
+ensures  unfolding acc(s.Mem(), _) in t == s.Base.Type()
+decreases
+func (s *Raw) Type() (t path.Type) {
+	return unfolding acc(s.Mem(), _) in s.Base.Type()
+}
+
+ghost
+requires s.Mem()
+ensures  s.NonInitMem()
+decreases
+func (s *Raw) DowngradePerm() {
+	unfold s.Mem()
+	unfold s.Base.Mem()
+	fold s.Base.NonInitMem()
+	fold s.NonInitMem()
+}

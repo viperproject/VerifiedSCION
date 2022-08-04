@@ -5,6 +5,8 @@
 // Signatures for the public declarations in file
 // https://github.com/golang/go/blob/master/src/encoding/binary/binary.gobra
 
+// +gobra
+
 package binary
 
 // A ByteOrder specifies how to convert byte sequences into

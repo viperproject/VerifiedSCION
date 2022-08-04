@@ -23,6 +23,7 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/private/util"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // InfoLen is the size of an InfoField in bytes.
@@ -59,13 +60,15 @@ type InfoField struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // path.InfoLen.
 //@ requires  len(raw) >= InfoLen
-//@ preserves acc(inf) && acc(raw, definitions.ReadL1)
+//@ preserves acc(inf)
+//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), definitions.ReadL1)
 //@ ensures   err == nil
 //@ decreases
 func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < InfoLen {
 		return serrors.New("InfoField raw too short", "expected", InfoLen, "actual", len(raw))
 	}
+	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), definitions.ReadL1)
 	inf.ConsDir = raw[0]&0x1 == 0x1
 	inf.Peer = raw[0]&0x2 == 0x2
 	//@ assert &raw[2:4][0] == &raw[2] && &raw[2:4][1] == &raw[3]
@@ -73,6 +76,7 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert &raw[4:8][0] == &raw[4] && &raw[4:8][1] == &raw[5]
 	//@ assert &raw[4:8][2] == &raw[6] && &raw[4:8][3] == &raw[7]
 	inf.Timestamp = binary.BigEndian.Uint32(raw[4:8])
+	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), definitions.ReadL1)
 	return nil
 }
 
@@ -80,7 +84,7 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // path.InfoLen.
 //@ requires  len(b) >= InfoLen
 //@ preserves acc(inf, definitions.ReadL1)
-//@ preserves acc(b)
+//@ preserves slices.AbsSlice_Bytes(b, 0, InfoLen)
 //@ ensures   err == nil
 //@ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {
@@ -88,6 +92,7 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 		return serrors.New("buffer for InfoField too short", "expected", InfoLen,
 			"actual", len(b))
 	}
+	//@ unfold slices.AbsSlice_Bytes(b, 0, InfoLen)
 	b[0] = 0
 	if inf.ConsDir {
 		b[0] |= 0x1
@@ -101,7 +106,7 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	//@ assert &b[4:8][0] == &b[4] && &b[4:8][1] == &b[5]
 	//@ assert &b[4:8][2] == &b[6] && &b[4:8][3] == &b[7]
 	binary.BigEndian.PutUint32(b[4:8], inf.Timestamp)
-
+	//@ fold slices.AbsSlice_Bytes(b, 0, InfoLen)
 	return nil
 }
 

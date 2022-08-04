@@ -73,19 +73,19 @@ const (
 
 //@ ensures res.ErrorMem()
 //@ decreases
-func ErrBadHostAddrType () (res error) {
+func ErrBadHostAddrType() (res error) {
 	return serrors.New("unsupported host address type")
 }
 
 //@ ensures res.ErrorMem()
 //@ decreases
-func ErrMalformedHostAddrType () (res error) {
+func ErrMalformedHostAddrType() (res error) {
 	return serrors.New("malformed host address type")
 }
 
 //@ ensures res.ErrorMem()
 //@ decreases
-func ErrUnsupportedSVCAddress () (res error) {
+func ErrUnsupportedSVCAddress() (res error) {
 	return serrors.New("unsupported SVC address")
 }
 
@@ -127,7 +127,7 @@ type HostAddr interface {
 	//@ preserves acc(Mem(), definitions.ReadL13) && acc(o.Mem(), definitions.ReadL13)
 	//@ decreases
 	Equal(o HostAddr) bool
-	
+
 	// (VerifiedSCION) Can't use imported types as interface fields yet
 	// Issue: https://github.com/viperproject/gobra/issues/461
 	// replaced by the String() method which is the one that should be implemented
@@ -165,7 +165,6 @@ func (h HostNone) IP() (res net.IP) {
 	return nil
 }
 
-//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostNone) Copy() (res HostAddr) {
@@ -222,7 +221,7 @@ func (h HostIPv4) IP() (res net.IP) {
 //@ decreases
 func (h HostIPv4) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	var tmp HostIPv4 = HostIPv4(append(/*@ definitions.ReadL13, @*/net.IP(nil), h...))
+	var tmp HostIPv4 = HostIPv4(append( /*@ definitions.ReadL13, @*/ net.IP(nil), h...))
 	//@ fold acc(h.Mem(), definitions.ReadL13)
 	//@ fold tmp.Mem()
 	return tmp
@@ -235,19 +234,17 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv4)
-	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	//@ fold acc(o.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
 //@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv4
-	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return h.IP().String()
 }
 
 var _ HostAddr = (HostIPv6)(nil)
@@ -286,7 +283,7 @@ func (h HostIPv6) IP() (res net.IP) {
 //@ decreases
 func (h HostIPv6) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	var tmp HostIPv6 = HostIPv6(append(/*@ definitions.ReadL13, @*/net.IP(nil), h...))
+	var tmp HostIPv6 = HostIPv6(append( /*@ definitions.ReadL13, @*/ net.IP(nil), h...))
 	//@ fold acc(h.Mem(), definitions.ReadL13)
 	//@ fold tmp.Mem()
 	return tmp
@@ -299,19 +296,17 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv6)
-	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	//@ fold acc(o.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
 //@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv6) String() string {
 	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv6
-	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return h.IP().String()
 }
 
 var _ HostAddr = (*HostSVC)(nil)
@@ -392,7 +387,6 @@ func (h HostSVC) Multicast() HostSVC {
 	return h | SVCMcast
 }
 
-//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostSVC) Copy() (res HostAddr) {

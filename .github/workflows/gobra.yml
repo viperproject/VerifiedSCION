@@ -42,7 +42,7 @@ jobs:
         with:
           projectLocation: 'VerifiedSCION/verification'
           recursive: 1
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: './dependencies/ ..' # relative to project location
@@ -52,7 +52,47 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path'
-          packageTimeout: 10m
+          timeout: 10m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'pkg/slayers/path/empty'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path/empty'
+          timeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'pkg/slayers/path/epic'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path/epic'
+          timeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'pkg/slayers/path/onehop'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path/onehop'
+          timeout: 15m # 'onehop' currently takes a lot of time
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'pkg/slayers/path/scion'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path/scion'
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -62,7 +102,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/addr'
-          packageTimeout: 10m
+          timeout: 10m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}

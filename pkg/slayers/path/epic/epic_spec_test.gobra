@@ -1,0 +1,43 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package epic
+
+func testAllocateNonInitMem() {
+	p := &Path{}
+	fold p.NonInitMem()
+}
+
+func canAllocatePath() {
+	p := &Path{}
+	fold p.Mem()
+}
+
+// (*Path).Len() cannot be currently be verified because Gobra does not allow statements in
+// pure functions, but Len must be pure.
+// This method contains the same exact body and checks that the contract holds.
+preserves acc(p.Mem(), _)
+ensures   !p.hasScionPath() ==> l == MetadataLen
+ensures   p.hasScionPath()  ==> l == MetadataLen + unfolding acc(p.Mem(), _) in p.ScionPath.Len()
+decreases
+func len_test(p *Path) (l int) {
+	unfold acc(p.Mem(), _) // would need to be 'unfolding' in the pure version
+	if p.ScionPath == nil {
+		return MetadataLen
+	}
+	unfold acc(p.ScionPath.Mem(), _) // would need to be 'unfolding' in the pure version
+	return  MetadataLen + p.ScionPath.Len()
+}
