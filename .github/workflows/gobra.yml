@@ -119,6 +119,16 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'router/dataplane'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'router/dataplane'
+          timeout: 30m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
       - name: Upload the verification report
         uses: actions/upload-artifact@v2
         with:
