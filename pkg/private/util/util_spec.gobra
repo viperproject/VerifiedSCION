@@ -12,14 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This file allows importing `util` without crashing, even though it currently
+// does not specify anything. To specify and verify this package, we will need at least
+// to support "encoding/json" from the standard library.
+
 // +gobra
 
-package definitions
-
-func IsOfPrimitiveType_test() {
-	var v interface{} = int(10)
-	assert IsOfPrimitiveType(v)
-	var x interface{} = struct{}{}
-	//:: ExpectedOutput(assert_error)
-	// assert IsOfPrimitiveType(x)
-}
+package util
