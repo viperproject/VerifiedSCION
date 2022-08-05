@@ -15,6 +15,9 @@
 
 // +gobra
 
+//@ initEnsures acc(&ErrBadHostAddrType, _) && ErrBadHostAddrType.ErrorMem()
+//@ initEnsures acc(&ErrMalformedHostAddrType, _) && ErrMalformedHostAddrType.ErrorMem()
+//@ initEnsures acc(&ErrUnsupportedSVCAddress, _) && ErrUnsupportedSVCAddress.ErrorMem()
 package addr
 
 import (
@@ -59,35 +62,14 @@ const (
 	HostLenSVC  = 2
 )
 
-// (VerifiedSCION) The following variables are not mutated by any functions so
-// they are replaced by functions until we have support for globals
-
-//var (
-//	// ErrBadHostAddrType indicates an invalid host address type.
-//	ErrBadHostAddrType = serrors.New("unsupported host address type")
-//	// ErrMalformedHostAddrType indicates a malformed host address type.
-//	ErrMalformedHostAddrType = serrors.New("malformed host address type")
-//	// ErrUnsupportedSVCAddress indicates an unsupported SVC address.
-//	ErrUnsupportedSVCAddress = serrors.New("unsupported SVC address")
-//)
-
-//@ ensures res.ErrorMem()
-//@ decreases
-func ErrBadHostAddrType() (res error) {
-	return serrors.New("unsupported host address type")
-}
-
-//@ ensures res.ErrorMem()
-//@ decreases
-func ErrMalformedHostAddrType() (res error) {
-	return serrors.New("malformed host address type")
-}
-
-//@ ensures res.ErrorMem()
-//@ decreases
-func ErrUnsupportedSVCAddress() (res error) {
-	return serrors.New("unsupported SVC address")
-}
+var (
+	// ErrBadHostAddrType indicates an invalid host address type.
+	ErrBadHostAddrType = serrors.New("unsupported host address type")
+	// ErrMalformedHostAddrType indicates a malformed host address type.
+	ErrMalformedHostAddrType = serrors.New("malformed host address type")
+	// ErrUnsupportedSVCAddress indicates an unsupported SVC address.
+	ErrUnsupportedSVCAddress = serrors.New("unsupported SVC address")
+)
 
 const (
 	SvcDS       HostSVC = 0x0001
@@ -444,27 +426,27 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		return tmp, nil
 	case HostTypeIPv4:
 		if len(b) < HostLenIPv4 {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
 		tmp := HostIPv4(b[:HostLenIPv4])
 		//@ fold tmp.Mem()
 		return tmp, nil
 	case HostTypeIPv6:
 		if len(b) < HostLenIPv6 {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
 		tmp := HostIPv6(b[:HostLenIPv6])
 		//@ fold tmp.Mem()
 		return tmp, nil
 	case HostTypeSVC:
 		if len(b) < HostLenSVC {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
 		tmp := HostSVC(binary.BigEndian.Uint16(b))
 		//@ fold tmp.Mem()
 		return tmp, nil
 	default:
-		return nil, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
+		return nil, serrors.WithCtx(ErrBadHostAddrType, "type", htype)
 	}
 }
 
@@ -509,7 +491,7 @@ func HostLen(htype HostAddrType) (uint8, error) {
 	case HostTypeSVC:
 		length = HostLenSVC
 	default:
-		return 0, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
+		return 0, serrors.WithCtx(ErrBadHostAddrType, "type", htype)
 	}
 	return length, nil
 }
