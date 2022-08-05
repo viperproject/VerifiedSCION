@@ -154,7 +154,7 @@ func WithCtx(err error, errCtx ...interface{}) (res error) {
 		fields: errCtxToFields(errCtx),
 	}
 	fold res.ErrorMem()
-	ghost if isComparable(res) {
+	ghost if isComparable(err) {
 		package ((res.ErrorMem() && res.(basicError).msg.err == err) --* err.ErrorMem()) {
 			unfold res.ErrorMem()
 			unfold res.(basicError).msg.ErrorMem()
@@ -189,9 +189,11 @@ func Wrap(msg, cause error, errCtx ...interface{}) (res error) {
 		fields: errCtxToFields(errCtx),
 	}
 	fold res.ErrorMem()
-	package ((res.ErrorMem() && res.(basicError).msg.err == msg && res.(basicError).cause == cause) --* (msg.ErrorMem() && cause.ErrorMem())) {
-		unfold res.ErrorMem()
-		unfold res.(basicError).msg.ErrorMem()
+	ghost if isComparable(msg) && isComparable(cause) {
+		package ((res.ErrorMem() && res.(basicError).msg.err == msg && res.(basicError).cause == cause) --* (msg.ErrorMem() && cause.ErrorMem())) {
+			unfold res.ErrorMem()
+			unfold res.(basicError).msg.ErrorMem()
+		}
 	}
 	return res
 }
