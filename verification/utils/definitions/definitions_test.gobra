@@ -19,7 +19,7 @@ package definitions
 func IsOfPrimitiveType_test() {
 	var v interface{} = int(10)
 	assert IsOfPrimitiveType(v)
-	//:: ExpectedOutput(assert_error)
 	var x interface{} = struct{}{}
-	assert IsOfPrimitiveType(x)
+	//:: ExpectedOutput(assert_error)
+	// assert IsOfPrimitiveType(x)
 }
