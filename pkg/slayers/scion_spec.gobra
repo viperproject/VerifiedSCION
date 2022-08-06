@@ -34,6 +34,8 @@ pred (b *BaseLayer) PayloadMem() {
 
 pred (s *SCION) Mem() {
 		s.BaseLayer.Mem() &&
+			acc(&s.HdrLen) &&
+			acc(&s.PayloadLen) &&
 			acc(&s.DstAddrType) &&
 			acc(&s.DstAddrLen) &&
 			acc(&s.SrcAddrType) &&
@@ -44,6 +46,10 @@ pred (s *SCION) Mem() {
 			acc(&s.RawSrcAddr) &&
 			slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)) &&
 			slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
+
+			acc(&s.Path) &&
+			s.Path != nil && // TODO should this be here?
+			s.Path.Mem() &&
 		// forall i int :: 0 <= i && i < len(s.pathPool) ==> s.pathPool[i].Mem() &&
 		// s.Path.Mem() &&
 		// s.pathPoolRaw.Mem()
@@ -52,13 +58,27 @@ pred (s *SCION) Mem() {
 			s.SrcAddrLen >= 0
 }
 
+pred (s *SCION) PreAddrHdrMem() {
+	acc(s) &&
+		s.DstAddrLen >= 0 &&
+		s.SrcAddrLen >= 0
+}
+
+pred (s *SCION) AddrHdrMem() {
+	acc(s) &&
+		slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)) &&
+		slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
+		s.DstAddrLen >= 0 &&
+		s.SrcAddrLen >= 0
+}
+
 /* TODO add these fields as needed
 	Version uint8
 	TrafficClass uint8
 	FlowID uint32
 	NextHdr L4ProtocolType
-	HdrLen uint8
-	PayloadLen uint16
+	* HdrLen uint8
+	* PayloadLen uint16
 	PathType path.Type
 	* DstAddrType AddrType
 	* DstAddrLen AddrLen
@@ -68,7 +88,7 @@ pred (s *SCION) Mem() {
 	* SrcIA addr.IA
 	* RawDstAddr []byte
 	* RawSrcAddr []byte
-	Path path.Path
+	* Path path.Path
 	pathPool    []path.Path
 	pathPoolRaw path.Path
 
