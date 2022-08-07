@@ -37,23 +37,27 @@ func (p *rawPath) DowngradePerm() {
 	fold p.NonInitMem()
 }
 
-pred PathPackageMem(strictDecodingVal bool) {
+pred PathPackageMem() {
 	acc(&registeredPaths) &&
 	acc(&strictDecoding) &&
-	strictDecoding == strictDecodingVal
+	forall t Type :: (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==> registeredPaths[t].Metadata.New implements NewPathSpec
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PathPackageMem(b), _)
-ensures  res == unfolding acc(PathPackageMem(b), _) in registeredPaths[t].inUse
-pure func Registered(t Type, b bool) (res bool) {
-	return unfolding acc(PathPackageMem(b), _) in registeredPaths[t].inUse
+requires acc(PathPackageMem(), _)
+ensures  res == unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
+pure func Registered(t Type) (res bool) {
+	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PathPackageMem(b), _)
-pure func GetType(t Type, b bool) (res Metadata) {
-	return unfolding acc(PathPackageMem(b), _) in registeredPaths[t].Metadata
+requires acc(PathPackageMem(), _)
+pure func GetType(t Type) (res Metadata) {
+	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].Metadata
 }
+
+ensures p.Mem()
+decreases
+func NewPathSpec() (p Path)

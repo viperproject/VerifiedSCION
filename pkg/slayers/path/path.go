@@ -14,7 +14,7 @@
 
 // +gobra
 
-//@ initEnsures PathPackageMem(true)
+//@ initEnsures PathPackageMem()
 package path
 
 import (
@@ -38,8 +38,8 @@ var (
 func init() {
 	assert acc(&registeredPaths)
 	assert acc(&strictDecoding)
-	assert strictDecoding
-	fold PathPackageMem(true)
+	assert forall t Type :: 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
+	fold PathPackageMem()
 }
 @*/
 
@@ -47,11 +47,11 @@ func init() {
 type Type uint8
 
 //@ requires 0 <= t && t < maxPathType
-//@ preserves acc(PathPackageMem(b), definitions.ReadL20)
+//@ preserves acc(PathPackageMem(), definitions.ReadL20)
 //@ decreases
-func (t Type) String( /*@ ghost b bool @*/ ) string {
-	//@ unfold acc(PathPackageMem(b), definitions.ReadL20)
-	//@ ghost defer fold acc(PathPackageMem(b), definitions.ReadL20)
+func (t Type) String() string {
+	//@ unfold acc(PathPackageMem(), definitions.ReadL20)
+	//@ ghost defer fold acc(PathPackageMem(), definitions.ReadL20)
 	pm := registeredPaths[t]
 	if !pm.inUse {
 		return fmt.Sprintf("UNKNOWN (%d)", int(t))
@@ -128,22 +128,23 @@ type Metadata struct {
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
 //@ requires 0 <= pathMeta.Type && pathMeta.Type < maxPathType
-//@ requires PathPackageMem(current)
-//@ requires !Registered(pathMeta.Type, current)
-//@ ensures  PathPackageMem(current)
+//@ requires PathPackageMem()
+//@ requires !Registered(pathMeta.Type)
+//@ requires pathMeta.New implements NewPathSpec
+//@ ensures  PathPackageMem()
 //@ ensures  forall t Type :: 0 <= t && t < maxPathType ==>
-//@ 	t != pathMeta.Type ==> old(Registered(t, current)) == Registered(t, current)
-//@ ensures  Registered(pathMeta.Type, current)
+//@ 	t != pathMeta.Type ==> old(Registered(t)) == Registered(t)
+//@ ensures  Registered(pathMeta.Type)
 //@ decreases
-func RegisterPath(pathMeta Metadata /*@ , ghost current bool @*/) {
-	//@ unfold PathPackageMem(current)
+func RegisterPath(pathMeta Metadata) {
+	//@ unfold PathPackageMem()
 	pm := registeredPaths[pathMeta.Type]
 	if pm.inUse {
 		panic("path type already registered")
 	}
 	registeredPaths[pathMeta.Type].inUse = true
 	registeredPaths[pathMeta.Type].Metadata = pathMeta
-	//@ fold PathPackageMem(current)
+	//@ fold PathPackageMem()
 }
 
 // StrictDecoding enables or disables strict path decoding. If enabled, unknown
@@ -153,16 +154,16 @@ func RegisterPath(pathMeta Metadata /*@ , ghost current bool @*/) {
 // Strict parsing is enabled by default.
 //
 // Experimental: This function is experimental and might be subject to change.
-//@ requires PathPackageMem(current)
-//@ ensures  PathPackageMem(strict)
+//@ requires PathPackageMem()
+//@ ensures  PathPackageMem()
 //@ decreases
-func StrictDecoding(strict bool /*@ , ghost current bool @*/) {
-	//@ unfold PathPackageMem(current)
+func StrictDecoding(strict bool) {
+	//@ unfold PathPackageMem()
 	strictDecoding = strict
-	//@ fold PathPackageMem(strict)
+	//@ fold PathPackageMem()
 }
 
-/* TODO:
+/* TODO: causes a type issue
 // NewPath returns a new path object of pathType.
 func NewPath(pathType Type) (Path, error) {
 	pm := registeredPaths[pathType]
