@@ -36,3 +36,24 @@ func (p *rawPath) DowngradePerm() {
 	unfold p.Mem()
 	fold p.NonInitMem()
 }
+
+pred PathPackageMem(strictDecodingVal bool) {
+	acc(&registeredPaths) &&
+	acc(&strictDecoding) &&
+	strictDecoding == strictDecodingVal
+}
+
+ghost
+requires 0 <= t && t < maxPathType
+requires acc(PathPackageMem(b), _)
+ensures  res == unfolding acc(PathPackageMem(b), _) in registeredPaths[t].inUse
+pure func Registered(t Type, b bool) (res bool) {
+	return unfolding acc(PathPackageMem(b), _) in registeredPaths[t].inUse
+}
+
+ghost
+requires 0 <= t && t < maxPathType
+requires acc(PathPackageMem(b), _)
+pure func GetType(t Type, b bool) (res Metadata) {
+	return unfolding acc(PathPackageMem(b), _) in registeredPaths[t].Metadata
+}
