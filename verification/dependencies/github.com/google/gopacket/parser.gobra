@@ -66,6 +66,7 @@ type DecodingLayerContainer interface {
 	Decoder(LayerType) (d DecodingLayer, b bool)
 
 	// TODO: replace return type with DecodingLayerFunc when https://github.com/viperproject/gobra/issues/503 is fixed
+	preserves Mem()
 	ensures f implements decodingLayerFunc_spec
 	LayersDecoder(first LayerType, df DecodeFeedback) (f func([]byte, *[]LayerType) (LayerType, error))
 }
