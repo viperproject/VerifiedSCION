@@ -54,7 +54,7 @@ func (t Type) String() string {
 	//@ ghost defer fold acc(PathPackageMem(), definitions.ReadL20)
 	pm := registeredPaths[t]
 	if !pm.inUse {
-		return fmt.Sprintf("UNKNOWN (%d)", int(t))
+		return fmt.Sprintf("UNKNOWN (%d)", t)
 	}
 	return fmt.Sprintf("%v (%d)", pm.Desc, t)
 }
@@ -163,19 +163,29 @@ func StrictDecoding(strict bool) {
 	//@ fold PathPackageMem()
 }
 
-/* TODO: causes a type issue
 // NewPath returns a new path object of pathType.
-func NewPath(pathType Type) (Path, error) {
+//@ requires 0 <= pathType && pathType < maxPathType
+//@ requires acc(PathPackageMem(), definitions.ReadL20)
+//@ ensures  acc(PathPackageMem(), definitions.ReadL20)
+//@ ensures  (!Registered(pathType) && IsStrictDecoding()) ==> e.ErrorMem()
+//@ ensures  (!Registered(pathType) && !IsStrictDecoding()) ==> p.Mem()
+//@ ensures  Registered(pathType) ==> p.Mem()
+//@ decreases
+func NewPath(pathType Type) (p Path, e error) {
+	//@ unfold acc(PathPackageMem(), definitions.ReadL20)
+	//@ defer fold acc(PathPackageMem(), definitions.ReadL20)
 	pm := registeredPaths[pathType]
 	if !pm.inUse {
 		if strictDecoding {
-			return nil, serrors.New("unsupported path", "type", pathType)
+			return nil, serrors.New("unsupported path", "type", uint8(pathType))
 		}
-		return &rawPath{}, nil
+		tmp := &rawPath{}
+		//@ fold slices.AbsSlice_Bytes(tmp.raw, 0, len(tmp.raw))
+		//@ fold tmp.Mem()
+		return tmp, nil
 	}
-	return pm.New(), nil
+	return pm.New() /*@ as NewPathSpec @*/, nil
 }
-*/
 
 // NewRawPath returns a new raw path that can hold any path type.
 func NewRawPath() Path {
