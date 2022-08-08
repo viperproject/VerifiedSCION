@@ -14,7 +14,6 @@ const MaxEndpointSize = 16
 
 type EndpointTypeMetadata struct {
 	Name string
-	// (VerifiedSCION) closures not supported yet
 	//Formatter func([]byte) string
 }
 

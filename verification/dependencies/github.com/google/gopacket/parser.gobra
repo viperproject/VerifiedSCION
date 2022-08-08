@@ -10,6 +10,9 @@ package gopacket
 
 import "github.com/scionproto/scion/verification/utils/slices"
 
+// Uncomment when https://github.com/viperproject/gobra/issues/503 is fixed
+//type DecodingLayerFunc func([]byte, *[]LayerType) (LayerType, error)
+
 type DecodingLayer interface {
 	pred Mem()
 
@@ -49,8 +52,8 @@ type DecodingLayerContainer interface {
 	decreases
 	Decoder(LayerType) (d DecodingLayer, b bool)
 
-	// (VerifiedSCION) no support for closures yet
-	//LayersDecoder(first LayerType, df DecodeFeedback) DecodingLayerFunc
+	// TODO: replace return type with DecodingLayerFunc when https://github.com/viperproject/gobra/issues/503 is fixed
+	//LayersDecoder(first LayerType, df DecodeFeedback) func([]byte, *[]LayerType) (LayerType, error)
 }
 
 type DecodingLayerParser struct {
@@ -58,8 +61,8 @@ type DecodingLayerParser struct {
 	dlc   DecodingLayerContainer
 	first LayerType
 	df    DecodeFeedback
-	// (VerifiedSCION) no support for closures yet
-	//decodeFunc DecodingLayerFunc
+	// TODO: replace type with DecodingLayerFunc when https://github.com/viperproject/gobra/issues/503 is fixed
+	//decodeFunc func([]byte, *[]LayerType) (LayerType, error)
 	Truncated bool
 }
 
