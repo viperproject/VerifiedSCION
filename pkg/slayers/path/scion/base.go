@@ -31,17 +31,29 @@ const MetaLen = 4
 
 const PathType path.Type = 1
 
-/*
+//@ requires path.PathPackageMem()
+//@ requires !path.Registered(PathType)
+//@ ensures  path.PathPackageMem()
+//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+//@ ensures  path.Registered(PathType)
+//@ decreases
 func RegisterPath() {
-	path.RegisterPath(path.Metadata{
+	tmp := path.Metadata{
 		Type: PathType,
 		Desc: "SCION",
-		New: func() path.Path {
-			return &Raw{}
+		New:
+		//@ ensures p.NonInitMem()
+		//@ decreases
+		func() path.Path {
+			rawTmp := &Raw{}
+			//@ fold rawTmp.Base.NonInitMem()
+			//@ fold rawTmp.NonInitMem()
+			return rawTmp
 		},
-	})
+	}
+	path.RegisterPath(tmp)
 }
-*/
 
 // Base holds the basic information that is used by both raw and fully decoded paths.
 type Base struct {

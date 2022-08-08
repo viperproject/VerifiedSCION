@@ -38,11 +38,11 @@ func RegisterPath() {
 		Type: PathType,
 		Desc: "Empty",
 		New:
-		//@ ensures p.Mem()
+		//@ ensures p.NonInitMem()
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
 			emptyTmp /*@@@*/ := Path{}
-			//@ fold emptyTmp.Mem()
+			//@ fold emptyTmp.NonInitMem()
 			return emptyTmp
 		},
 	}

@@ -169,7 +169,7 @@ func StrictDecoding(strict bool) {
 //@ ensures  acc(PathPackageMem(), definitions.ReadL20)
 //@ ensures  (!Registered(pathType) && IsStrictDecoding()) ==> e.ErrorMem()
 //@ ensures  (!Registered(pathType) && !IsStrictDecoding()) ==> p.Mem()
-//@ ensures  Registered(pathType) ==> p.Mem()
+//@ ensures  Registered(pathType) ==> p.NonInitMem()
 //@ decreases
 func NewPath(pathType Type) (p Path, e error) {
 	//@ unfold acc(PathPackageMem(), definitions.ReadL20)
