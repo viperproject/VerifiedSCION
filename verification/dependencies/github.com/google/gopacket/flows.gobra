@@ -14,7 +14,7 @@ const MaxEndpointSize = 16
 
 type EndpointTypeMetadata struct {
 	Name string
-	//Formatter func([]byte) string
+	Formatter func([]byte) string
 }
 
 type EndpointType int64

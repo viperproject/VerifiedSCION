@@ -8,10 +8,23 @@
 
 package gopacket
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/verification/utils/definitions"
+)
 
 // Uncomment when https://github.com/viperproject/gobra/issues/503 is fixed
 //type DecodingLayerFunc func([]byte, *[]LayerType) (LayerType, error)
+
+// DecodingLayerFunc decodes given packet and stores decoded LayerType
+// values into specified slice. Returns either first encountered
+// unsupported LayerType value or decoding error. In case of success,
+// returns (LayerTypeZero, nil).
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL13)
+preserves acc(ltypes, definitions.ReadL13) && acc(*ltypes, definitions.ReadL13)
+ensures err != nil ==> err.ErrorMem()
+func decodingLayerFunc_spec(b []byte, ltypes *[]LayerType) (l LayerType, err error)
+
 
 type DecodingLayer interface {
 	pred Mem()
@@ -53,7 +66,8 @@ type DecodingLayerContainer interface {
 	Decoder(LayerType) (d DecodingLayer, b bool)
 
 	// TODO: replace return type with DecodingLayerFunc when https://github.com/viperproject/gobra/issues/503 is fixed
-	//LayersDecoder(first LayerType, df DecodeFeedback) func([]byte, *[]LayerType) (LayerType, error)
+	ensures f implements decodingLayerFunc_spec
+	LayersDecoder(first LayerType, df DecodeFeedback) (f func([]byte, *[]LayerType) (LayerType, error))
 }
 
 type DecodingLayerParser struct {
@@ -62,7 +76,7 @@ type DecodingLayerParser struct {
 	first LayerType
 	df    DecodeFeedback
 	// TODO: replace type with DecodingLayerFunc when https://github.com/viperproject/gobra/issues/503 is fixed
-	//decodeFunc func([]byte, *[]LayerType) (LayerType, error)
+	decodeFunc func([]byte, *[]LayerType) (LayerType, error)
 	Truncated bool
 }
 
