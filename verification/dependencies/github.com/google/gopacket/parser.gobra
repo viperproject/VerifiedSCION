@@ -13,7 +13,7 @@ import (
 	"github.com/scionproto/scion/verification/utils/definitions"
 )
 
-// Uncomment when https://github.com/viperproject/gobra/issues/503 is fixed
+// TODO: Uncomment when https://github.com/viperproject/gobra/issues/503 is fixed
 //type DecodingLayerFunc func([]byte, *[]LayerType) (LayerType, error)
 
 // DecodingLayerFunc decodes given packet and stores decoded LayerType
