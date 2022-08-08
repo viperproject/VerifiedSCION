@@ -27,6 +27,9 @@ pred (n nilDecodeFeedback) Mem() { true }
 
 nilDecodeFeedback implements DecodeFeedback
 
+// NilDecodeFeedback implements DecodeFeedback by doing nothing.
+var NilDecodeFeedback DecodeFeedback = nilDecodeFeedback{}
+
 type PacketBuilder interface {
 	DecodeFeedback
 

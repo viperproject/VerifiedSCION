@@ -6,16 +6,93 @@
 
 // +gobra
 
+initEnsures LayerTypesMem()
 package gopacket
 
 type LayerType int64
+
+const maxLayerType = 2000
+// can be used for spec purposes
+ghost const MaxLayerType = maxLayerType
+
+pred LayerTypesMem() {
+	acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
+}
+
+// ghost init operations
+func init() {
+	fold LayerTypesMem()
+}
+
+var ltMeta [maxLayerType]layerTypeMetadata
+var ltMetaMap = map[LayerType]layerTypeMetadata{}
+
+type layerTypeMetadata struct {
+	inUse bool
+	LayerTypeMetadata
+}
 
 type LayerTypeMetadata struct {
 	Name string
 	Decoder Decoder
 }
 
-// TODO: rewrite when we have globals
+// DecodersByLayerName maps layer names to decoders for those layers.
+// This allows users to specify decoders by name to a program and have that
+// program pick the correct decoder accordingly.
+var DecodersByLayerName = map[string]Decoder{}
+
+requires LayerTypesMem()
+requires !Registered(LayerType(num))
 requires meta.Decoder.Mem()
+ensures  LayerTypesMem()
+ensures  forall t LayerType :: 0 <= t && t < MaxLayerType ==>
+	t != LayerType(num) ==> old(Registered(t)) == Registered(t)
+ensures  Registered(LayerType(num))
 decreases
-func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType
+func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType {
+	unfold LayerTypesMem()
+	if 0 <= num && num < maxLayerType {
+		if ltMeta[num].inUse {
+			panic("Layer type already exists")
+		}
+	} else {
+		if ltMetaMap[LayerType(num)].inUse {
+			panic("Layer type already exists")
+		}
+	}
+	fold LayerTypesMem()
+	return OverrideLayerType(num, meta)
+}
+
+requires LayerTypesMem()
+requires meta.Decoder.Mem()
+ensures  LayerTypesMem()
+ensures  forall t LayerType :: 0 <= t && t < MaxLayerType ==>
+	t != LayerType(num) ==> old(Registered(t)) == Registered(t)
+ensures  Registered(LayerType(num))
+decreases
+func OverrideLayerType(num int, meta LayerTypeMetadata) LayerType {
+	unfold LayerTypesMem()
+	defer fold LayerTypesMem()
+	if 0 <= num && num < maxLayerType {
+		ltMeta[num] = layerTypeMetadata{
+			inUse:             true,
+			LayerTypeMetadata: meta,
+		}
+	} else {
+		ltMetaMap[LayerType(num)] = layerTypeMetadata{
+			inUse:             true,
+			LayerTypeMetadata: meta,
+		}
+	}
+	DecodersByLayerName[meta.Name] = meta.Decoder
+	return LayerType(num)
+}
+
+ghost
+requires acc(LayerTypesMem(), _)
+ensures  res == unfolding acc(LayerTypesMem(), _) in (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+pure func Registered(t LayerType) (res bool) {
+	return unfolding acc(LayerTypesMem(), _) in (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+}
