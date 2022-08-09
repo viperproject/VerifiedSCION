@@ -45,13 +45,18 @@ func RegisterPath() {
 		New:
 		//@ ensures p.NonInitMem()
 		//@ decreases
-		func() path.Path {
+		func /*@ newPath @*/ () (p path.Path) {
 			rawTmp := &Raw{}
 			//@ fold rawTmp.Base.NonInitMem()
 			//@ fold rawTmp.NonInitMem()
 			return rawTmp
 		},
 	}
+	/*@
+	proof tmp.New implements path.NewPathSpec {
+		return tmp.New() as newPath
+	}
+	@*/
 	path.RegisterPath(tmp)
 }
 
