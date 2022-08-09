@@ -7,25 +7,20 @@
 // +gobra
 
 initEnsures LayerTypesMem()
+initEnsures acc(&LayerTypeZero, _) && LayerTypeZero == 0
+initEnsures acc(&LayerTypeDecodeFailure, _) && LayerTypeDecodeFailure == 1
+initEnsures acc(&LayerTypePayload, _) && LayerTypePayload == 2
+initEnsures acc(&LayerTypeFragment, _) && LayerTypeFragment == 3
+initEnsures Registered(LayerTypeZero)
+initEnsures Registered(LayerTypeDecodeFailure)
+initEnsures Registered(LayerTypePayload)
+initEnsures Registered(LayerTypeFragment)
+initEnsures forall t LayerType :: t < 0 ==> !Registered(t)
+initEnsures forall t LayerType :: 3 < t ==> !Registered(t)
 package gopacket
 
+/** Types **/
 type LayerType int64
-
-const maxLayerType = 2000
-// can be used for spec purposes
-ghost const MaxLayerType = maxLayerType
-
-pred LayerTypesMem() {
-	acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
-}
-
-// ghost init operations
-func init() {
-	fold LayerTypesMem()
-}
-
-var ltMeta [maxLayerType]layerTypeMetadata
-var ltMetaMap = map[LayerType]layerTypeMetadata{}
 
 type layerTypeMetadata struct {
 	inUse bool
@@ -37,20 +32,116 @@ type LayerTypeMetadata struct {
 	Decoder Decoder
 }
 
+/** End of Types **/
+
+/** Constants **/
+const maxLayerType = 2000
+ghost const MaxLayerType = maxLayerType // can be used for spec purposes
+
+/** End of Constants **/
+
+/** Predicates and ghost helper members **/
+pred LayerTypesMem() {
+	acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
+}
+
+ghost
+requires acc(LayerTypesMem(), _)
+ensures  res == unfolding acc(LayerTypesMem(), _) in (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+decreases
+pure func Registered(t LayerType) (res bool) {
+	return unfolding acc(LayerTypesMem(), _) in
+		(0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+}
+
+ghost
+requires acc(&ltMeta, _) && acc(&ltMetaMap, _) && acc(ltMetaMap, _) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName, _)
+ensures  res == (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+decreases
+pure func registeredDuringInit(t LayerType) (res bool) {
+	return (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+}
+
+// cannot be made ghost, even though it is morally so
+requires acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
+requires forall t LayerType :: !registeredDuringInit(t)
+ensures  LayerTypesMem()
+ensures  forall t LayerType :: !Registered(t)
+decreases
+func satisfyGlobalVarInitPre() int {
+	fold LayerTypesMem()
+	assert forall t LayerType :: old(!registeredDuringInit(t)) ==> !Registered(t)
+	assert unfolding LayerTypesMem() in (forall t LayerType :: !registeredDuringInit(t))
+	assert forall t LayerType :: !Registered(t)
+	return 1
+}
+/** End of predicates and ghost helper members **/
+
+/** Globals **/
+var ltMeta [maxLayerType]layerTypeMetadata
+var ltMetaMap = map[LayerType]layerTypeMetadata{}
 // DecodersByLayerName maps layer names to decoders for those layers.
 // This allows users to specify decoders by name to a program and have that
 // program pick the correct decoder accordingly.
 var DecodersByLayerName = map[string]Decoder{}
 
+/** Globals not originally declared in this file **/
+/** Vars defined in decode.go that are required to establish preconditions of RegisterLayer. **/
+// TODO: specify and verify the creation of these decoders
+ensures d.Mem() && d.Mem() // d.Mem() must be duplicable!
+decreases _
+func generateDecodeUnknown() (d Decoder)
+var DecodeUnknown = generateDecodeUnknown()
+
+ensures d.Mem()
+decreases _
+func generateDecodePayload() (d Decoder)
+var DecodePayload = generateDecodePayload()
+
+ensures d.Mem()
+decreases _
+func generateDecodeFragment() (d Decoder)
+var DecodeFragment = generateDecodeFragment()
+/** End of Vars defined in decode.go that are required to establish preconditions of RegisterLayer. **/
+
+// This call allows us to satisfy the preconditions of RegisterLayerType.
+var _ = satisfyGlobalVarInitPre()
+// LayerTypeZero is an invalid layer type, but can be used to determine whether
+// layer type has actually been set correctly.
+var LayerTypeZero = RegisterLayerType(0, LayerTypeMetadata{Name: "Unknown", Decoder: DecodeUnknown})
+
+// LayerTypeDecodeFailure is the layer type for the default error layer.
+var LayerTypeDecodeFailure = RegisterLayerType(1, LayerTypeMetadata{Name: "DecodeFailure", Decoder: DecodeUnknown})
+
+// LayerTypePayload is the layer type for a payload that we don't try to decode
+// but treat as a success, IE: an application-level payload.
+var LayerTypePayload = RegisterLayerType(2, LayerTypeMetadata{Name: "Payload", Decoder: DecodePayload})
+
+// LayerTypeFragment is the layer type for a fragment of a layer transported
+// by an underlying layer that supports fragmentation.
+var LayerTypeFragment = RegisterLayerType(3, LayerTypeMetadata{Name: "Fragment", Decoder: DecodeFragment})
+
+/** End of globals not originally declared in this file **/
+/** End of Globals **/
+
+/** Ghost init operations **/
+func init() {
+	assert forall t LayerType :: (t != 0 && t != 1 && t != 2 && t != 3) ==> !Registered(t)
+	assert forall t LayerType :: t < 0 ==> !Registered(t)
+	assert forall t LayerType :: 3 < t ==> !Registered(t)
+}
+/** End of ghost init operations **/
+
+/** Actual Methods **/
 requires LayerTypesMem()
 requires !Registered(LayerType(num))
-requires meta.Decoder.Mem()
+requires meta.Decoder != nil ==> meta.Decoder.Mem()
 ensures  LayerTypesMem()
-ensures  forall t LayerType :: 0 <= t && t < MaxLayerType ==>
-	t != LayerType(num) ==> old(Registered(t)) == Registered(t)
+ensures  forall t LayerType :: t != LayerType(num) ==> old(Registered(t)) == Registered(t)
 ensures  Registered(LayerType(num))
+ensures  res == LayerType(num)
 decreases
-func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType {
+func RegisterLayerType(num int, meta LayerTypeMetadata) (res LayerType) {
 	unfold LayerTypesMem()
 	if 0 <= num && num < maxLayerType {
 		if ltMeta[num].inUse {
@@ -66,13 +157,13 @@ func RegisterLayerType(num int, meta LayerTypeMetadata) LayerType {
 }
 
 requires LayerTypesMem()
-requires meta.Decoder.Mem()
+requires meta.Decoder != nil ==> meta.Decoder.Mem()
 ensures  LayerTypesMem()
-ensures  forall t LayerType :: 0 <= t && t < MaxLayerType ==>
-	t != LayerType(num) ==> old(Registered(t)) == Registered(t)
+ensures  forall t LayerType :: t != LayerType(num) ==> old(Registered(t)) == Registered(t)
 ensures  Registered(LayerType(num))
+ensures  res == LayerType(num)
 decreases
-func OverrideLayerType(num int, meta LayerTypeMetadata) LayerType {
+func OverrideLayerType(num int, meta LayerTypeMetadata) (res LayerType) {
 	unfold LayerTypesMem()
 	defer fold LayerTypesMem()
 	if 0 <= num && num < maxLayerType {
@@ -88,11 +179,4 @@ func OverrideLayerType(num int, meta LayerTypeMetadata) LayerType {
 	}
 	DecodersByLayerName[meta.Name] = meta.Decoder
 	return LayerType(num)
-}
-
-ghost
-requires acc(LayerTypesMem(), _)
-ensures  res == unfolding acc(LayerTypesMem(), _) in (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
-pure func Registered(t LayerType) (res bool) {
-	return unfolding acc(LayerTypesMem(), _) in (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
 }
