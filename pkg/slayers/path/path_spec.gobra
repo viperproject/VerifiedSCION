@@ -16,10 +16,64 @@
 
 package path
 
+import "github.com/scionproto/scion/verification/utils/slices"
+
+/** rawPath spec **/
 pred (r *rawPath) Mem() {
-	acc(r) && acc(r.raw)
+	acc(r) && slices.AbsSlice_Bytes(r.raw, 0, len(r.raw))
 }
 
 pred (r *rawPath) NonInitMem() {
 	acc(r)
-} 
+}
+
+(*rawPath) implements Path
+
+ghost
+requires p.Mem()
+ensures  p.NonInitMem()
+decreases
+func (p *rawPath) DowngradePerm() {
+	unfold p.Mem()
+	fold p.NonInitMem()
+}
+/** End of rawPath spec **/
+
+/** Global state of the pacakge **/
+ghost const MaxPathType = maxPathType
+
+pred PathPackageMem() {
+	acc(&registeredPaths) &&
+	acc(&strictDecoding) &&
+	forall t Type :: (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==> registeredPaths[t].Metadata.New implements NewPathSpec
+}
+
+ghost
+requires 0 <= t && t < maxPathType
+requires acc(PathPackageMem(), _)
+ensures  res == unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
+pure func Registered(t Type) (res bool) {
+	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
+}
+
+ghost
+requires 0 <= t && t < maxPathType
+requires acc(PathPackageMem(), _)
+pure func GetType(t Type) (res Metadata) {
+	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].Metadata
+}
+
+ghost
+requires acc(PathPackageMem(), _)
+ensures  b == unfolding acc(PathPackageMem(), _) in strictDecoding
+pure func IsStrictDecoding() (b bool) {
+	return unfolding acc(PathPackageMem(), _) in strictDecoding
+}
+
+// without passing `writePerm` explicitely below, we run into
+// exceptions when verifying method RegisterPath in package 'empty'
+ensures acc(p.NonInitMem(), writePerm)
+decreases
+func NewPathSpec() (p Path)
+
+/** End of global state of the pacakge **/

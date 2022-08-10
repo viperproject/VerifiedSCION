@@ -107,11 +107,11 @@ func (e basicError) Is(err error) bool {
 	}
 }
 
-requires  as != nil
+requires  _as != nil
 decreases
-func (e basicError) As(as interface{}) bool {
+func (e basicError) As(_as interface{}) bool {
 	if e.msg.err != nil {
-		return errors.As(e.msg.err, as)
+		return errors.As(e.msg.err, _as)
 	}
 	return false
 }
@@ -154,7 +154,7 @@ func WithCtx(err error, errCtx ...interface{}) (res error) {
 		fields: errCtxToFields(errCtx),
 	}
 	fold res.ErrorMem()
-	ghost if isComparable(res) {
+	ghost if isComparable(err) {
 		package ((res.ErrorMem() && res.(basicError).msg.err == err) --* err.ErrorMem()) {
 			unfold res.ErrorMem()
 			unfold res.(basicError).msg.ErrorMem()
@@ -172,13 +172,14 @@ func WithCtx(err error, errCtx ...interface{}) (res error) {
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 requires msg.ErrorMem() && cause.ErrorMem()
-preserves forall i int :: 0 <= i && i < len(errCtx) ==>
-  acc(&errCtx[i], 1/1000) && definitions.IsOfPrimitiveType(errCtx[i])
-ensures res != nil && res.ErrorMem()
-ensures typeOf(res) == type[basicError]
-ensures isComparable(msg) ==> res.(basicError).msg.err == msg
-ensures isComparable(cause) ==> res.(basicError).cause == cause
-ensures isComparable(cause) && isComparable(msg) ==> (res.ErrorMem() && res.(basicError).msg.err == msg && res.(basicError).cause == cause) --* (msg.ErrorMem() && cause.ErrorMem())
+requires forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], 1/1000)
+requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
+ensures  forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], 1/1000)
+ensures  res != nil && res.ErrorMem()
+ensures  typeOf(res) == type[basicError]
+ensures  isComparable(msg) ==> res.(basicError).msg.err == msg
+ensures  isComparable(cause) ==> res.(basicError).cause == cause
+ensures  isComparable(cause) && isComparable(msg) ==> (res.ErrorMem() && res.(basicError).msg.err == msg && res.(basicError).cause == cause) --* (msg.ErrorMem() && cause.ErrorMem())
 decreases
 func Wrap(msg, cause error, errCtx ...interface{}) (res error) {
 	errMsg := errOrMsg{err: msg}
@@ -189,9 +190,11 @@ func Wrap(msg, cause error, errCtx ...interface{}) (res error) {
 		fields: errCtxToFields(errCtx),
 	}
 	fold res.ErrorMem()
-	package ((res.ErrorMem() && res.(basicError).msg.err == msg && res.(basicError).cause == cause) --* (msg.ErrorMem() && cause.ErrorMem())) {
-		unfold res.ErrorMem()
-		unfold res.(basicError).msg.ErrorMem()
+	ghost if isComparable(msg) && isComparable(cause) {
+		package ((res.ErrorMem() && res.(basicError).msg.err == msg && res.(basicError).cause == cause) --* (msg.ErrorMem() && cause.ErrorMem())) {
+			unfold res.ErrorMem()
+			unfold res.(basicError).msg.ErrorMem()
+		}
 	}
 	return res
 }
@@ -237,10 +240,12 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error) {
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 trusted
-preserves forall i int :: 0 <= i && i < len(errCtx) ==>
-  acc(&errCtx[i], 1/1000) && definitions.IsOfPrimitiveType(errCtx[i])
-ensures res != nil && res.ErrorMem()
-ensures typeOf(res) == type[basicError]
+requires forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], 1/1000)
+requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
+ensures  forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], 1/1000)
+ensures  res != nil && res.ErrorMem()
+ensures  typeOf(res) == type[basicError]
+ensures  isComparable(res) // the result is comparable; it only returns pointers
 decreases
 func New(msg string, errCtx ...interface{}) (res error) {
 	if len(errCtx) == 0 {
@@ -279,9 +284,9 @@ func (e List) Error() string {
 
 // ToError returns the object as error interface implementation.
 trusted
-requires  e.ErrorMem()
-ensures   len(e) == 0 ==> err == nil
-ensures   err.ErrorMem()
+requires e.ErrorMem()
+ensures  len(e) == 0 ==> err == nil
+ensures  err.ErrorMem()
 decreases
 func (e List) ToError() (err error) {
 	if len(e) == 0 {

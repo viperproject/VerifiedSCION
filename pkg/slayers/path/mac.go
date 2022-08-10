@@ -61,7 +61,6 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byt
 		hf.ConsIngress, hf.ConsEgress, buffer)
 	//@ unfold slices.AbsSlice_Bytes(buffer, 0, len(buffer))
 	//@ defer fold slices.AbsSlice_Bytes(buffer, 0, len(buffer))
-
 	// Write must not return an error: https://godoc.org/hash#Hash
 	if _, err := h.Write(buffer); err != nil {
 		panic(err)

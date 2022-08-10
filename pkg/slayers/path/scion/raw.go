@@ -33,7 +33,6 @@ type Raw struct {
 // DecodeFromBytes only decodes the PathMetaHeader. Otherwise the nothing is decoded and simply kept
 // as raw bytes.
 //@ requires s.NonInitMem()
-//@ requires len(data) >= MetaLen
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures  res == nil ==> s.Mem()
 //@ ensures  res != nil ==> (s.NonInitMem() && res.ErrorMem())
@@ -44,49 +43,37 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 		//@ fold s.NonInitMem()
 		return err
 	}
-	pathLen := s.Len()
+	// (VerifiedSCION) Gobra expects a stronger contract for s.Len() when in fact
+	// what happens here is that we just call the same function in s.Base.
+	pathLen := s. /*@ Base. @*/ Len()
 	if len(data) < pathLen {
 		//@ apply s.Base.Mem() --* s.Base.NonInitMem()
 		//@ fold s.NonInitMem()
 		return serrors.New("RawPath raw too short", "expected", pathLen, "actual", int(len(data)))
 	}
-	// requires s.Base.Mem()
-	// requires  s.Len() == pathLen
-	// requires  len(data) >= pathLen
-	// requires  slices.AbsSlice_Bytes(data, 0, len(data))
-	// preserves acc(&s.Raw)
-	// ensures   s.Base.Mem()
-	// ensures   len(s.Raw) == s.Len()
-	// ensures   slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	// decreases
-	// outline (
 	//@ ghost slices.SplitByIndex_Bytes(data, 0, len(data), pathLen, writePerm)
 	//@ ghost slices.Reslice_Bytes(data, 0, pathLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data[:pathLen], 0, len(data[:pathLen]))
 	s.Raw = data[:pathLen]
 	//@ fold slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	// )
 	//@ fold s.Mem()
 	return nil
 }
 
-// SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
+// SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-//@ requires  s.Mem()
-//@ requires  len(b) >= unfolding s.Mem() in s.Len()
+//@ preserves s.Mem()
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   s.Mem()
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) SerializeTo(b []byte) error {
-	//@ unfold s.Mem()
-	if s.Raw == nil {
-		//@ fold s.Mem()
+func (s *Raw) SerializeTo(b []byte) (r error) {
+	if /*@ unfolding s.Mem() in @*/ s.Raw == nil {
 		return serrors.New("raw is nil")
 	}
 	if minLen := s.Len(); len(b) < minLen {
-		//@ fold s.Mem()
 		return serrors.New("buffer too small", "expected", minLen, "actual", int(len(b)))
 	}
+	//@ unfold s.Mem()
 	// XXX(roosd): This modifies the underlying buffer. Consider writing to data
 	// directly.
 	//@ unfold s.Base.Mem()
@@ -119,15 +106,10 @@ func (s *Raw) SerializeTo(b []byte) error {
 }
 
 // Reverse reverses the path such that it can be used in the reverse direction.
-//
-// TODO this method suffers from the
-// same issue with embedded interfaces as:
-// https://github.com/viperproject/gobra/issues/461
-//
-//@ trusted
 //@ requires s.Mem()
 //@ ensures  err == nil ==> p.Mem()
-//@ ensures  err != nil ==> s.Mem()
+//@ ensures  err == nil ==> p != nil
+//@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *Raw) Reverse() (p path.Path, err error) {
 	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
@@ -142,10 +124,14 @@ func (s *Raw) Reverse() (p path.Path, err error) {
 	if err != nil {
 		return nil, err
 	}
+	//@ unfold s.Mem()
 	if err := reversed.SerializeTo(s.Raw); err != nil {
 		return nil, err
 	}
-	err = s.DecodeFromBytes(s.Raw)
+	//@ unfold s.Base.Mem()
+	//@ fold s.Base.NonInitMem()
+	//@ fold s.NonInitMem()
+	err = s.DecodeFromBytes( /*@ unfolding s.NonInitMem() in @*/ s.Raw)
 	return s, err
 }
 
@@ -154,6 +140,7 @@ func (s *Raw) Reverse() (p path.Path, err error) {
 //@ requires unfolding s.Mem() in len(s.Raw) >= MetaLen
 //@ ensures  s.Mem()
 //@ ensures  err == nil ==> d.Mem()
+//@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *Raw) ToDecoded() (d *Decoded, err error) {
 	//@ unfold s.Mem()
@@ -182,17 +169,18 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 	return decoded, nil
 }
 
-// IncPath increments the path and writePerms it to the buffer.
+// IncPath increments the path and writes it to the buffer.
 //@ requires s.Mem()
-//@ requires unfolding s.Mem() in unfolding
-//@   s.Base.Mem() in
-//@     (s.NumINF > 0 && int(s.PathMeta.CurrHF) < s.NumHops-1)
-//@ ensures  s.Mem()
+//@ ensures old(unfolding s.Mem() in unfolding
+//@   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
+//@ ensures  r == nil ==> s.Mem()
+//@ ensures  r != nil ==> s.NonInitMem()
+//@ ensures  r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) IncPath() error {
+func (s *Raw) IncPath() (r error) {
 	//@ unfold s.Mem()
 	if err := s.Base.IncPath(); err != nil {
-		//@ fold s.Mem()
+		//@ fold s.NonInitMem()
 		return err
 	}
 	//@ unfold s.Base.Mem()
@@ -210,6 +198,7 @@ func (s *Raw) IncPath() error {
 //@ requires acc(s.Mem(), definitions.ReadL1)
 //@ requires 0 <= idx
 //@ ensures  acc(s.Mem(), definitions.ReadL1)
+//@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *Raw) GetInfoField(idx int) (ifield path.InfoField, err error) {
 	//@ assert path.InfoLen == 8
@@ -244,13 +233,13 @@ func (s *Raw) GetInfoField(idx int) (ifield path.InfoField, err error) {
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
 //@ preserves acc(s.Mem(), definitions.ReadL1)
+//@ ensures r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) GetCurrentInfoField() (path.InfoField, error) {
+func (s *Raw) GetCurrentInfoField() (res path.InfoField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
-	// (gavin) introduced idx variable
 	idx := int(s.PathMeta.CurrINF)
-	// (gavin) CurrINF is a uint and must be positive
+	// (VerifiedSCION) the following assumption is safe because s.PathMeta.CurINF is an uint8
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ fold acc(s.Mem(), definitions.ReadL1)
@@ -260,8 +249,9 @@ func (s *Raw) GetCurrentInfoField() (path.InfoField, error) {
 // SetInfoField updates the InfoField at a given index.
 //@ requires  0 <= idx
 //@ preserves s.Mem()
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
+func (s *Raw) SetInfoField(info path.InfoField, idx int) (r error) {
 	//@ share info
 	//@ unfold s.Mem()
 	//@ unfold s.Base.Mem()
@@ -287,8 +277,9 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
 // GetHopField returns the HopField at a given index.
 //@ requires  0 <= idx
 //@ preserves acc(s.Mem(), definitions.ReadL1)
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) GetHopField(idx int) (path.HopField, error) {
+func (s *Raw) GetHopField(idx int) (res path.HopField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	if idx >= s.NumHops {
@@ -321,12 +312,13 @@ func (s *Raw) GetHopField(idx int) (path.HopField, error) {
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
 //@ preserves acc(s.Mem(), definitions.ReadL1)
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) GetCurrentHopField() (path.HopField, error) {
+func (s *Raw) GetCurrentHopField() (res path.HopField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	idx := int(s.PathMeta.CurrHF)
-	// NOTE CurrHF is guaranteed to be positive.
+	// (VerifiedSCION) the following assumption is safe because s.PathMeta.CurrHF is an uint8
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ fold acc(s.Mem(), definitions.ReadL1)
@@ -336,9 +328,13 @@ func (s *Raw) GetCurrentHopField() (path.HopField, error) {
 // SetHopField updates the HopField at a given index.
 //@ requires  0 <= idx
 //@ preserves s.Mem()
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) SetHopField(hop path.HopField, idx int) error {
+func (s *Raw) SetHopField(hop path.HopField, idx int) (r error) {
 	//@ share hop
+	// (VerifiedSCION) Gobra cannot prove the following yet, even though they
+	// must be positive because of their type.
+	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
 	//@ fold hop.Mem()
 	//@ unfold s.Mem()
 	//@ unfold s.Base.Mem()

@@ -16,12 +16,65 @@
 
 package onehop
 
+import "github.com/scionproto/scion/pkg/slayers/path"
+
 pred (o *Path) NonInitMem() {
 	acc(o)
 }
 
 pred (o *Path) Mem() {
-	acc(&o.Info) &&
-		o.FirstHop.Mem() &&
-		o.SecondHop.Mem()
+	acc(&o.Info) && o.FirstHop.Mem() && o.SecondHop.Mem()
+}
+
+ghost
+requires p.Mem()
+ensures  p.NonInitMem()
+decreases
+func (p *Path) DowngradePerm() {
+	unfold p.Mem()
+	unfold p.FirstHop.Mem()
+	unfold p.SecondHop.Mem()
+	fold  p.NonInitMem()
+}
+
+(*Path) implements path.Path {
+	(p *Path) SerializeTo(b []byte) (e error) {
+		e = p.SerializeTo(b)
+	}
+
+	(p *Path) DecodeFromBytes(b []byte) (e error) {
+		e = p.DecodeFromBytes(b)
+	}
+
+	(p *Path) Reverse() (r path.Path, e error) {
+		unfold p.Mem()
+		unfold p.FirstHop.Mem()
+		unfold p.SecondHop.Mem()
+		r, e = p.Reverse()
+	}
+
+	(p *Path) DowngradePerm() {
+		p.DowngradePerm()
+	}
+
+	pure (p *Path) Len() int {
+		return p.Len()
+	}
+
+	pure (p *Path) Type() path.Type {
+		return p.Type()
+	}
+}
+
+ghost
+requires acc(o)
+ensures  o.Mem()
+decreases
+func FoldPathMem(o *Path) {
+	// The following must hold because of the type of ConsIngress and ConsEgress
+	assume 0 <= o.FirstHop.ConsIngress && 0 <= o.FirstHop.ConsEgress
+	assume 0 <= o.SecondHop.ConsIngress && 0 <= o.SecondHop.ConsEgress
+	fold o.FirstHop.Mem()
+	fold o.SecondHop.Mem()
+	fold o.Mem()
 }

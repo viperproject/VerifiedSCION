@@ -8,6 +8,7 @@
 
 package gopacket
 
+requires acc(&LayerTypePayload, _)
 func payload_test() {
 	var p Payload = Payload([]byte{1,2,3})
 	fold p.Mem()

@@ -43,10 +43,9 @@ type Decoded struct {
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 //@ requires  s.NonInitMem()
-//@ requires  len(data) >= MetaLen
 //@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
 //@ ensures   r == nil ==> s.Mem()
-//@ ensures   r != nil ==> s.NonInitMem()
+//@ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 //@ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ unfold s.NonInitMem()
@@ -54,13 +53,15 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		//@ fold s.NonInitMem()
 		return err
 	}
-	if minLen := s.Len(); len(data) < minLen {
+	// (VerifiedSCION) Gobra expects a stronger contract for s.Len() when in fact
+	// what happens here is that we just call the same function in s.Base.
+	if minLen := s. /*@ Base. @*/ Len(); len(data) < minLen {
 		//@ apply s.Base.Mem() --* s.Base.NonInitMem()
 		//@ fold s.NonInitMem()
 		return serrors.New("DecodedPath raw too short", "expected", minLen, "actual", int(len(data)))
 	}
 	offset := MetaLen
-	s.InfoFields = make([]path.InfoField, /*@ unfolding s.Base.Mem() in @*/ s.NumINF)
+	s.InfoFields = make([]path.InfoField, ( /*@ unfolding s.Base.Mem() in @*/ s.NumINF))
 	//@ assert len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
 	//@ ghost slices.SplitByIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
 	//@ invariant acc(&s.InfoFields)
@@ -69,8 +70,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant 0 <= i && i <= s.Base.getNumINF()
 	//@ invariant len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + i * path.InfoLen
-	//@ invariant forall j int :: 0 <= j && j < s.Base.getNumINF() ==>
-	//@   acc(&s.InfoFields[j])
+	//@ invariant forall j int :: 0 <= j && j < s.Base.getNumINF() ==> acc(&s.InfoFields[j])
 	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL1)
 	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL1)
 	//@ decreases s.Base.getNumINF() - i
@@ -92,7 +92,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		//@ ghost slices.CombineAtIndex_Bytes(data, 0, offset + path.InfoLen, offset, definitions.ReadL1)
 		offset += path.InfoLen
 	}
-	s.HopFields = make([]path.HopField, /*@ unfolding s.Base.Mem() in @*/ s.NumHops)
+	s.HopFields = make([]path.HopField, ( /*@ unfolding s.Base.Mem() in @*/ s.NumHops))
 	//@ invariant acc(&s.HopFields)
 	//@ invariant acc(s.Base.Mem(), definitions.ReadL1)
 	//@ invariant len(s.HopFields) == s.Base.getNumHops()
@@ -131,19 +131,17 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 
 // SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-//@ requires  acc(s.Mem(), definitions.ReadL1)
-//@ requires  len(b) >= unfolding acc(s.Mem(), definitions.ReadL1) in s.Base.Len()
+//@ preserves acc(s.Mem(), definitions.ReadL1)
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   acc(s.Mem(), definitions.ReadL1)
+//@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Decoded) SerializeTo(b []byte) error {
-	//@ unfold acc(s.Mem(), definitions.ReadL1)
+func (s *Decoded) SerializeTo(b []byte) (r error) {
 	if len(b) < s.Len() {
 		ret := serrors.New("buffer too small to serialize path.", "expected", s.Len(),
 			"actual", int(len(b)))
-		//@ fold acc(s.Mem(), definitions.ReadL1)
 		return ret
 	}
+	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
 	//@ ghost slices.Reslice_Bytes(b, 0, MetaLen, writePerm)
@@ -222,25 +220,22 @@ func (s *Decoded) SerializeTo(b []byte) error {
 }
 
 // Reverse reverses a SCION path.
-//
-// TODO
-//@ trusted
+//@ trusted // depends on the changes from https://github.com/scionproto/scion/issues/4241 to verify
 //@ requires s.Mem()
-//@ ensures  r != nil ==> s.Mem()
+//@ ensures  r == nil ==> p != nil
 //@ ensures  r == nil ==> p.Mem()
+//@ ensures  r != nil ==> r.ErrorMem() && s.Mem()
 //@ decreases
 func (s *Decoded) Reverse() (p path.Path, r error) {
 	if s.NumINF == 0 {
 		// Empty path doesn't need reversal.
 		return nil, nil
 	}
-
 	// Reverse order of InfoFields and SegLens
 	for i, j := 0, s.NumINF-1; i < j; i, j = i+1, j-1 {
 		s.InfoFields[i], s.InfoFields[j] = s.InfoFields[j], s.InfoFields[i]
 		s.PathMeta.SegLen[i], s.PathMeta.SegLen[j] = s.PathMeta.SegLen[j], s.PathMeta.SegLen[i]
 	}
-
 	// Reverse cons dir flags
 	for i := 0; i < s.NumINF; i++ {
 		info := &s.InfoFields[i]
@@ -257,15 +252,13 @@ func (s *Decoded) Reverse() (p path.Path, r error) {
 	return s, nil
 }
 
-/*
 // ToRaw tranforms scion.Decoded into scion.Raw.
 //@ preserves acc(s.Mem(), definitions.ReadL1)
 //@ ensures err == nil ==> r.Mem()
+//@ decreases
 func (s *Decoded) ToRaw() (r *Raw, err error) {
-	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	b := make([]byte, s.Len())
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
-	//@ fold acc(s.Mem(), definitions.ReadL1)
 	if err := s.SerializeTo(b); err != nil {
 		return nil, err
 	}
@@ -277,4 +270,3 @@ func (s *Decoded) ToRaw() (r *Raw, err error) {
 	}
 	return raw, nil
 }
-*/

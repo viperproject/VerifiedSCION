@@ -16,23 +16,36 @@
 
 package epic
 
+import "github.com/scionproto/scion/pkg/slayers/path"
+
+(*Path) implements path.Path
+
 pred (p *Path) NonInitMem() {
 	acc(p)
 }
 
 pred (p *Path) Mem() {
 	acc(&p.PktID) &&
-		acc(&p.PHVF) &&
-		(forall i int :: 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i])) &&
-		acc(&p.LHVF) &&
-		(forall i int :: 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i])) &&
-		acc(&p.ScionPath) &&
-		(p.ScionPath != nil ==> p.ScionPath.Mem())
+	acc(&p.PHVF) &&
+	(forall i int :: 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i])) &&
+	acc(&p.LHVF) &&
+	(forall i int :: 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i])) &&
+	acc(&p.ScionPath) &&
+	(p.ScionPath != nil ==> p.ScionPath.Mem())
+}
+
+ghost
+requires p.Mem()
+ensures  p.NonInitMem()
+decreases
+func (p *Path) DowngradePerm() {
+	unfold p.Mem()
+	fold  p.NonInitMem()
 }
 
 pure
 requires acc(p.Mem(), _)
-ensures l >= 0
+ensures l == (unfolding acc(p.Mem(), _) in len(p.PHVF))
 decreases
 func (p *Path) getPHVFLen() (l int) {
 	return unfolding acc(p.Mem(), _) in len(p.PHVF)
@@ -40,16 +53,15 @@ func (p *Path) getPHVFLen() (l int) {
 
 pure
 requires acc(p.Mem(), _)
-ensures l >= 0
+ensures l == (unfolding acc(p.Mem(), _) in len(p.LHVF))
 decreases
 func (p *Path) getLHVFLen() (l int) {
 	return unfolding acc(p.Mem(), _) in len(p.LHVF)
 }
 
-trusted // TODO
 pure
 requires acc(p.Mem(), _)
-ensures  r ==> unfolding acc(p.Mem(), _) in p.ScionPath != nil
+ensures  r == (unfolding acc(p.Mem(), _) in p.ScionPath != nil)
 decreases
 func (p *Path) hasScionPath() (r bool) {
 	return unfolding acc(p.Mem(), _) in p.ScionPath != nil

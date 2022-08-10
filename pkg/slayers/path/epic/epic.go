@@ -40,18 +40,36 @@ const (
 	HVFLen = 4
 )
 
-/*
 // RegisterPath registers the EPIC path type globally.
+//@ requires path.PathPackageMem()
+//@ requires !path.Registered(PathType)
+//@ ensures  path.PathPackageMem()
+//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+//@ ensures  path.Registered(PathType)
+//@ decreases
 func RegisterPath() {
-	path.RegisterPath(path.Metadata{
+	tmp := path.Metadata{
 		Type: PathType,
 		Desc: "Epic",
-		New: func() path.Path {
-			return &Path{ScionPath: &scion.Raw{}}
+		New:
+		//@ ensures p.NonInitMem()
+		//@ decreases
+		func /*@ newPath @*/ () (p path.Path) {
+			epicTmp := &Path{ScionPath: &scion.Raw{}}
+			//@ fold epicTmp.ScionPath.Base.NonInitMem()
+			//@ fold epicTmp.ScionPath.NonInitMem()
+			//@ fold epicTmp.NonInitMem()
+			return epicTmp
 		},
-	})
+	}
+	/*@
+	proof tmp.New implements path.NewPathSpec {
+		return tmp.New() as newPath
+	}
+	@*/
+	path.RegisterPath(tmp)
 }
-*/
 
 // Path denotes the EPIC path type header.
 type Path struct {
@@ -63,29 +81,27 @@ type Path struct {
 
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
-// requires acc(p.Mem(), definitions.ReadL1)
-//@ requires  p.Mem()
-//@ requires  p.hasScionPath()
-//@ requires  len(b) >= p.Len()
-//@ requires  p.getPHVFLen() == HVFLen
-//@ requires  p.getLHVFLen() == HVFLen
+//@ preserves p.Mem()
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   p.Mem()
-// ensures acc(p.Mem(), definitions.ReadL1)
+//@ ensures   r != nil ==> r.ErrorMem()
+//@ ensures   !old(p.hasScionPath()) ==> r != nil
+//@ ensures   len(b) < old(p.Len()) ==> r != nil
+//@ ensures   old(p.getPHVFLen()) != HVFLen ==> r != nil
+//@ ensures   old(p.getLHVFLen()) != HVFLen ==> r != nil
 //@ decreases
-func (p *Path) SerializeTo(b []byte) error {
+func (p *Path) SerializeTo(b []byte) (r error) {
 	if len(b) < p.Len() {
-		return serrors.New("buffer too small to serialize path.", "expected", p.Len(),
-			"actual", len(b))
+		return serrors.New("buffer too small to serialize path.", "expected", int(p.Len()),
+			"actual", int(len(b)))
 	}
 	//@ unfold p.Mem()
 	if len(p.PHVF) != HVFLen {
-		//@ fold p.Mem()
-		return serrors.New("invalid length of PHVF", "expected", HVFLen, "actual", len(p.PHVF))
+		//@ defer fold p.Mem()
+		return serrors.New("invalid length of PHVF", "expected", int(HVFLen), "actual", int(len(p.PHVF)))
 	}
 	if len(p.LHVF) != HVFLen {
-		//@ fold p.Mem()
-		return serrors.New("invalid length of LHVF", "expected", HVFLen, "actual", len(p.LHVF))
+		//@ defer fold p.Mem()
+		return serrors.New("invalid length of LHVF", "expected", int(HVFLen), "actual", int(len(p.LHVF)))
 	}
 	if p.ScionPath == nil {
 		//@ fold p.Mem()
@@ -124,25 +140,25 @@ func (p *Path) SerializeTo(b []byte) error {
 	//@ )
 	//@ ghost slices.CombineAtIndex_Bytes(b, 0, MetadataLen, PktIDLen+HVFLen, writePerm)
 	//@ ghost slices.Reslice_Bytes(b, MetadataLen, len(b), writePerm)
-	ret := p.ScionPath.SerializeTo(b[MetadataLen:])
-	//@ ghost slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
-	//@ ghost slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
-	//@ fold p.Mem()
-	return ret
+	//@ defer fold p.Mem()
+	//@ ghost defer slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
+	//@ ghost defer slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
+	return p.ScionPath.SerializeTo(b[MetadataLen:])
 }
 
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
 // otherwise SerializeTo will return nil.
-//@ requires  p.NonInitMem()
-//@ requires  len(b) >= MetadataLen + scion.MetaLen
+//@ requires p.NonInitMem()
 //@ requires slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures slices.AbsSlice_Bytes(b, 0, MetadataLen)
-//@ ensures r == nil ==> p.Mem()
-//@ ensures r != nil ==> p.NonInitMem()
+//@ ensures  len(b) < MetadataLen ==> r != nil
+//@ ensures  r == nil ==> p.Mem()
+//@ ensures  r == nil ==> slices.AbsSlice_Bytes(b, 0, MetadataLen)
+//@ ensures  r != nil ==> r.ErrorMem()
+//@ ensures  r != nil ==> p.NonInitMem()
 //@ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	if len(b) < MetadataLen {
-		return serrors.New("EPIC Path raw too short", "expected", MetadataLen, "actual", len(b))
+		return serrors.New("EPIC Path raw too short", "expected", int(MetadataLen), "actual", int(len(b)))
 	}
 	//@ assert MetadataLen == PktIDLen + HVFLen + HVFLen
 	//@ unfold p.NonInitMem()
@@ -193,10 +209,10 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 
 // Reverse reverses the EPIC path. In particular, this means that the SCION path type subheader
 // is reversed.
-//@ trusted // TODO
 //@ requires p.Mem()
-//@ ensures r == nil ==> p.Mem()
-//@ ensures r != nil ==> ret.Mem()
+//@ ensures  r == nil ==> ret.Mem()
+//@ ensures  r == nil ==> ret != nil
+//@ ensures  r != nil ==> r.ErrorMem()
 //@ decreases
 func (p *Path) Reverse() (ret path.Path, r error) {
 	//@ unfold p.Mem()
@@ -221,26 +237,26 @@ func (p *Path) Reverse() (ret path.Path, r error) {
 }
 
 // Len returns the length of the EPIC path in bytes.
-// TODO How do we get around the if statement in a pure func
+// (VerifiedSCION) This is currently not checked here because Gobra
+// does not support statements in pure functions. The proof obligations
+// for this method are discharged in function `len_test` in the file `epic_spec_test.gobra`.
 //@ trusted
 //@ pure
 //@ requires acc(p.Mem(), _)
-//@ requires p.hasScionPath()
-// ensures   unfolding acc(p.Mem(), _) in (p.ScionPath == nil ==> (l == MetadataLen))
-// ensures   unfolding acc(p.Mem(), _) in (p.ScionPath != nil ==> (l == MetadataLen + p.ScionPath.RawLen()))
-//@ ensures  unfolding acc(p.Mem(), _) in (l == MetadataLen + p.ScionPath.RawLen())
+//@ ensures  !p.hasScionPath() ==> l == MetadataLen
+//@ ensures  p.hasScionPath()  ==> l == MetadataLen + unfolding acc(p.Mem(), _) in p.ScionPath.Len()
 //@ decreases
 func (p *Path) Len() (l int) {
 	if p.ScionPath == nil {
 		return MetadataLen
 	}
-	return /*@ unfolding acc(p.Mem(), _) in unfolding p.ScionPath.Mem() in @*/ MetadataLen + p.ScionPath.Len()
+	return MetadataLen + p.ScionPath.Len()
 }
 
 // Type returns the EPIC path type identifier.
 //@ pure
 //@ requires acc(p.Mem(), _)
-//@ ensures t == PathType
+//@ ensures  t == PathType
 //@ decreases
 func (p *Path) Type() (t path.Type) {
 	return PathType
@@ -256,22 +272,15 @@ type PktID struct {
 //@ requires  len(raw) >= PktIDLen
 //@ preserves acc(i)
 //@ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
-//@ ensures 0 <= i.Timestamp
-//@ ensures 0 <= i.Counter
+//@ ensures   0 <= i.Timestamp
+//@ ensures   0 <= i.Counter
 //@ decreases
 func (i *PktID) DecodeFromBytes(raw []byte) {
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
-	//@ assert forall i int :: 0 <= i && i < 4 ==>
-	//@   &raw[:4][i] == &raw[i]
+	//@ assert forall i int :: 0 <= i && i < 4 ==> &raw[:4][i] == &raw[i]
 	i.Timestamp = binary.BigEndian.Uint32(raw[:4])
-	//@ assert forall i int :: 0 <= i && i < 4 ==>
-	//@   &raw[4:8][i] == &raw[4 + i]
+	//@ assert forall i int :: 0 <= i && i < 4 ==> &raw[4:8][i] == &raw[4 + i]
 	i.Counter = binary.BigEndian.Uint32(raw[4:8])
-	// (gavin) TODO why are these assumptions still needed?
-	// The post-condition of Uint32 is that the result is >= 0
-	// yet if the following are not present Gobra complains.
-	//@ assume i.Counter >= 0
-	//@ assume i.Timestamp >= 0
 	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 }
 
@@ -282,11 +291,9 @@ func (i *PktID) DecodeFromBytes(raw []byte) {
 //@ decreases
 func (i *PktID) SerializeTo(b []byte) {
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
-	//@ assert forall j int :: 0 <= 4 ==>
-	//@   &b[:4][j] == &b[j]
+	//@ assert forall j int :: 0 <= 4 ==> &b[:4][j] == &b[j]
 	binary.BigEndian.PutUint32(b[:4], i.Timestamp)
-	//@ assert forall j int :: 0 <= 4 ==>
-	//@   &b[4:8][j] == &b[4 + j]
+	//@ assert forall j int :: 0 <= 4 ==> &b[4:8][j] == &b[4 + j]
 	binary.BigEndian.PutUint32(b[4:8], i.Counter)
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 }

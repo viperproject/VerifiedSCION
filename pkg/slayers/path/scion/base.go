@@ -31,17 +31,34 @@ const MetaLen = 4
 
 const PathType path.Type = 1
 
-/*
+//@ requires path.PathPackageMem()
+//@ requires !path.Registered(PathType)
+//@ ensures  path.PathPackageMem()
+//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+//@ ensures  path.Registered(PathType)
+//@ decreases
 func RegisterPath() {
-	path.RegisterPath(path.Metadata{
+	tmp := path.Metadata{
 		Type: PathType,
 		Desc: "SCION",
-		New: func() path.Path {
-			return &Raw{}
+		New:
+		//@ ensures p.NonInitMem()
+		//@ decreases
+		func /*@ newPath @*/ () (p path.Path) {
+			rawTmp := &Raw{}
+			//@ fold rawTmp.Base.NonInitMem()
+			//@ fold rawTmp.NonInitMem()
+			return rawTmp
 		},
-	})
+	}
+	/*@
+	proof tmp.New implements path.NewPathSpec {
+		return tmp.New() as newPath
+	}
+	@*/
+	path.RegisterPath(tmp)
 }
-*/
 
 // Base holds the basic information that is used by both raw and fully decoded paths.
 type Base struct {
@@ -54,11 +71,11 @@ type Base struct {
 	NumHops int
 }
 
-//@ requires  len(data) >= MetaLen
 //@ requires  s.NonInitMem()
 //@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
 //@ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
 //@ ensures   r == nil ==> s.Mem() && (s.Mem() --* s.NonInitMem())
+//@ ensures   len(data) < MetaLen ==> r != nil
 //@ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// PathMeta takes care of bounds check.
@@ -85,8 +102,8 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		if s.PathMeta.SegLen[i] > 0 && s.NumINF == 0 {
 			s.NumINF = i + 1
 		}
-		//  Cannot assert bounds of uint:
-		//  https://github.com/viperproject/gobra/issues/192
+		// (VerifiedSCION) Cannot assert bounds of uint:
+		// https://github.com/viperproject/gobra/issues/192
 		//@ assume int(s.PathMeta.SegLen[i]) >= 0
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
@@ -100,19 +117,23 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 
 // IncPath increases the currHF index and currINF index if appropriate.
 //@ requires s.Mem()
-//@ requires unfolding s.Mem() in s.NumINF > 0
-//@ requires unfolding s.Mem() in int(s.PathMeta.CurrHF) < s.NumHops-1
-//@ ensures  s.Mem()
-//@ ensures  s.Len() == old(s.Len())
-//@ ensures  e == nil
+//@ ensures  old(unfolding s.Mem() in s.NumINF == 0) ==> e != nil
+//@ ensures  old(unfolding s.Mem() in int(s.PathMeta.CurrHF) >= s.NumHops-1) ==> e != nil
+//@ ensures  e == nil ==> s.Mem()
+//@ ensures  e == nil ==> s.Len() == old(s.Len())
+//@ ensures  e == nil ==> s.getNumINF() == old(s.getNumINF())
+//@ ensures  e != nil ==> s.NonInitMem()
+//@ ensures  e != nil ==> e.ErrorMem()
 //@ decreases
 func (s *Base) IncPath() (e error) {
 	//@ unfold s.Mem()
 	if s.NumINF == 0 {
+		//@ fold s.NonInitMem()
 		return serrors.New("empty path cannot be increased")
 	}
 	if int(s.PathMeta.CurrHF) >= s.NumHops-1 {
 		s.PathMeta.CurrHF = uint8(s.NumHops - 1)
+		//@ fold s.NonInitMem()
 		return serrors.New("path already at end")
 	}
 	s.PathMeta.CurrHF++
@@ -181,22 +202,22 @@ type MetaHdr struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
-//@ requires  len(raw) >= MetaLen
 //@ preserves acc(m)
 //@ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
-//@ ensures   m.CurrINF >= 0 && m.CurrHF >= 0
-//@ ensures   e == nil
+//@ ensures   (len(raw) >= MetaLen) == (e == nil)
+//@ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrHF >= 0)
+//@ ensures   e != nil ==> e.ErrorMem()
 //@ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	if len(raw) < MetaLen {
-		return serrors.New("MetaHdr raw too short", "expected", MetaLen, "actual", len(raw))
+		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
+		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
-	//  The following assumption is guaranteed by Go but still
-	//  not modeled in Gobra.
+	// (VerifiedSCION) The following assumption is guaranteed by Go but still not modeled in Gobra.
 	//@ assume m.CurrINF >= 0 && m.CurrHF >= 0
 	m.SegLen[0] = uint8(line>>12) & 0x3F
 	m.SegLen[1] = uint8(line>>6) & 0x3F
@@ -226,7 +247,7 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	return nil
 }
 
-//  The spec of fmt.Sprintf is still too limited to verify this method.
+// (VerifiedSCION) The spec of fmt.Sprintf is still too limited to verify this method.
 //@ trusted
 //@ decreases
 func (m MetaHdr) String() string {

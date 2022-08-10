@@ -1,0 +1,27 @@
+// Copyright 2011 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Signatures for the public declarations in file
+// https://go.dev/src/crypto/rand/util.go
+
+// +gobra
+
+package rand
+
+import (
+	"io"
+	"math/big"
+
+	"github.com/scionproto/scion/verification/utils/definitions/"
+)
+
+// Int returns a uniform random value in [0, max). It panics if max <= 0.
+preserves rand.Mem()
+requires acc(max.Mem(), definitions.ReadL13)
+requires max.toInt() > 0
+ensures acc(max.Mem(), definitions.ReadL13)
+ensures err != nil ==> err.ErrorMem()
+ensures err == nil ==> n.Mem()
+ensures err == nil ==> n.toInt() >= 0 && n.toInt() < max.toInt()
+func Int(rand io.Reader, max *big.Int) (n *big.Int, err error)

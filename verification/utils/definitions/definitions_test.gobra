@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package definitions
 
 func IsOfPrimitiveType_test() {
 	var v interface{} = int(10)
 	assert IsOfPrimitiveType(v)
-	//:: ExpectedOutput(assert_error)
 	var x interface{} = struct{}{}
-	assert IsOfPrimitiveType(x)
+	//:: ExpectedOutput(assert_error)
+	// assert IsOfPrimitiveType(x)
 }

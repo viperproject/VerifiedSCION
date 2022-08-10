@@ -29,15 +29,33 @@ const PathLen = path.InfoLen + 2*path.HopLen
 
 const PathType path.Type = 2
 
-// func RegisterPath() {
-// 	path.RegisterPath(path.Metadata{
-// 		Type: PathType,
-// 		Desc: "OneHop",
-// 		New: func() path.Path {
-// 			return &Path{}
-// 		},
-// 	})
-// }
+//@ requires path.PathPackageMem()
+//@ requires !path.Registered(PathType)
+//@ ensures  path.PathPackageMem()
+//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+//@ ensures  path.Registered(PathType)
+//@ decreases
+func RegisterPath() {
+	tmp := path.Metadata{
+		Type: PathType,
+		Desc: "OneHop",
+		New:
+		//@ ensures p.NonInitMem()
+		//@ decreases
+		func /*@ newPath @*/ () (p path.Path) {
+			onehopTmp := &Path{}
+			//@ fold onehopTmp.NonInitMem()
+			return onehopTmp
+		},
+	}
+	/*@
+	proof tmp.New implements path.NewPathSpec {
+		return tmp.New() as newPath
+	}
+	@*/
+	path.RegisterPath(tmp)
+}
 
 // Path encodes a one hop path. A one hop path is a special path that is created by a SCION router
 // in the first AS and completed by a SCION router in the second AS. It is used during beaconing
@@ -49,15 +67,15 @@ type Path struct {
 }
 
 //@ requires  o.NonInitMem()
-//@ requires  len(data) >= PathLen
 //@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-//@ ensures   r != nil ==> (o.NonInitMem() && r.ErrorMem())
+//@ ensures   (len(data) >= PathLen) == (r == nil)
 //@ ensures   r == nil ==> o.Mem()
+//@ ensures   r != nil ==> (o.NonInitMem() && r.ErrorMem())
 //@ decreases
 func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	if len(data) < PathLen {
-		return serrors.New("buffer too short for OneHop path", "expected", PathLen, "actual",
-			len(data))
+		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
+			int(len(data)))
 	}
 	offset := 0
 	//@ unfold o.NonInitMem()
@@ -96,15 +114,15 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	return r
 }
 
-//@ requires  len(b) >= PathLen
 //@ preserves acc(o.Mem(), definitions.ReadL1)
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   err == nil
+//@ ensures   (len(b) >= PathLen) == (err == nil)
+//@ ensures   err != nil ==> err.ErrorMem()
 //@ decreases
 func (o *Path) SerializeTo(b []byte) (err error) {
 	if len(b) < PathLen {
-		return serrors.New("buffer too short for OneHop path", "expected", PathLen, "actual",
-			len(b))
+		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
+			int(len(b)))
 	}
 	offset := 0
 	//@ unfold acc(o.Mem(), definitions.ReadL1)
@@ -140,19 +158,20 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
-//@ requires o.Mem()
-//@ ensures  err == nil ==> sd.Mem()
-//@ ensures  err != nil ==> o.Mem()
+//@ trusted // (VerifiedSCION) Currently takes a long time to verify
+//@ preserves acc(o.Mem(), definitions.ReadL10)
+//@ ensures   err == nil ==> (sd != nil && sd.Mem())
+//@ ensures   err != nil ==> err.ErrorMem() && o.Mem()
 //@ decreases
 func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
-	//@ unfold o.Mem()
-	//@ unfold o.SecondHop.Mem()
+	//@ unfold acc(o.Mem(), definitions.ReadL10)
+	//@ unfold acc(o.SecondHop.Mem(), definitions.ReadL10)
 	if o.SecondHop.ConsIngress == 0 {
-		//@ fold o.SecondHop.Mem()
-		//@ fold o.Mem()
+		//@ fold acc(o.SecondHop.Mem(), definitions.ReadL10)
+		//@ fold acc(o.Mem(), definitions.ReadL10)
 		return nil, serrors.New("incomplete path can't be converted")
 	}
-	//@ unfold o.FirstHop.Mem()
+	//@ fold acc(o.SecondHop.Mem(), definitions.ReadL10)
 	p := &scion.Decoded{
 		Base: scion.Base{
 			PathMeta: scion.MetaHdr{
@@ -187,7 +206,7 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 			},
 		},
 	}
-	// TODO (gavin) this verification times out. Even folding
+	// (VerifiedSCION) this verification times out. Even folding
 	// the base predicate and assuming false for the rest takes a
 	// significant amount of time.
 	//@ fold p.Base.Mem()
@@ -198,13 +217,23 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
-//@ trusted // TODO
+//@ trusted // (VerifiedSCION) the following currently takes a long time to verify
+// (VerifiedSCION) The main cause for the performance problem is the `share` statement,
+// together with the assert right after. This is translated to a huge chunk of inhales
+// and exhales in Viper involving quantifiers that cause verification to choke.
 //@ ensures err == nil ==> p.Mem()
+//@ ensures err == nil ==> p != nil
+//@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (o /*@@@*/ Path) Reverse() (p path.Path, err error) {
-	//@ fold o.FirstHop.Mem()
-	//@ fold o.SecondHop.Mem()
-	//@ fold o.Mem()
+func (o Path) Reverse() (p path.Path, err error) {
+	// (VerifiedSCION) this share would not be needed if we had passed a *Path as a parameter.
+	// From a performance standpoint (for SCION), this would also be preferrable, given that Reverse cannot
+	// be modified in these functions.
+	// From a verification stand-point, it would also make more sense to provide Mem() as a precondition.
+	// It would be easier to maintain.
+	//@ share o
+	//@ assert acc(&o)
+	//@ ghost FoldPathMem(&o)
 	sp, err := o.ToSCIONDecoded()
 	if err != nil {
 		return nil, serrors.WrapStr("converting to scion path", err)

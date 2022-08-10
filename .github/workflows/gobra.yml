@@ -42,17 +42,38 @@ jobs:
         with:
           projectLocation: 'VerifiedSCION/verification'
           recursive: 1
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: './dependencies/ ..' # relative to project location
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'pkg/addr'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/addr'
+          timeout: 10m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          statsFile: '/stats/stats_addr.json'
+      - name: Verify package 'pkg/private/serrors'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/private/serrors'
+          timeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
       - name: Verify package 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path'
-          packageTimeout: 10m
+          timeout: 10m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -62,7 +83,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/empty'
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -72,7 +93,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/epic'
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -82,7 +103,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/onehop'
-          packageTimeout: 5m
+          timeout: 15m # 'onehop' currently takes a lot of time
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -92,23 +113,12 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/scion'
-          packageTimeout: 5m
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
-      - name: Verify package 'pkg/addr'
-        uses: viperproject/gobra-action@main
-        with:
-          packages: 'pkg/addr'
-          packageTimeout: 10m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          statsFile: '/stats/stats_addr.json'
       - name: Upload the verification report
         uses: actions/upload-artifact@v2
         with:

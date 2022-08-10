@@ -34,7 +34,6 @@ ensures typeOf(v) == type[string] ==> res
 pure func IsOfPrimitiveType(v interface{}) (res bool)
 
 const (
-  Write perm = 1/1
 	ReadL1 perm = 1/(2 << iota)
 	ReadL2
 	ReadL3

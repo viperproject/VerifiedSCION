@@ -25,3 +25,14 @@ pred (e Path) Mem() {
 pred (e Path) NonInitMem() {
 	true
 }
+
+Path implements path.Path
+
+ghost
+requires e.Mem()
+ensures  e.NonInitMem()
+decreases
+func (e Path) DowngradePerm() {
+	unfold e.Mem()
+	fold e.NonInitMem()
+}
