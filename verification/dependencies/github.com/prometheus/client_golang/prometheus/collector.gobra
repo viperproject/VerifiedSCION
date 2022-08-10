@@ -13,6 +13,8 @@
 
 // Adapted from https://raw.githubusercontent.com/prometheus/client_golang/master/prometheus/collector.go
 
+// +gobra
+
 package prometheus
 
 // Collector is the interface implemented by anything that can be used by

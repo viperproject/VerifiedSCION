@@ -13,7 +13,11 @@
 
 // Adapted from https://github.com/prometheus/client_golang/blob/master/prometheus/desc.go
 
+// +gobra
+
 package prometheus
+
+import "github.com/scionproto/scion/verification/utils/definitions"
 
 // Desc is the descriptor used by every Prometheus Metric. It is essentially
 // the immutable meta-data of a Metric. The normal Metric implementations
@@ -67,17 +71,22 @@ pred (d *Desc) Mem()
 //
 // For constLabels, the label values are constant. Therefore, they are fully
 // specified in the Desc. See the Collector example for a usage pattern.
-requires forall i int :: 0 <= i && i < len(variableLabels) ==> acc(&variableLabels[i], 1/10000)
+requires fqName != ""
+requires forall i int :: 0 <= i && i < len(variableLabels) ==> acc(&variableLabels[i], definitions.ReadL16)
 requires acc(constLabels)
 ensures  res.Mem()
+decreases _
 func NewDesc(fqName, help string, variableLabels []string, constLabels Labels) (res *Desc)
 
 // NewInvalidDesc returns an invalid descriptor, i.e. a descriptor with the
 // provided error set. If a collector returning such a descriptor is registered,
 // registration will fail with the provided error. NewInvalidDesc can be used by
 // a Collector to signal inability to describe itself.
-ensures res.Mem()
+requires err.ErrorMem()
+ensures  res.Mem()
+decreases _
 func NewInvalidDesc(err error) (res *Desc)
 
-preserves acc(d.Mem(), 1/10000)
+preserves acc(d.Mem(), definitions.ReadL16)
+decreases _
 func (d *Desc) String() string

@@ -13,6 +13,8 @@
 
 // Adapted from https://github.com/prometheus/client_golang/blob/master/prometheus/metric.go
 
+// +gobra
+
 package prometheus
 
 import (
@@ -32,6 +34,7 @@ type Metric interface {
 	// with NewInvalidDesc).
 	preserves Mem()
 	ensures   d.Mem()
+    decreases
 	Desc() (d *Desc)
 
 	// Write encodes the Metric into a "Metric" Protocol Buffer data
@@ -60,7 +63,9 @@ type Opts struct {
 // provided error. It is useful if a Collector finds itself unable to collect
 // a metric and wishes to report an error to the registry.
 requires desc.Mem()
+requires err.ErrorMem()
 ensures  m.Mem()
+decreases _
 func NewInvalidMetric(desc *Desc, err error) (m Metric)
 
 // NewMetricWithTimestamp returns a new Metric wrapping the provided Metric in a
@@ -78,4 +83,5 @@ func NewInvalidMetric(desc *Desc, err error) (m Metric)
 // next full millisecond value.
 requires m.Mem()
 ensures  ret.Mem()
+decreases _
 func NewMetricWithTimestamp(t time.Time, m Metric) (ret Metric)

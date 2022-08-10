@@ -13,6 +13,8 @@
 
 // Adapted from https://github.com/prometheus/client_golang/blob/master/prometheus/gauge.go
 
+// +gobra
+
 package prometheus
 
 import (
@@ -29,51 +31,39 @@ import (
 //
 // To create Gauge instances, use NewGauge.
 type Gauge interface {
-	// Metric
-	// Collector
+	Metric
+	Collector
 
 	pred Mem()
 
-	// (joao) this method is from Metric because Gobra does not have good support
-	//        for composition of interfaces
-	preserves acc(Mem(), _)
-	ensures   d.Mem()
-	Desc() (d *Desc)
-
-	// (joao) this method is from Collector because Gobra does not have good support
-	//        for composition of interfaces
-	requires acc(c.SendChannel(), _) && c.SendGivenPerm() == (*Desc).Mem!<_!>;
-	preserves acc(Mem(), _)
-	Describe(c chan<- *Desc)
-
-	// (joao) this method is from Collector because Gobra does not have good support
-	//        for composition of interfaces
-	requires acc(c.SendChannel(), _) && c.SendGivenPerm() == Metric.Mem!<_!>;
-	preserves acc(Mem(), _)
-	Collect(c chan<- Metric)
-
 	// Set sets the Gauge to an arbitrary value.
 	preserves acc(Mem(), _)
+	decreases
 	Set(float64)
 	// Inc increments the Gauge by 1. Use Add to increment it by arbitrary
 	// values.
 	preserves acc(Mem(), _)
+	decreases
 	Inc()
 	// Dec decrements the Gauge by 1. Use Sub to decrement it by arbitrary
 	// values.
 	preserves acc(Mem(), _)
+	decreases
 	Dec()
 	// Add adds the given value to the Gauge. (The value can be negative,
 	// resulting in a decrease of the Gauge.)
 	preserves acc(Mem(), _)
+	decreases
 	Add(float64)
 	// Sub subtracts the given value from the Gauge. (The value can be
 	// negative, resulting in an increase of the Gauge.)
 	preserves acc(Mem(), _)
+	decreases
 	Sub(float64)
 
 	// SetToCurrentTime sets the Gauge to the current Unix time in seconds.
 	preserves acc(Mem(), _)
+	decreases
 	SetToCurrentTime()
 }
 
@@ -83,6 +73,7 @@ type GaugeOpts Opts
 // NewGauge creates a new Gauge based on the provided GaugeOpts.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
 ensures  ret.Mem()
+decreases _
 func NewGauge(opts GaugeOpts) (ret Gauge)
 
 // GaugeVec is a Collector that bundles a set of Gauges that all share the same
@@ -91,17 +82,19 @@ func NewGauge(opts GaugeOpts) (ret Gauge)
 // (e.g. number of operations queued, partitioned by user and operation
 // type). Create instances with NewGaugeVec.
 type GaugeVec struct {
-	// (joao) commented out field
-	// *MetricVec
+	*MetricVec
 }
 
-pred (c *GaugeVec) Mem()
+pred (c *GaugeVec) Mem() {
+	acc(&c.MetricVec) && (c.MetricVec != nil ==> acc(c.MetricVec) && c.MetricVec.Mem())
+}
 
 // NewGaugeVec creates a new GaugeVec based on the provided GaugeOpts and
 // partitioned by the given label names.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
 requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
 ensures  g.Mem()
+decreases _
 func NewGaugeVec(opts GaugeOpts, labelNames []string) (g *GaugeVec)
 
 // (tlino) The Prometheus reference implementaiton of GaugeVec and Gauge ensures thread-safety
@@ -110,6 +103,6 @@ func NewGaugeVec(opts GaugeOpts, labelNames []string) (g *GaugeVec)
 //     myVec.With(prometheus.Labels{"code": "404", "method": "GET"}).Add(42)
 preserves acc(v.Mem(), _)
 preserves acc(labels, _)
-ensures g.Mem()
+ensures   g.Mem()
 decreases _
 func (v *GaugeVec) With(labels Labels) (g Gauge)

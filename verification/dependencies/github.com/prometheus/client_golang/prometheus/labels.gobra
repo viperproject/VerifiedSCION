@@ -13,6 +13,8 @@
 
 // Adapted from https://github.com/prometheus/client_golang/blob/master/prometheus/labels.go
 
+// +gobra
+
 package prometheus
 
 // Labels represents a collection of label name -> value mappings. This type is
