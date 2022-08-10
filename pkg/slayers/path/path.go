@@ -14,10 +14,11 @@
 
 // +gobra
 
+//@ initEnsures PathPackageMem()
 package path
 
 import (
-	// "fmt" // no support for globals yet
+	"fmt"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
@@ -27,27 +28,36 @@ import (
 // PathType is uint8 so 256 values max.
 const maxPathType = 256
 
-// No support for globals yet
-/*
 var (
 	registeredPaths [maxPathType]metadata
 	strictDecoding  bool = true
 )
-*/
+
+// Ghost initialization code to establish the PathPackageMem predicate.
+/*@
+func init() {
+	assert acc(&registeredPaths)
+	assert acc(&strictDecoding)
+	assert forall t Type :: 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
+	fold PathPackageMem()
+}
+@*/
 
 // Type indicates the type of the path contained in the SCION header.
 type Type uint8
 
-// No support for globals yet
-/*
+//@ requires 0 <= t && t < maxPathType
+//@ preserves acc(PathPackageMem(), definitions.ReadL20)
+//@ decreases
 func (t Type) String() string {
+	//@ unfold acc(PathPackageMem(), definitions.ReadL20)
+	//@ ghost defer fold acc(PathPackageMem(), definitions.ReadL20)
 	pm := registeredPaths[t]
 	if !pm.inUse {
 		return fmt.Sprintf("UNKNOWN (%d)", t)
 	}
 	return fmt.Sprintf("%v (%d)", pm.Desc, t)
 }
-*/
 
 // Path is the path contained in the SCION header.
 type Path interface {
@@ -117,17 +127,25 @@ type Metadata struct {
 
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
-// No support for globals yet
-/*
+//@ requires 0 <= pathMeta.Type && pathMeta.Type < maxPathType
+//@ requires PathPackageMem()
+//@ requires !Registered(pathMeta.Type)
+//@ requires pathMeta.New implements NewPathSpec
+//@ ensures  PathPackageMem()
+//@ ensures  forall t Type :: 0 <= t && t < maxPathType ==>
+//@ 	t != pathMeta.Type ==> old(Registered(t)) == Registered(t)
+//@ ensures  Registered(pathMeta.Type)
+//@ decreases
 func RegisterPath(pathMeta Metadata) {
+	//@ unfold PathPackageMem()
 	pm := registeredPaths[pathMeta.Type]
 	if pm.inUse {
 		panic("path type already registered")
 	}
 	registeredPaths[pathMeta.Type].inUse = true
 	registeredPaths[pathMeta.Type].Metadata = pathMeta
+	//@ fold PathPackageMem()
 }
-*/
 
 // StrictDecoding enables or disables strict path decoding. If enabled, unknown
 // path types fail to decode. If disabled, unknown path types are decoded into a
@@ -136,23 +154,38 @@ func RegisterPath(pathMeta Metadata) {
 // Strict parsing is enabled by default.
 //
 // Experimental: This function is experimental and might be subject to change.
-/*
+//@ requires PathPackageMem()
+//@ ensures  PathPackageMem()
+//@ decreases
 func StrictDecoding(strict bool) {
+	//@ unfold PathPackageMem()
 	strictDecoding = strict
+	//@ fold PathPackageMem()
 }
 
 // NewPath returns a new path object of pathType.
-func NewPath(pathType Type) (Path, error) {
+//@ requires 0 <= pathType && pathType < maxPathType
+//@ requires acc(PathPackageMem(), definitions.ReadL20)
+//@ ensures  acc(PathPackageMem(), definitions.ReadL20)
+//@ ensures  (!Registered(pathType) && IsStrictDecoding()) ==> e.ErrorMem()
+//@ ensures  (!Registered(pathType) && !IsStrictDecoding()) ==> p.Mem()
+//@ ensures  Registered(pathType) ==> p.NonInitMem()
+//@ decreases
+func NewPath(pathType Type) (p Path, e error) {
+	//@ unfold acc(PathPackageMem(), definitions.ReadL20)
+	//@ defer fold acc(PathPackageMem(), definitions.ReadL20)
 	pm := registeredPaths[pathType]
 	if !pm.inUse {
 		if strictDecoding {
-			return nil, serrors.New("unsupported path", "type", pathType)
+			return nil, serrors.New("unsupported path", "type", uint8(pathType))
 		}
-		return &rawPath{}, nil
+		tmp := &rawPath{}
+		//@ fold slices.AbsSlice_Bytes(tmp.raw, 0, len(tmp.raw))
+		//@ fold tmp.Mem()
+		return tmp, nil
 	}
-	return pm.New(), nil
+	return pm.New() /*@ as NewPathSpec @*/, nil
 }
-*/
 
 // NewRawPath returns a new raw path that can hold any path type.
 func NewRawPath() Path {

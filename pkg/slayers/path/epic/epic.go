@@ -40,18 +40,36 @@ const (
 	HVFLen = 4
 )
 
-/*
 // RegisterPath registers the EPIC path type globally.
+//@ requires path.PathPackageMem()
+//@ requires !path.Registered(PathType)
+//@ ensures  path.PathPackageMem()
+//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+//@ ensures  path.Registered(PathType)
+//@ decreases
 func RegisterPath() {
-	path.RegisterPath(path.Metadata{
+	tmp := path.Metadata{
 		Type: PathType,
 		Desc: "Epic",
-		New: func() path.Path {
-			return &Path{ScionPath: &scion.Raw{}}
+		New:
+		//@ ensures p.NonInitMem()
+		//@ decreases
+		func /*@ newPath @*/ () (p path.Path) {
+			epicTmp := &Path{ScionPath: &scion.Raw{}}
+			//@ fold epicTmp.ScionPath.Base.NonInitMem()
+			//@ fold epicTmp.ScionPath.NonInitMem()
+			//@ fold epicTmp.NonInitMem()
+			return epicTmp
 		},
-	})
+	}
+	/*@
+	proof tmp.New implements path.NewPathSpec {
+		return tmp.New() as newPath
+	}
+	@*/
+	path.RegisterPath(tmp)
 }
-*/
 
 // Path denotes the EPIC path type header.
 type Path struct {

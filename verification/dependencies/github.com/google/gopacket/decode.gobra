@@ -27,6 +27,9 @@ pred (n nilDecodeFeedback) Mem() { true }
 
 nilDecodeFeedback implements DecodeFeedback
 
+// NilDecodeFeedback implements DecodeFeedback by doing nothing.
+var NilDecodeFeedback DecodeFeedback = nilDecodeFeedback{}
+
 type PacketBuilder interface {
 	DecodeFeedback
 
@@ -83,11 +86,3 @@ type Decoder interface {
 	decreases
 	Decode(b []byte, p PacketBuilder) error
 }
-
-// TODO: change to a global variable once they are supported in Gobra
-decreases
-pure func LayerTypePayload() LayerType
-
-// TODO: change to a global variable once they are supported in Gobra
-decreases
-pure func LayerTypeFragment() LayerType
