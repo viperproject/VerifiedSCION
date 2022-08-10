@@ -34,8 +34,13 @@ pred (b *BaseLayer) PayloadMem() {
 
 pred (s *SCION) Mem() {
 		s.BaseLayer.Mem() &&
+			acc(&s.Version) &&
+			acc(&s.TrafficClass) &&
+			acc(&s.FlowID) &&
+			acc(&s.NextHdr) &&
 			acc(&s.HdrLen) &&
 			acc(&s.PayloadLen) &&
+			acc(&s.PathType) &&
 			acc(&s.DstAddrType) &&
 			acc(&s.DstAddrLen) &&
 			acc(&s.SrcAddrType) &&
@@ -58,28 +63,38 @@ pred (s *SCION) Mem() {
 			s.SrcAddrLen >= 0
 }
 
-pred (s *SCION) PreAddrHdrMem() {
-	acc(s) &&
-		s.DstAddrLen >= 0 &&
-		s.SrcAddrLen >= 0
-}
-
 pred (s *SCION) AddrHdrMem() {
-	acc(s) &&
+		acc(&s.RawDstAddr) &&
+		acc(&s.RawSrcAddr) &&
+		acc(&s.DstAddrLen) &&
+		acc(&s.SrcAddrLen) &&
 		slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)) &&
 		slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
 		s.DstAddrLen >= 0 &&
 		s.SrcAddrLen >= 0
 }
 
+// ghost
+// requires s.Mem()
+// ensures  s.PreAddrHdrMem()
+// ensures  s.PreAddrHdrMem() --* s.Mem()
+// func (s *SCION) memToPreAddrHdrMem() {
+// 	unfold s.Mem()
+// 	fold s.PreAddrHdrMem()
+// 	package s.PreAddrHdrMem() --* s.Mem() {
+// 		unfold s.PreAddrHdrMem()
+// 		fold s.Mem()
+// 	}
+// }
+
 /* TODO add these fields as needed
-	Version uint8
-	TrafficClass uint8
-	FlowID uint32
-	NextHdr L4ProtocolType
+	* Version uint8
+	* TrafficClass uint8
+	* FlowID uint32
+	* NextHdr L4ProtocolType
 	* HdrLen uint8
 	* PayloadLen uint16
-	PathType path.Type
+	* PathType path.Type
 	* DstAddrType AddrType
 	* DstAddrLen AddrLen
 	* SrcAddrType AddrType
