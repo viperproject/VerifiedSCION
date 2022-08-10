@@ -26,17 +26,33 @@ const PathLen = 0
 
 const PathType path.Type = 0
 
-/*
+//@ requires path.PathPackageMem()
+//@ requires !path.Registered(PathType)
+//@ ensures  path.PathPackageMem()
+//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+//@ ensures  path.Registered(PathType)
+//@ decreases
 func RegisterPath() {
-	path.RegisterPath(path.Metadata{
+	tmp := path.Metadata{
 		Type: PathType,
 		Desc: "Empty",
-		New: func() path.Path {
-			return Path{}
+		New:
+		//@ ensures p.NonInitMem()
+		//@ decreases
+		func /*@ newPath @*/ () (p path.Path) {
+			emptyTmp /*@@@*/ := Path{}
+			//@ fold emptyTmp.NonInitMem()
+			return emptyTmp
 		},
-	})
+	}
+	/*@
+	proof tmp.New implements path.NewPathSpec {
+		return tmp.New() as newPath
+	}
+	@*/
+	path.RegisterPath(tmp)
 }
-*/
 
 // Path encodes an empty path. An empty path is a special path that takes zero
 // bytes on the wire and is used for AS internal communication.

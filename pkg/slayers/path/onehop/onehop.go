@@ -29,15 +29,33 @@ const PathLen = path.InfoLen + 2*path.HopLen
 
 const PathType path.Type = 2
 
-// func RegisterPath() {
-// 	path.RegisterPath(path.Metadata{
-// 		Type: PathType,
-// 		Desc: "OneHop",
-// 		New: func() path.Path {
-// 			return &Path{}
-// 		},
-// 	})
-// }
+//@ requires path.PathPackageMem()
+//@ requires !path.Registered(PathType)
+//@ ensures  path.PathPackageMem()
+//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+//@ ensures  path.Registered(PathType)
+//@ decreases
+func RegisterPath() {
+	tmp := path.Metadata{
+		Type: PathType,
+		Desc: "OneHop",
+		New:
+		//@ ensures p.NonInitMem()
+		//@ decreases
+		func /*@ newPath @*/ () (p path.Path) {
+			onehopTmp := &Path{}
+			//@ fold onehopTmp.NonInitMem()
+			return onehopTmp
+		},
+	}
+	/*@
+	proof tmp.New implements path.NewPathSpec {
+		return tmp.New() as newPath
+	}
+	@*/
+	path.RegisterPath(tmp)
+}
 
 // Path encodes a one hop path. A one hop path is a special path that is created by a SCION router
 // in the first AS and completed by a SCION router in the second AS. It is used during beaconing
