@@ -19,6 +19,7 @@ type Layer interface {
 	pred LayerMem()
 	pred PayloadMem()
 
+	requires acc(LayerMem(), _)
 	decreases
 	pure LayerType() LayerType
 
@@ -37,12 +38,15 @@ type Layer interface {
 
 type Payload []byte
 
-pred (p Payload) LayerMem() { acc(p) }
+pred (p Payload) LayerMem() { acc(p) && acc(&LayerTypePayload, _) }
 pred (p Payload) PayloadMem() { true }
-pred (p Payload) Mem() { acc(p) }
+pred (p Payload) Mem() { acc(p) && acc(&LayerTypePayload, _) }
 
+requires acc(p.LayerMem(), _)
 decreases
-pure func (p Payload) LayerType() LayerType { return LayerTypePayload() }
+pure func (p Payload) LayerType() LayerType {
+	return unfolding acc(p.LayerMem(), _) in LayerTypePayload
+}
 
 requires p.LayerMem()
 ensures slices.AbsSlice_Bytes(res, 0, len(res))

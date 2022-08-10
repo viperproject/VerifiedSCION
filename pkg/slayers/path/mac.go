@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"hash"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 const MACBufferSize = 16
@@ -28,12 +29,13 @@ const MACBufferSize = 16
 // https://docs.scion.org/en/latest/protocols/scion-header.html#hop-field-mac-computation
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
-//@ requires  h != nil && h.Mem() && h.Size() >= 16
-//@ preserves acc(buffer)
+//@ requires  h != nil && h.Mem() && h.Size() >= MACBufferSize
+//@ preserves len(buffer) >= MACBufferSize ==> slices.AbsSlice_Bytes(buffer, 0, len(buffer))
 //@ decreases
 func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 	mac := FullMAC(h, info, hf, buffer)
 	var res /*@ @ @*/ [MacLen]byte
+	//@ unfold slices.AbsSlice_Bytes(mac, 0, MACBufferSize)
 	copy(res[:], mac[:MacLen] /*@, definitions.ReadL1@*/)
 	return res
 }
@@ -43,25 +45,30 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // In contrast to MAC(), FullMAC returns all the 16 bytes instead of only 6 bytes of the MAC.
-//@ requires   h != nil && h.Mem() && h.Size() >= 16
-//@ preserves  acc(buffer)
-//@ ensures    h.Mem()
-//@ ensures    acc(res) && len(res) == MACBufferSize
+//@ requires  h != nil && h.Mem() && h.Size() >= MACBufferSize
+//@ preserves len(buffer) >= MACBufferSize ==> slices.AbsSlice_Bytes(buffer, 0, len(buffer))
+//@ ensures   h.Mem()
+//@ ensures   len(res) == MACBufferSize && slices.AbsSlice_Bytes(res, 0, MACBufferSize)
 //@ decreases
 func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byte) {
 	if len(buffer) < MACBufferSize {
 		buffer = make([]byte, MACBufferSize)
+		//@ fold slices.AbsSlice_Bytes(buffer, 0, len(buffer))
 	}
 
 	h.Reset()
 	MACInput(info.SegID, info.Timestamp, hf.ExpTime,
 		hf.ConsIngress, hf.ConsEgress, buffer)
+	//@ unfold slices.AbsSlice_Bytes(buffer, 0, len(buffer))
+	//@ defer fold slices.AbsSlice_Bytes(buffer, 0, len(buffer))
 	// Write must not return an error: https://godoc.org/hash#Hash
 	if _, err := h.Write(buffer); err != nil {
 		panic(err)
 	}
 	//@ assert h.Size() >= 16
-	return h.Sum(buffer[:0])[:16]
+	res = h.Sum(buffer[:0])[:16]
+	//@ fold slices.AbsSlice_Bytes(res, 0, MACBufferSize)
+	return res
 }
 
 // MACInput returns the MAC input data block with the following layout:
@@ -78,11 +85,12 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byt
 //   |          ConsEgress           |               0               |
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
-//@ requires  len(buffer) >= 16
-//@ preserves acc(buffer)
+//@ requires  len(buffer) >= MACBufferSize
+//@ preserves slices.AbsSlice_Bytes(buffer, 0, len(buffer))
 //@ decreases
 func MACInput(segID uint16, timestamp uint32, expTime uint8,
 	consIngress, consEgress uint16, buffer []byte) {
+	//@ unfold slices.AbsSlice_Bytes(buffer, 0, len(buffer))
 
 	//@ assert &buffer[0:2][0] == &buffer[0] && &buffer[0:2][1] == &buffer[1]
 	binary.BigEndian.PutUint16(buffer[0:2], 0)
@@ -99,4 +107,5 @@ func MACInput(segID uint16, timestamp uint32, expTime uint8,
 	binary.BigEndian.PutUint16(buffer[12:14], consEgress)
 	//@ assert &buffer[14:16][0] == &buffer[14] && &buffer[14:16][1] == &buffer[15]
 	binary.BigEndian.PutUint16(buffer[14:16], 0)
+	//@ fold slices.AbsSlice_Bytes(buffer, 0, len(buffer))
 }

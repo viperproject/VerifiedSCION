@@ -14,21 +14,21 @@
 
 // +gobra
 
-package fmt
+package scion
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import "github.com/scionproto/scion/verification/utils/slices"
 
-preserves forall i int :: 0 <= i && i < len(v) ==> acc(&v[i], 1/1000)
-// TODO:
-// The following precondition cannot be adequately captured in Gobra.
-// preserves forall i int :: 0 <= i && i < len(v) ==> definitions.IsOfPrimitiveType(v[i])
-decreases _
-func Sprintf(format string, v ...interface{}) string
+func testAllocateNonInitRaw() {
+	r := &Raw{}
+	fold r.Base.NonInitMem()
+	fold r.NonInitMem()
+}
 
-type Stringer interface {
-	pred Mem()
-
-	preserves acc(Mem())
-	decreases
-	String() string
+func testAllocateRaw() {
+	r := &Raw{}
+	fold r.Base.Mem()
+	// Required to satisfy length predicate
+	r.Raw = make([]byte, r.Base.Len())
+	fold slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
+	fold r.Mem()
 }

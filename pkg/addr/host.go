@@ -15,6 +15,9 @@
 
 // +gobra
 
+//@ initEnsures acc(&ErrBadHostAddrType, _) && ErrBadHostAddrType.ErrorMem() && isComparable(ErrBadHostAddrType)
+//@ initEnsures acc(&ErrMalformedHostAddrType, _) && ErrMalformedHostAddrType.ErrorMem() && isComparable(ErrMalformedHostAddrType)
+//@ initEnsures acc(&ErrUnsupportedSVCAddress, _) && ErrUnsupportedSVCAddress.ErrorMem() && isComparable(ErrUnsupportedSVCAddress)
 package addr
 
 import (
@@ -59,35 +62,14 @@ const (
 	HostLenSVC  = 2
 )
 
-// (VerifiedSCION) The following variables are not mutated by any functions so
-// they are replaced by functions until we have support for globals
-
-//var (
-//	// ErrBadHostAddrType indicates an invalid host address type.
-//	ErrBadHostAddrType = serrors.New("unsupported host address type")
-//	// ErrMalformedHostAddrType indicates a malformed host address type.
-//	ErrMalformedHostAddrType = serrors.New("malformed host address type")
-//	// ErrUnsupportedSVCAddress indicates an unsupported SVC address.
-//	ErrUnsupportedSVCAddress = serrors.New("unsupported SVC address")
-//)
-
-//@ ensures res.ErrorMem()
-//@ decreases
-func ErrBadHostAddrType () (res error) {
-	return serrors.New("unsupported host address type")
-}
-
-//@ ensures res.ErrorMem()
-//@ decreases
-func ErrMalformedHostAddrType () (res error) {
-	return serrors.New("malformed host address type")
-}
-
-//@ ensures res.ErrorMem()
-//@ decreases
-func ErrUnsupportedSVCAddress () (res error) {
-	return serrors.New("unsupported SVC address")
-}
+var (
+	// ErrBadHostAddrType indicates an invalid host address type.
+	ErrBadHostAddrType = serrors.New("unsupported host address type")
+	// ErrMalformedHostAddrType indicates a malformed host address type.
+	ErrMalformedHostAddrType = serrors.New("malformed host address type")
+	// ErrUnsupportedSVCAddress indicates an unsupported SVC address.
+	ErrUnsupportedSVCAddress = serrors.New("unsupported SVC address")
+)
 
 const (
 	SvcDS       HostSVC = 0x0001
@@ -127,7 +109,7 @@ type HostAddr interface {
 	//@ preserves acc(Mem(), definitions.ReadL13) && acc(o.Mem(), definitions.ReadL13)
 	//@ decreases
 	Equal(o HostAddr) bool
-	
+
 	// (VerifiedSCION) Can't use imported types as interface fields yet
 	// Issue: https://github.com/viperproject/gobra/issues/461
 	// replaced by the String() method which is the one that should be implemented
@@ -165,7 +147,6 @@ func (h HostNone) IP() (res net.IP) {
 	return nil
 }
 
-//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostNone) Copy() (res HostAddr) {
@@ -222,7 +203,7 @@ func (h HostIPv4) IP() (res net.IP) {
 //@ decreases
 func (h HostIPv4) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	var tmp HostIPv4 = HostIPv4(append(/*@ definitions.ReadL13, @*/net.IP(nil), h...))
+	var tmp HostIPv4 = HostIPv4(append( /*@ definitions.ReadL13, @*/ net.IP(nil), h...))
 	//@ fold acc(h.Mem(), definitions.ReadL13)
 	//@ fold tmp.Mem()
 	return tmp
@@ -235,19 +216,17 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv4)
-	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	//@ fold acc(o.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
 //@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv4
-	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return h.IP().String()
 }
 
 var _ HostAddr = (HostIPv6)(nil)
@@ -286,7 +265,7 @@ func (h HostIPv6) IP() (res net.IP) {
 //@ decreases
 func (h HostIPv6) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	var tmp HostIPv6 = HostIPv6(append(/*@ definitions.ReadL13, @*/net.IP(nil), h...))
+	var tmp HostIPv6 = HostIPv6(append( /*@ definitions.ReadL13, @*/ net.IP(nil), h...))
 	//@ fold acc(h.Mem(), definitions.ReadL13)
 	//@ fold tmp.Mem()
 	return tmp
@@ -299,19 +278,17 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv6)
-	var tmp bool = ok && net.IP(h).Equal(net.IP(ha))
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	//@ fold acc(o.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
 //@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ decreases
 func (h HostIPv6) String() string {
 	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv6
-	tmp := h.IP().String()
-	//@ fold acc(h.Mem(), definitions.ReadL13)
-	return tmp
+	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	return h.IP().String()
 }
 
 var _ HostAddr = (*HostSVC)(nil)
@@ -392,7 +369,6 @@ func (h HostSVC) Multicast() HostSVC {
 	return h | SVCMcast
 }
 
-//@ preserves acc(h.Mem(), definitions.ReadL13)
 //@ ensures res.Mem()
 //@ decreases
 func (h HostSVC) Copy() (res HostAddr) {
@@ -450,27 +426,27 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		return tmp, nil
 	case HostTypeIPv4:
 		if len(b) < HostLenIPv4 {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
 		tmp := HostIPv4(b[:HostLenIPv4])
 		//@ fold tmp.Mem()
 		return tmp, nil
 	case HostTypeIPv6:
 		if len(b) < HostLenIPv6 {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
 		tmp := HostIPv6(b[:HostLenIPv6])
 		//@ fold tmp.Mem()
 		return tmp, nil
 	case HostTypeSVC:
 		if len(b) < HostLenSVC {
-			return nil, serrors.WithCtx(ErrMalformedHostAddrType(), "type", htype)
+			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
 		tmp := HostSVC(binary.BigEndian.Uint16(b))
 		//@ fold tmp.Mem()
 		return tmp, nil
 	default:
-		return nil, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
+		return nil, serrors.WithCtx(ErrBadHostAddrType, "type", htype)
 	}
 }
 
@@ -515,7 +491,7 @@ func HostLen(htype HostAddrType) (uint8, error) {
 	case HostTypeSVC:
 		length = HostLenSVC
 	default:
-		return 0, serrors.WithCtx(ErrBadHostAddrType(), "type", htype)
+		return 0, serrors.WithCtx(ErrBadHostAddrType, "type", htype)
 	}
 	return length, nil
 }

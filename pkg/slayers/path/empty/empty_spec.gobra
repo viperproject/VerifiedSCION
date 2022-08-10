@@ -1,4 +1,4 @@
-// Copyright 2020 Anapaya Systems
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metrics
+// +gobra
 
-import (
-	"github.com/scionproto/scion/pkg/private/prom"
-)
+package empty
 
-// Namespace is the prometheus namespace.
-const Namespace = "renewal"
+import "github.com/scionproto/scion/pkg/slayers/path"
 
-// Signer exposes the signer metrics.
-var Signer = newSigner()
+pred (e Path) Mem() {
+	true
+}
 
-// Result types
-const (
-	Success = prom.Success
+pred (e Path) NonInitMem() {
+	true
+}
 
-	ErrInactive = "err_inactive"
-	ErrInternal = prom.ErrInternal
-	ErrKey      = "err_key"
-	ErrCerts    = "err_certs"
-	ErrNotFound = "err_not_found"
-)
+Path implements path.Path
+
+ghost
+requires e.Mem()
+ensures  e.NonInitMem()
+decreases
+func (e Path) DowngradePerm() {
+	unfold e.Mem()
+	fold e.NonInitMem()
+}
