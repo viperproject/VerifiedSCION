@@ -17,26 +17,31 @@
 package router
 
 import (
-	"bytes"
-	"context"
-	"crypto/rand"
-	"crypto/subtle"
-	"errors"
-	"fmt"
-	"hash"
-	"math/big"
-	"net"
-	"strconv"
-	"sync"
-	"syscall"
-	"time"
+	_ "bytes"
+	_ "context"
+	_ "crypto/rand"
+	_ "crypto/subtle"
+	_ "errors"
+	_ "fmt"
+	_ "hash"
+	_ "math/big"
+	_ "net"
+	_ "strconv"
+	_ "sync"
+	_ "syscall"
+	_ "time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/prometheus/client_golang/prometheus"
+	_ "github.com/google/gopacket"
+	_ "github.com/google/gopacket/layers"
+	_ "github.com/prometheus/client_golang/prometheus"
 
-	"github.com/scionproto/scion/pkg/addr"
-	libepic "github.com/scionproto/scion/pkg/experimental/epic"
+	_ "github.com/scionproto/scion/pkg/addr"
+	// libepic "github.com/scionproto/scion/pkg/experimental/epic"
+	_ "github.com/scionproto/scion/pkg/experimental/epic"
+)
+
+/*
+
 	"github.com/scionproto/scion/pkg/log"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/private/util"
@@ -52,8 +57,9 @@ import (
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
 	"github.com/scionproto/scion/router/bfd"
 	"github.com/scionproto/scion/router/control"
-)
+*/
 
+/*
 const (
 	// Number of packets to read in a single ReadBatch call.
 	inputBatchCnt = 64
@@ -1677,3 +1683,4 @@ func serviceMetricLabels(localIA addr.IA, svc addr.HostSVC) prometheus.Labels {
 		"service": svc.BaseString(),
 	}
 }
+*/
