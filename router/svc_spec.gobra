@@ -34,12 +34,30 @@ pred internalLockInv(s *services) {
 	(forall host addr.HostSVC :: host in domain(s.m) ==> validMapValue(s.m[host]))
 }
 
+/*
+pred validMapValue(udpSlice []*net.UDPAddr) {
+	(forall i, j int :: 0 <= i && i < len(udpSlice) ==>
+		(0 <= j && j < len(udpSlice) ==>
+			(i != j ==> &udpSlice[i] != &udpSlice[j]))) &&
+	(forall i int :: 0 <= i && i < len(udpSlice) ==> acc(&udpSlice[i])) &&
+	(forall i, j int :: 0 <= i && i < len(udpSlice) ==>
+		(0 <= j && j < len(udpSlice) ==>
+			(i != j ==> udpSlice[i] != udpSlice[j]))) &&
+	(forall i int :: 0 <= i && i < len(udpSlice) ==> acc(udpSlice[i].Mem(), _)) &&
+	(forall i, j int :: 0 <= i && i < len(udpSlice) ==>
+		(0 <= j && j < len(udpSlice) ==>
+			(i != j ==> !equalUDPAddr(udpSlice[i], udpSlice[j]))))
+}
+*/
+
 pred validMapValue(udpSlice []*net.UDPAddr) {
 	(forall i int :: 0 <= i && i < len(udpSlice) ==> acc(&udpSlice[i])) &&
 	(forall i int :: 0 <= i && i < len(udpSlice) ==> acc(udpSlice[i].Mem(), _)) &&
-	(forall i int :: 0 <= i && i < len(udpSlice) ==>
-		(forall j int :: 0 <= j && j < len(udpSlice) ==>
-			(i != j ==> equalUDPAddr(udpSlice[i], udpSlice[j]))))
+	(forall i, j int :: { &udpSlice[i], &udpSlice[j] } (0 <= i && i < len(udpSlice) && 0 <= j && j < len(udpSlice) && i != j) ==>
+		(&udpSlice[i] != &udpSlice[j] && udpSlice[i] != udpSlice[j])) // &&
+	// (forall i, j int :: { &udpSlice[i], &udpSlice[j] } 0 <= i && i < len(udpSlice) ==>
+	//	(0 <= j && j < len(udpSlice) ==>
+	//		(i != j ==> !equalUDPAddr(udpSlice[i], udpSlice[j]))))
 }
 
 // The following function is a trick to avoid a bug in Gobra. If we inline this function

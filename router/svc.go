@@ -91,32 +91,40 @@ func (s *services) Any(svc addr.HostSVC) (*net.UDPAddr, bool) {
 	return addrs[mrand.Intn(len(addrs))], true
 }
 
-//@ trusted // TODO: deal with the injectivity checks
 //@ preserves acc(a.Mem(), definitions.ReadL10)
 //@ preserves acc(validMapValue(addrs), definitions.ReadL10)
 //@ ensures   b ==> res >= 0 && 0 < len(addrs) && 0 <= res && res < len(addrs)
 //@ ensures   !b ==> res == -1
-// TODO: this postcondition can be made stronger
-//@ ensures   !b == unfolding acc(validMapValue(addrs), definitions.ReadL10) in (forall i int :: 0 <= i && i < len(addrs) ==> !equalUDPAddr(a, addrs[i]))
+// ensures   !b == unfolding acc(validMapValue(addrs), definitions.ReadL10) in
+// 	(forall i int :: 0 <= i && i < len(addrs) ==> !equalUDPAddr(a, addrs[i]))
 //@ decreases
 func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr) (res int, b bool) {
 	//@ unfold acc(validMapValue(addrs), definitions.ReadL11)
 	//@ defer  fold acc(validMapValue(addrs), definitions.ReadL11)
 	//@ assert acc(addrs, definitions.ReadL11)
-	//@ assert forall i int :: 0 <= i && i < len(addrs) ==> acc(addrs[i].Mem(), _)
-	//@ assert forall i int :: 0 <= i && i < len(addrs) ==> unfolding acc(addrs[i].Mem(), _) in true
+	//@ assert (forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> (forall j int :: 0 <= j && j < len(addrs) ==> (i1 != j ==> &addrs[i1] != &addrs[j])))
+	//@ assert forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(addrs[i1].Mem(), _)
 
-	//@ invariant acc(a.Mem(), definitions.ReadL11)
+	//@ assume len(addrs) > 0
+
+	//@ invariant acc(a.Mem(), definitions.ReadL10)
+	//@ invariant (forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> (forall j int :: 0 <= j && j < len(addrs) ==> (i1 != j ==> &addrs[i1] != &addrs[j])))
 	//@ invariant acc(addrs, definitions.ReadL11)
-	//@ invariant forall i int :: 0 <= i && i < len(addrs) ==> acc(addrs[i].Mem(), _)
+	//@ invariant (forall i1, j1 int :: /*{&addrs[i1], &addrs[j1]}*/ (0 <= i1 && i1 < len(addrs) && 0 <= j1 && j1 < len(addrs) && i1 != j1) ==>
+	//@ 	(&addrs[i1] != &addrs[j1] && addrs[i1] != addrs[j1]))
+	//@ invariant forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(addrs[i1].Mem(), _)
+	// invariant forall i1, j1 int :: { &addrs[i1], &addrs[j1] } 0 <= i1 && i1 < len(addrs) ==>
+	//	(0 <= j1 && j1 < len(addrs) ==>
+	//	(i1 != j1 ==> !equalUDPAddr(addrs[i1], addrs[j1])))
 	//@ decreases len(addrs) - i
 	for i, o := range addrs {
-		//@ unfold acc(a.Mem(), definitions.ReadL11)
-		//@ defer  fold acc(a.Mem(), definitions.ReadL11)
+		//@ unfold acc(a.Mem(), definitions.ReadL10)
 		//@ unfold acc(o.Mem(), _)
 		if a.IP.Equal(o.IP) && a.Port == o.Port {
+			//@ fold acc(a.Mem(), definitions.ReadL10)
 			return i, true
 		}
+		//@ fold acc(a.Mem(), definitions.ReadL10)
 	}
 	return -1, false
 }
