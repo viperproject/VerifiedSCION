@@ -1,0 +1,108 @@
+// Copyright 2014 The Prometheus Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Adapted from https://github.com/prometheus/client_golang/blob/master/prometheus/gauge.go
+
+// +gobra
+
+package prometheus
+
+import (
+	"time"
+)
+
+// (tlino) The Prometheus reference implementaiton of Gauge ensures thread-safety
+// Gauge is a Metric that represents a single numerical value that can
+// arbitrarily go up and down.
+//
+// A Gauge is typically used for measured values like temperatures or current
+// memory usage, but also "counts" that can go up and down, like the number of
+// running goroutines.
+//
+// To create Gauge instances, use NewGauge.
+type Gauge interface {
+	Metric
+	Collector
+
+	pred Mem()
+
+	// Set sets the Gauge to an arbitrary value.
+	preserves acc(Mem(), _)
+	decreases
+	Set(float64)
+	// Inc increments the Gauge by 1. Use Add to increment it by arbitrary
+	// values.
+	preserves acc(Mem(), _)
+	decreases
+	Inc()
+	// Dec decrements the Gauge by 1. Use Sub to decrement it by arbitrary
+	// values.
+	preserves acc(Mem(), _)
+	decreases
+	Dec()
+	// Add adds the given value to the Gauge. (The value can be negative,
+	// resulting in a decrease of the Gauge.)
+	preserves acc(Mem(), _)
+	decreases
+	Add(float64)
+	// Sub subtracts the given value from the Gauge. (The value can be
+	// negative, resulting in an increase of the Gauge.)
+	preserves acc(Mem(), _)
+	decreases
+	Sub(float64)
+
+	// SetToCurrentTime sets the Gauge to the current Unix time in seconds.
+	preserves acc(Mem(), _)
+	decreases
+	SetToCurrentTime()
+}
+
+// GaugeOpts is an alias for Opts. See there for doc comments.
+type GaugeOpts Opts
+
+// NewGauge creates a new Gauge based on the provided GaugeOpts.
+requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
+ensures  ret.Mem()
+decreases _
+func NewGauge(opts GaugeOpts) (ret Gauge)
+
+// GaugeVec is a Collector that bundles a set of Gauges that all share the same
+// Desc, but have different values for their variable labels. This is used if
+// you want to count the same thing partitioned by various dimensions
+// (e.g. number of operations queued, partitioned by user and operation
+// type). Create instances with NewGaugeVec.
+type GaugeVec struct {
+	*MetricVec
+}
+
+pred (c *GaugeVec) Mem() {
+	acc(&c.MetricVec) && (c.MetricVec != nil ==> acc(c.MetricVec) && c.MetricVec.Mem())
+}
+
+// NewGaugeVec creates a new GaugeVec based on the provided GaugeOpts and
+// partitioned by the given label names.
+requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
+requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
+ensures  g.Mem()
+decreases _
+func NewGaugeVec(opts GaugeOpts, labelNames []string) (g *GaugeVec)
+
+// (tlino) The Prometheus reference implementaiton of GaugeVec and Gauge ensures thread-safety
+// With works as GetMetricWith, but panics where GetMetricWithLabels would have
+// returned an error. Not returning an error allows shortcuts like
+//     myVec.With(prometheus.Labels{"code": "404", "method": "GET"}).Add(42)
+preserves acc(v.Mem(), _)
+preserves acc(labels, _)
+ensures   g.Mem()
+decreases _
+func (v *GaugeVec) With(labels Labels) (g Gauge)
