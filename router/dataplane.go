@@ -38,26 +38,26 @@ import (
 	_ "github.com/scionproto/scion/pkg/addr"
 	// libepic "github.com/scionproto/scion/pkg/experimental/epic"
 	_ "github.com/scionproto/scion/pkg/experimental/epic"
-)
+	_ "github.com/scionproto/scion/pkg/log"
+	_ "github.com/scionproto/scion/pkg/private/serrors"
+	_ "github.com/scionproto/scion/pkg/private/util"
+	_ "github.com/scionproto/scion/pkg/scrypto"
 
-/*
-
-	"github.com/scionproto/scion/pkg/log"
-	"github.com/scionproto/scion/pkg/private/serrors"
-	"github.com/scionproto/scion/pkg/private/util"
-	"github.com/scionproto/scion/pkg/scrypto"
-	"github.com/scionproto/scion/pkg/slayers"
-	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/pkg/slayers/path/empty"
-	"github.com/scionproto/scion/pkg/slayers/path/epic"
-	"github.com/scionproto/scion/pkg/slayers/path/onehop"
-	"github.com/scionproto/scion/pkg/slayers/path/scion"
-	"github.com/scionproto/scion/private/topology"
-	"github.com/scionproto/scion/private/underlay/conn"
-	underlayconn "github.com/scionproto/scion/private/underlay/conn"
-	"github.com/scionproto/scion/router/bfd"
-	"github.com/scionproto/scion/router/control"
-*/
+	/*
+		"github.com/scionproto/scion/pkg/slayers"
+	*/
+	_ "github.com/scionproto/scion/pkg/slayers/path"
+	_ "github.com/scionproto/scion/pkg/slayers/path/empty"
+	_ "github.com/scionproto/scion/pkg/slayers/path/epic"
+	_ "github.com/scionproto/scion/pkg/slayers/path/onehop"
+	_ "github.com/scionproto/scion/pkg/slayers/path/scion"
+	/*
+		"github.com/scionproto/scion/private/topology"
+		"github.com/scionproto/scion/private/underlay/conn"
+		underlayconn "github.com/scionproto/scion/private/underlay/conn"
+		"github.com/scionproto/scion/router/bfd"
+		"github.com/scionproto/scion/router/control"
+	*/)
 
 /*
 const (
