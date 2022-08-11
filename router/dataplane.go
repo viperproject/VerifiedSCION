@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +gobra
+// TODO: currently not verified, header missing
 
 package router
 
@@ -51,15 +51,14 @@ import (
 	_ "github.com/scionproto/scion/pkg/slayers/path/epic"
 	_ "github.com/scionproto/scion/pkg/slayers/path/onehop"
 	_ "github.com/scionproto/scion/pkg/slayers/path/scion"
+	_ "github.com/scionproto/scion/private/topology"
 	/*
-		"github.com/scionproto/scion/private/topology"
 		"github.com/scionproto/scion/private/underlay/conn"
 		underlayconn "github.com/scionproto/scion/private/underlay/conn"
 		"github.com/scionproto/scion/router/bfd"
 		"github.com/scionproto/scion/router/control"
 	*/)
 
-/*
 const (
 	// Number of packets to read in a single ReadBatch call.
 	inputBatchCnt = 64
@@ -75,6 +74,7 @@ const (
 	hopFieldDefaultExpTime = 63
 )
 
+/*
 type bfdSession interface {
 	Run(ctx context.Context) error
 	ReceiveMessage(*layers.BFD)

@@ -1,0 +1,59 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package router
+
+import (
+	"net"
+
+	"github.com/scionproto/scion/pkg/addr"
+)
+
+pred (s *services) Mem() {
+	s.mtx.LockP() &&
+	s.mtx.LockInv() == internalLockInv!<s!>;
+}
+
+pred internalLockInv(s *services) {
+	acc(&s.m) &&
+	acc(s.m) &&
+	// we can read all keys stored in the map
+	(forall host addr.HostSVC :: host in domain(s.m) ==> validMapValue(s.m[host]))
+}
+
+pred validMapValue(udpSlice []*net.UDPAddr) {
+	(forall i int :: 0 <= i && i < len(udpSlice) ==> acc(&udpSlice[i])) &&
+	(forall i int :: 0 <= i && i < len(udpSlice) ==> acc(udpSlice[i].Mem(), _)) &&
+	(forall i int :: 0 <= i && i < len(udpSlice) ==>
+		(forall j int :: 0 <= j && j < len(udpSlice) ==>
+			(i != j ==> equalUDPAddr(udpSlice[i], udpSlice[j]))))
+}
+
+// The following function is a trick to avoid a bug in Gobra. If we inline this function
+// definition, Gobra complains with:
+//     [info] An assumption was violated during execution.
+//     [info] Logic error: got unexpected type InternalSingleMulti([]*UDPAddr,([]*UDPAddr,bool))
+ghost
+pure func notEqual(udpSlice1 []*net.UDPAddr, udpSlice2 []*net.UDPAddr) bool {
+	return udpSlice1 != udpSlice2
+}
+
+ghost
+requires acc(a.Mem(), _) && acc(o.Mem(), _)
+decreases
+pure func equalUDPAddr(a, o *net.UDPAddr) bool {
+	return unfolding acc(a.Mem(), _) in (unfolding acc(o.Mem(), _) in a.IP.Equal(o.IP) && a.Port == o.Port)
+}
