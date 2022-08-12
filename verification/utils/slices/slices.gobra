@@ -157,14 +157,14 @@ func Reslice_Bytes(s []byte, start int, end int, p perm) {
 
 ghost
 requires 0 <= p
-requires 0 <= start && start < end && end <= cap(s)
+requires 0 <= start && start <= end && end <= cap(s)
 requires len(s[start:end]) <= cap(s)
 requires acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
 ensures  acc(AbsSlice_Bytes(s, start, end), p)
 decreases
 func Unslice_Bytes(s []byte, start int, end int, p perm) {
 	unfold acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
-	assert 0 <= start && start < end && end <= cap(s)
+	assert 0 <= start && start <= end && end <= cap(s)
 	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
 	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
 	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
