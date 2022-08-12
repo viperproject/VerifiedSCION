@@ -354,6 +354,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ fold acc(s.AddrHdrMem(), definitions.ReadL2)
 	//@ ghost slices.Reslice_Bytes(buf, CmnHdrLen, len(buf), writePerm)
 	tmp := s.SerializeAddrHdr(buf[CmnHdrLen:])
+	//@ ghost slices.Unslice_Bytes(buf, CmnHdrLen, len(buf), writePerm)
 	//@ unfold acc(s.AddrHdrMem(), definitions.ReadL2)
 	//@ fold acc(s.Mem(), definitions.ReadL1)
 	//@ assert acc(s.Mem(), definitions.ReadL1)
@@ -649,11 +650,10 @@ func (s *SCION) AddrHdrLen() (l int) {
 // SerializeAddrHdr serializes destination and source ISD-AS-Host address triples into the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
-//@ requires acc(s.AddrHdrMem(), definitions.ReadL2)
-// requires len(buf) >= unfolding(acc(s.AddrHdrMem(), definitions.ReadL2)) in s.AddrHdrLen()
-//@ requires slices.AbsSlice_Bytes(buf, 0, len(buf))
-//@ ensures  acc(s.AddrHdrMem(), definitions.ReadL2)
-//@ ensures  err != nil ==> err.ErrorMem()
+//@ requires  acc(s.AddrHdrMem(), definitions.ReadL2)
+//@ preserves slices.AbsSlice_Bytes(buf, 0, len(buf))
+//@ ensures   acc(s.AddrHdrMem(), definitions.ReadL2)
+//@ ensures   err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *SCION) SerializeAddrHdr(buf []byte) (err error) {
 	//@ unfold acc(s.AddrHdrMem(), definitions.ReadL2)

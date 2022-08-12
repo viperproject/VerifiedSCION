@@ -45,6 +45,8 @@ type SerializeBuffer interface {
 	ensures err == nil ==> len(res) == num
 	ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
 	ensures err != nil ==> Mem()
+	// TODO ensure ErrorMem for all other cases
+	ensures err != nil ==> err.ErrorMem()
 	decreases
 	PrependBytes(num int) (res []byte, err error)
 
