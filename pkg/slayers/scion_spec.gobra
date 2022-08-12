@@ -68,6 +68,8 @@ pred (s *SCION) AddrHdrMem() {
 		acc(&s.RawSrcAddr) &&
 		acc(&s.DstAddrLen) &&
 		acc(&s.SrcAddrLen) &&
+		acc(&s.DstIA) &&
+		acc(&s.SrcIA) &&
 		slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)) &&
 		slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
 		s.DstAddrLen >= 0 &&

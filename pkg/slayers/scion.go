@@ -253,22 +253,29 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		// apply slices.AbsSlice_Bytes(buf, 0, len(buf)) --* Mem()
 		s.PayloadLen = uint16(len(b.Bytes()) - scnLen)
 	}
+	//@ assert len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
+	//@ preserves acc(s.Mem(), definitions.ReadL1)
+	//@ decreases
+	//@ outline (
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
-	//@ assert len(buf) >= CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
-	//@ assert len(buf) >= CmnHdrLen
-	//@ assert CmnHdrLen > 4
-	//@ assert len(buf) > 4
-	//@ assert s.DstAddrLen >= 0
 	// Serialize common header.
 	firstLine := uint32(s.Version&0xF)<<28 | uint32(s.TrafficClass)<<20 | s.FlowID&0xFFFFF
+	//@ fold acc(s.Mem(), definitions.ReadL1)
+	//@ )
 
+	//@ requires  acc(s.Mem(), definitions.ReadL1)
+	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, len(buf))
-	//@ preserves acc(&s.NextHdr, definitions.ReadL2)
-	//@ preserves acc(&s.HdrLen, definitions.ReadL2)
+	//@ ensures   acc(s.Mem(), definitions.ReadL1)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, 6)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 6, len(buf))
+	//@ ensures   len(buf) == before(len(buf))
 	//@ decreases
 	//@ outline(
+	//@ unfold acc(s.Mem(), definitions.ReadL2)
+	//
+	//@ assume s.Path.Len() >= 0 // FIXME
+	//
 	//@ ghost slices.SplitByIndex_Bytes(buf, 0, len(buf), 4, writePerm)
 	//@ ghost slices.Reslice_Bytes(buf, 0, 4, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(buf[:4], 0, len(buf[:4]))
@@ -281,21 +288,23 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	buf[5] = s.HdrLen
 	//@ fold slices.AbsSlice_Bytes(buf, 4, 6)
 	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, 6, 4, writePerm)
+	//@ fold acc(s.Mem(), definitions.ReadL2)
 	//@ )
 
-	//@ assert s.DstAddrLen >= 0
-
+	//@ requires  acc(s.Mem(), definitions.ReadL1)
+	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, 6)
 	//@ requires  slices.AbsSlice_Bytes(buf, 6, len(buf))
-	//@ preserves acc(&s.PayloadLen, definitions.ReadL2)
-	//@ preserves acc(&s.DstAddrLen, definitions.ReadL2)
-	//@ preserves acc(&s.DstAddrType, definitions.ReadL2)
-	//@ preserves acc(&s.SrcAddrLen, definitions.ReadL2)
-	//@ preserves acc(&s.SrcAddrType, definitions.ReadL2)
+	//@ ensures   acc(s.Mem(), definitions.ReadL1)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, 10)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 10, len(buf))
+	//@ ensures   len(buf) == before(len(buf))
 	//@ decreases
 	//@ outline(
+	//@ unfold acc(s.Mem(), definitions.ReadL2)
+	//
+	//@ assume s.Path.Len() >= 0 // FIXME
+	//
 	//@ ghost slices.SplitByIndex_Bytes(buf, 6, len(buf), 8, writePerm)
 	//@ ghost slices.Reslice_Bytes(buf, 6, 8, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(buf[6:8], 0, len(buf[6:8]))
@@ -310,14 +319,14 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		uint8(s.SrcAddrType&0x3)<<2 | uint8(s.SrcAddrLen&0x3)
 	//@ fold slices.AbsSlice_Bytes(buf, 8, 10)
 	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, 10, 8, writePerm)
+	//@ fold acc(s.Mem(), definitions.ReadL2)
 	//@ )
-
-	//@ assert s.DstAddrLen >= 0
 
 	//@ requires slices.AbsSlice_Bytes(buf, 0, 10)
 	//@ requires slices.AbsSlice_Bytes(buf, 10, len(buf))
 	//@ ensures  slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
 	//@ ensures  slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
+	//@ ensures  len(buf) == before(len(buf))
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.SplitByIndex_Bytes(buf, 10, len(buf), 12, writePerm)
@@ -329,21 +338,50 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, 12, 10, writePerm)
 	//@ )
 
-	//@ assert s.DstAddrLen >= 0
-
-	//@ fold acc(s.AddrHdrMem(), definitions.ReadL1)
-	//@ assert CmnHdrLen == 12
-	//@ assert slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
+	//@ requires  acc(s.Mem(), definitions.ReadL1)
+	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
+	//@ preserves slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
+	//@ preserves slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
+	//@ ensures   acc(s.Mem(), definitions.ReadL1)
+	//@ ensures   len(buf) == before(len(buf))
+	//@ ensures   tmp != nil ==> tmp.ErrorMem()
+	//@ decreases
+	//@ outline(
+	//@ unfold acc(s.Mem(), definitions.ReadL1)
+	//
+	//@ assume s.Path.Len() >= 0 // FIXME
+	//
+	//@ fold acc(s.AddrHdrMem(), definitions.ReadL2)
 	//@ ghost slices.Reslice_Bytes(buf, CmnHdrLen, len(buf), writePerm)
+	tmp := s.SerializeAddrHdr(buf[CmnHdrLen:])
+	//@ unfold acc(s.AddrHdrMem(), definitions.ReadL2)
+	//@ fold acc(s.Mem(), definitions.ReadL1)
+	//@ assert acc(s.Mem(), definitions.ReadL1)
+	//@ )
+
 	// Serialize address header.
-	if err := s.SerializeAddrHdr(buf[CmnHdrLen:]); err != nil {
+	if err := tmp; err != nil {
 		//@ ghost slices.CombineAtIndex_Bytes(buf, 0, len(buf), CmnHdrLen, writePerm)
-		//@ fold s.Mem()
+		//@ apply slices.AbsSlice_Bytes(buf, 0, len(buf)) --* b.Mem()
 		return err
 	}
-	//@ unfold acc(s.AddrHdrMem(), definitions.ReadL1)
+
+	//@ requires  s.Mem()
+	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
+	//@ requires  slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
+	//@ requires  slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
+	//@ ensures   s.Mem()
+	//@ ensures   slices.AbsSlice_Bytes(buf, 0, len(buf))
+	//@ ensures   len(buf) == before(len(buf))
+	//@ ensures   res != nil ==> res.ErrorMem()
+	//@ decreases
+	//@ outline(
+	//@ unfold s.Mem()
+	//
+	//@ assume s.Path.Len() >= 0 // FIXME
+	//
 	offset := CmnHdrLen + s.AddrHdrLen()
-	//@ assert offset >= CmnHdrLen
+	//@ assert offset >= CmnHdrLen && offset <= len(buf)
 	//@ ghost slices.SplitByIndex_Bytes(buf, CmnHdrLen, len(buf), offset, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, offset, CmnHdrLen, writePerm)
 	//@ ghost slices.Reslice_Bytes(buf, offset, len(buf), writePerm)
@@ -352,6 +390,8 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ ghost slices.Unslice_Bytes(buf, offset, len(buf), writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, len(buf), offset, writePerm)
 	//@ fold s.Mem()
+	//@ )
+	//@ apply slices.AbsSlice_Bytes(buf, 0, len(buf)) --* b.Mem()
 	return res
 }
 
@@ -609,25 +649,26 @@ func (s *SCION) AddrHdrLen() (l int) {
 // SerializeAddrHdr serializes destination and source ISD-AS-Host address triples into the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
-//@ requires acc(s.AddrHdrMem(), definitions.ReadL1)
-//@ requires len(buf) >= unfolding(acc(s.AddrHdrMem(), definitions.ReadL1)) in s.AddrHdrLen()
+//@ requires acc(s.AddrHdrMem(), definitions.ReadL2)
+// requires len(buf) >= unfolding(acc(s.AddrHdrMem(), definitions.ReadL2)) in s.AddrHdrLen()
 //@ requires slices.AbsSlice_Bytes(buf, 0, len(buf))
-//@ ensures  acc(s.Mem(), definitions.ReadL1)
+//@ ensures  acc(s.AddrHdrMem(), definitions.ReadL2)
 //@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *SCION) SerializeAddrHdr(buf []byte) (err error) {
+	//@ unfold acc(s.AddrHdrMem(), definitions.ReadL2)
 	if len(buf) < s.AddrHdrLen() {
+		//@ defer fold acc(s.AddrHdrMem(), definitions.ReadL2)
 		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen(),
 			"actual", len(buf))
 	}
-	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	dstAddrBytes := addrBytes(s.DstAddrLen)
 	srcAddrBytes := addrBytes(s.SrcAddrLen)
 	offset := 0
 	//@ assert len(buf) >= 2*addr.IABytes + dstAddrBytes + srcAddrBytes
 	//@ preserves 0 <= offset && offset + addr.IABytes < len(buf)
 	//@ preserves  slices.AbsSlice_Bytes(buf, 0, len(buf))
-	//@ preserves acc(&s.DstIA, definitions.ReadL1)
+	//@ preserves acc(&s.DstIA, definitions.ReadL2)
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.SplitByIndex_Bytes(buf, 0, len(buf), offset, writePerm)
@@ -640,7 +681,7 @@ func (s *SCION) SerializeAddrHdr(buf []byte) (err error) {
 	//@ )
 	offset += addr.IABytes
 	//@ preserves 0 <= offset && offset + addr.IABytes < len(buf)
-	//@ preserves acc(&s.SrcIA, definitions.ReadL1)
+	//@ preserves acc(&s.SrcIA, definitions.ReadL2)
 	//@ preserves slices.AbsSlice_Bytes(buf, 0, len(buf))
 	//@ decreases
 	//@ outline(
@@ -657,16 +698,16 @@ func (s *SCION) SerializeAddrHdr(buf []byte) (err error) {
 	//@ ghost slices.SplitByIndex_Bytes(buf, offset, len(buf), offset+dstAddrBytes, writePerm)
 	//@ requires  0 < dstAddrBytes
 	//@ preserves 0 <= offset && offset + dstAddrBytes <= len(buf)
-	//@ preserves acc(&s.RawDstAddr, definitions.ReadL1)
-	//@ preserves acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL1)
+	//@ preserves acc(&s.RawDstAddr, definitions.ReadL2)
+	//@ preserves acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL2)
 	//@ preserves slices.AbsSlice_Bytes(buf, offset, offset+dstAddrBytes)
 	//@ decreases
 	//@ outline (
 	//@ ghost slices.Reslice_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, dstAddrBytes)
-	//@ unfold acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL1)
-	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@, definitions.ReadL1 @*/)
-	//@ fold acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL1)
+	//@ unfold acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL2)
+	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@, definitions.ReadL2 @*/)
+	//@ fold acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL2)
 	//@ fold slices.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, dstAddrBytes)
 	//@ assert offset < offset + dstAddrBytes
 	//@ ghost slices.Unslice_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
@@ -677,40 +718,48 @@ func (s *SCION) SerializeAddrHdr(buf []byte) (err error) {
 	//@ requires 0 < srcAddrBytes
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, offset)
 	//@ requires  slices.AbsSlice_Bytes(buf, offset, len(buf))
-	//@ preserves acc(&s.RawSrcAddr, definitions.ReadL1)
-	//@ preserves acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL1)
+	//@ preserves acc(&s.RawSrcAddr, definitions.ReadL2)
+	//@ preserves acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL2)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, len(buf))
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.SplitByIndex_Bytes(buf, offset, len(buf), offset+srcAddrBytes, writePerm)
 	//@ ghost slices.Reslice_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
-	//@ unfold acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL1)
-	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@, definitions.ReadL1 @*/)
-	//@ fold acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL1)
+	//@ unfold acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL2)
+	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@, definitions.ReadL2 @*/)
+	//@ fold acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL2)
 	//@ fold slices.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
 	//@ ghost slices.Unslice_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(buf, offset, len(buf), offset+srcAddrBytes, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, len(buf), offset, writePerm)
 	//@ )
-	//@ fold acc(s.Mem(), definitions.ReadL1)
+	//@ fold acc(s.AddrHdrMem(), definitions.ReadL2)
 	return nil
 }
 
 // DecodeAddrHdr decodes the destination and source ISD-AS-Host address triples from the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
-//@ requires acc(&s.RawDstAddr)
-//@ requires acc(&s.RawSrcAddr)
-//@ requires acc(&s.DstAddrLen)
-//@ requires acc(&s.SrcAddrLen)
-//@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ ensures  err == nil ==> s.AddrHdrMem()
-//@ ensures  err != nil ==> acc(&s.RawDstAddr)
-//@ ensures  err != nil ==> acc(&s.RawSrcAddr)
-//@ ensures  err != nil ==> acc(&s.DstAddrLen)
-//@ ensures  err != nil ==> acc(&s.SrcAddrLen)
-//@ ensures  err != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+//@ requires  acc(&s.RawDstAddr)
+//@ requires  acc(&s.RawSrcAddr)
+//@ requires  acc(&s.DstAddrLen)
+//@ requires  acc(&s.SrcAddrLen)
+//@ requires  acc(&s.SrcIA)
+//@ requires  acc(&s.DstIA)
+//@ requires  slices.AbsSlice_Bytes(data, 0, len(data))
+//@ requires  s.DstAddrLen >= 0
+//@ requires  s.SrcAddrLen >= 0
+//@ ensures   err == nil ==> s.AddrHdrMem()
+//@ ensures   err != nil ==> acc(&s.RawDstAddr)
+//@ ensures   err != nil ==> acc(&s.RawSrcAddr)
+//@ ensures   err != nil ==> acc(&s.DstAddrLen)
+//@ ensures   err != nil ==> acc(&s.SrcAddrLen)
+//@ ensures   err != nil ==> acc(&s.DstIA)
+//@ ensures   err != nil ==> acc(&s.SrcIA)
+//@ ensures   err != nil ==> s.DstAddrLen >= 0
+//@ ensures   err != nil ==> s.SrcAddrLen >= 0
+//@ ensures   err != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 func (s *SCION) DecodeAddrHdr(data []byte) (err error) {
 	if len(data) < s.AddrHdrLen() {
 		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen(),
@@ -776,7 +825,6 @@ func (s *SCION) DecodeAddrHdr(data []byte) (err error) {
 	return nil
 }
 
-//@ trusted // TODO
 //@ pure
 //@ requires addrLen >= 0
 //@ ensures  l == (int(addrLen) + 1) * LineLen
