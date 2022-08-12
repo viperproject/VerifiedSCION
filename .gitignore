@@ -94,4 +94,5 @@ node_modules
 logger.log
 tmp/
 *.vpr
+*.debugType
 target
