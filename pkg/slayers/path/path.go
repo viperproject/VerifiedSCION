@@ -95,7 +95,7 @@ type Path interface {
 	// Len returns the length of a path in bytes.
 	//@ pure
 	//@ requires acc(Mem(), _)
-	//  ensures  l >= 0 // TODO: open issue, this causes exception
+	//@ ensures  l >= 0
 	//@ decreases
 	Len() (l int)
 	// Type returns the type of a path.
