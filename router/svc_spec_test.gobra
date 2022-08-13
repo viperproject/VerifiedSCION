@@ -22,7 +22,6 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 )
 
-/* Disabled for now
 func foldInternalLockInvAndMem_test() {
 	s := &services{m: make(map[addr.HostSVC][]*net.UDPAddr)}
 	fold internalLockInv!<s!>()
@@ -31,7 +30,7 @@ func foldInternalLockInvAndMem_test() {
 }
 
 func foldValidMapValueFold_test() {
+	var svc addr.HostSVC = addr.HostSVC(1)
 	var v []*net.UDPAddr = nil
-	fold validMapValue(v)
+	fold validMapValue(svc, v)
 }
-*/

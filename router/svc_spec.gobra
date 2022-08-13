@@ -30,45 +30,21 @@ pred (s *services) Mem() {
 pred internalLockInv(s *services) {
 	acc(&s.m) &&
 	acc(s.m) &&
-	// injectivity constraints - no two slices in s.m are the same. Enforced by all methods
-	forall host1, host2 addr.HostSVC :: { s.m[host1], s.m[host2] } (host1 != host2 && notEqual(s.m[host1], nil)) ==> notEqual(s.m[host1], s.m[host2]) &&
 	// we can read all keys stored in the map
 	forall k addr.HostSVC :: k in domain(s.m) ==> validMapValue(k, s.m[k])
 }
 
-pred validMapValue(_ addr.HostSVC, udpSlice []*net.UDPAddr) {
-	(forall i, j int :: { &udpSlice[i], &udpSlice[j] } (0 <= i && i < len(udpSlice) && 0 <= j && j < len(udpSlice) && i != j) ==> &udpSlice[i] != &udpSlice[j]) &&
+pred validMapValue(k addr.HostSVC, udpSlice []*net.UDPAddr) {
 	(forall i int :: 0 <= i && i < len(udpSlice) ==> acc(&udpSlice[i])) &&
-	// New version because of injectivity
-	(forall u *net.UDPAddr :: u in sliceToSet(udpSlice) ==> acc(u.Mem(), _))
+	(forall i int :: 0 <= i && i < len(udpSlice) ==> InjectiveMem(udpSlice[i], i))
 }
 
-// The following function is a trick to avoid a bug in Gobra. If we inline this function
-// definition, Gobra complains with:
-//     [info] An assumption was violated during execution.
-//     [info] Logic error: got unexpected type InternalSingleMulti([]*UDPAddr,([]*UDPAddr,bool))
-ghost
-pure func notEqual(udpSlice1 []*net.UDPAddr, udpSlice2 []*net.UDPAddr) bool {
-	return udpSlice1 != udpSlice2
-}
+pred InjectiveMem(u *net.UDPAddr, i int) { acc(u.Mem(), _) }
 
 ghost
 requires acc(a.Mem(), _) && acc(o.Mem(), _)
-ensures  res ==	unfolding acc(a.Mem(), _) in (unfolding acc(o.Mem(), _) in a.IP.Equal(o.IP) && a.Port == o.Port) 
+ensures  res ==	unfolding acc(a.Mem(), _) in (unfolding acc(o.Mem(), _) in a.IP.Equal(o.IP) && a.Port == o.Port)
 decreases
 pure func equalUDPAddr(a, o *net.UDPAddr) (res bool) {
 	return unfolding acc(a.Mem(), _) in (unfolding acc(o.Mem(), _) in a.IP.Equal(o.IP) && a.Port == o.Port)
 }
-
-ghost
-requires acc(udpSlice, _)
-ensures  forall u *net.UDPAddr :: u in sliceToSeq(udpSlice) == u in s
-decreases _
-pure func sliceToSet(udpSlice []*net.UDPAddr) (s set[*net.UDPAddr])
-
-ghost
-requires acc(udpSlice, _)
-ensures  len(s) == len(udpSlice)
-ensures  forall i int :: 0 <= i && i < len(udpSlice) ==> udpSlice[i] == s[i]
-decreases _
-pure func sliceToSeq(udpSlice []*net.UDPAddr) (s seq[*net.UDPAddr])
