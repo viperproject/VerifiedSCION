@@ -57,11 +57,6 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	}
 	@*/
 	//@ unfold acc(validMapValue(addrs), definitions.ReadL10)
-	//@ assert forall i, j int :: { &addrs[i], &addrs[j] } 0 <= i && i < len(addrs) ==>
-	//@	(0 <= j && j < len(addrs) ==>
-	//@		(i != j ==> !equalUDPAddr(addrs[i], addrs[j])))
-	//@ assume forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> equalUDPAddr(addrs[i1], a)
-
 	if _, ok := s.index(a, addrs); ok {
 		//@ fold internalLockInv!<s!>()
 		return
@@ -76,6 +71,7 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 }
 
 // WIP
+//@ trusted
 //@ requires  acc(s.Mem(), _)
 //@ preserves acc(a.Mem(), definitions.ReadL10)
 func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
@@ -89,7 +85,6 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ assert validMapValue(addrs)
 	index, ok := s.index(a, addrs)
 	if !ok {
-		//@ assume false // TODO
 		//@ fold internalLockInv!<s!>()
 		return
 	}
@@ -103,31 +98,32 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ fold internalLockInv!<s!>()
 }
 
-//  Verified, made trusted for now to speed up the progress
-//@ trusted
+// WIP
 //@ requires acc(s.Mem(), _)
 //@ ensures !b ==> r == nil
-//@ ensures b  ==> acc(r.Mem(), _)
+//@ ensures  b  ==> acc(r.Mem(), _)
 func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	//@ unfold internalLockInv!<s!>()
-	//@ defer fold internalLockInv!<s!>()
 	addrs := s.m[svc]
 	if len(addrs) == 0 {
+		//@ fold internalLockInv!<s!>()
 		return nil, false
 	}
-	//@ unfold acc(validMapValue(addrs))
-	//@ defer fold acc(validMapValue(addrs))
+	//@ assert validMapValue(svc, addrs)
+	//@ unfold acc(validMapValue(svc, addrs))
+	//@ defer fold internalLockInv!<s!>()
+	//@ defer fold acc(validMapValue(svc, addrs))
 	return addrs[mrand.Intn(len(addrs))], true
 }
 
-//  Verified, made trusted for now to speed up the progress
+// Verified but marked as trusted to improve verification time.
 //@ trusted
 //@ preserves acc(a.Mem(), definitions.ReadL10)
-//@ preserves acc(validMapValue(addrs), definitions.ReadL10)
+//@ preserves acc(validMapValue(k, addrs), definitions.ReadL10)
 //@ ensures   b ==> res >= 0 && 0 < len(addrs) && 0 <= res && res < len(addrs)
 //@ ensures   b ==> 0 < len(addrs)
 //@ ensures   b ==> 0 <= res && res < len(addrs)
@@ -135,7 +131,7 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 // ensures   b ==> unfolding acc(validMapValue(addrs), definitions.ReadL10) in equalUDPAddr(addrs[res], a)
 //@ ensures   !b ==> res == -1
 //@ decreases
-func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr) (res int, b bool) {
+func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr /*@ , ghost k addr.HostSVC @*/) (res int, b bool) {
 	//@ unfold acc(validMapValue(addrs), definitions.ReadL11)
 	//@ defer  fold acc(validMapValue(addrs), definitions.ReadL11)
 
