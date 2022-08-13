@@ -159,10 +159,10 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
-      - name: Verify package 'router/dataplane'
+      - name: Verify package 'router/'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'router/dataplane'
+          packages: 'router/'
           timeout: 30m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
