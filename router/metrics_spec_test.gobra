@@ -15,22 +15,3 @@
 // +gobra
 
 package router
-
-pred (m *Metrics) Mem() {
-	acc(m) &&
-	m.InputBytesTotal.Mem() &&
-	m.OutputBytesTotal.Mem() &&
-	m.InputPacketsTotal.Mem() &&
-	m.OutputPacketsTotal.Mem() &&
-	m.DroppedPacketsTotal.Mem() &&
-	m.InterfaceUp.Mem() &&
-	m.BFDInterfaceStateChanges.Mem() &&
-	m.BFDPacketsSent.Mem() &&
-	m.BFDPacketsReceived.Mem() &&
-	m.ServiceInstanceCount.Mem() &&
-	m.ServiceInstanceChanges.Mem() &&
-	m.SiblingReachable.Mem() &&
-	m.SiblingBFDPacketsSent.Mem() &&
-	m.SiblingBFDPacketsReceived.Mem() &&
-	m.SiblingBFDStateChanges.Mem()
-}
