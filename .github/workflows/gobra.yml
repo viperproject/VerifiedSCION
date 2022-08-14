@@ -133,7 +133,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/onehop'
-          timeout: 15m # 'onehop' currently takes a lot of time
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -153,6 +153,16 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'private/topology'
+          timeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'private/underlay/sockctrl'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'private/underlay/sockctrl'
           timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
