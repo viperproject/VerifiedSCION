@@ -1,0 +1,44 @@
+// Specification for package "golang.org/x/net/internal/socket"
+// Based on file https://github.com/golang/net/blob/master/internal/socket/socket.go
+
+// +gobra
+
+package socket
+
+import (
+	"net"
+	
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+
+// A Message represents an IO message.
+type Message struct {
+	// When writing, the Buffers field must contain at least one
+	// byte to write.
+	// When reading, the Buffers field will always contain a byte
+	// to read.
+	Buffers [][]byte
+
+	// OOB contains protocol-specific control or miscellaneous
+	// ancillary data known as out-of-band data.
+	OOB []byte
+
+	// Addr specifies a destination address when writing.
+	// It can be nil when the underlying protocol of the raw
+	// connection uses connection-oriented communication.
+	// After a successful read, it may contain the source address
+	// on the received packet.
+	Addr net.Addr
+
+	N     int // # of bytes read or written from/to Buffers
+	NN    int // # of bytes read or written from/to OOB
+	Flags int // protocol-specific information on the received message
+}
+
+pred (m *Message) Mem() {
+	acc(m) &&
+	(forall i int :: 0 <= i && i < len(m.Buffers) ==> (acc(&m.Buffers[i]) && slices.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))) &&
+	slices.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
+	m.Addr.Mem()
+}
