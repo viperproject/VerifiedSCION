@@ -72,11 +72,11 @@ type Conn interface {
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(m Messages, k int) (n int, err error)
 	//@ preserves acc(Mem(), definitions.ReadL10)
-	//@ ensures   acc(u.Mem(), _)
+	//@ ensures   u != nil ==> acc(u.Mem(), _)
 	//@ decreases
 	LocalAddr() (u *net.UDPAddr)
 	//@ preserves acc(Mem(), definitions.ReadL10)
-	//@ ensures   acc(u.Mem(), _)
+	//@ ensures   u != nil ==> acc(u.Mem(), _)
 	//@ decreases
 	RemoteAddr() (u *net.UDPAddr)
 	//@ preserves Mem()
@@ -110,8 +110,14 @@ type Config struct {
 // New opens a new underlay socket on the specified addresses.
 //
 // The config can be used to customize socket behavior.
-//@ trusted
-func New(listen, remote *net.UDPAddr, cfg *Config) (Conn, error) {
+//@ requires cfg.Mem()
+//@ requires listen != nil || remote != nil
+//@ requires listen != nil ==> acc(listen.Mem(), definitions.ReadL10)
+//@ requires remote != nil ==> acc(remote.Mem(), definitions.ReadL10)
+//@ ensures  e == nil ==> res.Mem()
+//@ ensures  e != nil ==> e.ErrorMem()
+//@ decreases
+func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	a := listen
 	if remote != nil {
 		a = remote
@@ -119,6 +125,12 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (Conn, error) {
 	if listen == nil && remote == nil {
 		panic("either listen or remote must be set")
 	}
+	/*@
+	assert remote != nil ==> a == remote
+	assert remote == nil ==> a == listen
+	unfold acc(a.Mem(), definitions.ReadL15)
+	assert forall i int :: 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], definitions.ReadL15)
+	@*/
 	if a.IP.To4() != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
 	}
@@ -131,8 +143,8 @@ type connUDPIPv4 struct {
 }
 
 //@ requires cfg.Mem()
-//@ requires acc(listen.Mem(), _)
-//@ requires acc(remote.Mem(), _)
+//@ requires listen != nil ==> acc(listen.Mem(), _)
+//@ requires remote != nil ==> acc(remote.Mem(), _)
 //@ ensures  e == nil ==> res.Mem()
 //@ ensures  e != nil ==> e.ErrorMem()
 //@ decreases
@@ -206,42 +218,74 @@ type connUDPIPv6 struct {
 	pconn *ipv6.PacketConn
 }
 
-//@ trusted
-func newConnUDPIPv6(listen, remote *net.UDPAddr, cfg *Config) (*connUDPIPv6, error) {
+//@ requires cfg.Mem()
+//@ requires listen != nil ==> acc(listen.Mem(), _)
+//@ requires remote != nil ==> acc(remote.Mem(), _)
+//@ ensures  e == nil ==> res.Mem()
+//@ ensures  e != nil ==> e.ErrorMem()
+//@ decreases
+func newConnUDPIPv6(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv6, e error) {
 	cc := &connUDPIPv6{}
 	if err := cc.initConnUDP("udp6", listen, remote, cfg); err != nil {
 		return nil, err
 	}
+	//@ unfold cc.connUDPBase.Mem()
 	cc.pconn = ipv6.NewPacketConn(cc.conn)
+	//@ fold cc.connUDPBase.MemWithoutConn()
+	//@ fold cc.Mem()
 	return cc, nil
 }
 
 // ReadBatch reads up to len(msgs) packets, and stores them in msgs.
 // It returns the number of packets read, and an error if any.
-//@ trusted
-func (c *connUDPIPv6) ReadBatch(msgs Messages) (int, error) {
-	n, err := c.pconn.ReadBatch(msgs, syscall.MSG_WAITFORONE)
+//@ preserves c.Mem()
+//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+//@ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
+//@ ensures   errRet != nil ==> errRet.ErrorMem()
+func (c *connUDPIPv6) ReadBatch(msgs Messages) (nRet int, errRet error) {
+	//@ unfold c.Mem()
+	// (VerifiedSCION) 1 is the length of the buffers of the messages in msgs
+	n, err := c.pconn.ReadBatch(msgs, syscall.MSG_WAITFORONE /*@, 1 @*/)
+	//@ fold c.Mem()
 	return n, err
 }
 
-//@ trusted
-func (c *connUDPIPv6) WriteBatch(msgs Messages, flags int) (int, error) {
-	return c.pconn.WriteBatch(msgs, flags)
+//@ preserves c.Mem()
+//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+//@ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+//@ ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPIPv6) WriteBatch(msgs Messages, flags int) (n int, err error) {
+	//@ unfold c.Mem()
+	//@ defer fold c.Mem()
+	// (VerifiedSCION) 1 is the length of the buffers of the messages in msgs
+	return c.pconn.WriteBatch(msgs, flags /*@, 1 @*/)
 }
 
 // SetReadDeadline sets the read deadline associated with the endpoint.
-//@ trusted
-func (c *connUDPIPv6) SetReadDeadline(t time.Time) error {
+//@ preserves c.Mem()
+//@ ensures   err != nil ==> err.ErrorMem()
+//@ decreases
+func (c *connUDPIPv6) SetReadDeadline(t time.Time) (err error) {
+	//@ unfold c.Mem()
+	//@ defer fold c.Mem()
 	return c.pconn.SetReadDeadline(t)
 }
 
-//@ trusted
-func (c *connUDPIPv6) SetWriteDeadline(t time.Time) error {
+//@ preserves c.Mem()
+//@ ensures   err != nil ==> err.ErrorMem()
+//@ decreases
+func (c *connUDPIPv6) SetWriteDeadline(t time.Time) (err error) {
+	//@ unfold c.Mem()
+	//@ defer fold c.Mem()
 	return c.pconn.SetWriteDeadline(t)
 }
 
-//@ trusted
-func (c *connUDPIPv6) SetDeadline(t time.Time) error {
+//@ preserves c.Mem()
+//@ ensures   err != nil ==> err.ErrorMem()
+//@ decreases
+func (c *connUDPIPv6) SetDeadline(t time.Time) (err error) {
+	//@ unfold c.Mem()
+	//@ defer fold c.Mem()
 	return c.pconn.SetDeadline(t)
 }
 
@@ -253,8 +297,8 @@ type connUDPBase struct {
 }
 
 //@ requires acc(cc)
-//@ requires acc(laddr.Mem(), _)
-//@ requires acc(raddr.Mem(), _)
+//@ requires laddr != nil ==> acc(laddr.Mem(), _)
+//@ requires raddr != nil ==> acc(raddr.Mem(), _)
 //@ requires cfg.Mem()
 //@ ensures  errRet == nil ==> cc.Mem()
 //@ ensures  errRet != nil ==> errRet.ErrorMem()
@@ -392,7 +436,7 @@ func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingCo
 }
 
 //@ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
-//@ ensures   acc(u.Mem(), _)
+//@ ensures   u != nil ==> acc(u.Mem(), _)
 //@ decreases
 func (c *connUDPBase) LocalAddr() (u *net.UDPAddr) {
 	//@ unfold acc(c.MemWithoutConn(), definitions.ReadL16)
@@ -401,7 +445,7 @@ func (c *connUDPBase) LocalAddr() (u *net.UDPAddr) {
 }
 
 //@ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
-//@ ensures   acc(u.Mem(), _)
+//@ ensures   u != nil ==> acc(u.Mem(), _)
 //@ decreases
 func (c *connUDPBase) RemoteAddr() (u *net.UDPAddr) {
 	//@ unfold acc(c.MemWithoutConn(), definitions.ReadL16)
