@@ -15,6 +15,8 @@
 //go:build go1.9
 // +build go1.9
 
+// +gobra
+
 // This version of sockctrl is for Go versions >= 1.9, where the socket FDs are
 // accessible via RawConn.Control().
 package sockctrl
@@ -25,6 +27,9 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 )
 
+//@ trusted
+//@ requires f implements FunctionParam
+//@ preserves c.Mem()
 func SockControl(c *net.UDPConn, f func(int) error) error {
 	rawConn, err := c.SyscallConn()
 	if err != nil {

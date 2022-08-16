@@ -1,0 +1,36 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package router
+
+pred (m *Metrics) Mem() {
+	acc(m) &&
+	m.InputBytesTotal.Mem() &&
+	m.OutputBytesTotal.Mem() &&
+	m.InputPacketsTotal.Mem() &&
+	m.OutputPacketsTotal.Mem() &&
+	m.DroppedPacketsTotal.Mem() &&
+	m.InterfaceUp.Mem() &&
+	m.BFDInterfaceStateChanges.Mem() &&
+	m.BFDPacketsSent.Mem() &&
+	m.BFDPacketsReceived.Mem() &&
+	m.ServiceInstanceCount.Mem() &&
+	m.ServiceInstanceChanges.Mem() &&
+	m.SiblingReachable.Mem() &&
+	m.SiblingBFDPacketsSent.Mem() &&
+	m.SiblingBFDPacketsReceived.Mem() &&
+	m.SiblingBFDStateChanges.Mem()
+}

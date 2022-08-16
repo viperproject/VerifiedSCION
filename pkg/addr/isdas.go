@@ -249,7 +249,7 @@ func (ia IA) IsWildcard() bool {
 //@ decreases
 func (ia IA) String() string {
 	// (VerifiedSCION) Added casts around ia.ISD() and ia.AS() to be able to pass them to 'fmt.Sprintf'
-	return fmt.Sprintf("%d-%s", uint16(ia.ISD()), uint64(ia.AS()))
+	return fmt.Sprintf("%d-%s", ia.ISD(), ia.AS())
 }
 
 // Set implements flag.Value interface
