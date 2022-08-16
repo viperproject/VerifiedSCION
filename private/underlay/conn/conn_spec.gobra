@@ -16,9 +16,14 @@
 
 package conn
 
-import "golang.org/x/net/ipv4"
+import (
+	"net"
 
-import "github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/verification/utils/slices"
+
+	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
+)
 
 /** Mem predicate definitions **/
 pred (c *connUDPBase) Mem() {
@@ -28,15 +33,17 @@ pred (c *connUDPBase) Mem() {
 	acc(c.Remote.Mem(), _)
 }
 
-pred (c *connUDPBase) MemWithoutConn() {
+// TODO: explain two params
+pred (c *connUDPBase) MemWithoutConn(ipv4Conn *ipv4.PacketConn, ipv6Conn *ipv6.PacketConn) {
+	((ipv4Conn != nil && ipv6Conn == nil) || (ipv6Conn != nil && ipv4Conn == nil)) &&
 	acc(c) &&
 	acc(c.Listen.Mem(), _) &&
 	acc(c.Remote.Mem(), _)
 }
 
 pred (c *connUDPIPv4) Mem() {
-	c.connUDPBase.MemWithoutConn() &&
 	acc(&c.pconn) &&
+	c.connUDPBase.MemWithoutConn(c.pconn, nil) &&
 	c.pconn.Mem()
 }
 
@@ -46,53 +53,52 @@ pred (c *Config) Mem() {
 	0 <= c.ReceiveBufferSize
 }
 
-// This predicate is tested (folded) in function NewReadMessages.
-pred UnderlayConnValidMsg(msg *ipv4.Message) {
-	acc(msg) &&
-	len(msg.Buffers) == 1 &&
-	acc(&msg.Buffers[0]) &&
-	slices.AbsSlice_Bytes(msg.Buffers[0], 0, len(msg.Buffers[0])) &&
-	slices.AbsSlice_Bytes(msg.OOB, 0, len(msg.OOB)) &&
-	(msg.Addr != nil ==> acc(msg.Addr.Mem(), _))
-}
-/** End of mem predicate definitions **/
-
-/** Useful functions **/
-pure
-requires acc(msg.Mem(), _)
-ensures  res == unfolding acc(msg.Mem(), _) in len(msg.Buffers)
-decreases
-func getLengthBuffers(msg *ipv4.Message) (res int) {
-	return unfolding acc(msg.Mem(), _) in len(msg.Buffers)
-}
-/** End of useful functions **/
-
-/** Conversions between predicates for *ipv4.Message **/
-ghost
-requires UnderlayConnValidMsg(msg)
-ensures  msg.Mem()
-ensures  getLengthBuffers(msg) == 1
-decreases
-func underlayToMem(msg *ipv4.Message) {
-	unfold UnderlayConnValidMsg(msg)
-	fold msg.Mem()
-}
-
-ghost
-requires msg.Mem()
-requires unfolding msg.Mem() in len(msg.Buffers) == 1
-ensures  UnderlayConnValidMsg(msg)
-decreases
-func memToUnderlay(msg *ipv4.Message) {
-	unfold msg.Mem()
-	fold UnderlayConnValidMsg(msg)
-}
-/** End of conversions between predicates for *ipv4.Message **/
-
 // TODO
 // *connUDPIPv4 implements Conn
+// TODO: spec udpconnbase
 // TODO: lift methods from connUDPBase to its implementations
+
+/** Lift methods in *connUDPBase to *connUDPIPv4 **/
+trusted
+preserves c.Mem()
+preserves slices.AbsSlice_Bytes(b, 0, len(b))
+ensures   err == nil ==> 0 <= n && n <= len(b)
+ensures   err == nil ==> acc(addr.Mem(), _)
+ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPIPv4) ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error) {
+// call impl
+}
+
+trusted
+func (c *connUDPIPv4) Write(b []byte) (int, error) {
+// call impl
+}
+
+trusted
+func (c *connUDPIPv4) WriteTo(b []byte, dst *net.UDPAddr) (int, error) {
+// call impl
+}
+
+trusted
+func (c *connUDPIPv4) LocalAddr() *net.UDPAddr {
+// call impl
+}
+
+trusted
+func (c *connUDPIPv4) RemoteAddr() *net.UDPAddr {
+// call impl
+}
+
+requires c.Mem()
+ensures  err != nil ==> err.ErrorMem()
+decreases
+func (c *connUDPIPv4) Close() (err error) {
+	unfold c.Mem()
+	c.connUDPBase.Close()
+}
+/** End of Lift methods in *connUDPBase to *connUDPIPv4 **/
 
 //TODO: redo everything for ipv6:
 // *connUDPIPv6 implements Conn
 // TODO: add post to readbatch in ipv6
+// TODO: disable consistency checks here because of

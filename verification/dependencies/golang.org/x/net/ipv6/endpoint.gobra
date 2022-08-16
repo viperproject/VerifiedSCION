@@ -147,7 +147,8 @@ func (c *PacketConn) Close() (e error) {
 // transport.
 trusted
 requires c.Mem()
-ensures p.Mem()
+ensures  p != nil && p.Mem()
+ensures  p.Mem() --* c.Mem()
 decreases _
 func NewPacketConn(c net.PacketConn) (p *PacketConn) {
 	cc, _ := socket.NewConn(c.(net.Conn))
@@ -164,10 +165,10 @@ func NewPacketConn(c net.PacketConn) (p *PacketConn) {
 // to len(ms).
 trusted
 preserves c.Mem()
-preserves forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem()
-ensures err == nil ==> 0 <= n && n <= len(ms)
-ensures err != nil ==> err.ErrorMem()
-func (c *PacketConn) ReadBatch(ms []socket.Message, flags int) (n int, err error) {
+preserves forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem(lenBuffers)
+ensures   err == nil ==> 0 <= n && n <= len(ms)
+ensures   err != nil ==> err.ErrorMem()
+func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers int) (n int, err error) {
 	return c.payloadHandler.ReadBatch(ms, flags)
 }
 
@@ -176,9 +177,9 @@ func (c *PacketConn) ReadBatch(ms []socket.Message, flags int) (n int, err error
 // It returns the number of messages written on a successful write.
 trusted
 preserves c.Mem()
-preserves forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(), definitions.ReadL10)
+preserves forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), definitions.ReadL10)
 ensures err == nil ==> 0 <= n && n <= len(ms)
 ensures err != nil ==> err.ErrorMem()
-func (c *PacketConn) WriteBatch(ms []socket.Message, flags int) (n int, err error) {
+func (c *PacketConn) WriteBatch(ms []socket.Message, flags int, ghost lenBuffers int) (n int, err error) {
 	return c.payloadHandler.WriteBatch(ms, flags)
 }
