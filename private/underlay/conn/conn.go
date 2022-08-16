@@ -56,26 +56,26 @@ type Conn interface {
 	//@ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(m Messages) (n int, err error)
 	//@ preserves Mem()
-	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	Write(b []byte) (n int, err error)
 	//@ requires  acc(u.Mem(), _)
 	//@ preserves Mem()
-	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, u *net.UDPAddr) (n int, err error)
 	//@ preserves Mem()
-	//@ preserves forall i int :: 0 <= i && i < len(m) ==> acc(m[i].Mem(1), definitions.ReadL15)
+	//@ preserves forall i int :: 0 <= i && i < len(m) ==> acc(m[i].Mem(1), definitions.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(m)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(m Messages, k int) (n int, err error)
-	//@ preserves acc(Mem(), definitions.ReadL15)
+	//@ preserves acc(Mem(), definitions.ReadL10)
 	//@ ensures   acc(u.Mem(), _)
 	//@ decreases
 	LocalAddr() (u *net.UDPAddr)
-	//@ preserves acc(Mem(), definitions.ReadL15)
+	//@ preserves acc(Mem(), definitions.ReadL10)
 	//@ ensures   acc(u.Mem(), _)
 	//@ decreases
 	RemoteAddr() (u *net.UDPAddr)
@@ -143,7 +143,7 @@ func newConnUDPIPv4(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv4,
 	}
 	//@ unfold cc.connUDPBase.Mem()
 	cc.pconn = ipv4.NewPacketConn(cc.conn)
-	//@ fold cc.connUDPBase.MemWithoutConn(cc.pconn, nil)
+	//@ fold cc.connUDPBase.MemWithoutConn()
 	//@ fold cc.Mem()
 	return cc, nil
 }
@@ -353,37 +353,67 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 	return nil
 }
 
-//@ trusted
-func (c *connUDPBase) ReadFrom(b []byte) (int, *net.UDPAddr, error) {
+//@ preserves c.Mem()
+//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+//@ preserves unfolding c.Mem() in c.conn == underlyingConn
+//@ ensures   err == nil ==> 0 <= n && n <= len(b)
+//@ ensures   err == nil ==> acc(addr.Mem(), _)
+//@ ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPBase) ReadFrom(b []byte /*@, ghost underlyingConn *net.UDPConn @*/) (n int, addr *net.UDPAddr, err error) {
+	//@ unfold c.Mem()
+	//@ defer fold c.Mem()
 	return c.conn.ReadFromUDP(b)
 }
 
-//@ trusted
-func (c *connUDPBase) Write(b []byte) (int, error) {
+//@ preserves c.Mem()
+//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+//@ preserves unfolding c.Mem() in c.conn == underlyingConn
+//@ ensures   err == nil ==> 0 <= n && n <= len(b)
+//@ ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPBase) Write(b []byte /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
+	//@ unfold c.Mem()
+	//@ defer fold c.Mem()
 	return c.conn.Write(b)
 }
 
-//@ trusted
-func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr) (int, error) {
+//@ requires  acc(dst.Mem(), _)
+//@ preserves c.Mem()
+//@ preserves unfolding c.Mem() in c.conn == underlyingConn
+//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+//@ ensures   err == nil ==> 0 <= n && n <= len(b)
+//@ ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
+	//@ unfold c.Mem()
+	//@ defer fold c.Mem()
 	if c.Remote != nil {
 		return c.conn.Write(b)
 	}
 	return c.conn.WriteTo(b, dst)
 }
 
-//@ trusted
-func (c *connUDPBase) LocalAddr() *net.UDPAddr {
+//@ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
+//@ ensures   acc(u.Mem(), _)
+//@ decreases
+func (c *connUDPBase) LocalAddr() (u *net.UDPAddr) {
+	//@ unfold acc(c.MemWithoutConn(), definitions.ReadL16)
+	//@ defer fold acc(c.MemWithoutConn(), definitions.ReadL16)
 	return c.Listen
 }
 
-//@ trusted
-func (c *connUDPBase) RemoteAddr() *net.UDPAddr {
+//@ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
+//@ ensures   acc(u.Mem(), _)
+//@ decreases
+func (c *connUDPBase) RemoteAddr() (u *net.UDPAddr) {
+	//@ unfold acc(c.MemWithoutConn(), definitions.ReadL16)
+	//@ defer fold acc(c.MemWithoutConn(), definitions.ReadL16)
 	return c.Remote
 }
 
-//@ trusted
+//@ requires c.Mem()
+//@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
-func (c *connUDPBase) Close() error {
+func (c *connUDPBase) Close() (err error) {
+	//@ unfold c.Mem()
 	if c.closed {
 		return nil
 	}

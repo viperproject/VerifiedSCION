@@ -56,11 +56,11 @@ pred (u *UDPConn) Mem() {
 }
 
 // ReadFromUDP acts like ReadFrom but returns a UDPAddr.
-requires c.Mem()
-requires forall i int :: 0 <= i && i < len(b) ==> acc(&b[i])
-ensures c.Mem()
-ensures forall i int :: 0 <= i && i < len(b) ==> acc(&b[i])
-ensures 0 <= n && n <= len(b)
+preserves c.Mem()
+preserves slices.AbsSlice_Bytes(b, 0, len(b))
+ensures   err == nil ==> 0 <= n && n <= len(b)
+ensures   err == nil ==> acc(addr.Mem(), _)
+ensures   err != nil ==> err.ErrorMem()
 func (c *UDPConn) ReadFromUDP(b []byte) (n int, addr *UDPAddr, err error)
 
 // ReadFrom implements the PacketConn ReadFrom method.
@@ -107,8 +107,9 @@ decreases
 func (c *UDPConn) SetDeadline(time.Time) (err error)
 
 requires c.Mem()
+ensures  err != nil ==> err.ErrorMem()
 decreases
-func (c *UDPConn) Close() error
+func (c *UDPConn) Close() (err error)
 
 requires acc(laddr.Mem(), _)
 ensures  err == nil ==> conn.Mem()
@@ -132,3 +133,9 @@ preserves c.Mem()
 ensures   err != nil ==> err.ErrorMem()
 decreases _
 func (c *UDPConn) SetReadBuffer(bytes int) (err error)
+
+preserves c.Mem()
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+ensures   err == nil ==> 0 <= n && n <= len(b)
+ensures   err != nil ==> err.ErrorMem()
+func (c *UDPConn) Write(b []byte) (n int, err error)
