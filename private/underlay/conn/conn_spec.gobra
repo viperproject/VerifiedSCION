@@ -16,23 +16,83 @@
 
 package conn
 
-import "github.com/scionproto/scion/verification/utils/slices"
 import "golang.org/x/net/ipv4"
 
+import "github.com/scionproto/scion/verification/utils/slices"
+
+/** Mem predicate definitions **/
 pred (c *connUDPBase) Mem() {
 	acc(c) &&
 	c.conn.Mem() &&
-	c.Listen.Mem() &&
-	c.Remote.Mem()
+	acc(c.Listen.Mem(), _) &&
+	acc(c.Remote.Mem(), _)
 }
 
-// This predicate is test (folded) in function NewReadMessages.
+pred (c *connUDPBase) MemWithoutConn() {
+	acc(c) &&
+	acc(c.Listen.Mem(), _) &&
+	acc(c.Remote.Mem(), _)
+}
+
+pred (c *connUDPIPv4) Mem() {
+	c.connUDPBase.MemWithoutConn() &&
+	acc(&c.pconn) &&
+	c.pconn.Mem()
+}
+
+pred (c *Config) Mem() {
+	acc(c) &&
+	0 <= c.SendBufferSize &&
+	0 <= c.ReceiveBufferSize
+}
+
+// This predicate is tested (folded) in function NewReadMessages.
 pred UnderlayConnValidMsg(msg *ipv4.Message) {
 	acc(msg) &&
 	len(msg.Buffers) == 1 &&
 	acc(&msg.Buffers[0]) &&
 	slices.AbsSlice_Bytes(msg.Buffers[0], 0, len(msg.Buffers[0])) &&
-	// OOB does not seem to be used in SCION
-	// slices.AbsSlice_Bytes(msg.OOB, 0, len(msg.OOB)) &&
-	(msg.Addr != nil ==> msg.Addr.Mem())
+	slices.AbsSlice_Bytes(msg.OOB, 0, len(msg.OOB)) &&
+	(msg.Addr != nil ==> acc(msg.Addr.Mem(), _))
 }
+/** End of mem predicate definitions **/
+
+/** Useful functions **/
+pure
+requires acc(msg.Mem(), _)
+ensures  res == unfolding acc(msg.Mem(), _) in len(msg.Buffers)
+decreases
+func getLengthBuffers(msg *ipv4.Message) (res int) {
+	return unfolding acc(msg.Mem(), _) in len(msg.Buffers)
+}
+/** End of useful functions **/
+
+/** Conversions between predicates for *ipv4.Message **/
+ghost
+requires UnderlayConnValidMsg(msg)
+ensures  msg.Mem()
+ensures  getLengthBuffers(msg) == 1
+decreases
+func underlayToMem(msg *ipv4.Message) {
+	unfold UnderlayConnValidMsg(msg)
+	fold msg.Mem()
+}
+
+ghost
+requires msg.Mem()
+requires unfolding msg.Mem() in len(msg.Buffers) == 1
+ensures  UnderlayConnValidMsg(msg)
+decreases
+func memToUnderlay(msg *ipv4.Message) {
+	unfold msg.Mem()
+	fold UnderlayConnValidMsg(msg)
+}
+/** End of conversions between predicates for *ipv4.Message **/
+
+// TODO
+// *connUDPIPv4 implements Conn
+// TODO: lift methods from connUDPBase to its implementations
+
+//TODO: redo everything for ipv6:
+// *connUDPIPv6 implements Conn
+// TODO: add post to readbatch in ipv6

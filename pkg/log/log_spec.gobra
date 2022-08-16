@@ -32,3 +32,7 @@ func Debug(msg string, ctx ...interface{})
 // Error logs at error level.
 decreases _
 func Error(msg string, ctx ...interface{})
+
+// Info logs at info level.
+decreases _
+func Info(msg string, ctx ...interface{})

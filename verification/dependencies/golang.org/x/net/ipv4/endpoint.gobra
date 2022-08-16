@@ -240,8 +240,10 @@ func NewRawConn(c net.PacketConn) (r *RawConn, err error) {
 trusted
 preserves c.Mem()
 preserves forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem()
-ensures err == nil ==> (0 <= n && n <= len(ms))
-ensures err != nil ==> err.ErrorMem()
+// The following clause was introduced specifically for the SCION codebase
+preserves forall i int :: 0 <= i && i < len(ms) ==> (unfolding (&ms[i]).Mem() in len(ms[i].Buffers) == 1)
+ensures   err == nil ==> (0 <= n && n <= len(ms))
+ensures   err != nil ==> err.ErrorMem()
 func (c *PacketConn) ReadBatch(ms []socket.Message, flags int) (n int, err error) {
 	return c.payloadHandler.ReadBatch(ms, flags)
 }
@@ -252,7 +254,7 @@ func (c *PacketConn) ReadBatch(ms []socket.Message, flags int) (n int, err error
 trusted
 preserves c.Mem()
 preserves forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(), definitions.ReadL10)
-ensures err == nil ==> 0 <= n && n <= len(ms)
+ensures   err == nil ==> 0 <= n && n <= len(ms)
 func (c *PacketConn) WriteBatch(ms []socket.Message, flags int) (n int, err error) {
 	return c.payloadHandler.WriteBatch(ms, flags)
 }
