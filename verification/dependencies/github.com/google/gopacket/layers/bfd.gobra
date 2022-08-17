@@ -171,7 +171,10 @@ type BFD struct {
 }
 
 pred (b *BFD) Mem() {
-	acc(b) && slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload)) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) && (b.AuthPresent ==> b.AuthHeader.Mem())
+	acc(b) &&
+	slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload)) &&
+	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
+	(b.AuthPresent ==> b.AuthHeader.Mem())
 }
 
 preserves acc(d, 1/10000)

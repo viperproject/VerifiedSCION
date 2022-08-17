@@ -14,36 +14,37 @@
 
 // +gobra
 
-//@ initEnsures acc(&alreadySet, _) && isComparable(alreadySet) && alreadySet != nil && alreadySet.ErrorMem()
-//@ initEnsures acc(&cannotRoute, _) && isComparable(cannotRoute) && cannotRoute != nil && cannotRoute.ErrorMem()
-//@ initEnsures acc(&emptyValue, _) && isComparable(emptyValue) && emptyValue != nil && emptyValue.ErrorMem()
-//@ initEnsures acc(&malformedPath, _) && isComparable(malformedPath) && malformedPath != nil && malformedPath.ErrorMem()
-//@ initEnsures acc(&modifyExisting, _) && isComparable(modifyExisting) && modifyExisting != nil && modifyExisting.ErrorMem()
-//@ initEnsures acc(&noSVCBackend, _) && isComparable(noSVCBackend) && noSVCBackend != nil && noSVCBackend.ErrorMem()
-//@ initEnsures acc(&unsupportedPathType, _) && isComparable(unsupportedPathType) && unsupportedPathType != nil && unsupportedPathType.ErrorMem()
-//@ initEnsures acc(&unsupportedPathTypeNextHeader, _) && isComparable(unsupportedPathTypeNextHeader) && unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
-//@ initEnsures acc(&noBFDSessionFound, _) && isComparable(noBFDSessionFound) && noBFDSessionFound != nil && noBFDSessionFound.ErrorMem()
-//@ initEnsures acc(&noBFDSessionConfigured, _) && isComparable(noBFDSessionConfigured) && noBFDSessionConfigured != nil && noBFDSessionConfigured.ErrorMem()
-//@ initEnsures acc(&errBFDDisabled, _) && isComparable(errBFDDisabled) && errBFDDisabled != nil && errBFDDisabled.ErrorMem()
+// (VerifiedSCION) The following is currently commented out otherwise the verification time increases significantly.
+// initEnsures acc(&alreadySet, _) && isComparable(alreadySet) && alreadySet != nil && alreadySet.ErrorMem()
+// initEnsures acc(&cannotRoute, _) && isComparable(cannotRoute) && cannotRoute != nil && cannotRoute.ErrorMem()
+// initEnsures acc(&emptyValue, _) && isComparable(emptyValue) && emptyValue != nil && emptyValue.ErrorMem()
+// initEnsures acc(&malformedPath, _) && isComparable(malformedPath) && malformedPath != nil && malformedPath.ErrorMem()
+// initEnsures acc(&modifyExisting, _) && isComparable(modifyExisting) && modifyExisting != nil && modifyExisting.ErrorMem()
+// initEnsures acc(&noSVCBackend, _) && isComparable(noSVCBackend) && noSVCBackend != nil && noSVCBackend.ErrorMem()
+// initEnsures acc(&unsupportedPathType, _) && isComparable(unsupportedPathType) && unsupportedPathType != nil && unsupportedPathType.ErrorMem()
+// initEnsures acc(&unsupportedPathTypeNextHeader, _) && isComparable(unsupportedPathTypeNextHeader) && unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
+// initEnsures acc(&noBFDSessionFound, _) && isComparable(noBFDSessionFound) && noBFDSessionFound != nil && noBFDSessionFound.ErrorMem()
+// initEnsures acc(&noBFDSessionConfigured, _) && isComparable(noBFDSessionConfigured) && noBFDSessionConfigured != nil && noBFDSessionConfigured.ErrorMem()
+// initEnsures acc(&errBFDDisabled, _) && isComparable(errBFDDisabled) && errBFDDisabled != nil && errBFDDisabled.ErrorMem()
 package router
 
 import (
 	_ "bytes"
-	_ "context"
+	"context"
 	_ "crypto/rand"
 	_ "crypto/subtle"
 	_ "errors"
 	_ "fmt"
-	_ "hash"
+	"hash"
 	_ "math/big"
 	"net"
 	"strconv"
-	_ "sync"
+	"sync"
 	_ "syscall"
 	_ "time"
 
 	_ "github.com/google/gopacket"
-	_ "github.com/google/gopacket/layers"
+	"github.com/google/gopacket/layers"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/scionproto/scion/pkg/addr"
@@ -60,11 +61,13 @@ import (
 	_ "github.com/scionproto/scion/pkg/slayers/path/epic"
 	_ "github.com/scionproto/scion/pkg/slayers/path/onehop"
 	_ "github.com/scionproto/scion/pkg/slayers/path/scion"
-	_ "github.com/scionproto/scion/private/topology"
+	"github.com/scionproto/scion/private/topology"
 	_ "github.com/scionproto/scion/private/underlay/conn"
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
 	_ "github.com/scionproto/scion/router/bfd"
 	_ "github.com/scionproto/scion/router/control"
+	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 const (
@@ -82,23 +85,53 @@ const (
 	hopFieldDefaultExpTime = 63
 )
 
-/*
+// (VerifiedSCION) acc(Mem(), _) is enough to call every method, given that
+// the concrete implementations of this type use internal sync mechanisms to
+// obtain write access to the underlying data.
 type bfdSession interface {
-	Run(ctx context.Context) error
-	ReceiveMessage(*layers.BFD)
+	//@ pred Mem()
+
+	// (VerifiedSCION) ctx is used to obtain a logger from ctx by
+	// calling the method Value. ReadL20 permissions are enough for that.
+	//@ requires acc(ctx.Mem(), definitions.ReadL20)
+	//@ requires acc(Mem(), _)
+	//@ ensures  err != nil ==> err.ErrorMem()
+	Run(ctx context.Context) (err error)
+	//@ requires acc(Mem(), _)
+	//@ requires msg.Mem()
+	ReceiveMessage(msg *layers.BFD)
+	//@ requires acc(Mem(), _)
 	IsUp() bool
 }
-*/
 
 // BatchConn is a connection that supports batch reads and writes.
+// (VerifiedSCION) the spec of this interface exactly matches that of the same methods
+// in private/underlay/conn/Conn
 type BatchConn interface {
-	ReadBatch(underlayconn.Messages) (int, error)
-	WriteTo([]byte, *net.UDPAddr) (int, error)
-	WriteBatch(msgs underlayconn.Messages, flags int) (int, error)
-	Close() error
+	//@ pred Mem()
+
+	//@ preserves Mem()
+	//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+	//@ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+	//@ ensures   err != nil ==> err.ErrorMem()
+	ReadBatch(msgs underlayconn.Messages) (n int, err error)
+	//@ requires  acc(addr.Mem(), _)
+	//@ preserves Mem()
+	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL10)
+	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
+	//@ ensures   err != nil ==> err.ErrorMem()
+	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
+	//@ preserves Mem()
+	//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+	//@ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+	//@ ensures   err != nil ==> err.ErrorMem()
+	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
+	//@ requires Mem()
+	//@ ensures  err != nil ==> err.ErrorMem()
+	//@ decreases
+	Close() (err error)
 }
 
-/*
 // DataPlane contains a SCION Border Router's forwarding logic. It reads packets
 // from multiple sockets, performs routing, and sends them to their destinations
 // (after updating the path, if that is needed).
@@ -122,7 +155,6 @@ type DataPlane struct {
 	Metrics           *Metrics
 	forwardingMetrics map[uint16]forwardingMetrics
 }
-*/
 
 var (
 	alreadySet                    = serrors.New("already set")
