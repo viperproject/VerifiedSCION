@@ -183,27 +183,27 @@ func (e scmpError) Error() string {
 */
 
 // SetIA sets the local IA for the dataplane.
-//@ requires acc(nonNilErr(&modifyExisting), _)
-//@ requires acc(nonNilErr(&emptyValue), _)
-//@ requires acc(nonNilErr(&alreadySet), _)
+//@ requires acc(&d.running, 1/2) && !d.running
+//@ requires acc(&d.localIA, 1/2) && d.localIA.IsZero()
 //@ requires d.mtx.LockP()
 //@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ requires !ia.IsZero()
+//@ ensures  acc(&d.running, 1/2) && !d.running
+//@ ensures  acc(&d.localIA, 1/2)
 //@ ensures  d.mtx.LockP()
+//@ ensures  e == nil
 func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	//@ unfold MutexInvariant!<d!>()
 	//@ defer fold MutexInvariant!<d!>()
 	if d.running {
-		//@ unfold acc(nonNilErr(&modifyExisting), _)
 		return modifyExisting
 	}
 	if ia.IsZero() {
-		//@ unfold acc(nonNilErr(&emptyValue), _)
 		return emptyValue
 	}
 	if !d.localIA.IsZero() {
-		//@ unfold acc(nonNilErr(&alreadySet), _)
 		return alreadySet
 	}
 	d.localIA = ia
@@ -214,12 +214,14 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // already be derived as in scrypto.HFMacFactory.
 // (VerifiedSCION) Gobra crashes due to the closure literal.
 //@ trusted
-//@ requires acc(nonNilErr(&modifyExisting), _)
-//@ requires acc(nonNilErr(&emptyValue), _)
-//@ requires acc(nonNilErr(&alreadySet), _)
+//@ requires acc(&d.running,    1/2) && !d.running
+//@ requires acc(&d.macFactory, 1/2) && d.macFactory == nil
+//@ requires len(key) == 0
 //@ requires slices.AbsSlice_Bytes(key, 0, len(key))
 //@ requires d.mtx.LockP()
 //@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures  acc(&d.running,    1/2) && !d.running
+//@ ensures  acc(&d.macFactory, 1/2)
 //@ ensures  d.mtx.LockP()
 func (d *DataPlane) SetKey(key []byte) error {
 	//@ share key
@@ -228,15 +230,12 @@ func (d *DataPlane) SetKey(key []byte) error {
 	//@ unfold MutexInvariant!<d!>()
 	//@ defer fold MutexInvariant!<d!>()
 	if d.running {
-		//@ unfold acc(nonNilErr(&modifyExisting), _)
 		return modifyExisting
 	}
 	if len(key) == 0 {
-		//@ unfold acc(nonNilErr(&emptyValue), _)
 		return emptyValue
 	}
 	if d.macFactory != nil {
-		//@ unfold acc(nonNilErr(&alreadySet), _)
 		return alreadySet
 	}
 	// First check for MAC creation errors.
@@ -254,29 +253,29 @@ func (d *DataPlane) SetKey(key []byte) error {
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
 // dataplane.
-//@ requires acc(nonNilErr(&modifyExisting), _)
-//@ requires acc(nonNilErr(&emptyValue), _)
-//@ requires acc(nonNilErr(&alreadySet), _)
-//@ requires conn.Mem()
+//@ requires acc(&d.running,    1/2) && !d.running
+//@ requires acc(&d.internal,   1/2) && d.internal == nil
+//@ requires acc(&d.internalIP, 1/2)
+//@ requires conn != nil && conn.Mem()
 //@ requires ip.Mem()
 //@ requires d.mtx.LockP()
 //@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
 //@ ensures  d.mtx.LockP()
+//@ ensures  acc(&d.running,    1/2) && !d.running
+//@ ensures  acc(&d.internal,   1/2)
+//@ ensures  acc(&d.internalIP, 1/2)
 func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	//@ unfold MutexInvariant!<d!>()
 	//@ defer fold MutexInvariant!<d!>()
 	if d.running {
-		//@ unfold acc(nonNilErr(&modifyExisting), _)
 		return modifyExisting
 	}
 	if conn == nil {
-		//@ unfold acc(nonNilErr(&emptyValue), _)
 		return emptyValue
 	}
 	if d.internal != nil {
-		//@ unfold acc(nonNilErr(&alreadySet), _)
 		return alreadySet
 	}
 	d.internal = conn
@@ -284,14 +283,24 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	return nil
 }
 
-/*
 // AddExternalInterface adds the inter AS connection for the given interface ID.
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
-//@ trusted
+//@ requires acc(&d.running,    1/2) && !d.running
+//@ requires acc(&d.external,   1/2)
+//@ requires d.external != nil ==> acc(d.external, 1/2)
+//@ requires !(ifID in domain(d.external))
+//@ requires conn != nil && conn.Mem()
+//@ requires d.mtx.LockP()
+//@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures  d.mtx.LockP()
+//@ ensures  acc(&d.running,    1/2) && !d.running
+//@ ensures  acc(&d.external,   1/2) && acc(d.external, 1/2)
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
+	//@ unfold MutexInvariant!<d!>()
+	//@ defer fold MutexInvariant!<d!>()
 	if d.running {
 		return modifyExisting
 	}
@@ -303,11 +312,15 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	}
 	if d.external == nil {
 		d.external = make(map[uint16]BatchConn)
+		//@ fold AccBatchConn(d.external)
 	}
+	//@ unfold AccBatchConn(d.external)
 	d.external[ifID] = conn
+	//@ fold AccBatchConn(d.external)
 	return nil
 }
 
+/*
 // AddNeighborIA adds the neighboring IA for a given interface ID. If an IA for
 // the given ID is already set, this method will return an error. This can only
 // be called on a yet running dataplane.

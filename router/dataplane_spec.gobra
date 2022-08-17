@@ -26,45 +26,45 @@ pred nonNilErr(e *error) {
 
 pred MutexInvariant(d *DataPlane) {
 	// access to the field 'mtx' ommited
-	acc(&d.external)          &&
-	acc(&d.linkTypes)         &&
-	acc(&d.neighborIAs)       &&
-	acc(&d.internal)          &&
-	acc(&d.internalIP)        &&
-	acc(&d.internalNextHops)  &&
-	acc(&d.svc)               &&
-	acc(&d.macFactory)        &&
-	acc(&d.bfdSessions)       &&
-	acc(&d.localIA)           &&
-	acc(&d.running)           &&
-	acc(&d.Metrics)           &&
-	acc(&d.forwardingMetrics) &&
-	(d.external    != nil       ==> AccBatchConn(d.external))         &&
-	(d.linkTypes   != nil       ==> acc(d.linkTypes))                 &&
-	(d.neighborIAs != nil       ==> acc(d.neighborIAs))               &&
-	(d.internal != nil          ==> d.internal.Mem())                 &&
-	(d.internalIP != nil        ==> d.internalIP.Mem())               &&
-	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))      &&
-	(d.svc != nil               ==> d.svc.Mem())                      &&
+	acc(&d.external,          1/2) &&
+	acc(&d.linkTypes,         1/2) &&
+	acc(&d.neighborIAs,       1/2) &&
+	acc(&d.internal,          1/2) &&
+	acc(&d.internalIP,        1/2) &&
+	acc(&d.internalNextHops,  1/2) &&
+	acc(&d.svc,               1/2) &&
+	acc(&d.macFactory,        1/2) &&
+	acc(&d.bfdSessions,       1/2) &&
+	acc(&d.localIA,           1/2) &&
+	acc(&d.running,           1/2) &&
+	acc(&d.Metrics,           1/2) &&
+	acc(&d.forwardingMetrics, 1/2) &&
+	(d.external    != nil       ==> AccBatchConn(d.external))           &&
+	(d.linkTypes   != nil       ==> acc(d.linkTypes))                   &&
+	(d.neighborIAs != nil       ==> acc(d.neighborIAs))                 &&
+	(d.internal != nil          ==> d.internal.Mem())                   &&
+	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
+	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
+	(d.svc != nil               ==> d.svc.Mem())                        &&
 	// TODO: replace when I know the exact spec that macFactory should implement
-	(d.macFactory != nil        ==> false)                            &&
-	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))     &&
-	(d.Metrics != nil           ==> d.Metrics.Mem())                  &&
+	(d.macFactory != nil        ==> false)                              &&
+	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
+	(d.Metrics != nil           ==> d.Metrics.Mem())                    &&
 	// TODO: forwading metrics
 	(d.forwardingMetrics != nil ==> false)
 }
 
 pred AccAddr(addrs map[uint16]*net.UDPAddr) {
 	acc(addrs) &&
-	forall a *net.UDPAddr :: a in range(addrs) ==> a.Mem()
+	forall a *net.UDPAddr :: a in range(addrs) ==> acc(a.Mem(), _)
 }
 
 pred AccBatchConn(batchConns map[uint16]BatchConn) {
-	acc(batchConns) &&
+	acc(batchConns, 1/2) &&
 	forall b BatchConn :: b in range(batchConns) ==> b.Mem()
 }
 
 pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
 	acc(bfdSessions) &&
-	forall bfd bfdSession :: bfd in range(bfdSessions) ==> bfd.Mem()
+	forall bfd bfdSession :: bfd in range(bfdSessions) ==> acc(bfd.Mem(), _)
 }
