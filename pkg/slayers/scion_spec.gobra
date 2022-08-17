@@ -16,7 +16,18 @@
 
 package slayers
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+type PathMemLoc uint8
+
+const (
+	New PathMemLoc = iota
+	Pool
+	Raw
+)
 
 pred (b *BaseLayer) Mem() {
 	acc(b) &&
@@ -53,12 +64,22 @@ pred (s *SCION) Mem() {
 			slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
 
 			acc(&s.Path) &&
-			s.Path != nil && // TODO should this be here?
+			s.Path != nil &&
 			s.Path.Mem() &&
-		// forall i int :: 0 <= i && i < len(s.pathPool) ==> s.pathPool[i].Mem() &&
-		// s.Path.Mem() &&
-		// s.pathPoolRaw.Mem()
 
+			acc(&s.pathPool) &&
+			(s.pathPool != nil ==>
+				len(s.pathPool) < path.maxPathType &&
+				(forall i int :: 0 <= i && i < len(s.pathPool) &&
+					(s.getPathLoc() != Pool || i != int(s.PathType)) ==>
+					s.pathPool[i].NonInitMem())) &&
+
+			acc(&s.pathPoolRaw) &&
+			s.pathPoolRaw != nil &&
+			(s.getPathLoc() == Raw ==> s.pathPoolRaw.Mem()) &&
+			(s.getPathLoc() != Raw ==> s.pathPoolRaw.NonInitMem()) &&
+
+			// Well-formedness for values
 			s.DstAddrLen >= 0 &&
 			s.SrcAddrLen >= 0
 }
@@ -76,37 +97,17 @@ pred (s *SCION) AddrHdrMem() {
 		s.SrcAddrLen >= 0
 }
 
-// ghost
-// requires s.Mem()
-// ensures  s.PreAddrHdrMem()
-// ensures  s.PreAddrHdrMem() --* s.Mem()
-// func (s *SCION) memToPreAddrHdrMem() {
-// 	unfold s.Mem()
-// 	fold s.PreAddrHdrMem()
-// 	package s.PreAddrHdrMem() --* s.Mem() {
-// 		unfold s.PreAddrHdrMem()
-// 		fold s.Mem()
-// 	}
-// }
+ghost
+requires acc(s.Mem(), _)
+pure func (s *SCION) getPathLoc() PathMemLoc
 
-/* TODO add these fields as needed
-	* Version uint8
-	* TrafficClass uint8
-	* FlowID uint32
-	* NextHdr L4ProtocolType
-	* HdrLen uint8
-	* PayloadLen uint16
-	* PathType path.Type
-	* DstAddrType AddrType
-	* DstAddrLen AddrLen
-	* SrcAddrType AddrType
-	* SrcAddrLen AddrLen
-	* DstIA addr.IA
-	* SrcIA addr.IA
-	* RawDstAddr []byte
-	* RawSrcAddr []byte
-	* Path path.Path
-	pathPool    []path.Path
-	pathPoolRaw path.Path
+ghost
+requires s.Mem()
+ensures  s.getPathLoc() == l
+func (s *SCION) setPathLoc(l PathMemLoc)
 
-*/
+ghost
+requires acc(&s.pathPool)
+pure func (s *SCION) hasPathPool() bool {
+	return s.pathPool != nil
+}
