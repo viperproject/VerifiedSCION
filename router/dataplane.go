@@ -212,6 +212,7 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
+// (VerifiedSCION) Gobra crashes due to the closure literal.
 //@ trusted
 //@ requires acc(nonNilErr(&modifyExisting), _)
 //@ requires acc(nonNilErr(&emptyValue), _)
@@ -249,22 +250,33 @@ func (d *DataPlane) SetKey(key []byte) error {
 	return nil
 }
 
-/*
 // AddInternalInterface sets the interface the data-plane will use to
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
 // dataplane.
-//@ trusted
+//@ requires acc(nonNilErr(&modifyExisting), _)
+//@ requires acc(nonNilErr(&emptyValue), _)
+//@ requires acc(nonNilErr(&alreadySet), _)
+//@ requires conn.Mem()
+//@ requires ip.Mem()
+//@ requires d.mtx.LockP()
+//@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures  d.mtx.LockP()
 func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
+	//@ unfold MutexInvariant!<d!>()
+	//@ defer fold MutexInvariant!<d!>()
 	if d.running {
+		//@ unfold acc(nonNilErr(&modifyExisting), _)
 		return modifyExisting
 	}
 	if conn == nil {
+		//@ unfold acc(nonNilErr(&emptyValue), _)
 		return emptyValue
 	}
 	if d.internal != nil {
+		//@ unfold acc(nonNilErr(&alreadySet), _)
 		return alreadySet
 	}
 	d.internal = conn
@@ -272,6 +284,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	return nil
 }
 
+/*
 // AddExternalInterface adds the inter AS connection for the given interface ID.
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
