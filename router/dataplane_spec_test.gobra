@@ -12,18 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The methods specified in this file cannot be verified right not, as they rely on third-party
-// libraries for which we do not provide support (i.e., "github.com/dchest/cmac").
-
 // +gobra
 
-package scrypto
+package router
 
-import "hash"
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"net"
+)
 
-preserves slices.AbsSlice_Bytes(key, 0, len(key))
-ensures   e == nil ==> (h != nil && h.Mem())
-ensures   e != nil ==> e.ErrorMem()
-decreases _
-func InitMac(key []byte) (h hash.Hash, e error)
+func foldMem_test() {
+	d@ := DataPlane{}
+	fold MutexInvariant(&d)
+}

@@ -14,18 +14,18 @@
 
 // +gobra
 
-// (VerifiedSCION) The following is currently commented out otherwise the verification time increases significantly.
-// initEnsures acc(&alreadySet, _) && isComparable(alreadySet) && alreadySet != nil && alreadySet.ErrorMem()
-// initEnsures acc(&cannotRoute, _) && isComparable(cannotRoute) && cannotRoute != nil && cannotRoute.ErrorMem()
-// initEnsures acc(&emptyValue, _) && isComparable(emptyValue) && emptyValue != nil && emptyValue.ErrorMem()
-// initEnsures acc(&malformedPath, _) && isComparable(malformedPath) && malformedPath != nil && malformedPath.ErrorMem()
-// initEnsures acc(&modifyExisting, _) && isComparable(modifyExisting) && modifyExisting != nil && modifyExisting.ErrorMem()
-// initEnsures acc(&noSVCBackend, _) && isComparable(noSVCBackend) && noSVCBackend != nil && noSVCBackend.ErrorMem()
-// initEnsures acc(&unsupportedPathType, _) && isComparable(unsupportedPathType) && unsupportedPathType != nil && unsupportedPathType.ErrorMem()
-// initEnsures acc(&unsupportedPathTypeNextHeader, _) && isComparable(unsupportedPathTypeNextHeader) && unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
-// initEnsures acc(&noBFDSessionFound, _) && isComparable(noBFDSessionFound) && noBFDSessionFound != nil && noBFDSessionFound.ErrorMem()
-// initEnsures acc(&noBFDSessionConfigured, _) && isComparable(noBFDSessionConfigured) && noBFDSessionConfigured != nil && noBFDSessionConfigured.ErrorMem()
-// initEnsures acc(&errBFDDisabled, _) && isComparable(errBFDDisabled) && errBFDDisabled != nil && errBFDDisabled.ErrorMem()
+// Currently disabled. Proving that this holds after initialization causes a big slowdown.
+// initEnsures nonNilErr(&alreadySet)
+// initEnsures nonNilErr(&cannotRoute)
+// initEnsures nonNilErr(&emptyValue)
+// initEnsures nonNilErr(&malformedPath)
+// initEnsures nonNilErr(&modifyExisting)
+// initEnsures nonNilErr(&noSVCBackend)
+// initEnsures nonNilErr(&unsupportedPathType)
+// initEnsures nonNilErr(&unsupportedPathTypeNextHeader)
+// initEnsures nonNilErr(&noBFDSessionFound)
+// initEnsures nonNilErr(&noBFDSessionConfigured)
+// initEnsures nonNilErr(&errBFDDisabled)
 package router
 
 import (
@@ -53,7 +53,7 @@ import (
 	_ "github.com/scionproto/scion/pkg/log"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	_ "github.com/scionproto/scion/pkg/private/util"
-	_ "github.com/scionproto/scion/pkg/scrypto"
+	"github.com/scionproto/scion/pkg/scrypto"
 
 	//	"github.com/scionproto/scion/pkg/slayers"
 	_ "github.com/scionproto/scion/pkg/slayers/path"
@@ -180,19 +180,30 @@ type scmpError struct {
 func (e scmpError) Error() string {
 	return serrors.New("scmp", "typecode", e.TypeCode, "cause", e.Cause).Error()
 }
+*/
 
 // SetIA sets the local IA for the dataplane.
-//@ trusted
-func (d *DataPlane) SetIA(ia addr.IA) error {
+//@ requires acc(nonNilErr(&modifyExisting), _)
+//@ requires acc(nonNilErr(&emptyValue), _)
+//@ requires acc(nonNilErr(&alreadySet), _)
+//@ requires d.mtx.LockP()
+//@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures  d.mtx.LockP()
+func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
+	//@ unfold MutexInvariant!<d!>()
+	//@ defer fold MutexInvariant!<d!>()
 	if d.running {
+		//@ unfold acc(nonNilErr(&modifyExisting), _)
 		return modifyExisting
 	}
 	if ia.IsZero() {
+		//@ unfold acc(nonNilErr(&emptyValue), _)
 		return emptyValue
 	}
 	if !d.localIA.IsZero() {
+		//@ unfold acc(nonNilErr(&alreadySet), _)
 		return alreadySet
 	}
 	d.localIA = ia
@@ -202,16 +213,29 @@ func (d *DataPlane) SetIA(ia addr.IA) error {
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
 //@ trusted
+//@ requires acc(nonNilErr(&modifyExisting), _)
+//@ requires acc(nonNilErr(&emptyValue), _)
+//@ requires acc(nonNilErr(&alreadySet), _)
+//@ requires slices.AbsSlice_Bytes(key, 0, len(key))
+//@ requires d.mtx.LockP()
+//@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures  d.mtx.LockP()
 func (d *DataPlane) SetKey(key []byte) error {
+	//@ share key
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
+	//@ unfold MutexInvariant!<d!>()
+	//@ defer fold MutexInvariant!<d!>()
 	if d.running {
+		//@ unfold acc(nonNilErr(&modifyExisting), _)
 		return modifyExisting
 	}
 	if len(key) == 0 {
+		//@ unfold acc(nonNilErr(&emptyValue), _)
 		return emptyValue
 	}
 	if d.macFactory != nil {
+		//@ unfold acc(nonNilErr(&alreadySet), _)
 		return alreadySet
 	}
 	// First check for MAC creation errors.
@@ -225,6 +249,7 @@ func (d *DataPlane) SetKey(key []byte) error {
 	return nil
 }
 
+/*
 // AddInternalInterface sets the interface the data-plane will use to
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
@@ -611,6 +636,7 @@ func (d *DataPlane) initMetrics() {
 		d.forwardingMetrics[id] = initForwardingMetrics(d.Metrics, labels)
 	}
 }
+*/
 
 type processResult struct {
 	EgressID uint16
@@ -619,6 +645,7 @@ type processResult struct {
 	OutPkt   []byte
 }
 
+/*
 //@ trusted
 func newPacketProcessor(d *DataPlane, ingressID uint16) *scionPacketProcessor {
 	p := &scionPacketProcessor{
