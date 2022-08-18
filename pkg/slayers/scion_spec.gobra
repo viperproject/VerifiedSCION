@@ -43,6 +43,15 @@ pred (b *BaseLayer) PayloadMem() {
 	acc(b) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
 }
 
+pred (s *SCION) NonInitMem() {
+	acc(s) &&
+		(s.pathPool != nil ==> s.pathPoolRaw != nil && s.pathPoolRaw.NonInitMem()) &&
+		(s.pathPool != nil ==> (forall i int :: 0 <= i && i < len(s.pathPool) ==>
+			(acc(&s.pathPool[i]) &&
+				s.pathPool[i] != nil &&
+				s.pathPool[i].NonInitMem())))
+}
+
 pred (s *SCION) Mem() {
 		s.BaseLayer.Mem() &&
 			acc(&s.Version) &&
@@ -75,9 +84,8 @@ pred (s *SCION) Mem() {
 					s.pathPool[i].NonInitMem())) &&
 
 			acc(&s.pathPoolRaw) &&
-			s.pathPoolRaw != nil &&
 			(s.getPathLoc() == Raw ==> s.pathPoolRaw.Mem()) &&
-			(s.getPathLoc() != Raw ==> s.pathPoolRaw.NonInitMem()) &&
+			((s.pathPool != nil && s.getPathLoc() != Raw) ==> s.pathPoolRaw != nil && s.pathPoolRaw.NonInitMem()) &&
 
 			// Well-formedness for values
 			s.DstAddrLen >= 0 &&
