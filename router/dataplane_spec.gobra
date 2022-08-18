@@ -50,12 +50,14 @@ pred MutexInvariant(d *DataPlane) {
 	(d.macFactory != nil        ==> false)                              &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
 	(d.Metrics != nil           ==> d.Metrics.Mem())                    &&
-	// TODO: forwading metrics
+	// TODO: forwading metrics: they should have permission for all fields accessed
+    // in initForwardingMetrics(we can introduce some equality relation between
+    // them). DataPlane.initMetrics should ensure that forwarding metrics is not nil
 	(d.forwardingMetrics != nil ==> false)
 }
 
 pred AccAddr(addrs map[uint16]*net.UDPAddr) {
-	acc(addrs) &&
+	acc(addrs, 1/2) &&
 	forall a *net.UDPAddr :: a in range(addrs) ==> acc(a.Mem(), _)
 }
 
@@ -66,5 +68,5 @@ pred AccBatchConn(batchConns map[uint16]BatchConn) {
 
 pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
 	acc(bfdSessions) &&
-	forall bfd bfdSession :: bfd in range(bfdSessions) ==> acc(bfd.Mem(), _)
+	forall bfd bfdSession :: bfd in range(bfdSessions) ==> (bfd != nil && acc(bfd.Mem(), _))
 }

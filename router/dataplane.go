@@ -65,7 +65,7 @@ import (
 	_ "github.com/scionproto/scion/private/underlay/conn"
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
 	_ "github.com/scionproto/scion/router/bfd"
-	_ "github.com/scionproto/scion/router/control"
+	"github.com/scionproto/scion/router/control"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
@@ -211,7 +211,6 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// (VerifiedSCION) Gobra crashes due to the closure literal.
 //@ trusted
 //@ requires  acc(&d.running,    1/2) && !d.running
 //@ requires  acc(&d.macFactory, 1/2) && d.macFactory == nil
@@ -240,7 +239,9 @@ func (d *DataPlane) SetKey(key []byte) error {
 	if _, err := scrypto.InitMac(key); err != nil {
 		return err
 	}
-	d.macFactory = func() hash.Hash {
+	// (TODO)
+	// (VerifiedSCION) Gobra crashes due to the closure literal.
+	d.macFactory = func /*@ f @*/ () hash.Hash {
 		mac, _ := scrypto.InitMac(key)
 		return mac
 	}
@@ -407,19 +408,36 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 	s := newBFDSend(conn, src.IA, dst.IA, src.Addr, dst.Addr, ifID, d.macFactory())
 	return d.addBFDController(ifID, s, cfg, m)
 }
+*/
 
 // getInterfaceState checks if there is a bfd session for the input interfaceID and
 // returns InterfaceUp if the relevant bfdsession state is up, or if there is no BFD
 // session. Otherwise, it returns InterfaceDown.
-//@ trusted
+//@ preserves acc(MutexInvariant!<d!>(), definitions.ReadL5)
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
+	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL5)
+	//@ defer fold acc(MutexInvariant!<d!>(), definitions.ReadL5)
 	bfdSessions := d.bfdSessions
-	if bfdSession, ok := bfdSessions[interfaceID]; ok && !bfdSession.IsUp() {
-		return control.InterfaceDown
+	/*@
+	ghost if bfdSessions != nil {
+		//@ unfold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
+		//@ defer fold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
+	}
+	@*/
+	// (VerifiedSCION) had to rewrite this, as Gobra does not correctly
+	// implement short-circuiting.
+	if bfdSession, ok := bfdSessions[interfaceID]; ok {
+		//@ assert interfaceID in domain(d.bfdSessions)
+		//@ assert bfdSession in range(d.bfdSessions)
+		//@ assert bfdSession != nil
+		if !bfdSession.IsUp() {
+			return control.InterfaceDown
+		}
 	}
 	return control.InterfaceUp
 }
 
+/*
 //@ trusted
 func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 	metrics bfd.Metrics) error {
@@ -490,14 +508,25 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	}
 	return nil
 }
+*/
 
 // AddNextHop sets the next hop address for the given interface ID. If the
 // interface ID already has an address associated this operation fails. This can
 // only be called on a not yet running dataplane.
-//@ trusted
+//@ requires  acc(&d.running,          1/2) && !d.running
+//@ requires  acc(&d.internalNextHops, 1/2)
+//@ requires  d.internalNextHops != nil ==> acc(d.internalNextHops, 1/2)
+//@ requires  !(ifID in domain(d.internalNextHops))
+//@ requires  a != nil && acc(a.Mem(), _)
+//@ preserves d.mtx.LockP()
+//@ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures   acc(&d.running,          1/2) && !d.running
+//@ ensures   acc(&d.internalNextHops, 1/2) && acc(d.internalNextHops, 1/2)
 func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
+	//@ unfold MutexInvariant!<d!>()
+	//@ defer fold MutexInvariant!<d!>()
 	if d.running {
 		return modifyExisting
 	}
@@ -509,11 +538,15 @@ func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	}
 	if d.internalNextHops == nil {
 		d.internalNextHops = make(map[uint16]*net.UDPAddr)
+		//@ fold AccAddr(d.internalNextHops)
 	}
+	//@ unfold AccAddr(d.internalNextHops)
+	//@ defer fold AccAddr(d.internalNextHops)
 	d.internalNextHops[ifID] = a
 	return nil
 }
 
+/*
 // AddNextHopBFD adds the BFD session for the next hop address.
 // If the remote ifID belongs to an existing address, the existing
 // BFD session will be re-used.
