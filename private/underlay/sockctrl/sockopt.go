@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package sockctrl
 
 import (
@@ -19,7 +21,11 @@ import (
 	"syscall"
 )
 
-func GetsockoptInt(c *net.UDPConn, level, opt int) (int, error) {
+//@ trusted
+//@ preserves c.Mem()
+//@ ensures   e != nil ==> e.ErrorMem()
+//@ decreases _
+func GetsockoptInt(c *net.UDPConn, level, opt int) (r int, e error) {
 	var val int
 	err := SockControl(c, func(fd int) error {
 		var err error
@@ -29,7 +35,11 @@ func GetsockoptInt(c *net.UDPConn, level, opt int) (int, error) {
 	return val, err
 }
 
-func SetsockoptInt(c *net.UDPConn, level, opt, value int) error {
+//@ trusted
+//@ preserves c.Mem()
+//@ ensures   e != nil ==> e.ErrorMem()
+//@ decreases _
+func SetsockoptInt(c *net.UDPConn, level, opt, value int) (e error) {
 	return SockControl(c, func(fd int) error {
 		return syscall.SetsockoptInt(fd, level, opt, value)
 	})
