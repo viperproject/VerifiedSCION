@@ -123,7 +123,8 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/epic'
-          timeout: 5m
+          # timeout increased; we were having frequent timeouts before
+          timeout: 10m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}

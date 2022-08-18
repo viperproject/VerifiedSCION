@@ -40,8 +40,8 @@ pred MutexInvariant(d *DataPlane) {
 	acc(&d.Metrics,           1/2) &&
 	acc(&d.forwardingMetrics, 1/2) &&
 	(d.external    != nil       ==> AccBatchConn(d.external))           &&
-	(d.linkTypes   != nil       ==> acc(d.linkTypes))                   &&
-	(d.neighborIAs != nil       ==> acc(d.neighborIAs))                 &&
+	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
+	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
 	(d.internal != nil          ==> d.internal.Mem())                   &&
 	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&

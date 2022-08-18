@@ -183,15 +183,14 @@ func (e scmpError) Error() string {
 */
 
 // SetIA sets the local IA for the dataplane.
-//@ requires acc(&d.running, 1/2) && !d.running
-//@ requires acc(&d.localIA, 1/2) && d.localIA.IsZero()
-//@ requires d.mtx.LockP()
-//@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
-//@ requires !ia.IsZero()
-//@ ensures  acc(&d.running, 1/2) && !d.running
-//@ ensures  acc(&d.localIA, 1/2)
-//@ ensures  d.mtx.LockP()
-//@ ensures  e == nil
+//@ requires  acc(&d.running, 1/2) && !d.running
+//@ requires  acc(&d.localIA, 1/2) && d.localIA.IsZero()
+//@ requires  !ia.IsZero()
+//@ preserves d.mtx.LockP()
+//@ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures   acc(&d.running, 1/2) && !d.running
+//@ ensures   acc(&d.localIA, 1/2)
+//@ ensures   e == nil
 func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -214,15 +213,14 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // already be derived as in scrypto.HFMacFactory.
 // (VerifiedSCION) Gobra crashes due to the closure literal.
 //@ trusted
-//@ requires acc(&d.running,    1/2) && !d.running
-//@ requires acc(&d.macFactory, 1/2) && d.macFactory == nil
-//@ requires len(key) == 0
-//@ requires slices.AbsSlice_Bytes(key, 0, len(key))
-//@ requires d.mtx.LockP()
-//@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
-//@ ensures  acc(&d.running,    1/2) && !d.running
-//@ ensures  acc(&d.macFactory, 1/2)
-//@ ensures  d.mtx.LockP()
+//@ requires  acc(&d.running,    1/2) && !d.running
+//@ requires  acc(&d.macFactory, 1/2) && d.macFactory == nil
+//@ requires  len(key) == 0
+//@ requires  slices.AbsSlice_Bytes(key, 0, len(key))
+//@ preserves d.mtx.LockP()
+//@ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures   acc(&d.running,    1/2) && !d.running
+//@ ensures   acc(&d.macFactory, 1/2)
 func (d *DataPlane) SetKey(key []byte) error {
 	//@ share key
 	d.mtx.Lock()
@@ -253,17 +251,16 @@ func (d *DataPlane) SetKey(key []byte) error {
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
 // dataplane.
-//@ requires acc(&d.running,    1/2) && !d.running
-//@ requires acc(&d.internal,   1/2) && d.internal == nil
-//@ requires acc(&d.internalIP, 1/2)
-//@ requires conn != nil && conn.Mem()
-//@ requires ip.Mem()
-//@ requires d.mtx.LockP()
-//@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
-//@ ensures  d.mtx.LockP()
-//@ ensures  acc(&d.running,    1/2) && !d.running
-//@ ensures  acc(&d.internal,   1/2)
-//@ ensures  acc(&d.internalIP, 1/2)
+//@ requires  acc(&d.running,    1/2) && !d.running
+//@ requires  acc(&d.internal,   1/2) && d.internal == nil
+//@ requires  acc(&d.internalIP, 1/2)
+//@ requires  conn != nil && conn.Mem()
+//@ requires  ip.Mem()
+//@ preserves d.mtx.LockP()
+//@ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures   acc(&d.running,    1/2) && !d.running
+//@ ensures   acc(&d.internal,   1/2)
+//@ ensures   acc(&d.internalIP, 1/2)
 func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -286,16 +283,15 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // AddExternalInterface adds the inter AS connection for the given interface ID.
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
-//@ requires acc(&d.running,    1/2) && !d.running
-//@ requires acc(&d.external,   1/2)
-//@ requires d.external != nil ==> acc(d.external, 1/2)
-//@ requires !(ifID in domain(d.external))
-//@ requires conn != nil && conn.Mem()
-//@ requires d.mtx.LockP()
-//@ requires d.mtx.LockInv() == MutexInvariant!<d!>;
-//@ ensures  d.mtx.LockP()
-//@ ensures  acc(&d.running,    1/2) && !d.running
-//@ ensures  acc(&d.external,   1/2) && acc(d.external, 1/2)
+//@ requires  acc(&d.running,    1/2) && !d.running
+//@ requires  acc(&d.external,   1/2)
+//@ requires  d.external != nil ==> acc(d.external, 1/2)
+//@ requires  !(ifID in domain(d.external))
+//@ requires  conn != nil && conn.Mem()
+//@ preserves d.mtx.LockP()
+//@ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures   acc(&d.running,    1/2) && !d.running
+//@ ensures   acc(&d.external,   1/2) && acc(d.external, 1/2)
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -320,14 +316,24 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	return nil
 }
 
-/*
 // AddNeighborIA adds the neighboring IA for a given interface ID. If an IA for
 // the given ID is already set, this method will return an error. This can only
 // be called on a yet running dataplane.
-//@ trusted
+//@ requires  acc(&d.running,     1/2) && !d.running
+//@ requires  acc(&d.neighborIAs, 1/2)
+//@ requires  d.neighborIAs != nil ==> acc(d.neighborIAs, 1/2)
+//@ requires  !remote.IsZero()
+//@ requires  !(ifID in domain(d.neighborIAs))
+//@ preserves d.mtx.LockP()
+//@ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+//@ ensures   acc(&d.running,    1/2) && !d.running
+//@ ensures   acc(&d.neighborIAs,1/2) && acc(d.neighborIAs, 1/2)
+//@ ensures   domain(d.neighborIAs) == old(domain(d.neighborIAs)) union set[uint16]{ifID}
 func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
+	//@ unfold MutexInvariant!<d!>()
+	//@ defer fold MutexInvariant!<d!>()
 	if d.running {
 		return modifyExisting
 	}
@@ -347,11 +353,22 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // AddLinkType adds the link type for a given interface ID. If a link type for
 // the given ID is already set, this method will return an error. This can only
 // be called on a not yet running dataplane.
-//@ trusted
+//@ requires  acc(&d.running,   1/2) && !d.running
+//@ requires  acc(&d.linkTypes, 1/2)
+//@ requires  d.linkTypes != nil ==> acc(d.linkTypes, 1/2)
+//@ requires  !(ifID in domain(d.linkTypes))
+// (VerifiedSCION) unlike all other setter methods, this does not lock
+// d.mtx. Did the devs forget about it?
+//@ preserves MutexInvariant!<d!>()
+//@ ensures   acc(&d.running,   1/2) && !d.running
+//@ ensures   acc(&d.linkTypes, 1/2) && acc(d.linkTypes, 1/2)
+//@ ensures   domain(d.linkTypes) == old(domain(d.linkTypes)) union set[uint16]{ifID}
 func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	if _, existsB := d.linkTypes[ifID]; existsB {
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
+	//@ unfold MutexInvariant!<d!>()
+	//@ defer fold MutexInvariant!<d!>()
 	if d.linkTypes == nil {
 		d.linkTypes = make(map[uint16]topology.LinkType)
 	}
@@ -359,6 +376,7 @@ func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	return nil
 }
 
+/*
 // AddExternalInterfaceBFD adds the inter AS connection BFD session.
 //@ trusted
 func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
