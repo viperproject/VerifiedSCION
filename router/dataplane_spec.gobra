@@ -49,13 +49,13 @@ pred MutexInvariant(d *DataPlane) {
 	// TODO: replace when I know the exact spec that macFactory should implement
 	(d.macFactory != nil        ==> false)                              &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
-	(d.Metrics != nil           ==> d.Metrics.Mem())                    &&
-	// TODO: forwading metrics: they should have permission for all fields accessed
-    // in initForwardingMetrics(we can introduce some equality relation between
-    // them). DataPlane.initMetrics should ensure that forwarding metrics is not nil
-	(d.forwardingMetrics != nil ==> false)
+	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), 1/2))          &&
+	// The following permissions are enough to call all methods needed in fields
+	// of forwardingMetrics
+	(d.forwardingMetrics != nil ==> acc(AccForwardingMetrics(d.forwardingMetrics), _))
 }
 
+// TODO: use lower case for these predicates' names?
 pred AccAddr(addrs map[uint16]*net.UDPAddr) {
 	acc(addrs, 1/2) &&
 	forall a *net.UDPAddr :: a in range(addrs) ==> acc(a.Mem(), _)
@@ -67,6 +67,19 @@ pred AccBatchConn(batchConns map[uint16]BatchConn) {
 }
 
 pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
-	acc(bfdSessions) &&
+	acc(bfdSessions, 1/2) &&
 	forall bfd bfdSession :: bfd in range(bfdSessions) ==> (bfd != nil && acc(bfd.Mem(), _))
+}
+
+pred AccForwardingMetrics(metrics map[uint16]forwardingMetrics) {
+	acc(metrics, 1/2) &&
+	forall fm forwardingMetrics :: fm in range(metrics) ==> acc(forwardingMetricsMem(fm), _)
+}
+
+pred forwardingMetricsMem(v forwardingMetrics) {
+	v.InputBytesTotal.Mem()      &&
+	v.OutputBytesTotal.Mem()     &&
+	v.InputPacketsTotal.Mem()    &&
+	v.OutputPacketsTotal.Mem()   &&
+	v.DroppedPacketsTotal.Mem()
 }

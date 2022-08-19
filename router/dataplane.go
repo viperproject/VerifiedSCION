@@ -418,12 +418,10 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL5)
 	//@ defer fold acc(MutexInvariant!<d!>(), definitions.ReadL5)
 	bfdSessions := d.bfdSessions
-	/*@
-	ghost if bfdSessions != nil {
-		//@ unfold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
-		//@ defer fold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
-	}
-	@*/
+	//@ ghost if bfdSessions != nil {
+	//@		unfold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
+	//@		defer fold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
+	//@ }
 	// (VerifiedSCION) had to rewrite this, as Gobra does not correctly
 	// implement short-circuiting.
 	if bfdSession, ok := bfdSessions[interfaceID]; ok {
@@ -438,6 +436,7 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 }
 
 /*
+//@ TODO: mark as trusted, otherwise we need to support bfd.Session
 //@ trusted
 func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 	metrics bfd.Metrics) error {
@@ -1792,9 +1791,16 @@ type forwardingMetrics struct {
 	DroppedPacketsTotal prometheus.Counter
 }
 
-/*
-//@ trusted
-func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) forwardingMetrics {
+//@ requires  acc(labels, _)
+//@ preserves acc(metrics.Mem(), definitions.ReadL20)
+//@ ensures   acc(res.InputBytesTotal.Mem(), _)
+//@ ensures   acc(res.OutputBytesTotal.Mem(), _)
+//@ ensures   acc(res.InputPacketsTotal.Mem(), _)
+//@ ensures   acc(res.OutputPacketsTotal.Mem(), _)
+//@ ensures   acc(res.DroppedPacketsTotal.Mem(), _)
+//@ decreases
+func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forwardingMetrics) {
+	//@ unfold acc(metrics.Mem(), definitions.ReadL20)
 	c := forwardingMetrics{
 		InputBytesTotal:     metrics.InputBytesTotal.With(labels),
 		InputPacketsTotal:   metrics.InputPacketsTotal.With(labels),
@@ -1802,14 +1808,14 @@ func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) forwardin
 		OutputPacketsTotal:  metrics.OutputPacketsTotal.With(labels),
 		DroppedPacketsTotal: metrics.DroppedPacketsTotal.With(labels),
 	}
-	c.InputBytesTotal.Add(0)
-	c.InputPacketsTotal.Add(0)
-	c.OutputBytesTotal.Add(0)
-	c.OutputPacketsTotal.Add(0)
-	c.DroppedPacketsTotal.Add(0)
+	c.InputBytesTotal.Add(float64(0))
+	c.InputPacketsTotal.Add(float64(0))
+	c.OutputBytesTotal.Add(float64(0))
+	c.OutputPacketsTotal.Add(float64(0))
+	c.DroppedPacketsTotal.Add(float64(0))
+	//@ fold acc(metrics.Mem(), definitions.ReadL20)
 	return c
 }
-*/
 
 //@ preserves acc(neighbors)
 //@ ensures   acc(res)
