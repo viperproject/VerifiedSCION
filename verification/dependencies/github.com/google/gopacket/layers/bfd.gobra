@@ -189,10 +189,10 @@ ensures err == nil ==> d.Mem()
 decreases
 func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err error)
 
-requires d.Mem() && b.Mem()
-ensures err != nil ==> d.Mem() && b.Mem()
+requires d.Mem() && b.Mem(buf)
+ensures err != nil ==> d.Mem() && b.Mem(buf)
 decreases
-func (d *BFD) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) (err error)
+func (d *BFD) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions, ghost buf []byte) (err error)
 
 decreases
 pure func (d *BFD) CanDecode() gopacket.LayerClass
