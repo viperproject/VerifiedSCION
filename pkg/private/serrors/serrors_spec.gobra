@@ -141,7 +141,7 @@ func (e basicError) ctxPairs() (res []ctxPair) {
 requires  err.ErrorMem()
 // The following precondition cannot be adequately captured in Gobra.
 // requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
-preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], 1/1000)
+preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
 ensures res != nil && res.ErrorMem()
 ensures typeOf(res) == type[basicError]
 ensures isComparable(err) ==> res.(basicError).msg.err == err
@@ -173,7 +173,7 @@ func WithCtx(err error, errCtx ...interface{}) (res error) {
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 requires  msg.ErrorMem() && cause.ErrorMem()
-preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], 1/1000)
+preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
 // The following precondition cannot be adequately captured in Gobra.
 // requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
 ensures   res != nil && res.ErrorMem()
@@ -209,7 +209,7 @@ func Wrap(msg, cause error, errCtx ...interface{}) (res error) {
 // with this method.
 trusted
 requires  cause.ErrorMem()
-preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], 1/1000)
+preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
 // The following precondition cannot be adequately captured in Gobra.
 // requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
 ensures res != nil && res.ErrorMem()
@@ -242,7 +242,7 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error) {
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 trusted
-preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], 1/1000)
+preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
 // The following precondition cannot be adequately captured in Gobra.
 // requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
 ensures   res != nil && res.ErrorMem()
@@ -298,7 +298,7 @@ func (e List) ToError() (err error) {
 }
 
 trusted
-preserves acc(errCtx, 1/10000)
+preserves acc(errCtx, definitions.ReadL15)
 ensures   len(errCtx) == 0 ==> res == nil
 ensures   len(errCtx) > 0  ==> acc(res)
 decreases
