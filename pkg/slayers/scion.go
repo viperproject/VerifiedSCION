@@ -578,7 +578,23 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	//@ assert 0 <= hdrBytes && hdrBytes <= len(data)
 	//@ ghost var pathMemLoc PathMemLoc
 	//@ ghost s.hdrBytes = hdrBytes
-	s.Path, err /*@, pathMemLoc @*/ = s.getPath(s.PathType)
+	// NOTE XXX (gavinleroy) the following two variables (path & pathTYpe) should be removed
+	// as soon as possible. Here is a brief explanation of why they are currently necessary.
+	// In a magic wand instance `Q() --* P()` both the left and right-hand sides need
+	// to be self framing. However, the instances received from the `s.getPath` method
+	// are not. That is, you cannot say `Q(s.PathType) --* P()` because that would
+	// not be self framing. Once Gobra introduces let-bindings, we could easily say
+	// `let pt := s.PathType in (Q(pt) --* P())` which would be self framing. Though
+	// demonstrated with the `s.PathType` field, this principle also applies for
+	// `s.Path` which is also required in the use of the wands. Once a fix for this is
+	// introduced, these variables should be removed, and all subsequent lines of the code
+	// which were changed need to be updated.
+	var path path.Path
+	//@ ghost pathType := s.PathType
+	path, err /*@, pathMemLoc @*/ = s.getPath(s.PathType)
+	//@ assert (err == nil && pathMemLoc == Pool) ==> (s.PathPoolPartial(pathType) && s.PathPoolRawFull() && ((path.NonInitMem() && s.PathPoolPartial(pathType)) --* s.PathPoolFull()))
+	//@ assert (err == nil && pathMemLoc == Raw) ==> (s.PathPoolFull() && s.PathPoolRawPartial() && ((path.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()))
+	//@ assert s.PathType == pathType
 	if err != nil {
 		//@ apply s.AddrHdrMem() --* (slices.AbsSlice_Bytes(data[CmnHdrLen:offset], 0, len(data[CmnHdrLen:offset])) && s.AddrHdrInitMem())
 		//@ ghost slices.Unslice_Bytes(data, CmnHdrLen, offset, writePerm)
@@ -590,59 +606,45 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return err
 	}
 	//@ assert acc(&s.Path)
-	//@ assert s.Path != nil
-	//@ assert s.Path.NonInitMem()
+	//@ assert path != nil
+	//@ assert path.NonInitMem()
 	//@ assert offset + pathLen <= len(data)
 	//@ ghost slices.SplitByIndex_Bytes(data, offset, len(data), offset + pathLen, writePerm)
 	//@ assert slices.AbsSlice_Bytes(data, 0, CmnHdrLen)
 	// NOTE the slice [CmnHdrLen : offset] was consumed previously
 	//@ assert slices.AbsSlice_Bytes(data, offset, offset + pathLen)
 	//@ assert slices.AbsSlice_Bytes(data, offset + pathLen, len(data))
-	// TODO FIXME why is inhaling the wand instance /here/ necessary?
-	//@ ghost if pathMemLoc == Pool {
-	//@   assert err == nil && pathMemLoc == Pool
-	//@   assert s.PathPoolPartial(s.PathType)
-	//@   assert s.PathPoolRawFull()
-	//@   assert s.Path.NonInitMem()
-	//@   inhale (s.Path.NonInitMem() && s.PathPoolPartial(s.PathType)) --* s.PathPoolFull()
-	//@   assert (s.Path.NonInitMem() && s.PathPoolPartial(s.PathType)) --* s.PathPoolFull()
-	//@ } else if pathMemLoc == Raw {
-	//@   assert err == nil && pathMemLoc == Raw
-	//@   inhale (s.Path.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()
-	//@   assert (s.Path.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()
-	//@ } else {
-	//@   assert err == nil && pathMemLoc == New
-	//@ }
 	//@ requires  acc(&s.Path)
-	//@ requires  s.Path != nil
-	//@ requires  s.Path.NonInitMem()
+	//@ requires  path != nil
+	//@ requires  path.NonInitMem()
 	//@ requires  slices.AbsSlice_Bytes(data, offset, offset + pathLen)
 	//@ ensures   acc(&s.Path)
-	//@ ensures   s.Path != nil
-	//@ ensures   err == nil ==> s.Path.Mem()
-	//@ ensures   err != nil ==> s.Path.NonInitMem()
+	//@ ensures   path != nil
+	//@ ensures   err == nil ==> path.Mem()
+	//@ ensures   err != nil ==> path.NonInitMem()
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> slices.AbsSlice_Bytes(data, offset, offset + pathLen)
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(data, offset, offset+pathLen, writePerm)
-	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
+	// err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
+	err = path.DecodeFromBytes(data[offset : offset+pathLen])
 	//@ ghost if err != nil {
 	//@   slices.Unslice_Bytes(data, offset, offset+pathLen, writePerm)
 	//@ }
 	//@ )
 	if err != nil {
-		//@ assert s.Path.NonInitMem()
+		//@ assert path.NonInitMem()
 		//@ ghost if pathMemLoc == Pool {
 		//@   assert s.PathPoolPartial(s.PathType)
 		//@   assert s.PathPoolRawFull()
-		//@   apply (s.Path.NonInitMem() && s.PathPoolPartial(s.PathType)) --* s.PathPoolFull()
+		//@   apply (path.NonInitMem() && s.PathPoolPartial(pathType)) --* s.PathPoolFull()
 		//@   unfold s.PathPoolRawFull()
 		//@   unfold s.PathPoolFull()
 		//@ } else if pathMemLoc == Raw {
 		//@   assert s.PathPoolFull()
 		//@   assert s.PathPoolRawPartial()
-		//@   apply (s.Path.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()
+		//@   apply (path.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()
 		//@   unfold s.PathPoolRawFull()
 		//@   unfold s.PathPoolFull()
 		//@ } else {
@@ -659,15 +661,19 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		//@ fold s.NonInitMem()
 		return err
 	}
+	// NOTE XXX (gavinleroy) this assignment is necessary because the above
+	// code was changed from using `s.Path` to the newly created local variable `path`.
+	// The assignment should be REMOVED once the feature is addressed.
+	//@ assert path.Mem()
+	s.Path = path
+	//@ assert s.Path.Mem()
+	//@ assert s.Path != nil
 	//@ ghost s.setPathLoc(pathMemLoc)
 	//@ assert s.getPathLoc() == pathMemLoc
-	//@ assert s.Path.Mem()
-	//
 	//@ assert slices.AbsSlice_Bytes(data, 0, CmnHdrLen)
 	// NOTE the slice [CmnHdrLen : offset] was consumed
 	// NOTE the slice [offset : offset + pathLen] was consumed
 	//@ assert slices.AbsSlice_Bytes(data, offset + pathLen, len(data))
-	//
 	//@ requires  0 <= hdrBytes && hdrBytes <= len(data)
 	//@ preserves acc(&s.Contents)
 	//@ preserves acc(&s.Payload)
@@ -730,9 +736,11 @@ func (s *SCION) RecyclePaths() {
 //@ ensures   err == nil ==> p != nil
 //@ ensures   err == nil ==> p.NonInitMem()
 //@ ensures   err == nil ==> isValidPathMemLoc(loc)
+//
 //@ ensures   (err == nil && loc == New) ==> s.PathPoolNone()
 //@ ensures   (err == nil && loc == Pool) ==> (s.PathPoolPartial(pathType) && s.PathPoolRawFull() && ((p.NonInitMem() && s.PathPoolPartial(pathType)) --* s.PathPoolFull()))
 //@ ensures   (err == nil && loc == Raw) ==> (s.PathPoolFull() && s.PathPoolRawPartial() && ((p.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()))
+//
 //@ ensures   err != nil ==> err.ErrorMem()
 //@ ensures   err != nil ==> s.PathPoolNone()
 //@ decreases
