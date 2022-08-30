@@ -1,0 +1,17 @@
+// Copyright 2017 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Based on file https://github.com/golang/net/blob/master/internal/socket/rawconn.go
+
+// +gobra
+
+package socket
+
+import "syscall"
+
+// A Conn represents a raw connection.
+type Conn struct {
+	network string
+	c       syscall.RawConn
+}

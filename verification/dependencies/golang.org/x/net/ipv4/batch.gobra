@@ -1,0 +1,46 @@
+// Specification for package "golang.org/x/net/ipv4"
+// Based on file https://github.com/golang/net/blob/master/ipv4/batch.go
+
+// +gobra
+
+package ipv4
+
+import "golang.org/x/net/internal/socket"
+
+// A Message represents an IO message.
+//
+//	type Message struct {
+//		Buffers [][]byte
+//		OOB     []byte
+//		Addr    net.Addr
+//		N       int
+//		NN      int
+//		Flags   int
+//	}
+//
+// The Buffers fields represents a list of contiguous buffers, which
+// can be used for vectored IO, for example, putting a header and a
+// payload in each slice.
+// When writing, the Buffers field must contain at least one byte to
+// write.
+// When reading, the Buffers field will always contain a byte to read.
+//
+// The OOB field contains protocol-specific control or miscellaneous
+// ancillary data known as out-of-band data.
+// It can be nil when not required.
+//
+// The Addr field specifies a destination address when writing.
+// It can be nil when the underlying protocol of the endpoint uses
+// connection-oriented communication.
+// After a successful read, it may contain the source address on the
+// received packet.
+//
+// The N field indicates the number of bytes read or written from/to
+// Buffers.
+//
+// The NN field indicates the number of bytes read or written from/to
+// OOB.
+//
+// The Flags field contains protocol-specific information on the
+// received message.
+type Message = socket.Message

@@ -230,8 +230,7 @@ func (s *Decoded) SerializeTo(b []byte) (r error) {
 //@ decreases
 func (s *Decoded) Reverse() (p path.Path, r error) {
 	if s.NumINF == 0 {
-		// Empty path doesn't need reversal.
-		return nil, nil
+		return nil, serrors.New("empty decoded path is invalid and cannot be reversed")
 	}
 	// Reverse order of InfoFields and SegLens
 	for i, j := 0, s.NumINF-1; i < j; i, j = i+1, j-1 {

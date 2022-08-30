@@ -221,28 +221,16 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
-//@ trusted // (VerifiedSCION) the following currently takes a long time to verify
-// (VerifiedSCION) The main cause for the performance problem is the `share` statement,
-// together with the assert right after. This is translated to a huge chunk of inhales
-// and exhales in Viper involving quantifiers that cause verification to choke.
+//@ requires o.Mem()
 //@ ensures err == nil ==> p.Mem()
 //@ ensures err == nil ==> p != nil
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (o Path) Reverse() (p path.Path, err error) {
-	// (VerifiedSCION) this share would not be needed if we had passed a *Path as a parameter.
-	// From a performance standpoint (for SCION), this would also be preferrable, given that Reverse cannot
-	// be modified in these functions.
-	// From a verification stand-point, it would also make more sense to provide Mem() as a precondition.
-	// It would be easier to maintain.
-	//@ share o
-	//@ assert acc(&o)
-	//@ ghost FoldPathMem(&o)
+func (o *Path) Reverse() (p path.Path, err error) {
 	sp, err := o.ToSCIONDecoded()
 	if err != nil {
 		return nil, serrors.WrapStr("converting to scion path", err)
 	}
-	//@ assert sp.Mem()
 	// increment the path, since we are at the receiver side.
 	if err := sp.IncPath(); err != nil {
 		return nil, serrors.WrapStr("incrementing path", err)

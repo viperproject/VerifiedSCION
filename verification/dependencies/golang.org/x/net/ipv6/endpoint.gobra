@@ -1,0 +1,215 @@
+// Specification for package "golang.org/x/net/ipv4"
+// Based on file https://github.com/golang/net/blob/master/ipv6/endpoint.go
+
+// +gobra
+
+package ipv6
+
+import (
+	"net"
+	"time"
+
+	"golang.org/x/net/internal/socket"
+
+	"github.com/scionproto/scion/verification/utils/definitions"
+)
+
+pred (p *PacketConn) Mem()
+
+pred (c *Conn) Mem() {
+	acc(c)
+}
+
+// A Conn represents a network endpoint that uses IPv6 transport.
+// It allows to set basic IP-level socket options such as traffic
+// class and hop limit.
+type Conn struct {
+	genericOpt
+}
+
+type genericOpt struct {
+	// (VerifiedSCION) this is originally an embedded field, but Gobra does not yet support imported embedded fields
+	connGenericOpt *socket.Conn
+}
+
+// PathMTU returns a path MTU value for the destination associated
+// with the endpoint.
+trusted
+preserves c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+decreases _
+func (c *Conn) PathMTU() (n int, e error) {
+	if !c.ok() {
+		return 0, errInvalidConn
+	}
+	so, ok := sockOpts[ssoPathMTU]
+	if !ok {
+		return 0, errNotImplemented
+	}
+	_, mtu, err := so.getMTUInfo(c.Conn)
+	if err != nil {
+		return 0, err
+	}
+	return mtu, nil
+}
+
+// NewConn returns a new Conn.
+trusted
+requires c.Mem()
+ensures  conn.Mem()
+decreases _
+func NewConn(c net.Conn) (conn *Conn) {
+	cc, _ := socket.NewConn(c)
+	return &Conn{
+		genericOpt: genericOpt{Conn: cc},
+	}
+}
+
+// A PacketConn represents a packet network endpoint that uses IPv6
+// transport. It is used to control several IP-level socket options
+// including IPv6 header manipulation. It also provides datagram
+// based network I/O methods specific to the IPv6 and higher layer
+// protocols such as OSPF, GRE, and UDP.
+type PacketConn struct {
+	genericOpt
+	dgramOpt
+	// payloadHandler
+}
+
+type dgramOpt struct {
+	// (VerifiedSCION) this is originally an embedded field, but Gobra does not yet support imported embedded fields
+	conn *socket.Conn
+}
+
+// SetControlMessage allows to receive the per packet basis IP-level
+// socket options.
+// func (c *PacketConn) SetControlMessage(cf ControlFlags, on bool) error //{
+// 	if !c.payloadHandler.ok() {
+// 		return errInvalidConn
+// 	}
+// 	return setControlMessage(c.dgramOpt.Conn, &c.payloadHandler.rawOpt, cf, on)
+// }
+
+// SetDeadline sets the read and write deadlines associated with the
+// endpoint.
+trusted
+requires  c.Mem()
+requires  isComparable(c.GetUnderlyingConn())
+ensures   c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+decreases _
+func (c *PacketConn) SetDeadline(t time.Time) (e error) {
+	if !c.payloadHandler.ok() {
+		return errInvalidConn
+	}
+	return c.payloadHandler.SetDeadline(t)
+}
+
+// SetReadDeadline sets the read deadline associated with the
+// endpoint.
+trusted
+requires  c.Mem()
+requires  isComparable(c.GetUnderlyingConn())
+ensures   c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+decreases _
+func (c *PacketConn) SetReadDeadline(t time.Time) (e error) {
+	if !c.payloadHandler.ok() {
+		return errInvalidConn
+	}
+	return c.payloadHandler.SetReadDeadline(t)
+}
+
+// SetWriteDeadline sets the write deadline associated with the
+// endpoint.
+trusted
+requires  c.Mem()
+requires  isComparable(c.GetUnderlyingConn())
+ensures   c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+decreases _
+func (c *PacketConn) SetWriteDeadline(t time.Time) (e error) {
+	if !c.payloadHandler.ok() {
+		return errInvalidConn
+	}
+	return c.payloadHandler.SetWriteDeadline(t)
+}
+
+// Close closes the endpoint.
+trusted
+requires c.Mem()
+ensures  e != nil ==> e.ErrorMem()
+decreases _
+func (c *PacketConn) Close() (e error) {
+	if !c.payloadHandler.ok() {
+		return errInvalidConn
+	}
+	return c.payloadHandler.Close()
+}
+
+// NewPacketConn returns a new PacketConn using c as its underlying
+// transport.
+trusted
+requires c != nil && c.Mem()
+requires isComparable(c)
+ensures  p != nil && p.Mem()
+ensures  p.GetUnderlyingConn() == c
+decreases _
+func NewPacketConn(c net.PacketConn) (p *PacketConn) {
+	cc, _ := socket.NewConn(c.(net.Conn))
+	return &PacketConn{
+		genericOpt:     genericOpt{Conn: cc},
+		dgramOpt:       dgramOpt{Conn: cc},
+		payloadHandler: payloadHandler{PacketConn: c, Conn: cc},
+	}
+}
+
+
+ghost
+requires acc(p.Mem(), _)
+pure func (p *PacketConn) GetUnderlyingConn() (c net.PacketConn)
+
+ghost
+requires p.Mem()
+requires isComparable(p.GetUnderlyingConn())
+ensures  c == old(p.GetUnderlyingConn())
+ensures  c.Mem()
+ensures  c.Mem() --* (p.Mem() && p.GetUnderlyingConn() == c)
+decreases _
+func (p *PacketConn) ExchangePerm() (c net.PacketConn)
+
+// (VerifiedSCION) Promote method from payloadHandler to PacketConn.
+// ReadBatch reads a batch of messages.
+// On a successful read it returns the number of messages received, up
+// to len(ms).
+trusted
+requires  forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem(lenBuffers)
+requires  c.Mem()
+requires  isComparable(c.GetUnderlyingConn())
+ensures   forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem(lenBuffers)
+ensures   c.Mem()
+ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+ensures   err == nil ==> (0 <= n && n <= len(ms))
+ensures   err != nil ==> err.ErrorMem()
+func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers int) (n int, err error) {
+	return c.payloadHandler.ReadBatch(ms, flags)
+}
+
+// (VerifiedSCION) Promote method from payloadHandler to PacketConn.
+// WriteBatch writes a batch of messages.
+// It returns the number of messages written on a successful write.
+trusted
+requires  forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), definitions.ReadL10)
+requires  c.Mem()
+requires  isComparable(c.GetUnderlyingConn())
+ensures   forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), definitions.ReadL10)
+ensures   c.Mem()
+ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+ensures   err == nil ==> 0 <= n && n <= len(ms)
+ensures   err != nil ==> err.ErrorMem()
+func (c *PacketConn) WriteBatch(ms []socket.Message, flags int, ghost lenBuffers int) (n int, err error) {
+	return c.payloadHandler.WriteBatch(ms, flags)
+}
