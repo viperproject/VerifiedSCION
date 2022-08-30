@@ -16,7 +16,10 @@
 
 package onehop
 
-import "github.com/scionproto/scion/pkg/slayers/path"
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
 
 pred (o *Path) NonInitMem() {
 	acc(o)
@@ -36,6 +39,24 @@ func (p *Path) DowngradePerm() {
 	unfold p.SecondHop.Mem()
 	fold  p.NonInitMem()
 }
+
+ghost
+requires acc(o.Mem(), _)
+decreases
+pure func (o *Path) GetUnderlyingBuf() (buf []byte)
+
+ghost
+requires o.Mem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* o.Mem()
+decreases
+func (o *Path) ExchangeBufMem() (buf []byte)
+
+ghost
+preserves o.Mem()
+ensures   o.GetUnderlyingBuf() == buf
+decreases
+func (o *Path) SetUnderlyingBuf(buf []byte)
 
 (*Path) implements path.Path {
 	(p *Path) SerializeTo(b []byte) (e error) {

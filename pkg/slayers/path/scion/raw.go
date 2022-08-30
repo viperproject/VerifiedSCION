@@ -35,7 +35,9 @@ type Raw struct {
 //@ requires s.NonInitMem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures  res == nil ==> s.Mem()
+//@ ensures  res == nil ==> s.GetUnderlyingBuf() == data
 //@ ensures  res != nil ==> (s.NonInitMem() && res.ErrorMem())
+//@ ensures  res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()
@@ -57,6 +59,7 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	s.Raw = data[:pathLen]
 	//@ fold slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
 	//@ fold s.Mem()
+	//@ s.SetUnderlyingBuf(data)
 	return nil
 }
 

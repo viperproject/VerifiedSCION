@@ -114,28 +114,38 @@ func (p *Path) SerializeTo(b []byte) (r error) {
 	//@ ghost slices.SplitByIndex_Bytes(b, PktIDLen, len(b), PktIDLen+HVFLen, writePerm)
 	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen, PktIDLen + HVFLen)
 	//@ preserves acc(&p.PHVF)
-	//@ preserves forall i int :: 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i])
+	//
+	//@ preserves slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
+	// preserves forall i int :: 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i])
+	//
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
 	//@ assert len(b[PktIDLen:(PktIDLen+HVFLen)]) == HVFLen
 	//@ unfold slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen)
+	//@ unfold acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL1)
 	copy(b[PktIDLen:(PktIDLen+HVFLen)], p.PHVF /*@, definitions.ReadL1 @*/)
 	//@ fold slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen)
+	//@ fold acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL1)
 	//@ ghost slices.Unslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
 	//@ )
 	//@ ghost slices.CombineAtIndex_Bytes(b, 0, PktIDLen+HVFLen, PktIDLen, writePerm)
 	//@ ghost slices.SplitByIndex_Bytes(b, PktIDLen+HVFLen, len(b), MetadataLen, writePerm)
 	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen+HVFLen, MetadataLen)
 	//@ preserves acc(&p.LHVF)
-	//@ preserves forall i int :: 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i])
+	//
+	//@ preserves slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
+	// preserves forall i int :: 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i])
+	//
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
 	//@ assert len(b[(PktIDLen+HVFLen):MetadataLen]) == HVFLen
+	//@ unfold acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL1)
 	//@ unfold slices.AbsSlice_Bytes(b[(PktIDLen+HVFLen):MetadataLen], 0, HVFLen)
 	copy(b[(PktIDLen+HVFLen):MetadataLen], p.LHVF /*@, definitions.ReadL1 @*/)
 	//@ fold slices.AbsSlice_Bytes(b[(PktIDLen+HVFLen):MetadataLen], 0, HVFLen)
+	//@ fold acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL1)
 	//@ ghost slices.Unslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
 	//@ )
 	//@ ghost slices.CombineAtIndex_Bytes(b, 0, MetadataLen, PktIDLen+HVFLen, writePerm)
@@ -152,9 +162,11 @@ func (p *Path) SerializeTo(b []byte) (r error) {
 //@ requires slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures  len(b) < MetadataLen ==> r != nil
 //@ ensures  r == nil ==> p.Mem()
+//@ ensures  r == nil ==> p.GetUnderlyingBuf() == b
 //@ ensures  r == nil ==> slices.AbsSlice_Bytes(b, 0, MetadataLen)
 //@ ensures  r != nil ==> r.ErrorMem()
 //@ ensures  r != nil ==> p.NonInitMem()
+//@ ensures  r != nil ==> slices.AbsSlice_Bytes(b, 0, len(b))
 //@ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	if len(b) < MetadataLen {
@@ -163,34 +175,51 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ assert MetadataLen == PktIDLen + HVFLen + HVFLen
 	//@ unfold p.NonInitMem()
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), PktIDLen, writePerm)
+	//@ preserves slices.AbsSlice_Bytes(b, 0, PktIDLen)
+	//@ preserves acc(&p.PktID)
+	//@ preserves acc(&p.PHVF)
+	//@ preserves acc(&p.LHVF)
+	//@ ensures   p.PHVF != nil && len(p.PHVF) == HVFLen
+	//@ ensures   p.LHVF != nil && len(p.LHVF) == HVFLen
+	//@ ensures   slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
+	//@ ensures   slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
+	//@ decreases
+	//@ outline(
 	//@ ghost slices.Reslice_Bytes(b, 0, PktIDLen, writePerm)
 	p.PktID.DecodeFromBytes(b[:PktIDLen])
 	p.PHVF = make([]byte, HVFLen)
 	p.LHVF = make([]byte, HVFLen)
+	//@ fold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
+	//@ fold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
 	//@ ghost slices.Unslice_Bytes(b, 0, PktIDLen, writePerm)
+	//@ )
 	//@ ghost slices.SplitByIndex_Bytes(b, PktIDLen, len(b), PktIDLen+HVFLen, writePerm)
 	//@ preserves acc(&p.PHVF)
-	//@ preserves forall i int :: 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i])
+	//@ preserves slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
 	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen, PktIDLen + HVFLen)
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
 	//@ unfold acc(slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen), definitions.ReadL1)
 	copy(p.PHVF, b[PktIDLen:(PktIDLen+HVFLen)] /*@, definitions.ReadL1 @*/)
 	//@ fold acc(slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen), definitions.ReadL1)
+	//@ fold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
 	//@ ghost slices.Unslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
 	//@ )
 	//@ ghost slices.CombineAtIndex_Bytes(b, 0, PktIDLen+HVFLen, PktIDLen, writePerm)
 	//@ ghost slices.SplitByIndex_Bytes(b, PktIDLen+HVFLen, len(b), MetadataLen, writePerm)
 	//@ preserves acc(&p.LHVF)
-	//@ preserves forall i int :: 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i])
+	//@ preserves slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
 	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen+HVFLen, MetadataLen)
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
 	//@ unfold acc(slices.AbsSlice_Bytes(b[PktIDLen+HVFLen:MetadataLen], 0, HVFLen), definitions.ReadL1)
 	copy(p.LHVF, b[(PktIDLen+HVFLen):MetadataLen] /*@, definitions.ReadL1 @*/)
 	//@ fold acc(slices.AbsSlice_Bytes(b[PktIDLen+HVFLen:MetadataLen], 0, HVFLen), definitions.ReadL1)
+	//@ fold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
 	//@ ghost slices.Unslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
 	//@ )
 	//@ ghost slices.CombineAtIndex_Bytes(b, 0, MetadataLen, PktIDLen+HVFLen, writePerm)
@@ -201,8 +230,11 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	ret := p.ScionPath.DecodeFromBytes(b[MetadataLen:])
 	//@ ghost if ret == nil {
 	//@   fold p.Mem()
+	//@   ghost p.SetUnderlyingBuf(b)
 	//@ } else {
 	//@   fold p.NonInitMem()
+	//@   ghost slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
+	//@   ghost slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
 	//@ }
 	return ret
 }

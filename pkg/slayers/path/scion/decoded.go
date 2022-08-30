@@ -43,8 +43,9 @@ type Decoded struct {
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 //@ requires  s.NonInitMem()
-//@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
+//@ preserves slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures   r == nil ==> s.Mem()
+//@ ensures   r == nil ==> s.GetUnderlyingBuf() == data
 //@ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 //@ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
@@ -126,6 +127,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	}
 	//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
 	//@ fold s.Mem()
+	//@ s.SetUnderlyingBuf(data)
 	return nil
 }
 

@@ -16,6 +16,8 @@
 
 package epic
 
+import "github.com/scionproto/scion/verification/utils/slices"
+
 func testAllocateNonInitMem() {
 	p := &Path{}
 	fold p.NonInitMem()
@@ -23,6 +25,8 @@ func testAllocateNonInitMem() {
 
 func canAllocatePath() {
 	p := &Path{}
+	fold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
+	fold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
 	fold p.Mem()
 }
 

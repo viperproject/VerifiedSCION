@@ -16,7 +16,10 @@
 
 package empty
 
-import "github.com/scionproto/scion/pkg/slayers/path"
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
 
 pred (e Path) Mem() {
 	true
@@ -25,6 +28,25 @@ pred (e Path) Mem() {
 pred (e Path) NonInitMem() {
 	true
 }
+
+ghost
+requires p.Mem()
+requires p.GetUnderlyingBuf() == buf
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* p.Mem()
+decreases
+func (p Path) ExchangeBufMem(buf []byte)
+
+ghost
+requires acc(p.Mem(), _)
+decreases
+pure func (p Path) GetUnderlyingBuf() (buf []byte)
+
+ghost
+preserves p.Mem()
+ensures   p.GetUnderlyingBuf() == buf
+decreases
+func (p Path) SetUnderlyingBuf(buf []byte)
 
 Path implements path.Path
 

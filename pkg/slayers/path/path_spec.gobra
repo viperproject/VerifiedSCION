@@ -27,6 +27,34 @@ pred (r *rawPath) NonInitMem() {
 	acc(r)
 }
 
+ghost
+requires acc(r.Mem(), _)
+decreases
+pure func (r *rawPath) GetUnderlyingBuf() (buf []byte) {
+	return unfolding acc(r.Mem(), _) in r.raw
+}
+
+ghost
+requires r.Mem()
+requires r.GetUnderlyingBuf() == buf
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem()
+decreases
+func (r *rawPath) ExchangeBufMem(buf []byte) {
+	unfold r.Mem()
+	buf := r.raw
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem() {
+		fold r.Mem()
+	}
+	return
+}
+
+ghost
+preserves r.Mem()
+ensures   r.GetUnderlyingBuf() == buf
+decreases
+func (r *rawPath) SetUnderlyingBuf(buf []byte)
+
 (*rawPath) implements Path
 
 ghost

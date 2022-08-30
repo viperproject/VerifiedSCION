@@ -66,11 +66,14 @@ type Path struct {
 	SecondHop path.HopField
 }
 
-//@ requires  o.NonInitMem()
-//@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-//@ ensures   (len(data) >= PathLen) == (r == nil)
-//@ ensures   r == nil ==> o.Mem()
-//@ ensures   r != nil ==> (o.NonInitMem() && r.ErrorMem())
+//@ requires o.NonInitMem()
+//@ requires slices.AbsSlice_Bytes(data, 0, len(data))
+//@ ensures  (len(data) >= PathLen) == (r == nil)
+//@ ensures  r == nil ==> o.Mem()
+//@ ensures  r == nil ==> o.GetUnderlyingBuf() == data
+//@ ensures  r != nil ==> o.NonInitMem()
+//@ ensures  r != nil ==> r.ErrorMem()
+//@ ensures  r != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ decreases
 func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	if len(data) < PathLen {
@@ -108,6 +111,7 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
 	//@ ghost if r == nil {
 	//@   fold o.Mem()
+	//@   ghost o.SetUnderlyingBuf(data)
 	//@ } else {
 	//@   fold o.NonInitMem()
 	//@ }

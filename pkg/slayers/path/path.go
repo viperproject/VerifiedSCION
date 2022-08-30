@@ -66,6 +66,26 @@ type Path interface {
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
 	//@ pred NonInitMem()
+
+	// (VerifiedSCION) releases the permission to access the underlying
+	// buffer for the given Path instance. There must also be a wand to
+	// regain access to the Mem predicate.
+	//@ ghost
+	//@ requires acc(Mem(), _)
+	//@ decreases
+	//@ pure GetUnderlyingBuf() (buf []byte)
+
+	// (VerifiedSCION) exchange the Mem predicate for access to the
+	// underlying Path buffer. Access to Mem should be re-acquirable
+	// via a wand instance.
+	// ghost
+	// requires Mem()
+	// requires GetUnderlyingBuf() == buf
+	// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+	// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* Mem()
+	// decreases
+	// ExchangeBufMem(buf []byte)
+
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
@@ -80,7 +100,10 @@ type Path interface {
 	//@ requires NonInitMem()
 	//@ requires slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures  err == nil ==> Mem()
+	//@ ensures  err == nil ==> b == GetUnderlyingBuf()
 	//@ ensures  err != nil ==> err.ErrorMem()
+	//@ ensures  err != nil ==> NonInitMem()
+	//@ ensures  err != nil ==> slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
 	// Reverse reverses a path such that it can be used in the reversed direction.
@@ -167,9 +190,6 @@ func StrictDecoding(strict bool) {
 //@ requires 0 <= pathType && pathType < maxPathType
 //@ requires acc(PathPackageMem(), definitions.ReadL20)
 //@ ensures  acc(PathPackageMem(), definitions.ReadL20)
-// ensures  (!Registered(pathType) && IsStrictDecoding()) ==> e.ErrorMem()
-// ensures  (!Registered(pathType) && !IsStrictDecoding()) ==> p.Mem()
-// ensures  Registered(pathType) ==> p.NonInitMem()
 //@ ensures  e != nil ==> e.ErrorMem()
 //@ ensures  e == nil ==> p != nil && p.NonInitMem()
 //@ decreases
@@ -182,16 +202,22 @@ func NewPath(pathType Type) (p Path, e error) {
 			return nil, serrors.New("unsupported path", "type", uint8(pathType))
 		}
 		tmp := &rawPath{}
-		//@ fold slices.AbsSlice_Bytes(tmp.raw, 0, len(tmp.raw))
-		//@ fold tmp.Mem()
+		//@ fold tmp.NonInitMem()
 		return tmp, nil
 	}
-	return pm.New() /*@ as NewPathSpec @*/, nil
+	tmp := pm.New() /*@ as NewPathSpec @*/
+	//@ assume tmp != nil // TODO FIXME
+	return tmp, nil
 }
 
 // NewRawPath returns a new raw path that can hold any path type.
-func NewRawPath() Path {
-	return &rawPath{}
+//@ ensures p != nil
+//@ ensures p.NonInitMem()
+//@ decreases
+func NewRawPath() (p Path) {
+	p = &rawPath{}
+	//@ fold p.NonInitMem()
+	return p
 }
 
 type rawPath struct {
@@ -216,12 +242,14 @@ func (p *rawPath) SerializeTo(b []byte) (e error) {
 
 //@ requires p.NonInitMem() && slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures  p.Mem()
+//@ ensures  p.GetUnderlyingBuf() == b
 //@ ensures  e == nil
 //@ decreases
 func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
 	//@ unfold p.NonInitMem()
 	p.raw = b
 	//@ fold p.Mem()
+	//@ ghost p.SetUnderlyingBuf(b)
 	return nil
 }
 

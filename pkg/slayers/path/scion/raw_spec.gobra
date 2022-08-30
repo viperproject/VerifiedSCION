@@ -19,31 +19,27 @@ package scion
 import "github.com/scionproto/scion/pkg/slayers/path"
 import "github.com/scionproto/scion/verification/utils/slices"
 
-(*Raw) implements path.Path {
-	(r *Raw) SerializeTo(b []byte) (e error) {
-		e = r.SerializeTo(b)
-	}
+ghost
+requires acc(r.Mem(), _)
+decreases
+pure func (r *Raw) GetUnderlyingBuf() (buf []byte)
 
-	(r *Raw) DecodeFromBytes(b []byte) (e error) {
-		e = r.DecodeFromBytes(b)
-	}
+ghost
+requires r.Mem()
+requires r.GetUnderlyingBuf() == buf
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem()
+decreases
+func (r *Raw) ExchangeBufMem(buf []byte)
 
-	(r *Raw) Reverse() (p path.Path, e error) {
-		p, e = r.Reverse()
-	}
+ghost
+preserves r.Mem()
+ensures   r.GetUnderlyingBuf() == buf
+decreases
+func (r *Raw) SetUnderlyingBuf(buf []byte)
 
-	(r *Raw) DowngradePerm() {
-		r.DowngradePerm()
-	}
 
-	pure (r *Raw) Len() int {
-		return r.Len()
-	}
-
-	pure (r *Raw) Type() path.Type {
-		return r.Type()
-	}
-}
+(*Raw) implements path.Path
 
 pred (s *Raw) NonInitMem() {
 	acc(&s.Raw) && s.Base.NonInitMem()

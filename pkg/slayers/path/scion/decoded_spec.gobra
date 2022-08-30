@@ -100,31 +100,26 @@ func (d *Decoded) DowngradePerm() {
 	fold d.NonInitMem()
 }
 
-(*Decoded) implements path.Path {
-	(d *Decoded) SerializeTo(b []byte) (e error) {
-		e = d.SerializeTo(b)
-	}
+ghost
+requires acc(d.Mem(), _)
+decreases
+pure func (d *Decoded) GetUnderlyingBuf() (buf []byte)
 
-	(d *Decoded) DecodeFromBytes(b []byte) (e error) {
-		e = d.DecodeFromBytes(b)
-	}
+// ghost
+// requires d.Mem()
+// requires d.GetUnderlyingBuf() == buf
+// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* d.Mem()
+// decreases
+// func (d *Decoded) ExchangeBufMem(buf []byte)
 
-	(d *Decoded) Reverse() (p path.Path, e error) {
-		p, e = d.Reverse()
-	}
+ghost
+preserves d.Mem()
+ensures   d.GetUnderlyingBuf() == buf
+decreases
+func (d *Decoded) SetUnderlyingBuf(buf []byte)
 
-	(d *Decoded) DowngradePerm() {
-		d.DowngradePerm()
-	}
-
-	pure (d *Decoded) Len() int {
-		return d.Len()
-	}
-
-	pure (d *Decoded) Type() path.Type {
-		return d.Type()
-	}
-}
+(*Decoded) implements path.Path
 
 requires acc(d.Mem(), _)
 decreases

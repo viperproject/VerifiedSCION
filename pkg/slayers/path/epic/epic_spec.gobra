@@ -16,7 +16,29 @@
 
 package epic
 
-import "github.com/scionproto/scion/pkg/slayers/path"
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+ghost
+requires acc(p.Mem(), _)
+decreases
+pure func (p *Path) GetUnderlyingBuf() (buf []byte)
+
+// ghost
+// requires p.Mem()
+// requires p.GetUnderlyingBuf() == buf
+// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* p.Mem()
+// decreases
+// func (p *Path) ExchangeBufMem(buf []byte)
+
+ghost
+preserves p.Mem()
+ensures   p.GetUnderlyingBuf() == buf
+decreases
+func (p *Path) SetUnderlyingBuf(buf []byte)
 
 (*Path) implements path.Path
 
@@ -26,10 +48,8 @@ pred (p *Path) NonInitMem() {
 
 pred (p *Path) Mem() {
 	acc(&p.PktID) &&
-	acc(&p.PHVF) &&
-	(forall i int :: 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i])) &&
-	acc(&p.LHVF) &&
-	(forall i int :: 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i])) &&
+	acc(&p.PHVF) && slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)) &&
+	acc(&p.LHVF) && slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)) &&
 	acc(&p.ScionPath) &&
 	(p.ScionPath != nil ==> p.ScionPath.Mem())
 }
