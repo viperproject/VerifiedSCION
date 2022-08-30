@@ -130,6 +130,14 @@ type SCION struct {
 	BaseLayer
 	// Common Header fields
 
+	// TODO (gavinleroy) ghost fields for the SCION struct.
+	// Gobra currently has no support for ghost fields, however,
+	// this information is required to ensure safe memory transfer
+	// during reuse and well-formedness. The following should not
+	// be referred to outside of ghost positions.
+	//@ pathMemLoc PathMemLoc
+	//@ hdrBytes int
+
 	// Version is version of the SCION Header. Currently, only 0 is supported.
 	Version uint8
 	// TrafficClass denotes the traffic class. Its value in a received packet or fragment might be
@@ -191,21 +199,20 @@ func (s *SCION) LayerType() gopacket.LayerType {
 	return getLayerTypeSCION()
 }
 
-//@ pure
-//@ requires acc(s.Mem(), _)
+//@ preserves s.Mem()
+//@ ensures   res.Mem()
 //@ decreases
-func (s *SCION) CanDecode() gopacket.LayerClass {
+func (s *SCION) CanDecode() (res gopacket.LayerClass) {
 	// TODO once the globals PR is merged uncomment the original statement
 	// return LayerClassSCION
 	return getLayerClassSCION()
 }
 
-// pure
-// requires acc(s.Mem(), _)
-// decreases
-// func (s *SCION) NextLayerType() gopacket.LayerType {
-// 	return scionNextLayerType(s.NextHdr)
-// }
+//@ preserves s.Mem()
+//@ decreases
+func (s *SCION) NextLayerType() gopacket.LayerType {
+	return scionNextLayerType(s.NextHdr)
+}
 
 // TODO in the previous code this method only returned /read/
 // access to the payload, do we still want that or is write access
@@ -225,12 +232,12 @@ func (s *SCION) LayerPayload() (res []byte) {
 	return res
 }
 
-/*
+//@ requires false
+//@ decreases
 func (s *SCION) NetworkFlow() gopacket.Flow {
 	// TODO(shitz): Investigate how we can use gopacket.Flow.
 	return gopacket.Flow{}
 }
-*/
 
 //@ requires  s != nil
 //@ requires  b != nil
@@ -414,8 +421,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 //@ preserves acc(path.PathPackageMem(), definitions.ReadL20)
 //@ preserves df.Mem()
 //@ ensures   res == nil ==> s.Mem()
+//@ ensures   res == nil ==> s.GetUnderlyingBuf() == data
 //@ ensures   res != nil ==> s.NonInitMem()
 //@ ensures   res != nil ==> res.ErrorMem()
+//@ ensures   res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ decreases
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	// Decode common header.
@@ -425,58 +434,64 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 			"min", int(CmnHdrLen), "actual", int(len(data)))
 	}
 	//@ ghost slices.SplitByIndex_Bytes(data, 0, len(data), 6, writePerm)
+	//@ ghost slices.SplitByIndex_Bytes(data, 0, 6, 4, writePerm)
 	//@ unfold s.NonInitMem()
-	//@ preserves acc(slices.AbsSlice_Bytes(data, 0, 6), definitions.ReadL1)
-	//@ preserves acc(&s.Version)
-	//@ preserves acc(&s.TrafficClass)
-	//@ preserves acc(&s.FlowID)
-	//@ preserves acc(&s.NextHdr)
-	//@ preserves acc(&s.HdrLen)
-	//@ ensures   s.HdrLen >= 0
-	//@ ensures   s.Version >= 0
-	//@ ensures   s.TrafficClass >= 0
+	//@ preserves acc(slices.AbsSlice_Bytes(data, 0, 4), definitions.ReadL1)
+	//@ ensures   firstLine >= 0
 	//@ decreases
 	//@ outline(
-	//@ ghost slices.SplitByIndex_Bytes(data, 0, 6, 4, definitions.ReadL1)
 	//@ ghost slices.Reslice_Bytes(data, 0, 4, definitions.ReadL1)
-	//@ unfold acc(slices.AbsSlice_Bytes(data[0:4], 0, len(data[0:4])), definitions.ReadL1)
+	//@ unfold acc(slices.AbsSlice_Bytes(data[:4], 0, len(data[:4])), definitions.ReadL2)
 	firstLine := binary.BigEndian.Uint32(data[:4])
-	//@ fold acc(slices.AbsSlice_Bytes(data[0:4], 0, len(data[0:4])), definitions.ReadL1)
+	//@ fold acc(slices.AbsSlice_Bytes(data[:4], 0, len(data[:4])), definitions.ReadL2)
 	//@ ghost slices.Unslice_Bytes(data, 0, 4, definitions.ReadL1)
+	//@ )
 	s.Version = uint8(firstLine >> 28)
 	s.TrafficClass = uint8((firstLine >> 20) & 0xFF)
 	s.FlowID = firstLine & 0xFFFFF
+	// NOTE (gavinleroy) Gobra doesn't recognize a uint cast as
+	// returning non-negative values.
+	//@ assume s.Version >= 0
+	//@ assume s.TrafficClass >= 0
+	//@ preserves acc(slices.AbsSlice_Bytes(data, 4, 6), definitions.ReadL1)
+	//@ preserves acc(&s.NextHdr)
+	//@ preserves acc(&s.HdrLen)
+	//@ ensures   s.HdrLen >= 0
+	//@ decreases
+	//@ outline(
 	//@ unfold acc(slices.AbsSlice_Bytes(data, 4, 6), definitions.ReadL1)
 	s.NextHdr = L4ProtocolType(data[4])
 	s.HdrLen = data[5]
 	//@ fold acc(slices.AbsSlice_Bytes(data, 4, 6), definitions.ReadL1)
-	//@ ghost slices.CombineAtIndex_Bytes(data, 0, 6, 4, definitions.ReadL1)
 	// NOTE s.HdrLen is an /unsigned integer/ but Gobra does not recognize
 	// that is is always >= 0.
 	//@ assume s.HdrLen >= 0
-	//@ assume s.Version >= 0
-	//@ assume s.TrafficClass >= 0
 	//@ )
+	//@ ghost slices.CombineAtIndex_Bytes(data, 0, 6, 4, writePerm)
 	//@ ghost slices.SplitByIndex_Bytes(data, 6, len(data), 10, writePerm)
-	//@ preserves acc(slices.AbsSlice_Bytes(data, 6, 10), definitions.ReadL1)
-	//@ preserves acc(&s.PathType)
-	//@ preserves acc(&s.DstAddrType)
-	//@ preserves acc(&s.DstAddrLen)
-	//@ preserves acc(&s.SrcAddrType)
-	//@ preserves acc(&s.SrcAddrLen)
+	//@ ghost slices.SplitByIndex_Bytes(data, 6, 10, 8, writePerm)
+	//@ preserves acc(slices.AbsSlice_Bytes(data, 6, 8), definitions.ReadL1)
 	//@ preserves acc(&s.PayloadLen)
 	//@ ensures   s.PayloadLen >= 0
-	//@ ensures   s.DstAddrLen >= 0
-	//@ ensures   s.SrcAddrLen >= 0
-	//@ ensures   0 <= s.PathType && s.PathType < path.maxPathType
 	//@ decreases
 	//@ outline(
-	//@ ghost slices.SplitByIndex_Bytes(data, 6, 10, 8, definitions.ReadL1)
 	//@ ghost slices.Reslice_Bytes(data, 6, 8, definitions.ReadL1)
 	//@ unfold acc(slices.AbsSlice_Bytes(data[6:8], 0, 2), definitions.ReadL1)
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
 	//@ fold acc(slices.AbsSlice_Bytes(data[6:8], 0, 2), definitions.ReadL1)
 	//@ ghost slices.Unslice_Bytes(data, 6, 8, definitions.ReadL1)
+	//@ )
+	//@ preserves acc(slices.AbsSlice_Bytes(data, 8, 10), definitions.ReadL1)
+	//@ preserves acc(&s.PathType)
+	//@ preserves acc(&s.DstAddrType)
+	//@ preserves acc(&s.DstAddrLen)
+	//@ preserves acc(&s.SrcAddrType)
+	//@ preserves acc(&s.SrcAddrLen)
+	//@ ensures   s.DstAddrLen >= 0
+	//@ ensures   s.SrcAddrLen >= 0
+	//@ ensures   0 <= s.PathType && s.PathType < path.maxPathType
+	//@ decreases
+	//@ outline(
 	//@ unfold acc(slices.AbsSlice_Bytes(data, 8, 10), definitions.ReadL1)
 	s.PathType = path.Type(data[8])
 	s.DstAddrType = AddrType(data[9] >> 6)
@@ -484,12 +499,15 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.SrcAddrType = AddrType(data[9] >> 2 & 0x3)
 	s.SrcAddrLen = AddrLen(data[9] & 0x3)
 	//@ fold acc(slices.AbsSlice_Bytes(data, 8, 10), definitions.ReadL1)
-	//@ ghost slices.CombineAtIndex_Bytes(data, 6, 10, 8, definitions.ReadL1)
-	// NOTE AddrLen is an alias to uint, which Gobra doesn't
-	// recognize.
+	// NOTE AddrLen & PathTYpe are aliases to uint, which Gobra doesn't
+	// recognize. maxPathType is 256, the maximum number for uint8, thus
+	// we also add this knowledge after reading the byte.
 	//@ assume s.DstAddrLen >= 0
 	//@ assume s.SrcAddrLen >= 0
+	//@ assume s.PathType >= 0
+	//@ assume s.PathType < path.maxPathType
 	//@ )
+	//@ ghost slices.CombineAtIndex_Bytes(data, 6, 10, 8, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(data, 0, 10, 6, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), 10, writePerm)
 	//@ ghost slices.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, writePerm)
@@ -500,10 +518,14 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(data, CmnHdrLen, len(data), writePerm)
 	//@ )
+	//@ fold s.AddrHdrInitMem()
 	tmp_err /*@, end_idx @*/ := s.DecodeAddrHdr(data[CmnHdrLen:])
 	// Decode address header.
 	if err := tmp_err; err != nil {
 		df.SetTruncated()
+		//@ ghost slices.Unslice_Bytes(data, CmnHdrLen, len(data), writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, writePerm)
+		//@ unfold s.AddrHdrInitMem()
 		//@ fold s.NonInitMem()
 		//@ assert err.ErrorMem()
 		return err
@@ -513,8 +535,9 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	//@ assert slices.AbsSlice_Bytes(data[CmnHdrLen + end_idx:], 0, len(data[CmnHdrLen + end_idx:]))
 	//@ ghost slices.Unslice_Bytes(data, CmnHdrLen + end_idx, len(data), writePerm)
 	//@ assert slices.AbsSlice_Bytes(data, CmnHdrLen + end_idx, len(data))
-	//@ assert end_idx == s.AddrHdrLen()
-	addrHdrLen := s.AddrHdrLen()
+	//@ assert s.AddrHdrMem()
+	//@ assert end_idx == unfolding s.AddrHdrMem() in s.AddrHdrLen()
+	addrHdrLen := /*@ unfolding s.AddrHdrMem() in @*/ s.AddrHdrLen()
 	//@ assert end_idx == addrHdrLen
 	offset := CmnHdrLen + addrHdrLen
 	//@ assert offset == CmnHdrLen + end_idx
@@ -524,6 +547,11 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	hdrBytes := int(s.HdrLen) * LineLen
 	pathLen := hdrBytes - CmnHdrLen - addrHdrLen
 	if pathLen < 0 {
+		//@ apply s.AddrHdrMem() --* (slices.AbsSlice_Bytes(data[CmnHdrLen:offset], 0, len(data[CmnHdrLen:offset])) && s.AddrHdrInitMem())
+		//@ ghost slices.Unslice_Bytes(data, CmnHdrLen, offset, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(data, CmnHdrLen, len(data), offset, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, writePerm)
+		//@ unfold s.AddrHdrInitMem()
 		//@ fold s.NonInitMem()
 		return serrors.New("invalid header, negative pathLen",
 			"hdrBytes", int(hdrBytes), "addrHdrLen", int(addrHdrLen), "CmdHdrLen", int(CmnHdrLen))
@@ -531,142 +559,255 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	//@ assert pathLen >= 0
 	//@ assert addrHdrLen >= 0
 	//@ assert CmnHdrLen == 12
-	//@ assert hdrBytes >= (CmnHdrLen + addrHdrLen)
+	//@ assert 0 <= hdrBytes && hdrBytes >= (CmnHdrLen + addrHdrLen)
 	if minLen := offset + pathLen; len(data) < minLen {
 		df.SetTruncated()
+		//@ apply s.AddrHdrMem() --* (slices.AbsSlice_Bytes(data[CmnHdrLen:offset], 0, len(data[CmnHdrLen:offset])) && s.AddrHdrInitMem())
+		//@ ghost slices.Unslice_Bytes(data, CmnHdrLen, offset, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(data, CmnHdrLen, len(data), offset, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, writePerm)
+		//@ unfold s.AddrHdrInitMem()
 		//@ fold s.NonInitMem()
 		return serrors.New("provided buffer is too small", "expected", int(minLen), "actual", int(len(data)))
 	}
+	//@ assert len(data) > CmnHdrLen
 	//@ assert len(data) >= offset + pathLen
+	//@ assert len(data) >= CmnHdrLen + addrHdrLen + pathLen
+	//@ assert len(data) >= CmnHdrLen + addrHdrLen + (hdrBytes - CmnHdrLen - addrHdrLen)
+	//@ assert len(data) >= hdrBytes
+	//@ assert 0 <= hdrBytes && hdrBytes <= len(data)
 	//@ ghost var pathMemLoc PathMemLoc
-	//@ assume s.pathPool == nil
-	//@ assert (s.pathPool != nil ==> (forall i int :: 0 <= i && i < len(s.pathPool) ==> acc(&s.pathPool[i]) && s.pathPool[i] != nil && s.pathPool[i].NonInitMem()))
+	//@ ghost s.hdrBytes = hdrBytes
 	s.Path, err /*@, pathMemLoc @*/ = s.getPath(s.PathType)
-	//@ assume err == nil // TODO
 	if err != nil {
+		//@ apply s.AddrHdrMem() --* (slices.AbsSlice_Bytes(data[CmnHdrLen:offset], 0, len(data[CmnHdrLen:offset])) && s.AddrHdrInitMem())
+		//@ ghost slices.Unslice_Bytes(data, CmnHdrLen, offset, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(data, CmnHdrLen, len(data), offset, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, writePerm)
+		//@ unfold s.AddrHdrInitMem()
+		//@ unfold s.PathPoolNone()
+		//@ fold s.NonInitMem()
 		return err
 	}
-
 	//@ assert acc(&s.Path)
 	//@ assert s.Path != nil
 	//@ assert s.Path.NonInitMem()
 	//@ assert offset + pathLen <= len(data)
 	//@ ghost slices.SplitByIndex_Bytes(data, offset, len(data), offset + pathLen, writePerm)
-
 	//@ assert slices.AbsSlice_Bytes(data, 0, CmnHdrLen)
 	// NOTE the slice [CmnHdrLen : offset] was consumed previously
 	//@ assert slices.AbsSlice_Bytes(data, offset, offset + pathLen)
 	//@ assert slices.AbsSlice_Bytes(data, offset + pathLen, len(data))
-
-	//@ requires acc(&s.Path)
-	//@ requires s.Path.NonInitMem()
-	//@ requires slices.AbsSlice_Bytes(data, offset, offset + pathLen)
-	//@ ensures  acc(&s.Path)
-	//@ ensures  err == nil ==> s.Path.Mem()
-	//@ ensures  err != nil ==> s.Path.NonInitMem()
-	//@ ensures  err != nil ==> err.ErrorMem()
+	// TODO FIXME why is inhaling the wand instance /here/ necessary?
+	//@ ghost if pathMemLoc == Pool {
+	//@   assert err == nil && pathMemLoc == Pool
+	//@   assert s.PathPoolPartial(s.PathType)
+	//@   assert s.PathPoolRawFull()
+	//@   assert s.Path.NonInitMem()
+	//@   inhale (s.Path.NonInitMem() && s.PathPoolPartial(s.PathType)) --* s.PathPoolFull()
+	//@   assert (s.Path.NonInitMem() && s.PathPoolPartial(s.PathType)) --* s.PathPoolFull()
+	//@ } else if pathMemLoc == Raw {
+	//@   assert err == nil && pathMemLoc == Raw
+	//@   inhale (s.Path.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()
+	//@   assert (s.Path.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()
+	//@ } else {
+	//@   assert err == nil && pathMemLoc == New
+	//@ }
+	//@ requires  acc(&s.Path)
+	//@ requires  s.Path != nil
+	//@ requires  s.Path.NonInitMem()
+	//@ requires  slices.AbsSlice_Bytes(data, offset, offset + pathLen)
+	//@ ensures   acc(&s.Path)
+	//@ ensures   s.Path != nil
+	//@ ensures   err == nil ==> s.Path.Mem()
+	//@ ensures   err != nil ==> s.Path.NonInitMem()
+	//@ ensures   err != nil ==> err.ErrorMem()
+	//@ ensures   err != nil ==> slices.AbsSlice_Bytes(data, offset, offset + pathLen)
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(data, offset, offset+pathLen, writePerm)
 	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
-	//@ ghost slices.Unslice_Bytes(data, offset, offset+pathLen, writePerm)
+	//@ ghost if err != nil {
+	//@   slices.Unslice_Bytes(data, offset, offset+pathLen, writePerm)
+	//@ }
 	//@ )
 	if err != nil {
+		//@ assert s.Path.NonInitMem()
+		//@ ghost if pathMemLoc == Pool {
+		//@   assert s.PathPoolPartial(s.PathType)
+		//@   assert s.PathPoolRawFull()
+		//@   apply (s.Path.NonInitMem() && s.PathPoolPartial(s.PathType)) --* s.PathPoolFull()
+		//@   unfold s.PathPoolRawFull()
+		//@   unfold s.PathPoolFull()
+		//@ } else if pathMemLoc == Raw {
+		//@   assert s.PathPoolFull()
+		//@   assert s.PathPoolRawPartial()
+		//@   apply (s.Path.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()
+		//@   unfold s.PathPoolRawFull()
+		//@   unfold s.PathPoolFull()
+		//@ } else {
+		//@   assert pathMemLoc == New
+		//@   assert s.PathPoolNone()
+		//@   unfold s.PathPoolNone()
+		//@ }
+		//@ ghost slices.CombineAtIndex_Bytes(data, offset, len(data), offset+pathLen, writePerm)
+		//@ apply s.AddrHdrMem() --* (slices.AbsSlice_Bytes(data[CmnHdrLen:offset], 0, len(data[CmnHdrLen:offset])) && s.AddrHdrInitMem())
+		//@ ghost slices.Unslice_Bytes(data, CmnHdrLen, offset, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(data, CmnHdrLen, len(data), offset, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, writePerm)
+		//@ unfold s.AddrHdrInitMem()
+		//@ fold s.NonInitMem()
 		return err
 	}
+	//@ ghost s.setPathLoc(pathMemLoc)
+	//@ assert s.getPathLoc() == pathMemLoc
 	//@ assert s.Path.Mem()
-
+	//
 	//@ assert slices.AbsSlice_Bytes(data, 0, CmnHdrLen)
 	// NOTE the slice [CmnHdrLen : offset] was consumed
 	// NOTE the slice [offset : offset + pathLen] was consumed
 	//@ assert slices.AbsSlice_Bytes(data, offset + pathLen, len(data))
-
-	//@ assert false
-
-	// // XXX TODO
-	// // assume slices.AbsSlice_Bytes(data, 0, hdrBytes)
-	// // assume slices.AbsSlice_Bytes(data, hdrBytes, len(data))
-
-	// // requires  slices.AbsSlice_Bytes(data, 0, hdrBytes)
-	// // requires  slices.AbsSlice_Bytes(data, hdrBytes, len(data))
-	// // preserves acc(&s.Contents)
-	// // preserves acc(&s.Payload)
-	// // ensures   slices.AbsSlice_Bytes(s.Contents, 0, len(s.Contents))
-	// // ensures   slices.AbsSlice_Bytes(s.Payload, 0, len(s.payload))
-	// // decreases
-	// // outine (
-	// s.Contents = data[:hdrBytes]
-	// s.Payload = data[hdrBytes:]
-	// // )
-	// //@ fold s.Mem()
+	//
+	//@ requires  0 <= hdrBytes && hdrBytes <= len(data)
+	//@ preserves acc(&s.Contents)
+	//@ preserves acc(&s.Payload)
+	//@ ensures   len(s.Contents) == hdrBytes
+	//@ ensures   len(s.Payload) == len(data) - hdrBytes
+	//@ decreases
+	//@ outline (
+	s.Contents = data[:hdrBytes]
+	s.Payload = data[hdrBytes:]
+	//@ )
+	//@ unfold s.AddrHdrMem()
+	//@ fold s.Mem()
+	//@ s.SetUnderlyingBuf(data)
 	return nil
 }
-
-/*
 
 // RecyclePaths enables recycling of paths used for DecodeFromBytes. This is
 // only useful if the layer itself is reused.
 // When this is enabled, the Path instance may be overwritten in
 // DecodeFromBytes. No references to Path should be kept in use between
 // invocations of DecodeFromBytes.
+
+//@ trusted
+//@ preserves s.NonInitMem()
+//@ ensures unfolding s.NonInitMem() in s.pathPool != nil
+//@ decreases
 func (s *SCION) RecyclePaths() {
+	//@ unfold s.NonInitMem()
+	//@ defer fold s.NonInitMem()
 	if s.pathPool == nil {
+		//@ assert int(empty.PathType) == 0
+		//@ assert int(onehop.PathType) == 2
+		//@ assert int(scion.PathType) == 1
+		//@ assert int(epic.PathType) == 3
+		p_raw := &scion.Raw{}
+		//@ fold p_raw.Base.NonInitMem()
 		s.pathPool = []path.Path{
 			empty.PathType:  empty.Path{},
 			onehop.PathType: &onehop.Path{},
-			scion.PathType:  &scion.Raw{},
+			scion.PathType:  p_raw,
 			epic.PathType:   &epic.Path{},
 		}
+		//@ fold s.pathPool[0].NonInitMem()
+		//@ fold s.pathPool[1].NonInitMem()
+		//@ fold s.pathPool[2].NonInitMem()
+		//@ fold s.pathPool[3].NonInitMem()
 		s.pathPoolRaw = path.NewRawPath()
+		//@ assert s.pathPoolRaw.NonInitMem()
 	}
 }
-
-*/
 
 // getPath returns a new or recycled path for pathType
 //@ requires  0 <= pathType && pathType < path.maxPathType
 //@ requires  acc(&s.pathPoolRaw)
 //@ requires  acc(&s.pathPool)
+//@ requires  s.pathPool == nil ==> s.pathPoolRaw == nil
+//@ requires  s.pathPool != nil ==> (forall i int :: 0 <= i && i < len(s.pathPool) ==> (acc(&s.pathPool[i]) && s.pathPool[i] != nil && s.pathPool[i].NonInitMem()))
 //@ requires  s.pathPool != nil ==> (s.pathPoolRaw != nil && s.pathPoolRaw.NonInitMem())
-//@ requires  s.pathPool != nil ==> (forall i int :: 0 <= i && i < len(s.pathPool) ==> (acc(&s.pathPool[i]) && acc(&s.pathPool[i]) && s.pathPool[i].NonInitMem()))
 //@ preserves acc(path.PathPackageMem(), definitions.ReadL20)
-//@ ensures   acc(&s.pathPoolRaw)
-//@ ensures   acc(&s.pathPool)
-//@ ensures   (s.pathPool != nil && loc != Raw) ==> (s.pathPoolRaw != nil && s.pathPoolRaw.NonInitMem())
-//@ ensures   s.pathPool != nil ==> (forall i int :: 0 <= i && i < len(s.pathPool) && loc != Pool ==> (acc(&s.pathPool[i]) && acc(&s.pathPool[i]) && s.pathPool[i].NonInitMem()))
-//@ ensures   s.pathPool == nil ==> loc == New
 //@ ensures   err == nil ==> p != nil
 //@ ensures   err == nil ==> p.NonInitMem()
+//@ ensures   err == nil ==> isValidPathMemLoc(loc)
+//@ ensures   (err == nil && loc == New) ==> s.PathPoolNone()
+//@ ensures   (err == nil && loc == Pool) ==> (s.PathPoolPartial(pathType) && s.PathPoolRawFull() && ((p.NonInitMem() && s.PathPoolPartial(pathType)) --* s.PathPoolFull()))
+//@ ensures   (err == nil && loc == Raw) ==> (s.PathPoolFull() && s.PathPoolRawPartial() && ((p.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()))
 //@ ensures   err != nil ==> err.ErrorMem()
+//@ ensures   err != nil ==> s.PathPoolNone()
 //@ decreases
 func (s *SCION) getPath(pathType path.Type) (p path.Path, err error /*@, ghost loc PathMemLoc @*/) {
 	if s.pathPool == nil {
 		p, tmp_e := path.NewPath(pathType)
-		//@ assert tmp_e != nil ==> tmp_e.ErrorMem()
-		//@ assert tmp_e == nil ==> p != nil
-		//@ assert tmp_e == nil ==> p.NonInitMem()
+		//@ fold s.PathPoolNone()
 		return p, tmp_e /*@, New @*/
 	}
 	ipt := int(pathType)
 	//@ assert 0 <= ipt
 	if ipt < len(s.pathPool) {
-		//@ assert s.pathPool[pathType].NonInitMem()
-		p := s.pathPool[pathType]
-		//@ assert p != nil
-		//@ assert p.NonInitMem()
-		return p, nil /*@, Pool @*/
+		//@ loc := Pool
+		p = s.pathPool[ipt]
+		//@ fold s.PathPoolRawFull()
+		//@ fold s.PathPoolPartial(pathType)
+		//@ inhale (p.NonInitMem() && s.PathPoolPartial(pathType)) --* s.PathPoolFull()
+		// NOTE XXX the following code should be used to package the magic wand, however, it is
+		// not currently supported by Gobra. Here's a small description why:
+		// The return value `p` is an interface, which in this situation is an alias of
+		// `s.pathPoolRaw`. It is obvious that this alias exists due to the direct assignment
+		// roughly 7 lines above. However, when the resources -- in the form of predicates --
+		// are returned below, Gobra cannot show that `p` is still aliasing `s.pathPoolRaw`.
+		// A logicaly solution would be to return the information that `p == s.pathPoolRaw`
+		// when the returned `PathMemLoc, loc == Raw` but there is no way to (currently)
+		// represent this as interfaces are not comparable.
+		// Due to this, the following code will fail to verify saying that "permissions to
+		// receiver s.pathPool[ipt] may be insufficient" when attempting to fold.
+		// ```
+		// package (p.NonInitMem() && s.PathPoolPartial(pathType)) --* s.PathPoolFull() {
+		//   assert int(pathType) == ipt
+		//   assert 0 <= ipt && ipt < len(s.pathPool)
+		//   unfold s.PathPoolPartial(pathType)
+		//   unfold p.NonInitMem()
+		//   fold s.pathPool[ipt].NonInitMem()
+		//   fold s.PathPoolFull()
+		// }
+		// ```
+		return p, nil /*@, loc @*/
 	}
-	//@ assert s.pathPool != nil
-	p := s.pathPoolRaw
-	//@ assert pathType >= len(s.pathPool)
-	//@ assert p != nil
-	//@ assert p.NonInitMem()
+	//@ fold s.PathPoolFull()
+	p = s.pathPoolRaw
+	//@ fold s.PathPoolRawPartial()
+	//@ inhale (p.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()
+	// NOTE XXX the following code should be used to package the magic wand, however, it is
+	// not currently supported by Gobra. Here's a small description why:
+	// The return value `p` is an interface, which in this situation is an alias of
+	// `s.pathPoolRaw`. It is obvious that this alias exists due to the direct assignment
+	// roughly 7 lines above. However, when the resources -- in the form of predicates --
+	// are returned below, Gobra cannot show that `p` is still aliasing `s.pathPoolRaw`.
+	// A logicaly solution would be to return the information that `p == s.pathPoolRaw`
+	// when the returned `PathMemLoc, loc == Raw` but there is no way to (currently)
+	// represent this as interfaces are not comparable.
+	// Due to this, the following code will fail to verify saying that "permissions to
+	// receiver s.pathPoolRaw may be insufficient" when attempting to fold.
+	//
+	// ```
+	// package (p.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull() {
+	//   unfold s.PathPoolRawPartial()
+	//   unfold p.NonInitMem()
+	//   assert acc(&s.pathPoolRaw)
+	//   fold s.pathPoolRaw.NonInitMem()
+	//   fold s.PathPoolRawFull()
+	// }
+	// ```
 	return p, nil /*@, Raw @*/
 }
 
-/*
-
-func decodeSCION(data []byte, pb gopacket.PacketBuilder) error {
+//@ trusted
+//@ requires  slices.AbsSlice_Bytes(data, 0, len(data))
+//@ preserves pb.Mem()
+//@ ensures   e == nil ==> true
+//@ ensures   e != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+//@ decreases
+func decodeSCION(data []byte, pb gopacket.PacketBuilder) (e error) {
 	scn := &SCION{}
 	err := scn.DecodeFromBytes(data, pb)
 	if err != nil {
@@ -679,64 +820,75 @@ func decodeSCION(data []byte, pb gopacket.PacketBuilder) error {
 
 // scionNextLayerType returns the layer type for the given protocol identifier
 // in a SCION base header.
+//@ decreases
 func scionNextLayerType(t L4ProtocolType) gopacket.LayerType {
-	switch t {
-	case HopByHopClass:
-		return LayerTypeHopByHopExtn
-	case End2EndClass:
-		return LayerTypeEndToEndExtn
-	default:
-		return scionNextLayerTypeL4(t)
-	}
+	return getTODOLayerType() // TODO FIXME
+	// switch t {
+	// case HopByHopClass:
+	// 	return LayerTypeHopByHopExtn
+	// case End2EndClass:
+	// 	return LayerTypeEndToEndExtn
+	// default:
+	// 	return scionNextLayerTypeL4(t)
+	// }
 }
 
 // scionNextLayerTypeAfterHBH returns the layer type for the given protocol
 // identifier in a SCION hop-by-hop extension, excluding (repeated) hop-by-hop
 // extensions.
+//@ decreases
 func scionNextLayerTypeAfterHBH(t L4ProtocolType) gopacket.LayerType {
-	switch t {
-	case HopByHopClass:
-		return gopacket.LayerTypeDecodeFailure
-	case End2EndClass:
-		return LayerTypeEndToEndExtn
-	default:
-		return scionNextLayerTypeL4(t)
-	}
+	return getTODOLayerType() // TODO FIXME
+	// switch t {
+	// case HopByHopClass:
+	// 	return gopacket.LayerTypeDecodeFailure
+	// case End2EndClass:
+	// 	return LayerTypeEndToEndExtn
+	// default:
+	// 	return scionNextLayerTypeL4(t)
+	// }
 }
 
 // scionNextLayerTypeAfterE2E returns the layer type for the given protocol
 // identifier, in a SCION end-to-end extension, excluding (repeated or
 // misordered) hop-by-hop extensions or (repeated) end-to-end extensions.
+//@ decreases
 func scionNextLayerTypeAfterE2E(t L4ProtocolType) gopacket.LayerType {
-	switch t {
-	case HopByHopClass:
-		return gopacket.LayerTypeDecodeFailure
-	case End2EndClass:
-		return gopacket.LayerTypeDecodeFailure
-	default:
-		return scionNextLayerTypeL4(t)
-	}
+	return getTODOLayerType() // TODO FIXME
+	// switch t {
+	// case HopByHopClass:
+	// 	return gopacket.LayerTypeDecodeFailure
+	// case End2EndClass:
+	// 	return gopacket.LayerTypeDecodeFailure
+	// default:
+	// 	return scionNextLayerTypeL4(t)
+	// }
 }
 
 // scionNextLayerTypeL4 returns the layer type for the given layer-4 protocol identifier.
 // Does not handle extension header classes.
+//@ decreases
 func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
-	switch t {
-	case L4UDP:
-		return LayerTypeSCIONUDP
-	case L4SCMP:
-		return LayerTypeSCMP
-	case L4BFD:
-		return layerTypeBFD
-	default:
-		return gopacket.LayerTypePayload
-	}
+	return getTODOLayerType() // TODO FIXME
+	// switch t {
+	// case L4UDP:
+	// 	return LayerTypeSCIONUDP
+	// case L4SCMP:
+	// 	return LayerTypeSCMP
+	// case L4BFD:
+	// 	return layerTypeBFD
+	// default:
+	// 	return gopacket.LayerTypePayload
+	// }
 }
 
 // DstAddr parses the destination address into a net.Addr. The returned net.Addr references data
 // from the underlaying layer data. Changing the net.Addr object might lead to inconsistent layer
 // information and thus should be treated read-only. Instead, SetDstAddr should be used to update
 // the destination address.
+//@ trusted
+//@ requires s.Mem()
+//@ decreases
 func (s *SCION) DstAddr() (net.Addr, error) {
 	return parseAddr(s.DstAddrType, s.DstAddrLen, s.RawDstAddr)
 }
@@ -745,6 +897,8 @@ func (s *SCION) DstAddr() (net.Addr, error) {
 // underlaying layer data. Changing the net.Addr object might lead to inconsistent layer information
 // and thus should be treated read-only. Instead, SetDstAddr should be used to update the source
 // address.
+//@ trusted // TODO FIXME
+//@ decreases
 func (s *SCION) SrcAddr() (net.Addr, error) {
 	return parseAddr(s.SrcAddrType, s.SrcAddrLen, s.RawSrcAddr)
 }
@@ -752,6 +906,8 @@ func (s *SCION) SrcAddr() (net.Addr, error) {
 // SetDstAddr sets the destination address and updates the DstAddrLen/Type fields accordingly.
 // SetDstAddr takes ownership of dst and callers should not write to it after calling SetDstAddr.
 // Changes to dst might leave the layer in an inconsistent state.
+//@ trusted // TODO FIXME
+//@ decreases
 func (s *SCION) SetDstAddr(dst net.Addr) error {
 	var err error
 	s.DstAddrLen, s.DstAddrType, s.RawDstAddr, err = packAddr(dst)
@@ -761,13 +917,24 @@ func (s *SCION) SetDstAddr(dst net.Addr) error {
 // SetSrcAddr sets the source address and updates the DstAddrLen/Type fields accordingly.
 // SetSrcAddr takes ownership of src and callers should not write to it after calling SetSrcAddr.
 // Changes to src might leave the layer in an inconsistent state.
+//@ trusted // TODO FIXME
+//@ decreases
 func (s *SCION) SetSrcAddr(src net.Addr) error {
 	var err error
 	s.SrcAddrLen, s.SrcAddrType, s.RawSrcAddr, err = packAddr(src)
 	return err
 }
 
-func parseAddr(addrType AddrType, addrLen AddrLen, raw []byte) (net.Addr, error) {
+//@ requires addrLen == AddrLen4 ==> len(raw) == 4
+//@ requires addrLen == AddrLen16 ==> len(raw) == 16
+//@ requires acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL20)
+//@ ensures  addrLen != AddrLen4 && addrLen != AddrLen16 ==> err != nil
+//@ ensures  (addrLen == AddrLen4 && (addrType == T4Ip || addrType == T4Svc)) ==> err == nil
+//@ ensures  (addrLen == AddrLen16 && addrType == T16Ip) ==> err == nil
+//@ ensures  err == nil ==> acc(resAddr.Mem(), definitions.ReadL20)
+//@ ensures  err != nil ==> acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL20)
+//@ decreases
+func parseAddr(addrType AddrType, addrLen AddrLen, raw []byte) (resAddr net.Addr, err error) {
 	switch addrLen {
 	case AddrLen4:
 		switch addrType {
@@ -786,6 +953,8 @@ func parseAddr(addrType AddrType, addrLen AddrLen, raw []byte) (net.Addr, error)
 		"type", addrType, "len", addrLen)
 }
 
+//@ trusted // TODO FIXME
+//@ decreases
 func packAddr(hostAddr net.Addr) (AddrLen, AddrType, []byte, error) {
 	switch a := hostAddr.(type) {
 	case *net.IPAddr:
@@ -798,8 +967,6 @@ func packAddr(hostAddr net.Addr) (AddrLen, AddrType, []byte, error) {
 	}
 	return 0, 0, nil, serrors.New("unsupported address", "addr", hostAddr)
 }
-
-*/
 
 // AddrHdrLen returns the length of the address header (destination and source ISD-AS-Host triples)
 // in bytes.
@@ -911,25 +1078,39 @@ func (s *SCION) SerializeAddrHdr(buf []byte) (err error) {
 // DecodeAddrHdr decodes the destination and source ISD-AS-Host address triples from the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
+
 //@ requires  slices.AbsSlice_Bytes(data, 0, len(data))
-//@ preserves acc(&s.RawDstAddr)
-//@ preserves acc(&s.RawSrcAddr)
-//@ preserves acc(&s.DstAddrLen)
-//@ preserves acc(&s.SrcAddrLen)
-//@ preserves acc(&s.SrcIA)
-//@ preserves acc(&s.DstIA)
-//@ preserves s.DstAddrLen >= 0
-//@ preserves s.SrcAddrLen >= 0
+//@ requires  s.AddrHdrInitMem()
+// requires  acc(&s.RawDstAddr)
+// requires  acc(&s.RawSrcAddr)
+// requires  acc(&s.DstAddrLen)
+// requires  acc(&s.SrcAddrLen)
+// requires  acc(&s.SrcIA)
+// requires  acc(&s.DstIA)
+// requires  s.DstAddrLen >= 0
+// requires  s.SrcAddrLen >= 0
+//
+//@ ensures   err == nil ==> s.AddrHdrMem()
 //@ ensures   err == nil ==> end <= len(data)
-//@ ensures   err == nil ==> end == s.AddrHdrLen()
+//@ ensures   err == nil ==> end == (unfolding s.AddrHdrMem() in s.AddrHdrLen())
 //@ ensures   err == nil ==> slices.AbsSlice_Bytes(data[end:], 0, len(data[end:]))
-//@ ensures   err == nil ==> slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
-//@ ensures   err == nil ==> slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
+//@ ensures   err == nil ==> (s.AddrHdrMem() --* (slices.AbsSlice_Bytes(data[:end], 0, len(data[:end])) && s.AddrHdrInitMem()))
+//
+//@ ensures   err != nil ==> s.AddrHdrInitMem()
+// ensures   err != nil ==> acc(&s.RawDstAddr)
+// ensures   err != nil ==> acc(&s.RawSrcAddr)
+// ensures   err != nil ==> acc(&s.DstAddrLen)
+// ensures   err != nil ==> acc(&s.SrcAddrLen)
+// ensures   err != nil ==> acc(&s.SrcIA)
+// ensures   err != nil ==> acc(&s.DstIA)
+//
 //@ ensures   err != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures   err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *SCION) DecodeAddrHdr(data []byte) (err error /*@, ghost end int @*/) {
+	//@ unfold s.AddrHdrInitMem()
 	if len(data) < s.AddrHdrLen() {
+		//@ defer fold s.AddrHdrInitMem()
 		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen(),
 			"actual", int(len(data))) /*@, 0 @*/
 	}
@@ -962,6 +1143,7 @@ func (s *SCION) DecodeAddrHdr(data []byte) (err error /*@, ghost end int @*/) {
 	//@ ghost slices.SplitByIndex_Bytes(data, offset, len(data), offset+addr.IABytes, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(data, 0, offset+addr.IABytes, offset, writePerm)
 	offset += addr.IABytes
+	//@ assert slices.AbsSlice_Bytes(data, 0, offset)
 	dstAddrBytes := addrBytes(s.DstAddrLen)
 	srcAddrBytes := addrBytes(s.SrcAddrLen)
 	//@ ghost slices.SplitByIndex_Bytes(data, offset, len(data), offset+dstAddrBytes, writePerm)
@@ -969,6 +1151,7 @@ func (s *SCION) DecodeAddrHdr(data []byte) (err error /*@, ghost end int @*/) {
 	//@ requires  slices.AbsSlice_Bytes(data, offset, offset+dstAddrBytes)
 	//@ preserves acc(&s.RawDstAddr)
 	//@ ensures   slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
+	// ensures   s.RawDstAddr == data[offset : offset+dstAddrBytes]
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(data, offset, offset+dstAddrBytes, writePerm)
@@ -982,6 +1165,7 @@ func (s *SCION) DecodeAddrHdr(data []byte) (err error /*@, ghost end int @*/) {
 	//@ requires  slices.AbsSlice_Bytes(data, offset, offset+srcAddrBytes)
 	//@ preserves acc(&s.RawSrcAddr)
 	//@ ensures   slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
+	// ensures   s.RawSrcAddr == data[offset : offset+srcAddrBytes]
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(data, offset, offset+srcAddrBytes, writePerm)
@@ -995,6 +1179,29 @@ func (s *SCION) DecodeAddrHdr(data []byte) (err error /*@, ghost end int @*/) {
 	//@ assert slices.AbsSlice_Bytes(data, offset + srcAddrBytes, len(data))
 	//@ assert slices.AbsSlice_Bytes(data, end_idx, len(data))
 	//@ ghost slices.Reslice_Bytes(data, end_idx, len(data), writePerm)
+	//@ fold s.AddrHdrMem()
+	//@ package (s.AddrHdrMem() --* (slices.AbsSlice_Bytes(data[:end_idx], 0, len(data[:end_idx])) && s.AddrHdrInitMem())) {
+	//@   unfold s.AddrHdrMem()
+	//    TODO FIXME
+	//@   assume s.RawDstAddr == data[offset - dstAddrBytes : offset]
+	//@   assume s.RawSrcAddr == data[offset : offset + srcAddrBytes]
+	//
+	//@   assert offset + srcAddrBytes == end_idx
+	//@   assert slices.AbsSlice_Bytes(data, 0, offset - dstAddrBytes)
+	//@   assert s.RawDstAddr == data[offset - dstAddrBytes : offset]
+	//@   assert s.RawSrcAddr == data[offset : offset + srcAddrBytes]
+	//@   unfold slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
+	//@   fold slices.AbsSlice_Bytes(data[offset - dstAddrBytes : offset], 0, len(data[offset - dstAddrBytes : offset]))
+	//@   ghost slices.Unslice_Bytes(data, offset - dstAddrBytes, offset, writePerm)
+	//@   ghost slices.CombineAtIndex_Bytes(data, 0, offset, offset - dstAddrBytes, writePerm)
+	//@   unfold slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
+	//@   fold slices.AbsSlice_Bytes(data[offset : offset + srcAddrBytes], 0, len(data[offset : offset + srcAddrBytes]))
+	//@   ghost slices.Unslice_Bytes(data, offset, offset + srcAddrBytes, writePerm)
+	//@   ghost slices.CombineAtIndex_Bytes(data, 0, offset + srcAddrBytes, offset, writePerm)
+	//@   assert slices.AbsSlice_Bytes(data, 0, end_idx)
+	//@   ghost slices.Reslice_Bytes(data, 0, end_idx, writePerm)
+	//@   fold s.AddrHdrInitMem()
+	//@ }
 	return nil /*@, end_idx @*/
 }
 

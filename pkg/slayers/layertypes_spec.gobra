@@ -24,6 +24,9 @@ import (
 // support is merged into Gobra.
 
 decreases
+func getTODOLayerType() gopacket.LayerType
+
+decreases
 pure func getLayerTypeSCION() gopacket.LayerType
 
 pure

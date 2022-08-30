@@ -17,6 +17,8 @@
 package slayers
 
 import (
+	"github.com/google/gopacket"
+
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
@@ -43,17 +45,32 @@ pred (b *BaseLayer) PayloadMem() {
 	acc(b) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
 }
 
+pred (s *SCION) LayerMem() {
+	true
+}
+
+pred (s *SCION) PayloadMem() {
+	true
+}
+
 pred (s *SCION) NonInitMem() {
 	acc(s) &&
+		(s.pathPool == nil ==> s.pathPoolRaw == nil) &&
 		(s.pathPool != nil ==> s.pathPoolRaw != nil && s.pathPoolRaw.NonInitMem()) &&
 		(s.pathPool != nil ==> (forall i int :: 0 <= i && i < len(s.pathPool) ==>
-			(acc(&s.pathPool[i]) &&
-				s.pathPool[i] != nil &&
-				s.pathPool[i].NonInitMem())))
+			(acc(&s.pathPool[i]) && s.pathPool[i] != nil && s.pathPool[i].NonInitMem())))
 }
 
 pred (s *SCION) Mem() {
-		s.BaseLayer.Mem() &&
+	// TODO (gavinleroy) this is a /ghost/ field and should
+	// be treated as one.
+	acc(&s.pathMemLoc) && isValidPathMemLoc(s.pathMemLoc) &&
+		acc(&s.hdrBytes) &&
+		// 0 <= s.hdrBytes && s.hdrBytes < len(s.GetUnderlyingBuf()) &&
+	// ---
+
+			acc(&s.Contents) &&
+			acc(&s.Payload) &&
 			acc(&s.Version) &&
 			acc(&s.TrafficClass) &&
 			acc(&s.FlowID) &&
@@ -72,24 +89,31 @@ pred (s *SCION) Mem() {
 			slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)) &&
 			slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
 
-			acc(&s.Path) &&
-			s.Path != nil &&
-			s.Path.Mem() &&
-
-			acc(&s.pathPool) &&
-			(s.pathPool != nil ==>
-				len(s.pathPool) < path.maxPathType &&
-				(forall i int :: 0 <= i && i < len(s.pathPool) &&
-					(s.getPathLoc() != Pool || i != int(s.PathType)) ==>
-					s.pathPool[i].NonInitMem())) &&
-
-			acc(&s.pathPoolRaw) &&
-			(s.getPathLoc() == Raw ==> s.pathPoolRaw.Mem()) &&
-			((s.pathPool != nil && s.getPathLoc() != Raw) ==> s.pathPoolRaw != nil && s.pathPoolRaw.NonInitMem()) &&
+			// Mem ensures we have Mem resources for Path, this could be
+			// borrowed from the s.pathPool / s.pathPoolRaw as indicated
+			// by the memory location demonstrated below.
+			acc(&s.Path) && s.Path != nil && s.Path.Mem() &&
+			(s.pathMemLoc == New ==> s.PathPoolNone()) &&
+			(s.pathMemLoc == Raw ==> s.PathPoolFull() && s.PathPoolRawPartial()) &&
+			(s.pathMemLoc == Pool ==> s.PathPoolPartial(s.PathType) && s.PathPoolRawFull()) &&
 
 			// Well-formedness for values
 			s.DstAddrLen >= 0 &&
 			s.SrcAddrLen >= 0
+
+			// s.Contents == s.GetUnderlyingBuf()[:s.hdrBytes] &&
+			// s.Payload == s.GetUnderlyingBuf()[s.hdrBytes:]
+}
+
+pred (s *SCION) AddrHdrInitMem() {
+		acc(&s.RawDstAddr) &&
+		acc(&s.RawSrcAddr) &&
+		acc(&s.DstAddrLen) &&
+		acc(&s.SrcAddrLen) &&
+		acc(&s.DstIA) &&
+		acc(&s.SrcIA) &&
+		s.DstAddrLen >= 0 &&
+		s.SrcAddrLen >= 0
 }
 
 pred (s *SCION) AddrHdrMem() {
@@ -105,17 +129,91 @@ pred (s *SCION) AddrHdrMem() {
 		s.SrcAddrLen >= 0
 }
 
+// Indicates that paths should be recycled and full permissions are
+// held to each location in the path pool.
+pred (s *SCION) PathPoolFull() {
+	acc(&s.pathPool) &&
+		s.pathPool != nil &&
+		(forall i int :: 0 <= i && i < len(s.pathPool) ==> (acc(&s.pathPool[i]) && s.pathPool[i] != nil && s.pathPool[i].NonInitMem()))
+}
+
+// Indicates that paths should be recycled and the current s.Path is
+// aliasing location `pathType` in the pool.
+pred (s *SCION) PathPoolPartial(pathType path.Type) {
+	acc(&s.pathPool) &&
+		s.pathPool != nil &&
+		0 <= int(pathType) && int(pathType) < len(s.pathPool) &&
+		(forall i int :: (0 <= i && i < len(s.pathPool) && i != int(pathType)) ==>
+			(acc(&s.pathPool[i]) && s.pathPool[i] != nil && s.pathPool[i].NonInitMem()))
+}
+
+// Indicates that RecyclePaths was not called and the path pool is nil.
+pred (s *SCION) PathPoolNone() {
+	acc(&s.pathPool) && acc(&s.pathPoolRaw) &&
+		s.pathPool == nil && s.pathPoolRaw == nil
+}
+
+// Indicates that paths should be Recycled and full permissions are held
+// to the Raw version of the path pool.
+pred (s *SCION) PathPoolRawFull() {
+	acc(&s.pathPoolRaw) && s.pathPoolRaw != nil && s.pathPoolRaw.NonInitMem()
+}
+
+// Indicates that paths should be recycled and the current s.Path is
+// aliasing the s.pathPoolRaw field.
+pred (s *SCION) PathPoolRawPartial() {
+	acc(&s.pathPoolRaw) && s.pathPoolRaw != nil
+}
+
+// TODO SCION must implement the following interfaces
+// - gopacket.NetworkLayer
+// - gopacket.DecodingLayer
+// - gopacket.SerializingLayer
+
+//@ requires f implements gopacket.DecodeFuncSpec
+//@ decreases
+func MakeDecoder(f func([]byte, gopacket.PacketBuilder) error) (d gopacket.Decoder)
+
 ghost
 requires acc(s.Mem(), _)
-pure func (s *SCION) getPathLoc() PathMemLoc
+decreases
+pure func (s *SCION) GetUnderlyingBuf() (buf []byte)
 
 ghost
 requires s.Mem()
-ensures  s.getPathLoc() == l
-func (s *SCION) setPathLoc(l PathMemLoc)
+requires s.GetUnderlyingBuf() == buf
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* s.Mem()
+decreases
+func (s *SCION) ExchangeMemBuf(buf []byte)
 
 ghost
-requires acc(&s.pathPool)
-pure func (s *SCION) hasPathPool() bool {
-	return s.pathPool != nil
+preserves s.Mem()
+ensures   s.GetUnderlyingBuf() == buf
+decreases
+func (s *SCION) SetUnderlyingBuf(buf []byte)
+
+ghost
+requires acc(&s.pathMemLoc, _)
+decreases
+pure func (s *SCION) getPathLoc() PathMemLoc {
+	return s.pathMemLoc
 }
+
+ghost
+requires  isValidPathMemLoc(l)
+preserves acc(&s.pathMemLoc)
+ensures   s.getPathLoc() == l
+decreases
+func (s *SCION) setPathLoc(l PathMemLoc) {
+	s.pathMemLoc = l
+}
+
+ghost
+ensures (l == New || l == Raw || l == Pool) == res
+pure func isValidPathMemLoc(l PathMemLoc) (res bool) {
+	return l == New || l == Raw || l == Pool
+}
+
+// (*SCION) implements gopacket.DecodingLayer
+// (*SCION) implements gopacket.NetworkLayer
