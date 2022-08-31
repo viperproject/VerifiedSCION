@@ -62,7 +62,7 @@ pred (s *SCION) NonInitMem() {
 }
 
 pred (s *SCION) Mem() {
-	// TODO (gavinleroy) this is a /ghost/ field and should
+	// TODO (gavinleroy) this is a ghost field and should
 	// be treated as one.
 	acc(&s.pathMemLoc) && isValidPathMemLoc(s.pathMemLoc) &&
 		acc(&s.hdrBytes) &&
@@ -134,7 +134,8 @@ pred (s *SCION) AddrHdrMem() {
 pred (s *SCION) PathPoolFull() {
 	acc(&s.pathPool) &&
 		s.pathPool != nil &&
-		(forall i int :: 0 <= i && i < len(s.pathPool) ==> (acc(&s.pathPool[i]) && s.pathPool[i] != nil && s.pathPool[i].NonInitMem()))
+		(forall i int :: 0 <= i && i < len(s.pathPool) ==>
+			(acc(&s.pathPool[i]) && s.pathPool[i] != nil && s.pathPool[i].NonInitMem()))
 }
 
 // Indicates that paths should be recycled and the current s.Path is
@@ -169,6 +170,9 @@ pred (s *SCION) PathPoolRawPartial() {
 // - gopacket.NetworkLayer
 // - gopacket.DecodingLayer
 // - gopacket.SerializingLayer
+
+// (*SCION) implements gopacket.DecodingLayer
+// (*SCION) implements gopacket.NetworkLayer
 
 //@ requires f implements gopacket.DecodeFuncSpec
 //@ decreases
@@ -215,5 +219,20 @@ pure func isValidPathMemLoc(l PathMemLoc) (res bool) {
 	return l == New || l == Raw || l == Pool
 }
 
-// (*SCION) implements gopacket.DecodingLayer
-// (*SCION) implements gopacket.NetworkLayer
+pure
+requires acc(s.Mem(), _)
+ensures  res == unfolding acc(s.Mem(), _) in len(s.RawSrcAddr)
+// ensures  res % 2 == 0
+decreases
+func (s *SCION) getLenRawSrcAddr() (res int) {
+	return unfolding acc(s.Mem(), _) in len(s.RawSrcAddr)
+}
+
+pure
+requires acc(s.Mem(), _)
+ensures  res == unfolding acc(s.Mem(), _) in len(s.RawDstAddr)
+// ensures  res % 2 == 0
+decreases
+func (s *SCION) getLenRawDstAddr() (res int) {
+	return unfolding acc(s.Mem(), _) in len(s.RawDstAddr)
+}

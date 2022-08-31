@@ -695,8 +695,6 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 // When this is enabled, the Path instance may be overwritten in
 // DecodeFromBytes. No references to Path should be kept in use between
 // invocations of DecodeFromBytes.
-
-//@ trusted
 //@ preserves s.NonInitMem()
 //@ ensures unfolding s.NonInitMem() in s.pathPool != nil
 //@ decreases
@@ -704,22 +702,46 @@ func (s *SCION) RecyclePaths() {
 	//@ unfold s.NonInitMem()
 	//@ defer fold s.NonInitMem()
 	if s.pathPool == nil {
+		//@ ensures p_empty.NonInitMem()
+		//@ decreases
+		//@ outline(
+		p_empty := empty.Path{}
+		//@ fold p_empty.NonInitMem()
+		//@ )
+		//@ ensures p_onehop.NonInitMem()
+		//@ decreases
+		//@ outline(
+		p_onehop := &onehop.Path{}
+		//@ fold p_onehop.NonInitMem()
+		//@ )
+		//@ ensures p_raw.NonInitMem()
+		//@ decreases
+		//@ outline(
+		p_raw := &scion.Raw{}
+		//@ fold p_raw.Base.NonInitMem()
+		//@ fold p_raw.NonInitMem()
+		//@ )
+		//@ ensures p_epic.NonInitMem()
+		//@ decreases
+		//@ outline(
+		p_epic := &epic.Path{}
+		//@ fold p_epic.NonInitMem()
+		//@ )
 		//@ assert int(empty.PathType) == 0
 		//@ assert int(onehop.PathType) == 2
 		//@ assert int(scion.PathType) == 1
 		//@ assert int(epic.PathType) == 3
-		p_raw := &scion.Raw{}
-		//@ fold p_raw.Base.NonInitMem()
 		s.pathPool = []path.Path{
-			empty.PathType:  empty.Path{},
-			onehop.PathType: &onehop.Path{},
+			empty.PathType:  p_empty,
+			onehop.PathType: p_onehop,
 			scion.PathType:  p_raw,
-			epic.PathType:   &epic.Path{},
+			epic.PathType:   p_epic,
 		}
-		//@ fold s.pathPool[0].NonInitMem()
-		//@ fold s.pathPool[1].NonInitMem()
-		//@ fold s.pathPool[2].NonInitMem()
-		//@ fold s.pathPool[3].NonInitMem()
+		//@ assert len(s.pathPool) == 4
+		//@ assert s.pathPool[0].NonInitMem()
+		//@ assert s.pathPool[1].NonInitMem()
+		//@ assert s.pathPool[2].NonInitMem()
+		//@ assert s.pathPool[3].NonInitMem()
 		s.pathPoolRaw = path.NewRawPath()
 		//@ assert s.pathPoolRaw.NonInitMem()
 	}
@@ -736,11 +758,9 @@ func (s *SCION) RecyclePaths() {
 //@ ensures   err == nil ==> p != nil
 //@ ensures   err == nil ==> p.NonInitMem()
 //@ ensures   err == nil ==> isValidPathMemLoc(loc)
-//
 //@ ensures   (err == nil && loc == New) ==> s.PathPoolNone()
 //@ ensures   (err == nil && loc == Pool) ==> (s.PathPoolPartial(pathType) && s.PathPoolRawFull() && ((p.NonInitMem() && s.PathPoolPartial(pathType)) --* s.PathPoolFull()))
 //@ ensures   (err == nil && loc == Raw) ==> (s.PathPoolFull() && s.PathPoolRawPartial() && ((p.NonInitMem() && s.PathPoolRawPartial()) --* s.PathPoolRawFull()))
-//
 //@ ensures   err != nil ==> err.ErrorMem()
 //@ ensures   err != nil ==> s.PathPoolNone()
 //@ decreases
@@ -1226,10 +1246,14 @@ func addrBytes(addrLen AddrLen) (l int) {
 	return (int(addrLen) + 1) * LineLen
 }
 
-/*
-
 // computeChecksum computes the checksum with the SCION pseudo header.
-func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (uint16, error) {
+//@ preserves s != nil ==> acc(s.Mem(), definitions.ReadL10)
+//@ preserves acc(slices.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), definitions.ReadL10)
+//@ ensures s == nil ==> retErr != nil
+//@ ensures retErr != nil ==> ret == 0
+//@ ensures s != nil && s.getLenRawSrcAddr() > 0 && s.getLenRawDstAddr() > 0 ==> retErr == nil
+//@ decreases
+func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (ret uint16, retErr error) {
 	if s == nil {
 		return 0, serrors.New("SCION header missing")
 	}
@@ -1242,17 +1266,41 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (uint16, erro
 	return folded, nil
 }
 
-func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (uint32, error) {
-	if len(s.RawDstAddr) == 0 {
+//@ preserves acc(s.Mem(), definitions.ReadL10)
+//@ ensures   s.getLenRawSrcAddr() == 0 ==> resErr != nil
+//@ ensures   s.getLenRawDstAddr() == 0 ==> resErr != nil
+//@ ensures   s.getLenRawSrcAddr() > 0 && s.getLenRawDstAddr() > 0 ==> resErr == nil
+//@ decreases
+func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, resErr error) {
+	if /*@ unfolding acc(s.Mem(), definitions.ReadL20) in @*/ len(s.RawDstAddr) == 0 {
 		return 0, serrors.New("destination address missing")
 	}
-	if len(s.RawSrcAddr) == 0 {
+	if /*@ unfolding acc(s.Mem(), definitions.ReadL20) in @*/ len(s.RawSrcAddr) == 0 {
 		return 0, serrors.New("source address missing")
 	}
 	var csum uint32
-	var srcIA, dstIA [8]byte
+	var srcIA /*@@@*/, dstIA /*@@@*/ [8]byte
+	//@ preserves acc(s.Mem(), definitions.ReadL15)
+	//@ preserves forall i int :: 0 <= i && i < 8 ==> acc(&srcIA[i])
+	//@ decreases
+	//@ outline(
+	//@ unfold acc(s.Mem(), definitions.ReadL20)
 	binary.BigEndian.PutUint64(srcIA[:], uint64(s.SrcIA))
+	//@ fold acc(s.Mem(), definitions.ReadL20)
+	//@ )
+	//@ preserves acc(s.Mem(), definitions.ReadL15)
+	//@ preserves forall i int :: 0 <= i && i < 8 ==> acc(&dstIA[i])
+	//@ decreases
+	//@ outline(
+	//@ unfold acc(s.Mem(), definitions.ReadL20)
 	binary.BigEndian.PutUint64(dstIA[:], uint64(s.DstIA))
+	//@ fold acc(s.Mem(), definitions.ReadL20)
+	//@ )
+	//@ invariant 0 <= i && i <= 8
+	//@ invariant i % 2 == 0
+	//@ invariant forall i int :: 0 <= i && i < 8 ==> acc(&srcIA[i])
+	//@ invariant forall i int :: 0 <= i && i < 8 ==> acc(&dstIA[i])
+	//@ decreases 8 - i
 	for i := 0; i < 8; i += 2 {
 		csum += uint32(srcIA[i]) << 8
 		csum += uint32(srcIA[i+1])
@@ -1260,13 +1308,51 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (uint32, error)
 		csum += uint32(dstIA[i+1])
 	}
 	// Address length is guaranteed to be a multiple of 2 by the protocol.
-	for i := 0; i < len(s.RawSrcAddr); i += 2 {
+	//@ ghost rawSrcAddrLen := unfolding acc(s.Mem(), definitions.ReadL15) in len(s.RawSrcAddr)
+	//@ assume rawSrcAddrLen % 2 == 0 // TODO FIXME
+	//
+	//@ invariant acc(s.Mem(), definitions.ReadL15)
+	//@ invariant rawSrcAddrLen == (unfolding acc(s.Mem(), definitions.ReadL15) in len(s.RawSrcAddr))
+	//@ invariant 0 <= i && i <= rawSrcAddrLen
+	//@ invariant i % 2 == 0
+	//@ decreases rawSrcAddrLen - i
+	for i := 0; i < /*@unfolding acc(s.Mem(), definitions.ReadL15) in@*/ len(s.RawSrcAddr); i += 2 {
+		//@ requires 0 <= i && i + 1 < rawSrcAddrLen
+		//@ requires i % 2 == 0
+		//@ preserves acc(s.Mem(), definitions.ReadL20)
+		//@ ensures i == before(i)
+		//@ decreases
+		//@ outline(
+		//@ unfold acc(s.Mem(), definitions.ReadL20)
+		//@ unfold acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL20)
 		csum += uint32(s.RawSrcAddr[i]) << 8
 		csum += uint32(s.RawSrcAddr[i+1])
+		//@ fold acc(slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), definitions.ReadL20)
+		//@ fold acc(s.Mem(), definitions.ReadL20)
+		//@ )
 	}
-	for i := 0; i < len(s.RawDstAddr); i += 2 {
+	//@ ghost rawDstAddrLen := unfolding acc(s.Mem(), definitions.ReadL15) in len(s.RawDstAddr)
+	//@ assume rawDstAddrLen % 2 == 0 // TODO FIXME
+	//
+	//@ invariant acc(s.Mem(), definitions.ReadL15)
+	//@ invariant rawDstAddrLen == (unfolding acc(s.Mem(), definitions.ReadL15) in len(s.RawDstAddr))
+	//@ invariant 0 <= i && i <= rawDstAddrLen
+	//@ invariant i % 2 == 0
+	//@ decreases rawDstAddrLen - i
+	for i := 0; i < /*@unfolding acc(s.Mem(), definitions.ReadL15) in@*/ len(s.RawDstAddr); i += 2 {
+		//@ requires 0 <= i && i + 1 < rawDstAddrLen
+		//@ requires i % 2 == 0
+		//@ preserves acc(s.Mem(), definitions.ReadL20)
+		//@ ensures i == before(i)
+		//@ decreases
+		//@ outline(
+		//@ unfold acc(s.Mem(), definitions.ReadL20)
+		//@ unfold acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL20)
 		csum += uint32(s.RawDstAddr[i]) << 8
 		csum += uint32(s.RawDstAddr[i+1])
+		//@ fold acc(slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), definitions.ReadL20)
+		//@ fold acc(s.Mem(), definitions.ReadL20)
+		//@ )
 	}
 	l := uint32(length)
 	csum += (l >> 16) + (l & 0xffff)
@@ -1274,10 +1360,18 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (uint32, error)
 	return csum, nil
 }
 
+//@ preserves acc(slices.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), definitions.ReadL15)
+//@ decreases
 func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	// Compute safe boundary to ensure we do not access out of bounds.
 	// Odd lengths are handled at the end.
 	safeBoundary := len(upperLayer) - 1
+	//@ unfold acc(slices.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), definitions.ReadL20)
+	//@ invariant 0 <= i && i < safeBoundary + 2
+	//@ invariant i % 2 == 0
+	//@ invariant len(upperLayer) - 1 == safeBoundary
+	//@ invariant forall i int :: 0 <= i && i < len(upperLayer) ==> acc(&upperLayer[i], definitions.ReadL20)
+	//@ decreases safeBoundary - i
 	for i := 0; i < safeBoundary; i += 2 {
 		csum += uint32(upperLayer[i]) << 8
 		csum += uint32(upperLayer[i+1])
@@ -1285,14 +1379,15 @@ func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	if len(upperLayer)%2 == 1 {
 		csum += uint32(upperLayer[safeBoundary]) << 8
 	}
+	//@ fold acc(slices.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), definitions.ReadL20)
 	return csum
 }
 
+//@ trusted
+//@ decreases
 func (s *SCION) foldChecksum(csum uint32) uint16 {
 	for csum > 0xffff {
 		csum = (csum >> 16) + (csum & 0xffff)
 	}
 	return ^uint16(csum)
 }
-
-**/
