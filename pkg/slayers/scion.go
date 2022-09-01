@@ -421,7 +421,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 //@ preserves acc(path.PathPackageMem(), definitions.ReadL20)
 //@ preserves df.Mem()
 //@ ensures   res == nil ==> s.Mem()
-//@ ensures   res == nil ==> s.GetUnderlyingBuf() == data
+//@ ensures   res == nil ==> s.GetUnderlyingBuf() === data
 //@ ensures   res != nil ==> s.NonInitMem()
 //@ ensures   res != nil ==> res.ErrorMem()
 //@ ensures   res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
@@ -530,7 +530,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		//@ assert err.ErrorMem()
 		return err
 	}
-	//@ assert data[CmnHdrLen:][end_idx:] == data[(CmnHdrLen + end_idx):]
+	//@ assert data[CmnHdrLen:][end_idx:] === data[(CmnHdrLen + end_idx):]
 	//@ assert slices.AbsSlice_Bytes(data[CmnHdrLen:][end_idx:], 0, len(data[CmnHdrLen:][end_idx:]))
 	//@ assert slices.AbsSlice_Bytes(data[CmnHdrLen + end_idx:], 0, len(data[CmnHdrLen + end_idx:]))
 	//@ ghost slices.Unslice_Bytes(data, CmnHdrLen + end_idx, len(data), writePerm)
@@ -1211,13 +1211,13 @@ func (s *SCION) DecodeAddrHdr(data []byte) (err error /*@, ghost end int @*/) {
 	//@ package (s.AddrHdrMem() --* (slices.AbsSlice_Bytes(data[:end_idx], 0, len(data[:end_idx])) && s.AddrHdrInitMem())) {
 	//@   unfold s.AddrHdrMem()
 	//    TODO FIXME
-	//@   assume s.RawDstAddr == data[offset - dstAddrBytes : offset]
-	//@   assume s.RawSrcAddr == data[offset : offset + srcAddrBytes]
+	//@   assume s.RawDstAddr === data[offset - dstAddrBytes : offset]
+	//@   assume s.RawSrcAddr === data[offset : offset + srcAddrBytes]
 	//
 	//@   assert offset + srcAddrBytes == end_idx
 	//@   assert slices.AbsSlice_Bytes(data, 0, offset - dstAddrBytes)
-	//@   assert s.RawDstAddr == data[offset - dstAddrBytes : offset]
-	//@   assert s.RawSrcAddr == data[offset : offset + srcAddrBytes]
+	//@   assert s.RawDstAddr === data[offset - dstAddrBytes : offset]
+	//@   assert s.RawSrcAddr === data[offset : offset + srcAddrBytes]
 	//@   unfold slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 	//@   fold slices.AbsSlice_Bytes(data[offset - dstAddrBytes : offset], 0, len(data[offset - dstAddrBytes : offset]))
 	//@   ghost slices.Unslice_Bytes(data, offset - dstAddrBytes, offset, writePerm)
