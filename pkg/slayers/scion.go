@@ -251,30 +251,39 @@ func (s *SCION) NetworkFlow() gopacket.Flow {
 //@ ensures   err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@ , ghost buf_init []byte @*/) (err error /*@, ghost buf_res []byte @*/) {
-	scnLen := CmnHdrLen + /*@ unfolding s.Mem() in @*/ s.AddrHdrLen() + s.Path.Len()
+	scnLen := CmnHdrLen + /*@ unfolding acc(s.Mem(), _) in @*/ s.AddrHdrLen() + s.Path.Len()
 	//@ assert scnLen >= 0
 	buf, err /*@, buf_res @*/ := b.PrependBytes(scnLen /*@ , buf_init @*/)
 	if err != nil {
 		return err /*@, nil @*/
 	}
 	if opts.FixLengths {
-		//@ unfold s.Mem()
+		//@ s.ExchangeLenMem()
+		//@ unfold s.LenMem()
 		s.HdrLen = uint8(scnLen / LineLen)
 		buf_tmp := b.Bytes( /*@ buf_res @*/ )
 		//@ assert len(buf_tmp) == len(buf_res)
 		s.PayloadLen = uint16(len(buf_tmp) - scnLen)
 		//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
-		//@ fold s.Mem()
+		//@ fold s.LenMem()
+		//@ apply s.LenMem() --* s.Mem()
 	}
-	//@ assert b.Mem(buf_res)
 	//@ assert b.Mem(buf_res)
 	//@ ghost b.ExchangePred(buf_res)
 	//@ assert slices.AbsSlice_Bytes(buf_res, 0, len(buf_res))
 	//@ ghost slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), scnLen, writePerm)
-	//@ requires slices.AbsSlice_Bytes(buf_res, 0, scnLen)
-	//@ requires slices.AbsSlice_Bytes(buf_res, scnLen, len(buf_res))
-	//@ ensures slices.AbsSlice_Bytes(buf, 0, len(buf))
-	//@ ensures slices.AbsSlice_Bytes(buf_res, scnLen, len(buf_res))
+	//
+	//@ requires  slices.AbsSlice_Bytes(buf_res, 0, scnLen)
+	//@ requires  unfolding slices.AbsSlice_Bytes(buf_res, 0, scnLen) in true
+	//@ requires  slices.AbsSlice_Bytes(buf_res, scnLen, len(buf_res))
+	//@ requires  scnLen <= len(buf_res)
+	//@ requires  buf === buf_res[:scnLen]
+	//@ preserves acc(s.Mem(), definitions.ReadL2)
+	//@ ensures   slices.AbsSlice_Bytes(buf, 0, len(buf))
+	//@ ensures   slices.AbsSlice_Bytes(buf_res, scnLen, len(buf_res))
+	//@ ensures   len_buf == unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
+	//@ ensures   len_buf <= len(buf)
+	//@ ensures   len(buf) == before(len(buf))
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(buf_res, 0, scnLen, writePerm)
@@ -283,20 +292,24 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ ghost len_buf := unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ assert len_buf == unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ )
-	//@ preserves acc(s.Mem(), definitions.ReadL1)
+	//@
+	//@ preserves acc(s.Mem(), definitions.ReadL10)
+	//@ preserves len_buf <= len(buf)
+	//@ ensures   len(buf) == before(len(buf))
 	//@ decreases
 	//@ outline (
-	//@ unfold acc(s.Mem(), definitions.ReadL1)
+	//@ unfold acc(s.Mem(), definitions.ReadL15)
 	// Serialize common header.
 	firstLine := uint32(s.Version&0xF)<<28 | uint32(s.TrafficClass)<<20 | s.FlowID&0xFFFFF
-	//@ fold acc(s.Mem(), definitions.ReadL1)
+	//@ fold acc(s.Mem(), definitions.ReadL15)
 	//@ )
-	//@ requires  acc(s.Mem(), definitions.ReadL1)
-	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, len(buf))
-	//@ ensures   acc(s.Mem(), definitions.ReadL1)
+	//@ preserves acc(s.Mem(), definitions.ReadL1)
+	//@ preserves len_buf <= len(buf)
+	//@ ensures   acc(s.Mem(), definitions.ReadL2)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, 6)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 6, len(buf))
+	//@ ensures   len(buf) == before(len(buf))
 	//@ decreases
 	//@ outline(
 	//@ unfold acc(s.Mem(), definitions.ReadL2)
@@ -314,11 +327,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, 6, 4, writePerm)
 	//@ fold acc(s.Mem(), definitions.ReadL2)
 	//@ )
-	//@ requires  acc(s.Mem(), definitions.ReadL1)
-	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, 6)
 	//@ requires  slices.AbsSlice_Bytes(buf, 6, len(buf))
-	//@ ensures   acc(s.Mem(), definitions.ReadL1)
+	//@ preserves acc(s.Mem(), definitions.ReadL1)
+	//@ preserves len_buf <= len(buf)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, 10)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 10, len(buf))
 	//@ ensures   len(buf) == before(len(buf))
@@ -341,11 +353,12 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, 10, 8, writePerm)
 	//@ fold acc(s.Mem(), definitions.ReadL2)
 	//@ )
-	//@ requires slices.AbsSlice_Bytes(buf, 0, 10)
-	//@ requires slices.AbsSlice_Bytes(buf, 10, len(buf))
-	//@ ensures  slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
-	//@ ensures  slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
-	//@ ensures  len(buf) == before(len(buf))
+	//@ requires  slices.AbsSlice_Bytes(buf, 0, 10)
+	//@ requires  slices.AbsSlice_Bytes(buf, 10, len(buf))
+	//@ preserves len_buf <= len(buf)
+	//@ ensures   slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
+	//@ ensures   slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
+	//@ ensures   len(buf) == before(len(buf))
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.SplitByIndex_Bytes(buf, 10, len(buf), 12, writePerm)
@@ -360,6 +373,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ preserves slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
 	//@ preserves slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
+	//@ preserves len_buf <= len(buf)
 	//@ ensures   acc(s.Mem(), definitions.ReadL1)
 	//@ ensures   len(buf) == before(len(buf))
 	//@ ensures   tmp != nil ==> tmp.ErrorMem()
@@ -389,6 +403,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
 	//@ requires  slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
+	//@ preserves len_buf <= len(buf)
 	//@ ensures   s.Mem()
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, len(buf))
 	//@ ensures   len(buf) == before(len(buf))

@@ -61,6 +61,11 @@ pred (s *SCION) NonInitMem() {
 			(acc(&s.pathPool[i]) && s.pathPool[i] != nil && s.pathPool[i].NonInitMem())))
 }
 
+pred (s *SCION) LenMem() {
+	acc(&s.HdrLen) &&
+		acc(&s.PayloadLen)
+}
+
 pred (s *SCION) Mem() {
 	// TODO (gavinleroy) this is a ghost field and should
 	// be treated as one.
@@ -174,15 +179,9 @@ pred (s *SCION) PathPoolRawPartial() {
 // (*SCION) implements gopacket.DecodingLayer
 // (*SCION) implements gopacket.NetworkLayer
 
-//@ requires f implements gopacket.DecodeFuncSpec
-//@ decreases
-func MakeDecoder(f func([]byte, gopacket.PacketBuilder) error) (d gopacket.Decoder)
-
-ghost
-requires acc(s.Mem(), _)
-decreases
-pure func (s *SCION) GetUnderlyingBuf() (buf []byte)
-
+// NOTE (gavinleroy) Methods for exchanging Mem access for a
+// subset of the predicate. These are useful when unfoldings
+// are required, but you don't want to refold the whole predicate.
 ghost
 requires s.Mem()
 requires s.GetUnderlyingBuf() === buf
@@ -190,6 +189,18 @@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* s.Mem()
 decreases
 func (s *SCION) ExchangeMemBuf(buf []byte)
+
+ghost
+requires s.Mem()
+ensures  s.LenMem()
+ensures  s.LenMem() --* s.Mem()
+decreases
+func (s *SCION) ExchangeLenMem()
+
+ghost
+requires acc(s.Mem(), _)
+decreases
+pure func (s *SCION) GetUnderlyingBuf() (buf []byte)
 
 ghost
 preserves s.Mem()
