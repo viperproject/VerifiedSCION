@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package slayers
 
 import (
@@ -31,6 +33,7 @@ const (
 	End2EndClass  L4ProtocolType = 201
 )
 
+//@ decreases
 func (p L4ProtocolType) String() string {
 	switch p {
 	case L4None:
