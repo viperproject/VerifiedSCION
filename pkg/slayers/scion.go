@@ -252,11 +252,13 @@ func (s *SCION) NetworkFlow() gopacket.Flow {
 //@ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@ , ghost buf_init []byte @*/) (err error /*@, ghost buf_res []byte @*/) {
 	scnLen := CmnHdrLen + /*@ unfolding acc(s.Mem(), _) in @*/ s.AddrHdrLen() + s.Path.Len()
-	//@ assert scnLen >= 0
+	//@ assert scnLen >= 12
 	buf, err /*@, buf_res @*/ := b.PrependBytes(scnLen /*@ , buf_init @*/)
 	if err != nil {
 		return err /*@, nil @*/
 	}
+	//@ assert len(buf) >= scnLen
+	//@ assert len(buf) >= CmnHdrLen + unfolding acc(s.Mem(), _) in s.AddrHdrLen() + s.Path.Len()
 	if opts.FixLengths {
 		//@ s.ExchangeLenMem()
 		//@ unfold s.LenMem()
@@ -272,29 +274,22 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ ghost b.ExchangePred(buf_res)
 	//@ assert slices.AbsSlice_Bytes(buf_res, 0, len(buf_res))
 	//@ ghost slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), scnLen, writePerm)
-	//
+	//@ assert len(buf) >= scnLen
 	//@ requires  slices.AbsSlice_Bytes(buf_res, 0, scnLen)
-	//@ requires  unfolding slices.AbsSlice_Bytes(buf_res, 0, scnLen) in true
-	//@ requires  slices.AbsSlice_Bytes(buf_res, scnLen, len(buf_res))
-	//@ requires  scnLen <= len(buf_res)
 	//@ requires  buf === buf_res[:scnLen]
+	//@ preserves 12 <= scnLen && scnLen <= len(buf_res)
 	//@ preserves acc(s.Mem(), definitions.ReadL2)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, len(buf))
-	//@ ensures   slices.AbsSlice_Bytes(buf_res, scnLen, len(buf_res))
-	//@ ensures   len_buf == unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
-	//@ ensures   len_buf <= len(buf)
 	//@ ensures   len(buf) == before(len(buf))
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(buf_res, 0, scnLen, writePerm)
+	//@ assert slices.AbsSlice_Bytes(buf_res[:scnLen], 0, len(buf_res[:scnLen]))
+	//@ assert  buf === buf_res[:scnLen]
 	//@ assert slices.AbsSlice_Bytes(buf, 0, len(buf))
-	//@ assert len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
-	//@ ghost len_buf := unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
-	//@ assert len_buf == unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ )
-	//@
+	//@ assert slices.AbsSlice_Bytes(buf_res, scnLen, len(buf_res))
 	//@ preserves acc(s.Mem(), definitions.ReadL10)
-	//@ preserves len_buf <= len(buf)
 	//@ ensures   len(buf) == before(len(buf))
 	//@ decreases
 	//@ outline (
@@ -305,8 +300,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ )
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, len(buf))
 	//@ preserves acc(s.Mem(), definitions.ReadL1)
-	//@ preserves len_buf <= len(buf)
-	//@ ensures   acc(s.Mem(), definitions.ReadL2)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, 6)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 6, len(buf))
 	//@ ensures   len(buf) == before(len(buf))
@@ -329,8 +322,8 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ )
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, 6)
 	//@ requires  slices.AbsSlice_Bytes(buf, 6, len(buf))
+	//@ preserves 12 <= scnLen && scnLen <= len(buf)
 	//@ preserves acc(s.Mem(), definitions.ReadL1)
-	//@ preserves len_buf <= len(buf)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, 10)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 10, len(buf))
 	//@ ensures   len(buf) == before(len(buf))
@@ -355,7 +348,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ )
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, 10)
 	//@ requires  slices.AbsSlice_Bytes(buf, 10, len(buf))
-	//@ preserves len_buf <= len(buf)
+	//@ preserves 12 <= scnLen && scnLen <= len(buf)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
 	//@ ensures   slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
 	//@ ensures   len(buf) == before(len(buf))
@@ -369,11 +362,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	//@ ghost slices.Unslice_Bytes(buf, 10, 12, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(buf, 0, 12, 10, writePerm)
 	//@ )
-	//@ requires  acc(s.Mem(), definitions.ReadL1)
-	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
+	//@ preserves 12 <= scnLen && scnLen <= len(buf)
+	//@ preserves acc(s.Mem(), definitions.ReadL1)
 	//@ preserves slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
 	//@ preserves slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
-	//@ preserves len_buf <= len(buf)
 	//@ ensures   acc(s.Mem(), definitions.ReadL1)
 	//@ ensures   len(buf) == before(len(buf))
 	//@ ensures   tmp != nil ==> tmp.ErrorMem()
@@ -399,12 +391,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
 		return err /*@, nil @*/
 	}
-	//@ requires  s.Mem()
-	//@ requires  len(buf) >= unfolding acc(s.Mem(), _) in CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	//@ requires  slices.AbsSlice_Bytes(buf, 0, CmnHdrLen)
 	//@ requires  slices.AbsSlice_Bytes(buf, CmnHdrLen, len(buf))
-	//@ preserves len_buf <= len(buf)
-	//@ ensures   s.Mem()
+	//@ preserves s.Mem()
+	//@ preserves 12 <= scnLen && scnLen <= len(buf)
 	//@ ensures   slices.AbsSlice_Bytes(buf, 0, len(buf))
 	//@ ensures   len(buf) == before(len(buf))
 	//@ ensures   res != nil ==> res.ErrorMem()
