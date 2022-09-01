@@ -61,7 +61,7 @@ type Path struct{}
 //@ ensures len(r) != 0 ==> (e != nil && e.ErrorMem())
 //@ ensures len(r) == 0 ==> e == nil
 //@ ensures o.Mem()
-//@ ensures e == nil ==> o.GetUnderlyingBuf() == r
+//@ ensures e == nil ==> o.GetUnderlyingBuf() === r
 //@ decreases
 func (o Path) DecodeFromBytes(r []byte) (e error) {
 	//@ fold o.Mem()

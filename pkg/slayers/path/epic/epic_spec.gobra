@@ -36,7 +36,7 @@ pure func (p *Path) GetUnderlyingBuf() (buf []byte)
 
 ghost
 preserves p.Mem()
-ensures   p.GetUnderlyingBuf() == buf
+ensures   p.GetUnderlyingBuf() === buf
 decreases
 func (p *Path) SetUnderlyingBuf(buf []byte)
 

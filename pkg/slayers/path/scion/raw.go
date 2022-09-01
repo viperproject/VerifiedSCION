@@ -35,7 +35,7 @@ type Raw struct {
 //@ requires s.NonInitMem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures  res == nil ==> s.Mem()
-//@ ensures  res == nil ==> s.GetUnderlyingBuf() == data
+//@ ensures  res == nil ==> s.GetUnderlyingBuf() === data
 //@ ensures  res != nil ==> (s.NonInitMem() && res.ErrorMem())
 //@ ensures  res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ decreases

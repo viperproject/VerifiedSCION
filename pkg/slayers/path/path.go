@@ -80,7 +80,7 @@ type Path interface {
 	// via a wand instance.
 	// ghost
 	// requires Mem()
-	// requires GetUnderlyingBuf() == buf
+	// requires GetUnderlyingBuf() === buf
 	// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 	// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* Mem()
 	// decreases
@@ -100,7 +100,7 @@ type Path interface {
 	//@ requires NonInitMem()
 	//@ requires slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures  err == nil ==> Mem()
-	//@ ensures  err == nil ==> b == GetUnderlyingBuf()
+	//@ ensures  err == nil ==> b === GetUnderlyingBuf()
 	//@ ensures  err != nil ==> err.ErrorMem()
 	//@ ensures  err != nil ==> NonInitMem()
 	//@ ensures  err != nil ==> slices.AbsSlice_Bytes(b, 0, len(b))
@@ -242,7 +242,7 @@ func (p *rawPath) SerializeTo(b []byte) (e error) {
 
 //@ requires p.NonInitMem() && slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures  p.Mem()
-//@ ensures  p.GetUnderlyingBuf() == b
+//@ ensures  p.GetUnderlyingBuf() === b
 //@ ensures  e == nil
 //@ decreases
 func (p *rawPath) DecodeFromBytes(b []byte) (e error) {

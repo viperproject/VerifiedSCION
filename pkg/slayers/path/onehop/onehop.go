@@ -70,7 +70,7 @@ type Path struct {
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures  (len(data) >= PathLen) == (r == nil)
 //@ ensures  r == nil ==> o.Mem()
-//@ ensures  r == nil ==> o.GetUnderlyingBuf() == data
+//@ ensures  r == nil ==> o.GetUnderlyingBuf() === data
 //@ ensures  r != nil ==> o.NonInitMem()
 //@ ensures  r != nil ==> r.ErrorMem()
 //@ ensures  r != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))

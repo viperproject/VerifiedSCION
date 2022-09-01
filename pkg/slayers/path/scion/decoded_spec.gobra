@@ -115,7 +115,7 @@ pure func (d *Decoded) GetUnderlyingBuf() (buf []byte)
 
 ghost
 preserves d.Mem()
-ensures   d.GetUnderlyingBuf() == buf
+ensures   d.GetUnderlyingBuf() === buf
 decreases
 func (d *Decoded) SetUnderlyingBuf(buf []byte)
 

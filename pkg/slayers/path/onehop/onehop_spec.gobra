@@ -40,7 +40,49 @@ func (p *Path) DowngradePerm() {
 	fold  p.NonInitMem()
 }
 
-(*Path) implements path.Path
+ghost
+requires acc(o.Mem(), _)
+decreases
+pure func (o *Path) GetUnderlyingBuf() (buf []byte)
+
+ghost
+requires o.Mem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* o.Mem()
+decreases
+func (o *Path) ExchangeBufMem() (buf []byte)
+
+ghost
+preserves o.Mem()
+ensures   o.GetUnderlyingBuf() === buf
+decreases
+func (o *Path) SetUnderlyingBuf(buf []byte)
+
+(*Path) implements path.Path {
+	(p *Path) SerializeTo(b []byte) (e error) {
+		e = p.SerializeTo(b)
+	}
+
+	(p *Path) DecodeFromBytes(b []byte) (e error) {
+		e = p.DecodeFromBytes(b)
+	}
+
+	(p *Path) Reverse() (r path.Path, e error) {
+		r, e = p.Reverse()
+	}
+
+	(p *Path) DowngradePerm() {
+		p.DowngradePerm()
+	}
+
+	pure (p *Path) Len() int {
+		return p.Len()
+	}
+
+	pure (p *Path) Type() path.Type {
+		return p.Type()
+	}
+}
 
 ghost
 requires acc(o)

@@ -45,7 +45,7 @@ type Decoded struct {
 //@ requires  s.NonInitMem()
 //@ preserves slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures   r == nil ==> s.Mem()
-//@ ensures   r == nil ==> s.GetUnderlyingBuf() == data
+//@ ensures   r == nil ==> s.GetUnderlyingBuf() === data
 //@ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 //@ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {

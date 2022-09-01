@@ -162,7 +162,7 @@ func (p *Path) SerializeTo(b []byte) (r error) {
 //@ requires slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures  len(b) < MetadataLen ==> r != nil
 //@ ensures  r == nil ==> p.Mem()
-//@ ensures  r == nil ==> p.GetUnderlyingBuf() == b
+//@ ensures  r == nil ==> p.GetUnderlyingBuf() === b
 //@ ensures  r == nil ==> slices.AbsSlice_Bytes(b, 0, MetadataLen)
 //@ ensures  r != nil ==> r.ErrorMem()
 //@ ensures  r != nil ==> p.NonInitMem()

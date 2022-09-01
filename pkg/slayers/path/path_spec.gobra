@@ -36,7 +36,7 @@ pure func (r *rawPath) GetUnderlyingBuf() (buf []byte) {
 
 ghost
 requires r.Mem()
-requires r.GetUnderlyingBuf() == buf
+requires r.GetUnderlyingBuf() === buf
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem()
 decreases
@@ -51,7 +51,7 @@ func (r *rawPath) ExchangeBufMem(buf []byte) {
 
 ghost
 preserves r.Mem()
-ensures   r.GetUnderlyingBuf() == buf
+ensures   r.GetUnderlyingBuf() === buf
 decreases
 func (r *rawPath) SetUnderlyingBuf(buf []byte)
 
