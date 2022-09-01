@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 //@ initEnsures path.PathPackageMem()
 //@ initEnsures path.Registered(empty.PathType)
 //@ initEnsures path.Registered(epic.PathType)
