@@ -75,6 +75,7 @@ pred (c *CounterVec) Mem() {
 // partitioned by the given label names.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
 requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i], definitions.ReadL15)
+ensures  c != nil
 ensures  c.Mem()
 func NewCounterVec(opts CounterOpts, labelNames []string) (c *CounterVec)
 
@@ -84,6 +85,7 @@ func NewCounterVec(opts CounterOpts, labelNames []string) (c *CounterVec)
 //     myVec.With(prometheus.Labels{"code": "404", "method": "GET"}).Add(42)
 preserves acc(v.Mem(), _)
 preserves acc(labels, _)
-ensures acc(c.Mem(), _)
+ensures   c != nil
+ensures   acc(c.Mem(), _)
 decreases _
 func (v *CounterVec) With(labels Labels) (c Counter)

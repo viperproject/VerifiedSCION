@@ -23,6 +23,7 @@ import "github.com/prometheus/client_golang/prometheus"
 // but it automatically registers the Counter with the
 // prometheus.DefaultRegisterer. If the registration fails, NewCounter panics.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
+ensures  c != nil
 ensures  c.Mem()
 decreases _
 func NewCounter(opts prometheus.CounterOpts) (c prometheus.Counter)
@@ -33,6 +34,7 @@ func NewCounter(opts prometheus.CounterOpts) (c prometheus.Counter)
 // panics.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
 requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
+ensures  c != nil
 ensures  c.Mem()
 decreases _
 func NewCounterVec(opts prometheus.CounterOpts, labelNames []string) (c *prometheus.CounterVec)
@@ -42,6 +44,7 @@ func NewCounterVec(opts prometheus.CounterOpts, labelNames []string) (c *prometh
 // prometheus.DefaultRegisterer. If the registration fails, NewGauge panics.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
 ensures  g.Mem()
+ensures  g != nil
 decreases _
 func NewGauge(opts prometheus.GaugeOpts) (g prometheus.Gauge)
 
@@ -51,5 +54,6 @@ func NewGauge(opts prometheus.GaugeOpts) (g prometheus.Gauge)
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
 requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
 ensures  g.Mem()
+ensures  g != nil
 decreases _
 func NewGaugeVec(opts prometheus.GaugeOpts, labelNames []string) (g *prometheus.GaugeVec)
