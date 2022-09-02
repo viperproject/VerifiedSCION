@@ -81,7 +81,7 @@ func (p Payload) LayerPayload() (res []byte) {
 requires p.LayerMem()
 ensures slices.AbsSlice_Bytes(res, 0, len(res))
 ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem()
-ensures res == []byte(p)
+ensures res === []byte(p)
 decreases
 func (p Payload) Payload() (res []byte) {
 	unfold p.LayerMem()

@@ -93,7 +93,7 @@ func (e basicError) Error() string {
 	return buf.String()
 }
 
-requires  isComparable(err)
+requires isComparable(err)
 decreases
 func (e basicError) Is(err error) bool {
 	switch other := err.(type) {
@@ -144,8 +144,8 @@ requires  err.ErrorMem()
 preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
 ensures res != nil && res.ErrorMem()
 ensures typeOf(res) == type[basicError]
-ensures isComparable(err) ==> res.(basicError).msg.err == err
-ensures isComparable(err) ==> ((res.ErrorMem() && res.(basicError).msg.err == err) --* err.ErrorMem())
+ensures res.(basicError).msg.err === err
+ensures (res.ErrorMem() && res.(basicError).msg.err === err) --* err.ErrorMem()
 decreases
 func WithCtx(err error, errCtx ...interface{}) (res error) {
 	errMsg := errOrMsg{err: err}
@@ -155,11 +155,9 @@ func WithCtx(err error, errCtx ...interface{}) (res error) {
 		fields: errCtxToFields(errCtx),
 	}
 	fold res.ErrorMem()
-	ghost if isComparable(err) {
-		package ((res.ErrorMem() && res.(basicError).msg.err == err) --* err.ErrorMem()) {
-			unfold res.ErrorMem()
-			unfold res.(basicError).msg.ErrorMem()
-		}
+	package ((res.ErrorMem() && res.(basicError).msg.err === err) --* err.ErrorMem()) {
+		unfold res.ErrorMem()
+		unfold res.(basicError).msg.ErrorMem()
 	}
 	return res
 }
@@ -178,9 +176,9 @@ preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definiti
 // requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
 ensures   res != nil && res.ErrorMem()
 ensures   typeOf(res) == type[basicError]
-ensures   isComparable(msg) ==> res.(basicError).msg.err == msg
-ensures   isComparable(cause) ==> res.(basicError).cause == cause
-ensures   isComparable(cause) && isComparable(msg) ==> (res.ErrorMem() && res.(basicError).msg.err == msg && res.(basicError).cause == cause) --* (msg.ErrorMem() && cause.ErrorMem())
+ensures   res.(basicError).msg.err === msg
+ensures   res.(basicError).cause === cause
+ensures   (res.ErrorMem() && res.(basicError).msg.err === msg && res.(basicError).cause === cause) --* (msg.ErrorMem() && cause.ErrorMem())
 decreases
 func Wrap(msg, cause error, errCtx ...interface{}) (res error) {
 	errMsg := errOrMsg{err: msg}
@@ -191,11 +189,9 @@ func Wrap(msg, cause error, errCtx ...interface{}) (res error) {
 		fields: errCtxToFields(errCtx),
 	}
 	fold res.ErrorMem()
-	ghost if isComparable(msg) && isComparable(cause) {
-		package ((res.ErrorMem() && res.(basicError).msg.err == msg && res.(basicError).cause == cause) --* (msg.ErrorMem() && cause.ErrorMem())) {
-			unfold res.ErrorMem()
-			unfold res.(basicError).msg.ErrorMem()
-		}
+	package ((res.ErrorMem() && res.(basicError).msg.err === msg && res.(basicError).cause === cause) --* (msg.ErrorMem() && cause.ErrorMem())) {
+		unfold res.ErrorMem()
+		unfold res.(basicError).msg.ErrorMem()
 	}
 	return res
 }
@@ -214,8 +210,8 @@ preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definiti
 // requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
 ensures res != nil && res.ErrorMem()
 ensures typeOf(res) == type[basicError]
-ensures isComparable(cause) ==> res.(basicError).cause == cause
-ensures isComparable(cause) ==> (res.ErrorMem() && res.(basicError).cause == cause) --* cause.ErrorMem()
+ensures res.(basicError).cause === cause
+ensures (res.ErrorMem() && res.(basicError).cause === cause) --* cause.ErrorMem()
 decreases
 func WrapStr(msg string, cause error, errCtx ...interface{}) (res error) {
 	var (
