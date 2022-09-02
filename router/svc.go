@@ -41,7 +41,7 @@ func newServices() (s *services) {
 }
 
 //@ requires acc(s.Mem(), _)
-//@ requires acc(a.Mem())
+//@ requires acc(a.Mem(), definitions.ReadL10)
 func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()
@@ -52,10 +52,12 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ ghost if addrs == nil { fold validMapValue(svc, addrs) }
 	//@ unfold acc(validMapValue(svc, addrs), definitions.ReadL10)
 	if _, ok := s.index(a, addrs /*@, svc @*/); ok {
+		//@ fold acc(validMapValue(svc, addrs), definitions.ReadL10)
 		//@ fold internalLockInv!<s!>()
 		return
 	}
-	//@ unfold acc(validMapValue(svc, addrs), definitions.ReadL10)
+	//@ fold acc(validMapValue(svc, addrs), definitions.ReadL10)
+	//@ unfold validMapValue(svc, addrs)
 	s.m[svc] = append( /*@ definitions.ReadL10, @*/ addrs, a)
 	//@ ghost tmp := s.m[svc]
 	//@ fold InjectiveMem(tmp[len(tmp)-1], len(tmp)-1)
@@ -79,11 +81,13 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 		//@ fold internalLockInv!<s!>()
 		return
 	}
+	//@ fold acc(hiddenPerm(a), definitions.ReadL10)
 	//@ assert 0 < len(addrs)
 	//@ unfold validMapValue(svc, addrs)
 	//@ unfold InjectiveMem(addrs[len(addrs)-1], len(addrs)-1)
 	addrs[index] = addrs[len(addrs)-1]
 	//@ fold InjectiveMem(addrs[index], index)
+	//@ unfold acc(hiddenPerm(a), definitions.ReadL10)
 	addrs[len(addrs)-1] = nil
 	//@ assert forall i int :: 0 <= i && i < len(addrs)-1 ==> &addrs[:len(addrs)-1][i] == &addrs[i]
 	s.m[svc] = addrs[:len(addrs)-1]

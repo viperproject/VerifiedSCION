@@ -48,3 +48,8 @@ decreases
 pure func equalUDPAddr(a, o *net.UDPAddr) (res bool) {
 	return unfolding acc(a.Mem(), _) in (unfolding acc(o.Mem(), _) in a.IP.Equal(o.IP) && a.Port == o.Port)
 }
+
+// used to hide permissions to a.Mem() to allow framing
+pred hiddenPerm(a *net.UDPAddr) {
+	a.Mem()
+}
