@@ -1,0 +1,30 @@
+// Copyright 2022 Eth Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// (VerifiedSCION) We currently axiomatize the behaviour of Session and
+// focus on the implementation of the SCION protocol.
+// As such, the implementation of the BFD protocol currently used is trusted.
+// An additional challenge with verifying this implementation is that it
+// relies on concurrency primitives not supported by Gobra (sync.Once, sync.RWMutex)
+
+// +gobra
+
+initEnsures acc(&AlreadyRunning, _) && AlreadyRunning.ErrorMem()
+package bfd
+
+import (
+	"github.com/scionproto/scion/pkg/private/serrors"
+)
+
+var AlreadyRunning = serrors.New("is running")

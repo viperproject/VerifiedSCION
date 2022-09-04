@@ -1,0 +1,55 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package router
+
+import (
+	"net"
+
+	"github.com/scionproto/scion/pkg/addr"
+)
+
+pred (s *services) Mem() {
+	s.mtx.LockP() &&
+	s.mtx.LockInv() == internalLockInv!<s!>;
+}
+
+pred internalLockInv(s *services) {
+	acc(&s.m) &&
+	acc(s.m) &&
+	// we can read all keys stored in the map
+	forall k addr.HostSVC :: k in domain(s.m) ==> validMapValue(k, s.m[k])
+}
+
+pred validMapValue(k addr.HostSVC, udpSlice []*net.UDPAddr) {
+	(forall i int :: 0 <= i && i < len(udpSlice) ==> acc(&udpSlice[i])) &&
+	(forall i int :: 0 <= i && i < len(udpSlice) ==> InjectiveMem(udpSlice[i], i))
+}
+
+pred InjectiveMem(u *net.UDPAddr, i int) { acc(u.Mem(), _) }
+
+ghost
+requires acc(a.Mem(), _) && acc(o.Mem(), _)
+ensures  res ==	unfolding acc(a.Mem(), _) in (unfolding acc(o.Mem(), _) in a.IP.Equal(o.IP) && a.Port == o.Port)
+decreases
+pure func equalUDPAddr(a, o *net.UDPAddr) (res bool) {
+	return unfolding acc(a.Mem(), _) in (unfolding acc(o.Mem(), _) in a.IP.Equal(o.IP) && a.Port == o.Port)
+}
+
+// used to hide permissions to a.Mem() to allow framing
+pred hiddenPerm(a *net.UDPAddr) {
+	a.Mem()
+}

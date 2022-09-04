@@ -205,8 +205,10 @@ func (ip *IP) UnmarshalText(text []byte) error
 // Equal reports whether ip and x are the same IP address.
 // An IPv4 address and that same address in IPv6 form are
 // considered to be equal.
-preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-preserves forall i int :: 0 <= i && i < len(x) ==> acc(&x[i], definitions.ReadL15)
+// (VerifiedSCION) we consider this function to be morally pure
+pure
+requires forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], _)
+requires forall i int :: 0 <= i && i < len(x) ==> acc(&x[i], _)
 decreases _
 func (ip IP) Equal(x IP) bool // {
 //	if len(ip) == len(x) {

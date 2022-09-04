@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package router
 
 import (
@@ -40,8 +42,10 @@ type Metrics struct {
 
 // NewMetrics initializes the metrics for the Border Router, and registers them
 // with the default registry.
-func NewMetrics() *Metrics {
-	return &Metrics{
+//@ ensures m.Mem()
+//@ decreases
+func NewMetrics() (m *Metrics) {
+	tmp := &Metrics{
 		InputBytesTotal: promauto.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "router_input_bytes_total",
@@ -151,4 +155,6 @@ func NewMetrics() *Metrics {
 			[]string{"sibling", "isd_as"},
 		),
 	}
+	//@ fold tmp.Mem()
+	return tmp
 }

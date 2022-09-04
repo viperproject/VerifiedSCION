@@ -1,0 +1,271 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package conn
+
+import (
+	"net"
+
+	"github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices"
+
+	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
+)
+
+/** Mem predicate definitions **/
+pred (c *connUDPBase) Mem() {
+	acc(c) &&
+	c.conn.Mem() &&
+	(c.Listen != nil ==> acc(c.Listen.Mem(), _)) &&
+	(c.Remote != nil ==> acc(c.Remote.Mem(), _))
+}
+
+pred (c *connUDPBase) MemWithoutConn() {
+	acc(c) &&
+	(c.Listen != nil ==> acc(c.Listen.Mem(), _)) &&
+	(c.Remote != nil ==> acc(c.Remote.Mem(), _))
+}
+
+// Shown to be satisfiable in newConnUDPIPv4
+pred (c *connUDPIPv4) Mem() {
+	acc(&c.pconn) &&
+	c.pconn.Mem() &&
+	c.connUDPBase.MemWithoutConn() &&
+	c.pconn.GetUnderlyingConn() == (unfolding c.connUDPBase.MemWithoutConn() in c.conn)
+}
+
+// Shown to be satisfiable in newConnUDPIPv6
+pred (c *connUDPIPv6) Mem() {
+	acc(&c.pconn) &&
+	c.pconn.Mem() &&
+	c.connUDPBase.MemWithoutConn() &&
+	c.pconn.GetUnderlyingConn() == (unfolding c.connUDPBase.MemWithoutConn() in c.conn)
+}
+
+pred (c *Config) Mem() {
+	acc(c) &&
+	0 <= c.SendBufferSize &&
+	0 <= c.ReceiveBufferSize
+}
+
+/** Lift methods in *connUDPBase to *connUDPIPv4 **/
+*connUDPIPv4 implements Conn
+
+preserves c.Mem()
+preserves slices.AbsSlice_Bytes(b, 0, len(b))
+ensures   err == nil ==> 0 <= n && n <= len(b)
+ensures   err == nil ==> acc(addr.Mem(), _)
+ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPIPv4) ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error) {
+	unfold c.Mem()
+	unfold c.connUDPBase.MemWithoutConn()
+	assert c.pconn.GetUnderlyingConn() == c.conn
+	tmpImpl := c.conn
+	tmpItf := c.pconn.ExchangePerm()
+	var packetconn *ipv4.PacketConn = c.pconn
+	assert tmpItf == c.conn
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.Mem()
+	n1, addr1, err1 := c.connUDPBase.ReadFrom(b, tmpImpl)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	unfold c.connUDPBase.Mem()
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.MemWithoutConn()
+	fold c.Mem()
+	return n1, addr1, err1
+}
+
+preserves c.Mem()
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+ensures   err == nil ==> 0 <= n && n <= len(b)
+ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPIPv4) Write(b []byte) (n int, err error) {
+	unfold c.Mem()
+	unfold c.connUDPBase.MemWithoutConn()
+	assert c.pconn.GetUnderlyingConn() == c.conn
+	tmpImpl := c.conn
+	tmpItf := c.pconn.ExchangePerm()
+	var packetconn *ipv4.PacketConn = c.pconn
+	assert tmpItf == c.conn
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.Mem()
+	n1, err1 := c.connUDPBase.Write(b, tmpImpl)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	unfold c.connUDPBase.Mem()
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.MemWithoutConn()
+	fold c.Mem()
+	return n1, err1
+}
+
+requires  acc(dst.Mem(), _)
+preserves c.Mem()
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+ensures   err == nil ==> 0 <= n && n <= len(b)
+ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPIPv4) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
+	unfold c.Mem()
+	unfold c.connUDPBase.MemWithoutConn()
+	assert c.pconn.GetUnderlyingConn() == c.conn
+	tmpImpl := c.conn
+	tmpItf := c.pconn.ExchangePerm()
+	var packetconn *ipv4.PacketConn = c.pconn
+	assert tmpItf == c.conn
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.Mem()
+	n1, err1 := c.connUDPBase.WriteTo(b, dst, tmpImpl)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	unfold c.connUDPBase.Mem()
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.MemWithoutConn()
+	fold c.Mem()
+	return n1, err1
+}
+
+preserves acc(c.Mem(), definitions.ReadL15)
+ensures   u != nil ==> acc(u.Mem(), _)
+decreases
+func (c *connUDPIPv4) LocalAddr() (u *net.UDPAddr) {
+	unfold acc(c.Mem(), definitions.ReadL15)
+	defer fold acc(c.Mem(), definitions.ReadL15)
+	return c.connUDPBase.LocalAddr()
+}
+
+preserves acc(c.Mem(), definitions.ReadL15)
+ensures   u != nil ==> acc(u.Mem(), _)
+decreases
+func (c *connUDPIPv4) RemoteAddr() (u *net.UDPAddr) {
+	unfold acc(c.Mem(), definitions.ReadL15)
+	defer fold acc(c.Mem(), definitions.ReadL15)
+	return c.connUDPBase.RemoteAddr()
+}
+
+requires c.Mem()
+ensures  err != nil ==> err.ErrorMem()
+decreases
+func (c *connUDPIPv4) Close() (err error) {
+	unfold c.Mem()
+	unfold c.connUDPBase.MemWithoutConn()
+	c.pconn.ExchangePerm()
+	fold c.connUDPBase.Mem()
+	c.connUDPBase.Close()
+}
+/** End of Lift methods in *connUDPBase to *connUDPIPv4 **/
+
+/** Lift methods in *connUDPBase to *connUDPIPv6 **/
+*connUDPIPv6 implements Conn
+
+preserves c.Mem()
+preserves slices.AbsSlice_Bytes(b, 0, len(b))
+ensures   err == nil ==> 0 <= n && n <= len(b)
+ensures   err == nil ==> acc(addr.Mem(), _)
+ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPIPv6) ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error) {
+	unfold c.Mem()
+	unfold c.connUDPBase.MemWithoutConn()
+	assert c.pconn.GetUnderlyingConn() == c.conn
+	tmpImpl := c.conn
+	tmpItf := c.pconn.ExchangePerm()
+	var packetconn *ipv6.PacketConn = c.pconn
+	assert tmpItf == c.conn
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.Mem()
+	n1, addr1, err1 := c.connUDPBase.ReadFrom(b, tmpImpl)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	unfold c.connUDPBase.Mem()
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.MemWithoutConn()
+	fold c.Mem()
+	return n1, addr1, err1
+}
+
+preserves c.Mem()
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+ensures   err == nil ==> 0 <= n && n <= len(b)
+ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPIPv6) Write(b []byte) (n int, err error) {
+	unfold c.Mem()
+	unfold c.connUDPBase.MemWithoutConn()
+	assert c.pconn.GetUnderlyingConn() == c.conn
+	tmpImpl := c.conn
+	tmpItf := c.pconn.ExchangePerm()
+	var packetconn *ipv6.PacketConn = c.pconn
+	assert tmpItf == c.conn
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.Mem()
+	n1, err1 := c.connUDPBase.Write(b, tmpImpl)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	unfold c.connUDPBase.Mem()
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.MemWithoutConn()
+	fold c.Mem()
+	return n1, err1
+}
+
+requires  acc(dst.Mem(), _)
+preserves c.Mem()
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+ensures   err == nil ==> 0 <= n && n <= len(b)
+ensures   err != nil ==> err.ErrorMem()
+func (c *connUDPIPv6) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
+	unfold c.Mem()
+	unfold c.connUDPBase.MemWithoutConn()
+	assert c.pconn.GetUnderlyingConn() == c.conn
+	tmpImpl := c.conn
+	tmpItf := c.pconn.ExchangePerm()
+	var packetconn *ipv6.PacketConn = c.pconn
+	assert tmpItf == c.conn
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.Mem()
+	n1, err1 := c.connUDPBase.WriteTo(b, dst, tmpImpl)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	unfold c.connUDPBase.Mem()
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	fold c.connUDPBase.MemWithoutConn()
+	fold c.Mem()
+	return n1, err1
+}
+
+preserves acc(c.Mem(), definitions.ReadL15)
+ensures   u != nil ==> acc(u.Mem(), _)
+decreases
+func (c *connUDPIPv6) LocalAddr() (u *net.UDPAddr) {
+	unfold acc(c.Mem(), definitions.ReadL15)
+	defer fold acc(c.Mem(), definitions.ReadL15)
+	return c.connUDPBase.LocalAddr()
+}
+
+preserves acc(c.Mem(), definitions.ReadL15)
+ensures   u != nil ==> acc(u.Mem(), _)
+decreases
+func (c *connUDPIPv6) RemoteAddr() (u *net.UDPAddr) {
+	unfold acc(c.Mem(), definitions.ReadL15)
+	defer fold acc(c.Mem(), definitions.ReadL15)
+	return c.connUDPBase.RemoteAddr()
+}
+
+requires c.Mem()
+ensures  err != nil ==> err.ErrorMem()
+decreases
+func (c *connUDPIPv6) Close() (err error) {
+	unfold c.Mem()
+	unfold c.connUDPBase.MemWithoutConn()
+	c.pconn.ExchangePerm()
+	fold c.connUDPBase.Mem()
+	c.connUDPBase.Close()
+}
+/** End of Lift methods in *connUDPBase to *connUDPIPv6 **/
