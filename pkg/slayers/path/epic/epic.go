@@ -114,10 +114,7 @@ func (p *Path) SerializeTo(b []byte) (r error) {
 	//@ ghost slices.SplitByIndex_Bytes(b, PktIDLen, len(b), PktIDLen+HVFLen, writePerm)
 	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen, PktIDLen + HVFLen)
 	//@ preserves acc(&p.PHVF)
-	//
 	//@ preserves slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
-	// preserves forall i int :: 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i])
-	//
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
@@ -133,10 +130,7 @@ func (p *Path) SerializeTo(b []byte) (r error) {
 	//@ ghost slices.SplitByIndex_Bytes(b, PktIDLen+HVFLen, len(b), MetadataLen, writePerm)
 	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen+HVFLen, MetadataLen)
 	//@ preserves acc(&p.LHVF)
-	//
 	//@ preserves slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
-	// preserves forall i int :: 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i])
-	//
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
