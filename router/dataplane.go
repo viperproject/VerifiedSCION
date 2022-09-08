@@ -465,29 +465,45 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 	}
 	return nil
 }
+*/
 
 // AddSvc adds the address for the given service. This can be called multiple
 // times for the same service, with the address added to the list of addresses
 // that provide the service.
-//@ trusted
+//@ requires  a != nil && acc(a.Mem(), definitions.ReadL10)
+//@ preserves acc(&d.svc, 1/2)
+//@ preserves d.mtx.LockP()
+//@ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	if a == nil {
 		return emptyValue
 	}
+	//@ unfold MutexInvariant!<d!>()
+	//@ assert (d.linkTypes != nil ==> acc(d.linkTypes, 1/2)) && (d.neighborIAs != nil ==> acc(d.neighborIAs, 1/2))
 	if d.svc == nil {
 		d.svc = newServices()
 	}
+	//@ fold MutexInvariant!<d!>()
+	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL20)
+	//@ assert acc(d.svc.Mem(), _)
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
+		//@ assume false
 		labels := serviceMetricLabels(d.localIA, svc)
-		d.Metrics.ServiceInstanceChanges.With(labels).Add(1)
-		d.Metrics.ServiceInstanceCount.With(labels).Add(1)
+		//@ unfold acc(d.Metrics.Mem(), _)
+		//@ assume float64(0) < float64(1) // Gobra still does not fully support floats
+		//@ assert d.Metrics.ServiceInstanceChanges != nil
+		//@ assert d.Metrics.ServiceInstanceCount   != nil
+		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
+		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(1))
 	}
+	//@ fold acc(MutexInvariant!<d!>(), definitions.ReadL20)
 	return nil
 }
 
+/* TODO: next
 // DelSvc deletes the address for the given service.
 //@ trusted
 func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
@@ -1817,7 +1833,7 @@ func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forw
 	return c
 }
 
-//@ preserves acc(neighbors)
+//@ preserves acc(neighbors, definitions.ReadL20)
 //@ ensures   acc(res)
 //@ decreases
 func interfaceToMetricLabels(id uint16, localIA addr.IA,
