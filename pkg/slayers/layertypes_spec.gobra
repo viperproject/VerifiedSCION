@@ -1,0 +1,76 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// This file is meant as a temporary replacement for layertypes.go to be used
+// while the rest of the package slayers is not verified.
+
+// +gobra
+
+// (VerifiedSCION) The following should be uncommented on a per need basis
+initEnsures acc(&LayerTypeSCION)
+initEnsures acc(&LayerClassSCION)
+// initEnsures acc(&LayerTypeSCIONUDP)
+// initEnsures acc(&LayerClassSCIONUDP)
+initEnsures acc(&LayerTypeSCMP)
+initEnsures acc(&LayerClassSCMP)
+// initEnsures acc(&LayerTypeHopByHopExtn)
+// initEnsures acc(&LayerClassHopByHopExtn)
+// initEnsures acc(&LayerTypeEndToEndExtn)
+// initEnsures acc(&LayerClassEndToEndExtn)
+// initEnsures acc(&LayerTypeSCMPExternalInterfaceDown)
+// initEnsures acc(&LayerTypeSCMPInternalConnectivityDown)
+// initEnsures acc(&LayerTypeSCMPParameterProblem)
+// initEnsures acc(&LayerTypeSCMPDestinationUnreachable)
+// initEnsures acc(&LayerTypeSCMPPacketTooBig)
+// initEnsures acc(&LayerTypeSCMPEcho)
+// initEnsures acc(&LayerTypeSCMPTraceroute)
+// initEnsures acc(&EndpointUDPPort)
+// initEnsures acc(&layerTypeBFD)
+package slayers
+
+import (
+	"github.com/google/gopacket"
+
+	// the following comes from gopacket/layers instead of gopacket
+	importRequires gopacket.LayerTypesMem()
+	importRequires forall t gopacket.LayerType :: 1000 <= t ==> !gopacket.Registered(t)
+	"github.com/google/gopacket/layers"
+)
+
+var (
+	LayerTypeSCION = gopacket.LayerType(1000) 
+	LayerClassSCION gopacket.LayerClass = LayerTypeSCION
+	LayerTypeSCIONUDP = gopacket.LayerType(1001)
+	LayerClassSCIONUDP gopacket.LayerClass = LayerTypeSCIONUDP
+	LayerTypeSCMP = gopacket.LayerType(1002)
+	LayerClassSCMP gopacket.LayerClass = LayerTypeSCMP
+	LayerTypeHopByHopExtn = gopacket.LayerType(1003)
+	LayerClassHopByHopExtn gopacket.LayerClass = LayerTypeHopByHopExtn
+	LayerTypeEndToEndExtn = gopacket.LayerType(1004)
+	LayerClassEndToEndExtn gopacket.LayerClass = LayerTypeEndToEndExtn
+	LayerTypeSCMPExternalInterfaceDown = gopacket.LayerType(1005)
+	LayerTypeSCMPInternalConnectivityDown = gopacket.LayerType(1006)
+	LayerTypeSCMPParameterProblem = gopacket.LayerType(1007)
+	LayerTypeSCMPDestinationUnreachable = gopacket.LayerType(1008)
+	LayerTypeSCMPPacketTooBig = gopacket.LayerType(1009)
+	LayerTypeSCMPEcho = gopacket.LayerType(1128)
+	LayerTypeSCMPTraceroute = gopacket.LayerType(1130)
+	EndpointUDPPort = gopacket.EndpointType(1005)
+
+	// layerTypeBFD is the identifier for gopacket/layers.LayerTypeBFD.
+	// Defining this with a constant here allows to build slayers without linking
+	// against gopacket/layers and still allow easily parsing SCION/BFD packets
+	// where gopacket/layers is imported.
+	layerTypeBFD = gopacket.LayerType(122)
+)
