@@ -1,0 +1,17 @@
+// +gobra
+
+package slayers
+
+import "github.com/google/gopacket"
+
+pred (s *SCMPExternalInterfaceDown) Mem() {
+	acc(s) && acc(s.BaseLayer.Contents) && acc(s.BaseLayer.Payload)
+}
+
+pred (s *SCMPExternalInterfaceDown) LayerMem() {
+	acc(s) && acc(s.BaseLayer.Contents)
+}
+
+pred (s *SCMPExternalInterfaceDown) PayloadMem() {
+	acc(s) && acc(s.BaseLayer.Payload)
+}

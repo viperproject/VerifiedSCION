@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package slayers
 
 import (
@@ -21,7 +23,64 @@ import (
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
+	
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
+
+// TODO: remove this when scion.go is merged in
+// BaseLayer is a convenience struct which implements the LayerData and
+// LayerPayload functions of the Layer interface.
+// Copy-pasted from gopacket/layers (we avoid importing this due its massive size)
+type BaseLayer struct {
+	// Contents is the set of bytes that make up this layer.  IE: for an
+	// Ethernet packet, this would be the set of bytes making up the
+	// Ethernet frame.
+	Contents []byte
+	// Payload is the set of bytes contained by (but not part of) this
+	// Layer.  Again, to take Ethernet as an example, this would be the
+	// set of bytes encapsulated by the Ethernet protocol.
+	Payload []byte
+}
+
+//@ pred (b *BaseLayer) Mem() {
+//@ 	acc(b) && acc(b.Contents) && acc(b.Payload)
+//@ }
+
+//@ pred (b *BaseLayer) LayerMem() {
+//@ 	acc(b) && acc(b.Contents)
+//@ }
+
+//@ pred (b *BaseLayer) PayloadMem() {
+//@ 	acc(b) && acc(b.Payload)
+//@ }
+
+//@ requires b.LayerMem()
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res))
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+//@ decreases
+func (b *BaseLayer) LayerContents() (res []byte) {
+	//@ unfold b.LayerMem()
+	res = b.Contents
+	//@ fold slices.AbsSlice_Bytes(res, 0, len(res))
+	//@ package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+	//@ 	unfold slices.AbsSlice_Bytes(res, 0, len(res))
+	//@ 	fold b.LayerMem()
+	//@ }
+}
+
+//@ requires b.PayloadMem()
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res))
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+//@ decreases
+func (b *BaseLayer) LayerPayload() (res []byte) {
+	//@ unfold b.PayloadMem()
+	res = b.Payload
+	//@ fold slices.AbsSlice_Bytes(res, 0, len(res))
+	//@ package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+	//@ 	unfold slices.AbsSlice_Bytes(res, 0, len(res))
+	//@ 	fold b.PayloadMem()
+	//@ }
+}
 
 const scmpRawInterfaceLen = 8
 
@@ -41,31 +100,54 @@ const scmpRawInterfaceLen = 8
 //
 type SCMPExternalInterfaceDown struct {
 	BaseLayer
+	
 	IA   addr.IA
 	IfID uint64
 }
 
 // LayerType returns LayerTypeSCMPExternalInterfaceDown.
+//@ decreases
+//@ pure
 func (i *SCMPExternalInterfaceDown) LayerType() gopacket.LayerType {
-	return LayerTypeSCMPExternalInterfaceDown
+	// (VerifiedSCION) TODO: replace with global
+	return getLayerTypeSCMPExternalInterfaceDown()
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
+//@ preserves acc(&gopacket.LayerTypePayload, _)
+//@ decreases
 func (i *SCMPExternalInterfaceDown) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
+//@ requires df != nil
+//@ requires df.Mem()
+//@ requires slices.AbsSlice_Bytes(data, 0, len(data))
+//@ requires i.Mem()
+//@ ensures res != nil ==> res.ErrorMem()
+//@ decreases
 func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
-	df gopacket.DecodeFeedback) error {
+	df gopacket.DecodeFeedback) (res error) {
 
 	minLength := addr.IABytes + scmpRawInterfaceLen
 	if size := len(data); size < minLength {
 		df.SetTruncated()
 		return serrors.New("buffer too short", "mininum_legth", minLength, "actual", size)
 	}
+	assert len(data) == 16
+	//@ unfold i.Mem()
+	//@ defer fold i.Mem()
 	offset := 0
+	//@ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+	//@ decreases
+	//@ outline (
+	//@ assert len(data) > 8
+	//@ unfold slices.AbsSlice_Bytes(data, 0, len(data))
+	//@ assert acc(&data[0], _) && acc(&data[1], _) && acc(&data[2], _) && acc(&data[3], _) && acc(&data[4], _) && acc(&data[5], _) && acc(&data[6], _) && acc(&data[7], _)
 	i.IA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
+	//@ fold slices.AbsSlice_Bytes(data, 0, len(data))
+	//@ )
 	offset += addr.IABytes
 	i.IfID = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
 	offset += scmpRawInterfaceLen
@@ -78,21 +160,38 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer,
-	opts gopacket.SerializeOptions) error {
+//@ trusted
+//@ requires i != nil
+//@ requires b != nil
+//@ requires b.Mem(buf_init)
+//@ preserves i.Mem()
+//@ ensures err == nil ==> buf_res != nil
+//@ ensures err == nil ==> b.Mem(buf_res)
+//@ ensures err != nil ==> b.Mem(buf_init)
+//@ ensures err != nil ==> err.ErrorMem()
+//@ decreases
+func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost buf_init []byte @*/) (err error/*@, ghost buf_res []byte @*/) {
 
-	buf, err := b.PrependBytes(addr.IABytes + scmpRawInterfaceLen)
+	buf, err/*@, buf_res@*/ := b.PrependBytes(addr.IABytes + scmpRawInterfaceLen/*@, buf_init@*/)
+	//assert false
 	if err != nil {
-		return err
+		return err/*@, buf_res @*/
 	}
+	//assert false
 	offset := 0
+	//@ unfold i.Mem()
+	//@ defer fold i.Mem()
 	binary.BigEndian.PutUint64(buf[offset:], uint64(i.IA))
 	offset += addr.IABytes
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.IfID)
-	return nil
+	return nil, buf_res
 }
 
-func decodeSCMPExternalInterfaceDown(data []byte, pb gopacket.PacketBuilder) error {
+//@ trusted
+//@ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+//@ ensures err != nil ==> err.ErrorMem()
+//@ decreases
+func decodeSCMPExternalInterfaceDown(data []byte, pb gopacket.PacketBuilder) (err error) {
 	s := &SCMPExternalInterfaceDown{}
 	err := s.DecodeFromBytes(data, pb)
 	if err != nil {
@@ -123,22 +222,29 @@ func decodeSCMPExternalInterfaceDown(data []byte, pb gopacket.PacketBuilder) err
 //
 type SCMPInternalConnectivityDown struct {
 	BaseLayer
+	
 	IA      addr.IA
 	Ingress uint64
 	Egress  uint64
 }
 
 // LayerType returns LayerTypeSCMPInternalConnectivityDown.
+//@ trusted
+//@ decreases _
 func (*SCMPInternalConnectivityDown) LayerType() gopacket.LayerType {
 	return LayerTypeSCMPInternalConnectivityDown
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
+//@ trusted
+//@ decreases _
 func (*SCMPInternalConnectivityDown) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
+//@ trusted
+//@ decreases _
 func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 	df gopacket.DecodeFeedback) error {
 
@@ -163,6 +269,8 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
+//@ trusted
+//@ decreases _
 func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -179,6 +287,8 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer,
 	return nil
 }
 
+//@ trusted
+//@ decreases _
 func decodeSCMPInternalConnectivityDown(data []byte, pb gopacket.PacketBuilder) error {
 	s := &SCMPInternalConnectivityDown{}
 	if err := s.DecodeFromBytes(data, pb); err != nil {
@@ -198,21 +308,28 @@ func decodeSCMPInternalConnectivityDown(data []byte, pb gopacket.PacketBuilder) 
 //
 type SCMPEcho struct {
 	BaseLayer
+	
 	Identifier uint16
 	SeqNumber  uint16
 }
 
 // LayerType returns LayerTypeSCMPEcho.
+//@ trusted
+//@ decreases _
 func (*SCMPEcho) LayerType() gopacket.LayerType {
 	return LayerTypeSCMPEcho
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
+//@ trusted
+//@ decreases _
 func (*SCMPEcho) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
+//@ trusted
+//@ decreases _
 func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	minLength := 4
 	if size := len(data); size < minLength {
@@ -233,6 +350,8 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) erro
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
+//@ trusted
+//@ decreases _
 func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	buf, err := b.PrependBytes(4)
 	if err != nil {
@@ -245,6 +364,8 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	return nil
 }
 
+//@ trusted
+//@ decreases _
 func decodeSCMPEcho(data []byte, pb gopacket.PacketBuilder) error {
 	s := &SCMPEcho{}
 	if err := s.DecodeFromBytes(data, pb); err != nil {
@@ -262,20 +383,27 @@ func decodeSCMPEcho(data []byte, pb gopacket.PacketBuilder) error {
 //
 type SCMPParameterProblem struct {
 	BaseLayer
+	
 	Pointer uint16
 }
 
 // LayerType returns LayerTypeSCMPParameterProblem.
+//@ trusted
+//@ decreases _
 func (*SCMPParameterProblem) LayerType() gopacket.LayerType {
 	return LayerTypeSCMPParameterProblem
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
+//@ trusted
+//@ decreases _
 func (*SCMPParameterProblem) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
+//@ trusted
+//@ decreases _
 func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	minLength := 2 + 2
 	if size := len(data); size < minLength {
@@ -292,6 +420,8 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
+//@ trusted
+//@ decreases _
 func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -304,6 +434,8 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer,
 	return nil
 }
 
+//@ trusted
+//@ decreases _
 func decodeSCMPParameterProblem(data []byte, pb gopacket.PacketBuilder) error {
 	s := &SCMPParameterProblem{}
 	if err := s.DecodeFromBytes(data, pb); err != nil {
@@ -331,6 +463,7 @@ func decodeSCMPParameterProblem(data []byte, pb gopacket.PacketBuilder) error {
 //
 type SCMPTraceroute struct {
 	BaseLayer
+	
 	Identifier uint16
 	Sequence   uint16
 	IA         addr.IA
@@ -338,16 +471,22 @@ type SCMPTraceroute struct {
 }
 
 // LayerType returns LayerTypeSCMPTraceroute.
+//@ trusted
+//@ decreases _
 func (*SCMPTraceroute) LayerType() gopacket.LayerType {
 	return LayerTypeSCMPTraceroute
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
+//@ trusted
+//@ decreases _
 func (*SCMPTraceroute) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
+//@ trusted
+//@ decreases _
 func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	minLength := 2 + 2 + addr.IABytes + scmpRawInterfaceLen
 	if size := len(data); size < minLength {
@@ -372,6 +511,8 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
+//@ trusted
+//@ decreases _
 func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -390,6 +531,8 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer,
 	return nil
 }
 
+//@ trusted
+//@ decreases _
 func decodeSCMPTraceroute(data []byte, pb gopacket.PacketBuilder) error {
 	s := &SCMPTraceroute{}
 	if err := s.DecodeFromBytes(data, pb); err != nil {
@@ -412,16 +555,22 @@ type SCMPDestinationUnreachable struct {
 }
 
 // LayerType returns LayerTypeSCMPTraceroute.
+//@ trusted
+//@ decreases _
 func (*SCMPDestinationUnreachable) LayerType() gopacket.LayerType {
 	return LayerTypeSCMPDestinationUnreachable
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
+//@ trusted
+//@ decreases _
 func (*SCMPDestinationUnreachable) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
+//@ trusted
+//@ decreases _
 func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 	df gopacket.DecodeFeedback) error {
 
@@ -439,6 +588,8 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
+//@ trusted
+//@ decreases _
 func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -450,6 +601,8 @@ func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer,
 	return nil
 }
 
+//@ trusted
+//@ decreases _
 func decodeSCMPDestinationUnreachable(data []byte, pb gopacket.PacketBuilder) error {
 	s := &SCMPDestinationUnreachable{}
 	if err := s.DecodeFromBytes(data, pb); err != nil {
@@ -467,20 +620,27 @@ func decodeSCMPDestinationUnreachable(data []byte, pb gopacket.PacketBuilder) er
 //
 type SCMPPacketTooBig struct {
 	BaseLayer
+	
 	MTU uint16
 }
 
 // LayerType returns LayerTypeSCMPParameterProblem.
+//@ trusted
+//@ decreases _
 func (*SCMPPacketTooBig) LayerType() gopacket.LayerType {
 	return LayerTypeSCMPPacketTooBig
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
+//@ trusted
+//@ decreases _
 func (*SCMPPacketTooBig) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
+//@ trusted
+//@ decreases _
 func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	minLength := 2 + 2
 	if size := len(data); size < minLength {
@@ -497,6 +657,8 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
+//@ trusted
+//@ decreases _
 func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -509,6 +671,8 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer,
 	return nil
 }
 
+//@ trusted
+//@ decreases _
 func decodeSCMPPacketTooBig(data []byte, pb gopacket.PacketBuilder) error {
 	s := &SCMPPacketTooBig{}
 	if err := s.DecodeFromBytes(data, pb); err != nil {
