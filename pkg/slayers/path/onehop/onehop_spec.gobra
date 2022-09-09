@@ -26,7 +26,12 @@ pred (o *Path) NonInitMem() {
 }
 
 pred (o *Path) Mem() {
-	acc(&o.Info) && o.FirstHop.Mem() && o.SecondHop.Mem()
+	// underlyingBuf can only be treated as a ghost field.
+	acc(&o.underlyingBuf) &&
+		slices.AbsSlice_Bytes(o.underlyingBuf, 0, len(o.underlyingBuf)) &&
+		acc(&o.Info) &&
+		o.FirstHop.Mem() &&
+		o.SecondHop.Mem()
 }
 
 ghost
@@ -43,20 +48,23 @@ func (p *Path) DowngradePerm() {
 ghost
 requires acc(o.Mem(), _)
 decreases
-pure func (o *Path) GetUnderlyingBuf() (buf []byte)
+pure func (o *Path) GetUnderlyingBuf() (buf []byte) {
+	return unfolding acc(o.Mem(), _) in o.underlyingBuf
+}
 
 ghost
 requires o.Mem()
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* o.Mem()
 decreases
-func (o *Path) ExchangeBufMem() (buf []byte)
-
-ghost
-preserves o.Mem()
-ensures   o.GetUnderlyingBuf() === buf
-decreases
-func (o *Path) SetUnderlyingBuf(buf []byte)
+func (o *Path) ExchangeBufMem() (buf []byte) {
+	unfold o.Mem()
+	buf := o.underlyingBuf
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* o.Mem() {
+		fold o.Mem()
+	}
+	return
+}
 
 (*Path) implements path.Path {
 	(p *Path) SerializeTo(b []byte) (e error) {
@@ -86,6 +94,7 @@ func (o *Path) SetUnderlyingBuf(buf []byte)
 
 ghost
 requires acc(o)
+requires slices.AbsSlice_Bytes(o.underlyingBuf, 0, len(o.underlyingBuf))
 ensures  o.Mem()
 decreases
 func FoldPathMem(o *Path) {

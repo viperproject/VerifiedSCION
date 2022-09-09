@@ -16,40 +16,60 @@
 
 package scion
 
-import "github.com/scionproto/scion/pkg/slayers/path"
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+pred (s *Raw) NonInitMem() {
+	acc(&s.Raw) &&
+		s.Base.NonInitMem()
+}
+
+pred (s *Raw) Mem() {
+	s.Base.Mem() &&
+		acc(&s.Raw) &&
+		slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)) &&
+		len(s.Raw) >= s.Base.Len()
+}
+
+pred (r *Raw) PostBufXchange(buf []byte) {
+	acc(r.Mem(), definitions.ReadL1) && r.GetUnderlyingBuf() === buf
+}
+
+ghost
+requires r.PostBufXchange(buf)
+ensures  acc(r.Mem(), definitions.ReadL1)
+ensures  r.GetUnderlyingBuf() === buf
+func (r *Raw) UnfoldPostBufXchange(buf []byte) {
+	unfold r.PostBufXchange(buf)
+	assert acc(r.Mem(), definitions.ReadL1)
+	assert r.GetUnderlyingBuf() === buf
+}
 
 ghost
 requires acc(r.Mem(), _)
 decreases
-pure func (r *Raw) GetUnderlyingBuf() (buf []byte)
+pure func (r *Raw) GetUnderlyingBuf() (buf []byte) {
+	return unfolding acc(r.Mem(), _) in r.Raw
+}
 
 ghost
 requires r.Mem()
 requires r.GetUnderlyingBuf() === buf
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf))
 decreases
-func (r *Raw) ExchangeBufMem(buf []byte)
-
-ghost
-preserves r.Mem()
-ensures   r.GetUnderlyingBuf() === buf
-decreases
-func (r *Raw) SetUnderlyingBuf(buf []byte)
-
-
-(*Raw) implements path.Path
-
-pred (s *Raw) NonInitMem() {
-	acc(&s.Raw) && s.Base.NonInitMem()
-}
-
-pred (s *Raw) Mem() {
-	s.Base.Mem() &&
-	acc(&s.Raw) &&
-	len(s.Raw) >= s.Base.Len() &&
-	slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
+func (r *Raw) ExchangeBufMem(buf []byte) {
+	unfold r.Mem()
+	assert r.Raw === buf
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf)) {
+		assert r.Raw === buf
+		assert slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
+		fold r.Mem()
+		fold r.PostBufXchange(buf)
+	}
 }
 
 /**
@@ -67,6 +87,8 @@ func (s *Raw) Len() (l int) {
 	return unfolding acc(s.Mem(), _) in s.Base.Len()
 }
 
+(*Raw) implements path.Path
+
 /**
   * This method is not part of the original SCION codebase.
   * Instead, `Len` was defined in `*Raw` via embedded structs.
@@ -83,11 +105,14 @@ func (s *Raw) Type() (t path.Type) {
 
 ghost
 requires s.Mem()
+requires buf === s.GetUnderlyingBuf()
 ensures  s.NonInitMem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
-func (s *Raw) DowngradePerm() {
+func (s *Raw) DowngradePerm(buf []byte) {
 	unfold s.Mem()
 	unfold s.Base.Mem()
+	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
 	fold s.Base.NonInitMem()
 	fold s.NonInitMem()
 }

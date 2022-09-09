@@ -66,31 +66,19 @@ type Path interface {
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
 	//@ pred NonInitMem()
-
-	// (VerifiedSCION) releases the permission to access the underlying
-	// buffer for the given Path instance. There must also be a wand to
-	// regain access to the Mem predicate.
-	//@ ghost
-	//@ requires acc(Mem(), _)
-	//@ decreases
-	//@ pure GetUnderlyingBuf() (buf []byte)
-
-	// (VerifiedSCION) exchange the Mem predicate for access to the
-	// underlying Path buffer. Access to Mem should be re-acquirable
-	// via a wand instance.
-	// ghost
-	// requires Mem()
-	// requires GetUnderlyingBuf() === buf
-	// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-	// ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* Mem()
-	// decreases
-	// ExchangeBufMem(buf []byte)
-
+	// (VerifiedSCION) this precondition deals with managing the
+	// underlying buffer permissions when exchanging Mem. When
+	// Mem is reclaimed via a magic wand, the knowledge that the
+	// underlying buffer did not change needs to be known. This
+	// could be a conjunct in the right-hand side but Gobra does
+	// not recognize this.
+	//@ pred PostBufXchange(buf []byte)
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
 	//@ preserves Mem()
-	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ preserves GetUnderlyingBuf() !== b ==> slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ ensures   GetUnderlyingBuf() === old(GetUnderlyingBuf())
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	SerializeTo(b []byte) (e error)
@@ -107,12 +95,12 @@ type Path interface {
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
 	// Reverse reverses a path such that it can be used in the reversed direction.
-	//
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
-	//@ requires Mem()
-	//@ ensures  e == nil ==> p.Mem()
-	//@ ensures  e == nil ==> p != nil
-	//@ ensures  e != nil ==> e.ErrorMem()
+	//@ requires  Mem()
+	//@ ensures   e == nil ==> p != nil
+	//@ ensures   e == nil ==> p.Mem()
+	//@ ensures   e == nil ==> p.GetUnderlyingBuf() === old(GetUnderlyingBuf())
+	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	Reverse() (p Path, e error)
 	// Len returns the length of a path in bytes.
@@ -126,11 +114,38 @@ type Path interface {
 	//@ requires acc(Mem(), _)
 	//@ decreases
 	Type() Type
+	// (VerifiedSCION) downgrade a full permission `Mem` predicate
+	// to the non-initialized `NonInitMem`. This releases resources
+	// captured by `Mem`.
 	//@ ghost
 	//@ requires Mem()
+	//@ requires buf === GetUnderlyingBuf()
 	//@ ensures  NonInitMem()
+	//@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 	//@ decreases
-	//@ DowngradePerm()
+	//@ DowngradePerm(ghost buf []byte)
+	// (VerifiedSCION) releases the permission to access the underlying
+	// buffer for the given Path instance. There must also be a wand to
+	// regain access to the Mem predicate.
+	//@ ghost
+	//@ requires acc(Mem(), _)
+	//@ decreases
+	//@ pure GetUnderlyingBuf() (buf []byte)
+	// (VerifiedSCION) exchange the Mem predicate for access to the
+	// underlying Path buffer. Access to Mem should be re-acquirable
+	// via a wand instance.
+	//@ ghost
+	//@ requires Mem()
+	//@ requires GetUnderlyingBuf() === buf
+	//@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+	//@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(Mem(), definitions.ReadL1) && PostBufXchange(buf))
+	//@ decreases
+	//@ ExchangeBufMem(buf []byte)
+	//
+	//@ ghost
+	//@ requires PostBufXchange(buf)
+	//@ ensures  acc(Mem(), definitions.ReadL1) && GetUnderlyingBuf() === buf
+	//@ UnfoldPostBufXchange(buf []byte)
 }
 
 type metadata struct {
@@ -227,6 +242,7 @@ type rawPath struct {
 
 //@ preserves acc(p.Mem(), definitions.ReadL10)
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+//@ ensures   p.GetUnderlyingBuf() === old(p.GetUnderlyingBuf())
 //@ ensures   e == nil
 //@ decreases
 func (p *rawPath) SerializeTo(b []byte) (e error) {
@@ -249,7 +265,6 @@ func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
 	//@ unfold p.NonInitMem()
 	p.raw = b
 	//@ fold p.Mem()
-	//@ ghost p.SetUnderlyingBuf(b)
 	return nil
 }
 

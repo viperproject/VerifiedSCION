@@ -16,7 +16,10 @@
 
 package path
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
 
 /** rawPath spec **/
 pred (r *rawPath) Mem() {
@@ -25,6 +28,10 @@ pred (r *rawPath) Mem() {
 
 pred (r *rawPath) NonInitMem() {
 	acc(r)
+}
+
+pred (r *rawPath) PostBufXchange(buf []byte) {
+	acc(r.Mem(), definitions.ReadL1) && r.GetUnderlyingBuf() === buf
 }
 
 ghost
@@ -38,33 +45,47 @@ ghost
 requires r.Mem()
 requires r.GetUnderlyingBuf() === buf
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf))
 decreases
 func (r *rawPath) ExchangeBufMem(buf []byte) {
 	unfold r.Mem()
-	buf := r.raw
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem() {
+	assert buf === r.raw
+	package  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf)) {
+		assert acc(&r.raw)
+		assert buf === r.raw
 		fold r.Mem()
+		fold r.PostBufXchange(buf)
 	}
-	return
+	assert  slices.AbsSlice_Bytes(buf, 0, len(buf))
+	assert  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf))
 }
 
-ghost
-preserves r.Mem()
-ensures   r.GetUnderlyingBuf() === buf
-decreases
-func (r *rawPath) SetUnderlyingBuf(buf []byte)
 
-(*rawPath) implements Path
+ghost
+requires r.PostBufXchange(buf)
+ensures  acc(r.Mem(), definitions.ReadL1)
+ensures  r.GetUnderlyingBuf() === buf
+func (r *rawPath) UnfoldPostBufXchange(buf []byte) {
+	unfold r.PostBufXchange(buf)
+	assert acc(r.Mem(), definitions.ReadL1)
+	assert r.GetUnderlyingBuf() === buf
+}
 
 ghost
 requires p.Mem()
+requires p.GetUnderlyingBuf() === buf
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 ensures  p.NonInitMem()
 decreases
-func (p *rawPath) DowngradePerm() {
+func (p *rawPath) DowngradePerm(ghost buf []byte) {
 	unfold p.Mem()
+	assert p.raw === buf
+	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
 	fold p.NonInitMem()
 }
+
+(*rawPath) implements Path
+
 /** End of rawPath spec **/
 
 /** Global state of the pacakge **/

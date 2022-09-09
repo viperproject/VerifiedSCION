@@ -61,6 +61,11 @@ func RegisterPath() {
 // in the first AS and completed by a SCION router in the second AS. It is used during beaconing
 // when there is not yet any other path segment available.
 type Path struct {
+	// (VerifiedSCION) this ghost field represents the buffer
+	// from which the Path was decoded. This needs to be kept
+	// in order to give up permissions eventually when recovering
+	// initial buffer permissions.
+	//@ underlyingBuf []byte
 	Info      path.InfoField
 	FirstHop  path.HopField
 	SecondHop path.HopField
@@ -110,8 +115,9 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	//@ ghost slices.CombineAtIndex_Bytes(data, offset, len(data), offset+path.HopLen, definitions.ReadL1)
 	//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
 	//@ ghost if r == nil {
+	//@   o.underlyingBuf = data
+	//@   assert slices.AbsSlice_Bytes(o.underlyingBuf, 0, len(o.underlyingBuf))
 	//@   fold o.Mem()
-	//@   ghost o.SetUnderlyingBuf(data)
 	//@ } else {
 	//@   fold o.NonInitMem()
 	//@ }

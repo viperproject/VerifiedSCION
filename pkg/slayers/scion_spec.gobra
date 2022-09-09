@@ -99,8 +99,8 @@ pred (s *SCION) Mem() {
 			// by the memory location demonstrated below.
 			acc(&s.Path) && s.Path != nil && s.Path.Mem() &&
 			(s.pathMemLoc == New ==> s.PathPoolNone()) &&
-			(s.pathMemLoc == Raw ==> s.PathPoolFull() && s.PathPoolRawPartial()) &&
-			(s.pathMemLoc == Pool ==> s.PathPoolPartial(s.PathType) && s.PathPoolRawFull()) &&
+			(s.pathMemLoc == Raw ==> s.PathPoolFull() && s.PathPoolRawPartial(s.Path)) &&
+			(s.pathMemLoc == Pool ==> s.PathPoolPartial(s.Path, s.PathType) && s.PathPoolRawFull()) &&
 
 			// Well-formedness for values
 			s.DstAddrLen >= 0 &&
@@ -134,6 +134,10 @@ pred (s *SCION) AddrHdrMem() {
 		s.SrcAddrLen >= 0
 }
 
+pred (s *SCION) PathMem() {
+	acc(&s.Path) && s.Path != nil && s.Path.Mem()
+}
+
 // Indicates that paths should be recycled and full permissions are
 // held to each location in the path pool.
 pred (s *SCION) PathPoolFull() {
@@ -145,12 +149,14 @@ pred (s *SCION) PathPoolFull() {
 
 // Indicates that paths should be recycled and the current s.Path is
 // aliasing location `pathType` in the pool.
-pred (s *SCION) PathPoolPartial(pathType path.Type) {
+pred (s *SCION) PathPoolPartial(aliasedPath path.Path, pathType path.Type) {
 	acc(&s.pathPool) &&
 		s.pathPool != nil &&
 		0 <= int(pathType) && int(pathType) < len(s.pathPool) &&
-		(forall i int :: (0 <= i && i < len(s.pathPool) && i != int(pathType)) ==>
-			(acc(&s.pathPool[i]) && s.pathPool[i] != nil && s.pathPool[i].NonInitMem()))
+		(forall i int :: (0 <= i && i < len(s.pathPool)) ==>
+			(acc(&s.pathPool[i]) && s.pathPool[i] != nil &&
+				((i == int(pathType) ==> s.pathPool[i] === aliasedPath) &&
+					(i != int(pathType) ==> (s.pathPool[i] !== aliasedPath && s.pathPool[i].NonInitMem())))))
 }
 
 // Indicates that RecyclePaths was not called and the path pool is nil.
@@ -167,8 +173,10 @@ pred (s *SCION) PathPoolRawFull() {
 
 // Indicates that paths should be recycled and the current s.Path is
 // aliasing the s.pathPoolRaw field.
-pred (s *SCION) PathPoolRawPartial() {
-	acc(&s.pathPoolRaw) && s.pathPoolRaw != nil
+pred (s *SCION) PathPoolRawPartial(aliasingPath path.Path) {
+	acc(&s.pathPoolRaw) &&
+		s.pathPoolRaw != nil &&
+		aliasingPath === s.pathPoolRaw
 }
 
 // TODO SCION must implement the following interfaces
@@ -195,7 +203,43 @@ requires s.Mem()
 ensures  s.LenMem()
 ensures  s.LenMem() --* s.Mem()
 decreases
-func (s *SCION) ExchangeLenMem()
+func (s *SCION) ExchangeLenMem() {
+	unfold s.Mem()
+	fold s.LenMem()
+	package s.LenMem() --* s.Mem() {
+		unfold s.LenMem()
+		fold s.Mem()
+	}
+}
+
+ghost
+requires 0 <= p && p <= writePerm
+requires acc(s.Mem(), p)
+ensures  acc(s.AddrHdrMem(), p)
+ensures  acc(s.AddrHdrMem(), p) --* acc(s.Mem(), p)
+decreases
+func (s *SCION) ExchangeAddrHdrMem(p perm) {
+	unfold acc(s.Mem(), p)
+	fold acc(s.AddrHdrMem(), p)
+	package acc(s.AddrHdrMem(), p) --* acc(s.Mem(), p) {
+		unfold acc(s.AddrHdrMem(), p)
+		fold acc(s.Mem(), p)
+	}
+}
+
+ghost
+requires s.Mem()
+ensures  s.PathMem()
+ensures  s.PathMem() --* s.Mem()
+decreases
+func (s *SCION) ExchangePathMem() {
+	unfold s.Mem()
+	fold s.PathMem()
+	package s.PathMem() --* s.Mem() {
+		unfold s.PathMem()
+		fold s.Mem()
+	}
+}
 
 ghost
 requires acc(s.Mem(), _)
@@ -246,4 +290,10 @@ ensures  res == unfolding acc(s.Mem(), _) in len(s.RawDstAddr)
 decreases
 func (s *SCION) getLenRawDstAddr() (res int) {
 	return unfolding acc(s.Mem(), _) in len(s.RawDstAddr)
+}
+
+ghost
+requires acc(s.Mem(), _)
+pure func (s *SCION) PathLen() int {
+	return unfolding acc(s.Mem(), _) in s.Path.Len()
 }

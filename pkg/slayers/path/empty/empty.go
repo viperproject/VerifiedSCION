@@ -19,6 +19,7 @@ package empty
 import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // PathLen is the length of a serialized empty path in bytes.
@@ -56,20 +57,24 @@ func RegisterPath() {
 
 // Path encodes an empty path. An empty path is a special path that takes zero
 // bytes on the wire and is used for AS internal communication.
-type Path struct{}
+type Path struct {
+	//@ underlyingBuf []byte
+}
 
-//@ ensures len(r) != 0 ==> (e != nil && e.ErrorMem())
-//@ ensures len(r) == 0 ==> e == nil
-//@ ensures o.Mem()
-//@ ensures e == nil ==> o.GetUnderlyingBuf() === r
+//@ ensures len(r) != 0 ==> (e != nil && e.ErrorMem() && o.NonInitMem())
+//@ ensures len(r) == 0 ==> (e == nil && o.Mem() && r === o.GetUnderlyingBuf())
 //@ decreases
 func (o Path) DecodeFromBytes(r []byte) (e error) {
-	//@ fold o.Mem()
 	if len(r) != 0 {
+		//@ fold o.NonInitMem()
 		// (VerifiedSCION) TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
 		return serrors.New("decoding an empty path", "len", int(len(r)))
 	}
-	//@ o.SetUnderlyingBuf(r)
+	//@ o.underlyingBuf = r
+	//@ assert len(o.underlyingBuf) == 0
+	//@ fold slices.AbsSlice_Bytes(o.underlyingBuf, 0, 0)
+	//@ fold o.Mem()
+	//@ assert o.GetUnderlyingBuf() === r
 	return nil
 }
 
@@ -79,7 +84,7 @@ func (o Path) SerializeTo(b []byte) (e error) {
 	return nil
 }
 
-//@ ensures p == o
+//@ ensures p === o
 //@ ensures e == nil
 //@ decreases
 func (o Path) Reverse() (p path.Path, e error) {
