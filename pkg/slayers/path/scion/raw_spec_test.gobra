@@ -24,9 +24,10 @@ func testAllocateNonInitRaw() {
 	fold r.NonInitMem()
 }
 
-func testAllocateRaw() {
-	r := &Raw{}
-	fold r.Base.Mem()
-	fold slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
-	fold r.Mem()
-}
+// func testAllocateRaw() {
+// 	r := &Raw{}
+// 	fold r.Base.Mem()
+// 	fold slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
+// 	fold slices.AbsSlice_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf))
+// 	fold r.Mem()
+// }

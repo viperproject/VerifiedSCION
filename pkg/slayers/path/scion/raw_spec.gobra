@@ -24,14 +24,21 @@ import (
 
 pred (s *Raw) NonInitMem() {
 	acc(&s.Raw) &&
+		acc(&s.underlyingBuf) && // Ghost
+		acc(&s.dataLen) && // Ghost
 		s.Base.NonInitMem()
 }
 
 pred (s *Raw) Mem() {
 	s.Base.Mem() &&
 		acc(&s.Raw) &&
+		acc(&s.underlyingBuf) && // Ghost
+		acc(&s.dataLen) && // Ghost
+		0 <= s.dataLen && s.dataLen <= len(s.underlyingBuf) &&
+		s.Raw === s.underlyingBuf[:s.dataLen] &&
+		slices.AbsSlice_Bytes(s.underlyingBuf, s.dataLen, len(s.underlyingBuf)) &&
 		slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)) &&
-		len(s.Raw) >= s.Base.Len()
+		len(s.Raw) == s.Base.Len()
 }
 
 pred (r *Raw) PostBufXchange(buf []byte) {
@@ -52,7 +59,7 @@ ghost
 requires acc(r.Mem(), _)
 decreases
 pure func (r *Raw) GetUnderlyingBuf() (buf []byte) {
-	return unfolding acc(r.Mem(), _) in r.Raw
+	return unfolding acc(r.Mem(), _) in r.underlyingBuf
 }
 
 ghost
@@ -63,9 +70,15 @@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.R
 decreases
 func (r *Raw) ExchangeBufMem(buf []byte) {
 	unfold r.Mem()
-	assert r.Raw === buf
+	ghost slices.Unslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
+	ghost slices.CombineAtIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
 	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf)) {
-		assert r.Raw === buf
+		assert acc(&r.Raw)
+		assert acc(&r.underlyingBuf)
+		assert acc(&r.dataLen)
+		assert r.Raw === r.underlyingBuf[:r.dataLen]
+		ghost slices.SplitByIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
+		ghost slices.Reslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
 		assert slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
 		fold r.Mem()
 		fold r.PostBufXchange(buf)
@@ -87,7 +100,31 @@ func (s *Raw) Len() (l int) {
 	return unfolding acc(s.Mem(), _) in s.Base.Len()
 }
 
-(*Raw) implements path.Path
+(*Raw) implements path.Path {
+	(p *Raw) SerializeTo(b, buf []byte, l int) (e error) {
+		e = p.SerializeTo(b, buf, l)
+	}
+
+	(p *Raw) DecodeFromBytes(b, buf []byte, l int) (e error) {
+		e = p.DecodeFromBytes(b, buf, l)
+	}
+
+	(p *Raw) Reverse() (r path.Path, e error) {
+		r, e = p.Reverse()
+	}
+
+	(p *Raw) DowngradePerm(buf []byte) {
+		p.DowngradePerm(buf)
+	}
+
+	pure (p *Raw) Len() int {
+		return p.Len()
+	}
+
+	pure (p *Raw) Type() path.Type {
+		return p.Type()
+	}
+}
 
 /**
   * This method is not part of the original SCION codebase.
@@ -111,8 +148,10 @@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
 func (s *Raw) DowngradePerm(buf []byte) {
 	unfold s.Mem()
-	unfold s.Base.Mem()
+	ghost slices.Unslice_Bytes(s.underlyingBuf, 0, s.dataLen, writePerm)
+	ghost slices.CombineAtIndex_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf), s.dataLen, writePerm)
 	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
+	unfold s.Base.Mem()
 	fold s.Base.NonInitMem()
 	fold s.NonInitMem()
 }

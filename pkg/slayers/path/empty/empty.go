@@ -61,26 +61,37 @@ type Path struct {
 	//@ underlyingBuf []byte
 }
 
-//@ ensures len(r) != 0 ==> (e != nil && e.ErrorMem() && o.NonInitMem())
-//@ ensures len(r) == 0 ==> (e == nil && o.Mem() && r === o.GetUnderlyingBuf())
+//@ requires len(r) == dataLen
+//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+//@ ensures  dataLen == 0 ==> e == nil
+//@ ensures  dataLen == 0 ==> o.Mem()
+//@ ensures  dataLen == 0 ==> underlyingBuf === o.GetUnderlyingBuf()
+//@ ensures  dataLen != 0 ==> e != nil
+//@ ensures  dataLen != 0 ==> e.ErrorMem()
+//@ ensures  dataLen != 0 ==> o.NonInitMem()
+//@ ensures  dataLen != 0 ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 //@ decreases
-func (o Path) DecodeFromBytes(r []byte) (e error) {
+func (o Path) DecodeFromBytes(r []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error) {
 	if len(r) != 0 {
 		//@ fold o.NonInitMem()
 		// (VerifiedSCION) TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
+		//@ assert dataLen != 0
 		return serrors.New("decoding an empty path", "len", int(len(r)))
 	}
-	//@ o.underlyingBuf = r
-	//@ assert len(o.underlyingBuf) == 0
-	//@ fold slices.AbsSlice_Bytes(o.underlyingBuf, 0, 0)
+	//@ assert dataLen == 0
+	//@ o.underlyingBuf = underlyingBuf
 	//@ fold o.Mem()
-	//@ assert o.GetUnderlyingBuf() === r
+	//@ assert o.Mem()
+	//
+	// TODO FIXME ask Joao, probably something with value
+	// receiver you aren't understanding
+	//@ assume false
 	return nil
 }
 
 //@ ensures e == nil
 //@ decreases
-func (o Path) SerializeTo(b []byte) (e error) {
+func (o Path) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error) {
 	return nil
 }
 

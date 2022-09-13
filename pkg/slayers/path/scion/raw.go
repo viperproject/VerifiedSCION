@@ -27,22 +27,31 @@ import (
 // little as possible and should be used if performance matters.
 type Raw struct {
 	Base
+	//@ underlyingBuf []byte
+	//@ dataLen int
 	Raw []byte
 }
 
 // DecodeFromBytes only decodes the PathMetaHeader. Otherwise the nothing is decoded and simply kept
 // as raw bytes.
-//@ trusted
 //@ requires s.NonInitMem()
-//@ requires slices.AbsSlice_Bytes(data, 0, len(data))
+//@ requires 0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ requires len(data) == dataLen
+//@ requires data === underlyingBuf[:dataLen]
+//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 //@ ensures  res == nil ==> s.Mem()
-//@ ensures  res == nil ==> s.GetUnderlyingBuf() === data
+//@ ensures  res == nil ==> s.GetUnderlyingBuf() === underlyingBuf
 //@ ensures  res != nil ==> (s.NonInitMem() && res.ErrorMem())
-//@ ensures  res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+//@ ensures  res != nil ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 //@ decreases
-func (s *Raw) DecodeFromBytes(data []byte) (res error) {
+func (s *Raw) DecodeFromBytes(data []byte /*@, underlyingBuf []byte, dataLen int @*/) (res error) {
+	//@ ghost slices.SplitByIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
+	//@ ghost slices.Reslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
+	//@ assert acc(slices.AbsSlice_Bytes(data, 0, len(data)), writePerm)
 	//@ unfold s.NonInitMem()
 	if err := s.Base.DecodeFromBytes(data); err != nil {
+		//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
 		//@ fold s.NonInitMem()
 		return err
 	}
@@ -52,10 +61,21 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	if len(data) < pathLen {
 		//@ apply s.Base.Mem() --* s.Base.NonInitMem()
 		//@ fold s.NonInitMem()
+		//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
 		return serrors.New("RawPath raw too short", "expected", pathLen, "actual", int(len(data)))
 	}
-	//@ ghost slices.SplitByIndex_Bytes(data, 0, len(data), pathLen, writePerm)
-	//@ ghost slices.Reslice_Bytes(data, 0, pathLen, writePerm)
+	//@ assert dataLen >= pathLen
+	//@ assert data === underlyingBuf[:dataLen]
+	//@ assert data[:pathLen] === underlyingBuf[:dataLen][:pathLen]
+	//@ assert data[:pathLen] === underlyingBuf[:pathLen]
+	//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
+	//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
+	//@ s.underlyingBuf = underlyingBuf
+	//@ s.dataLen = pathLen
+	//@ ghost slices.SplitByIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), pathLen, writePerm)
+	//@ ghost slices.Reslice_Bytes(underlyingBuf, 0, pathLen, writePerm)
+	//@ assert data[:pathLen] === underlyingBuf[:pathLen]
 	//@ unfold slices.AbsSlice_Bytes(data[:pathLen], 0, len(data[:pathLen]))
 	s.Raw = data[:pathLen]
 	//@ fold slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
@@ -65,12 +85,15 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
+//@ trusted // TODO FIXME
 //@ preserves s.Mem()
-//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   s.GetUnderlyingBuf() === old(s.GetUnderlyingBuf())
+//@ preserves s.GetUnderlyingBuf() === underlyingBuf
+//@ preserves len(b) == dataLen
+//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ preserves b !== underlyingBuf[:dataLen] ==> slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
-func (s *Raw) SerializeTo(b []byte) (r error) {
+func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (r error) {
 	if /*@ unfolding acc(s.Mem(), _) in @*/ s.Raw == nil {
 		return serrors.New("raw is nil")
 	}
@@ -92,18 +115,26 @@ func (s *Raw) SerializeTo(b []byte) (r error) {
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
 		//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(b), MetaLen, writePerm)
+		//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
+		//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
 		//@ fold s.Base.Mem()
 		//@ fold s.Mem()
 		return err
 	}
 	//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
+	// TODO FIXME
+	// One issue I see is that we could potentially serialize a
+	// Raw path to itself, however, we cannot have permission
+	// to both b and s.Raw at the same time.
+	//@ assume false // <-- FIXME
 	//@ preserves acc(&s.Raw, definitions.ReadL1)
 	//@ preserves slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
 	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures len(s.Raw) == before(len(s.Raw))
 	//@ decreases
 	//@ outline(
+	//@ assume false // TODO FIXME
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL1)
 	copy(b, s.Raw /*@ , definitions.ReadL1 @*/)
@@ -112,6 +143,8 @@ func (s *Raw) SerializeTo(b []byte) (r error) {
 	//@ )
 	//@ fold s.Base.Mem()
 	//@ fold s.Mem()
+	//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
+	//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
 	return nil
 }
 
@@ -126,32 +159,37 @@ func (s *Raw) Reverse() (p path.Path, err error) {
 	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
 	// path first. If this becomes a performance bottleneck, the implementation should be changed to
 	// work directly on the raw representation.
-	//@ ghost underlyingBuf := unfolding acc(s.Mem(), _) in s.Raw
-	//@ assert s.GetUnderlyingBuf() === underlyingBuf
+	//@ underlyingBuf := unfolding acc(s.Mem(), _) in s.underlyingBuf
+	//@ pathLen := unfolding acc(s.Mem(), _) in s.dataLen
+	//@ assert true // TODO
 	decoded, err := s.ToDecoded()
 	if err != nil {
 		return nil, err
 	}
 	//@ unfold s.NonInitMem()
 	//@ assert underlyingBuf === decoded.GetUnderlyingBuf()
-	//@ assert underlyingBuf === s.Raw
+	//@ assert s.Raw === underlyingBuf[:pathLen]
+	//@ assert underlyingBuf === s.underlyingBuf
 	reversed, err := decoded.Reverse()
 	if err != nil {
 		return nil, err
 	}
 	//@ assert typeOf(reversed) == type[*Decoded]
-	//@ ghost reversed = reversed.(*Decoded)
-	//@ assert underlyingBuf === reversed.GetUnderlyingBuf()
-	//@ assert underlyingBuf === s.Raw
-	//@ assert s.Raw === reversed.GetUnderlyingBuf()
-	if err := reversed.SerializeTo(s.Raw); err != nil {
+	// TODO FIXME remove the extra variable
+	var rev *Decoded
+	rev = reversed.(*Decoded)
+	// ghost reversed = reversed.(*Decoded)
+	//@ assert s.Raw === underlyingBuf[:pathLen]
+	//@ assert underlyingBuf === rev.GetUnderlyingBuf()
+	//@ assert underlyingBuf === s.underlyingBuf
+	if err := rev.SerializeTo(s.Raw /*@, underlyingBuf, pathLen @*/); err != nil {
 		return nil, err
 	}
-	//@ unfold reversed.Mem()
+	//@ unfold rev.Mem()
 	//@ assert slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-	//@ assert underlyingBuf === s.Raw
+	//@ assert underlyingBuf[:pathLen] === s.Raw
 	//@ fold s.NonInitMem()
-	err = s.DecodeFromBytes( /*@ unfolding acc(s.NonInitMem(), _) in @*/ s.Raw)
+	err = s.DecodeFromBytes( /*@ unfolding acc(s.NonInitMem(), _) in @*/ s.Raw /*@, underlyingBuf, pathLen @*/)
 	return s, err
 }
 
@@ -159,14 +197,17 @@ func (s *Raw) Reverse() (p path.Path, err error) {
 //@ requires s.Mem()
 //@ ensures  err == nil ==> d.Mem()
 //@ ensures  err == nil ==> s.NonInitMem()
-//@ ensures  err == nil ==> old(s.GetUnderlyingBuf()) === (unfolding acc(s.NonInitMem(), _) in s.Raw)
+//@ ensures  err == nil ==> unfolding acc(s.NonInitMem(), _) in s.Raw === old(unfolding acc(s.Mem(), _) in s.Raw)
+//@ ensures  err == nil ==> unfolding acc(s.NonInitMem(), _) in s.underlyingBuf === old(unfolding acc(s.Mem(), _) in s.underlyingBuf)
+//@ ensures  err == nil ==> unfolding acc(s.NonInitMem(), _) in s.dataLen === old(unfolding acc(s.Mem(), _) in s.dataLen)
 //@ ensures  err == nil ==> d.GetUnderlyingBuf() === old(s.GetUnderlyingBuf())
 //@ ensures  err != nil ==> (s.Mem() && err.ErrorMem())
 //@ decreases
 func (s *Raw) ToDecoded() (d *Decoded, err error) {
+	//@ underlyingBuf := s.GetUnderlyingBuf()
 	//@ unfold s.Mem()
+	//@ assert underlyingBuf === s.underlyingBuf
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
-	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	//@ ghost slices.SplitByIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
 	//@ requires acc(&s.Raw)
 	//@ requires slices.AbsSlice_Bytes(s.Raw, 0, MetaLen)
@@ -181,6 +222,7 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(s.Raw, 0, MetaLen, writePerm)
 	//@ )
+	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
 		//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
@@ -188,9 +230,6 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 		//@ fold s.Mem()
 		return nil, err
 	}
-	//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
-	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
-	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ ensures decoded.NonInitMem()
 	//@ decreases
 	//@ outline(
@@ -198,11 +237,18 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 	//@ fold decoded.Base.NonInitMem()
 	//@ fold decoded.NonInitMem()
 	//@ )
-	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
+	//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
+	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
+	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
+	//@ ghost slices.Unslice_Bytes(s.underlyingBuf, 0, s.dataLen, writePerm)
+	//@ ghost slices.CombineAtIndex_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf), s.dataLen, writePerm)
+	if err := decoded.DecodeFromBytes(s.Raw /*@, s.underlyingBuf, s.dataLen @*/); err != nil {
 		//@ fold s.Mem()
 		return nil, err
 	}
 	//@ ghost if err == nil {
+	//@   assert decoded.GetUnderlyingBuf() === s.underlyingBuf
+	//@   assert underlyingBuf === s.underlyingBuf
 	//@   unfold s.Base.Mem()
 	//@   fold s.Base.NonInitMem()
 	//@   fold s.NonInitMem()

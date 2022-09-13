@@ -176,7 +176,31 @@ func (d *Decoded) ExchangeBufMem(buf []byte) {
 	}
 }
 
-(*Decoded) implements path.Path
+(*Decoded) implements path.Path {
+	(p *Decoded) SerializeTo(b, buf []byte, l int) (e error) {
+		e = p.SerializeTo(b, buf, l)
+	}
+
+	(p *Decoded) DecodeFromBytes(b, buf []byte, l int) (e error) {
+		e = p.DecodeFromBytes(b, buf, l)
+	}
+
+	(p *Decoded) Reverse() (r path.Path, e error) {
+		r, e = p.Reverse()
+	}
+
+	(p *Decoded) DowngradePerm(buf []byte) {
+		p.DowngradePerm(buf)
+	}
+
+	pure (p *Decoded) Len() int {
+		return p.Len()
+	}
+
+	pure (p *Decoded) Type() path.Type {
+		return p.Type()
+	}
+}
 
 requires acc(d.NoBufMem(buf), _)
 decreases

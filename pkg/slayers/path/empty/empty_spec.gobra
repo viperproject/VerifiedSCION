@@ -23,8 +23,7 @@ import (
 )
 
 pred (e Path) Mem() {
-	len(e.underlyingBuf) == 0 &&
-		slices.AbsSlice_Bytes(e.underlyingBuf, 0, 0)
+	slices.AbsSlice_Bytes(e.underlyingBuf, 0, len(e.underlyingBuf))
 }
 
 pred (e Path) NonInitMem() {
@@ -38,14 +37,12 @@ pred (e Path) PostBufXchange(buf []byte) {
 ghost
 requires p.Mem()
 requires p.GetUnderlyingBuf() === buf
-ensures  len(buf) == 0
-ensures  slices.AbsSlice_Bytes(buf, 0, 0)
-ensures  slices.AbsSlice_Bytes(buf, 0, 0) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf))
 decreases
 func (p Path) ExchangeBufMem(buf []byte) {
 	unfold p.Mem()
-	assert len(buf) == 0
-	package slices.AbsSlice_Bytes(buf, 0, 0) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf)) {
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf)) {
 		fold p.Mem()
 		fold p.PostBufXchange(buf)
 	}
@@ -62,7 +59,6 @@ func (p Path) UnfoldPostBufXchange(buf []byte) {
 
 ghost
 requires acc(p.Mem(), _)
-ensures len(buf) == 0
 decreases
 pure func (p Path) GetUnderlyingBuf() (buf []byte) {
 	return unfolding acc(p.Mem(), _) in p.underlyingBuf
@@ -72,9 +68,9 @@ ghost
 requires e.Mem()
 requires buf === e.GetUnderlyingBuf()
 ensures  e.NonInitMem()
-ensures  slices.AbsSlice_Bytes(buf, 0, 0)
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
-func (e Path) DowngradePerm(ghost buf []byte) {
+func (e Path) DowngradePerm(buf []byte) {
 	unfold e.Mem()
 	fold e.NonInitMem()
 }

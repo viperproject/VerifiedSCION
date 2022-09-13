@@ -23,7 +23,11 @@ import (
 
 /** rawPath spec **/
 pred (r *rawPath) Mem() {
-	acc(r) && slices.AbsSlice_Bytes(r.raw, 0, len(r.raw))
+	acc(r) &&
+		0 <= r.dataLen && r.dataLen <= len(r.underlyingBuf) &&
+		r.raw === r.underlyingBuf[:r.dataLen] &&
+		slices.AbsSlice_Bytes(r.raw, 0, len(r.raw)) &&
+		slices.AbsSlice_Bytes(r.underlyingBuf, r.dataLen, len(r.underlyingBuf))
 }
 
 pred (r *rawPath) NonInitMem() {
@@ -36,9 +40,10 @@ pred (r *rawPath) PostBufXchange(buf []byte) {
 
 ghost
 requires acc(r.Mem(), _)
+ensures unfolding acc(r.Mem(), _) in (buf === r.underlyingBuf && buf[:r.dataLen] === r.raw)
 decreases
 pure func (r *rawPath) GetUnderlyingBuf() (buf []byte) {
-	return unfolding acc(r.Mem(), _) in r.raw
+	return unfolding acc(r.Mem(), _) in r.underlyingBuf
 }
 
 ghost
@@ -49,15 +54,19 @@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.R
 decreases
 func (r *rawPath) ExchangeBufMem(buf []byte) {
 	unfold r.Mem()
-	assert buf === r.raw
+	ghost slices.Unslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
+	ghost slices.CombineAtIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
 	package  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf)) {
 		assert acc(&r.raw)
-		assert buf === r.raw
+		assert acc(&r.underlyingBuf)
+		assert acc(&r.dataLen)
+		assert buf === r.underlyingBuf
+		assert r.underlyingBuf[:r.dataLen] === r.raw
+		ghost slices.SplitByIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
+		ghost slices.Reslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
 		fold r.Mem()
 		fold r.PostBufXchange(buf)
 	}
-	assert  slices.AbsSlice_Bytes(buf, 0, len(buf))
-	assert  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf))
 }
 
 
@@ -79,7 +88,10 @@ ensures  p.NonInitMem()
 decreases
 func (p *rawPath) DowngradePerm(ghost buf []byte) {
 	unfold p.Mem()
-	assert p.raw === buf
+	assert p.underlyingBuf === buf
+	assert p.raw === buf[:p.dataLen]
+	ghost slices.Unslice_Bytes(p.underlyingBuf, 0, p.dataLen, writePerm)
+	ghost slices.CombineAtIndex_Bytes(p.underlyingBuf, 0, len(p.underlyingBuf), p.dataLen, writePerm)
 	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
 	fold p.NonInitMem()
 }

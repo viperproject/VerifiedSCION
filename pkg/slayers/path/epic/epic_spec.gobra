@@ -19,6 +19,7 @@ package epic
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (p *Path) NonInitMem() {
@@ -38,6 +39,20 @@ pred (p *Path) Mem() {
 		p.ScionPath.GetUnderlyingBuf() === p.underlyingBuf[MetadataLen:]
 }
 
+pred (o *Path) PostBufXchange(buf []byte) {
+	acc(o.Mem(), definitions.ReadL1) && o.GetUnderlyingBuf() === buf
+}
+
+ghost
+requires p.PostBufXchange(buf)
+ensures  acc(p.Mem(), definitions.ReadL1)
+ensures  p.GetUnderlyingBuf() === buf
+func (p *Path) UnfoldPostBufXchange(buf []byte) {
+	unfold p.PostBufXchange(buf)
+	assert acc(p.Mem(), definitions.ReadL1)
+	assert p.GetUnderlyingBuf() === buf
+}
+
 ghost
 requires acc(p.Mem(), _)
 decreases
@@ -49,7 +64,7 @@ ghost
 requires p.Mem()
 requires p.GetUnderlyingBuf() === buf
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (p.Mem() && p.GetUnderlyingBuf() === buf)
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf))
 decreases
 func (p *Path) ExchangeBufMem(buf []byte) {
 	unfold p.Mem()
@@ -57,30 +72,34 @@ func (p *Path) ExchangeBufMem(buf []byte) {
 	assert slices.AbsSlice_Bytes(buf, 0, MetadataLen)
 	ghost scionPath := p.ScionPath
 	scionPath.ExchangeBufMem(buf[MetadataLen:])
-	assert slices.AbsSlice_Bytes(buf[MetadataLen:], 0, len(buf[MetadataLen:])) --* scionPath.Mem()
 	ghost slices.Unslice_Bytes(buf, MetadataLen, len(buf), writePerm)
 	ghost slices.CombineAtIndex_Bytes(buf, 0, len(buf), MetadataLen, writePerm)
 	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* p.Mem() {
-		// TODO test this and report to joao
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf)) {
 		assert acc(&p.underlyingBuf)
+		assert acc(&p.ScionPath)
 		ghost slices.SplitByIndex_Bytes(buf, 0, len(buf), MetadataLen, writePerm)
 		ghost slices.Reslice_Bytes(buf, MetadataLen, len(buf), writePerm)
-		apply slices.AbsSlice_Bytes(buf[MetadataLen:], 0, len(buf[MetadataLen:])) --* scionPath.Mem()
+		apply slices.AbsSlice_Bytes(buf[MetadataLen:], 0, len(buf[MetadataLen:])) --* (acc(scionPath.Mem(), definitions.ReadL1) && scionPath.PostBufXchange(buf[MetadataLen:]))
+		unfold scionPath.PostBufXchange(buf[MetadataLen:])
 		assert MetadataLen <= len(p.underlyingBuf)
 		assert p.underlyingBuf[MetadataLen:] === p.ScionPath.GetUnderlyingBuf()
 		fold p.Mem()
+		fold p.PostBufXchange(buf)
 	}
 }
 
-(*Path) implements path.Path
-
 ghost
 requires p.Mem()
+requires buf === p.GetUnderlyingBuf()
 ensures  p.NonInitMem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
-func (p *Path) DowngradePerm() {
+func (p *Path) DowngradePerm(buf []byte) {
 	unfold p.Mem()
+	p.ScionPath.DowngradePerm(buf[MetadataLen:])
+	slices.Unslice_Bytes(buf, MetadataLen, len(buf), writePerm)
+	slices.CombineAtIndex_Bytes(buf, 0, len(buf), MetadataLen, writePerm)
 	fold  p.NonInitMem()
 }
 
@@ -106,4 +125,30 @@ ensures  r == (unfolding acc(p.Mem(), _) in p.ScionPath != nil)
 decreases
 func (p *Path) hasScionPath() (r bool) {
 	return unfolding acc(p.Mem(), _) in p.ScionPath != nil
+}
+
+(*Path) implements path.Path {
+	(p *Path) SerializeTo(b, buf []byte, l int) (e error) {
+		e = p.SerializeTo(b, buf, l)
+	}
+
+	(p *Path) DecodeFromBytes(b, buf []byte, l int) (e error) {
+		e = p.DecodeFromBytes(b, buf, l)
+	}
+
+	(p *Path) Reverse() (r path.Path, e error) {
+		r, e = p.Reverse()
+	}
+
+	(p *Path) DowngradePerm(buf []byte) {
+		p.DowngradePerm(buf)
+	}
+
+	pure (p *Path) Len() int {
+		return p.Len()
+	}
+
+	pure (p *Path) Type() path.Type {
+		return p.Type()
+	}
 }
