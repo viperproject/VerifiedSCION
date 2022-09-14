@@ -26,6 +26,17 @@ pred (e Path) Mem() {
 	slices.AbsSlice_Bytes(e.underlyingBuf, 0, len(e.underlyingBuf))
 }
 
+// NOTE the way the underlying buffer is set for Empty.Path
+// is different from the others. Because Path is used as a
+// value receiver, setting e.underlyingBuf explicitly will
+// not work. This is because Gobra does not currently support
+// ghost struct fields.
+requires slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  e.Mem()
+ensures  e.GetUnderlyingBuf() === buf
+decreases
+func (e Path) SetUnderlyingBuf(buf []byte)
+
 pred (e Path) NonInitMem() {
 	true
 }
