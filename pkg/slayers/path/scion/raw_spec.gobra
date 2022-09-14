@@ -16,40 +16,73 @@
 
 package scion
 
-import "github.com/scionproto/scion/pkg/slayers/path"
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+pred (s *Raw) NonInitMem() {
+	acc(&s.Raw) &&
+		acc(&s.underlyingBuf) && // Ghost
+		acc(&s.dataLen) && // Ghost
+		s.Base.NonInitMem()
+}
+
+pred (s *Raw) Mem() {
+	s.Base.Mem() &&
+		acc(&s.Raw) &&
+		acc(&s.underlyingBuf) && // Ghost
+		acc(&s.dataLen) && // Ghost
+		0 <= s.dataLen && s.dataLen <= len(s.underlyingBuf) &&
+		s.Raw === s.underlyingBuf[:s.dataLen] &&
+		slices.AbsSlice_Bytes(s.underlyingBuf, s.dataLen, len(s.underlyingBuf)) &&
+		slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)) &&
+		len(s.Raw) == s.Base.Len()
+}
+
+pred (r *Raw) PostBufXchange(buf []byte) {
+	acc(r.Mem(), definitions.ReadL1) && r.GetUnderlyingBuf() === buf
+}
+
+ghost
+requires r.PostBufXchange(buf)
+ensures  acc(r.Mem(), definitions.ReadL1)
+ensures  r.GetUnderlyingBuf() === buf
+func (r *Raw) UnfoldPostBufXchange(buf []byte) {
+	unfold r.PostBufXchange(buf)
+	assert acc(r.Mem(), definitions.ReadL1)
+	assert r.GetUnderlyingBuf() === buf
+}
 
 ghost
 requires acc(r.Mem(), _)
 decreases
-pure func (r *Raw) GetUnderlyingBuf() (buf []byte)
+pure func (r *Raw) GetUnderlyingBuf() (buf []byte) {
+	return unfolding acc(r.Mem(), _) in r.underlyingBuf
+}
 
 ghost
 requires r.Mem()
 requires r.GetUnderlyingBuf() === buf
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf))
 decreases
-func (r *Raw) ExchangeBufMem(buf []byte)
-
-ghost
-preserves r.Mem()
-ensures   r.GetUnderlyingBuf() === buf
-decreases
-func (r *Raw) SetUnderlyingBuf(buf []byte)
-
-
-(*Raw) implements path.Path
-
-pred (s *Raw) NonInitMem() {
-	acc(&s.Raw) && s.Base.NonInitMem()
-}
-
-pred (s *Raw) Mem() {
-	s.Base.Mem() &&
-	acc(&s.Raw) &&
-	len(s.Raw) >= s.Base.Len() &&
-	slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
+func (r *Raw) ExchangeBufMem(buf []byte) {
+	unfold r.Mem()
+	ghost slices.Unslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
+	ghost slices.CombineAtIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf)) {
+		assert acc(&r.Raw)
+		assert acc(&r.underlyingBuf)
+		assert acc(&r.dataLen)
+		assert r.Raw === r.underlyingBuf[:r.dataLen]
+		ghost slices.SplitByIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
+		ghost slices.Reslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
+		assert slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
+		fold r.Mem()
+		fold r.PostBufXchange(buf)
+	}
 }
 
 /**
@@ -65,6 +98,32 @@ ensures  l >= 0
 decreases
 func (s *Raw) Len() (l int) {
 	return unfolding acc(s.Mem(), _) in s.Base.Len()
+}
+
+(*Raw) implements path.Path {
+	(p *Raw) SerializeTo(b, buf []byte, l int) (e error) {
+		e = p.SerializeTo(b, buf, l)
+	}
+
+	(p *Raw) DecodeFromBytes(b, buf []byte, l int) (e error) {
+		e = p.DecodeFromBytes(b, buf, l)
+	}
+
+	(p *Raw) Reverse() (r path.Path, e error) {
+		r, e = p.Reverse()
+	}
+
+	(p *Raw) DowngradePerm(buf []byte) {
+		p.DowngradePerm(buf)
+	}
+
+	pure (p *Raw) Len() int {
+		return p.Len()
+	}
+
+	pure (p *Raw) Type() path.Type {
+		return p.Type()
+	}
 }
 
 /**
@@ -83,10 +142,15 @@ func (s *Raw) Type() (t path.Type) {
 
 ghost
 requires s.Mem()
+requires buf === s.GetUnderlyingBuf()
 ensures  s.NonInitMem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
-func (s *Raw) DowngradePerm() {
+func (s *Raw) DowngradePerm(buf []byte) {
 	unfold s.Mem()
+	ghost slices.Unslice_Bytes(s.underlyingBuf, 0, s.dataLen, writePerm)
+	ghost slices.CombineAtIndex_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf), s.dataLen, writePerm)
+	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
 	unfold s.Base.Mem()
 	fold s.Base.NonInitMem()
 	fold s.NonInitMem()

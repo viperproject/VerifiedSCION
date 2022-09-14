@@ -16,7 +16,10 @@
 
 package scion
 
-import "github.com/scionproto/scion/pkg/slayers/path"
+import (
+  "github.com/scionproto/scion/pkg/slayers/path"
+  "github.com/scionproto/scion/verification/utils/slices"
+)
 
 func testAllocateNonInitDecoded() {
   d := &Decoded{}
@@ -27,5 +30,6 @@ func testAllocateNonInitDecoded() {
 func testAllocateDecoded() {
   d := &Decoded{}
   fold d.Base.Mem()
+  fold slices.AbsSlice_Bytes(d.underlyingBuf, 0, len(d.underlyingBuf))
   fold d.Mem()
 }

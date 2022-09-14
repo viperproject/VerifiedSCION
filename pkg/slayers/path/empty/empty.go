@@ -19,6 +19,7 @@ package empty
 import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // PathLen is the length of a serialized empty path in bytes.
@@ -56,30 +57,45 @@ func RegisterPath() {
 
 // Path encodes an empty path. An empty path is a special path that takes zero
 // bytes on the wire and is used for AS internal communication.
-type Path struct{}
+type Path struct {
+	//@ underlyingBuf []byte
+}
 
-//@ ensures len(r) != 0 ==> (e != nil && e.ErrorMem())
-//@ ensures len(r) == 0 ==> e == nil
-//@ ensures o.Mem()
-//@ ensures e == nil ==> o.GetUnderlyingBuf() === r
+//@ requires len(r) == dataLen
+//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+//@ ensures  dataLen == 0 ==> e == nil
+//@ ensures  dataLen == 0 ==> o.Mem()
+//@ ensures  dataLen == 0 ==> underlyingBuf === o.GetUnderlyingBuf()
+//@ ensures  dataLen != 0 ==> e != nil
+//@ ensures  dataLen != 0 ==> e.ErrorMem()
+//@ ensures  dataLen != 0 ==> o.NonInitMem()
+//@ ensures  dataLen != 0 ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 //@ decreases
-func (o Path) DecodeFromBytes(r []byte) (e error) {
-	//@ fold o.Mem()
+func (o Path) DecodeFromBytes(r []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error) {
 	if len(r) != 0 {
+		//@ fold o.NonInitMem()
 		// (VerifiedSCION) TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
+		//@ assert dataLen != 0
 		return serrors.New("decoding an empty path", "len", int(len(r)))
 	}
-	//@ o.SetUnderlyingBuf(r)
+	//@ assert dataLen == 0
+	//@ o.underlyingBuf = underlyingBuf
+	//@ fold o.Mem()
+	//@ assert o.Mem()
+	//
+	// TODO FIXME ask Joao, probably something with value
+	// receiver you aren't understanding
+	//@ assume false
 	return nil
 }
 
 //@ ensures e == nil
 //@ decreases
-func (o Path) SerializeTo(b []byte) (e error) {
+func (o Path) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error) {
 	return nil
 }
 
-//@ ensures p == o
+//@ ensures p === o
 //@ ensures e == nil
 //@ decreases
 func (o Path) Reverse() (p path.Path, e error) {

@@ -18,43 +18,61 @@ package empty
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
 pred (e Path) Mem() {
-	true
+	slices.AbsSlice_Bytes(e.underlyingBuf, 0, len(e.underlyingBuf))
 }
 
 pred (e Path) NonInitMem() {
 	true
 }
 
+pred (e Path) PostBufXchange(buf []byte) {
+	acc(e.Mem(), definitions.ReadL1) && e.GetUnderlyingBuf() === buf
+}
+
 ghost
 requires p.Mem()
 requires p.GetUnderlyingBuf() === buf
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* p.Mem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf))
 decreases
-func (p Path) ExchangeBufMem(buf []byte)
+func (p Path) ExchangeBufMem(buf []byte) {
+	unfold p.Mem()
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf)) {
+		fold p.Mem()
+		fold p.PostBufXchange(buf)
+	}
+}
+
+ghost
+requires p.PostBufXchange(buf)
+ensures  acc(p.Mem(), definitions.ReadL1) && p.GetUnderlyingBuf() === buf
+func (p Path) UnfoldPostBufXchange(buf []byte) {
+	unfold p.PostBufXchange(buf)
+	assert acc(p.Mem(), definitions.ReadL1)
+	assert p.GetUnderlyingBuf() === buf
+}
 
 ghost
 requires acc(p.Mem(), _)
 decreases
-pure func (p Path) GetUnderlyingBuf() (buf []byte)
-
-ghost
-preserves p.Mem()
-ensures   p.GetUnderlyingBuf() === buf
-decreases
-func (p Path) SetUnderlyingBuf(buf []byte)
-
-Path implements path.Path
+pure func (p Path) GetUnderlyingBuf() (buf []byte) {
+	return unfolding acc(p.Mem(), _) in p.underlyingBuf
+}
 
 ghost
 requires e.Mem()
+requires buf === e.GetUnderlyingBuf()
 ensures  e.NonInitMem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
-func (e Path) DowngradePerm() {
+func (e Path) DowngradePerm(buf []byte) {
 	unfold e.Mem()
 	fold e.NonInitMem()
 }
+
+Path implements path.Path

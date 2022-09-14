@@ -16,6 +16,8 @@
 
 package onehop
 
+import "github.com/scionproto/scion/verification/utils/slices"
+
 func testAllocateNonInitMem() {
 	p := &Path{}
 	fold p.NonInitMem()
@@ -25,5 +27,6 @@ func canAllocatePath() {
 	p := &Path{}
 	fold p.FirstHop.Mem()
 	fold p.SecondHop.Mem()
+	fold slices.AbsSlice_Bytes(p.underlyingBuf, 0, len(p.underlyingBuf))
 	fold p.Mem()
 }

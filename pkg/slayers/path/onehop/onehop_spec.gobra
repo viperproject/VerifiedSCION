@@ -19,6 +19,7 @@ package onehop
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (o *Path) NonInitMem() {
@@ -26,14 +27,35 @@ pred (o *Path) NonInitMem() {
 }
 
 pred (o *Path) Mem() {
-	acc(&o.Info) && o.FirstHop.Mem() && o.SecondHop.Mem()
+	// underlyingBuf can only be treated as a ghost field.
+	acc(&o.underlyingBuf) &&
+		slices.AbsSlice_Bytes(o.underlyingBuf, 0, len(o.underlyingBuf)) &&
+		acc(&o.Info) &&
+		o.FirstHop.Mem() &&
+		o.SecondHop.Mem()
+}
+
+pred (o *Path) PostBufXchange(buf []byte) {
+	acc(o.Mem(), definitions.ReadL1) && o.GetUnderlyingBuf() === buf
+}
+
+ghost
+requires p.PostBufXchange(buf)
+ensures  acc(p.Mem(), definitions.ReadL1)
+ensures  p.GetUnderlyingBuf() === buf
+func (p *Path) UnfoldPostBufXchange(buf []byte) {
+	unfold p.PostBufXchange(buf)
+	assert acc(p.Mem(), definitions.ReadL1)
+	assert p.GetUnderlyingBuf() === buf
 }
 
 ghost
 requires p.Mem()
+requires buf === p.GetUnderlyingBuf()
 ensures  p.NonInitMem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
-func (p *Path) DowngradePerm() {
+func (p *Path) DowngradePerm(buf []byte) {
 	unfold p.Mem()
 	unfold p.FirstHop.Mem()
 	unfold p.SecondHop.Mem()
@@ -43,36 +65,41 @@ func (p *Path) DowngradePerm() {
 ghost
 requires acc(o.Mem(), _)
 decreases
-pure func (o *Path) GetUnderlyingBuf() (buf []byte)
+pure func (o *Path) GetUnderlyingBuf() (buf []byte) {
+	return unfolding acc(o.Mem(), _) in o.underlyingBuf
+}
 
 ghost
 requires o.Mem()
+requires buf === o.GetUnderlyingBuf()
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* o.Mem()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(o.Mem(), definitions.ReadL1) && o.PostBufXchange(buf))
 decreases
-func (o *Path) ExchangeBufMem() (buf []byte)
-
-ghost
-preserves o.Mem()
-ensures   o.GetUnderlyingBuf() === buf
-decreases
-func (o *Path) SetUnderlyingBuf(buf []byte)
+func (o *Path) ExchangeBufMem(buf []byte) {
+	unfold o.Mem()
+	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(o.Mem(), definitions.ReadL1) && o.PostBufXchange(buf)) {
+		assert acc(&o.underlyingBuf)
+		fold o.Mem()
+		fold o.PostBufXchange(buf)
+	}
+}
 
 (*Path) implements path.Path {
-	(p *Path) SerializeTo(b []byte) (e error) {
-		e = p.SerializeTo(b)
+	(p *Path) SerializeTo(b, buf []byte, l int) (e error) {
+		e = p.SerializeTo(b, buf, l)
 	}
 
-	(p *Path) DecodeFromBytes(b []byte) (e error) {
-		e = p.DecodeFromBytes(b)
+	(p *Path) DecodeFromBytes(b, buf []byte, l int) (e error) {
+		e = p.DecodeFromBytes(b, buf, l)
 	}
 
 	(p *Path) Reverse() (r path.Path, e error) {
 		r, e = p.Reverse()
 	}
 
-	(p *Path) DowngradePerm() {
-		p.DowngradePerm()
+	(p *Path) DowngradePerm(buf []byte) {
+		p.DowngradePerm(buf)
 	}
 
 	pure (p *Path) Len() int {
@@ -86,6 +113,7 @@ func (o *Path) SetUnderlyingBuf(buf []byte)
 
 ghost
 requires acc(o)
+requires slices.AbsSlice_Bytes(o.underlyingBuf, 0, len(o.underlyingBuf))
 ensures  o.Mem()
 decreases
 func FoldPathMem(o *Path) {

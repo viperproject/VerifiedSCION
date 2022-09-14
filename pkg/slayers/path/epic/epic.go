@@ -73,6 +73,9 @@ func RegisterPath() {
 
 // Path denotes the EPIC path type header.
 type Path struct {
+	// (VerifiedSCION) keeping a reference to the inital buffer from which
+	// the Path was decoded will be crucial to recovering memory.
+	//@ underlyingBuf []byte
 	PktID     PktID
 	PHVF      []byte
 	LHVF      []byte
@@ -82,6 +85,9 @@ type Path struct {
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
 //@ preserves p.Mem()
+//@ preserves len(b) == dataLen
+//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ preserves p.GetUnderlyingBuf() === underlyingBuf
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures   r != nil ==> r.ErrorMem()
 //@ ensures   !old(p.hasScionPath()) ==> r != nil
@@ -89,22 +95,20 @@ type Path struct {
 //@ ensures   old(p.getPHVFLen()) != HVFLen ==> r != nil
 //@ ensures   old(p.getLHVFLen()) != HVFLen ==> r != nil
 //@ decreases
-func (p *Path) SerializeTo(b []byte) (r error) {
+func (p *Path) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (r error) {
 	if len(b) < p.Len() {
 		return serrors.New("buffer too small to serialize path.", "expected", int(p.Len()),
 			"actual", int(len(b)))
 	}
-	//@ unfold p.Mem()
+	//@ unfold acc(p.Mem(), definitions.ReadL1)
+	//@ defer fold acc(p.Mem(), definitions.ReadL1)
 	if len(p.PHVF) != HVFLen {
-		//@ defer fold p.Mem()
 		return serrors.New("invalid length of PHVF", "expected", int(HVFLen), "actual", int(len(p.PHVF)))
 	}
 	if len(p.LHVF) != HVFLen {
-		//@ defer fold p.Mem()
 		return serrors.New("invalid length of LHVF", "expected", int(HVFLen), "actual", int(len(p.LHVF)))
 	}
 	if p.ScionPath == nil {
-		//@ fold p.Mem()
 		return serrors.New("SCION path is nil")
 	}
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), PktIDLen, writePerm)
@@ -113,65 +117,66 @@ func (p *Path) SerializeTo(b []byte) (r error) {
 	//@ ghost slices.Unslice_Bytes(b, 0, PktIDLen, writePerm)
 	//@ ghost slices.SplitByIndex_Bytes(b, PktIDLen, len(b), PktIDLen+HVFLen, writePerm)
 	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen, PktIDLen + HVFLen)
-	//@ preserves acc(&p.PHVF)
-	//
-	//@ preserves slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
-	// preserves forall i int :: 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i])
-	//
+	//@ preserves acc(&p.PHVF, definitions.ReadL2)
+	//@ preserves acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL2)
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
 	//@ assert len(b[PktIDLen:(PktIDLen+HVFLen)]) == HVFLen
 	//@ unfold slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen)
-	//@ unfold acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL1)
-	copy(b[PktIDLen:(PktIDLen+HVFLen)], p.PHVF /*@, definitions.ReadL1 @*/)
+	//@ unfold acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL2)
+	copy(b[PktIDLen:(PktIDLen+HVFLen)], p.PHVF /*@, definitions.ReadL3 @*/)
 	//@ fold slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen)
-	//@ fold acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL1)
+	//@ fold acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL2)
 	//@ ghost slices.Unslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
 	//@ )
 	//@ ghost slices.CombineAtIndex_Bytes(b, 0, PktIDLen+HVFLen, PktIDLen, writePerm)
 	//@ ghost slices.SplitByIndex_Bytes(b, PktIDLen+HVFLen, len(b), MetadataLen, writePerm)
 	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen+HVFLen, MetadataLen)
-	//@ preserves acc(&p.LHVF)
-	//
-	//@ preserves slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
-	// preserves forall i int :: 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i])
-	//
+	//@ preserves acc(&p.LHVF, definitions.ReadL1)
+	//@ preserves acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL2)
 	//@ decreases
 	//@ outline(
 	//@ ghost slices.Reslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
 	//@ assert len(b[(PktIDLen+HVFLen):MetadataLen]) == HVFLen
-	//@ unfold acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL1)
+	//@ unfold acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL3)
 	//@ unfold slices.AbsSlice_Bytes(b[(PktIDLen+HVFLen):MetadataLen], 0, HVFLen)
-	copy(b[(PktIDLen+HVFLen):MetadataLen], p.LHVF /*@, definitions.ReadL1 @*/)
+	copy(b[(PktIDLen+HVFLen):MetadataLen], p.LHVF /*@, definitions.ReadL3 @*/)
 	//@ fold slices.AbsSlice_Bytes(b[(PktIDLen+HVFLen):MetadataLen], 0, HVFLen)
-	//@ fold acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL1)
+	//@ fold acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL3)
 	//@ ghost slices.Unslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
 	//@ )
 	//@ ghost slices.CombineAtIndex_Bytes(b, 0, MetadataLen, PktIDLen+HVFLen, writePerm)
+	//@ assert slices.AbsSlice_Bytes(b, 0, MetadataLen)
+	//@ assert slices.AbsSlice_Bytes(b, MetadataLen, len(b))
 	//@ ghost slices.Reslice_Bytes(b, MetadataLen, len(b), writePerm)
-	//@ defer fold p.Mem()
+	//@ unfold acc(p.Mem(), definitions.ReadL1)
+	//@ defer fold acc(p.Mem(), definitions.ReadL1)
 	//@ ghost defer slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
 	//@ ghost defer slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
-	return p.ScionPath.SerializeTo(b[MetadataLen:])
+	return p.ScionPath.SerializeTo(b[MetadataLen:] /*@, underlyingBuf[MetadataLen:], dataLen - MetadataLen @*/)
 }
 
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
 // otherwise SerializeTo will return nil.
 //@ requires p.NonInitMem()
-//@ requires slices.AbsSlice_Bytes(b, 0, len(b))
+//@ requires 0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ requires len(b) == dataLen
+//@ requires b === underlyingBuf[:dataLen]
+//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 //@ ensures  len(b) < MetadataLen ==> r != nil
 //@ ensures  r == nil ==> p.Mem()
-//@ ensures  r == nil ==> p.GetUnderlyingBuf() === b
-//@ ensures  r == nil ==> slices.AbsSlice_Bytes(b, 0, MetadataLen)
-//@ ensures  r != nil ==> r.ErrorMem()
-//@ ensures  r != nil ==> p.NonInitMem()
-//@ ensures  r != nil ==> slices.AbsSlice_Bytes(b, 0, len(b))
+//@ ensures  r == nil ==> p.GetUnderlyingBuf() === underlyingBuf
+//@ ensures  r != nil ==> p.NonInitMem() && r.ErrorMem()
+//@ ensures  r != nil ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 //@ decreases
-func (p *Path) DecodeFromBytes(b []byte) (r error) {
+func (p *Path) DecodeFromBytes(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (r error) {
 	if len(b) < MetadataLen {
 		return serrors.New("EPIC Path raw too short", "expected", int(MetadataLen), "actual", int(len(b)))
 	}
+	//@ ghost slices.SplitByIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
+	//@ ghost slices.Reslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
+	//@ assert slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ assert MetadataLen == PktIDLen + HVFLen + HVFLen
 	//@ unfold p.NonInitMem()
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), PktIDLen, writePerm)
@@ -226,15 +231,24 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	p.ScionPath = &scion.Raw{}
 	//@ fold p.ScionPath.Base.NonInitMem()
 	//@ fold p.ScionPath.NonInitMem()
-	//@ ghost slices.Reslice_Bytes(b, MetadataLen, len(b), writePerm)
-	ret := p.ScionPath.DecodeFromBytes(b[MetadataLen:])
+	//@ ghost slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
+	//@ assert b === underlyingBuf[:dataLen]
+	//@ assert MetadataLen <= dataLen
+	//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
+	//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
+	//@ ghost slices.SplitByIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), MetadataLen, writePerm)
+	//@ assert b[MetadataLen:] === underlyingBuf[MetadataLen:dataLen]
+	//@ ghost slices.Reslice_Bytes(underlyingBuf, MetadataLen, len(underlyingBuf), writePerm)
+	ret := p.ScionPath.DecodeFromBytes(b[MetadataLen:] /*@, underlyingBuf[MetadataLen:], dataLen - MetadataLen @*/)
 	//@ ghost if ret == nil {
+	//@   assert slices.AbsSlice_Bytes(underlyingBuf, 0, MetadataLen)
+	//@   p.underlyingBuf = underlyingBuf
+	//@   assert slices.AbsSlice_Bytes(p.underlyingBuf, 0, MetadataLen)
 	//@   fold p.Mem()
-	//@   ghost p.SetUnderlyingBuf(b)
 	//@ } else {
+	//@   ghost slices.Unslice_Bytes(underlyingBuf, MetadataLen, len(underlyingBuf), writePerm)
+	//@   ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), MetadataLen, writePerm)
 	//@   fold p.NonInitMem()
-	//@   ghost slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
-	//@   ghost slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
 	//@ }
 	return ret
 }
@@ -242,7 +256,9 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 // Reverse reverses the EPIC path. In particular, this means that the SCION path type subheader
 // is reversed.
 //@ requires p.Mem()
+//@ ensures  r == nil ==> ret != nil
 //@ ensures  r == nil ==> ret.Mem()
+//@ ensures  r == nil ==> ret.GetUnderlyingBuf() === old(p.GetUnderlyingBuf())
 //@ ensures  r == nil ==> ret != nil
 //@ ensures  r != nil ==> r.ErrorMem()
 //@ decreases
@@ -263,6 +279,9 @@ func (p *Path) Reverse() (ret path.Path, r error) {
 		return nil, serrors.New("reversed path of type scion.Raw must not change type")
 	}
 	//@ assert ScionPath.Mem()
+	// TODO FIXME this assumption shouldn't be necessary
+	//@ assume ScionPath != nil
+	//@ assert ScionPath != nil
 	p.ScionPath = ScionPath
 	//@ fold p.Mem()
 	return p, nil
