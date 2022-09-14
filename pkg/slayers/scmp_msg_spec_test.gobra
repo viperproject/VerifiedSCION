@@ -1,0 +1,14 @@
+// +gobra
+
+package slayers
+
+import (
+	"github.com/google/gopacket"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+func test() {
+	b := &SCMPExternalInterfaceDown{}
+	fold b.BaseLayer.Mem()
+	fold b.
+}

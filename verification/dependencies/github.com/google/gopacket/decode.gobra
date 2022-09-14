@@ -32,6 +32,7 @@ var NilDecodeFeedback DecodeFeedback = nilDecodeFeedback{}
 
 type PacketBuilder interface {
 	DecodeFeedback
+	pred Mem()
 
 	requires l.Mem()
 	preserves Mem()
@@ -66,7 +67,9 @@ type PacketBuilder interface {
 	requires Mem()
 	requires next.Mem()
 	ensures Mem()
-	NextDecoder(next Decoder) error
+	ensures err != nil ==> err.ErrorMem()
+	decreases
+	NextDecoder(next Decoder) (err error)
 
 	preserves Mem()
 	decreases
@@ -80,6 +83,7 @@ type PacketBuilder interface {
 type Decoder interface {
 	pred Mem()
 
+	requires acc(LayerTypesMem(), _)
 	requires slices.AbsSlice_Bytes(b, 0, len(b))
 	preserves Mem()
 	preserves p.Mem()
