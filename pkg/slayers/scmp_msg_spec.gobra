@@ -46,16 +46,257 @@ func (b *SCMPExternalInterfaceDown) LayerPayload() (res []byte) {
 }
 
 
-(*SCMPExternalInterfaceDown) implements gopacket.Layer/* {
-	pure (a *SCMPExternalInterfaceDown) LayerType() gopacket.LayerType {
-		return a.LayerType()
-	}
+(*SCMPExternalInterfaceDown) implements gopacket.Layer
+(*SCMPExternalInterfaceDown) implements gopacket.SerializableLayer
 
-	(a *SCMPExternalInterfaceDown) LayerContents() []byte {
-		return a.LayerContents()
-	}
 
-	(a *SCMPExternalInterfaceDown) LayerPayload() []byte {
-		return a.LayerPayload()
+pred (s *SCMPInternalConnectivityDown) Mem() {
+	acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && s.BaseLayer.Mem()
+}
+
+pred (s *SCMPInternalConnectivityDown) LayerMem() {
+	s.BaseLayer.LayerMem()
+}
+
+pred (s *SCMPInternalConnectivityDown) PayloadMem() {
+	s.BaseLayer.PayloadMem()
+}
+
+requires b.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+decreases
+func (b *SCMPInternalConnectivityDown) LayerContents() (res []byte) {
+	unfold b.LayerMem()
+	res = b.BaseLayer.LayerContents()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.LayerMem()
+		fold b.LayerMem()
 	}
-  }*/
+}
+
+requires b.PayloadMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+decreases
+func (b *SCMPInternalConnectivityDown) LayerPayload() (res []byte) {
+	unfold b.PayloadMem()
+	res = b.BaseLayer.LayerPayload()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.PayloadMem()
+		fold b.PayloadMem()
+	}
+}
+
+
+(*SCMPInternalConnectivityDown) implements gopacket.Layer
+
+
+pred (s *SCMPEcho) Mem() {
+	acc(&s.Identifier) && acc(&s.SeqNumber) && s.BaseLayer.Mem()
+}
+
+pred (s *SCMPEcho) LayerMem() {
+	s.BaseLayer.LayerMem()
+}
+
+pred (s *SCMPEcho) PayloadMem() {
+	s.BaseLayer.PayloadMem()
+}
+
+requires b.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+decreases
+func (b *SCMPEcho) LayerContents() (res []byte) {
+	unfold b.LayerMem()
+	res = b.BaseLayer.LayerContents()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.LayerMem()
+		fold b.LayerMem()
+	}
+}
+
+requires b.PayloadMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+decreases
+func (b *SCMPEcho) LayerPayload() (res []byte) {
+	unfold b.PayloadMem()
+	res = b.BaseLayer.LayerPayload()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.PayloadMem()
+		fold b.PayloadMem()
+	}
+}
+
+
+(*SCMPEcho) implements gopacket.Layer
+
+
+pred (s *SCMPParameterProblem) Mem() {
+	acc(&s.Pointer) && s.BaseLayer.Mem()
+}
+
+pred (s *SCMPParameterProblem) LayerMem() {
+	s.BaseLayer.LayerMem()
+}
+
+pred (s *SCMPParameterProblem) PayloadMem() {
+	s.BaseLayer.PayloadMem()
+}
+
+requires b.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+decreases
+func (b *SCMPParameterProblem) LayerContents() (res []byte) {
+	unfold b.LayerMem()
+	res = b.BaseLayer.LayerContents()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.LayerMem()
+		fold b.LayerMem()
+	}
+}
+
+requires b.PayloadMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+decreases
+func (b *SCMPParameterProblem) LayerPayload() (res []byte) {
+	unfold b.PayloadMem()
+	res = b.BaseLayer.LayerPayload()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.PayloadMem()
+		fold b.PayloadMem()
+	}
+}
+
+
+(*SCMPParameterProblem) implements gopacket.Layer
+
+
+pred (s *SCMPTraceroute) Mem() {
+	acc(&s.Identifier) && acc(&s.Sequence) && acc(&s.IA) && acc(&s.Interface) && s.BaseLayer.Mem()
+}
+
+pred (s *SCMPTraceroute) LayerMem() {
+	s.BaseLayer.LayerMem()
+}
+
+pred (s *SCMPTraceroute) PayloadMem() {
+	s.BaseLayer.PayloadMem()
+}
+
+requires b.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+decreases
+func (b *SCMPTraceroute) LayerContents() (res []byte) {
+	unfold b.LayerMem()
+	res = b.BaseLayer.LayerContents()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.LayerMem()
+		fold b.LayerMem()
+	}
+}
+
+requires b.PayloadMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+decreases
+func (b *SCMPTraceroute) LayerPayload() (res []byte) {
+	unfold b.PayloadMem()
+	res = b.BaseLayer.LayerPayload()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.PayloadMem()
+		fold b.PayloadMem()
+	}
+}
+
+
+(*SCMPTraceroute) implements gopacket.Layer
+
+
+pred (s *SCMPDestinationUnreachable) Mem() {
+	s.BaseLayer.Mem()
+}
+
+pred (s *SCMPDestinationUnreachable) LayerMem() {
+	s.BaseLayer.LayerMem()
+}
+
+pred (s *SCMPDestinationUnreachable) PayloadMem() {
+	s.BaseLayer.PayloadMem()
+}
+
+requires b.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+decreases
+func (b *SCMPDestinationUnreachable) LayerContents() (res []byte) {
+	unfold b.LayerMem()
+	res = b.BaseLayer.LayerContents()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.LayerMem()
+		fold b.LayerMem()
+	}
+}
+
+requires b.PayloadMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+decreases
+func (b *SCMPDestinationUnreachable) LayerPayload() (res []byte) {
+	unfold b.PayloadMem()
+	res = b.BaseLayer.LayerPayload()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.PayloadMem()
+		fold b.PayloadMem()
+	}
+}
+
+
+(*SCMPDestinationUnreachable) implements gopacket.Layer
+
+
+pred (s *SCMPPacketTooBig) Mem() {
+	acc(&s.MTU) && s.BaseLayer.Mem()
+}
+
+pred (s *SCMPPacketTooBig) LayerMem() {
+	s.BaseLayer.LayerMem()
+}
+
+pred (s *SCMPPacketTooBig) PayloadMem() {
+	s.BaseLayer.PayloadMem()
+}
+
+requires b.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+decreases
+func (b *SCMPPacketTooBig) LayerContents() (res []byte) {
+	unfold b.LayerMem()
+	res = b.BaseLayer.LayerContents()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.LayerMem()
+		fold b.LayerMem()
+	}
+}
+
+requires b.PayloadMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res))
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+decreases
+func (b *SCMPPacketTooBig) LayerPayload() (res []byte) {
+	unfold b.PayloadMem()
+	res = b.BaseLayer.LayerPayload()
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.PayloadMem()
+		fold b.PayloadMem()
+	}
+}
+
+
+(*SCMPPacketTooBig) implements gopacket.Layer
