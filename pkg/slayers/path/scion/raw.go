@@ -85,7 +85,6 @@ func (s *Raw) DecodeFromBytes(data []byte /*@, underlyingBuf []byte, dataLen int
 
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-//@ trusted // TODO FIXME
 //@ preserves s.Mem()
 //@ preserves s.GetUnderlyingBuf() === underlyingBuf
 //@ preserves len(b) == dataLen
@@ -101,17 +100,11 @@ func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (
 		return serrors.New("buffer too small", "expected", minLen, "actual", int(len(b)))
 	}
 	//@ unfold s.Mem()
-	// XXX(roosd): This modifies the underlying buffer. Consider writing to data
-	// directly.
 	//@ unfold s.Base.Mem()
 	//@ ghost slices.SplitByIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
-	// requires 0 <= MetaLen && MetaLen <= len(s.Raw)
-	// requires slices.AbsSlice_Bytes(s.Raw, 0, MetaLen)
-	// ensures  slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, len(s.Raw[:MetaLen]))
-	// decreases
-	// outline(
 	//@ ghost slices.Reslice_Bytes(s.Raw, 0, MetaLen, writePerm)
-	// )
+	// XXX(roosd): This modifies the underlying buffer. Consider writing to data
+	// directly.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
 		//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(b), MetaLen, writePerm)
@@ -123,28 +116,34 @@ func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (
 	}
 	//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
-	// TODO FIXME
-	// One issue I see is that we could potentially serialize a
-	// Raw path to itself, however, we cannot have permission
-	// to both b and s.Raw at the same time.
-	//@ assume false // <-- FIXME
+	//@ assert slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
+	//@ ghost overlap := b === underlyingBuf[:dataLen]
+	//@ assert overlap ==> b === s.Raw[:dataLen]
+	//@ assert !overlap ==> slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ preserves acc(&s.Raw, definitions.ReadL1)
+	//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
 	//@ preserves slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ preserves !overlap ==> slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures len(s.Raw) == before(len(s.Raw))
+	//@ ensures s.Raw === before(s.Raw)
 	//@ decreases
 	//@ outline(
-	//@ assume false // TODO FIXME
-	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL1)
+	// NOTE (gavinleroy) b and s.raw could overlap in memory,
+	// however, Gobra is too strict and doesn't allow this.
+	// See:
+	//@ assume false // TODO FIXME
+	//@ ghost if b !== s.Raw {
+	//@   unfold slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ }
 	copy(b, s.Raw /*@ , definitions.ReadL1 @*/)
+	//@ ghost if b !== s.Raw {
+	//@   fold slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ }
 	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL1)
-	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ )
 	//@ fold s.Base.Mem()
 	//@ fold s.Mem()
-	//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
-	//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
 	return nil
 }
 
@@ -237,12 +236,16 @@ func (s *Raw) ToDecoded() (d *Decoded, err error) {
 	//@ fold decoded.Base.NonInitMem()
 	//@ fold decoded.NonInitMem()
 	//@ )
+	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
-	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ ghost slices.Unslice_Bytes(s.underlyingBuf, 0, s.dataLen, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf), s.dataLen, writePerm)
+	//@ assert s.Raw === s.underlyingBuf[:s.dataLen]
+	//@ assert slices.AbsSlice_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf))
 	if err := decoded.DecodeFromBytes(s.Raw /*@, s.underlyingBuf, s.dataLen @*/); err != nil {
+		//@ ghost slices.SplitByIndex_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf), s.dataLen, writePerm)
+		//@ ghost slices.Reslice_Bytes(s.underlyingBuf, 0, s.dataLen, writePerm)
 		//@ fold s.Mem()
 		return nil, err
 	}

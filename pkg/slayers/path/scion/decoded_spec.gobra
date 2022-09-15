@@ -193,6 +193,18 @@ func (d *Decoded) ExchangeBufMem(buf []byte) {
 		p.DowngradePerm(buf)
 	}
 
+	// pure (p *Decoded) GetUnderlyingBuf() []byte {
+	// 	return p.GetUnderlyingBuf()
+	// }
+
+	(p *Decoded) ExchangeBufMem(buf []byte) {
+		p.ExchangeBufMem(buf)
+	}
+
+	(p *Decoded) UnfoldPostBufXchange(buf []byte) {
+		p.UnfoldPostBufXchange(buf)
+	}
+
 	pure (p *Decoded) Len() int {
 		return p.Len()
 	}

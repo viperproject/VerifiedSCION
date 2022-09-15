@@ -150,7 +150,6 @@ type Path interface {
 	//@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(Mem(), definitions.ReadL1) && PostBufXchange(buf))
 	//@ decreases
 	//@ ExchangeBufMem(buf []byte)
-	//
 	//@ ghost
 	//@ requires PostBufXchange(buf)
 	//@ ensures  acc(Mem(), definitions.ReadL1) && GetUnderlyingBuf() === buf

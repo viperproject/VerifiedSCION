@@ -306,6 +306,7 @@ func (s *Decoded) Reverse() (p path.Path, r error) {
 }
 
 // ToRaw tranforms scion.Decoded into scion.Raw.
+//@ trusted // TODO FIXME
 //@ requires s.Mem()
 //@ ensures  err == nil ==> r.Mem()
 //@ ensures  err == nil ==> r.GetUnderlyingBuf() === old(s.GetUnderlyingBuf())

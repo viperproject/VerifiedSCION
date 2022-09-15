@@ -117,6 +117,18 @@ func (s *Raw) Len() (l int) {
 		p.DowngradePerm(buf)
 	}
 
+	// pure (p *Raw) GetUnderlyingBuf() []byte {
+	// 	return p.GetUnderlyingBuf()
+	// }
+
+	(p *Raw) ExchangeBufMem(buf []byte) {
+		p.ExchangeBufMem(buf)
+	}
+
+	(p *Raw) UnfoldPostBufXchange(buf []byte) {
+		p.UnfoldPostBufXchange(buf)
+	}
+
 	pure (p *Raw) Len() int {
 		return p.Len()
 	}
