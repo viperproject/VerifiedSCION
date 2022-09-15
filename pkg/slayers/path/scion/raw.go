@@ -129,17 +129,13 @@ func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (
 	//@ decreases
 	//@ outline(
 	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL1)
-	// NOTE (gavinleroy) b and s.raw could overlap in memory,
+	// NOTE TODO (gavinleroy) b and s.raw could overlap in memory,
 	// however, Gobra is too strict and doesn't allow this.
-	// See:
-	//@ assume false // TODO FIXME
-	//@ ghost if b !== s.Raw {
-	//@   unfold slices.AbsSlice_Bytes(b, 0, len(b))
-	//@ }
+	// See: https://github.com/viperproject/gobra/issues/521
+	//@ assume false
+	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	copy(b, s.Raw /*@ , definitions.ReadL1 @*/)
-	//@ ghost if b !== s.Raw {
-	//@   fold slices.AbsSlice_Bytes(b, 0, len(b))
-	//@ }
+	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL1)
 	//@ )
 	//@ fold s.Base.Mem()
