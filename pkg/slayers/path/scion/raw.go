@@ -89,7 +89,8 @@ func (s *Raw) DecodeFromBytes(data []byte /*@, underlyingBuf []byte, dataLen int
 //@ preserves s.GetUnderlyingBuf() === underlyingBuf
 //@ preserves len(b) == dataLen
 //@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
-//@ preserves b !== underlyingBuf[:dataLen] ==> slices.AbsSlice_Bytes(b, 0, len(b))
+//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// preserves b !== underlyingBuf[:dataLen] ==> slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
 func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (r error) {
@@ -117,26 +118,19 @@ func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (
 	//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
 	//@ assert slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	//@ ghost overlap := b === underlyingBuf[:dataLen]
-	//@ assert overlap ==> b === s.Raw[:dataLen]
-	//@ assert !overlap ==> slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ preserves acc(&s.Raw, definitions.ReadL1)
 	//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
-	//@ preserves slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	//@ preserves !overlap ==> slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ preserves acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL1)
+	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures len(s.Raw) == before(len(s.Raw))
 	//@ ensures s.Raw === before(s.Raw)
 	//@ decreases
 	//@ outline(
-	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL1)
-	// NOTE TODO (gavinleroy) b and s.raw could overlap in memory,
-	// however, Gobra is too strict and doesn't allow this.
-	// See: https://github.com/viperproject/gobra/issues/521
-	//@ assume false
+	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL2)
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
-	copy(b, s.Raw /*@ , definitions.ReadL1 @*/)
+	copy(b, s.Raw /*@ , definitions.ReadL2 @*/)
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
-	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL1)
+	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL2)
 	//@ )
 	//@ fold s.Base.Mem()
 	//@ fold s.Mem()
