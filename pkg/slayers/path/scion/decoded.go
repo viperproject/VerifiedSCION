@@ -306,20 +306,18 @@ func (s *Decoded) Reverse() (p path.Path, r error) {
 }
 
 // ToRaw tranforms scion.Decoded into scion.Raw.
-//@ requires s.Mem()
+//@ preserves s.Mem()
 //@ ensures  err == nil ==> r.Mem()
-//@ ensures  err == nil ==> r.GetUnderlyingBuf() === old(s.GetUnderlyingBuf())
-//@ ensures  err != nil ==> (s.Mem() && err.ErrorMem())
+//@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *Decoded) ToRaw() (r *Raw, err error) {
 	b := make([]byte, s.Len())
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ dataLen := len(b)
-	// TODO FIXME
 	//@ underlyingBuf := unfolding acc(s.Mem(), _) in s.underlyingBuf
 	//@ assert underlyingBuf === s.GetUnderlyingBuf()
+	// TODO FIXME
 	//@ assume 0 <= dataLen && dataLen <= len(underlyingBuf)
-	//@ assert b !== s.GetUnderlyingBuf()[:dataLen]
 	//@ assert slices.AbsSlice_Bytes(b, 0, len(b))
 	if err := s.SerializeTo(b /*@, underlyingBuf, dataLen @*/); err != nil {
 		return nil, err
@@ -327,12 +325,9 @@ func (s *Decoded) ToRaw() (r *Raw, err error) {
 	raw := &Raw{}
 	//@ fold raw.Base.NonInitMem()
 	//@ fold raw.NonInitMem()
-	//@ assert underlyingBuf === s.GetUnderlyingBuf()
-	if err := raw.DecodeFromBytes(b /*@, underlyingBuf, dataLen @*/); err != nil {
+	// assert underlyingBuf === s.GetUnderlyingBuf()
+	if err := raw.DecodeFromBytes(b /*@, b, dataLen @*/); err != nil {
 		return nil, err
 	}
-	//@ ghost if err == nil {
-	//@   assert underlyingBuf === raw.GetUnderlyingBuf()
-	//@ }
 	return raw, nil
 }

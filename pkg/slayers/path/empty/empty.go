@@ -79,13 +79,7 @@ func (o Path) DecodeFromBytes(r []byte /*@, underlyingBuf []byte, dataLen int @*
 		return serrors.New("decoding an empty path", "len", int(len(r)))
 	}
 	//@ assert dataLen == 0
-	//@ o.underlyingBuf = underlyingBuf
-	//@ fold o.Mem()
-	//@ assert o.Mem()
-	//
-	// TODO FIXME ask Joao, probably something with value
-	// receiver you aren't understanding
-	//@ assume false
+	//@ o.SetUnderlyingBuf(underlyingBuf)
 	return nil
 }
 
