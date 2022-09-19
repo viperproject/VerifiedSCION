@@ -26,62 +26,6 @@ import (
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
-// TODO: remove this when scion.go is merged in
-// BaseLayer is a convenience struct which implements the LayerData and
-// LayerPayload functions of the Layer interface.
-// Copy-pasted from gopacket/layers (we avoid importing this due its massive size)
-type BaseLayer struct {
-	// Contents is the set of bytes that make up this layer.  IE: for an
-	// Ethernet packet, this would be the set of bytes making up the
-	// Ethernet frame.
-	Contents []byte
-	// Payload is the set of bytes contained by (but not part of) this
-	// Layer.  Again, to take Ethernet as an example, this would be the
-	// set of bytes encapsulated by the Ethernet protocol.
-	Payload []byte
-}
-
-//@ pred (b *BaseLayer) Mem() {
-//@ 	acc(b) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
-//@ }
-
-//@ pred (b *BaseLayer) LayerMem() {
-//@ 	acc(b) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
-//@ }
-
-//@ pred (b *BaseLayer) PayloadMem() {
-//@ 	acc(b) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
-//@ }
-
-//@ requires b.LayerMem()
-//@ ensures slices.AbsSlice_Bytes(res, 0, len(res))
-//@ ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
-//@ decreases
-func (b *BaseLayer) LayerContents() (res []byte) {
-	//@ unfold b.LayerMem()
-	//@ unfold slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
-	res = b.Contents
-	//@ fold slices.AbsSlice_Bytes(res, 0, len(res))
-	//@ package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
-	//@ 	fold b.LayerMem()
-	//@ }
-}
-
-//@ requires b.PayloadMem()
-//@ ensures slices.AbsSlice_Bytes(res, 0, len(res))
-//@ ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
-//@ decreases
-func (b *BaseLayer) LayerPayload() (res []byte) {
-	//@ unfold b.PayloadMem()
-	//@ unfold slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
-	res = b.Payload
-	//@ assert forall i int :: 0 <= i && i < len(res) ==> &res[i] == &b.Payload[i]
-	//@ fold slices.AbsSlice_Bytes(res, 0, len(res))
-	//@ package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
-	//@ 	fold b.PayloadMem()
-	//@ }
-}
-
 const scmpRawInterfaceLen = 8
 
 // SCMPExternalInterfaceDown message contains the data for that error.
