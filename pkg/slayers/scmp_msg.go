@@ -105,8 +105,7 @@ type SCMPExternalInterfaceDown struct {
 	IfID uint64
 }
 
-// LayerType returns LayerTypeSCMPExternalInterfaceDown.
-//@ requires acc(i.LayerMem(), _)
+// LayerType returns LayerTypeSCMPExternalInterfaceDown
 //@ decreases
 //@ pure
 func (i *SCMPExternalInterfaceDown) LayerType() gopacket.LayerType {
@@ -201,12 +200,11 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-//@ requires i != nil
 //@ requires b != nil
-//@ requires b.Mem(buf_init)
 //@ requires i.Mem()
+//@ requires b.Mem(buf_init)
 //@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> b.Mem(buf_res)
+//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
 //@ ensures err != nil ==> b.Mem(buf_init)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -312,7 +310,6 @@ type SCMPInternalConnectivityDown struct {
 }
 
 // LayerType returns LayerTypeSCMPInternalConnectivityDown.
-//@ requires acc(i.LayerMem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPInternalConnectivityDown) LayerType() gopacket.LayerType {
@@ -426,12 +423,11 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-//@ requires i != nil
 //@ requires b != nil
-//@ requires b.Mem(buf_init)
 //@ requires i.Mem()
+//@ requires b.Mem(buf_init)
 //@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> b.Mem(buf_res)
+//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
 //@ ensures err != nil ==> b.Mem(buf_init)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -549,7 +545,6 @@ type SCMPEcho struct {
 }
 
 // LayerType returns LayerTypeSCMPEcho.
-//@ requires acc(i.LayerMem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPEcho) LayerType() gopacket.LayerType {
@@ -642,12 +637,11 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-//@ requires i != nil
 //@ requires b != nil
-//@ requires b.Mem(buf_init)
 //@ requires i.Mem()
+//@ requires b.Mem(buf_init)
 //@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> b.Mem(buf_res)
+//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
 //@ ensures err != nil ==> b.Mem(buf_init)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -739,7 +733,6 @@ type SCMPParameterProblem struct {
 }
 
 // LayerType returns LayerTypeSCMPParameterProblem.
-//@ requires acc(i.LayerMem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPParameterProblem) LayerType() gopacket.LayerType {
@@ -810,12 +803,11 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-//@ requires i != nil
 //@ requires b != nil
-//@ requires b.Mem(buf_init)
 //@ requires i.Mem()
+//@ requires b.Mem(buf_init)
 //@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> b.Mem(buf_res)
+//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
 //@ ensures err != nil ==> b.Mem(buf_init)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -914,7 +906,6 @@ type SCMPTraceroute struct {
 }
 
 // LayerType returns LayerTypeSCMPTraceroute.
-//@ requires acc(i.LayerMem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPTraceroute) LayerType() gopacket.LayerType {
@@ -1044,12 +1035,11 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-//@ requires i != nil
 //@ requires b != nil
-//@ requires b.Mem(buf_init)
 //@ requires i.Mem()
+//@ requires b.Mem(buf_init)
 //@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> b.Mem(buf_res)
+//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
 //@ ensures err != nil ==> b.Mem(buf_init)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -1186,7 +1176,6 @@ type SCMPDestinationUnreachable struct {
 }
 
 // LayerType returns LayerTypeSCMPTraceroute.
-//@ requires acc(i.LayerMem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPDestinationUnreachable) LayerType() gopacket.LayerType {
@@ -1237,12 +1226,11 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-//@ requires i != nil
 //@ requires b != nil
-//@ requires b.Mem(buf_init)
 //@ requires i.Mem()
+//@ requires b.Mem(buf_init)
 //@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> b.Mem(buf_res)
+//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
 //@ ensures err != nil ==> b.Mem(buf_init)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -1300,7 +1288,6 @@ type SCMPPacketTooBig struct {
 }
 
 // LayerType returns LayerTypeSCMPParameterProblem.
-//@ requires acc(i.LayerMem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPPacketTooBig) LayerType() gopacket.LayerType {
@@ -1371,12 +1358,11 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-//@ requires i != nil
 //@ requires b != nil
-//@ requires b.Mem(buf_init)
 //@ requires i.Mem()
+//@ requires b.Mem(buf_init)
 //@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> b.Mem(buf_res)
+//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
 //@ ensures err != nil ==> b.Mem(buf_init)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
