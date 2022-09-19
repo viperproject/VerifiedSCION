@@ -47,8 +47,6 @@ pred LayerTypesMem() {
 	acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
 }
 
-pred (t LayerType) Mem() { true }
-
 ghost
 requires acc(LayerTypesMem(), _)
 ensures  res == unfolding acc(LayerTypesMem(), _) in (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
