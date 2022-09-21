@@ -16,15 +16,20 @@
 
 package epic
 
+import "github.com/scionproto/scion/verification/utils/slices"
+
 func testAllocateNonInitMem() {
 	p := &Path{}
 	fold p.NonInitMem()
 }
 
-func canAllocatePath() {
-	p := &Path{}
-	fold p.Mem()
-}
+// func canAllocatePath() {
+// 	p := &Path{}
+// 	fold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
+// 	fold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
+// 	fold slices.AbsSlice_Bytes(p.underlyingBuf, 0, MetadataLen)
+// 	fold p.Mem()
+// }
 
 // (*Path).Len() cannot be currently be verified because Gobra does not allow statements in
 // pure functions, but Len must be pure.

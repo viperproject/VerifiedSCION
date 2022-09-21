@@ -18,22 +18,72 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
 pred (d *Decoded) NonInitMem() {
-	acc(&d.InfoFields) && acc(&d.HopFields) && d.Base.NonInitMem()
+	acc(&d.underlyingBuf) &&
+		acc(&d.InfoFields) &&
+		acc(&d.HopFields) &&
+		d.Base.NonInitMem()
 }
 
 pred (d *Decoded) Mem() {
 	d.Base.Mem() &&
-	acc(&d.InfoFields) &&
-	d.Base.getNumINF() <= MaxINFs &&
-	len(d.InfoFields) == d.Base.getNumINF() &&
-	(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
-	acc(&d.HopFields) &&
-	len(d.HopFields) == d.Base.getNumHops() &&
-	(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
+		acc(&d.underlyingBuf) && // Ghost
+		slices.AbsSlice_Bytes(d.underlyingBuf, 0, len(d.underlyingBuf)) && // Ghost
+		acc(&d.InfoFields) &&
+		d.Base.getNumINF() <= MaxINFs &&
+		len(d.InfoFields) == d.Base.getNumINF() &&
+		(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
+		acc(&d.HopFields) &&
+		len(d.HopFields) == d.Base.getNumHops() &&
+		(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
+}
+
+pred (d *Decoded) NoBufMem(buf []byte) {
+	d.Base.Mem() &&
+		acc(&d.underlyingBuf) && d.underlyingBuf === buf && // Ghost
+		acc(&d.InfoFields) &&
+		d.Base.getNumINF() <= MaxINFs &&
+		len(d.InfoFields) == d.Base.getNumINF() &&
+		(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
+		acc(&d.HopFields) &&
+		len(d.HopFields) == d.Base.getNumHops() &&
+		(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
+}
+
+requires d.Mem()
+requires d.GetUnderlyingBuf() === buf
+ensures  d.NoBufMem(buf)
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  (slices.AbsSlice_Bytes(buf, 0, len(buf)) && d.NoBufMem(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf))
+decreases
+func (d *Decoded) ExchangeNoBufMem(buf []byte) {
+	unfold d.Mem()
+	assert buf === d.underlyingBuf
+	fold d.NoBufMem(buf)
+	package (slices.AbsSlice_Bytes(buf, 0, len(buf)) && d.NoBufMem(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf)) {
+		unfold d.NoBufMem(buf)
+		assert acc(&d.underlyingBuf)
+		assert d.underlyingBuf === buf
+		fold d.Mem()
+		fold d.PostBufXchange(buf)
+	}
+}
+
+pred (p *Decoded) PostBufXchange(buf []byte) {
+	acc(p.Mem(), definitions.ReadL1) && p.GetUnderlyingBuf() === buf
+}
+
+ghost
+requires p.PostBufXchange(buf)
+ensures  acc(p.Mem(), definitions.ReadL1)
+ensures  p.GetUnderlyingBuf() === buf
+decreases
+func (p *Decoded) UnfoldPostBufXchange(buf []byte) {
+	unfold p.PostBufXchange(buf)
 }
 
 /**
@@ -91,49 +141,87 @@ func (d *Decoded) IncPath() (e error) {
 
 ghost
 requires d.Mem()
+requires buf === d.GetUnderlyingBuf()
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 ensures  d.NonInitMem()
 decreases
-func (d *Decoded) DowngradePerm() {
+func (d *Decoded) DowngradePerm(buf []byte) {
 	unfold d.Mem()
 	unfold d.Base.Mem()
+	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
 	fold d.Base.NonInitMem()
 	fold d.NonInitMem()
 }
 
+ghost
+requires acc(d.Mem(), _)
+decreases
+pure func (d *Decoded) GetUnderlyingBuf() (buf []byte) {
+	return unfolding acc(d.Mem(), _) in d.underlyingBuf
+}
+
+ghost
+requires d.Mem()
+requires d.GetUnderlyingBuf() === buf
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf))
+decreases
+func (d *Decoded) ExchangeBufMem(buf []byte) {
+	unfold d.Mem()
+	assert buf === d.underlyingBuf
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf)) {
+		assert acc(&d.underlyingBuf)
+		fold d.Mem()
+		fold d.PostBufXchange(buf)
+	}
+}
+
 (*Decoded) implements path.Path {
-	(d *Decoded) SerializeTo(b []byte) (e error) {
-		e = d.SerializeTo(b)
+	(p *Decoded) SerializeTo(b, buf []byte, l int) (e error) {
+		e = p.SerializeTo(b, buf, l)
 	}
 
-	(d *Decoded) DecodeFromBytes(b []byte) (e error) {
-		e = d.DecodeFromBytes(b)
+	(p *Decoded) DecodeFromBytes(b, buf []byte, l int) (e error) {
+		e = p.DecodeFromBytes(b, buf, l)
 	}
 
-	(d *Decoded) Reverse() (p path.Path, e error) {
-		p, e = d.Reverse()
+	(p *Decoded) Reverse() (r path.Path, e error) {
+		r, e = p.Reverse()
 	}
 
-	(d *Decoded) DowngradePerm() {
-		d.DowngradePerm()
+	(p *Decoded) DowngradePerm(buf []byte) {
+		p.DowngradePerm(buf)
 	}
 
-	pure (d *Decoded) Len() int {
-		return d.Len()
+	// pure (p *Decoded) GetUnderlyingBuf() []byte {
+	// 	return p.GetUnderlyingBuf()
+	// }
+
+	(p *Decoded) ExchangeBufMem(buf []byte) {
+		p.ExchangeBufMem(buf)
 	}
 
-	pure (d *Decoded) Type() path.Type {
-		return d.Type()
+	(p *Decoded) UnfoldPostBufXchange(buf []byte) {
+		p.UnfoldPostBufXchange(buf)
+	}
+
+	pure (p *Decoded) Len() int {
+		return p.Len()
+	}
+
+	pure (p *Decoded) Type() path.Type {
+		return p.Type()
 	}
 }
 
-requires acc(d.Mem(), _)
+requires acc(d.NoBufMem(buf), _)
 decreases
-pure func (d *Decoded) getLenInfoFields() int {
-	return unfolding acc(d.Mem(), _) in len(d.InfoFields)
+pure func (d *Decoded) getLenInfoFields(buf []byte) int {
+	return unfolding acc(d.NoBufMem(buf), _) in len(d.InfoFields)
 }
 
-requires acc(d.Mem(), _)
+requires acc(d.NoBufMem(buf), _)
 decreases
-pure func (d *Decoded) getLenHopFields() int {
-	return unfolding acc(d.Mem(), _) in len(d.HopFields)
+pure func (d *Decoded) getLenHopFields(buf []byte) int {
+	return unfolding acc(d.NoBufMem(buf), _) in len(d.HopFields)
 }

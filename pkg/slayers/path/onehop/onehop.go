@@ -61,29 +61,46 @@ func RegisterPath() {
 // in the first AS and completed by a SCION router in the second AS. It is used during beaconing
 // when there is not yet any other path segment available.
 type Path struct {
+	// (VerifiedSCION) this ghost field represents the buffer
+	// from which the Path was decoded. This needs to be kept
+	// in order to give up permissions eventually when recovering
+	// initial buffer permissions.
+	//@ underlyingBuf []byte
 	Info      path.InfoField
 	FirstHop  path.HopField
 	SecondHop path.HopField
 }
 
-//@ requires  o.NonInitMem()
-//@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-//@ ensures   (len(data) >= PathLen) == (r == nil)
-//@ ensures   r == nil ==> o.Mem()
-//@ ensures   r != nil ==> (o.NonInitMem() && r.ErrorMem())
+//@ requires o.NonInitMem()
+//@ requires 0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ requires len(data) == dataLen
+//@ requires data === underlyingBuf[:dataLen]
+//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+//@ ensures  (len(data) >= PathLen) == (r == nil)
+//@ ensures  r == nil ==> o.Mem()
+//@ ensures  r == nil ==> o.GetUnderlyingBuf() === underlyingBuf
+//@ ensures  r != nil ==> o.NonInitMem()
+//@ ensures  r != nil ==> r.ErrorMem()
+//@ ensures  r != nil ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 //@ decreases
-func (o *Path) DecodeFromBytes(data []byte) (r error) {
+func (o *Path) DecodeFromBytes(data []byte /*@, underlyingBuf []byte, dataLen int @*/) (r error) {
 	if len(data) < PathLen {
 		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
 			int(len(data)))
 	}
 	offset := 0
 	//@ unfold o.NonInitMem()
+	//
+	//@ ghost slices.SplitByIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, definitions.ReadL1)
+	//@ ghost slices.Reslice_Bytes(underlyingBuf, 0, dataLen, definitions.ReadL1)
+	//
 	//@ ghost slices.SplitByIndex_Bytes(data, 0, len(data), path.InfoLen, definitions.ReadL1)
 	//@ ghost slices.Reslice_Bytes(data, 0, path.InfoLen, definitions.ReadL1)
 	if err := o.Info.DecodeFromBytes(data[:path.InfoLen]); err != nil {
 		//@ ghost slices.Unslice_Bytes(data, 0, path.InfoLen, definitions.ReadL1)
 		//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), path.InfoLen, definitions.ReadL1)
+		//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, definitions.ReadL1)
+		//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, definitions.ReadL1)
 		return err
 	}
 	//@ slices.Unslice_Bytes(data, 0, path.InfoLen, definitions.ReadL1)
@@ -95,6 +112,8 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 		//@ ghost slices.Unslice_Bytes(data, offset, offset+path.HopLen, definitions.ReadL1)
 		//@ ghost slices.CombineAtIndex_Bytes(data, offset, len(data), offset+path.HopLen, definitions.ReadL1)
 		//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
+		//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, definitions.ReadL1)
+		//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, definitions.ReadL1)
 		return err
 	}
 	//@ ghost slices.Unslice_Bytes(data, offset, offset+path.HopLen, definitions.ReadL1)
@@ -106,7 +125,11 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	//@ ghost slices.Unslice_Bytes(data, offset, offset+path.HopLen, definitions.ReadL1)
 	//@ ghost slices.CombineAtIndex_Bytes(data, offset, len(data), offset+path.HopLen, definitions.ReadL1)
 	//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
+	//@ ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, definitions.ReadL1)
+	//@ ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, definitions.ReadL1)
 	//@ ghost if r == nil {
+	//@   o.underlyingBuf = underlyingBuf
+	//@   assert slices.AbsSlice_Bytes(o.underlyingBuf, 0, len(o.underlyingBuf))
 	//@   fold o.Mem()
 	//@ } else {
 	//@   fold o.NonInitMem()
@@ -115,11 +138,14 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 }
 
 //@ preserves acc(o.Mem(), definitions.ReadL1)
+//@ preserves underlyingBuf === o.GetUnderlyingBuf()
+//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ preserves len(b) == dataLen
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures   (len(b) >= PathLen) == (err == nil)
 //@ ensures   err != nil ==> err.ErrorMem()
 //@ decreases
-func (o *Path) SerializeTo(b []byte) (err error) {
+func (o *Path) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (err error) {
 	if len(b) < PathLen {
 		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
 			int(len(b)))
@@ -159,16 +185,17 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
 //@ trusted // (VerifiedSCION) Currently takes a long time to verify
-//@ preserves acc(o.Mem(), definitions.ReadL10)
-//@ ensures   err == nil ==> (sd != nil && sd.Mem())
-//@ ensures   err != nil ==> err.ErrorMem() && o.Mem()
+//@ requires o.Mem()
+//@ ensures  err == nil ==> (sd != nil && sd.Mem())
+//@ ensures  err == nil ==> sd.GetUnderlyingBuf() === old(o.GetUnderlyingBuf())
+//@ ensures  err != nil ==> err.ErrorMem() && o.Mem()
 //@ decreases
 func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
-	//@ unfold acc(o.Mem(), definitions.ReadL10)
+	//@ unfold acc(o.Mem(), definitions.ReadL1)
 	//@ unfold acc(o.SecondHop.Mem(), definitions.ReadL10)
 	if o.SecondHop.ConsIngress == 0 {
 		//@ fold acc(o.SecondHop.Mem(), definitions.ReadL10)
-		//@ fold acc(o.Mem(), definitions.ReadL10)
+		//@ fold acc(o.Mem(), definitions.ReadL1)
 		return nil, serrors.New("incomplete path can't be converted")
 	}
 	//@ fold acc(o.SecondHop.Mem(), definitions.ReadL10)
@@ -212,14 +239,19 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 	//@ fold p.Base.Mem()
 	//@ fold p.HopFields[0].Mem()
 	//@ fold p.HopFields[1].Mem()
+	//@ unfold acc(o.Mem(), definitions.ReadL1)
+	//@ p.underlyingBuf = o.underlyingBuf
 	//@ fold p.Mem()
 	return p, nil
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
+//@ trusted // TODO FIXME
 //@ requires o.Mem()
-//@ ensures err == nil ==> p.Mem()
 //@ ensures err == nil ==> p != nil
+//@ ensures err == nil ==> p.Mem()
+//@ ensures err == nil ==> p.GetUnderlyingBuf() === old(o.GetUnderlyingBuf())
+//@ ensures err == nil ==> typeOf(p) == type[*scion.Decoded]
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
 func (o *Path) Reverse() (p path.Path, err error) {

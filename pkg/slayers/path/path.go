@@ -66,30 +66,50 @@ type Path interface {
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
 	//@ pred NonInitMem()
+	// (VerifiedSCION) this precondition deals with managing the
+	// underlying buffer permissions when exchanging Mem. When
+	// Mem is reclaimed via a magic wand, the knowledge that the
+	// underlying buffer did not change needs to be known. This
+	// could be a conjunct in the right-hand side but Gobra does
+	// not recognize this.
+	//@ pred PostBufXchange(buf []byte)
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
 	//@ preserves Mem()
+	//@ preserves GetUnderlyingBuf() === underlyingBuf
+	//@ preserves len(b) == dataLen
+	//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
 	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
-	SerializeTo(b []byte) (e error)
+	// TODO the extra fields should be annotated as ghost once ghost fields are
+	// implemented in Gobra
+	SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error)
 	// DecodesFromBytes decodes the path from the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface (e.g. scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires NonInitMem()
-	//@ requires slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ requires 0 <= dataLen && dataLen <= len(underlyingBuf)
+	//@ requires len(b) == dataLen
+	//@ requires b === underlyingBuf[:dataLen]
+	//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 	//@ ensures  err == nil ==> Mem()
+	//@ ensures  err == nil ==> underlyingBuf === GetUnderlyingBuf()
 	//@ ensures  err != nil ==> err.ErrorMem()
+	//@ ensures  err != nil ==> NonInitMem()
+	//@ ensures  err != nil ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 	//@ decreases
-	DecodeFromBytes(b []byte) (err error)
+	// TODO the extra fields should be annotated as ghost once ghost fields are
+	// implemented in Gobra
+	DecodeFromBytes(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (err error)
 	// Reverse reverses a path such that it can be used in the reversed direction.
-	//
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
-	//@ requires Mem()
-	//@ ensures  e == nil ==> p.Mem()
-	//@ ensures  e == nil ==> p != nil
-	//@ ensures  e != nil ==> e.ErrorMem()
+	//@ requires  Mem()
+	//@ ensures   e == nil ==> p != nil
+	//@ ensures   e == nil ==> p.Mem()
+	//@ ensures   e == nil ==> p.GetUnderlyingBuf() === old(GetUnderlyingBuf())
+	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	Reverse() (p Path, e error)
 	// Len returns the length of a path in bytes.
@@ -103,11 +123,37 @@ type Path interface {
 	//@ requires acc(Mem(), _)
 	//@ decreases
 	Type() Type
+	// (VerifiedSCION) downgrade a full permission `Mem` predicate
+	// to the non-initialized `NonInitMem`. This releases resources
+	// captured by `Mem`.
 	//@ ghost
 	//@ requires Mem()
+	//@ requires buf === GetUnderlyingBuf()
 	//@ ensures  NonInitMem()
+	//@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 	//@ decreases
-	//@ DowngradePerm()
+	//@ DowngradePerm(ghost buf []byte)
+	// (VerifiedSCION) releases the permission to access the underlying
+	// buffer for the given Path instance. There must also be a wand to
+	// regain access to the Mem predicate.
+	//@ ghost
+	//@ requires acc(Mem(), _)
+	//@ decreases
+	//@ pure GetUnderlyingBuf() (buf []byte)
+	// (VerifiedSCION) exchange the Mem predicate for access to the
+	// underlying Path buffer. Access to Mem should be re-acquirable
+	// via a wand instance.
+	//@ ghost
+	//@ requires Mem()
+	//@ requires GetUnderlyingBuf() === buf
+	//@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+	//@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(Mem(), definitions.ReadL1) && PostBufXchange(buf))
+	//@ decreases
+	//@ ExchangeBufMem(buf []byte)
+	//@ ghost
+	//@ requires PostBufXchange(buf)
+	//@ ensures  acc(Mem(), definitions.ReadL1) && GetUnderlyingBuf() === buf
+	//@ UnfoldPostBufXchange(buf []byte)
 }
 
 type metadata struct {
@@ -167,9 +213,8 @@ func StrictDecoding(strict bool) {
 //@ requires 0 <= pathType && pathType < maxPathType
 //@ requires acc(PathPackageMem(), definitions.ReadL20)
 //@ ensures  acc(PathPackageMem(), definitions.ReadL20)
-//@ ensures  (!Registered(pathType) && IsStrictDecoding()) ==> e.ErrorMem()
-//@ ensures  (!Registered(pathType) && !IsStrictDecoding()) ==> p.Mem()
-//@ ensures  Registered(pathType) ==> p.NonInitMem()
+//@ ensures  e != nil ==> e.ErrorMem()
+//@ ensures  e == nil ==> p != nil && p.NonInitMem()
 //@ decreases
 func NewPath(pathType Type) (p Path, e error) {
 	//@ unfold acc(PathPackageMem(), definitions.ReadL20)
@@ -180,28 +225,41 @@ func NewPath(pathType Type) (p Path, e error) {
 			return nil, serrors.New("unsupported path", "type", uint8(pathType))
 		}
 		tmp := &rawPath{}
-		//@ fold slices.AbsSlice_Bytes(tmp.raw, 0, len(tmp.raw))
-		//@ fold tmp.Mem()
+		//@ fold tmp.NonInitMem()
 		return tmp, nil
 	}
-	return pm.New() /*@ as NewPathSpec @*/, nil
+	tmp := pm.New() /*@ as NewPathSpec @*/
+	//@ assume tmp != nil // TODO FIXME
+	return tmp, nil
 }
 
 // NewRawPath returns a new raw path that can hold any path type.
-func NewRawPath() Path {
-	return &rawPath{}
+//@ ensures p != nil
+//@ ensures p.NonInitMem()
+//@ decreases
+func NewRawPath() (p Path) {
+	p = &rawPath{}
+	//@ fold p.NonInitMem()
+	return p
 }
 
 type rawPath struct {
+	//@ underlyingBuf []byte
+	//@ dataLen int
 	raw      []byte
 	pathType Type
 }
 
 //@ preserves acc(p.Mem(), definitions.ReadL10)
+//@ preserves p.GetUnderlyingBuf() === underlyingBuf
+//@ preserves len(b) == dataLen
+//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures   e == nil
 //@ decreases
-func (p *rawPath) SerializeTo(b []byte) (e error) {
+func (p *rawPath) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error) {
+	// ghost slices.SplitByIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
+	// ghost slices.Reslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ unfold acc(p.Mem(), definitions.ReadL10)
 	//@ unfold acc(slices.AbsSlice_Bytes(p.raw, 0, len(p.raw)), definitions.ReadL11)
@@ -209,16 +267,29 @@ func (p *rawPath) SerializeTo(b []byte) (e error) {
 	//@ fold acc(slices.AbsSlice_Bytes(p.raw, 0, len(p.raw)), definitions.ReadL11)
 	//@ fold acc(p.Mem(), definitions.ReadL10)
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
+	// ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
+	// ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
 	return nil
 }
 
-//@ requires p.NonInitMem() && slices.AbsSlice_Bytes(b, 0, len(b))
+//@ requires p.NonInitMem()
+//@ requires 0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+//@ requires len(b) == dataLen
+//@ requires b === underlyingBuf[:dataLen]
 //@ ensures  p.Mem()
+//@ ensures  p.GetUnderlyingBuf() === underlyingBuf
 //@ ensures  e == nil
 //@ decreases
-func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
+func (p *rawPath) DecodeFromBytes(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error) {
 	//@ unfold p.NonInitMem()
 	p.raw = b
+	//@ p.underlyingBuf = underlyingBuf
+	//@ p.dataLen = dataLen
+	//@ ghost slices.SplitByIndex_Bytes(p.underlyingBuf, 0, len(p.underlyingBuf), dataLen, writePerm)
+	//@ ghost slices.Reslice_Bytes(p.underlyingBuf, 0, dataLen, writePerm)
+	//@ assert slices.AbsSlice_Bytes(p.raw, 0, len(p.raw))
+	//@ assert slices.AbsSlice_Bytes(p.underlyingBuf, dataLen, len(p.underlyingBuf))
 	//@ fold p.Mem()
 	return nil
 }
