@@ -165,6 +165,9 @@ func (s *Decoded) SerializeTo(b []byte /*@, buf []byte, dataLen int @*/) (r erro
 			"actual", int(len(b)))
 		return ret
 	}
+	//@ assert unfolding acc(s.Mem(), _) in unfolding acc(s.Base.Mem(), _) in (len(b) >= MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen)
+	//@ assert unfolding acc(s.Mem(), _) in (s.Base.Len() == unfolding acc(s.Base.Mem(), _) in (MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen))
+	//@ assert s.Len() == unfolding acc(s.Mem(), _) in s.Base.Len()
 	//@ ghost s.ExchangeNoBufMem(buf)
 	//@ ghost slices.SplitByIndex_Bytes(buf, 0, len(buf), dataLen, writePerm)
 	//@ ghost slices.Reslice_Bytes(buf, 0, dataLen, writePerm)
@@ -193,9 +196,6 @@ func (s *Decoded) SerializeTo(b []byte /*@, buf []byte, dataLen int @*/) (r erro
 	//@ ghost slices.Unslice_Bytes(b, 0, MetaLen, writePerm)
 	//@ ghost slices.CombineAtIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
 	offset := MetaLen
-	//@ assert unfolding acc(s.Mem(), _) in unfolding acc(s.Base.Mem(), _) in (len(b) >= MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen)
-	//@ assert unfolding acc(s.Mem(), _) in (s.Base.Len() == unfolding acc(s.Base.Mem(), _) in (MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen))
-	//@ assert s.Len() == unfolding acc(s.Mem(), _) in s.Base.Len()
 	//@ assert len(b) >= MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
 	//@ assume 0 < s.NumINF && 0 < s.NumHops // TODO FIXME
