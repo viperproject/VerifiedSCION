@@ -176,14 +176,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, buf []byte, dataLen int @*/) (r erro
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ assert len(b) >= MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
-	// requires  slices.AbsSlice_Bytes(b, 0, MetaLen)
-	// preserves MetaLen <= len(b)
-	// ensures   len(b) == before(len(b))
-	// ensures   slices.AbsSlice_Bytes(b[:MetaLen], 0, len(b[:MetaLen]))
-	// decreases
-	// outline(
 	//@ ghost slices.Reslice_Bytes(b, 0, MetaLen, writePerm)
-	// )
 	if err := s.PathMeta.SerializeTo(b[:MetaLen]); err != nil {
 		//@ ghost slices.Unslice_Bytes(b, 0, MetaLen, writePerm)
 		//@ ghost slices.CombineAtIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
@@ -198,7 +191,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, buf []byte, dataLen int @*/) (r erro
 	offset := MetaLen
 	//@ assert len(b) >= MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
-	//@ assume 0 < s.NumINF && 0 < s.NumHops // TODO FIXME
+	// assume 0 < s.NumINF && 0 < s.NumHops // TODO FIXME
 	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ fold acc(s.NoBufMem(buf), definitions.ReadL1)
 	//@ invariant acc(s.NoBufMem(buf), definitions.ReadL1)
