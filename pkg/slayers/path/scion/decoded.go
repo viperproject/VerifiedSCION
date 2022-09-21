@@ -191,7 +191,6 @@ func (s *Decoded) SerializeTo(b []byte /*@, buf []byte, dataLen int @*/) (r erro
 	offset := MetaLen
 	//@ assert len(b) >= MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
-	// assume 0 < s.NumINF && 0 < s.NumHops // TODO FIXME
 	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ fold acc(s.NoBufMem(buf), definitions.ReadL1)
 	//@ invariant acc(s.NoBufMem(buf), definitions.ReadL1)
