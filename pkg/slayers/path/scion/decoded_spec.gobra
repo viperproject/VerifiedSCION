@@ -31,7 +31,7 @@ pred (d *Decoded) NonInitMem() {
 
 pred (d *Decoded) Mem() {
 	d.Base.Mem() &&
-		acc(&d.underlyingBuf) && // Ghost
+		/* ghost */ acc(&d.underlyingBuf) &&
 		slices.AbsSlice_Bytes(d.underlyingBuf, 0, len(d.underlyingBuf)) && // Ghost
 		acc(&d.InfoFields) &&
 		d.Base.getNumINF() <= MaxINFs &&
@@ -57,6 +57,7 @@ pred (d *Decoded) NoBufMem(buf []byte) {
 requires d.Mem()
 requires d.GetUnderlyingBuf() === buf
 ensures  d.NoBufMem(buf)
+ensures  (unfolding acc(d.NoBufMem(buf), _) in d.Base.Len()) == old(unfolding acc(d.Mem(), _) in d.Base.Len())
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 ensures  (slices.AbsSlice_Bytes(buf, 0, len(buf)) && d.NoBufMem(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf))
 decreases
