@@ -21,7 +21,6 @@ jobs:
       includePaths: '. verification/dependencies'
       assumeInjectivityOnInhale: '1'
       checkConsistency: '1'
-      chop: '10'
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
@@ -104,7 +103,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers'
-          timeout: 10m
+          timeout: 15m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -154,8 +153,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/scion'
-          timeout: 10m
-          chop: ${{ env.chop }}
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}

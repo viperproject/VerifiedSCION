@@ -25,18 +25,29 @@ type LayerClass interface {
 	LayerTypes() (res []LayerType)
 }
 
-// The following commented methods could be easily verified after we
-// introduce support for range (but we don't have to):
-/*
+LayerType implements LayerClass
+
+pred (l LayerType) Mem() { true }
+
 // Contains implements LayerClass.
-func (l LayerType) Contains(a LayerType) bool {
+pure
+ensures res == (l == a)
+decreases
+func (l LayerType) Contains(a LayerType) (res bool) {
 	return l == a
 }
 
 // LayerTypes implements LayerClass.
-func (l LayerType) LayerTypes() []LayerType {
+ensures acc(res) && len(res) == 1
+ensures res[0] == l
+decreases
+func (l LayerType) LayerTypes() (res []LayerType) {
 	return []LayerType{l}
 }
+
+/*
+// (verifiedSCION) The following commented methods could be easily verified
+// after we introduce support for range:
 
 // LayerClassSlice implements a LayerClass with a slice.
 type LayerClassSlice []bool
