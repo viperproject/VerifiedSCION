@@ -27,7 +27,66 @@ import (
 )
 
 const scmpRawInterfaceLen = 8
+//delete inside here
+// BaseLayer is a convenience struct which implements the LayerData and
+// LayerPayload functions of the Layer interface.
+// Copy-pasted from gopacket/layers (we avoid importing this due its massive size)
+type BaseLayer struct {
+	// Contents is the set of bytes that make up this layer.  IE: for an
+	// Ethernet packet, this would be the set of bytes making up the
+	// Ethernet frame.
+	Contents []byte
+	// Payload is the set of bytes contained by (but not part of) this
+	// Layer.  Again, to take Ethernet as an example, this would be the
+	// set of bytes encapsulated by the Ethernet protocol.
+	Payload []byte
+}
 
+// LayerContents returns the bytes of the packet layer.
+//@ requires b.LayerMem()
+//@ ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+//@ ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+//@ decreases
+func (b *BaseLayer) LayerContents() (res []byte) {
+	//@ unfold b.LayerMem()
+	//@ unfold slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
+	res = b.Contents
+	//@ fold slices.AbsSlice_Bytes(res, 0, len(res))
+	//@ package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+	//@   fold b.LayerMem()
+	//@ }
+	return res
+}
+
+// LayerPayload returns the bytes contained within the packet layer.
+//@ requires b.PayloadMem()
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res))
+//@ ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+//@ decreases
+func (b *BaseLayer) LayerPayload() (res []byte) {
+	//@ unfold b.PayloadMem()
+	//@ unfold slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+	res = b.Payload
+	//@ fold slices.AbsSlice_Bytes(res, 0, len(res))
+	//@ package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+	//@   fold b.PayloadMem()
+	//@ }
+	return res
+}
+pred (b *BaseLayer) Mem() {
+	acc(b) &&
+	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
+	slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+}
+
+pred (b *BaseLayer) LayerMem() {
+	acc(b) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
+}
+
+pred (b *BaseLayer) PayloadMem() {
+	acc(b) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+}
+//delete abovehere
 // SCMPExternalInterfaceDown message contains the data for that error.
 //
 //   0                   1                   2                   3
@@ -44,7 +103,6 @@ const scmpRawInterfaceLen = 8
 //
 type SCMPExternalInterfaceDown struct {
 	BaseLayer
-	
 	IA   addr.IA
 	IfID uint64
 }
@@ -58,19 +116,18 @@ func (i *SCMPExternalInterfaceDown) LayerType() gopacket.LayerType {
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ preserves acc(&gopacket.LayerTypePayload, _)
+//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
+//@ pure
 func (i *SCMPExternalInterfaceDown) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 //@ requires df != nil
-//@ requires df.Mem()
+//@ preserves df.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ requires i.Mem()
-//@ ensures i.Mem()
-//@ ensures df.Mem()
+//@ preserves i.Mem()
 //@ ensures res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures res != nil ==> res.ErrorMem()
 //@ decreases
@@ -146,68 +203,68 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 //@ requires b != nil
 //@ requires i.Mem()
-//@ requires b.Mem(buf_init)
-//@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
-//@ ensures err != nil ==> b.Mem(buf_init)
+//@ requires b.Mem(underlyingBuf)
+//@ ensures err == nil ==> underlyingBufRes != nil
+//@ ensures err == nil ==> i.Mem() && b.Mem(underlyingBufRes)
+//@ ensures err != nil ==> b.Mem(underlyingBuf)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost buf_init []byte @*/) (err error/*@, ghost buf_res []byte @*/) {
+func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
 
-	buf, err/*@, buf_res@*/ := b.PrependBytes(addr.IABytes + scmpRawInterfaceLen/*@, buf_init@*/)
+	buf, err/*@, underlyingBufRes@*/ := b.PrependBytes(addr.IABytes + scmpRawInterfaceLen/*@, underlyingBuf@*/)
 	if err != nil {
-		return err/*@, buf_res @*/
+		return err/*@, underlyingBufRes @*/
 	}
 	offset := 0
 	//@ unfold i.Mem()
 	//@ defer fold i.Mem()
 	//@ requires offset == 0
-	//@ requires len(buf_res) >= addr.IABytes + scmpRawInterfaceLen
-	//@ requires buf === buf_res[:addr.IABytes+scmpRawInterfaceLen]
+	//@ requires len(underlyingBufRes) >= addr.IABytes + scmpRawInterfaceLen
+	//@ requires buf === underlyingBufRes[:addr.IABytes+scmpRawInterfaceLen]
 	//@ requires b != nil
 	//@ requires acc(&i.IA)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.IA)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 0, addr.IABytes)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, addr.IABytes)
 	binary.BigEndian.PutUint64(buf[offset:], uint64(i.IA))
-	//@ fold slices.AbsSlice_Bytes(buf_res, 0, addr.IABytes)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, addr.IABytes)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
 	offset += addr.IABytes
 	//@ requires offset == addr.IABytes
-	//@ requires len(buf_res) >= addr.IABytes + scmpRawInterfaceLen
-	//@ requires buf === buf_res[:addr.IABytes+scmpRawInterfaceLen]
+	//@ requires len(underlyingBufRes) >= addr.IABytes + scmpRawInterfaceLen
+	//@ requires buf === underlyingBufRes[:addr.IABytes+scmpRawInterfaceLen]
 	//@ requires b != nil
 	//@ requires acc(&i.IfID)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.IfID)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes, writePerm)
-	//@ slices.SplitByIndex_Bytes(buf_res, addr.IABytes, len(buf_res), addr.IABytes+scmpRawInterfaceLen, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, addr.IABytes, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
 	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.IfID)
-	//@ fold slices.AbsSlice_Bytes(buf_res, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	//@ slices.CombineAtIndex_Bytes(buf_res, addr.IABytes, len(buf_res), addr.IABytes+scmpRawInterfaceLen, writePerm)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, addr.IABytes, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
-	return nil/*@, buf_res@*/
+	return nil/*@, underlyingBufRes@*/
 }
 
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
-//@ requires pb.Mem()
+//@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -262,19 +319,18 @@ func (i *SCMPInternalConnectivityDown) LayerType() gopacket.LayerType {
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ preserves acc(&gopacket.LayerTypePayload, _)
+//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
+//@ pure
 func (*SCMPInternalConnectivityDown) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 //@ requires df != nil
-//@ requires df.Mem()
+//@ preserves df.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ requires i.Mem()
-//@ ensures i.Mem()
-//@ ensures df.Mem()
+//@ preserves i.Mem()
 //@ ensures res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures res != nil ==> res.ErrorMem()
 //@ decreases
@@ -369,90 +425,90 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 //@ requires b != nil
 //@ requires i.Mem()
-//@ requires b.Mem(buf_init)
-//@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
-//@ ensures err != nil ==> b.Mem(buf_init)
+//@ requires b.Mem(underlyingBuf)
+//@ ensures err == nil ==> underlyingBufRes != nil
+//@ ensures err == nil ==> i.Mem() && b.Mem(underlyingBufRes)
+//@ ensures err != nil ==> b.Mem(underlyingBuf)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost buf_init []byte @*/) (err error/*@, ghost buf_res []byte @*/) {
+func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
 
-	buf, err/*@, buf_res@*/ := b.PrependBytes(addr.IABytes + 2*scmpRawInterfaceLen/*@, buf_init@*/)
+	buf, err/*@, underlyingBufRes@*/ := b.PrependBytes(addr.IABytes + 2*scmpRawInterfaceLen/*@, underlyingBuf@*/)
 	if err != nil {
-		return err/*@, buf_res@*/
+		return err/*@, underlyingBufRes@*/
 	}
 	offset := 0
 	//@ unfold i.Mem()
 	//@ defer fold i.Mem()
 	//@ requires offset == 0
-	//@ requires len(buf_res) >= addr.IABytes + 2*scmpRawInterfaceLen
-	//@ requires buf === buf_res[:addr.IABytes+2*scmpRawInterfaceLen]
+	//@ requires len(underlyingBufRes) >= addr.IABytes + 2*scmpRawInterfaceLen
+	//@ requires buf === underlyingBufRes[:addr.IABytes+2*scmpRawInterfaceLen]
 	//@ requires b != nil
 	//@ requires acc(&i.IA)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.IA)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 0, addr.IABytes)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, addr.IABytes)
 	binary.BigEndian.PutUint64(buf[offset:], uint64(i.IA))
-	//@ fold slices.AbsSlice_Bytes(buf_res, 0, addr.IABytes)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, addr.IABytes)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
 	offset += addr.IABytes
 	//@ requires offset == addr.IABytes
-	//@ requires len(buf_res) >= addr.IABytes + 2*scmpRawInterfaceLen
-	//@ requires buf === buf_res[:addr.IABytes+2*scmpRawInterfaceLen]
+	//@ requires len(underlyingBufRes) >= addr.IABytes + 2*scmpRawInterfaceLen
+	//@ requires buf === underlyingBufRes[:addr.IABytes+2*scmpRawInterfaceLen]
 	//@ requires b != nil
 	//@ requires acc(&i.Ingress)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.Ingress)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes, writePerm)
-	//@ slices.SplitByIndex_Bytes(buf_res, addr.IABytes, len(buf_res), addr.IABytes+scmpRawInterfaceLen, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, addr.IABytes, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
 	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.Ingress)
-	//@ fold slices.AbsSlice_Bytes(buf_res, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	//@ slices.CombineAtIndex_Bytes(buf_res, addr.IABytes, len(buf_res), addr.IABytes+scmpRawInterfaceLen, writePerm)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, addr.IABytes, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
 	offset += scmpRawInterfaceLen
 	//@ requires offset == addr.IABytes+scmpRawInterfaceLen
-	//@ requires len(buf_res) >= addr.IABytes + 2*scmpRawInterfaceLen
-	//@ requires buf === buf_res[:addr.IABytes+2*scmpRawInterfaceLen]
+	//@ requires len(underlyingBufRes) >= addr.IABytes + 2*scmpRawInterfaceLen
+	//@ requires buf === underlyingBufRes[:addr.IABytes+2*scmpRawInterfaceLen]
 	//@ requires b != nil
 	//@ requires acc(&i.Egress)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.Egress)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes+scmpRawInterfaceLen, writePerm)
-	//@ slices.SplitByIndex_Bytes(buf_res, addr.IABytes+scmpRawInterfaceLen, len(buf_res), addr.IABytes+2*scmpRawInterfaceLen, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, addr.IABytes+scmpRawInterfaceLen, len(underlyingBufRes), addr.IABytes+2*scmpRawInterfaceLen, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
 	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.Egress)
-	//@ fold slices.AbsSlice_Bytes(buf_res, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
-	//@ slices.CombineAtIndex_Bytes(buf_res, addr.IABytes+scmpRawInterfaceLen, len(buf_res), addr.IABytes+2*scmpRawInterfaceLen, writePerm)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), addr.IABytes+scmpRawInterfaceLen, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, addr.IABytes+scmpRawInterfaceLen, len(underlyingBufRes), addr.IABytes+2*scmpRawInterfaceLen, writePerm)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
-	return nil/*@, buf_res@*/
+	return nil/*@, underlyingBufRes@*/
 }
 
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
-//@ requires pb.Mem()
+//@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -497,19 +553,18 @@ func (i *SCMPEcho) LayerType() gopacket.LayerType {
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ preserves acc(&gopacket.LayerTypePayload, _)
+//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
+//@ pure
 func (*SCMPEcho) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 //@ requires df != nil
-//@ requires df.Mem()
+//@ preserves df.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ requires i.Mem()
-//@ ensures i.Mem()
-//@ ensures df.Mem()
+//@ preserves i.Mem()
 //@ ensures res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures res != nil ==> res.ErrorMem()
 //@ decreases
@@ -583,67 +638,67 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 //@ requires b != nil
 //@ requires i.Mem()
-//@ requires b.Mem(buf_init)
-//@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
-//@ ensures err != nil ==> b.Mem(buf_init)
+//@ requires b.Mem(underlyingBuf)
+//@ ensures err == nil ==> underlyingBufRes != nil
+//@ ensures err == nil ==> i.Mem() && b.Mem(underlyingBufRes)
+//@ ensures err != nil ==> b.Mem(underlyingBuf)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost buf_init []byte @*/) (err error/*@, ghost buf_res []byte @*/) {
-	buf, err/*@, buf_res@*/ := b.PrependBytes(4/*@, buf_init@*/)
+func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
+	buf, err/*@, underlyingBufRes@*/ := b.PrependBytes(4/*@, underlyingBuf@*/)
 	if err != nil {
-		return err/*@, buf_res@*/
+		return err/*@, underlyingBufRes@*/
 	}
 	offset := 0
 	//@ unfold i.Mem()
 	//@ defer fold i.Mem()
 	//@ requires offset == 0
-	//@ requires len(buf_res) >= 4
-	//@ requires buf === buf_res[:4]
+	//@ requires len(underlyingBufRes) >= 4
+	//@ requires buf === underlyingBufRes[:4]
 	//@ requires b != nil
 	//@ requires acc(&i.Identifier)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.Identifier)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 0, 2)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	binary.BigEndian.PutUint16(buf[:2], i.Identifier)
-	//@ fold slices.AbsSlice_Bytes(buf_res, 0, 2)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
 	offset += 2
 	//@ requires offset == 2
-	//@ requires len(buf_res) >= 4
-	//@ requires buf === buf_res[:4]
+	//@ requires len(underlyingBufRes) >= 4
+	//@ requires buf === underlyingBufRes[:4]
 	//@ requires b != nil
 	//@ requires acc(&i.SeqNumber)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.SeqNumber)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ slices.SplitByIndex_Bytes(buf_res, 2, len(buf_res), 4, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 2, 4)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	//@ assert forall i int :: 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
 	binary.BigEndian.PutUint16(buf[offset:offset+2], i.SeqNumber)
-	//@ fold slices.AbsSlice_Bytes(buf_res, 2, 4)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 2, len(buf_res), 4, writePerm)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
-	return nil/*@, buf_res@*/
+	return nil/*@, underlyingBufRes@*/
 }
 
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
-//@ requires pb.Mem()
+//@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -685,19 +740,18 @@ func (i *SCMPParameterProblem) LayerType() gopacket.LayerType {
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ preserves acc(&gopacket.LayerTypePayload, _)
+//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
+//@ pure
 func (*SCMPParameterProblem) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 //@ requires df != nil
-//@ requires df.Mem()
+//@ preserves df.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ requires i.Mem()
-//@ ensures i.Mem()
-//@ ensures df.Mem()
+//@ preserves i.Mem()
 //@ ensures res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures res != nil ==> res.ErrorMem()
 //@ decreases
@@ -749,61 +803,61 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 //@ requires b != nil
 //@ requires i.Mem()
-//@ requires b.Mem(buf_init)
-//@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
-//@ ensures err != nil ==> b.Mem(buf_init)
+//@ requires b.Mem(underlyingBuf)
+//@ ensures err == nil ==> underlyingBufRes != nil
+//@ ensures err == nil ==> i.Mem() && b.Mem(underlyingBufRes)
+//@ ensures err != nil ==> b.Mem(underlyingBuf)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost buf_init []byte @*/) (err error/*@, ghost buf_res []byte @*/) {
+func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
 
-	buf, err/*@, buf_res@*/ := b.PrependBytes(2 + 2/*@, buf_init@*/)
+	buf, err/*@, underlyingBufRes@*/ := b.PrependBytes(2 + 2/*@, underlyingBuf@*/)
 	if err != nil {
-		return err/*@, buf_res@*/
+		return err/*@, underlyingBufRes@*/
 	}
 	//@ unfold i.Mem()
 	//@ defer fold i.Mem()
-	//@ requires len(buf_res) >= 4
-	//@ requires buf === buf_res[:4]
+	//@ requires len(underlyingBufRes) >= 4
+	//@ requires buf === underlyingBufRes[:4]
 	//@ requires b != nil
-	//@ preserves b.Mem(buf_res)
+	//@ preserves b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 0, 2)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	binary.BigEndian.PutUint16(buf[0:2], uint16(0)) //Reserved
-	//@ fold slices.AbsSlice_Bytes(buf_res, 0, 2)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
-	//@ requires len(buf_res) >= 4
-	//@ requires buf === buf_res[:4]
+	//@ requires len(underlyingBufRes) >= 4
+	//@ requires buf === underlyingBufRes[:4]
 	//@ requires b != nil
 	//@ requires acc(&i.Pointer)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.Pointer)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ slices.SplitByIndex_Bytes(buf_res, 2, len(buf_res), 4, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 2, 4)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	//@ assert forall i int :: 0 <= i && i < 2 ==> &buf[2:4][i] == &buf[2 + i]
 	binary.BigEndian.PutUint16(buf[2:4], i.Pointer)
-	//@ fold slices.AbsSlice_Bytes(buf_res, 2, 4)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 2, len(buf_res), 4, writePerm)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
-	return nil/*@, buf_res@*/
+	return nil/*@, underlyingBufRes@*/
 }
 
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
-//@ requires pb.Mem()
+//@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -858,19 +912,18 @@ func (i *SCMPTraceroute) LayerType() gopacket.LayerType {
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ preserves acc(&gopacket.LayerTypePayload, _)
+//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
+//@ pure
 func (*SCMPTraceroute) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 //@ requires df != nil
-//@ requires df.Mem()
+//@ preserves df.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ requires i.Mem()
-//@ ensures i.Mem()
-//@ ensures df.Mem()
+//@ preserves i.Mem()
 //@ ensures res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures res != nil ==> res.ErrorMem()
 //@ decreases
@@ -981,112 +1034,112 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 //@ requires b != nil
 //@ requires i.Mem()
-//@ requires b.Mem(buf_init)
-//@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
-//@ ensures err != nil ==> b.Mem(buf_init)
+//@ requires b.Mem(underlyingBuf)
+//@ ensures err == nil ==> underlyingBufRes != nil
+//@ ensures err == nil ==> i.Mem() && b.Mem(underlyingBufRes)
+//@ ensures err != nil ==> b.Mem(underlyingBuf)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost buf_init []byte @*/) (err error/*@, ghost buf_res []byte @*/) {
+func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
 
-	buf, err/*@, buf_res@*/ := b.PrependBytes(2 + 2 + addr.IABytes + scmpRawInterfaceLen/*@, buf_init@*/)
+	buf, err/*@, underlyingBufRes@*/ := b.PrependBytes(2 + 2 + addr.IABytes + scmpRawInterfaceLen/*@, underlyingBuf@*/)
 	if err != nil {
-		return err/*@, buf_res@*/
+		return err/*@, underlyingBufRes@*/
 	}
 	offset := 0
 	//@ unfold i.Mem()
 	//@ defer fold i.Mem()
 	//@ requires offset == 0
-	//@ requires len(buf_res) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	//@ requires buf === buf_res[:2+2+addr.IABytes+scmpRawInterfaceLen]
+	//@ requires len(underlyingBufRes) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
+	//@ requires buf === underlyingBufRes[:2+2+addr.IABytes+scmpRawInterfaceLen]
 	//@ requires b != nil
 	//@ requires acc(&i.Identifier)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.Identifier)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 0, 2)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	binary.BigEndian.PutUint16(buf[:2], i.Identifier)
-	//@ fold slices.AbsSlice_Bytes(buf_res, 0, 2)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
 	offset += 2
 	//@ requires offset == 2
-	//@ requires len(buf_res) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	//@ requires buf === buf_res[:2 + 2 + addr.IABytes + scmpRawInterfaceLen]
+	//@ requires len(underlyingBufRes) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
+	//@ requires buf === underlyingBufRes[:2 + 2 + addr.IABytes + scmpRawInterfaceLen]
 	//@ requires b != nil
 	//@ requires acc(&i.Sequence)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.Sequence)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ slices.SplitByIndex_Bytes(buf_res, 2, len(buf_res), 2+2, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 2, 2+2)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2, 2+2)
 	//@ assert forall i int :: 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
 	binary.BigEndian.PutUint16(buf[offset:offset+2], i.Sequence)
-	//@ fold slices.AbsSlice_Bytes(buf_res, 2, 2+2)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 2, len(buf_res), 2+2, writePerm)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2, 2+2)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
 	offset += 2
 	//@ requires offset == 2 + 2
-	//@ requires len(buf_res) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	//@ requires buf === buf_res[:2 + 2 + addr.IABytes + scmpRawInterfaceLen]
+	//@ requires len(underlyingBufRes) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
+	//@ requires buf === underlyingBufRes[:2 + 2 + addr.IABytes + scmpRawInterfaceLen]
 	//@ requires b != nil
 	//@ requires acc(&i.IA)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.IA)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2+2, writePerm)
-	//@ slices.SplitByIndex_Bytes(buf_res, 2+2, len(buf_res), 2+2+addr.IABytes, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 2+2, 2+2+addr.IABytes)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2, writePerm)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
 	//@ assert forall i int :: 0 <= i && i < addr.IABytes ==> &buf[offset:offset+addr.IABytes][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+addr.IABytes], uint64(i.IA))
-	//@ fold slices.AbsSlice_Bytes(buf_res, 2+2, 2+2+addr.IABytes)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 2+2, len(buf_res), 2+2+addr.IABytes, writePerm)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2+2, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
 	offset += addr.IABytes
 	//@ requires offset == 2 + 2 + addr.IABytes
-	//@ requires len(buf_res) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	//@ requires buf === buf_res[:2 + 2 + addr.IABytes + scmpRawInterfaceLen]
+	//@ requires len(underlyingBufRes) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
+	//@ requires buf === underlyingBufRes[:2 + 2 + addr.IABytes + scmpRawInterfaceLen]
 	//@ requires b != nil
 	//@ requires acc(&i.Interface)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.Interface)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2+2+addr.IABytes, writePerm)
-	//@ slices.SplitByIndex_Bytes(buf_res, 2+2+addr.IABytes, len(buf_res), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.Interface)
-	//@ fold slices.AbsSlice_Bytes(buf_res, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 2+2+addr.IABytes, len(buf_res), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2+2+addr.IABytes, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
-	return nil/*@, buf_res@*/
+	return nil/*@, underlyingBufRes@*/
 }
 
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
-//@ requires pb.Mem()
+//@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -1128,19 +1181,18 @@ func (i *SCMPDestinationUnreachable) LayerType() gopacket.LayerType {
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ preserves acc(&gopacket.LayerTypePayload, _)
+//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
+//@ pure
 func (*SCMPDestinationUnreachable) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 //@ requires df != nil
-//@ requires df.Mem()
+//@ preserves df.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ requires i.Mem()
-//@ ensures i.Mem()
-//@ ensures df.Mem()
+//@ preserves i.Mem()
 //@ ensures res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures res != nil ==> res.ErrorMem()
 //@ decreases
@@ -1172,33 +1224,33 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 //@ requires b != nil
 //@ requires i.Mem()
-//@ requires b.Mem(buf_init)
-//@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
-//@ ensures err != nil ==> b.Mem(buf_init)
+//@ requires b.Mem(underlyingBuf)
+//@ ensures err == nil ==> underlyingBufRes != nil
+//@ ensures err == nil ==> i.Mem() && b.Mem(underlyingBufRes)
+//@ ensures err != nil ==> b.Mem(underlyingBuf)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost buf_init []byte @*/) (err error/*@, ghost buf_res []byte @*/) {
+func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
 
-	buf, err/*@, buf_res@*/ := b.PrependBytes(4/*@, buf_init@*/)
+	buf, err/*@, underlyingBufRes@*/ := b.PrependBytes(4/*@, underlyingBuf@*/)
 	if err != nil {
-		return err/*@, buf_res@*/
+		return err/*@, underlyingBufRes@*/
 	}
-	//@ assert buf === buf_res[:4]
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 4, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 0, 4)
+	//@ assert buf === underlyingBufRes[:4]
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 	copy(buf, make([]byte, 4), writePerm)
-	//@ fold slices.AbsSlice_Bytes(buf_res, 0, 4)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 4, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
-	return nil/*@, buf_res@*/
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	return nil/*@, underlyingBufRes@*/
 }
 
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
-//@ requires pb.Mem()
+//@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
@@ -1240,19 +1292,18 @@ func (i *SCMPPacketTooBig) LayerType() gopacket.LayerType {
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ preserves acc(&gopacket.LayerTypePayload, _)
+//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
+//@ pure
 func (*SCMPPacketTooBig) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 //@ requires df != nil
-//@ requires df.Mem()
+//@ preserves df.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ requires i.Mem()
-//@ ensures i.Mem()
-//@ ensures df.Mem()
+//@ preserves i.Mem()
 //@ ensures res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures res != nil ==> res.ErrorMem()
 //@ decreases
@@ -1304,61 +1355,61 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 //@ requires b != nil
 //@ requires i.Mem()
-//@ requires b.Mem(buf_init)
-//@ ensures err == nil ==> buf_res != nil
-//@ ensures err == nil ==> i.Mem() && b.Mem(buf_res)
-//@ ensures err != nil ==> b.Mem(buf_init)
+//@ requires b.Mem(underlyingBuf)
+//@ ensures err == nil ==> underlyingBufRes != nil
+//@ ensures err == nil ==> i.Mem() && b.Mem(underlyingBufRes)
+//@ ensures err != nil ==> b.Mem(underlyingBuf)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
-func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost buf_init []byte @*/) (err error/*@, ghost buf_res []byte @*/) {
+func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
 
-	buf, err/*@, buf_res@*/ := b.PrependBytes(2 + 2/*@, buf_init@*/)
+	buf, err/*@, underlyingBufRes@*/ := b.PrependBytes(2 + 2/*@, underlyingBuf@*/)
 	if err != nil {
-		return err/*@, buf_res@*/
+		return err/*@, underlyingBufRes@*/
 	}
 	//@ unfold i.Mem()
 	//@ defer fold i.Mem()
-	//@ requires len(buf_res) >= 4
-	//@ requires buf === buf_res[:4]
+	//@ requires len(underlyingBufRes) >= 4
+	//@ requires buf === underlyingBufRes[:4]
 	//@ requires b != nil
-	//@ preserves b.Mem(buf_res)
+	//@ preserves b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 0, 2)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	binary.BigEndian.PutUint16(buf[0:2], uint16(0)) //Reserved
-	//@ fold slices.AbsSlice_Bytes(buf_res, 0, 2)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
-	//@ requires len(buf_res) >= 4
-	//@ requires buf === buf_res[:4]
+	//@ requires len(underlyingBufRes) >= 4
+	//@ requires buf === underlyingBufRes[:4]
 	//@ requires b != nil
 	//@ requires acc(&i.MTU)
-	//@ requires b.Mem(buf_res)
+	//@ requires b.Mem(underlyingBufRes)
 	//@ ensures acc(&i.MTU)
-	//@ ensures b.Mem(buf_res)
+	//@ ensures b.Mem(underlyingBufRes)
 	//@ decreases
 	//@ outline (
-	//@ b.ExchangePred(buf_res)
-	//@ slices.SplitByIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ slices.SplitByIndex_Bytes(buf_res, 2, len(buf_res), 4, writePerm)
-	//@ unfold slices.AbsSlice_Bytes(buf_res, 2, 4)
+	//@ b.ExchangePred(underlyingBufRes)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
+	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	//@ assert forall i int :: 0 <= i && i < 2 ==> &buf[2:4][i] == &buf[2 + i]
 	binary.BigEndian.PutUint16(buf[2:4], i.MTU)
-	//@ fold slices.AbsSlice_Bytes(buf_res, 2, 4)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 2, len(buf_res), 4, writePerm)
-	//@ slices.CombineAtIndex_Bytes(buf_res, 0, len(buf_res), 2, writePerm)
-	//@ apply slices.AbsSlice_Bytes(buf_res, 0, len(buf_res)) --* b.Mem(buf_res)
+	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
+	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	//@ )
-	return nil/*@, buf_res@*/
+	return nil/*@, underlyingBufRes@*/
 }
 
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
-//@ requires pb.Mem()
+//@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
