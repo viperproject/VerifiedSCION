@@ -319,7 +319,8 @@ func (s *Raw) GetCurrentInfoField() (res path.InfoField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL1)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
 	idx := int(s.PathMeta.CurrINF)
-	// (VerifiedSCION) the following assumption is safe because s.PathMeta.CurINF is an uint8
+	// (VerifiedSCION) Cannot assert bounds of uint:
+	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
 	//@ fold acc(s.Mem(), definitions.ReadL1)
@@ -398,7 +399,8 @@ func (s *Raw) GetCurrentHopField() (res path.HopField, r error) {
 	//@ unfold acc(s.Mem(), definitions.ReadL2)
 	//@ unfold acc(s.Base.Mem(), definitions.ReadL3)
 	idx := int(s.PathMeta.CurrHF)
-	// (VerifiedSCION) the following assumption is safe because s.PathMeta.CurrHF is an uint8
+	// (VerifiedSCION) Cannot assert bounds of uint:
+	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), definitions.ReadL3)
 	//@ fold acc(s.Mem(), definitions.ReadL2)
@@ -412,8 +414,8 @@ func (s *Raw) GetCurrentHopField() (res path.HopField, r error) {
 //@ decreases
 func (s *Raw) SetHopField(hop path.HopField, idx int) (r error) {
 	//@ share hop
-	// (VerifiedSCION) Gobra cannot prove the following yet, even though they
-	// must be positive because of their type.
+	// (VerifiedSCION) Cannot assert bounds of uint:
+	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
 	//@ fold hop.Mem()
 	//@ unfold s.Mem()
