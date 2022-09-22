@@ -173,7 +173,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, buf []byte, dataLen int @*/) (r erro
 	//@ ghost slices.Reslice_Bytes(buf, 0, dataLen, writePerm)
 	//@ assert slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ unfold acc(s.NoBufMem(buf), definitions.ReadL1)
-	//@ unfold acc(s.Base.Mem(), definitions.ReadL1)
+	//@ unfold acc(s.Base.Mem(), definitions.ReadL2)
 	//@ assert len(b) >= MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
 	//@ ghost slices.Reslice_Bytes(b, 0, MetaLen, writePerm)
@@ -191,7 +191,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, buf []byte, dataLen int @*/) (r erro
 	offset := MetaLen
 	//@ assert len(b) >= MetaLen + s.NumINF * path.InfoLen + s.NumHops * path.HopLen
 	//@ ghost slices.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
-	//@ fold acc(s.Base.Mem(), definitions.ReadL1)
+	//@ fold acc(s.Base.Mem(), definitions.ReadL2)
 	//@ fold acc(s.NoBufMem(buf), definitions.ReadL1)
 	//@ invariant acc(s.NoBufMem(buf), definitions.ReadL1)
 	//@ invariant slices.AbsSlice_Bytes(b, 0, offset)
@@ -310,8 +310,6 @@ func (s *Decoded) ToRaw() (r *Raw, err error) {
 	//@ dataLen := len(b)
 	//@ underlyingBuf := unfolding acc(s.Mem(), _) in s.underlyingBuf
 	//@ assert underlyingBuf === s.GetUnderlyingBuf()
-	// TODO FIXME
-	//@ assume 0 <= dataLen && dataLen <= len(underlyingBuf)
 	//@ assert slices.AbsSlice_Bytes(b, 0, len(b))
 	if err := s.SerializeTo(b /*@, underlyingBuf, dataLen @*/); err != nil {
 		return nil, err

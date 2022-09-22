@@ -32,7 +32,8 @@ pred (d *Decoded) NonInitMem() {
 pred (d *Decoded) Mem() {
 	d.Base.Mem() &&
 		/* ghost */ acc(&d.underlyingBuf) &&
-		slices.AbsSlice_Bytes(d.underlyingBuf, 0, len(d.underlyingBuf)) && // Ghost
+		/* ghost */ slices.AbsSlice_Bytes(d.underlyingBuf, 0, len(d.underlyingBuf)) &&
+		d.Base.Len() <= len(d.underlyingBuf) &&
 		acc(&d.InfoFields) &&
 		d.Base.getNumINF() <= MaxINFs &&
 		len(d.InfoFields) == d.Base.getNumINF() &&
@@ -43,8 +44,8 @@ pred (d *Decoded) Mem() {
 }
 
 pred (d *Decoded) NoBufMem(buf []byte) {
-	d.Base.Mem() &&
-		acc(&d.underlyingBuf) && d.underlyingBuf === buf && // Ghost
+	acc(d.Base.Mem(), definitions.ReadL1) &&
+		/* ghost */acc(&d.underlyingBuf) && d.underlyingBuf === buf &&
 		acc(&d.InfoFields) &&
 		d.Base.getNumINF() <= MaxINFs &&
 		len(d.InfoFields) == d.Base.getNumINF() &&
@@ -64,11 +65,17 @@ decreases
 func (d *Decoded) ExchangeNoBufMem(buf []byte) {
 	unfold d.Mem()
 	assert buf === d.underlyingBuf
+	old_len := len(d.underlyingBuf)
+	assert d.Base.Len() <= len(d.underlyingBuf)
 	fold d.NoBufMem(buf)
+	assert acc(d.Base.Mem(), definitions.ReadL1)
 	package (slices.AbsSlice_Bytes(buf, 0, len(buf)) && d.NoBufMem(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf)) {
+		assert acc(d.Base.Mem(), definitions.ReadL1)
 		unfold d.NoBufMem(buf)
 		assert acc(&d.underlyingBuf)
 		assert d.underlyingBuf === buf
+		assert len(d.underlyingBuf) == old_len
+		assert d.Base.Len() <= len(d.underlyingBuf)
 		fold d.Mem()
 		fold d.PostBufXchange(buf)
 	}

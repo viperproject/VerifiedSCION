@@ -30,6 +30,9 @@ func testAllocateNonInitDecoded() {
 func testAllocateDecoded() {
   d := &Decoded{}
   fold d.Base.Mem()
+  assert d.Base.Len() == MetaLen
+  d.underlyingBuf = make([]byte, MetaLen)
+  assert len(d.underlyingBuf) == MetaLen
   fold slices.AbsSlice_Bytes(d.underlyingBuf, 0, len(d.underlyingBuf))
   fold d.Mem()
 }
