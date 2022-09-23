@@ -21,6 +21,7 @@ type SerializableLayer interface {
 	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost buf []byte) (err error, ghost buf_res []byte)
 
 
+	requires acc(Mem(), _)
 	decreases
 	pure LayerType() LayerType
 }

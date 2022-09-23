@@ -8,7 +8,7 @@ import (
 )
 
 pred (s *SCMPExternalInterfaceDown) Mem() {
-	acc(&s.IA) && acc(&s.IfID) && s.BaseLayer.Mem()
+	acc(&LayerTypeSCMPExternalInterfaceDown, _) && acc(&s.IA) && acc(&s.IfID) && s.BaseLayer.Mem()
 }
 
 pred (s *SCMPExternalInterfaceDown) LayerMem() {
@@ -51,7 +51,7 @@ func (b *SCMPExternalInterfaceDown) LayerPayload() (res []byte) {
 
 
 pred (s *SCMPInternalConnectivityDown) Mem() {
-	acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && s.BaseLayer.Mem()
+	acc(&LayerTypeSCMPInternalConnectivityDown, _) && acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && s.BaseLayer.Mem()
 }
 
 pred (s *SCMPInternalConnectivityDown) LayerMem() {
@@ -88,13 +88,12 @@ func (b *SCMPInternalConnectivityDown) LayerPayload() (res []byte) {
 	}
 }
 
-
 (*SCMPInternalConnectivityDown) implements gopacket.Layer
 (*SCMPInternalConnectivityDown) implements gopacket.SerializableLayer
 
 
 pred (s *SCMPEcho) Mem() {
-	acc(&s.Identifier) && acc(&s.SeqNumber) && s.BaseLayer.Mem()
+	acc(&LayerTypeSCMPEcho, _) && acc(&s.Identifier) && acc(&s.SeqNumber) && s.BaseLayer.Mem()
 }
 
 pred (s *SCMPEcho) LayerMem() {
@@ -131,13 +130,12 @@ func (b *SCMPEcho) LayerPayload() (res []byte) {
 	}
 }
 
-
 (*SCMPEcho) implements gopacket.Layer
 (*SCMPEcho) implements gopacket.SerializableLayer
 
 
 pred (s *SCMPParameterProblem) Mem() {
-	acc(&s.Pointer) && s.BaseLayer.Mem()
+	acc(&LayerTypeSCMPParameterProblem, _) && acc(&s.Pointer) && s.BaseLayer.Mem()
 }
 
 pred (s *SCMPParameterProblem) LayerMem() {
@@ -174,13 +172,12 @@ func (b *SCMPParameterProblem) LayerPayload() (res []byte) {
 	}
 }
 
-
 (*SCMPParameterProblem) implements gopacket.Layer
 (*SCMPParameterProblem) implements gopacket.SerializableLayer
 
 
 pred (s *SCMPTraceroute) Mem() {
-	acc(&s.Identifier) && acc(&s.Sequence) && acc(&s.IA) && acc(&s.Interface) && s.BaseLayer.Mem()
+	acc(&LayerTypeSCMPTraceroute, _) && acc(&s.Identifier) && acc(&s.Sequence) && acc(&s.IA) && acc(&s.Interface) && s.BaseLayer.Mem()
 }
 
 pred (s *SCMPTraceroute) LayerMem() {
@@ -217,13 +214,12 @@ func (b *SCMPTraceroute) LayerPayload() (res []byte) {
 	}
 }
 
-
 (*SCMPTraceroute) implements gopacket.Layer
 (*SCMPTraceroute) implements gopacket.SerializableLayer
 
 
 pred (s *SCMPDestinationUnreachable) Mem() {
-	s.BaseLayer.Mem()
+	acc(&LayerTypeSCMPDestinationUnreachable, _) && s.BaseLayer.Mem()
 }
 
 pred (s *SCMPDestinationUnreachable) LayerMem() {
@@ -260,13 +256,12 @@ func (b *SCMPDestinationUnreachable) LayerPayload() (res []byte) {
 	}
 }
 
-
 (*SCMPDestinationUnreachable) implements gopacket.Layer
 (*SCMPDestinationUnreachable) implements gopacket.SerializableLayer
 
 
 pred (s *SCMPPacketTooBig) Mem() {
-	acc(&s.MTU) && s.BaseLayer.Mem()
+	acc(&LayerTypeSCMPPacketTooBig, _) && acc(&s.MTU) && s.BaseLayer.Mem()
 }
 
 pred (s *SCMPPacketTooBig) LayerMem() {
@@ -302,7 +297,6 @@ func (b *SCMPPacketTooBig) LayerPayload() (res []byte) {
 		fold b.PayloadMem()
 	}
 }
-
 
 (*SCMPPacketTooBig) implements gopacket.Layer
 (*SCMPPacketTooBig) implements gopacket.SerializableLayer

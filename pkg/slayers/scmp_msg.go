@@ -108,11 +108,11 @@ type SCMPExternalInterfaceDown struct {
 }
 
 // LayerType returns LayerTypeSCMPExternalInterfaceDown
+//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPExternalInterfaceDown) LayerType() gopacket.LayerType {
-	// (VerifiedSCION) TODO: replace with global
-	return getLayerTypeSCMPExternalInterfaceDown()
+	return /*@ unfolding acc(i.Mem(), _) in @*/ LayerTypeSCMPExternalInterfaceDown
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
@@ -261,6 +261,7 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 	return nil/*@, underlyingBufRes@*/
 }
 
+//@ requires acc(&LayerTypeSCMPExternalInterfaceDown, _)
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
@@ -311,11 +312,11 @@ type SCMPInternalConnectivityDown struct {
 }
 
 // LayerType returns LayerTypeSCMPInternalConnectivityDown.
+//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPInternalConnectivityDown) LayerType() gopacket.LayerType {
-	// (VerifiedSCION) TODO: replace with global
-	return getLayerTypeSCMPInternalConnectivityDown()
+	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPInternalConnectivityDown
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
@@ -505,6 +506,7 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 	return nil/*@, underlyingBufRes@*/
 }
 
+//@ requires acc(&LayerTypeSCMPInternalConnectivityDown, _)
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
@@ -545,11 +547,11 @@ type SCMPEcho struct {
 }
 
 // LayerType returns LayerTypeSCMPEcho.
+//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPEcho) LayerType() gopacket.LayerType {
-	// (VerifiedSCION) TODO: replace with global
-	return getLayerTypeSCMPEcho()
+	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPEcho
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
@@ -695,6 +697,7 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	return nil/*@, underlyingBufRes@*/
 }
 
+//@ requires acc(&LayerTypeSCMPEcho, _)
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
@@ -732,11 +735,11 @@ type SCMPParameterProblem struct {
 }
 
 // LayerType returns LayerTypeSCMPParameterProblem.
+//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPParameterProblem) LayerType() gopacket.LayerType {
-	// (VerifiedSCION) TODO: replace with global
-	return getLayerTypeSCMPParameterProblem()
+	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPParameterProblem
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
@@ -854,6 +857,7 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 	return nil/*@, underlyingBufRes@*/
 }
 
+//@ requires acc(&LayerTypeSCMPParameterProblem, _)
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
@@ -904,11 +908,11 @@ type SCMPTraceroute struct {
 }
 
 // LayerType returns LayerTypeSCMPTraceroute.
+//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPTraceroute) LayerType() gopacket.LayerType {
-	// (VerifiedSCION) TODO: replace with global
-	return getLayerTypeSCMPTraceroute()
+	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPTraceroute
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
@@ -1136,6 +1140,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	return nil/*@, underlyingBufRes@*/
 }
 
+//@ requires acc(&LayerTypeSCMPTraceroute, _)
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
@@ -1173,11 +1178,11 @@ type SCMPDestinationUnreachable struct {
 }
 
 // LayerType returns LayerTypeSCMPTraceroute.
+//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPDestinationUnreachable) LayerType() gopacket.LayerType {
-	// (VerifiedSCION) TODO: replace with global
-	return getLayerTypeSCMPDestinationUnreachable()
+	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPDestinationUnreachable
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
@@ -1247,6 +1252,7 @@ func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opt
 	return nil/*@, underlyingBufRes@*/
 }
 
+//@ requires acc(&LayerTypeSCMPDestinationUnreachable, _)
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
@@ -1284,11 +1290,11 @@ type SCMPPacketTooBig struct {
 }
 
 // LayerType returns LayerTypeSCMPParameterProblem.
+//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPPacketTooBig) LayerType() gopacket.LayerType {
-	// (VerifiedSCION) TODO: replace with global
-	return getLayerTypeSCMPPacketTooBig()
+	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPPacketTooBig
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
@@ -1406,6 +1412,7 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 	return nil/*@, underlyingBufRes@*/
 }
 
+//@ requires acc(&LayerTypeSCMPPacketTooBig, _)
 //@ requires acc(gopacket.LayerTypesMem(), _)
 //@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
