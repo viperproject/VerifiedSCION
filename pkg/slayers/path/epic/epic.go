@@ -54,6 +54,7 @@ func RegisterPath() {
 		Desc: "Epic",
 		New:
 		//@ ensures p.NonInitMem()
+		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
 			epicTmp := &Path{ScionPath: &scion.Raw{}}

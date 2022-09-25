@@ -40,6 +40,7 @@ func RegisterPath() {
 		Desc: "Empty",
 		New:
 		//@ ensures p.NonInitMem()
+		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
 			emptyTmp /*@@@*/ := Path{}
@@ -65,24 +66,21 @@ type Path struct {
 	//@ underlyingBuf []byte
 }
 
-// requires len(r) == dataLen
 //@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-//@ ensures  dataLen == 0 ==> e == nil
-//@ ensures  dataLen == 0 ==> o.Mem()
-//@ ensures  dataLen == 0 ==> underlyingBuf === o.GetUnderlyingBuf()
-//@ ensures  dataLen != 0 ==> e != nil
-//@ ensures  dataLen != 0 ==> e.ErrorMem()
-//@ ensures  dataLen != 0 ==> o.NonInitMem()
-//@ ensures  dataLen != 0 ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+//@ ensures  len(r) == 0 ==> e == nil
+//@ ensures  len(r) == 0 ==> o.Mem()
+//@ ensures  len(r) == 0 ==> underlyingBuf === o.GetUnderlyingBuf()
+//@ ensures  len(r) != 0 ==> e != nil
+//@ ensures  len(r) != 0 ==> e.ErrorMem()
+//@ ensures  len(r) != 0 ==> o.NonInitMem()
+//@ ensures  len(r) != 0 ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 //@ decreases
 func (o Path) DecodeFromBytes(r []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error) {
 	if len(r) != 0 {
 		//@ fold o.NonInitMem()
 		// (VerifiedSCION) TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
-		//@ assert dataLen != 0
 		return serrors.New("decoding an empty path", "len", int(len(r)))
 	}
-	//@ assert dataLen == 0
 	//@ o.SetUnderlyingBuf(underlyingBuf)
 	return nil
 }

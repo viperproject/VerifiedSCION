@@ -42,6 +42,7 @@ func RegisterPath() {
 		Desc: "OneHop",
 		New:
 		//@ ensures p.NonInitMem()
+		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
 			onehopTmp := &Path{}
