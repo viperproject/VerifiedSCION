@@ -58,6 +58,10 @@ func RegisterPath() {
 // Path encodes an empty path. An empty path is a special path that takes zero
 // bytes on the wire and is used for AS internal communication.
 type Path struct {
+	// (VerifiedSCION) this field is meant to be a ghost field
+	// which identifies from where the Path was decoded.
+	// XXX(gavinleroy) this field should be marked as 'ghost' when
+	// ghost fields are supported by Gobra.
 	//@ underlyingBuf []byte
 }
 
