@@ -61,10 +61,10 @@ func RegisterPath() {
 // in the first AS and completed by a SCION router in the second AS. It is used during beaconing
 // when there is not yet any other path segment available.
 type Path struct {
-	// (VerifiedSCION) this ghost field represents the buffer
-	// from which the Path was decoded. This needs to be kept
-	// in order to give up permissions eventually when recovering
-	// initial buffer permissions.
+	// (VerifiedSCION) this field is meant to be a ghost field
+	// which identifies from where the Path was decoded.
+	// XXX(gavinleroy) this field should be marked as 'ghost' when
+	// ghost fields are supported by Gobra.
 	//@ underlyingBuf []byte
 	Info      path.InfoField
 	FirstHop  path.HopField

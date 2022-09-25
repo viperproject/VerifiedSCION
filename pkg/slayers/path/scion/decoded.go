@@ -35,6 +35,10 @@ const (
 // the loss of performance.
 type Decoded struct {
 	Base
+	// (VerifiedSCION) this field is meant to be a ghost field
+	// which identifies from where the Path was decoded.
+	// XXX(gavinleroy) this field should be marked as 'ghost' when
+	// ghost fields are supported by Gobra.
 	//@ underlyingBuf []byte
 	// InfoFields contains all the InfoFields of the path.
 	InfoFields []path.InfoField

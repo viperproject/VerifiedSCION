@@ -73,8 +73,10 @@ func RegisterPath() {
 
 // Path denotes the EPIC path type header.
 type Path struct {
-	// (VerifiedSCION) keeping a reference to the inital buffer from which
-	// the Path was decoded will be crucial to recovering memory.
+	// (VerifiedSCION) this field is meant to be a ghost field
+	// which identifies from where the Path was decoded.
+	// XXX(gavinleroy) this field should be marked as 'ghost' when
+	// ghost fields are supported by Gobra.
 	//@ underlyingBuf []byte
 	PktID     PktID
 	PHVF      []byte

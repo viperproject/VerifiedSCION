@@ -65,7 +65,7 @@ type Path struct {
 	//@ underlyingBuf []byte
 }
 
-//@ requires len(r) == dataLen
+// requires len(r) == dataLen
 //@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 //@ ensures  dataLen == 0 ==> e == nil
 //@ ensures  dataLen == 0 ==> o.Mem()

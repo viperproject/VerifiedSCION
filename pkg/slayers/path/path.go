@@ -66,12 +66,13 @@ type Path interface {
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
 	//@ pred NonInitMem()
-	// (VerifiedSCION) this precondition deals with managing the
-	// underlying buffer permissions when exchanging Mem. When
-	// Mem is reclaimed via a magic wand, the knowledge that the
-	// underlying buffer did not change needs to be known. This
-	// could be a conjunct in the right-hand side but Gobra does
-	// not recognize this.
+	// (VerifiedSCION) This predicate abstracts the remainder of
+	// subtracting the permissions to the underlying buffer from
+	// the `Mem()` predicate and keeps track of the underlying
+	// buffer. This predicate is only necessary because if we
+	// inline its occurrences in the method ExchangeBufMem, Gobra
+	// cannot prove that the subtypes of Path correctly override
+	// this method.
 	//@ pred PostBufXchange(buf []byte)
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
@@ -83,15 +84,14 @@ type Path interface {
 	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
-	// TODO the extra fields should be annotated as ghost once ghost fields are
-	// implemented in Gobra
+	// TODO(VerifiedSCION) the extra parameters should be annotated as
+	// ghost once ghost fields are implemented in Gobra
 	SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error)
 	// DecodesFromBytes decodes the path from the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface (e.g. scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires NonInitMem()
 	//@ requires 0 <= dataLen && dataLen <= len(underlyingBuf)
-	//@ requires len(b) == dataLen
 	//@ requires b === underlyingBuf[:dataLen]
 	//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 	//@ ensures  err == nil ==> Mem()
@@ -100,8 +100,8 @@ type Path interface {
 	//@ ensures  err != nil ==> NonInitMem()
 	//@ ensures  err != nil ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 	//@ decreases
-	// TODO the extra fields should be annotated as ghost once ghost fields are
-	// implemented in Gobra
+	// TODO(VerifiedSCION) the extra parameters should be annotated as
+	// ghost once ghost fields are implemented in Gobra
 	DecodeFromBytes(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (err error)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
@@ -133,16 +133,12 @@ type Path interface {
 	//@ ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 	//@ decreases
 	//@ DowngradePerm(ghost buf []byte)
-	// (VerifiedSCION) releases the permission to access the underlying
-	// buffer for the given Path instance. There must also be a wand to
-	// regain access to the Mem predicate.
+	// (VerifiedSCION) get the reference to the underlying buffer.
 	//@ ghost
 	//@ requires acc(Mem(), _)
 	//@ decreases
 	//@ pure GetUnderlyingBuf() (buf []byte)
-	// (VerifiedSCION) exchange the Mem predicate for access to the
-	// underlying Path buffer. Access to Mem should be re-acquirable
-	// via a wand instance.
+	// (VerifiedSCION) obtain the full permission to the underlying buffer.
 	//@ ghost
 	//@ requires Mem()
 	//@ requires GetUnderlyingBuf() === buf
@@ -229,7 +225,6 @@ func NewPath(pathType Type) (p Path, e error) {
 		return tmp, nil
 	}
 	tmp := pm.New() /*@ as NewPathSpec @*/
-	//@ assume tmp != nil // TODO FIXME
 	return tmp, nil
 }
 
@@ -244,7 +239,14 @@ func NewRawPath() (p Path) {
 }
 
 type rawPath struct {
+	// (VerifiedSCION) this field is a ghost field
+	// which identifies from where the Path was decoded.
+	// XXX(gavinleroy) this field should be marked as 'ghost' when
+	// ghost fields are supported by Gobra.
 	//@ underlyingBuf []byte
+	// (VerifiedSCION) this field is a ghost field which
+	// identifies what size prefix of 'underlyingBuf' holds the
+	// actual 'raw' contents.
 	//@ dataLen int
 	raw      []byte
 	pathType Type
@@ -275,7 +277,6 @@ func (p *rawPath) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*
 //@ requires p.NonInitMem()
 //@ requires 0 <= dataLen && dataLen <= len(underlyingBuf)
 //@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-//@ requires len(b) == dataLen
 //@ requires b === underlyingBuf[:dataLen]
 //@ ensures  p.Mem()
 //@ ensures  p.GetUnderlyingBuf() === underlyingBuf

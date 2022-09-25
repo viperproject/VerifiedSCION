@@ -44,6 +44,7 @@ func RegisterPath() {
 		Desc: "SCION",
 		New:
 		//@ ensures p.NonInitMem()
+		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
 			rawTmp := &Raw{}

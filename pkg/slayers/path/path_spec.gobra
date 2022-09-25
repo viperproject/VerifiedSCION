@@ -134,6 +134,7 @@ pure func IsStrictDecoding() (b bool) {
 // without passing `writePerm` explicitely below, we run into
 // exceptions when verifying method RegisterPath in package 'empty'
 ensures acc(p.NonInitMem(), writePerm)
+ensures p != nil
 decreases
 func NewPathSpec() (p Path)
 

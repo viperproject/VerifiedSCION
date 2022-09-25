@@ -27,7 +27,13 @@ import (
 // little as possible and should be used if performance matters.
 type Raw struct {
 	Base
+	// (VerifiedSCION) this field is meant to be a ghost field
+	// which identifies from where the Path was decoded.
+	// XXX(gavinleroy) this field should be marked as 'ghost' when
+	// ghost fields are supported by Gobra.
 	//@ underlyingBuf []byte
+	// (VerifiedSCION) this field is meant to be a ghost field
+	// indicating how many prefix bytes 'Raw' is of 'underlyingBuf'.
 	//@ dataLen int
 	Raw []byte
 }
