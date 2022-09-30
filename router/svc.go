@@ -30,7 +30,7 @@ type services struct {
 	m   map[addr.HostSVC][]*net.UDPAddr
 }
 
-//@ ensures s.Mem()
+//@ ensures s != nil && s.Mem()
 //@ decreases
 func newServices() (s *services) {
 	tmp := &services{m: make(map[addr.HostSVC][]*net.UDPAddr)}

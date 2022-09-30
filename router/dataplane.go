@@ -480,26 +480,37 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	if a == nil {
 		return emptyValue
 	}
+	//@ preserves MutexInvariant!<d!>()
+	//@ preserves acc(&d.svc, 1/2)
+	//@ ensures   d.svc != nil && acc(d.svc.Mem(), _)
+	//@ decreases
+	//@ outline(
 	//@ unfold MutexInvariant!<d!>()
-	//@ assert (d.linkTypes != nil ==> acc(d.linkTypes, 1/2)) && (d.neighborIAs != nil ==> acc(d.neighborIAs, 1/2))
 	if d.svc == nil {
 		d.svc = newServices()
 	}
 	//@ fold MutexInvariant!<d!>()
-	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL20)
+	//@ )
+	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL15)
 	//@ assert acc(d.svc.Mem(), _)
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
-		//@ assume false
 		labels := serviceMetricLabels(d.localIA, svc)
+		//@ requires acc(&d.Metrics, definitions.ReadL20)
+		//@ requires acc(d.Metrics.Mem(), _)
+		//@ requires acc(labels, _)
+		//@ ensures  acc(&d.Metrics, definitions.ReadL20)
+		//@ decreases
+		//@ outline (
 		//@ unfold acc(d.Metrics.Mem(), _)
 		//@ assume float64(0) < float64(1) // Gobra still does not fully support floats
 		//@ assert d.Metrics.ServiceInstanceChanges != nil
 		//@ assert d.Metrics.ServiceInstanceCount   != nil
 		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(1))
+		//@ )
 	}
-	//@ fold acc(MutexInvariant!<d!>(), definitions.ReadL20)
+	//@ fold acc(MutexInvariant!<d!>(), definitions.ReadL15)
 	return nil
 }
 
