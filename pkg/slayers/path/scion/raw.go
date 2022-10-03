@@ -146,7 +146,6 @@ func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (
 //@ requires s.Mem()
 //@ ensures  err == nil ==> p != nil
 //@ ensures  err == nil ==> typeOf(p) == type[*Raw]
-// ensures  err == nil ==> p.(*Raw) != nil
 //@ ensures  err == nil ==> p.Mem()
 //@ ensures  err == nil ==> p.GetUnderlyingBuf() === old(s.GetUnderlyingBuf())
 //@ ensures  err != nil ==> err.ErrorMem()
@@ -157,7 +156,6 @@ func (s *Raw) Reverse() (p path.Path, err error) {
 	// work directly on the raw representation.
 	//@ underlyingBuf := unfolding acc(s.Mem(), _) in s.underlyingBuf
 	//@ pathLen := unfolding acc(s.Mem(), _) in s.dataLen
-	//@ assert true // TODO
 	decoded, err := s.ToDecoded()
 	if err != nil {
 		return nil, err
