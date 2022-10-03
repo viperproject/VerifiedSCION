@@ -24,10 +24,16 @@ func testAllocateNonInitRaw() {
 	fold r.NonInitMem()
 }
 
-// func testAllocateRaw() {
-// 	r := &Raw{}
-// 	fold r.Base.Mem()
-// 	fold slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
-// 	fold slices.AbsSlice_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf))
-// 	fold r.Mem()
-// }
+func testAllocateRaw() {
+	r := &Raw{}
+	fold r.Base.Mem()
+	assert r.Base.Len() == MetaLen
+	r.underlyingBuf = make([]byte, MetaLen)
+	r.dataLen = MetaLen
+	r.Raw = r.underlyingBuf[:r.dataLen]
+	fold slices.AbsSlice_Bytes(r.underlyingBuf, 0, r.dataLen)
+	slices.SplitByIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
+	slices.Reslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
+	assert slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
+	fold r.Mem()
+}

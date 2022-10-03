@@ -16,20 +16,33 @@
 
 package epic
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
+)
 
 func testAllocateNonInitMem() {
 	p := &Path{}
 	fold p.NonInitMem()
 }
 
-// func canAllocatePath() {
-// 	p := &Path{}
-// 	fold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
-// 	fold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
-// 	fold slices.AbsSlice_Bytes(p.underlyingBuf, 0, MetadataLen)
-// 	fold p.Mem()
-// }
+requires slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures r != nil && r.Mem() && r.GetUnderlyingBuf() === buf
+func getRawWithMem(buf []byte) (r *scion.Raw)
+
+func canAllocatePath() {
+	p := &Path{}
+	p.underlyingBuf = make([]byte, MetadataLen)
+	fold slices.AbsSlice_Bytes(p.underlyingBuf, 0, len(p.underlyingBuf))
+	slices.SplitByIndex_Bytes(p.underlyingBuf, 0, len(p.underlyingBuf), MetadataLen, writePerm)
+	assert slices.AbsSlice_Bytes(p.underlyingBuf, 0, MetadataLen)
+	assert slices.AbsSlice_Bytes(p.underlyingBuf, MetadataLen, len(p.underlyingBuf))
+	fold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
+	fold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
+	slices.Reslice_Bytes(p.underlyingBuf, MetadataLen, len(p.underlyingBuf), writePerm)
+	p.ScionPath = getRawWithMem(p.underlyingBuf[MetadataLen:])
+	fold p.Mem()
+}
 
 // (*Path).Len() cannot be currently be verified because Gobra does not allow statements in
 // pure functions, but Len must be pure.

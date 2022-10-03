@@ -79,9 +79,9 @@ type Path interface {
 	// structure when serializing (e.g. scion.Raw)
 	//@ preserves Mem()
 	//@ preserves GetUnderlyingBuf() === underlyingBuf
-	//@ preserves len(b) == dataLen
-	//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
 	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ requires  len(b) == dataLen
+	//@ requires  0 <= dataLen && dataLen <= len(underlyingBuf)
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	// TODO(VerifiedSCION) the extra parameters should be annotated as

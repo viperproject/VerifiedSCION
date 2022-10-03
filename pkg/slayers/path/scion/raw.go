@@ -144,8 +144,8 @@ func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (
 
 // Reverse reverses the path such that it can be used in the reverse direction.
 //@ requires s.Mem()
-//@ ensures  err == nil ==> p != nil
 //@ ensures  err == nil ==> typeOf(p) == type[*Raw]
+//@ ensures  err == nil ==> p != nil
 //@ ensures  err == nil ==> p.Mem()
 //@ ensures  err == nil ==> p.GetUnderlyingBuf() === old(s.GetUnderlyingBuf())
 //@ ensures  err != nil ==> err.ErrorMem()
