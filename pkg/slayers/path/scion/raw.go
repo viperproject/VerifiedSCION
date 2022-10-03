@@ -93,10 +93,9 @@ func (s *Raw) DecodeFromBytes(data []byte /*@, underlyingBuf []byte, dataLen int
 // otherwise an error is returned.
 //@ preserves s.Mem()
 //@ preserves s.GetUnderlyingBuf() === underlyingBuf
-//@ preserves len(b) == dataLen
-//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-// preserves b !== underlyingBuf[:dataLen] ==> slices.AbsSlice_Bytes(b, 0, len(b))
+//@ requires 0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ requires  len(b) == dataLen
 //@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
 func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (r error) {
@@ -146,6 +145,8 @@ func (s *Raw) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (
 // Reverse reverses the path such that it can be used in the reverse direction.
 //@ requires s.Mem()
 //@ ensures  err == nil ==> p != nil
+//@ ensures  err == nil ==> typeOf(p) == type[*Raw]
+// ensures  err == nil ==> p.(*Raw) != nil
 //@ ensures  err == nil ==> p.Mem()
 //@ ensures  err == nil ==> p.GetUnderlyingBuf() === old(s.GetUnderlyingBuf())
 //@ ensures  err != nil ==> err.ErrorMem()
@@ -170,10 +171,9 @@ func (s *Raw) Reverse() (p path.Path, err error) {
 		return nil, err
 	}
 	//@ assert typeOf(reversed) == type[*Decoded]
-	// TODO FIXME remove the extra variable
+	// TODO(VerifiedSCION) remove the extra variable
 	var rev *Decoded
 	rev = reversed.(*Decoded)
-	// ghost reversed = reversed.(*Decoded)
 	//@ assert s.Raw === underlyingBuf[:pathLen]
 	//@ assert underlyingBuf === rev.GetUnderlyingBuf()
 	//@ assert underlyingBuf === s.underlyingBuf

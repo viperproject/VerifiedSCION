@@ -88,10 +88,10 @@ type Path struct {
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
 //@ preserves p.Mem()
-//@ preserves len(b) == dataLen
-//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
 //@ preserves p.GetUnderlyingBuf() === underlyingBuf
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+//@ requires  0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ requires  len(b) == dataLen
 //@ ensures   r != nil ==> r.ErrorMem()
 //@ ensures   !old(p.hasScionPath()) ==> r != nil
 //@ ensures   len(b) < old(p.Len()) ==> r != nil

@@ -157,10 +157,10 @@ func (s *Decoded) DecodeFromBytes(data []byte /*@, underlyingBuf []byte, dataLen
 // SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
 //@ preserves s.Mem()
-//@ preserves 0 <= dataLen && dataLen <= len(buf)
-//@ preserves len(b) == dataLen
 //@ preserves s.GetUnderlyingBuf() === buf
+//@ preserves 0 <= dataLen && dataLen <= len(buf)
 //@ preserves b !== buf[:dataLen] ==> slices.AbsSlice_Bytes(b, 0, len(b))
+//@ requires  len(b) == dataLen
 //@ ensures   r != nil ==> r.ErrorMem()
 //@ decreases
 func (s *Decoded) SerializeTo(b []byte /*@, buf []byte, dataLen int @*/) (r error) {

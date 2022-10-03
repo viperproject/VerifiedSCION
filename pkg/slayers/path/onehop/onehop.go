@@ -140,9 +140,9 @@ func (o *Path) DecodeFromBytes(data []byte /*@, underlyingBuf []byte, dataLen in
 
 //@ preserves acc(o.Mem(), definitions.ReadL1)
 //@ preserves underlyingBuf === o.GetUnderlyingBuf()
-//@ preserves 0 <= dataLen && dataLen <= len(underlyingBuf)
-//@ preserves len(b) == dataLen
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+//@ requires  0 <= dataLen && dataLen <= len(underlyingBuf)
+//@ requires  len(b) == dataLen
 //@ ensures   (len(b) >= PathLen) == (err == nil)
 //@ ensures   err != nil ==> err.ErrorMem()
 //@ decreases
@@ -247,7 +247,6 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
-//@ trusted // TODO FIXME
 //@ requires o.Mem()
 //@ ensures err == nil ==> p != nil
 //@ ensures err == nil ==> p.Mem()

@@ -133,6 +133,7 @@ func (d *Decoded) Type() (t path.Type) {
 requires d.Mem()
 ensures  e == nil ==> d.Mem()
 ensures  e == nil ==> d.Len() == old(d.Len())
+ensures  e == nil ==> d.GetUnderlyingBuf() === old(d.GetUnderlyingBuf())
 ensures  e != nil ==> d.NonInitMem()
 ensures  e != nil ==> e.ErrorMem()
 decreases
