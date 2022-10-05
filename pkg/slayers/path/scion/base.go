@@ -31,6 +31,7 @@ const MetaLen = 4
 
 const PathType path.Type = 1
 
+/*
 //@ requires path.PathPackageMem()
 //@ requires !path.Registered(PathType)
 //@ ensures  path.PathPackageMem()
@@ -46,20 +47,19 @@ func RegisterPath() {
 		//@ ensures p.NonInitMem()
 		//@ ensures p != nil
 		//@ decreases
-		func /*@ newPath @*/ () (p path.Path) {
+		func /*@ newPath @*/ /*() (p path.Path) {
 			rawTmp := &Raw{}
 			//@ fold rawTmp.Base.NonInitMem()
 			//@ fold rawTmp.NonInitMem()
 			return rawTmp
 		},
 	}
-	/*@
-	proof tmp.New implements path.NewPathSpec {
-		return tmp.New() as newPath
-	}
-	@*/
+	//@ proof tmp.New implements path.NewPathSpec {
+	//@ 	return tmp.New() as newPath
+	//@ }
 	path.RegisterPath(tmp)
 }
+*/
 
 // Base holds the basic information that is used by both raw and fully decoded paths.
 type Base struct {

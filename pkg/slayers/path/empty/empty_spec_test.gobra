@@ -14,22 +14,6 @@
 
 // +gobra
 
-package scion
+package empty
 
-import "github.com/scionproto/scion/verification/utils/slices"
-
-func testAllocateNonInitRaw() {
-	r := &Raw{}
-	fold r.Base.NonInitMem()
-	fold r.NonInitMem()
-}
-
-func testAllocateRaw() {
-	r := &Raw{}
-	fold r.Base.Mem()
-	assert r.Base.Len() == MetaLen
-	s := make([]byte, MetaLen)
-	fold slices.AbsSlice_Bytes(s, 0, len(s))
-	r.Raw = s
-	fold r.Mem(s)
-}
+// TODO

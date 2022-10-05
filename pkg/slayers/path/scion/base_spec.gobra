@@ -16,6 +16,9 @@
 
 package scion
 
+// TODO: remove this
+const 	MaxINFs = 3
+
 pred (b *Base) NonInitMem() {
 	acc(b)
 }
@@ -41,14 +44,7 @@ pred (b *Base) Mem() {
 	(0 < b.NumINF ==> 0 < b.NumHops)
 }
 
-// The following conjuncts were previously added to Mem()
-// by a student, but are unsound:
-// (b.NumINF  == 0 ==> b.PathMeta.CurrINF == 0) &&
-// (b.NumINF  >  0 ==> b.PathMeta.CurrINF >= 0) &&
-// (b.NumHops == 0 ==> b.PathMeta.CurrHF == 0)  &&
-// (b.NumHops  > 0 ==> b.PathMeta.CurrHF >= 0)
-// TODO: Maybe we can put them in a separate predicate 
-
+ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res && res <= 3
 decreases
@@ -56,6 +52,7 @@ pure func (b *Base) getNumINF() (res int) {
 	return unfolding acc(b.Mem(), _) in b.NumINF
 }
 
+ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res
 decreases

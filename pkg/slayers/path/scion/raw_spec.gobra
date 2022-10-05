@@ -18,72 +18,89 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/verification/utils/definitions"
+	// d "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
 pred (s *Raw) NonInitMem() {
 	acc(&s.Raw) &&
-		acc(&s.underlyingBuf) && // Ghost
-		acc(&s.dataLen) && // Ghost
-		s.Base.NonInitMem()
+	s.Base.NonInitMem()
 }
 
-pred (s *Raw) Mem() {
+pred (s *Raw) Mem(buf []byte) {
 	s.Base.Mem() &&
-		acc(&s.Raw) &&
-		acc(&s.underlyingBuf) && // Ghost
-		acc(&s.dataLen) && // Ghost
-		0 <= s.dataLen && s.dataLen <= len(s.underlyingBuf) &&
-		s.Raw === s.underlyingBuf[:s.dataLen] &&
-		slices.AbsSlice_Bytes(s.underlyingBuf, s.dataLen, len(s.underlyingBuf)) &&
-		slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)) &&
-		len(s.Raw) == s.Base.Len()
-}
-
-pred (r *Raw) PostBufXchange(buf []byte) {
-	acc(r.Mem(), definitions.ReadL1) && r.GetUnderlyingBuf() === buf
+	acc(&s.Raw) &&
+	len(s.Raw) <= len(buf) &&
+	s.Raw === buf[:len(s.Raw)] &&
+	slices.AbsSlice_Bytes(buf, 0, len(buf)) &&
+	len(s.Raw) == s.Base.Len()
 }
 
 ghost
-requires r.PostBufXchange(buf)
-ensures  acc(r.Mem(), definitions.ReadL1)
-ensures  r.GetUnderlyingBuf() === buf
-func (r *Raw) UnfoldPostBufXchange(buf []byte) {
-	unfold r.PostBufXchange(buf)
-	assert acc(r.Mem(), definitions.ReadL1)
-	assert r.GetUnderlyingBuf() === buf
-}
-
-ghost
-requires acc(r.Mem(), _)
-decreases
-pure func (r *Raw) GetUnderlyingBuf() (buf []byte) {
-	return unfolding acc(r.Mem(), _) in r.underlyingBuf
-}
-
-ghost
-requires r.Mem()
-requires r.GetUnderlyingBuf() === buf
+requires r.Mem(buf)
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf)
 decreases
 func (r *Raw) ExchangeBufMem(buf []byte) {
-	unfold r.Mem()
-	ghost slices.Unslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
-	ghost slices.CombineAtIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf)) {
-		assert acc(&r.Raw)
-		assert acc(&r.underlyingBuf)
-		assert acc(&r.dataLen)
-		assert r.Raw === r.underlyingBuf[:r.dataLen]
-		ghost slices.SplitByIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
-		ghost slices.Reslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
-		assert slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
-		fold r.Mem()
-		fold r.PostBufXchange(buf)
+	unfold r.Mem(buf)
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf) {
+		fold r.Mem(buf)
 	}
 }
+
+ghost
+requires r.Mem(ubuf)
+ensures  acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)
+ensures  (acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf)
+decreases
+func (r *Raw) RawPerm(ubuf []byte) {
+	unfold r.Mem(ubuf)
+	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), writePerm)
+	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), writePerm)
+	assert slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
+	package (acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf) {
+		{
+			// assert body of predicate
+			assert r.Base.Mem()
+			assert acc(&r.Raw)
+			assert len(r.Raw) <= len(ubuf)
+			assert r.Raw === ubuf[:len(r.Raw)]
+			assert len(r.Raw) == r.Base.Len()
+		}
+		slices.Unslice_Bytes(ubuf, 0, len(r.Raw), writePerm)	
+		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), writePerm)
+		assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+		fold r.Mem(ubuf)
+	}
+}
+
+// TODO: define in terms of rawperm
+/*
+ghost
+requires r.Mem(ubuf)
+requires 0 <= idx && idx <= unfolding r.Mem(ubuf) in len(r.Raw)
+ensures  acc(&r.Raw, 1/2)
+ensures  r.Raw === old(unfolding r.Mem(ubuf) in r.Raw)
+ensures  slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)
+ensures  (acc(&r.Raw, 1/2) && idx <= len(r.Raw) && slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)) --* r.Mem(ubuf) // TODO: maybe remove middle conjunct
+decreases
+func (r *Raw) RawIdxPerm(ubuf []byte, idx int) {
+	unfold r.Mem(ubuf)
+	assert r.Raw === ubuf[:len(r.Raw)]
+	assert r.Raw[:MetaLen] === ubuf[:MetaLen]
+	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, writePerm)
+	slices.Reslice_Bytes(ubuf, 0, idx, writePerm)
+	assert slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)
+	package (acc(&r.Raw, 1/2) && idx <= len(r.Raw) && slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)) --* r.Mem(ubuf) {
+		slices.Unslice_Bytes(ubuf, 0, idx, writePerm)	
+		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, writePerm)
+		fold r.Mem(ubuf)
+	}
+	assert slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)
+}
+*/
+
+// TODO: Mem(ubuf1) -> Mem(ubuf2) if ubuf1 is a subslice of ubuf2
 
 /**
   * This method is not part of the original SCION codebase.
@@ -92,15 +109,15 @@ func (r *Raw) ExchangeBufMem(buf []byte) {
   * introduced this wrapper method which acts as a wrapper.
   */
 pure
-requires acc(s.Mem(), _)
-ensures  unfolding acc(s.Mem(), _) in l == s.Base.Len()
+requires acc(s.Mem(buf), _)
+ensures  unfolding acc(s.Mem(buf), _) in l == s.Base.Len()
 ensures  l >= 0
 decreases
-func (s *Raw) Len() (l int) {
-	return unfolding acc(s.Mem(), _) in s.Base.Len()
+func (s *Raw) Len(ghost buf []byte) (l int) {
+	return unfolding acc(s.Mem(buf), _) in s.Base.Len()
 }
 
-(*Raw) implements path.Path {
+/*(*Raw) implements path.Path {
 	(p *Raw) SerializeTo(b, buf []byte, l int) (e error) {
 		e = p.SerializeTo(b, buf, l)
 	}
@@ -137,6 +154,7 @@ func (s *Raw) Len() (l int) {
 		return p.Type()
 	}
 }
+*/
 
 /**
   * This method is not part of the original SCION codebase.
@@ -145,23 +163,20 @@ func (s *Raw) Len() (l int) {
   * introduced this wrapper method which acts as a wrapper.
   */
 pure
-requires acc(s.Mem(), _)
-ensures  unfolding acc(s.Mem(), _) in t == s.Base.Type()
+requires acc(s.Mem(buf), _)
+ensures  unfolding acc(s.Mem(buf), _) in t == s.Base.Type()
 decreases
-func (s *Raw) Type() (t path.Type) {
-	return unfolding acc(s.Mem(), _) in s.Base.Type()
+func (s *Raw) Type(ghost buf []byte) (t path.Type) {
+	return unfolding acc(s.Mem(buf), _) in s.Base.Type()
 }
 
 ghost
-requires s.Mem()
-requires buf === s.GetUnderlyingBuf()
+requires s.Mem(buf)
 ensures  s.NonInitMem()
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
 func (s *Raw) DowngradePerm(buf []byte) {
-	unfold s.Mem()
-	ghost slices.Unslice_Bytes(s.underlyingBuf, 0, s.dataLen, writePerm)
-	ghost slices.CombineAtIndex_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf), s.dataLen, writePerm)
+	unfold s.Mem(buf)
 	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
 	unfold s.Base.Mem()
 	fold s.Base.NonInitMem()

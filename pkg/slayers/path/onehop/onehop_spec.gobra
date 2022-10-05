@@ -26,101 +26,36 @@ pred (o *Path) NonInitMem() {
 	acc(o)
 }
 
-pred (o *Path) Mem() {
-	// underlyingBuf can only be treated as a ghost field.
-	acc(&o.underlyingBuf) &&
-		slices.AbsSlice_Bytes(o.underlyingBuf, 0, len(o.underlyingBuf)) &&
-		acc(&o.Info) &&
-		o.FirstHop.Mem() &&
-		o.SecondHop.Mem()
-}
-
-pred (o *Path) PostBufXchange(buf []byte) {
-	acc(o.Mem(), definitions.ReadL1) && o.GetUnderlyingBuf() === buf
+pred (o *Path) Mem(underlyingBuf []byte) {
+	slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)) &&
+    acc(&o.Info) &&
+    o.FirstHop.Mem() &&
+    o.SecondHop.Mem()
 }
 
 ghost
-requires p.PostBufXchange(buf)
-ensures  acc(p.Mem(), definitions.ReadL1)
-ensures  p.GetUnderlyingBuf() === buf
-func (p *Path) UnfoldPostBufXchange(buf []byte) {
-	unfold p.PostBufXchange(buf)
-	assert acc(p.Mem(), definitions.ReadL1)
-	assert p.GetUnderlyingBuf() === buf
-}
-
-ghost
-requires p.Mem()
-requires buf === p.GetUnderlyingBuf()
+requires p.Mem(buf)
 ensures  p.NonInitMem()
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
 func (p *Path) DowngradePerm(buf []byte) {
-	unfold p.Mem()
+	unfold p.Mem(buf)
 	unfold p.FirstHop.Mem()
 	unfold p.SecondHop.Mem()
 	fold  p.NonInitMem()
 }
 
 ghost
-requires acc(o.Mem(), _)
-decreases
-pure func (o *Path) GetUnderlyingBuf() (buf []byte) {
-	return unfolding acc(o.Mem(), _) in o.underlyingBuf
-}
-
-ghost
-requires o.Mem()
-requires buf === o.GetUnderlyingBuf()
+requires o.Mem(buf)
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(o.Mem(), definitions.ReadL1) && o.PostBufXchange(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* o.Mem()
 decreases
 func (o *Path) ExchangeBufMem(buf []byte) {
 	unfold o.Mem()
 	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(o.Mem(), definitions.ReadL1) && o.PostBufXchange(buf)) {
-		assert acc(&o.underlyingBuf)
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* o.Mem(buf) {
 		fold o.Mem()
-		fold o.PostBufXchange(buf)
 	}
 }
 
-(*Path) implements path.Path {
-	(p *Path) SerializeTo(b, buf []byte, l int) (e error) {
-		e = p.SerializeTo(b, buf, l)
-	}
-
-	(p *Path) DecodeFromBytes(b, buf []byte, l int) (e error) {
-		e = p.DecodeFromBytes(b, buf, l)
-	}
-
-	(p *Path) Reverse() (r path.Path, e error) {
-		r, e = p.Reverse()
-	}
-
-	(p *Path) DowngradePerm(buf []byte) {
-		p.DowngradePerm(buf)
-	}
-
-	pure (p *Path) Len() int {
-		return p.Len()
-	}
-
-	pure (p *Path) Type() path.Type {
-		return p.Type()
-	}
-}
-
-ghost
-requires acc(o)
-requires slices.AbsSlice_Bytes(o.underlyingBuf, 0, len(o.underlyingBuf))
-ensures  o.Mem()
-decreases
-func FoldPathMem(o *Path) {
-	// The following must hold because of the type of ConsIngress and ConsEgress
-	assume 0 <= o.FirstHop.ConsIngress && 0 <= o.FirstHop.ConsEgress
-	assume 0 <= o.SecondHop.ConsIngress && 0 <= o.SecondHop.ConsEgress
-	fold o.FirstHop.Mem()
-	fold o.SecondHop.Mem()
-	fold o.Mem()
-}
+(*Path) implements path.Path
