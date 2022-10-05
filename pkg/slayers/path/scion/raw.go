@@ -18,7 +18,7 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/private/serrors"
-	_ "github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
@@ -71,58 +71,35 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	if minLen := s.Len( /*@ ubuf @*/ ); len(b) < minLen {
 		return serrors.New("buffer too small", "expected", minLen, "actual", len(b))
 	}
-	//@ unfold s.Mem(ubuf)
-
-	//@ {
-	//@ 	assert MetaLen <= len(s.Raw)
-	//@ 	assert s.Raw === ubuf[:len(s.Raw)]
-	//@ 	assert s.Raw[:MetaLen] === ubuf[:MetaLen]
-	//@ 	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, writePerm)
-	//@ 	slices.Reslice_Bytes(ubuf, 0, MetaLen, writePerm)
-	//@ }
-
+	//@ s.RawIdxPerm(ubuf, MetaLen)
 	// XXX(roosd): This modifies the underlying buffer. Consider writing to data
 	// directly.
-	//@ unfold s.Base.Mem()
+	//@ unfold acc(s.Base.Mem(), 1/2)
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
-		//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
-		//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(b), MetaLen, writePerm)
-		//@ fold s.Base.Mem()
-		//@ fold s.Mem(ubuf)
+		//@ fold acc(s.Base.Mem(), 1/2)
+		//@ apply (acc(&s.Raw, 1/2) && MetaLen <= len(s.Raw) && slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen) && acc(s.Base.Mem(), 1/2)) --* s.Mem(ubuf)
 		return err
 	}
-
-	//@ {
-	//@ 	ghost slices.Unslice_Bytes(ubuf, 0, MetaLen, writePerm)
-	//@ 	ghost slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, writePerm)
-	//@ 	assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-	//@ 	fold s.Base.Mem()
-	//@ 	fold s.Mem(ubuf)
-	//@ 	s.RawPerm(ubuf)
-	//@ }
-
-	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-	//@ preserves acc(&s.Raw, 1/2) && slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	//@ decreases
-	//@ outline(
+	//@ fold acc(s.Base.Mem(), 1/2)
+	//@ apply (acc(&s.Raw, 1/2) && MetaLen <= len(s.Raw) && slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen) && acc(s.Base.Mem(), 1/2)) --* s.Mem(ubuf)
+	//@ s.RawPerm(ubuf)
 	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL2)
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	copy(b, s.Raw /*@ , definitions.ReadL2 @*/)
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), definitions.ReadL2)
-	//@ )
 	//@ apply (acc(&s.Raw, 1/2) && slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)) && acc(s.Base.Mem(), 1/2)) --* s.Mem(ubuf)
 	return nil
 }
 
 //// Reverse reverses the path such that it can be used in the reverse direction.
-////@ requires s.Mem(underlyingBuf)
-////@ ensures  err == nil ==> typeOf(p) == type[*Raw]
-////@ ensures  err == nil ==> p != nil
-////@ ensures  err == nil ==> p.Mem(underlyingBuf)
-////@ ensures  err != nil ==> err.ErrorMem()
-////@ decreases
-//func (s *Raw) Reverse( /*@ ghost underlyingBuf []byte @*/ ) (p path.Path, err error) {
+//@ requires s.Mem(ubuf)
+//@ ensures  err == nil ==> typeOf(p) == type[*Raw]
+//@ ensures  err == nil ==> p != nil
+//@ ensures  err == nil ==> p.Mem(ubuf)
+//@ ensures  err != nil ==> err.ErrorMem()
+//@ decreases
+func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) // {
 //	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
 //	// path first. If this becomes a performance bottleneck, the implementation should be changed to
 //	// work directly on the raw representation.
@@ -223,7 +200,7 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 
 // IncPath increments the path and writes it to the buffer.
 //@ requires s.Mem(ubuf)
-//@ ensures old(unfolding s.Mem(ubuf) in unfolding
+//@ ensures  old(unfolding s.Mem(ubuf) in unfolding
 //@   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
 //@ ensures  r == nil ==> s.Mem(ubuf)
 //@ ensures  r != nil ==> s.NonInitMem()
@@ -235,31 +212,29 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 		//@ fold s.NonInitMem()
 		return err
 	}
-	//@ unfold s.Base.Mem()
-	//@ ghost slices.SplitByIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
-	//@ ghost slices.Reslice_Bytes(s.Raw, 0, MetaLen, writePerm)
-	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
-	//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
-	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
-	//@ fold s.Base.Mem()
 	//@ fold s.Mem(ubuf)
+	//@ s.RawIdxPerm(ubuf, MetaLen)
+	//@ unfold acc(s.Base.Mem(), 1/2)
+	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
+	//@ fold acc(s.Base.Mem(), 1/2)
+	//@ apply (acc(&s.Raw, 1/2) && MetaLen <= len(s.Raw) && slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen) && acc(s.Base.Mem(), 1/2)) --* s.Mem(ubuf)
 	return err
 }
 
-//// GetInfoField returns the InfoField at a given index.
-////@ requires acc(s.Mem(), definitions.ReadL1)
+// GetInfoField returns the InfoField at a given index.
+////@ requires acc(s.Mem(ubuf), definitions.ReadL1)
 ////@ requires 0 <= idx
-////@ ensures  acc(s.Mem(), definitions.ReadL1)
+////@ ensures  acc(s.Mem(ubuf), definitions.ReadL1)
 ////@ ensures  err != nil ==> err.ErrorMem()
 ////@ decreases
-//func (s *Raw) GetInfoField(idx int /*@, ghost underlyingBuf []byte @*/) (ifield path.InfoField, err error) {
-//	//@ assert path.InfoLen == 8
-//	//@ unfold acc(s.Mem(), definitions.ReadL2)
+//func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) {
+//	// assert path.InfoLen == 8
+//	//@ unfold acc(s.Mem(ubuf), definitions.ReadL2)
 //	//@ unfold acc(s.Base.Mem(), definitions.ReadL3)
 //	if idx >= s.NumINF {
 //		e := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
 //		//@ fold acc(s.Base.Mem(), definitions.ReadL3)
-//		//@ fold acc(s.Mem(), definitions.ReadL2)
+//		//@ fold acc(s.Mem(ubuf), definitions.ReadL2)
 //		return path.InfoField{}, e
 //	}
 //	//@ fold acc(s.Base.Mem(), definitions.ReadL3)
@@ -272,13 +247,13 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 //		//@ ghost slices.Unslice_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, definitions.ReadL2)
 //		//@ ghost slices.CombineAtIndex_Bytes(s.Raw, infOffset, len(s.Raw), infOffset+path.InfoLen, definitions.ReadL2)
 //		//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), infOffset, definitions.ReadL2)
-//		//@ fold acc(s.Mem(), definitions.ReadL2)
+//		//@ fold acc(s.Mem(ubuf), definitions.ReadL2)
 //		return path.InfoField{}, err
 //	}
 //	//@ ghost slices.Unslice_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, definitions.ReadL2)
 //	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, infOffset, len(s.Raw), infOffset+path.InfoLen, definitions.ReadL2)
 //	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), infOffset, definitions.ReadL2)
-//	//@ fold acc(s.Mem(), definitions.ReadL2)
+//	//@ fold acc(s.Mem(ubuf), definitions.ReadL2)
 //	return info, nil
 //}
 

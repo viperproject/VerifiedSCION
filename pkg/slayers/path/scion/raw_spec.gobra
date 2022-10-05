@@ -18,10 +18,11 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-	// d "github.com/scionproto/scion/verification/utils/definitions"
+	// "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
+/**** Predicates ****/
 pred (s *Raw) NonInitMem() {
 	acc(&s.Raw) &&
 	s.Base.NonInitMem()
@@ -35,89 +36,12 @@ pred (s *Raw) Mem(buf []byte) {
 	slices.AbsSlice_Bytes(buf, 0, len(buf)) &&
 	len(s.Raw) == s.Base.Len()
 }
+/**** End of Predicates ****/
 
-ghost
-requires r.Mem(buf)
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf)
-decreases
-func (r *Raw) ExchangeBufMem(buf []byte) {
-	unfold r.Mem(buf)
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf) {
-		fold r.Mem(buf)
-	}
-}
+(*Raw) implements path.Path
 
-ghost
-requires r.Mem(ubuf)
-ensures  acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)
-ensures  (acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf)
-decreases
-func (r *Raw) RawPerm(ubuf []byte) {
-	unfold r.Mem(ubuf)
-	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), writePerm)
-	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), writePerm)
-	assert slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
-	package (acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf) {
-		{
-			// assert body of predicate
-			assert r.Base.Mem()
-			assert acc(&r.Raw)
-			assert len(r.Raw) <= len(ubuf)
-			assert r.Raw === ubuf[:len(r.Raw)]
-			assert len(r.Raw) == r.Base.Len()
-		}
-		slices.Unslice_Bytes(ubuf, 0, len(r.Raw), writePerm)	
-		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), writePerm)
-		assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-		fold r.Mem(ubuf)
-	}
-}
-
-// TODO: define in terms of rawperm
-/*
-ghost
-requires r.Mem(ubuf)
-requires 0 <= idx && idx <= unfolding r.Mem(ubuf) in len(r.Raw)
-ensures  acc(&r.Raw, 1/2)
-ensures  r.Raw === old(unfolding r.Mem(ubuf) in r.Raw)
-ensures  slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)
-ensures  (acc(&r.Raw, 1/2) && idx <= len(r.Raw) && slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)) --* r.Mem(ubuf) // TODO: maybe remove middle conjunct
-decreases
-func (r *Raw) RawIdxPerm(ubuf []byte, idx int) {
-	unfold r.Mem(ubuf)
-	assert r.Raw === ubuf[:len(r.Raw)]
-	assert r.Raw[:MetaLen] === ubuf[:MetaLen]
-	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, writePerm)
-	slices.Reslice_Bytes(ubuf, 0, idx, writePerm)
-	assert slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)
-	package (acc(&r.Raw, 1/2) && idx <= len(r.Raw) && slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)) --* r.Mem(ubuf) {
-		slices.Unslice_Bytes(ubuf, 0, idx, writePerm)	
-		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, writePerm)
-		fold r.Mem(ubuf)
-	}
-	assert slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)
-}
-*/
-
-// TODO: Mem(ubuf1) -> Mem(ubuf2) if ubuf1 is a subslice of ubuf2
-
-/**
-  * This method is not part of the original SCION codebase.
-  * Instead, `Len` was defined in `*Raw` via embedded structs.
-  * Unfortunately, Gobra does not fully support them yet, so we
-  * introduced this wrapper method which acts as a wrapper.
-  */
-pure
-requires acc(s.Mem(buf), _)
-ensures  unfolding acc(s.Mem(buf), _) in l == s.Base.Len()
-ensures  l >= 0
-decreases
-func (s *Raw) Len(ghost buf []byte) (l int) {
-	return unfolding acc(s.Mem(buf), _) in s.Base.Len()
-}
-
-/*(*Raw) implements path.Path {
+// TODO: delete explicit proof
+/* {
 	(p *Raw) SerializeTo(b, buf []byte, l int) (e error) {
 		e = p.SerializeTo(b, buf, l)
 	}
@@ -156,6 +80,7 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
 }
 */
 
+/**** Stubs ****/
 /**
   * This method is not part of the original SCION codebase.
   * Instead, `Len` was defined in `*Raw` via embedded structs.
@@ -170,6 +95,35 @@ func (s *Raw) Type(ghost buf []byte) (t path.Type) {
 	return unfolding acc(s.Mem(buf), _) in s.Base.Type()
 }
 
+/**
+  * This method is not part of the original SCION codebase.
+  * Instead, `Len` was defined in `*Raw` via embedded structs.
+  * Unfortunately, Gobra does not fully support them yet, so we
+  * introduced this wrapper method which acts as a wrapper.
+  */
+pure
+requires acc(s.Mem(buf), _)
+ensures  unfolding acc(s.Mem(buf), _) in l == s.Base.Len()
+ensures  l >= 0
+decreases
+func (s *Raw) Len(ghost buf []byte) (l int) {
+	return unfolding acc(s.Mem(buf), _) in s.Base.Len()
+}
+/**** End of Stubs ****/
+
+/**** Lemmas ****/
+ghost
+requires r.Mem(buf)
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf)
+decreases
+func (r *Raw) ExchangeBufMem(buf []byte) {
+	unfold r.Mem(buf)
+	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf) {
+		fold r.Mem(buf)
+	}
+}
+
 ghost
 requires s.Mem(buf)
 ensures  s.NonInitMem()
@@ -182,3 +136,64 @@ func (s *Raw) DowngradePerm(buf []byte) {
 	fold s.Base.NonInitMem()
 	fold s.NonInitMem()
 }
+
+ghost
+requires r.Mem(ubuf)
+ensures  acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)
+ensures  (acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf)
+ensures  r.Raw === old(unfolding r.Mem(ubuf) in r.Raw)
+decreases
+func (r *Raw) RawPerm(ubuf []byte) {
+	unfold r.Mem(ubuf)
+	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), writePerm)
+	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), writePerm)
+	assert slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
+	package (acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf) {
+		{
+			// assert body of predicate
+			assert r.Base.Mem()
+			assert acc(&r.Raw)
+			assert len(r.Raw) <= len(ubuf)
+			assert r.Raw === ubuf[:len(r.Raw)]
+			assert len(r.Raw) == r.Base.Len()
+		}
+		slices.Unslice_Bytes(ubuf, 0, len(r.Raw), writePerm)
+		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), writePerm)
+		assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+		fold r.Mem(ubuf)
+	}
+}
+
+ghost
+requires r.Mem(ubuf)
+requires 0 <= idx && idx <= unfolding r.Mem(ubuf) in len(r.Raw)
+ensures  acc(&r.Raw, 1/2)
+ensures  r.Raw === old(unfolding r.Mem(ubuf) in r.Raw)
+ensures  slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx) && acc(r.Base.Mem(), 1/2)
+ensures  (acc(&r.Raw, 1/2) && idx <= len(r.Raw) && slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf)
+decreases
+func (r *Raw) RawIdxPerm(ubuf []byte, idx int) {
+	unfold r.Mem(ubuf)
+	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, writePerm)
+	slices.Reslice_Bytes(ubuf, 0, idx, writePerm)
+	assert r.Raw[:idx] === ubuf[:idx]
+	assert slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)
+	package (acc(&r.Raw, 1/2) && idx <= len(r.Raw) && slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf) {
+		{
+			// assert body of predicate
+			assert r.Base.Mem()
+			assert acc(&r.Raw)
+			assert len(r.Raw) <= len(ubuf)
+			assert r.Raw === ubuf[:len(r.Raw)]
+			assert len(r.Raw) == r.Base.Len()
+		}
+		slices.Unslice_Bytes(ubuf, 0, idx, writePerm)
+		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, writePerm)
+		assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+		fold r.Mem(ubuf)
+	}
+}
+
+// TODO: Mem(ubuf1) -> Mem(ubuf2) if ubuf1 is a subslice of ubuf2
+
+/**** End of Lemmas ****/
