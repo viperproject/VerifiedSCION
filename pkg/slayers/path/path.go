@@ -61,7 +61,7 @@ func (t Type) String() string {
 
 // Path is the path contained in the SCION header.
 type Path interface {
-	// (VerifiedSCION) Must hold for every valid of Path.
+	// (VerifiedSCION) Must hold for every valid Path.
 	//@ pred Mem(underlyingBuf []byte)
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
@@ -87,10 +87,10 @@ type Path interface {
 	DecodeFromBytes(b []byte) (err error)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
-	//@ requires  Mem(underlyingBuf)
-	//@ ensures   e == nil ==> p != nil
-	//@ ensures   e == nil ==> p.Mem(underlyingBuf)
-	//@ ensures   e != nil ==> e.ErrorMem()
+	//@ requires Mem(underlyingBuf)
+	//@ ensures  e == nil ==> p != nil
+	//@ ensures  e == nil ==> p.Mem(underlyingBuf)
+	//@ ensures  e != nil ==> e.ErrorMem()
 	//@ decreases
 	Reverse( /*@ ghost underlyingBuf []byte @*/ ) (p Path, e error)
 	// Len returns the length of a path in bytes.

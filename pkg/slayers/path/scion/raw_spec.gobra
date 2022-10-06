@@ -18,7 +18,6 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-	// "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -39,46 +38,6 @@ pred (s *Raw) Mem(buf []byte) {
 /**** End of Predicates ****/
 
 (*Raw) implements path.Path
-
-// TODO: delete explicit proof
-/* {
-	(p *Raw) SerializeTo(b, buf []byte, l int) (e error) {
-		e = p.SerializeTo(b, buf, l)
-	}
-
-	(p *Raw) DecodeFromBytes(b, buf []byte, l int) (e error) {
-		e = p.DecodeFromBytes(b, buf, l)
-	}
-
-	(p *Raw) Reverse() (r path.Path, e error) {
-		r, e = p.Reverse()
-	}
-
-	(p *Raw) DowngradePerm(buf []byte) {
-		p.DowngradePerm(buf)
-	}
-
-	// pure (p *Raw) GetUnderlyingBuf() []byte {
-	// 	return p.GetUnderlyingBuf()
-	// }
-
-	(p *Raw) ExchangeBufMem(buf []byte) {
-		p.ExchangeBufMem(buf)
-	}
-
-	(p *Raw) UnfoldPostBufXchange(buf []byte) {
-		p.UnfoldPostBufXchange(buf)
-	}
-
-	pure (p *Raw) Len() int {
-		return p.Len()
-	}
-
-	pure (p *Raw) Type() path.Type {
-		return p.Type()
-	}
-}
-*/
 
 /**** Stubs ****/
 /**
@@ -138,62 +97,123 @@ func (s *Raw) DowngradePerm(buf []byte) {
 }
 
 ghost
-requires r.Mem(ubuf)
-ensures  acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)
-ensures  (acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf)
-ensures  r.Raw === old(unfolding r.Mem(ubuf) in r.Raw)
+requires 0 < p
+requires acc(r.Mem(ubuf), p)
+ensures  acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
+ensures  (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
+ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
 decreases
-func (r *Raw) RawPerm(ubuf []byte) {
-	unfold r.Mem(ubuf)
-	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), writePerm)
-	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), writePerm)
-	assert slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw))
-	package (acc(&r.Raw, 1/2) && slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf) {
+func (r *Raw) RawPerm(ubuf []byte, p perm) {
+	unfold acc(r.Mem(ubuf), p)
+	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
+	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
+	assert acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p)
+	package (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p) {
 		{
 			// assert body of predicate
-			assert r.Base.Mem()
-			assert acc(&r.Raw)
+			assert acc(r.Base.Mem(), p)
+			assert acc(&r.Raw, p)
 			assert len(r.Raw) <= len(ubuf)
 			assert r.Raw === ubuf[:len(r.Raw)]
 			assert len(r.Raw) == r.Base.Len()
 		}
-		slices.Unslice_Bytes(ubuf, 0, len(r.Raw), writePerm)
-		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), writePerm)
-		assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-		fold r.Mem(ubuf)
+		slices.Unslice_Bytes(ubuf, 0, len(r.Raw), p)
+		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
+		assert acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
+		fold acc(r.Mem(ubuf), p)
 	}
 }
 
 ghost
-requires r.Mem(ubuf)
-requires 0 <= idx && idx <= unfolding r.Mem(ubuf) in len(r.Raw)
-ensures  acc(&r.Raw, 1/2)
-ensures  r.Raw === old(unfolding r.Mem(ubuf) in r.Raw)
-ensures  slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx) && acc(r.Base.Mem(), 1/2)
-ensures  (acc(&r.Raw, 1/2) && idx <= len(r.Raw) && slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf)
+requires 0 < p
+requires acc(r.Mem(ubuf), p)
+requires 0 <= idx && idx <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
+ensures  acc(&r.Raw, p/2)
+ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
+ensures  acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
+ensures  (acc(&r.Raw, p/2) && idx <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
 decreases
-func (r *Raw) RawIdxPerm(ubuf []byte, idx int) {
-	unfold r.Mem(ubuf)
-	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, writePerm)
-	slices.Reslice_Bytes(ubuf, 0, idx, writePerm)
+func (r *Raw) RawIdxPerm(ubuf []byte, idx int, p perm) {
+	unfold acc(r.Mem(ubuf), p)
+	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
+	slices.Reslice_Bytes(ubuf, 0, idx, p)
 	assert r.Raw[:idx] === ubuf[:idx]
-	assert slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx)
-	package (acc(&r.Raw, 1/2) && idx <= len(r.Raw) && slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx) && acc(r.Base.Mem(), 1/2)) --* r.Mem(ubuf) {
+	assert acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p)
+	package (acc(&r.Raw, p/2) && idx <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p) {
 		{
 			// assert body of predicate
-			assert r.Base.Mem()
-			assert acc(&r.Raw)
+			assert acc(r.Base.Mem(), p)
+			assert acc(&r.Raw, p)
 			assert len(r.Raw) <= len(ubuf)
 			assert r.Raw === ubuf[:len(r.Raw)]
 			assert len(r.Raw) == r.Base.Len()
 		}
-		slices.Unslice_Bytes(ubuf, 0, idx, writePerm)
-		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, writePerm)
-		assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-		fold r.Mem(ubuf)
+		slices.Unslice_Bytes(ubuf, 0, idx, p)
+		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
+		assert acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
+		fold acc(r.Mem(ubuf), p)
+	}
+}
+
+// Notice that no permission to r.Base.Mem() is provided, unlike the previous methods
+ghost
+requires 0 < p
+requires acc(r.Mem(ubuf), p)
+requires 0 <= start && start <= end && end <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
+ensures  acc(&r.Raw, p/4)
+ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
+ensures  acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
+ensures  (acc(&r.Raw, p/4) && 0 < p && 0 <= start && start <= end && end <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)) --* acc(r.Mem(ubuf), p)
+decreases
+func (r *Raw) RawRangePerm(ubuf []byte, start, end int, p perm) {
+	r.RawPerm(ubuf, p)
+	{
+		assert acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
+		assert (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
+	}
+	slices.SplitByIndex_Bytes(r.Raw, 0, len(r.Raw), start, p)
+	{
+		assert acc(slices.AbsSlice_Bytes(r.Raw, 0, start), p)
+		assert acc(slices.AbsSlice_Bytes(r.Raw, start, len(r.Raw)), p)
+	}
+	slices.SplitByIndex_Bytes(r.Raw, start, len(r.Raw), end, p)
+	{
+		assert acc(slices.AbsSlice_Bytes(r.Raw, 0, start), p)
+		assert acc(slices.AbsSlice_Bytes(r.Raw, start, end), p)
+		assert acc(slices.AbsSlice_Bytes(r.Raw, end, len(r.Raw)), p)
+	}
+	slices.Reslice_Bytes(r.Raw, start, end, p)
+	{
+		assert acc(slices.AbsSlice_Bytes(r.Raw, 0, start), p)
+		assert acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
+		assert acc(slices.AbsSlice_Bytes(r.Raw, end, len(r.Raw)), p)
+	}
+	package (acc(&r.Raw, p/4) && 0 < p && 0 <= start && start <= end && end <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)) --* acc(r.Mem(ubuf), p) {
+		assert 0 < p
+		{
+			assert acc(&r.Raw, p/2)
+			assert acc(slices.AbsSlice_Bytes(r.Raw, 0, start), p)
+			assert acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
+			assert acc(slices.AbsSlice_Bytes(r.Raw, end, len(r.Raw)), p)
+		}
+		slices.Unslice_Bytes(r.Raw, start, end, p)
+		slices.CombineAtIndex_Bytes(r.Raw, start, len(r.Raw), end, p)
+		slices.CombineAtIndex_Bytes(r.Raw, 0, len(r.Raw), start, p)
+		apply (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
 	}
 }
 
 // TODO: Mem(ubuf1) -> Mem(ubuf2) if ubuf1 is a subslice of ubuf2
+/*
+ghost
+requires r.Mem(ubuf1)
+requires len(ubuf1) <= len(ubuf2)
+requires ubuf1 === ubuf2[:len(ubuf1)]
+requires slices.AbsSlice_Bytes(ubuf2, len(ubuf1), len(ubuf2))
+ensures  r.Mem(ubuf2)
+func (r *Raw) Widden(ubuf1, ubuf2 []byte) {
+	unfold r.Mem(ubuf1)
+}
+*/
 
 /**** End of Lemmas ****/

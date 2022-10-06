@@ -19,7 +19,6 @@ package empty
 import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // PathLen is the length of a serialized empty path in bytes.
