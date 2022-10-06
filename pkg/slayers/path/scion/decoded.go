@@ -288,6 +288,10 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	}
 	//@ fold s.Mem(ubuf)
 	//@ )
+
+	//@ preserves s.Mem(ubuf)
+	//@ decreases
+	//@ outline(
 	// Reverse order of hop fields
 	//@ invariant s.Mem(ubuf)
 	//@ invariant i + j == (unfolding s.Mem(ubuf) in s.Base.getNumHops())-1
@@ -301,20 +305,23 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ assert 0 < len(s.HopFields)
 		//@ assert s.Base.getNumHops() == len(s.HopFields)
 
-		//@ preserves acc(&s.HopFields, definitions.ReadL10)
-		//@ preserves 0 <= i && i < len(s.HopFields)
-		//@ preserves 0 <= j && j < len(s.HopFields)
-		//@ preserves s.HopFields[i].Mem() && s.HopFields[j].Mem()
-		//@ decreases
-		//@ outline(
+		// preserves acc(&s.HopFields, definitions.ReadL10)
+		// preserves 0 <= i && i < len(s.HopFields)
+		// preserves 0 <= j && j < len(s.HopFields)
+		// preserves s.HopFields[i].Mem() && s.HopFields[j].Mem()
+		// decreases
+		// outline(
+		//@ assert i != j
 		//@ unfold s.HopFields[i].Mem()
 		//@ unfold s.HopFields[j].Mem()
 		s.HopFields[i], s.HopFields[j] = s.HopFields[j], s.HopFields[i]
 		//@ fold s.HopFields[i].Mem()
 		//@ fold s.HopFields[j].Mem()
-		//@ )
+		// )
 		//@ fold s.Mem(ubuf)
 	}
+	//@ )
+
 	//@ assume false
 	// Update CurrINF and CurrHF and SegLens
 	s.PathMeta.CurrINF = uint8(s.NumINF) - s.PathMeta.CurrINF - 1
@@ -331,11 +338,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 //func (s *Decoded) ToRaw() (r *Raw, err error) {
 //	b := make([]byte, s.Len())
 //	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
-//	//@ dataLen := len(b)
-//	//@ underlyingBuf := unfolding acc(s.Mem(), _) in s.underlyingBuf
-//	//@ assert underlyingBuf === s.GetUnderlyingBuf()
-//	//@ assert slices.AbsSlice_Bytes(b, 0, len(b))
-//	if err := s.SerializeTo(b /*@, underlyingBuf, dataLen @*/); err != nil {
+//	if err := s.SerializeTo(b /*@, underlyingBuf @*/); err != nil {
 //		return nil, err
 //	}
 //	raw := &Raw{}
