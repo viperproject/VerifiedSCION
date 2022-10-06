@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
 
 package scion
 
@@ -21,41 +22,42 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
+/**** Predicates ****/
+
 pred (d *Decoded) NonInitMem() {
-	acc(&d.underlyingBuf) &&
-		acc(&d.InfoFields) &&
-		acc(&d.HopFields) &&
-		d.Base.NonInitMem()
+	acc(&d.InfoFields) && acc(&d.HopFields) && d.Base.NonInitMem()
 }
 
-pred (d *Decoded) Mem() {
+pred (d *Decoded) Mem(ubuf []byte) {
 	d.Base.Mem() &&
-		/* ghost */ acc(&d.underlyingBuf) &&
-		/* ghost */ slices.AbsSlice_Bytes(d.underlyingBuf, 0, len(d.underlyingBuf)) &&
-		d.Base.Len() <= len(d.underlyingBuf) &&
-		acc(&d.InfoFields) &&
-		d.Base.getNumINF() <= MaxINFs &&
-		len(d.InfoFields) == d.Base.getNumINF() &&
-		(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
-		acc(&d.HopFields) &&
-		len(d.HopFields) == d.Base.getNumHops() &&
-		(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
+	acc(&d.InfoFields) &&
+	d.Base.getNumINF() <= MaxINFs &&
+	len(d.InfoFields) == d.Base.getNumINF() &&
+	(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
+	acc(&d.HopFields) &&
+	len(d.HopFields) == d.Base.getNumHops() &&
+	(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem()) &&
+	slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 }
 
+// TODO: not sure if I'm removing it
+/*
 pred (d *Decoded) NoBufMem(buf []byte) {
 	acc(d.Base.Mem(), definitions.ReadL1) &&
-		/* ghost */acc(&d.underlyingBuf) && d.underlyingBuf === buf &&
-		acc(&d.InfoFields) &&
-		d.Base.getNumINF() <= MaxINFs &&
-		len(d.InfoFields) == d.Base.getNumINF() &&
-		(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
-		acc(&d.HopFields) &&
-		len(d.HopFields) == d.Base.getNumHops() &&
-		(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
+	acc(&d.InfoFields) &&
+	d.Base.getNumINF() <= MaxINFs &&
+	len(d.InfoFields) == d.Base.getNumINF() &&
+	(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
+	acc(&d.HopFields) &&
+	len(d.HopFields) == d.Base.getNumHops() &&
+	(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
+*/
 
+/**** End of Predicates ****/
+
+/*
 requires d.Mem()
-requires d.GetUnderlyingBuf() === buf
 ensures  d.NoBufMem(buf)
 ensures  (unfolding acc(d.NoBufMem(buf), _) in d.Base.Len()) == old(unfolding acc(d.Mem(), _) in d.Base.Len())
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
@@ -79,19 +81,9 @@ func (d *Decoded) ExchangeNoBufMem(buf []byte) {
 		fold d.PostBufXchange(buf)
 	}
 }
+*/
 
-pred (p *Decoded) PostBufXchange(buf []byte) {
-	acc(p.Mem(), definitions.ReadL1) && p.GetUnderlyingBuf() === buf
-}
-
-ghost
-requires p.PostBufXchange(buf)
-ensures  acc(p.Mem(), definitions.ReadL1)
-ensures  p.GetUnderlyingBuf() === buf
-decreases
-func (p *Decoded) UnfoldPostBufXchange(buf []byte) {
-	unfold p.PostBufXchange(buf)
-}
+/**** Stubs ****/
 
 /**
   * This method is not part of the original SCION codebase.
@@ -100,12 +92,12 @@ func (p *Decoded) UnfoldPostBufXchange(buf []byte) {
   * introduced this wrapper method which acts as a wrapper.
   */
 pure
-requires acc(d.Mem(), _)
-ensures  unfolding acc(d.Mem(), _) in l == d.Base.Len()
+requires acc(d.Mem(ubuf), _)
+ensures  unfolding acc(d.Mem(ubuf), _) in l == d.Base.Len()
 ensures  l >= 0
 decreases
-func (d *Decoded) Len() (l int) {
-	return unfolding acc(d.Mem(), _) in d.Base.Len()
+func (d *Decoded) Len(ghost ubuf []byte) (l int) {
+	return unfolding acc(d.Mem(ubuf), _) in d.Base.Len()
 }
 
 /**
@@ -115,11 +107,11 @@ func (d *Decoded) Len() (l int) {
   * introduced this wrapper method which acts as a wrapper.
   */
 pure
-requires acc(d.Mem(), _)
-ensures  unfolding acc(d.Mem(), _) in t == d.Base.Type()
+requires acc(d.Mem(ubuf), _)
+ensures  unfolding acc(d.Mem(ubuf), _) in t == d.Base.Type()
 decreases
-func (d *Decoded) Type() (t path.Type) {
-	return unfolding acc(d.Mem(), _) in d.Base.Type()
+func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
+	return unfolding acc(d.Mem(ubuf), _) in d.Base.Type()
 }
 
 /**
@@ -129,99 +121,53 @@ func (d *Decoded) Type() (t path.Type) {
   * on d.Base. Without this, one would need to unfold d.Mem() to call `IncPath`,
   * which can be extremely cumbersome.
   */
-requires d.Mem()
-ensures  e == nil ==> d.Mem()
-ensures  e == nil ==> d.Len() == old(d.Len())
-ensures  e == nil ==> d.GetUnderlyingBuf() === old(d.GetUnderlyingBuf())
+requires d.Mem(ubuf)
+ensures  e == nil ==> d.Mem(ubuf)
+ensures  e == nil ==> d.Len(ubuf) == old(d.Len(ubuf))
 ensures  e != nil ==> d.NonInitMem()
 ensures  e != nil ==> e.ErrorMem()
 decreases
-func (d *Decoded) IncPath() (e error) {
-	unfold d.Mem()
+func (d *Decoded) IncPath(ubuf []byte) (e error) {
+	unfold d.Mem(ubuf)
 	e = d.Base.IncPath()
 	if e == nil {
-		fold d.Mem()
+		fold d.Mem(ubuf)
 	} else {
 		fold d.NonInitMem()
 	}
 	return e
 }
 
+/**** End of Stubs ****/
+
 ghost
-requires d.Mem()
-requires buf === d.GetUnderlyingBuf()
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+requires d.Mem(ubuf)
+ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 ensures  d.NonInitMem()
 decreases
-func (d *Decoded) DowngradePerm(buf []byte) {
-	unfold d.Mem()
+func (d *Decoded) DowngradePerm(ubuf []byte) {
+	unfold d.Mem(ubuf)
 	unfold d.Base.Mem()
-	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
+	assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 	fold d.Base.NonInitMem()
 	fold d.NonInitMem()
 }
 
 ghost
-requires acc(d.Mem(), _)
+requires d.Mem(ubuf)
+ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* d.Mem(ubuf)
 decreases
-pure func (d *Decoded) GetUnderlyingBuf() (buf []byte) {
-	return unfolding acc(d.Mem(), _) in d.underlyingBuf
-}
-
-ghost
-requires d.Mem()
-requires d.GetUnderlyingBuf() === buf
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf))
-decreases
-func (d *Decoded) ExchangeBufMem(buf []byte) {
-	unfold d.Mem()
-	assert buf === d.underlyingBuf
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf)) {
-		assert acc(&d.underlyingBuf)
-		fold d.Mem()
-		fold d.PostBufXchange(buf)
+func (d *Decoded) ExchangeBufMem(ubuf []byte) {
+	unfold d.Mem(ubuf)
+	package slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* d.Mem(ubuf) {
+		fold d.Mem(ubuf)
 	}
 }
 
-(*Decoded) implements path.Path {
-	(p *Decoded) SerializeTo(b, buf []byte, l int) (e error) {
-		e = p.SerializeTo(b, buf, l)
-	}
+(*Decoded) implements path.Path
 
-	(p *Decoded) DecodeFromBytes(b, buf []byte, l int) (e error) {
-		e = p.DecodeFromBytes(b, buf, l)
-	}
-
-	(p *Decoded) Reverse() (r path.Path, e error) {
-		r, e = p.Reverse()
-	}
-
-	(p *Decoded) DowngradePerm(buf []byte) {
-		p.DowngradePerm(buf)
-	}
-
-	// pure (p *Decoded) GetUnderlyingBuf() []byte {
-	// 	return p.GetUnderlyingBuf()
-	// }
-
-	(p *Decoded) ExchangeBufMem(buf []byte) {
-		p.ExchangeBufMem(buf)
-	}
-
-	(p *Decoded) UnfoldPostBufXchange(buf []byte) {
-		p.UnfoldPostBufXchange(buf)
-	}
-
-	pure (p *Decoded) Len() int {
-		return p.Len()
-	}
-
-	pure (p *Decoded) Type() path.Type {
-		return p.Type()
-	}
-}
-
+/*
 requires acc(d.NoBufMem(buf), _)
 decreases
 pure func (d *Decoded) getLenInfoFields(buf []byte) int {
@@ -233,3 +179,4 @@ decreases
 pure func (d *Decoded) getLenHopFields(buf []byte) int {
 	return unfolding acc(d.NoBufMem(buf), _) in len(d.HopFields)
 }
+*/

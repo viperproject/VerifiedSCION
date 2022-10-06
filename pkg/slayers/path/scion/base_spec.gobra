@@ -16,9 +16,6 @@
 
 package scion
 
-// TODO: remove this
-const 	MaxINFs = 3
-
 pred (b *Base) NonInitMem() {
 	acc(b)
 }
@@ -40,7 +37,7 @@ pred (b *Base) Mem() {
 	0 <= b.NumINF && b.NumINF <= MaxINFs &&
 	// the Code defines 64 as the maximum number of hops,
 	// but this does not seem to be enforced anywhere.
-	0 <= b.NumHops && // && b.NumHops <= 64 &&
+	0 <= b.NumHops && // && b.NumHops <= MaxHops &&
 	(0 < b.NumINF ==> 0 < b.NumHops)
 }
 

@@ -116,7 +116,6 @@ ghost
 requires 0 < p
 requires acc(r.Mem(ubuf), p)
 ensures  acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
-// ensures  (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
 ensures  r.RawPermRemainder(ubuf, p)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
 decreases
@@ -168,7 +167,6 @@ requires 0 <= idx && idx <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
 ensures  acc(&r.Raw, p/2)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
 ensures  acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
-// ensures  (acc(&r.Raw, p/2) && idx <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
 ensures  r.RawIdxPermRemainder(ubuf, idx, p)
 decreases
 func (r *Raw) RawIdxPerm(ubuf []byte, idx int, p perm) {
@@ -221,8 +219,6 @@ requires 0 <= start && start <= end && end <= unfolding acc(r.Mem(ubuf), p) in l
 ensures  acc(&r.Raw, p/4)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
 ensures  acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
-// TODO: delete following postcondition everywhere
-// ensures  (acc(&r.Raw, p/4) && 0 < p && 0 <= start && start <= end && end <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)) --* acc(r.Mem(ubuf), p)
 ensures  r.RawRangePermRemainder(ubuf, start, end, p)
 decreases
 func (r *Raw) RawRangePerm(ubuf []byte, start, end int, p perm) {
