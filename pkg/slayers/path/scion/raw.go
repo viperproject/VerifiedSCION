@@ -77,18 +77,18 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ unfold acc(s.Base.Mem(), 1/2)
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		//@ fold acc(s.Base.Mem(), 1/2)
-		//@ apply (acc(&s.Raw, 1/2) && MetaLen <= len(s.Raw) && slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen) && acc(s.Base.Mem(), 1/2)) --* s.Mem(ubuf)
+		//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
 		return err
 	}
 	//@ fold acc(s.Base.Mem(), 1/2)
-	//@ apply (acc(&s.Raw, 1/2) && MetaLen <= len(s.Raw) && slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen) && acc(s.Base.Mem(), 1/2)) --* s.Mem(ubuf)
+	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
 	//@ s.RawPerm(ubuf, writePerm)
 	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), def.ReadL2)
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	copy(b, s.Raw /*@ , def.ReadL2 @*/)
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), def.ReadL2)
-	//@ apply (acc(&s.Raw, 1/2) && slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)) && acc(s.Base.Mem(), 1/2)) --* s.Mem(ubuf)
+	//@ s.UndoRawPerm(ubuf, writePerm)
 	return nil
 }
 
@@ -129,7 +129,6 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) // {
 //}
 
 //// ToDecoded transforms a scion.Raw to a scion.Decoded.
-///*
 //// requires s.Mem()
 //// ensures  err == nil ==> d.Mem()
 //// ensures  err == nil ==> s.NonInitMem()
@@ -139,7 +138,6 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) // {
 //// ensures  err == nil ==> d.GetUnderlyingBuf() === old(s.GetUnderlyingBuf())
 //// ensures  err != nil ==> (s.Mem() && err.ErrorMem())
 //// decreases
-//*/
 ////@ trusted
 //func (s *Raw) ToDecoded() (d *Decoded, err error) {
 //	//@ underlyingBuf := s.GetUnderlyingBuf()
@@ -217,7 +215,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ unfold acc(s.Base.Mem(), 1/2)
 	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
 	//@ fold acc(s.Base.Mem(), 1/2)
-	//@ apply (acc(&s.Raw, 1/2) && MetaLen <= len(s.Raw) && slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen) && acc(s.Base.Mem(), 1/2)) --* s.Mem(ubuf)
+	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
 	return err
 }
 
@@ -240,22 +238,12 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 	//@ fold acc(s.Mem(ubuf), def.ReadL2)
 	infOffset := MetaLen + idx*path.InfoLen
 	info /*@@@*/ := path.InfoField{}
-	//@ s.RawPerm(ubuf, def.ReadL1)
-	//@ slices.SplitByIndex_Bytes(s.Raw, 0, len(s.Raw), infOffset, def.ReadL2)
-	//@ slices.SplitByIndex_Bytes(s.Raw, infOffset, len(s.Raw), infOffset+path.InfoLen, def.ReadL2)
-	//@ slices.Reslice_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, def.ReadL2)
+	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL1)
 	if err := info.DecodeFromBytes(s.Raw[infOffset : infOffset+path.InfoLen]); err != nil {
-		//@ slices.Unslice_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, def.ReadL2)
-		//@ slices.CombineAtIndex_Bytes(s.Raw, infOffset, len(s.Raw), infOffset+path.InfoLen, def.ReadL2)
-		//@ slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), infOffset, def.ReadL2)
-		//@ fold acc(s.Mem(ubuf), def.ReadL2)
+		//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL1)
 		return path.InfoField{}, err
 	}
-	//@ slices.Unslice_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, def.ReadL2)
-	//@ slices.CombineAtIndex_Bytes(s.Raw, infOffset, len(s.Raw), infOffset+path.InfoLen, def.ReadL2)
-	//@ slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), infOffset, def.ReadL2)
-	//@ apply (acc(&s.Raw, def.ReadL2) && acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), def.ReadL1) && acc(s.Base.Mem(), def.ReadL2)) --* acc(s.Mem(ubuf), def.ReadL1)
-	// fold acc(s.Mem(ubuf), def.ReadL2)
+	//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL1)
 	return info, nil
 }
 
@@ -294,15 +282,9 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ fold acc(s.Base.Mem(), def.ReadL1)
 	//@ fold s.Mem(ubuf)
 	infOffset := MetaLen + idx*path.InfoLen
-	//@ s.RawPerm(ubuf, writePerm)
-	//@ slices.SplitByIndex_Bytes(s.Raw, 0, len(s.Raw), infOffset, writePerm)
-	//@ slices.SplitByIndex_Bytes(s.Raw, infOffset, len(s.Raw), infOffset+path.InfoLen, writePerm)
-	//@ slices.Reslice_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
+	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, writePerm)
 	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
-	//@ slices.Unslice_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
-	//@ slices.CombineAtIndex_Bytes(s.Raw, infOffset, len(s.Raw), infOffset+path.InfoLen, writePerm)
-	//@ slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), infOffset, writePerm)
-	//@ apply (acc(&s.Raw, 1/2) && slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)) && acc(s.Base.Mem(), 1/2)) --* s.Mem(ubuf)
+	//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, writePerm)
 	return ret
 }
 
@@ -322,74 +304,63 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
 	//@ fold acc(s.Base.Mem(), def.ReadL3)
+	//@ fold acc(s.Mem(ubuf), def.ReadL2)
 	hop /*@@@*/ := path.HopField{}
-	//@ slices.SplitByIndex_Bytes(s.Raw, 0, len(s.Raw), hopOffset, def.ReadL2)
-	//@ slices.SplitByIndex_Bytes(s.Raw, hopOffset, len(s.Raw), hopOffset+path.HopLen, def.ReadL2)
-	//@ slices.Reslice_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, def.ReadL2)
+	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL2)
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
-		//@ slices.Unslice_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, def.ReadL2)
-		//@ slices.CombineAtIndex_Bytes(s.Raw, hopOffset, len(s.Raw), hopOffset+path.HopLen, def.ReadL2)
-		//@ slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), hopOffset, def.ReadL2)
-		//@ fold acc(s.Mem(ubuf), def.ReadL2)
+		//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, writePerm)
 		return path.HopField{}, err
 	}
-	//@ slices.Unslice_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, def.ReadL2)
-	//@ slices.CombineAtIndex_Bytes(s.Raw, hopOffset, len(s.Raw), hopOffset+path.HopLen, def.ReadL2)
-	//@ slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), hopOffset, def.ReadL2)
-	//@ fold acc(s.Mem(ubuf), def.ReadL2)
+	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL2)
 	//@ unfold hop.Mem()
 	return hop, nil
 }
 
-//// GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
-//// CurrHF index in the path meta header.
-////@ preserves acc(s.Mem(underlyingBuf), def.ReadL1)
-////@ ensures   r != nil ==> r.ErrorMem()
-////@ decreases
-//func (s *Raw) GetCurrentHopField( /*@ ghost underlyingBuf []byte @*/ ) (res path.HopField, r error) {
-//	//@ unfold acc(s.Mem(), def.ReadL2)
-//	//@ unfold acc(s.Base.Mem(), def.ReadL3)
-//	idx := int(s.PathMeta.CurrHF)
-//	// (VerifiedSCION) Cannot assert bounds of uint:
-//	// https://github.com/viperproject/gobra/issues/192
-//	//@ assume 0 <= idx
-//	//@ fold acc(s.Base.Mem(), def.ReadL3)
-//	//@ fold acc(s.Mem(), def.ReadL2)
-//	return s.GetHopField(idx)
-//}
+// GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
+// CurrHF index in the path meta header.
+//@ preserves acc(s.Mem(ubuf), def.ReadL1)
+//@ ensures   r != nil ==> r.ErrorMem()
+//@ decreases
+func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {
+	//@ unfold acc(s.Mem(ubuf), def.ReadL2)
+	//@ unfold acc(s.Base.Mem(), def.ReadL3)
+	idx := int(s.PathMeta.CurrHF)
+	// (VerifiedSCION) Cannot assert bounds of uint:
+	// https://github.com/viperproject/gobra/issues/192
+	//@ assume 0 <= idx
+	//@ fold acc(s.Base.Mem(), def.ReadL3)
+	//@ fold acc(s.Mem(ubuf), def.ReadL2)
+	return s.GetHopField(idx /*@, ubuf @*/)
+}
 
-//// SetHopField updates the HopField at a given index.
-////@ requires  0 <= idx
-////@ preserves s.Mem(underlyingBuf)
-////@ ensures   r != nil ==> r.ErrorMem()
-////@ decreases
-//func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost underlyingBuf []byte @*/) (r error) {
-//	//@ share hop
-//	// (VerifiedSCION) Cannot assert bounds of uint:
-//	// https://github.com/viperproject/gobra/issues/192
-//	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
-//	//@ fold hop.Mem()
-//	//@ unfold s.Mem()
-//	//@ unfold s.Base.Mem()
-//	if idx >= s.NumHops {
-//		// (gavin) introduced `err`
-//		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-//		//@ fold s.Base.Mem()
-//		//@ fold s.Mem()
-//		return err
-//	}
-//	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-//	//@ fold s.Base.Mem()
-//	//@ ghost slices.SplitByIndex_Bytes(s.Raw, 0, len(s.Raw), hopOffset, writePerm)
-//	//@ ghost slices.SplitByIndex_Bytes(s.Raw, hopOffset, len(s.Raw), hopOffset+path.HopLen, writePerm)
-//	//@ ghost slices.Reslice_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
-//	ret := hop.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
-//	//@ ghost slices.Unslice_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
-//	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, hopOffset, len(s.Raw), hopOffset+path.HopLen, writePerm)
-//	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), hopOffset, writePerm)
-//	//@ fold s.Mem()
-//	return ret
-//}
+// SetHopField updates the HopField at a given index.
+//@ requires  0 <= idx
+//@ preserves s.Mem(ubuf)
+//@ ensures   r != nil ==> r.ErrorMem()
+//@ decreases
+func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/) (r error) {
+	//@ share hop
+	// (VerifiedSCION) Cannot assert bounds of uint:
+	// https://github.com/viperproject/gobra/issues/192
+	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
+	//@ fold hop.Mem()
+	//@ unfold s.Mem(ubuf)
+	//@ unfold s.Base.Mem()
+	if idx >= s.NumHops {
+		// (gavin) introduced `err`
+		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
+		//@ fold s.Base.Mem()
+		//@ fold s.Mem(ubuf)
+		return err
+	}
+	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
+	//@ fold s.Base.Mem()
+	//@ fold s.Mem(ubuf)
+	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, writePerm)
+	ret := hop.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
+	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, writePerm)
+	return ret
+}
 
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.
 //@ preserves acc(s.Mem(ubuf), def.ReadL1)
