@@ -290,12 +290,29 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ )
 	// Reverse order of hop fields
 	//@ invariant s.Mem(ubuf)
-	//@ invariant 0 <= i && i < unfolding s.Mem(ubuf) in s.Base.getNumHops()
-	//@ invariant 0 <= j && j < unfolding s.Mem(ubuf) in s.Base.getNumHops()
+	//@ invariant i + j == (unfolding s.Mem(ubuf) in s.Base.getNumHops())-1
+	//@ invariant 0 <= i && i < j+2
+	//@ invariant 0 <= i && i <= unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in s.NumHops)
+	//@ invariant -1 <= j && j < unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in s.NumHops)
 	//@ decreases j-i
 	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumHops - 1 /*@ ) @*/); i < j; i, j = i+1, j-1 {
 		//@ unfold s.Mem(ubuf)
+		//@ assert 0 <= i && j < s.Base.getNumHops()
+		//@ assert 0 < len(s.HopFields)
+		//@ assert s.Base.getNumHops() == len(s.HopFields)
+
+		//@ preserves acc(&s.HopFields, definitions.ReadL10)
+		//@ preserves 0 <= i && i < len(s.HopFields)
+		//@ preserves 0 <= j && j < len(s.HopFields)
+		//@ preserves s.HopFields[i].Mem() && s.HopFields[j].Mem()
+		//@ decreases
+		//@ outline(
+		//@ unfold s.HopFields[i].Mem()
+		//@ unfold s.HopFields[j].Mem()
 		s.HopFields[i], s.HopFields[j] = s.HopFields[j], s.HopFields[i]
+		//@ fold s.HopFields[i].Mem()
+		//@ fold s.HopFields[j].Mem()
+		//@ )
 		//@ fold s.Mem(ubuf)
 	}
 	//@ assume false
