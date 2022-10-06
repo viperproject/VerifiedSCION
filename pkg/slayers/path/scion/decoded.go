@@ -41,7 +41,6 @@ type Decoded struct {
 	HopFields []path.HopField
 }
 
-//@ trusted // TODO: for speed, remove
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 //@ requires s.NonInitMem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
@@ -79,13 +78,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ decreases s.Base.getNumINF() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), _) in @*/ s.NumINF; i++ {
 		//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.InfoLen, definitions.ReadL1)
-		// requires  acc(slices.AbsSlice_Bytes(data, offset, offset + path.InfoLen), definitions.ReadL1)
-		// preserves 0 <= offset && offset < offset + path.InfoLen && offset + path.InfoLen <= len(data)
-		// ensures   acc(slices.AbsSlice_Bytes(data[offset:offset + path.InfoLen], 0, len(data[offset:offset + path.InfoLen])), definitions.ReadL1)
-		// decreases
-		// outline(
 		//@ ghost slices.Reslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL1)
-		// )
 		if err := s.InfoFields[i].DecodeFromBytes(data[offset : offset+path.InfoLen]); err != nil {
 			// (VerifiedSCION) infofield.DecodeFromBytes guarantees that err == nil.
 			// Thus, this path should not be reachable.
@@ -108,15 +101,9 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL1)
 	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL1)
 	//@ decreases s.Base.getNumHops() - i
-	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), _) in @*/ s.NumHops; i++ {
+	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), definitions.ReadL2) in @*/ s.NumHops; i++ {
 		//@ ghost slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.HopLen, definitions.ReadL1)
-		// requires  acc(slices.AbsSlice_Bytes(data, offset, offset + path.HopLen), definitions.ReadL1)
-		// preserves 0 <= offset && offset < offset + path.HopLen && offset + path.HopLen <= len(data)
-		// ensures   acc(slices.AbsSlice_Bytes(data[offset: offset + path.HopLen], 0, len(data[offset: offset + path.HopLen])), definitions.ReadL1)
-		// decreases
-		// outline(
 		//@ ghost slices.Reslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL1)
-		// )
 		if err := s.HopFields[i].DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 			// (VerifiedSCION) infofield.DecodeFromBytes guarantees that err == nil.
 			// Thus, this path should not be reachable.
@@ -288,30 +275,30 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ decreases
 	//@ outline(
 	//@ unfold s.Mem(ubuf)
-	//@ invariant s.Mem(ubuf)
+	//@ invariant acc(s.Base.Mem(), definitions.ReadL10)
 	//@ invariant 0 <= i && i <= s.getNumINF()
-	//@ invariant forall i int :: 0 <= i && i < len(s.InfoFields) ==> acc(&s.InfoFields[i])
-	//@ decreases MaxINFs-1
+	//@ invariant acc(&s.InfoFields, definitions.ReadL10)
+	//@ invariant len(s.InfoFields) == s.getNumINF()
+	//@ invariant forall i int :: 0 <= i && i < len(s.InfoFields) ==> (acc(&s.InfoFields[i].ConsDir))
+	//@ decreases MaxINFs-i
 	// Reverse cons dir flags
-	for i := 0; i < ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumINF /*@) @*/); i++ {
-		// requires s.Mem(ubuf)
-		// requires 0 <= i && i < unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in s.NumINF)
-		// ensures  s.Mem(ubuf)
-		// decreases
-		// outline (
-		// unfold s.Mem(ubuf)
+	for i := 0; i < ( /*@ unfolding acc(s.Base.Mem(), definitions.ReadL11) in @*/ s.NumINF); i++ {
 		info := &s.InfoFields[i]
 		info.ConsDir = !info.ConsDir
-		// fold s.Mem(ubuf)
-		// )
 	}
 	//@ fold s.Mem(ubuf)
 	//@ )
-	//@ assume false
 	// Reverse order of hop fields
-	for i, j := 0, s.NumHops-1; i < j; i, j = i+1, j-1 {
+	//@ invariant s.Mem(ubuf)
+	//@ invariant 0 <= i && i < unfolding s.Mem(ubuf) in s.Base.getNumHops()
+	//@ invariant 0 <= j && j < unfolding s.Mem(ubuf) in s.Base.getNumHops()
+	//@ decreases j-i
+	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumHops - 1 /*@ ) @*/); i < j; i, j = i+1, j-1 {
+		//@ unfold s.Mem(ubuf)
 		s.HopFields[i], s.HopFields[j] = s.HopFields[j], s.HopFields[i]
+		//@ fold s.Mem(ubuf)
 	}
+	//@ assume false
 	// Update CurrINF and CurrHF and SegLens
 	s.PathMeta.CurrINF = uint8(s.NumINF) - s.PathMeta.CurrINF - 1
 	s.PathMeta.CurrHF = uint8(s.NumHops) - s.PathMeta.CurrHF - 1

@@ -158,8 +158,9 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          chop: 10
+          # Re-enable consistency checks when the "Remainder" predicates are changed
+          # to not include magic-wands.
+          # checkConsistency: ${{ env.checkConsistency }}
       - name: Verify package 'private/topology'
         uses: viperproject/gobra-action@main
         with:
