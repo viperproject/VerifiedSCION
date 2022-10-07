@@ -140,9 +140,10 @@ ghost
 requires 0 < p
 requires acc(&r.Raw, p/2)
 requires 0 <= idx && idx <= len(r.Raw)
-requires  acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
+requires acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
 requires r.RawIdxPermRemainder(ubuf, idx, p)
 ensures  acc(r.Mem(ubuf), p)
+ensures  (unfolding acc(r.Mem(ubuf), p) in r.Raw) === old(r.Raw)
 decreases
 func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
 	unfold r.RawIdxPermRemainder(ubuf, idx, p)

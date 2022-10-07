@@ -104,7 +104,6 @@ type Path interface {
 	//@ requires acc(Mem(underlyingBuf), _)
 	//@ decreases
 	Type( /*@ ghost underlyingBuf []byte @*/ ) Type
-
 	//@ ghost
 	//@ requires Mem(underlyingBuf)
 	//@ ensures  NonInitMem()

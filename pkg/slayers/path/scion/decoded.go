@@ -207,6 +207,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 //@ requires s.Mem(ubuf)
 //@ ensures  r == nil ==> p != nil
 //@ ensures  r == nil ==> p.Mem(ubuf)
+//@ ensures  r == nil ==> p == s
 //@ ensures  r == nil ==> typeOf(p) == type[*Decoded]
 //@ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
 //@ decreases

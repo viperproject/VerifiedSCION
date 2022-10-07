@@ -98,39 +98,37 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 //@ ensures  err == nil ==> p.Mem(ubuf)
 //@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases
-func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) // {
-//	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
-//	// path first. If this becomes a performance bottleneck, the implementation should be changed to
-//	// work directly on the raw representation.
-//	decoded, err := s.ToDecoded()
-//	if err != nil {
-//		return nil, err
-//	}
-//	//@ unfold s.NonInitMem()
-//	//@ assert s.Raw === underlyingBuf[:pathLen]
-//	reversed, err := decoded.Reverse()
-//	if err != nil {
-//		return nil, err
-//	}
-//	//@ assert typeOf(reversed) == type[*Decoded]
-//	var rev *Decoded
-//	rev = reversed.(*Decoded)
-//	//@ assert s.Raw === underlyingBuf[:pathLen]
-//	if err := rev.SerializeTo(s.Raw /*@, underlyingBuf, pathLen @*/); err != nil {
-//		return nil, err
-//	}
-//	//@ unfold rev.Mem()
-//	//@ assert slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-//	//@ assert underlyingBuf[:pathLen] === s.Raw
-//	//@ fold s.NonInitMem()
-//	err = s.DecodeFromBytes( /*@ unfolding acc(s.NonInitMem(), _) in @*/ s.Raw /*@, underlyingBuf, pathLen @*/)
-//	return s, err
-//}
+func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
+	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
+	// path first. If this becomes a performance bottleneck, the implementation should be changed to
+	// work directly on the raw representation.
+	decoded, err := s.ToDecoded( /*@ ubuf @*/ )
+	if err != nil {
+		return nil, err
+	}
+	reversed, err := decoded.Reverse( /*@ ubuf @*/ )
+	if err != nil {
+		return nil, err
+	}
+	var rev *Decoded
+	rev = reversed.(*Decoded)
+	//@ unfold s.NonInitMem()
+	//@ assert s.Raw === ubuf
+	if err := rev.SerializeTo(s.Raw /*@, ubuf @*/); err != nil {
+		return nil, err
+	}
+	// unfold rev.Mem(s.Raw)
+	// assert slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+	// assert underlyingBuf[:pathLen] === s.Raw
+	// fold s.NonInitMem()
+	err = s.DecodeFromBytes(s.Raw)
+	return s, err
+}
 
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
 //@ requires s.Mem(ubuf)
 //@ ensures  err == nil ==> d.Mem(ubuf)
-//@ ensures  err == nil ==> s.NonInitMem()
+//@ ensures  err == nil ==> (s.NonInitMem() && (unfolding s.NonInitMem() in s.Raw) === old(unfolding s.Mem(ubuf) in s.Raw))
 //@ ensures  err != nil ==> (s.Mem(ubuf) && err.ErrorMem())
 //@ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
