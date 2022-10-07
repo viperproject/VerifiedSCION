@@ -40,48 +40,7 @@ pred (d *Decoded) Mem(ubuf []byte) {
 	slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 }
 
-// TODO: not sure if I'm removing it
-/*
-pred (d *Decoded) NoBufMem(buf []byte) {
-	acc(d.Base.Mem(), definitions.ReadL1) &&
-	acc(&d.InfoFields) &&
-	d.Base.getNumINF() <= MaxINFs &&
-	len(d.InfoFields) == d.Base.getNumINF() &&
-	(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
-	acc(&d.HopFields) &&
-	len(d.HopFields) == d.Base.getNumHops() &&
-	(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
-}
-*/
-
 /**** End of Predicates ****/
-
-/*
-requires d.Mem()
-ensures  d.NoBufMem(buf)
-ensures  (unfolding acc(d.NoBufMem(buf), _) in d.Base.Len()) == old(unfolding acc(d.Mem(), _) in d.Base.Len())
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  (slices.AbsSlice_Bytes(buf, 0, len(buf)) && d.NoBufMem(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf))
-decreases
-func (d *Decoded) ExchangeNoBufMem(buf []byte) {
-	unfold d.Mem()
-	assert buf === d.underlyingBuf
-	old_len := len(d.underlyingBuf)
-	assert d.Base.Len() <= len(d.underlyingBuf)
-	fold d.NoBufMem(buf)
-	assert acc(d.Base.Mem(), definitions.ReadL1)
-	package (slices.AbsSlice_Bytes(buf, 0, len(buf)) && d.NoBufMem(buf)) --* (acc(d.Mem(), definitions.ReadL1) && d.PostBufXchange(buf)) {
-		assert acc(d.Base.Mem(), definitions.ReadL1)
-		unfold d.NoBufMem(buf)
-		assert acc(&d.underlyingBuf)
-		assert d.underlyingBuf === buf
-		assert len(d.underlyingBuf) == old_len
-		assert d.Base.Len() <= len(d.underlyingBuf)
-		fold d.Mem()
-		fold d.PostBufXchange(buf)
-	}
-}
-*/
 
 /**** Stubs ****/
 
@@ -140,6 +99,8 @@ func (d *Decoded) IncPath(ubuf []byte) (e error) {
 
 /**** End of Stubs ****/
 
+(*Decoded) implements path.Path
+
 ghost
 requires d.Mem(ubuf)
 ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
@@ -165,18 +126,14 @@ func (d *Decoded) ExchangeBufMem(ubuf []byte) {
 	}
 }
 
-(*Decoded) implements path.Path
-
-/*
-requires acc(d.NoBufMem(buf), _)
+requires acc(d.Mem(ubuf), _)
 decreases
-pure func (d *Decoded) getLenInfoFields(buf []byte) int {
-	return unfolding acc(d.NoBufMem(buf), _) in len(d.InfoFields)
+pure func (d *Decoded) getLenInfoFields(ubuf []byte) int {
+	return unfolding acc(d.Mem(ubuf), _) in len(d.InfoFields)
 }
 
-requires acc(d.NoBufMem(buf), _)
+requires acc(d.Mem(ubuf), _)
 decreases
-pure func (d *Decoded) getLenHopFields(buf []byte) int {
-	return unfolding acc(d.NoBufMem(buf), _) in len(d.HopFields)
+pure func (d *Decoded) getLenHopFields(ubuf []byte) int {
+	return unfolding acc(d.Mem(ubuf), _) in len(d.HopFields)
 }
-*/
