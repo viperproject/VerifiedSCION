@@ -22,6 +22,8 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
+(*Decoded) implements path.Path
+
 /**** Predicates ****/
 
 pred (d *Decoded) NonInitMem() {
@@ -99,7 +101,23 @@ func (d *Decoded) IncPath(ubuf []byte) (e error) {
 
 /**** End of Stubs ****/
 
-(*Decoded) implements path.Path
+/**** Auxiliary Functions ****/
+
+requires acc(d.Mem(ubuf), _)
+decreases
+pure func (d *Decoded) getLenInfoFields(ubuf []byte) int {
+	return unfolding acc(d.Mem(ubuf), _) in len(d.InfoFields)
+}
+
+requires acc(d.Mem(ubuf), _)
+decreases
+pure func (d *Decoded) getLenHopFields(ubuf []byte) int {
+	return unfolding acc(d.Mem(ubuf), _) in len(d.HopFields)
+}
+
+/**** End of Auxiliary Functions ****/
+
+/**** Lemmas ****/
 
 ghost
 requires d.Mem(ubuf)
@@ -114,14 +132,19 @@ func (d *Decoded) DowngradePerm(ubuf []byte) {
 	fold d.NonInitMem()
 }
 
-requires acc(d.Mem(ubuf), _)
+ghost
+requires d.Mem(ubuf1)
+requires len(ubuf1) <= len(ubuf2)
+requires ubuf1 === ubuf2[:len(ubuf1)]
+requires slices.AbsSlice_Bytes(ubuf2, len(ubuf1), len(ubuf2))
+ensures  d.Mem(ubuf2)
 decreases
-pure func (d *Decoded) getLenInfoFields(ubuf []byte) int {
-	return unfolding acc(d.Mem(ubuf), _) in len(d.InfoFields)
+func (d *Decoded) Widden(ubuf1, ubuf2 []byte) {
+	unfold d.Mem(ubuf1)
+	slices.Unslice_Bytes(ubuf2, 0, len(ubuf1), writePerm)
+	slices.CombineAtIndex_Bytes(ubuf2, 0, len(ubuf2), len(ubuf1), writePerm)
+	assert slices.AbsSlice_Bytes(ubuf2, 0, len(ubuf2))
+	fold d.Mem(ubuf2)
 }
 
-requires acc(d.Mem(ubuf), _)
-decreases
-pure func (d *Decoded) getLenHopFields(ubuf []byte) int {
-	return unfolding acc(d.Mem(ubuf), _) in len(d.HopFields)
-}
+/**** End of Lemmas ****/

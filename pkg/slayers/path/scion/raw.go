@@ -76,8 +76,7 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	// directly.
 	//@ unfold acc(s.Base.Mem(), 1/2)
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
-		//@ fold acc(s.Base.Mem(), 1/2)
-		//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
+		// (VerifiedSCION) branch ensured to be unreachable
 		return err
 	}
 	//@ fold acc(s.Base.Mem(), 1/2)
@@ -92,7 +91,7 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	return nil
 }
 
-//// Reverse reverses the path such that it can be used in the reverse direction.
+// Reverse reverses the path such that it can be used in the reverse direction.
 //@ requires s.Mem(ubuf)
 //@ ensures  err == nil ==> typeOf(p) == type[*Raw]
 //@ ensures  err == nil ==> p != nil
@@ -128,73 +127,40 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) // {
 //	return s, err
 //}
 
-//// ToDecoded transforms a scion.Raw to a scion.Decoded.
-//// requires s.Mem()
-//// ensures  err == nil ==> d.Mem()
-//// ensures  err == nil ==> s.NonInitMem()
-//// ensures  err == nil ==> unfolding acc(s.NonInitMem(), _) in s.Raw === old(unfolding acc(s.Mem(), _) in s.Raw)
-//// ensures  err == nil ==> unfolding acc(s.NonInitMem(), _) in s.underlyingBuf === old(unfolding acc(s.Mem(), _) in s.underlyingBuf)
-//// ensures  err == nil ==> unfolding acc(s.NonInitMem(), _) in s.dataLen === old(unfolding acc(s.Mem(), _) in s.dataLen)
-//// ensures  err == nil ==> d.GetUnderlyingBuf() === old(s.GetUnderlyingBuf())
-//// ensures  err != nil ==> (s.Mem() && err.ErrorMem())
-//// decreases
-////@ trusted
-//func (s *Raw) ToDecoded() (d *Decoded, err error) {
-//	//@ underlyingBuf := s.GetUnderlyingBuf()
-//	//@ unfold s.Mem()
-//	//@ assert underlyingBuf === s.underlyingBuf
-//	//@ unfold acc(s.Base.Mem(), def.ReadL1)
-//	//@ ghost slices.SplitByIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
-//	//@ requires acc(&s.Raw)
-//	//@ requires slices.AbsSlice_Bytes(s.Raw, 0, MetaLen)
-//	//@ requires MetaLen <= len(s.Raw)
-//	//@ requires  slices.AbsSlice_Bytes(s.Raw, MetaLen, len(s.Raw))
-//	//@ ensures  acc(&s.Raw)
-//	//@ ensures s.Raw === before(s.Raw)
-//	//@ ensures  MetaLen <= len(s.Raw)
-//	//@ ensures  slices.AbsSlice_Bytes(s.Raw, MetaLen, len(s.Raw))
-//	//@ ensures  slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, len(s.Raw[:MetaLen]))
-//	//@ decreases
-//	//@ outline(
-//	//@ ghost slices.Reslice_Bytes(s.Raw, 0, MetaLen, writePerm)
-//	//@ )
-//	// Serialize PathMeta to ensure potential changes are reflected Raw.
-//	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
-//		//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
-//		//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
-//		//@ fold acc(s.Base.Mem(), def.ReadL1)
-//		//@ fold s.Mem()
-//		return nil, err
-//	}
-//	//@ ensures decoded.NonInitMem()
-//	//@ decreases
-//	//@ outline(
-//	decoded := &Decoded{}
-//	//@ fold decoded.Base.NonInitMem()
-//	//@ fold decoded.NonInitMem()
-//	//@ )
-//	//@ fold acc(s.Base.Mem(), def.ReadL1)
-//	//@ ghost slices.Unslice_Bytes(s.Raw, 0, MetaLen, writePerm)
-//	//@ ghost slices.CombineAtIndex_Bytes(s.Raw, 0, len(s.Raw), MetaLen, writePerm)
-//	//@ ghost slices.Unslice_Bytes(s.underlyingBuf, 0, s.dataLen, writePerm)
-//	//@ ghost slices.CombineAtIndex_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf), s.dataLen, writePerm)
-//	//@ assert s.Raw === s.underlyingBuf[:s.dataLen]
-//	//@ assert slices.AbsSlice_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf))
-//	if err := decoded.DecodeFromBytes(s.Raw /*@, s.underlyingBuf, s.dataLen @*/); err != nil {
-//		//@ ghost slices.SplitByIndex_Bytes(s.underlyingBuf, 0, len(s.underlyingBuf), s.dataLen, writePerm)
-//		//@ ghost slices.Reslice_Bytes(s.underlyingBuf, 0, s.dataLen, writePerm)
-//		//@ fold s.Mem()
-//		return nil, err
-//	}
-//	//@ ghost if err == nil {
-//	//@   assert decoded.GetUnderlyingBuf() === s.underlyingBuf
-//	//@   assert underlyingBuf === s.underlyingBuf
-//	//@   unfold s.Base.Mem()
-//	//@   fold s.Base.NonInitMem()
-//	//@   fold s.NonInitMem()
-//	//@ }
-//	return decoded, nil
-//}
+// ToDecoded transforms a scion.Raw to a scion.Decoded.
+//@ requires s.Mem(ubuf)
+//@ ensures  err == nil ==> d.Mem(ubuf)
+//@ ensures  err == nil ==> s.NonInitMem()
+//@ ensures  err != nil ==> (s.Mem(ubuf) && err.ErrorMem())
+//@ decreases
+func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
+	//@ s.RawIdxPerm(ubuf, MetaLen, writePerm)
+	//@ unfold acc(s.Base.Mem(), def.ReadL1)
+	// Serialize PathMeta to ensure potential changes are reflected Raw.
+	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
+		// (VerifiedSCION) branch ensured to be unreachable
+		return nil, err
+	}
+	//@ fold acc(s.Base.Mem(), def.ReadL1)
+	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
+	decoded := &Decoded{}
+	//@ fold decoded.Base.NonInitMem()
+	//@ fold decoded.NonInitMem()
+	//@ unfold s.Mem(ubuf)
+	//@ slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
+	//@ slices.Reslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
+		//@ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
+		//@ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
+		//@ fold s.Mem(ubuf)
+		return nil, err
+	}
+	//@ decoded.Widden(s.Raw, ubuf)
+	//@ unfold s.Base.Mem()
+	//@ fold s.Base.NonInitMem()
+	//@ fold s.NonInitMem()
+	return decoded, nil
+}
 
 // IncPath increments the path and writes it to the buffer.
 //@ requires s.Mem(ubuf)
