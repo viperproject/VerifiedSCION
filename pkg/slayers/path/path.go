@@ -208,8 +208,6 @@ type rawPath struct {
 //@ ensures   e == nil
 //@ decreases
 func (p *rawPath) SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e error) {
-	// ghost slices.SplitByIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
-	// ghost slices.Reslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ unfold acc(p.Mem(underlyingBuf), definitions.ReadL10)
 	//@ unfold acc(slices.AbsSlice_Bytes(p.raw, 0, len(p.raw)), definitions.ReadL11)
@@ -217,8 +215,6 @@ func (p *rawPath) SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e e
 	//@ fold acc(slices.AbsSlice_Bytes(p.raw, 0, len(p.raw)), definitions.ReadL11)
 	//@ fold acc(p.Mem(underlyingBuf), definitions.ReadL10)
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
-	// ghost slices.Unslice_Bytes(underlyingBuf, 0, dataLen, writePerm)
-	// ghost slices.CombineAtIndex_Bytes(underlyingBuf, 0, len(underlyingBuf), dataLen, writePerm)
 	return nil
 }
 

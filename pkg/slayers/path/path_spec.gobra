@@ -16,10 +16,7 @@
 
 package path
 
-import (
-	"github.com/scionproto/scion/verification/utils/definitions"
-	"github.com/scionproto/scion/verification/utils/slices"
-)
+import "github.com/scionproto/scion/verification/utils/slices"
 
 /** rawPath spec **/
 pred (r *rawPath) Mem(underlyingBuf []byte) {
@@ -46,7 +43,7 @@ func (p *rawPath) DowngradePerm(ghost buf []byte) {
 
 /** End of rawPath spec **/
 
-/** Global state of the pacakge **/
+/** Global state of the package **/
 ghost const MaxPathType = maxPathType
 
 pred PathPackageMem() {
@@ -84,4 +81,4 @@ ensures p != nil
 decreases
 func NewPathSpec() (p Path)
 
-/** End of global state of the pacakge **/
+/** End of global state of the package **/
