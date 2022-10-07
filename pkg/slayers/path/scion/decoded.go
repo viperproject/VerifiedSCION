@@ -297,16 +297,17 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ outline(
 	// Reverse order of hop fields
 	//@ invariant s.Mem(ubuf)
-	//@ invariant i + j == (unfolding s.Mem(ubuf) in s.Base.getNumHops())-1
-	//@ invariant 0 <= i && i < j+2
 	//@ invariant 0 <= i && i <= unfolding s.Mem(ubuf) in s.getNumHops()
 	//@ invariant -1 <= j && j < unfolding s.Mem(ubuf) in s.getNumHops()
 	//@ decreases j-i
 	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumHops - 1 /*@ ) @*/); i < j; i, j = i+1, j-1 {
 		//@ unfold s.Mem(ubuf)
+		//@ assert &s.HopFields[i] != &s.HopFields[j]
 		//@ unfold s.HopFields[i].Mem()
 		//@ unfold s.HopFields[j].Mem()
+		//@ assert acc(&s.HopFields[i]) && acc(&s.HopFields[j])
 		s.HopFields[i], s.HopFields[j] = s.HopFields[j], s.HopFields[i]
+		//@ assert acc(&s.HopFields[i]) && acc(&s.HopFields[j])
 		//@ fold s.HopFields[i].Mem()
 		//@ fold s.HopFields[j].Mem()
 		//@ fold s.Mem(ubuf)
@@ -326,23 +327,25 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	return s, nil
 }
 
-//// ToRaw tranforms scion.Decoded into scion.Raw.
-////@ preserves s.Mem()
-////@ ensures  err == nil ==> r.Mem()
-////@ ensures  err != nil ==> err.ErrorMem()
-////@ decreases
-//func (s *Decoded) ToRaw() (r *Raw, err error) {
-//	b := make([]byte, s.Len())
-//	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
-//	if err := s.SerializeTo(b /*@, underlyingBuf @*/); err != nil {
-//		return nil, err
-//	}
-//	raw := &Raw{}
-//	//@ fold raw.Base.NonInitMem()
-//	//@ fold raw.NonInitMem()
-//	// assert underlyingBuf === s.GetUnderlyingBuf()
-//	if err := raw.DecodeFromBytes(b /*@, b, dataLen @*/); err != nil {
-//		return nil, err
-//	}
-//	return raw, nil
-//}
+// ToRaw tranforms scion.Decoded into scion.Raw.
+//@ preserves s.Mem(ubuf1)
+//@ ensures   err == nil ==> r.Mem(ubuf2)
+//@ ensures   err != nil ==> err.ErrorMem()
+//@ decreases
+func (s *Decoded) ToRaw( /*@ ghost ubuf1 []byte @*/ ) (r *Raw, err error /*@, ghost ubuf2 []byte @*/) {
+	// (VerifiedSCION) if `tmp` is not used, Gobra complains that
+	// make cannot contain ghost subexpressions
+	tmp := s.Len( /*@ ubuf1 @*/ )
+	b := make([]byte, tmp)
+	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
+	if err := s.SerializeTo(b /*@, ubuf1 @*/); err != nil {
+		return nil, err /*@, b @*/
+	}
+	raw := &Raw{}
+	//@ fold raw.Base.NonInitMem()
+	//@ fold raw.NonInitMem()
+	if err := raw.DecodeFromBytes(b); err != nil {
+		return nil, err /*@, b @*/
+	}
+	return raw, nil /*@, b @*/
+}
