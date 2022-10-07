@@ -16,4 +16,12 @@
 
 package empty
 
-// TODO
+func FoldNonInitMem_test() {
+	e := Path{}
+	fold e.NonInitMem()
+}
+
+func FoldMem_test() {
+	e := Path{}
+	fold e.Mem(nil)
+}

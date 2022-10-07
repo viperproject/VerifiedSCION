@@ -47,11 +47,9 @@ func RegisterPath() {
 			return emptyTmp
 		},
 	}
-	/*@
-	proof tmp.New implements path.NewPathSpec {
-		return tmp.New() as newPath
-	}
-	@*/
+	//@ proof tmp.New implements path.NewPathSpec {
+	//@		return tmp.New() as newPath
+	//@ }
 	path.RegisterPath(tmp)
 }
 
@@ -87,7 +85,7 @@ func (o Path) Reverse( /*@ underlyingBuf []byte @*/ ) (p path.Path, e error) {
 }
 
 //@ pure
-//@ ensures r >= 0
+//@ ensures 0 <= r
 //@ decreases
 func (o Path) Len( /*@ underlyingBuf []byte @*/ ) (r int) {
 	return PathLen
