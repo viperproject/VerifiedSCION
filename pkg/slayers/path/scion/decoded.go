@@ -78,15 +78,15 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ decreases s.Base.getNumINF() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), _) in @*/ s.NumINF; i++ {
 		//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.InfoLen, definitions.ReadL1)
-		//@ ghost slices.Reslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL1)
+		//@ slices.Reslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL1)
 		if err := s.InfoFields[i].DecodeFromBytes(data[offset : offset+path.InfoLen]); err != nil {
 			// (VerifiedSCION) infofield.DecodeFromBytes guarantees that err == nil.
 			// Thus, this branch is not reachable.
 			return err
 		}
 		//@ assert len(data[offset:offset+path.InfoLen]) == path.InfoLen
-		//@ ghost slices.Unslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL1)
-		//@ ghost slices.CombineAtIndex_Bytes(data, 0, offset + path.InfoLen, offset, definitions.ReadL1)
+		//@ slices.Unslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL1)
+		//@ slices.CombineAtIndex_Bytes(data, 0, offset + path.InfoLen, offset, definitions.ReadL1)
 		offset += path.InfoLen
 	}
 	s.HopFields = make([]path.HopField, ( /*@ unfolding s.Base.Mem() in @*/ s.NumHops))
@@ -102,19 +102,19 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL1)
 	//@ decreases s.Base.getNumHops() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), definitions.ReadL2) in @*/ s.NumHops; i++ {
-		//@ ghost slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.HopLen, definitions.ReadL1)
-		//@ ghost slices.Reslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL1)
+		//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.HopLen, definitions.ReadL1)
+		//@ slices.Reslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL1)
 		if err := s.HopFields[i].DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 			// (VerifiedSCION) infofield.DecodeFromBytes guarantees that err == nil.
 			// Thus, this branch should not be reachable.
 			return err
 		}
 		//@ assert len(data[offset:offset+path.HopLen]) == path.HopLen
-		//@ ghost slices.Unslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL1)
-		//@ ghost slices.CombineAtIndex_Bytes(data, 0, offset + path.HopLen, offset, definitions.ReadL1)
+		//@ slices.Unslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL1)
+		//@ slices.CombineAtIndex_Bytes(data, 0, offset + path.HopLen, offset, definitions.ReadL1)
 		offset += path.HopLen
 	}
-	//@ ghost slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
+	//@ slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
 	//@ fold s.Mem(data)
 	return nil
 }
@@ -154,7 +154,6 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ invariant offset == MetaLen + i * path.InfoLen
 	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
 	//@ decreases s.getLenInfoFields(ubuf) - i
-
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, info := range s.InfoFields {
 	for i := 0; i < /*@ unfolding s.Mem(ubuf) in @*/ len(s.InfoFields); i++ {
@@ -165,7 +164,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 		//@ slices.Reslice_Bytes(b, offset, offset + path.InfoLen, writePerm)
 		//@ assert slices.AbsSlice_Bytes(b[offset:offset+path.InfoLen], 0, path.InfoLen)
 		if err := info.SerializeTo(b[offset : offset+path.InfoLen]); err != nil {
-			// (VerifiedSCION) infofield.SerializeTo always returns nil.
+			// (VerifiedSCION) Infofield.SerializeTo always returns nil.
 			// Thus, this branch is not reachable.
 			return err
 		}
@@ -182,38 +181,25 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ invariant offset == MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + i * path.HopLen
 	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
 	//@ decreases s.getLenHopFields(ubuf)-i
-
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, hop := range s.HopFields {
-	for i := 0; i < /* unfolding acc(s.NoBufMem(buf), _) in */ len(s.HopFields); i++ {
-		//@ assert false
-		// unfold acc(s.NoBufMem(buf), definitions.ReadL2)
+	for i := 0; i < /*@ unfolding acc(s.Mem(ubuf), _) in @*/ len(s.HopFields); i++ {
+		//@ unfold s.Mem(ubuf)
 		hop := &s.HopFields[i]
-		//@ ghost slices.SplitByIndex_Bytes(b, offset, len(b), offset + path.HopLen, writePerm)
-		//@ requires  slices.AbsSlice_Bytes(b, offset, offset + path.HopLen)
-		//@ preserves 0 <= offset && offset < offset + path.HopLen && offset + path.HopLen <= len(b)
-		//@ ensures   slices.AbsSlice_Bytes(b[offset:offset + path.HopLen], 0, len(b[offset:offset + path.HopLen]))
-		//@ decreases
-		//@ outline(
-		//@ ghost slices.Reslice_Bytes(b, offset, offset + path.HopLen, writePerm)
-		//@ )
+		//@ slices.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
+		//@ slices.SplitByIndex_Bytes(b, offset, len(b), offset + path.HopLen, writePerm)
+		//@ slices.Reslice_Bytes(b, offset, offset + path.HopLen, writePerm)
 		if err := hop.SerializeTo(b[offset : offset+path.HopLen]); err != nil {
-			// XXX(gavinleroy) hopfield.SerializeTo guarantees that err == nil.
-			// Thus, no ghost code is included to ensure postconditions from this return point.
+			// (VerifiedSCION) Infofield.SerializeTo always returns nil.
+			// Thus, this branch is not reachable.
 			return err
 		}
-		// fold acc(s.NoBufMem(buf), definitions.ReadL2)
-		//@ assert len(b[offset:offset+path.HopLen]) == path.HopLen
-		//@ ghost slices.Unslice_Bytes(b, offset, offset + path.HopLen, writePerm)
-		//@ ghost slices.CombineAtIndex_Bytes(b, 0, offset + path.HopLen, offset, writePerm)
+		//@ slices.Unslice_Bytes(b, offset, offset + path.HopLen, writePerm)
+		//@ slices.CombineAtIndex_Bytes(b, offset, len(b), offset + path.HopLen, writePerm)
+		//@ slices.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
+		//@ fold s.Mem(ubuf)
 		offset += path.HopLen
 	}
-	//@ assert false
-	//@ ghost slices.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
-	// ghost slices.Unslice_Bytes(ubuf, 0, dataLen, writePerm)
-	// ghost slices.CombineAtIndex_Bytes(buf, 0, len(buf), dataLen, writePerm)
-	// apply (slices.AbsSlice_Bytes(buf, 0, len(buf)) && s.NoBufMem(buf)) --* (acc(s.Mem(), definitions.ReadL1) && s.PostBufXchange(buf))
-	// s.UnfoldPostBufXchange(buf)
 	return nil
 }
 
