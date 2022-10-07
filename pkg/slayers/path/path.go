@@ -185,8 +185,7 @@ func NewPath(pathType Type) (p Path, e error) {
 		//@ fold tmp.NonInitMem()
 		return tmp, nil
 	}
-	tmp := pm.New() /*@ as NewPathSpec @*/
-	return tmp, nil
+	return pm.New() /*@ as NewPathSpec @*/, nil
 }
 
 // NewRawPath returns a new raw path that can hold any path type.
