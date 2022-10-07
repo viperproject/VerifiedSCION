@@ -62,35 +62,6 @@ pure func (p *Path) GetUnderlyingBuf() (buf []byte) {
 
 ghost
 requires p.Mem()
-requires p.GetUnderlyingBuf() === buf
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf))
-decreases
-func (p *Path) ExchangeBufMem(buf []byte) {
-	unfold p.Mem()
-	assert buf === p.underlyingBuf
-	assert slices.AbsSlice_Bytes(buf, 0, MetadataLen)
-	ghost scionPath := p.ScionPath
-	scionPath.ExchangeBufMem(buf[MetadataLen:])
-	ghost slices.Unslice_Bytes(buf, MetadataLen, len(buf), writePerm)
-	ghost slices.CombineAtIndex_Bytes(buf, 0, len(buf), MetadataLen, writePerm)
-	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf)) {
-		assert acc(&p.underlyingBuf)
-		assert acc(&p.ScionPath)
-		ghost slices.SplitByIndex_Bytes(buf, 0, len(buf), MetadataLen, writePerm)
-		ghost slices.Reslice_Bytes(buf, MetadataLen, len(buf), writePerm)
-		apply slices.AbsSlice_Bytes(buf[MetadataLen:], 0, len(buf[MetadataLen:])) --* (acc(scionPath.Mem(), definitions.ReadL1) && scionPath.PostBufXchange(buf[MetadataLen:]))
-		unfold scionPath.PostBufXchange(buf[MetadataLen:])
-		assert MetadataLen <= len(p.underlyingBuf)
-		assert p.underlyingBuf[MetadataLen:] === p.ScionPath.GetUnderlyingBuf()
-		fold p.Mem()
-		fold p.PostBufXchange(buf)
-	}
-}
-
-ghost
-requires p.Mem()
 requires buf === p.GetUnderlyingBuf()
 ensures  p.NonInitMem()
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))

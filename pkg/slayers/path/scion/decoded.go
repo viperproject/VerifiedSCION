@@ -179,8 +179,8 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ invariant b !== ubuf ==> slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ invariant s.Len(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenHopFields(ubuf)
-	//@ invariant offset == MetaLen + s.getLenInfoFields(buf) * path.InfoLen + i * path.HopLen
-	//@ invariant MetaLen + s.getLenInfoFields(buf) * path.InfoLen + s.getLenHopFields(buf) * path.HopLen <= len(b)
+	//@ invariant offset == MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + i * path.HopLen
+	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
 	//@ decreases s.getLenHopFields(ubuf)-i
 
 	// (VerifiedSCION) TODO: reinstate the original range clause

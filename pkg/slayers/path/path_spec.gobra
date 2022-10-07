@@ -33,20 +33,6 @@ pred (r *rawPath) NonInitMem() {
 }
 
 ghost
-requires r.Mem(buf)
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf)
-decreases
-func (r *rawPath) ExchangeBufMem(ghost buf []byte) {
-	unfold r.Mem(buf)
-	package  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf) {
-		assert acc(&r.raw)
-		assert buf === r.raw
-		fold r.Mem(buf)
-	}
-}
-
-ghost
 requires p.Mem(buf)
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 ensures  p.NonInitMem()

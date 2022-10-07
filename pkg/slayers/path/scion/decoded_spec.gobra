@@ -114,18 +114,6 @@ func (d *Decoded) DowngradePerm(ubuf []byte) {
 	fold d.NonInitMem()
 }
 
-ghost
-requires d.Mem(ubuf)
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* d.Mem(ubuf)
-decreases
-func (d *Decoded) ExchangeBufMem(ubuf []byte) {
-	unfold d.Mem(ubuf)
-	package slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* d.Mem(ubuf) {
-		fold d.Mem(ubuf)
-	}
-}
-
 requires acc(d.Mem(ubuf), _)
 decreases
 pure func (d *Decoded) getLenInfoFields(ubuf []byte) int {

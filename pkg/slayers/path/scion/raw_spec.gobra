@@ -71,17 +71,6 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
 /**** End of Stubs ****/
 
 /**** Lemmas ****/
-ghost
-requires r.Mem(buf)
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf)
-decreases
-func (r *Raw) ExchangeBufMem(buf []byte) {
-	unfold r.Mem(buf)
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* r.Mem(buf) {
-		fold r.Mem(buf)
-	}
-}
 
 ghost
 requires s.Mem(buf)

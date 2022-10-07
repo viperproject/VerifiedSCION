@@ -26,19 +26,6 @@ pred (e Path) Mem(buf []byte) { len(buf) == 0 }
 pred (e Path) NonInitMem() { true }
 
 ghost
-requires p.Mem(buf)
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* p.Mem(buf)
-decreases
-func (p Path) ExchangeBufMem(buf []byte) {
-	unfold p.Mem(buf)
-	fold   slices.AbsSlice_Bytes(buf, 0, len(buf))
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* p.Mem(buf) {
-		fold p.Mem(buf)
-	}
-}
-
-ghost
 requires e.Mem(buf)
 ensures  e.NonInitMem()
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))

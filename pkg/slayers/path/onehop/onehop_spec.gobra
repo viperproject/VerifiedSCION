@@ -45,17 +45,4 @@ func (p *Path) DowngradePerm(buf []byte) {
 	fold  p.NonInitMem()
 }
 
-ghost
-requires o.Mem(buf)
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* o.Mem()
-decreases
-func (o *Path) ExchangeBufMem(buf []byte) {
-	unfold o.Mem()
-	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* o.Mem(buf) {
-		fold o.Mem()
-	}
-}
-
 (*Path) implements path.Path

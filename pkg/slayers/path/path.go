@@ -111,13 +111,6 @@ type Path interface {
 	//@ ensures  slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 	//@ decreases
 	//@ DowngradePerm(ghost underlyingBuf []byte)
-
-	//@ ghost
-	//@ requires Mem(underlyingBuf)
-	//@ ensures  slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-	//@ ensures  slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)) --* Mem(underlyingBuf)
-	//@ decreases
-	//@ ExchangeBufMem(underlyingBuf []byte)
 }
 
 type metadata struct {
