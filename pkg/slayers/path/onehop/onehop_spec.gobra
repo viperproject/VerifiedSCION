@@ -26,8 +26,8 @@ pred (o *Path) NonInitMem() {
 	acc(o)
 }
 
-pred (o *Path) Mem(underlyingBuf []byte) {
-	slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)) &&
+pred (o *Path) Mem(ubuf []byte) {
+	slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) &&
     acc(&o.Info) &&
     o.FirstHop.Mem() &&
     o.SecondHop.Mem()

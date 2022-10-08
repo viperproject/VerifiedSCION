@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: verify
+// +gobra
 
 package scion
 
@@ -31,8 +31,7 @@ func testAllocateDecoded() {
 	d := &Decoded{}
 	fold d.Base.Mem()
 	assert d.Base.Len() == MetaLen
-	d.underlyingBuf = make([]byte, MetaLen)
-	assert len(d.underlyingBuf) == MetaLen
-	fold slices.AbsSlice_Bytes(d.underlyingBuf, 0, len(d.underlyingBuf))
-	fold d.Mem()
+	b := make([]byte, MetaLen)
+	fold slices.AbsSlice_Bytes(b, 0, MetaLen)
+	fold d.Mem(b)
 }

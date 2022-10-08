@@ -139,16 +139,16 @@ jobs:
 #          includePaths: ${{ env.includePaths }}
 #          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
 #          checkConsistency: ${{ env.checkConsistency }}
-#      - name: Verify package 'pkg/slayers/path/onehop'
-#        uses: viperproject/gobra-action@main
-#        with:
-#          packages: 'pkg/slayers/path/onehop'
-#          timeout: 5m
-#          headerOnly: ${{ env.headerOnly }}
-#          module: ${{ env.module }}
-#          includePaths: ${{ env.includePaths }}
-#          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-#          checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'pkg/slayers/path/onehop'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path/onehop'
+          timeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
       - name: Verify package 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:

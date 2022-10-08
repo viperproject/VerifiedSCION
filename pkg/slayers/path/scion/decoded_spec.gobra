@@ -88,7 +88,7 @@ ensures  e == nil ==> d.Len(ubuf) == old(d.Len(ubuf))
 ensures  e != nil ==> d.NonInitMem()
 ensures  e != nil ==> e.ErrorMem()
 decreases
-func (d *Decoded) IncPath(ubuf []byte) (e error) {
+func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 	unfold d.Mem(ubuf)
 	e = d.Base.IncPath()
 	if e == nil {
