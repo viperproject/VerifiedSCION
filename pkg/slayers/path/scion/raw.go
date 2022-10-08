@@ -44,9 +44,8 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 		//@ fold s.NonInitMem()
 		return err
 	}
-	// (VerifiedSCION) Gobra expects a stronger contract for
-	// s.Len() when in fact what happens here is that we just
-	// call the same function in s.Base.
+	// (VerifiedSCION) Gobra expects a stronger contract for s.Len() when in fact what
+	// happens here is that we just call the same function in s.Base.
 	pathLen := s. /*@ Base. @*/ Len()
 	if len(data) < pathLen {
 		//@ apply s.Base.Mem() --* s.Base.NonInitMem()
@@ -106,29 +105,30 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	if err != nil {
 		return nil, err
 	}
-	reversed, err := decoded.Reverse( /*@ ubuf @*/ )
+	reversed, err := decoded.Reverse( /*@ unfolding s.NonInitMem() in s.Raw @*/ )
 	if err != nil {
 		return nil, err
 	}
 	var rev *Decoded
 	rev = reversed.(*Decoded)
 	//@ unfold s.NonInitMem()
-	//@ assert s.Raw === ubuf
-	if err := rev.SerializeTo(s.Raw /*@, ubuf @*/); err != nil {
+	if err := rev.SerializeTo(s.Raw /*@, s.Raw @*/); err != nil {
 		return nil, err
 	}
-	// unfold rev.Mem(s.Raw)
-	// assert slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-	// assert underlyingBuf[:pathLen] === s.Raw
-	// fold s.NonInitMem()
-	err = s.DecodeFromBytes(s.Raw)
+	//@ ghost sraw := s.Raw
+	//@ fold s.NonInitMem()
+	//@ rev.DowngradePerm(sraw)
+	err = s.DecodeFromBytes( /*@ unfolding s.NonInitMem() in @*/ s.Raw)
+	//@ ghost if err == nil { s.Widden(sraw, ubuf) }
 	return s, err
 }
 
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
 //@ requires s.Mem(ubuf)
-//@ ensures  err == nil ==> d.Mem(ubuf)
-//@ ensures  err == nil ==> (s.NonInitMem() && (unfolding s.NonInitMem() in s.Raw) === old(unfolding s.Mem(ubuf) in s.Raw))
+//@ ensures  err == nil ==> s.NonInitMem()
+//@ ensures  err == nil ==> unfolding s.NonInitMem() in len(s.Raw) <= len(ubuf) && s.Raw === ubuf[:len(s.Raw)]
+//@ ensures  err == nil ==> slices.AbsSlice_Bytes(ubuf, unfolding s.NonInitMem() in len(s.Raw), len(ubuf))
+//@ ensures  err == nil ==> d.Mem(unfolding s.NonInitMem() in s.Raw)
 //@ ensures  err != nil ==> (s.Mem(ubuf) && err.ErrorMem())
 //@ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
@@ -153,7 +153,6 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 		//@ fold s.Mem(ubuf)
 		return nil, err
 	}
-	//@ decoded.Widden(s.Raw, ubuf)
 	//@ unfold s.Base.Mem()
 	//@ fold s.Base.NonInitMem()
 	//@ fold s.NonInitMem()

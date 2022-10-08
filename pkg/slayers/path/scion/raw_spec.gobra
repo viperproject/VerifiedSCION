@@ -143,7 +143,6 @@ requires 0 <= idx && idx <= len(r.Raw)
 requires acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
 requires r.RawIdxPermRemainder(ubuf, idx, p)
 ensures  acc(r.Mem(ubuf), p)
-ensures  (unfolding acc(r.Mem(ubuf), p) in r.Raw) === old(r.Raw)
 decreases
 func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
 	unfold r.RawIdxPermRemainder(ubuf, idx, p)
@@ -252,17 +251,19 @@ func (r *Raw) RawRangePerm(ubuf []byte, start, end int, p perm) {
 }
 /******** End of Lemma: RawRangePerm ********/
 
-// TODO: Mem(ubuf1) -> Mem(ubuf2) if ubuf1 is a subslice of ubuf2
-/*
 ghost
 requires r.Mem(ubuf1)
 requires len(ubuf1) <= len(ubuf2)
 requires ubuf1 === ubuf2[:len(ubuf1)]
 requires slices.AbsSlice_Bytes(ubuf2, len(ubuf1), len(ubuf2))
 ensures  r.Mem(ubuf2)
+decreases
 func (r *Raw) Widden(ubuf1, ubuf2 []byte) {
 	unfold r.Mem(ubuf1)
+	slices.Unslice_Bytes(ubuf2, 0, len(ubuf1), writePerm)
+	slices.CombineAtIndex_Bytes(ubuf2, 0, len(ubuf2), len(ubuf1), writePerm)
+	assert slices.AbsSlice_Bytes(ubuf2, 0, len(ubuf2))
+	fold r.Mem(ubuf2)
 }
-*/
 
 /**** End of Lemmas ****/
