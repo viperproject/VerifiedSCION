@@ -93,7 +93,7 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // Reverse reverses the path such that it can be used in the reverse direction.
 //@ requires s.Mem(ubuf)
 //@ ensures  err == nil ==> typeOf(p) == type[*Raw]
-//@ ensures  err == nil ==> p != nil
+//@ ensures  err == nil ==> p != nil && p != (*Raw)(nil)
 //@ ensures  err == nil ==> p.Mem(ubuf)
 //@ ensures  err != nil ==> err.ErrorMem()
 //@ decreases

@@ -64,21 +64,14 @@ func RegisterPath() {
 			return epicTmp
 		},
 	}
-	/*@
-	proof tmp.New implements path.NewPathSpec {
-		return tmp.New() as newPath
-	}
-	@*/
+	//@ proof tmp.New implements path.NewPathSpec {
+	//@		return tmp.New() as newPath
+	//@ }
 	path.RegisterPath(tmp)
 }
 
 // Path denotes the EPIC path type header.
 type Path struct {
-	// (VerifiedSCION) this field is meant to be a ghost field
-	// which identifies from where the Path was decoded.
-	// XXX(gavinleroy) this field should be marked as 'ghost' when
-	// ghost fields are supported by Gobra.
-	//@ underlyingBuf []byte
 	PktID     PktID
 	PHVF      []byte
 	LHVF      []byte
@@ -87,24 +80,22 @@ type Path struct {
 
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
-//@ preserves p.Mem()
-//@ preserves p.GetUnderlyingBuf() === underlyingBuf
+//@ trusted // TODO
+//@ preserves p.Mem(ubuf)
 //@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ requires  0 <= dataLen && dataLen <= len(underlyingBuf)
-//@ requires  len(b) == dataLen
 //@ ensures   r != nil ==> r.ErrorMem()
-//@ ensures   !old(p.hasScionPath()) ==> r != nil
-//@ ensures   len(b) < old(p.Len()) ==> r != nil
-//@ ensures   old(p.getPHVFLen()) != HVFLen ==> r != nil
-//@ ensures   old(p.getLHVFLen()) != HVFLen ==> r != nil
+//@ ensures   !old(p.hasScionPath(ubuf)) ==> r != nil
+//@ ensures   len(b) < old(p.Len(ubuf)) ==> r != nil
+//@ ensures   old(p.getPHVFLen(ubuf)) != HVFLen ==> r != nil
+//@ ensures   old(p.getLHVFLen(ubuf)) != HVFLen ==> r != nil
 //@ decreases
-func (p *Path) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (r error) {
+func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	if len(b) < p.Len() {
 		return serrors.New("buffer too small to serialize path.", "expected", int(p.Len()),
 			"actual", int(len(b)))
 	}
-	//@ unfold acc(p.Mem(), definitions.ReadL1)
-	//@ defer fold acc(p.Mem(), definitions.ReadL1)
+	//@ unfold acc(p.Mem(ubuf), definitions.ReadL1)
+	//@ defer fold acc(p.Mem(ubuf), definitions.ReadL1)
 	if len(p.PHVF) != HVFLen {
 		return serrors.New("invalid length of PHVF", "expected", int(HVFLen), "actual", int(len(p.PHVF)))
 	}
@@ -162,18 +153,15 @@ func (p *Path) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) 
 
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
 // otherwise SerializeTo will return nil.
+//@ trusted // TODO
 //@ requires p.NonInitMem()
-//@ requires 0 <= dataLen && dataLen <= len(underlyingBuf)
-//@ requires len(b) == dataLen
-//@ requires b === underlyingBuf[:dataLen]
-//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+//@ requires slices.AbsSlice_Bytes(b, 0, len(b))
 //@ ensures  len(b) < MetadataLen ==> r != nil
-//@ ensures  r == nil ==> p.Mem()
-//@ ensures  r == nil ==> p.GetUnderlyingBuf() === underlyingBuf
+//@ ensures  r == nil ==> p.Mem(b)
 //@ ensures  r != nil ==> p.NonInitMem() && r.ErrorMem()
-//@ ensures  r != nil ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+//@ ensures  r != nil ==> slices.AbsSlice_Bytes(b, 0, len(b))
 //@ decreases
-func (p *Path) DecodeFromBytes(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (r error) {
+func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	if len(b) < MetadataLen {
 		return serrors.New("EPIC Path raw too short", "expected", int(MetadataLen), "actual", int(len(b)))
 	}
@@ -258,35 +246,30 @@ func (p *Path) DecodeFromBytes(b []byte /*@, underlyingBuf []byte, dataLen int @
 
 // Reverse reverses the EPIC path. In particular, this means that the SCION path type subheader
 // is reversed.
-//@ requires p.Mem()
+//@ requires p.Mem(ubuf)
 //@ ensures  r == nil ==> ret != nil
-//@ ensures  r == nil ==> ret.Mem()
-//@ ensures  r == nil ==> ret.GetUnderlyingBuf() === old(p.GetUnderlyingBuf())
+//@ ensures  r == nil ==> ret.Mem(ubuf)
 //@ ensures  r == nil ==> ret != nil
 //@ ensures  r != nil ==> r.ErrorMem()
 //@ decreases
-func (p *Path) Reverse() (ret path.Path, r error) {
-	//@ unfold p.Mem()
+func (p *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (ret path.Path, r error) {
+	//@ unfold p.Mem(ubuf)
 	if p.ScionPath == nil {
-		//@ fold p.Mem()
+		//@ fold p.Mem(ubuf)
 		return nil, serrors.New("scion subpath must not be nil")
 	}
-	//@ assert p.ScionPath.Mem()
-	revScion, err := p.ScionPath.Reverse()
+	revScion, err := p.ScionPath.Reverse( /*@ ubuf @*/ )
 	if err != nil {
 		return nil, err
 	}
-	//@ assert revScion.Mem()
+	//@ assert revScion.Mem(ubuf)
 	ScionPath, ok := revScion.(*scion.Raw)
 	if !ok {
 		return nil, serrors.New("reversed path of type scion.Raw must not change type")
 	}
-	//@ assert ScionPath.Mem()
-	// TODO FIXME this assumption shouldn't be necessary
-	//@ assume ScionPath != nil
 	//@ assert ScionPath != nil
 	p.ScionPath = ScionPath
-	//@ fold p.Mem()
+	//@ fold p.Mem(ubuf)
 	return p, nil
 }
 
@@ -296,23 +279,23 @@ func (p *Path) Reverse() (ret path.Path, r error) {
 // for this method are discharged in function `len_test` in the file `epic_spec_test.gobra`.
 //@ trusted
 //@ pure
-//@ requires acc(p.Mem(), _)
-//@ ensures  !p.hasScionPath() ==> l == MetadataLen
-//@ ensures  p.hasScionPath()  ==> l == MetadataLen + unfolding acc(p.Mem(), _) in p.ScionPath.Len()
+//@ requires acc(p.Mem(ubuf), _)
+//@ ensures  !p.hasScionPath(ubuf) ==> l == MetadataLen
+//@ ensures  p.hasScionPath(ubuf)  ==> l == MetadataLen + unfolding acc(p.Mem(ubuf), _) in p.ScionPath.Len(ubuf)
 //@ decreases
-func (p *Path) Len() (l int) {
+func (p *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 	if p.ScionPath == nil {
 		return MetadataLen
 	}
-	return MetadataLen + p.ScionPath.Len()
+	return MetadataLen + p.ScionPath.Len( /*@ ubuf @*/ )
 }
 
 // Type returns the EPIC path type identifier.
 //@ pure
-//@ requires acc(p.Mem(), _)
+//@ requires acc(p.Mem(ubuf), _)
 //@ ensures  t == PathType
 //@ decreases
-func (p *Path) Type() (t path.Type) {
+func (p *Path) Type( /*@ ghost ubuf []byte @*/ ) (t path.Type) {
 	return PathType
 }
 

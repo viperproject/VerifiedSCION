@@ -19,107 +19,57 @@ package epic
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/verification/utils/slices"
-	"github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (p *Path) NonInitMem() {
 	acc(p)
 }
 
-pred (p *Path) Mem() {
-	acc(&p.underlyingBuf) &&
-		slices.AbsSlice_Bytes(p.underlyingBuf, 0, MetadataLen) &&
-		acc(&p.PktID) &&
-		acc(&p.PHVF) && slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)) &&
-		acc(&p.LHVF) && slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)) &&
-		acc(&p.ScionPath) &&
-		p.ScionPath != nil &&
-		p.ScionPath.Mem() &&
-		MetadataLen <= len(p.underlyingBuf) &&
-		p.ScionPath.GetUnderlyingBuf() === p.underlyingBuf[MetadataLen:]
-}
-
-pred (o *Path) PostBufXchange(buf []byte) {
-	acc(o.Mem(), definitions.ReadL1) && o.GetUnderlyingBuf() === buf
+pred (p *Path) Mem(ubuf []byte) {
+	acc(&p.PktID) &&
+	acc(&p.PHVF) && slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)) &&
+	acc(&p.LHVF) && slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)) &&
+	acc(&p.ScionPath) &&
+	p.ScionPath != nil &&
+	p.ScionPath.Mem(ubuf)
 }
 
 ghost
-requires p.PostBufXchange(buf)
-ensures  acc(p.Mem(), definitions.ReadL1)
-ensures  p.GetUnderlyingBuf() === buf
-func (p *Path) UnfoldPostBufXchange(buf []byte) {
-	unfold p.PostBufXchange(buf)
-	assert acc(p.Mem(), definitions.ReadL1)
-	assert p.GetUnderlyingBuf() === buf
-}
-
-ghost
-requires acc(p.Mem(), _)
-decreases
-pure func (p *Path) GetUnderlyingBuf() (buf []byte) {
-	return unfolding acc(p.Mem(), _) in p.underlyingBuf
-}
-
-ghost
-requires p.Mem()
-requires buf === p.GetUnderlyingBuf()
+requires p.Mem(buf)
 ensures  p.NonInitMem()
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
 func (p *Path) DowngradePerm(buf []byte) {
-	unfold p.Mem()
-	p.ScionPath.DowngradePerm(buf[MetadataLen:])
-	slices.Unslice_Bytes(buf, MetadataLen, len(buf), writePerm)
-	slices.CombineAtIndex_Bytes(buf, 0, len(buf), MetadataLen, writePerm)
+	unfold p.Mem(buf)
+	p.ScionPath.DowngradePerm(buf)
 	fold  p.NonInitMem()
 }
 
+ghost
 pure
-requires acc(p.Mem(), _)
-ensures l == (unfolding acc(p.Mem(), _) in len(p.PHVF))
+requires acc(p.Mem(buf), _)
+ensures l == (unfolding acc(p.Mem(buf), _) in len(p.PHVF))
 decreases
-func (p *Path) getPHVFLen() (l int) {
-	return unfolding acc(p.Mem(), _) in len(p.PHVF)
+func (p *Path) getPHVFLen(buf []byte) (l int) {
+	return unfolding acc(p.Mem(buf), _) in len(p.PHVF)
 }
 
+ghost
 pure
-requires acc(p.Mem(), _)
-ensures l == (unfolding acc(p.Mem(), _) in len(p.LHVF))
+requires acc(p.Mem(buf), _)
+ensures l == (unfolding acc(p.Mem(buf), _) in len(p.LHVF))
 decreases
-func (p *Path) getLHVFLen() (l int) {
-	return unfolding acc(p.Mem(), _) in len(p.LHVF)
+func (p *Path) getLHVFLen(buf []byte) (l int) {
+	return unfolding acc(p.Mem(buf), _) in len(p.LHVF)
 }
 
+ghost
 pure
-requires acc(p.Mem(), _)
-ensures  r == (unfolding acc(p.Mem(), _) in p.ScionPath != nil)
+requires acc(p.Mem(buf), _)
+ensures  r == (unfolding acc(p.Mem(buf), _) in p.ScionPath != nil)
 decreases
-func (p *Path) hasScionPath() (r bool) {
-	return unfolding acc(p.Mem(), _) in p.ScionPath != nil
+func (p *Path) hasScionPath(buf []byte) (r bool) {
+	return unfolding acc(p.Mem(buf), _) in p.ScionPath != nil
 }
 
-(*Path) implements path.Path {
-	(p *Path) SerializeTo(b, buf []byte, l int) (e error) {
-		e = p.SerializeTo(b, buf, l)
-	}
-
-	(p *Path) DecodeFromBytes(b, buf []byte, l int) (e error) {
-		e = p.DecodeFromBytes(b, buf, l)
-	}
-
-	(p *Path) Reverse() (r path.Path, e error) {
-		r, e = p.Reverse()
-	}
-
-	(p *Path) DowngradePerm(buf []byte) {
-		p.DowngradePerm(buf)
-	}
-
-	pure (p *Path) Len() int {
-		return p.Len()
-	}
-
-	pure (p *Path) Type() path.Type {
-		return p.Type()
-	}
-}
+(*Path) implements path.Path
