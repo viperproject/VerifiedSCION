@@ -109,15 +109,13 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	if err != nil {
 		return nil, err
 	}
-	var rev *Decoded
-	rev = reversed.(*Decoded)
 	//@ unfold s.NonInitMem()
-	if err := rev.SerializeTo(s.Raw /*@, s.Raw @*/); err != nil {
+	if err := reversed. /*@ (*Decoded). @*/ SerializeTo(s.Raw /*@, s.Raw @*/); err != nil {
 		return nil, err
 	}
 	//@ ghost sraw := s.Raw
 	//@ fold s.NonInitMem()
-	//@ rev.DowngradePerm(sraw)
+	//@ reversed.DowngradePerm(sraw)
 	err = s.DecodeFromBytes( /*@ unfolding s.NonInitMem() in @*/ s.Raw)
 	//@ ghost if err == nil { s.Widden(sraw, ubuf) }
 	return s, err
