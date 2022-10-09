@@ -12,50 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO
+// +gobra
 
 package epic
 
-import (
-	"github.com/scionproto/scion/verification/utils/slices"
-	"github.com/scionproto/scion/pkg/slayers/path/scion"
-)
+import "github.com/scionproto/scion/pkg/slayers/path/scion"
 
 func testAllocateNonInitMem() {
 	p := &Path{}
 	fold p.NonInitMem()
 }
 
-requires slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures r != nil && r.Mem() && r.GetUnderlyingBuf() === buf
-func getRawWithMem(buf []byte) (r *scion.Raw)
-
-func canAllocatePath() {
-	p := &Path{}
-	p.underlyingBuf = make([]byte, MetadataLen)
-	fold slices.AbsSlice_Bytes(p.underlyingBuf, 0, len(p.underlyingBuf))
-	slices.SplitByIndex_Bytes(p.underlyingBuf, 0, len(p.underlyingBuf), MetadataLen, writePerm)
-	assert slices.AbsSlice_Bytes(p.underlyingBuf, 0, MetadataLen)
-	assert slices.AbsSlice_Bytes(p.underlyingBuf, MetadataLen, len(p.underlyingBuf))
-	fold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
-	fold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
-	slices.Reslice_Bytes(p.underlyingBuf, MetadataLen, len(p.underlyingBuf), writePerm)
-	p.ScionPath = getRawWithMem(p.underlyingBuf[MetadataLen:])
-	fold p.Mem()
-}
+// A test folding Mem(ubuf) is skipped here, as one can just call DesugarFromBytes to get the
+// desired predicate
 
 // (*Path).Len() cannot be currently be verified because Gobra does not allow statements in
 // pure functions, but Len must be pure.
 // This method contains the same exact body and checks that the contract holds.
-preserves acc(p.Mem(), _)
-ensures   !p.hasScionPath() ==> l == MetadataLen
-ensures   p.hasScionPath()  ==> l == MetadataLen + unfolding acc(p.Mem(), _) in p.ScionPath.Len()
+ghost
+preserves acc(p.Mem(ubuf), _)
+ensures   !p.hasScionPath(ubuf) ==> l == MetadataLen
+ensures   p.hasScionPath(ubuf)  ==> l == MetadataLen + unfolding acc(p.Mem(ubuf), _) in p.ScionPath.Len(ubuf[MetadataLen:])
 decreases
-func len_test(p *Path) (l int) {
-	unfold acc(p.Mem(), _) // would need to be 'unfolding' in the pure version
+func len_test(p *Path, ubuf []byte) (l int) {
+	unfold acc(p.Mem(ubuf), _) // would need to be 'unfolding' in the pure version
 	if p.ScionPath == nil {
 		return MetadataLen
 	}
-	unfold acc(p.ScionPath.Mem(), _) // would need to be 'unfolding' in the pure version
-	return  MetadataLen + p.ScionPath.Len()
+	unfold acc(p.ScionPath.Mem(ubuf[MetadataLen:]), _) // would need to be 'unfolding' in the pure version
+	return  MetadataLen + p.ScionPath.Len(ubuf[MetadataLen:])
 }
