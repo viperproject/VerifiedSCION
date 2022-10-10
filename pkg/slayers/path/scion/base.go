@@ -246,8 +246,6 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	return nil
 }
 
-// (VerifiedSCION) The spec of fmt.Sprintf is still too limited to verify this method.
-//@ trusted
 //@ decreases
 func (m MetaHdr) String() string {
 	return fmt.Sprintf("{CurrInf: %d, CurrHF: %d, SegLen: %v}", m.CurrINF, m.CurrHF, m.SegLen)
