@@ -316,10 +316,11 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 // invocations of DecodeFromBytes.
 // @ trusted
 // @ requires false
-// @ requires s.NonInitPathPool()
-// @ requires unfolding s.NonInitPathPool() in s.pathPool == nil
-// @ ensures  s.InitPathPool()
-// @ decreases
+//
+//	requires s.NonInitPathPool()
+//	requires unfolding s.NonInitPathPool() in s.pathPool == nil
+//	ensures  s.InitPathPool()
+//	decreases
 func (s *SCION) RecyclePaths() {
 	// @ unfold s.NonInitPathPool()
 	if s.pathPool == nil {
@@ -514,12 +515,12 @@ func packAddr(hostAddr net.Addr) (AddrLen, AddrType, []byte, error) {
 // (VerifiedSCION) TODO: maybe try to put this conditional in a predicate?
 // @ pure
 // @ requires insideSlayers  ==> (acc(&s.DstAddrLen, _) && acc(&s.SrcAddrLen, _))
-// @ requires !insideSlayers ==> acc(s.Mem(), _)
+// @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
 // @ ensures  insideSlayers  ==> res == s.AddrHdrLenAbstractionLeak()
-// @ ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak()
+// @ ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak(ubuf)
 // @ decreases
 // @ trusted
-func (s *SCION) AddrHdrLen( /*@ ghost insideSlayers bool @*/ ) (res int) {
+func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
 	return 2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)
 }
 
@@ -554,30 +555,35 @@ func (s *SCION) SerializeAddrHdr(buf []byte) error {
 // @ requires acc(&s.SrcAddrLen, def.ReadL1) && s.SrcAddrLen.isValid()
 // @ requires acc(&s.DstAddrLen, def.ReadL1) && s.DstAddrLen.isValid()
 // @ requires acc(&s.RawSrcAddr) && acc(&s.RawDstAddr)
-// @ requires sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(true))
-// @ ensures  res == nil ==> s.HeaderMem() // TODO: put data as a param
+// @ requires sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(nil, true)) // the 1st param here does not matter
+// @ ensures  res == nil ==> s.HeaderMem(data)
 // @ ensures  res != nil ==> res.ErrorMem()
 // @ ensures  res != nil ==> (
 // @	acc(&s.SrcIA) && acc(&s.DstIA) && acc(&s.SrcAddrLen, def.ReadL1) &&
 // @	acc(&s.DstAddrLen, def.ReadL1) && acc(&s.RawSrcAddr) &&
-// @	acc(&s.RawDstAddr) && sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(true)))
+// @	acc(&s.RawDstAddr) && sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(nil, true)))
 // @ decreases
 func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
-	if len(data) < s.AddrHdrLen( /*@ true @*/ ) {
-		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen( /*@ true @*/ ),
+	// @ ghost l := s.AddrHdrLen(nil, true)
+	if len(data) < s.AddrHdrLen( /*@ nil, true @*/ ) {
+		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen( /*@ nil, true @*/ ),
 			"actual", len(data))
 	}
 	offset := 0
-	// @ assert false
+	// @ unfold sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(nil, true))
+	// @ assert forall i int :: 0 <= i && i < l ==> &data[offset:][i] == &data[i]
 	s.DstIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
 	offset += addr.IABytes
+	// @ assert forall i int :: 0 <= i && i < l ==> &data[offset:][i] == &data[offset+i]
 	s.SrcIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
+	// @ fold sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(nil, true))
 	offset += addr.IABytes
 	dstAddrBytes := addrBytes(s.DstAddrLen)
 	srcAddrBytes := addrBytes(s.SrcAddrLen)
 	s.RawDstAddr = data[offset : offset+dstAddrBytes]
 	offset += dstAddrBytes
 	s.RawSrcAddr = data[offset : offset+srcAddrBytes]
+	// @ fold s.HeaderMem(data)
 
 	return nil
 }
@@ -661,6 +667,7 @@ func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 }
 
 // (VerifiedSCION) TODO: add assumptions about the result of these operations
+// in order to prove termination
 // @ trusted
 // @ decreases
 func (s *SCION) foldChecksum(csum uint32) uint16 {
