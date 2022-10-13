@@ -1,0 +1,94 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slayers
+
+import (
+	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path/empty"
+	"github.com/scionproto/scion/pkg/slayers/path/epic"
+	"github.com/scionproto/scion/pkg/slayers/path/onehop"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
+
+	def "github.com/scionproto/scion/verification/utils/definitions"
+)
+
+pred (s *SCION) NonInitPathPool() {
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw)
+}
+
+pred (s *SCION) InitPathPool() {
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw) &&
+	// entry per path type
+	// empty
+	acc(&s.pathPool[empty.PathType]) &&
+	s.pathPool[empty.PathType].NonInitMem() &&
+	// typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
+	// onehop
+	acc(&s.pathPool[onehop.PathType]) &&
+	s.pathPool[empty.PathType].NonInitMem() &&
+	// scion
+	acc(&s.pathPool[scion.PathType]) &&
+	s.pathPool[empty.PathType].NonInitMem() &&
+	// epic
+	acc(&s.pathPool[epic.PathType]) &&
+	s.pathPool[empty.PathType].NonInitMem() &&
+	// raw path
+	s.pathPoolRaw.NonInitMem()
+}
+
+pred (s *SCION) NonInitMem()
+
+// TODO: put buffer as param
+pred (s *SCION) Mem() {
+	// TODO: complete
+	s.HeaderMem()
+}
+
+pred (s *SCION) HeaderMem() {
+	acc(&s.SrcIA) &&
+	acc(&s.DstIA) &&
+	// these fields are not parsed during DecodeAddrHd
+	acc(&s.SrcAddrLen, def.ReadL1) && s.SrcAddrLen.isValid() &&
+	acc(&s.DstAddrLen, def.ReadL1) && s.DstAddrLen.isValid()
+	// TODO: put slices of rawdstaddr and rawsrcaddr
+
+}
+
+ghost
+pure
+func (a AddrLen) isValid() bool {
+	return a == AddrLen4 || a == AddrLen8 || a == AddrLen12 || a == AddrLen16
+}
+
+ghost
+requires acc(&s.DstAddrLen, _) && acc(&s.SrcAddrLen, _)
+decreases
+pure
+func (s *SCION) AddrHdrLenAbstractionLeak() int {
+	return 2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)
+}
+
+ghost
+requires acc(s.Mem(), _)
+decreases
+pure
+func (s *SCION) AddrHdrLenNoAbstractionLeak() int {
+	return unfolding acc(s.Mem(), _) in (unfolding s.HeaderMem() in (2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)))
+}
