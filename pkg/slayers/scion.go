@@ -589,8 +589,9 @@ func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 }
 
 // @ pure
+// @ ensures addrLen.isValid() ==> 0 < res
 // @ decreases
-func addrBytes(addrLen AddrLen) int {
+func addrBytes(addrLen AddrLen) (res int) {
 	return (int(addrLen) + 1) * LineLen
 }
 

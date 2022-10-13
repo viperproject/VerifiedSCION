@@ -53,6 +53,8 @@ pred (s *SCION) InitPathPool() {
 	s.pathPoolRaw.NonInitMem()
 }
 
+// TODO: should have NonInitHeaderMem (TBD) and another predicate for the remaining fields,
+// except for the path pool!
 pred (s *SCION) NonInitMem()
 
 // TODO: put buffer as param
@@ -78,8 +80,12 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 
 ghost
 pure
+decreases
 func (a AddrLen) isValid() bool {
-	return a == AddrLen4 || a == AddrLen8 || a == AddrLen12 || a == AddrLen16
+	// takes advantage of the knowledge (non-modular) that all definitions are contiguoues
+	// to introduce an interval instead of an enequality:
+	// 		return a == AddrLen4 || a == AddrLen8 || a == AddrLen12 || a == AddrLen16
+	return AddrLen4 <= a && a <= AddrLen16
 }
 
 ghost
