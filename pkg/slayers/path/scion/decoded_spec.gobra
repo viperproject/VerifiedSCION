@@ -50,7 +50,7 @@ pred (d *Decoded) Mem(ubuf []byte) {
   * This method is not part of the original SCION codebase.
   * Instead, `Len` was defined in `*Decoded` via embedded structs.
   * Unfortunately, Gobra does not fully support them yet, so we
-  * introduced this wrapper method which acts as a wrapper.
+  * introduced this method which acts as a wrapper.
   */
 pure
 requires acc(d.Mem(ubuf), _)
@@ -65,7 +65,7 @@ func (d *Decoded) Len(ghost ubuf []byte) (l int) {
   * This method is not part of the original SCION codebase.
   * Instead, `Len` was defined in `*Decoded` via embedded structs.
   * Unfortunately, Gobra does not fully support them yet, so we
-  * introduced this wrapper method which acts as a wrapper.
+  * introduced this method which acts as a wrapper.
   */
 pure
 requires acc(d.Mem(ubuf), _)
