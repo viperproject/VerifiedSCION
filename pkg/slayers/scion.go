@@ -516,7 +516,7 @@ func packAddr(hostAddr net.Addr) (AddrLen, AddrType, []byte, error) {
 // @ pure
 // @ requires insideSlayers  ==> (acc(&s.DstAddrLen, _) && acc(&s.SrcAddrLen, _))
 // @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
-// @ ensures  insideSlayers  ==> res == s.AddrHdrLenAbstractionLeak()
+// @ ensures  insideSlayers  ==> res == s.addrHdrLenAbstractionLeak()
 // @ ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak(ubuf)
 // @ decreases
 // @ trusted

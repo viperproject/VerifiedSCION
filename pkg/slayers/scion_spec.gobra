@@ -59,7 +59,7 @@ pred (s *SCION) NonInitMem()
 
 // TODO: put buffer as param
 pred (s *SCION) Mem(ubuf []byte) {
-	// TODO: complete
+	// TODO: complete; put description of fields from BaseLayer
 	CmnHdrLen <= len(ubuf) &&
 	s.HeaderMem(ubuf[CmnHdrLen:])
 }
@@ -73,9 +73,16 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	// RawDstAddr & RawSrcAddr locations. The memory for these is kept
 	// outside of HeaderMem, in the Mem predicate where we just keep
 	// access to the entire slice.
-	s.AddrHdrLenAbstractionLeak() <= len(ubuf) &&
-	acc(&s.RawDstAddr) && s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+addrBytes(s.DstAddrLen)] &&
-	acc(&s.RawSrcAddr) && s.RawSrcAddr === ubuf[2*addr.IABytes+addrBytes(s.DstAddrLen):2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen)]
+	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
+	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
+	0 < addrBytes(s.DstAddrLen) && 0 < addrBytes(s.SrcAddrLen) &&
+	0 < 2*addr.IABytes && 2*addr.IABytes < 2*addr.IABytes+addrBytes(s.DstAddrLen) &&
+	2*addr.IABytes+addrBytes(s.DstAddrLen) < 2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen) &&
+	2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen) <= len(ubuf) &&
+	// end of helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
+	acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
+	s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+addrBytes(s.DstAddrLen)] &&
+	s.RawSrcAddr === ubuf[2*addr.IABytes+addrBytes(s.DstAddrLen):2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen)]
 }
 
 ghost
@@ -92,7 +99,7 @@ ghost
 requires acc(&s.DstAddrLen, _) && acc(&s.SrcAddrLen, _)
 decreases
 pure
-func (s *SCION) AddrHdrLenAbstractionLeak() int {
+func (s *SCION) addrHdrLenAbstractionLeak() int {
 	return 2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)
 }
 
