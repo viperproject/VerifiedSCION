@@ -50,7 +50,7 @@ pred (d *Decoded) Mem(ubuf []byte) {
   * This method is not part of the original SCION codebase.
   * Instead, `Len` was defined in `*Decoded` via embedded structs.
   * Unfortunately, Gobra does not fully support them yet, so we
-  * introduced this wrapper method which acts as a wrapper.
+  * introduced this method which acts as a wrapper.
   */
 pure
 requires acc(d.Mem(ubuf), _)
@@ -65,7 +65,7 @@ func (d *Decoded) Len(ghost ubuf []byte) (l int) {
   * This method is not part of the original SCION codebase.
   * Instead, `Len` was defined in `*Decoded` via embedded structs.
   * Unfortunately, Gobra does not fully support them yet, so we
-  * introduced this wrapper method which acts as a wrapper.
+  * introduced this method which acts as a wrapper.
   */
 pure
 requires acc(d.Mem(ubuf), _)
@@ -139,7 +139,7 @@ requires ubuf1 === ubuf2[:len(ubuf1)]
 requires slices.AbsSlice_Bytes(ubuf2, len(ubuf1), len(ubuf2))
 ensures  d.Mem(ubuf2)
 decreases
-func (d *Decoded) Widden(ubuf1, ubuf2 []byte) {
+func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
 	unfold d.Mem(ubuf1)
 	slices.Unslice_Bytes(ubuf2, 0, len(ubuf1), writePerm)
 	slices.CombineAtIndex_Bytes(ubuf2, 0, len(ubuf2), len(ubuf1), writePerm)
