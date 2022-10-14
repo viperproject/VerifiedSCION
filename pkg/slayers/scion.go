@@ -251,15 +251,24 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // to the state defined by the passed-in bytes. Slices in the SCION layer reference the passed-in
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
-// @ trusted
-// @ requires false
-func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+// @ requires  s.NonInitMem()
+// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves df != nil && df.Mem()
+// @ ensures   res == nil ==> s.Mem(data)
+// @ ensures   res != nil ==> (
+// @	s.NonInitMem() &&
+// @	sl.AbsSlice_Bytes(data, 0, len(data)) &&
+// @	res.ErrorMem())
+// @ decreases
+func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	// Decode common header.
 	if len(data) < CmnHdrLen {
 		df.SetTruncated()
 		return serrors.New("packet is shorter than the common header length",
 			"min", CmnHdrLen, "actual", len(data))
 	}
+	// @ unfold s.NonInitMem()
+	// @ assert false
 	firstLine := binary.BigEndian.Uint32(data[:4])
 	s.Version = uint8(firstLine >> 28)
 	s.TrafficClass = uint8((firstLine >> 20) & 0xFF)
@@ -278,7 +287,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 		df.SetTruncated()
 		return err
 	}
-	addrHdrLen := s.AddrHdrLen()
+	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ ) // (VerifiedSCION) TODO: explain why nil is necessary
 	offset := CmnHdrLen + addrHdrLen
 
 	// Decode path header.
@@ -316,11 +325,10 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 // invocations of DecodeFromBytes.
 // @ trusted
 // @ requires false
-//
-//	requires s.NonInitPathPool()
-//	requires unfolding s.NonInitPathPool() in s.pathPool == nil
-//	ensures  s.InitPathPool()
-//	decreases
+// @ requires s.NonInitPathPool()
+// @ requires unfolding s.NonInitPathPool() in s.pathPool == nil
+// @ ensures  s.InitPathPool()
+// @ decreases
 func (s *SCION) RecyclePaths() {
 	// @ unfold s.NonInitPathPool()
 	if s.pathPool == nil {

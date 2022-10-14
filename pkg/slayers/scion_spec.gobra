@@ -55,11 +55,65 @@ pred (s *SCION) InitPathPool() {
 
 // TODO: should have NonInitHeaderMem (TBD) and another predicate for the remaining fields,
 // except for the path pool!
-pred (s *SCION) NonInitMem()
+pred (s *SCION) NonInitMem() {
+	true
+	/*
+		BaseLayer
+	// Common Header fields
+
+	// Version is version of the SCION Header. Currently, only 0 is supported.
+	Version uint8
+	// TrafficClass denotes the traffic class. Its value in a received packet or fragment might be
+	// different from the value sent by the packet’s source. The current use of the Traffic Class
+	// field for Differentiated Services and Explicit Congestion Notification is specified in
+	// RFC2474 and RFC3168
+	TrafficClass uint8
+	// FlowID is a 20-bit field used by a source to label sequences of packets to be treated in the
+	// network as a single flow. It is mandatory to be set.
+	FlowID uint32
+	// NextHdr  encodes the type of the first header after the SCION header. This can be either a
+	// SCION extension or a layer-4 protocol such as TCP or UDP. Values of this field respect and
+	// extend IANA’s assigned internet protocol numbers.
+	NextHdr L4ProtocolType
+	// HdrLen is the length of the SCION header in multiples of 4 bytes. The SCION header length is
+	// computed as HdrLen * 4 bytes. The 8 bits of the HdrLen field limit the SCION header to a
+	// maximum of 255 * 4 == 1020 bytes.
+	HdrLen uint8
+	// PayloadLen is the length of the payload in bytes. The payload includes extension headers and
+	// the L4 payload. This field is 16 bits long, supporting a maximum payload size of 64KB.
+	PayloadLen uint16
+	// PathType specifies the type of path in this SCION header.
+	PathType path.Type
+	// DstAddrType (2 bit) is the type of the destination address.
+	DstAddrType AddrType
+	// DstAddrLen (2 bit) is the length of the destination address. Supported address length are 4B
+	// (0), 8B (1), 12B (2), and 16B (3).
+	DstAddrLen AddrLen
+	// SrcAddrType (2 bit) is the type of the source address.
+	SrcAddrType AddrType
+	// SrcAddrLen (2 bit) is the length of the source address. Supported address length are 4B (0),
+	// 8B (1), 12B (2), and 16B (3).
+	SrcAddrLen AddrLen
+
+	// Address header fields.
+
+	// DstIA is the destination ISD-AS.
+	DstIA addr.IA
+	// SrcIA is the source ISD-AS.
+	SrcIA addr.IA
+	// RawDstAddr is the destination address.
+	RawDstAddr []byte
+	// RawSrcAddr is the source address.
+	RawSrcAddr []byte
+
+	// Path is the path contained in the SCION header. It depends on the PathType field.
+	Path path.Path
+	*/
+}
 
 // TODO: put buffer as param
 pred (s *SCION) Mem(ubuf []byte) {
-	// TODO: complete; put description of fields from BaseLayer
+	// TODO: complete; put description of fields from BaseLayer; put permissions to the entire ubuf as a clause here
 	CmnHdrLen <= len(ubuf) &&
 	s.HeaderMem(ubuf[CmnHdrLen:])
 }
