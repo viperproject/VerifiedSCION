@@ -14,34 +14,14 @@
 
 // +gobra
 
-package onehop
+package empty
 
-import (
-	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/verification/utils/slices"
-)
-
-pred (o *Path) NonInitMem() {
-	acc(o)
+func FoldNonInitMem_test() {
+	e := Path{}
+	fold e.NonInitMem()
 }
 
-pred (o *Path) Mem(ubuf []byte) {
-	slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) &&
-	acc(&o.Info) &&
-	o.FirstHop.Mem() &&
-	o.SecondHop.Mem()
+func FoldMem_test() {
+	e := Path{}
+	fold e.Mem(nil)
 }
-
-ghost
-requires p.Mem(buf)
-ensures  p.NonInitMem()
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-decreases
-func (p *Path) DowngradePerm(buf []byte) {
-	unfold p.Mem(buf)
-	unfold p.FirstHop.Mem()
-	unfold p.SecondHop.Mem()
-	fold  p.NonInitMem()
-}
-
-(*Path) implements path.Path

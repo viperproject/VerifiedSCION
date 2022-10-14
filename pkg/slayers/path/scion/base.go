@@ -44,6 +44,7 @@ func RegisterPath() {
 		Desc: "SCION",
 		New:
 		//@ ensures p.NonInitMem()
+		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
 			rawTmp := &Raw{}
@@ -52,11 +53,9 @@ func RegisterPath() {
 			return rawTmp
 		},
 	}
-	/*@
-	proof tmp.New implements path.NewPathSpec {
-		return tmp.New() as newPath
-	}
-	@*/
+	//@ proof tmp.New implements path.NewPathSpec {
+	//@ 	return tmp.New() as newPath
+	//@ }
 	path.RegisterPath(tmp)
 }
 
@@ -247,8 +246,6 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	return nil
 }
 
-// (VerifiedSCION) The spec of fmt.Sprintf is still too limited to verify this method.
-//@ trusted
 //@ decreases
 func (m MetaHdr) String() string {
 	return fmt.Sprintf("{CurrInf: %d, CurrHF: %d, SegLen: %v}", m.CurrINF, m.CurrHF, m.SegLen)
