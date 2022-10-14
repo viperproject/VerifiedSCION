@@ -117,7 +117,7 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	//@ fold s.NonInitMem()
 	//@ reversed.DowngradePerm(sraw)
 	err = s.DecodeFromBytes( /*@ unfolding s.NonInitMem() in @*/ s.Raw)
-	//@ ghost if err == nil { s.Widden(sraw, ubuf) }
+	//@ ghost if err == nil { s.Widen(sraw, ubuf) }
 	return s, err
 }
 

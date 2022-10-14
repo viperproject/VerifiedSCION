@@ -258,7 +258,7 @@ requires ubuf1 === ubuf2[:len(ubuf1)]
 requires slices.AbsSlice_Bytes(ubuf2, len(ubuf1), len(ubuf2))
 ensures  r.Mem(ubuf2)
 decreases
-func (r *Raw) Widden(ubuf1, ubuf2 []byte) {
+func (r *Raw) Widen(ubuf1, ubuf2 []byte) {
 	unfold r.Mem(ubuf1)
 	slices.Unslice_Bytes(ubuf2, 0, len(ubuf1), writePerm)
 	slices.CombineAtIndex_Bytes(ubuf2, 0, len(ubuf2), len(ubuf1), writePerm)
