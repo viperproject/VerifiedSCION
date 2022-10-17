@@ -26,13 +26,13 @@ const PathLen = 0
 
 const PathType path.Type = 0
 
-//@ requires path.PathPackageMem()
-//@ requires !path.Registered(PathType)
-//@ ensures  path.PathPackageMem()
-//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
-//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-//@ ensures  path.Registered(PathType)
-//@ decreases
+// @ requires path.PathPackageMem()
+// @ requires !path.Registered(PathType)
+// @ ensures  path.PathPackageMem()
+// @ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+// @ ensures  path.Registered(PathType)
+// @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
 		Type: PathType,
@@ -57,9 +57,9 @@ func RegisterPath() {
 // bytes on the wire and is used for AS internal communication.
 type Path struct{}
 
-//@ ensures  len(r) == 0 ==> (e == nil && o.Mem(r))
-//@ ensures  len(r) != 0 ==> (e != nil && e.ErrorMem() && o.NonInitMem())
-//@ decreases
+// @ ensures  len(r) == 0 ==> (e == nil && o.Mem(r))
+// @ ensures  len(r) != 0 ==> (e != nil && e.ErrorMem() && o.NonInitMem())
+// @ decreases
 func (o Path) DecodeFromBytes(r []byte) (e error) {
 	if len(r) != 0 {
 		//@ fold o.NonInitMem()
@@ -69,31 +69,31 @@ func (o Path) DecodeFromBytes(r []byte) (e error) {
 	return nil
 }
 
-//@ ensures e == nil
-//@ decreases
+// @ ensures e == nil
+// @ decreases
 func (o Path) SerializeTo(b []byte /*@, underlyingBuf []byte @*/) (e error) {
 	return nil
 }
 
-//@ requires o.Mem(underlyingBuf)
-//@ ensures  p == o
-//@ ensures  p.Mem(underlyingBuf)
-//@ ensures  e == nil
-//@ decreases
+// @ requires o.Mem(underlyingBuf)
+// @ ensures  p == o
+// @ ensures  p.Mem(underlyingBuf)
+// @ ensures  e == nil
+// @ decreases
 func (o Path) Reverse( /*@ underlyingBuf []byte @*/ ) (p path.Path, e error) {
 	return o, nil
 }
 
-//@ pure
-//@ ensures 0 <= r
-//@ decreases
+// @ pure
+// @ ensures 0 <= r
+// @ decreases
 func (o Path) Len( /*@ underlyingBuf []byte @*/ ) (r int) {
 	return PathLen
 }
 
-//@ pure
-//@ ensures r == PathType
-//@ decreases
+// @ pure
+// @ ensures r == PathType
+// @ decreases
 func (o Path) Type( /*@ underlyingBuf []byte @*/ ) (r path.Type) {
 	return PathType
 }

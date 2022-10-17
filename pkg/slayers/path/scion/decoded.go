@@ -42,12 +42,12 @@ type Decoded struct {
 }
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
-//@ requires s.NonInitMem()
-//@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ ensures  r == nil ==> s.Mem(data)
-//@ ensures  r != nil ==> (r.ErrorMem() && s.NonInitMem())
-//@ ensures  r != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
-//@ decreases
+// @ requires s.NonInitMem()
+// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures  r == nil ==> s.Mem(data)
+// @ ensures  r != nil ==> (r.ErrorMem() && s.NonInitMem())
+// @ ensures  r != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+// @ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ unfold s.NonInitMem()
 	if err := s.Base.DecodeFromBytes(data); err != nil {
@@ -121,10 +121,10 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 
 // SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-//@ preserves s.Mem(ubuf)
-//@ preserves b !== ubuf ==> slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   r != nil ==> r.ErrorMem()
-//@ decreases
+// @ preserves s.Mem(ubuf)
+// @ preserves b !== ubuf ==> slices.AbsSlice_Bytes(b, 0, len(b))
+// @ ensures   r != nil ==> r.ErrorMem()
+// @ decreases
 func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	if len(b) < s.Len( /*@ ubuf @*/ ) {
 		return serrors.New("buffer too small to serialize path.", "expected", s.Len( /*@ ubuf @*/ ),
@@ -202,13 +202,13 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 }
 
 // Reverse reverses a SCION path.
-//@ requires s.Mem(ubuf)
-//@ ensures  r == nil ==> p != nil
-//@ ensures  r == nil ==> p.Mem(ubuf)
-//@ ensures  r == nil ==> p == s
-//@ ensures  r == nil ==> typeOf(p) == type[*Decoded]
-//@ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
-//@ decreases
+// @ requires s.Mem(ubuf)
+// @ ensures  r == nil ==> p != nil
+// @ ensures  r == nil ==> p.Mem(ubuf)
+// @ ensures  r == nil ==> p == s
+// @ ensures  r == nil ==> typeOf(p) == type[*Decoded]
+// @ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
+// @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ unfold s.Mem(ubuf)
 	//@ unfold s.Base.Mem()
@@ -298,10 +298,10 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 }
 
 // ToRaw tranforms scion.Decoded into scion.Raw.
-//@ preserves s.Mem(ubuf1)
-//@ ensures   err == nil ==> r.Mem(ubuf2)
-//@ ensures   err != nil ==> err.ErrorMem()
-//@ decreases
+// @ preserves s.Mem(ubuf1)
+// @ ensures   err == nil ==> r.Mem(ubuf2)
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func (s *Decoded) ToRaw( /*@ ghost ubuf1 []byte @*/ ) (r *Raw, err error /*@, ghost ubuf2 []byte @*/) {
 	// (VerifiedSCION) if `tmp` is not used, Gobra complains that
 	// make cannot contain ghost subexpressions
