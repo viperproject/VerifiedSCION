@@ -1,0 +1,127 @@
+// +gobra
+
+package slayers
+
+import (
+	"github.com/google/gopacket"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+requires acc(&LayerTypeSCMPExternalInterfaceDown, _)
+func external_interface_down_test() {
+	b := &SCMPExternalInterfaceDown{}
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
+	fold b.BaseLayer.LayerMem()
+	fold b.LayerMem()
+	unfold b.LayerMem()
+	unfold b.BaseLayer.LayerMem()
+	fold b.BaseLayer.PayloadMem()
+	fold b.PayloadMem()
+	unfold b.PayloadMem()
+	unfold b.BaseLayer.PayloadMem()
+	fold b.BaseLayer.Mem()
+	fold b.Mem()
+}
+
+requires acc(&LayerTypeSCMPInternalConnectivityDown, _)
+func internal_connectivity_down_test() {
+	b := &SCMPInternalConnectivityDown{}
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
+	fold b.BaseLayer.LayerMem()
+	fold b.LayerMem()
+	unfold b.LayerMem()
+	unfold b.BaseLayer.LayerMem()
+	fold b.BaseLayer.PayloadMem()
+	fold b.PayloadMem()
+	unfold b.PayloadMem()
+	unfold b.BaseLayer.PayloadMem()
+	fold b.BaseLayer.Mem()
+	fold b.Mem()
+}
+
+requires acc(&LayerTypeSCMPEcho, _)
+func echo_test() {
+	b := &SCMPEcho{}
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
+	fold b.BaseLayer.LayerMem()
+	fold b.LayerMem()
+	unfold b.LayerMem()
+	unfold b.BaseLayer.LayerMem()
+	fold b.BaseLayer.PayloadMem()
+	fold b.PayloadMem()
+	unfold b.PayloadMem()
+	unfold b.BaseLayer.PayloadMem()
+	fold b.BaseLayer.Mem()
+	fold b.Mem()
+}
+
+requires acc(&LayerTypeSCMPParameterProblem, _)
+func parameter_problem_test() {
+	b := &SCMPParameterProblem{}
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
+	fold b.BaseLayer.LayerMem()
+	fold b.LayerMem()
+	unfold b.LayerMem()
+	unfold b.BaseLayer.LayerMem()
+	fold b.BaseLayer.PayloadMem()
+	fold b.PayloadMem()
+	unfold b.PayloadMem()
+	unfold b.BaseLayer.PayloadMem()
+	fold b.BaseLayer.Mem()
+	fold b.Mem()
+}
+
+requires acc(&LayerTypeSCMPTraceroute, _)
+func traceroute_test() {
+	b := &SCMPTraceroute{}
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
+	fold b.BaseLayer.LayerMem()
+	fold b.LayerMem()
+	unfold b.LayerMem()
+	unfold b.BaseLayer.LayerMem()
+	fold b.BaseLayer.PayloadMem()
+	fold b.PayloadMem()
+	unfold b.PayloadMem()
+	unfold b.BaseLayer.PayloadMem()
+	fold b.BaseLayer.Mem()
+	fold b.Mem()
+}
+
+requires acc(&LayerTypeSCMPDestinationUnreachable, _)
+func destination_unreachable_test() {
+	b := &SCMPDestinationUnreachable{}
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
+	fold b.BaseLayer.LayerMem()
+	fold b.LayerMem()
+	unfold b.LayerMem()
+	unfold b.BaseLayer.LayerMem()
+	fold b.BaseLayer.PayloadMem()
+	fold b.PayloadMem()
+	unfold b.PayloadMem()
+	unfold b.BaseLayer.PayloadMem()
+	fold b.BaseLayer.Mem()
+	fold b.Mem()
+}
+
+requires acc(&LayerTypeSCMPPacketTooBig, _)
+func packet_too_big_test() {
+	b := &SCMPPacketTooBig{}
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
+	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
+	fold b.BaseLayer.LayerMem()
+	fold b.LayerMem()
+	unfold b.LayerMem()
+	unfold b.BaseLayer.LayerMem()
+	fold b.BaseLayer.PayloadMem()
+	fold b.PayloadMem()
+	unfold b.PayloadMem()
+	unfold b.BaseLayer.PayloadMem()
+	fold b.BaseLayer.Mem()
+	fold b.Mem()
+}
