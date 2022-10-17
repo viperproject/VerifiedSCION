@@ -27,7 +27,7 @@ import (
 )
 
 const scmpRawInterfaceLen = 8
-//delete inside here
+// TODO: delete inside here
 // BaseLayer is a convenience struct which implements the LayerData and
 // LayerPayload functions of the Layer interface.
 // Copy-pasted from gopacket/layers (we avoid importing this due its massive size)
