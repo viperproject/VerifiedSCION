@@ -15,10 +15,7 @@
 // +gobra
 
 // @ initEnsures PathPackageMem()
-<<<<<<< HEAD
 // @ initEnsures forall t Type :: 0 <= t && t < maxPathType ==> !Registered(t)
-=======
->>>>>>> master
 package path
 
 import (
