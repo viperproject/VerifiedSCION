@@ -26,19 +26,20 @@ const PathLen = 0
 
 const PathType path.Type = 0
 
-//@ requires path.PathPackageMem()
-//@ requires !path.Registered(PathType)
-//@ ensures  path.PathPackageMem()
-//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
-//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-//@ ensures  path.Registered(PathType)
-//@ decreases
+// @ requires path.PathPackageMem()
+// @ requires !path.Registered(PathType)
+// @ ensures  path.PathPackageMem()
+// @ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+// @ ensures  path.Registered(PathType)
+// @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
 		Type: PathType,
 		Desc: "Empty",
 		New:
 		//@ ensures p.NonInitMem()
+		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
 			emptyTmp /*@@@*/ := Path{}
@@ -46,11 +47,9 @@ func RegisterPath() {
 			return emptyTmp
 		},
 	}
-	/*@
-	proof tmp.New implements path.NewPathSpec {
-		return tmp.New() as newPath
-	}
-	@*/
+	//@ proof tmp.New implements path.NewPathSpec {
+	//@		return tmp.New() as newPath
+	//@ }
 	path.RegisterPath(tmp)
 }
 
@@ -58,42 +57,43 @@ func RegisterPath() {
 // bytes on the wire and is used for AS internal communication.
 type Path struct{}
 
-//@ ensures len(r) != 0 ==> (e != nil && e.ErrorMem())
-//@ ensures len(r) == 0 ==> e == nil
-//@ ensures o.Mem()
-//@ decreases
+// @ ensures  len(r) == 0 ==> (e == nil && o.Mem(r))
+// @ ensures  len(r) != 0 ==> (e != nil && e.ErrorMem() && o.NonInitMem())
+// @ decreases
 func (o Path) DecodeFromBytes(r []byte) (e error) {
-	//@ fold o.Mem()
 	if len(r) != 0 {
-		// (VerifiedSCION) TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
-		return serrors.New("decoding an empty path", "len", int(len(r)))
+		//@ fold o.NonInitMem()
+		return serrors.New("decoding an empty path", "len", len(r))
 	}
+	//@ fold o.Mem(r)
 	return nil
 }
 
-//@ ensures e == nil
-//@ decreases
-func (o Path) SerializeTo(b []byte) (e error) {
+// @ ensures e == nil
+// @ decreases
+func (o Path) SerializeTo(b []byte /*@, underlyingBuf []byte @*/) (e error) {
 	return nil
 }
 
-//@ ensures p == o
-//@ ensures e == nil
-//@ decreases
-func (o Path) Reverse() (p path.Path, e error) {
+// @ requires o.Mem(underlyingBuf)
+// @ ensures  p == o
+// @ ensures  p.Mem(underlyingBuf)
+// @ ensures  e == nil
+// @ decreases
+func (o Path) Reverse( /*@ underlyingBuf []byte @*/ ) (p path.Path, e error) {
 	return o, nil
 }
 
-//@ pure
-//@ ensures r >= 0
-//@ decreases
-func (o Path) Len() (r int) {
+// @ pure
+// @ ensures 0 <= r
+// @ decreases
+func (o Path) Len( /*@ underlyingBuf []byte @*/ ) (r int) {
 	return PathLen
 }
 
-//@ pure
-//@ ensures r == PathType
-//@ decreases
-func (o Path) Type() (r path.Type) {
+// @ pure
+// @ ensures r == PathType
+// @ decreases
+func (o Path) Type( /*@ underlyingBuf []byte @*/ ) (r path.Type) {
 	return PathType
 }

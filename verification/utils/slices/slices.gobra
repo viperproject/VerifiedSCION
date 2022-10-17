@@ -186,6 +186,20 @@ func Unslice_Bytes(s []byte, start int, end int, p perm) {
 	fold acc(AbsSlice_Bytes(s, start, end), p)
 }
 
+ghost
+requires 0 <= p
+requires 0 <= start && start <= end && end <= len(s)
+requires acc(AbsSlice_Bytes(s, 0, len(s)), p)
+ensures  acc(AbsSlice_Bytes(s[start:end], 0, end-start), p)
+ensures  acc(AbsSlice_Bytes(s, 0, start), p)
+ensures  acc(AbsSlice_Bytes(s, end, len(s)), p)
+decreases
+func SplitRange_Bytes(s []byte, start int, end int, p perm) {
+	SplitByIndex_Bytes(s, 0, len(s), start, p)
+	SplitByIndex_Bytes(s, start, len(s), end, p)
+	Reslice_Bytes(s, start, end, p)
+}
+
 /** End of slices of Bytes without Contents **/
 
 /** Auxiliar definitions Any **/

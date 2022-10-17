@@ -18,14 +18,19 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
+
+(*Decoded) implements path.Path
+
+/**** Predicates ****/
 
 pred (d *Decoded) NonInitMem() {
 	acc(&d.InfoFields) && acc(&d.HopFields) && d.Base.NonInitMem()
 }
 
-pred (d *Decoded) Mem() {
+pred (d *Decoded) Mem(ubuf []byte) {
 	d.Base.Mem() &&
 	acc(&d.InfoFields) &&
 	d.Base.getNumINF() <= MaxINFs &&
@@ -33,36 +38,41 @@ pred (d *Decoded) Mem() {
 	(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
 	acc(&d.HopFields) &&
 	len(d.HopFields) == d.Base.getNumHops() &&
-	(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
+	(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem()) &&
+	slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 }
+
+/**** End of Predicates ****/
+
+/**** Stubs ****/
 
 /**
   * This method is not part of the original SCION codebase.
   * Instead, `Len` was defined in `*Decoded` via embedded structs.
   * Unfortunately, Gobra does not fully support them yet, so we
-  * introduced this wrapper method which acts as a wrapper.
+  * introduced this method which acts as a wrapper.
   */
 pure
-requires acc(d.Mem(), _)
-ensures  unfolding acc(d.Mem(), _) in l == d.Base.Len()
+requires acc(d.Mem(ubuf), _)
+ensures  unfolding acc(d.Mem(ubuf), _) in l == d.Base.Len()
 ensures  l >= 0
 decreases
-func (d *Decoded) Len() (l int) {
-	return unfolding acc(d.Mem(), _) in d.Base.Len()
+func (d *Decoded) Len(ghost ubuf []byte) (l int) {
+	return unfolding acc(d.Mem(ubuf), _) in d.Base.Len()
 }
 
 /**
   * This method is not part of the original SCION codebase.
   * Instead, `Len` was defined in `*Decoded` via embedded structs.
   * Unfortunately, Gobra does not fully support them yet, so we
-  * introduced this wrapper method which acts as a wrapper.
+  * introduced this method which acts as a wrapper.
   */
 pure
-requires acc(d.Mem(), _)
-ensures  unfolding acc(d.Mem(), _) in t == d.Base.Type()
+requires acc(d.Mem(ubuf), _)
+ensures  unfolding acc(d.Mem(ubuf), _) in t == d.Base.Type()
 decreases
-func (d *Decoded) Type() (t path.Type) {
-	return unfolding acc(d.Mem(), _) in d.Base.Type()
+func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
+	return unfolding acc(d.Mem(ubuf), _) in d.Base.Type()
 }
 
 /**
@@ -72,68 +82,69 @@ func (d *Decoded) Type() (t path.Type) {
   * on d.Base. Without this, one would need to unfold d.Mem() to call `IncPath`,
   * which can be extremely cumbersome.
   */
-requires d.Mem()
-ensures  e == nil ==> d.Mem()
-ensures  e == nil ==> d.Len() == old(d.Len())
+requires d.Mem(ubuf)
+ensures  e == nil ==> d.Mem(ubuf)
+ensures  e == nil ==> d.Len(ubuf) == old(d.Len(ubuf))
 ensures  e != nil ==> d.NonInitMem()
 ensures  e != nil ==> e.ErrorMem()
 decreases
-func (d *Decoded) IncPath() (e error) {
-	unfold d.Mem()
+func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
+	unfold d.Mem(ubuf)
 	e = d.Base.IncPath()
 	if e == nil {
-		fold d.Mem()
+		fold d.Mem(ubuf)
 	} else {
 		fold d.NonInitMem()
 	}
 	return e
 }
 
+/**** End of Stubs ****/
+
+/**** Auxiliary Functions ****/
+
+requires acc(d.Mem(ubuf), _)
+decreases
+pure func (d *Decoded) getLenInfoFields(ubuf []byte) int {
+	return unfolding acc(d.Mem(ubuf), _) in len(d.InfoFields)
+}
+
+requires acc(d.Mem(ubuf), _)
+decreases
+pure func (d *Decoded) getLenHopFields(ubuf []byte) int {
+	return unfolding acc(d.Mem(ubuf), _) in len(d.HopFields)
+}
+
+/**** End of Auxiliary Functions ****/
+
+/**** Lemmas ****/
+
 ghost
-requires d.Mem()
+requires d.Mem(ubuf)
+ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 ensures  d.NonInitMem()
 decreases
-func (d *Decoded) DowngradePerm() {
-	unfold d.Mem()
+func (d *Decoded) DowngradePerm(ubuf []byte) {
+	unfold d.Mem(ubuf)
 	unfold d.Base.Mem()
+	assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 	fold d.Base.NonInitMem()
 	fold d.NonInitMem()
 }
 
-(*Decoded) implements path.Path {
-	(d *Decoded) SerializeTo(b []byte) (e error) {
-		e = d.SerializeTo(b)
-	}
-
-	(d *Decoded) DecodeFromBytes(b []byte) (e error) {
-		e = d.DecodeFromBytes(b)
-	}
-
-	(d *Decoded) Reverse() (p path.Path, e error) {
-		p, e = d.Reverse()
-	}
-
-	(d *Decoded) DowngradePerm() {
-		d.DowngradePerm()
-	}
-
-	pure (d *Decoded) Len() int {
-		return d.Len()
-	}
-
-	pure (d *Decoded) Type() path.Type {
-		return d.Type()
-	}
-}
-
-requires acc(d.Mem(), _)
+ghost
+requires d.Mem(ubuf1)
+requires len(ubuf1) <= len(ubuf2)
+requires ubuf1 === ubuf2[:len(ubuf1)]
+requires slices.AbsSlice_Bytes(ubuf2, len(ubuf1), len(ubuf2))
+ensures  d.Mem(ubuf2)
 decreases
-pure func (d *Decoded) getLenInfoFields() int {
-	return unfolding acc(d.Mem(), _) in len(d.InfoFields)
+func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
+	unfold d.Mem(ubuf1)
+	slices.Unslice_Bytes(ubuf2, 0, len(ubuf1), writePerm)
+	slices.CombineAtIndex_Bytes(ubuf2, 0, len(ubuf2), len(ubuf1), writePerm)
+	assert slices.AbsSlice_Bytes(ubuf2, 0, len(ubuf2))
+	fold d.Mem(ubuf2)
 }
 
-requires acc(d.Mem(), _)
-decreases
-pure func (d *Decoded) getLenHopFields() int {
-	return unfolding acc(d.Mem(), _) in len(d.HopFields)
-}
+/**** End of Lemmas ****/

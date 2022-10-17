@@ -19,27 +19,31 @@ package path
 import "github.com/scionproto/scion/verification/utils/slices"
 
 /** rawPath spec **/
-pred (r *rawPath) Mem() {
-	acc(r) && slices.AbsSlice_Bytes(r.raw, 0, len(r.raw))
+pred (r *rawPath) Mem(underlyingBuf []byte) {
+	acc(r) &&
+	r.raw === underlyingBuf &&
+	slices.AbsSlice_Bytes(r.raw, 0, len(r.raw))
 }
 
 pred (r *rawPath) NonInitMem() {
 	acc(r)
 }
 
-(*rawPath) implements Path
-
 ghost
-requires p.Mem()
+requires p.Mem(buf)
+ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 ensures  p.NonInitMem()
 decreases
-func (p *rawPath) DowngradePerm() {
-	unfold p.Mem()
+func (p *rawPath) DowngradePerm(ghost buf []byte) {
+	unfold p.Mem(buf)
 	fold p.NonInitMem()
 }
+
+(*rawPath) implements Path
+
 /** End of rawPath spec **/
 
-/** Global state of the pacakge **/
+/** Global state of the package **/
 ghost const MaxPathType = maxPathType
 
 pred PathPackageMem() {
@@ -73,7 +77,8 @@ pure func IsStrictDecoding() (b bool) {
 // without passing `writePerm` explicitely below, we run into
 // exceptions when verifying method RegisterPath in package 'empty'
 ensures acc(p.NonInitMem(), writePerm)
+ensures p != nil
 decreases
 func NewPathSpec() (p Path)
 
-/** End of global state of the pacakge **/
+/** End of global state of the package **/
