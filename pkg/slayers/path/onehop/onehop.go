@@ -29,13 +29,13 @@ const PathLen = path.InfoLen + 2*path.HopLen
 
 const PathType path.Type = 2
 
-//@ requires path.PathPackageMem()
-//@ requires !path.Registered(PathType)
-//@ ensures  path.PathPackageMem()
-//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
-//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-//@ ensures  path.Registered(PathType)
-//@ decreases
+// @ requires path.PathPackageMem()
+// @ requires !path.Registered(PathType)
+// @ ensures  path.PathPackageMem()
+// @ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+// @ ensures  path.Registered(PathType)
+// @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
 		Type: PathType,
@@ -65,14 +65,14 @@ type Path struct {
 	SecondHop path.HopField
 }
 
-//@ requires o.NonInitMem()
-//@ requires slices.AbsSlice_Bytes(data, 0, len(data))
-//@ ensures  (len(data) >= PathLen) == (r == nil)
-//@ ensures  r == nil ==> o.Mem(data)
-//@ ensures  r != nil ==> o.NonInitMem()
-//@ ensures  r != nil ==> r.ErrorMem()
-//@ ensures  r != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
-//@ decreases
+// @ requires o.NonInitMem()
+// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures  (len(data) >= PathLen) == (r == nil)
+// @ ensures  r == nil ==> o.Mem(data)
+// @ ensures  r != nil ==> o.NonInitMem()
+// @ ensures  r != nil ==> r.ErrorMem()
+// @ ensures  r != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+// @ decreases
 func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	if len(data) < PathLen {
 		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
@@ -107,11 +107,11 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	return r
 }
 
-//@ preserves acc(o.Mem(ubuf), definitions.ReadL1)
-//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   (len(b) >= PathLen) == (err == nil)
-//@ ensures   err != nil ==> err.ErrorMem()
-//@ decreases
+// @ preserves acc(o.Mem(ubuf), definitions.ReadL1)
+// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ ensures   (len(b) >= PathLen) == (err == nil)
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	if len(b) < PathLen {
 		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
@@ -151,11 +151,11 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
-//@ trusted // verification does not terminate in useful time
-//@ requires o.Mem(ubuf)
-//@ ensures  err == nil ==> (sd != nil && sd.Mem(ubuf))
-//@ ensures  err != nil ==> err.ErrorMem() && o.Mem(ubuf)
-//@ decreases
+// @ trusted // verification does not terminate in useful time
+// @ requires o.Mem(ubuf)
+// @ ensures  err == nil ==> (sd != nil && sd.Mem(ubuf))
+// @ ensures  err != nil ==> err.ErrorMem() && o.Mem(ubuf)
+// @ decreases
 func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, err error) {
 	//@ unfold acc(o.Mem(ubuf), definitions.ReadL1)
 	//@ unfold acc(o.SecondHop.Mem(), definitions.ReadL10)
@@ -211,12 +211,12 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
-//@ requires o.Mem(ubuf)
-//@ ensures err == nil ==> p != nil
-//@ ensures err == nil ==> p.Mem(ubuf)
-//@ ensures err == nil ==> typeOf(p) == type[*scion.Decoded]
-//@ ensures err != nil ==> err.ErrorMem()
-//@ decreases
+// @ requires o.Mem(ubuf)
+// @ ensures err == nil ==> p != nil
+// @ ensures err == nil ==> p.Mem(ubuf)
+// @ ensures err == nil ==> typeOf(p) == type[*scion.Decoded]
+// @ ensures err != nil ==> err.ErrorMem()
+// @ decreases
 func (o *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	sp, err := o.ToSCIONDecoded( /*@ ubuf @*/ )
 	if err != nil {
@@ -229,16 +229,16 @@ func (o *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	return sp.Reverse( /*@ ubuf @*/ )
 }
 
-//@ pure
-//@ ensures l == PathLen
-//@ decreases
+// @ pure
+// @ ensures l == PathLen
+// @ decreases
 func (o *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 	return PathLen
 }
 
-//@ pure
-//@ ensures t == PathType
-//@ decreases
+// @ pure
+// @ ensures t == PathType
+// @ decreases
 func (o *Path) Type( /*@ ghost ubuf []byte @*/ ) (t path.Type) {
 	return PathType
 }

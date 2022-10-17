@@ -41,13 +41,13 @@ const (
 )
 
 // RegisterPath registers the EPIC path type globally.
-//@ requires path.PathPackageMem()
-//@ requires !path.Registered(PathType)
-//@ ensures  path.PathPackageMem()
-//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
-//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-//@ ensures  path.Registered(PathType)
-//@ decreases
+// @ requires path.PathPackageMem()
+// @ requires !path.Registered(PathType)
+// @ ensures  path.PathPackageMem()
+// @ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+// @ ensures  path.Registered(PathType)
+// @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
 		Type: PathType,
@@ -80,14 +80,14 @@ type Path struct {
 
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
-//@ preserves p.Mem(ubuf)
-//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   r != nil ==> r.ErrorMem()
-//@ ensures   !old(p.hasScionPath(ubuf)) ==> r != nil
-//@ ensures   len(b) < old(p.Len(ubuf)) ==> r != nil
-//@ ensures   old(p.getPHVFLen(ubuf)) != HVFLen ==> r != nil
-//@ ensures   old(p.getLHVFLen(ubuf)) != HVFLen ==> r != nil
-//@ decreases
+// @ preserves p.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ ensures   r != nil ==> r.ErrorMem()
+// @ ensures   !old(p.hasScionPath(ubuf)) ==> r != nil
+// @ ensures   len(b) < old(p.Len(ubuf)) ==> r != nil
+// @ ensures   old(p.getPHVFLen(ubuf)) != HVFLen ==> r != nil
+// @ ensures   old(p.getLHVFLen(ubuf)) != HVFLen ==> r != nil
+// @ decreases
 func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	if len(b) < p.Len( /*@ ubuf @*/ ) {
 		return serrors.New("buffer too small to serialize path.", "expected", int(p.Len( /*@ ubuf @*/ )),
@@ -148,13 +148,13 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
 // otherwise SerializeTo will return nil.
-//@ requires p.NonInitMem()
-//@ requires slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures  len(b) < MetadataLen ==> r != nil
-//@ ensures  r == nil ==> p.Mem(b)
-//@ ensures  r != nil ==> p.NonInitMem() && r.ErrorMem()
-//@ ensures  r != nil ==> slices.AbsSlice_Bytes(b, 0, len(b))
-//@ decreases
+// @ requires p.NonInitMem()
+// @ requires slices.AbsSlice_Bytes(b, 0, len(b))
+// @ ensures  len(b) < MetadataLen ==> r != nil
+// @ ensures  r == nil ==> p.Mem(b)
+// @ ensures  r != nil ==> p.NonInitMem() && r.ErrorMem()
+// @ ensures  r != nil ==> slices.AbsSlice_Bytes(b, 0, len(b))
+// @ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	if len(b) < MetadataLen {
 		return serrors.New("EPIC Path raw too short", "expected", int(MetadataLen), "actual", int(len(b)))
@@ -226,12 +226,12 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 
 // Reverse reverses the EPIC path. In particular, this means that the SCION path type subheader
 // is reversed.
-//@ requires p.Mem(ubuf)
-//@ ensures  r == nil ==> ret != nil
-//@ ensures  r == nil ==> ret.Mem(ubuf)
-//@ ensures  r == nil ==> ret != nil
-//@ ensures  r != nil ==> r.ErrorMem()
-//@ decreases
+// @ requires p.Mem(ubuf)
+// @ ensures  r == nil ==> ret != nil
+// @ ensures  r == nil ==> ret.Mem(ubuf)
+// @ ensures  r == nil ==> ret != nil
+// @ ensures  r != nil ==> r.ErrorMem()
+// @ decreases
 func (p *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (ret path.Path, r error) {
 	//@ unfold p.Mem(ubuf)
 	if p.ScionPath == nil {
@@ -255,12 +255,12 @@ func (p *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (ret path.Path, r error) {
 // (VerifiedSCION) This is currently not checked here because Gobra
 // does not support statements in pure functions. The proof obligations
 // for this method are discharged in function `len_test` in the file `epic_spec_test.gobra`.
-//@ trusted
-//@ pure
-//@ requires acc(p.Mem(ubuf), _)
-//@ ensures  !p.hasScionPath(ubuf) ==> l == MetadataLen
-//@ ensures  p.hasScionPath(ubuf)  ==> l == MetadataLen + unfolding acc(p.Mem(ubuf), _) in p.ScionPath.Len(ubuf[MetadataLen:])
-//@ decreases
+// @ trusted
+// @ pure
+// @ requires acc(p.Mem(ubuf), _)
+// @ ensures  !p.hasScionPath(ubuf) ==> l == MetadataLen
+// @ ensures  p.hasScionPath(ubuf)  ==> l == MetadataLen + unfolding acc(p.Mem(ubuf), _) in p.ScionPath.Len(ubuf[MetadataLen:])
+// @ decreases
 func (p *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 	if p.ScionPath == nil {
 		return MetadataLen
@@ -269,10 +269,10 @@ func (p *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 }
 
 // Type returns the EPIC path type identifier.
-//@ pure
-//@ requires acc(p.Mem(ubuf), _)
-//@ ensures  t == PathType
-//@ decreases
+// @ pure
+// @ requires acc(p.Mem(ubuf), _)
+// @ ensures  t == PathType
+// @ decreases
 func (p *Path) Type( /*@ ghost ubuf []byte @*/ ) (t path.Type) {
 	return PathType
 }
@@ -284,12 +284,12 @@ type PktID struct {
 }
 
 // DecodeFromBytes deserializes the buffer (raw) into the PktID.
-//@ requires  len(raw) >= PktIDLen
-//@ preserves acc(i)
-//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
-//@ ensures   0 <= i.Timestamp
-//@ ensures   0 <= i.Counter
-//@ decreases
+// @ requires  len(raw) >= PktIDLen
+// @ preserves acc(i)
+// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+// @ ensures   0 <= i.Timestamp
+// @ ensures   0 <= i.Counter
+// @ decreases
 func (i *PktID) DecodeFromBytes(raw []byte) {
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 	//@ assert forall i int :: 0 <= i && i < 4 ==> &raw[:4][i] == &raw[i]
@@ -300,10 +300,10 @@ func (i *PktID) DecodeFromBytes(raw []byte) {
 }
 
 // SerializeTo serializes the PktID into the buffer (b).
-//@ requires  len(b) >= PktIDLen
-//@ preserves acc(i, definitions.ReadL1)
-//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ decreases
+// @ requires  len(b) >= PktIDLen
+// @ preserves acc(i, definitions.ReadL1)
+// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ decreases
 func (i *PktID) SerializeTo(b []byte) {
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ assert forall j int :: 0 <= 4 ==> &b[:4][j] == &b[j]
