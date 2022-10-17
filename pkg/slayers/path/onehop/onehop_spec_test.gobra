@@ -21,9 +21,5 @@ func testAllocateNonInitMem() {
 	fold p.NonInitMem()
 }
 
-func canAllocatePath() {
-	p := &Path{}
-	fold p.FirstHop.Mem()
-	fold p.SecondHop.Mem()
-	fold p.Mem()
-}
+// A test folding Mem(ubuf) is skipped here, as one can
+// just call DesugarFromBytes to get the desired predicate.
