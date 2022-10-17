@@ -19,7 +19,6 @@ package empty
 import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // PathLen is the length of a serialized empty path in bytes.
@@ -27,19 +26,20 @@ const PathLen = 0
 
 const PathType path.Type = 0
 
-//@ requires path.PathPackageMem()
-//@ requires !path.Registered(PathType)
-//@ ensures  path.PathPackageMem()
-//@ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
-//@ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-//@ ensures  path.Registered(PathType)
-//@ decreases
+// @ requires path.PathPackageMem()
+// @ requires !path.Registered(PathType)
+// @ ensures  path.PathPackageMem()
+// @ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
+// @ ensures  path.Registered(PathType)
+// @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
 		Type: PathType,
 		Desc: "Empty",
 		New:
 		//@ ensures p.NonInitMem()
+		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
 			emptyTmp /*@@@*/ := Path{}
@@ -47,65 +47,53 @@ func RegisterPath() {
 			return emptyTmp
 		},
 	}
-	/*@
-	proof tmp.New implements path.NewPathSpec {
-		return tmp.New() as newPath
-	}
-	@*/
+	//@ proof tmp.New implements path.NewPathSpec {
+	//@		return tmp.New() as newPath
+	//@ }
 	path.RegisterPath(tmp)
 }
 
 // Path encodes an empty path. An empty path is a special path that takes zero
 // bytes on the wire and is used for AS internal communication.
-type Path struct {
-	//@ underlyingBuf []byte
-}
+type Path struct{}
 
-//@ requires len(r) == dataLen
-//@ requires slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-//@ ensures  dataLen == 0 ==> e == nil
-//@ ensures  dataLen == 0 ==> o.Mem()
-//@ ensures  dataLen == 0 ==> underlyingBuf === o.GetUnderlyingBuf()
-//@ ensures  dataLen != 0 ==> e != nil
-//@ ensures  dataLen != 0 ==> e.ErrorMem()
-//@ ensures  dataLen != 0 ==> o.NonInitMem()
-//@ ensures  dataLen != 0 ==> slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-//@ decreases
-func (o Path) DecodeFromBytes(r []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error) {
+// @ ensures  len(r) == 0 ==> (e == nil && o.Mem(r))
+// @ ensures  len(r) != 0 ==> (e != nil && e.ErrorMem() && o.NonInitMem())
+// @ decreases
+func (o Path) DecodeFromBytes(r []byte) (e error) {
 	if len(r) != 0 {
 		//@ fold o.NonInitMem()
-		// (VerifiedSCION) TODO: undo the cast done bellow, should not be required according to the spec of definitions.IsPrimitiveType
-		//@ assert dataLen != 0
-		return serrors.New("decoding an empty path", "len", int(len(r)))
+		return serrors.New("decoding an empty path", "len", len(r))
 	}
-	//@ assert dataLen == 0
-	//@ o.SetUnderlyingBuf(underlyingBuf)
+	//@ fold o.Mem(r)
 	return nil
 }
 
-//@ ensures e == nil
-//@ decreases
-func (o Path) SerializeTo(b []byte /*@, underlyingBuf []byte, dataLen int @*/) (e error) {
+// @ ensures e == nil
+// @ decreases
+func (o Path) SerializeTo(b []byte /*@, underlyingBuf []byte @*/) (e error) {
 	return nil
 }
 
-//@ ensures p === o
-//@ ensures e == nil
-//@ decreases
-func (o Path) Reverse() (p path.Path, e error) {
+// @ requires o.Mem(underlyingBuf)
+// @ ensures  p == o
+// @ ensures  p.Mem(underlyingBuf)
+// @ ensures  e == nil
+// @ decreases
+func (o Path) Reverse( /*@ underlyingBuf []byte @*/ ) (p path.Path, e error) {
 	return o, nil
 }
 
-//@ pure
-//@ ensures r >= 0
-//@ decreases
-func (o Path) Len() (r int) {
+// @ pure
+// @ ensures 0 <= r
+// @ decreases
+func (o Path) Len( /*@ underlyingBuf []byte @*/ ) (r int) {
 	return PathLen
 }
 
-//@ pure
-//@ ensures r == PathType
-//@ decreases
-func (o Path) Type() (r path.Type) {
+// @ pure
+// @ ensures r == PathType
+// @ decreases
+func (o Path) Type( /*@ underlyingBuf []byte @*/ ) (r path.Type) {
 	return PathType
 }

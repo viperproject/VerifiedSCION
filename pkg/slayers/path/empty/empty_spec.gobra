@@ -18,71 +18,21 @@ package empty
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-pred (e Path) Mem() {
-	slices.AbsSlice_Bytes(e.underlyingBuf, 0, len(e.underlyingBuf))
-}
+pred (e Path) Mem(buf []byte) { len(buf) == 0 }
 
-// NOTE the way the underlying buffer is set for Empty.Path
-// is different from the others. Because Path is used as a
-// value receiver, setting e.underlyingBuf explicitly will
-// not work. This is because Gobra does not currently support
-// ghost struct fields.
-requires slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  e.Mem()
-ensures  e.GetUnderlyingBuf() === buf
-decreases
-func (e Path) SetUnderlyingBuf(buf []byte)
-
-pred (e Path) NonInitMem() {
-	true
-}
-
-pred (e Path) PostBufXchange(buf []byte) {
-	acc(e.Mem(), definitions.ReadL1) && e.GetUnderlyingBuf() === buf
-}
+pred (e Path) NonInitMem() { true }
 
 ghost
-requires p.Mem()
-requires p.GetUnderlyingBuf() === buf
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf))
-decreases
-func (p Path) ExchangeBufMem(buf []byte) {
-	unfold p.Mem()
-	package slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(p.Mem(), definitions.ReadL1) && p.PostBufXchange(buf)) {
-		fold p.Mem()
-		fold p.PostBufXchange(buf)
-	}
-}
-
-ghost
-requires p.PostBufXchange(buf)
-ensures  acc(p.Mem(), definitions.ReadL1) && p.GetUnderlyingBuf() === buf
-func (p Path) UnfoldPostBufXchange(buf []byte) {
-	unfold p.PostBufXchange(buf)
-	assert acc(p.Mem(), definitions.ReadL1)
-	assert p.GetUnderlyingBuf() === buf
-}
-
-ghost
-requires acc(p.Mem(), _)
-decreases
-pure func (p Path) GetUnderlyingBuf() (buf []byte) {
-	return unfolding acc(p.Mem(), _) in p.underlyingBuf
-}
-
-ghost
-requires e.Mem()
-requires buf === e.GetUnderlyingBuf()
+requires e.Mem(buf)
 ensures  e.NonInitMem()
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
 func (e Path) DowngradePerm(buf []byte) {
-	unfold e.Mem()
+	unfold e.Mem(buf)
+	fold slices.AbsSlice_Bytes(buf, 0, len(buf))
 	fold e.NonInitMem()
 }
 

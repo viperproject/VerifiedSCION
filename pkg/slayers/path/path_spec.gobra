@@ -16,83 +16,26 @@
 
 package path
 
-import (
-	"github.com/scionproto/scion/verification/utils/definitions"
-	"github.com/scionproto/scion/verification/utils/slices"
-)
+import "github.com/scionproto/scion/verification/utils/slices"
 
 /** rawPath spec **/
-pred (r *rawPath) Mem() {
+pred (r *rawPath) Mem(underlyingBuf []byte) {
 	acc(r) &&
-		0 <= r.dataLen && r.dataLen <= len(r.underlyingBuf) &&
-		r.raw === r.underlyingBuf[:r.dataLen] &&
-		slices.AbsSlice_Bytes(r.raw, 0, len(r.raw)) &&
-		slices.AbsSlice_Bytes(r.underlyingBuf, r.dataLen, len(r.underlyingBuf))
+	r.raw === underlyingBuf &&
+	slices.AbsSlice_Bytes(r.raw, 0, len(r.raw))
 }
 
 pred (r *rawPath) NonInitMem() {
 	acc(r)
 }
 
-pred (r *rawPath) PostBufXchange(buf []byte) {
-	acc(r.Mem(), definitions.ReadL1) && r.GetUnderlyingBuf() === buf
-}
-
 ghost
-requires acc(r.Mem(), _)
-ensures unfolding acc(r.Mem(), _) in (buf === r.underlyingBuf && buf[:r.dataLen] === r.raw)
-decreases
-pure func (r *rawPath) GetUnderlyingBuf() (buf []byte) {
-	return unfolding acc(r.Mem(), _) in r.underlyingBuf
-}
-
-ghost
-requires r.Mem()
-requires r.GetUnderlyingBuf() === buf
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf))
-decreases
-func (r *rawPath) ExchangeBufMem(buf []byte) {
-	unfold r.Mem()
-	ghost slices.Unslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
-	ghost slices.CombineAtIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
-	package  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* (acc(r.Mem(), definitions.ReadL1) && r.PostBufXchange(buf)) {
-		assert acc(&r.raw)
-		assert acc(&r.underlyingBuf)
-		assert acc(&r.dataLen)
-		assert buf === r.underlyingBuf
-		assert r.underlyingBuf[:r.dataLen] === r.raw
-		ghost slices.SplitByIndex_Bytes(r.underlyingBuf, 0, len(r.underlyingBuf), r.dataLen, writePerm)
-		ghost slices.Reslice_Bytes(r.underlyingBuf, 0, r.dataLen, writePerm)
-		fold r.Mem()
-		fold r.PostBufXchange(buf)
-	}
-}
-
-
-ghost
-requires r.PostBufXchange(buf)
-ensures  acc(r.Mem(), definitions.ReadL1)
-ensures  r.GetUnderlyingBuf() === buf
-func (r *rawPath) UnfoldPostBufXchange(buf []byte) {
-	unfold r.PostBufXchange(buf)
-	assert acc(r.Mem(), definitions.ReadL1)
-	assert r.GetUnderlyingBuf() === buf
-}
-
-ghost
-requires p.Mem()
-requires p.GetUnderlyingBuf() === buf
+requires p.Mem(buf)
 ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 ensures  p.NonInitMem()
 decreases
 func (p *rawPath) DowngradePerm(ghost buf []byte) {
-	unfold p.Mem()
-	assert p.underlyingBuf === buf
-	assert p.raw === buf[:p.dataLen]
-	ghost slices.Unslice_Bytes(p.underlyingBuf, 0, p.dataLen, writePerm)
-	ghost slices.CombineAtIndex_Bytes(p.underlyingBuf, 0, len(p.underlyingBuf), p.dataLen, writePerm)
-	assert slices.AbsSlice_Bytes(buf, 0, len(buf))
+	unfold p.Mem(buf)
 	fold p.NonInitMem()
 }
 
@@ -100,7 +43,7 @@ func (p *rawPath) DowngradePerm(ghost buf []byte) {
 
 /** End of rawPath spec **/
 
-/** Global state of the pacakge **/
+/** Global state of the package **/
 ghost const MaxPathType = maxPathType
 
 pred PathPackageMem() {
@@ -134,7 +77,8 @@ pure func IsStrictDecoding() (b bool) {
 // without passing `writePerm` explicitely below, we run into
 // exceptions when verifying method RegisterPath in package 'empty'
 ensures acc(p.NonInitMem(), writePerm)
+ensures p != nil
 decreases
 func NewPathSpec() (p Path)
 
-/** End of global state of the pacakge **/
+/** End of global state of the package **/
