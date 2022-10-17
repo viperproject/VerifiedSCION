@@ -251,8 +251,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // to the state defined by the passed-in bytes. Slices in the SCION layer reference the passed-in
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
-// @ trusted
-// @ requires false
 // @ requires  s.NonInitMem()
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df != nil && df.Mem()
@@ -270,10 +268,11 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 			"min", CmnHdrLen, "actual", len(data))
 	}
 	// @ unfold s.NonInitMem()
-	// @ assert false
+	//  ??? // slice
 	firstLine := binary.BigEndian.Uint32(data[:4])
 	s.Version = uint8(firstLine >> 28)
 	s.TrafficClass = uint8((firstLine >> 20) & 0xFF)
+	// @ assert false
 	s.FlowID = firstLine & 0xFFFFF
 	s.NextHdr = L4ProtocolType(data[4])
 	s.HdrLen = data[5]
