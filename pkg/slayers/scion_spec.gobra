@@ -35,6 +35,7 @@ pred (s *SCION) NonInitPathPool() {
 pred (s *SCION) InitPathPool() {
 	acc(&s.pathPool) &&
 	acc(&s.pathPoolRaw) &&
+	len(s.pathPool) == 4 &&
 	// entry per path type
 	// empty
 	acc(&s.pathPool[empty.PathType]) &&
@@ -127,4 +128,35 @@ decreases
 pure
 func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) int {
 	return unfolding acc(s.Mem(ubuf), _) in (unfolding s.HeaderMem(ubuf[CmnHdrLen:]) in (2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)))
+}
+
+// Morally ghost
+requires acc(p)
+ensures  p.NonInitMem()
+ensures  r == p
+decreases
+func FoldOneHopMem(p *onehop.Path) (r *onehop.Path) {
+	fold p.NonInitMem()
+	return p
+}
+
+// Morally ghost
+requires acc(p)
+ensures  p.NonInitMem()
+ensures  r == p
+decreases
+func FoldRawMem(p *scion.Raw) (r *scion.Raw) {
+	fold p.Base.NonInitMem()
+	fold p.NonInitMem()
+	return p
+}
+
+// Morally ghost
+requires acc(p)
+ensures  p.NonInitMem()
+ensures  r == p
+decreases
+func FoldEpicMem(p *epic.Path) (r *epic.Path) {
+	fold p.NonInitMem()
+	return p
 }

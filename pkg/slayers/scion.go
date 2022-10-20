@@ -246,6 +246,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // to the state defined by the passed-in bytes. Slices in the SCION layer reference the passed-in
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
+// @ trusted
 // @ requires  s.NonInitMem()
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df != nil && df.Mem()
@@ -306,9 +307,9 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	}
 	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
 	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
-	// @ assert false
 	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
 	//                 is set to nil. As such, we pick the easiest possible value as a placeholder.
+	// @ assert false
 	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
 	offset := CmnHdrLen + addrHdrLen
 
@@ -345,8 +346,6 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 // When this is enabled, the Path instance may be overwritten in
 // DecodeFromBytes. No references to Path should be kept in use between
 // invocations of DecodeFromBytes.
-// @ trusted
-// @ requires false
 // @ requires s.NonInitPathPool()
 // @ requires unfolding s.NonInitPathPool() in s.pathPool == nil
 // @ ensures  s.InitPathPool()
@@ -354,15 +353,18 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 func (s *SCION) RecyclePaths() {
 	// @ unfold s.NonInitPathPool()
 	if s.pathPool == nil {
-		// @ assert false
 		s.pathPool = []path.Path{
 			empty.PathType:  empty.Path{},
-			onehop.PathType: &onehop.Path{},
-			scion.PathType:  &scion.Raw{},
-			epic.PathType:   &epic.Path{},
+			onehop.PathType: ( /*@ FoldOneHopMem( @*/ &onehop.Path{} /*@ ) @*/),
+			scion.PathType:  ( /*@ FoldRawMem( @*/ &scion.Raw{} /*@ ) @*/),
+			epic.PathType:   ( /*@ FoldEpicMem( @*/ &epic.Path{} /*@ ) @*/),
 		}
-		// @ assert false
+		// @ fold s.pathPool[empty.PathType].(empty.Path).NonInitMem()
 		s.pathPoolRaw = path.NewRawPath()
+		// @ assert acc(&s.pathPool[empty.PathType]) && acc(&s.pathPool[onehop.PathType])
+		// @ assert acc(&s.pathPool[scion.PathType]) && acc(&s.pathPool[epic.PathType])
+		// @ assert s.pathPool[empty.PathType].NonInitMem() && s.pathPool[onehop.PathType].NonInitMem()
+		// @ assert s.pathPool[scion.PathType].NonInitMem() && s.pathPool[epic.PathType].NonInitMem()
 		// @ fold s.InitPathPool()
 	}
 }
