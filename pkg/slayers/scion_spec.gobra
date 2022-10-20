@@ -53,8 +53,8 @@ pred (s *SCION) InitPathPool() {
 	s.pathPoolRaw.NonInitMem()
 }
 
-// TODO: should have NonInitHeaderMem (TBD) and another predicate for the remaining fields,
-// except for the path pool!
+// Has the permission for all fields, except those related to the path pools.
+// These will come from NonInitPathPool/InitPathPool.
 pred (s *SCION) NonInitMem() {
 	acc(&s.Version) &&
 	acc(&s.TrafficClass) &&
@@ -62,37 +62,19 @@ pred (s *SCION) NonInitMem() {
 	acc(&s.NextHdr) &&
 	acc(&s.HdrLen) &&
 	acc(&s.PayloadLen) &&
-	true
-	/*
-	// PathType specifies the type of path in this SCION header.
-	PathType path.Type
-	// DstAddrType (2 bit) is the type of the destination address.
-	DstAddrType AddrType
-	// DstAddrLen (2 bit) is the length of the destination address. Supported address length are 4B
-	// (0), 8B (1), 12B (2), and 16B (3).
-	DstAddrLen AddrLen
-	// SrcAddrType (2 bit) is the type of the source address.
-	SrcAddrType AddrType
-	// SrcAddrLen (2 bit) is the length of the source address. Supported address length are 4B (0),
-	// 8B (1), 12B (2), and 16B (3).
-	SrcAddrLen AddrLen
-
-	// Address header fields.
-
-	// DstIA is the destination ISD-AS.
-	DstIA addr.IA
-	// SrcIA is the source ISD-AS.
-	SrcIA addr.IA
-	// RawDstAddr is the destination address.
-	RawDstAddr []byte
-	// RawSrcAddr is the source address.
-	RawSrcAddr []byte
-
-	// Path is the path contained in the SCION header. It depends on the PathType field.
-	Path path.Path
-	*/
+	acc(&s.PathType) &&
+	acc(&s.DstAddrType) &&
+	acc(&s.DstAddrLen) &&
+	acc(&s.SrcAddrType) &&
+	acc(&s.SrcAddrLen) &&
+	acc(&s.DstIA) &&
+	acc(&s.SrcIA) &&
+	acc(&s.RawDstAddr) &&
+	acc(&s.RawSrcAddr) &&
+	acc(&s.Path)
 }
 
+// Note: this is still incomplete
 pred (s *SCION) Mem(ubuf []byte) {
 	// TODO: complete; put description of
 	// fields from BaseLayer; put permissions to the entire ubuf as a clause here

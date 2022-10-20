@@ -15,7 +15,10 @@
 // +gobra
 
 // @ initEnsures PathPackageMem()
-// @ initEnsures forall t Type :: 0 <= t && t < maxPathType ==> !Registered(t)
+// Skipped the following post-condition due to performance reasons
+// initEnsures forall t Type :: 0 <= t && t < maxPathType ==> !Registered(t)
+// Instead, we have:
+// @ initEnsures !Registered(0) && !Registered(1) && !Registered(2) && !Registered(3)
 package path
 
 import (

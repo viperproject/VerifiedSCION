@@ -14,11 +14,11 @@
 
 // +gobra
 
-// initEnsures acc(path.PathPackageMem(), _)
-// initEnsures path.Registered(empty.PathType)
-// initEnsures path.Registered(scion.PathType)
-// initEnsures path.Registered(onehop.PathType)
-// initEnsures path.Registered(epic.PathType)
+// @ initEnsures acc(path.PathPackageMem(), _)
+// @ initEnsures path.Registered(empty.PathType)
+// @ initEnsures path.Registered(scion.PathType)
+// @ initEnsures path.Registered(onehop.PathType)
+// @ initEnsures path.Registered(epic.PathType)
 package slayers
 
 import (
@@ -30,13 +30,15 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
 
-	// importRequires path.PathPackageMem()
-	// importRequires forall t path.Type :: 0 <= t && t < path.MaxPathType ==> !path.Registered(t)
+	// @ importRequires path.PathPackageMem()
+	// @ importRequires !path.Registered(0) && !path.Registered(1)
+	// @ importRequires !path.Registered(2) && !path.Registered(3)
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/empty"
 	"github.com/scionproto/scion/pkg/slayers/path/epic"
 	"github.com/scionproto/scion/pkg/slayers/path/onehop"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
+	// @ b "github.com/scionproto/scion/verification/utils/bitwise"
 	// @ def "github.com/scionproto/scion/verification/utils/definitions"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 )
@@ -53,19 +55,12 @@ const (
 	SCIONVersion = 0
 )
 
-// TODO
-/*
 func init() {
-	// @ assert !path.Registered(empty.PathType)
-	// @ assert !path.Registered(scion.PathType)
-	// @ assert !path.Registered(onehop.PathType)
-	// @ assert !path.Registered(epic.PathType)
 	empty.RegisterPath()
 	scion.RegisterPath()
 	onehop.RegisterPath()
 	epic.RegisterPath()
 }
-*/
 
 // AddrLen indicates the length of a host address in the SCION header. The four possible lengths are
 // 4, 8, 12, or 16 bytes.
@@ -251,6 +246,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // to the state defined by the passed-in bytes. Slices in the SCION layer reference the passed-in
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
+// @ requires  false // (VerifiedSCION) WIP: still not ready to be called
 // @ requires  s.NonInitMem()
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df != nil && df.Mem()
@@ -283,6 +279,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ preserves acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) && acc(&s.PathType)
 	// @ preserves acc(&s.DstAddrType) && acc(&s.DstAddrLen) && acc(&s.SrcAddrType) && acc(&s.SrcAddrLen)
 	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
+	// @ ensures s.DstAddrLen.isValid() && s.SrcAddrLen.isValid()
 	// @ decreases
 	// @ outline(
 	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
@@ -292,19 +289,25 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
 	s.PathType = path.Type(data[8])
 	s.DstAddrType = AddrType(data[9] >> 6)
+	// @ b.BitAnd3(data[9] >> 4)
 	s.DstAddrLen = AddrLen(data[9] >> 4 & 0x3)
 	s.SrcAddrType = AddrType(data[9] >> 2 & 0x3)
+	// @ b.BitAnd3(data[9])
 	s.SrcAddrLen = AddrLen(data[9] & 0x3)
 	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
 	// @ )
-	// @ assert false
 
 	// Decode address header.
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
+	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
 	if err := s.DecodeAddrHdr(data[CmnHdrLen:]); err != nil {
 		df.SetTruncated()
 		return err
 	}
-	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ ) // (VerifiedSCION) TODO: explain why nil is necessary
+	// @ assert false
+	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
+	// is set to nil. As such, we pick the easiest possible value as a placeholder.
+	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
 	offset := CmnHdrLen + addrHdrLen
 
 	// Decode path header.
@@ -535,9 +538,14 @@ func packAddr(hostAddr net.Addr) (AddrLen, AddrType, []byte, error) {
 
 // AddrHdrLen returns the length of the address header (destination and source ISD-AS-Host triples)
 // in bytes.
-// (VerifiedSCION) TODO: explain insideSlayers
-// (VerifiedSCION) TODO: explain that because Gobra does not support multiple spec for the same method, ...
-// (VerifiedSCION) TODO: maybe try to put this conditional in a predicate?
+//
+//	(VerifiedSCION):
+//	AddrHdrLen is meant to be called both inside and outside slayers.
+//	To enforce abstraction, we introduce a second field `insideSlayers`
+//	in order to chose between the appropriate contract for this method.
+//	This hack will not be needed when we introduce support for
+//	multiple contracts per method.
+//
 // @ pure
 // @ requires insideSlayers  ==> (acc(&s.DstAddrLen, _) && acc(&s.SrcAddrLen, _))
 // @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
@@ -576,17 +584,16 @@ func (s *SCION) SerializeAddrHdr(buf []byte) error {
 // DecodeAddrHdr decodes the destination and source ISD-AS-Host address triples from the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
-// @ requires acc(&s.SrcIA) && acc(&s.DstIA)
-// @ requires acc(&s.SrcAddrLen, def.ReadL1) && s.SrcAddrLen.isValid()
-// @ requires acc(&s.DstAddrLen, def.ReadL1) && s.DstAddrLen.isValid()
-// @ requires acc(&s.RawSrcAddr) && acc(&s.RawDstAddr)
-// @ requires sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(nil, true)) // the 1st param here does not matter
-// @ ensures  res == nil ==> s.HeaderMem(data)
-// @ ensures  res != nil ==> res.ErrorMem()
-// @ ensures  res != nil ==> (
+// @ requires  acc(&s.SrcIA) && acc(&s.DstIA)
+// @ requires  acc(&s.SrcAddrLen, def.ReadL1) && s.SrcAddrLen.isValid()
+// @ requires  acc(&s.DstAddrLen, def.ReadL1) && s.DstAddrLen.isValid()
+// @ requires  acc(&s.RawSrcAddr) && acc(&s.RawDstAddr)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
+// @ ensures   res == nil ==> s.HeaderMem(data)
+// @ ensures   res != nil ==> res.ErrorMem()
+// @ ensures   res != nil ==> (
 // @	acc(&s.SrcIA) && acc(&s.DstIA) && acc(&s.SrcAddrLen, def.ReadL1) &&
-// @	acc(&s.DstAddrLen, def.ReadL1) && acc(&s.RawSrcAddr) &&
-// @	acc(&s.RawDstAddr) && sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(nil, true)))
+// @	acc(&s.DstAddrLen, def.ReadL1) && acc(&s.RawSrcAddr) && acc(&s.RawDstAddr))
 // @ decreases
 func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 	// @ ghost l := s.AddrHdrLen(nil, true)
@@ -595,13 +602,13 @@ func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 			"actual", len(data))
 	}
 	offset := 0
-	// @ unfold sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(nil, true))
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
 	// @ assert forall i int :: 0 <= i && i < l ==> &data[offset:][i] == &data[i]
 	s.DstIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
 	offset += addr.IABytes
 	// @ assert forall i int :: 0 <= i && i < l ==> &data[offset:][i] == &data[offset+i]
 	s.SrcIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
-	// @ fold sl.AbsSlice_Bytes(data, 0, s.AddrHdrLen(nil, true))
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
 	offset += addr.IABytes
 	dstAddrBytes := addrBytes(s.DstAddrLen)
 	srcAddrBytes := addrBytes(s.SrcAddrLen)
@@ -692,10 +699,8 @@ func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	return csum
 }
 
-// (VerifiedSCION) TODO: add assumptions about the result of these operations
-// in order to prove termination
 // @ trusted
-// @ decreases
+// @ requires false
 func (s *SCION) foldChecksum(csum uint32) uint16 {
 	for csum > 0xffff {
 		csum = (csum >> 16) + (csum & 0xffff)
