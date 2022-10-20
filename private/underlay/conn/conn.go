@@ -110,13 +110,13 @@ type Config struct {
 // New opens a new underlay socket on the specified addresses.
 //
 // The config can be used to customize socket behavior.
-//@ requires cfg.Mem()
-//@ requires listen != nil || remote != nil
-//@ requires listen != nil ==> acc(listen.Mem(), definitions.ReadL10)
-//@ requires remote != nil ==> acc(remote.Mem(), definitions.ReadL10)
-//@ ensures  e == nil ==> res.Mem()
-//@ ensures  e != nil ==> e.ErrorMem()
-//@ decreases
+// @ requires cfg.Mem()
+// @ requires listen != nil || remote != nil
+// @ requires listen != nil ==> acc(listen.Mem(), definitions.ReadL10)
+// @ requires remote != nil ==> acc(remote.Mem(), definitions.ReadL10)
+// @ ensures  e == nil ==> res.Mem()
+// @ ensures  e != nil ==> e.ErrorMem()
+// @ decreases
 func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	a := listen
 	if remote != nil {
@@ -142,12 +142,12 @@ type connUDPIPv4 struct {
 	pconn *ipv4.PacketConn
 }
 
-//@ requires cfg.Mem()
-//@ requires listen != nil ==> acc(listen.Mem(), _)
-//@ requires remote != nil ==> acc(remote.Mem(), _)
-//@ ensures  e == nil ==> res.Mem()
-//@ ensures  e != nil ==> e.ErrorMem()
-//@ decreases
+// @ requires cfg.Mem()
+// @ requires listen != nil ==> acc(listen.Mem(), _)
+// @ requires remote != nil ==> acc(remote.Mem(), _)
+// @ ensures  e == nil ==> res.Mem()
+// @ ensures  e != nil ==> e.ErrorMem()
+// @ decreases
 func newConnUDPIPv4(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv4, e error) {
 	cc := &connUDPIPv4{}
 	if err := cc.initConnUDP("udp4", listen, remote, cfg); err != nil {
@@ -162,10 +162,10 @@ func newConnUDPIPv4(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv4,
 
 // ReadBatch reads up to len(msgs) packets, and stores them in msgs.
 // It returns the number of packets read, and an error if any.
-//@ preserves c.Mem()
-//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
-//@ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
-//@ ensures   errRet != nil ==> errRet.ErrorMem()
+// @ preserves c.Mem()
+// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+// @ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
+// @ ensures   errRet != nil ==> errRet.ErrorMem()
 func (c *connUDPIPv4) ReadBatch(msgs Messages) (nRet int, errRet error) {
 	//@ unfold c.Mem()
 	// (VerifiedSCION) 1 is the length of the buffers of the messages in msgs
@@ -174,10 +174,10 @@ func (c *connUDPIPv4) ReadBatch(msgs Messages) (nRet int, errRet error) {
 	return n, err
 }
 
-//@ preserves c.Mem()
-//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
-//@ ensures   err == nil ==> 0 <= n && n <= len(msgs)
-//@ ensures   err != nil ==> err.ErrorMem()
+// @ preserves c.Mem()
+// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+// @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) WriteBatch(msgs Messages, flags int) (n int, err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
@@ -186,27 +186,27 @@ func (c *connUDPIPv4) WriteBatch(msgs Messages, flags int) (n int, err error) {
 }
 
 // SetReadDeadline sets the read deadline associated with the endpoint.
-//@ preserves c.Mem()
-//@ ensures   err != nil ==> err.ErrorMem()
-//@ decreases
+// @ preserves c.Mem()
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func (c *connUDPIPv4) SetReadDeadline(t time.Time) (err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
 	return c.pconn.SetReadDeadline(t)
 }
 
-//@ preserves c.Mem()
-//@ ensures   err != nil ==> err.ErrorMem()
-//@ decreases
+// @ preserves c.Mem()
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func (c *connUDPIPv4) SetWriteDeadline(t time.Time) (err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
 	return c.pconn.SetWriteDeadline(t)
 }
 
-//@ preserves c.Mem()
-//@ ensures   err != nil ==> err.ErrorMem()
-//@ decreases
+// @ preserves c.Mem()
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func (c *connUDPIPv4) SetDeadline(t time.Time) (err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
@@ -218,12 +218,12 @@ type connUDPIPv6 struct {
 	pconn *ipv6.PacketConn
 }
 
-//@ requires cfg.Mem()
-//@ requires listen != nil ==> acc(listen.Mem(), _)
-//@ requires remote != nil ==> acc(remote.Mem(), _)
-//@ ensures  e == nil ==> res.Mem()
-//@ ensures  e != nil ==> e.ErrorMem()
-//@ decreases
+// @ requires cfg.Mem()
+// @ requires listen != nil ==> acc(listen.Mem(), _)
+// @ requires remote != nil ==> acc(remote.Mem(), _)
+// @ ensures  e == nil ==> res.Mem()
+// @ ensures  e != nil ==> e.ErrorMem()
+// @ decreases
 func newConnUDPIPv6(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv6, e error) {
 	cc := &connUDPIPv6{}
 	if err := cc.initConnUDP("udp6", listen, remote, cfg); err != nil {
@@ -238,10 +238,10 @@ func newConnUDPIPv6(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv6,
 
 // ReadBatch reads up to len(msgs) packets, and stores them in msgs.
 // It returns the number of packets read, and an error if any.
-//@ preserves c.Mem()
-//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
-//@ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
-//@ ensures   errRet != nil ==> errRet.ErrorMem()
+// @ preserves c.Mem()
+// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+// @ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
+// @ ensures   errRet != nil ==> errRet.ErrorMem()
 func (c *connUDPIPv6) ReadBatch(msgs Messages) (nRet int, errRet error) {
 	//@ unfold c.Mem()
 	// (VerifiedSCION) 1 is the length of the buffers of the messages in msgs
@@ -250,10 +250,10 @@ func (c *connUDPIPv6) ReadBatch(msgs Messages) (nRet int, errRet error) {
 	return n, err
 }
 
-//@ preserves c.Mem()
-//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
-//@ ensures   err == nil ==> 0 <= n && n <= len(msgs)
-//@ ensures   err != nil ==> err.ErrorMem()
+// @ preserves c.Mem()
+// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+// @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) WriteBatch(msgs Messages, flags int) (n int, err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
@@ -262,27 +262,27 @@ func (c *connUDPIPv6) WriteBatch(msgs Messages, flags int) (n int, err error) {
 }
 
 // SetReadDeadline sets the read deadline associated with the endpoint.
-//@ preserves c.Mem()
-//@ ensures   err != nil ==> err.ErrorMem()
-//@ decreases
+// @ preserves c.Mem()
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func (c *connUDPIPv6) SetReadDeadline(t time.Time) (err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
 	return c.pconn.SetReadDeadline(t)
 }
 
-//@ preserves c.Mem()
-//@ ensures   err != nil ==> err.ErrorMem()
-//@ decreases
+// @ preserves c.Mem()
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func (c *connUDPIPv6) SetWriteDeadline(t time.Time) (err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
 	return c.pconn.SetWriteDeadline(t)
 }
 
-//@ preserves c.Mem()
-//@ ensures   err != nil ==> err.ErrorMem()
-//@ decreases
+// @ preserves c.Mem()
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func (c *connUDPIPv6) SetDeadline(t time.Time) (err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
@@ -296,13 +296,13 @@ type connUDPBase struct {
 	closed bool
 }
 
-//@ requires acc(cc)
-//@ requires laddr != nil ==> acc(laddr.Mem(), _)
-//@ requires raddr != nil ==> acc(raddr.Mem(), _)
-//@ requires cfg.Mem()
-//@ ensures  errRet == nil ==> cc.Mem()
-//@ ensures  errRet != nil ==> errRet.ErrorMem()
-//@ decreases
+// @ requires acc(cc)
+// @ requires laddr != nil ==> acc(laddr.Mem(), _)
+// @ requires raddr != nil ==> acc(raddr.Mem(), _)
+// @ requires cfg.Mem()
+// @ ensures  errRet == nil ==> cc.Mem()
+// @ ensures  errRet != nil ==> errRet.ErrorMem()
+// @ decreases
 func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cfg *Config) (errRet error) {
 	var c *net.UDPConn
 	var err error
@@ -397,35 +397,35 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 	return nil
 }
 
-//@ preserves c.Mem()
-//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ preserves unfolding c.Mem() in c.conn == underlyingConn
-//@ ensures   err == nil ==> 0 <= n && n <= len(b)
-//@ ensures   err == nil ==> acc(addr.Mem(), _)
-//@ ensures   err != nil ==> err.ErrorMem()
+// @ preserves c.Mem()
+// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ preserves unfolding c.Mem() in c.conn == underlyingConn
+// @ ensures   err == nil ==> 0 <= n && n <= len(b)
+// @ ensures   err == nil ==> acc(addr.Mem(), _)
+// @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) ReadFrom(b []byte /*@, ghost underlyingConn *net.UDPConn @*/) (n int, addr *net.UDPAddr, err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
 	return c.conn.ReadFromUDP(b)
 }
 
-//@ preserves c.Mem()
-//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
-//@ preserves unfolding c.Mem() in c.conn == underlyingConn
-//@ ensures   err == nil ==> 0 <= n && n <= len(b)
-//@ ensures   err != nil ==> err.ErrorMem()
+// @ preserves c.Mem()
+// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+// @ preserves unfolding c.Mem() in c.conn == underlyingConn
+// @ ensures   err == nil ==> 0 <= n && n <= len(b)
+// @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) Write(b []byte /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
 	return c.conn.Write(b)
 }
 
-//@ requires  acc(dst.Mem(), _)
-//@ preserves c.Mem()
-//@ preserves unfolding c.Mem() in c.conn == underlyingConn
-//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
-//@ ensures   err == nil ==> 0 <= n && n <= len(b)
-//@ ensures   err != nil ==> err.ErrorMem()
+// @ requires  acc(dst.Mem(), _)
+// @ preserves c.Mem()
+// @ preserves unfolding c.Mem() in c.conn == underlyingConn
+// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+// @ ensures   err == nil ==> 0 <= n && n <= len(b)
+// @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
 	//@ unfold c.Mem()
 	//@ defer fold c.Mem()
@@ -435,27 +435,27 @@ func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingCo
 	return c.conn.WriteTo(b, dst)
 }
 
-//@ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
-//@ ensures   u != nil ==> acc(u.Mem(), _)
-//@ decreases
+// @ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
+// @ ensures   u != nil ==> acc(u.Mem(), _)
+// @ decreases
 func (c *connUDPBase) LocalAddr() (u *net.UDPAddr) {
 	//@ unfold acc(c.MemWithoutConn(), definitions.ReadL16)
 	//@ defer fold acc(c.MemWithoutConn(), definitions.ReadL16)
 	return c.Listen
 }
 
-//@ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
-//@ ensures   u != nil ==> acc(u.Mem(), _)
-//@ decreases
+// @ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
+// @ ensures   u != nil ==> acc(u.Mem(), _)
+// @ decreases
 func (c *connUDPBase) RemoteAddr() (u *net.UDPAddr) {
 	//@ unfold acc(c.MemWithoutConn(), definitions.ReadL16)
 	//@ defer fold acc(c.MemWithoutConn(), definitions.ReadL16)
 	return c.Remote
 }
 
-//@ requires c.Mem()
-//@ ensures  err != nil ==> err.ErrorMem()
-//@ decreases
+// @ requires c.Mem()
+// @ ensures  err != nil ==> err.ErrorMem()
+// @ decreases
 func (c *connUDPBase) Close() (err error) {
 	//@ unfold c.Mem()
 	if c.closed {
@@ -467,42 +467,22 @@ func (c *connUDPBase) Close() (err error) {
 
 // NewReadMessages allocates memory for reading IPv4 Linux network stack
 // messages.
-//@ requires 0 < n
-//@ ensures  len(res) == n
-//@ ensures  forall i int :: 0 <= i && i < n ==> res[i].Mem(1)
-//@ decreases
+// @ requires 0 < n
+// @ ensures  len(res) == n
+// @ ensures  forall i int :: 0 <= i && i < n ==> res[i].Mem(1)
+// @ decreases
 func NewReadMessages(n int) (res Messages) {
-	//@ requires 0 < n
-	//@ ensures  len(m) == n
-	//@ ensures  forall j int :: 0 <= j && j < len(m) ==> acc(&m[j])
-	//@ ensures  forall j int :: { m[j].Addr } 0 <= j && j < len(m) ==> m[j].Addr == nil
-	//@ ensures  forall j int :: { m[j].OOB } 0 <= j && j < len(m) ==> m[j].OOB == nil
-	//@ decreases
-	//@ outline(
 	m := make(Messages, n)
-	//@ )
-	//@ assert forall j int :: 0 <= j && j < len(m) ==> m[j].Addr == nil
-	//@ invariant forall j int :: (0 <= j && j < i) ==> m[j].Mem(1)
-	//@ invariant forall j int :: (i <= j && j < len(m)) ==> acc(&m[j])
-	//@ invariant forall j int :: { m[j].Addr } (i <= j && j < len(m)) ==> m[j].Addr == nil
-	//@ invariant forall j int :: { m[j].OOB } (i <= j && j < len(m)) ==> m[j].OOB == nil
+	//@ invariant forall j int :: (0 <= j && j < i0) ==> m[j].Mem(1)
+	//@ invariant forall j int :: (i0 <= j && j < len(m)) ==> acc(&m[j])
+	//@ invariant forall j int :: { m[j].Addr } (i0 <= j && j < len(m)) ==> m[j].Addr == nil
+	//@ invariant forall j int :: { m[j].OOB } (i0 <= j && j < len(m)) ==> m[j].OOB == nil
 	//@ decreases len(m) - i
-	for i := range m {
+	for i := range m /*@ with i0 @*/ {
 		// Allocate a single-element, to avoid allocations when setting the buffer.
-		//@ preserves acc(&(m[i].Buffers))
-		//@ ensures   len(m[i].Buffers) == 1
-		//@ ensures   acc(&(m[i].Buffers[0]))
-		//@ ensures   slices.AbsSlice_Bytes(m[i].Buffers[0], 0, len(m[i].Buffers[0]))
-		//@ decreases
-		//@ outline(
+		// preserves acc(&(m[i].Buffers))
 		m[i].Buffers = make([][]byte, 1)
 		//@ fold slices.AbsSlice_Bytes(m[i].Buffers[0], 0, len(m[i].Buffers[0]))
-		//@ )
-		//@ assert acc(&m[i])
-		//@ assert len(m[i].Buffers) == 1
-		//@ assert acc(&m[i].Buffers[0])
-		//@ assert slices.AbsSlice_Bytes(m[i].Buffers[0], 0, len(m[i].Buffers[0]))
-		//@ assert m[i].Addr == nil
 		//@ fold slices.AbsSlice_Bytes(m[i].OOB, 0, len(m[i].OOB))
 		//@ fold m[i].Mem(1)
 	}
