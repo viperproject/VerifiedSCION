@@ -56,13 +56,13 @@ pred (s *SCION) InitPathPool() {
 // TODO: should have NonInitHeaderMem (TBD) and another predicate for the remaining fields,
 // except for the path pool!
 pred (s *SCION) NonInitMem() {
-    acc(&s.Version) &&
-    acc(&s.TrafficClass) &&
-    acc(&s.FlowID) &&
-    acc(&s.NextHdr) &&
-    acc(&s.HdrLen) &&
-    acc(&s.PayloadLen) &&
-    true
+	acc(&s.Version) &&
+	acc(&s.TrafficClass) &&
+	acc(&s.FlowID) &&
+	acc(&s.NextHdr) &&
+	acc(&s.HdrLen) &&
+	acc(&s.PayloadLen) &&
+	true
 	/*
 	// PathType specifies the type of path in this SCION header.
 	PathType path.Type
@@ -93,9 +93,9 @@ pred (s *SCION) NonInitMem() {
 	*/
 }
 
-// TODO: put buffer as param
 pred (s *SCION) Mem(ubuf []byte) {
-	// TODO: complete; put description of fields from BaseLayer; put permissions to the entire ubuf as a clause here
+	// TODO: complete; put description of
+	// fields from BaseLayer; put permissions to the entire ubuf as a clause here
 	CmnHdrLen <= len(ubuf) &&
 	s.HeaderMem(ubuf[CmnHdrLen:])
 }

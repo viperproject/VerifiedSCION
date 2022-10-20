@@ -200,6 +200,22 @@ func SplitRange_Bytes(s []byte, start int, end int, p perm) {
 	Reslice_Bytes(s, start, end, p)
 }
 
+ghost
+requires 0 <= p
+requires 0 <= start && start <= end && end <= len(s)
+requires acc(AbsSlice_Bytes(s[start:end], 0, end-start), p)
+requires acc(AbsSlice_Bytes(s, 0, start), p)
+requires acc(AbsSlice_Bytes(s, end, len(s)), p)
+ensures  acc(AbsSlice_Bytes(s, 0, len(s)), p)
+decreases
+func CombineRange_Bytes(s []byte, start int, end int, p perm) {
+	Unslice_Bytes(s, start, end, p)
+	CombineAtIndex_Bytes(s, start, len(s), end, p)
+	CombineAtIndex_Bytes(s, 0, len(s), start, p)
+}
+
+// TODO: get single elem
+
 /** End of slices of Bytes without Contents **/
 
 /** Auxiliar definitions Any **/

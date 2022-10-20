@@ -267,21 +267,37 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("packet is shorter than the common header length",
 			"min", CmnHdrLen, "actual", len(data))
 	}
-	// @ unfold s.NonInitMem()
-	//  ??? // slice
+	// @ sl.SplitRange_Bytes(data, 0, 4, def.ReadL15)
+	// @ preserves 4 <= len(data) && acc(sl.AbsSlice_Bytes(data[:4], 0, 4), def.ReadL15)
+	// @ decreases
+	// @ outline(
+	// @ unfold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), def.ReadL15)
 	firstLine := binary.BigEndian.Uint32(data[:4])
+	// @ fold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), def.ReadL15)
+	// @ )
+	// @ sl.CombineRange_Bytes(data, 0, 4, def.ReadL15)
+	// @ unfold s.NonInitMem()
 	s.Version = uint8(firstLine >> 28)
 	s.TrafficClass = uint8((firstLine >> 20) & 0xFF)
-	// @ assert false
 	s.FlowID = firstLine & 0xFFFFF
+	// @ preserves acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) && acc(&s.PathType)
+	// @ preserves acc(&s.DstAddrType) && acc(&s.DstAddrLen) && acc(&s.SrcAddrType) && acc(&s.SrcAddrLen)
+	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
+	// @ decreases
+	// @ outline(
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
 	s.NextHdr = L4ProtocolType(data[4])
 	s.HdrLen = data[5]
+	// @ assert &data[6:8][0] == &data[6] && &data[6:8][1] == &data[7]
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
 	s.PathType = path.Type(data[8])
 	s.DstAddrType = AddrType(data[9] >> 6)
 	s.DstAddrLen = AddrLen(data[9] >> 4 & 0x3)
 	s.SrcAddrType = AddrType(data[9] >> 2 & 0x3)
 	s.SrcAddrLen = AddrLen(data[9] & 0x3)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
+	// @ )
+	// @ assert false
 
 	// Decode address header.
 	if err := s.DecodeAddrHdr(data[CmnHdrLen:]); err != nil {
