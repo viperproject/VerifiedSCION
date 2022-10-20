@@ -480,7 +480,6 @@ func NewReadMessages(n int) (res Messages) {
 	//@ decreases len(m) - i
 	for i := range m /*@ with i0 @*/ {
 		// Allocate a single-element, to avoid allocations when setting the buffer.
-		// preserves acc(&(m[i].Buffers))
 		m[i].Buffers = make([][]byte, 1)
 		//@ fold slices.AbsSlice_Bytes(m[i].Buffers[0], 0, len(m[i].Buffers[0]))
 		//@ fold slices.AbsSlice_Bytes(m[i].OOB, 0, len(m[i].OOB))
