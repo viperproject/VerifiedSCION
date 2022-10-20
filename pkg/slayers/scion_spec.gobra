@@ -107,7 +107,7 @@ ghost
 pure
 decreases
 func (a AddrLen) isValid() bool {
-	// takes advantage of the knowledge (non-modular) that all definitions are contiguoues
+	// takes advantage of the knowledge (non-modular) that all definitions are contiguous
 	// to introduce an interval instead of an enequality:
 	// 		return a == AddrLen4 || a == AddrLen8 || a == AddrLen12 || a == AddrLen16
 	return AddrLen4 <= a && a <= AddrLen16

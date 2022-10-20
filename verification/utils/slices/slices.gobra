@@ -214,8 +214,6 @@ func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 	CombineAtIndex_Bytes(s, 0, len(s), start, p)
 }
 
-// TODO: get single elem
-
 /** End of slices of Bytes without Contents **/
 
 /** Auxiliar definitions Any **/
