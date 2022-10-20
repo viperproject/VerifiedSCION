@@ -246,14 +246,11 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // to the state defined by the passed-in bytes. Slices in the SCION layer reference the passed-in
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
-// @ requires  false // (VerifiedSCION) WIP: still not ready to be called
 // @ requires  s.NonInitMem()
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
-// @ ensures   res != nil ==> (
-// @	s.NonInitMem() &&
-// @	sl.AbsSlice_Bytes(data, 0, len(data)) &&
+// @ ensures   res != nil ==> ( s.NonInitMem() && sl.AbsSlice_Bytes(data, 0, len(data)) &&
 // @	res.ErrorMem())
 // @ decreases
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
@@ -301,12 +298,17 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
 	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
 	if err := s.DecodeAddrHdr(data[CmnHdrLen:]); err != nil {
+		// @ fold s.NonInitMem()
+		// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
+		// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
 		df.SetTruncated()
 		return err
 	}
+	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
+	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
 	// @ assert false
 	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
-	// is set to nil. As such, we pick the easiest possible value as a placeholder.
+	//                 is set to nil. As such, we pick the easiest possible value as a placeholder.
 	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
 	offset := CmnHdrLen + addrHdrLen
 
