@@ -722,11 +722,16 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	<-ctx.Done()
 	return nil
 }
-
+*/
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-//@ trusted
+//@ preserves acc(&d.forwardingMetrics)
+//@ preserves acc(&d.neighborIAs, definitions.ReadL20)
+//@ preserves acc(d.neighborIAs, definitions.ReadL20)
+//@ preserves acc(&d.localIA)
+//@ preserves acc(&d.Metrics, definitions.ReadL20) && acc(d.Metrics.Mem(), definitions.ReadL20)
+//@ preserves acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
 func (d *DataPlane) initMetrics() {
 	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
 	labels := interfaceToMetricLabels(0, d.localIA, d.neighborIAs)
@@ -739,7 +744,7 @@ func (d *DataPlane) initMetrics() {
 		d.forwardingMetrics[id] = initForwardingMetrics(d.Metrics, labels)
 	}
 }
-*/
+
 
 type processResult struct {
 	EgressID uint16
