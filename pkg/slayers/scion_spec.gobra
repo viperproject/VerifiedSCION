@@ -39,8 +39,7 @@ pred (s *SCION) InitPathPool() {
 	// entry per path type
 	// empty
 	acc(&s.pathPool[empty.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
-	// typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
+	// s.pathPool[empty.PathType].NonInitMem() && // omited for simplification
 	// onehop
 	acc(&s.pathPool[onehop.PathType]) &&
 	s.pathPool[empty.PathType].NonInitMem() &&

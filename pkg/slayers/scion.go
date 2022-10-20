@@ -359,7 +359,6 @@ func (s *SCION) RecyclePaths() {
 			scion.PathType:  ( /*@ FoldRawMem( @*/ &scion.Raw{} /*@ ) @*/),
 			epic.PathType:   ( /*@ FoldEpicMem( @*/ &epic.Path{} /*@ ) @*/),
 		}
-		// @ fold s.pathPool[empty.PathType].(empty.Path).NonInitMem()
 		s.pathPoolRaw = path.NewRawPath()
 		// @ assert acc(&s.pathPool[empty.PathType]) && acc(&s.pathPool[onehop.PathType])
 		// @ assert acc(&s.pathPool[scion.PathType]) && acc(&s.pathPool[epic.PathType])
