@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
+// @ initEnsures acc(path.PathPackageMem(), _)
+// @ initEnsures path.Registered(empty.PathType)
+// @ initEnsures path.Registered(scion.PathType)
+// @ initEnsures path.Registered(onehop.PathType)
+// @ initEnsures path.Registered(epic.PathType)
 package slayers
 
 import (
@@ -22,11 +29,18 @@ import (
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
+
+	// @ importRequires path.PathPackageMem()
+	// @ importRequires !path.Registered(0) && !path.Registered(1)
+	// @ importRequires !path.Registered(2) && !path.Registered(3)
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/empty"
 	"github.com/scionproto/scion/pkg/slayers/path/epic"
 	"github.com/scionproto/scion/pkg/slayers/path/onehop"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
+	// @ b "github.com/scionproto/scion/verification/utils/bitwise"
+	// @ def "github.com/scionproto/scion/verification/utils/definitions"
+	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 const (
@@ -90,9 +104,13 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
+// @ trusted
+// @ requires false
 func (b *BaseLayer) LayerContents() []byte { return b.Contents }
 
 // LayerPayload returns the bytes contained within the packet layer.
+// @ trusted
+// @ requires false
 func (b *BaseLayer) LayerPayload() []byte { return b.Payload }
 
 // SCION is the header of a SCION packet.
@@ -152,27 +170,39 @@ type SCION struct {
 	pathPoolRaw path.Path
 }
 
+// @ trusted
+// @ requires false
 func (s *SCION) LayerType() gopacket.LayerType {
 	return LayerTypeSCION
 }
 
+// @ trusted
+// @ requires false
 func (s *SCION) CanDecode() gopacket.LayerClass {
 	return LayerClassSCION
 }
 
+// @ trusted
+// @ requires false
 func (s *SCION) NextLayerType() gopacket.LayerType {
 	return scionNextLayerType(s.NextHdr)
 }
 
+// @ trusted
+// @ requires false
 func (s *SCION) LayerPayload() []byte {
 	return s.Payload
 }
 
+// @ trusted
+// @ requires false
 func (s *SCION) NetworkFlow() gopacket.Flow {
 	// TODO(shitz): Investigate how we can use gopacket.Flow.
 	return gopacket.Flow{}
 }
 
+// @ trusted
+// @ requires false
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
 	scnLen := CmnHdrLen + s.AddrHdrLen() + s.Path.Len()
 	if scnLen > MaxHdrLen {
@@ -216,32 +246,68 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // to the state defined by the passed-in bytes. Slices in the SCION layer reference the passed-in
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
-func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+// @ requires  false // (VerifiedSCION) WIP: still not ready to be called
+// @ requires  s.NonInitMem()
+// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves df != nil && df.Mem()
+// @ ensures   res == nil ==> s.Mem(data)
+// @ ensures   res != nil ==> (
+// @	s.NonInitMem() &&
+// @	sl.AbsSlice_Bytes(data, 0, len(data)) &&
+// @	res.ErrorMem())
+// @ decreases
+func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	// Decode common header.
 	if len(data) < CmnHdrLen {
 		df.SetTruncated()
 		return serrors.New("packet is shorter than the common header length",
 			"min", CmnHdrLen, "actual", len(data))
 	}
+	// @ sl.SplitRange_Bytes(data, 0, 4, def.ReadL15)
+	// @ preserves 4 <= len(data) && acc(sl.AbsSlice_Bytes(data[:4], 0, 4), def.ReadL15)
+	// @ decreases
+	// @ outline(
+	// @ unfold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), def.ReadL15)
 	firstLine := binary.BigEndian.Uint32(data[:4])
+	// @ fold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), def.ReadL15)
+	// @ )
+	// @ sl.CombineRange_Bytes(data, 0, 4, def.ReadL15)
+	// @ unfold s.NonInitMem()
 	s.Version = uint8(firstLine >> 28)
 	s.TrafficClass = uint8((firstLine >> 20) & 0xFF)
 	s.FlowID = firstLine & 0xFFFFF
+	// @ preserves acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) && acc(&s.PathType)
+	// @ preserves acc(&s.DstAddrType) && acc(&s.DstAddrLen) && acc(&s.SrcAddrType) && acc(&s.SrcAddrLen)
+	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
+	// @ ensures s.DstAddrLen.isValid() && s.SrcAddrLen.isValid()
+	// @ decreases
+	// @ outline(
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
 	s.NextHdr = L4ProtocolType(data[4])
 	s.HdrLen = data[5]
+	// @ assert &data[6:8][0] == &data[6] && &data[6:8][1] == &data[7]
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
 	s.PathType = path.Type(data[8])
 	s.DstAddrType = AddrType(data[9] >> 6)
+	// @ b.BitAnd3(data[9] >> 4)
 	s.DstAddrLen = AddrLen(data[9] >> 4 & 0x3)
 	s.SrcAddrType = AddrType(data[9] >> 2 & 0x3)
+	// @ b.BitAnd3(data[9])
 	s.SrcAddrLen = AddrLen(data[9] & 0x3)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
+	// @ )
 
 	// Decode address header.
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
+	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
 	if err := s.DecodeAddrHdr(data[CmnHdrLen:]); err != nil {
 		df.SetTruncated()
 		return err
 	}
-	addrHdrLen := s.AddrHdrLen()
+	// @ assert false
+	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
+	// is set to nil. As such, we pick the easiest possible value as a placeholder.
+	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
 	offset := CmnHdrLen + addrHdrLen
 
 	// Decode path header.
@@ -277,19 +343,31 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 // When this is enabled, the Path instance may be overwritten in
 // DecodeFromBytes. No references to Path should be kept in use between
 // invocations of DecodeFromBytes.
+// @ trusted
+// @ requires false
+// @ requires s.NonInitPathPool()
+// @ requires unfolding s.NonInitPathPool() in s.pathPool == nil
+// @ ensures  s.InitPathPool()
+// @ decreases
 func (s *SCION) RecyclePaths() {
+	// @ unfold s.NonInitPathPool()
 	if s.pathPool == nil {
+		// @ assert false
 		s.pathPool = []path.Path{
 			empty.PathType:  empty.Path{},
 			onehop.PathType: &onehop.Path{},
 			scion.PathType:  &scion.Raw{},
 			epic.PathType:   &epic.Path{},
 		}
+		// @ assert false
 		s.pathPoolRaw = path.NewRawPath()
+		// @ fold s.InitPathPool()
 	}
 }
 
 // getPath returns a new or recycled path for pathType
+// @ trusted
+// @ requires false
 func (s *SCION) getPath(pathType path.Type) (path.Path, error) {
 	if s.pathPool == nil {
 		return path.NewPath(pathType)
@@ -300,6 +378,8 @@ func (s *SCION) getPath(pathType path.Type) (path.Path, error) {
 	return s.pathPoolRaw, nil
 }
 
+// @ trusted
+// @ requires false
 func decodeSCION(data []byte, pb gopacket.PacketBuilder) error {
 	scn := &SCION{}
 	err := scn.DecodeFromBytes(data, pb)
@@ -313,6 +393,8 @@ func decodeSCION(data []byte, pb gopacket.PacketBuilder) error {
 
 // scionNextLayerType returns the layer type for the given protocol identifier
 // in a SCION base header.
+// @ trusted
+// @ requires false
 func scionNextLayerType(t L4ProtocolType) gopacket.LayerType {
 	switch t {
 	case HopByHopClass:
@@ -327,6 +409,8 @@ func scionNextLayerType(t L4ProtocolType) gopacket.LayerType {
 // scionNextLayerTypeAfterHBH returns the layer type for the given protocol
 // identifier in a SCION hop-by-hop extension, excluding (repeated) hop-by-hop
 // extensions.
+// @ trusted
+// @ requires false
 func scionNextLayerTypeAfterHBH(t L4ProtocolType) gopacket.LayerType {
 	switch t {
 	case HopByHopClass:
@@ -341,6 +425,8 @@ func scionNextLayerTypeAfterHBH(t L4ProtocolType) gopacket.LayerType {
 // scionNextLayerTypeAfterE2E returns the layer type for the given protocol
 // identifier, in a SCION end-to-end extension, excluding (repeated or
 // misordered) hop-by-hop extensions or (repeated) end-to-end extensions.
+// @ trusted
+// @ requires false
 func scionNextLayerTypeAfterE2E(t L4ProtocolType) gopacket.LayerType {
 	switch t {
 	case HopByHopClass:
@@ -354,6 +440,11 @@ func scionNextLayerTypeAfterE2E(t L4ProtocolType) gopacket.LayerType {
 
 // scionNextLayerTypeL4 returns the layer type for the given layer-4 protocol identifier.
 // Does not handle extension header classes.
+// @ requires acc(&LayerTypeSCIONUDP, _)
+// @ requires acc(&LayerTypeSCMP, _)
+// @ requires acc(&layerTypeBFD, _)
+// @ requires acc(&gopacket.LayerTypePayload, _)
+// @ decreases
 func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 	switch t {
 	case L4UDP:
@@ -371,6 +462,8 @@ func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 // from the underlaying layer data. Changing the net.Addr object might lead to inconsistent layer
 // information and thus should be treated read-only. Instead, SetDstAddr should be used to update
 // the destination address.
+// @ trusted
+// @ requires false
 func (s *SCION) DstAddr() (net.Addr, error) {
 	return parseAddr(s.DstAddrType, s.DstAddrLen, s.RawDstAddr)
 }
@@ -379,6 +472,8 @@ func (s *SCION) DstAddr() (net.Addr, error) {
 // underlaying layer data. Changing the net.Addr object might lead to inconsistent layer information
 // and thus should be treated read-only. Instead, SetDstAddr should be used to update the source
 // address.
+// @ trusted
+// @ requires false
 func (s *SCION) SrcAddr() (net.Addr, error) {
 	return parseAddr(s.SrcAddrType, s.SrcAddrLen, s.RawSrcAddr)
 }
@@ -386,6 +481,8 @@ func (s *SCION) SrcAddr() (net.Addr, error) {
 // SetDstAddr sets the destination address and updates the DstAddrLen/Type fields accordingly.
 // SetDstAddr takes ownership of dst and callers should not write to it after calling SetDstAddr.
 // Changes to dst might leave the layer in an inconsistent state.
+// @ trusted
+// @ requires false
 func (s *SCION) SetDstAddr(dst net.Addr) error {
 	var err error
 	s.DstAddrLen, s.DstAddrType, s.RawDstAddr, err = packAddr(dst)
@@ -395,12 +492,16 @@ func (s *SCION) SetDstAddr(dst net.Addr) error {
 // SetSrcAddr sets the source address and updates the DstAddrLen/Type fields accordingly.
 // SetSrcAddr takes ownership of src and callers should not write to it after calling SetSrcAddr.
 // Changes to src might leave the layer in an inconsistent state.
+// @ trusted
+// @ requires false
 func (s *SCION) SetSrcAddr(src net.Addr) error {
 	var err error
 	s.SrcAddrLen, s.SrcAddrType, s.RawSrcAddr, err = packAddr(src)
 	return err
 }
 
+// @ trusted
+// @ requires false
 func parseAddr(addrType AddrType, addrLen AddrLen, raw []byte) (net.Addr, error) {
 	switch addrLen {
 	case AddrLen4:
@@ -420,6 +521,8 @@ func parseAddr(addrType AddrType, addrLen AddrLen, raw []byte) (net.Addr, error)
 		"type", addrType, "len", addrLen)
 }
 
+// @ trusted
+// @ requires false
 func packAddr(hostAddr net.Addr) (AddrLen, AddrType, []byte, error) {
 	switch a := hostAddr.(type) {
 	case *net.IPAddr:
@@ -435,13 +538,30 @@ func packAddr(hostAddr net.Addr) (AddrLen, AddrType, []byte, error) {
 
 // AddrHdrLen returns the length of the address header (destination and source ISD-AS-Host triples)
 // in bytes.
-func (s *SCION) AddrHdrLen() int {
+//
+//	(VerifiedSCION):
+//	AddrHdrLen is meant to be called both inside and outside slayers.
+//	To enforce abstraction, we introduce a second field `insideSlayers`
+//	in order to chose between the appropriate contract for this method.
+//	This hack will not be needed when we introduce support for
+//	multiple contracts per method.
+//
+// @ pure
+// @ requires insideSlayers  ==> (acc(&s.DstAddrLen, _) && acc(&s.SrcAddrLen, _))
+// @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
+// @ ensures  insideSlayers  ==> res == s.addrHdrLenAbstractionLeak()
+// @ ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak(ubuf)
+// @ decreases
+// @ trusted
+func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
 	return 2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)
 }
 
 // SerializeAddrHdr serializes destination and source ISD-AS-Host address triples into the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
+// @ trusted
+// @ requires false
 func (s *SCION) SerializeAddrHdr(buf []byte) error {
 	if len(buf) < s.AddrHdrLen() {
 		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen(),
@@ -464,30 +584,52 @@ func (s *SCION) SerializeAddrHdr(buf []byte) error {
 // DecodeAddrHdr decodes the destination and source ISD-AS-Host address triples from the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
-func (s *SCION) DecodeAddrHdr(data []byte) error {
-	if len(data) < s.AddrHdrLen() {
-		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen(),
+// @ requires  acc(&s.SrcIA) && acc(&s.DstIA)
+// @ requires  acc(&s.SrcAddrLen, def.ReadL1) && s.SrcAddrLen.isValid()
+// @ requires  acc(&s.DstAddrLen, def.ReadL1) && s.DstAddrLen.isValid()
+// @ requires  acc(&s.RawSrcAddr) && acc(&s.RawDstAddr)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
+// @ ensures   res == nil ==> s.HeaderMem(data)
+// @ ensures   res != nil ==> res.ErrorMem()
+// @ ensures   res != nil ==> (
+// @	acc(&s.SrcIA) && acc(&s.DstIA) && acc(&s.SrcAddrLen, def.ReadL1) &&
+// @	acc(&s.DstAddrLen, def.ReadL1) && acc(&s.RawSrcAddr) && acc(&s.RawDstAddr))
+// @ decreases
+func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
+	// @ ghost l := s.AddrHdrLen(nil, true)
+	if len(data) < s.AddrHdrLen( /*@ nil, true @*/ ) {
+		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen( /*@ nil, true @*/ ),
 			"actual", len(data))
 	}
 	offset := 0
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
+	// @ assert forall i int :: 0 <= i && i < l ==> &data[offset:][i] == &data[i]
 	s.DstIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
 	offset += addr.IABytes
+	// @ assert forall i int :: 0 <= i && i < l ==> &data[offset:][i] == &data[offset+i]
 	s.SrcIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
 	offset += addr.IABytes
 	dstAddrBytes := addrBytes(s.DstAddrLen)
 	srcAddrBytes := addrBytes(s.SrcAddrLen)
 	s.RawDstAddr = data[offset : offset+dstAddrBytes]
 	offset += dstAddrBytes
 	s.RawSrcAddr = data[offset : offset+srcAddrBytes]
+	// @ fold s.HeaderMem(data)
 
 	return nil
 }
 
-func addrBytes(addrLen AddrLen) int {
+// @ pure
+// @ ensures addrLen.isValid() ==> 0 < res
+// @ decreases
+func addrBytes(addrLen AddrLen) (res int) {
 	return (int(addrLen) + 1) * LineLen
 }
 
 // computeChecksum computes the checksum with the SCION pseudo header.
+// @ trusted
+// @ requires false
 func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (uint16, error) {
 	if s == nil {
 		return 0, serrors.New("SCION header missing")
@@ -501,6 +643,8 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (uint16, erro
 	return folded, nil
 }
 
+// @ trusted
+// @ requires false
 func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (uint32, error) {
 	if len(s.RawDstAddr) == 0 {
 		return 0, serrors.New("destination address missing")
@@ -533,10 +677,17 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (uint32, error)
 	return csum, nil
 }
 
+// @ preserves acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
+// @ decreases
 func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	// Compute safe boundary to ensure we do not access out of bounds.
 	// Odd lengths are handled at the end.
 	safeBoundary := len(upperLayer) - 1
+	// @ unfold acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
+	// @ invariant 0 <= i && i < safeBoundary + 2
+	// @ invariant i % 2 == 0
+	// @ invariant forall i int :: 0 <= i && i < len(upperLayer) ==> acc(&upperLayer[i], def.ReadL20)
+	// @ decreases safeBoundary - i
 	for i := 0; i < safeBoundary; i += 2 {
 		csum += uint32(upperLayer[i]) << 8
 		csum += uint32(upperLayer[i+1])
@@ -544,9 +695,12 @@ func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	if len(upperLayer)%2 == 1 {
 		csum += uint32(upperLayer[safeBoundary]) << 8
 	}
+	// @ fold acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
 	return csum
 }
 
+// @ trusted
+// @ requires false
 func (s *SCION) foldChecksum(csum uint32) uint16 {
 	for csum > 0xffff {
 		csum = (csum >> 16) + (csum & 0xffff)

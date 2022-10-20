@@ -1,0 +1,130 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slayers
+
+import (
+	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path/empty"
+	"github.com/scionproto/scion/pkg/slayers/path/epic"
+	"github.com/scionproto/scion/pkg/slayers/path/onehop"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
+
+	def "github.com/scionproto/scion/verification/utils/definitions"
+)
+
+pred (s *SCION) NonInitPathPool() {
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw)
+}
+
+pred (s *SCION) InitPathPool() {
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw) &&
+	// entry per path type
+	// empty
+	acc(&s.pathPool[empty.PathType]) &&
+	s.pathPool[empty.PathType].NonInitMem() &&
+	// typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
+	// onehop
+	acc(&s.pathPool[onehop.PathType]) &&
+	s.pathPool[empty.PathType].NonInitMem() &&
+	// scion
+	acc(&s.pathPool[scion.PathType]) &&
+	s.pathPool[empty.PathType].NonInitMem() &&
+	// epic
+	acc(&s.pathPool[epic.PathType]) &&
+	s.pathPool[empty.PathType].NonInitMem() &&
+	// raw path
+	s.pathPoolRaw.NonInitMem()
+}
+
+// Has the permission for all fields, except those related to the path pools.
+// These will come from NonInitPathPool/InitPathPool.
+pred (s *SCION) NonInitMem() {
+	acc(&s.Version) &&
+	acc(&s.TrafficClass) &&
+	acc(&s.FlowID) &&
+	acc(&s.NextHdr) &&
+	acc(&s.HdrLen) &&
+	acc(&s.PayloadLen) &&
+	acc(&s.PathType) &&
+	acc(&s.DstAddrType) &&
+	acc(&s.DstAddrLen) &&
+	acc(&s.SrcAddrType) &&
+	acc(&s.SrcAddrLen) &&
+	acc(&s.DstIA) &&
+	acc(&s.SrcIA) &&
+	acc(&s.RawDstAddr) &&
+	acc(&s.RawSrcAddr) &&
+	acc(&s.Path)
+}
+
+// Note: this is still incomplete
+pred (s *SCION) Mem(ubuf []byte) {
+	// TODO: complete; put description of
+	// fields from BaseLayer; put permissions to the entire ubuf as a clause here
+	CmnHdrLen <= len(ubuf) &&
+	s.HeaderMem(ubuf[CmnHdrLen:])
+}
+
+pred (s *SCION) HeaderMem(ubuf []byte) {
+	acc(&s.DstIA) &&
+	acc(&s.SrcIA) &&
+	// these fields are not parsed during DecodeAddrHd
+	acc(&s.DstAddrLen, def.ReadL1) && s.DstAddrLen.isValid() &&
+	acc(&s.SrcAddrLen, def.ReadL1) && s.SrcAddrLen.isValid() &&
+	// RawDstAddr & RawSrcAddr locations. The memory for these is kept
+	// outside of HeaderMem, in the Mem predicate where we just keep
+	// access to the entire slice.
+	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
+	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
+	0 < addrBytes(s.DstAddrLen) && 0 < addrBytes(s.SrcAddrLen) &&
+	0 < 2*addr.IABytes && 2*addr.IABytes < 2*addr.IABytes+addrBytes(s.DstAddrLen) &&
+	2*addr.IABytes+addrBytes(s.DstAddrLen) < 2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen) &&
+	2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen) <= len(ubuf) &&
+	// end of helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
+	acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
+	s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+addrBytes(s.DstAddrLen)] &&
+	s.RawSrcAddr === ubuf[2*addr.IABytes+addrBytes(s.DstAddrLen):2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen)]
+}
+
+ghost
+pure
+decreases
+func (a AddrLen) isValid() bool {
+	// takes advantage of the knowledge (non-modular) that all definitions are contiguous
+	// to introduce an interval instead of an enequality:
+	// 		return a == AddrLen4 || a == AddrLen8 || a == AddrLen12 || a == AddrLen16
+	return AddrLen4 <= a && a <= AddrLen16
+}
+
+ghost
+requires acc(&s.DstAddrLen, _) && acc(&s.SrcAddrLen, _)
+decreases
+pure
+func (s *SCION) addrHdrLenAbstractionLeak() int {
+	return 2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)
+}
+
+ghost
+requires acc(s.Mem(ubuf), _)
+decreases
+pure
+func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) int {
+	return unfolding acc(s.Mem(ubuf), _) in (unfolding s.HeaderMem(ubuf[CmnHdrLen:]) in (2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)))
+}
