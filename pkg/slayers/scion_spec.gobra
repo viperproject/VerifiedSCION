@@ -29,7 +29,9 @@ import (
 
 pred (s *SCION) NonInitPathPool() {
 	acc(&s.pathPool) &&
-	acc(&s.pathPoolRaw)
+	acc(&s.pathPoolRaw) &&
+	s.pathPool == nil &&
+	s.pathPoolRaw == nil
 }
 
 pred (s *SCION) InitPathPool() {
@@ -42,13 +44,13 @@ pred (s *SCION) InitPathPool() {
 	// s.pathPool[empty.PathType].NonInitMem() && // omited for simplification
 	// onehop
 	acc(&s.pathPool[onehop.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
+	s.pathPool[onehop.PathType].NonInitMem() &&
 	// scion
 	acc(&s.pathPool[scion.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
+	s.pathPool[scion.PathType].NonInitMem() &&
 	// epic
 	acc(&s.pathPool[epic.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
+	s.pathPool[epic.PathType].NonInitMem() &&
 	// raw path
 	s.pathPoolRaw.NonInitMem()
 }

@@ -347,7 +347,6 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 // DecodeFromBytes. No references to Path should be kept in use between
 // invocations of DecodeFromBytes.
 // @ requires s.NonInitPathPool()
-// @ requires unfolding s.NonInitPathPool() in s.pathPool == nil
 // @ ensures  s.InitPathPool()
 // @ decreases
 func (s *SCION) RecyclePaths() {
@@ -362,8 +361,7 @@ func (s *SCION) RecyclePaths() {
 		s.pathPoolRaw = path.NewRawPath()
 		// @ assert acc(&s.pathPool[empty.PathType]) && acc(&s.pathPool[onehop.PathType])
 		// @ assert acc(&s.pathPool[scion.PathType]) && acc(&s.pathPool[epic.PathType])
-		// @ assert s.pathPool[empty.PathType].NonInitMem() && s.pathPool[onehop.PathType].NonInitMem()
-		// @ assert s.pathPool[scion.PathType].NonInitMem() && s.pathPool[epic.PathType].NonInitMem()
+		// @ assert s.pathPool[onehop.PathType].NonInitMem() && s.pathPool[scion.PathType].NonInitMem() && s.pathPool[epic.PathType].NonInitMem()
 		// @ fold s.InitPathPool()
 	}
 }

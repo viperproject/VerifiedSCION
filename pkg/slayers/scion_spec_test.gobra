@@ -19,4 +19,5 @@ package slayers
 func foldNonInitMem_Test() {
 	s@ := SCION{}
 	fold s.NonInitMem()
+	fold s.NonInitPathPool()
 }
