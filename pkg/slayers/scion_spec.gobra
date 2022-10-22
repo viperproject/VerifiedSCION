@@ -37,11 +37,13 @@ pred (s *SCION) NonInitPathPool() {
 pred (s *SCION) InitPathPool() {
 	acc(&s.pathPool) &&
 	acc(&s.pathPoolRaw) &&
+	s.pathPool != nil &&
+	s.pathPoolRaw != nil &&
 	len(s.pathPool) == 4 &&
 	// entry per path type
 	// empty
 	acc(&s.pathPool[empty.PathType]) &&
-	// s.pathPool[empty.PathType].NonInitMem() && // omited for simplification
+	typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
 	// onehop
 	acc(&s.pathPool[onehop.PathType]) &&
 	s.pathPool[onehop.PathType].NonInitMem() &&

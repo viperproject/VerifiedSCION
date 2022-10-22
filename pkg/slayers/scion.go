@@ -194,9 +194,9 @@ func (s *SCION) LayerPayload() []byte {
 	return s.Payload
 }
 
-// @ trusted
-// @ requires false
-func (s *SCION) NetworkFlow() gopacket.Flow {
+// @ ensures res == gopacket.Flow{}
+// @ decreases
+func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 	// TODO(shitz): Investigate how we can use gopacket.Flow.
 	return gopacket.Flow{}
 }
@@ -247,11 +247,12 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
 // @ trusted
-// @ requires  s.NonInitMem()
+// @ requires  false
+// @ requires  s.NonInitMem() && s.InitPathPool()
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
-// @ ensures   res != nil ==> ( s.NonInitMem() && sl.AbsSlice_Bytes(data, 0, len(data)) &&
+// @ ensures   res != nil ==> (s.NonInitMem() && sl.AbsSlice_Bytes(data, 0, len(data)) &&
 // @	res.ErrorMem())
 // @ decreases
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
@@ -294,7 +295,6 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.SrcAddrLen = AddrLen(data[9] & 0x3)
 	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
 	// @ )
-
 	// Decode address header.
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
 	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
@@ -367,16 +367,34 @@ func (s *SCION) RecyclePaths() {
 }
 
 // getPath returns a new or recycled path for pathType
-// @ trusted
-// @ requires false
-func (s *SCION) getPath(pathType path.Type) (path.Path, error) {
+// @ requires s.InitPathPool()
+// @ ensures  err == nil
+// @ ensures  pathType == 0 ==> (typeOf(res) == type[empty.Path] && s.InitPathPool())
+// @ ensures  pathType <  0 ==> (
+// @ 	res.NonInitMem() &&
+// @ 	(res.NonInitMem() --* s.InitPathPool()))
+// @ decreases
+func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
+	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
+	//                 path.Type is defined as an uint8.
+	// @ assume 0 <= pathType
+	// @ unfold s.InitPathPool()
 	if s.pathPool == nil {
+		// @ def.Unreachable()
 		return path.NewPath(pathType)
 	}
 	if int(pathType) < len(s.pathPool) {
-		return s.pathPool[pathType], nil
+		tmp := s.pathPool[pathType]
+		// @ ghost if pathType != empty.PathType {
+		// @ 	package tmp.NonInitMem() --* s.InitPathPool() { fold s.InitPathPool() }
+		// @ } else {
+		// @ 	fold s.InitPathPool()
+		// @ }
+		return tmp, nil
 	}
-	return s.pathPoolRaw, nil
+	tmp := s.pathPoolRaw
+	// @ package tmp.NonInitMem() --* s.InitPathPool() { fold s.InitPathPool() }
+	return tmp, nil
 }
 
 // @ trusted

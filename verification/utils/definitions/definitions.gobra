@@ -55,3 +55,7 @@ const (
 	ReadL19
 	ReadL20
 )
+
+ghost
+requires false
+func Unreachable()
