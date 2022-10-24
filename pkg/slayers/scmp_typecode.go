@@ -188,5 +188,7 @@ var scmpTypeCodeInfo = map[SCMPType]struct {
 	},
 }
 
+// (VerifiedSCION) TODO: This is a temporary solution as gobra
+// does not support multiple init blocks yet.
 //@ var _ = satisfyInitEnsures()
 
