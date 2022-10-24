@@ -188,5 +188,5 @@ var scmpTypeCodeInfo = map[SCMPType]struct {
 	},
 }
 
-//@ func init() { fold SCMPTypeCodeMem() }
+//@ var _ = satisfyInitEnsures()
 
