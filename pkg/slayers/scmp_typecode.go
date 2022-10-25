@@ -14,7 +14,7 @@
 
 // +gobra
 
-//@ initEnsures scmpTypeCodeInfoAcc()
+//@ initEnsures SCMPTypeCodeMem()
 package slayers
 
 
@@ -93,32 +93,32 @@ const (
 type SCMPTypeCode uint16
 
 // Type returns the SCMP type field.
-//@ preserves acc(scmpTypeCodeInfoAcc(), definitions.ReadL10)
 //@ decreases
+//@ pure
 func (a SCMPTypeCode) Type() SCMPType {
 	return SCMPType(a >> 8)
 }
 
 // Code returns the SCMP code field.
-//@ preserves acc(scmpTypeCodeInfoAcc(), definitions.ReadL10)
 //@ decreases
+//@ pure
 func (a SCMPTypeCode) Code() SCMPCode {
 	return SCMPCode(a)
 }
 
 // InfoMsg indicates if the SCMP message is an SCMP informational message.
-//@ preserves acc(scmpTypeCodeInfoAcc(), definitions.ReadL10)
 //@ decreases
+//@ pure
 func (a SCMPTypeCode) InfoMsg() bool {
 	return a.Type() > 127
 }
 
-//@ preserves acc(scmpTypeCodeInfoAcc(), definitions.ReadL10)
+//@ preserves acc(SCMPTypeCodeMem(), definitions.ReadL10)
 //@ decreases
 func (a SCMPTypeCode) String() string {
 	t, c := a.Type(), a.Code()
-	//@ unfold acc(scmpTypeCodeInfoAcc(), definitions.ReadL10)
-	//@ defer fold acc(scmpTypeCodeInfoAcc(), definitions.ReadL10)
+	//@ unfold acc(SCMPTypeCodeMem(), definitions.ReadL10)
+	//@ defer fold acc(SCMPTypeCodeMem(), definitions.ReadL10)
 	info, ok := scmpTypeCodeInfo[t]
 	if !ok {
 		return fmt.Sprintf("%d(%d)", t, c)
@@ -134,12 +134,12 @@ func (a SCMPTypeCode) String() string {
 }
 
 // SerializeTo writes the SCMPTypeCode value to the buffer.
-//@ requires len(bytes) == 2
-//@ preserves slices.AbsSlice_Bytes(bytes, 0, len(bytes))
+//@ requires len(bytes) >= 2
+//@ preserves slices.AbsSlice_Bytes(bytes, 0, 2)
 //@ decreases
 func (a SCMPTypeCode) SerializeTo(bytes []byte) {
-	//@ unfold slices.AbsSlice_Bytes(bytes, 0, len(bytes))
-	//@ defer fold slices.AbsSlice_Bytes(bytes, 0, len(bytes))
+	//@ unfold slices.AbsSlice_Bytes(bytes, 0, 2)
+	//@ defer fold slices.AbsSlice_Bytes(bytes, 0, 2)
 	binary.BigEndian.PutUint16(bytes, uint16(a))
 }
 
@@ -188,4 +188,7 @@ var scmpTypeCodeInfo = map[SCMPType]struct {
 	},
 }
 
+// (VerifiedSCION) TODO: This is a temporary solution as gobra
+// does not support multiple init blocks yet.
 //@ var _ = satisfyInitEnsures()
+
