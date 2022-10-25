@@ -25,6 +25,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 
 	def "github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices"
 )
 
 pred (s *SCION) NonInitPathPool() {
@@ -101,6 +102,20 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
 	s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+addrBytes(s.DstAddrLen)] &&
 	s.RawSrcAddr === ubuf[2*addr.IABytes+addrBytes(s.DstAddrLen):2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen)]
+}
+
+pred (b *BaseLayer) Mem() {
+	acc(b) &&
+	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
+	slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+}
+
+pred (b *BaseLayer) LayerMem() {
+	acc(b) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
+}
+
+pred (b *BaseLayer) PayloadMem() {
+	acc(b) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
 }
 
 ghost
