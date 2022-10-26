@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
 package slayers
 
 import (
@@ -21,6 +22,7 @@ import (
 	"github.com/google/gopacket"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	//@ def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 // MaxSCMPPacketLen the maximum length a SCION packet including SCMP quote can
@@ -63,19 +65,36 @@ type SCMP struct {
 }
 
 // LayerType returns LayerTypeSCMP.
+//@ requires acc(s.Mem(), _)
+//@ decreases
+//@ pure
 func (s *SCMP) LayerType() gopacket.LayerType {
-	return LayerTypeSCMP
+	return /*@ unfolding acc(s.Mem(), _) in @*/ LayerTypeSCMP
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
+//@ requires acc(s.Mem(), _)
+//@ decreases
+//@ pure
 func (s *SCMP) CanDecode() gopacket.LayerClass {
-	return LayerClassSCMP
+	return /*@ unfolding acc(s.Mem(), _) in @*/ LayerClassSCMP
 }
 
 // NextLayerType use the typecode to select the right next decoder.
 // If the SCMP type is unknown, the next layer is gopacket.LayerTypePayload.
+// NextLayerType returns the layer type contained by this DecodingLayer.
+//@ requires acc(&LayerTypeSCMPDestinationUnreachable, _)
+//@ requires acc(&LayerTypeSCMPPacketTooBig, _)
+//@ requires acc(&LayerTypeSCMPParameterProblem, _)
+//@ requires acc(&LayerTypeSCMPExternalInterfaceDown, _)
+//@ requires acc(&LayerTypeSCMPInternalConnectivityDown, _)
+//@ requires acc(&LayerTypeSCMPEcho, _)
+//@ requires acc(&LayerTypeSCMPTraceroute, _)
+//@ requires acc(&gopacket.LayerTypePayload, _)
+//@ requires acc(s.Mem(), def.ReadL20)
+//@ decreases
 func (s *SCMP) NextLayerType() gopacket.LayerType {
-	switch s.TypeCode.Type() {
+	switch /*@unfolding acc(s.Mem(), def.ReadL20) in @*/s.TypeCode.Type() {
 	case SCMPTypeDestinationUnreachable:
 		return LayerTypeSCMPDestinationUnreachable
 	case SCMPTypePacketTooBig:
@@ -96,11 +115,21 @@ func (s *SCMP) NextLayerType() gopacket.LayerType {
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions) error {
-	bytes, err := b.PrependBytes(4)
+//@ requires b != nil
+//@ requires i.Mem()
+//@ requires b.Mem(underlyingBuf)
+//@ ensures err == nil ==> underlyingBufRes != nil
+//@ ensures err == nil ==> i.Mem() && b.Mem(underlyingBufRes)
+//@ ensures err != nil ==> b.Mem(underlyingBuf)
+//@ ensures err != nil ==> err.ErrorMem()
+//@ decreases
+func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
+	bytes, err/*@, underlyingBufRes@*/  := b.PrependBytes(4)
 	if err != nil {
-		return err
+		return err/*@, underlyingBufRes @*/
 	}
+	//@ unfold s.Mem()
+	//@ defer fold s.Mem()
 	s.TypeCode.SerializeTo(bytes)
 
 	if opts.ComputeChecksums {
@@ -121,6 +150,8 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
+//@ trusted
+//@ requires false
 func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	if size := len(data); size < 4 {
 		df.SetTruncated()
@@ -132,12 +163,16 @@ func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	return nil
 }
 
+//@ trusted
+//@ requires false
 func (s *SCMP) String() string {
 	return fmt.Sprintf("%s(%d)\nPayload: %s", &s.TypeCode, s.Checksum, s.Payload)
 }
 
 // SetNetworkLayerForChecksum tells this layer which network layer is wrapping it.
 // This is needed for computing the checksum when serializing,
+//@ trusted
+//@ requires false
 func (s *SCMP) SetNetworkLayerForChecksum(l gopacket.NetworkLayer) error {
 	if l == nil {
 		return serrors.New("cannot use nil layer type for scmp checksum network layer")
@@ -150,6 +185,8 @@ func (s *SCMP) SetNetworkLayerForChecksum(l gopacket.NetworkLayer) error {
 	return nil
 }
 
+//@ trusted
+//@ requires false
 func decodeSCMP(data []byte, pb gopacket.PacketBuilder) error {
 	scmp := &SCMP{}
 	err := scmp.DecodeFromBytes(data, pb)
