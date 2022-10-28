@@ -1117,12 +1117,12 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 	//@ unfold i.BaseLayer.Mem()
 	//@ defer fold i.BaseLayer.Mem()
 	//@ unfold slices.AbsSlice_Bytes(data, 0, len(data))
-	//@ assert forall i int :: minLength <= i && i < len(data) ==> &data[minLength:][i] == &data[minLength + i]
+	//@ assert forall i int :: 0 <= i && i < len(data) - minLength ==> &data[minLength:][i] == &data[minLength + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:minLength],
 		Payload:  data[minLength:],
 	}
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[minLength+l] == &i.Payload[l]
+	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[minLength:][l] == &i.Payload[l]
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	return nil
