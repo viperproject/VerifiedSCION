@@ -551,6 +551,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 		Payload:  data[offset:],
 	}
 	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
+	//@ assert forall l int :: {&i.Payload[l]} 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	//@ fold i.BaseLayer.Mem()
@@ -1111,6 +1112,7 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 		return serrors.New("buffer too short", "min", minLength, "actual", size)
 	}
 	//@ unfold i.Mem()
+	//@ assert acc(&LayerTypeSCMPDestinationUnreachable, _)
 	//@ defer fold i.Mem()
 	//@ unfold i.BaseLayer.Mem()
 	//@ defer fold i.BaseLayer.Mem()
