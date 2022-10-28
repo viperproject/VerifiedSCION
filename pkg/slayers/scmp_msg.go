@@ -130,8 +130,8 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 		Payload:  data[offset:],
 	}
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
-	//@ assert forall l int :: {&i.Payload[l]} 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	//@ fold i.BaseLayer.Mem()
 	//@ )
@@ -550,8 +550,8 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
-	//@ assert forall l int :: {&i.Payload[l]} 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	//@ fold i.BaseLayer.Mem()
