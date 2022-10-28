@@ -124,7 +124,7 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 	//@ unfold slices.AbsSlice_Bytes(data, 0, addr.IABytes+scmpRawInterfaceLen)
 	//@ unfold slices.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: offset <= i && i < len(data) ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: { data[offset:] } 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
@@ -339,7 +339,7 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 	//@ unfold slices.AbsSlice_Bytes(data, 0, addr.IABytes+2*scmpRawInterfaceLen)
 	//@ unfold slices.AbsSlice_Bytes(data, addr.IABytes+2*scmpRawInterfaceLen, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: offset <= i && i < len(data) ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
 	//@ assert forall l int :: offset <= l && l < len(data) ==> acc(&data[l])
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
@@ -545,7 +545,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	//@ unfold slices.AbsSlice_Bytes(data, 0, 4)
 	//@ unfold slices.AbsSlice_Bytes(data, 4, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: offset <= i && i < len(data) ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
@@ -930,7 +930,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	//@ unfold slices.AbsSlice_Bytes(data, 0, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	//@ unfold slices.AbsSlice_Bytes(data, 2+2+addr.IABytes+scmpRawInterfaceLen, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: offset <= i && i < len(data) ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: 0 <= i && i < len(data)-offset ==> &data[offset:][i] == &data[offset + i]
 	//@ assert forall l int :: offset <= l && l < len(data) ==> acc(&data[l])
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
