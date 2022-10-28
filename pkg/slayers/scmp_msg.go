@@ -1148,7 +1148,7 @@ func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opt
 	//@ b.ExchangePred(underlyingBufRes)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
-	copy(buf, make([]byte, 4), writePerm)
+	copy(buf, make([]byte, 4)/*@, writePerm@*/)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
