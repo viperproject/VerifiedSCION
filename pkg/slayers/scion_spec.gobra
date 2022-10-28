@@ -126,5 +126,5 @@ requires acc(s.Mem(ubuf), _)
 decreases
 pure
 func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) int {
-	return unfolding acc(s.Mem(ubuf), _) in (unfolding s.HeaderMem(ubuf[CmnHdrLen:]) in (2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)))
+	return unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in (2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)))
 }
