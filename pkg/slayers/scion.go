@@ -647,12 +647,12 @@ func addrBytes(addrLen AddrLen) (res int) {
 }
 
 // computeChecksum computes the checksum with the SCION pseudo header.
-// @ preserves acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
 // @ requires acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
 // @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
 // @ requires acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
 // @ requires acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
 // @ requires acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+// @ preserves acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
 // @ ensures acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
 // @ ensures acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
 // @ ensures acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
