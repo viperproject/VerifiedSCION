@@ -30,18 +30,17 @@ const scmpRawInterfaceLen = 8
 
 // SCMPExternalInterfaceDown message contains the data for that error.
 //
-//   0                   1                   2                   3
-//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |              ISD              |                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         AS                    +
-//  |                                                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |                                                               |
-//  +                        Interface ID                           +
-//  |                                                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|              ISD              |                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         AS                    +
+//	|                                                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                                                               |
+//	+                        Interface ID                           +
+//	|                                                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type SCMPExternalInterfaceDown struct {
 	BaseLayer
 	IA   addr.IA
@@ -124,14 +123,14 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 	//@ unfold slices.AbsSlice_Bytes(data, 0, addr.IABytes+scmpRawInterfaceLen)
 	//@ unfold slices.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: offset <= i && i < len(data) ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: { data[offset:] } 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
-	//@ assert forall l int :: {&i.Payload[l]} 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	//@ fold i.BaseLayer.Mem()
 	//@ )
@@ -222,22 +221,21 @@ func decodeSCMPExternalInterfaceDown(data []byte, pb gopacket.PacketBuilder) (er
 // SCMPInternalConnectivityDown indicates the AS internal connection between 2
 // routers is down. The format is as follows:
 //
-//   0                   1                   2                   3
-//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |              ISD              |                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         AS                    +
-//  |                                                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |                                                               |
-//  +                   Ingress Interface ID                        +
-//  |                                                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |                                                               |
-//  +                   Egress Interface ID                         +
-//  |                                                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|              ISD              |                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         AS                    +
+//	|                                                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                                                               |
+//	+                   Ingress Interface ID                        +
+//	|                                                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                                                               |
+//	+                   Egress Interface ID                         +
+//	|                                                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type SCMPInternalConnectivityDown struct {
 	BaseLayer
 	
@@ -339,7 +337,7 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 	//@ unfold slices.AbsSlice_Bytes(data, 0, addr.IABytes+2*scmpRawInterfaceLen)
 	//@ unfold slices.AbsSlice_Bytes(data, addr.IABytes+2*scmpRawInterfaceLen, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: offset <= i && i < len(data) ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
 	//@ assert forall l int :: offset <= l && l < len(data) ==> acc(&data[l])
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
@@ -458,12 +456,11 @@ func decodeSCMPInternalConnectivityDown(data []byte, pb gopacket.PacketBuilder) 
 
 // SCMPEcho represents the structure of a ping.
 //
-//   0                   1                   2                   3
-//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |           Identifier          |        Sequence Number        |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|           Identifier          |        Sequence Number        |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type SCMPEcho struct {
 	BaseLayer
 	
@@ -545,12 +542,13 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	//@ unfold slices.AbsSlice_Bytes(data, 0, 4)
 	//@ unfold slices.AbsSlice_Bytes(data, 4, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: offset <= i && i < len(data) ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	//@ fold i.BaseLayer.Mem()
@@ -642,10 +640,9 @@ func decodeSCMPEcho(data []byte, pb gopacket.PacketBuilder) (err error) {
 
 // SCMPParameterProblem represents the structure of a parameter problem message.
 //
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |            reserved           |           Pointer             |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|            reserved           |           Pointer             |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type SCMPParameterProblem struct {
 	BaseLayer
 	
@@ -798,20 +795,19 @@ func decodeSCMPParameterProblem(data []byte, pb gopacket.PacketBuilder) (err err
 
 // SCMPTraceroute represents the structure of a traceroute.
 //
-//   0                   1                   2                   3
-//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |           Identifier          |        Sequence Number        |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |              ISD              |                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         AS                    +
-//  |                                                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |                                                               |
-//  +                        Interface ID                           +
-//  |                                                               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|           Identifier          |        Sequence Number        |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|              ISD              |                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         AS                    +
+//	|                                                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                                                               |
+//	+                        Interface ID                           +
+//	|                                                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type SCMPTraceroute struct {
 	BaseLayer
 	
@@ -929,7 +925,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	//@ unfold slices.AbsSlice_Bytes(data, 0, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	//@ unfold slices.AbsSlice_Bytes(data, 2+2+addr.IABytes+scmpRawInterfaceLen, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: offset <= i && i < len(data) ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: 0 <= i && i < len(data)-offset ==> &data[offset:][i] == &data[offset + i]
 	//@ assert forall l int :: offset <= l && l < len(data) ==> acc(&data[l])
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
@@ -1069,11 +1065,11 @@ func decodeSCMPTraceroute(data []byte, pb gopacket.PacketBuilder) (err error) {
 // SCMPDestinationUnreachable represents the structure of a destination
 // unreachable message.
 //
-//   0                   1                   2                   3
-//   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |                             Unused                            |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|                             Unused                            |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type SCMPDestinationUnreachable struct {
 	BaseLayer
 }
@@ -1111,16 +1107,17 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 		return serrors.New("buffer too short", "min", minLength, "actual", size)
 	}
 	//@ unfold i.Mem()
+	//@ assert acc(&LayerTypeSCMPDestinationUnreachable, _)
 	//@ defer fold i.Mem()
 	//@ unfold i.BaseLayer.Mem()
 	//@ defer fold i.BaseLayer.Mem()
 	//@ unfold slices.AbsSlice_Bytes(data, 0, len(data))
-	//@ assert forall i int :: minLength <= i && i < len(data) ==> &data[minLength:][i] == &data[minLength + i]
+	//@ assert forall i int :: 0 <= i && i < len(data) - minLength ==> &data[minLength:][i] == &data[minLength + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:minLength],
 		Payload:  data[minLength:],
 	}
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[minLength+l] == &i.Payload[l]
+	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[minLength:][l] == &i.Payload[l]
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	return nil
@@ -1146,7 +1143,7 @@ func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opt
 	//@ b.ExchangePred(underlyingBufRes)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
-	copy(buf, make([]byte, 4), writePerm)
+	copy(buf, make([]byte, 4)/*@, writePerm@*/)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 	//@ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
@@ -1180,10 +1177,9 @@ func decodeSCMPDestinationUnreachable(data []byte, pb gopacket.PacketBuilder) (e
 
 // SCMPPacketTooBig represents the structure of a packet too big message.
 //
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//  |            reserved           |             MTU               |
-//  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|            reserved           |             MTU               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type SCMPPacketTooBig struct {
 	BaseLayer
 	
