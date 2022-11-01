@@ -647,9 +647,23 @@ func addrBytes(addrLen AddrLen) (res int) {
 }
 
 // computeChecksum computes the checksum with the SCION pseudo header.
-// @ trusted
-// @ requires false
-func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (uint16, error) {
+// @ preserves acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
+// @ requires acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
+// @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
+// @ requires acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
+// @ requires acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+// @ requires acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+// @ ensures acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
+// @ ensures acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
+// @ ensures acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+// @ ensures acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+// @ ensures s == nil ==> err != nil
+// @ ensures len(s.RawDstAddr) == 0 ==> err != nil
+// @ ensures len(s.RawSrcAddr) == 0 ==> err != nil
+// @ ensures err != nil ==> err.ErrorMem()
+// @ ensures len(s.RawDstAddr) > 0 && len(s.RawSrcAddr) > 0 ==> err == nil
+// @ decreases
+func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (res uint16, err error) {
 	if s == nil {
 		return 0, serrors.New("SCION header missing")
 	}
@@ -662,7 +676,7 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (uint16, erro
 	return folded, nil
 }
 
-// previous time: 14.14 TODO: use valid length
+// TODO: use valid length
 // @ requires acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
 // @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
 // @ requires acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
@@ -672,6 +686,10 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (uint16, erro
 // @ ensures acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
 // @ ensures acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
 // @ ensures acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+// @ ensures len(s.RawDstAddr) == 0 ==> err != nil
+// @ ensures len(s.RawSrcAddr) == 0 ==> err != nil
+// @ ensures err != nil ==> err.ErrorMem()
+// @ ensures len(s.RawDstAddr) > 0 && len(s.RawSrcAddr) > 0 ==> err == nil
 // @ decreases
 func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, err error) {
 	if len(s.RawDstAddr) == 0 {
@@ -684,8 +702,8 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	var srcIA/*@@@*/, dstIA/*@@@*/ [8]byte
 	binary.BigEndian.PutUint64(srcIA[:], uint64(s.SrcIA))
 	binary.BigEndian.PutUint64(dstIA[:], uint64(s.DstIA))
-	// @ invariant forall j int :: { srcIA[j] } 0 <= j && j < 8 ==> acc(&srcIA[j])
-	// @ invariant forall j int :: { dstIA[j] } 0 <= j && j < 8 ==> acc(&dstIA[j])
+	// @ invariant forall j int :: { &srcIA[j] } 0 <= j && j < 8 ==> acc(&srcIA[j])
+	// @ invariant forall j int :: { &dstIA[j] } 0 <= j && j < 8 ==> acc(&dstIA[j])
 	// @ invariant i % 2 == 0
 	// @ invariant 0 <= i && i <= 8
 	// @ decreases 8 - i
@@ -696,28 +714,48 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 		csum += uint32(dstIA[i+1])
 	}
 	// Address length is guaranteed to be a multiple of 2 by the protocol.
-	// @ unfold acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
-	// @ invariant acc(&s.RawSrcAddr, def.ReadL20) && acc(s.RawSrcAddr, def.ReadL20)
+	// @ ghost var rawSrcAddrLen int = len(s.RawSrcAddr)
+	// @ invariant acc(&s.RawSrcAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+	// @ invariant len(s.RawSrcAddr) == rawSrcAddrLen
 	// @ invariant len(s.RawSrcAddr) % 2 == 0
 	// @ invariant i % 2 == 0
 	// @ invariant 0 <= i && i <= len(s.RawSrcAddr)
 	// @ decreases len(s.RawSrcAddr) - i
 	for i := 0; i < len(s.RawSrcAddr); i += 2 {
+		// @ preserves err == nil
+		// @ requires acc(&s.RawSrcAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+		// @ requires 0 <= i && i < len(s.RawSrcAddr) && i % 2 == 0 && len(s.RawSrcAddr) % 2 == 0
+		// @ ensures acc(&s.RawSrcAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+		// @ ensures s.RawSrcAddr === before(s.RawSrcAddr)
+		// @ decreases
+		// @ outline(
+		// @ unfold acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
 		csum += uint32(s.RawSrcAddr[i]) << 8
 		csum += uint32(s.RawSrcAddr[i+1])
+		// @ fold acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+		// @ )
 	}
-	// @ fold acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
-	// @ unfold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
-	// @ invariant acc(&s.RawDstAddr, def.ReadL20) && acc(s.RawDstAddr, def.ReadL20)
+	// @ ghost var rawDstAddrLen int = len(s.RawDstAddr)
+	// @ invariant acc(&s.RawDstAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+	// @ invariant len(s.RawDstAddr) == rawDstAddrLen
 	// @ invariant len(s.RawDstAddr) % 2 == 0
 	// @ invariant i % 2 == 0
 	// @ invariant 0 <= i && i <= len(s.RawDstAddr)
 	// @ decreases len(s.RawDstAddr) - i
 	for i := 0; i < len(s.RawDstAddr); i += 2 {
+		// @ preserves err == nil
+		// @ requires acc(&s.RawDstAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+		// @ requires 0 <= i && i < len(s.RawDstAddr) && i % 2 == 0 && len(s.RawDstAddr) % 2 == 0
+		// @ ensures acc(&s.RawDstAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+		// @ ensures s.RawDstAddr === before(s.RawDstAddr)
+		// @ decreases
+		// @ outline(
+		// @ unfold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
 		csum += uint32(s.RawDstAddr[i]) << 8
 		csum += uint32(s.RawDstAddr[i+1])
+		// @ fold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+		// @ )
 	}
-	// @ fold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
 	l := uint32(length)
 	csum += (l >> 16) + (l & 0xffff)
 	csum += uint32(protocol)
@@ -746,9 +784,10 @@ func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	return csum
 }
 
-// @ trusted
-// @ requires false
-func (s *SCION) foldChecksum(csum uint32) uint16 {
+// (VerifiedSCION) The following function terminates but Gobra can't
+// deduce that because of limited support of bitwise operations.
+// @ decreases _
+func (s *SCION) foldChecksum(csum uint32) (res uint16) {
 	for csum > 0xffff {
 		csum = (csum >> 16) + (csum & 0xffff)
 	}
