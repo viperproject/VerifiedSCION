@@ -83,7 +83,7 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	//@ slices.SplitByIndex_Bytes(data, 0, len(data), path.InfoLen, definitions.ReadL1)
 	//@ slices.Reslice_Bytes(data, 0, path.InfoLen, definitions.ReadL1)
 	if err := o.Info.DecodeFromBytes(data[:path.InfoLen]); err != nil {
-		// (VerifiedSCION) unreachable path
+		// @ definitions.Unreachable()
 		return err
 	}
 	//@ slices.Unslice_Bytes(data, 0, path.InfoLen, definitions.ReadL1)
@@ -91,7 +91,7 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, definitions.ReadL1)
 	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, definitions.ReadL1)
 	if err := o.FirstHop.DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
-		// (VerifiedSCION) unreachable path
+		// @ definitions.Unreachable()
 		return err
 	}
 	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, definitions.ReadL1)

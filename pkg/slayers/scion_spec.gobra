@@ -29,26 +29,30 @@ import (
 
 pred (s *SCION) NonInitPathPool() {
 	acc(&s.pathPool) &&
-	acc(&s.pathPoolRaw)
+	acc(&s.pathPoolRaw) &&
+	s.pathPool == nil &&
+	s.pathPoolRaw == nil
 }
 
 pred (s *SCION) InitPathPool() {
 	acc(&s.pathPool) &&
 	acc(&s.pathPoolRaw) &&
+	s.pathPool != nil &&
+	s.pathPoolRaw != nil &&
+	len(s.pathPool) == 4 &&
 	// entry per path type
 	// empty
 	acc(&s.pathPool[empty.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
-	// typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
+	typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
 	// onehop
 	acc(&s.pathPool[onehop.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
+	s.pathPool[onehop.PathType].NonInitMem() &&
 	// scion
 	acc(&s.pathPool[scion.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
+	s.pathPool[scion.PathType].NonInitMem() &&
 	// epic
 	acc(&s.pathPool[epic.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
+	s.pathPool[epic.PathType].NonInitMem() &&
 	// raw path
 	s.pathPoolRaw.NonInitMem()
 }
@@ -126,5 +130,36 @@ requires acc(s.Mem(ubuf), _)
 decreases
 pure
 func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) int {
-	return unfolding acc(s.Mem(ubuf), _) in (unfolding s.HeaderMem(ubuf[CmnHdrLen:]) in (2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)))
+	return unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in (2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)))
+}
+
+// Morally ghost
+requires acc(p)
+ensures  p.NonInitMem()
+ensures  r == p
+decreases
+func FoldOneHopMem(p *onehop.Path) (r *onehop.Path) {
+	fold p.NonInitMem()
+	return p
+}
+
+// Morally ghost
+requires acc(p)
+ensures  p.NonInitMem()
+ensures  r == p
+decreases
+func FoldRawMem(p *scion.Raw) (r *scion.Raw) {
+	fold p.Base.NonInitMem()
+	fold p.NonInitMem()
+	return p
+}
+
+// Morally ghost
+requires acc(p)
+ensures  p.NonInitMem()
+ensures  r == p
+decreases
+func FoldEpicMem(p *epic.Path) (r *epic.Path) {
+	fold p.NonInitMem()
+	return p
 }
