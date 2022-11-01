@@ -662,7 +662,7 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (uint16, erro
 	return folded, nil
 }
 
-// previous time: 14.14
+// previous time: 14.14 TODO: use valid length
 // @ requires acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
 // @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
 // @ requires acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
