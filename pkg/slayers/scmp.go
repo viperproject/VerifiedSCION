@@ -115,15 +115,15 @@ func (s *SCMP) NextLayerType() gopacket.LayerType {
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
 //@ requires b != nil
-//@ requires i.Mem()
+//@ requires s.Mem()
 //@ requires b.Mem(underlyingBuf)
 //@ ensures err == nil ==> underlyingBufRes != nil
-//@ ensures err == nil ==> i.Mem() && b.Mem(underlyingBufRes)
+//@ ensures err == nil ==> s.Mem() && b.Mem(underlyingBufRes)
 //@ ensures err != nil ==> b.Mem(underlyingBuf)
 //@ ensures err != nil ==> err.ErrorMem()
 //@ decreases
 func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
-	bytes, err/*@, underlyingBufRes@*/  := b.PrependBytes(4)
+	bytes, err/*@, underlyingBufRes@*/  := b.PrependBytes(4/*@, underlyingBuf@*/)
 	if err != nil {
 		return err/*@, underlyingBufRes @*/
 	}
@@ -133,19 +133,19 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 
 	if opts.ComputeChecksums {
 		if s.scn == nil {
-			return serrors.New("can not calculate checksum without SCION header")
+			return serrors.New("can not calculate checksum without SCION header")/*@, underlyingBufRes @*/
 		}
 		// zero out checksum bytes
 		bytes[2] = 0
 		bytes[3] = 0
-		s.Checksum, err = s.scn.computeChecksum(b.Bytes(), uint8(L4SCMP))
+		s.Checksum, err = s.scn.computeChecksum(b.Bytes(/*@underlyingBuf@*/), uint8(L4SCMP))
 		if err != nil {
-			return err
+			return err/*@, underlyingBufRes @*/
 		}
 
 	}
 	binary.BigEndian.PutUint16(bytes[2:], s.Checksum)
-	return nil
+	return nil/*@, underlyingBufRes @*/
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
