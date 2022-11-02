@@ -90,10 +90,15 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.IsValid() &&
 	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.IsValid() &&
 	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
-	// required to deal incompletness in Gobra
+	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	s.AddrHdrLen(nil, true) == s.addrHdrLenAbstractionLeak() &&
 	s.AddrHdrLen(nil, true) <= len(ubuf) &&
-	// end of "required to deal incompletness in Gobra"
+	0 < s.DstAddrType.Length() && 0 < s.SrcAddrType.Length() &&
+	0 < 2*addr.IABytes &&
+	2*addr.IABytes < 2*addr.IABytes+s.DstAddrType.Length() &&
+	2*addr.IABytes+s.DstAddrType.Length() < 2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length() &&
+	2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length() <= len(ubuf) &&
+	// end of helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
 	// RawDstAddr & RawSrcAddr locations. The memory for these is kept
 	// outside of HeaderMem, in the Mem predicate where we just keep
