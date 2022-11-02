@@ -29,26 +29,30 @@ import (
 
 pred (s *SCION) NonInitPathPool() {
 	acc(&s.pathPool) &&
-	acc(&s.pathPoolRaw)
+	acc(&s.pathPoolRaw) &&
+	s.pathPool == nil &&
+	s.pathPoolRaw == nil
 }
 
 pred (s *SCION) InitPathPool() {
 	acc(&s.pathPool) &&
 	acc(&s.pathPoolRaw) &&
+	s.pathPool != nil &&
+	s.pathPoolRaw != nil &&
+	len(s.pathPool) == 4 &&
 	// entry per path type
 	// empty
 	acc(&s.pathPool[empty.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
-	// typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
+	typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
 	// onehop
 	acc(&s.pathPool[onehop.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
+	s.pathPool[onehop.PathType].NonInitMem() &&
 	// scion
 	acc(&s.pathPool[scion.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
+	s.pathPool[scion.PathType].NonInitMem() &&
 	// epic
 	acc(&s.pathPool[epic.PathType]) &&
-	s.pathPool[empty.PathType].NonInitMem() &&
+	s.pathPool[epic.PathType].NonInitMem() &&
 	// raw path
 	s.pathPoolRaw.NonInitMem()
 }
@@ -64,9 +68,7 @@ pred (s *SCION) NonInitMem() {
 	acc(&s.PayloadLen) &&
 	acc(&s.PathType) &&
 	acc(&s.DstAddrType) &&
-	acc(&s.DstAddrLen) &&
 	acc(&s.SrcAddrType) &&
-	acc(&s.SrcAddrLen) &&
 	acc(&s.DstIA) &&
 	acc(&s.SrcIA) &&
 	acc(&s.RawDstAddr) &&
@@ -85,46 +87,72 @@ pred (s *SCION) Mem(ubuf []byte) {
 pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.DstIA) &&
 	acc(&s.SrcIA) &&
-	// these fields are not parsed during DecodeAddrHd
-	acc(&s.DstAddrLen, def.ReadL1) && s.DstAddrLen.isValid() &&
-	acc(&s.SrcAddrLen, def.ReadL1) && s.SrcAddrLen.isValid() &&
+	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.IsValid() &&
+	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.IsValid() &&
+	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
+	acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
 	// RawDstAddr & RawSrcAddr locations. The memory for these is kept
 	// outside of HeaderMem, in the Mem predicate where we just keep
 	// access to the entire slice.
-	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
-	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
-	0 < addrBytes(s.DstAddrLen) && 0 < addrBytes(s.SrcAddrLen) &&
-	0 < 2*addr.IABytes && 2*addr.IABytes < 2*addr.IABytes+addrBytes(s.DstAddrLen) &&
-	2*addr.IABytes+addrBytes(s.DstAddrLen) < 2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen) &&
-	2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen) <= len(ubuf) &&
-	// end of helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
-	acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
-	s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+addrBytes(s.DstAddrLen)] &&
-	s.RawSrcAddr === ubuf[2*addr.IABytes+addrBytes(s.DstAddrLen):2*addr.IABytes+addrBytes(s.DstAddrLen)+addrBytes(s.SrcAddrLen)]
+	s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+s.DstAddrType.Length()] &&
+	s.RawSrcAddr === ubuf[2*addr.IABytes+s.DstAddrType.Length():2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()]
 }
 
 ghost
 pure
 decreases
-func (a AddrLen) isValid() bool {
-	// takes advantage of the knowledge (non-modular) that all definitions are contiguous
-	// to introduce an interval instead of an enequality:
-	// 		return a == AddrLen4 || a == AddrLen8 || a == AddrLen12 || a == AddrLen16
-	return AddrLen4 <= a && a <= AddrLen16
+func (a AddrType) IsValid() (res bool) {
+	return a == T4Ip || a == T4Svc || a == T16Ip
 }
 
 ghost
-requires acc(&s.DstAddrLen, _) && acc(&s.SrcAddrLen, _)
+requires acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
+requires s.DstAddrType.IsValid() && s.SrcAddrType.IsValid()
 decreases
 pure
 func (s *SCION) addrHdrLenAbstractionLeak() int {
-	return 2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)
+	return 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
+/*
+
+TODO: adapt to the new version of SCION upstream
 ghost
 requires acc(s.Mem(ubuf), _)
 decreases
 pure
 func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) int {
 	return unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in (2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)))
+}
+*/
+
+// Morally ghost
+requires acc(p)
+ensures  p.NonInitMem()
+ensures  r == p
+decreases
+func FoldOneHopMem(p *onehop.Path) (r *onehop.Path) {
+	fold p.NonInitMem()
+	return p
+}
+
+// Morally ghost
+requires acc(p)
+ensures  p.NonInitMem()
+ensures  r == p
+decreases
+func FoldRawMem(p *scion.Raw) (r *scion.Raw) {
+	fold p.Base.NonInitMem()
+	fold p.NonInitMem()
+	return p
+}
+
+// Morally ghost
+requires acc(p)
+ensures  p.NonInitMem()
+ensures  r == p
+decreases
+func FoldEpicMem(p *epic.Path) (r *epic.Path) {
+	fold p.NonInitMem()
+	return p
 }

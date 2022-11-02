@@ -75,7 +75,7 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	// directly.
 	//@ unfold acc(s.Base.Mem(), 1/2)
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
-		// (VerifiedSCION) branch ensured to be unreachable
+		// @ def.Unreachable()
 		return err
 	}
 	//@ fold acc(s.Base.Mem(), 1/2)
@@ -134,7 +134,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ unfold acc(s.Base.Mem(), def.ReadL1)
 	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
-		// (VerifiedSCION) branch ensured to be unreachable
+		// @ def.Unreachable()
 		return nil, err
 	}
 	//@ fold acc(s.Base.Mem(), def.ReadL1)
