@@ -90,6 +90,10 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.IsValid() &&
 	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.IsValid() &&
 	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
+	// required to deal incompletness in Gobra
+	s.AddrHdrLen(nil, true) == s.addrHdrLenAbstractionLeak() &&
+	s.AddrHdrLen(nil, true) <= len(ubuf) &&
+	// end of "required to deal incompletness in Gobra"
 	acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
 	// RawDstAddr & RawSrcAddr locations. The memory for these is kept
 	// outside of HeaderMem, in the Mem predicate where we just keep
@@ -114,17 +118,13 @@ func (s *SCION) addrHdrLenAbstractionLeak() int {
 	return 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
-/*
-
-TODO: adapt to the new version of SCION upstream
 ghost
-requires acc(s.Mem(ubuf), _)
+requires acc(s.Mem(ubuf), def.ReadL20)
 decreases
 pure
 func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) int {
-	return unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in (2*addr.IABytes + addrBytes(s.DstAddrLen) + addrBytes(s.SrcAddrLen)))
+	return unfolding acc(s.Mem(ubuf), def.ReadL20) in (unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL20) in (2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()))
 }
-*/
 
 // Morally ghost
 requires acc(p)

@@ -551,12 +551,9 @@ func packAddr(hostAddr net.Addr) (AddrType, []byte, error) {
 // @ pure
 // @ requires insideSlayers ==> (acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20))
 // @ requires insideSlayers ==> s.DstAddrType.IsValid() && s.SrcAddrType.IsValid()
-//
-//	 TODO:
-//		requires !insideSlayers ==> acc(s.Mem(ubuf), _)
-//		ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak(ubuf)
-//
+// @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
 // @ ensures  insideSlayers  ==> res == s.addrHdrLenAbstractionLeak()
+// @ ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak(ubuf)
 // @ decreases
 // @ trusted
 func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
