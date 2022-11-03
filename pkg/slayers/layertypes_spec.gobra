@@ -18,7 +18,7 @@
 // +gobra
 
 // To be added on a per-need basis
-initEnsures LayerTypeSCION == 1
+initEnsures LayerTypeSCION == 1000
 package slayers
 
 import (
