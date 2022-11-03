@@ -448,10 +448,6 @@ func scionNextLayerTypeAfterE2E(t L4ProtocolType) gopacket.LayerType {
 
 // scionNextLayerTypeL4 returns the layer type for the given layer-4 protocol identifier.
 // Does not handle extension header classes.
-// @ requires acc(&LayerTypeSCIONUDP, _)
-// @ requires acc(&LayerTypeSCMP, _)
-// @ requires acc(&layerTypeBFD, _)
-// @ requires acc(&gopacket.LayerTypePayload, _)
 // @ decreases
 func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 	switch t {
