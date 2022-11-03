@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package slayers
 
 import (
@@ -44,6 +46,8 @@ type tlvOption struct {
 	OptAlign     [2]uint8 // Xn+Y = [2]uint8{X, Y}
 }
 
+// @ trusted
+// @ requires false
 func (o *tlvOption) length(fixLengths bool) int {
 	if o.OptType == OptTypePad1 {
 		return 1
@@ -54,6 +58,8 @@ func (o *tlvOption) length(fixLengths bool) int {
 	return int(o.OptDataLen) + 2
 }
 
+// @ trusted
+// @ requires false
 func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 	dryrun := data == nil
 	if o.OptType == OptTypePad1 {
@@ -72,6 +78,8 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 	}
 }
 
+// @ trusted
+// @ requires false
 func decodeTLVOption(data []byte) (*tlvOption, error) {
 	o := &tlvOption{OptType: OptionType(data[0])}
 	if OptionType(data[0]) == OptTypePad1 {
@@ -91,6 +99,8 @@ func decodeTLVOption(data []byte) (*tlvOption, error) {
 }
 
 // serializeTLVOptionPadding adds an appropriate PadN extension.
+// @ trusted
+// @ requires false
 func serializeTLVOptionPadding(data []byte, padLength int) {
 	if padLength <= 0 {
 		return
@@ -111,6 +121,8 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 // serializeTLVOptions serializes options to buf and returns the length of the serialized options.
 // Passing in a nil-buffer will treat the serialization as a dryrun that can be used to calculate
 // the length needed for the buffer.
+// @ trusted
+// @ requires false
 func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool) int {
 	dryrun := buf == nil
 	// length start at 2 since the padding needs to be calculated taking the first 2 bytes of the
@@ -162,6 +174,8 @@ type extnBase struct {
 	ActualLen int
 }
 
+// @ trusted
+// @ requires false
 func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions, tlvOptions []*tlvOption) error {
 
@@ -188,6 +202,8 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func decodeExtnBase(data []byte, df gopacket.DecodeFeedback) (extnBase, error) {
 	e := extnBase{}
 	if len(data) < 2 {
@@ -216,23 +232,33 @@ type HopByHopExtn struct {
 	Options []*HopByHopOption
 }
 
+// @ trusted
+// @ requires false
 func (h *HopByHopExtn) LayerType() gopacket.LayerType {
 	return LayerTypeHopByHopExtn
 }
 
+// @ trusted
+// @ requires false
 func (h *HopByHopExtn) CanDecode() gopacket.LayerClass {
 	return LayerClassHopByHopExtn
 }
 
+// @ trusted
+// @ requires false
 func (h *HopByHopExtn) NextLayerType() gopacket.LayerType {
 	return scionNextLayerTypeAfterHBH(h.NextHdr)
 }
 
+// @ trusted
+// @ requires false
 func (h *HopByHopExtn) LayerPayload() []byte {
 	return h.Payload
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer.
+// @ trusted
+// @ requires false
 func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -249,6 +275,8 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer.
+// @ trusted
+// @ requires false
 func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	var err error
 	h.extnBase, err = decodeExtnBase(data, df)
@@ -270,6 +298,8 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func decodeHopByHopExtn(data []byte, p gopacket.PacketBuilder) error {
 	h := &HopByHopExtn{}
 	err := h.DecodeFromBytes(data, p)
@@ -280,6 +310,8 @@ func decodeHopByHopExtn(data []byte, p gopacket.PacketBuilder) error {
 	return p.NextDecoder(scionNextLayerTypeAfterHBH(h.NextHdr))
 }
 
+// @ trusted
+// @ requires false
 func checkHopByHopExtnNextHdr(t L4ProtocolType) error {
 	if t == HopByHopClass {
 		return serrors.New("hbh extension must not be repeated")
@@ -296,23 +328,33 @@ type EndToEndExtn struct {
 	Options []*EndToEndOption
 }
 
+// @ trusted
+// @ requires false
 func (e *EndToEndExtn) LayerType() gopacket.LayerType {
 	return LayerTypeEndToEndExtn
 }
 
+// @ trusted
+// @ requires false
 func (e *EndToEndExtn) CanDecode() gopacket.LayerClass {
 	return LayerClassEndToEndExtn
 }
 
+// @ trusted
+// @ requires false
 func (e *EndToEndExtn) NextLayerType() gopacket.LayerType {
 	return scionNextLayerTypeAfterE2E(e.NextHdr)
 }
 
+// @ trusted
+// @ requires false
 func (e *EndToEndExtn) LayerPayload() []byte {
 	return e.Payload
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer.
+// @ trusted
+// @ requires false
 func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	var err error
 	e.extnBase, err = decodeExtnBase(data, df)
@@ -334,6 +376,8 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func decodeEndToEndExtn(data []byte, p gopacket.PacketBuilder) error {
 	e := &EndToEndExtn{}
 	err := e.DecodeFromBytes(data, p)
@@ -344,6 +388,8 @@ func decodeEndToEndExtn(data []byte, p gopacket.PacketBuilder) error {
 	return p.NextDecoder(scionNextLayerTypeAfterE2E(e.NextHdr))
 }
 
+// @ trusted
+// @ requires false
 func checkEndToEndExtnNextHdr(t L4ProtocolType) error {
 	if t == HopByHopClass {
 		return serrors.New("e2e extension must not come before the HBH extension")
@@ -354,6 +400,8 @@ func checkEndToEndExtnNextHdr(t L4ProtocolType) error {
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer
+// @ trusted
+// @ requires false
 func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -371,6 +419,8 @@ func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 // FindOption returns the first option entry of the given type if any exists,
 // or ErrOptionNotFound otherwise.
+// @ trusted
+// @ requires false
 func (e *EndToEndExtn) FindOption(typ OptionType) (*EndToEndOption, error) {
 	for _, o := range e.Options {
 		if o.OptType == typ {
@@ -389,6 +439,8 @@ type HopByHopExtnSkipper struct {
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer
+// @ trusted
+// @ requires false
 func (s *HopByHopExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	var err error
 	s.extnBase, err = decodeExtnBase(data, df)
@@ -401,14 +453,20 @@ func (s *HopByHopExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFee
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func (e *HopByHopExtnSkipper) LayerType() gopacket.LayerType {
 	return LayerTypeHopByHopExtn
 }
 
+// @ trusted
+// @ requires false
 func (s *HopByHopExtnSkipper) CanDecode() gopacket.LayerClass {
 	return LayerClassHopByHopExtn
 }
 
+// @ trusted
+// @ requires false
 func (h *HopByHopExtnSkipper) NextLayerType() gopacket.LayerType {
 	return scionNextLayerTypeAfterHBH(h.NextHdr)
 }
@@ -422,6 +480,8 @@ type EndToEndExtnSkipper struct {
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer
+// @ trusted
+// @ requires false
 func (s *EndToEndExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
 	var err error
 	s.extnBase, err = decodeExtnBase(data, df)
@@ -434,14 +494,20 @@ func (s *EndToEndExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFee
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func (e *EndToEndExtnSkipper) LayerType() gopacket.LayerType {
 	return LayerTypeEndToEndExtn
 }
 
+// @ trusted
+// @ requires false
 func (s *EndToEndExtnSkipper) CanDecode() gopacket.LayerClass {
 	return LayerClassEndToEndExtn
 }
 
+// @ trusted
+// @ requires false
 func (e *EndToEndExtnSkipper) NextLayerType() gopacket.LayerType {
 	return scionNextLayerTypeAfterE2E(e.NextHdr)
 }
