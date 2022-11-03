@@ -18,7 +18,13 @@ package slayers
 
 pred (s *SCMP) Mem() {
 	// TODO: add scion Mem
-	acc(&LayerTypeSCMP, _) && acc(&LayerClassSCMP, _) && acc(&s.TypeCode) && acc(&s.Checksum) && s.BaseLayer.Mem() && acc(&s.scn) && acc(s.scn) && s.scn.NonInitMem()
+	acc(&LayerTypeSCMP, _) &&
+	acc(&LayerClassSCMP, _) &&
+	acc(&s.TypeCode) &&
+	acc(&s.Checksum) &&
+	s.BaseLayer.Mem() &&
+	acc(&s.scn) &&
+	(s != nil ==> s.scn.ChecksumMem())
 }
 
 pred (s *SCMP) LayerMem() {
