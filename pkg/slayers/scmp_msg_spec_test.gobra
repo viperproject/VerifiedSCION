@@ -7,7 +7,6 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-requires acc(&LayerTypeSCMPExternalInterfaceDown, _)
 func external_interface_down_test() {
 	b := &SCMPExternalInterfaceDown{}
 	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
@@ -24,7 +23,6 @@ func external_interface_down_test() {
 	fold b.Mem()
 }
 
-requires acc(&LayerTypeSCMPInternalConnectivityDown, _)
 func internal_connectivity_down_test() {
 	b := &SCMPInternalConnectivityDown{}
 	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
@@ -41,7 +39,6 @@ func internal_connectivity_down_test() {
 	fold b.Mem()
 }
 
-requires acc(&LayerTypeSCMPEcho, _)
 func echo_test() {
 	b := &SCMPEcho{}
 	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
@@ -58,7 +55,6 @@ func echo_test() {
 	fold b.Mem()
 }
 
-requires acc(&LayerTypeSCMPParameterProblem, _)
 func parameter_problem_test() {
 	b := &SCMPParameterProblem{}
 	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
@@ -75,7 +71,6 @@ func parameter_problem_test() {
 	fold b.Mem()
 }
 
-requires acc(&LayerTypeSCMPTraceroute, _)
 func traceroute_test() {
 	b := &SCMPTraceroute{}
 	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
@@ -92,7 +87,6 @@ func traceroute_test() {
 	fold b.Mem()
 }
 
-requires acc(&LayerTypeSCMPDestinationUnreachable, _)
 func destination_unreachable_test() {
 	b := &SCMPDestinationUnreachable{}
 	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
@@ -109,7 +103,6 @@ func destination_unreachable_test() {
 	fold b.Mem()
 }
 
-requires acc(&LayerTypeSCMPPacketTooBig, _)
 func packet_too_big_test() {
 	b := &SCMPPacketTooBig{}
 	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))

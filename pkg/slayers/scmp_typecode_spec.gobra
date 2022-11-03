@@ -18,7 +18,7 @@ package slayers
 
 pred SCMPTypeCodeMem() {
 	acc(scmpTypeCodeInfo) &&
-	forall i SCMPType :: { i in domain(scmpTypeCodeInfo) } i in domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
+	forall i SCMPType :: i in domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
 }
 
 requires acc(scmpTypeCodeInfo)

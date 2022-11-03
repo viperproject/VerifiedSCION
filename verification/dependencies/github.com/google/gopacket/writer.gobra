@@ -31,7 +31,6 @@ type SerializeOptions struct {
 	ComputeChecksums bool
 }
 
-// TODO: maybe change the spec of this buffer in the future to provide more information about the contents currently stored in the buffer.
 type SerializeBuffer interface {
 	pred Mem(ghost buf []byte)
 
@@ -92,5 +91,4 @@ func NewSerializeBuffer() (res SerializeBuffer, ghost buf []byte)
 preserves w.Mem(buf)
 preserves forall i int :: 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem()
 decreases
-// TODO ask (joao) if making this the first argument is a "good idea".
 func SerializeLayers(ghost buf []byte, w SerializeBuffer, opts SerializeOptions, layers ...SerializableLayer) error

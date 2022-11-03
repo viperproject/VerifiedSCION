@@ -183,7 +183,6 @@ func OverrideLayerType(num int, meta LayerTypeMetadata) (res LayerType) {
 	return LayerType(num)
 }
 
-requires acc(LayerTypesMem(), _)
 preserves c.Mem()
 preserves slices.AbsSlice_Bytes(data, 0, len(data))
 ensures err != nil ==> err.ErrorMem()
