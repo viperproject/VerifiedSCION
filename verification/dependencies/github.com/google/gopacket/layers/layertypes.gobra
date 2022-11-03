@@ -7,7 +7,7 @@
 // +gobra
 
 initEnsures gopacket.LayerTypesMem()
-initEnsures acc(&LayerTypeBFD, _) && LayerTypeBFD == gopacket.LayerType(122)
+initEnsures LayerTypeBFD == gopacket.LayerType(122)
 initEnsures gopacket.Registered(LayerTypeBFD)
 initEnsures forall t gopacket.LayerType :: (0 <= t && t <= 3) ==> gopacket.Registered(t)
 // The full postcondition cannot be proven because of performance reasons.

@@ -33,8 +33,8 @@ import (
 const maxPathType = 256
 
 var (
-	registeredPaths [maxPathType]metadata
-	strictDecoding  bool = true
+	registeredPaths/*@@@*/ [maxPathType]metadata
+	strictDecoding/*@@@*/ bool = true
 )
 
 func init() {

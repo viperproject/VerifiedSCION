@@ -38,9 +38,9 @@ type Layer interface {
 
 type Payload []byte
 
-pred (p Payload) LayerMem() { acc(p) && acc(&LayerTypePayload, _) }
+pred (p Payload) LayerMem() { acc(p) }
 pred (p Payload) PayloadMem() { true }
-pred (p Payload) Mem() { acc(p) && acc(&LayerTypePayload, _) }
+pred (p Payload) Mem() { acc(p) }
 
 requires acc(p.Mem(), _)
 decreases
