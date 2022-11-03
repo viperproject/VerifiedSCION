@@ -17,26 +17,8 @@
 
 // +gobra
 
-// (VerifiedSCION) The following should be uncommented on a per need basis
-initEnsures acc(&LayerTypeSCION)
-initEnsures acc(&LayerClassSCION)
-// initEnsures acc(&LayerTypeSCIONUDP)
-// initEnsures acc(&LayerClassSCIONUDP)
-initEnsures acc(&LayerTypeSCMP)
-initEnsures acc(&LayerClassSCMP)
-// initEnsures acc(&LayerTypeHopByHopExtn)
-// initEnsures acc(&LayerClassHopByHopExtn)
-// initEnsures acc(&LayerTypeEndToEndExtn)
-// initEnsures acc(&LayerClassEndToEndExtn)
-// initEnsures acc(&LayerTypeSCMPExternalInterfaceDown)
-// initEnsures acc(&LayerTypeSCMPInternalConnectivityDown)
-// initEnsures acc(&LayerTypeSCMPParameterProblem)
-// initEnsures acc(&LayerTypeSCMPDestinationUnreachable)
-// initEnsures acc(&LayerTypeSCMPPacketTooBig)
-// initEnsures acc(&LayerTypeSCMPEcho)
-// initEnsures acc(&LayerTypeSCMPTraceroute)
-// initEnsures acc(&EndpointUDPPort)
-// initEnsures acc(&layerTypeBFD)
+// To be added on a per-need basis
+initEnsures LayerTypeSCION == 1000
 package slayers
 
 import (
