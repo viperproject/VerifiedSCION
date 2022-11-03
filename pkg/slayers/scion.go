@@ -163,20 +163,19 @@ type SCION struct {
 	pathPoolRaw path.Path
 }
 
-// @ trusted
-// @ requires false
-func (s *SCION) LayerType() gopacket.LayerType {
+// @ ensures res === LayerTypeSCION
+// @ decreases
+func (s *SCION) LayerType() (res gopacket.LayerType) {
 	return LayerTypeSCION
 }
 
-// @ trusted
-// @ requires false
-func (s *SCION) CanDecode() gopacket.LayerClass {
+// @ ensures res === LayerClassSCION
+// @ decreases
+func (s *SCION) CanDecode() (res gopacket.LayerClass) {
 	return LayerClassSCION
 }
 
 // @ trusted
-// @ requires false
 func (s *SCION) NextLayerType() gopacket.LayerType {
 	return scionNextLayerType(s.NextHdr)
 }
@@ -401,8 +400,7 @@ func decodeSCION(data []byte, pb gopacket.PacketBuilder) error {
 
 // scionNextLayerType returns the layer type for the given protocol identifier
 // in a SCION base header.
-// @ trusted
-// @ requires false
+// @ decreases
 func scionNextLayerType(t L4ProtocolType) gopacket.LayerType {
 	switch t {
 	case HopByHopClass:
@@ -417,8 +415,7 @@ func scionNextLayerType(t L4ProtocolType) gopacket.LayerType {
 // scionNextLayerTypeAfterHBH returns the layer type for the given protocol
 // identifier in a SCION hop-by-hop extension, excluding (repeated) hop-by-hop
 // extensions.
-// @ trusted
-// @ requires false
+// @ decreases
 func scionNextLayerTypeAfterHBH(t L4ProtocolType) gopacket.LayerType {
 	switch t {
 	case HopByHopClass:
@@ -433,8 +430,7 @@ func scionNextLayerTypeAfterHBH(t L4ProtocolType) gopacket.LayerType {
 // scionNextLayerTypeAfterE2E returns the layer type for the given protocol
 // identifier, in a SCION end-to-end extension, excluding (repeated or
 // misordered) hop-by-hop extensions or (repeated) end-to-end extensions.
-// @ trusted
-// @ requires false
+// @ decreases
 func scionNextLayerTypeAfterE2E(t L4ProtocolType) gopacket.LayerType {
 	switch t {
 	case HopByHopClass:
