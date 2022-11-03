@@ -77,9 +77,9 @@ const (
 
 // Length returns the length of this AddrType value.
 // (VerifiedSCION) Assumed, as Gobra cannot reason about the result of bitwise operations.
-// @ trusted
 // @ pure
-// @ requires tl.IsValid()
+// @ requires tl.Has3Bits()
+// @ ensures  res == LineLen * (1 + (b.BitAnd3(int(tl))))
 // @ ensures  tl == T4Ip  ==> res == LineLen
 // @ ensures  tl == T4Svc ==> res == LineLen
 // @ ensures  tl == T16Ip ==> res == 4*LineLen
@@ -237,8 +237,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // to the state defined by the passed-in bytes. Slices in the SCION layer reference the passed-in
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
-// @ trusted
-// @ requires  false
 // @ requires  s.NonInitMem() && s.InitPathPool()
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df != nil && df.Mem()
@@ -269,7 +267,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ preserves acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) && acc(&s.PathType)
 	// @ preserves acc(&s.DstAddrType) && acc(&s.SrcAddrType)
 	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
-	// @ ensures s.DstAddrType.IsValid() && s.SrcAddrType.IsValid()
+	// @ ensures s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 	// @ decreases
 	// @ outline(
 	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
@@ -279,10 +277,11 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
 	s.PathType = path.Type(data[8])
 	s.DstAddrType = AddrType(data[9] >> 4 & 0x7)
+	// @ assert int(s.DstAddrType) == b.BitAnd7(int(data[9] >> 4))
 	s.SrcAddrType = AddrType(data[9] & 0x7)
+	// @ assert int(s.SrcAddrType) == b.BitAnd7(int(data[9]))
 	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
 	// @ )
-	// @ assert false
 	// Decode address header.
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
 	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
@@ -295,12 +294,19 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	}
 	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
 	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
+	// @ preserves acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
+	// @ preserves acc(&addrHdrLen)
+	// @ requires  s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
+	// @ ensures   0 < addrHdrLen
+	// @ decreases
+	// @ outline (
 	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
 	//                 is set to nil. As such, we pick the easiest possible value as a placeholder.
-	// @ assert false
-	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
+	addrHdrLen /*@@@*/ := s.AddrHdrLen( /*@ nil, true @*/ )
+	// @ )
 	offset := CmnHdrLen + addrHdrLen
 
+	// @ assert false
 	// Decode path header.
 	var err error
 	hdrBytes := int(s.HdrLen) * LineLen
@@ -542,7 +548,7 @@ func packAddr(hostAddr net.Addr) (AddrType, []byte, error) {
 //
 // @ pure
 // @ requires insideSlayers ==> (acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20))
-// @ requires insideSlayers ==> s.DstAddrType.IsValid() && s.SrcAddrType.IsValid()
+// @ requires insideSlayers ==> s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 // @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
 // @ ensures  insideSlayers  ==> res == s.addrHdrLenAbstractionLeak()
 // @ ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak(ubuf)
@@ -580,8 +586,8 @@ func (s *SCION) SerializeAddrHdr(buf []byte) error {
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
 // @ requires  acc(&s.SrcIA) && acc(&s.DstIA)
-// @ requires  acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.IsValid()
-// @ requires  acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.IsValid()
+// @ requires  acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.Has3Bits()
+// @ requires  acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.Has3Bits()
 // @ requires  acc(&s.RawSrcAddr) && acc(&s.RawDstAddr)
 // @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
 // @ ensures   res == nil ==> s.HeaderMem(data)

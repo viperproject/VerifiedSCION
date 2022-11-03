@@ -87,8 +87,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.DstIA) &&
 	acc(&s.SrcIA) &&
-	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.IsValid() &&
-	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.IsValid() &&
+	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.Has3Bits() &&
+	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.Has3Bits() &&
 	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
 	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	s.AddrHdrLen(nil, true) == s.addrHdrLenAbstractionLeak() &&
@@ -110,13 +110,13 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 ghost
 pure
 decreases
-func (a AddrType) IsValid() (res bool) {
-	return a == T4Ip || a == T4Svc || a == T16Ip
+func (a AddrType) Has3Bits() (res bool) {
+	return 0 <= a && a <= 7
 }
 
 ghost
 requires acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
-requires s.DstAddrType.IsValid() && s.SrcAddrType.IsValid()
+requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 decreases
 pure
 func (s *SCION) addrHdrLenAbstractionLeak() int {
