@@ -20,7 +20,7 @@
 
 // +gobra
 
-initEnsures acc(&AlreadyRunning, _) && AlreadyRunning.ErrorMem()
+initEnsures AlreadyRunning != nil && AlreadyRunning.ErrorMem()
 package bfd
 
 import (

@@ -20,8 +20,8 @@ import (
 	"net"
 )
 
-pred nonNilErr(e *error) {
-	acc(e, _) && isComparable(*e) && *e != nil && (*e).ErrorMem()
+pred nonNilErr(e error) {
+	isComparable(e) && e != nil && e.ErrorMem()
 }
 
 pred MutexInvariant(d *DataPlane) {
