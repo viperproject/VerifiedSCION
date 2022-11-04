@@ -135,7 +135,6 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// @ requires b != nil
 	// @ preserves acc(&s.TypeCode)
 	// @ preserves b.Mem(underlyingBufRes)
-	// @ ensures &s.TypeCode == before(&s.TypeCode)
 	// @ decreases
 	// @ outline (
 	// @ b.ExchangePred(underlyingBufRes)
