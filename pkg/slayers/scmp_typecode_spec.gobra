@@ -17,8 +17,10 @@
 package slayers
 
 pred SCMPTypeCodeMem() {
+	// We don't use a trigger here since triggers of the form scmpTypeCodeInfo[i].codes would generate a ternary expression
+	// The default trigger generated is: { (i_V0 in domain((getMap(scmpTypeCodeInfo_e8d3837_G().underlyingMapField): Map[Int,Tuple2[Int, Ref]]))) }
 	acc(scmpTypeCodeInfo) &&
-	forall i SCMPType :: { i in domain(scmpTypeCodeInfo) } i in domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
+	forall i SCMPType :: i in domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
 }
 
 requires acc(scmpTypeCodeInfo)
