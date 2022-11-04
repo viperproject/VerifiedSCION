@@ -24,6 +24,7 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
+	//@ def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 const scmpRawInterfaceLen = 8
@@ -48,15 +49,13 @@ type SCMPExternalInterfaceDown struct {
 }
 
 // LayerType returns LayerTypeSCMPExternalInterfaceDown
-//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPExternalInterfaceDown) LayerType() gopacket.LayerType {
-	return /*@ unfolding acc(i.Mem(), _) in @*/ LayerTypeSCMPExternalInterfaceDown
+	return LayerTypeSCMPExternalInterfaceDown
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
 //@ pure
 func (i *SCMPExternalInterfaceDown) NextLayerType() gopacket.LayerType {
@@ -106,7 +105,7 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 	//@ outline (
 	//@ slices.SplitByIndex_Bytes(data, addr.IABytes, len(data), addr.IABytes+scmpRawInterfaceLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+scmpRawInterfaceLen][i]
+	//@ assert forall i int :: { &data[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+scmpRawInterfaceLen][i]
 	i.IfID = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
 	//@ fold slices.AbsSlice_Bytes(data, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
 	//@ )
@@ -123,7 +122,7 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 	//@ unfold slices.AbsSlice_Bytes(data, 0, addr.IABytes+scmpRawInterfaceLen)
 	//@ unfold slices.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: { data[offset:] } 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: { &data[offset:][i] } 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
@@ -185,7 +184,7 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, addr.IABytes, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
+	//@ assert forall i int :: { &buf[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.IfID)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, addr.IABytes, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
@@ -195,9 +194,6 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 	return nil/*@, underlyingBufRes@*/
 }
 
-//@ requires acc(&LayerTypeSCMPExternalInterfaceDown, _)
-//@ requires acc(gopacket.LayerTypesMem(), _)
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
 //@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
@@ -214,8 +210,9 @@ func decodeSCMPExternalInterfaceDown(data []byte, pb gopacket.PacketBuilder) (er
 		return err
 	}
 	pb.AddLayer(s)
-	//@ fold gopacket.LayerTypePayload.Mem()
-	return pb.NextDecoder(gopacket.LayerTypePayload)
+	verScionTmp := gopacket.LayerTypePayload
+	//@ fold verScionTmp.Mem()
+	return pb.NextDecoder(verScionTmp)
 }
 
 // SCMPInternalConnectivityDown indicates the AS internal connection between 2
@@ -245,15 +242,13 @@ type SCMPInternalConnectivityDown struct {
 }
 
 // LayerType returns LayerTypeSCMPInternalConnectivityDown.
-//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPInternalConnectivityDown) LayerType() gopacket.LayerType {
-	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPInternalConnectivityDown
+	return LayerTypeSCMPInternalConnectivityDown
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
 //@ pure
 func (*SCMPInternalConnectivityDown) NextLayerType() gopacket.LayerType {
@@ -303,7 +298,7 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 	//@ outline (
 	//@ slices.SplitByIndex_Bytes(data, addr.IABytes, len(data), addr.IABytes+scmpRawInterfaceLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+scmpRawInterfaceLen][i]
+	//@ assert forall i int :: { &data[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+scmpRawInterfaceLen][i]
 	i.Ingress = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
 	//@ fold slices.AbsSlice_Bytes(data, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
 	//@ )
@@ -318,7 +313,7 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 	//@ outline (
 	//@ slices.SplitByIndex_Bytes(data, addr.IABytes+scmpRawInterfaceLen, len(data), addr.IABytes+2*scmpRawInterfaceLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
-	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+scmpRawInterfaceLen][i]
+	//@ assert forall i int :: { &data[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+scmpRawInterfaceLen][i]
 	i.Egress = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
 	//@ fold slices.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
 	//@ )
@@ -337,13 +332,13 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 	//@ unfold slices.AbsSlice_Bytes(data, 0, addr.IABytes+2*scmpRawInterfaceLen)
 	//@ unfold slices.AbsSlice_Bytes(data, addr.IABytes+2*scmpRawInterfaceLen, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
-	//@ assert forall l int :: offset <= l && l < len(data) ==> acc(&data[l])
+	//@ assert forall i int :: { &data[offset:][i] } 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall l int :: { &data[l] } offset <= l && l < len(data) ==> acc(&data[l])
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	//@ fold i.BaseLayer.Mem()
@@ -399,7 +394,7 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes, writePerm)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, addr.IABytes, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
+	//@ assert forall i int :: { &buf[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.Ingress)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, addr.IABytes, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
@@ -419,7 +414,7 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), addr.IABytes+scmpRawInterfaceLen, writePerm)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, addr.IABytes+scmpRawInterfaceLen, len(underlyingBufRes), addr.IABytes+2*scmpRawInterfaceLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
-	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
+	//@ assert forall i int :: { &buf[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.Egress)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, addr.IABytes+scmpRawInterfaceLen, len(underlyingBufRes), addr.IABytes+2*scmpRawInterfaceLen, writePerm)
@@ -429,9 +424,6 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 	return nil/*@, underlyingBufRes@*/
 }
 
-//@ requires acc(&LayerTypeSCMPInternalConnectivityDown, _)
-//@ requires acc(gopacket.LayerTypesMem(), _)
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
 //@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
@@ -447,11 +439,9 @@ func decodeSCMPInternalConnectivityDown(data []byte, pb gopacket.PacketBuilder) 
 		return err
 	}
 	pb.AddLayer(s)
-	// (VerifiedSCION): The following line needs a small refactor with a temporary variable
-	//return pb.NextDecoder(s.NextLayerType())
-	next := s.NextLayerType()
-	//@ fold next.Mem()
-	return pb.NextDecoder(next)
+	verScionTmp := s.NextLayerType()
+	//@ fold verScionTmp.Mem()
+	return pb.NextDecoder(verScionTmp)
 }
 
 // SCMPEcho represents the structure of a ping.
@@ -469,15 +459,13 @@ type SCMPEcho struct {
 }
 
 // LayerType returns LayerTypeSCMPEcho.
-//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPEcho) LayerType() gopacket.LayerType {
-	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPEcho
+	return LayerTypeSCMPEcho
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
 //@ pure
 func (*SCMPEcho) NextLayerType() gopacket.LayerType {
@@ -525,7 +513,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	//@ outline (
 	//@ slices.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data, 2, 4)
-	//@ assert forall i int :: 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
+	//@ assert forall i int :: { &data[offset:def.add(offset, 2)][i] } 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
 	i.SeqNumber = binary.BigEndian.Uint16(data[offset : offset+2])
 	//@ fold slices.AbsSlice_Bytes(data, 2, 4)
 	//@ )
@@ -542,7 +530,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	//@ unfold slices.AbsSlice_Bytes(data, 0, 4)
 	//@ unfold slices.AbsSlice_Bytes(data, 4, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall i int :: { &data[offset:][i] } 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
@@ -603,7 +591,7 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
-	//@ assert forall i int :: 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
+	//@ assert forall i int :: { &buf[offset:def.add(offset, 2)][i] } 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
 	binary.BigEndian.PutUint16(buf[offset:offset+2], i.SeqNumber)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
@@ -613,9 +601,6 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	return nil/*@, underlyingBufRes@*/
 }
 
-//@ requires acc(&LayerTypeSCMPEcho, _)
-//@ requires acc(gopacket.LayerTypesMem(), _)
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
 //@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
@@ -631,11 +616,9 @@ func decodeSCMPEcho(data []byte, pb gopacket.PacketBuilder) (err error) {
 		return err
 	}
 	pb.AddLayer(s)
-	// (VerifiedSCION): The following line needs a small refactor with a temporary variable
-	//return pb.NextDecoder(s.NextLayerType())
-	next := s.NextLayerType()
-	//@ fold next.Mem()
-	return pb.NextDecoder(next)
+	verScionTmp := s.NextLayerType()
+	//@ fold verScionTmp.Mem()
+	return pb.NextDecoder(verScionTmp)
 }
 
 // SCMPParameterProblem represents the structure of a parameter problem message.
@@ -645,20 +628,17 @@ func decodeSCMPEcho(data []byte, pb gopacket.PacketBuilder) (err error) {
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type SCMPParameterProblem struct {
 	BaseLayer
-	
 	Pointer uint16
 }
 
 // LayerType returns LayerTypeSCMPParameterProblem.
-//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPParameterProblem) LayerType() gopacket.LayerType {
-	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPParameterProblem
+	return LayerTypeSCMPParameterProblem
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
 //@ pure
 func (*SCMPParameterProblem) NextLayerType() gopacket.LayerType {
@@ -689,7 +669,7 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 	//@ slices.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
 	//@ slices.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data, 2, 4)
-	//@ assert forall i int :: 0 <= i && i < 2 ==> &data[2:4][i] == &data[2 + i]
+	//@ assert forall i int :: { &data[2:4][i] } 0 <= i && i < 2 ==> &data[2:4][i] == &data[2 + i]
 	i.Pointer = binary.BigEndian.Uint16(data[2:4])
 	//@ fold slices.AbsSlice_Bytes(data, 2, 4)
 	//@ slices.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
@@ -702,12 +682,12 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 	//@ outline (
 	//@ unfold slices.AbsSlice_Bytes(data, 0, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: 0 <= i && i < len(data) ==> &data[4:][i] == &data[4 + i]
+	//@ assert forall i int :: { &data[4:][i] } 0 <= i && i < len(data) ==> &data[4:][i] == &data[4 + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:4],
 		Payload:  data[4:],
 	}
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[4+l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[4+l] == &i.Payload[l]
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	//@ fold i.BaseLayer.Mem()
@@ -758,7 +738,7 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
-	//@ assert forall i int :: 0 <= i && i < 2 ==> &buf[2:4][i] == &buf[2 + i]
+	//@ assert forall i int :: { &buf[2:4][i] } 0 <= i && i < 2 ==> &buf[2:4][i] == &buf[2 + i]
 	binary.BigEndian.PutUint16(buf[2:4], i.Pointer)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
@@ -768,9 +748,6 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 	return nil/*@, underlyingBufRes@*/
 }
 
-//@ requires acc(&LayerTypeSCMPParameterProblem, _)
-//@ requires acc(gopacket.LayerTypesMem(), _)
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
 //@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
@@ -786,11 +763,9 @@ func decodeSCMPParameterProblem(data []byte, pb gopacket.PacketBuilder) (err err
 		return err
 	}
 	pb.AddLayer(s)
-	// (VerifiedSCION): The following line needs a small refactor with a temporary variable
-	//return pb.NextDecoder(s.NextLayerType())
-	next := s.NextLayerType()
-	//@ fold next.Mem()
-	return pb.NextDecoder(next)
+	verScionTmp := s.NextLayerType()
+	//@ fold verScionTmp.Mem()
+	return pb.NextDecoder(verScionTmp)
 }
 
 // SCMPTraceroute represents the structure of a traceroute.
@@ -818,15 +793,13 @@ type SCMPTraceroute struct {
 }
 
 // LayerType returns LayerTypeSCMPTraceroute.
-//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPTraceroute) LayerType() gopacket.LayerType {
-	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPTraceroute
+	return LayerTypeSCMPTraceroute
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
 //@ pure
 func (*SCMPTraceroute) NextLayerType() gopacket.LayerType {
@@ -874,7 +847,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	//@ outline (
 	//@ slices.SplitByIndex_Bytes(data, 2, len(data), 2+2, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data, 2, 2+2)
-	//@ assert forall i int :: 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
+	//@ assert forall i int :: { &data[offset:def.add(offset, 2)][i] } 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
 	i.Sequence = binary.BigEndian.Uint16(data[offset : offset+2])
 	//@ fold slices.AbsSlice_Bytes(data, 2, 2+2)
 	//@ )
@@ -889,7 +862,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	//@ outline (
 	//@ slices.SplitByIndex_Bytes(data, 2+2, len(data), 2+2+addr.IABytes, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes)
-	//@ assert forall i int :: 0 <= i && i < addr.IABytes ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
+	//@ assert forall i int :: { &data[offset:def.add(offset, addr.IABytes)][i] } 0 <= i && i < addr.IABytes ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
 	i.IA = addr.IA(binary.BigEndian.Uint64(data[offset : offset+addr.IABytes]))
 	//@ fold slices.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes)
 	//@ )
@@ -904,7 +877,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	//@ outline (
 	//@ slices.SplitByIndex_Bytes(data, 2+2+addr.IABytes, len(data), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
-	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
+	//@ assert forall i int :: { &data[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
 	i.Interface = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
 	//@ fold slices.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	//@ )
@@ -925,13 +898,13 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	//@ unfold slices.AbsSlice_Bytes(data, 0, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	//@ unfold slices.AbsSlice_Bytes(data, 2+2+addr.IABytes+scmpRawInterfaceLen, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: 0 <= i && i < len(data)-offset ==> &data[offset:][i] == &data[offset + i]
-	//@ assert forall l int :: offset <= l && l < len(data) ==> acc(&data[l])
+	//@ assert forall i int :: { &data[offset:][i] } 0 <= i && i < len(data)-offset ==> &data[offset:][i] == &data[offset + i]
+	//@ assert forall l int :: { &data[l] } offset <= l && l < len(data) ==> acc(&data[l])
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	//@ fold i.BaseLayer.Mem()
@@ -987,7 +960,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2, 2+2)
-	//@ assert forall i int :: 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
+	//@ assert forall i int :: { &buf[offset:def.add(offset, 2)][i] } 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
 	binary.BigEndian.PutUint16(buf[offset:offset+2], i.Sequence)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2, 2+2)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
@@ -1007,7 +980,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2, writePerm)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
-	//@ assert forall i int :: 0 <= i && i < addr.IABytes ==> &buf[offset:offset+addr.IABytes][i] == &buf[offset + i]
+	//@ assert forall i int :: { &buf[offset:def.add(offset, addr.IABytes)][i] } 0 <= i && i < addr.IABytes ==> &buf[offset:offset+addr.IABytes][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+addr.IABytes], uint64(i.IA))
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
@@ -1027,7 +1000,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
-	//@ assert forall i int :: 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
+	//@ assert forall i int :: { &buf[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.Interface)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
@@ -1037,9 +1010,6 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	return nil/*@, underlyingBufRes@*/
 }
 
-//@ requires acc(&LayerTypeSCMPTraceroute, _)
-//@ requires acc(gopacket.LayerTypesMem(), _)
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
 //@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
@@ -1055,11 +1025,9 @@ func decodeSCMPTraceroute(data []byte, pb gopacket.PacketBuilder) (err error) {
 		return err
 	}
 	pb.AddLayer(s)
-	// (VerifiedSCION): The following line needs a small refactor with a temporary variable
-	//return pb.NextDecoder(s.NextLayerType())
-	next := s.NextLayerType()
-	//@ fold next.Mem()
-	return pb.NextDecoder(next)
+	verScionTmp := s.NextLayerType()
+	//@ fold verScionTmp.Mem()
+	return pb.NextDecoder(verScionTmp)
 }
 
 // SCMPDestinationUnreachable represents the structure of a destination
@@ -1075,15 +1043,13 @@ type SCMPDestinationUnreachable struct {
 }
 
 // LayerType returns LayerTypeSCMPTraceroute.
-//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPDestinationUnreachable) LayerType() gopacket.LayerType {
-	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPDestinationUnreachable
+	return LayerTypeSCMPDestinationUnreachable
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
 //@ pure
 func (*SCMPDestinationUnreachable) NextLayerType() gopacket.LayerType {
@@ -1107,17 +1073,16 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 		return serrors.New("buffer too short", "min", minLength, "actual", size)
 	}
 	//@ unfold i.Mem()
-	//@ assert acc(&LayerTypeSCMPDestinationUnreachable, _)
 	//@ defer fold i.Mem()
 	//@ unfold i.BaseLayer.Mem()
 	//@ defer fold i.BaseLayer.Mem()
 	//@ unfold slices.AbsSlice_Bytes(data, 0, len(data))
-	//@ assert forall i int :: 0 <= i && i < len(data) - minLength ==> &data[minLength:][i] == &data[minLength + i]
+	//@ assert forall i int :: { &data[minLength:][i] } 0 <= i && i < len(data) - minLength ==> &data[minLength:][i] == &data[minLength + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:minLength],
 		Payload:  data[minLength:],
 	}
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[minLength:][l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[minLength:][l] == &i.Payload[l]
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	return nil
@@ -1150,9 +1115,6 @@ func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opt
 	return nil/*@, underlyingBufRes@*/
 }
 
-//@ requires acc(&LayerTypeSCMPDestinationUnreachable, _)
-//@ requires acc(gopacket.LayerTypesMem(), _)
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
 //@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
@@ -1168,11 +1130,9 @@ func decodeSCMPDestinationUnreachable(data []byte, pb gopacket.PacketBuilder) (e
 		return err
 	}
 	pb.AddLayer(s)
-	// (VerifiedSCION): The following line needs a small refactor with a temporary variable
-	//return pb.NextDecoder(s.NextLayerType())
-	next := s.NextLayerType()
-	//@ fold next.Mem()
-	return pb.NextDecoder(next)
+	verScionTmp := s.NextLayerType()
+	//@ fold verScionTmp.Mem()
+	return pb.NextDecoder(verScionTmp)
 }
 
 // SCMPPacketTooBig represents the structure of a packet too big message.
@@ -1187,15 +1147,13 @@ type SCMPPacketTooBig struct {
 }
 
 // LayerType returns LayerTypeSCMPParameterProblem.
-//@ requires acc(i.Mem(), _)
 //@ decreases
 //@ pure
 func (i *SCMPPacketTooBig) LayerType() gopacket.LayerType {
-	return /*@ unfolding acc(i.Mem(), _) in @*/LayerTypeSCMPPacketTooBig
+	return LayerTypeSCMPPacketTooBig
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ decreases
 //@ pure
 func (*SCMPPacketTooBig) NextLayerType() gopacket.LayerType {
@@ -1226,7 +1184,7 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 	//@ slices.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
 	//@ slices.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(data, 2, 4)
-	//@ assert forall i int :: 0 <= i && i < 2 ==> &data[2:4][i] == &data[2 + i]
+	//@ assert forall i int :: { &data[2:4][i] } 0 <= i && i < 2 ==> &data[2:4][i] == &data[2 + i]
 	i.MTU = binary.BigEndian.Uint16(data[2:4])
 	//@ fold slices.AbsSlice_Bytes(data, 2, 4)
 	//@ slices.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
@@ -1239,12 +1197,12 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 	//@ outline (
 	//@ unfold slices.AbsSlice_Bytes(data, 0, len(data))
 	//@ unfold i.BaseLayer.Mem()
-	//@ assert forall i int :: 0 <= i && i < len(data) ==> &data[4:][i] == &data[4 + i]
+	//@ assert forall i int :: { &data[4:][i] } 0 <= i && i < len(data) ==> &data[4:][i] == &data[4 + i]
 	i.BaseLayer = BaseLayer{
 		Contents: data[:4],
 		Payload:  data[4:],
 	}
-	//@ assert forall l int :: 0 <= l && l < len(i.Payload) ==> &data[4+l] == &i.Payload[l]
+	//@ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[4+l] == &i.Payload[l]
 	//@ fold slices.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	//@ fold slices.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	//@ fold i.BaseLayer.Mem()
@@ -1295,7 +1253,7 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	//@ slices.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
-	//@ assert forall i int :: 0 <= i && i < 2 ==> &buf[2:4][i] == &buf[2 + i]
+	//@ assert forall i int :: { &buf[2:4][i] } 0 <= i && i < 2 ==> &buf[2:4][i] == &buf[2 + i]
 	binary.BigEndian.PutUint16(buf[2:4], i.MTU)
 	//@ fold slices.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	//@ slices.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
@@ -1305,9 +1263,6 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 	return nil/*@, underlyingBufRes@*/
 }
 
-//@ requires acc(&LayerTypeSCMPPacketTooBig, _)
-//@ requires acc(gopacket.LayerTypesMem(), _)
-//@ requires acc(&gopacket.LayerTypePayload, _)
 //@ requires pb != nil
 //@ preserves pb.Mem()
 //@ requires slices.AbsSlice_Bytes(data, 0, len(data))
@@ -1323,9 +1278,7 @@ func decodeSCMPPacketTooBig(data []byte, pb gopacket.PacketBuilder) (err error) 
 		return err
 	}
 	pb.AddLayer(s)
-	// (VerifiedSCION): The following line needs a small refactor with a temporary variable
-	//return pb.NextDecoder(s.NextLayerType())
-	next := s.NextLayerType()
-	//@ fold next.Mem()
-	return pb.NextDecoder(next)
+	verScionTmp := s.NextLayerType()
+	//@ fold verScionTmp.Mem()
+	return pb.NextDecoder(verScionTmp)
 }
