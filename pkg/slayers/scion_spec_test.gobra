@@ -16,8 +16,23 @@
 
 package slayers
 
+import sl "github.com/scionproto/scion/verification/utils/slices"
+
 func foldNonInitMem_Test() {
 	s@ := SCION{}
 	fold s.NonInitMem()
 	fold s.NonInitPathPool()
+}
+
+func baseLayer_Tests() {
+	p := []byte{1,2,3}
+	d := []byte{1,2,3,4}
+	fold sl.AbsSlice_Bytes(p, 0, len(p))
+	fold sl.AbsSlice_Bytes(d, 0, len(d))
+	b := &BaseLayer{d, p}
+	fold b.Mem()
+	unfold b.Mem()
+	fold b.LayerMem()
+	unfold b.LayerMem()
+	fold b.PayloadMem()
 }
