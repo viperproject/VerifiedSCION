@@ -33,19 +33,17 @@ import (
 const maxPathType = 256
 
 var (
-	registeredPaths [maxPathType]metadata
-	strictDecoding  bool = true
+	registeredPaths/*@@@*/ [maxPathType]metadata
+	strictDecoding/*@@@*/ bool = true
 )
 
-// Ghost initialization code to establish the PathPackageMem predicate.
-/*@
 func init() {
-	assert acc(&registeredPaths)
-	assert acc(&strictDecoding)
-	assert forall t Type :: 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
-	fold PathPackageMem()
+	// (VerifiedSCION) ghost initialization code to establish the PathPackageMem predicate.
+	// @ assert acc(&registeredPaths)
+	// @ assert acc(&strictDecoding)
+	// @ assert forall t Type :: 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
+	// @ fold PathPackageMem()
 }
-@*/
 
 // Type indicates the type of the path contained in the SCION header.
 type Type uint8

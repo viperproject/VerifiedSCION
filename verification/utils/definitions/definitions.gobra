@@ -55,3 +55,12 @@ const (
 	ReadL19
 	ReadL20
 )
+
+ghost
+requires false
+func Unreachable()
+
+ensures res == x+y
+decreases _
+pure
+func add(x, y int) (res int)

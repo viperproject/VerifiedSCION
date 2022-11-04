@@ -136,7 +136,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ slices.Reslice_Bytes(b, 0, MetaLen, writePerm)
 	//@ unfold s.Base.Mem()
 	if err := s.PathMeta.SerializeTo(b[:MetaLen]); err != nil {
-		// (VerifiedSCION) unreachable branch
+		// @ definitions.Unreachable()
 		return err
 	}
 	//@ fold s.Base.Mem()
