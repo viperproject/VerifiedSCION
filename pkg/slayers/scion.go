@@ -103,14 +103,36 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
-// @ trusted
-// @ requires false
-func (b *BaseLayer) LayerContents() []byte { return b.Contents }
+//@ requires b.LayerMem()
+//@ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
+//@ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+//@ decreases
+func (b *BaseLayer) LayerContents() (res []byte) {
+	//@ unfold b.LayerMem()
+	//@ unfold sl.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
+	res = b.Contents
+	//@ fold sl.AbsSlice_Bytes(res, 0, len(res))
+	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
+	//@   fold b.LayerMem()
+	//@ }
+	return res
+}
 
 // LayerPayload returns the bytes contained within the packet layer.
-// @ trusted
-// @ requires false
-func (b *BaseLayer) LayerPayload() []byte { return b.Payload }
+//@ requires b.PayloadMem()
+//@ ensures sl.AbsSlice_Bytes(res, 0, len(res))
+//@ ensures sl.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+//@ decreases
+func (b *BaseLayer) LayerPayload() (res []byte) {
+	//@ unfold b.PayloadMem()
+	//@ unfold sl.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+	res = b.Payload
+	//@ fold sl.AbsSlice_Bytes(res, 0, len(res))
+	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
+	//@   fold b.PayloadMem()
+	//@ }
+	return res
+}
 
 // SCION is the header of a SCION packet.
 type SCION struct {
