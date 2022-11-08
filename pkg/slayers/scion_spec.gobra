@@ -108,6 +108,14 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	s.RawSrcAddr === ubuf[2*addr.IABytes+s.DstAddrType.Length():2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()]
 }
 
+pred (s *SCION) ChecksumMem() {
+	acc(&s.RawSrcAddr) && acc(&s.RawDstAddr) &&
+	len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0 &&
+	acc(&s.SrcIA) && acc(&s.DstIA) &&
+	slices.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
+	slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
+}
+
 pred (b *BaseLayer) Mem() {
 	acc(b) &&
 	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&

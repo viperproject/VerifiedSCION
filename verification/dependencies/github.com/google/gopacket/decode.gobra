@@ -34,33 +34,33 @@ type PacketBuilder interface {
 	DecodeFeedback
 	pred Mem()
 
-	requires l.Mem()
+	preserves l.Mem()
 	preserves Mem()
 	decreases
 	AddLayer(l Layer)
 
 	preserves Mem()
-	requires l.Mem()
+	preserves l.Mem()
 	decreases
 	SetLinkLayer(l LinkLayer)
 
 	preserves Mem()
-	requires l.Mem()
+	preserves l.Mem()
 	decreases
 	SetNetworkLayer(l NetworkLayer)
 
 	preserves Mem()
-	requires l.Mem()
+	preserves l.Mem()
 	decreases
 	SetTransportLayer(l TransportLayer)
 
 	preserves Mem()
-	requires l.Mem()
+	preserves l.Mem()
 	decreases
 	SetApplicationLayer(l ApplicationLayer)
 
 	preserves Mem()
-	requires l.Mem()
+	preserves l.Mem()
 	decreases
 	SetErrorLayer(l ErrorLayer)
 
