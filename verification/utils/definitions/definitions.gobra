@@ -16,6 +16,8 @@
 
 package definitions
 
+// This function does not correctly capture what we need
+/*
 ensures typeOf(v) == type[bool] ==> res
 ensures typeOf(v) == type[byte] ==> res
 ensures typeOf(v) == type[rune] ==> res
@@ -32,6 +34,7 @@ ensures typeOf(v) == type[uint64] ==> res
 ensures typeOf(v) == type[uintptr] ==> res
 ensures typeOf(v) == type[string] ==> res
 pure func IsOfPrimitiveType(v interface{}) (res bool)
+*/
 
 const (
 	ReadL1 perm = 1/(2 << iota)
