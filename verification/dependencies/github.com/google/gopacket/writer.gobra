@@ -16,7 +16,7 @@ type SerializableLayer interface {
 	requires Mem()
 	requires b != nil
 	requires b.Mem(buf)
-	ensures (err == nil) ==> (Mem() && b.Mem(bufRes))
+	ensures err == nil ==> (Mem() && b.Mem(bufRes))
 	decreases
 	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost buf []byte) (err error, ghost bufRes []byte)
 

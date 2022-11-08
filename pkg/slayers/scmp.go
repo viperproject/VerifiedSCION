@@ -262,7 +262,6 @@ func (s *SCMP) String() string {
 
 // SetNetworkLayerForChecksum tells this layer which network layer is wrapping it.
 // This is needed for computing the checksum when serializing,
-// TODO: verify this when SCION is a layer
 // @ trusted
 // @ requires false
 func (s *SCMP) SetNetworkLayerForChecksum(l gopacket.NetworkLayer) (err error) {
