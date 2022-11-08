@@ -280,9 +280,9 @@ func (s *SCMP) SetNetworkLayerForChecksum(l gopacket.NetworkLayer) (err error) {
 // @ requires pb != nil
 // @ preserves pb.Mem()
 // @ requires slices.AbsSlice_Bytes(data, 0, len(data))
-// @ ensures err != nil ==> err.ErrorMem()
+// @ ensures res != nil ==> res.ErrorMem()
 // @ decreases
-func decodeSCMP(data []byte, pb gopacket.PacketBuilder) (err error) {
+func decodeSCMP(data []byte, pb gopacket.PacketBuilder) (res error) {
 	scmp := &SCMP{}
 	// @ fold slices.AbsSlice_Bytes(scmp.Contents, 0, len(scmp.Contents))
 	// @ fold slices.AbsSlice_Bytes(scmp.Payload, 0, len(scmp.Payload))

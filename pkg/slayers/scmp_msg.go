@@ -197,9 +197,9 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 // @ requires pb != nil
 // @ preserves pb.Mem()
 // @ requires slices.AbsSlice_Bytes(data, 0, len(data))
-// @ ensures err != nil ==> err.ErrorMem()
+// @ ensures res != nil ==> res.ErrorMem()
 // @ decreases
-func decodeSCMPExternalInterfaceDown(data []byte, pb gopacket.PacketBuilder) (err error) {
+func decodeSCMPExternalInterfaceDown(data []byte, pb gopacket.PacketBuilder) (res error) {
 	s := &SCMPExternalInterfaceDown{}
 	// @ fold slices.AbsSlice_Bytes(s.Contents, 0, len(s.Contents))
 	// @ fold slices.AbsSlice_Bytes(s.Payload, 0, len(s.Payload))
