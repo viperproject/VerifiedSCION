@@ -103,10 +103,10 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
-//@ requires b.LayerMem()
-//@ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
-//@ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
-//@ decreases
+// @ requires b.LayerMem()
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+// @ decreases
 func (b *BaseLayer) LayerContents() (res []byte) {
 	//@ unfold b.LayerMem()
 	//@ unfold sl.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
@@ -119,10 +119,10 @@ func (b *BaseLayer) LayerContents() (res []byte) {
 }
 
 // LayerPayload returns the bytes contained within the packet layer.
-//@ requires b.PayloadMem()
-//@ ensures sl.AbsSlice_Bytes(res, 0, len(res))
-//@ ensures sl.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
-//@ decreases
+// @ requires b.PayloadMem()
+// @ ensures sl.AbsSlice_Bytes(res, 0, len(res))
+// @ ensures sl.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+// @ decreases
 func (b *BaseLayer) LayerPayload() (res []byte) {
 	//@ unfold b.PayloadMem()
 	//@ unfold sl.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
@@ -289,7 +289,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ preserves acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) && acc(&s.PathType)
 	// @ preserves acc(&s.DstAddrType) && acc(&s.SrcAddrType)
 	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
-	// @ ensures s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
+	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 	// @ decreases
 	// @ outline(
 	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
@@ -316,15 +316,15 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	}
 	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
 	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
-	// @ preserves acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
-	// @ preserves acc(&addrHdrLen)
+	// @ requires  acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
 	// @ requires  s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
+	// @ ensures   acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
 	// @ ensures   0 < addrHdrLen
 	// @ decreases
 	// @ outline (
 	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
 	//                 is set to nil. As such, we pick the easiest possible value as a placeholder.
-	addrHdrLen /*@@@*/ := s.AddrHdrLen( /*@ nil, true @*/ )
+	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
 	// @ )
 	offset := CmnHdrLen + addrHdrLen
 
