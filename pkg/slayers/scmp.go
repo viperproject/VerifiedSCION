@@ -65,33 +65,23 @@ type SCMP struct {
 }
 
 // LayerType returns LayerTypeSCMP.
-// @ requires acc(s.Mem(), _)
 // @ decreases
 // @ pure
 func (s *SCMP) LayerType() gopacket.LayerType {
-	return /*@ unfolding acc(s.Mem(), _) in @*/ LayerTypeSCMP
+	return LayerTypeSCMP
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
-// @ requires acc(s.Mem(), _)
 // @ decreases
 // @ pure
 func (s *SCMP) CanDecode() gopacket.LayerClass {
-	return /*@ unfolding acc(s.Mem(), _) in @*/ LayerClassSCMP
+	return LayerClassSCMP
 }
 
 // NextLayerType use the typecode to select the right next decoder.
 // If the SCMP type is unknown, the next layer is gopacket.LayerTypePayload.
 // NextLayerType returns the layer type contained by this DecodingLayer.
-// @ requires acc(&LayerTypeSCMPDestinationUnreachable, _)
-// @ requires acc(&LayerTypeSCMPPacketTooBig, _)
-// @ requires acc(&LayerTypeSCMPParameterProblem, _)
-// @ requires acc(&LayerTypeSCMPExternalInterfaceDown, _)
-// @ requires acc(&LayerTypeSCMPInternalConnectivityDown, _)
-// @ requires acc(&LayerTypeSCMPEcho, _)
-// @ requires acc(&LayerTypeSCMPTraceroute, _)
-// @ requires acc(&gopacket.LayerTypePayload, _)
-// @ requires acc(s.Mem(), def.ReadL20)
+// @ preserves acc(s.Mem(), def.ReadL20)
 // @ decreases
 func (s *SCMP) NextLayerType() gopacket.LayerType {
 	switch /*@unfolding acc(s.Mem(), def.ReadL20) in @*/s.TypeCode.Type() {
@@ -120,7 +110,6 @@ func (s *SCMP) NextLayerType() gopacket.LayerType {
 // @ requires b.Mem(underlyingBuf)
 // @ ensures err == nil ==> underlyingBufRes != nil
 // @ ensures err == nil ==> s.Mem() && b.Mem(underlyingBufRes)
-// @ ensures err != nil ==> b.Mem(underlyingBuf)
 // @ ensures err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
@@ -135,6 +124,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// @ requires b != nil
 	// @ preserves acc(&s.TypeCode)
 	// @ preserves b.Mem(underlyingBufRes)
+	// @ ensures underlyingBufRes === before(underlyingBufRes)
 	// @ decreases
 	// @ outline (
 	// @ b.ExchangePred(underlyingBufRes)
@@ -151,11 +141,6 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 
 	if opts.ComputeChecksums {
 		if s.scn == nil {
-			// @ assert acc(&LayerTypeSCMP, _) && acc(&LayerClassSCMP, _) && acc(&s.TypeCode)
-			// @ assert acc(&s.Checksum)
-			// @ assert s.BaseLayer.Mem()
-			// @ assert acc(&s.scn)
-			// @ assert (s != nil ==> s.scn.ChecksumMem())
 			// @ fold s.Mem()
 			return serrors.New("can not calculate checksum without SCION header")/*@, underlyingBufRes @*/
 		}
@@ -164,6 +149,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		// @ requires bytes === underlyingBufRes[:4]
 		// @ requires b != nil
 		// @ preserves b.Mem(underlyingBufRes)
+		// @ ensures underlyingBufRes === before(underlyingBufRes)
 		// @ decreases
 		// @ outline (
 		// @ b.ExchangePred(underlyingBufRes)
@@ -176,11 +162,12 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		// @ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 		// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 		// @ )
-		
+		verScionTmp := b.Bytes(/*@underlyingBufRes@*/)
 		// @ unfold s.scn.ChecksumMem()
-		s.Checksum, err = s.scn.computeChecksum(b.Bytes(/*@underlyingBufRes@*/), uint8(L4SCMP))
+		s.Checksum, err = s.scn.computeChecksum(verScionTmp, uint8(L4SCMP))
+		// @ fold s.scn.ChecksumMem()
+		// @ apply slices.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)) --* b.Mem(underlyingBufRes)
 		if err != nil {
-			// @ fold s.scn.ChecksumMem()
 			// @ fold s.Mem()
 			return err/*@, underlyingBufRes @*/
 		}
@@ -208,30 +195,77 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
-// @ trusted
-// @ requires false
-func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) error {
+// @ requires df != nil
+// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves df.Mem()
+// @ preserves s.Mem()
+// @ ensures res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures res != nil ==> res.ErrorMem()
+// @ decreases
+func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	if size := len(data); size < 4 {
 		df.SetTruncated()
 		return serrors.New("SCMP layer length is less then 4 bytes", "minimum", 4, "actual", size)
 	}
+	// @ unfold s.Mem()
+	// @ defer fold s.Mem()
+	// @ requires len(data) >= 4
+	// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+	// @ preserves acc(&s.TypeCode)
+	// @ ensures slices.AbsSlice_Bytes(data, 2, len(data))
+	// @ ensures slices.AbsSlice_Bytes(data, 0, 2)
+	// @ decreases
+	// @ outline (
+	// @ slices.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
+	// @ unfold slices.AbsSlice_Bytes(data, 0, 2)
 	s.TypeCode = CreateSCMPTypeCode(SCMPType(data[0]), SCMPCode(data[1]))
+	// @ fold slices.AbsSlice_Bytes(data, 0, 2)
+	// @ )
+	// @ requires len(data) >= 4
+	// @ requires slices.AbsSlice_Bytes(data, 0, 2)
+	// @ requires slices.AbsSlice_Bytes(data, 2, len(data))
+	// @ preserves acc(&s.Checksum)
+	// @ ensures slices.AbsSlice_Bytes(data, 0, len(data))
+	// @ decreases
+	// @ outline (
+	// @ slices.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
+	// @ unfold slices.AbsSlice_Bytes(data, 2, 4)
+	// @ assert forall i int :: { &data[2:4][i] } 0 <= i && i < 2 ==> &data[2 + i] == &data[2:4][i]
 	s.Checksum = binary.BigEndian.Uint16(data[2:4])
+	// @ fold slices.AbsSlice_Bytes(data, 2, 4)
+	// @ slices.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
+	// @ slices.CombineAtIndex_Bytes(data, 0, len(data), 4, writePerm)
+	// @ )
+	// @ requires len(data) >= 4
+	// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+	// @ preserves s.BaseLayer.Mem()
+	// @ decreases
+	// @ outline (
+	// @ unfold slices.AbsSlice_Bytes(data, 0, len(data))
+	// @ unfold s.BaseLayer.Mem()
+	// @ assert forall i int :: { &data[4:][i] } 0 <= i && i < len(data) ==> &data[4:][i] == &data[4 + i]
 	s.BaseLayer = BaseLayer{Contents: data[:4], Payload: data[4:]}
+	// @ assert forall l int :: { &s.Payload[l] } 0 <= l && l < len(s.Payload) ==> &data[4+l] == &s.Payload[l]
+	// @ fold slices.AbsSlice_Bytes(s.Contents, 0, len(s.Contents))
+	// @ fold slices.AbsSlice_Bytes(s.Payload, 0, len(s.Payload))
+	// @ fold s.BaseLayer.Mem()
+	// @ )
 	return nil
 }
 
-// @ trusted
-// @ requires false
+// @ requires s != nil
+// @ preserves acc(&s.TypeCode) && acc(&s.Checksum) && acc(&s.Payload) && acc(s.Payload)
+// @ decreases
 func (s *SCMP) String() string {
 	return fmt.Sprintf("%s(%d)\nPayload: %s", &s.TypeCode, s.Checksum, s.Payload)
 }
 
 // SetNetworkLayerForChecksum tells this layer which network layer is wrapping it.
 // This is needed for computing the checksum when serializing,
+// TODO: verify this when SCION is a layer
 // @ trusted
 // @ requires false
-func (s *SCMP) SetNetworkLayerForChecksum(l gopacket.NetworkLayer) error {
+func (s *SCMP) SetNetworkLayerForChecksum(l gopacket.NetworkLayer) (err error) {
 	if l == nil {
 		return serrors.New("cannot use nil layer type for scmp checksum network layer")
 	}
@@ -243,14 +277,24 @@ func (s *SCMP) SetNetworkLayerForChecksum(l gopacket.NetworkLayer) error {
 	return nil
 }
 
-// @ trusted
-// @ requires false
-func decodeSCMP(data []byte, pb gopacket.PacketBuilder) error {
+// @ requires pb != nil
+// @ preserves pb.Mem()
+// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures err != nil ==> err.ErrorMem()
+// @ decreases
+func decodeSCMP(data []byte, pb gopacket.PacketBuilder) (err error) {
 	scmp := &SCMP{}
+	// @ fold slices.AbsSlice_Bytes(scmp.Contents, 0, len(scmp.Contents))
+	// @ fold slices.AbsSlice_Bytes(scmp.Payload, 0, len(scmp.Payload))
+	// @ fold scmp.BaseLayer.Mem()
+	// @ assert scmp.scn == nil
+	// @ fold scmp.Mem()
 	err := scmp.DecodeFromBytes(data, pb)
 	if err != nil {
 		return err
 	}
 	pb.AddLayer(scmp)
-	return pb.NextDecoder(scmp.NextLayerType())
+	verScionTmp := scmp.NextLayerType()
+	// @ fold verScionTmp.Mem()
+	return pb.NextDecoder(verScionTmp)
 }
