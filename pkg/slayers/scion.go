@@ -328,15 +328,18 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ )
 	offset := CmnHdrLen + addrHdrLen
 
-	// @ assert false
+	// @ assert acc(&s.DstAddrType) && acc(&s.SrcAddrType)
+
 	// Decode path header.
 	var err error
 	hdrBytes := int(s.HdrLen) * LineLen
 	pathLen := hdrBytes - CmnHdrLen - addrHdrLen
 	if pathLen < 0 {
+		// @ fold s.NonInitMem()
 		return serrors.New("invalid header, negative pathLen",
 			"hdrBytes", hdrBytes, "addrHdrLen", addrHdrLen, "CmdHdrLen", CmnHdrLen)
 	}
+	// @ assert false
 	if minLen := offset + pathLen; len(data) < minLen {
 		df.SetTruncated()
 		return serrors.New("provided buffer is too small", "expected", minLen, "actual", len(data))
@@ -644,7 +647,6 @@ func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 	return nil
 }
 
-// TODO: use valid length
 // computeChecksum computes the checksum with the SCION pseudo header.
 // @ requires acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
 // @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
@@ -675,7 +677,6 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (res uint16, 
 	return folded, nil
 }
 
-// TODO: use valid length
 // @ requires acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
 // @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
 // @ requires acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
