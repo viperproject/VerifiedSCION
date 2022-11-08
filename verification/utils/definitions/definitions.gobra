@@ -16,23 +16,6 @@
 
 package definitions
 
-ensures typeOf(v) == type[bool] ==> res
-ensures typeOf(v) == type[byte] ==> res
-ensures typeOf(v) == type[rune] ==> res
-ensures typeOf(v) == type[int]  ==> res
-ensures typeOf(v) == type[int8] ==> res
-ensures typeOf(v) == type[int16] ==> res
-ensures typeOf(v) == type[int32] ==> res
-ensures typeOf(v) == type[int64] ==> res
-ensures typeOf(v) == type[uint] ==> res
-ensures typeOf(v) == type[uint8] ==> res
-ensures typeOf(v) == type[uint16] ==> res
-ensures typeOf(v) == type[uint32] ==> res
-ensures typeOf(v) == type[uint64] ==> res
-ensures typeOf(v) == type[uintptr] ==> res
-ensures typeOf(v) == type[string] ==> res
-pure func IsOfPrimitiveType(v interface{}) (res bool)
-
 const (
 	ReadL1 perm = 1/(2 << iota)
 	ReadL2
