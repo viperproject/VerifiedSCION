@@ -15,11 +15,3 @@
 // +gobra
 
 package definitions
-
-func IsOfPrimitiveType_test() {
-	var v interface{} = int(10)
-	assert IsOfPrimitiveType(v)
-	var x interface{} = struct{}{}
-	//:: ExpectedOutput(assert_error)
-	// assert IsOfPrimitiveType(x)
-}
