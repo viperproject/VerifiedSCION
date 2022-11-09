@@ -187,6 +187,7 @@ type SCION struct {
 
 // @ ensures res === LayerTypeSCION
 // @ decreases
+// @ pure
 func (s *SCION) LayerType() (res gopacket.LayerType) {
 	return LayerTypeSCION
 }

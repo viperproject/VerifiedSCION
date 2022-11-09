@@ -1,0 +1,26 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Copyright (c) 2011-2020 ETH Zurich.
+
+name: Check that code still compiles
+
+on:
+  push:
+    branches:
+    - master
+  pull_request: # run this workflow on every pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '1.19.1' # The Go version to download (if necessary) and use.
+    - name: Build router
+      run: |
+        cd router/cmd/router
+        go build main.go
