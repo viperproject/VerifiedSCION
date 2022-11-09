@@ -982,7 +982,6 @@ type macBuffers struct {
 	epicInput  []byte
 }
 
-
 // @ trusted
 // @ requires false
 func (p *scionPacketProcessor) packSCMP(scmpH *slayers.SCMP, scmpP gopacket.SerializableLayer,
@@ -1007,7 +1006,6 @@ func (p *scionPacketProcessor) packSCMP(scmpH *slayers.SCMP, scmpP gopacket.Seri
 	)
 	return processResult{OutPkt: rawSCMP}, err
 }
-
 
 // @ trusted
 // @ requires false
@@ -1688,7 +1686,6 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-
 // @ trusted
 // @ requires false
 func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.SerializableLayer,
@@ -1803,7 +1800,6 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	}
 	return p.buffer.Bytes(), scmpError{TypeCode: scmpH.TypeCode, Cause: cause}
 }
-
 
 // decodeLayers implements roughly the functionality of
 // gopacket.DecodingLayerParser, but customized to our use case with a "base"
