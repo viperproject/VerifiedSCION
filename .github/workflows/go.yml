@@ -22,5 +22,6 @@ jobs:
         go-version: '1.19.1' # The Go version to download (if necessary) and use.
     - name: Build router
       run: |
+        go mod tidy
         cd router/cmd/router
         go build -o bin router/cmd/router
