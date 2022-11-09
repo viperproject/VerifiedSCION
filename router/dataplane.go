@@ -950,10 +950,8 @@ type scionPacketProcessor struct {
 
 	// scionLayer is the SCION gopacket layer.
 	scionLayer slayers.SCION
-	/***** (VerifiedSCION) uncomment the following
 	hbhLayer   slayers.HopByHopExtnSkipper
 	e2eLayer   slayers.EndToEndExtnSkipper
-	******/
 	// last is the last parsed layer, i.e. either &scionLayer, &hbhLayer or &e2eLayer
 	lastLayer gopacket.DecodingLayer
 
