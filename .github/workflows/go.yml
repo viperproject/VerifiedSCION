@@ -20,4 +20,7 @@ jobs:
     - uses: actions/setup-go@v3
       with:
         go-version: '1.19.1' # The Go version to download (if necessary) and use.
-    - run: go build -o bin router/cmd/router
+    - name: Build router
+      run: |
+        ls -l
+        go build -o bin router/cmd/router
