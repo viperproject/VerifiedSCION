@@ -181,6 +181,7 @@ func (e scmpError) Error() string {
 }
 
 // SetIA sets the local IA for the dataplane.
+// @ trusted //TEST 4m13s
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.localIA, 1/2) && d.localIA.IsZero()
 // @ requires  !ia.IsZero()
@@ -251,6 +252,7 @@ func (d *DataPlane) SetKey(key []byte) error {
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
 // dataplane.
+// @ trusted //TEST 3m36s
 // @ requires  acc(&d.running,    1/2) && !d.running
 // @ requires  acc(&d.internal,   1/2) && d.internal == nil
 // @ requires  acc(&d.internalIP, 1/2)
@@ -283,6 +285,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // AddExternalInterface adds the inter AS connection for the given interface ID.
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
+// @ trusted //TEST 8m9s
 // @ requires  acc(&d.running,    1/2) && !d.running
 // @ requires  acc(&d.external,   1/2)
 // @ requires  d.external != nil ==> acc(d.external, 1/2)
@@ -319,6 +322,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 // AddNeighborIA adds the neighboring IA for a given interface ID. If an IA for
 // the given ID is already set, this method will return an error. This can only
 // be called on a yet running dataplane.
+// @ trusted //TEST 5m4s
 // @ requires  acc(&d.running,     1/2) && !d.running
 // @ requires  acc(&d.neighborIAs, 1/2)
 // @ requires  d.neighborIAs != nil ==> acc(d.neighborIAs, 1/2)
@@ -353,6 +357,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // AddLinkType adds the link type for a given interface ID. If a link type for
 // the given ID is already set, this method will return an error. This can only
 // be called on a not yet running dataplane.
+// @ trusted //TEST 4m8s
 // @ requires  acc(&d.running,   1/2) && !d.running
 // @ requires  acc(&d.linkTypes, 1/2)
 // @ requires  d.linkTypes != nil ==> acc(d.linkTypes, 1/2)
@@ -411,6 +416,7 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 // getInterfaceState checks if there is a bfd session for the input interfaceID and
 // returns InterfaceUp if the relevant bfdsession state is up, or if there is no BFD
 // session. Otherwise, it returns InterfaceDown.
+// @ trusted //TEST 8m56s
 // @ preserves acc(MutexInvariant!<d!>(), definitions.ReadL5)
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
 	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL5)
@@ -467,6 +473,7 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // AddSvc adds the address for the given service. This can be called multiple
 // times for the same service, with the address added to the list of addresses
 // that provide the service.
+// @ trusted //TEST 3m25s
 // @ requires  a != nil && acc(a.Mem(), definitions.ReadL10)
 // @ preserves acc(&d.svc, 1/2)
 // @ preserves d.mtx.LockP()
@@ -535,6 +542,7 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // AddNextHop sets the next hop address for the given interface ID. If the
 // interface ID already has an address associated this operation fails. This can
 // only be called on a not yet running dataplane.
+// @ trusted //TEST 7m47s
 // @ requires  acc(&d.running,          1/2) && !d.running
 // @ requires  acc(&d.internalNextHops, 1/2)
 // @ requires  d.internalNextHops != nil ==> acc(d.internalNextHops, 1/2)
@@ -1687,7 +1695,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ trusted
 // @ requires false
 func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.SerializableLayer,
-	cause error) ([]byte, error) {
+	cause error) (res []byte, err error) {
 
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
 	// back to rawPkt (quote).
@@ -1849,6 +1857,7 @@ type forwardingMetrics struct {
 	DroppedPacketsTotal prometheus.Counter
 }
 
+// @ trusted //TEST 2m39s
 // @ requires  acc(labels, _)
 // @ preserves acc(metrics.Mem(), definitions.ReadL20)
 // @ ensures   acc(res.InputBytesTotal.Mem(), _)
@@ -1875,6 +1884,7 @@ func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forw
 	return c
 }
 
+// @ trusted //TEST 2m12s
 // @ preserves acc(neighbors, definitions.ReadL20)
 // @ ensures   acc(res)
 // @ decreases
@@ -1898,6 +1908,7 @@ func interfaceToMetricLabels(id uint16, localIA addr.IA,
 	}
 }
 
+// @ trusted //TEST 2m18s
 // @ ensures acc(res)
 // @ decreases
 func serviceMetricLabels(localIA addr.IA, svc addr.HostSVC) (res prometheus.Labels) {
