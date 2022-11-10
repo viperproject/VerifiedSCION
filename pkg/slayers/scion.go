@@ -329,34 +329,44 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ )
 	offset := CmnHdrLen + addrHdrLen
 
-	// @ assert acc(&s.DstAddrType) && acc(&s.SrcAddrType)
-
 	// Decode path header.
 	var err error
 	hdrBytes := int(s.HdrLen) * LineLen
 	pathLen := hdrBytes - CmnHdrLen - addrHdrLen
 	if pathLen < 0 {
+		// @ unfold s.HeaderMem(data[CmnHdrLen:])
 		// @ fold s.NonInitMem()
 		return serrors.New("invalid header, negative pathLen",
 			"hdrBytes", hdrBytes, "addrHdrLen", addrHdrLen, "CmdHdrLen", CmnHdrLen)
 	}
-	// @ assert false
 	if minLen := offset + pathLen; len(data) < minLen {
 		df.SetTruncated()
+		// @ unfold s.HeaderMem(data[CmnHdrLen:])
+		// @ fold s.NonInitMem()
 		return serrors.New("provided buffer is too small", "expected", minLen, "actual", len(data))
 	}
 
 	s.Path, err = s.getPath(s.PathType)
 	if err != nil {
+		// @ def.Unreachable()
 		return err
 	}
-
+	// (VerifiedSCION) Gobra cannot currently prove this, even though it must hold as s.PathType is of type
+	//                 path.Type (defined as uint8)
+	// @ assume 0 <= s.PathType
+	// @ ghost if s.PathType == empty.PathType { fold s.Path.NonInitMem() }
+	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, writePerm)
 	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
 	if err != nil {
+		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
+		// @ unfold s.HeaderMem(data[CmnHdrLen:])
+		// @ fold s.NonInitMem()
 		return err
 	}
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
+
+	// @ fold s.Mem(data)
 
 	return nil
 }
@@ -388,11 +398,11 @@ func (s *SCION) RecyclePaths() {
 
 // getPath returns a new or recycled path for pathType
 // @ requires s.InitPathPool()
-// @ ensures  err == nil
+// @ ensures  res != nil && err == nil
 // @ ensures  pathType == 0 ==> (typeOf(res) == type[empty.Path] && s.InitPathPool())
-// @ ensures  pathType <  0 ==> (
+// @ ensures  0 < pathType  ==> (
 // @ 	res.NonInitMem() &&
-// @ 	(res.NonInitMem() --* s.InitPathPool()))
+// @ 	s.InitPathPoolExceptOne(pathType))
 // @ decreases
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
@@ -405,15 +415,17 @@ func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 	}
 	if int(pathType) < len(s.pathPool) {
 		tmp := s.pathPool[pathType]
-		// @ ghost if pathType != empty.PathType {
-		// @ 	package tmp.NonInitMem() --* s.InitPathPool() { fold s.InitPathPool() }
+		// @ ghost if 0 < pathType {
+		// @ 	fold   s.InitPathPoolExceptOne(pathType)
+		// @ 	assert tmp.NonInitMem()
 		// @ } else {
 		// @ 	fold s.InitPathPool()
 		// @ }
 		return tmp, nil
 	}
 	tmp := s.pathPoolRaw
-	// @ package tmp.NonInitMem() --* s.InitPathPool() { fold s.InitPathPool() }
+	// @ fold   s.InitPathPoolExceptOne(pathType)
+	// @ assert tmp.NonInitMem()
 	return tmp, nil
 }
 
@@ -620,7 +632,7 @@ func (s *SCION) SerializeAddrHdr(buf []byte) error {
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res != nil ==> (
 // @	acc(&s.SrcIA) && acc(&s.DstIA) &&
-// @ 	acc(&s.SrcAddrType, def.ReadL15) && acc(&s.DstAddrType, def.ReadL15) &&
+// @ 	acc(&s.SrcAddrType, def.ReadL1) && acc(&s.DstAddrType, def.ReadL1) &&
 // @ 	acc(&s.RawSrcAddr) && acc(&s.RawDstAddr))
 // @ decreases
 func (s *SCION) DecodeAddrHdr(data []byte) (res error) {

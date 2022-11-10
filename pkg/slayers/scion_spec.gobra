@@ -36,26 +36,65 @@ pred (s *SCION) NonInitPathPool() {
 }
 
 pred (s *SCION) InitPathPool() {
-	acc(&s.pathPool) &&
-	acc(&s.pathPoolRaw) &&
-	s.pathPool != nil &&
-	s.pathPoolRaw != nil &&
+	acc(&s.pathPool)     &&
+	acc(&s.pathPoolRaw)  &&
+	s.pathPool != nil    &&
 	len(s.pathPool) == 4 &&
 	// entry per path type
 	// empty
-	acc(&s.pathPool[empty.PathType]) &&
+	acc(&s.pathPool[empty.PathType])  &&
+	s.pathPool[empty.PathType] != nil &&
 	typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
 	// onehop
-	acc(&s.pathPool[onehop.PathType]) &&
+	acc(&s.pathPool[onehop.PathType])  &&
+	s.pathPool[onehop.PathType] != nil &&
+	typeOf(s.pathPool[onehop.PathType]) == type[*onehop.Path] &&
 	s.pathPool[onehop.PathType].NonInitMem() &&
 	// scion
-	acc(&s.pathPool[scion.PathType]) &&
+	acc(&s.pathPool[scion.PathType])  &&
+	s.pathPool[scion.PathType] != nil &&
+	typeOf(s.pathPool[scion.PathType]) == type[*scion.Raw] &&
 	s.pathPool[scion.PathType].NonInitMem() &&
 	// epic
-	acc(&s.pathPool[epic.PathType]) &&
+	acc(&s.pathPool[epic.PathType])  &&
+	s.pathPool[epic.PathType] != nil &&
+	typeOf(s.pathPool[epic.PathType]) == type[*epic.Path] &&
 	s.pathPool[epic.PathType].NonInitMem() &&
 	// raw path
+	s.pathPoolRaw != nil &&
 	s.pathPoolRaw.NonInitMem()
+}
+
+// Captures the same obligations as InitPathPool. Initially, I tried using a magic wand
+// but they are a lot harder to use then just this predicate.
+pred (s *SCION) InitPathPoolExceptOne(pathType path.Type) {
+	acc(&s.pathPool)     &&
+	acc(&s.pathPoolRaw)  &&
+	s.pathPool != nil    &&
+	len(s.pathPool) == 4 &&
+	// entry per path type
+	// empty
+    (acc(&s.pathPool[empty.PathType]) &&
+    s.pathPool[empty.PathType] != nil &&
+    typeOf(s.pathPool[empty.PathType]) == type[empty.Path]) &&
+	// onehop
+    acc(&s.pathPool[onehop.PathType])  &&
+    s.pathPool[onehop.PathType] != nil &&
+    typeOf(s.pathPool[onehop.PathType]) == type[*onehop.Path] &&
+    (pathType != onehop.PathType ==> s.pathPool[onehop.PathType].NonInitMem()) &&
+	// scion
+    acc(&s.pathPool[scion.PathType])  &&
+    s.pathPool[scion.PathType] != nil &&
+    typeOf(s.pathPool[scion.PathType]) == type[*scion.Raw] &&
+    (pathType != scion.PathType ==> s.pathPool[scion.PathType].NonInitMem()) &&
+	// epic
+    acc(&s.pathPool[epic.PathType])  &&
+    s.pathPool[epic.PathType] != nil &&
+    typeOf(s.pathPool[epic.PathType]) == type[*epic.Path] &&
+    (pathType != epic.PathType ==> s.pathPool[epic.PathType].NonInitMem()) &&
+	// raw path
+    s.pathPoolRaw != nil &&
+    (pathType < len(s.pathPool) ==> s.pathPoolRaw.NonInitMem())
 }
 
 // Has the permission for all fields, except those related to the path pools.
@@ -74,7 +113,8 @@ pred (s *SCION) NonInitMem() {
 	acc(&s.SrcIA) &&
 	acc(&s.RawDstAddr) &&
 	acc(&s.RawSrcAddr) &&
-	acc(&s.Path)
+	acc(&s.Path) &&
+    acc(&s.BaseLayer)
 }
 
 // Note: this is still incomplete

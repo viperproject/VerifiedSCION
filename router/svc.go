@@ -30,8 +30,8 @@ type services struct {
 	m   map[addr.HostSVC][]*net.UDPAddr
 }
 
-//@ ensures s.Mem()
-//@ decreases
+// @ ensures s.Mem()
+// @ decreases
 func newServices() (s *services) {
 	tmp := &services{m: make(map[addr.HostSVC][]*net.UDPAddr)}
 	//@ fold internalLockInv!<tmp!>()
@@ -40,8 +40,8 @@ func newServices() (s *services) {
 	return tmp
 }
 
-//@ requires acc(s.Mem(), _)
-//@ requires acc(a.Mem(), definitions.ReadL10)
+// @ requires acc(s.Mem(), _)
+// @ requires acc(a.Mem(), definitions.ReadL10)
 func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()
@@ -65,8 +65,8 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ fold internalLockInv!<s!>()
 }
 
-//@ requires  acc(s.Mem(), _)
-//@ preserves acc(a.Mem(), definitions.ReadL10)
+// @ requires  acc(s.Mem(), _)
+// @ preserves acc(a.Mem(), definitions.ReadL10)
 func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()
@@ -95,9 +95,9 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ fold internalLockInv!<s!>()
 }
 
-//@ requires acc(s.Mem(), _)
-//@ ensures  !b ==> r == nil
-//@ ensures  b  ==> acc(r.Mem(), _)
+// @ requires acc(s.Mem(), _)
+// @ ensures  !b ==> r == nil
+// @ ensures  b  ==> acc(r.Mem(), _)
 func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()
@@ -120,15 +120,15 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	return tmpAddr, true
 }
 
-//@ preserves acc(a.Mem(), definitions.ReadL10)
-//@ preserves acc(validMapValue(k, addrs), definitions.ReadL10)
-//@ ensures   b ==> res >= 0 && 0 < len(addrs) && 0 <= res && res < len(addrs)
-//@ ensures   b ==> 0 < len(addrs)
-//@ ensures   b ==> 0 <= res && res < len(addrs)
-//@ ensures   !b ==> res == -1
+// @ preserves acc(a.Mem(), definitions.ReadL10)
+// @ preserves acc(validMapValue(k, addrs), definitions.ReadL10)
+// @ ensures   b ==> res >= 0 && 0 < len(addrs) && 0 <= res && res < len(addrs)
+// @ ensures   b ==> 0 < len(addrs)
+// @ ensures   b ==> 0 <= res && res < len(addrs)
+// @ ensures   !b ==> res == -1
 // We could ensure stronger postconditions for this method,
 // but it is unclear right now if we need them.
-//@ decreases
+// @ decreases
 func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr /*@ , ghost k addr.HostSVC @*/) (res int, b bool) {
 	//@ unfold acc(validMapValue(k, addrs), definitions.ReadL11)
 	//@ defer  fold acc(validMapValue(k, addrs), definitions.ReadL11)
