@@ -723,13 +723,21 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-// @ trusted
-// @ requires false
+// @ preserves acc(d)
+// @ preserves acc(&d.forwardingMetrics)
+// @ preserves acc(&d.Metrics)
+// @ preserves acc(d.Metrics.Mem(), definitions.ReadL20)
+// @ preserves acc(&d.external) && acc(d.external)
+// @ preserves acc(&d.localIA)
+// @ preserves acc(&d.neighborIAs) && acc(d.neighborIAs)
+// @ decreases
 func (d *DataPlane) initMetrics() {
 	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
 	labels := interfaceToMetricLabels(0, d.localIA, d.neighborIAs)
 	d.forwardingMetrics[0] = initForwardingMetrics(d.Metrics, labels)
-	for id := range d.external {
+	// @ invariant acc (&d.external)
+	// @ decreases len(d.external) - len(visited)
+	for id := range d.external /*@with visited@*/ {
 		if _, notOwned := d.internalNextHops[id]; notOwned {
 			continue
 		}
