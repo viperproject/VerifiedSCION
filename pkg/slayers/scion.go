@@ -198,9 +198,10 @@ func (s *SCION) CanDecode() (res gopacket.LayerClass) {
 	return LayerClassSCION
 }
 
-// @ trusted
-func (s *SCION) NextLayerType() gopacket.LayerType {
-	return scionNextLayerType(s.NextHdr)
+// @ preserves acc(s.Mem(ub), def.ReadL20)
+// @ decreases
+func (s *SCION) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
+	return scionNextLayerType( /*@ unfolding acc(s.Mem(ub), def.ReadL20) in @*/ s.NextHdr)
 }
 
 // @ trusted
@@ -593,23 +594,47 @@ func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ 
 // SerializeAddrHdr serializes destination and source ISD-AS-Host address triples into the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
-// @ trusted
-// @ requires false
-func (s *SCION) SerializeAddrHdr(buf []byte) error {
-	if len(buf) < s.AddrHdrLen() {
-		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen(),
+// @ preserves acc(s.HeaderMem(ubuf), def.ReadL10)
+// @ preserves sl.AbsSlice_Bytes(buf, 0, len(buf))
+// @ decreases
+func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ubuf []byte @*/) error {
+	// @ unfold acc(s.HeaderMem(ubuf), def.ReadL10)
+	// @ defer fold acc(s.HeaderMem(ubuf), def.ReadL10)
+	if len(buf) < s.AddrHdrLen( /*@ nil, true @*/ ) {
+		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen( /*@ nil, true @*/ ),
 			"actual", len(buf))
 	}
 	dstAddrBytes := s.DstAddrType.Length()
 	srcAddrBytes := s.SrcAddrType.Length()
 	offset := 0
+	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
+
+	// @ preserves acc(&s.DstIA, def.ReadL15)
+	// @ preserves sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
+	// @ decreases
+	// @ outline (
+	// @ unfold sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.DstIA))
+	// @ fold sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
+	// @ )
+	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	offset += addr.IABytes
+	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
+	// @ assert false
+	// @ preserves acc(&s.SrcIA, def.ReadL15)
+	// @ preserves sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
+	// @ decreases
+	// @ outline (
+	// @ unfold sl.AbsSlice_Bytes(buf, offset, len(buf))
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.SrcIA))
+	// @ fold sl.AbsSlice_Bytes(buf, offset, len(buf))
+	// @ )
+	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	offset += addr.IABytes
-	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr)
+	// @ assert false
+	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@ , def.ReadL10 @*/)
 	offset += dstAddrBytes
-	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr)
+	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@ , def.ReadL10 @*/)
 
 	return nil
 }
