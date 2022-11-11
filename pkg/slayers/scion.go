@@ -595,6 +595,7 @@ func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ 
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
 // @ preserves acc(s.HeaderMem(ubuf), def.ReadL10)
+// @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ preserves sl.AbsSlice_Bytes(buf, 0, len(buf))
 // @ decreases
 func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ubuf []byte @*/) error {
@@ -608,33 +609,41 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ubuf []byte @*/) error {
 	srcAddrBytes := s.SrcAddrType.Length()
 	offset := 0
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
-
-	// @ preserves acc(&s.DstIA, def.ReadL15)
-	// @ preserves sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
-	// @ decreases
-	// @ outline (
 	// @ unfold sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.DstIA))
 	// @ fold sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
-	// @ )
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	offset += addr.IABytes
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
-	// @ assert false
-	// @ preserves acc(&s.SrcIA, def.ReadL15)
-	// @ preserves sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
-	// @ decreases
-	// @ outline (
-	// @ unfold sl.AbsSlice_Bytes(buf, offset, len(buf))
+	// @ unfold sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.SrcIA))
-	// @ fold sl.AbsSlice_Bytes(buf, offset, len(buf))
-	// @ )
+	// @ fold sl.AbsSlice_Bytes(buf[offset:], 0, len(buf[offset:]))
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	offset += addr.IABytes
-	// @ assert false
+	// @ sl.SplitRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
+	// @ sl.SplitRange_Bytes(ubuf, offset, offset+dstAddrBytes, writePerm)
+
+	// @ unfold sl.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
+	// @ unfold sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes]))
 	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@ , def.ReadL10 @*/)
+	// @ fold sl.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
+	// @ fold sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes]))
+	// @ sl.CombineRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
+	// @ sl.CombineRange_Bytes(ubuf, offset, offset+dstAddrBytes, writePerm)
+
 	offset += dstAddrBytes
+	// @ sl.SplitRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
+	// @ sl.SplitRange_Bytes(ubuf, offset, offset+srcAddrBytes, writePerm)
+
+	// @ unfold sl.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
+	// @ unfold sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes]))
+
 	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@ , def.ReadL10 @*/)
+
+	// @ fold sl.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
+	// @ fold sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes]))
+	// @ sl.CombineRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
+	// @ sl.CombineRange_Bytes(ubuf, offset, offset+srcAddrBytes, writePerm)
 
 	return nil
 }
