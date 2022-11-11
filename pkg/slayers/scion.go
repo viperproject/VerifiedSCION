@@ -317,16 +317,9 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	}
 	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
 	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
-	// @ requires  acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
-	// @ requires  s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
-	// @ ensures   acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
-	// @ ensures   0 < addrHdrLen
-	// @ decreases
-	// @ outline (
 	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
 	//                 is set to nil. As such, we pick the easiest possible value as a placeholder.
 	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
-	// @ )
 	offset := CmnHdrLen + addrHdrLen
 
 	// Decode path header.
@@ -590,6 +583,7 @@ func packAddr(hostAddr net.Addr) (AddrType, []byte, error) {
 // @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
 // @ ensures  insideSlayers  ==> res == s.addrHdrLenAbstractionLeak()
 // @ ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak(ubuf)
+// @ ensures  0 <= res
 // @ decreases
 // @ trusted
 func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
