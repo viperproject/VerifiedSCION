@@ -219,24 +219,24 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 
 // @ requires  !opts.FixLengths
 // @ requires  b != nil && b.Mem(uSerBuf)
-// @ preserves acc(s.Mem(ubuf), def.ReadL10)
-// @ ensures   b.Mem(uSerBuf) // TODO: use the new value
+// @ preserves acc(s.Mem(ubuf), def.ReadL5)
+// @ ensures   b.Mem(newUSerBuf)
 // @ decreases
-func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte, ghost uSerBuf []byte @*/) error {
-	// @ unfold acc(s.Mem(ubuf), def.ReadL10)
-	// @ defer  fold acc(s.Mem(ubuf), def.ReadL10)
+func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte, ghost uSerBuf []byte @*/) (e error /*@ , ghost newUSerBuf []byte @*/) {
+	// @ unfold acc(s.Mem(ubuf), def.ReadL5)
+	// @ defer  fold acc(s.Mem(ubuf), def.ReadL5)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
-			"max", MaxHdrLen, "actual", scnLen)
+			"max", MaxHdrLen, "actual", scnLen) /*@ , uSerBuf @*/
 	}
 	if scnLen%LineLen != 0 {
 		return serrors.New("header length is not an integer multiple of line length",
-			"actual", scnLen)
+			"actual", scnLen) /*@ , uSerBuf @*/
 	}
 	buf, err /*@ , uSerBufN @*/ := b.PrependBytes(scnLen /*@, uSerBuf @*/)
 	if err != nil {
-		return err
+		return err /*@ , uSerBuf @*/
 	}
 	if opts.FixLengths {
 		// @ def.Unreachable()
@@ -273,20 +273,31 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ fold acc(sl.AbsSlice_Bytes(buf[10:12], 0, 2), writePerm)
 	// @ sl.CombineRange_Bytes(buf, 10, 12, writePerm)
 
+	// @ ghost sPath := s.Path
+	// @ ghost pathSlice := ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]
+	// @ sPath.AccUnderlyingBuf(pathSlice, def.ReadL10)
+	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
+
 	// Serialize address header.
 	// @ sl.SplitRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
-	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen, len(ubuf), writePerm)
+	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
 	if err := s.SerializeAddrHdr(buf[CmnHdrLen:] /*@ , ubuf[CmnHdrLen:] @*/); err != nil {
 		// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
-		return err
+		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
+		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
+		// @ apply acc(sl.AbsSlice_Bytes(pathSlice, 0, len(pathSlice)), def.ReadL10) --* acc(sPath.Mem(pathSlice), def.ReadL10)
+		// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
+		// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* b.Mem(uSerBufN)
+		return err /*@ , uSerBufN @*/
 	}
-	// @ assert false
-	// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), def.ReadL10)
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
-	// @ assert false
 
+	// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
+	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
+	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
+	// @ apply acc(sl.AbsSlice_Bytes(pathSlice, 0, len(pathSlice)), def.ReadL10) --* acc(sPath.Mem(pathSlice), def.ReadL10)
 	// Serialize path header.
-	return s.Path.SerializeTo(buf[offset:] /*@, nil @*/)
+	return s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/) /*@ , uSerBufN @*/ // TODO: change the underlyingBuf from nil
 	// TODO: combine range
 	// TODO: apply wand from ExchangePred
 }
@@ -630,7 +641,7 @@ func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ 
 // layer, otherwise the results of this method are undefined.
 // @ preserves acc(s.HeaderMem(ubuf), def.ReadL10)
 // @ preserves sl.AbsSlice_Bytes(buf, 0, len(buf))
-// @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL10)
 // @ decreases
 func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) error {
 	// @ unfold acc(s.HeaderMem(ubuf), def.ReadL10)
@@ -655,29 +666,29 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) error {
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	offset += addr.IABytes
 	// @ sl.SplitRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
-	// @ sl.SplitRange_Bytes(ubuf, offset, offset+dstAddrBytes, writePerm)
+	// @ sl.SplitRange_Bytes(ubuf, offset, offset+dstAddrBytes, def.ReadL10)
 
 	// @ unfold sl.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
-	// @ unfold sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes]))
+	// @ unfold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), def.ReadL10)
 	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@ , def.ReadL10 @*/)
 	// @ fold sl.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
-	// @ fold sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes]))
+	// @ fold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), def.ReadL10)
 	// @ sl.CombineRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
-	// @ sl.CombineRange_Bytes(ubuf, offset, offset+dstAddrBytes, writePerm)
+	// @ sl.CombineRange_Bytes(ubuf, offset, offset+dstAddrBytes, def.ReadL10)
 
 	offset += dstAddrBytes
 	// @ sl.SplitRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
-	// @ sl.SplitRange_Bytes(ubuf, offset, offset+srcAddrBytes, writePerm)
+	// @ sl.SplitRange_Bytes(ubuf, offset, offset+srcAddrBytes, def.ReadL10)
 
 	// @ unfold sl.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
-	// @ unfold sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes]))
+	// @ unfold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), def.ReadL10)
 
 	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@ , def.ReadL10 @*/)
 
 	// @ fold sl.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
-	// @ fold sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes]))
+	// @ fold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), def.ReadL10)
 	// @ sl.CombineRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
-	// @ sl.CombineRange_Bytes(ubuf, offset, offset+srcAddrBytes, writePerm)
+	// @ sl.CombineRange_Bytes(ubuf, offset, offset+srcAddrBytes, def.ReadL10)
 
 	return nil
 }

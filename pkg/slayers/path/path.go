@@ -112,6 +112,14 @@ type Path interface {
 	//@ ensures  slices.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
 	//@ decreases
 	//@ DowngradePerm(ghost underlyingBuf []byte)
+
+	//@ ghost
+	//@ requires 0 < p
+	//@ requires acc(Mem(ub), p)
+	//@ ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p)
+	//@ ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p) --* acc(Mem(ub), p)
+	//@ decreases
+	//@ AccUnderlyingBuf(ghost ub []byte, ghost p perm)
 }
 
 type metadata struct {
