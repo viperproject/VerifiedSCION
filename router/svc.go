@@ -135,26 +135,18 @@ func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr /*@ , ghost k addr
 
 	//@ invariant acc(a.Mem(), definitions.ReadL10)
 	//@ invariant acc(addrs, definitions.ReadL11)
-	// Right now, Gobra seems to mix quantified variables `i`
-	// with the declared variable i.
-	// That is why we are using `i1`.
-	// Is this a problem with how we handle range loops?
 	//@ invariant forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), definitions.ReadL11)
-	//@ decreases len(addrs) - i
-	for i, o := range addrs {
-		// TODO: Gobra currently cannot prove that the iterated slice
-		// is non-empty at this point, even though it must definitely
-		// not be. Is that a bug with range statements?
-		// This temporary assume deals with that Gobra limitation.
-		//@ assume len(addrs) > 0
+	//@ decreases len(addrs) - i0
+	for i, o := range addrs /*@ with i0 @*/ {
 		//@ unfold acc(a.Mem(), definitions.ReadL10)
 		//@ unfold acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
-		//@ fold acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
+		//@ fold   acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
 		//@ unfold acc(o.Mem(), _)
-		if a.IP.Equal(o.IP) && a.Port == o.Port {
+		//@ assert forall i int :: 0 <= i && i < len(o.IP) ==> &o.IP[i] == &o.IP[i] // trivial trigger
+		//@ assert forall i int :: 0 <= i && i < len(o.IP) ==> net.UDPAddrDummyTrigger(i) // trivial trigger
+		//@ assert forall i int :: 0 <= i && i < len(o.IP) ==> net.UDPAddrDummyTrigger(i) && o.IP[i] == o.IP[i] && acc(&o.IP[i], _)
+		if /*@ unfolding acc(o.Mem(), _) in ( @*/ a.IP.Equal(o.IP) && a.Port == o.Port /*@ ) @*/ {
 			//@ fold acc(a.Mem(), definitions.ReadL10)
-			// The following assertion cannot be shown to hold even though it does
-			// assert equalUDPAddr(addrs[i], a)
 			return i, true
 		}
 		//@ fold acc(a.Mem(), definitions.ReadL10)
