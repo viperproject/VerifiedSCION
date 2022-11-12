@@ -133,7 +133,9 @@ pred (s *SCION) Mem(ubuf []byte) {
 	s.HdrLen * LineLen <= len(ubuf) &&
 	CmnHdrLen + s.AddrHdrLen(nil, true) <= s.HdrLen * LineLen &&
 	// end of len of ubuf
-	acc(&s.Path) && s.Path.Mem(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) &&
+	acc(&s.Path) &&
+	s.Path != nil &&
+	s.Path.Mem(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) &&
 	acc(&s.BaseLayer) &&
 	// base layer fields:
 	s.Contents === ubuf[:s.HdrLen*LineLen] &&
