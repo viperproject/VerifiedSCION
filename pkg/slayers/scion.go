@@ -217,10 +217,9 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 	return gopacket.Flow{}
 }
 
+// @ requires  !opts.FixLengths
 // @ requires  b != nil && b.Mem(uSerBuf)
 // @ preserves acc(s.Mem(ubuf), def.ReadL10)
-// @ preserves opts.FixLengths ==> acc(&s.HdrLen, writePerm-def.ReadL10)
-// @ preserves opts.FixLengths ==> acc(&s.PayloadLen, writePerm-def.ReadL10)
 // @ ensures   b.Mem(uSerBuf) // TODO: use the new value
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte, ghost uSerBuf []byte @*/) error {
@@ -240,11 +239,9 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		return err
 	}
 	if opts.FixLengths {
+		// @ def.Unreachable()
 		s.HdrLen = uint8(scnLen / LineLen)
-		// @ assert CmnHdrLen + s.AddrHdrLen(nil, true) <= s.HdrLen * LineLen
-		// @ assert scnLen <= s.HdrLen * LineLen
 		s.PayloadLen = uint16(len(b.Bytes( /*@ uSerBufN @*/ )) - scnLen)
-		// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* b.Mem(uSerBufN)
 	}
 	// @ assert buf === uSerBufN[:scnLen]
 	// @ b.ExchangePred(uSerBufN)
@@ -277,12 +274,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ sl.CombineRange_Bytes(buf, 10, 12, writePerm)
 
 	// Serialize address header.
-	// @ fold acc(s.Mem(ubuf), def.ReadL10)
 	// @ sl.SplitRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
-	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
+	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen, len(ubuf), writePerm)
 	if err := s.SerializeAddrHdr(buf[CmnHdrLen:] /*@ , ubuf[CmnHdrLen:] @*/); err != nil {
 		// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
-		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
 		return err
 	}
 	// @ assert false

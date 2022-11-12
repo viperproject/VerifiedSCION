@@ -142,7 +142,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 	s.Payload  === ubuf[s.HdrLen*LineLen:] &&
 	// end of base layer fields
 	CmnHdrLen <= len(ubuf) &&
-	s.HeaderMem(ubuf[CmnHdrLen:])
+	s.HeaderMem(ubuf[CmnHdrLen:]) //  &&
+	// slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 }
 
 pred (s *SCION) HeaderMem(ubuf []byte) {
