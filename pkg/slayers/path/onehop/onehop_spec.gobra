@@ -44,4 +44,17 @@ func (p *Path) DowngradePerm(buf []byte) {
 	fold  p.NonInitMem()
 }
 
+ghost
+requires 0 < pm
+requires acc(p.Mem(ub), pm)
+ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm)
+ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm) --* acc(p.Mem(ub), pm)
+decreases
+func (p *Path) AccUnderlyingBuf(ghost ub []byte, ghost pm perm) {
+	unfold acc(p.Mem(ub), pm)
+	package acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm) --* acc(p.Mem(ub), pm) {
+		fold acc(p.Mem(ub), pm)
+	}
+}
+
 (*Path) implements path.Path
