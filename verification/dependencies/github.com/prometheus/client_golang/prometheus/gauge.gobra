@@ -93,6 +93,7 @@ pred (c *GaugeVec) Mem() {
 // partitioned by the given label names.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
 requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
+ensures  g != nil
 ensures  g.Mem()
 decreases _
 func NewGaugeVec(opts GaugeOpts, labelNames []string) (g *GaugeVec)
@@ -103,6 +104,6 @@ func NewGaugeVec(opts GaugeOpts, labelNames []string) (g *GaugeVec)
 //     myVec.With(prometheus.Labels{"code": "404", "method": "GET"}).Add(42)
 preserves acc(v.Mem(), _)
 preserves acc(labels, _)
-ensures   g.Mem()
+ensures   g.Mem() && g != nil
 decreases _
 func (v *GaugeVec) With(labels Labels) (g Gauge)
