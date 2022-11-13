@@ -433,7 +433,7 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	return control.InterfaceUp
 }
 
-// TODO: mark as trusted, otherwise we need to support bfd.Session
+// (VerifiedSCION) marked as trusted, otherwise we need to support bfd.Session
 // @ trusted
 // @ requires false
 func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
@@ -512,22 +512,27 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 }
 
 // DelSvc deletes the address for the given service.
-// @ trusted
-// @ requires false
+// @ requires  a != nil && acc(a.Mem(), definitions.ReadL10)
+// @ preserves d.mtx.LockP()
+// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	if a == nil {
 		return emptyValue
 	}
+	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL15)
+	//@ ghost defer fold acc(MutexInvariant!<d!>(), definitions.ReadL15)
 	if d.svc == nil {
 		return nil
 	}
 	d.svc.DelSvc(svc, a)
 	if d.Metrics != nil {
 		labels := serviceMetricLabels(d.localIA, svc)
-		d.Metrics.ServiceInstanceChanges.With(labels).Add(1)
-		d.Metrics.ServiceInstanceCount.With(labels).Add(-1)
+		// @ unfold acc(d.Metrics.Mem(), _)
+		// @ assume float64(0) < float64(1) // Gobra still does not fully support floats
+		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
+		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(-1))
 	}
 	return nil
 }
