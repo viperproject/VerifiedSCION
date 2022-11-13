@@ -28,7 +28,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
-	//@"github.com/scionproto/scion/verification/utils/slices"
+	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 type HostAddrType uint8
