@@ -18,6 +18,7 @@ package router
 
 import (
 	"net"
+	"hash"
 )
 
 pred nonNilErr(e error) {
@@ -90,3 +91,24 @@ pred forwardingMetricsMem(v forwardingMetrics) {
 pred (d *DataPlane) HalfLinkTypes() {
 	acc(&d.linkTypes, 1/2) && (d.linkTypes != nil ==> acc(d.linkTypes, 1/2))
 }
+
+pred (p *scionPacketProcessor) initMem() {
+	acc(&p.d) &&
+	acc(&p.ingressID) &&
+	acc(&p.buffer) &&
+	acc(&p.mac) &&
+	acc(p.scionLayer.InitPathPool()) &&
+	acc(&p.hbhLayer) &&
+	acc(&p.e2eLayer) &&
+	acc(&p.lastLayer) &&
+	acc(&p.path) &&
+	acc(&p.hopField) &&
+	acc(&p.infoField) &&
+	acc(&p.segmentChange) &&
+	acc(&p.cachedMac) &&
+	acc(&p.macBuffers) &&
+	acc(&p.bfdLayer)
+}
+
+decreases _
+func MacFactorySpec() hash.Hash

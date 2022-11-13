@@ -753,20 +753,27 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ trusted
-// @ requires false
-func newPacketProcessor(d *DataPlane, ingressID uint16) *scionPacketProcessor {
+// @ requires acc(&d.macFactory)
+// @ requires d.macFactory implements MacFactorySpec
+// @ ensures res.initMem()
+// @ decreases
+func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
+	var verScionTmp gopacket.SerializeBuffer
+	// @ ghost var ubuf []byte
+	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
-		buffer:    gopacket.NewSerializeBuffer(),
-		mac:       d.macFactory(),
-		macBuffers: macBuffers{
+		buffer:    verScionTmp,
+		mac:       d.macFactory() /*@ as MacFactorySpec@ */,
+		macBuffers: macBuffersT{
 			scionInput: make([]byte, path.MACBufferSize),
 			epicInput:  make([]byte, libepic.MACBufferSize),
 		},
 	}
+	// @ fold p.scionLayer.NonInitPathPool()
 	p.scionLayer.RecyclePaths()
+	// @ fold p.initMem()
 	return p
 }
 
@@ -976,14 +983,14 @@ type scionPacketProcessor struct {
 	// For a hop performing an Xover, it is the MAC corresponding to the down segment.
 	cachedMac []byte
 	// macBuffers avoid allocating memory during processing.
-	macBuffers macBuffers
+	macBuffers macBuffersT
 
 	// bfdLayer is reusable buffer for parsing BFD messages
 	bfdLayer layers.BFD
 }
 
-// macBuffers are preallocated buffers for the in- and outputs of MAC functions.
-type macBuffers struct {
+// macBuffersT are preallocated buffers for the in- and outputs of MAC functions.
+type macBuffersT struct {
 	scionInput []byte
 	epicInput  []byte
 }
