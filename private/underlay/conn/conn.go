@@ -129,6 +129,7 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	assert remote != nil ==> a == remote
 	assert remote == nil ==> a == listen
 	unfold acc(a.Mem(), definitions.ReadL15)
+	unfold acc(slices.AbsSlice_Bytes(a.IP, 0, len(a.IP)), definitions.ReadL15)
 	assert forall i int :: 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], definitions.ReadL15)
 	@*/
 	if a.IP.To4() != nil {

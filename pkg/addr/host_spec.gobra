@@ -20,17 +20,24 @@ import (
 	"net"
 
 	"github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices"
 )
 
 pred (h HostNone) Mem() { len(h) == HostLenNone }
 
 HostNone implements HostAddr
 
-pred (h HostIPv4) Mem() { len(h) == HostLenIPv4 && acc(h) }
+pred (h HostIPv4) Mem() {
+	len(h) == HostLenIPv4 &&
+	slices.AbsSlice_Bytes(h, 0, len(h))
+}
 
 HostIPv4 implements HostAddr
 
-pred (h HostIPv6) Mem() { len(h) == HostLenIPv6 && acc(h) }
+pred (h HostIPv6) Mem() {
+	len(h) == HostLenIPv6 &&
+	slices.AbsSlice_Bytes(h, 0, len(h))
+}
 
 HostIPv6 implements HostAddr
 

@@ -130,34 +130,23 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 // but it is unclear right now if we need them.
 // @ decreases
 func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr /*@ , ghost k addr.HostSVC @*/) (res int, b bool) {
-	//@ unfold acc(validMapValue(k, addrs), definitions.ReadL11)
-	//@ defer  fold acc(validMapValue(k, addrs), definitions.ReadL11)
+	// @ unfold acc(validMapValue(k, addrs), definitions.ReadL11)
+	// @ defer  fold acc(validMapValue(k, addrs), definitions.ReadL11)
 
-	//@ invariant acc(a.Mem(), definitions.ReadL10)
-	//@ invariant acc(addrs, definitions.ReadL11)
-	// Right now, Gobra seems to mix quantified variables `i`
-	// with the declared variable i.
-	// That is why we are using `i1`.
-	// Is this a problem with how we handle range loops?
-	//@ invariant forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), definitions.ReadL11)
-	//@ decreases len(addrs) - i
-	for i, o := range addrs {
-		// TODO: Gobra currently cannot prove that the iterated slice
-		// is non-empty at this point, even though it must definitely
-		// not be. Is that a bug with range statements?
-		// This temporary assume deals with that Gobra limitation.
-		//@ assume len(addrs) > 0
-		//@ unfold acc(a.Mem(), definitions.ReadL10)
-		//@ unfold acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
-		//@ fold acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
-		//@ unfold acc(o.Mem(), _)
+	// @ invariant acc(a.Mem(), definitions.ReadL10)
+	// @ invariant acc(addrs, definitions.ReadL11)
+	// @ invariant forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), definitions.ReadL11)
+	// @ decreases len(addrs) - i0
+	for i, o := range addrs /*@ with i0 @*/ {
+		// @ unfold acc(a.Mem(), definitions.ReadL10)
+		// @ unfold acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
+		// @ fold   acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
+		// @ unfold acc(o.Mem(), _)
 		if a.IP.Equal(o.IP) && a.Port == o.Port {
-			//@ fold acc(a.Mem(), definitions.ReadL10)
-			// The following assertion cannot be shown to hold even though it does
-			// assert equalUDPAddr(addrs[i], a)
+			// @ fold acc(a.Mem(), definitions.ReadL10)
 			return i, true
 		}
-		//@ fold acc(a.Mem(), definitions.ReadL10)
+		// @ fold acc(a.Mem(), definitions.ReadL10)
 	}
 	return -1, false
 }

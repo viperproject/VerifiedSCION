@@ -22,9 +22,16 @@ type UDPAddr struct {
 }
 
 pred (a *UDPAddr) Mem() {
-    // The second conjunct should be eventually replaced by a.IP.Mem().
-    // However, doing this at the moment requires changes in the VerifiedSCION codebase.
-    acc(a) && forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i])
+	// The second conjunct should be eventually replaced by a.IP.Mem().
+	// However, doing this at the moment requires changes in the VerifiedSCION codebase.
+	// OLD: acc(a) && forall i int :: { &a.IP[i] }{ UDPAddrDummyTrigger(i) } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i])
+	acc(a) && slices.AbsSlice_Bytes(a.IP, 0, len(a.IP))
+}
+
+pure
+decreases
+func UDPAddrDummyTrigger(i int) bool {
+	return true
 }
 
 (*UDPAddr) implements Addr {
@@ -47,12 +54,12 @@ func (a *UDPAddr) String() string
 // UDPConn is the implementation of the Conn and PacketConn interfaces
 // for UDP network connections.
 type UDPConn struct {
-    // TODO(Gobra): embedded fields not supported
-    // conn
+	// TODO(Gobra): embedded fields not supported
+	// conn
 }
 
 pred (u *UDPConn) Mem() {
-    acc(u)
+	acc(u)
 }
 
 // ReadFromUDP acts like ReadFrom but returns a UDPAddr.
