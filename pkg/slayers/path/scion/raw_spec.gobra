@@ -85,6 +85,19 @@ func (s *Raw) DowngradePerm(buf []byte) {
 	fold s.NonInitMem()
 }
 
+ghost
+requires 0 < pm
+requires acc(p.Mem(ub), pm)
+ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm)
+ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm) --* acc(p.Mem(ub), pm)
+decreases
+func (p *Raw) AccUnderlyingBuf(ghost ub []byte, ghost pm perm) {
+	unfold acc(p.Mem(ub), pm)
+	package acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm) --* acc(p.Mem(ub), pm) {
+		fold acc(p.Mem(ub), pm)
+	}
+}
+
 /******** Lemma: RawPerm ********/
 pred (r *Raw) RawPermRemainder(ubuf []byte, p perm) {
 	0 < p && (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
