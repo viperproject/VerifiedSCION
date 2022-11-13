@@ -133,6 +133,19 @@ func (d *Decoded) DowngradePerm(ubuf []byte) {
 }
 
 ghost
+requires 0 < p
+requires acc(d.Mem(ub), p)
+ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p)
+ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p) --* acc(d.Mem(ub), p)
+decreases
+func (d *Decoded) AccUnderlyingBuf(ghost ub []byte, ghost p perm) {
+	unfold acc(d.Mem(ub), p)
+	package acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p) --* acc(d.Mem(ub), p) {
+		fold acc(d.Mem(ub), p)
+	}
+}
+
+ghost
 requires d.Mem(ubuf1)
 requires len(ubuf1) <= len(ubuf2)
 requires ubuf1 === ubuf2[:len(ubuf1)]

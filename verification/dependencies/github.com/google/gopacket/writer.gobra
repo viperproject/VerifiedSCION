@@ -36,8 +36,8 @@ type SerializeBuffer interface {
 
 	ghost
 	requires Mem(buf)
-	ensures slices.AbsSlice_Bytes(buf, 0, len(buf))
-	ensures slices.AbsSlice_Bytes(buf, 0, len(buf)) --* Mem(buf)
+	ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+	ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* Mem(buf)
 	decreases
 	ExchangePred(buf []byte)
 
@@ -50,12 +50,12 @@ type SerializeBuffer interface {
 
 	requires Mem(s)
 	requires num >= 0
-	ensures err == nil ==> len(buf) == len(s) + num
-	ensures err == nil ==> len(res) == num
-	ensures err == nil ==> res === buf[:num]
-	ensures err == nil ==> Mem(buf)
-	ensures err != nil ==> Mem(s)
-	ensures err != nil ==> err.ErrorMem()
+	ensures  err == nil ==> len(buf) == len(s) + num
+	ensures  err == nil ==> len(res) == num
+	ensures  err == nil ==> res === buf[:num]
+	ensures  err == nil ==> Mem(buf)
+	ensures  err != nil ==> Mem(s)
+	ensures  err != nil ==> err.ErrorMem()
 	decreases
 	PrependBytes(num int, ghost s []byte) (res []byte, err error, ghost buf []byte)
 
