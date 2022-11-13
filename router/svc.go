@@ -130,26 +130,23 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 // but it is unclear right now if we need them.
 // @ decreases
 func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr /*@ , ghost k addr.HostSVC @*/) (res int, b bool) {
-	//@ unfold acc(validMapValue(k, addrs), definitions.ReadL11)
-	//@ defer  fold acc(validMapValue(k, addrs), definitions.ReadL11)
+	// @ unfold acc(validMapValue(k, addrs), definitions.ReadL11)
+	// @ defer  fold acc(validMapValue(k, addrs), definitions.ReadL11)
 
-	//@ invariant acc(a.Mem(), definitions.ReadL10)
-	//@ invariant acc(addrs, definitions.ReadL11)
-	//@ invariant forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), definitions.ReadL11)
-	//@ decreases len(addrs) - i0
+	// @ invariant acc(a.Mem(), definitions.ReadL10)
+	// @ invariant acc(addrs, definitions.ReadL11)
+	// @ invariant forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), definitions.ReadL11)
+	// @ decreases len(addrs) - i0
 	for i, o := range addrs /*@ with i0 @*/ {
-		//@ unfold acc(a.Mem(), definitions.ReadL10)
-		//@ unfold acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
-		//@ fold   acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
-		//@ unfold acc(o.Mem(), _)
-		//@ assert forall i int :: 0 <= i && i < len(o.IP) ==> &o.IP[i] == &o.IP[i] // trivial trigger
-		//@ assert forall i int :: 0 <= i && i < len(o.IP) ==> net.UDPAddrDummyTrigger(i) // trivial trigger
-		//@ assert forall i int :: 0 <= i && i < len(o.IP) ==> net.UDPAddrDummyTrigger(i) && o.IP[i] == o.IP[i] && acc(&o.IP[i], _)
-		if /*@ unfolding acc(o.Mem(), _) in ( @*/ a.IP.Equal(o.IP) && a.Port == o.Port /*@ ) @*/ {
-			//@ fold acc(a.Mem(), definitions.ReadL10)
+		// @ unfold acc(a.Mem(), definitions.ReadL10)
+		// @ unfold acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
+		// @ fold   acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
+		// @ unfold acc(o.Mem(), _)
+		if a.IP.Equal(o.IP) && a.Port == o.Port {
+			// @ fold acc(a.Mem(), definitions.ReadL10)
 			return i, true
 		}
-		//@ fold acc(a.Mem(), definitions.ReadL10)
+		// @ fold acc(a.Mem(), definitions.ReadL10)
 	}
 	return -1, false
 }
