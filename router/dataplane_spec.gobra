@@ -18,12 +18,18 @@ package router
 
 import (
 	"net"
+	// def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred nonNilErr(e error) {
 	isComparable(e) && e != nil && e.ErrorMem()
 }
 
+// TODO: maybe change interpretation of Mutex depending on whether the
+// dataplane is running or not. This is because, when Run is called and
+// d.running is set to true, the permissions to some of these fields is transferred
+// to the read closure, and thus, we cannot transfer it back on the call to unlock
+// at the end of run
 pred MutexInvariant(d *DataPlane) {
 	// access to the field 'mtx' ommited
 	acc(&d.external,          1/2) &&

@@ -65,7 +65,7 @@ import (
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
 	"github.com/scionproto/scion/router/bfd"
 	"github.com/scionproto/scion/router/control"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ def "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -92,7 +92,7 @@ type bfdSession interface {
 
 	// (VerifiedSCION) ctx is used to obtain a logger from ctx by
 	// calling the method Value. ReadL20 permissions are enough for that.
-	//@ requires acc(ctx.Mem(), definitions.ReadL20)
+	//@ requires acc(ctx.Mem(), def.ReadL20)
 	//@ requires acc(Mem(), _)
 	//@ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
@@ -116,12 +116,12 @@ type BatchConn interface {
 	ReadBatch(msgs underlayconn.Messages) (n int, err error)
 	//@ requires  acc(addr.Mem(), _)
 	//@ preserves Mem()
-	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL10)
+	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	//@ preserves Mem()
-	//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+	//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), def.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
@@ -411,14 +411,14 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 // getInterfaceState checks if there is a bfd session for the input interfaceID and
 // returns InterfaceUp if the relevant bfdsession state is up, or if there is no BFD
 // session. Otherwise, it returns InterfaceDown.
-// @ preserves acc(MutexInvariant!<d!>(), definitions.ReadL5)
+// @ preserves acc(MutexInvariant!<d!>(), def.ReadL5)
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
-	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL5)
-	//@ defer fold acc(MutexInvariant!<d!>(), definitions.ReadL5)
+	//@ unfold acc(MutexInvariant!<d!>(), def.ReadL5)
+	//@ defer fold acc(MutexInvariant!<d!>(), def.ReadL5)
 	bfdSessions := d.bfdSessions
 	//@ ghost if bfdSessions != nil {
-	//@		unfold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
-	//@		defer fold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
+	//@		unfold acc(AccBfdSession(d.bfdSessions), def.ReadL20)
+	//@		defer fold acc(AccBfdSession(d.bfdSessions), def.ReadL20)
 	//@ }
 	// (VerifiedSCION) had to rewrite this, as Gobra does not correctly
 	// implement short-circuiting.
@@ -467,7 +467,7 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // AddSvc adds the address for the given service. This can be called multiple
 // times for the same service, with the address added to the list of addresses
 // that provide the service.
-// @ requires  a != nil && acc(a.Mem(), definitions.ReadL10)
+// @ requires  a != nil && acc(a.Mem(), def.ReadL10)
 // @ preserves acc(&d.svc, 1/2)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
@@ -488,15 +488,15 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	}
 	//@ fold MutexInvariant!<d!>()
 	//@ )
-	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL15)
+	//@ unfold acc(MutexInvariant!<d!>(), def.ReadL15)
 	//@ assert acc(d.svc.Mem(), _)
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
 		labels := serviceMetricLabels(d.localIA, svc)
-		//@ requires acc(&d.Metrics, definitions.ReadL20)
+		//@ requires acc(&d.Metrics, def.ReadL20)
 		//@ requires acc(d.Metrics.Mem(), _)
 		//@ requires acc(labels, _)
-		//@ ensures  acc(&d.Metrics, definitions.ReadL20)
+		//@ ensures  acc(&d.Metrics, def.ReadL20)
 		//@ decreases
 		//@ outline (
 		//@ unfold acc(d.Metrics.Mem(), _)
@@ -507,12 +507,12 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(1))
 		//@ )
 	}
-	//@ fold acc(MutexInvariant!<d!>(), definitions.ReadL15)
+	//@ fold acc(MutexInvariant!<d!>(), def.ReadL15)
 	return nil
 }
 
 // DelSvc deletes the address for the given service.
-// @ requires  a != nil && acc(a.Mem(), definitions.ReadL10)
+// @ requires  a != nil && acc(a.Mem(), def.ReadL10)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
@@ -521,8 +521,8 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	if a == nil {
 		return emptyValue
 	}
-	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL15)
-	//@ ghost defer fold acc(MutexInvariant!<d!>(), definitions.ReadL15)
+	//@ unfold acc(MutexInvariant!<d!>(), def.ReadL15)
+	//@ ghost defer fold acc(MutexInvariant!<d!>(), def.ReadL15)
 	if d.svc == nil {
 		return nil
 	}
@@ -728,8 +728,15 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-// @ trusted
-// @ requires false
+// @ requires acc(&d.forwardingMetrics)
+// @ requires acc(&d.localIA, def.ReadL15)
+// @ requires acc(&d.neighborIAs, def.ReadL15) &&
+// @ 	(d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL15))
+// @ requires acc(&d.Metrics, def.ReadL15) &&
+// @ 	(d.Metrics != nil ==> acc(d.Metrics.Mem(), _))
+// @ requires acc(&d.external, def.ReadL15) &&
+// @ 	(d.external != nil ==> acc(AccBatchConn(d.external), _))
+// @ decreases
 func (d *DataPlane) initMetrics() {
 	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
 	labels := interfaceToMetricLabels(0, d.localIA, d.neighborIAs)
@@ -1855,7 +1862,7 @@ type forwardingMetrics struct {
 }
 
 // @ requires  acc(labels, _)
-// @ preserves acc(metrics.Mem(), definitions.ReadL20)
+// @ preserves acc(metrics.Mem(), _)
 // @ ensures   acc(res.InputBytesTotal.Mem(), _)
 // @ ensures   acc(res.OutputBytesTotal.Mem(), _)
 // @ ensures   acc(res.InputPacketsTotal.Mem(), _)
@@ -1863,7 +1870,7 @@ type forwardingMetrics struct {
 // @ ensures   acc(res.DroppedPacketsTotal.Mem(), _)
 // @ decreases
 func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forwardingMetrics) {
-	//@ unfold acc(metrics.Mem(), definitions.ReadL20)
+	//@ unfold acc(metrics.Mem(), _)
 	c := forwardingMetrics{
 		InputBytesTotal:     metrics.InputBytesTotal.With(labels),
 		InputPacketsTotal:   metrics.InputPacketsTotal.With(labels),
@@ -1876,11 +1883,10 @@ func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forw
 	c.OutputBytesTotal.Add(float64(0))
 	c.OutputPacketsTotal.Add(float64(0))
 	c.DroppedPacketsTotal.Add(float64(0))
-	//@ fold acc(metrics.Mem(), definitions.ReadL20)
 	return c
 }
 
-// @ preserves acc(neighbors, definitions.ReadL20)
+// @ preserves neighbors != nil ==> acc(neighbors, def.ReadL20)
 // @ ensures   acc(res)
 // @ decreases
 func interfaceToMetricLabels(id uint16, localIA addr.IA,
