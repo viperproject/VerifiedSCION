@@ -728,20 +728,33 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-// @ requires acc(&d.forwardingMetrics)
-// @ requires acc(&d.localIA, def.ReadL15)
-// @ requires acc(&d.neighborIAs, def.ReadL15) &&
-// @ 	(d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL15))
-// @ requires acc(&d.Metrics, def.ReadL15) &&
+// @ preserves acc(&d.forwardingMetrics)
+// @ preserves acc(&d.localIA, def.ReadL15)
+// @ preserves acc(&d.neighborIAs, def.ReadL15) &&
+// @ 	(d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL15)) // required for call
+// @ preserves acc(&d.Metrics, def.ReadL15) &&
 // @ 	(d.Metrics != nil ==> acc(d.Metrics.Mem(), _))
-// @ requires acc(&d.external, def.ReadL15) &&
+// @ preserves acc(&d.external, def.ReadL15) &&
 // @ 	(d.external != nil ==> acc(AccBatchConn(d.external), _))
+// @ preserves acc(&d.internalNextHops, def.ReadL15) &&
+// @	(d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL15))
+// @ ensures   AccForwardingMetrics(d.forwardingMetrics)
 // @ decreases
 func (d *DataPlane) initMetrics() {
 	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
 	labels := interfaceToMetricLabels(0, d.localIA, d.neighborIAs)
 	d.forwardingMetrics[0] = initForwardingMetrics(d.Metrics, labels)
-	for id := range d.external {
+
+	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
+	// @ invariant acc(&d.external, def.ReadL20)
+	// @ invariant d.external != nil ==> acc(AccBatchConn(d.external), _)
+	// @ invariant acc(&d.internalNextHops, def.ReadL20)
+	// @ invariant d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL20)
+	// @ invariant acc(&d.neighborIAs, def.ReadL20)
+	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL20)
+	// @ decreases len(d.external) - len(visitedSet)
+	for id := range d.external /*@ with visitedSet @*/ {
+		// TODO(VerifiedSCION): acc(labels) is missing
 		if _, notOwned := d.internalNextHops[id]; notOwned {
 			continue
 		}
