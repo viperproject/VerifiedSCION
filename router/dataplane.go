@@ -761,28 +761,30 @@ func (d *DataPlane) initMetrics() {
 	d.forwardingMetrics[0] = initForwardingMetrics(d.Metrics, labels)
 	// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[0], 0)
 	// @ )
-	// @ ghost if d.external != nil { unfold acc(AccBatchConn(d.external), def.ReadL17) }
+	// @ ghost if d.external != nil { unfold acc(AccBatchConn(d.external), def.ReadL15) }
 
-	// @ fold acc(hideLocalIA(&d.localIA), def.ReadL20)
+	// @ fold acc(hideLocalIA(&d.localIA), def.ReadL15)
 
-	// @ invariant acc(hideLocalIA(&d.localIA), def.ReadL20) // avoids incompletnes when folding acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
-	// @ invariant acc(&d.external, def.ReadL20)
+	// @ invariant acc(hideLocalIA(&d.localIA), def.ReadL15) // avoids incompletnes when folding acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
+	// @ invariant acc(&d.external, def.ReadL15)
 	// @ invariant d.external != nil ==> acc(d.external, def.ReadL20)
 	// @ invariant d.external === old(d.external)
 	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
-	// @ invariant acc(&d.internalNextHops, def.ReadL20)
-	// @ invariant d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL20)
+	// @ invariant acc(&d.internalNextHops, def.ReadL15)
+	// @ invariant d.internalNextHops === old(d.internalNextHops)
+	// @ invariant d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL15)
 	// @ invariant acc(&d.neighborIAs, def.ReadL15)
 	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL15)
 	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i in domain(d.forwardingMetrics) ==>
 	// @ 	acc(forwardingMetricsMem(d.forwardingMetrics[i], i), _)
-	// @ invariant acc(&d.Metrics, def.ReadL20)
+	// @ invariant acc(&d.Metrics, def.ReadL15)
 	// @ invariant acc(d.Metrics.Mem(), _)
 	// @ decreases len(d.external) - len(visitedSet)
 	for id := range d.external /*@ with visitedSet @*/ {
 		// @ ghost if d.internalNextHops != nil {
-		//  	unfold acc(AccAddr(d.internalNextHops), def.ReadL20)
+		// @	unfold acc(AccAddr(d.internalNextHops), def.ReadL20)
 		// @ }
+		// @ assert d.internalNextHops[id] === d.internalNextHops[id]
 		if _, notOwned := d.internalNextHops[id]; notOwned {
 			// @ ghost if d.internalNextHops != nil {
 			// @ 	fold acc(AccAddr(d.internalNextHops), def.ReadL20)
@@ -797,9 +799,9 @@ func (d *DataPlane) initMetrics() {
 		// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[id], id)
 		// @ assert acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	}
-	// @ ghost if d.external != nil { fold acc(AccBatchConn(d.external), def.ReadL17) }
+	// @ ghost if d.external != nil { fold acc(AccBatchConn(d.external), def.ReadL15) }
 	// @ fold AccForwardingMetrics(d.forwardingMetrics)
-	// @ unfold acc(hideLocalIA(&d.localIA), def.ReadL20)
+	// @ unfold acc(hideLocalIA(&d.localIA), def.ReadL15)
 }
 
 type processResult struct {
