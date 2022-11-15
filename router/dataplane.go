@@ -736,7 +736,7 @@ func (d *DataPlane) initMetrics() {
 	d.forwardingMetrics[0] = initForwardingMetrics(d.Metrics, labels)
 	// @ invariant acc (&d.external)
 	// @ decreases len(d.external) - len(visited)
-	for id := range d.external /*@with visited@*/ {
+	for id := range d.external /*@ with visited @*/ {
 		if _, notOwned := d.internalNextHops[id]; notOwned {
 			continue
 		}
