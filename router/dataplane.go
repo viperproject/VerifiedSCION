@@ -622,6 +622,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	d.mtx.Lock()
 	d.running = true
 
+	// (VerifiedSCION) TODO: change the invariant to have the resources only
+	//     when it is not runnning. That way, we can unfold the memory predicate
+	//     right after setting running to true, which is required for the call to unlock
+	//     to succeed. the rest of the permissions will be held in the closure footprint
+	//     and on this method.
 	d.initMetrics()
 
 	read := func(ingressID uint16, rd BatchConn) {
@@ -740,7 +745,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // @ ensures   AccForwardingMetrics(d.forwardingMetrics)
 // @ decreases
 func (d *DataPlane) initMetrics() {
-	// TODO: fold hideLocalIA here already, remove the outline block
 	// @ preserves acc(&d.forwardingMetrics)
 	// @ preserves acc(&d.localIA, def.ReadL20)
 	// @ preserves acc(&d.neighborIAs, def.ReadL20)
@@ -755,14 +759,12 @@ func (d *DataPlane) initMetrics() {
 	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
 	labels := interfaceToMetricLabels(0, d.localIA, d.neighborIAs)
 	d.forwardingMetrics[0] = initForwardingMetrics(d.Metrics, labels)
-	//  liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[0], 0)
-	// @ fold acc(forwardingMetricsMem(d.forwardingMetrics[0], 0), _)
+	// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[0], 0)
 	// @ )
 	// @ ghost if d.external != nil { unfold acc(AccBatchConn(d.external), def.ReadL17) }
 
 	// @ fold acc(hideLocalIA(&d.localIA), def.ReadL20)
 
-	//  invariant acc(&d.localIA, def.ReadL20)
 	// @ invariant acc(hideLocalIA(&d.localIA), def.ReadL20) // avoids incompletnes when folding acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	// @ invariant acc(&d.external, def.ReadL20)
 	// @ invariant d.external != nil ==> acc(d.external, def.ReadL20)
@@ -770,29 +772,29 @@ func (d *DataPlane) initMetrics() {
 	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
 	// @ invariant acc(&d.internalNextHops, def.ReadL20)
 	// @ invariant d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL20)
-	// @ invariant acc(&d.neighborIAs, def.ReadL20)
-	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL20)
+	// @ invariant acc(&d.neighborIAs, def.ReadL15)
+	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL15)
 	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i in domain(d.forwardingMetrics) ==>
 	// @ 	acc(forwardingMetricsMem(d.forwardingMetrics[i], i), _)
 	// @ invariant acc(&d.Metrics, def.ReadL20)
 	// @ invariant acc(d.Metrics.Mem(), _)
 	// @ decreases len(d.external) - len(visitedSet)
 	for id := range d.external /*@ with visitedSet @*/ {
-		// @ unfold acc(AccAddr(d.internalNextHops), def.ReadL20)
-		//  assert acc(&d.localIA, def.ReadL20)
+		// @ ghost if d.internalNextHops != nil {
+		//  	unfold acc(AccAddr(d.internalNextHops), def.ReadL20)
+		// @ }
 		if _, notOwned := d.internalNextHops[id]; notOwned {
-			// @ fold acc(AccAddr(d.internalNextHops), def.ReadL20)
+			// @ ghost if d.internalNextHops != nil {
+			// @ 	fold acc(AccAddr(d.internalNextHops), def.ReadL20)
+			// @ }
 			continue
 		}
-		//  assert acc(&d.localIA, def.ReadL20)
-		// @ fold acc(AccAddr(d.internalNextHops), def.ReadL20)
-		//  unfold acc(hideLocalIA(&d.localIA), def.ReadL20)
-		//  assert acc(&d.localIA, def.ReadL20)
+		// @ ghost if d.internalNextHops != nil {
+		// @ 	fold acc(AccAddr(d.internalNextHops), def.ReadL20)
+		// @ }
 		labels = interfaceToMetricLabels(id, ( /*@ unfolding acc(hideLocalIA(&d.localIA), def.ReadL20) in @*/ d.localIA), d.neighborIAs)
-		//  assert acc(&d.localIA, def.ReadL20)
 		d.forwardingMetrics[id] = initForwardingMetrics(d.Metrics, labels)
-		// @ fold acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
-		//  assert acc(&d.localIA, def.ReadL20)
+		// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[id], id)
 		// @ assert acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	}
 	// @ ghost if d.external != nil { fold acc(AccBatchConn(d.external), def.ReadL17) }
@@ -1913,14 +1915,7 @@ type forwardingMetrics struct {
 
 // @ requires  acc(labels, _)
 // @ preserves acc(metrics.Mem(), _)
-// @ ensures   acc(res.InputBytesTotal.Mem(), _)
-// @ ensures   acc(res.OutputBytesTotal.Mem(), _)
-// @ ensures   acc(res.InputPacketsTotal.Mem(), _)
-// @ ensures   acc(res.OutputPacketsTotal.Mem(), _)
-// @ ensures   acc(res.DroppedPacketsTotal.Mem(), _)
-//
-//	ensures  acc(forwardingMetricsNonInjectiveMem(res), _)
-//
+// @ ensures   acc(forwardingMetricsNonInjectiveMem(res), _)
 // @ decreases
 func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forwardingMetrics) {
 	//@ unfold acc(metrics.Mem(), _)
@@ -1936,7 +1931,7 @@ func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forw
 	c.OutputBytesTotal.Add(float64(0))
 	c.OutputPacketsTotal.Add(float64(0))
 	c.DroppedPacketsTotal.Add(float64(0))
-	//  fold acc(forwardingMetricsNonInjectiveMem(c), _)
+	// @ fold acc(forwardingMetricsNonInjectiveMem(c), _)
 	return c
 }
 

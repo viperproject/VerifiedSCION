@@ -93,7 +93,6 @@ pred forwardingMetricsMem(v forwardingMetrics, ignoredForInjectivity uint16) {
 	v.DroppedPacketsTotal.Mem()
 }
 
-// TODO: drop
 pred forwardingMetricsNonInjectiveMem(v forwardingMetrics) {
 	v.InputBytesTotal.Mem()      &&
 	v.OutputBytesTotal.Mem()     &&
