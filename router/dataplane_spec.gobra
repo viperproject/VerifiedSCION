@@ -18,6 +18,7 @@ package router
 
 import (
 	"net"
+	"github.com/scionproto/scion/pkg/addr"
 	// def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
@@ -92,7 +93,30 @@ pred forwardingMetricsMem(v forwardingMetrics, ignoredForInjectivity uint16) {
 	v.DroppedPacketsTotal.Mem()
 }
 
+// TODO: drop
+pred forwardingMetricsNonInjectiveMem(v forwardingMetrics) {
+	v.InputBytesTotal.Mem()      &&
+	v.OutputBytesTotal.Mem()     &&
+	v.InputPacketsTotal.Mem()    &&
+	v.OutputPacketsTotal.Mem()   &&
+	v.DroppedPacketsTotal.Mem()
+}
+
+ghost
+requires  acc(forwardingMetricsNonInjectiveMem(v), _)
+ensures   acc(forwardingMetricsMem(v, id), _)
+decreases
+func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
+	unfold acc(forwardingMetricsNonInjectiveMem(v), _)
+	fold acc(forwardingMetricsMem(v, id), _)
+}
+
 // useful for hidding permissions to avoid incompletenesses of Gobra
 pred (d *DataPlane) HalfLinkTypes() {
 	acc(&d.linkTypes, 1/2) && (d.linkTypes != nil ==> acc(d.linkTypes, 1/2))
+}
+
+// useful to deal with incompletnesses
+pred hideLocalIA(p *addr.IA) {
+	acc(p)
 }
