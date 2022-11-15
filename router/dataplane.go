@@ -784,7 +784,6 @@ func (d *DataPlane) initMetrics() {
 		// @ ghost if d.internalNextHops != nil {
 		// @	unfold acc(AccAddr(d.internalNextHops), def.ReadL20)
 		// @ }
-		// @ assert d.internalNextHops[id] === d.internalNextHops[id]
 		if _, notOwned := d.internalNextHops[id]; notOwned {
 			// @ ghost if d.internalNextHops != nil {
 			// @ 	fold acc(AccAddr(d.internalNextHops), def.ReadL20)

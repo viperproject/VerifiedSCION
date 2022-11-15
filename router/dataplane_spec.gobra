@@ -19,7 +19,6 @@ package router
 import (
 	"net"
 	"github.com/scionproto/scion/pkg/addr"
-	// def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred nonNilErr(e error) {
