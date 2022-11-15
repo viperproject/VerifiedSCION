@@ -754,7 +754,7 @@ type processResult struct {
 
 // @ requires acc(&d.macFactory)
 // @ requires d.macFactory implements MacFactorySpec
-// @ ensures res.initMem()
+// @ ensures  res.initMem()
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
