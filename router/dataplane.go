@@ -747,7 +747,7 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ requires acc(&d.macFactory)
+// @ requires acc(&d.macFactory, definitions.ReadL20)
 // @ requires d.macFactory implements MacFactorySpec
 // @ ensures res.initMem()
 // @ decreases
@@ -977,6 +977,8 @@ type scionPacketProcessor struct {
 	// For a hop performing an Xover, it is the MAC corresponding to the down segment.
 	cachedMac []byte
 	// macBuffers avoid allocating memory during processing.
+	// (VerifiedSCION) Having the same name for the type and the field caused an exception
+	// with Gobra so the type name was slightly altered
 	macBuffers macBuffersT
 
 	// bfdLayer is reusable buffer for parsing BFD messages
