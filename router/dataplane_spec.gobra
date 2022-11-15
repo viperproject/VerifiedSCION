@@ -81,10 +81,10 @@ pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
 
 pred AccForwardingMetrics(metrics map[uint16]forwardingMetrics) {
 	acc(metrics, 1/2) &&
-	forall fm forwardingMetrics :: fm in range(metrics) ==> acc(forwardingMetricsMem(fm), _)
+	forall id uint16 :: id in domain(metrics) ==> acc(forwardingMetricsMem(metrics[id], id), _)
 }
 
-pred forwardingMetricsMem(v forwardingMetrics) {
+pred forwardingMetricsMem(v forwardingMetrics, ignoredForInjectivity uint16) {
 	v.InputBytesTotal.Mem()      &&
 	v.OutputBytesTotal.Mem()     &&
 	v.InputPacketsTotal.Mem()    &&

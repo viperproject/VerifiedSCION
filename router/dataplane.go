@@ -730,37 +730,61 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // will not have to be repeated during packet forwarding.
 // @ preserves acc(&d.forwardingMetrics)
 // @ preserves acc(&d.localIA, def.ReadL15)
-// @ preserves acc(&d.neighborIAs, def.ReadL15) &&
-// @ 	(d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL15)) // required for call
-// @ preserves acc(&d.Metrics, def.ReadL15) &&
-// @ 	(d.Metrics != nil ==> acc(d.Metrics.Mem(), _))
-// @ preserves acc(&d.external, def.ReadL15) &&
-// @ 	(d.external != nil ==> acc(AccBatchConn(d.external), _))
-// @ preserves acc(&d.internalNextHops, def.ReadL15) &&
-// @	(d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL15))
+// @ preserves acc(&d.neighborIAs, def.ReadL15)
+// @ preserves d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL15) // required for call
+// @ preserves acc(&d.Metrics, def.ReadL15) && acc(d.Metrics.Mem(), _)
+// @ preserves acc(&d.external, def.ReadL15)
+// @ preserves d.external != nil ==> acc(AccBatchConn(d.external), def.ReadL15) // required for call
+// @ preserves acc(&d.internalNextHops, def.ReadL15)
+// @ preserves d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL15)
 // @ ensures   AccForwardingMetrics(d.forwardingMetrics)
 // @ decreases
 func (d *DataPlane) initMetrics() {
+	// @ preserves acc(&d.forwardingMetrics)
+	// @ preserves acc(&d.localIA, def.ReadL20)
+	// @ preserves acc(&d.neighborIAs, def.ReadL20)
+	// @ preserves d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL20)
+	// @ preserves acc(&d.Metrics, def.ReadL20)
+	// @ preserves acc(d.Metrics.Mem(), _)
+	// @ ensures   acc(d.forwardingMetrics)
+	// @ ensures   acc(forwardingMetricsMem(d.forwardingMetrics[0], 0), _)
+	// @ decreases
+	// @ outline (
 	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
 	labels := interfaceToMetricLabels(0, d.localIA, d.neighborIAs)
 	d.forwardingMetrics[0] = initForwardingMetrics(d.Metrics, labels)
+	// @ fold acc(forwardingMetricsMem(d.forwardingMetrics[0], 0), _)
+	// @ )
+	// @ ghost if d.external != nil { unfold acc(AccBatchConn(d.external), def.ReadL17) }
+	// ghost var visitedVals set[forwardingMetrics] = set[forwardingMetrics]{ d.forwardingMetrics[0] }
 
-	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
+	// assert acc(&d.external, def.ReadL20 * def.ReadL15)
+
 	// @ invariant acc(&d.external, def.ReadL20)
-	// @ invariant d.external != nil ==> acc(AccBatchConn(d.external), _)
+	// @ invariant d.external != nil ==> acc(d.external, def.ReadL20)
+	// @ invariant d.external === old(d.external)
+	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
 	// @ invariant acc(&d.internalNextHops, def.ReadL20)
 	// @ invariant d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL20)
 	// @ invariant acc(&d.neighborIAs, def.ReadL20)
 	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL20)
+	//  invariant forall i uint16 :: { i in domain(d.forwardingMetrics) } i in domain(d.forwardingMetrics) ==> i in visitedSet
+	//  invariant range(d.forwardingMetrics) == visitedVals
+	//  invariant forall i uint16 :: { i in domain(d.forwardingMetrics) }{ forwardingMetricsMem(d.forwardingMetrics[i], i) } i in domain(d.forwardingMetrics) ==>
+	// @ invariant forall i uint16 :: { forwardingMetricsMem(d.forwardingMetrics[i], i) } i in domain(d.forwardingMetrics) ==>
+	// @ 	acc(forwardingMetricsMem(d.forwardingMetrics[i], i), _)
 	// @ decreases len(d.external) - len(visitedSet)
 	for id := range d.external /*@ with visitedSet @*/ {
-		// TODO(VerifiedSCION): acc(labels) is missing
 		if _, notOwned := d.internalNextHops[id]; notOwned {
 			continue
 		}
 		labels = interfaceToMetricLabels(id, d.localIA, d.neighborIAs)
 		d.forwardingMetrics[id] = initForwardingMetrics(d.Metrics, labels)
+		// visitedVals = visitedVals union set[forwardingMetrics]{ d.forwardingMetrics[id] }
+		// @ fold acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	}
+	// @ ghost if d.external != nil { fold acc(AccBatchConn(d.external), def.ReadL17) }
+	// @ fold AccForwardingMetrics(d.forwardingMetrics)
 }
 
 type processResult struct {
