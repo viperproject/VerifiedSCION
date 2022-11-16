@@ -19,10 +19,22 @@ package router
 import (
 	"net"
 	"hash"
+	"github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/pkg/scrypto"
 )
 
 pred nonNilErr(e error) {
 	isComparable(e) && e != nil && e.ErrorMem()
+}
+
+pred (d *DataPlane) MacFactoryOperational() {
+	acc(&d.macFactory, 1/2) &&
+	acc(&d.key, 1/2) &&
+	acc(d.key, 1/2) &&
+	acc(slices.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
+	scrypto.ValidKeyForHash(*d.key) &&
+	d.macFactory implements MacFactorySpec{d.key}
 }
 
 pred MutexInvariant(d *DataPlane) {
@@ -40,6 +52,8 @@ pred MutexInvariant(d *DataPlane) {
 	acc(&d.running,           1/2) &&
 	acc(&d.Metrics,           1/2) &&
 	acc(&d.forwardingMetrics, 1/2) &&
+	acc(&d.key,               1/2) &&
+	acc(d.key,                1/2) &&
 	(d.external    != nil       ==> AccBatchConn(d.external))           &&
 	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
 	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
@@ -47,8 +61,9 @@ pred MutexInvariant(d *DataPlane) {
 	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
 	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
-	// TODO: replace when I know the exact spec that macFactory should implement
-	(d.macFactory != nil        ==> false)                              &&
+	(d.macFactory != nil        ==> acc(slices.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
+	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key)) &&
+	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key}) &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
 	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&
 	// The following permissions are enough to call all methods needed in fields
@@ -110,5 +125,16 @@ pred (p *scionPacketProcessor) initMem() {
 	acc(&p.bfdLayer)
 }
 
-decreases _
-func MacFactorySpec() hash.Hash
+//type KeyHolder struct { key []byte }
+
+//pred (k *KeyHolder) Inv() {
+//	len(k.key) > 0 &&
+//	slices.AbsSlice_Bytes(k.key, 0, len(k.key))
+//}
+
+requires acc(key, definitions.ReadL15) && slices.AbsSlice_Bytes(*key, 0, len(*key))
+requires scrypto.ValidKeyForHash(*key)
+ensures  acc(key, definitions.ReadL15) && slices.AbsSlice_Bytes(*key, 0, len(*key))
+ensures  res.Mem()
+decreases
+func MacFactorySpec(ghost key *[]byte) (res hash.Hash)

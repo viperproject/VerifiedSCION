@@ -22,8 +22,14 @@ package scrypto
 import "hash"
 import "github.com/scionproto/scion/verification/utils/slices"
 
+ghost
+requires acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
+decreases _
+pure func ValidKeyForHash(key []byte) bool
+
 preserves slices.AbsSlice_Bytes(key, 0, len(key))
-ensures   e == nil ==> (h != nil && h.Mem())
+ensures   old(ValidKeyForHash(key)) ==> e == nil
+ensures   e == nil ==> (h != nil && h.Mem() && ValidKeyForHash(key))
 ensures   e != nil ==> e.ErrorMem()
 decreases _
 func InitMac(key []byte) (h hash.Hash, e error)

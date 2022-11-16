@@ -139,6 +139,8 @@ type BatchConn interface {
 // Currently, only the following features are supported:
 //   - initializing connections; MUST be done prior to calling Run
 type DataPlane struct {
+	// (VerifiedSCION) this is morally ghost
+	// @ key *[]byte
 	external          map[uint16]BatchConn
 	linkTypes         map[uint16]topology.LinkType
 	neighborIAs       map[uint16]addr.IA
@@ -181,6 +183,7 @@ func (e scmpError) Error() string {
 }
 
 // SetIA sets the local IA for the dataplane.
+// @ trusted
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.localIA, 1/2) && d.localIA.IsZero()
 // @ requires  !ia.IsZero()
@@ -209,22 +212,22 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// @ trusted
-// @ requires  false
+// Verified in 12m3s with --disableMoreCompleteExhale --parallelizeBranches
+// @ requires  acc(&d.key,        1/2)
+// @ requires  acc(d.key,         1/2)
 // @ requires  acc(&d.running,    1/2) && !d.running
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory == nil
-// @ requires  len(key) == 0
 // @ requires  slices.AbsSlice_Bytes(key, 0, len(key))
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.macFactory, 1/2)
-func (d *DataPlane) SetKey(key []byte) error {
-	//@ share key
+// @ ensures   res == nil ==> d.MacFactoryOperational()
+func (d *DataPlane) SetKey(key []byte) (res error) {
+	// @ share key
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	//@ unfold MutexInvariant!<d!>()
-	//@ defer fold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
 		return modifyExisting
 	}
@@ -238,12 +241,23 @@ func (d *DataPlane) SetKey(key []byte) error {
 	if _, err := scrypto.InitMac(key); err != nil {
 		return err
 	}
-	// (TODO)
-	// (VerifiedSCION) Gobra crashes due to the closure literal.
-	d.macFactory = func /*@ f @*/ () hash.Hash {
+	tempKey := &key
+	// @ d.key = &key
+	verScionTemp :=
+		// @ requires acc(&key, definitions.ReadL15) && slices.AbsSlice_Bytes(key, 0, len(key))
+		// @ requires scrypto.ValidKeyForHash(key)
+		// @ ensures  acc(&key, definitions.ReadL15) && slices.AbsSlice_Bytes(key, 0, len(key))
+		// @ ensures  h.Mem()
+		// @ decreases
+		func /*@ f @*/ () (h hash.Hash) {
 		mac, _ := scrypto.InitMac(key)
-		return mac
+			return mac
 	}
+	// @ proof verScionTemp implements MacFactorySpec{tempKey} {
+	// @   return verScionTemp() as f
+	// @ }
+	d.macFactory = verScionTemp
+	// @ fold d.MacFactoryOperational()
 	return nil
 }
 
@@ -251,6 +265,7 @@ func (d *DataPlane) SetKey(key []byte) error {
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
 // dataplane.
+// @ trusted
 // @ requires  acc(&d.running,    1/2) && !d.running
 // @ requires  acc(&d.internal,   1/2) && d.internal == nil
 // @ requires  acc(&d.internalIP, 1/2)
@@ -283,6 +298,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // AddExternalInterface adds the inter AS connection for the given interface ID.
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
+// @ trusted
 // @ requires  acc(&d.running,    1/2) && !d.running
 // @ requires  acc(&d.external,   1/2)
 // @ requires  d.external != nil ==> acc(d.external, 1/2)
@@ -319,6 +335,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 // AddNeighborIA adds the neighboring IA for a given interface ID. If an IA for
 // the given ID is already set, this method will return an error. This can only
 // be called on a yet running dataplane.
+// @ trusted
 // @ requires  acc(&d.running,     1/2) && !d.running
 // @ requires  acc(&d.neighborIAs, 1/2)
 // @ requires  d.neighborIAs != nil ==> acc(d.neighborIAs, 1/2)
@@ -353,6 +370,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // AddLinkType adds the link type for a given interface ID. If a link type for
 // the given ID is already set, this method will return an error. This can only
 // be called on a not yet running dataplane.
+// @ trusted
 // @ requires  acc(&d.running,   1/2) && !d.running
 // @ requires  acc(&d.linkTypes, 1/2)
 // @ requires  d.linkTypes != nil ==> acc(d.linkTypes, 1/2)
@@ -411,6 +429,7 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 // getInterfaceState checks if there is a bfd session for the input interfaceID and
 // returns InterfaceUp if the relevant bfdsession state is up, or if there is no BFD
 // session. Otherwise, it returns InterfaceDown.
+// @ trusted
 // @ preserves acc(MutexInvariant!<d!>(), definitions.ReadL5)
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
 	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL5)
@@ -467,6 +486,7 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // AddSvc adds the address for the given service. This can be called multiple
 // times for the same service, with the address added to the list of addresses
 // that provide the service.
+// @ trusted
 // @ requires  a != nil && acc(a.Mem(), definitions.ReadL10)
 // @ preserves acc(&d.svc, 1/2)
 // @ preserves d.mtx.LockP()
@@ -512,6 +532,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 }
 
 // DelSvc deletes the address for the given service.
+// @ trusted
 // @ requires  a != nil && acc(a.Mem(), definitions.ReadL10)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
@@ -540,6 +561,7 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // AddNextHop sets the next hop address for the given interface ID. If the
 // interface ID already has an address associated this operation fails. This can
 // only be called on a not yet running dataplane.
+// @ trusted
 // @ requires  acc(&d.running,          1/2) && !d.running
 // @ requires  acc(&d.internalNextHops, 1/2)
 // @ requires  d.internalNextHops != nil ==> acc(d.internalNextHops, 1/2)
@@ -751,7 +773,10 @@ type processResult struct {
 }
 
 // @ requires acc(&d.macFactory, definitions.ReadL20)
-// @ requires d.macFactory implements MacFactorySpec
+// @ requires acc(&d.key, definitions.ReadL15)
+// @ requires acc(d.key, definitions.ReadL15)
+// @ requires acc(slices.AbsSlice_Bytes(*d.key, 0, len(*d.key)))
+// @ requires d.macFactory implements MacFactorySpec{d.key}
 // @ ensures  res.initMem()
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
@@ -762,7 +787,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 		d:         d,
 		ingressID: ingressID,
 		buffer:    verScionTmp,
-		mac:       d.macFactory() /*@ as MacFactorySpec@ */,
+		mac:       d.macFactory() /*@ as MacFactorySpec{d.key} @ */,
 		macBuffers: macBuffersT{
 			scionInput: make([]byte, path.MACBufferSize),
 			epicInput:  make([]byte, libepic.MACBufferSize),
@@ -1863,6 +1888,7 @@ type forwardingMetrics struct {
 	DroppedPacketsTotal prometheus.Counter
 }
 
+// @ trusted
 // @ requires  acc(labels, _)
 // @ preserves acc(metrics.Mem(), definitions.ReadL20)
 // @ ensures   acc(res.InputBytesTotal.Mem(), _)
@@ -1912,6 +1938,7 @@ func interfaceToMetricLabels(id uint16, localIA addr.IA,
 	}
 }
 
+// @ trusted
 // @ ensures acc(res)
 // @ decreases
 func serviceMetricLabels(localIA addr.IA, svc addr.HostSVC) (res prometheus.Labels) {
