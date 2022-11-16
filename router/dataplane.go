@@ -65,7 +65,7 @@ import (
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
 	"github.com/scionproto/scion/router/bfd"
 	"github.com/scionproto/scion/router/control"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ def "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -92,7 +92,7 @@ type bfdSession interface {
 
 	// (VerifiedSCION) ctx is used to obtain a logger from ctx by
 	// calling the method Value. ReadL20 permissions are enough for that.
-	//@ requires acc(ctx.Mem(), definitions.ReadL20)
+	//@ requires acc(ctx.Mem(), def.ReadL20)
 	//@ requires acc(Mem(), _)
 	//@ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
@@ -116,12 +116,12 @@ type BatchConn interface {
 	ReadBatch(msgs underlayconn.Messages) (n int, err error)
 	//@ requires  acc(addr.Mem(), _)
 	//@ preserves Mem()
-	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL10)
+	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	//@ preserves Mem()
-	//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+	//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), def.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
@@ -411,14 +411,14 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 // getInterfaceState checks if there is a bfd session for the input interfaceID and
 // returns InterfaceUp if the relevant bfdsession state is up, or if there is no BFD
 // session. Otherwise, it returns InterfaceDown.
-// @ preserves acc(MutexInvariant!<d!>(), definitions.ReadL5)
+// @ preserves acc(MutexInvariant!<d!>(), def.ReadL5)
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
-	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL5)
-	//@ defer fold acc(MutexInvariant!<d!>(), definitions.ReadL5)
+	//@ unfold acc(MutexInvariant!<d!>(), def.ReadL5)
+	//@ defer fold acc(MutexInvariant!<d!>(), def.ReadL5)
 	bfdSessions := d.bfdSessions
 	//@ ghost if bfdSessions != nil {
-	//@		unfold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
-	//@		defer fold acc(AccBfdSession(d.bfdSessions), definitions.ReadL20)
+	//@		unfold acc(AccBfdSession(d.bfdSessions), def.ReadL20)
+	//@		defer fold acc(AccBfdSession(d.bfdSessions), def.ReadL20)
 	//@ }
 	// (VerifiedSCION) had to rewrite this, as Gobra does not correctly
 	// implement short-circuiting.
@@ -467,7 +467,7 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // AddSvc adds the address for the given service. This can be called multiple
 // times for the same service, with the address added to the list of addresses
 // that provide the service.
-// @ requires  a != nil && acc(a.Mem(), definitions.ReadL10)
+// @ requires  a != nil && acc(a.Mem(), def.ReadL10)
 // @ preserves acc(&d.svc, 1/2)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
@@ -488,15 +488,15 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	}
 	//@ fold MutexInvariant!<d!>()
 	//@ )
-	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL15)
+	//@ unfold acc(MutexInvariant!<d!>(), def.ReadL15)
 	//@ assert acc(d.svc.Mem(), _)
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
 		labels := serviceMetricLabels(d.localIA, svc)
-		//@ requires acc(&d.Metrics, definitions.ReadL20)
+		//@ requires acc(&d.Metrics, def.ReadL20)
 		//@ requires acc(d.Metrics.Mem(), _)
 		//@ requires acc(labels, _)
-		//@ ensures  acc(&d.Metrics, definitions.ReadL20)
+		//@ ensures  acc(&d.Metrics, def.ReadL20)
 		//@ decreases
 		//@ outline (
 		//@ unfold acc(d.Metrics.Mem(), _)
@@ -507,12 +507,12 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(1))
 		//@ )
 	}
-	//@ fold acc(MutexInvariant!<d!>(), definitions.ReadL15)
+	//@ fold acc(MutexInvariant!<d!>(), def.ReadL15)
 	return nil
 }
 
 // DelSvc deletes the address for the given service.
-// @ requires  a != nil && acc(a.Mem(), definitions.ReadL10)
+// @ requires  a != nil && acc(a.Mem(), def.ReadL10)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
@@ -521,8 +521,8 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	if a == nil {
 		return emptyValue
 	}
-	//@ unfold acc(MutexInvariant!<d!>(), definitions.ReadL15)
-	//@ ghost defer fold acc(MutexInvariant!<d!>(), definitions.ReadL15)
+	//@ unfold acc(MutexInvariant!<d!>(), def.ReadL15)
+	//@ ghost defer fold acc(MutexInvariant!<d!>(), def.ReadL15)
 	if d.svc == nil {
 		return nil
 	}
@@ -622,6 +622,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	d.mtx.Lock()
 	d.running = true
 
+	// (VerifiedSCION) TODO: change the invariant to have the resources only
+	//     when it is not runnning. That way, we can unfold the memory predicate
+	//     right after setting running to true, which is required for the call to unlock
+	//     to succeed. the rest of the permissions will be held in the closure footprint
+	//     and on this method.
 	d.initMetrics()
 
 	read := func(ingressID uint16, rd BatchConn) {
@@ -728,19 +733,74 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-// @ trusted
-// @ requires false
+// @ preserves acc(&d.forwardingMetrics)
+// @ preserves acc(&d.localIA, def.ReadL15)
+// @ preserves acc(&d.neighborIAs, def.ReadL15)
+// @ preserves d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL15) // required for call
+// @ preserves acc(&d.Metrics, def.ReadL15) && acc(d.Metrics.Mem(), _)
+// @ preserves acc(&d.external, def.ReadL15)
+// @ preserves d.external != nil ==> acc(AccBatchConn(d.external), def.ReadL15) // required for call
+// @ preserves acc(&d.internalNextHops, def.ReadL15)
+// @ preserves d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL15)
+// @ ensures   AccForwardingMetrics(d.forwardingMetrics)
+// @ decreases
 func (d *DataPlane) initMetrics() {
+	// @ preserves acc(&d.forwardingMetrics)
+	// @ preserves acc(&d.localIA, def.ReadL20)
+	// @ preserves acc(&d.neighborIAs, def.ReadL20)
+	// @ preserves d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL20)
+	// @ preserves acc(&d.Metrics, def.ReadL20)
+	// @ preserves acc(d.Metrics.Mem(), _)
+	// @ ensures   acc(d.forwardingMetrics)
+	// @ ensures   domain(d.forwardingMetrics) == set[uint16]{0}
+	// @ ensures   acc(forwardingMetricsMem(d.forwardingMetrics[0], 0), _)
+	// @ decreases
+	// @ outline (
 	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
 	labels := interfaceToMetricLabels(0, d.localIA, d.neighborIAs)
 	d.forwardingMetrics[0] = initForwardingMetrics(d.Metrics, labels)
-	for id := range d.external {
+	// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[0], 0)
+	// @ )
+	// @ ghost if d.external != nil { unfold acc(AccBatchConn(d.external), def.ReadL15) }
+
+	// @ fold acc(hideLocalIA(&d.localIA), def.ReadL15)
+
+	// @ invariant acc(hideLocalIA(&d.localIA), def.ReadL15) // avoids incompletnes when folding acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
+	// @ invariant acc(&d.external, def.ReadL15)
+	// @ invariant d.external != nil ==> acc(d.external, def.ReadL20)
+	// @ invariant d.external === old(d.external)
+	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
+	// @ invariant acc(&d.internalNextHops, def.ReadL15)
+	// @ invariant d.internalNextHops === old(d.internalNextHops)
+	// @ invariant d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), def.ReadL15)
+	// @ invariant acc(&d.neighborIAs, def.ReadL15)
+	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, def.ReadL15)
+	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i in domain(d.forwardingMetrics) ==>
+	// @ 	acc(forwardingMetricsMem(d.forwardingMetrics[i], i), _)
+	// @ invariant acc(&d.Metrics, def.ReadL15)
+	// @ invariant acc(d.Metrics.Mem(), _)
+	// @ decreases len(d.external) - len(visitedSet)
+	for id := range d.external /*@ with visitedSet @*/ {
+		// @ ghost if d.internalNextHops != nil {
+		// @	unfold acc(AccAddr(d.internalNextHops), def.ReadL20)
+		// @ }
 		if _, notOwned := d.internalNextHops[id]; notOwned {
+			// @ ghost if d.internalNextHops != nil {
+			// @ 	fold acc(AccAddr(d.internalNextHops), def.ReadL20)
+			// @ }
 			continue
 		}
-		labels = interfaceToMetricLabels(id, d.localIA, d.neighborIAs)
+		// @ ghost if d.internalNextHops != nil {
+		// @ 	fold acc(AccAddr(d.internalNextHops), def.ReadL20)
+		// @ }
+		labels = interfaceToMetricLabels(id, ( /*@ unfolding acc(hideLocalIA(&d.localIA), def.ReadL20) in @*/ d.localIA), d.neighborIAs)
 		d.forwardingMetrics[id] = initForwardingMetrics(d.Metrics, labels)
+		// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[id], id)
+		// @ assert acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	}
+	// @ ghost if d.external != nil { fold acc(AccBatchConn(d.external), def.ReadL15) }
+	// @ fold AccForwardingMetrics(d.forwardingMetrics)
+	// @ unfold acc(hideLocalIA(&d.localIA), def.ReadL15)
 }
 
 type processResult struct {
@@ -1855,15 +1915,11 @@ type forwardingMetrics struct {
 }
 
 // @ requires  acc(labels, _)
-// @ preserves acc(metrics.Mem(), definitions.ReadL20)
-// @ ensures   acc(res.InputBytesTotal.Mem(), _)
-// @ ensures   acc(res.OutputBytesTotal.Mem(), _)
-// @ ensures   acc(res.InputPacketsTotal.Mem(), _)
-// @ ensures   acc(res.OutputPacketsTotal.Mem(), _)
-// @ ensures   acc(res.DroppedPacketsTotal.Mem(), _)
+// @ preserves acc(metrics.Mem(), _)
+// @ ensures   acc(forwardingMetricsNonInjectiveMem(res), _)
 // @ decreases
 func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forwardingMetrics) {
-	//@ unfold acc(metrics.Mem(), definitions.ReadL20)
+	//@ unfold acc(metrics.Mem(), _)
 	c := forwardingMetrics{
 		InputBytesTotal:     metrics.InputBytesTotal.With(labels),
 		InputPacketsTotal:   metrics.InputPacketsTotal.With(labels),
@@ -1876,11 +1932,11 @@ func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forw
 	c.OutputBytesTotal.Add(float64(0))
 	c.OutputPacketsTotal.Add(float64(0))
 	c.DroppedPacketsTotal.Add(float64(0))
-	//@ fold acc(metrics.Mem(), definitions.ReadL20)
+	// @ fold acc(forwardingMetricsNonInjectiveMem(c), _)
 	return c
 }
 
-// @ preserves acc(neighbors, definitions.ReadL20)
+// @ preserves neighbors != nil ==> acc(neighbors, def.ReadL20)
 // @ ensures   acc(res)
 // @ decreases
 func interfaceToMetricLabels(id uint16, localIA addr.IA,
