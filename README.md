@@ -27,9 +27,9 @@ In this project, we aim at verifying the data-plane component of the SCION borde
 When necessary, we make reasonable assumptions and explicitly state them.
 
 ## Differences to `scionproto/scion`
-This repository is meant to be updated frequently, to keep track of the changes in the SCION implementation ([scionproto/scion](https://github.com/scionproto/scion/)). The current version of this repository is based on the commit [cc378aaf5ac028995b3697d6ed9ad98d9a166227SCION](https://github.com/scionproto/scion/tree/cc378aaf5ac028995b3697d6ed9ad98d9a166227) from the original repository.
+This repository is meant to be updated frequently, to keep track of the changes in the SCION implementation ([scionproto/scion](https://github.com/scionproto/scion/)).
 
-Whenever necessary, we transform the original code to make it easier to verify (e.g., by extracting closures to a named function). We try to have minimal differences from the original code and we expect to contribute these changes to the upstream when we believe that they improve the original code.
+We try to have minimal differences from the original code and we expect to contribute these changes to the upstream when we believe that they improve the original code.
 
 ## Repo Structure
 This repository contains all the code from `scionproto/scion`.
