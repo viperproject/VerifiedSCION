@@ -212,7 +212,6 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// Verified in 12m3s with --disableMoreCompleteExhale --parallelizeBranches
 // @ requires  acc(&d.key,        1/2)
 // @ requires  acc(d.key,         1/2)
 // @ requires  acc(&d.running,    1/2) && !d.running
