@@ -216,6 +216,7 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // @ requires  acc(d.key,         1/2)
 // @ requires  acc(&d.running,    1/2) && !d.running
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory == nil
+// @ requires  len(key) > 0
 // @ requires  slices.AbsSlice_Bytes(key, 0, len(key))
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
@@ -228,19 +229,21 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ unfold MutexInvariant!<d!>()
 	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
+		// @ definitions.Unreachable()
 		return modifyExisting
 	}
 	if len(key) == 0 {
+		// @ definitions.Unreachable()
 		return emptyValue
 	}
 	if d.macFactory != nil {
+		// @ definitions.Unreachable()
 		return alreadySet
 	}
 	// First check for MAC creation errors.
 	if _, err := scrypto.InitMac(key); err != nil {
 		return err
 	}
-	tempKey := &key
 	// @ d.key = &key
 	verScionTemp :=
 		// @ requires acc(&key, definitions.ReadL15) && slices.AbsSlice_Bytes(key, 0, len(key))
@@ -252,7 +255,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 		mac, _ := scrypto.InitMac(key)
 			return mac
 	}
-	// @ proof verScionTemp implements MacFactorySpec{tempKey} {
+	// @ proof verScionTemp implements MacFactorySpec{d.key} {
 	// @   return verScionTemp() as f
 	// @ }
 	d.macFactory = verScionTemp
