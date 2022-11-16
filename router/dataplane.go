@@ -616,9 +616,12 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
+//
 // @ trusted
+//
 // @ requires false
 func (d *DataPlane) Run(ctx context.Context) error {
+	// @ share d, ctx
 	d.mtx.Lock()
 	d.running = true
 
@@ -639,7 +642,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		writeMsgs[0].Buffers = make([][]byte, 1)
 
 		processor := newPacketProcessor(d, ingressID)
-		var scmpErr scmpError
+		var scmpErr /*@@@*/ scmpError
 		for d.running {
 			pkts, err := rd.ReadBatch(msgs)
 			if err != nil {
@@ -688,7 +691,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 				_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
 				if err != nil {
-					var errno syscall.Errno
+					var errno /*@@@*/ syscall.Errno
 					if !errors.As(err, &errno) ||
 						!(errno == syscall.EAGAIN || errno == syscall.EWOULDBLOCK) {
 						log.Debug("Error writing packet", "err", err)
