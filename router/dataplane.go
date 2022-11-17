@@ -1060,8 +1060,6 @@ type scionPacketProcessor struct {
 	// For a hop performing an Xover, it is the MAC corresponding to the down segment.
 	cachedMac []byte
 	// macBuffers avoid allocating memory during processing.
-	// (VerifiedSCION) Having the same name for the type and the field caused an exception
-	// with Gobra so the type name was slightly altered
 	macBuffers macBuffersT
 
 	// bfdLayer is reusable buffer for parsing BFD messages
@@ -1069,6 +1067,8 @@ type scionPacketProcessor struct {
 }
 
 // macBuffersT are preallocated buffers for the in- and outputs of MAC functions.
+// (VerifiedSCION) This type used to be called macBuffers but this lead to an exception in
+// Gobra because there is a field with name and type macBuffers. Because of that, we renamed it.
 type macBuffersT struct {
 	scionInput []byte
 	epicInput  []byte
