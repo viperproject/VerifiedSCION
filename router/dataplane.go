@@ -65,8 +65,8 @@ import (
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
 	"github.com/scionproto/scion/router/bfd"
 	"github.com/scionproto/scion/router/control"
-	//@ def "github.com/scionproto/scion/verification/utils/definitions"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
+	// @ def "github.com/scionproto/scion/verification/utils/definitions"
+	// @ "github.com/scionproto/scion/verification/utils/slices"
 )
 
 const (
@@ -88,18 +88,18 @@ const (
 // the concrete implementations of this type use internal sync mechanisms to
 // obtain write access to the underlying data.
 type bfdSession interface {
-	//@ pred Mem()
+	// @ pred Mem()
 
 	// (VerifiedSCION) ctx is used to obtain a logger from ctx by
 	// calling the method Value. ReadL20 permissions are enough for that.
-	//@ requires acc(ctx.Mem(), def.ReadL20)
-	//@ requires acc(Mem(), _)
-	//@ ensures  err != nil ==> err.ErrorMem()
+	// @ requires acc(ctx.Mem(), def.ReadL20)
+	// @ requires acc(Mem(), _)
+	// @ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
-	//@ requires acc(Mem(), _)
-	//@ requires msg.Mem()
+	// @ requires acc(Mem(), _)
+	// @ requires msg.Mem()
 	ReceiveMessage(msg *layers.BFD)
-	//@ requires acc(Mem(), _)
+	// @ requires acc(Mem(), _)
 	IsUp() bool
 }
 
@@ -107,27 +107,27 @@ type bfdSession interface {
 // (VerifiedSCION) the spec of this interface exactly matches that of the same methods
 // in private/underlay/conn/Conn
 type BatchConn interface {
-	//@ pred Mem()
+	// @ pred Mem()
 
-	//@ preserves Mem()
-	//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
-	//@ ensures   err == nil ==> 0 <= n && n <= len(msgs)
-	//@ ensures   err != nil ==> err.ErrorMem()
+	// @ preserves Mem()
+	// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+	// @ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(msgs underlayconn.Messages) (n int, err error)
-	//@ requires  acc(addr.Mem(), _)
-	//@ preserves Mem()
-	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL10)
-	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
-	//@ ensures   err != nil ==> err.ErrorMem()
+	// @ requires  acc(addr.Mem(), _)
+	// @ preserves Mem()
+	// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL10)
+	// @ ensures   err == nil ==> 0 <= n && n <= len(b)
+	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
-	//@ preserves Mem()
-	//@ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), def.ReadL10)
-	//@ ensures   err == nil ==> 0 <= n && n <= len(msgs)
-	//@ ensures   err != nil ==> err.ErrorMem()
+	// @ preserves Mem()
+	// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), def.ReadL10)
+	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
-	//@ requires Mem()
-	//@ ensures  err != nil ==> err.ErrorMem()
-	//@ decreases
+	// @ requires Mem()
+	// @ ensures  err != nil ==> err.ErrorMem()
+	// @ decreases
 	Close() (err error)
 }
 
@@ -194,8 +194,8 @@ func (e scmpError) Error() string {
 func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	//@ unfold MutexInvariant!<d!>()
-	//@ defer fold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
 		return modifyExisting
 	}
@@ -313,8 +313,8 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	//@ unfold MutexInvariant!<d!>()
-	//@ defer fold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
 		return modifyExisting
 	}
@@ -326,11 +326,11 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	}
 	if d.external == nil {
 		d.external = make(map[uint16]BatchConn)
-		//@ fold AccBatchConn(d.external)
+		// @ fold AccBatchConn(d.external)
 	}
-	//@ unfold AccBatchConn(d.external)
+	// @ unfold AccBatchConn(d.external)
 	d.external[ifID] = conn
-	//@ fold AccBatchConn(d.external)
+	// @ fold AccBatchConn(d.external)
 	return nil
 }
 
@@ -350,8 +350,8 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	//@ unfold MutexInvariant!<d!>()
-	//@ defer fold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
 		return modifyExisting
 	}
@@ -385,8 +385,8 @@ func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	if _, existsB := d.linkTypes[ifID]; existsB {
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
-	//@ unfold MutexInvariant!<d!>()
-	//@ defer fold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant!<d!>()
 	if d.linkTypes == nil {
 		d.linkTypes = make(map[uint16]topology.LinkType)
 	}
@@ -431,19 +431,19 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 // session. Otherwise, it returns InterfaceDown.
 // @ preserves acc(MutexInvariant!<d!>(), def.ReadL5)
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
-	//@ unfold acc(MutexInvariant!<d!>(), def.ReadL5)
-	//@ defer fold acc(MutexInvariant!<d!>(), def.ReadL5)
+	// @ unfold acc(MutexInvariant!<d!>(), def.ReadL5)
+	// @ defer fold acc(MutexInvariant!<d!>(), def.ReadL5)
 	bfdSessions := d.bfdSessions
-	//@ ghost if bfdSessions != nil {
-	//@		unfold acc(AccBfdSession(d.bfdSessions), def.ReadL20)
-	//@		defer fold acc(AccBfdSession(d.bfdSessions), def.ReadL20)
-	//@ }
+	// @ ghost if bfdSessions != nil {
+	// @		unfold acc(AccBfdSession(d.bfdSessions), def.ReadL20)
+	// @		defer fold acc(AccBfdSession(d.bfdSessions), def.ReadL20)
+	// @ }
 	// (VerifiedSCION) had to rewrite this, as Gobra does not correctly
 	// implement short-circuiting.
 	if bfdSession, ok := bfdSessions[interfaceID]; ok {
-		//@ assert interfaceID in domain(d.bfdSessions)
-		//@ assert bfdSession in range(d.bfdSessions)
-		//@ assert bfdSession != nil
+		// @ assert interfaceID in domain(d.bfdSessions)
+		// @ assert bfdSession in range(d.bfdSessions)
+		// @ assert bfdSession != nil
 		if !bfdSession.IsUp() {
 			return control.InterfaceDown
 		}
@@ -495,37 +495,37 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	if a == nil {
 		return emptyValue
 	}
-	//@ preserves MutexInvariant!<d!>()
-	//@ preserves acc(&d.svc, 1/2)
-	//@ ensures   d.svc != nil && acc(d.svc.Mem(), _)
-	//@ decreases
-	//@ outline(
-	//@ unfold MutexInvariant!<d!>()
+	// @ preserves MutexInvariant!<d!>()
+	// @ preserves acc(&d.svc, 1/2)
+	// @ ensures   d.svc != nil && acc(d.svc.Mem(), _)
+	// @ decreases
+	// @ outline(
+	// @ unfold MutexInvariant!<d!>()
 	if d.svc == nil {
 		d.svc = newServices()
 	}
-	//@ fold MutexInvariant!<d!>()
-	//@ )
-	//@ unfold acc(MutexInvariant!<d!>(), def.ReadL15)
-	//@ assert acc(d.svc.Mem(), _)
+	// @ fold MutexInvariant!<d!>()
+	// @ )
+	// @ unfold acc(MutexInvariant!<d!>(), def.ReadL15)
+	// @ assert acc(d.svc.Mem(), _)
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
 		labels := serviceMetricLabels(d.localIA, svc)
-		//@ requires acc(&d.Metrics, def.ReadL20)
-		//@ requires acc(d.Metrics.Mem(), _)
-		//@ requires acc(labels, _)
-		//@ ensures  acc(&d.Metrics, def.ReadL20)
-		//@ decreases
-		//@ outline (
-		//@ unfold acc(d.Metrics.Mem(), _)
-		//@ assume float64(0) < float64(1) // Gobra still does not fully support floats
-		//@ assert d.Metrics.ServiceInstanceChanges != nil
-		//@ assert d.Metrics.ServiceInstanceCount   != nil
+		// @ requires acc(&d.Metrics, def.ReadL20)
+		// @ requires acc(d.Metrics.Mem(), _)
+		// @ requires acc(labels, _)
+		// @ ensures  acc(&d.Metrics, def.ReadL20)
+		// @ decreases
+		// @ outline (
+		// @ unfold acc(d.Metrics.Mem(), _)
+		// @ assume float64(0) < float64(1) // Gobra still does not fully support floats
+		// @ assert d.Metrics.ServiceInstanceChanges != nil
+		// @ assert d.Metrics.ServiceInstanceCount   != nil
 		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(1))
-		//@ )
+		// @ )
 	}
-	//@ fold acc(MutexInvariant!<d!>(), def.ReadL15)
+	// @ fold acc(MutexInvariant!<d!>(), def.ReadL15)
 	return nil
 }
 
@@ -539,8 +539,8 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	if a == nil {
 		return emptyValue
 	}
-	//@ unfold acc(MutexInvariant!<d!>(), def.ReadL15)
-	//@ ghost defer fold acc(MutexInvariant!<d!>(), def.ReadL15)
+	// @ unfold acc(MutexInvariant!<d!>(), def.ReadL15)
+	// @ ghost defer fold acc(MutexInvariant!<d!>(), def.ReadL15)
 	if d.svc == nil {
 		return nil
 	}
@@ -570,8 +570,8 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	//@ unfold MutexInvariant!<d!>()
-	//@ defer fold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
 		return modifyExisting
 	}
@@ -583,10 +583,10 @@ func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	}
 	if d.internalNextHops == nil {
 		d.internalNextHops = make(map[uint16]*net.UDPAddr)
-		//@ fold AccAddr(d.internalNextHops)
+		// @ fold AccAddr(d.internalNextHops)
 	}
-	//@ unfold AccAddr(d.internalNextHops)
-	//@ defer fold AccAddr(d.internalNextHops)
+	// @ unfold AccAddr(d.internalNextHops)
+	// @ defer fold AccAddr(d.internalNextHops)
 	d.internalNextHops[ifID] = a
 	return nil
 }
@@ -1947,7 +1947,7 @@ type forwardingMetrics struct {
 // @ ensures   acc(forwardingMetricsNonInjectiveMem(res), _)
 // @ decreases
 func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forwardingMetrics) {
-	//@ unfold acc(metrics.Mem(), _)
+	// @ unfold acc(metrics.Mem(), _)
 	c := forwardingMetrics{
 		InputBytesTotal:     metrics.InputBytesTotal.With(labels),
 		InputPacketsTotal:   metrics.InputPacketsTotal.With(labels),
@@ -1971,7 +1971,7 @@ func interfaceToMetricLabels(id uint16, localIA addr.IA,
 	neighbors map[uint16]addr.IA) (res prometheus.Labels) {
 	// (VerifiedSCION) Gobra cannot prove this, even though it is obvious from the
 	// type of id.
-	//@ assume 0 <= id
+	// @ assume 0 <= id
 
 	if id == 0 {
 		return prometheus.Labels{
