@@ -22,6 +22,7 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 	"github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/pkg/scrypto"
+	"github.com/scionproto/scion/pkg/addr"
 )
 
 pred nonNilErr(e error) {
@@ -37,6 +38,11 @@ pred (d *DataPlane) MacFactoryOperational() {
 	d.macFactory implements MacFactorySpec{d.key}
 }
 
+// TODO: maybe change interpretation of Mutex depending on whether the
+// dataplane is running or not. This is because, when Run is called and
+// d.running is set to true, the permissions to some of these fields is transferred
+// to the read closure, and thus, we cannot transfer it back on the call to unlock
+// at the end of run
 pred MutexInvariant(d *DataPlane) {
 	// access to the field 'mtx' ommited
 	acc(&d.external,          1/2) &&
@@ -91,15 +97,32 @@ pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
 
 pred AccForwardingMetrics(metrics map[uint16]forwardingMetrics) {
 	acc(metrics, 1/2) &&
-	forall fm forwardingMetrics :: fm in range(metrics) ==> acc(forwardingMetricsMem(fm), _)
+	forall id uint16 :: { metrics[id] } id in domain(metrics) ==> acc(forwardingMetricsMem(metrics[id], id), _)
 }
 
-pred forwardingMetricsMem(v forwardingMetrics) {
+pred forwardingMetricsMem(v forwardingMetrics, ignoredForInjectivity uint16) {
 	v.InputBytesTotal.Mem()      &&
 	v.OutputBytesTotal.Mem()     &&
 	v.InputPacketsTotal.Mem()    &&
 	v.OutputPacketsTotal.Mem()   &&
 	v.DroppedPacketsTotal.Mem()
+}
+
+pred forwardingMetricsNonInjectiveMem(v forwardingMetrics) {
+	v.InputBytesTotal.Mem()      &&
+	v.OutputBytesTotal.Mem()     &&
+	v.InputPacketsTotal.Mem()    &&
+	v.OutputPacketsTotal.Mem()   &&
+	v.DroppedPacketsTotal.Mem()
+}
+
+ghost
+requires  acc(forwardingMetricsNonInjectiveMem(v), _)
+ensures   acc(forwardingMetricsMem(v, id), _)
+decreases
+func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
+	unfold acc(forwardingMetricsNonInjectiveMem(v), _)
+	fold acc(forwardingMetricsMem(v, id), _)
 }
 
 // useful for hidding permissions to avoid incompletenesses of Gobra
@@ -125,16 +148,14 @@ pred (p *scionPacketProcessor) initMem() {
 	acc(&p.bfdLayer)
 }
 
-//type KeyHolder struct { key []byte }
-
-//pred (k *KeyHolder) Inv() {
-//	len(k.key) > 0 &&
-//	slices.AbsSlice_Bytes(k.key, 0, len(k.key))
-//}
-
 requires acc(key, definitions.ReadL15) && acc(slices.AbsSlice_Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
 ensures  acc(key, definitions.ReadL15) && acc(slices.AbsSlice_Bytes(*key, 0, len(*key)), _)
 ensures  res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
+
+// useful to deal with incompletnesses
+pred hideLocalIA(p *addr.IA) {
+	acc(p)
+}
