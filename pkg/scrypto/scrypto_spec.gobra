@@ -22,12 +22,16 @@ package scrypto
 import "hash"
 import "github.com/scionproto/scion/verification/utils/slices"
 
+// The error returned by initMac is produced deterministically depending on the key.
+// If an initial call to initmac succeeds with a key, then any subsequent
+// calls to it will also succeed. This behaviour is abstracted using this
+// ghost function.
 ghost
-requires acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
+requires  acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 decreases _
 pure func ValidKeyForHash(key []byte) bool
 
-preserves slices.AbsSlice_Bytes(key, 0, len(key))
+preserves acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 ensures   old(ValidKeyForHash(key)) ==> e == nil
 ensures   e == nil ==> (h != nil && h.Mem() && ValidKeyForHash(key))
 ensures   e != nil ==> e.ErrorMem()

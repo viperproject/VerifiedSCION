@@ -196,7 +196,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'router/'
-          timeout: 2h
+          timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}

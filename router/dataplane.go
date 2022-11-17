@@ -140,6 +140,8 @@ type BatchConn interface {
 //   - initializing connections; MUST be done prior to calling Run
 type DataPlane struct {
 	// (VerifiedSCION) this is morally ghost
+	// It is stored in the dataplane in order to retain
+	// knowledge that macFactory will not fail
 	// @ key *[]byte
 	external          map[uint16]BatchConn
 	linkTypes         map[uint16]topology.LinkType
@@ -211,9 +213,8 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// Verified locally in 29m45s with --disableMoreCompleteExhale --parallelizeBranches
+// Verified locally in 26m35s with --disableMoreCompleteExhale --parallelizeBranches
 // Marked as trusted for now because of timeouts
-// @ trusted
 // @ requires  acc(&d.key,        1/2)
 // @ requires  acc(d.key,         1/2)
 // @ requires  acc(&d.running,    1/2) && !d.running
@@ -248,9 +249,9 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	}
 	// @ d.key = &key
 	verScionTemp :=
-		// @ requires acc(&key, def.ReadL15) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
+		// @ requires acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ requires scrypto.ValidKeyForHash(key)
-		// @ ensures  acc(&key, def.ReadL15) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
+		// @ ensures  acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ ensures  h.Mem()
 		// @ decreases
 		func /*@ f @*/ () (h hash.Hash) {
@@ -828,13 +829,13 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ preserves d.MacFactoryOperational()
+// @ preserves acc(d.MacFactoryOperational(), _)
 // @ ensures   res.initMem()
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
-	// @ unfold d.MacFactoryOperational()
-	// @ defer fold d.MacFactoryOperational()
+	// @ unfold acc(d.MacFactoryOperational(), _)
+	// @ defer fold acc(d.MacFactoryOperational(), _)
 	// @ ghost var ubuf []byte
 	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{

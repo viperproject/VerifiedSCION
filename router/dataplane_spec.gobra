@@ -19,8 +19,7 @@ package router
 import (
 	"net"
 	"hash"
-	"github.com/scionproto/scion/verification/utils/slices"
-	"github.com/scionproto/scion/verification/utils/definitions"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
 )
@@ -33,7 +32,7 @@ pred (d *DataPlane) MacFactoryOperational() {
 	acc(&d.macFactory, 1/2) &&
 	acc(&d.key, 1/2) &&
 	acc(d.key, 1/2) &&
-	acc(slices.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
+	acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
 	scrypto.ValidKeyForHash(*d.key) &&
 	d.macFactory implements MacFactorySpec{d.key}
 }
@@ -67,7 +66,7 @@ pred MutexInvariant(d *DataPlane) {
 	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
 	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
-	(d.macFactory != nil        ==> acc(slices.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
+	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
 	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key)) &&
 	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key}) &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
@@ -148,9 +147,9 @@ pred (p *scionPacketProcessor) initMem() {
 	acc(&p.bfdLayer)
 }
 
-requires acc(key, definitions.ReadL15) && acc(slices.AbsSlice_Bytes(*key, 0, len(*key)), _)
+requires acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
-ensures  acc(key, definitions.ReadL15) && acc(slices.AbsSlice_Bytes(*key, 0, len(*key)), _)
+ensures  acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
 ensures  res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
