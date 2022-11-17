@@ -58,7 +58,6 @@ pred MutexInvariant(d *DataPlane) {
 	acc(&d.Metrics,           1/2) &&
 	acc(&d.forwardingMetrics, 1/2) &&
 	acc(&d.key,               1/2) &&
-	acc(d.key,                1/2) &&
 	(d.external    != nil       ==> AccBatchConn(d.external))           &&
 	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
 	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
@@ -66,6 +65,7 @@ pred MutexInvariant(d *DataPlane) {
 	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
 	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
+	(d.macFactory != nil        ==> acc(d.key, 1/2))                    &&
 	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
 	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key)) &&
 	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key}) &&
