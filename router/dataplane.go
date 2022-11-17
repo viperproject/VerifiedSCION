@@ -282,8 +282,8 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	//@ unfold MutexInvariant!<d!>()
-	//@ defer fold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
 		return modifyExisting
 	}
