@@ -53,7 +53,7 @@ jobs:
       - name: Verify package 'router/'
         uses: viperproject/gobra-action@main
         with:
-          input: '/home/shit/repos/VerifiedSCION/router/metrics_spec_test.gobra /home/shit/repos/VerifiedSCION/router/svc_spec_test.gobra /home/shit/repos/VerifiedSCION/router/dataplane_spec_test.gobra /home/shit/repos/VerifiedSCION/router/dataplane.go@192 /home/shit/repos/VerifiedSCION/router/dataplane_spec.gobra /home/shit/repos/VerifiedSCION/router/metrics.go /home/shit/repos/VerifiedSCION/router/metrics_spec.gobra /home/shit/repos/VerifiedSCION/router/svc.go /home/shit/repos/VerifiedSCION/router/svc_spec.gobra'
+          files: '/home/shit/repos/VerifiedSCION/router/metrics_spec_test.gobra /home/shit/repos/VerifiedSCION/router/svc_spec_test.gobra /home/shit/repos/VerifiedSCION/router/dataplane_spec_test.gobra /home/shit/repos/VerifiedSCION/router/dataplane.go@192 /home/shit/repos/VerifiedSCION/router/dataplane_spec.gobra /home/shit/repos/VerifiedSCION/router/metrics.go /home/shit/repos/VerifiedSCION/router/metrics_spec.gobra /home/shit/repos/VerifiedSCION/router/svc.go /home/shit/repos/VerifiedSCION/router/svc_spec.gobra'
           timeout: 2h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
