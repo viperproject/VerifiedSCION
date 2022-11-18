@@ -1,0 +1,49 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Copyright (c) 2011-2020 ETH Zurich.
+
+name: Verify the specified codebase
+
+on:
+  pull_request: # verify on pull request
+  push:
+    branches:
+    - master
+
+jobs:
+  verify:
+    env:
+      assumeInjectivityOnInhale: '1'
+      checkConsistency: '0'
+      headerOnly: 1
+      includePaths: . verification/dependencies
+      module: github.com/scionproto/scion
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout the VerifiedSCION repository
+      uses: actions/checkout@v3
+    - env:
+        cache-name: gobra-cache
+      name: Cache the verification results
+      uses: actions/cache@v3
+      with:
+        key: ${{ env.cache-name }}
+        path: ${{ runner.workspace }}/.gobra/cache.json
+    - name: Verify package 'router/'-none
+      uses: viperproject/gobra-action@main
+      with:
+        assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+        checkConsistency: ${{ env.checkConsistency }}
+        files: ' router/dataplane.go@1480,1555,1644,1668,1672,1677,1705,1757,1766,1785,1898,1904,1925,1952,1973,1995 router/metrics_spec.gobra router/dataplane_spec.gobra@122,155 router/svc.go@35,45,70,101,132 router/metrics.go@47 router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra@26,37 router/svc_spec_test.gobra@25,32'
+        headerOnly: ${{ env.headerOnly }}
+        includePaths: ${{ env.includePaths }}
+        module: ${{ env.module }}
+        timeout: 2h
+    - name: Upload the verification report
+      uses: actions/upload-artifact@v2
+      with:
+        if-no-files-found: error
+        name: stats_addr.json
+        path: /stats/stats_addr.json

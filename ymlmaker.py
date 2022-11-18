@@ -18,8 +18,8 @@ def get_file(s):
 def partition(s):
     fname = s[:s.index("@")]
     rest = s[s.index("@")+1:].split(",")
-    f1 = deepcopy(fname) + "@"
-    f2 = deepcopy(fname) + "@"
+    f1 = fname + "@"
+    f2 = fname + "@"
     for i in range(len(rest)):
         if len(f1) + len(rest[i]) + 1 < 250:
             f1 += f",{rest[i]}"
@@ -101,6 +101,25 @@ def alter_entry(entry: dict):
         return reduce(lambda a, b: a + b, [normalize(v) for k, v in retdict.items() if enabled[k]])
     return [ret]
 
+def split_to_many(yml):
+    ret = []
+    for i in yml['jobs']['verify']['steps'][2:-1]:
+        toappend = deepcopy(yml)
+        start = toappend['jobs']['verify']['steps'][:2]
+        end = toappend['jobs']['verify']['steps'][-1]
+        toappend['jobs']['verify']['steps'] = start + [deepcopy(i)] + [end]
+        ret.append(toappend)
+    return ret
+
+def write_result(yml, ftarget):
+    with open(ftarget, 'w') as fhandle2:
+        fhandle2.write("# This Source Code Form is subject to the terms of the Mozilla Public\n# License, v. 2.0. If a copy of the MPL was not distributed with this\n# file, You can obtain one at http://mozilla.org/MPL/2.0/.\n#\n# Copyright (c) 2011-2020 ETH Zurich.\n\nname: Verify the specified codebase\n\n")
+        fhandle2.write("on:\n  pull_request: # verify on pull request\n  push:\n    branches:\n    - master\n\n")
+        s = yaml.dump(yml, Dumper=yaml.CDumper)
+        for i in re.findall(r"files: '[^']*'", s):
+            s = s.replace(i, " ".join(i.replace("\n", "").split()))
+        fhandle2.write(s)
+
 if __name__ == "__main__":
     with open(f, 'r') as fhandle:
         yml = yaml.load(fhandle, Loader=yaml.CLoader)
@@ -113,10 +132,9 @@ if __name__ == "__main__":
         yml['jobs']['verify']['steps'] = newdistinct
         yml.pop(True)
         yml.pop('name')
-        with open(ftarget, 'w') as fhandle2:
-            fhandle2.write("# This Source Code Form is subject to the terms of the Mozilla Public\n# License, v. 2.0. If a copy of the MPL was not distributed with this\n# file, You can obtain one at http://mozilla.org/MPL/2.0/.\n#\n# Copyright (c) 2011-2020 ETH Zurich.\n\nname: Verify the specified codebase\n\n")
-            fhandle2.write("on:\n  pull_request: # verify on pull request\n  push:\n    branches:\n    - master\n\n")
-            s = yaml.dump(yml, Dumper=yaml.CDumper)
-            for i in re.findall(r"files: '[^']*'", s):
-                s = s.replace(i, " ".join(i.replace("\n", "").split()))
-            fhandle2.write(s)
+        ymls = split_to_many(yml)
+        for i, e in enumerate(ymls):
+            print(f'{ftarget.split(".")[0]}{i}.yml')
+            write_result(e, f'{ftarget[:-4]}{i}.yml')
+        #write_result(yml, ftarget)
+

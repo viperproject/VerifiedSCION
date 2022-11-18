@@ -1,0 +1,49 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Copyright (c) 2011-2020 ETH Zurich.
+
+name: Verify the specified codebase
+
+on:
+  pull_request: # verify on pull request
+  push:
+    branches:
+    - master
+
+jobs:
+  verify:
+    env:
+      assumeInjectivityOnInhale: '1'
+      checkConsistency: '0'
+      headerOnly: 1
+      includePaths: . verification/dependencies
+      module: github.com/scionproto/scion
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout the VerifiedSCION repository
+      uses: actions/checkout@v3
+    - env:
+        cache-name: gobra-cache
+      name: Cache the verification results
+      uses: actions/cache@v3
+      with:
+        key: ${{ env.cache-name }}
+        path: ${{ runner.workspace }}/.gobra/cache.json
+    - name: Verify package 'router/'-none0
+      uses: viperproject/gobra-action@main
+      with:
+        assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+        checkConsistency: ${{ env.checkConsistency }}
+        files: ' router/dataplane.go@,153,183,196,258,284,315,352,386,402,435,459,494,504,521,538,572,601,641,652,701,729,737,742,767,778,861,878,920,940,968,981,1071,1081,1106,1129,1148,1170,1217,1233,1240,1247,1272,1290,1309,1336,1345,1373,1390,1399,1417,1426,1463 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
+        headerOnly: ${{ env.headerOnly }}
+        includePaths: ${{ env.includePaths }}
+        module: ${{ env.module }}
+        timeout: 2h
+    - name: Upload the verification report
+      uses: actions/upload-artifact@v2
+      with:
+        if-no-files-found: error
+        name: stats_addr.json
+        path: /stats/stats_addr.json
