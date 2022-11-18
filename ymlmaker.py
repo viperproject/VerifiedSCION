@@ -22,7 +22,10 @@ def partition(s):
     f2 = fname + "@"
     for i in range(len(rest)):
         if len(f1) + len(rest[i]) + 1 < 250:
-            f1 += f",{rest[i]}"
+            if f1[-1] != "@":
+                f1 += f",{rest[i]}"
+            else:
+                f1 += str(rest[i])
             continue
         f2 += ",".join(rest[i:])
         break
@@ -134,7 +137,5 @@ if __name__ == "__main__":
         yml.pop('name')
         ymls = split_to_many(yml)
         for i, e in enumerate(ymls):
-            print(f'{ftarget.split(".")[0]}{i}.yml')
             write_result(e, f'{ftarget[:-4]}{i}.yml')
-        #write_result(yml, ftarget)
 

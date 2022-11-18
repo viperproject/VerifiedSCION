@@ -36,7 +36,7 @@ jobs:
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
-        files: ' router/dataplane.go@,153,183,196,258,284,315,352,386,402,435,459,494,504,521,538,572,601,641,652,701,729,737,742,767,778,861,878,920,940,968,981,1071,1081,1106,1129,1148,1170,1217,1233,1240,1247,1272,1290,1309,1336,1345,1373,1390,1399,1417,1426,1463 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
+        files: ' router/dataplane.go@153,183,196,258,284,315,352,386,402,435,459,494,504,521,538,572,601,641,652,701,729,737,742,767,778,861,878,920,940,968,981,1071,1081,1106,1129,1148,1170,1217,1233,1240,1247,1272,1290,1309,1336,1345,1373,1390,1399,1417,1426,1463 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
