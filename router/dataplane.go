@@ -833,6 +833,7 @@ type processResult struct {
 // @ preserves acc(d.MacFactoryOperational(), _)
 // @ ensures   res.initMem()
 // @ decreases
+// $![disableMoreCompleteExhale parallelizeBranches]!$
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
 	// @ unfold acc(d.MacFactoryOperational(), _)
