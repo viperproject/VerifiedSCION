@@ -1,3 +1,8 @@
+on:
+  pull_request: 1
+  push:
+    branches:
+    - master
 jobs:
   verify:
     env:
@@ -57,8 +62,4 @@ jobs:
         name: stats_addr.json
         path: /stats/stats_addr.json
 name: Verify the specified codebase
-on:
-  pull_request: 1
-  push:
-    branches:
-    - master
+
