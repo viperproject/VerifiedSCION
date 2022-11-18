@@ -5,10 +5,49 @@ from os import path
 import os
 from copy import deepcopy
 import re
+from functools import reduce
 
 f = "metagobra.yml"
 ftarget = ".github/workflows/gobra.yml"
 
+def get_file(s):
+    if "@" in s:
+        return s[:s.index("@")]
+    return s
+
+def partition(s):
+    fname = s[:s.index("@")]
+    rest = s[s.index("@")+1:].split(",")
+    f1 = deepcopy(fname) + "@"
+    f2 = deepcopy(fname) + "@"
+    for i in range(len(rest)):
+        if len(f1) + len(rest[i]) + 1 < 250:
+            f1 += f",{rest[i]}"
+            continue
+        f2 += ",".join(rest[i:])
+        break
+    return f1, f2
+
+def normalize(yml):
+    if "files" in yml['with'].keys():
+        ret = []
+        files = yml['with']['files'].split()
+        large_files = [i for i in files if len(i) > 250]
+        rest_files = [i for i in files if len(i) <= 250]
+        for i in range(len(large_files)):
+            while len(large_files[i]) > 250:
+                f1, f2 = partition(large_files[i])
+                toappend = deepcopy(yml)
+                toappend['with']['files'] = f' {f1} {" ".join(get_file(e) for j, e in enumerate(large_files) if j != i)} {" ".join(get_file(e) for e in rest_files)}'
+                toappend['name'] += str(len(ret))
+                ret.append(toappend)
+                large_files[i] = f2
+        toappend = deepcopy(yml)
+        toappend['with']['files'] = f' {" ".join(large_files)} {" ".join(rest_files)}'
+        ret.append(toappend)
+        return ret
+    return [yml]
+    
 def has_header(f):
     with open(f, 'r') as fhandle:
         return any(["// +gobra" in l for l in fhandle.readlines()])
@@ -59,7 +98,7 @@ def alter_entry(entry: dict):
                     retdict[key]['with']['files'] += f' {f}@{",".join(str(j) for j in lines)}'
                 else:
                     retdict[key]['with']['files'] += f' {f}'
-        return [v for k, v in retdict.items() if enabled[k]]
+        return reduce(lambda a, b: a + b, [normalize(v) for k, v in retdict.items() if enabled[k]])
     return [ret]
 
 if __name__ == "__main__":
