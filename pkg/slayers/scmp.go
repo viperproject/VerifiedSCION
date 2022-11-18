@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +gobra
-
 package slayers
 
 import (
@@ -85,7 +83,7 @@ func (s *SCMP) CanDecode() gopacket.LayerClass {
 // @ preserves acc(s.Mem(), def.ReadL20)
 // @ decreases
 func (s *SCMP) NextLayerType() gopacket.LayerType {
-	switch /*@unfolding acc(s.Mem(), def.ReadL20) in @*/s.TypeCode.Type() {
+	switch /*@unfolding acc(s.Mem(), def.ReadL20) in @*/ s.TypeCode.Type() {
 	case SCMPTypeDestinationUnreachable:
 		return LayerTypeSCMPDestinationUnreachable
 	case SCMPTypePacketTooBig:
@@ -113,13 +111,13 @@ func (s *SCMP) NextLayerType() gopacket.LayerType {
 // @ ensures err == nil ==> s.Mem() && b.Mem(underlyingBufRes)
 // @ ensures err != nil ==> err.ErrorMem()
 // @ decreases
-func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions/*@, ghost underlyingBuf []byte @*/) (err error/*@, ghost underlyingBufRes []byte @*/) {
-	bytes, err/*@, underlyingBufRes@*/  := b.PrependBytes(4/*@, underlyingBuf@*/)
+func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost underlyingBuf []byte @*/) (err error /*@, ghost underlyingBufRes []byte @*/) {
+	bytes, err /*@, underlyingBufRes@*/ := b.PrependBytes(4 /*@, underlyingBuf@*/)
 	if err != nil {
-		return err/*@, underlyingBufRes @*/
+		return err /*@, underlyingBufRes @*/
 	}
 	// @ unfold s.Mem()
-	
+
 	// @ requires len(underlyingBufRes) >= 4
 	// @ requires bytes === underlyingBufRes[:4]
 	// @ requires b != nil
@@ -143,7 +141,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	if opts.ComputeChecksums {
 		if s.scn == nil {
 			// @ fold s.Mem()
-			return serrors.New("can not calculate checksum without SCION header")/*@, underlyingBufRes @*/
+			return serrors.New("can not calculate checksum without SCION header") /*@, underlyingBufRes @*/
 		}
 		// zero out checksum bytes
 		// @ requires len(underlyingBufRes) >= 4
@@ -163,14 +161,14 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		// @ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 		// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 		// @ )
-		verScionTmp := b.Bytes(/*@underlyingBufRes@*/)
+		verScionTmp := b.Bytes( /*@underlyingBufRes@*/ )
 		// @ unfold s.scn.ChecksumMem()
 		s.Checksum, err = s.scn.computeChecksum(verScionTmp, uint8(L4SCMP))
 		// @ fold s.scn.ChecksumMem()
 		// @ apply slices.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)) --* b.Mem(underlyingBufRes)
 		if err != nil {
 			// @ fold s.Mem()
-			return err/*@, underlyingBufRes @*/
+			return err /*@, underlyingBufRes @*/
 		}
 
 	}
@@ -192,7 +190,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
 	// @ )
 	// @ fold s.Mem()
-	return nil/*@, underlyingBufRes @*/
+	return nil /*@, underlyingBufRes @*/
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.

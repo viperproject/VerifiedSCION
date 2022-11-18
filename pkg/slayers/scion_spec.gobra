@@ -17,6 +17,8 @@
 package slayers
 
 import (
+	"github.com/google/gopacket"
+
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/empty"
@@ -250,3 +252,5 @@ func FoldEpicMem(p *epic.Path) (r *epic.Path) {
 	fold p.NonInitMem()
 	return p
 }
+
+*SCION implements gopacket.Layer

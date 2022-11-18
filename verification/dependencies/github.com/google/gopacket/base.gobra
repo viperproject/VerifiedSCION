@@ -15,82 +15,82 @@ type Layer interface {
 	// it may not be possible to hold an instance of each at once.
 	// Hence, we have Mem that abstracts all the resources associated with
 	// the layer.
-	pred Mem()
-	pred LayerMem()
-	pred PayloadMem()
+	pred Mem(ub []byte)
+	pred LayerMem(ub []byte)
+	pred PayloadMem(ub []byte)
 
-	requires acc(Mem(), _)
+	requires acc(Mem(ub), _)
 	decreases
-	pure LayerType() LayerType
+	pure LayerType(ghost ub []byte) LayerType
 
-	requires LayerMem()
+	requires LayerMem(ub)
 	ensures slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* LayerMem()
+	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* LayerMem(ub)
 	decreases
-	LayerContents() (res []byte)
+	LayerContents(ghost ub []byte) (res []byte)
 
-	requires PayloadMem()
+	requires PayloadMem(ub)
 	ensures slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* PayloadMem()
+	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* PayloadMem(ub)
 	decreases
-	LayerPayload() (res []byte)
+	LayerPayload(ghost ub []byte) (res []byte)
 }
 
 type Payload []byte
 
-pred (p Payload) LayerMem() { acc(p) }
-pred (p Payload) PayloadMem() { true }
-pred (p Payload) Mem() { acc(p) }
+pred (p Payload) LayerMem(ub []byte) { acc(p) }
+pred (p Payload) PayloadMem(ub []byte) { true }
+pred (p Payload) Mem(ub []byte) { acc(p) }
 
-requires acc(p.Mem(), _)
+requires acc(p.Mem(ub), _)
 decreases
-pure func (p Payload) LayerType() LayerType {
-	return unfolding acc(p.Mem(), _) in LayerTypePayload
+pure func (p Payload) LayerType(ghost ub []byte) LayerType {
+	return unfolding acc(p.Mem(ub), _) in LayerTypePayload
 }
 
-requires p.LayerMem()
+requires p.LayerMem(ub)
 ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem(ub)
 decreases
-func (p Payload) LayerContents() (res []byte) {
+func (p Payload) LayerContents(ghost ub []byte) (res []byte) {
 	unfold p.LayerMem()
 	res = []byte(p)
 	assert forall i int :: 0 <= i && i < len(p) ==> acc(&p[i])
 	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem() {
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem(ub) {
 		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold p.LayerMem()
+		fold p.LayerMem(ub)
 	}
 }
 
-requires p.PayloadMem()
+requires p.PayloadMem(ub)
 ensures res == nil
 ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.PayloadMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.PayloadMem(ub)
 decreases
-func (p Payload) LayerPayload() (res []byte) {
-	unfold p.PayloadMem()
+func (p Payload) LayerPayload(ghost ub []byte) (res []byte) {
+	unfold p.PayloadMem(ub)
 	res = nil
 	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.PayloadMem() {
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.PayloadMem(ub) {
 		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold p.PayloadMem()
+		fold p.PayloadMem(ub)
 	}
 }
 
-requires p.LayerMem()
+requires p.LayerMem(ub)
 ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem()
+ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem(ub)
 ensures res === []byte(p)
 decreases
-func (p Payload) Payload() (res []byte) {
-	unfold p.LayerMem()
+func (p Payload) Payload(ghost ub []byte) (res []byte) {
+	unfold p.LayerMem(ub)
 	res = []byte(p)
 	assert forall i int :: 0 <= i && i < len(p) ==> acc(&p[i])
 	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem() {
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem(ub) {
 		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold p.LayerMem()
+		fold p.LayerMem(ub)
 	}
 }
 
