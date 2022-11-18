@@ -189,6 +189,7 @@ requires df.Mem()
 preserves slices.AbsSlice_Bytes(data, 0, len(data))
 ensures df.Mem()
 ensures err == nil ==> d.Mem()
+ensures err != nil ==> err.ErrorMem()
 decreases
 func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err error)
 

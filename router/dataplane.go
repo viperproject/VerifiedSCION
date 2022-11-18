@@ -854,9 +854,13 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	return p /*@, ubuf @*/
 }
 
-// @ trusted
-// @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField) && acc(&p.segmentChange) && acc(&p.mac) && acc(&p.cachedMac)
-// @ ensures res != nil ==> res.ErrorMem()
+// @ preserves acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField)
+// @ preserves acc(&p.infoField) && acc(&p.segmentChange) && acc(&p.mac)
+// @ preserves acc(&p.cachedMac) && acc(&p.buffer)
+// @ preserves p.buffer != nil && p.mac != nil
+// @ preserves p.mac.Mem()
+// @ preserves p.buffer.Mem(ubuf)
+// @ ensures   res != nil ==> res.ErrorMem()
 func (p *scionPacketProcessor) reset(/*@ ghost ubuf []byte @*/) (res error) {
 	p.rawPkt = nil
 	//p.scionLayer // cannot easily be reset
@@ -934,20 +938,33 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) err
 	return noBFDSessionFound
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) processIntraBFD(src *net.UDPAddr, data []byte) error {
+// @ requires  acc(&p.d, _)
+// @ requires  acc(MutexInvariant(p.d), _)
+// @ requires  p.bfdLayer.Mem()
+// @ preserves acc(src.Mem(), def.ReadL15)
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures   res != nil ==> res.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) processIntraBFD(src *net.UDPAddr, data []byte) (res error) {
+	// @ unfold acc(MutexInvariant(p.d), _)
+	// @ unfold acc(AccBfdSession(p.d.bfdSessions), _)
 	if len(p.d.bfdSessions) == 0 {
 		return noBFDSessionConfigured
 	}
 
 	bfd := &p.bfdLayer
-	if err := bfd.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
+	verScionTmp := gopacket.NilDecodeFeedback
+	// @ fold verScionTmp.Mem()
+	if err := bfd.DecodeFromBytes(data, verScionTmp); err != nil {
 		return err
 	}
 
 	ifID := uint16(0)
-	for k, v := range p.d.internalNextHops {
+	// @ invariant acc(&p.d.internalNextHops, _)
+	// @ invariant p.d.internalNextHops != nil ==> acc(p.d.internalNextHops, _)
+	// @ invariant p.d.internalNextHops === old(p.d.internalNextHops)
+	// @ decreases len(p.d.internalNextHops) - len(visited)
+	for k, v := range p.d.internalNextHops /*@ with visited @*/ {
 		if bytes.Equal(v.IP, src.IP) && v.Port == src.Port {
 			ifID = k
 			break
