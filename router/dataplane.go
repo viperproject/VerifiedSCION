@@ -224,7 +224,7 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.macFactory, 1/2)
+// @ ensures   res == nil ==> d.MacFactoryOperational()
 // $![disableMoreCompleteExhale parallelizeBranches]!$
 func (d *DataPlane) SetKey(key []byte) error {
 	//@ share key
