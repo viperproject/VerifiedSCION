@@ -110,7 +110,8 @@ def split_to_many(yml):
         toappend = deepcopy(yml)
         start = toappend['jobs']['verify']['steps'][:2]
         end = toappend['jobs']['verify']['steps'][-1]
-        toappend['jobs']['verify']['steps'] = start + [deepcopy(i)] + [end]
+        # If we want stats we just uncomment the + [end] part
+        toappend['jobs']['verify']['steps'] = start + [deepcopy(i)]# + [end]
         ret.append(toappend)
     return ret
 

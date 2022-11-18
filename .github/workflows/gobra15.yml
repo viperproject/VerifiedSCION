@@ -43,9 +43,3 @@ jobs:
         module: ${{ env.module }}
         parallelizeBranches: 1
         timeout: 2h
-    - name: Upload the verification report
-      uses: actions/upload-artifact@v2
-      with:
-        if-no-files-found: error
-        name: stats_addr.json
-        path: /stats/stats_addr.json

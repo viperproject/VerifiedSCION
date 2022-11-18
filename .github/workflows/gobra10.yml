@@ -41,9 +41,3 @@ jobs:
         module: ${{ env.module }}
         packages: pkg/slayers/path/onehop
         timeout: 5m
-    - name: Upload the verification report
-      uses: actions/upload-artifact@v2
-      with:
-        if-no-files-found: error
-        name: stats_addr.json
-        path: /stats/stats_addr.json
