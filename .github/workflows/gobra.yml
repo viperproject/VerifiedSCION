@@ -1,5 +1,5 @@
 on:
-  pull_request: 1
+  pull_request: # verify on pull request
   push:
     branches:
     - master
