@@ -864,7 +864,7 @@ func (p *scionPacketProcessor) reset(/*@ ghost ubuf []byte @*/) (res error) {
 	p.hopField = path.HopField{}
 	p.infoField = path.InfoField{}
 	p.segmentChange = false
-	if err := p.buffer.Clear(ubuf); err != nil {
+	if err := p.buffer.Clear(/*@ ubuf @*/); err != nil {
 		return serrors.WrapStr("Failed to clear buffer", err)
 	}
 	p.mac.Reset()
