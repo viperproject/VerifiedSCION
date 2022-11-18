@@ -37,8 +37,7 @@ jobs:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
         disableMoreCompleteExhale: 1
-        files:
-          - 'router/dataplane.go@229'
+        files: ' router/dataplane.go@229 router/router/metrics_spec.gobra router/router/dataplane_spec.gobra router/router/svc.go router/router/metrics.go router/router/svc_spec.gobra router/router/metrics_spec_test.gobra router/router/dataplane_spec_test.gobra router/router/svc_spec_test.gobra'
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
