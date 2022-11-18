@@ -18,11 +18,23 @@ package router
 
 import (
 	"net"
+	"hash"
+	sl "github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
 )
 
 pred nonNilErr(e error) {
 	isComparable(e) && e != nil && e.ErrorMem()
+}
+
+pred (d *DataPlane) MacFactoryOperational() {
+	acc(&d.macFactory, 1/2) &&
+	acc(&d.key, 1/2) &&
+	acc(d.key, 1/2) &&
+	acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
+	scrypto.ValidKeyForHash(*d.key) &&
+	d.macFactory implements MacFactorySpec{d.key}
 }
 
 // TODO: maybe change interpretation of Mutex depending on whether the
@@ -45,6 +57,7 @@ pred MutexInvariant(d *DataPlane) {
 	acc(&d.running,           1/2) &&
 	acc(&d.Metrics,           1/2) &&
 	acc(&d.forwardingMetrics, 1/2) &&
+	acc(&d.key,               1/2) &&
 	(d.external    != nil       ==> AccBatchConn(d.external))           &&
 	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
 	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
@@ -52,8 +65,10 @@ pred MutexInvariant(d *DataPlane) {
 	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
 	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
-	// TODO: replace when I know the exact spec that macFactory should implement
-	(d.macFactory != nil        ==> false)                              &&
+	(d.macFactory != nil        ==> acc(d.key, 1/2))                    &&
+	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
+	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key)) &&
+	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key}) &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
 	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&
 	// The following permissions are enough to call all methods needed in fields
@@ -113,6 +128,31 @@ func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
 pred (d *DataPlane) HalfLinkTypes() {
 	acc(&d.linkTypes, 1/2) && (d.linkTypes != nil ==> acc(d.linkTypes, 1/2))
 }
+
+pred (p *scionPacketProcessor) initMem() {
+	acc(&p.d) &&
+	acc(&p.ingressID) &&
+	acc(&p.buffer) &&
+	acc(&p.mac) &&
+	acc(p.scionLayer.InitPathPool()) &&
+	acc(&p.hbhLayer) &&
+	acc(&p.e2eLayer) &&
+	acc(&p.lastLayer) &&
+	acc(&p.path) &&
+	acc(&p.hopField) &&
+	acc(&p.infoField) &&
+	acc(&p.segmentChange) &&
+	acc(&p.cachedMac) &&
+	acc(&p.macBuffers) &&
+	acc(&p.bfdLayer)
+}
+
+requires acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
+requires scrypto.ValidKeyForHash(*key)
+ensures  acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
+ensures  res.Mem()
+decreases
+func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
 
 // useful to deal with incompletnesses
 pred hideLocalIA(p *addr.IA) {
