@@ -39,21 +39,10 @@ jobs:
       # control over the settings applied to each package (this last
       # point could be also be solved by adapting the action to allow
       # per package config).
-      - name: Verify the packages in the 'verification' directory
-        uses: viperproject/gobra-action@main
-        with:
-          projectLocation: 'VerifiedSCION/verification'
-          recursive: 1
-          timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: './dependencies/ ..' # relative to project location
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
       - name: Verify package 'router/'
         uses: viperproject/gobra-action@main
         with:
-          files: '/home/shit/repos/VerifiedSCION/router/metrics_spec_test.gobra /home/shit/repos/VerifiedSCION/router/svc_spec_test.gobra /home/shit/repos/VerifiedSCION/router/dataplane_spec_test.gobra /home/shit/repos/VerifiedSCION/router/dataplane.go@192 /home/shit/repos/VerifiedSCION/router/dataplane_spec.gobra /home/shit/repos/VerifiedSCION/router/metrics.go /home/shit/repos/VerifiedSCION/router/metrics_spec.gobra /home/shit/repos/VerifiedSCION/router/svc.go /home/shit/repos/VerifiedSCION/router/svc_spec.gobra'
+          files: 'router/metrics_spec_test.gobra router/svc_spec_test.gobra router/dataplane_spec_test.gobra router/dataplane.go@192 router/dataplane_spec.gobra router/metrics.go router/metrics_spec.gobra router/svc.go router/svc_spec.gobra'
           timeout: 2h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
