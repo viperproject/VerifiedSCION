@@ -48,10 +48,7 @@ jobs:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
         disableMoreCompleteExhale: 1
-        files: ' router/dataplane.go@230 router/router/metrics_spec.gobra router/router/dataplane_spec.gobra
-          router/router/svc.go router/router/metrics.go router/router/svc_spec.gobra
-          router/router/metrics_spec_test.gobra router/router/dataplane_spec_test.gobra
-          router/router/svc_spec_test.gobra'
+        files: ' router/dataplane.go@230 router/router/metrics_spec.gobra router/router/dataplane_spec.gobra router/router/svc.go router/router/metrics.go router/router/svc_spec.gobra router/router/metrics_spec_test.gobra router/router/dataplane_spec_test.gobra router/router/svc_spec_test.gobra'
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
@@ -62,10 +59,7 @@ jobs:
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
-        files: ' router/dataplane.go@153,183,196,259,285,316,353,387,403,436,460,495,505,522,539,573,602,642,653,702,730,738,743,768,779,837,861,878,920,940,968,981,1071,1081,1106,1129,1148,1170,1217,1233,1240,1247,1272,1290,1309,1336,1345,1373,1390,1399,1417,1426,1463,1480,1555,1644,1668,1672,1677,1705,1757,1766,1785,1898,1904,1925,1952,1973,1995
-          router/router/metrics_spec.gobra router/dataplane_spec.gobra@122,155 router/svc.go@35,45,70,101,132
-          router/metrics.go@47 router/router/svc_spec.gobra router/router/metrics_spec_test.gobra
-          router/dataplane_spec_test.gobra@26,37 router/svc_spec_test.gobra@25,32'
+        files: ' router/dataplane.go@153,183,196,259,285,316,353,387,403,436,460,495,505,522,539,573,602,642,653,702,730,738,743,768,779,837,861,878,920,940,968,981,1071,1081,1106,1129,1148,1170,1217,1233,1240,1247,1272,1290,1309,1336,1345,1373,1390,1399,1417,1426,1463,1480,1555,1644,1668,1672,1677,1705,1757,1766,1785,1898,1904,1925,1952,1973,1995 router/router/metrics_spec.gobra router/dataplane_spec.gobra@122,155 router/svc.go@35,45,70,101,132 router/metrics.go@47 router/router/svc_spec.gobra router/router/metrics_spec_test.gobra router/dataplane_spec_test.gobra@26,37 router/svc_spec_test.gobra@25,32'
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
