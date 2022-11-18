@@ -58,7 +58,7 @@ def alter_entry(entry: dict):
                     enabled[key] = True
                     retdict[key]['with']['files'] += f' {f}@{",".join(str(j) for j in lines)}'
                 else:
-                    retdict[key]['with']['files'] += f' {path.join(directory,f)}'
+                    retdict[key]['with']['files'] += f' {f}'
         return [v for k, v in retdict.items() if enabled[k]]
     return [ret]
 
