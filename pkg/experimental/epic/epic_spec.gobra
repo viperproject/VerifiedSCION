@@ -15,3 +15,5 @@
 // +gobra
 
 package epic
+
+const MACBufferSize = 48
