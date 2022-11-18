@@ -32,7 +32,7 @@ jobs:
         key: ${{ env.cache-name }}
         path: ${{ runner.workspace }}/.gobra/cache.json
     - name: Verify the packages in the 'verification' directory
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -43,7 +43,7 @@ jobs:
         recursive: 1
         timeout: 5m
     - name: Verify package 'pkg/addr'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -54,7 +54,7 @@ jobs:
         statsFile: /stats/stats_addr.json
         timeout: 10m
     - name: Verify package 'pkg/experimental/epic'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -64,7 +64,7 @@ jobs:
         packages: pkg/experimental/epic
         timeout: 5m
     - name: Verify package 'pkg/log'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -74,7 +74,7 @@ jobs:
         packages: pkg/log
         timeout: 5m
     - name: Verify package 'pkg/private/serrors'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -84,7 +84,7 @@ jobs:
         packages: pkg/private/serrors
         timeout: 5m
     - name: Verify package 'pkg/scrypto'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -94,7 +94,7 @@ jobs:
         packages: pkg/scrypto
         timeout: 5m
     - name: Verify package 'pkg/slayers'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -104,7 +104,7 @@ jobs:
         packages: pkg/slayers
         timeout: 25m
     - name: Verify package 'pkg/slayers/path'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -114,7 +114,7 @@ jobs:
         packages: pkg/slayers/path
         timeout: 10m
     - name: Verify package 'pkg/slayers/path/empty'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -124,7 +124,7 @@ jobs:
         packages: pkg/slayers/path/empty
         timeout: 5m
     - name: Verify package 'pkg/slayers/path/epic'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -134,7 +134,7 @@ jobs:
         packages: pkg/slayers/path/epic
         timeout: 10m
     - name: Verify package 'pkg/slayers/path/onehop'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -144,7 +144,7 @@ jobs:
         packages: pkg/slayers/path/onehop
         timeout: 5m
     - name: Verify package 'pkg/slayers/path/scion'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -154,7 +154,7 @@ jobs:
         packages: pkg/slayers/path/scion
         timeout: 5m
     - name: Verify package 'private/topology'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -164,7 +164,7 @@ jobs:
         packages: private/topology
         timeout: 5m
     - name: Verify package 'private/underlay/conn'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -174,7 +174,7 @@ jobs:
         packages: private/underlay/conn
         timeout: 5m
     - name: Verify package 'private/underlay/sockctrl'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -184,7 +184,7 @@ jobs:
         packages: private/underlay/sockctrl
         timeout: 5m
     - name: Verify package 'router/'-both
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -196,7 +196,7 @@ jobs:
         parallelizeBranches: 1
         timeout: 2h
     - name: Verify package 'router/'-none
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -206,7 +206,7 @@ jobs:
         module: ${{ env.module }}
         timeout: 2h
     - name: Verify package 'router/bfd'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
@@ -216,7 +216,7 @@ jobs:
         packages: router/bfd
         timeout: 5m
     - name: Verify package 'router/control'
-      uses: viperproject/gobra-action@dspil/test
+      uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
