@@ -831,13 +831,12 @@ type processResult struct {
 }
 
 // @ preserves acc(d.MacFactoryOperational(), _)
-// @ ensures   res.initMem()
+// @ ensures   res.initMem(ubuf)
 // @ decreases
-func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
+func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor /*@, ghost ubuf []byte @*/) {
 	var verScionTmp gopacket.SerializeBuffer
 	// @ unfold acc(d.MacFactoryOperational(), _)
 	// @ defer fold acc(d.MacFactoryOperational(), _)
-	// @ ghost var ubuf []byte
 	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
@@ -851,20 +850,21 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	}
 	// @ fold p.scionLayer.NonInitPathPool()
 	p.scionLayer.RecyclePaths()
-	// @ fold p.initMem()
-	return p
+	// @ fold p.initMem(ubuf)
+	return p /*@, ubuf @*/
 }
 
 // @ trusted
-// @ requires false
-func (p *scionPacketProcessor) reset() error {
+// @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField) && acc(&p.segmentChange) && acc(&p.mac) && acc(&p.cachedMac)
+// @ ensures res != nil ==> res.ErrorMem()
+func (p *scionPacketProcessor) reset(/*@ ghost ubuf []byte @*/) (res error) {
 	p.rawPkt = nil
 	//p.scionLayer // cannot easily be reset
 	p.path = nil
 	p.hopField = path.HopField{}
 	p.infoField = path.InfoField{}
 	p.segmentChange = false
-	if err := p.buffer.Clear(); err != nil {
+	if err := p.buffer.Clear(ubuf); err != nil {
 		return serrors.WrapStr("Failed to clear buffer", err)
 	}
 	p.mac.Reset()

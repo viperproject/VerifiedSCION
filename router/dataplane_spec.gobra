@@ -129,10 +129,12 @@ pred (d *DataPlane) HalfLinkTypes() {
 	acc(&d.linkTypes, 1/2) && (d.linkTypes != nil ==> acc(d.linkTypes, 1/2))
 }
 
-pred (p *scionPacketProcessor) initMem() {
+pred (p *scionPacketProcessor) initMem(ubuf []byte) {
+	acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))) &&
 	acc(&p.d) &&
 	acc(&p.ingressID) &&
 	acc(&p.buffer) &&
+	p.buffer.Mem(ubuf) &&
 	acc(&p.mac) &&
 	acc(p.scionLayer.InitPathPool()) &&
 	acc(&p.hbhLayer) &&

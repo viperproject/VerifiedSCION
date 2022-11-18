@@ -21,6 +21,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/slayers"
+	"github.com/google/gopacket"
 )
 
 func foldMem_test() {
@@ -36,8 +37,10 @@ requires acc(s)
 requires s.InitPathPool()
 func foldScionPacketProcessorInitMem_test(s *slayers.SCION) {
 	d := &scionPacketProcessor{}
+	buf, ubuf := gopacket.NewSerializeBuffer()
+	d.buffer = buf
 	unfold s.InitPathPool()
 	d.scionLayer = *s
 	fold d.scionLayer.InitPathPool()
-	fold d.initMem()
+	fold d.initMem(ubuf)
 }
