@@ -960,9 +960,11 @@ func (p *scionPacketProcessor) processIntraBFD(src *net.UDPAddr, data []byte) (r
 	}
 
 	ifID := uint16(0)
+	// @ assert acc(&p.d.internalNextHops, _)
 	// @ invariant acc(&p.d.internalNextHops, _)
 	// @ invariant p.d.internalNextHops != nil ==> acc(p.d.internalNextHops, _)
 	// @ invariant p.d.internalNextHops === old(p.d.internalNextHops)
+	// @ invariant p.d === old(p.d)
 	// @ decreases len(p.d.internalNextHops) - len(visited)
 	for k, v := range p.d.internalNextHops /*@ with visited @*/ {
 		if bytes.Equal(v.IP, src.IP) && v.Port == src.Port {
