@@ -42,7 +42,7 @@ jobs:
       - name: Verify package 'router/'
         uses: viperproject/gobra-action@dspil/test
         with:
-          files: 'router/metrics_spec_test.gobra router/svc_spec_test.gobra router/dataplane_spec_test.gobra router/dataplane.go@192 router/dataplane_spec.gobra router/metrics.go router/metrics_spec.gobra router/svc.go router/svc_spec.gobra'
+          files: 'router/metrics_spec_test.gobra router/svc_spec_test.gobra router/dataplane_spec_test.gobra router/dataplane.go@192,415 router/dataplane_spec.gobra router/metrics.go router/metrics_spec.gobra router/svc.go router/svc_spec.gobra'
           timeout: 2h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
