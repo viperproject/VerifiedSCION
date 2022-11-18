@@ -226,7 +226,7 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // @ ensures   acc(&d.running,    1/2) && !d.running
 // @ ensures   res == nil ==> d.MacFactoryOperational()
 // $![disableMoreCompleteExhale parallelizeBranches]!$
-func (d *DataPlane) SetKey(key []byte) error {
+func (d *DataPlane) SetKey(key []byte) (res error) {
 	//@ share key
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
