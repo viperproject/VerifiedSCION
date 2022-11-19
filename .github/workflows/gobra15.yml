@@ -41,6 +41,5 @@ jobs:
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
-        packages: router/
         parallelizeBranches: 1
         timeout: 2h

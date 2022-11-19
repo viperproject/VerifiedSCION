@@ -114,6 +114,7 @@ def alter_entry(entry: dict):
         for f, args in isolated:
             toappend = deepcopy(entry)
             toappend['with'].pop('disect')
+            toappend['with'].pop('packages')
             if args in ('dis', 'both'):
                 toappend['with']['disableMoreCompleteExhale'] = 1
             if args in ('par', 'both'):

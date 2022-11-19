@@ -41,5 +41,4 @@ jobs:
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
-        packages: router/
         timeout: 2h
