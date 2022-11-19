@@ -63,6 +63,8 @@ def parse_args(line):
     iso = False
     if m := re.match(r'\s*// \$!\[\s*(.*)\s*\]!\$', line):
         args = m.group(1)
+        if "closure" in args:
+            return None, None
         iso = "isolate" in args
         if "disableMoreCompleteExhale" in args and "parallelizeBranches" in args:
             return "both", iso
@@ -79,6 +81,8 @@ def get_func_lines_annos(fname):
         for l, e in enumerate(lines):
             if "func" in e or "outline" in e:
                 args, iso = parse_args(lines[l-1])
+                if args is None:
+                    continue
                 if iso:
                     funcs['isolated'].append((l+1, args))
                 else:

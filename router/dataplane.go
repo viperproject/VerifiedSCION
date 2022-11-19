@@ -254,6 +254,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 		// @ ensures  acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ ensures  h.Mem()
 		// @ decreases
+		// $![closure]!$
 		func /*@ f @*/ () (h hash.Hash) {
 			mac, _ := scrypto.InitMac(key)
 			return mac
@@ -652,6 +653,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	//     and on this method.
 	d.initMetrics()
 
+	// $![closure]!$
 	read := func(ingressID uint16, rd BatchConn) {
 
 		msgs := conn.NewReadMessages(inputBatchCnt)
@@ -729,6 +731,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	}
 
 	for k, v := range d.bfdSessions {
+		// $![closure]!$
 		go func(ifID uint16, c bfdSession) {
 			defer log.HandlePanic()
 			if err := c.Run(ctx); err != nil && err != bfd.AlreadyRunning {
@@ -737,11 +740,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		}(k, v)
 	}
 	for ifID, v := range d.external {
+		// $![closure]!$
 		go func(i uint16, c BatchConn) {
 			defer log.HandlePanic()
 			read(i, c)
 		}(ifID, v)
 	}
+	// $![closure]!$
 	go func(c BatchConn) {
 		defer log.HandlePanic()
 		read(0, c)
