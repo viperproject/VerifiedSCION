@@ -193,6 +193,7 @@ func (e scmpError) Error() string {
 // @ ensures   acc(&d.running, 1/2) && !d.running
 // @ ensures   acc(&d.localIA, 1/2)
 // @ ensures   e == nil
+// $![disableMoreCompleteExhale]!$
 func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -213,8 +214,6 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// Verified locally in 26m35s with --disableMoreCompleteExhale --parallelizeBranches
-// Marked as trusted to not choke the CI
 // @ requires  acc(&d.key,        1/2)
 // @ requires  acc(d.key,         1/2)
 // @ requires  acc(&d.running,    1/2) && !d.running
@@ -225,7 +224,7 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   acc(&d.running,    1/2) && !d.running
 // @ ensures   res == nil ==> d.MacFactoryOperational()
-// $![disableMoreCompleteExhale parallelizeBranches]!$
+// $![disableMoreCompleteExhale parallelizeBranches isolate]!$
 func (d *DataPlane) SetKey(key []byte) (res error) {
 	//@ share key
 	d.mtx.Lock()
@@ -281,6 +280,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 // @ ensures   acc(&d.running,    1/2) && !d.running
 // @ ensures   acc(&d.internal,   1/2)
 // @ ensures   acc(&d.internalIP, 1/2)
+// $![disableMoreCompleteExhale]!$
 func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -312,6 +312,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   acc(&d.running,    1/2) && !d.running
 // @ ensures   acc(&d.external,   1/2) && acc(d.external, 1/2)
+// $![disableMoreCompleteExhale]!$
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -383,6 +384,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // @ ensures   acc(&d.running,   1/2) && !d.running
 // @ ensures   acc(&d.linkTypes, 1/2) && acc(d.linkTypes, 1/2)
 // @ ensures   domain(d.linkTypes) == old(domain(d.linkTypes)) union set[uint16]{ifID}
+// $![disableMoreCompleteExhale]!$
 func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	if _, existsB := d.linkTypes[ifID]; existsB {
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
@@ -535,6 +537,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // @ requires  a != nil && acc(a.Mem(), def.ReadL10)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+// $![disableMoreCompleteExhale isolate]!$
 func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -1966,6 +1969,7 @@ func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forw
 	// @ fold acc(forwardingMetricsNonInjectiveMem(c), _)
 	return c
 }
+
 
 // @ preserves neighbors != nil ==> acc(neighbors, def.ReadL20)
 // @ ensures   acc(res)

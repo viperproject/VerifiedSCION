@@ -60,23 +60,29 @@ def get_files(p):
     return files
 
 def parse_args(line):
+    iso = False
     if m := re.match(r'\s*// \$!\[\s*(.*)\s*\]!\$', line):
         args = m.group(1)
+        iso = "isolate" in args
         if "disableMoreCompleteExhale" in args and "parallelizeBranches" in args:
-            return "both"
+            return "both", iso
         elif "disableMoreCompleteExhale" in args:
-            return "dis"
+            return "dis", iso
         elif "parallelizeBranches" in args:
-            return "par"
-    return "none"
+            return "par", iso
+    return "none", iso
 
 def get_func_lines_annos(fname):
     with open(fname, 'r') as fhandle:
         lines = fhandle.readlines()
-        funcs = {'dis': [], 'par': [], 'both': [], 'none': []}
+        funcs = {'dis': [], 'par': [], 'both': [], 'none': [], 'isolated': []}
         for l, e in enumerate(lines):
             if "func" in e or "outline" in e:
-                funcs[parse_args(lines[l-1])].append(l+1)
+                args, iso = parse_args(lines[l-1])
+                if iso:
+                    funcs['isolated'].append((l+1, args))
+                else:
+                    funcs[args].append(l+1)
         return funcs
 
 def alter_entry(entry: dict):
@@ -86,6 +92,7 @@ def alter_entry(entry: dict):
         directory = ret['with'].pop('packages')
         files = get_files(directory)
         retdict = {"dis": deepcopy(ret), "par": deepcopy(ret), "both": deepcopy(ret), "none": ret}
+        isolated = []
         enabled = {"dis": False, "par": False, "both": False, "none": False}
         for key in ['dis', 'par', 'both', 'none']:
             retdict[key]['name'] += '-'+key
@@ -95,13 +102,24 @@ def alter_entry(entry: dict):
         retdict['par']['with']['parallelizeBranches'] = 1
         retdict['both']['with']['parallelizeBranches'] = 1
         for f in files:
-            for key, lines in get_func_lines_annos(f).items():
+            line_annos = get_func_lines_annos(f)
+            isolated.extend((f'{f}@{line}', args) for line, args in line_annos.pop('isolated'))
+            for key, lines in line_annos.items():
                 if len(lines) > 0:
                     enabled[key] = True
                     retdict[key]['with']['files'] += f' {f}@{",".join(str(j) for j in lines)}'
                 else:
                     retdict[key]['with']['files'] += f' {f}'
-        return reduce(lambda a, b: a + b, [normalize(v) for k, v in retdict.items() if enabled[k]])
+        retisolated = []
+        for f, args in isolated:
+            toappend = deepcopy(entry)
+            if args in ('dis', 'both'):
+                toappend['with']['disableMoreCompleteExhale'] = 1
+            if args in ('par', 'both'):
+                toappend['with']['parallelizeBranches'] = 1
+            toappend['with']['files'] = f' {f} {" ".join(fil for fil in files if fil not in f)}'
+            retisolated.append(toappend)
+        return retisolated + reduce(lambda a, b: a + b, (normalize(v) for k, v in retdict.items() if enabled[k]))
     return [ret]
 
 def split_to_many(yml):
