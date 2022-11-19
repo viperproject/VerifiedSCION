@@ -59,10 +59,13 @@ def get_files(p):
     files = [os.path.join(p, i) for i in os.listdir(p) if re.match(r'.+(\.go|\.gobra)$', i) is not None and has_header(os.path.join(p, i))]
     return files
 
-def parse_args(line):
+def parse_args(line, loc):
     iso = False
     if m := re.match(r'\s*// \$!\[\s*(.*)\s*\]!\$', line):
-        args = m.group(1)
+        args = [i.strip() for i in m.group(1).split()]
+        for i in args:
+            if i not in ["disableMoreCompleteExhale", "parallelizeBranches", "isolate", "closure"]:
+                print(f"Warning: <{loc}>: unrecognised flag '{i}'")
         if "closure" in args:
             return None, None
         iso = "isolate" in args
@@ -80,7 +83,7 @@ def get_func_lines_annos(fname):
         funcs = {'dis': [], 'par': [], 'both': [], 'none': [], 'isolated': []}
         for l, e in enumerate(lines):
             if "func" in e or "outline" in e:
-                args, iso = parse_args(lines[l-1])
+                args, iso = parse_args(lines[l-1], f'{fname}:{l-1}')
                 if args is None:
                     continue
                 if iso:
