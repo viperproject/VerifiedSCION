@@ -23,8 +23,9 @@ type SerializableLayer interface {
 	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte, ghost buf []byte) (err error, ghost bufRes []byte)
 
 
+	pure
 	decreases
-	pure LayerType() LayerType
+	LayerType() LayerType
 }
 
 type SerializeOptions struct {

@@ -12,56 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
 
 package slayers
 
 import (
 	"github.com/google/gopacket"
+
+	def "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-pred (s *SCMP) Mem() {
-	// TODO: add scion Mem
+pred (s *SCMP) NonInitMem() {
 	acc(&s.TypeCode) &&
 	acc(&s.Checksum) &&
-	s.BaseLayer.Mem() &&
+	acc(&s.BaseLayer) &&
 	acc(&s.scn) &&
 	(s.scn != nil ==> s.scn.ChecksumMem())
 }
 
-pred (s *SCMP) LayerMem() {
-	s.BaseLayer.LayerMem()
+pred (s *SCMP) Mem(ub []byte) {
+	acc(&s.TypeCode) &&
+	acc(&s.Checksum) &&
+	s.BaseLayer.Mem(ub) &&
+	acc(&s.scn) &&
+	(s.scn != nil ==> s.scn.ChecksumMem())
 }
 
-pred (s *SCMP) PayloadMem() {
-	s.BaseLayer.PayloadMem()
-}
-
-requires b.LayerMem()
-ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
-decreases
+requires def.Uncallable()
 func (b *SCMP) LayerContents() (res []byte) {
-	unfold b.LayerMem()
 	res = b.BaseLayer.LayerContents()
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
-		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.LayerMem()
-		fold b.LayerMem()
-	}
+	return res
 }
 
-requires b.PayloadMem()
-ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+requires b.Mem(ub)
+ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 decreases
-func (b *SCMP) LayerPayload() (res []byte) {
-	unfold b.PayloadMem()
-	res = b.BaseLayer.LayerPayload()
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
-		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.PayloadMem()
-		fold b.PayloadMem()
+func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte) {
+	unfold b.Mem(ub)
+	res = b.BaseLayer.LayerPayload(ub)
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
+		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
+		fold b.Mem(ub)
 	}
 }
 
 (*SCMP) implements gopacket.Layer
 (*SCMP) implements gopacket.SerializableLayer
+(*SCMP) implements gopacket.DecodingLayer

@@ -14,8 +14,9 @@ import "github.com/scionproto/scion/verification/utils/slices"
 type Layer interface {
 	pred Mem(ub []byte)
 
+	pure
 	decreases
-	pure LayerType() LayerType
+	LayerType() LayerType
 
 	// (VerifiedSCION) not used in the dataplane
 	requires def.Uncallable()
