@@ -4,14 +4,12 @@
 // that can be found in the LICENSE file in the root of the source
 // tree.
 
+// +gobra
 
 package gopacket
 
 func payload_test() {
-	var p Payload = Payload([]byte{1,2,3})
-	fold p.Mem()
-	unfold p.Mem()
-	fold p.LayerMem()
-	unfold p.LayerMem()
-	fold p.PayloadMem()
+	s := []byte{1,2,3}
+	p := Payload(s)
+	fold p.Mem(s)
 }
