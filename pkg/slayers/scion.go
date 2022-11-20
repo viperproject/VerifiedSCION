@@ -403,6 +403,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	if err != nil {
 		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
+		// @ s.InitPathPoolExchange(s.PathType, s.Path)
 		// @ fold s.NonInitMem()
 		return err
 	}
@@ -445,13 +446,9 @@ func (s *SCION) RecyclePaths() {
 // @ ensures  pathType == 0 ==> (typeOf(res) == type[empty.Path] && s.InitPathPool())
 // @ ensures  0 < pathType  ==> (
 // @ 	res.NonInitMem() &&
-// @ 	s.InitPathPoolExceptOne(pathType))
-//
-//	ensures  (0 <= pathType && pathType < (unfolding s.InitPathPoolExceptOne(pathType) in len(s.pathPool))) ==>
-//		(res === (unfolding s.InitPathPoolExceptOne(pathType) in s.pathPool[pathType]))
-//	ensures  (unfolding s.InitPathPoolExceptOne(pathType) in len(s.pathPool)) < pathType ==>
-//		(res === (unfolding s.InitPathPoolExceptOne(pathType) in s.pathPoolRaw))
-//
+// @ 	s.InitPathPoolExceptOne(pathType) &&
+// @ 	(pathType < s.lenPathPool(pathType) ==> res === s.elemPathPool(pathType)) &&
+// @	(s.lenPathPool(pathType) <= pathType ==> res === s.pathPoolRawPath(pathType)))
 // @ ensures  err == nil
 // @ decreases
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {

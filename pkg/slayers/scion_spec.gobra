@@ -99,6 +99,28 @@ pred (s *SCION) InitPathPoolExceptOne(pathType path.Type) {
 	(pathType < len(s.pathPool) ==> s.pathPoolRaw.NonInitMem())
 }
 
+ghost
+requires  s.InitPathPoolExceptOne(pathType)
+decreases
+pure func (s *SCION)lenPathPool(pathType path.Type) int {
+	return unfolding s.InitPathPoolExceptOne(pathType) in len(s.pathPool)
+}
+
+ghost
+requires  s.InitPathPoolExceptOne(pathType)
+requires  0 <= pathType && pathType < s.lenPathPool(pathType)
+decreases
+pure func (s *SCION)elemPathPool(pathType path.Type) path.Path {
+	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPool[pathType]
+}
+
+ghost
+requires  s.InitPathPoolExceptOne(pathType)
+decreases
+pure func (s *SCION)pathPoolRawPath(pathType path.Type) path.Path {
+	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPoolRaw
+}
+
 // Has the permission for all fields, except those related to the path pools.
 // These will come from NonInitPathPool/InitPathPool.
 pred (s *SCION) NonInitMem() {
@@ -259,16 +281,21 @@ func (s *SCION) LayerContents() (res []byte) {
 	return res
 }
 
-/*
 ghost
-requires s.InitPathPoolExceptOne(pathType)
 requires pathType == 0 ==> s.InitPathPool()
 requires 0 < pathType  ==> (
-// @ 	res.NonInitMem() &&
-// @ 	s.InitPathPoolExceptOne(pathType))
+	p.NonInitMem() &&
+	s.InitPathPoolExceptOne(pathType) &&
+	(pathType < s.lenPathPool(pathType) ==> p === s.elemPathPool(pathType)) &&
+	(s.lenPathPool(pathType) <= pathType ==> p === s.pathPoolRawPath(pathType)))
 ensures  s.InitPathPool()
 decreases
-func (s *SCION) InitPathPoolExchange(pathType path.Type, path path.Path) {
-
+func (s *SCION) InitPathPoolExchange(pathType path.Type, p path.Path) {
+	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
+	//                 path.Type is defined as an uint8.
+	assume 0 <= pathType
+	if 0 < pathType {
+		unfold s.InitPathPoolExceptOne(pathType)
+		fold s.InitPathPool()	
+	}
 }
-*/
