@@ -20,8 +20,9 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 
 func foldNonInitMem_Test() {
 	s@ := SCION{}
-	fold s.NonInitMem()
 	fold s.NonInitPathPool()
+	s.RecyclePaths()
+	fold s.NonInitMem()
 }
 
 func baseLayer_Tests() {

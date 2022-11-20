@@ -8,20 +8,21 @@
 
 package gopacket
 
+import def "github.com/scionproto/scion/verification/utils/definitions"
 import "github.com/scionproto/scion/verification/utils/slices"
 
 type SerializableLayer interface {
-	pred Mem()
+	pred Mem(ubuf []byte)
 
-	requires Mem()
-	requires b != nil
-	requires b.Mem(buf)
-	ensures err == nil ==> (Mem() && b.Mem(bufRes))
+	requires !opts.FixLengths
+	requires b != nil && b.Mem(buf)
+	requires Mem(ubuf)
+	ensures  err == nil ==> (Mem(ubuf) && b.Mem(bufRes))
+	ensures  err != nil ==> err.ErrorMem()
 	decreases
-	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost buf []byte) (err error, ghost bufRes []byte)
+	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte, ghost buf []byte) (err error, ghost bufRes []byte)
 
 
-	requires acc(Mem(), _)
 	decreases
 	pure LayerType() LayerType
 }
@@ -88,7 +89,9 @@ ensures res.Mem(buf)
 decreases
 func NewSerializeBuffer() (res SerializeBuffer, ghost buf []byte)
 
+requires  len(layerBufs) == len(layers)
 preserves w.Mem(buf)
-preserves forall i int :: 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem()
+preserves acc(layerBufs, def.ReadL20)
+preserves forall i int :: 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem(layerBufs[i])
 decreases
-func SerializeLayers(ghost buf []byte, w SerializeBuffer, opts SerializeOptions, layers ...SerializableLayer) error
+func SerializeLayers(ghost buf []byte, w SerializeBuffer, opts SerializeOptions, ghost layerBufs []([]byte), layers ...SerializableLayer) error

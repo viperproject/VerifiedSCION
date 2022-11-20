@@ -10,7 +10,7 @@ package gopacket
 
 import (
 	"github.com/scionproto/scion/verification/utils/slices"
-	"github.com/scionproto/scion/verification/utils/definitions"
+	def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 // TODO: Uncomment when https://github.com/viperproject/gobra/issues/503 is fixed
@@ -20,53 +20,53 @@ import (
 // values into specified slice. Returns either first encountered
 // unsupported LayerType value or decoding error. In case of success,
 // returns (LayerTypeZero, nil).
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL13)
-preserves acc(ltypes, definitions.ReadL13) && acc(*ltypes, definitions.ReadL13)
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL13)
+preserves acc(ltypes, def.ReadL13) && acc(*ltypes, def.ReadL13)
 ensures err != nil ==> err.ErrorMem()
 func decodingLayerFunc_spec(b []byte, ltypes *[]LayerType) (l LayerType, err error)
 
 
 type DecodingLayer interface {
 	pred NonInitMem()
-	pred Mem()
+	pred Mem(ubuf []byte)
 
 	requires  slices.AbsSlice_Bytes(data, 0, len(data))
 	requires  NonInitMem()
 	requires  df != nil
 	preserves df.Mem()
-	ensures   res == nil ==> Mem()
-	ensures   res != nil ==> NonInitMem()
-	ensures   res != nil ==> res.ErrorMem()
+	ensures   res == nil ==> Mem(data)
+	ensures   res != nil ==> (NonInitMem() && res.ErrorMem())
+	ensures   res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 	decreases
 	DecodeFromBytes(data []byte, df DecodeFeedback) (res error)
 
-	preserves Mem()
-	ensures   res.Mem()
 	decreases
 	CanDecode() (res LayerClass)
 
-	preserves Mem()
+	preserves acc(Mem(ubuf), def.ReadL20)
 	decreases
-	NextLayerType() LayerType
+	NextLayerType(ghost ubuf []byte) LayerType
 
-	requires Mem()
-	ensures slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
+	requires Mem(ubuf)
+	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem(ubuf)
 	decreases
-	LayerPayload() (res []byte)
+	LayerPayload(ghost ubuf []byte) (res []byte)
 }
 
 type DecodingLayerContainer interface {
 	pred Mem()
 	
 	requires Mem()
-	requires d.Mem()
+	// (VerifiedSCION) not sure if needed
+	// requires d.Mem()
 	ensures res.Mem()
 	decreases
-	Put(d DecodingLayer) (res DecodingLayerContainer)
+	Put(d DecodingLayer, ghost ubuf []byte) (res DecodingLayerContainer)
 
 	preserves Mem()
-	ensures d.Mem()
+	// (VerifiedSCION) not sure if required
+	// ensures d.Mem()
 	decreases
 	Decoder(LayerType) (d DecodingLayer, b bool)
 
@@ -91,9 +91,5 @@ type DecodingLayerParserOptions struct {
 	IgnoreUnsupported bool
 }
 
-requires forall i int :: 0 <= i && i < len(decoders) ==> acc(&decoders[i])
-requires forall i int :: 0 <= i && i < len(decoders) ==> decoders[i].Mem()
-ensures forall i int :: 0 <= i && i < len(decoders) ==> acc(&decoders[i])
-ensures acc(res)
-decreases
+requires  def.Uncallable()
 func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) (res *DecodingLayerParser)

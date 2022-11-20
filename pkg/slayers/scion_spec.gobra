@@ -116,7 +116,8 @@ pred (s *SCION) NonInitMem() {
 	acc(&s.RawDstAddr) &&
 	acc(&s.RawSrcAddr) &&
 	acc(&s.Path) &&
-	acc(&s.BaseLayer)
+	acc(&s.BaseLayer) &&
+	s.InitPathPool()
 }
 
 pred (s *SCION) Mem(ubuf []byte) {
@@ -248,9 +249,26 @@ func FoldEpicMem(p *epic.Path) (r *epic.Path) {
 
 // gopacket subtyping
 *SCION implements gopacket.Layer
+*SCION implements gopacket.NetworkLayer
+*SCION implements gopacket.SerializableLayer
+*SCION implements gopacket.DecodingLayer
 
 requires def.Uncallable()
 func (s *SCION) LayerContents() (res []byte) {
 	res = s.Contents
 	return res
 }
+
+/*
+ghost
+requires s.InitPathPoolExceptOne(pathType)
+requires pathType == 0 ==> s.InitPathPool()
+requires 0 < pathType  ==> (
+// @ 	res.NonInitMem() &&
+// @ 	s.InitPathPoolExceptOne(pathType))
+ensures  s.InitPathPool()
+decreases
+func (s *SCION) InitPathPoolExchange(pathType path.Type, path path.Path) {
+
+}
+*/
