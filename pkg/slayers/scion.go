@@ -103,33 +103,24 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
-// @ requires b.LayerMem()
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
-// @ decreases
+// @ requires def.Uncallable()
 func (b *BaseLayer) LayerContents() (res []byte) {
-	//@ unfold b.LayerMem()
-	//@ unfold sl.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
 	res = b.Contents
-	//@ fold sl.AbsSlice_Bytes(res, 0, len(res))
-	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
-	//@   fold b.LayerMem()
-	//@ }
 	return res
 }
 
 // LayerPayload returns the bytes contained within the packet layer.
-// @ requires b.PayloadMem()
-// @ ensures sl.AbsSlice_Bytes(res, 0, len(res))
-// @ ensures sl.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+// @ requires b.Mem(ub)
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 // @ decreases
-func (b *BaseLayer) LayerPayload() (res []byte) {
-	//@ unfold b.PayloadMem()
+func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
+	//@ unfold b.Mem(ub)
 	//@ unfold sl.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
 	res = b.Payload
 	//@ fold sl.AbsSlice_Bytes(res, 0, len(res))
-	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
-	//@   fold b.PayloadMem()
+	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
+	//@   fold b.Mem(ub)
 	//@ }
 	return res
 }
@@ -204,10 +195,20 @@ func (s *SCION) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 	return scionNextLayerType( /*@ unfolding acc(s.Mem(ub), def.ReadL20) in @*/ s.NextHdr)
 }
 
-// @ trusted
-// @ requires false
-func (s *SCION) LayerPayload() []byte {
-	return s.Payload
+// @ requires s.Mem(ub)
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem(ub)
+// @ decreases
+func (s *SCION) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
+	//@ unfold s.Mem(ub)
+	res = s.Payload
+	//@ l := int(s.HdrLen*LineLen)
+	//@ sl.Reslice_Bytes(ub, l, len(ub), writePerm)
+	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem(ub) {
+	//@ 	sl.Unslice_Bytes(ub, l, len(ub), writePerm)
+	//@ 	fold s.Mem(ub)
+	//@ }
+	return res
 }
 
 // @ ensures res == gopacket.Flow{}

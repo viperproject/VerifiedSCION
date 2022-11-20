@@ -182,18 +182,11 @@ pred (s *SCION) ChecksumMem() {
 	slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 }
 
-pred (b *BaseLayer) Mem() {
+// (VerifiedSCION: param not used)
+pred (b *BaseLayer) Mem(ghost ub []byte) {
 	acc(b) &&
 	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
 	slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
-}
-
-pred (b *BaseLayer) LayerMem() {
-	acc(b) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
-}
-
-pred (b *BaseLayer) PayloadMem() {
-	acc(b) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
 }
 
 ghost
@@ -253,4 +246,11 @@ func FoldEpicMem(p *epic.Path) (r *epic.Path) {
 	return p
 }
 
+// gopacket subtyping
 *SCION implements gopacket.Layer
+
+requires def.Uncallable()
+func (s *SCION) LayerContents() (res []byte) {
+	res = s.Contents
+	return res
+}
