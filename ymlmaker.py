@@ -31,25 +31,40 @@ def partition(s):
         break
     return f1, f2
 
-def normalize(yml):
+def key_arguments(key):
+    args = ""
+    if key in ["dis", "both"]:
+        args += "--disableMoreCompleteExhale "
+    if key in ["par", "both"]:
+        args += "--parallelizeBranches"
+    if len(args) == 0:
+        args = "no extra args"
+    return args
+
+def normalize(key, yml, dirname):
     if "files" in yml['with'].keys():
         ret = []
         files = yml['with']['files'].split()
         large_files = [i for i in files if len(i) > 250]
         rest_files = [i for i in files if len(i) <= 250]
+        i = -1
         for i in range(len(large_files)):
             while len(large_files[i]) > 250:
                 f1, f2 = partition(large_files[i])
                 toappend = deepcopy(yml)
                 toappend['with']['files'] = f' {f1} {" ".join(get_file(e) for j, e in enumerate(large_files) if j != i)} {" ".join(get_file(e) for e in rest_files)}'
                 toappend['name'] += str(len(ret))
+                toappend['with']['tempname'] = f"Verifying functions in {dirname} with {key_arguments(key)} part {i}"
                 ret.append(toappend)
                 large_files[i] = f2
         toappend = deepcopy(yml)
         toappend['with']['files'] = f' {" ".join(large_files)} {" ".join(rest_files)}'
+        toappend['with']['tempname'] = f"Verifying functions in {dirname} with {key_arguments(key)} part {i+1}"
         ret.append(toappend)
         return ret
-    return [yml]
+    ret = deepcopy(yml)
+    ret['with']['tempname'] = f"Verifying functions in {dirname} with {key_arguments(key)}"
+    return [ret]
     
 def has_header(f):
     with open(f, 'r') as fhandle:
@@ -87,7 +102,12 @@ def get_func_lines_annos(fname):
                 if args is None:
                     continue
                 if iso:
-                    funcs['isolated'].append((l+1, args))
+                    if "func" in e:
+                        match = re.match(r'\s*func\s*((\([^\)]+\)\s*([^\(\s]*)\s*\(.*)|(\s*([^\(\s]*)\s*\(.*))', e.replace("/*@", "").replace("@*/", ""))
+                        name = {"{fname}:{match.groups()[2] or match.groups()[4]}"}
+                    else:
+                        name = f"outline at {fname}@{l}"
+                    funcs['isolated'].append((l+1, args, name))
                 else:
                     funcs[args].append(l+1)
         return funcs
@@ -110,7 +130,7 @@ def alter_entry(entry: dict):
         retdict['both']['with']['parallelizeBranches'] = 1
         for f in files:
             line_annos = get_func_lines_annos(f)
-            isolated.extend((f'{f}@{line}', args) for line, args in line_annos.pop('isolated'))
+            isolated.extend((f'{f}@{line}', args, name) for line, args, name in line_annos.pop('isolated'))
             for key, lines in line_annos.items():
                 if len(lines) > 0:
                     enabled[key] = True
@@ -118,7 +138,7 @@ def alter_entry(entry: dict):
                 else:
                     retdict[key]['with']['files'] += f' {f}'
         retisolated = []
-        for f, args in isolated:
+        for f, args, name in isolated:
             toappend = deepcopy(entry)
             toappend['with'].pop('disect')
             toappend['with'].pop('packages')
@@ -127,24 +147,30 @@ def alter_entry(entry: dict):
             if args in ('par', 'both'):
                 toappend['with']['parallelizeBranches'] = 1
             toappend['with']['files'] = f' {f} {" ".join(fil for fil in files if fil not in f)}'
+            toappend['with']['tempname'] = f"Verifying function {name}"
             retisolated.append(toappend)
-        return retisolated + reduce(lambda a, b: a + b, (normalize(v) for k, v in retdict.items() if enabled[k]))
+        return retisolated + reduce(lambda a, b: a + b, (normalize(k, v, directory) for k, v in retdict.items() if enabled[k]))
+    ret['with']['tempname'] = f"Verifying package {ret['with']['packages']}"
     return [ret]
 
 def split_to_many(yml):
     ret = []
+    yml['jobs']['verify']['steps'][2]['with']['tempname'] = "Verifying the verification directory"
     for i in yml['jobs']['verify']['steps'][2:-1]:
         toappend = deepcopy(yml)
         start = toappend['jobs']['verify']['steps'][:2]
         end = toappend['jobs']['verify']['steps'][-1]
         # If we want stats we just uncomment the + [end] part
         toappend['jobs']['verify']['steps'] = start + [deepcopy(i)]# + [end]
-        ret.append(toappend)
+        name = toappend['jobs']['verify']['steps'][2]['with'].pop('tempname')
+        ret.append((toappend, name))
     return ret
 
-def write_result(yml, ftarget):
+def write_result(data, ftarget):
+    yml, name = data
     with open(ftarget, 'w') as fhandle2:
-        fhandle2.write("# This Source Code Form is subject to the terms of the Mozilla Public\n# License, v. 2.0. If a copy of the MPL was not distributed with this\n# file, You can obtain one at http://mozilla.org/MPL/2.0/.\n#\n# Copyright (c) 2011-2020 ETH Zurich.\n\nname: Verify the specified codebase\n\n")
+        fhandle2.write("# This Source Code Form is subject to the terms of the Mozilla Public\n# License, v. 2.0. If a copy of the MPL was not distributed with this\n# file, You can obtain one at http://mozilla.org/MPL/2.0/.\n#\n# Copyright (c) 2011-2020 ETH Zurich.\n\n")
+        fhandle2.write(f"name: {name}\n\n")
         fhandle2.write("on:\n  pull_request: # verify on pull request\n  push:\n    branches:\n    - master\n\n")
         s = yaml.dump(yml, Dumper=yaml.CDumper)
         for i in re.findall(r"files: '[^']*'", s):
