@@ -8,89 +8,69 @@
 
 package gopacket
 
+import def "github.com/scionproto/scion/verification/utils/definitions"
 import "github.com/scionproto/scion/verification/utils/slices"
 
 type Layer interface {
-	// Since the resources abstracted in LayerMem and PayloadMem might overlap,
-	// it may not be possible to hold an instance of each at once.
-	// Hence, we have Mem that abstracts all the resources associated with
-	// the layer.
-	pred Mem()
-	pred LayerMem()
-	pred PayloadMem()
+	pred Mem(ub []byte)
 
-	requires acc(Mem(), _)
+	pure
 	decreases
-	pure LayerType() LayerType
+	LayerType() LayerType
 
-	requires LayerMem()
-	ensures slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* LayerMem()
-	decreases
+	// (VerifiedSCION) not used in the dataplane
+	requires def.Uncallable()
 	LayerContents() (res []byte)
 
-	requires PayloadMem()
-	ensures slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* PayloadMem()
+	requires Mem(ub)
+	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem(ub)
 	decreases
-	LayerPayload() (res []byte)
+	LayerPayload(ghost ub []byte) (res []byte)
 }
 
 type Payload []byte
 
-pred (p Payload) LayerMem() { acc(p) }
-pred (p Payload) PayloadMem() { true }
-pred (p Payload) Mem() { acc(p) }
+pred (p Payload) Mem(ub []byte) { acc(p) }
 
-requires acc(p.Mem(), _)
 decreases
 pure func (p Payload) LayerType() LayerType {
-	return unfolding acc(p.Mem(), _) in LayerTypePayload
+	return LayerTypePayload
 }
 
-requires p.LayerMem()
-ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem()
-decreases
+requires def.Uncallable()
 func (p Payload) LayerContents() (res []byte) {
-	unfold p.LayerMem()
 	res = []byte(p)
-	assert forall i int :: 0 <= i && i < len(p) ==> acc(&p[i])
-	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem() {
-		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold p.LayerMem()
-	}
 }
 
-requires p.PayloadMem()
-ensures res == nil
-ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.PayloadMem()
+requires p.Mem(ub)
+ensures  res == nil
+ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* p.Mem(ub)
 decreases
-func (p Payload) LayerPayload() (res []byte) {
-	unfold p.PayloadMem()
+func (p Payload) LayerPayload(ghost ub []byte) (res []byte) {
+	unfold p.Mem(ub)
 	res = nil
 	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.PayloadMem() {
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.Mem(ub) {
 		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold p.PayloadMem()
+		fold p.Mem(ub)
 	}
 }
 
-requires p.LayerMem()
-ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem()
-ensures res === []byte(p)
+requires p.Mem(ub)
+ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* p.Mem(ub)
+ensures  res === []byte(p)
 decreases
-func (p Payload) Payload() (res []byte) {
-	unfold p.LayerMem()
+func (p Payload) Payload(ghost ub []byte) (res []byte) {
+	unfold p.Mem(ub)
 	res = []byte(p)
 	assert forall i int :: 0 <= i && i < len(p) ==> acc(&p[i])
 	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.LayerMem() {
+	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.Mem(ub) {
 		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold p.LayerMem()
+		fold p.Mem(ub)
 	}
 }
 
@@ -116,25 +96,25 @@ type NetworkLayer interface {
 type TransportLayer interface {
 	Layer
 
-	preserves acc(LayerMem(), 1/10000)
+	preserves acc(Mem(ub), def.ReadL15)
 	decreases
-	TransportFlow() Flow
+	TransportFlow(ghost ub []byte) Flow
 }
 
 type ApplicationLayer interface {
 	Layer
 
-	requires LayerMem()
-	ensures slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* LayerMem()
+	requires Mem(ub)
+	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem(ub)
 	decreases
-	Payload() (res []byte)
+	Payload(ghost ub []byte) (res []byte)
 }
 
 type ErrorLayer interface {
 	Layer
 
-	preserves Mem()
+	preserves Mem(ub)
 	decreases
-	Error() error
+	Error(ghost ub []byte) error
 }
