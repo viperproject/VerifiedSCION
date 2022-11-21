@@ -104,7 +104,7 @@ def get_func_lines_annos(fname):
                 if iso:
                     if "func" in e:
                         match = re.match(r'\s*func\s*((\([^\)]+\)\s*([^\(\s]*)\s*\(.*)|(\s*([^\(\s]*)\s*\(.*))', e.replace("/*@", "").replace("@*/", ""))
-                        name = {"{fname}:{match.groups()[2] or match.groups()[4]}"}
+                        name = f"{fname}:{match.groups()[2] or match.groups()[4]}"
                     else:
                         name = f"outline at {fname}@{l}"
                     funcs['isolated'].append((l+1, args, name))
