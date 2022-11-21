@@ -17,6 +17,8 @@
 package slayers
 
 import (
+	"github.com/google/gopacket"
+
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/empty"
@@ -36,26 +38,87 @@ pred (s *SCION) NonInitPathPool() {
 }
 
 pred (s *SCION) InitPathPool() {
-	acc(&s.pathPool) &&
-	acc(&s.pathPoolRaw) &&
-	s.pathPool != nil &&
-	s.pathPoolRaw != nil &&
+	acc(&s.pathPool)     &&
+	acc(&s.pathPoolRaw)  &&
+	s.pathPool != nil    &&
 	len(s.pathPool) == 4 &&
 	// entry per path type
 	// empty
-	acc(&s.pathPool[empty.PathType]) &&
+	acc(&s.pathPool[empty.PathType])  &&
+	s.pathPool[empty.PathType] != nil &&
 	typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
 	// onehop
-	acc(&s.pathPool[onehop.PathType]) &&
+	acc(&s.pathPool[onehop.PathType])  &&
+	s.pathPool[onehop.PathType] != nil &&
+	typeOf(s.pathPool[onehop.PathType]) == type[*onehop.Path] &&
 	s.pathPool[onehop.PathType].NonInitMem() &&
 	// scion
-	acc(&s.pathPool[scion.PathType]) &&
+	acc(&s.pathPool[scion.PathType])  &&
+	s.pathPool[scion.PathType] != nil &&
+	typeOf(s.pathPool[scion.PathType]) == type[*scion.Raw] &&
 	s.pathPool[scion.PathType].NonInitMem() &&
 	// epic
-	acc(&s.pathPool[epic.PathType]) &&
+	acc(&s.pathPool[epic.PathType])  &&
+	s.pathPool[epic.PathType] != nil &&
+	typeOf(s.pathPool[epic.PathType]) == type[*epic.Path] &&
 	s.pathPool[epic.PathType].NonInitMem() &&
 	// raw path
+	s.pathPoolRaw != nil &&
 	s.pathPoolRaw.NonInitMem()
+}
+
+// Captures the same obligations as InitPathPool. Initially, I tried using a magic wand
+// but they are a lot harder to use then just this predicate.
+pred (s *SCION) InitPathPoolExceptOne(pathType path.Type) {
+	acc(&s.pathPool)     &&
+	acc(&s.pathPoolRaw)  &&
+	s.pathPool != nil    &&
+	len(s.pathPool) == 4 &&
+	// entry per path type
+	// empty
+	(acc(&s.pathPool[empty.PathType]) &&
+	s.pathPool[empty.PathType] != nil &&
+	typeOf(s.pathPool[empty.PathType]) == type[empty.Path]) &&
+	// onehop
+	acc(&s.pathPool[onehop.PathType])  &&
+	s.pathPool[onehop.PathType] != nil &&
+	typeOf(s.pathPool[onehop.PathType]) == type[*onehop.Path] &&
+	(pathType != onehop.PathType ==> s.pathPool[onehop.PathType].NonInitMem()) &&
+	// scion
+	acc(&s.pathPool[scion.PathType])  &&
+	s.pathPool[scion.PathType] != nil &&
+	typeOf(s.pathPool[scion.PathType]) == type[*scion.Raw] &&
+	(pathType != scion.PathType ==> s.pathPool[scion.PathType].NonInitMem()) &&
+	// epic
+	acc(&s.pathPool[epic.PathType])  &&
+	s.pathPool[epic.PathType] != nil &&
+	typeOf(s.pathPool[epic.PathType]) == type[*epic.Path] &&
+	(pathType != epic.PathType ==> s.pathPool[epic.PathType].NonInitMem()) &&
+	// raw path
+	s.pathPoolRaw != nil &&
+	(pathType < len(s.pathPool) ==> s.pathPoolRaw.NonInitMem())
+}
+
+ghost
+requires  s.InitPathPoolExceptOne(pathType)
+decreases
+pure func (s *SCION)lenPathPool(pathType path.Type) int {
+	return unfolding s.InitPathPoolExceptOne(pathType) in len(s.pathPool)
+}
+
+ghost
+requires  s.InitPathPoolExceptOne(pathType)
+requires  0 <= pathType && pathType < s.lenPathPool(pathType)
+decreases
+pure func (s *SCION)elemPathPool(pathType path.Type) path.Path {
+	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPool[pathType]
+}
+
+ghost
+requires  s.InitPathPoolExceptOne(pathType)
+decreases
+pure func (s *SCION)pathPoolRawPath(pathType path.Type) path.Path {
+	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPoolRaw
 }
 
 // Has the permission for all fields, except those related to the path pools.
@@ -74,22 +137,48 @@ pred (s *SCION) NonInitMem() {
 	acc(&s.SrcIA) &&
 	acc(&s.RawDstAddr) &&
 	acc(&s.RawSrcAddr) &&
-	acc(&s.Path)
+	acc(&s.Path) &&
+	acc(&s.BaseLayer) &&
+	s.InitPathPool()
 }
 
-// Note: this is still incomplete
 pred (s *SCION) Mem(ubuf []byte) {
-	// TODO: complete; put description of
-	// fields from BaseLayer; put permissions to the entire ubuf as a clause here
+	acc(&s.Version) &&
+	acc(&s.TrafficClass) &&
+	acc(&s.FlowID) &&
+	acc(&s.NextHdr) &&
+	acc(&s.HdrLen) &&
+	acc(&s.PayloadLen) &&
+	acc(&s.PathType) &&
+	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.Has3Bits() &&
+	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.Has3Bits() &&
+	// len of ubuf:
+	0 <= s.HdrLen &&
+	0 <= CmnHdrLen + s.AddrHdrLen(nil, true) &&
+	s.HdrLen * LineLen <= len(ubuf) &&
+	CmnHdrLen + s.AddrHdrLen(nil, true) <= s.HdrLen * LineLen &&
+	// end of len of ubuf
+	acc(&s.Path) &&
+	s.Path != nil &&
+	s.Path.Mem(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) &&
+	acc(&s.BaseLayer) &&
+	// base layer fields:
+	s.Contents === ubuf[:s.HdrLen*LineLen] &&
+	s.Payload  === ubuf[s.HdrLen*LineLen:] &&
+	// end of base layer fields
 	CmnHdrLen <= len(ubuf) &&
-	s.HeaderMem(ubuf[CmnHdrLen:])
+	s.HeaderMem(ubuf[CmnHdrLen:]) &&
+	// permissions to the rest of the underlying slice:
+	slices.AbsSlice_Bytes(ubuf, 0, CmnHdrLen+s.AddrHdrLen(nil, true)) &&
+	slices.AbsSlice_Bytes(ubuf, int(s.HdrLen*LineLen), len(ubuf))
+	// end of permissions to the rest of the underlying slice
 }
 
 pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.DstIA) &&
 	acc(&s.SrcIA) &&
-	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.IsValid() &&
-	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.IsValid() &&
+	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.Has3Bits() &&
+	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.Has3Bits() &&
 	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
 	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	s.AddrHdrLen(nil, true) == s.addrHdrLenAbstractionLeak() &&
@@ -116,41 +205,35 @@ pred (s *SCION) ChecksumMem() {
 	slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 }
 
-pred (b *BaseLayer) Mem() {
+pred (b *BaseLayer) Mem(ghost _ []byte) {
 	acc(b) &&
 	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
 	slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
 }
 
-pred (b *BaseLayer) LayerMem() {
-	acc(b) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
-}
-
-pred (b *BaseLayer) PayloadMem() {
-	acc(b) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
-}
-
 ghost
 pure
 decreases
-func (a AddrType) IsValid() (res bool) {
-	return a == T4Ip || a == T4Svc || a == T16Ip
+func (a AddrType) Has3Bits() (res bool) {
+	return 0 <= a && a <= 7
 }
 
 ghost
 requires acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
-requires s.DstAddrType.IsValid() && s.SrcAddrType.IsValid()
+requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
+ensures  0 <= res
 decreases
 pure
-func (s *SCION) addrHdrLenAbstractionLeak() int {
+func (s *SCION) addrHdrLenAbstractionLeak() (res int) {
 	return 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
 ghost
 requires acc(s.Mem(ubuf), def.ReadL20)
+ensures  0 <= res
 decreases
 pure
-func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) int {
+func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) (res int) {
 	return unfolding acc(s.Mem(ubuf), def.ReadL20) in (unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL20) in (2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()))
 }
 
@@ -184,3 +267,34 @@ func FoldEpicMem(p *epic.Path) (r *epic.Path) {
 	fold p.NonInitMem()
 	return p
 }
+
+requires def.Uncallable()
+func (s *SCION) LayerContents() (res []byte) {
+	res = s.Contents
+	return res
+}
+
+ghost
+requires pathType == 0 ==> s.InitPathPool()
+requires 0 < pathType  ==> (
+	p.NonInitMem() &&
+	s.InitPathPoolExceptOne(pathType) &&
+	(pathType < s.lenPathPool(pathType) ==> p === s.elemPathPool(pathType)) &&
+	(s.lenPathPool(pathType) <= pathType ==> p === s.pathPoolRawPath(pathType)))
+ensures  s.InitPathPool()
+decreases
+func (s *SCION) InitPathPoolExchange(pathType path.Type, p path.Path) {
+	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
+	//                 path.Type is defined as an uint8.
+	assume 0 <= pathType
+	if 0 < pathType {
+		unfold s.InitPathPoolExceptOne(pathType)
+		fold s.InitPathPool()
+	}
+}
+
+// gopacket subtyping
+*SCION implements gopacket.Layer
+*SCION implements gopacket.NetworkLayer
+*SCION implements gopacket.SerializableLayer
+*SCION implements gopacket.DecodingLayer

@@ -196,7 +196,27 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'router/'
-          timeout: 45m
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'router/bfd'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'router/bfd'
+          timeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+      - name: Verify package 'router/control'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'router/control'
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
