@@ -17,6 +17,8 @@
 package slayers
 
 import (
+	"github.com/google/gopacket"
+
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/empty"
@@ -97,6 +99,28 @@ pred (s *SCION) InitPathPoolExceptOne(pathType path.Type) {
 	(pathType < len(s.pathPool) ==> s.pathPoolRaw.NonInitMem())
 }
 
+ghost
+requires  s.InitPathPoolExceptOne(pathType)
+decreases
+pure func (s *SCION)lenPathPool(pathType path.Type) int {
+	return unfolding s.InitPathPoolExceptOne(pathType) in len(s.pathPool)
+}
+
+ghost
+requires  s.InitPathPoolExceptOne(pathType)
+requires  0 <= pathType && pathType < s.lenPathPool(pathType)
+decreases
+pure func (s *SCION)elemPathPool(pathType path.Type) path.Path {
+	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPool[pathType]
+}
+
+ghost
+requires  s.InitPathPoolExceptOne(pathType)
+decreases
+pure func (s *SCION)pathPoolRawPath(pathType path.Type) path.Path {
+	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPoolRaw
+}
+
 // Has the permission for all fields, except those related to the path pools.
 // These will come from NonInitPathPool/InitPathPool.
 pred (s *SCION) NonInitMem() {
@@ -114,7 +138,8 @@ pred (s *SCION) NonInitMem() {
 	acc(&s.RawDstAddr) &&
 	acc(&s.RawSrcAddr) &&
 	acc(&s.Path) &&
-	acc(&s.BaseLayer)
+	acc(&s.BaseLayer) &&
+	s.InitPathPool()
 }
 
 pred (s *SCION) Mem(ubuf []byte) {
@@ -180,18 +205,10 @@ pred (s *SCION) ChecksumMem() {
 	slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 }
 
-pred (b *BaseLayer) Mem() {
+pred (b *BaseLayer) Mem(ghost _ []byte) {
 	acc(b) &&
 	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
 	slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
-}
-
-pred (b *BaseLayer) LayerMem() {
-	acc(b) && slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
-}
-
-pred (b *BaseLayer) PayloadMem() {
-	acc(b) && slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
 }
 
 ghost
@@ -250,3 +267,34 @@ func FoldEpicMem(p *epic.Path) (r *epic.Path) {
 	fold p.NonInitMem()
 	return p
 }
+
+requires def.Uncallable()
+func (s *SCION) LayerContents() (res []byte) {
+	res = s.Contents
+	return res
+}
+
+ghost
+requires pathType == 0 ==> s.InitPathPool()
+requires 0 < pathType  ==> (
+	p.NonInitMem() &&
+	s.InitPathPoolExceptOne(pathType) &&
+	(pathType < s.lenPathPool(pathType) ==> p === s.elemPathPool(pathType)) &&
+	(s.lenPathPool(pathType) <= pathType ==> p === s.pathPoolRawPath(pathType)))
+ensures  s.InitPathPool()
+decreases
+func (s *SCION) InitPathPoolExchange(pathType path.Type, p path.Path) {
+	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
+	//                 path.Type is defined as an uint8.
+	assume 0 <= pathType
+	if 0 < pathType {
+		unfold s.InitPathPoolExceptOne(pathType)
+		fold s.InitPathPool()
+	}
+}
+
+// gopacket subtyping
+*SCION implements gopacket.Layer
+*SCION implements gopacket.NetworkLayer
+*SCION implements gopacket.SerializableLayer
+*SCION implements gopacket.DecodingLayer

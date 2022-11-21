@@ -43,6 +43,12 @@ ghost
 requires false
 func Unreachable()
 
+ghost
+ensures !res
+pure func Uncallable() (res bool) {
+	return false
+}
+
 ensures res == x+y
 decreases _
 pure
