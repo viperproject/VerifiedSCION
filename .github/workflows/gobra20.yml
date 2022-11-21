@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2011-2020 ETH Zurich.
 
-name: Verifying functions in router/ with no extra args part 0
+name: Verifying functions in router/ with no extra arguments part 0
 
 on:
   pull_request: # verify on pull request

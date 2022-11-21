@@ -38,7 +38,7 @@ def key_arguments(key):
     if key in ["par", "both"]:
         args += "--parallelizeBranches"
     if len(args) == 0:
-        args = "no extra args"
+        args = "no extra arguments"
     return args
 
 def normalize(key, yml, dirname):
