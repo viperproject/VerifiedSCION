@@ -918,9 +918,10 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	}
 }
 
-// @ trusted
-// @ requires false
+// @ requires acc(&p.d, _)
+// @ requires acc(MutexInvariant(p.d), _)
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) error {
+	// @ unfold acc(MutexInvariant(p.d), _)
 	if len(p.d.bfdSessions) == 0 {
 		return noBFDSessionConfigured
 	}
