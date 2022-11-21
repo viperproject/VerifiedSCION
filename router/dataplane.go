@@ -919,15 +919,24 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 }
 
 // @ requires acc(&p.d, _)
+// @ requires acc(&p.ingressID, _)
 // @ requires acc(MutexInvariant(p.d), _)
+// @ requires  p.bfdLayer.Mem()
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) error {
 	// @ unfold acc(MutexInvariant(p.d), _)
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		return noBFDSessionConfigured
 	}
 
 	bfd := &p.bfdLayer
-	if err := bfd.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
+	verScionTmp := gopacket.NilDecodeFeedback
+	// (VerifiedSCION) NilDecodeFeedback is an initialized variable in decode.go in gopacket
+	// Gobra is not able to detect that it is not nil right now.
+	// @ assume typeOf(verScionTmp) == gopacket.nilDecodeFeedback
+	// @ fold verScionTmp.Mem()
+	if err := bfd.DecodeFromBytes(data, verScionTmp); err != nil {
 		return err
 	}
 
