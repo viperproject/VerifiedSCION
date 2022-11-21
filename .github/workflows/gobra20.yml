@@ -31,12 +31,12 @@ jobs:
       with:
         key: ${{ env.cache-name }}
         path: ${{ runner.workspace }}/.gobra/cache.json
-    - name: Verify package 'router/'-none
+    - name: Verify package 'router/'-none0
       uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
-        files: ' router/dataplane.go@1774,1793,1906,1912,1933,1960,1982,2004 router/metrics_spec.gobra router/dataplane_spec.gobra@122,155 router/svc.go@35,45,70,101,132 router/metrics.go@47 router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra@26,37 router/svc_spec_test.gobra@25,32'
+        files: ' router/dataplane.go@153,183,354,405,438,462,497,507,524,576,605,645,656,705,733,741,746,771,782,865,882,924,944,972,985,1075,1085,1110,1133,1152,1174,1221,1237,1244,1251,1276,1294,1313,1340,1349,1377,1394,1403,1421,1430,1467,1484,1559,1648,1672,1676 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
