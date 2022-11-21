@@ -76,7 +76,6 @@ const (
 )
 
 // Length returns the length of this AddrType value.
-// (VerifiedSCION) Assumed, as Gobra cannot reason about the result of bitwise operations.
 // @ pure
 // @ requires tl.Has3Bits()
 // @ ensures  res == LineLen * (1 + (b.BitAnd3(int(tl))))
@@ -103,33 +102,24 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
-// @ requires b.LayerMem()
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
-// @ decreases
+// @ requires def.Uncallable()
 func (b *BaseLayer) LayerContents() (res []byte) {
-	//@ unfold b.LayerMem()
-	//@ unfold sl.AbsSlice_Bytes(b.Contents, 0, len(b.Contents))
 	res = b.Contents
-	//@ fold sl.AbsSlice_Bytes(res, 0, len(res))
-	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
-	//@   fold b.LayerMem()
-	//@ }
 	return res
 }
 
 // LayerPayload returns the bytes contained within the packet layer.
-// @ requires b.PayloadMem()
-// @ ensures sl.AbsSlice_Bytes(res, 0, len(res))
-// @ ensures sl.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+// @ requires b.Mem(ub)
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 // @ decreases
-func (b *BaseLayer) LayerPayload() (res []byte) {
-	//@ unfold b.PayloadMem()
+func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
+	//@ unfold b.Mem(ub)
 	//@ unfold sl.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
 	res = b.Payload
 	//@ fold sl.AbsSlice_Bytes(res, 0, len(res))
-	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
-	//@   fold b.PayloadMem()
+	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
+	//@   fold b.Mem(ub)
 	//@ }
 	return res
 }
@@ -204,10 +194,20 @@ func (s *SCION) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 	return scionNextLayerType( /*@ unfolding acc(s.Mem(ub), def.ReadL20) in @*/ s.NextHdr)
 }
 
-// @ trusted
-// @ requires false
-func (s *SCION) LayerPayload() []byte {
-	return s.Payload
+// @ requires s.Mem(ub)
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
+// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem(ub)
+// @ decreases
+func (s *SCION) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
+	//@ unfold s.Mem(ub)
+	res = s.Payload
+	//@ l := int(s.HdrLen*LineLen)
+	//@ sl.Reslice_Bytes(ub, l, len(ub), writePerm)
+	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem(ub) {
+	//@ 	sl.Unslice_Bytes(ub, l, len(ub), writePerm)
+	//@ 	fold s.Mem(ub)
+	//@ }
+	return res
 }
 
 // @ ensures res == gopacket.Flow{}
@@ -221,6 +221,7 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ requires  b != nil && b.Mem(uSerBuf)
 // @ preserves s.Mem(ubuf)
 // @ ensures   b.Mem(newUSerBuf)
+// @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte, ghost uSerBuf []byte @*/) (e error /*@ , ghost newUSerBuf []byte @*/) {
 	// @ unfold s.Mem(ubuf)
@@ -309,7 +310,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // to the state defined by the passed-in bytes. Slices in the SCION layer reference the passed-in
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
-// @ requires  s.NonInitMem() && s.InitPathPool()
+// @ requires  s.NonInitMem()
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
@@ -402,6 +403,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	if err != nil {
 		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
+		// @ s.InitPathPoolExchange(s.PathType, s.Path)
 		// @ fold s.NonInitMem()
 		return err
 	}
@@ -444,7 +446,10 @@ func (s *SCION) RecyclePaths() {
 // @ ensures  pathType == 0 ==> (typeOf(res) == type[empty.Path] && s.InitPathPool())
 // @ ensures  0 < pathType  ==> (
 // @ 	res.NonInitMem() &&
-// @ 	s.InitPathPoolExceptOne(pathType))
+// @ 	s.InitPathPoolExceptOne(pathType) &&
+// @ 	(pathType < s.lenPathPool(pathType) ==> res === s.elemPathPool(pathType)) &&
+// @	(s.lenPathPool(pathType) <= pathType ==> res === s.pathPoolRawPath(pathType)))
+// @ ensures  err == nil
 // @ decreases
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
@@ -645,8 +650,9 @@ func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ 
 // @ preserves acc(s.HeaderMem(ubuf), def.ReadL10)
 // @ preserves sl.AbsSlice_Bytes(buf, 0, len(buf))
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL10)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) error {
+func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err error) {
 	// @ unfold acc(s.HeaderMem(ubuf), def.ReadL10)
 	// @ defer fold acc(s.HeaderMem(ubuf), def.ReadL10)
 	if len(buf) < s.AddrHdrLen( /*@ nil, true @*/ ) {

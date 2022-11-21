@@ -46,70 +46,81 @@ type Packet interface {
 	Dump() string
 
 	requires Mem()
-	ensures acc(res)
-	ensures forall i int :: 0 <= i && i < len(res) ==> res[i].Mem()
-	ensures forall i int :: 0 <= i && i < len(res) ==> (res[i].Mem()) --* Mem()
+	ensures  acc(res)
+	// (VerifiedSCION) not sure if we need this
+	// ensures forall i int :: 0 <= i && i < len(res) ==> res[i].Mem()
+	// ensures forall i int :: 0 <= i && i < len(res) ==> (res[i].Mem()) --* Mem()
+	ensures  forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
 	decreases
 	Layers() (res []Layer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
 	decreases
 	Layer(LayerType) (res Layer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
 	decreases
 	LayerClass(LayerClass) (res Layer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
 	decreases
 	LinkLayer() (res LinkLayer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
 	decreases
 	NetworkLayer() (res NetworkLayer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
 	decreases
 	TransportLayer() (res TransportLayer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
 	decreases
 	ApplicationLayer() (res ApplicationLayer)
 
 	requires Mem()
-	ensures res.Mem()
-	ensures res.Mem() --* Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
 	decreases
 	ErrorLayer() (res ErrorLayer)
 
 	requires Mem()
-	ensures slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures slices.AbsSlice_Bytes(res, 0, len(res))
+	// ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
 	decreases
 	Data() (res []byte)
 	
 	requires Mem()
-	ensures acc(res)
-	ensures acc(res) --* Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures acc(res)
+	// ensures acc(res) --* Mem()
 	decreases
 	Metadata() (res *PacketMetadata)
 }
 
-preserves l.Mem()
+preserves acc(l.Mem(ub), _)
 decreases
-func LayerString(l Layer) string
+func LayerString(l Layer, ghost ub []byte) string
 
 type DecodeOptions struct {
 	Lazy bool
