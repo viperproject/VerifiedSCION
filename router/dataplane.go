@@ -983,12 +983,10 @@ func (p *scionPacketProcessor) processIntraBFD(src *net.UDPAddr, data []byte) (r
 		// @ unfold acc(v.Mem(), _)
 		// @ unfold acc(src.Mem(), def.ReadL15)
 		var verScionTmp1 bool
-		// @ assume v !== src
-		// @ assume v.IP !== src.IP
-		// @ requires acc(v, _)
-		// @ requires acc(slices.AbsSlice_Bytes(v.IP, 0, len(v.IP)), _)
-		// @ requires acc(src, def.ReadL15)
-		// @ requires acc(slices.AbsSlice_Bytes(src.IP, 0, len(src.IP)), def.ReadL15)
+		// assume v !== src
+		// assume v.IP !== src.IP
+		// @ requires acc(src, def.ReadL15) && acc(v, _)
+		// @ requires acc(slices.AbsSlice_Bytes(v.IP, 0, len(v.IP)), _) && acc(slices.AbsSlice_Bytes(src.IP, 0, len(src.IP)), def.ReadL15)
 		// @ ensures  acc(src, def.ReadL15)
 		// @ ensures  acc(slices.AbsSlice_Bytes(src.IP, 0, len(src.IP)), def.ReadL15)
 		// @ outline (
