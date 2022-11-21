@@ -876,12 +876,16 @@ func (p *scionPacketProcessor) reset(/*@ ghost ubuf []byte @*/) (res error) {
 	return nil
 }
 
-// @ trusted
-// @ requires false
+// @ requires acc(&p.d, _)
+// @ requires acc(MutexInvariant(p.d), _)
+// @ requires slices.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ requires p.buffer !=nil
+// @ requires p.buffer.Mem(ubuf)
+// @ preserves acc(srcAddr.Mem(), def.ReadL15)
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
-	srcAddr *net.UDPAddr) (processResult, error) {
+	srcAddr *net.UDPAddr /*@ , ghost ubuf []byte @*/) (processResult, error) {
 
-	p.reset()
+	p.reset(/*@ubuf@*/)
 	p.rawPkt = rawPkt
 
 	// parse SCION header and skip extensions;
