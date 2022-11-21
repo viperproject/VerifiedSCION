@@ -1779,10 +1779,10 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-// @ trusted
-// @ requires false
+// @ requires scmpH.Mem(ubufH) && scmpP.Mem(ubufP)
+// @ requires p.scionLayer.Mem(ubufS) && p.buffer.Mem(ubufB)
 func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.SerializableLayer,
-	cause error) (res []byte, err error) {
+	cause error /*@, ghost ubufH []byte, ghost ubufP []byte, ghost ubufS []byte, ghost ubufB []byte @*/) (res []byte, err error) {
 
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
 	// back to rawPkt (quote).
