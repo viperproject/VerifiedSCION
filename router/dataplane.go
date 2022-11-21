@@ -943,34 +943,66 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) err
 // @ requires  p.bfdLayer.Mem()
 // @ preserves acc(src.Mem(), def.ReadL15)
 // @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
-// @ ensures   res != nil ==> res.ErrorMem()
-// @ decreases
 func (p *scionPacketProcessor) processIntraBFD(src *net.UDPAddr, data []byte) (res error) {
 	// @ unfold acc(MutexInvariant(p.d), _)
-	// @ unfold acc(AccBfdSession(p.d.bfdSessions), _)
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
+		// @ assert acc(src.Mem(), def.ReadL15)
 		return noBFDSessionConfigured
 	}
 
 	bfd := &p.bfdLayer
 	verScionTmp := gopacket.NilDecodeFeedback
+	// (VerifiedSCION) NilDecodeFeedback is an initialized variable in decode.go in gopacket
+	// Gobra is not able to detect that it is not nil right now.
+	// @ assume typeOf(verScionTmp) == gopacket.nilDecodeFeedback
 	// @ fold verScionTmp.Mem()
 	if err := bfd.DecodeFromBytes(data, verScionTmp); err != nil {
 		return err
 	}
+	// @ ghost if p.d.internalNextHops != nil {
+	// @   unfold acc(AccAddr(p.d.internalNextHops), _)
+	// @   assert acc(p.d.internalNextHops, _)
+	// @   // TODO: since we have read permission, we will inhale a small amount so that range
+	// @   // can succeed. If range encoding changes, this can be skipped
+	// @   inhale acc(p.d.internalNextHops, def.ReadL20)
+	// @ }
+
+	// @ ghost tmp := p.d.internalNextHops
 
 	ifID := uint16(0)
-	// @ assert acc(&p.d.internalNextHops, _)
+	// @ invariant acc(src.Mem(), def.ReadL15)
+	// @ invariant acc(&p.d, _)
 	// @ invariant acc(&p.d.internalNextHops, _)
-	// @ invariant p.d.internalNextHops != nil ==> acc(p.d.internalNextHops, _)
-	// @ invariant p.d.internalNextHops === old(p.d.internalNextHops)
 	// @ invariant p.d === old(p.d)
+	// @ invariant p.d.internalNextHops != nil ==> acc(p.d.internalNextHops, def.ReadL20)
+	// @ invariant p.d.internalNextHops != nil ==> forall a *net.UDPAddr :: a in range(p.d.internalNextHops) ==> acc(a.Mem(), _)
+	// @ invariant p.d.internalNextHops === tmp
 	// @ decreases len(p.d.internalNextHops) - len(visited)
 	for k, v := range p.d.internalNextHops /*@ with visited @*/ {
-		if bytes.Equal(v.IP, src.IP) && v.Port == src.Port {
+		// @ unfold acc(v.Mem(), _)
+		// @ unfold acc(src.Mem(), def.ReadL15)
+		var verScionTmp1 bool
+		// @ assume v !== src
+		// @ assume v.IP !== src.IP
+		// @ requires acc(v, _)
+		// @ requires acc(slices.AbsSlice_Bytes(v.IP, 0, len(v.IP)), _)
+		// @ requires acc(src, def.ReadL15)
+		// @ requires acc(slices.AbsSlice_Bytes(src.IP, 0, len(src.IP)), def.ReadL15)
+		// @ ensures  acc(src, def.ReadL15)
+		// @ ensures  acc(slices.AbsSlice_Bytes(src.IP, 0, len(src.IP)), def.ReadL15)
+		// @ outline (
+		// @ unfold acc(slices.AbsSlice_Bytes(src.IP, 0, len(src.IP)), def.ReadL15)
+		// @ unfold acc(slices.AbsSlice_Bytes(v.IP, 0, len(v.IP)), _)
+		verScionTmp1 = bytes.Equal(v.IP, src.IP)
+		// @ fold acc(slices.AbsSlice_Bytes(src.IP, 0, len(src.IP)), def.ReadL15)
+		// @ )
+		if verScionTmp1 && v.Port == src.Port {
 			ifID = k
+			// @ fold acc(src.Mem(), def.ReadL15)
 			break
 		}
+		// @ fold acc(src.Mem(), def.ReadL15)
 	}
 
 	if v, ok := p.d.bfdSessions[ifID]; ok {
