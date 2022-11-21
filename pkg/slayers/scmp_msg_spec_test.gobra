@@ -1,3 +1,18 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
 
 package slayers
 
@@ -6,114 +21,37 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-func external_interface_down_test() {
+func externalInterfaceDownTest() {
 	b := &SCMPExternalInterfaceDown{}
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
-	fold b.BaseLayer.LayerMem()
-	fold b.LayerMem()
-	unfold b.LayerMem()
-	unfold b.BaseLayer.LayerMem()
-	fold b.BaseLayer.PayloadMem()
-	fold b.PayloadMem()
-	unfold b.PayloadMem()
-	unfold b.BaseLayer.PayloadMem()
-	fold b.BaseLayer.Mem()
-	fold b.Mem()
+	fold b.NonInitMem()
 }
 
-func internal_connectivity_down_test() {
+func internalConnectivityDownTest() {
 	b := &SCMPInternalConnectivityDown{}
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
-	fold b.BaseLayer.LayerMem()
-	fold b.LayerMem()
-	unfold b.LayerMem()
-	unfold b.BaseLayer.LayerMem()
-	fold b.BaseLayer.PayloadMem()
-	fold b.PayloadMem()
-	unfold b.PayloadMem()
-	unfold b.BaseLayer.PayloadMem()
-	fold b.BaseLayer.Mem()
-	fold b.Mem()
+	fold b.NonInitMem()
 }
 
-func echo_test() {
+func echoTest() {
 	b := &SCMPEcho{}
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
-	fold b.BaseLayer.LayerMem()
-	fold b.LayerMem()
-	unfold b.LayerMem()
-	unfold b.BaseLayer.LayerMem()
-	fold b.BaseLayer.PayloadMem()
-	fold b.PayloadMem()
-	unfold b.PayloadMem()
-	unfold b.BaseLayer.PayloadMem()
-	fold b.BaseLayer.Mem()
-	fold b.Mem()
+	fold b.NonInitMem()
 }
 
-func parameter_problem_test() {
+func parameterProblemTest() {
 	b := &SCMPParameterProblem{}
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
-	fold b.BaseLayer.LayerMem()
-	fold b.LayerMem()
-	unfold b.LayerMem()
-	unfold b.BaseLayer.LayerMem()
-	fold b.BaseLayer.PayloadMem()
-	fold b.PayloadMem()
-	unfold b.PayloadMem()
-	unfold b.BaseLayer.PayloadMem()
-	fold b.BaseLayer.Mem()
-	fold b.Mem()
+	fold b.NonInitMem()
 }
 
-func traceroute_test() {
+func tracerouteTest() {
 	b := &SCMPTraceroute{}
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
-	fold b.BaseLayer.LayerMem()
-	fold b.LayerMem()
-	unfold b.LayerMem()
-	unfold b.BaseLayer.LayerMem()
-	fold b.BaseLayer.PayloadMem()
-	fold b.PayloadMem()
-	unfold b.PayloadMem()
-	unfold b.BaseLayer.PayloadMem()
-	fold b.BaseLayer.Mem()
-	fold b.Mem()
+	fold b.NonInitMem()
 }
 
-func destination_unreachable_test() {
+func destinationUnreachableTest() {
 	b := &SCMPDestinationUnreachable{}
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
-	fold b.BaseLayer.LayerMem()
-	fold b.LayerMem()
-	unfold b.LayerMem()
-	unfold b.BaseLayer.LayerMem()
-	fold b.BaseLayer.PayloadMem()
-	fold b.PayloadMem()
-	unfold b.PayloadMem()
-	unfold b.BaseLayer.PayloadMem()
-	fold b.BaseLayer.Mem()
-	fold b.Mem()
+	fold b.NonInitMem()
 }
 
-func packet_too_big_test() {
+func packetTooBigTest() {
 	b := &SCMPPacketTooBig{}
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Contents, 0, len(b.BaseLayer.Contents))
-	fold slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload))
-	fold b.BaseLayer.LayerMem()
-	fold b.LayerMem()
-	unfold b.LayerMem()
-	unfold b.BaseLayer.LayerMem()
-	fold b.BaseLayer.PayloadMem()
-	fold b.PayloadMem()
-	unfold b.PayloadMem()
-	unfold b.BaseLayer.PayloadMem()
-	fold b.BaseLayer.Mem()
-	fold b.Mem()
+	fold b.NonInitMem()
 }

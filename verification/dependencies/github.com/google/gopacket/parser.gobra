@@ -56,7 +56,7 @@ type DecodingLayer interface {
 
 type DecodingLayerContainer interface {
 	pred Mem()
-	
+
 	requires Mem()
 	// (VerifiedSCION) not sure if needed
 	// requires d.Mem()

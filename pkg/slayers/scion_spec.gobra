@@ -289,7 +289,7 @@ func (s *SCION) InitPathPoolExchange(pathType path.Type, p path.Path) {
 	assume 0 <= pathType
 	if 0 < pathType {
 		unfold s.InitPathPoolExceptOne(pathType)
-		fold s.InitPathPool()	
+		fold s.InitPathPool()
 	}
 }
 
