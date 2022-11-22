@@ -1787,7 +1787,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
 	// back to rawPkt (quote).
 	var path *scion.Raw
-	pathType := p.scionLayer.Path.Type()
+	pathType := p.scionLayer.Path.Type(/*@ ubufS @*/)
 	switch pathType {
 	case scion.PathType:
 		var ok bool
@@ -1807,11 +1807,11 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
-	decPath, err := path.ToDecoded()
+	decPath, err := path.ToDecoded(/*@ ubufS @*/)
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
-	revPathTmp, err := decPath.Reverse()
+	revPathTmp, err := decPath.Reverse(/*@ ubufS @*/)
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
@@ -1819,7 +1819,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover() {
-		if err := revPath.IncPath(); err != nil {
+		if err := revPath.IncPath(/*@ ubufS @*/); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
@@ -1832,7 +1832,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
 			infoField.UpdateSegID(hopField.Mac)
 		}
-		if err := revPath.IncPath(); err != nil {
+		if err := revPath.IncPath(/*@ ubufS @*/); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
@@ -1841,7 +1841,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	var scionL slayers.SCION
 	scionL.FlowID = p.scionLayer.FlowID
 	scionL.TrafficClass = p.scionLayer.TrafficClass
-	scionL.PathType = revPath.Type()
+	scionL.PathType = revPath.Type(/*@ ubufS @*/)
 	scionL.Path = revPath
 	scionL.DstIA = p.scionLayer.SrcIA
 	scionL.SrcIA = p.d.localIA

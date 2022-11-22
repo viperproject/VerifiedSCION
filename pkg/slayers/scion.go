@@ -606,8 +606,7 @@ func parseAddr(addrType AddrType, raw []byte) (net.Addr, error) {
 		"type", addrType, "len", addrType.Length())
 }
 
-// @ trusted
-// @ requires false
+// @ requires acc(hostAddr.Mem(), def.ReadL9)
 func packAddr(hostAddr net.Addr) (AddrType, []byte, error) {
 	switch a := hostAddr.(type) {
 	case *net.IPAddr:
