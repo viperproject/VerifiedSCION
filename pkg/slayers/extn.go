@@ -22,6 +22,8 @@ import (
 	"github.com/google/gopacket"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	// @ def "github.com/scionproto/scion/verification/utils/definitions"
+	// @ sl  "github.com/scionproto/scion/verification/utils/slices"
 )
 
 var (
@@ -46,25 +48,34 @@ type tlvOption struct {
 	OptAlign     [2]uint8 // Xn+Y = [2]uint8{X, Y}
 }
 
-// @ trusted
-// @ requires false
-func (o *tlvOption) length(fixLengths bool) int {
+// @ preserves acc(o, def.ReadL20)
+// @ ensures   0 < res
+// @ decreases
+func (o *tlvOption) length(fixLengths bool) (res int) {
 	if o.OptType == OptTypePad1 {
 		return 1
 	}
 	if fixLengths {
 		return len(o.OptData) + 2
 	}
+	// (VerifiedSCION) gobra cannot prove this yet, even though it must hold
+	//                 as the type of o.OptDataLen is uint8
+	// @ assume 0 <= o.OptDataLen
 	return int(o.OptDataLen) + 2
 }
 
-// @ trusted
-// @ requires false
+// @ requires  2 <= len(data)
+// @ preserves acc(o)
+// @ preserves acc(sl.AbsSlice_Bytes(o.OptData, 0, len(o.OptData)), def.ReadL20)
+// @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
+// @ decreases
 func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 	dryrun := data == nil
 	if o.OptType == OptTypePad1 {
 		if !dryrun {
+			// @ unfold sl.AbsSlice_Bytes(data, 0, len(data))
 			data[0] = 0x0
+			// @ fold sl.AbsSlice_Bytes(data, 0, len(data))
 		}
 		return
 	}
@@ -72,15 +83,27 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 		o.OptDataLen = uint8(len(o.OptData))
 	}
 	if !dryrun {
+		// @ unfold sl.AbsSlice_Bytes(data, 0, len(data))
+		// @ unfold acc(sl.AbsSlice_Bytes(o.OptData, 0, len(o.OptData)), def.ReadL20)
 		data[0] = uint8(o.OptType)
 		data[1] = o.OptDataLen
-		copy(data[2:], o.OptData)
+		// @ assert forall i int :: { &data[2:][i] } 0 <= i && i < len(data[2:]) ==> &data[2:][i] == &data[2+i]
+		copy(data[2:], o.OptData /*@ , def.ReadL20 @*/)
+		// @ fold acc(sl.AbsSlice_Bytes(o.OptData, 0, len(o.OptData)), def.ReadL20)
+		// @ fold sl.AbsSlice_Bytes(data, 0, len(data))
 	}
 }
 
-// @ trusted
-// @ requires false
-func decodeTLVOption(data []byte) (*tlvOption, error) {
+// @ requires  2 <= len(data)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL20)
+// @ ensures   err == nil ==> acc(res)
+// @ ensures   (err == nil && res.OptType != OptTypePad1) ==> (
+// @ 	2 <= res.ActualLength && res.ActualLength <= len(data) && res.OptData === data[2:res.ActualLength])
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
+func decodeTLVOption(data []byte) (res *tlvOption, err error) {
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL20)
+	// @ defer fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL20)
 	o := &tlvOption{OptType: OptionType(data[0])}
 	if OptionType(data[0]) == OptTypePad1 {
 		o.ActualLength = 1
@@ -90,10 +113,14 @@ func decodeTLVOption(data []byte) (*tlvOption, error) {
 		return nil, serrors.New("buffer too short", "expected", 2, "actual", len(data))
 	}
 	o.OptDataLen = data[1]
+	// (VerifiedSCION) Gobra cannot prove this even though it must hold, given the type of o.OptDataLen
+	// @ assume 0 <= o.OptDataLen
 	o.ActualLength = int(o.OptDataLen) + 2
 	if len(data) < o.ActualLength {
 		return nil, serrors.New("buffer too short", "expected", o.ActualLength, "actual", len(data))
 	}
+	// @ assert forall i int :: { &data[2:o.ActualLength][i] } 0 <= i && i < len(data[2:o.ActualLength]) ==>
+	// @ 	&data[2:o.ActualLength][i] == &data[2+i]
 	o.OptData = data[2:o.ActualLength]
 	return o, nil
 }
