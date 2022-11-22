@@ -50,6 +50,11 @@ type tlvOption struct {
 
 // @ preserves acc(o, def.ReadL20)
 // @ ensures   0 < res
+// @ ensures   o.OptType == OptTypePad1 ==> res == 1
+// @ ensures   o.OptType != OptTypePad1 ==> 2 <= res
+// @ ensures   fixLengths  && o.OptType != OptTypePad1 ==> res == len(o.OptData) + 2
+// @ ensures   !fixLengths && o.OptType != OptTypePad1 ==> res == int(o.OptDataLen) + 2
+// @ ensures   res == o.lengthGhost(fixLengths)
 // @ decreases
 func (o *tlvOption) length(fixLengths bool) (res int) {
 	if o.OptType == OptTypePad1 {
@@ -126,36 +131,50 @@ func decodeTLVOption(data []byte) (res *tlvOption, err error) {
 }
 
 // serializeTLVOptionPadding adds an appropriate PadN extension.
-// @ trusted
-// @ requires false
+// @ requires  padLength == 1 ==> 1 <= len(data)
+// @ requires  1 < padLength  ==> 2 <= len(data)
+// @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
+// @ decreases
 func serializeTLVOptionPadding(data []byte, padLength int) {
 	if padLength <= 0 {
 		return
 	}
 	if padLength == 1 {
+		// @ unfold sl.AbsSlice_Bytes(data, 0, len(data))
 		data[0] = 0x0
+		// @ fold sl.AbsSlice_Bytes(data, 0, len(data))
 		return
 	}
 	dataLen := uint8(padLength) - 2
-	padN := tlvOption{
+	padN /*@@@*/ := tlvOption{
 		OptType:    OptTypePadN,
 		OptDataLen: dataLen,
-		OptData:    make([]byte, dataLen),
+		OptData:    make([]byte, int(dataLen)),
 	}
+	// @ fold sl.AbsSlice_Bytes(padN.OptData, 0, len(padN.OptData))
 	padN.serializeTo(data, false)
 }
 
 // serializeTLVOptions serializes options to buf and returns the length of the serialized options.
 // Passing in a nil-buffer will treat the serialization as a dryrun that can be used to calculate
 // the length needed for the buffer.
-// @ trusted
-// @ requires false
-func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool) int {
+// @ requires 2 <= len(buf)
+// @ requires !fixLengths
+// @ requires forall i int :: { &options[i] } 0 <= i && i < len(options) ==> acc(&options[i], def.ReadL20)
+// @ requires forall i, j int :: (0 <= i && i < len(options) && 0 <= j && j < len(options) && j != i) ==> options[i] != options[j]
+// @ requires forall i int :: { &options[i] } 0 <= i && i < len(options) ==> acc(options[i], def.ReadL20)
+// @ requires buf != nil ==> computeLen(options, 0, len(options), fixLengths) <= len(buf)
+// @ ensures  buf == nil ==> res == computeLen(options, 0, len(options), fixLengths)
+// @ decreases
+func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool) (res int) {
 	dryrun := buf == nil
 	// length start at 2 since the padding needs to be calculated taking the first 2 bytes of the
 	// extension header (NextHdr and ExtLen fields) into account.
 	length := 2
-	for _, opt := range options {
+	// @ invariant 0 < len(options) ==> (0 <= i0 && i0 < len(options))
+	// @ invariant forall i int :: { &options[i] } 0 <= i && i < len(options) ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
+	// @ decreases len(options) - i0
+	for _, opt := range options /*@ with i0 @*/ {
 		if fixLengths {
 			x := int(opt.OptAlign[0])
 			y := int(opt.OptAlign[1])
@@ -179,6 +198,7 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool) int 
 		}
 		length += opt.length(fixLengths)
 	}
+	// @ assume false // TODO: remove
 	if fixLengths {
 		p := length % LineLen
 		if p != 0 {

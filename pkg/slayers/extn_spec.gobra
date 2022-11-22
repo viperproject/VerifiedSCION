@@ -23,6 +23,20 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
+ghost
+requires  acc(o, def.ReadL20)
+decreases
+pure func (o *tlvOption) lengthGhost(fixLengths bool) (res int) {
+	return o.OptType == OptTypePad1? 1 : (fixLengths? len(o.OptData) + 2 : int(o.OptDataLen) + 2)
+}
+
+ghost
+requires 0 <= start && start <= end && end <= len(options)
+requires forall i int :: { &options[i] } start <= i && i <= end ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
+pure func computeLen(options []*tlvOption, start, end int, fixLengths bool) (res int) {
+    return start >= end? 0 : options[start].lengthGhost(fixLengths) + computeLen(options, start+1, end, fixLengths)
+}
+
 pred (s *HopByHopExtn) NonInitMem()
 
 pred (s *HopByHopExtn) Mem(ub []byte)
