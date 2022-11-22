@@ -20,6 +20,7 @@ jobs:
       module: 'github.com/scionproto/scion'
       includePaths: '. verification/dependencies'
       assumeInjectivityOnInhale: '1'
+      parallelizeBranches: '1'
       # Re-enable consistency checks when the "Remainder" predicates in slayers/path/scion
       # are changed to not include magic-wands.
       checkConsistency: '0'
@@ -50,6 +51,7 @@ jobs:
           includePaths: './dependencies/ ..' # relative to project location
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
@@ -61,6 +63,7 @@ jobs:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
           statsFile: '/stats/stats_addr.json'
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/experimental/epic'
         uses: viperproject/gobra-action@main
         with:
@@ -71,6 +74,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/log'
         uses: viperproject/gobra-action@main
         with:
@@ -81,6 +85,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/private/serrors'
         uses: viperproject/gobra-action@main
         with:
@@ -91,6 +96,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/scrypto'
         uses: viperproject/gobra-action@main
         with:
@@ -101,6 +107,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/slayers'
         uses: viperproject/gobra-action@main
         with:
@@ -111,6 +118,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
@@ -121,6 +129,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/slayers/path/empty'
         uses: viperproject/gobra-action@main
         with:
@@ -131,6 +140,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/slayers/path/epic'
         uses: viperproject/gobra-action@main
         with:
@@ -142,6 +152,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/slayers/path/onehop'
         uses: viperproject/gobra-action@main
         with:
@@ -152,6 +163,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:
@@ -162,6 +174,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'private/topology'
         uses: viperproject/gobra-action@main
         with:
@@ -172,6 +185,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'private/underlay/conn'
         uses: viperproject/gobra-action@main
         with:
@@ -182,6 +196,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'private/underlay/sockctrl'
         uses: viperproject/gobra-action@main
         with:
@@ -192,6 +207,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'router/'
         uses: viperproject/gobra-action@main
         with:
@@ -202,6 +218,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'router/bfd'
         uses: viperproject/gobra-action@main
         with:
@@ -212,6 +229,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'router/control'
         uses: viperproject/gobra-action@main
         with:
@@ -222,26 +240,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
-      - name: Verify package 'router/bfd'
-        uses: viperproject/gobra-action@main
-        with:
-          packages: 'router/bfd'
-          timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-      - name: Verify package 'router/control'
-        uses: viperproject/gobra-action@main
-        with:
-          packages: 'router/control'
-          timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Upload the verification report
         uses: actions/upload-artifact@v2
         with:
