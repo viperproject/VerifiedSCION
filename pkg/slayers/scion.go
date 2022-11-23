@@ -573,6 +573,7 @@ func (s *SCION) SrcAddr() (net.Addr, error) {
 // SetDstAddr takes ownership of dst and callers should not write to it after calling SetDstAddr.
 // Changes to dst might leave the layer in an inconsistent state.
 // @ trusted
+// @ requires false
 //  requires acc(&s.RawDstAddr)
 //  requires sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 //  requires acc(&s.DstAddrType)
