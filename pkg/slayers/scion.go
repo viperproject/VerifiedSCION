@@ -573,8 +573,13 @@ func (s *SCION) SrcAddr() (net.Addr, error) {
 // SetDstAddr takes ownership of dst and callers should not write to it after calling SetDstAddr.
 // Changes to dst might leave the layer in an inconsistent state.
 // @ trusted
-// @ requires false
-func (s *SCION) SetDstAddr(dst net.Addr) error {
+//  requires wildcard ==> acc(dst.Mem(), _)
+//  requires wildcard ==> acc(dst.Mem(), def.ReadL15)
+//  ensures res != nil ==> res.ErrorMem()
+//  ensures err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL15)
+//  ensures err == nil && wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
+//  ensures err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL15) --* acc(hostAddr.Mem(), def.ReadL15)
+func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res error) {
 	var err error
 	s.DstAddrType, s.RawDstAddr, err = packAddr(dst)
 	return err
@@ -606,12 +611,13 @@ func parseAddr(addrType AddrType, raw []byte) (net.Addr, error) {
 		"type", addrType, "len", addrType.Length())
 }
 
-// @ requires wildcard ==> acc(hostAddr.Mem(), _)
-// @ requires !wildcard ==> acc(hostAddr.Mem(), def.ReadL15)
-// @ ensures err != nil ==> err.ErrorMem()
-// @ ensures err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL15)
-// @ ensures err == nil && wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
-// @ ensures err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL15) --* acc(hostAddr.Mem(), def.ReadL15)
+// @ requires  wildcard ==> acc(hostAddr.Mem(), _)
+// @ requires  !wildcard ==> acc(hostAddr.Mem(), def.ReadL15)
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ ensures   err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL15)
+// @ ensures   err == nil && wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
+// @ ensures   err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL15) --* acc(hostAddr.Mem(), def.ReadL15)
+// @ decreases
 func packAddr(hostAddr net.Addr /*@ , wildcard bool @*/) (addrtyp AddrType, b []byte, err error) {
 	switch a := hostAddr.(type) {
 	case *net.IPAddr:
