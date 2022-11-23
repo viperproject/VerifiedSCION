@@ -573,11 +573,13 @@ func (s *SCION) SrcAddr() (net.Addr, error) {
 // SetDstAddr takes ownership of dst and callers should not write to it after calling SetDstAddr.
 // Changes to dst might leave the layer in an inconsistent state.
 // @ trusted
+//  requires acc(&s.RawDstAddr)
+//  requires sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
+//  requires acc(&s.DstAddrType)
 //  requires wildcard ==> acc(dst.Mem(), _)
 //  requires wildcard ==> acc(dst.Mem(), def.ReadL15)
 //  ensures res != nil ==> res.ErrorMem()
 //  ensures err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL15)
-//  ensures err == nil && wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
 //  ensures err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL15) --* acc(hostAddr.Mem(), def.ReadL15)
 func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res error) {
 	var err error
@@ -613,6 +615,8 @@ func parseAddr(addrType AddrType, raw []byte) (net.Addr, error) {
 
 // @ requires  wildcard ==> acc(hostAddr.Mem(), _)
 // @ requires  !wildcard ==> acc(hostAddr.Mem(), def.ReadL15)
+// @ ensures   typeOf(hostAddr) == *net.IPAddr ==> err == nil
+// @ ensures   typeOf(hostAddr) == addr.HostSVC ==> err == nil
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ ensures   err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL15)
 // @ ensures   err == nil && wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
