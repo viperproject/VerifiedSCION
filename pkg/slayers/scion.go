@@ -605,7 +605,7 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 	// @       sl.SplitByIndex_Bytes(dst.(*net.IPAddr).IP, 0, len(dst.(*net.IPAddr).IP), 12, def.ReadL14)
 	// @       unfold acc(sl.AbsSlice_Bytes(dst.(*net.IPAddr).IP, 12, len(dst.(*net.IPAddr).IP)), def.ReadL14)
 	// @       fold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL14)
-	// @       splitIndex := 12
+	// @       splitIndex = 12
 	// @       assert len(dst.(*net.IPAddr).IP) - splitIndex == len(s.RawDstAddr)
 	// @     } else {
 	// @       assert (forall i int :: 0 <= i && i < len(s.RawDstAddr) ==> &dst.(*net.IPAddr).IP[i] == &s.RawDstAddr[i])
@@ -613,12 +613,12 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 	// @       sl.SplitByIndex_Bytes(dst.(*net.IPAddr).IP, 0, len(dst.(*net.IPAddr).IP), 0, def.ReadL14)
 	// @       unfold acc(sl.AbsSlice_Bytes(dst.(*net.IPAddr).IP, 0, len(dst.(*net.IPAddr).IP)), def.ReadL14)
 	// @       fold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL14)
-	// @       splitIndex := 0
+	// @       splitIndex = 0
 	// @       assert len(dst.(*net.IPAddr).IP) - splitIndex == len(s.RawDstAddr)
 	// @     }
-	// @     assume false
 	// @     assert len(dst.(*net.IPAddr).IP) - splitIndex == len(s.RawDstAddr)
 	// @     package (acc(&s.RawDstAddr, 1/2) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL14)) --* (acc(&s.RawDstAddr, 1/2) && acc(dst.Mem(), def.ReadL14)) {
+	// @       assert len(dst.(*net.IPAddr).IP) - splitIndex == len(s.RawDstAddr)
 	// @       unfold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL14)
 	// @       fold acc(sl.AbsSlice_Bytes(dst.(*net.IPAddr).IP, splitIndex, len(dst.(*net.IPAddr).IP)), def.ReadL14)
 	// @       sl.CombineAtIndex_Bytes(dst.(*net.IPAddr).IP, 0, len(dst.(*net.IPAddr).IP), splitIndex, def.ReadL14)
