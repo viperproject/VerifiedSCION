@@ -583,11 +583,12 @@ func (s *SCION) SrcAddr() (net.Addr, error) {
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res == nil ==> typeOf(dst) == *net.IPAddr || typeOf(dst) == addr.HostSVC
 // @ ensures   res == nil && wildcard ==> acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), _)
+// @ ensures   res == nil && !wildcard && typeOf(dst) == addr.HostSVC ==> sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 // @ ensures   res == nil && !wildcard ==> acc(dst.Mem(), def.ReadL18)
+// @ ensures   res == nil && !wildcard && typeOf(dst) == *net.IPAddr ==> (unfolding acc(dst.Mem(), def.ReadL20) in (len(dst.(*net.IPAddr).IP) == net.IPv4len ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && typeOf(dst) == *net.IPAddr ==> (unfolding acc(dst.Mem(), def.ReadL20) in (len(dst.(*net.IPAddr).IP) == net.IPv6len && net.isZeros(dst.(*net.IPAddr).IP[0:10]) && dst.(*net.IPAddr).IP[10] == 255 && dst.(*net.IPAddr).IP[11] == 255 ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[12+i]))
 // @ ensures   res == nil && !wildcard && typeOf(dst) == *net.IPAddr ==> (unfolding acc(dst.Mem(), def.ReadL20) in (len(dst.(*net.IPAddr).IP) != net.IPv4len && len(dst.(*net.IPAddr).IP) != net.IPv6len ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && typeOf(dst) == *net.IPAddr ==> (unfolding acc(dst.Mem(), def.ReadL20) in (len(dst.(*net.IPAddr).IP) == net.IPv6len && !(net.isZeros(dst.(*net.IPAddr).IP[0:10]) && dst.(*net.IPAddr).IP[10] == 255 && dst.(*net.IPAddr).IP[11] == 255) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && typeOf(dst) == *net.IPAddr ==> (unfolding acc(dst.Mem(), def.ReadL20) in (len(dst.(*net.IPAddr).IP) == net.IPv4len ==> len(s.RawDstAddr) == len(dst.(*net.IPAddr).IP)))
 // @ ensures   res == nil && !wildcard && typeOf(dst) == *net.IPAddr ==> (unfolding acc(dst.Mem(), def.ReadL20) in (len(dst.(*net.IPAddr).IP) == net.IPv4len ==> len(s.RawDstAddr) == len(dst.(*net.IPAddr).IP)))
 // @ ensures   res == nil && !wildcard && typeOf(dst) == *net.IPAddr ==> (unfolding acc(dst.Mem(), def.ReadL20) in (len(dst.(*net.IPAddr).IP) == net.IPv6len && net.isZeros(dst.(*net.IPAddr).IP[0:10]) && dst.(*net.IPAddr).IP[10] == 255 && dst.(*net.IPAddr).IP[11] == 255 ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr) + 12))
 // @ ensures   res == nil && !wildcard && typeOf(dst) == *net.IPAddr ==> (unfolding acc(dst.Mem(), def.ReadL20) in (len(dst.(*net.IPAddr).IP) != net.IPv4len && len(dst.(*net.IPAddr).IP) != net.IPv6len ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
@@ -597,7 +598,7 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 	var err error
 	var verScionTmp []byte
 	s.DstAddrType, verScionTmp, err = packAddr(dst /*@ , wildcard @*/)
-	// @ ghost if !wildcard && err == nil {
+	// @ ghost if !wildcard && err == nil && typeOf(dst) == *net.IPAddr {
 	// @   apply acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), def.ReadL20) --* acc(dst.Mem(), def.ReadL20)
 	// @ }
 	s.RawDstAddr = verScionTmp
@@ -618,11 +619,12 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res == nil ==> typeOf(src) == *net.IPAddr || typeOf(src) == addr.HostSVC
 // @ ensures   res == nil && wildcard ==> acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ ensures   res == nil && !wildcard && typeOf(src) == addr.HostSVC ==> sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
 // @ ensures   res == nil && !wildcard ==> acc(src.Mem(), def.ReadL18)
+// @ ensures   res == nil && !wildcard && typeOf(src) == *net.IPAddr ==> (unfolding acc(src.Mem(), def.ReadL20) in (len(src.(*net.IPAddr).IP) == net.IPv4len ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && typeOf(src) == *net.IPAddr ==> (unfolding acc(src.Mem(), def.ReadL20) in (len(src.(*net.IPAddr).IP) == net.IPv6len && net.isZeros(src.(*net.IPAddr).IP[0:10]) && src.(*net.IPAddr).IP[10] == 255 && src.(*net.IPAddr).IP[11] == 255 ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[12+i]))
 // @ ensures   res == nil && !wildcard && typeOf(src) == *net.IPAddr ==> (unfolding acc(src.Mem(), def.ReadL20) in (len(src.(*net.IPAddr).IP) != net.IPv4len && len(src.(*net.IPAddr).IP) != net.IPv6len ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && typeOf(src) == *net.IPAddr ==> (unfolding acc(src.Mem(), def.ReadL20) in (len(src.(*net.IPAddr).IP) == net.IPv6len && !(net.isZeros(src.(*net.IPAddr).IP[0:10]) && src.(*net.IPAddr).IP[10] == 255 && src.(*net.IPAddr).IP[11] == 255) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && typeOf(src) == *net.IPAddr ==> (unfolding acc(src.Mem(), def.ReadL20) in (len(src.(*net.IPAddr).IP) == net.IPv4len ==> len(s.RawSrcAddr) == len(src.(*net.IPAddr).IP)))
 // @ ensures   res == nil && !wildcard && typeOf(src) == *net.IPAddr ==> (unfolding acc(src.Mem(), def.ReadL20) in (len(src.(*net.IPAddr).IP) == net.IPv4len ==> len(s.RawSrcAddr) == len(src.(*net.IPAddr).IP)))
 // @ ensures   res == nil && !wildcard && typeOf(src) == *net.IPAddr ==> (unfolding acc(src.Mem(), def.ReadL20) in (len(src.(*net.IPAddr).IP) == net.IPv6len && net.isZeros(src.(*net.IPAddr).IP[0:10]) && src.(*net.IPAddr).IP[10] == 255 && src.(*net.IPAddr).IP[11] == 255 ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr) + 12))
 // @ ensures   res == nil && !wildcard && typeOf(src) == *net.IPAddr ==> (unfolding acc(src.Mem(), def.ReadL20) in (len(src.(*net.IPAddr).IP) != net.IPv4len && len(src.(*net.IPAddr).IP) != net.IPv6len ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
@@ -632,7 +634,7 @@ func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/ ) (res erro
 	var err error
 	var verScionTmp []byte
 	s.SrcAddrType, verScionTmp, err = packAddr(src /*@ , wildcard @*/)
-	// @ ghost if !wildcard && err == nil {
+	// @ ghost if !wildcard && err == nil && typeOf(src) == *net.IPAddr {
 	// @   apply acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), def.ReadL20) --* acc(src.Mem(), def.ReadL20)
 	// @ }
 	s.RawSrcAddr = verScionTmp
@@ -664,9 +666,10 @@ func parseAddr(addrType AddrType, raw []byte) (net.Addr, error) {
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ ensures   err == nil && wildcard && typeOf(hostAddr) == *net.IPAddr ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
 // @ ensures   err == nil && wildcard && typeOf(hostAddr) == addr.HostSVC ==> sl.AbsSlice_Bytes(b, 0, len(b))
-// @ ensures   err == nil && !wildcard ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL20)
-// @ ensures   err == nil && !wildcard && typeOf(hostAddr) == addr.HostSVC ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), 1 - def.ReadL20)
-// @ ensures   err == nil && !wildcard ==> (acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL20) --* acc(hostAddr.Mem(), def.ReadL20))
+// @ ensures   err == nil && !wildcard && typeOf(hostAddr) == addr.HostSVC ==> sl.AbsSlice_Bytes(b, 0, len(b))
+// @ ensures   err == nil && !wildcard && typeOf(hostAddr) == addr.HostSVC ==> acc(hostAddr.Mem(), def.ReadL20)
+// @ ensures   err == nil && !wildcard && typeOf(hostAddr) == *net.IPAddr ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL20)
+// @ ensures   err == nil && !wildcard && typeOf(hostAddr) == *net.IPAddr ==> (acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL20) --* acc(hostAddr.Mem(), def.ReadL20))
 // @ ensures   err == nil && !wildcard && typeOf(hostAddr) == *net.IPAddr ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (len(hostAddr.(*net.IPAddr).IP) == net.IPv4len ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
 // @ ensures   err == nil && !wildcard && typeOf(hostAddr) == *net.IPAddr ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (len(hostAddr.(*net.IPAddr).IP) == net.IPv6len && net.isZeros(hostAddr.(*net.IPAddr).IP[0:10]) && hostAddr.(*net.IPAddr).IP[10] == 255 && hostAddr.(*net.IPAddr).IP[11] == 255 ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 // @ ensures   err == nil && !wildcard && typeOf(hostAddr) == *net.IPAddr ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (len(hostAddr.(*net.IPAddr).IP) != net.IPv4len && len(hostAddr.(*net.IPAddr).IP) != net.IPv6len ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
@@ -719,13 +722,8 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 		// @ 	 unfold acc(hostAddr.Mem(), def.ReadL20)
 		// @ }
 		verScionTmp := a.PackWithPad(2)
+		// @ fold acc(hostAddr.Mem(), def.ReadL20)
 		// @ fold sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp))
-		// @ ghost if !wildcard {
-		// @   package acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), def.ReadL20) --* acc(hostAddr.Mem(), def.ReadL20) {
-		// @     unfold acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), def.ReadL20)
-		// @     fold acc(hostAddr.Mem(), def.ReadL20)
-		// @   }
-		// @ }
 		return T4Svc, verScionTmp, nil
 	}
 	return 0, nil, serrors.New("unsupported address", "addr", hostAddr)

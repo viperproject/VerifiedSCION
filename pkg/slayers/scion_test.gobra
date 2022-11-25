@@ -1,0 +1,66 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slayers
+
+import (
+	"net"
+	sl "github.com/scionproto/scion/verification/utils/slices"
+	def "github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/pkg/addr"
+)
+
+// This test shows the behavior of SetSrcAddr when an IPAddr is passed
+requires acc(&s.RawSrcAddr)
+requires acc(&s.SrcAddrType)
+requires acc(src.Mem())
+func testSrcSetter(s *SCION, src *net.IPAddr) {
+	res := s.SetSrcAddr(src, false)
+	// unfolding src.Mem() grants us permission to s.RawSrcAddr since they are aliased
+	unfold src.Mem()
+	assert forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i])
+}
+
+requires acc(&s.RawSrcAddr)
+requires acc(&s.SrcAddrType)
+requires acc(src.Mem())
+func testSrcSetterSVC(s *SCION, src addr.HostSVC) {
+	res := s.SetSrcAddr(src, false)
+	// if the address is HostSVC we have the whole permission anyway in a slice predicate
+	unfold sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
+	assert forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i])
+}
+
+
+requires acc(&s.RawDstAddr)
+requires acc(&s.DstAddrType)
+requires acc(dst.Mem())
+func testDstSetter(s *SCION, dst *net.IPAddr) {
+	res := s.SetDstAddr(dst, false)
+	// unfolding dst.Mem() grants us permission to s.RawDstAddr since they are aliased
+	unfold dst.Mem()
+	assert forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i])
+}
+
+requires acc(&s.RawDstAddr)
+requires acc(&s.DstAddrType)
+requires acc(dst.Mem())
+func testDstSetterSVC(s *SCION, dst addr.HostSVC) {
+	res := s.SetDstAddr(dst, false)
+	// if the address is HostSVC we have the whole permission anyway in a slice predicate
+	unfold sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
+	assert forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i])
+}
