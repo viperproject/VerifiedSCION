@@ -840,7 +840,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 		d:         d,
 		ingressID: ingressID,
 		buffer:    verScionTmp,
-		mac:       d.macFactory(), /*@ as MacFactorySpec{d.key} @ */
+		mac:       (d.macFactory() /*@ as MacFactorySpec{d.key} @ */),
 		macBuffers: macBuffersT{
 			scionInput: make([]byte, path.MACBufferSize),
 			epicInput:  make([]byte, libepic.MACBufferSize),
