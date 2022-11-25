@@ -23,7 +23,7 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 )
 
-// This test shows the behavior of SetSrcAddr when an IPAddr is passed
+// These tests show the behavior of SetSrcAddr when an IPAddr is passed
 requires acc(&s.RawSrcAddr)
 requires acc(&s.SrcAddrType)
 requires acc(src.Mem())
@@ -36,15 +36,37 @@ func testSrcSetter(s *SCION, src *net.IPAddr) {
 
 requires acc(&s.RawSrcAddr)
 requires acc(&s.SrcAddrType)
+requires acc(src.Mem(), _)
+func testSrcSetterWildcard(s *SCION, src *net.IPAddr) {
+	res := s.SetSrcAddr(src, true)
+	// in the wildcard case we have wildcard access to the address in the SCION struct
+	assert acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+}
+
+// These tests show the behavior of SetSrcAddr when an HostSVC is passed
+requires acc(&s.RawSrcAddr)
+requires acc(&s.SrcAddrType)
 requires acc(src.Mem())
 func testSrcSetterSVC(s *SCION, src addr.HostSVC) {
 	res := s.SetSrcAddr(src, false)
+	assert src.Mem()
+	// if the address is HostSVC we have the whole permission anyway in a slice predicate
+	unfold sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
+	assert forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i])
+}
+
+requires acc(&s.RawSrcAddr)
+requires acc(&s.SrcAddrType)
+requires acc(src.Mem(), _)
+func testSrcSetterSVCWildcard(s *SCION, src addr.HostSVC) {
+	res := s.SetSrcAddr(src, true)
 	// if the address is HostSVC we have the whole permission anyway in a slice predicate
 	unfold sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
 	assert forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i])
 }
 
 
+// These tests show the behavior of SetDstAddr when an IPAddr is passed
 requires acc(&s.RawDstAddr)
 requires acc(&s.DstAddrType)
 requires acc(dst.Mem())
@@ -57,9 +79,30 @@ func testDstSetter(s *SCION, dst *net.IPAddr) {
 
 requires acc(&s.RawDstAddr)
 requires acc(&s.DstAddrType)
+requires acc(dst.Mem(), _)
+func testDstSetterWildcard(s *SCION, dst *net.IPAddr) {
+	res := s.SetDstAddr(dst, true)
+	// in the wildcard case we have wildcard access to the address in the SCION struct
+	assert acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), _)
+}
+
+// These tests show the behavior of SetDstAddr when an HostSVC is passed
+requires acc(&s.RawDstAddr)
+requires acc(&s.DstAddrType)
 requires acc(dst.Mem())
 func testDstSetterSVC(s *SCION, dst addr.HostSVC) {
 	res := s.SetDstAddr(dst, false)
+	assert dst.Mem()
+	// if the address is HostSVC we have the whole permission anyway in a slice predicate
+	unfold sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
+	assert forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i])
+}
+
+requires acc(&s.RawDstAddr)
+requires acc(&s.DstAddrType)
+requires acc(dst.Mem(), _)
+func testDstSetterSVCWildcard(s *SCION, dst addr.HostSVC) {
+	res := s.SetDstAddr(dst, true)
 	// if the address is HostSVC we have the whole permission anyway in a slice predicate
 	unfold sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 	assert forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i])

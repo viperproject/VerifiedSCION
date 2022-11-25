@@ -582,7 +582,8 @@ func (s *SCION) SrcAddr() (net.Addr, error) {
 // @ ensures   acc(&s.RawDstAddr) && acc(&s.DstAddrType)
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res == nil ==> typeOf(dst) == *net.IPAddr || typeOf(dst) == addr.HostSVC
-// @ ensures   res == nil && wildcard ==> acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), _)
+// @ ensures   res == nil && wildcard && typeOf(dst) == *net.IPAddr ==> acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), _)
+// @ ensures   res == nil && wildcard && typeOf(dst) == addr.HostSVC ==> sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 // @ ensures   res == nil && !wildcard && typeOf(dst) == addr.HostSVC ==> sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 // @ ensures   res == nil && !wildcard ==> acc(dst.Mem(), def.ReadL18)
 // @ ensures   res == nil && !wildcard && typeOf(dst) == *net.IPAddr ==> (unfolding acc(dst.Mem(), def.ReadL20) in (len(dst.(*net.IPAddr).IP) == net.IPv4len ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
@@ -618,7 +619,8 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   acc(&s.RawSrcAddr) && acc(&s.SrcAddrType)
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res == nil ==> typeOf(src) == *net.IPAddr || typeOf(src) == addr.HostSVC
-// @ ensures   res == nil && wildcard ==> acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ ensures   res == nil && wildcard && typeOf(src) == *net.IPAddr ==> acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ ensures   res == nil && wildcard && typeOf(src) == addr.HostSVC ==> sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
 // @ ensures   res == nil && !wildcard && typeOf(src) == addr.HostSVC ==> sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
 // @ ensures   res == nil && !wildcard ==> acc(src.Mem(), def.ReadL18)
 // @ ensures   res == nil && !wildcard && typeOf(src) == *net.IPAddr ==> (unfolding acc(src.Mem(), def.ReadL20) in (len(src.(*net.IPAddr).IP) == net.IPv4len ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
