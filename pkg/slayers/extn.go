@@ -158,29 +158,18 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 // serializeTLVOptions serializes options to buf and returns the length of the serialized options.
 // Passing in a nil-buffer will treat the serialization as a dryrun that can be used to calculate
 // the length needed for the buffer.
-// (VerifiedSCION) started verifying this method but it does not terminate.
-//
-//	trusted
-//	requires false
-//
-// @ requires buf != nil ==> 2 <= len(buf)
-// @ requires !fixLengths
-// @ requires forall i int :: { &options[i] } 0 <= i && i < len(options) ==> acc(&options[i], def.ReadL19)
-// @ requires forall i, j int :: (0 <= i && i < len(options) && 0 <= j && j < len(options) && j != i) ==> options[i] != options[j]
-// @ requires forall i int :: { &options[i] } 0 <= i && i < len(options) ==> acc(options[i], def.ReadL19)
-// @ requires buf != nil ==> dryrunProof(options, precomputedSize, fixLengths)
-// @ ensures  0 <= res
-// @ ensures  buf == nil ==> dryrunProof(options, res, fixLengths)
-// @ decreases
+// @ requires  buf != nil ==> 2 <= len(buf)
+// @ preserves buf != nil ==> sl.AbsSlice_Bytes(buf, 0, len(buf))
+// @ requires false
 func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ , ghost precomputedSize int @*/) (res int) {
 	dryrun := buf == nil
 	// length start at 2 since the padding needs to be calculated taking the first 2 bytes of the
 	// extension header (NextHdr and ExtLen fields) into account.
 	length := 2
-	// @ invariant 0 < len(options) ==> (0 <= i0 && i0 < len(options))
+	// @ invariant 0 < len(options) ==> (0 <= i0 && i0 <= len(options))
 	// @ invariant forall i int :: { &options[i] } 0 <= i && i < len(options) ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
-	// @ invariant 0 < len(options) ==> length == 2 + computeLen(options, 0, i0, fixLengths)
-	// @ invariant !dryrun ==> dryrunProof(options, precomputedSize, fixLengths)
+	//  invariant 0 < len(options) ==> length == 2 + computeLen(options, 0, i0, fixLengths)
+	//  invariant !dryrun ==> dryrunProof(options, precomputedSize, fixLengths)
 	// @ decreases len(options) - i0
 	for _, opt := range options /*@ with i0 @*/ {
 		if fixLengths {
@@ -221,7 +210,8 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 			length += pad
 		}
 	}
-	// @ ghost if dryrun && 0 < len(options) { fold dryrunProof(options, length-2, fixLengths) }
+	// @ assume false
+	//  ghost if dryrun && 0 < len(options) { fold dryrunProof(options, length-2, fixLengths) }
 	return length - 2
 }
 
