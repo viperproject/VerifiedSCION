@@ -688,10 +688,10 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 		// @ 	 unfold acc(hostAddr.Mem(), def.ReadL20)
 		// @ }
 		if ip := a.IP.To4( /*@ wildcard @*/ ); ip != nil {
-			// @ ghost if !wildcard && len(a.IP) == net.IPv6len {
-			// @   assert net.isZeros(a.IP[0:10]) && a.IP[10] == 255 && a.IP[11] == 255 ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &a.IP[12+i]
+			// @ ghost if !wildcard && isIPv6(a) {
+			// @   assert isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &a.IP[12+i]
 			// @ }
-			// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (len(hostAddr.(*net.IPAddr).IP) == net.IPv6len && net.isZeros(hostAddr.(*net.IPAddr).IP[0:10]) && hostAddr.(*net.IPAddr).IP[10] == 255 && hostAddr.(*net.IPAddr).IP[11] == 255 ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
+			// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 			// @ ghost if wildcard {
 			// @   fold acc(sl.AbsSlice_Bytes(ip, 0, len(ip)), _)
 			// @ } else {
@@ -703,7 +703,7 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 			// @ }
 			return T4Ip, ip, nil
 		}
-		// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (len(hostAddr.(*net.IPAddr).IP) == net.IPv6len && net.isZeros(hostAddr.(*net.IPAddr).IP[0:10]) && hostAddr.(*net.IPAddr).IP[10] == 255 && hostAddr.(*net.IPAddr).IP[11] == 255 ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
+		// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 		verScionTmp := a.IP
 		// @ ghost if wildcard {
 		// @   fold acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), _)
