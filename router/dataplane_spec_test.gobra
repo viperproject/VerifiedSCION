@@ -20,6 +20,7 @@ import (
 	"net"
 
 	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/slayers"
 )
 
 func foldMem_test() {
@@ -29,4 +30,14 @@ func foldMem_test() {
 	d.mtx.SetInv(MutexInvariant!<&d!>)
 	d.AddNeighborIA(uint16(1), addr.IA(10))
 	d.AddNeighborIA(uint16(2), addr.IA(11))
+}
+
+requires acc(s)
+requires s.InitPathPool()
+func foldScionPacketProcessorInitMem_test(s *slayers.SCION) {
+	d := &scionPacketProcessor{}
+	unfold s.InitPathPool()
+	d.scionLayer = *s
+	fold d.scionLayer.InitPathPool()
+	fold d.initMem()
 }

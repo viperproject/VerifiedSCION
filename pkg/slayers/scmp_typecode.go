@@ -14,14 +14,12 @@
 
 // +gobra
 
-//@ initEnsures SCMPTypeCodeMem()
+// @ initEnsures SCMPTypeCodeMem()
 package slayers
-
 
 import (
 	"encoding/binary"
 	"fmt"
-
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
 )
@@ -93,28 +91,28 @@ const (
 type SCMPTypeCode uint16
 
 // Type returns the SCMP type field.
-//@ decreases
-//@ pure
+// @ decreases
+// @ pure
 func (a SCMPTypeCode) Type() SCMPType {
 	return SCMPType(a >> 8)
 }
 
 // Code returns the SCMP code field.
-//@ decreases
-//@ pure
+// @ decreases
+// @ pure
 func (a SCMPTypeCode) Code() SCMPCode {
 	return SCMPCode(a)
 }
 
 // InfoMsg indicates if the SCMP message is an SCMP informational message.
-//@ decreases
-//@ pure
+// @ decreases
+// @ pure
 func (a SCMPTypeCode) InfoMsg() bool {
 	return a.Type() > 127
 }
 
-//@ preserves acc(SCMPTypeCodeMem(), definitions.ReadL10)
-//@ decreases
+// @ preserves acc(SCMPTypeCodeMem(), definitions.ReadL10)
+// @ decreases
 func (a SCMPTypeCode) String() string {
 	t, c := a.Type(), a.Code()
 	//@ unfold acc(SCMPTypeCodeMem(), definitions.ReadL10)
@@ -134,9 +132,9 @@ func (a SCMPTypeCode) String() string {
 }
 
 // SerializeTo writes the SCMPTypeCode value to the buffer.
-//@ requires len(bytes) >= 2
-//@ preserves slices.AbsSlice_Bytes(bytes, 0, 2)
-//@ decreases
+// @ requires len(bytes) >= 2
+// @ preserves slices.AbsSlice_Bytes(bytes, 0, 2)
+// @ decreases
 func (a SCMPTypeCode) SerializeTo(bytes []byte) {
 	//@ unfold slices.AbsSlice_Bytes(bytes, 0, 2)
 	//@ defer fold slices.AbsSlice_Bytes(bytes, 0, 2)
@@ -144,7 +142,7 @@ func (a SCMPTypeCode) SerializeTo(bytes []byte) {
 }
 
 // CreateSCMPTypeCode is a convenience function to create an SCMPTypeCode
-//@ decreases
+// @ decreases
 func CreateSCMPTypeCode(typ SCMPType, code SCMPCode) SCMPTypeCode {
 	return SCMPTypeCode(binary.BigEndian.Uint16([]byte{uint8(typ), uint8(code)}))
 }
@@ -191,4 +189,3 @@ var scmpTypeCodeInfo = map[SCMPType]struct {
 // (VerifiedSCION) TODO: This is a temporary solution as gobra
 // does not support multiple init blocks yet.
 //@ var _ = satisfyInitEnsures()
-
