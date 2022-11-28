@@ -132,7 +132,7 @@ ensures   res != nil ==> len(res) == IPv4len
 ensures   len(ip) == IPv4len ==> ip === res
 ensures   (len(ip) == IPv6len && isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255) ==> res != nil
 ensures   (len(ip) == IPv6len && !(isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255)) ==> res == nil
-ensures   (len(ip) == IPv6len && res != nil) ==> ip[12:16] === res
+ensures   (len(ip) == IPv6len && res != nil) ==> (forall i int :: 0 <= i && i < IPv4len ==> &ip[12+i] == &res[i])
 ensures   len(ip) != IPv4len && len(ip) != IPv6len ==> res == nil
 decreases
 func (ip IP) To4(ghost wildcard bool) (res IP) {
