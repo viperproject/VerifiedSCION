@@ -134,7 +134,6 @@ ensures   (len(ip) == IPv6len && isZeros(ip[0:10]) && ip[10] == 255 && ip[11] ==
 ensures   (len(ip) == IPv6len && !(isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255)) ==> res == nil
 ensures   (len(ip) == IPv6len && res != nil) ==> (forall i int :: 0 <= i && i < IPv4len ==> &ip[12+i] == &res[i])
 ensures   len(ip) != IPv4len && len(ip) != IPv6len ==> res == nil
-ensures   len(ip) == IPv4len ==> len(res) == IPv4len
 decreases
 func (ip IP) To4(ghost wildcard bool) (res IP) {
 	if len(ip) == IPv4len {
