@@ -685,7 +685,7 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 	switch a := hostAddr.(type) {
 	case *net.IPAddr:
 		// @ ghost if wildcard {
-		// @   unfold acc(hostAddr.Mem(), _)
+		// @     unfold acc(hostAddr.Mem(), _)
 		// @ } else {
 		// @ 	 unfold acc(hostAddr.Mem(), def.ReadL20)
 		// @ }
