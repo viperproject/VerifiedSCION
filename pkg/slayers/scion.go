@@ -553,9 +553,19 @@ func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 // from the underlaying layer data. Changing the net.Addr object might lead to inconsistent layer
 // information and thus should be treated read-only. Instead, SetDstAddr should be used to update
 // the destination address.
-// @ trusted
-// @ requires false
-func (s *SCION) DstAddr() (net.Addr, error) {
+// @ requires  acc(&s.DstAddrType) && acc(&s.RawDstAddr)
+// @ requires  s.DstAddrType.Has3Bits()
+// @ requires  s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
+// @ requires  sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
+// @ ensures   acc(&s.DstAddrType) && acc(&s.RawDstAddr)
+// @ ensures   err == nil ==> res.Mem()
+// @ ensures   err == nil ==> (s.DstAddrType == T16Ip ==> typeOf(res) == *net.IPAddr)
+// @ ensures   err == nil ==> (s.DstAddrType == T4Ip ==> typeOf(res) == *net.IPAddr)
+// @ ensures   err == nil ==> (s.DstAddrType == T16Ip ==> unfolding res.(*net.IPAddr).Mem() in s.RawDstAddr === []byte(res.(*net.IPAddr).IP))
+// @ ensures   err == nil ==> (s.DstAddrType == T4Ip ==> unfolding res.(*net.IPAddr).Mem() in s.RawDstAddr === []byte(res.(*net.IPAddr).IP))
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
+func (s *SCION) DstAddr() (res net.Addr, err error) {
 	return parseAddr(s.DstAddrType, s.RawDstAddr)
 }
 
@@ -563,9 +573,19 @@ func (s *SCION) DstAddr() (net.Addr, error) {
 // underlaying layer data. Changing the net.Addr object might lead to inconsistent layer information
 // and thus should be treated read-only. Instead, SetDstAddr should be used to update the source
 // address.
-// @ trusted
-// @ requires false
-func (s *SCION) SrcAddr() (net.Addr, error) {
+// @ requires  acc(&s.SrcAddrType) && acc(&s.RawSrcAddr)
+// @ requires  s.SrcAddrType.Has3Bits()
+// @ requires  s.SrcAddrType == T4Svc ==> len(s.RawSrcAddr) >= addr.HostLenSVC
+// @ requires  sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
+// @ ensures   acc(&s.SrcAddrType) && acc(&s.RawSrcAddr)
+// @ ensures   err == nil ==> res.Mem()
+// @ ensures   err == nil ==> (s.SrcAddrType == T16Ip ==> typeOf(res) == *net.IPAddr)
+// @ ensures   err == nil ==> (s.SrcAddrType == T4Ip ==> typeOf(res) == *net.IPAddr)
+// @ ensures   err == nil ==> (s.SrcAddrType == T16Ip ==> unfolding res.(*net.IPAddr).Mem() in s.RawSrcAddr === []byte(res.(*net.IPAddr).IP))
+// @ ensures   err == nil ==> (s.SrcAddrType == T4Ip ==> unfolding res.(*net.IPAddr).Mem() in s.RawSrcAddr === []byte(res.(*net.IPAddr).IP))
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
+func (s *SCION) SrcAddr() (res net.Addr, err error) {
 	return parseAddr(s.SrcAddrType, s.RawSrcAddr)
 }
 
@@ -591,9 +611,16 @@ func (s *SCION) SetSrcAddr(src net.Addr) error {
 	return err
 }
 
-// @ requires sl.AbsSlice_Bytes(raw, 0, len(raw))
-// @ requires addrType == T4Svc ==> len(raw) >= addr.HostLenSVC
-// @ ensures err == nil ==> res.Mem()
+// @ requires  sl.AbsSlice_Bytes(raw, 0, len(raw))
+// @ requires  addrType.Has3Bits()
+// @ requires  addrType == T4Svc ==> len(raw) >= addr.HostLenSVC
+// @ ensures   err == nil ==> res.Mem()
+// @ ensures   err == nil ==> (addrType == T16Ip ==> typeOf(res) == *net.IPAddr)
+// @ ensures   err == nil ==> (addrType == T4Ip ==> typeOf(res) == *net.IPAddr)
+// @ ensures   err == nil ==> (addrType == T16Ip ==> unfolding res.(*net.IPAddr).Mem() in raw === []byte(res.(*net.IPAddr).IP))
+// @ ensures   err == nil ==> (addrType == T4Ip ==> unfolding res.(*net.IPAddr).Mem() in raw === []byte(res.(*net.IPAddr).IP))
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 	switch addrType {
 	case T4Ip:
@@ -603,7 +630,6 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 		return verScionTmp, nil
 	case T4Svc:
 		// @ unfold sl.AbsSlice_Bytes(raw, 0, len(raw))
-		// assert forall i int :: { &raw[:addr.HostLenSVC][i] } 0 <= i && i < addr.HostLenSVC ==> &raw[i] == &raw[:addr.HostLenSVC][i]
 		verScionTmp := addr.HostSVC(binary.BigEndian.Uint16(raw[:addr.HostLenSVC]))
 		// @ fold verScionTmp.Mem()
 		return verScionTmp, nil
