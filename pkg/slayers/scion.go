@@ -591,16 +591,27 @@ func (s *SCION) SetSrcAddr(src net.Addr) error {
 	return err
 }
 
-// @ requires acc(AbsSlice_Bytes(raw, 0, len(raw)), def.ReadL20)
-// @ ensures acc(res.Mem()
-func parseAddr(addrType AddrType, raw []byte/*@ ghost wildcard @*/) (res net.Addr, err error) {
+// @ requires sl.AbsSlice_Bytes(raw, 0, len(raw))
+// @ requires addrType == T4Svc ==> len(raw) >= addr.HostLenSVC
+// @ ensures err == nil ==> res.Mem()
+func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 	switch addrType {
 	case T4Ip:
-		return &net.IPAddr{IP: net.IP(raw)}, nil
+		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
+		// @ unfold sl.AbsSlice_Bytes(raw, 0, len(raw))
+		// @ fold verScionTmp.Mem()
+		return verScionTmp, nil
 	case T4Svc:
-		return addr.HostSVC(binary.BigEndian.Uint16(raw[:addr.HostLenSVC])), nil
+		// @ unfold sl.AbsSlice_Bytes(raw, 0, len(raw))
+		// assert forall i int :: { &raw[:addr.HostLenSVC][i] } 0 <= i && i < addr.HostLenSVC ==> &raw[i] == &raw[:addr.HostLenSVC][i]
+		verScionTmp := addr.HostSVC(binary.BigEndian.Uint16(raw[:addr.HostLenSVC]))
+		// @ fold verScionTmp.Mem()
+		return verScionTmp, nil
 	case T16Ip:
-		return &net.IPAddr{IP: net.IP(raw)}, nil
+		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
+		// @ unfold sl.AbsSlice_Bytes(raw, 0, len(raw))
+		// @ fold verScionTmp.Mem()
+		return verScionTmp, nil
 	}
 	return nil, serrors.New("unsupported address type/length combination",
 		"type", addrType, "len", addrType.Length())
