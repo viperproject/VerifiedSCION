@@ -17,6 +17,7 @@
 package slayers
 
 import (
+	"net"
 	"github.com/google/gopacket"
 
 	"github.com/scionproto/scion/pkg/addr"
@@ -298,3 +299,37 @@ func (s *SCION) InitPathPoolExchange(pathType path.Type, p path.Path) {
 *SCION implements gopacket.NetworkLayer
 *SCION implements gopacket.SerializableLayer
 *SCION implements gopacket.DecodingLayer
+
+
+ghost
+requires typeOf(a) == *net.IPAddr
+requires acc(&a.(*net.IPAddr).IP, _)
+requires forall i int :: { &a.(*net.IPAddr).IP[i] } 0 <= i && i < len(a.(*net.IPAddr).IP) ==> acc(&a.(*net.IPAddr).IP[i], _)
+requires len(a.(*net.IPAddr).IP) == net.IPv6len
+pure func isConvertibleToIPv4(a net.Addr) bool {
+	return net.isZeros(a.(*net.IPAddr).IP[0:10]) && a.(*net.IPAddr).IP[10] == 255 && a.(*net.IPAddr).IP[11] == 255
+}
+
+ghost
+requires typeOf(a) == *net.IPAddr
+requires acc(&a.(*net.IPAddr).IP, _)
+pure func isIPv6(a net.Addr) bool {
+	return len(a.(*net.IPAddr).IP) == net.IPv6len
+}
+
+ghost
+requires typeOf(a) == *net.IPAddr
+requires acc(&a.(*net.IPAddr).IP, _)
+pure func isIPv4(a net.Addr) bool {
+	return len(a.(*net.IPAddr).IP) == net.IPv4len
+}
+
+ghost
+pure func isIP(a net.Addr) bool {
+	return typeOf(a) == *net.IPAddr
+}
+
+ghost
+pure func isHostSVC(a net.Addr) bool {
+	return typeOf(a) == addr.HostSVC
+}
