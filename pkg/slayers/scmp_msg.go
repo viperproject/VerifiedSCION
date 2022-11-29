@@ -221,75 +221,34 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 	// @ unfold i.NonInitMem()
 	// @ defer fold i.Mem(data)
 	offset := 0
-	// @ requires offset == 0
-	// @ preserves acc(&i.IA)
-	// @ requires len(data) >= addr.IABytes + 2*scmpRawInterfaceLen
-	// @ requires sl.AbsSlice_Bytes(data, 0, len(data))
-	// @ ensures sl.AbsSlice_Bytes(data, addr.IABytes, len(data))
-	// @ ensures sl.AbsSlice_Bytes(data, 0, addr.IABytes)
-	// @ decreases
-	// @ outline (
-	// @ sl.SplitByIndex_Bytes(data, 0, len(data), addr.IABytes, writePerm)
-	// @ unfold sl.AbsSlice_Bytes(data, 0, addr.IABytes)
+	// @ sl.SplitRange_Bytes(data, offset, len(data), def.ReadL15)
+	// @ unfold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), def.ReadL15)
 	i.IA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
-	// @ fold sl.AbsSlice_Bytes(data, 0, addr.IABytes)
-	// @ )
+	// @ fold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), def.ReadL15)
+	// @ sl.CombineRange_Bytes(data, offset, len(data), def.ReadL15)
 	offset += addr.IABytes
-	// @ requires offset == addr.IABytes
-	// @ preserves acc(&i.Ingress)
-	// @ requires len(data) >= addr.IABytes + 2*scmpRawInterfaceLen
-	// @ requires sl.AbsSlice_Bytes(data, addr.IABytes, len(data))
-	// @ ensures sl.AbsSlice_Bytes(data, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	// @ ensures sl.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, len(data))
-	// @ decreases
-	// @ outline (
-	// @ sl.SplitByIndex_Bytes(data, addr.IABytes, len(data), addr.IABytes+scmpRawInterfaceLen, writePerm)
-	// @ unfold sl.AbsSlice_Bytes(data, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	// @ assert forall i int :: { &data[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+scmpRawInterfaceLen][i]
+	// @ sl.SplitRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
+	// @ ghost newSlice := data[offset : offset+scmpRawInterfaceLen]
+	// @ unfold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
 	i.Ingress = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
-	// @ fold sl.AbsSlice_Bytes(data, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	// @ )
+	// @ fold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
+	// @ sl.CombineRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
 	offset += scmpRawInterfaceLen
-	// @ requires offset == addr.IABytes + scmpRawInterfaceLen
-	// @ preserves acc(&i.Egress)
-	// @ requires len(data) >= addr.IABytes + 2*scmpRawInterfaceLen
-	// @ requires sl.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, len(data))
-	// @ ensures sl.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
-	// @ ensures sl.AbsSlice_Bytes(data, addr.IABytes+2*scmpRawInterfaceLen, len(data))
-	// @ decreases
-	// @ outline (
-	// @ sl.SplitByIndex_Bytes(data, addr.IABytes+scmpRawInterfaceLen, len(data), addr.IABytes+2*scmpRawInterfaceLen, writePerm)
-	// @ unfold sl.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
-	// @ assert forall i int :: { &data[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+scmpRawInterfaceLen][i]
+	// @ sl.SplitRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
+	// @ ghost newSlice = data[offset : offset+scmpRawInterfaceLen]
+	// @ unfold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
 	i.Egress = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
-	// @ fold sl.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
-	// @ )
+	// @ fold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
+	// @ sl.CombineRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
 	offset += scmpRawInterfaceLen
-	// @ requires offset == addr.IABytes + 2*scmpRawInterfaceLen
-	// @ requires len(data) >= addr.IABytes + 2*scmpRawInterfaceLen
-	// @ requires acc(&i.BaseLayer)
-	// @ requires sl.AbsSlice_Bytes(data, 0, addr.IABytes)
-	// @ requires sl.AbsSlice_Bytes(data, addr.IABytes, addr.IABytes+scmpRawInterfaceLen)
-	// @ requires sl.AbsSlice_Bytes(data, addr.IABytes+scmpRawInterfaceLen, addr.IABytes+2*scmpRawInterfaceLen)
-	// @ requires sl.AbsSlice_Bytes(data, addr.IABytes+2*scmpRawInterfaceLen, len(data))
-	// @ ensures i.BaseLayer.Mem(data)
-	// @ decreases
-	// @ outline (
-	// @ sl.CombineAtIndex_Bytes(data, 0, addr.IABytes+scmpRawInterfaceLen, addr.IABytes, writePerm)
-	// @ sl.CombineAtIndex_Bytes(data, 0, addr.IABytes+2*scmpRawInterfaceLen, addr.IABytes+scmpRawInterfaceLen, writePerm)
-	// @ unfold sl.AbsSlice_Bytes(data, 0, addr.IABytes+2*scmpRawInterfaceLen)
-	// @ unfold sl.AbsSlice_Bytes(data, addr.IABytes+2*scmpRawInterfaceLen, len(data))
-	// @ assert forall i int :: { &data[offset:][i] } 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
-	// @ assert forall l int :: { &data[l] } offset <= l && l < len(data) ==> acc(&data[l])
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), offset, writePerm)
+	// @ sl.Reslice_Bytes(data, 0, offset, writePerm)
+	// @ sl.Reslice_Bytes(data, offset, len(data), writePerm)
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
-	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
-	// @ fold sl.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
-	// @ fold sl.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
 	// @ fold i.BaseLayer.Mem(data)
-	// @ )
 	return nil
 }
 
