@@ -1835,7 +1835,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	}
 
 	// create new SCION header for reply.
-	var scionL slayers.SCION
+	var scionL /*@ @ @*/ slayers.SCION
 	scionL.FlowID = p.scionLayer.FlowID
 	scionL.TrafficClass = p.scionLayer.TrafficClass
 	scionL.PathType = revPath.Type(/*@ ubufS @*/)
@@ -1846,17 +1846,17 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "extracting src addr")
 	}
-	if err := scionL.SetDstAddr(srcA); err != nil {
+	if err := scionL.SetDstAddr(srcA /*@, false @*/ ); err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "setting dest addr")
 	}
-	if err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP}); err != nil {
+	if err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP} /*@ , false @*/); err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "setting src addr")
 	}
 	scionL.NextHdr = slayers.L4SCMP
 
 	scmpH.SetNetworkLayerForChecksum(&scionL)
 
-	if err := p.buffer.Clear(); err != nil {
+	if err := p.buffer.Clear(/*@ ubufB @*/); err != nil {
 		return nil, err
 	}
 
@@ -1867,7 +1867,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	scmpLayers := []gopacket.SerializableLayer{&scionL, scmpH, scmpP}
 	if cause != nil {
 		// add quote for errors.
-		hdrLen := slayers.CmnHdrLen + scionL.AddrHdrLen() + scionL.Path.Len()
+		hdrLen := slayers.CmnHdrLen + scionL.AddrHdrLen(/*@ ubufS, false @*/) + scionL.Path.Len(/*@ ubufS @*/)
 		switch scmpH.TypeCode.Type() {
 		case slayers.SCMPTypeExternalInterfaceDown:
 			hdrLen += 20
@@ -1881,14 +1881,14 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 		if len(quote) > maxQuoteLen {
 			quote = quote[:maxQuoteLen]
 		}
-		scmpLayers = append(scmpLayers, gopacket.Payload(quote))
+		scmpLayers = append(/*@ writePerm, @*/ scmpLayers, gopacket.Payload(quote))
 	}
 	// XXX(matzf) could we use iovec gather to avoid copying quote?
-	err = gopacket.SerializeLayers(p.buffer, sopts, scmpLayers...)
+	err = gopacket.SerializeLayers( /*@ ubufB, @*/ p.buffer, sopts, /*@ []([]byte){ ubufS, ubufH, ubufP }, @*/ scmpLayers...)
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "serializing SCMP message")
 	}
-	return p.buffer.Bytes(), scmpError{TypeCode: scmpH.TypeCode, Cause: cause}
+	return p.buffer.Bytes(/*@ ubufB @*/), scmpError{TypeCode: scmpH.TypeCode, Cause: cause}
 }
 
 // decodeLayers implements roughly the functionality of
