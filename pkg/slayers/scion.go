@@ -561,8 +561,11 @@ func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 // @ ensures   err == nil ==> res.Mem()
 // @ ensures   err == nil ==> (s.DstAddrType == T16Ip ==> typeOf(res) == *net.IPAddr)
 // @ ensures   err == nil ==> (s.DstAddrType == T4Ip ==> typeOf(res) == *net.IPAddr)
+// @ ensures   err == nil ==> (s.DstAddrType == T4Svc ==> typeOf(res) == addr.HostSVC)
 // @ ensures   err == nil ==> (s.DstAddrType == T16Ip ==> unfolding res.(*net.IPAddr).Mem() in s.RawDstAddr === []byte(res.(*net.IPAddr).IP))
 // @ ensures   err == nil ==> (s.DstAddrType == T4Ip ==> unfolding res.(*net.IPAddr).Mem() in s.RawDstAddr === []byte(res.(*net.IPAddr).IP))
+// @ ensures   err == nil ==> (s.DstAddrType == T4Svc ==> sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)))
+// @ ensures   err != nil ==> sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCION) DstAddr() (res net.Addr, err error) {
@@ -581,8 +584,11 @@ func (s *SCION) DstAddr() (res net.Addr, err error) {
 // @ ensures   err == nil ==> res.Mem()
 // @ ensures   err == nil ==> (s.SrcAddrType == T16Ip ==> typeOf(res) == *net.IPAddr)
 // @ ensures   err == nil ==> (s.SrcAddrType == T4Ip ==> typeOf(res) == *net.IPAddr)
+// @ ensures   err == nil ==> (s.SrcAddrType == T4Svc ==> typeOf(res) == addr.HostSVC)
 // @ ensures   err == nil ==> (s.SrcAddrType == T16Ip ==> unfolding res.(*net.IPAddr).Mem() in s.RawSrcAddr === []byte(res.(*net.IPAddr).IP))
 // @ ensures   err == nil ==> (s.SrcAddrType == T4Ip ==> unfolding res.(*net.IPAddr).Mem() in s.RawSrcAddr === []byte(res.(*net.IPAddr).IP))
+// @ ensures   err == nil ==> (s.SrcAddrType == T4Svc ==> sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)))
+// @ ensures   err != nil ==> sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCION) SrcAddr() (res net.Addr, err error) {
@@ -617,8 +623,11 @@ func (s *SCION) SetSrcAddr(src net.Addr) error {
 // @ ensures   err == nil ==> res.Mem()
 // @ ensures   err == nil ==> (addrType == T16Ip ==> typeOf(res) == *net.IPAddr)
 // @ ensures   err == nil ==> (addrType == T4Ip ==> typeOf(res) == *net.IPAddr)
+// @ ensures   err == nil ==> (addrType == T4Svc ==> typeOf(res) == addr.HostSVC)
 // @ ensures   err == nil ==> (addrType == T16Ip ==> unfolding res.(*net.IPAddr).Mem() in raw === []byte(res.(*net.IPAddr).IP))
 // @ ensures   err == nil ==> (addrType == T4Ip ==> unfolding res.(*net.IPAddr).Mem() in raw === []byte(res.(*net.IPAddr).IP))
+// @ ensures   err == nil ==> (addrType == T4Svc ==> sl.AbsSlice_Bytes(raw, 0, len(raw)))
+// @ ensures   err != nil ==> sl.AbsSlice_Bytes(raw, 0, len(raw))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
@@ -631,6 +640,7 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 	case T4Svc:
 		// @ unfold sl.AbsSlice_Bytes(raw, 0, len(raw))
 		verScionTmp := addr.HostSVC(binary.BigEndian.Uint16(raw[:addr.HostLenSVC]))
+		// @ fold sl.AbsSlice_Bytes(raw, 0, len(raw))
 		// @ fold verScionTmp.Mem()
 		return verScionTmp, nil
 	case T16Ip:
