@@ -591,9 +591,9 @@ func (s *SCION) SetSrcAddr(src net.Addr) error {
 	return err
 }
 
-// @ trusted
-// @ requires false
-func parseAddr(addrType AddrType, raw []byte) (net.Addr, error) {
+// @ requires acc(AbsSlice_Bytes(raw, 0, len(raw)), def.ReadL20)
+// @ ensures acc(res.Mem()
+func parseAddr(addrType AddrType, raw []byte/*@ ghost wildcard @*/) (res net.Addr, err error) {
 	switch addrType {
 	case T4Ip:
 		return &net.IPAddr{IP: net.IP(raw)}, nil
