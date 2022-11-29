@@ -716,13 +716,7 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 		// @ }
 		return T16Ip, verScionTmp, nil
 	case addr.HostSVC:
-		// @ ghost if wildcard {
-		// @     unfold acc(hostAddr.Mem(), _)
-		// @ } else {
-		// @ 	 unfold acc(hostAddr.Mem(), def.ReadL20)
-		// @ }
 		verScionTmp := a.PackWithPad(2)
-		// @ fold acc(hostAddr.Mem(), def.ReadL20)
 		// @ fold sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp))
 		return T4Svc, verScionTmp, nil
 	}
