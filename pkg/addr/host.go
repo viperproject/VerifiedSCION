@@ -197,7 +197,7 @@ func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
-	return net.IP(h).To4()
+	return net.IP(h).To4( /*@ false @*/ )
 }
 
 // @ preserves acc(h.Mem(), definitions.ReadL13)
@@ -471,7 +471,7 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 // @ ensures res.Mem()
 // @ decreases
 func HostFromIP(ip net.IP) (res HostAddr) {
-	if ip4 := ip.To4(); ip4 != nil {
+	if ip4 := ip.To4( /*@ false @*/ ); ip4 != nil {
 		tmp := HostIPv4(ip4)
 		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
 		//@ fold tmp.Mem()
