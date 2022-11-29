@@ -126,16 +126,14 @@ func (ip IP) IsGlobalUnicast() bool /*{
 }*/
 
 // To4 converts the IPv4 address ip to a 4-byte representation.
-requires  wildcard ==> forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], _)
-requires  !wildcard ==> forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-ensures   wildcard ==> forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], _)
-ensures   !wildcard ==> forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves wildcard ==> forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], _)
+preserves !wildcard ==> forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL20)
 ensures   res != nil ==> len(res) == IPv4len
-ensures   len(ip) == IPv4len ==> forall i int :: 0 <= i && i < len(ip) ==> &ip[i] == &res[i]
+ensures   len(ip) == IPv4len ==> ip === res
 ensures   (len(ip) == IPv6len && isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255) ==> res != nil
+ensures   (len(ip) == IPv6len && !(isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255)) ==> res == nil
 ensures   (len(ip) == IPv6len && res != nil) ==> (forall i int :: 0 <= i && i < IPv4len ==> &ip[12+i] == &res[i])
 ensures   len(ip) != IPv4len && len(ip) != IPv6len ==> res == nil
-ensures   len(ip) == IPv4len ==> len(res) == IPv4len
 decreases
 func (ip IP) To4(ghost wildcard bool) (res IP) {
 	if len(ip) == IPv4len {

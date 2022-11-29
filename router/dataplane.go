@@ -213,8 +213,6 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// Verified locally in 26m35s with --disableMoreCompleteExhale --parallelizeBranches
-// Marked as trusted to not choke the CI
 // @ requires  acc(&d.key,        1/2)
 // @ requires  acc(d.key,         1/2)
 // @ requires  acc(&d.running,    1/2) && !d.running
@@ -842,7 +840,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 		d:         d,
 		ingressID: ingressID,
 		buffer:    verScionTmp,
-		mac:       d.macFactory() /*@ as MacFactorySpec{d.key} @ */,
+		mac:       (d.macFactory() /*@ as MacFactorySpec{d.key} @ */),
 		macBuffers: macBuffersT{
 			scionInput: make([]byte, path.MACBufferSize),
 			epicInput:  make([]byte, libepic.MACBufferSize),
