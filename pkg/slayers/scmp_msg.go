@@ -385,7 +385,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(data, 2, 4)
-	// @ assert forall i int :: { &data[offset:def.add(offset, 2)][i] } 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
+	// @ assert forall i int :: { &data[offset:offset+2][i] } 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
 	i.SeqNumber = binary.BigEndian.Uint16(data[offset : offset+2])
 	// @ fold sl.AbsSlice_Bytes(data, 2, 4)
 	// @ )
@@ -463,7 +463,7 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
-	// @ assert forall i int :: { &buf[offset:def.add(offset, 2)][i] } 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
+	// @ assert forall i int :: { &buf[offset:offset+2][i] } 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
 	binary.BigEndian.PutUint16(buf[offset:offset+2], i.SeqNumber)
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
@@ -715,7 +715,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 2+2, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(data, 2, 2+2)
-	// @ assert forall i int :: { &data[offset:def.add(offset, 2)][i] } 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
+	// @ assert forall i int :: { &data[offset:offset+2][i] } 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
 	i.Sequence = binary.BigEndian.Uint16(data[offset : offset+2])
 	// @ fold sl.AbsSlice_Bytes(data, 2, 2+2)
 	// @ )
@@ -730,7 +730,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2+2, len(data), 2+2+addr.IABytes, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes)
-	// @ assert forall i int :: { &data[offset:def.add(offset, addr.IABytes)][i] } 0 <= i && i < addr.IABytes ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
+	// @ assert forall i int :: { &data[offset:offset+addr.IABytes][i] } 0 <= i && i < addr.IABytes ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
 	i.IA = addr.IA(binary.BigEndian.Uint64(data[offset : offset+addr.IABytes]))
 	// @ fold sl.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes)
 	// @ )
@@ -745,7 +745,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2+2+addr.IABytes, len(data), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
-	// @ assert forall i int :: { &data[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
+	// @ assert forall i int :: { &data[offset:offset+scmpRawInterfaceLen][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
 	i.Interface = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
 	// @ fold sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	// @ )
@@ -828,7 +828,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2, 2+2)
-	// @ assert forall i int :: { &buf[offset:def.add(offset, 2)][i] } 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
+	// @ assert forall i int :: { &buf[offset:offset+2][i] } 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
 	binary.BigEndian.PutUint16(buf[offset:offset+2], i.Sequence)
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 2+2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
@@ -848,7 +848,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
-	// @ assert forall i int :: { &buf[offset:def.add(offset, addr.IABytes)][i] } 0 <= i && i < addr.IABytes ==> &buf[offset:offset+addr.IABytes][i] == &buf[offset + i]
+	// @ assert forall i int :: { &buf[offset:offset+addr.IABytes][i] } 0 <= i && i < addr.IABytes ==> &buf[offset:offset+addr.IABytes][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+addr.IABytes], uint64(i.IA))
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
@@ -868,7 +868,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
-	// @ assert forall i int :: { &buf[offset:def.add(offset, scmpRawInterfaceLen)][i] } 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
+	// @ assert forall i int :: { &buf[offset:offset+scmpRawInterfaceLen][i] } 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.Interface)
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
