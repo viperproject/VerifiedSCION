@@ -178,9 +178,11 @@ type scmpError struct {
 	Cause    error
 }
 
-// @ trusted
-// @ requires false
+// @ preserves e.ErrorMem()
+// @ decreases
 func (e scmpError) Error() string {
+	// @ unfold e.ErrorMem()
+	// @ defer fold e.ErrorMem()
 	return serrors.New("scmp", "typecode", e.TypeCode, "cause", e.Cause).Error()
 }
 
@@ -848,7 +850,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 		d:         d,
 		ingressID: ingressID,
 		buffer:    verScionTmp,
-		mac:       d.macFactory() /*@ as MacFactorySpec{d.key} @ */,
+		mac:       (d.macFactory() /*@ as MacFactorySpec{d.key} @ */),
 		macBuffers: macBuffersT{
 			scionInput: make([]byte, path.MACBufferSize),
 			epicInput:  make([]byte, libepic.MACBufferSize),
