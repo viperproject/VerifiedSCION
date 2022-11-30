@@ -158,3 +158,9 @@ func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
 pred hideLocalIA(p *addr.IA) {
 	acc(p)
 }
+
+pred (err scmpError) ErrorMem() {
+	err.Cause.ErrorMem()
+}
+
+scmpError implements error

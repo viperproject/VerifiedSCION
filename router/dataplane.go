@@ -178,9 +178,11 @@ type scmpError struct {
 	Cause    error
 }
 
-// @ trusted
-// @ requires false
+// @ preserves e.ErrorMem()
+// @ decreases
 func (e scmpError) Error() string {
+	// @ unfold e.ErrorMem()
+	// @ defer fold e.ErrorMem()
 	return serrors.New("scmp", "typecode", e.TypeCode, "cause", e.Cause).Error()
 }
 
