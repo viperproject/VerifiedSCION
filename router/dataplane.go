@@ -1886,7 +1886,8 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 		if len(quote) > maxQuoteLen {
 			quote = quote[:maxQuoteLen]
 		}
-		scmpLayers = append(/*@ writePerm, @*/ scmpLayers, gopacket.Payload(quote))
+		verScionTmp := []gopacket.SerializableLayer{ gopacket.Payload(quote) }
+		scmpLayers = append(/*@ writePerm, @*/ scmpLayers, verScionTmp...)
 	}
 	// XXX(matzf) could we use iovec gather to avoid copying quote?
 	err = gopacket.SerializeLayers( /*@ ubufB, @*/ p.buffer, sopts, /*@ []([]byte){ ubufS, ubufH, ubufP }, @*/ scmpLayers...)
