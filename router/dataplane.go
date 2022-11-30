@@ -1778,6 +1778,9 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
+// @ requires acc(&p.buffer)
+// @ requires acc(&p.scionLayer)
+// @ requires acc(&p.scionLayer.Path) && p.scionLayer.Path != nil
 // @ requires scmpH.Mem(ubufH) && scmpP.Mem(ubufP)
 // @ requires p.scionLayer.Mem(ubufS) && p.buffer.Mem(ubufB)
 func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.SerializableLayer,
