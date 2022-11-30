@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2011-2020 ETH Zurich.
 
-name: Verifying functions in router/ with --disableMoreCompleteExhale --parallelizeBranches part 0
+name: Verifying functions in router/ with no extra arguments part 0
 
 on:
   pull_request: # verify on pull request
@@ -20,6 +20,7 @@ jobs:
       headerOnly: 1
       includePaths: . verification/dependencies
       module: github.com/scionproto/scion
+      parallelizeBranches: '1'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the VerifiedSCION repository
@@ -31,15 +32,14 @@ jobs:
       with:
         key: ${{ env.cache-name }}
         path: ${{ runner.workspace }}/.gobra/cache.json
-    - name: Verify package 'router/'-both
+    - name: Verify package 'router/'-none0
       uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
-        disableMoreCompleteExhale: 1
-        files: ' router/dataplane.go@841 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
+        files: ' router/dataplane.go@153,183,356,407,440,464,499,509,526,578,607,647,658,707,735,743,748,773,784,867,884,926,946,974,987,1077,1087,1112,1135,1154,1176,1223,1239,1246,1253,1278,1296,1315,1342,1351,1379,1396,1405,1423,1432,1469,1486,1561,1650,1674,1678 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
-        parallelizeBranches: 1
+        parallelizeBranches: ${{ env.parallelizeBranches }}
         timeout: 2h

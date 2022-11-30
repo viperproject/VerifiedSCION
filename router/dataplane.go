@@ -226,7 +226,7 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   acc(&d.running,    1/2) && !d.running
 // @ ensures   res == nil ==> d.MacFactoryOperational()
-// $![disableMoreCompleteExhale parallelizeBranches isolate]!$
+// $![disableMoreCompleteExhale isolate]!$
 func (d *DataPlane) SetKey(key []byte) (res error) {
 	//@ share key
 	d.mtx.Lock()
@@ -256,7 +256,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 		// @ ensures  acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ ensures  h.Mem()
 		// @ decreases
-		// $![disableMoreCompleteExhale parallelizeBranches isolate]!$
+		// $![disableMoreCompleteExhale isolate]!$
 		func /*@ f @*/ () (h hash.Hash) {
 			mac, _ := scrypto.InitMac(key)
 			return mac
@@ -839,7 +839,7 @@ type processResult struct {
 // @ preserves acc(d.MacFactoryOperational(), _)
 // @ ensures   res.initMem()
 // @ decreases
-// $![disableMoreCompleteExhale parallelizeBranches]!$
+// $![disableMoreCompleteExhale]!$
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
 	// @ unfold acc(d.MacFactoryOperational(), _)

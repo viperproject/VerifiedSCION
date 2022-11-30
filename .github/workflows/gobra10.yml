@@ -20,6 +20,7 @@ jobs:
       headerOnly: 1
       includePaths: . verification/dependencies
       module: github.com/scionproto/scion
+      parallelizeBranches: '1'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the VerifiedSCION repository
@@ -40,4 +41,5 @@ jobs:
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
         packages: pkg/slayers/path/onehop
+        parallelizeBranches: ${{ env.parallelizeBranches }}
         timeout: 5m

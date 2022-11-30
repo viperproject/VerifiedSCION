@@ -79,26 +79,22 @@ def parse_args(line, loc):
     if m := re.match(r'\s*// \$!\[\s*(.*)\s*\]!\$', line):
         args = [i.strip() for i in m.group(1).split()]
         for i in args:
-            if i not in ["disableMoreCompleteExhale", "parallelizeBranches", "isolate", "closure"]:
+            if i not in ["disableMoreCompleteExhale", "isolate", "closure"]:
                 print(f"Warning: <{loc}>: unrecognised flag '{i}'")
         if "closure" in args:
             return None, None
         iso = "isolate" in args
-        if "disableMoreCompleteExhale" in args and "parallelizeBranches" in args:
-            return "both", iso
-        elif "disableMoreCompleteExhale" in args:
+        if "disableMoreCompleteExhale" in args:
             return "dis", iso
-        elif "parallelizeBranches" in args:
-            return "par", iso
     return "none", iso
 
 def get_func_lines_annos(fname):
     with open(fname, 'r') as fhandle:
         lines = fhandle.readlines()
-        funcs = {'dis': [], 'par': [], 'both': [], 'none': [], 'isolated': []}
+        funcs = {'dis': [], 'none': [], 'isolated': []}
         for l, e in enumerate(lines):
             if "func" in e or "outline" in e:
-                args, iso = parse_args(lines[l-1], f'{fname}:{l-1}')
+                args, iso = parse_args(lines[l-1], f'{fname}:{l}')
                 if args is None:
                     continue
                 if iso:
@@ -118,16 +114,13 @@ def alter_entry(entry: dict):
         ret['with'].pop('disect')
         directory = ret['with'].pop('packages')
         files = get_files(directory)
-        retdict = {"dis": deepcopy(ret), "par": deepcopy(ret), "both": deepcopy(ret), "none": ret}
+        retdict = {"dis": deepcopy(ret), "none": ret}
         isolated = []
-        enabled = {"dis": False, "par": False, "both": False, "none": False}
-        for key in ['dis', 'par', 'both', 'none']:
+        enabled = {"dis": False, "none": False}
+        for key in ['dis', 'none']:
             retdict[key]['name'] += '-'+key
             retdict[key]['with']['files'] = ""
         retdict['dis']['with']['disableMoreCompleteExhale'] = 1
-        retdict['both']['with']['disableMoreCompleteExhale'] = 1
-        retdict['par']['with']['parallelizeBranches'] = 1
-        retdict['both']['with']['parallelizeBranches'] = 1
         for f in files:
             line_annos = get_func_lines_annos(f)
             isolated.extend((f'{f}@{line}', args, name) for line, args, name in line_annos.pop('isolated'))
@@ -142,10 +135,8 @@ def alter_entry(entry: dict):
             toappend = deepcopy(entry)
             toappend['with'].pop('disect')
             toappend['with'].pop('packages')
-            if args in ('dis', 'both'):
+            if args == 'dis':
                 toappend['with']['disableMoreCompleteExhale'] = 1
-            if args in ('par', 'both'):
-                toappend['with']['parallelizeBranches'] = 1
             toappend['with']['files'] = f' {f} {" ".join(fil for fil in files if fil not in f)}'
             toappend['with']['tempname'] = f"Verifying function {name}"
             retisolated.append(toappend)
@@ -177,6 +168,11 @@ def write_result(data, ftarget):
             s = s.replace(i, " ".join(i.replace("\n", "").split()))
         fhandle2.write(s)
 
+def delete_prev_workflows():
+    for f in os.listdir(".github/workflows/"):
+        if re.match(r'gobra[0-9]*\.yml', f):
+            os.remove(os.path.join(".github/workflows/", f))
+
 if __name__ == "__main__":
     with open(f, 'r') as fhandle:
         yml = yaml.load(fhandle, Loader=yaml.CLoader)
@@ -190,6 +186,7 @@ if __name__ == "__main__":
         yml.pop(True)
         yml.pop('name')
         ymls = split_to_many(yml)
+        delete_prev_workflows()
         for i, e in enumerate(ymls):
             write_result(e, f'{ftarget[:-4]}{i}.yml')
 

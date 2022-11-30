@@ -20,6 +20,7 @@ jobs:
       headerOnly: 1
       includePaths: . verification/dependencies
       module: github.com/scionproto/scion
+      parallelizeBranches: '1'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the VerifiedSCION repository
@@ -37,9 +38,9 @@ jobs:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
         disableMoreCompleteExhale: 1
-        files: ' router/dataplane.go@258 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
+        files: ' router/dataplane.go@260 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
-        parallelizeBranches: 1
+        parallelizeBranches: ${{ env.parallelizeBranches }}
         timeout: 2h

@@ -20,6 +20,7 @@ jobs:
       headerOnly: 1
       includePaths: . verification/dependencies
       module: github.com/scionproto/scion
+      parallelizeBranches: '1'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the VerifiedSCION repository
@@ -39,6 +40,7 @@ jobs:
         headerOnly: ${{ env.headerOnly }}
         includePaths: ./dependencies/ ..
         module: ${{ env.module }}
+        parallelizeBranches: ${{ env.parallelizeBranches }}
         projectLocation: VerifiedSCION/verification
         recursive: 1
         timeout: 5m
