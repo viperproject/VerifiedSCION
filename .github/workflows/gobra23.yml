@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2011-2020 ETH Zurich.
 
-name: Verifying function router/dataplane.go:AddLinkType
+name: Verifying functions in router/ with no extra arguments part 0
 
 on:
   pull_request: # verify on pull request
@@ -32,13 +32,12 @@ jobs:
       with:
         key: ${{ env.cache-name }}
         path: ${{ runner.workspace }}/.gobra/cache.json
-    - name: Verify package 'router/'
+    - name: Verify package 'router/'-none0
       uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
-        disableMoreCompleteExhale: 1
-        files: ' router/dataplane.go@395 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
+        files: ' router/dataplane.go@153,186,411,469,515,532,614,654,665,714,742,750,755,780,791,874,891,933,953,981,994,1084,1094,1119,1142,1161,1183,1230,1246,1253,1260,1285,1303,1322,1349,1358,1386,1403,1412,1430,1439,1476,1493,1568,1657,1681,1685,1690,1718,1770 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}

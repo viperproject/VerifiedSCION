@@ -356,6 +356,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 // @ ensures   acc(&d.running,    1/2) && !d.running
 // @ ensures   acc(&d.neighborIAs,1/2) && acc(d.neighborIAs, 1/2)
 // @ ensures   domain(d.neighborIAs) == old(domain(d.neighborIAs)) union set[uint16]{ifID}
+// $![disableMoreCompleteExhale isolate]!$
 func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -390,7 +391,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // @ ensures   acc(&d.running,   1/2) && !d.running
 // @ ensures   acc(&d.linkTypes, 1/2) && acc(d.linkTypes, 1/2)
 // @ ensures   domain(d.linkTypes) == old(domain(d.linkTypes)) union set[uint16]{ifID}
-// $![disableMoreCompleteExhale]!$
+// $![disableMoreCompleteExhale isolate]!$
 func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	if _, existsB := d.linkTypes[ifID]; existsB {
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
@@ -440,6 +441,7 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 // returns InterfaceUp if the relevant bfdsession state is up, or if there is no BFD
 // session. Otherwise, it returns InterfaceDown.
 // @ preserves acc(MutexInvariant!<d!>(), def.ReadL5)
+// $![disableMoreCompleteExhale isolate]!$
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
 	// @ unfold acc(MutexInvariant!<d!>(), def.ReadL5)
 	// @ defer fold acc(MutexInvariant!<d!>(), def.ReadL5)
@@ -499,6 +501,7 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // @ preserves acc(&d.svc, 1/2)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+// $![disableMoreCompleteExhale]!$
 func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -578,6 +581,7 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   acc(&d.running,          1/2) && !d.running
 // @ ensures   acc(&d.internalNextHops, 1/2) && acc(d.internalNextHops, 1/2)
+// $![disableMoreCompleteExhale isolate]!$
 func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()

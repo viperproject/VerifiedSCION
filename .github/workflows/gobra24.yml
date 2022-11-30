@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2011-2020 ETH Zurich.
 
-name: Verifying function router/dataplane.go:AddLinkType
+name: Verifying functions in router/ with no extra arguments part 1
 
 on:
   pull_request: # verify on pull request
@@ -32,13 +32,12 @@ jobs:
       with:
         key: ${{ env.cache-name }}
         path: ${{ runner.workspace }}/.gobra/cache.json
-    - name: Verify package 'router/'
+    - name: Verify package 'router/'-none
       uses: viperproject/gobra-action@main
       with:
         assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
         checkConsistency: ${{ env.checkConsistency }}
-        disableMoreCompleteExhale: 1
-        files: ' router/dataplane.go@395 router/metrics_spec.gobra router/dataplane_spec.gobra router/svc.go router/metrics.go router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/svc_spec_test.gobra'
+        files: ' router/dataplane.go@1779,1798,1911,1917,1938,1965,1987,2009 router/metrics_spec.gobra router/dataplane_spec.gobra@122,155 router/svc.go@35,45,70,101,132 router/metrics.go@47 router/svc_spec.gobra router/metrics_spec_test.gobra router/dataplane_spec_test.gobra@26,37 router/svc_spec_test.gobra@25,32'
         headerOnly: ${{ env.headerOnly }}
         includePaths: ${{ env.includePaths }}
         module: ${{ env.module }}
