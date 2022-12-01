@@ -155,6 +155,7 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 // @ ensures   err == nil ==> (sd != nil && sd.Mem(ubuf))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
+// $![isolate]!$
 func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, err error) {
 	//@ unfold acc(o.Mem(ubuf), definitions.ReadL1)
 	//@ unfold acc(o.SecondHop.Mem(), definitions.ReadL10)
