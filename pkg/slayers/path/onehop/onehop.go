@@ -151,10 +151,9 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
-// @ trusted // verification does not terminate in useful time
-// @ requires o.Mem(ubuf)
-// @ ensures  err == nil ==> (sd != nil && sd.Mem(ubuf))
-// @ ensures  err != nil ==> err.ErrorMem() && o.Mem(ubuf)
+// @ preserves o.Mem(ubuf)
+// @ ensures   err == nil ==> (sd != nil && sd.Mem(ubuf))
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, err error) {
 	//@ unfold acc(o.Mem(ubuf), definitions.ReadL1)
@@ -199,13 +198,16 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 			},
 		},
 	}
-	// (VerifiedSCION) these foldings time out. Even folding
-	// the base predicate and assuming false for the rest takes a
-	// significant amount of time.
+	//@ fold acc(o.FirstHop.Mem(), definitions.ReadL10)
+	//@ fold acc(o.SecondHop.Mem(), definitions.ReadL10)
+	//@ fold acc(o.Mem(ubuf), definitions.ReadL1)
+	//@ assert forall i int :: { &p.InfoFields[i] } 0 <= i && i < len(p.InfoFields) ==> acc(&p.InfoFields[i])
+	//@ assert forall i int :: { &p.HopFields[i] } 0 <= i && i < len(p.HopFields) ==> acc(&p.HopFields[i])
 	//@ fold p.Base.Mem()
 	//@ fold p.HopFields[0].Mem()
 	//@ fold p.HopFields[1].Mem()
-	//@ unfold acc(o.Mem(ubuf), definitions.ReadL1)
+	//@ assert forall i int :: { &p.InfoFields[i] } 0 <= i && i < len(p.InfoFields) ==> acc(&p.InfoFields[i])
+	//@ assert forall i int :: { &p.HopFields[i] } 0 <= i && i < len(p.HopFields) ==> p.HopFields[i].Mem()
 	//@ fold p.Mem(ubuf)
 	return p, nil
 }
