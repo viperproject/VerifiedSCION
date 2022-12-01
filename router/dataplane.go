@@ -1782,8 +1782,6 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 }
 
 // @ requires acc(&p.buffer)
-// @ requires acc(&p.scionLayer)
-// @ requires acc(&p.scionLayer.Path) && p.scionLayer.Path != nil
 // @ requires scmpH.Mem(ubufH) && scmpP.Mem(ubufP)
 // @ requires p.scionLayer.Mem(ubufS) && p.buffer.Mem(ubufB)
 func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.SerializableLayer,
@@ -1792,7 +1790,10 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
 	// back to rawPkt (quote).
 	var path *scion.Raw
-	pathType := p.scionLayer.Path.Type(/*@ ubufS @*/)
+	// @ unfold p.scionLayer.Mem(ubufS)
+	// @ ubufPath := ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]
+	pathType := p.scionLayer.Path.Type(/*@ ubufPath @*/)
+
 	switch pathType {
 	case scion.PathType:
 		var ok bool
@@ -1812,19 +1813,21 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
-	decPath, err := path.ToDecoded(/*@ ubufS @*/)
+	decPath, err := path.ToDecoded(/*@ ubufPath @*/)
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
-	revPathTmp, err := decPath.Reverse(/*@ ubufS @*/)
+	revPathTmp, err := decPath.Reverse(/*@ unfolding path.NonInitMem() in path.Raw @*/)
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	revPath := revPathTmp.(*scion.Decoded)
 
+	// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover() {
-		if err := revPath.IncPath(/*@ ubufS @*/); err != nil {
+		// @ fold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
+		if err := revPath.IncPath(/*@ unfolding path.NonInitMem() in path.Raw @*/); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
