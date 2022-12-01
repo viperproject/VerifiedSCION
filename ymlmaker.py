@@ -10,7 +10,6 @@ from functools import reduce
 f = "metagobra.yml"
 ftarget = ".github/workflows/gobra.yml"
 
-
 def get_file(s):
     if "@" in s:
         return s[:s.index("@")]
