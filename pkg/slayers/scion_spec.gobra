@@ -230,12 +230,12 @@ func (s *SCION) addrHdrLenAbstractionLeak() (res int) {
 }
 
 ghost
-requires acc(s.Mem(ubuf), def.ReadL20)
+requires acc(s.Mem(ubuf), _)
 ensures  0 <= res
 decreases
 pure
 func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) (res int) {
-	return unfolding acc(s.Mem(ubuf), def.ReadL20) in (unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL20) in (2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()))
+	return unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in (2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()))
 }
 
 // Morally ghost
