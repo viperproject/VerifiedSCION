@@ -1781,6 +1781,10 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
+// @ requires acc(&p.ingressID)
+// @ requires acc(&p.d, _)
+// @ requires acc(&p.d.running, _) && p.d.running
+// @ requires acc(MutexInvariant(p.d), _)
 // @ requires acc(&p.buffer)
 // @ requires scmpH.Mem(ubufH) && scmpP.Mem(ubufP)
 // @ requires p.scionLayer.Mem(ubufS) && p.buffer.Mem(ubufB)
@@ -1831,9 +1835,16 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
+	// @ preserves acc(&p.ingressID)
+	// @ requires acc(&p.d, _)
+	// @ requires acc(MutexInvariant(p.d), _)
+	// @ outline (
+	// @ unfold acc(MutexInvariant(p.d), _)
 	// If the packet is sent to an external router, we need to increment the
 	// path to prepare it for the next hop.
 	_, external := p.d.external[p.ingressID]
+	// @ )
+	// @ assert false
 	if external {
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
 		if infoField.ConsDir {
