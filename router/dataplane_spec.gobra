@@ -66,8 +66,7 @@ pred MutexInvariant(d *DataPlane) {
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
 	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
 	(d.macFactory != nil        ==> acc(d.key, 1/2))                    &&
-	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
-	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key)) &&
+	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) && scrypto.ValidKeyForHash(*d.key)) &&
 	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key}) &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
 	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&

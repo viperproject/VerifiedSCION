@@ -1785,6 +1785,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ requires acc(&p.d, _)
 // @ requires acc(&p.d.running, _) && p.d.running
 // @ requires acc(MutexInvariant(p.d), _)
+// @ requires unfolding acc(MutexInvariant(p.d), _) in p.d.external != nil
 // @ requires acc(&p.buffer)
 // @ requires scmpH.Mem(ubufH) && scmpP.Mem(ubufP)
 // @ requires p.scionLayer.Mem(ubufS) && p.buffer.Mem(ubufB)
@@ -1796,7 +1797,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	var path *scion.Raw
 	// @ unfold p.scionLayer.Mem(ubufS)
 	// @ ubufPath := ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]
-	pathType := p.scionLayer.Path.Type(/*@ ubufPath @*/)
+	pathType := p.scionLayer.Path.Type( /*@ ubufPath @*/ )
 
 	switch pathType {
 	case scion.PathType:
@@ -1817,11 +1818,11 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
-	decPath, err := path.ToDecoded(/*@ ubufPath @*/)
+	decPath, err := path.ToDecoded( /*@ ubufPath @*/ )
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
-	revPathTmp, err := decPath.Reverse(/*@ unfolding path.NonInitMem() in path.Raw @*/)
+	revPathTmp, err := decPath.Reverse( /*@ unfolding path.NonInitMem() in path.Raw @*/ )
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
@@ -1831,19 +1832,24 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover() {
 		// @ fold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
-		if err := revPath.IncPath(/*@ unfolding path.NonInitMem() in path.Raw @*/); err != nil {
+		if err := revPath.IncPath( /*@ unfolding path.NonInitMem() in path.Raw @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
-	// @ preserves acc(&p.ingressID)
+	// @ assert false
 	// @ requires acc(&p.d, _)
 	// @ requires acc(MutexInvariant(p.d), _)
+	// @ requires unfolding acc(MutexInvariant(p.d), _) in p.d.external != nil
+	// @ ensures acc(&p.d, _)
+	// @ ensures acc(&p.d.external, _) && acc(AccBatchConn(p.d.external), _)
 	// @ outline (
+	// @ assert acc(MutexInvariant(p.d), _)
 	// @ unfold acc(MutexInvariant(p.d), _)
-	// If the packet is sent to an external router, we need to increment the
+	// If the packet is sent to an external+ router, we need to increment the
 	// path to prepare it for the next hop.
-	_, external := p.d.external[p.ingressID]
 	// @ )
+	// @ unfold acc(AccBatchConn(p.d.external), _)
+	_, external := p.d.external[p.ingressID]
 	// @ assert false
 	if external {
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
@@ -1851,7 +1857,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
 			infoField.UpdateSegID(hopField.Mac)
 		}
-		if err := revPath.IncPath(/*@ ubufS @*/); err != nil {
+		if err := revPath.IncPath( /*@ ubufS @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
@@ -1860,7 +1866,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	var scionL /*@ @ @*/ slayers.SCION
 	scionL.FlowID = p.scionLayer.FlowID
 	scionL.TrafficClass = p.scionLayer.TrafficClass
-	scionL.PathType = revPath.Type(/*@ ubufS @*/)
+	scionL.PathType = revPath.Type( /*@ ubufS @*/ )
 	scionL.Path = revPath
 	scionL.DstIA = p.scionLayer.SrcIA
 	scionL.SrcIA = p.d.localIA
@@ -1868,7 +1874,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "extracting src addr")
 	}
-	if err := scionL.SetDstAddr(srcA /*@, false @*/ ); err != nil {
+	if err := scionL.SetDstAddr(srcA /*@, false @*/); err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "setting dest addr")
 	}
 	if err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP} /*@ , false @*/); err != nil {
@@ -1878,7 +1884,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 
 	scmpH.SetNetworkLayerForChecksum(&scionL)
 
-	if err := p.buffer.Clear(/*@ ubufB @*/); err != nil {
+	if err := p.buffer.Clear( /*@ ubufB @*/ ); err != nil {
 		return nil, err
 	}
 
@@ -1889,7 +1895,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	scmpLayers := []gopacket.SerializableLayer{&scionL, scmpH, scmpP}
 	if cause != nil {
 		// add quote for errors.
-		hdrLen := slayers.CmnHdrLen + scionL.AddrHdrLen(/*@ ubufS, false @*/) + scionL.Path.Len(/*@ ubufS @*/)
+		hdrLen := slayers.CmnHdrLen + scionL.AddrHdrLen( /*@ ubufS, false @*/ ) + scionL.Path.Len( /*@ ubufS @*/ )
 		switch scmpH.TypeCode.Type() {
 		case slayers.SCMPTypeExternalInterfaceDown:
 			hdrLen += 20
@@ -1903,15 +1909,15 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 		if len(quote) > maxQuoteLen {
 			quote = quote[:maxQuoteLen]
 		}
-		verScionTmp := []gopacket.SerializableLayer{ gopacket.Payload(quote) }
-		scmpLayers = append(/*@ writePerm, @*/ scmpLayers, verScionTmp...)
+		verScionTmp := []gopacket.SerializableLayer{gopacket.Payload(quote)}
+		scmpLayers = append( /*@ writePerm, @*/ scmpLayers, verScionTmp...)
 	}
 	// XXX(matzf) could we use iovec gather to avoid copying quote?
-	err = gopacket.SerializeLayers( /*@ ubufB, @*/ p.buffer, sopts, /*@ []([]byte){ ubufS, ubufH, ubufP }, @*/ scmpLayers...)
+	err = gopacket.SerializeLayers( /*@ ubufB, @*/ p.buffer, sopts /*@ []([]byte){ ubufS, ubufH, ubufP }, @*/, scmpLayers...)
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "serializing SCMP message")
 	}
-	return p.buffer.Bytes(/*@ ubufB @*/), scmpError{TypeCode: scmpH.TypeCode, Cause: cause}
+	return p.buffer.Bytes( /*@ ubufB @*/ ), scmpError{TypeCode: scmpH.TypeCode, Cause: cause}
 }
 
 // decodeLayers implements roughly the functionality of
