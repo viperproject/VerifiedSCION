@@ -1836,18 +1836,8 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
-	// @ assert false
-	// @ requires acc(&p.d, _)
-	// @ requires acc(MutexInvariant(p.d), _)
-	// @ requires unfolding acc(MutexInvariant(p.d), _) in p.d.external != nil
-	// @ ensures acc(&p.d, _)
-	// @ ensures acc(&p.d.external, _) && acc(AccBatchConn(p.d.external), _)
-	// @ outline (
-	// @ assert acc(MutexInvariant(p.d), _)
-	// @ unfold acc(MutexInvariant(p.d), _)
 	// If the packet is sent to an external+ router, we need to increment the
 	// path to prepare it for the next hop.
-	// @ )
 	// @ unfold acc(AccBatchConn(p.d.external), _)
 	_, external := p.d.external[p.ingressID]
 	// @ assert false

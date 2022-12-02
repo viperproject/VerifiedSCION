@@ -163,3 +163,11 @@ pred (err scmpError) ErrorMem() {
 }
 
 scmpError implements error
+
+ghost
+requires acc(MutexInvariant(d), _)
+requires unfolding acc(MutexInvariant(d), _) in d.external != nil
+ensures acc(&d.external, _) && acc(AccBatchConn(d.external), _)
+func (d *DataPlane) accToExternalAndBatchConn () {
+	unfold acc(AccBatchConn(d.external), _)
+}
