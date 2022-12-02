@@ -1195,6 +1195,8 @@ func (p *scionPacketProcessor) validateSrcDstIA() (processResult, error) {
 }
 
 // invalidSrcIA is a helper to return an SCMP error for an invalid SrcIA.
+// @ trusted
+// @ requires false
 func (p *scionPacketProcessor) invalidSrcIA() (processResult, error) {
 	return p.packSCMP(
 		&slayers.SCMP{
@@ -1207,6 +1209,8 @@ func (p *scionPacketProcessor) invalidSrcIA() (processResult, error) {
 }
 
 // invalidDstIA is a helper to return an SCMP error for an invalid DstIA.
+// @ trusted
+// @ requires false
 func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 	return p.packSCMP(
 		&slayers.SCMP{
@@ -1223,6 +1227,8 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // Provided that underlying network infrastructure prevents address spoofing,
 // this check prevents malicious end hosts in the local AS from bypassing the
 // SrcIA checks by disguising packets as transit traffic.
+// @ trusted
+// @ requires false
 func (p *scionPacketProcessor) validateTransitUnderlaySrc() (processResult, error) {
 	if p.path.IsFirstHop() || p.ingressID != 0 {
 		// not a transit packet, nothing to check
@@ -1237,6 +1243,8 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc() (processResult, erro
 	return processResult{}, nil
 }
 
+// @ trusted
+// @ requires false
 func (p *scionPacketProcessor) validateEgressID() (processResult, error) {
 	pktEgressID := p.egressInterface()
 	_, ih := p.d.internalNextHops[pktEgressID]
@@ -1394,6 +1402,8 @@ func (p *scionPacketProcessor) doXover() (processResult, error) {
 	return processResult{}, nil
 }
 
+// @ trusted
+// @ requires false
 func (p *scionPacketProcessor) ingressInterface() uint16 {
 	info := p.infoField
 	hop := p.hopField
