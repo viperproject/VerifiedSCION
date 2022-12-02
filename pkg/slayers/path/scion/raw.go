@@ -323,28 +323,17 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	return ret
 }
 
+// IsFirstHop returns whether the current hop is the first hop on the path.
+func (s *Raw) IsFirstHop() bool {
+	return s.PathMeta.CurrHF == 0
+}
+
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.
-// @ preserves acc(s.Mem(ubuf), def.ReadL1)
-// @ decreases
-func (s *Raw) IsPenultimateHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL2)
-	//@ unfold acc(s.Base.Mem(), def.ReadL3)
-	numberHops := s.NumHops
-	currentHop := int(s.PathMeta.CurrHF)
-	//@ fold acc(s.Base.Mem(), def.ReadL3)
-	//@ fold acc(s.Mem(ubuf), def.ReadL2)
-	return currentHop == numberHops-2
+func (s *Raw) IsPenultimateHop() bool {
+	return int(s.PathMeta.CurrHF) == (s.NumHops - 2)
 }
 
 // IsLastHop returns whether the current hop is the last hop on the path.
-// @ preserves acc(s.Mem(ubuf), def.ReadL1)
-// @ decreases
-func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL2)
-	//@ unfold acc(s.Base.Mem(), def.ReadL3)
-	numberHops := s.NumHops
-	currentHop := int(s.PathMeta.CurrHF)
-	//@ fold acc(s.Base.Mem(), def.ReadL3)
-	//@ fold acc(s.Mem(ubuf), def.ReadL2)
-	return currentHop == numberHops-1
+func (s *Raw) IsLastHop() bool {
+	return int(s.PathMeta.CurrHF) == (s.NumHops - 1)
 }
