@@ -158,9 +158,10 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 // serializeTLVOptions serializes options to buf and returns the length of the serialized options.
 // Passing in a nil-buffer will treat the serialization as a dryrun that can be used to calculate
 // the length needed for the buffer.
+// @ requires  !fixLengths
 // @ requires  buf != nil ==> 2 <= len(buf)
 // @ preserves buf != nil ==> sl.AbsSlice_Bytes(buf, 0, len(buf))
-// @ requires false
+// @ decreases
 func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ , ghost precomputedSize int @*/) (res int) {
 	dryrun := buf == nil
 	// length start at 2 since the padding needs to be calculated taking the first 2 bytes of the
@@ -191,6 +192,8 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 				}
 			}
 		}
+
+		// @ assert false
 		if !dryrun {
 			//  assert unfolding dryrunProof(options, precomputedSize, fixLengths) in length <= precomputedSize
 			// @ assume length <= precomputedSize
