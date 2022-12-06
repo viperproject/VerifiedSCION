@@ -22,6 +22,7 @@ import (
 	sl "github.com/scionproto/scion/verification/utils/slices"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
 )
 
 pred nonNilErr(e error) {
@@ -66,7 +67,8 @@ pred MutexInvariant(d *DataPlane) {
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
 	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
 	(d.macFactory != nil        ==> acc(d.key, 1/2))                    &&
-	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) && scrypto.ValidKeyForHash(*d.key)) &&
+	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
+	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key))    &&
 	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key}) &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
 	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&
@@ -164,10 +166,12 @@ pred (err scmpError) ErrorMem() {
 
 scmpError implements error
 
+// Helper functions for prepareSCMP
+
 ghost
 requires acc(MutexInvariant(d), _)
 requires unfolding acc(MutexInvariant(d), _) in d.external != nil
 ensures acc(&d.external, _) && acc(AccBatchConn(d.external), _)
 func (d *DataPlane) accToExternalAndBatchConn () {
-	unfold acc(AccBatchConn(d.external), _)
+	unfold acc(MutexInvariant(d), _)
 }

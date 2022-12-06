@@ -1796,6 +1796,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	// back to rawPkt (quote).
 	var path *scion.Raw
 	// @ unfold p.scionLayer.Mem(ubufS)
+	// @ assert p.scionLayer.Path.Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen])
 	// @ ubufPath := ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]
 	pathType := p.scionLayer.Path.Type( /*@ ubufPath @*/ )
 
@@ -1827,21 +1828,25 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	revPath := revPathTmp.(*scion.Decoded)
-
+	// @ p.d.accToExternalAndBatchConn()
 	// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
 	// Revert potential path segment switches that were done during processing.
+	// @ haveToFold := true
 	if revPath.IsXover() {
+		// @ haveToFold = false
 		// @ fold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
 		if err := revPath.IncPath( /*@ unfolding path.NonInitMem() in path.Raw @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
+	// @ ghost if haveToFold { fold revPath.Mem(unfolding path.NonInitMem() in path.Raw) }
+	// @ assert false
 	// If the packet is sent to an external+ router, we need to increment the
 	// path to prepare it for the next hop.
 	// @ unfold acc(AccBatchConn(p.d.external), _)
 	_, external := p.d.external[p.ingressID]
-	// @ assert false
 	if external {
+		// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
 		if infoField.ConsDir {
 			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
@@ -1852,6 +1857,7 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 		}
 	}
 
+	// @ assert false
 	// create new SCION header for reply.
 	var scionL /*@ @ @*/ slayers.SCION
 	scionL.FlowID = p.scionLayer.FlowID
