@@ -159,20 +159,23 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 // Passing in a nil-buffer will treat the serialization as a dryrun that can be used to calculate
 // the length needed for the buffer.
 // @ requires  !fixLengths
-// @ requires  buf != nil ==> 2 <= len(buf)
 // @ preserves buf != nil ==> sl.AbsSlice_Bytes(buf, 0, len(buf))
+// @ preserves forall i int :: { &options[i] } 0 <= i && i < len(options) ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
+// @ trusted
 // @ decreases
 func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ , ghost precomputedSize int @*/) (res int) {
 	dryrun := buf == nil
+	// @ assume dryrun
 	// length start at 2 since the padding needs to be calculated taking the first 2 bytes of the
 	// extension header (NextHdr and ExtLen fields) into account.
 	length := 2
 	// @ invariant 0 < len(options) ==> (0 <= i0 && i0 <= len(options))
 	// @ invariant forall i int :: { &options[i] } 0 <= i && i < len(options) ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
-	//  invariant 0 < len(options) ==> length == 2 + computeLen(options, 0, i0, fixLengths)
-	//  invariant !dryrun ==> dryrunProof(options, precomputedSize, fixLengths)
+	// @ invariant 0 < len(options) ==> length == 2 + computeLen(options, 0, i0)
+	// TODO: invariant !dryrun ==> dryrunProof(options, precomputedSize, fixLengths)
 	// @ decreases len(options) - i0
 	for _, opt := range options /*@ with i0 @*/ {
+		// assume false
 		if fixLengths {
 			// @ def.Unreachable()
 			x := int(opt.OptAlign[0])
@@ -193,14 +196,12 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 			}
 		}
 
-		// @ assert false
 		if !dryrun {
-			//  assert unfolding dryrunProof(options, precomputedSize, fixLengths) in length <= precomputedSize
-			// @ assume length <= precomputedSize
-			// @ assume false // TODO: remove
 			opt.serializeTo(buf[length-2:], fixLengths)
 		}
 		length += opt.length(fixLengths)
+		// @ assert length == computeLen(options, 0, i0) + options[i0]
+		// @ lemmaComputeLen(options, 0, i0)
 	}
 	if fixLengths {
 		// @ def.Unreachable()
@@ -213,8 +214,7 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 			length += pad
 		}
 	}
-	// @ assume false
-	//  ghost if dryrun && 0 < len(options) { fold dryrunProof(options, length-2, fixLengths) }
+	// TODO ghost if dryrun && 0 < len(options) { fold dryrunProof(options, length-2, fixLengths) }
 	return length - 2
 }
 

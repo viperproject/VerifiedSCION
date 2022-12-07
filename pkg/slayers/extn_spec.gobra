@@ -25,6 +25,7 @@ import (
 
 ghost
 requires  acc(o, _)
+ensures   0 < res
 decreases
 pure func (o *tlvOption) lengthGhost(fixLengths bool) (res int) {
 	return o.OptType == OptTypePad1? 1 : (fixLengths? len(o.OptData) + 2 : int(o.OptDataLen) + 2)
@@ -33,18 +34,35 @@ pure func (o *tlvOption) lengthGhost(fixLengths bool) (res int) {
 ghost
 requires 0 <= start && start <= end && end <= len(options)
 requires forall i int :: { &options[i] } start <= i && i < end ==> acc(&options[i], _)
-// requires forall i, j int :: (start <= i && i < end && start <= j && j < end && j != i) ==> options[i] != options[j]
 requires forall i int :: { &options[i] } start <= i && i < end ==> acc(options[i], _)
-pure func computeLen(options []*tlvOption, start, end int, fixLengths bool) (res int) {
-	return start >= end? 0 : options[start].lengthGhost(fixLengths) + computeLen(options, start+1, end, fixLengths)
+pure func computeLen(options []*tlvOption, start, end int) (res int) {
+	return start >= end? 0 : options[start].lengthGhost(false) + computeLen(options, start+1, end)
 }
 
+ghost
+requires  0 <= start && start < end && end < len(options)
+preserves forall i int :: { &options[i] } start <= i && i <= end ==> acc(&options[i], _)
+preserves forall i int :: { &options[i] } start <= i && i <= end ==> acc(options[i], _)
+ensures   computeLen(options, start, end) + options[end].lengthGhost(false) == computeLen(options, start, end+1)
+decreases end - start
+func lemmaComputeLen(options []*tlvOption, start, end int) {
+	assert computeLen(options, start, end) ==
+		options[start].lengthGhost(false) + computeLen(options, start+1, end)
+	if start+1 < end {
+		assume false
+	} else {
+		assume false
+	}
+}
+
+/*
 pred dryrunProof(options []*tlvOption, l int, fixLengths bool) {
 	(forall i int :: { &options[i] } 0 <= i && i < len(options) ==> acc(&options[i], def.ReadL20)) &&
 	(forall i, j int :: (0 <= i && i < len(options) && 0 <= j && j < len(options) && j != i) ==> options[i] != options[j]) &&
 	(forall i int :: { &options[i] } 0 <= i && i < len(options) ==> acc(options[i], def.ReadL20)) // &&
 	// computeLen(options, 0, len(options), fixLengths) <= l
 }
+*/
 
 pred (e *extnBase) NonInitMem() {
 	acc(e)
