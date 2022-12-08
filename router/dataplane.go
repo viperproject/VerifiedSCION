@@ -1795,9 +1795,11 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
 	// back to rawPkt (quote).
 	var path *scion.Raw
+	// assert false // 2m21s
 	// @ unfold p.scionLayer.Mem(ubufS)
 	// @ assert p.scionLayer.Path.Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen])
 	// @ ubufPath := ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]
+	// assert false // 2m2s
 	pathType := p.scionLayer.Path.Type( /*@ ubufPath @*/ )
 
 	switch pathType {
@@ -1828,36 +1830,51 @@ func (p *scionPacketProcessor) prepareSCMP(scmpH *slayers.SCMP, scmpP gopacket.S
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	revPath := revPathTmp.(*scion.Decoded)
+	// assert false // 2m45s
 	// @ p.d.accToExternalAndBatchConn()
+	// assert false // 3m41s ??? first run didn't terminate, second did
 	// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
+	// assert false // 3m38s
 	// Revert potential path segment switches that were done during processing.
 	// @ haveToFold := true
 	if revPath.IsXover() {
+		// assert false // 4m1s
 		// @ haveToFold = false
 		// @ fold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
 		if err := revPath.IncPath( /*@ unfolding path.NonInitMem() in path.Raw @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
+	// assert false // 4m5s
 	// @ ghost if haveToFold { fold revPath.Mem(unfolding path.NonInitMem() in path.Raw) }
-	// @ assert false
+	// assert false // 4m9s
 	// If the packet is sent to an external+ router, we need to increment the
 	// path to prepare it for the next hop.
 	// @ unfold acc(AccBatchConn(p.d.external), _)
+	// assert false // 4m12s
 	_, external := p.d.external[p.ingressID]
+	// assert false // 4m6s
 	if external {
+		// assert false // 4m30s third run
 		// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
+		// assert false // 4m27s
+		// @ unfold revPath.Base.Mem()
+		// assert false 4m22s
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
+		// @ assert revPath.PathMeta.CurrINF < len(revPath.InfoFields)
+		// assert false // 4m39s
 		if infoField.ConsDir {
+			// @ assert false
 			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
 			infoField.UpdateSegID(hopField.Mac)
 		}
+		// @ assert false
 		if err := revPath.IncPath( /*@ ubufS @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
 
-	// @ assert false
+	// @ assert false 
 	// create new SCION header for reply.
 	var scionL /*@ @ @*/ slayers.SCION
 	scionL.FlowID = p.scionLayer.FlowID
