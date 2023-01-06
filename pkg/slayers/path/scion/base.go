@@ -145,33 +145,39 @@ func (s *Base) IncPath() (e error) {
 // IsXover returns whether we are at a crossover point.
 // @ preserves acc(s.Mem(), definitions.ReadL10)
 // @ decreases
-func (s *Base) IsXover() (r bool) {
+func (s *Base) IsXover() bool {
 	//@ unfold acc(s.Mem(), definitions.ReadL10)
-	r = s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1)
-	//@ fold acc(s.Mem(), definitions.ReadL10)
-	return r
+	//@ defer fold acc(s.Mem(), definitions.ReadL10)
+	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
+		s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1)
+}
+
+// IsFirstHopAfterXover returns whether this is the first hop field after a crossover point.
+// @ preserves acc(s.Mem(), definitions.ReadL10)
+// @ decreases
+func (s *Base) IsFirstHopAfterXover() bool {
+	//@ unfold acc(s.Mem(), definitions.ReadL10)
+	//@ defer fold acc(s.Mem(), definitions.ReadL10)
+	return s.PathMeta.CurrINF > 0 && s.PathMeta.CurrHF > 0 &&
+		s.PathMeta.CurrINF-1 == s.infIndexForHF(s.PathMeta.CurrHF-1)
 }
 
 // @ preserves acc(s, definitions.ReadL11)
 // @ preserves 0 <= s.NumINF && s.NumINF <= 3 && 0 <= s.NumHops
-// @ ensures   0 < s.NumINF ==> (0 <= r && r < s.NumINF)
+// @ ensures   (0 <= r && r < 3)
 // @ decreases
 func (s *Base) infIndexForHF(hf uint8) (r uint8) {
-	left := uint8(0)
-	//@ invariant acc(s, definitions.ReadL11)
-	//@ invariant s.NumINF >= 0 && s.NumINF <= 3 && s.NumHops >= 0
-	//@ invariant 0 <= i && i <= 3
-	//@ decreases s.NumINF-i
-	for i := 0; i < s.NumINF; i++ {
-		if hf >= left {
-			if hf < left+s.PathMeta.SegLen[i] {
-				return uint8(i)
-			}
-		}
-		left += s.PathMeta.SegLen[i]
+	// (VerifiedSCION) Gobra cannot prove the following propertie, even though it
+	// is ensured by the type system.
+	// @ assume 0 <= hf
+	switch {
+	case hf < s.PathMeta.SegLen[0]:
+		return 0
+	case hf < s.PathMeta.SegLen[0]+s.PathMeta.SegLen[1]:
+		return 1
+	default:
+		return 2
 	}
-	// at the end we just return the last index.
-	return uint8(s.NumINF - 1)
 }
 
 // Len returns the length of the path in bytes.
