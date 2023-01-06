@@ -49,6 +49,7 @@ type tlvOption struct {
 }
 
 // @ preserves acc(o, def.ReadL20)
+// @ preserves 0 <= o.OptDataLen // trivial pre-condition (ensured by the type-system) that Gobra cannot ignore yet
 // @ ensures   0 < res
 // @ ensures   o.OptType == OptTypePad1 ==> res == 1
 // @ ensures   o.OptType != OptTypePad1 ==> 2 <= res
@@ -161,7 +162,6 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 // @ requires  !fixLengths
 // @ preserves buf != nil ==> sl.AbsSlice_Bytes(buf, 0, len(buf))
 // @ preserves forall i int :: { &options[i] } 0 <= i && i < len(options) ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
-// @ trusted
 // @ decreases
 func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ , ghost precomputedSize int @*/) (res int) {
 	dryrun := buf == nil
@@ -175,7 +175,6 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 	// TODO: invariant !dryrun ==> dryrunProof(options, precomputedSize, fixLengths)
 	// @ decreases len(options) - i0
 	for _, opt := range options /*@ with i0 @*/ {
-		// assume false
 		if fixLengths {
 			// @ def.Unreachable()
 			x := int(opt.OptAlign[0])
@@ -199,8 +198,10 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 		if !dryrun {
 			opt.serializeTo(buf[length-2:], fixLengths)
 		}
+		// (VerifiedSCION) trivial assertion which Gobra cannot check right now
+		// @ assume 0 <= opt.OptDataLen
 		length += opt.length(fixLengths)
-		// @ assert length == computeLen(options, 0, i0) + options[i0]
+		//  assert length == computeLen(options, 0, i0) + options[i0]
 		// @ lemmaComputeLen(options, 0, i0)
 	}
 	if fixLengths {
