@@ -169,12 +169,14 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 	// length start at 2 since the padding needs to be calculated taking the first 2 bytes of the
 	// extension header (NextHdr and ExtLen fields) into account.
 	length := 2
-	// @ invariant 0 < len(options) ==> (0 <= i0 && i0 <= len(options))
+	// @ invariant 0 < len(options) ==> (0 <= i0 && i0 < len(options))
 	// @ invariant forall i int :: { &options[i] } 0 <= i && i < len(options) ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
-	// @ invariant 0 < len(options) ==> length == 2 + computeLen(options, 0, i0)
+	//  invariant 0 < len(options) ==> length == 2 + computeLen(options, 0, i0)
 	// TODO: invariant !dryrun ==> dryrunProof(options, precomputedSize, fixLengths)
 	// @ decreases len(options) - i0
 	for _, opt := range options /*@ with i0 @*/ {
+		//  assert i0 < len(options)
+		//  assume false
 		if fixLengths {
 			// @ def.Unreachable()
 			x := int(opt.OptAlign[0])
@@ -201,8 +203,8 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 		// (VerifiedSCION) trivial assertion which Gobra cannot check right now
 		// @ assume 0 <= opt.OptDataLen
 		length += opt.length(fixLengths)
-		//  assert length == computeLen(options, 0, i0) + options[i0]
-		// @ lemmaComputeLen(options, 0, i0)
+		// @ assert length == computeLen(options, 0, i0) + options[i0].lengthGhost(false)
+		//  lemmaComputeLen(options, 0, i0)
 	}
 	if fixLengths {
 		// @ def.Unreachable()
