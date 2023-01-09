@@ -18,5 +18,10 @@ package slayers
 
 func testComputeLen() {
 	s := []*tlvOption{&tlvOption{OptType: OptTypePad1}, &tlvOption{OptType: OptTypePad1}, &tlvOption{OptType: OptTypePad1}}
+	assert computeLen(s, 0, 2) == s[2].lengthGhost(false) + computeLen(s, 0, 1)
+	assert computeLen(s, 0, 2) == 1 + computeLen(s, 0, 1)
+	assert computeLen(s, 0, 2) == 1 + s[1].lengthGhost(false) + computeLen(s, 0, 0)
+	assert computeLen(s, 0, 2) == 2 + computeLen(s, 0, 0)
+	assert computeLen(s, 0, 2) == 2 + s[0].lengthGhost(false)
 	assert computeLen(s, 0, 2) == 3
 }

@@ -39,40 +39,10 @@ requires 0 <= start && start <= end && end < len(options)
 requires forall i int :: { &options[i] } start <= i && i <= end ==> acc(&options[i], _)
 requires forall i int :: { &options[i] } start <= i && i <= end ==>
 	(acc(&options[i].OptType, _) && acc(&options[i].OptData, _) && acc(&options[i].OptDataLen, _))
+// decreases end
 pure func computeLen(options []*tlvOption, start, end int) (res int) {
 	return start < end? options[end].lengthGhost(false) + computeLen(options, start, end-1) : /* start==end */ options[start].lengthGhost(false)
 }
-
-/*
-ghost
-requires  0 <= start && start <= end && end < len(options)
-preserves forall i int :: { &options[i] } start <= i && i <= end ==> acc(&options[i], def.ReadL20)
-preserves forall i int :: { &options[i] } start <= i && i <= end ==> 
-	(acc(&options[i].OptType, def.ReadL20) && acc(&options[i].OptData, def.ReadL20) && acc(&options[i].OptDataLen, def.ReadL20))
-ensures   computeLen(options, start, end) + options[end].lengthGhost(false) == computeLen(options, start, end+1)
-decreases end - start
-func lemmaComputeLen(options []*tlvOption, start, end int) {
-	assert computeLen(options, start, end) ==
-		options[start].lengthGhost(false) + computeLen(options, start+1, end)
-		// TODO: finish proof
-	if start == end {
-		assume false
-	} else {
-		assert computeLen(options, start+1, end) == 0
-		assume false
-		assert computeLen(options, start+1, end + 1) == options[end].lengthGhost(false)
-	}
-}
-*/
-
-/*
-pred dryrunProof(options []*tlvOption, l int, fixLengths bool) {
-	(forall i int :: { &options[i] } 0 <= i && i < len(options) ==> acc(&options[i], def.ReadL20)) &&
-	(forall i, j int :: (0 <= i && i < len(options) && 0 <= j && j < len(options) && j != i) ==> options[i] != options[j]) &&
-	(forall i int :: { &options[i] } 0 <= i && i < len(options) ==> acc(options[i], def.ReadL20)) // &&
-	// computeLen(options, 0, len(options), fixLengths) <= l
-}
-*/
 
 pred (e *extnBase) NonInitMem() {
 	acc(e)
