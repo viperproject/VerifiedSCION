@@ -100,7 +100,13 @@ func (p *Raw) AccUnderlyingBuf(ghost ub []byte, ghost pm perm) {
 
 /******** Lemma: RawPerm ********/
 pred (r *Raw) RawPermRemainder(ubuf []byte, p perm) {
-	0 < p && (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
+	0 < p &&
+	acc(r.Base.Mem(), p/2) &&
+	acc(&r.Raw, p/2) &&
+	len(r.Raw) <= len(ubuf) &&
+	r.Raw === ubuf[:len(r.Raw)] &&
+	acc(slices.AbsSlice_Bytes(ubuf, len(r.Raw), len(ubuf)), p) &&
+	len(r.Raw) == r.Base.Len()
 }
 
 ghost
@@ -111,13 +117,17 @@ ensures  acc(r.Mem(ubuf), p)
 decreases
 func (r *Raw) UndoRawPerm(ubuf []byte, p perm) {
 	unfold r.RawPermRemainder(ubuf, p)
-	apply (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
+	slices.Unslice_Bytes(ubuf, 0, len(r.Raw), p)
+	slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
+	fold acc(r.Mem(ubuf), p)
 }
 
 ghost
 requires 0 < p
 requires acc(r.Mem(ubuf), p)
-ensures  acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
+ensures  acc(&r.Raw, p/2)
+ensures  acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p)
+ensures  acc(r.Base.Mem(), p/2)
 ensures  r.RawPermRemainder(ubuf, p)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
 decreases
@@ -126,27 +136,21 @@ func (r *Raw) RawPerm(ubuf []byte, p perm) {
 	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
 	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
 	assert acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p)
-	package (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p) {
-		{
-			// assert body of predicate
-			assert acc(r.Base.Mem(), p)
-			assert acc(&r.Raw, p)
-			assert len(r.Raw) <= len(ubuf)
-			assert r.Raw === ubuf[:len(r.Raw)]
-			assert len(r.Raw) == r.Base.Len()
-		}
-		slices.Unslice_Bytes(ubuf, 0, len(r.Raw), p)
-		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
-		assert acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-		fold acc(r.Mem(ubuf), p)
-	}
+	assert acc(slices.AbsSlice_Bytes(ubuf, len(r.Raw), len(ubuf)), p)
 	fold r.RawPermRemainder(ubuf, p)
 }
 /******** End of Lemma: RawPerm ********/
 
 /******** Lemma: RawIdxPerm ********/
 pred (r *Raw) RawIdxPermRemainder(ubuf []byte, idx int, p perm) {
-	0 < p && (acc(&r.Raw, p/2) && idx <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
+	0 < p &&
+	acc(r.Base.Mem(), p/2) &&
+	acc(&r.Raw, p/2) &&
+	len(r.Raw) <= len(ubuf) &&
+	r.Raw === ubuf[:len(r.Raw)] &&
+	acc(slices.AbsSlice_Bytes(ubuf, idx, len(ubuf)), p) &&
+	len(r.Raw) == r.Base.Len() &&
+	idx <= len(r.Raw)
 }
 
 ghost
@@ -159,7 +163,10 @@ ensures  acc(r.Mem(ubuf), p)
 decreases
 func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
 	unfold r.RawIdxPermRemainder(ubuf, idx, p)
-	apply (acc(&r.Raw, p/2) && idx <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
+	slices.Unslice_Bytes(ubuf, 0, idx, p)
+	slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
+	assert acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
+	fold acc(r.Mem(ubuf), p)
 }
 
 ghost
@@ -177,27 +184,22 @@ func (r *Raw) RawIdxPerm(ubuf []byte, idx int, p perm) {
 	slices.Reslice_Bytes(ubuf, 0, idx, p)
 	assert r.Raw[:idx] === ubuf[:idx]
 	assert acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p)
-	package (acc(&r.Raw, p/2) && idx <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p) {
-		{
-			// assert body of predicate
-			assert acc(r.Base.Mem(), p)
-			assert acc(&r.Raw, p)
-			assert len(r.Raw) <= len(ubuf)
-			assert r.Raw === ubuf[:len(r.Raw)]
-			assert len(r.Raw) == r.Base.Len()
-		}
-		slices.Unslice_Bytes(ubuf, 0, idx, p)
-		slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
-		assert acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-		fold acc(r.Mem(ubuf), p)
-	}
 	fold r.RawIdxPermRemainder(ubuf, idx, p)
 }
 /******** End of Lemma: RawIdxPerm ********/
 
 /******** Lemma: RawRangePerm ********/
 pred (r *Raw) RawRangePermRemainder(ubuf []byte, start, end int, p perm) {
-	(acc(&r.Raw, p/4) && 0 < p && 0 <= start && start <= end && end <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)) --* acc(r.Mem(ubuf), p)
+	0 < p &&
+	r.Base.Mem() &&
+	acc(&r.Raw, 3*p/4) && // TODO: change to p/2?
+	0 <= start && start <= end && end <= len(r.Raw) &&
+	len(r.Raw) <= len(ubuf) &&
+	r.Raw === ubuf[:len(r.Raw)] &&
+	acc(slices.AbsSlice_Bytes(r.Raw, 0, start), p) &&
+	acc(slices.AbsSlice_Bytes(r.Raw, end, len(r.Raw)), p) &&
+	acc(slices.AbsSlice_Bytes(ubuf, len(r.Raw), len(ubuf)), p) &&
+	len(r.Raw) == r.Base.Len()
 }
 
 ghost
@@ -210,7 +212,11 @@ ensures  acc(r.Mem(ubuf), p)
 decreases
 func (r *Raw) UndoRawRangePerm(ubuf []byte, start, end int, p perm) {
 	unfold r.RawRangePermRemainder(ubuf, start, end, p)
-	apply (acc(&r.Raw, p/4) && 0 < p && 0 <= start && start <= end && end <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)) --* acc(r.Mem(ubuf), p)
+	slices.Unslice_Bytes(r.Raw, start, end, p)
+	slices.CombineAtIndex_Bytes(r.Raw, 0, end, start, p)
+	slices.CombineAtIndex_Bytes(r.Raw, 0, len(r.Raw), end, p)
+	fold r.RawPermRemainder(ubuf, p)
+	r.UndoRawPerm(ubuf, p)
 }
 
 // Notice that no permission to r.Base.Mem() is provided, unlike the previous methods
@@ -224,29 +230,39 @@ ensures  acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
 ensures  r.RawRangePermRemainder(ubuf, start, end, p)
 decreases
 func (r *Raw) RawRangePerm(ubuf []byte, start, end int, p perm) {
-	r.RawPerm(ubuf, p)
+	// r.RawPerm(ubuf, p) // TODO: reuse this?
+	unfold acc(r.Mem(ubuf), p)
+	/*
 	{
 		assert acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
 		unfold r.RawPermRemainder(ubuf, p)
 		assert (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
 	}
+	*/
 	slices.SplitByIndex_Bytes(r.Raw, 0, len(r.Raw), start, p)
+	/*
 	{
 		assert acc(slices.AbsSlice_Bytes(r.Raw, 0, start), p)
 		assert acc(slices.AbsSlice_Bytes(r.Raw, start, len(r.Raw)), p)
 	}
+	*/
 	slices.SplitByIndex_Bytes(r.Raw, start, len(r.Raw), end, p)
+	/*
 	{
 		assert acc(slices.AbsSlice_Bytes(r.Raw, 0, start), p)
 		assert acc(slices.AbsSlice_Bytes(r.Raw, start, end), p)
 		assert acc(slices.AbsSlice_Bytes(r.Raw, end, len(r.Raw)), p)
 	}
+	*/
 	slices.Reslice_Bytes(r.Raw, start, end, p)
+	/*
 	{
 		assert acc(slices.AbsSlice_Bytes(r.Raw, 0, start), p)
 		assert acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
 		assert acc(slices.AbsSlice_Bytes(r.Raw, end, len(r.Raw)), p)
 	}
+	*/
+	/*
 	package (acc(&r.Raw, p/4) && 0 < p && 0 <= start && start <= end && end <= len(r.Raw) && acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)) --* acc(r.Mem(ubuf), p) {
 		assert 0 < p
 		{
@@ -260,6 +276,7 @@ func (r *Raw) RawRangePerm(ubuf []byte, start, end int, p perm) {
 		slices.CombineAtIndex_Bytes(r.Raw, 0, len(r.Raw), start, p)
 		apply (acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)) --* acc(r.Mem(ubuf), p)
 	}
+	*/
 	fold r.RawRangePermRemainder(ubuf, start, end, p)
 }
 /******** End of Lemma: RawRangePerm ********/
