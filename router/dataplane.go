@@ -841,7 +841,6 @@ type processResult struct {
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
 	// @ unfold acc(d.MacFactoryOperational(), _)
-	// @ defer fold acc(d.MacFactoryOperational(), _)
 	// @ ghost var ubuf []byte
 	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
@@ -857,6 +856,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	// @ fold p.scionLayer.NonInitPathPool()
 	p.scionLayer.RecyclePaths()
 	// @ fold p.initMem()
+	// @ fold acc(d.MacFactoryOperational(), _)
 	return p
 }
 
