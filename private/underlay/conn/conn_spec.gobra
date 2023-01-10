@@ -78,12 +78,12 @@ func (c *connUDPIPv4) ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error) {
 	tmpItf := c.pconn.ExchangePerm()
 	var packetconn *ipv4.PacketConn = c.pconn
 	assert tmpItf == c.conn
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.Mem()
 	n1, addr1, err1 := c.connUDPBase.ReadFrom(b, tmpImpl)
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	unfold c.connUDPBase.Mem()
-	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.MemWithoutConn()
 	fold c.Mem()
 	return n1, addr1, err1
@@ -101,12 +101,12 @@ func (c *connUDPIPv4) Write(b []byte) (n int, err error) {
 	tmpItf := c.pconn.ExchangePerm()
 	var packetconn *ipv4.PacketConn = c.pconn
 	assert tmpItf == c.conn
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.Mem()
 	n1, err1 := c.connUDPBase.Write(b, tmpImpl)
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	unfold c.connUDPBase.Mem()
-	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.MemWithoutConn()
 	fold c.Mem()
 	return n1, err1
@@ -125,12 +125,12 @@ func (c *connUDPIPv4) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
 	tmpItf := c.pconn.ExchangePerm()
 	var packetconn *ipv4.PacketConn = c.pconn
 	assert tmpItf == c.conn
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.Mem()
 	n1, err1 := c.connUDPBase.WriteTo(b, dst, tmpImpl)
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	unfold c.connUDPBase.Mem()
-	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.MemWithoutConn()
 	fold c.Mem()
 	return n1, err1
@@ -182,12 +182,12 @@ func (c *connUDPIPv6) ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error) {
 	tmpItf := c.pconn.ExchangePerm()
 	var packetconn *ipv6.PacketConn = c.pconn
 	assert tmpItf == c.conn
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.Mem()
 	n1, addr1, err1 := c.connUDPBase.ReadFrom(b, tmpImpl)
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	unfold c.connUDPBase.Mem()
-	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.MemWithoutConn()
 	fold c.Mem()
 	return n1, addr1, err1
@@ -205,12 +205,12 @@ func (c *connUDPIPv6) Write(b []byte) (n int, err error) {
 	tmpItf := c.pconn.ExchangePerm()
 	var packetconn *ipv6.PacketConn = c.pconn
 	assert tmpItf == c.conn
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.Mem()
 	n1, err1 := c.connUDPBase.Write(b, tmpImpl)
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	unfold c.connUDPBase.Mem()
-	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.MemWithoutConn()
 	fold c.Mem()
 	return n1, err1
@@ -229,12 +229,12 @@ func (c *connUDPIPv6) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
 	tmpItf := c.pconn.ExchangePerm()
 	var packetconn *ipv6.PacketConn = c.pconn
 	assert tmpItf == c.conn
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.Mem()
 	n1, err1 := c.connUDPBase.WriteTo(b, dst, tmpImpl)
-	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	assert tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	unfold c.connUDPBase.Mem()
-	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() == tmpItf)
+	apply tmpItf.Mem() --* (packetconn.Mem() && packetconn.GetUnderlyingConn() === tmpItf)
 	fold c.connUDPBase.MemWithoutConn()
 	fold c.Mem()
 	return n1, err1

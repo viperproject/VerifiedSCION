@@ -242,7 +242,7 @@ pred AbsSliceC_Any(s []any, start int, end int, ghost contents seq[any]) {
 	// Maybe, it is worth having different versions with
 	// different triggers, or using a different trigger
 	// than the one that is inferred.
-	forall i int :: start <= i && i < end ==> (acc(&s[i]) && isComparable(s[i]) && s[i] == contents[i - start])
+	forall i int :: start <= i && i < end ==> (acc(&s[i]) && s[i] === contents[i - start])
 }
 
 ghost

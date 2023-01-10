@@ -93,11 +93,9 @@ type dgramOpt struct {
 // SetDeadline sets the read and write deadlines associated with the
 // endpoint.
 trusted
-requires  c.Mem()
-requires  isComparable(c.GetUnderlyingConn())
-ensures   c.Mem()
+preserves c.Mem()
 ensures   e != nil ==> e.ErrorMem()
-ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 decreases _
 func (c *PacketConn) SetDeadline(t time.Time) (e error) {
 	if !c.payloadHandler.ok() {
@@ -109,11 +107,9 @@ func (c *PacketConn) SetDeadline(t time.Time) (e error) {
 // SetReadDeadline sets the read deadline associated with the
 // endpoint.
 trusted
-requires  c.Mem()
-requires  isComparable(c.GetUnderlyingConn())
-ensures   c.Mem()
+preserves c.Mem()
 ensures   e != nil ==> e.ErrorMem()
-ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 decreases _
 func (c *PacketConn) SetReadDeadline(t time.Time) (e error) {
 	if !c.payloadHandler.ok() {
@@ -125,11 +121,9 @@ func (c *PacketConn) SetReadDeadline(t time.Time) (e error) {
 // SetWriteDeadline sets the write deadline associated with the
 // endpoint.
 trusted
-requires  c.Mem()
-requires  isComparable(c.GetUnderlyingConn())
-ensures   c.Mem()
+preserves c.Mem()
 ensures   e != nil ==> e.ErrorMem()
-ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 decreases _
 func (c *PacketConn) SetWriteDeadline(t time.Time) (e error) {
 	if !c.payloadHandler.ok() {
@@ -154,9 +148,8 @@ func (c *PacketConn) Close() (e error) {
 // transport.
 trusted
 requires c != nil && c.Mem()
-requires isComparable(c)
 ensures  p != nil && p.Mem()
-ensures  p.GetUnderlyingConn() == c
+ensures  p.GetUnderlyingConn() === c
 decreases _
 func NewPacketConn(c net.PacketConn) (p *PacketConn) {
 	cc, _ := socket.NewConn(c.(net.Conn))
@@ -174,10 +167,9 @@ pure func (p *PacketConn) GetUnderlyingConn() (c net.PacketConn)
 
 ghost
 requires p.Mem()
-requires isComparable(p.GetUnderlyingConn())
-ensures  c == old(p.GetUnderlyingConn())
+ensures  c === old(p.GetUnderlyingConn())
 ensures  c.Mem()
-ensures  c.Mem() --* (p.Mem() && p.GetUnderlyingConn() == c)
+ensures  c.Mem() --* (p.Mem() && p.GetUnderlyingConn() === c)
 decreases _
 func (p *PacketConn) ExchangePerm() (c net.PacketConn)
 
@@ -188,10 +180,9 @@ func (p *PacketConn) ExchangePerm() (c net.PacketConn)
 trusted
 requires  forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem(lenBuffers)
 requires  c.Mem()
-requires  isComparable(c.GetUnderlyingConn())
 ensures   forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem(lenBuffers)
 ensures   c.Mem()
-ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> (0 <= n && n <= len(ms))
 ensures   err != nil ==> err.ErrorMem()
 func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers int) (n int, err error) {
@@ -202,12 +193,9 @@ func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers 
 // WriteBatch writes a batch of messages.
 // It returns the number of messages written on a successful write.
 trusted
-requires  forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), definitions.ReadL10)
-requires  c.Mem()
-requires  isComparable(c.GetUnderlyingConn())
-ensures   forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), definitions.ReadL10)
-ensures   c.Mem()
-ensures   c.GetUnderlyingConn() == old(c.GetUnderlyingConn())
+preserves forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), definitions.ReadL10)
+preserves c.Mem()
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> 0 <= n && n <= len(ms)
 ensures   err != nil ==> err.ErrorMem()
 func (c *PacketConn) WriteBatch(ms []socket.Message, flags int, ghost lenBuffers int) (n int, err error) {
