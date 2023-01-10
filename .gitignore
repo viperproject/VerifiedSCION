@@ -96,6 +96,6 @@ tmp/
 *.vpr
 *.debugType
 target
-*.gobrafied
 *.unparsed
+*.gobrafied
 *.internal
