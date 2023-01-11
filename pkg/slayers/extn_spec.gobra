@@ -1,0 +1,108 @@
+// Copyright 2020 Anapaya Systems
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slayers
+
+import (
+	"github.com/google/gopacket"
+
+	def "github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+/** Currently Axiomatized - HopByHopExtn **/
+pred (h *HopByHopExtn) NonInitMem()
+
+pred (h *HopByHopExtn) Mem(ubuf []byte)
+
+// Gobra is not able to infer that HopByHopExtn is "inheriting"
+// the implementation of LayerContents from extnBase.
+requires def.Uncallable()
+func (h *HopByHopExtn) LayerContents() (res []byte)
+
+(*HopByHopExtn) implements gopacket.Layer
+(*HopByHopExtn) implements gopacket.DecodingLayer
+// May not be necessary, but helpful
+// (*HopByHopExtn) implements gopacket.SerializableLayer
+
+/** End of HopByHopExtn (Axiomatization) **/
+
+/** Currently Axiomatized - HopByHopExtnSkipper **/
+pred (h *HopByHopExtnSkipper) NonInitMem()
+
+pred (h *HopByHopExtnSkipper) Mem(ubuf []byte)
+
+// Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
+// the implementation of LayerContents from extnBase.
+requires def.Uncallable()
+func (h *HopByHopExtnSkipper) LayerContents() (res []byte)
+
+// Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
+// the implementation of LayerPayload from extnBase.
+// TODO: introduce proof obligations in the body which include unfolding Mem()
+//       and calling this.extnBase.BaseLayer.LayerPayload 
+requires h.Mem(ub)
+ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* h.Mem(ub)
+decreases
+func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte)
+
+(*HopByHopExtnSkipper) implements gopacket.Layer
+(*HopByHopExtnSkipper) implements gopacket.DecodingLayer
+
+/** End of HopByHopExtnSkipper (Axiomatization) **/
+
+/** Currently Axiomatized - EndToEndExtn **/
+pred (e *EndToEndExtn) NonInitMem()
+
+pred (e *EndToEndExtn) Mem(ubuf []byte)
+
+// Gobra is not able to infer that EndToEndExtn is "inheriting"
+// the implementation of LayerContents from extnBase.
+requires def.Uncallable()
+func (e *EndToEndExtn) LayerContents() (res []byte)
+
+(*EndToEndExtn) implements gopacket.Layer
+(*EndToEndExtn) implements gopacket.DecodingLayer
+// May not be necessary, but helpful
+// (*EndToEndExtn) implements gopacket.SerializableLayer
+
+/** End of EndToEndExtn (Axiomatization) **/
+
+/** Currently Axiomatized - EndToEndExtnSkipper **/
+pred (e *EndToEndExtnSkipper) NonInitMem()
+
+pred (e *EndToEndExtnSkipper) Mem(ubuf []byte)
+
+// Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
+// the implementation of LayerContents from extnBase.
+requires def.Uncallable()
+func (e *EndToEndExtnSkipper) LayerContents() (res []byte)
+
+// Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
+// the implementation of LayerPayload from extnBase.
+// TODO: introduce proof obligations in the body which include unfolding Mem()
+//       and calling this.extnBase.BaseLayer.LayerPayload 
+requires e.Mem(ub)
+ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* e.Mem(ub)
+decreases
+func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte)
+
+(*EndToEndExtnSkipper) implements gopacket.Layer
+(*EndToEndExtnSkipper) implements gopacket.DecodingLayer
+
+/** End of EndToEndExtnSkipper (Axiomatization) **/
