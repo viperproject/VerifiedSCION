@@ -835,13 +835,12 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ preserves acc(d.MacFactoryOperational(), _)
+// @ requires  acc(d.MacFactoryOperational(), _)
 // @ ensures   res.initMem()
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
 	// @ unfold acc(d.MacFactoryOperational(), _)
-	// @ defer fold acc(d.MacFactoryOperational(), _)
 	// @ ghost var ubuf []byte
 	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
