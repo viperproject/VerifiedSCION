@@ -835,7 +835,7 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ preserves acc(d.MacFactoryOperational(), _)
+// @ requires  acc(d.MacFactoryOperational(), _)
 // @ ensures   res.initMem()
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
@@ -856,7 +856,6 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	// @ fold p.scionLayer.NonInitPathPool()
 	p.scionLayer.RecyclePaths()
 	// @ fold p.initMem()
-	// @ fold acc(d.MacFactoryOperational(), _)
 	return p
 }
 
