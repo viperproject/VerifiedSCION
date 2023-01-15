@@ -21,9 +21,7 @@ jobs:
       includePaths: '. verification/dependencies'
       assumeInjectivityOnInhale: '1'
       parallelizeBranches: '1'
-      # Re-enable consistency checks when the "Remainder" predicates in slayers/path/scion
-      # are changed to not include magic-wands.
-      checkConsistency: '0'
+      checkConsistency: '1'
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
@@ -157,7 +155,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/onehop'
-          timeout: 5m
+          timeout: 10m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
