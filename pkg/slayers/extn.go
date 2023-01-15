@@ -49,7 +49,6 @@ type tlvOption struct {
 }
 
 // @ preserves acc(o, def.ReadL20)
-// @ preserves 0 <= o.OptDataLen // trivial pre-condition (ensured by the type-system) that Gobra cannot ignore yet
 // @ ensures   0 < res
 // @ ensures   o.OptType == OptTypePad1 ==> res == 1
 // @ ensures   o.OptType != OptTypePad1 ==> 2 <= res
