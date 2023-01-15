@@ -482,6 +482,7 @@ func decodeEndToEndExtn(data []byte, p gopacket.PacketBuilder) error {
 }
 
 // @ ensures (err != nil) == (t == HopByHopClass || t == End2EndClass)
+// @ ensures err != nil ==> err.ErrorMem()
 // @ decreases
 func checkEndToEndExtnNextHdr(t L4ProtocolType) (err error) {
 	if t == HopByHopClass {
