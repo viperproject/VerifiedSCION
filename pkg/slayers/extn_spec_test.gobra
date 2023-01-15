@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// NOTE: currently disabled, causes major slowdowns in Gobra. In the CI, the verification
+//       time goes up to 20min from aroud 2min just with this method.
+
 package slayers
 
 func testComputeLen() {

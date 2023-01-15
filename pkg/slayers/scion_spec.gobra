@@ -207,6 +207,7 @@ pred (s *SCION) ChecksumMem() {
 }
 
 pred (b *BaseLayer) Mem(ghost _ []byte) {
+	// TODO: at some point, use the ghost param in the body here
 	acc(b) &&
 	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
 	slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))

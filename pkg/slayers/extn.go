@@ -257,24 +257,41 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 	return nil
 }
 
-// @ trusted
-// @ requires false
-func decodeExtnBase(data []byte, df gopacket.DecodeFeedback) (extnBase, error) {
+// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ requires  df != nil
+// @ preserves df.Mem()
+// @ ensures   resErr != nil ==> resErr.ErrorMem()
+// @ ensures   sl.AbsSlice_Bytes(data, 0, len(data))
+// The following poscondition is more a lot more complicated than it would be if the return type
+// was *extnBase instead of extnBase
+// @ ensures   resErr == nil ==> (
+// @ 	0 <= res.ActualLen && res.ActualLen <= len(data) &&
+// @ 	res.BaseLayer.Contents === data[:res.ActualLen] &&
+// @ 	res.BaseLayer.Payload === data[res.ActualLen:])
+// @ decreases
+func decodeExtnBase(data []byte, df gopacket.DecodeFeedback) (res extnBase, resErr error) {
 	e := extnBase{}
 	if len(data) < 2 {
 		df.SetTruncated()
 		return e, serrors.New(fmt.Sprintf("invalid extension header. Length %d less than 2",
 			len(data)))
 	}
+
+	// @ unfold sl.AbsSlice_Bytes(data, 0, len(data))
 	e.NextHdr = L4ProtocolType(data[0])
 	e.ExtLen = data[1]
+	// @ fold sl.AbsSlice_Bytes(data, 0, len(data))
 	e.ActualLen = (int(e.ExtLen) + 1) * LineLen
 	if len(data) < e.ActualLen {
 		return extnBase{}, serrors.New(fmt.Sprintf("invalid extension header. "+
 			"Length %d less than specified length %d", len(data), e.ActualLen))
 	}
-	e.Contents = data[:e.ActualLen]
-	e.Payload = data[e.ActualLen:]
+	// (VerifiedSCION) assumed because of Gobra's limitations. Nonetheless, we should know from the the type
+	// of e.ExtLen that this property always holds.
+	// @ assume 0 <= e.ExtLen
+	// @ assert 0 <= e.ActualLen
+	e. /*@ BaseLayer. @*/ Contents = data[:e.ActualLen]
+	e. /*@ BaseLayer. @*/ Payload = data[e.ActualLen:]
 	return e, nil
 }
 
@@ -375,9 +392,10 @@ func decodeHopByHopExtn(data []byte, p gopacket.PacketBuilder) error {
 	return p.NextDecoder(scionNextLayerTypeAfterHBH(h.NextHdr))
 }
 
-// @ trusted
-// @ requires false
-func checkHopByHopExtnNextHdr(t L4ProtocolType) error {
+// @ ensures (t == HopByHopClass) == (err != nil)
+// @ ensures err != nil ==> err.ErrorMem()
+// @ decreases
+func checkHopByHopExtnNextHdr(t L4ProtocolType) (err error) {
 	if t == HopByHopClass {
 		return serrors.New("hbh extension must not be repeated")
 	}
@@ -463,9 +481,9 @@ func decodeEndToEndExtn(data []byte, p gopacket.PacketBuilder) error {
 	return p.NextDecoder(scionNextLayerTypeAfterE2E(e.NextHdr))
 }
 
-// @ trusted
-// @ requires false
-func checkEndToEndExtnNextHdr(t L4ProtocolType) error {
+// @ ensures (err != nil) == (t == HopByHopClass || t == End2EndClass)
+// @ decreases
+func checkEndToEndExtnNextHdr(t L4ProtocolType) (err error) {
 	if t == HopByHopClass {
 		return serrors.New("e2e extension must not come before the HBH extension")
 	} else if t == End2EndClass {
@@ -514,7 +532,6 @@ type HopByHopExtnSkipper struct {
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer
-// @ trusted
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  s.NonInitMem()
 // @ requires  df != nil
@@ -525,13 +542,26 @@ type HopByHopExtnSkipper struct {
 // @ decreases
 func (s *HopByHopExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	var err error
+	// @ unfold s.NonInitMem()
 	s.extnBase, err = decodeExtnBase(data, df)
 	if err != nil {
+		// @ fold s.NonInitMem()
 		return err
 	}
 	if err := checkHopByHopExtnNextHdr(s.NextHdr); err != nil {
+		// @ fold s.NonInitMem()
 		return err
 	}
+	// @ ghost contentsLen := s.extnBase.ActualLen
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), contentsLen, writePerm)
+	// @ sl.Reslice_Bytes(data, 0, contentsLen, writePerm)
+	// @ sl.Reslice_Bytes(data, contentsLen, len(data), writePerm)
+	// @ assert sl.AbsSlice_Bytes(s.extnBase.Contents, 0, len(s.extnBase.Contents))
+	// @ assert sl.AbsSlice_Bytes(s.extnBase.Payload, 0, len(s.extnBase.Payload))
+	// @ assert acc(&s.extnBase)
+	// @ fold s.extnBase.BaseLayer.Mem(data)
+	// @ fold s.extnBase.Mem(data)
+	// @ fold s.Mem(data)
 	return nil
 }
 
@@ -546,11 +576,10 @@ func (s *HopByHopExtnSkipper) CanDecode() gopacket.LayerClass {
 	return LayerClassHopByHopExtn
 }
 
-// @ trusted
 // @ preserves acc(h.Mem(ubuf), def.ReadL20)
 // @ decreases
 func (h *HopByHopExtnSkipper) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerTypeAfterHBH(h.NextHdr)
+	return scionNextLayerTypeAfterHBH( /*@ unfolding acc(h.Mem(ubuf), def.ReadL20) in (unfolding acc(h.extnBase.Mem(ubuf), def.ReadL20) in @*/ h.NextHdr /*@ ) @*/)
 }
 
 // EndToEndExtnSkipper is a DecodingLayer which decodes an EndToEnd extension
@@ -562,7 +591,6 @@ type EndToEndExtnSkipper struct {
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer
-// @ trusted
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  s.NonInitMem()
 // @ requires  df != nil
@@ -573,13 +601,26 @@ type EndToEndExtnSkipper struct {
 // @ decreases
 func (s *EndToEndExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	var err error
+	// @ unfold s.NonInitMem()
 	s.extnBase, err = decodeExtnBase(data, df)
 	if err != nil {
+		// @ fold s.NonInitMem()
 		return err
 	}
 	if err := checkEndToEndExtnNextHdr(s.NextHdr); err != nil {
+		// @ fold s.NonInitMem()
 		return err
 	}
+	// @ ghost contentsLen := s.extnBase.ActualLen
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), contentsLen, writePerm)
+	// @ sl.Reslice_Bytes(data, 0, contentsLen, writePerm)
+	// @ sl.Reslice_Bytes(data, contentsLen, len(data), writePerm)
+	// @ assert sl.AbsSlice_Bytes(s.extnBase.Contents, 0, len(s.extnBase.Contents))
+	// @ assert sl.AbsSlice_Bytes(s.extnBase.Payload, 0, len(s.extnBase.Payload))
+	// @ assert acc(&s.extnBase)
+	// @ fold s.extnBase.BaseLayer.Mem(data)
+	// @ fold s.extnBase.Mem(data)
+	// @ fold s.Mem(data)
 	return nil
 }
 
@@ -594,9 +635,8 @@ func (s *EndToEndExtnSkipper) CanDecode() gopacket.LayerClass {
 	return LayerClassEndToEndExtn
 }
 
-// @ trusted
 // @ preserves acc(e.Mem(ubuf), def.ReadL20)
 // @ decreases
 func (e *EndToEndExtnSkipper) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerTypeAfterE2E(e.NextHdr)
+	return scionNextLayerTypeAfterE2E( /*@ unfolding acc(e.Mem(ubuf), def.ReadL20) in (unfolding acc(e.extnBase.Mem(ubuf), def.ReadL20) in @*/ e.NextHdr /*@ ) @*/)
 }

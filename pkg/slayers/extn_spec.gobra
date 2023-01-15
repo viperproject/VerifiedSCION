@@ -23,6 +23,21 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
+/** start of extnBase **/
+
+pred (e *extnBase) NonInitMem() {
+	acc(e)
+}
+
+pred (e *extnBase) Mem(ubuf []byte) {
+	e.BaseLayer.Mem(ubuf) &&
+	acc(&e.NextHdr)   &&
+	acc(&e.ExtLen)    &&
+	acc(&e.ActualLen)
+}
+
+/** end of extnBase **/
+
 /** Currently Axiomatized - HopByHopExtn **/
 pred (h *HopByHopExtn) NonInitMem()
 
@@ -44,9 +59,13 @@ func (h *HopByHopExtn) LayerContents() (res []byte) {
 /** End of HopByHopExtn (Axiomatization) **/
 
 /** Currently Axiomatized - HopByHopExtnSkipper **/
-pred (h *HopByHopExtnSkipper) NonInitMem()
+pred (h *HopByHopExtnSkipper) NonInitMem() {
+	acc(h)
+}
 
-pred (h *HopByHopExtnSkipper) Mem(ubuf []byte)
+pred (h *HopByHopExtnSkipper) Mem(ubuf []byte) {
+	h.extnBase.Mem(ubuf)
+}
 
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
 // the implementation of LayerContents from extnBase.
@@ -59,7 +78,7 @@ func (h *HopByHopExtnSkipper) LayerContents() (res []byte) {
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
 // TODO: introduce proof obligations in the body which include unfolding Mem()
-//       and calling this.extnBase.BaseLayer.LayerPayload 
+//       and calling this.extnBase.BaseLayer.LayerPayload
 requires h.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* h.Mem(ub)
@@ -92,9 +111,13 @@ func (e *EndToEndExtn) LayerContents() (res []byte) {
 /** End of EndToEndExtn (Axiomatization) **/
 
 /** Currently Axiomatized - EndToEndExtnSkipper **/
-pred (e *EndToEndExtnSkipper) NonInitMem()
+pred (e *EndToEndExtnSkipper) NonInitMem() {
+	acc(e)
+}
 
-pred (e *EndToEndExtnSkipper) Mem(ubuf []byte)
+pred (e *EndToEndExtnSkipper) Mem(ubuf []byte)  {
+	e.extnBase.Mem(ubuf)
+}
 
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
 // the implementation of LayerContents from extnBase.
@@ -107,7 +130,7 @@ func (e *EndToEndExtnSkipper) LayerContents() (res []byte) {
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
 // TODO: introduce proof obligations in the body which include unfolding Mem()
-//       and calling this.extnBase.BaseLayer.LayerPayload 
+//       and calling this.extnBase.BaseLayer.LayerPayload
 requires e.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* e.Mem(ub)
@@ -118,12 +141,6 @@ func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte)
 (*EndToEndExtnSkipper) implements gopacket.DecodingLayer
 
 /** End of EndToEndExtnSkipper (Axiomatization) **/
-
-/** Start of extnBase **/
-pred (e *extnBase) NonInitMem() {
-	acc(e)
-}
-/** End of extnBase **/
 
 /** Definitions required for serializeTLVOptions **/
 ghost
