@@ -158,27 +158,15 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 // serializeTLVOptions serializes options to buf and returns the length of the serialized options.
 // Passing in a nil-buffer will treat the serialization as a dryrun that can be used to calculate
 // the length needed for the buffer.
-// @ trusted
-// @ requires false // WIP!!
-// @ requires  !fixLengths
-// @ preserves buf != nil ==> sl.AbsSlice_Bytes(buf, 0, len(buf))
-// @ preserves forall i int :: { &options[i] } 0 <= i && i < len(options) ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
-// @ decreases
-func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ , ghost precomputedSize int @*/) (res int) {
+// (VerifiedSCION) Serialization of extensions is never invoked in the router.
+// @ requires false
+func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool) (res int) {
 	dryrun := buf == nil
-	// @ assume dryrun
 	// length start at 2 since the padding needs to be calculated taking the first 2 bytes of the
 	// extension header (NextHdr and ExtLen fields) into account.
 	length := 2
-	// @ invariant 0 < len(options) ==> (0 <= i0 && i0 <= len(options))
-	// @ invariant forall i int :: { &options[i] } 0 <= i && i < len(options) ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
-	//  invariant 0 < len(options) ==> length == 2 + computeLen(options, 0, i0)
-	// TODO: invariant !dryrun ==> dryrunProof(options, precomputedSize, fixLengths)
-	// @ decreases len(options) - i0
 	for _, opt := range options /*@ with i0 @*/ {
-		// @ assume false
 		if fixLengths {
-			// @ def.Unreachable()
 			x := int(opt.OptAlign[0])
 			y := int(opt.OptAlign[1])
 			if x != 0 {
@@ -199,14 +187,9 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 		if !dryrun {
 			opt.serializeTo(buf[length-2:], fixLengths)
 		}
-		// (VerifiedSCION) trivial assertion which Gobra cannot check right now
-		// @ assume 0 <= opt.OptDataLen
 		length += opt.length(fixLengths)
-		// assert length == computeLen(options, 0, i0) + options[i0].lengthGhost(false)
-		//  lemmaComputeLen(options, 0, i0)
 	}
 	if fixLengths {
-		// @ def.Unreachable()
 		p := length % LineLen
 		if p != 0 {
 			pad := LineLen - p
@@ -216,7 +199,6 @@ func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool /*@ ,
 			length += pad
 		}
 	}
-	// TODO ghost if dryrun && 0 < len(options) { fold dryrunProof(options, length-2, fixLengths) }
 	return length - 2
 }
 
@@ -229,13 +211,13 @@ type extnBase struct {
 	ActualLen int
 }
 
-// @ trusted
 // @ requires false
 func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions, tlvOptions []*tlvOption) error {
 
 	l := serializeTLVOptions(nil, tlvOptions, opts.FixLengths)
-	bytes, err := b.PrependBytes(l)
+	// @ ghost var resPB1 []byte
+	bytes, err /*@ , resPB1 @*/ := b.PrependBytes(l /*@, nil @*/)
 	if err != nil {
 		return err
 	}
@@ -245,7 +227,8 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 	if length%LineLen != 0 {
 		return serrors.New("SCION extension actual length must be multiple of 4")
 	}
-	bytes, err = b.PrependBytes(2)
+	// @ ghost var resPB2 []byte
+	bytes, err /*@ , resPB2 @*/ = b.PrependBytes(2 /*@, nil @*/)
 	if err != nil {
 		return err
 	}
@@ -332,7 +315,7 @@ func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer.
-// @ trusted
+// (VerifiedSCION) Serialization of extensions is never invoked in the router.
 // @ requires false
 func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
@@ -343,7 +326,7 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 	o := make([]*tlvOption, 0, len(h.Options))
 	for _, v := range h.Options {
-		o = append(o, (*tlvOption)(v))
+		o = append( /*@ perm(0/1), @*/ o, (*tlvOption)(v))
 	}
 
 	return h.extnBase.serializeToWithTLVOptions(b, opts, o)
@@ -494,7 +477,7 @@ func checkEndToEndExtnNextHdr(t L4ProtocolType) (err error) {
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer
-// @ trusted
+// (VerifiedSCION) Serialization of extensions is never invoked in the router
 // @ requires false
 func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
@@ -505,7 +488,7 @@ func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 	o := make([]*tlvOption, 0, len(e.Options))
 	for _, v := range e.Options {
-		o = append(o, (*tlvOption)(v))
+		o = append( /*@ perm(0/1), @*/ o, (*tlvOption)(v))
 	}
 
 	return e.extnBase.serializeToWithTLVOptions(b, opts, o)
@@ -513,7 +496,7 @@ func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 // FindOption returns the first option entry of the given type if any exists,
 // or ErrOptionNotFound otherwise.
-// @ trusted
+// (VerifiedSCION) FindOption is never called in the router.
 // @ requires false
 func (e *EndToEndExtn) FindOption(typ OptionType) (*EndToEndOption, error) {
 	for _, o := range e.Options {
