@@ -160,6 +160,7 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 // Passing in a nil-buffer will treat the serialization as a dryrun that can be used to calculate
 // the length needed for the buffer.
 // @ trusted
+// @ requires false // WIP!!
 // @ requires  !fixLengths
 // @ preserves buf != nil ==> sl.AbsSlice_Bytes(buf, 0, len(buf))
 // @ preserves forall i int :: { &options[i] } 0 <= i && i < len(options) ==> (acc(&options[i], def.ReadL20) && acc(options[i], def.ReadL20))
