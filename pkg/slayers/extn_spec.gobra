@@ -38,10 +38,16 @@ pred (e *extnBase) Mem(ubuf []byte) {
 
 /** end of extnBase **/
 
-/** Currently Axiomatized - HopByHopExtn **/
-pred (h *HopByHopExtn) NonInitMem()
+/** start of HopByHopExtn **/
+pred (h *HopByHopExtn) NonInitMem() {
+	acc(h)
+}
 
-pred (h *HopByHopExtn) Mem(ubuf []byte)
+pred (h *HopByHopExtn) Mem(ubuf []byte) {
+	h.extnBase.Mem(ubuf) &&
+	forall i int :: { &h.Options[i] } 0 <= i && i < len(h.Options) ==>
+		(acc(&h.Options[i]) && h.Options[i].Mem())
+}
 
 // Gobra is not able to infer that HopByHopExtn is "inheriting"
 // the implementation of LayerContents from extnBase.
@@ -53,10 +59,8 @@ func (h *HopByHopExtn) LayerContents() (res []byte) {
 
 (*HopByHopExtn) implements gopacket.Layer
 (*HopByHopExtn) implements gopacket.DecodingLayer
-// May not be necessary, but helpful
-// (*HopByHopExtn) implements gopacket.SerializableLayer
 
-/** End of HopByHopExtn (Axiomatization) **/
+/** end of HopByHopExtn **/
 
 /** start of HopByHopExtnSkipper **/
 pred (h *HopByHopExtnSkipper) NonInitMem() {
@@ -183,3 +187,13 @@ pure func computeLen(options []*tlvOption, start, end int) (res int) {
 }
 
 /** End of definitions required for serializeTLVOptions **/
+
+/** start of options **/
+
+pred (o *HopByHopOption) Mem() {
+	// permissions to the elements of OptData will be stored
+	// together with the underlying, not in the option itself
+	acc(o) // && slices.AbsSlice_Bytes(o.OptData, 0, len(o.OptData))
+}
+
+/** end of options **/

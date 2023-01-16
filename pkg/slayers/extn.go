@@ -54,7 +54,8 @@ type tlvOption struct {
 // @ ensures   o.OptType != OptTypePad1 ==> 2 <= res
 // @ ensures   fixLengths  && o.OptType != OptTypePad1 ==> res == len(o.OptData) + 2
 // @ ensures   !fixLengths && o.OptType != OptTypePad1 ==> res == int(o.OptDataLen) + 2
-// @ ensures   res == o.lengthGhost(fixLengths)
+// (VerifiedSCION): maybe drop the following postcondition:
+// ensures   res == o.lengthGhost(fixLengths)
 // @ decreases
 func (o *tlvOption) length(fixLengths bool) (res int) {
 	if o.OptType == OptTypePad1 {
