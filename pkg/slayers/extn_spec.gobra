@@ -45,6 +45,7 @@ pred (h *HopByHopExtn) NonInitMem() {
 
 pred (h *HopByHopExtn) Mem(ubuf []byte) {
 	h.extnBase.Mem(ubuf) &&
+	acc(&h.Options) &&
 	forall i int :: { &h.Options[i] } 0 <= i && i < len(h.Options) ==>
 		(acc(&h.Options[i]) && h.Options[i].Mem())
 }
