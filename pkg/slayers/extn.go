@@ -54,8 +54,6 @@ type tlvOption struct {
 // @ ensures   o.OptType != OptTypePad1 ==> 2 <= res
 // @ ensures   fixLengths  && o.OptType != OptTypePad1 ==> res == len(o.OptData) + 2
 // @ ensures   !fixLengths && o.OptType != OptTypePad1 ==> res == int(o.OptDataLen) + 2
-// (VerifiedSCION): maybe drop the following postcondition:
-// ensures   res == o.lengthGhost(fixLengths)
 // @ decreases
 func (o *tlvOption) length(fixLengths bool) (res int) {
 	if o.OptType == OptTypePad1 {
@@ -159,8 +157,7 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 // serializeTLVOptions serializes options to buf and returns the length of the serialized options.
 // Passing in a nil-buffer will treat the serialization as a dryrun that can be used to calculate
 // the length needed for the buffer.
-// (VerifiedSCION) Serialization of extensions is never invoked in the router.
-// @ requires false
+// @ requires def.Uncallable()
 func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool) (res int) {
 	dryrun := buf == nil
 	// length start at 2 since the padding needs to be calculated taking the first 2 bytes of the
@@ -316,8 +313,7 @@ func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer.
-// (VerifiedSCION) Serialization of extensions is never invoked in the router.
-// @ requires false
+// @ requires def.Uncallable()
 func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -478,8 +474,7 @@ func checkEndToEndExtnNextHdr(t L4ProtocolType) (err error) {
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer
-// (VerifiedSCION) Serialization of extensions is never invoked in the router
-// @ requires false
+// @ requires def.Uncallable()
 func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -497,8 +492,7 @@ func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 // FindOption returns the first option entry of the given type if any exists,
 // or ErrOptionNotFound otherwise.
-// (VerifiedSCION) FindOption is never called in the router.
-// @ requires false
+// @ requires def.Uncallable()
 func (e *EndToEndExtn) FindOption(typ OptionType) (*EndToEndOption, error) {
 	for _, o := range e.Options {
 		if o.OptType == typ {
