@@ -1904,6 +1904,7 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 	// @ assert p.scionLayer.Path.Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen])
 	// @ ubufPath := ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]
 	// assert false // 2m2s
+	// @ fold p.scionLayer.Path.Mem(ubufPath)
 	pathType := p.scionLayer.Path.Type( /*@ ubufPath @*/ )
 
 	switch pathType {
@@ -1974,6 +1975,7 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 		}*/
 		//  assert false
 		// @ fold revPath.Mem(ubufPath)
+		// @ fold revPath.Base.Mem()
 		if err := revPath.IncPath( /*@ ubufPath @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
