@@ -1968,11 +1968,11 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 		// assert revPath.PathMeta.CurrINF < len(revPath.InfoFields)
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
 		// assert false // 4m39s
-		/*if infoField.ConsDir {
+		if infoField.ConsDir {
 			// @ assert false
 			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
 			infoField.UpdateSegID(hopField.Mac)
-		}*/
+		}
 		//  assert false
 		// @ fold revPath.Mem(ubufPath)
 		// @ fold revPath.Base.Mem()
