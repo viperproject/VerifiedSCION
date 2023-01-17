@@ -22,6 +22,7 @@ type IF uint16
 type MsgTerm seq[byte]
 
 // Abstract representation of an HopField
+// TODO: use ADTs
 type HF domain {
     func inIF2(h HF) option[IF]
     func egIF2(h HF) option[IF]
