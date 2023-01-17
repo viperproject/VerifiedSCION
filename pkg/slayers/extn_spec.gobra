@@ -191,6 +191,8 @@ pure func computeLen(options []*tlvOption, start, end int) (res int) {
 
 /** start of options **/
 
+// TODO: maybe add the underlying slice as a parameter to be able to
+// establish that OptData aliases with it.
 pred (o *HopByHopOption) Mem() {
 	// permissions to the elements of OptData will be stored
 	// together with the underlying, not in the option itself

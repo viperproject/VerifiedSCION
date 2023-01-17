@@ -296,20 +296,28 @@ func (h *HopByHopExtn) CanDecode() gopacket.LayerClass {
 	return LayerClassHopByHopExtn
 }
 
-// @ trusted
 // @ preserves acc(h.Mem(ubuf), def.ReadL20)
 // @ decreases
 func (h *HopByHopExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerTypeAfterHBH(h.NextHdr)
+	return scionNextLayerTypeAfterHBH( /*@ unfolding acc(h.Mem(ubuf), def.ReadL20) in (unfolding acc(h.extnBase.Mem(ubuf), def.ReadL20) in @*/ h.NextHdr /*@ ) @*/)
 }
 
-// @ trusted
 // @ requires h.Mem(ub)
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* h.Mem(ub)
 // @ decreases
 func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
-	return h.Payload
+	// @ unfold h.Mem(ub)
+	// @ unfold h.extnBase.Mem(ub)
+	// @ ghost base := &h.extnBase.BaseLayer
+	// @ unfold base.Mem(ub)
+	tmp := h.Payload
+	// @ package sl.AbsSlice_Bytes(tmp, 0, len(tmp)) --* h.Mem(ub) {
+	// @ 	fold base.Mem(ub)
+	// @ 	fold h.extnBase.Mem(ub)
+	// @	fold h.Mem(ub)
+	// @ }
+	return tmp
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer.
@@ -330,7 +338,6 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer.
-// @ trusted
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  h.NonInitMem()
 // @ requires  df != nil
@@ -341,24 +348,49 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 // @ decreases
 func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	var err error
+	// @ unfold h.NonInitMem()
 	h.extnBase, err = decodeExtnBase(data, df)
 	if err != nil {
+		// @ fold h.NonInitMem()
 		return err
 	}
 	if err := checkHopByHopExtnNextHdr(h.NextHdr); err != nil {
+		// @ fold h.NonInitMem()
 		return err
 	}
 	offset := 2
+
+	// @ invariant 2 <= offset
+	// @ invariant acc(&h.ActualLen, def.ReadL1)
+	// @ invariant 0 <= h.ActualLen && h.ActualLen <= len(data)
+	// @ invariant acc(&h.Options)
+	// @ invariant forall i int :: { &h.Options[i] } 0 <= i && i < len(h.Options) ==>
+	// @ 	(acc(&h.Options[i]) && h.Options[i].Mem())
+	// @ invariant sl.AbsSlice_Bytes(data, 0, len(data))
+	// @ decreases h.ActualLen - offset
 	for offset < h.ActualLen {
 		opt, err := decodeTLVOption(data[offset:h.ActualLen])
 		if err != nil {
 			return err
 		}
-		h.Options = append(h.Options, (*HopByHopOption)(opt))
+		h.Options = append( /*@ perm(1/1), @*/ h.Options, (*HopByHopOption)(opt))
 		offset += opt.ActualLength
 	}
+	// @ assert false
+	//  fold h.extnBase.BaseLayer.Mem(data)
+	//  fold h.extnBase.Mem(data)
+	//  fold h.Mem(data)
+	//  assert false
 	return nil
 }
+
+/* to delete
+//  ensures   sl.AbsSlice_Bytes(data, 0, len(data))
+//  ensures   resErr == nil ==> (
+//  	0 <= res.ActualLen && res.ActualLen <= len(data) &&
+//  	res.BaseLayer.Contents === data[:res.ActualLen] &&
+//  	res.BaseLayer.Payload === data[res.ActualLen:])
+*/
 
 // @ trusted
 // @ requires false
