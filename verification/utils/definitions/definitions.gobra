@@ -39,6 +39,8 @@ const (
 	ReadL20
 )
 
+// To be used as a precondition of functions and methods that can never be called
+// from the router.
 ghost
 requires false
 func Unreachable()

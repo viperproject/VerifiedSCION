@@ -265,16 +265,8 @@ func (s *SCMP) String() string {
 // This is needed for computing the checksum when serializing,
 // @ trusted
 // @ requires false
-func (s *SCMP) SetNetworkLayerForChecksum(l gopacket.NetworkLayer) (err error) {
-	if l == nil {
-		return serrors.New("cannot use nil layer type for scmp checksum network layer")
-	}
-	if l.LayerType() != LayerTypeSCION {
-		return serrors.New("cannot use layer type for scmp checksum network layer",
-			"type", l.LayerType())
-	}
-	s.scn = l.(*SCION)
-	return nil
+func (s *SCMP) SetNetworkLayerForChecksum(scn *SCION) {
+	s.scn = scn
 }
 
 // @ requires  pb != nil
