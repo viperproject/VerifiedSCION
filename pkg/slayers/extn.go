@@ -349,6 +349,7 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	var err error
 	// @ unfold h.NonInitMem()
+	h.Options = nil
 	h.extnBase, err = decodeExtnBase(data, df)
 	if err != nil {
 		// @ fold h.NonInitMem()
@@ -462,6 +463,7 @@ func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
 // @ decreases
 func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	var err error
+	e.Options = nil
 	e.extnBase, err = decodeExtnBase(data, df)
 	if err != nil {
 		return err
