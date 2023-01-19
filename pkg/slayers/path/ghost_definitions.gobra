@@ -18,22 +18,62 @@ package path
 
 // interface IDs
 type IF uint16
-// terms in the term algebra
-type MsgTerm seq[byte]
+
+// MsgTerms consist of terms from our term algebra.
+// TODO: is encoding it as a domain the best choice here?
+type MsgTerm domain{}
+
+/** Hop-Fields **/
 
 // Abstract representation of an HopField
-// TODO: use ADTs
+// We consider 0 to be the ID of the internal network in HopField.
+// We consider None to be the ID of the internal network in HF.
 type HF domain {
-    func inIF2(h HF) option[IF]
-    func egIF2(h HF) option[IF]
+    func InIF2(h HF) option[IF]
+    func EgIF2(h HF) option[IF]
     func HVF(h HF) MsgTerm
 }
 
-// we consider 0 to be the ID of the internal network in HopField
-// we consider None to be the ID of the internal network in HF
+// We ASSUME the existence of a function that computes the MsgTerm of a HopField
 ghost
-ensures h.ConsIngress == 0 ==> inIF2(res) == none[IF]
-ensures h.ConsIngress != 0 ==> inIF2(res) == some(IF(h.ConsIngress))
-ensures h.ConsEgress == 0 ==> egIF2(res) == none[IF]
-ensures h.ConsEgress != 0 ==> egIF2(res) == some(IF(h.ConsIngress))
-pure func AbstractHopField(h HopField) (res HF)
+decreases
+pure func ComputeMsgTerm(h HopField) MsgTerm
+
+ghost
+ensures h.ConsIngress == 0 ==> InIF2(res) == none[IF]
+ensures h.ConsIngress != 0 ==> InIF2(res) == some(IF(h.ConsIngress))
+ensures h.ConsEgress  == 0 ==> EgIF2(res) == none[IF]
+ensures h.ConsEgress  != 0 ==> EgIF2(res) == some(IF(h.ConsIngress))
+ensures HVF(res) == ComputeMsgTerm(h)
+decreases
+pure func ToHF(h HopField) (res HF)
+
+/** End of Hop-Fields **/
+
+/** Segments **/
+type Seg2 domain {
+    func AInfo(s Seg2) AInfoT
+    func UInfo(s Seg2) UInfoT
+    func ConsDir(s Seg2) bool
+    func Peer(s Seg2) bool
+    func Past(s Seg2) seq[HFSchemeAhiT]
+    func Future(s Seg2) seq[HFSchemeAhiT]
+    func History(s Seg2) seq[AhiSchemeAhiT]
+}
+
+// TODO: is encoding these as domains the best choice here?
+type AInfoT domain{}
+type UInfoT domain{}
+type HFSchemeAhiT domain{} // check if interpretation of this type is correct
+type AhiSchemeAhiT domain{} // check if interpretation of this type is correct
+
+/** End of Segments **/
+
+/** Packets **/
+type Pkt2 domain {
+    func CurrSeg(p Pkt2) Seg2
+    func LeftSeg(p Pkt2) option[Seg2]
+    func MidSeg(p Pkt2) option[Seg2]
+    func RightSeg(p Pkt2) option[Seg2]
+}
+/** End of Packets **/
