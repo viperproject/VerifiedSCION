@@ -47,7 +47,7 @@ pred (h *HopByHopExtn) Mem(ubuf []byte) {
 	h.extnBase.Mem(ubuf) &&
 	acc(&h.Options) &&
 	forall i int :: { &h.Options[i] } 0 <= i && i < len(h.Options) ==>
-		(acc(&h.Options[i]) && h.Options[i].Mem())
+		(acc(&h.Options[i]) && h.Options[i].Mem(i))
 }
 
 // Gobra is not able to infer that HopByHopExtn is "inheriting"
@@ -105,9 +105,16 @@ func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
 /** end of HopByHopExtnSkipper **/
 
 /** Currently Axiomatized - EndToEndExtn **/
-pred (e *EndToEndExtn) NonInitMem()
+pred (e *EndToEndExtn) NonInitMem() {
+	acc(e)
+}
 
-pred (e *EndToEndExtn) Mem(ubuf []byte)
+pred (e *EndToEndExtn) Mem(ubuf []byte) {
+	e.extnBase.Mem(ubuf) &&
+	acc(&e.Options) &&
+	forall i int :: { &e.Options[i] } 0 <= i && i < len(e.Options) ==>
+		(acc(&e.Options[i]) && e.Options[i].Mem(i))
+}
 
 // Gobra is not able to infer that EndToEndExtn is "inheriting"
 // the implementation of LayerContents from extnBase.
@@ -191,10 +198,21 @@ pure func computeLen(options []*tlvOption, start, end int) (res int) {
 
 /** start of options **/
 
-pred (o *HopByHopOption) Mem() {
+// TODO: maybe add the underlying slice as a parameter to be able to
+// establish that OptData aliases with it.
+pred (o *HopByHopOption) Mem(_ int) {
 	// permissions to the elements of OptData will be stored
 	// together with the underlying, not in the option itself
 	acc(o) // && slices.AbsSlice_Bytes(o.OptData, 0, len(o.OptData))
 }
+
+// TODO: maybe add the underlying slice as a parameter to be able to
+// establish that OptData aliases with it.
+pred (e *EndToEndOption) Mem(_ int) {
+	// permissions to the elements of OptData will be stored
+	// together with the underlying, not in the option itself
+	acc(e) // && slices.AbsSlice_Bytes(e.OptData, 0, len(e.OptData))
+}
+
 
 /** end of options **/
