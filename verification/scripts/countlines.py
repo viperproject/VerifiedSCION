@@ -1,6 +1,24 @@
+"""
+The program counts and reports lines of code and lines of annotation for VerifiedScion.
+Currently a line is considered to be a line of code if all of these hold:
+- It is inside a '.go' file with the header // +gobra
+- It is not just whitespace
+- It is not a single line comment
+A line of annotation is a line for which either holds:
+- It is inside a '.gobra' file with the header // +gobra and is not a single line comment or blank
+- It is inside a '.go' file with the header // +gobra and starts with (possibly whitespace) and
+  '// @' or '//@'
+
+Current limitations:
+- The program does not count inlining of ghost code in lines
+- Multi line comments might increase the lines of code in .go files and lines of annotation in
+  .gobra files
+"""
+
 import os
 from os import path
 import re
+
 
 def has_header(fname):
     with open(fname, 'r') as fhandle:
