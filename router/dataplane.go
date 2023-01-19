@@ -1906,7 +1906,9 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 	// @ assert p.scionLayer.Path.Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen])
 	// @ ubufPath := ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]
 	// assert false // 2m2s
+	// @ fold slices.AbsSlice_Bytes(ubufPath, 0, len(ubufPath))
 	// @ fold p.scionLayer.Path.Mem(ubufPath)
+	// @ assert false
 	pathType := p.scionLayer.Path.Type( /*@ ubufPath @*/ )
 
 	switch pathType {
@@ -1967,7 +1969,7 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 		// assert false // 4m27s
 		// @ unfold revPath.Base.Mem()
 		// assert false 4m22s
-		// assert revPath.PathMeta.CurrINF < len(revPath.InfoFields)
+		// @ assert revPath.PathMeta.CurrINF < len(revPath.InfoFields)
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
 		// assert false // 4m39s
 		if infoField.ConsDir {
