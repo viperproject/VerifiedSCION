@@ -14,7 +14,9 @@
 
 // +gobra
 
-package path
+package io
+
+import "github.com/scionproto/scion/pkg/slayers/path"
 
 // interface IDs
 type IF uint16
@@ -29,15 +31,15 @@ type MsgTerm domain{}
 // We consider 0 to be the ID of the internal network in HopField.
 // We consider None to be the ID of the internal network in HF.
 type HF domain {
-    func InIF2(h HF) option[IF]
-    func EgIF2(h HF) option[IF]
-    func HVF(h HF) MsgTerm
+	func InIF2(h HF) option[IF]
+	func EgIF2(h HF) option[IF]
+	func HVF(h HF) MsgTerm
 }
 
 // We ASSUME the existence of a function that computes the MsgTerm of a HopField
 ghost
 decreases
-pure func ComputeMsgTerm(h HopField) MsgTerm
+pure func ComputeMsgTerm(h path.HopField) MsgTerm
 
 ghost
 ensures h.ConsIngress == 0 ==> InIF2(res) == none[IF]
@@ -46,19 +48,19 @@ ensures h.ConsEgress  == 0 ==> EgIF2(res) == none[IF]
 ensures h.ConsEgress  != 0 ==> EgIF2(res) == some(IF(h.ConsIngress))
 ensures HVF(res) == ComputeMsgTerm(h)
 decreases
-pure func ToHF(h HopField) (res HF)
+pure func ToHF(h path.HopField) (res HF)
 
 /** End of Hop-Fields **/
 
 /** Segments **/
 type Seg2 domain {
-    func AInfo(s Seg2) AInfoT
-    func UInfo(s Seg2) UInfoT
-    func ConsDir(s Seg2) bool
-    func Peer(s Seg2) bool
-    func Past(s Seg2) seq[HFSchemeAhiT]
-    func Future(s Seg2) seq[HFSchemeAhiT]
-    func History(s Seg2) seq[AhiSchemeAhiT]
+	func AInfo(s Seg2) AInfoT
+	func UInfo(s Seg2) UInfoT
+	func ConsDir(s Seg2) bool
+	func Peer(s Seg2) bool
+	func Past(s Seg2) seq[HFSchemeAhiT]
+	func Future(s Seg2) seq[HFSchemeAhiT]
+	func History(s Seg2) seq[AhiSchemeAhiT]
 }
 
 // TODO: is encoding these as domains the best choice here?
@@ -70,10 +72,74 @@ type AhiSchemeAhiT domain{} // check if interpretation of this type is correct
 /** End of Segments **/
 
 /** Packets **/
-type Pkt2 domain {
-    func CurrSeg(p Pkt2) Seg2
-    func LeftSeg(p Pkt2) option[Seg2]
-    func MidSeg(p Pkt2) option[Seg2]
-    func RightSeg(p Pkt2) option[Seg2]
+type Pkt2 adt {
+	Packet2 {
+		CurrSeg  Seg2
+		LeftSeg  option[Seg2]
+		MidSeg   option[Seg2]
+		RightSeg option[Seg2]
+	}
 }
+
+// TODO: where is this defined?
+type Pkt3 domain{
+
+}
+
 /** End of Packets **/
+
+/** Router State **/
+
+type DP3sStateLocal domain {
+	func IBuf(s DP3sStateLocal, ifc option[IF]) set[Pkt3]
+	func OBuf(s DP3sStateLocal, ifc option[IF]) set[Pkt3]
+}
+
+/** End of Router State **/
+
+/** Values **/
+
+// TODO: is the encoding correct?
+type Val adt {
+	Unit{}
+
+	// Pkt2 in the doc
+	P2{
+		ifcOpt option[IF]
+		pkt Pkt3
+	}
+
+	Unsupported {
+		ifcOpt option[IF]
+		uns o // type parameter o'
+	}
+
+	InternalVal1 {
+		p1 Pkt3
+		ifc1 IF
+		p2 Pkt3
+		ifc2 option[IF]
+	}
+
+	InternalVal2 {
+		p1 Pkt3
+		p2 Pkt3
+		ifc IF
+	}
+}
+
+type o domain{} // type parameter used in the variant Unsupported
+
+type Bio3sIn adt {
+	Bio3s_enter{}
+	Bio3s_xover_up2down{}
+	Bio3s_xover_core{}
+	Bio3s_exit{}
+}
+
+type Bio3sIO adt {
+	Bio3s_send{}
+	Bio3s_recv{}
+}
+
+/** End of Values **/
