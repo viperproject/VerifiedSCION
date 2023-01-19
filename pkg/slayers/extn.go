@@ -98,11 +98,12 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 	}
 }
 
-// @ requires  2 <= len(data)
+// @ requires  1 <= len(data)
 // @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL20)
 // @ ensures   err == nil ==> acc(res)
 // @ ensures   (err == nil && res.OptType != OptTypePad1) ==> (
 // @ 	2 <= res.ActualLength && res.ActualLength <= len(data) && res.OptData === data[2:res.ActualLength])
+// @ ensures   err == nil ==> 0 < res.ActualLength
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeTLVOption(data []byte) (res *tlvOption, err error) {
@@ -246,6 +247,7 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 // The following poscondition is more a lot more complicated than it would be if the return type
 // was *extnBase instead of extnBase
 // @ ensures   resErr == nil ==> (
+// @ 	2 <= len(data) &&
 // @ 	0 <= res.ActualLen && res.ActualLen <= len(data) &&
 // @ 	res.BaseLayer.Contents === data[:res.ActualLen] &&
 // @ 	res.BaseLayer.Payload === data[res.ActualLen:])
@@ -361,21 +363,36 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	}
 	offset := 2
 
+	// @ ghost lenOptions := 0
+
 	// @ invariant 2 <= offset
-	// @ invariant acc(&h.ActualLen, def.ReadL1)
+	// @ invariant acc(h)
+	//  invariant acc(&h.ActualLen, def.ReadL1)
+	//  invariant acc(&h.Options)
 	// @ invariant 0 <= h.ActualLen && h.ActualLen <= len(data)
-	// @ invariant acc(&h.Options)
-	// @ invariant forall i int :: { &h.Options[i] } 0 <= i && i < len(h.Options) ==>
-	// @ 	(acc(&h.Options[i]) && h.Options[i].Mem())
+	// @ invariant len(h.Options) == lenOptions
+	// @ invariant forall i int :: { &h.Options[i] } 0 <= i && i < lenOptions ==>
+	// @ 	(acc(&h.Options[i]) && h.Options[i].Mem(i))
 	// @ invariant sl.AbsSlice_Bytes(data, 0, len(data))
 	// @ decreases h.ActualLen - offset
 	for offset < h.ActualLen {
+		// @ sl.SplitRange_Bytes(data, offset, h.ActualLen, def.ReadL20)
 		opt, err := decodeTLVOption(data[offset:h.ActualLen])
+		// @ sl.CombineRange_Bytes(data, offset, h.ActualLen, def.ReadL20)
 		if err != nil {
+			// @ fold h.NonInitMem()
 			return err
 		}
-		h.Options = append( /*@ perm(1/1), @*/ h.Options, (*HopByHopOption)(opt))
+		tmp := (*HopByHopOption)(opt)
+		h.Options = append( /*@ writePerm, @*/ h.Options, tmp)
 		offset += opt.ActualLength
+		// TODO: exhale property for opt, inhale for (*HopByHopOption)(opt)
+		// @ fold tmp.Mem(lenOptions)
+		// @ assert tmp.Mem(lenOptions)
+		//  assert h.Options[lenOptions] === tmp
+		// @ assert forall i int :: { &h.Options[i] } 0 <= i && i < lenOptions ==>
+		// @ 	(acc(&h.Options[i]) && h.Options[i].Mem(i))
+		// @ lenOptions += 1
 	}
 	// @ assert false
 	//  fold h.extnBase.BaseLayer.Mem(data)
