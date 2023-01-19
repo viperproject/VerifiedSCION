@@ -1905,12 +1905,25 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 	// @ unfold p.scionLayer.Mem(ubufS)
 	// @ assert p.scionLayer.Path.Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen])
 	// @ ubufPath := ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]
-	// assert false // 2m2s
-	// @ fold slices.AbsSlice_Bytes(ubufPath, 0, len(ubufPath))
-	// @ fold p.scionLayer.Path.Mem(ubufPath)
-	// @ assert false
+	// @ assert p.scionLayer.Path.Mem(ubufPath)
+	// @ assert acc(p.scionLayer.Path.Mem(ubufPath), _)
 	pathType := p.scionLayer.Path.Type( /*@ ubufPath @*/ )
+	// @ assert false
+}
 
+func (p *scionPacketProcessor) prdepareSCMP(typ slayers.SCMPType, code slayers.SCMPCode, scmpP gopacket.SerializableLayer, cause error /*@, ghost ubufP []byte, ghost ubufS []byte, ghost ubufB []byte @*/) ([]byte, error) {
+		// *copy* and reverse path -- the original path should not be modified as this writes directly
+	// back to rawPkt (quote).
+	var path *scion.Raw
+	// assert false // 2m21s
+	// @ unfold p.scionLayer.Mem(ubufS)
+	// @ assert p.scionLayer.Path.Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen])
+	// @ ubufPath := ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]
+	// @ assert p.scionLayer.Path.Mem(ubufPath)
+	// @ assert acc(p.scionLayer.Path.Mem(ubufPath), _)
+	pathType := p.scionLayer.Path.Type( /*@ ubufPath @*/ )
+	// @ assert false
+	
 	switch pathType {
 	case scion.PathType:
 		var ok bool
@@ -1939,45 +1952,34 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	revPath := revPathTmp.(*scion.Decoded)
-	// assert false // 2m45s
+	// assert false // 5m13s
 	// @ p.d.accToExternalAndBatchConn()
-	// assert false // 3m41s ??? first run didn't terminate, second did
 	// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
-	// assert false // 3m38s
 	// Revert potential path segment switches that were done during processing.
 	// @ haveToFold := true
 	if revPath.IsXover() {
-		// assert false // 4m1s
 		// @ haveToFold = false
 		// @ fold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
 		if err := revPath.IncPath( /*@ unfolding path.NonInitMem() in path.Raw @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
-	// assert false // 4m5s
+	// assert false // 6m58s
 	// @ ghost if haveToFold { fold revPath.Mem(unfolding path.NonInitMem() in path.Raw) }
-	// assert false // 4m9s
 	// If the packet is sent to an external+ router, we need to increment the
 	// path to prepare it for the next hop.
 	// @ unfold acc(AccBatchConn(p.d.external), _)
-	// assert false // 4m12s
 	_, external := p.d.external[p.ingressID]
-	// assert false // 4m6s
 	if external {
-		// assert false // 4m30s third run
 		// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
-		// assert false // 4m27s
 		// @ unfold revPath.Base.Mem()
-		// assert false 4m22s
-		// @ assert revPath.PathMeta.CurrINF < len(revPath.InfoFields)
+		// @ assert revPath.PathMeta.CurrINF < len(revPath.InfoFields) // 8m1s
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
-		// assert false // 4m39s
+		// @ assert false
 		if infoField.ConsDir {
-			// @ assert false
 			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
 			infoField.UpdateSegID(hopField.Mac)
 		}
-		//  assert false
 		// @ fold revPath.Mem(ubufPath)
 		// @ fold revPath.Base.Mem()
 		if err := revPath.IncPath( /*@ ubufPath @*/ ); err != nil {

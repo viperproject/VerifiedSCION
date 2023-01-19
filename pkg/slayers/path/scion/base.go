@@ -121,6 +121,7 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 // @ ensures  e == nil ==> s.Mem()
 // @ ensures  e == nil ==> s.Len() == old(s.Len())
 // @ ensures  e == nil ==> s.getNumINF() == old(s.getNumINF())
+// @ ensures  e == nil ==> unfolding s.Mem() in 0 <= s.PathMeta.CurrINF && s.PathMeta.CurrINF < 3
 // @ ensures  e != nil ==> s.NonInitMem()
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ decreases
@@ -167,7 +168,7 @@ func (s *Base) IsFirstHopAfterXover() bool {
 // @ ensures   (0 <= r && r < 3)
 // @ decreases
 func (s *Base) infIndexForHF(hf uint8) (r uint8) {
-	// (VerifiedSCION) Gobra cannot prove the following propertie, even though it
+	// (VerifiedSCION) Gobra cannot prove the following property, even though it
 	// is ensured by the type system.
 	// @ assume 0 <= hf
 	switch {
