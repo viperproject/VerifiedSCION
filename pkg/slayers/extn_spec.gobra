@@ -23,57 +23,106 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-/** Currently Axiomatized - HopByHopExtn **/
-pred (h *HopByHopExtn) NonInitMem()
+/** start of extnBase **/
 
-pred (h *HopByHopExtn) Mem(ubuf []byte)
+pred (e *extnBase) NonInitMem() {
+	acc(e)
+}
+
+pred (e *extnBase) Mem(ubuf []byte) {
+	e.BaseLayer.Mem(ubuf) &&
+	acc(&e.NextHdr)   &&
+	acc(&e.ExtLen)    &&
+	acc(&e.ActualLen)
+}
+
+/** end of extnBase **/
+
+/** start of HopByHopExtn **/
+pred (h *HopByHopExtn) NonInitMem() {
+	acc(h)
+}
+
+pred (h *HopByHopExtn) Mem(ubuf []byte) {
+	h.extnBase.Mem(ubuf) &&
+	acc(&h.Options) &&
+	forall i int :: { &h.Options[i] } 0 <= i && i < len(h.Options) ==>
+		(acc(&h.Options[i]) && h.Options[i].Mem(i))
+}
 
 // Gobra is not able to infer that HopByHopExtn is "inheriting"
 // the implementation of LayerContents from extnBase.
 requires def.Uncallable()
-func (h *HopByHopExtn) LayerContents() (res []byte)
+func (h *HopByHopExtn) LayerContents() (res []byte) {
+	res = h.BaseLayer.LayerContents()
+	return res
+}
 
 (*HopByHopExtn) implements gopacket.Layer
 (*HopByHopExtn) implements gopacket.DecodingLayer
-// May not be necessary, but helpful
-// (*HopByHopExtn) implements gopacket.SerializableLayer
 
-/** End of HopByHopExtn (Axiomatization) **/
+/** end of HopByHopExtn **/
 
-/** Currently Axiomatized - HopByHopExtnSkipper **/
-pred (h *HopByHopExtnSkipper) NonInitMem()
+/** start of HopByHopExtnSkipper **/
+pred (h *HopByHopExtnSkipper) NonInitMem() {
+	acc(h)
+}
 
-pred (h *HopByHopExtnSkipper) Mem(ubuf []byte)
+pred (h *HopByHopExtnSkipper) Mem(ubuf []byte) {
+	h.extnBase.Mem(ubuf)
+}
 
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
 // the implementation of LayerContents from extnBase.
 requires def.Uncallable()
-func (h *HopByHopExtnSkipper) LayerContents() (res []byte)
+func (h *HopByHopExtnSkipper) LayerContents() (res []byte) {
+	res = h.BaseLayer.LayerContents()
+	return res
+}
 
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
-// TODO: introduce proof obligations in the body which include unfolding Mem()
-//       and calling this.extnBase.BaseLayer.LayerPayload 
 requires h.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* h.Mem(ub)
 decreases
-func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte)
+func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
+	unfold h.Mem(ub)
+	unfold h.extnBase.Mem(ub)
+	ghost base := &h.extnBase.BaseLayer
+	r := base.LayerPayload(ub)
+	package slices.AbsSlice_Bytes(r, 0, len(r)) --* h.Mem(ub) {
+		apply slices.AbsSlice_Bytes(r, 0, len(r)) --* base.Mem(ub)
+		fold h.extnBase.Mem(ub)
+		fold h.Mem(ub)
+	}
+	return r
+}
 
 (*HopByHopExtnSkipper) implements gopacket.Layer
 (*HopByHopExtnSkipper) implements gopacket.DecodingLayer
 
-/** End of HopByHopExtnSkipper (Axiomatization) **/
+/** end of HopByHopExtnSkipper **/
 
 /** Currently Axiomatized - EndToEndExtn **/
-pred (e *EndToEndExtn) NonInitMem()
+pred (e *EndToEndExtn) NonInitMem() {
+	acc(e)
+}
 
-pred (e *EndToEndExtn) Mem(ubuf []byte)
+pred (e *EndToEndExtn) Mem(ubuf []byte) {
+	e.extnBase.Mem(ubuf) &&
+	acc(&e.Options) &&
+	forall i int :: { &e.Options[i] } 0 <= i && i < len(e.Options) ==>
+		(acc(&e.Options[i]) && e.Options[i].Mem(i))
+}
 
 // Gobra is not able to infer that EndToEndExtn is "inheriting"
 // the implementation of LayerContents from extnBase.
 requires def.Uncallable()
-func (e *EndToEndExtn) LayerContents() (res []byte)
+func (e *EndToEndExtn) LayerContents() (res []byte) {
+	res = e.BaseLayer.LayerContents()
+	return res
+}
 
 (*EndToEndExtn) implements gopacket.Layer
 (*EndToEndExtn) implements gopacket.DecodingLayer
@@ -82,27 +131,88 @@ func (e *EndToEndExtn) LayerContents() (res []byte)
 
 /** End of EndToEndExtn (Axiomatization) **/
 
-/** Currently Axiomatized - EndToEndExtnSkipper **/
-pred (e *EndToEndExtnSkipper) NonInitMem()
+/** start of EndToEndExtnSkipper **/
+pred (e *EndToEndExtnSkipper) NonInitMem() {
+	acc(e)
+}
 
-pred (e *EndToEndExtnSkipper) Mem(ubuf []byte)
+pred (e *EndToEndExtnSkipper) Mem(ubuf []byte)  {
+	e.extnBase.Mem(ubuf)
+}
 
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
 // the implementation of LayerContents from extnBase.
 requires def.Uncallable()
-func (e *EndToEndExtnSkipper) LayerContents() (res []byte)
+func (e *EndToEndExtnSkipper) LayerContents() (res []byte) {
+	res = e.BaseLayer.LayerContents()
+	return res
+}
 
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
-// TODO: introduce proof obligations in the body which include unfolding Mem()
-//       and calling this.extnBase.BaseLayer.LayerPayload 
 requires e.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* e.Mem(ub)
 decreases
-func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte)
+func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
+	unfold e.Mem(ub)
+	unfold e.extnBase.Mem(ub)
+	ghost base := &e.extnBase.BaseLayer
+	r := base.LayerPayload(ub)
+	package slices.AbsSlice_Bytes(r, 0, len(r)) --* e.Mem(ub) {
+		apply slices.AbsSlice_Bytes(r, 0, len(r)) --* base.Mem(ub)
+		fold e.extnBase.Mem(ub)
+		fold e.Mem(ub)
+	}
+	return r
+}
 
 (*EndToEndExtnSkipper) implements gopacket.Layer
 (*EndToEndExtnSkipper) implements gopacket.DecodingLayer
 
-/** End of EndToEndExtnSkipper (Axiomatization) **/
+/** end of EndToEndExtnSkipper **/
+
+/** Definitions required for serializeTLVOptions **/
+ghost
+requires  acc(&o.OptType, _) && acc(&o.OptData, _) && acc(&o.OptDataLen, _)
+// may need: ensures 0 <= res
+decreases
+pure func (o *tlvOption) lengthGhost(fixLengths bool) (res int) {
+	return o.OptType == OptTypePad1? 1 : (fixLengths? len(o.OptData) + 2 : int(o.OptDataLen) + 2)
+}
+
+// The following computes the sum of elements from right to left, makes it trivial to prove
+// computeLen(options, start, end-1) + options[end].lengthGhost(false) == computeLen(options, start, end)
+// when start, end, and end-1 are valid indexes in options.
+ghost
+requires 0 <= start && start <= end && end < len(options)
+requires forall i int :: { &options[i] } start <= i && i <= end ==> acc(&options[i], _)
+requires forall i int :: { &options[i] } start <= i && i <= end ==>
+	(acc(&options[i].OptType, _) && acc(&options[i].OptData, _) && acc(&options[i].OptDataLen, _))
+// decreases end
+pure func computeLen(options []*tlvOption, start, end int) (res int) {
+	return start < end? options[end].lengthGhost(false) + computeLen(options, start, end-1) : /* start==end */ options[start].lengthGhost(false)
+}
+
+/** End of definitions required for serializeTLVOptions **/
+
+/** start of options **/
+
+// TODO: maybe add the underlying slice as a parameter to be able to
+// establish that OptData aliases with it.
+pred (o *HopByHopOption) Mem(_ int) {
+	// permissions to the elements of OptData will be stored
+	// together with the underlying, not in the option itself
+	acc(o) // && slices.AbsSlice_Bytes(o.OptData, 0, len(o.OptData))
+}
+
+// TODO: maybe add the underlying slice as a parameter to be able to
+// establish that OptData aliases with it.
+pred (e *EndToEndOption) Mem(_ int) {
+	// permissions to the elements of OptData will be stored
+	// together with the underlying, not in the option itself
+	acc(e) // && slices.AbsSlice_Bytes(e.OptData, 0, len(e.OptData))
+}
+
+
+/** end of options **/
