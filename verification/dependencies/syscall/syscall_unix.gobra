@@ -27,7 +27,7 @@ type Errno uintptr
 
 pred (e Errno) ErrorMem() { e != 0 }
 
-preserves e.ErrorMem()
+requires acc(e.ErrorMem(), _)
 decreases
 func (e Errno) Error() string
 
