@@ -33,6 +33,9 @@ pred (d *DataPlane) MacFactoryOperational() {
 	d.macFactory implements MacFactorySpec{d.key}
 }
 
+// TODO: split these permissions between two predicates: MutexInvariant
+// (should have access to 2/3 perm of all elems) and DataPlane.Mem(isRunning, key)
+// (should have the remaining access). Would allow simplifying the specs
 // TODO: maybe change interpretation of Mutex depending on whether the
 // dataplane is running or not. This is because, when Run is called and
 // d.running is set to true, the permissions to some of these fields is transferred
