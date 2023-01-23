@@ -14,18 +14,17 @@
 
 // +gobra
 
-// Currently disabled. Proving that this holds after initialization causes a big slowdown.
-// initEnsures nonNilErr(&alreadySet)
-// initEnsures nonNilErr(&cannotRoute)
-// initEnsures nonNilErr(&emptyValue)
-// initEnsures nonNilErr(&malformedPath)
-// initEnsures nonNilErr(&modifyExisting)
-// initEnsures nonNilErr(&noSVCBackend)
-// initEnsures nonNilErr(&unsupportedPathType)
-// initEnsures nonNilErr(&unsupportedPathTypeNextHeader)
-// initEnsures nonNilErr(&noBFDSessionFound)
-// initEnsures nonNilErr(&noBFDSessionConfigured)
-// initEnsures nonNilErr(&errBFDDisabled)
+// @ initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
+// @ initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
+// @ initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
+// @ initEnsures malformedPath                 != nil && malformedPath.ErrorMem()
+// @ initEnsures modifyExisting                != nil && modifyExisting.ErrorMem()
+// @ initEnsures noSVCBackend                  != nil && noSVCBackend.ErrorMem()
+// @ initEnsures unsupportedPathType           != nil && unsupportedPathType.ErrorMem()
+// @ initEnsures unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
+// @ initEnsures noBFDSessionFound             != nil && noBFDSessionFound.ErrorMem()
+// @ initEnsures noBFDSessionConfigured        != nil && noBFDSessionConfigured.ErrorMem()
+// @ initEnsures errBFDDisabled                != nil && errBFDDisabled.ErrorMem()
 package router
 
 import (
