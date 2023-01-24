@@ -49,13 +49,13 @@ pred (e errOrMsg) ErrorMem() {
 	e.err != nil ==> e.err.ErrorMem()
 }
 
-preserves m.ErrorMem()
+requires acc(m.ErrorMem(), _)
 decreases _ // Gobra cannot prove termination of this function yet
 func (m errOrMsg) Error() string {
 	if m.err != nil {
-		unfold m.ErrorMem()
+		unfold acc(m.ErrorMem(), _)
 		res := m.err.Error()
-		fold   m.ErrorMem()
+		fold   acc(m.ErrorMem(), _)
 		return res
 	}
 	return m.str
@@ -78,7 +78,7 @@ pred (e basicError) ErrorMem() {
 }
 
 trusted
-preserves e.ErrorMem()
+requires acc(e.ErrorMem(), _)
 decreases _
 func (e basicError) Error() string {
 	var buf bytes.Buffer
@@ -270,7 +270,7 @@ pred (l List) ErrorMem() {
 
 // Error implements the error interface.
 trusted
-preserves e.ErrorMem()
+requires acc(e.ErrorMem(), _)
 decreases
 func (e List) Error() string {
 	s := make([]string, 0, len(e))
