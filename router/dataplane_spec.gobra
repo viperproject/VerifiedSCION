@@ -159,7 +159,32 @@ pred hideLocalIA(p *addr.IA) {
 }
 
 pred (err scmpError) ErrorMem() {
-	err.Cause.ErrorMem()
+	err.Cause != nil ==> err.Cause.ErrorMem()
+}
+
+// Currently assumed, as Gobra cannot currently prove termination
+// of the code below
+ghost
+trusted
+pure
+decreases
+func (err scmpError) IsDuplicableMem() bool {
+	return err != nil? err.cause.IsDuplicableMem() : true
+}
+
+// Currently assumed, as Gobra cannot currently prove termination
+// of the code below
+ghost
+trusted
+preserves err.ErrorMem()
+ensures   err.IsDuplicableMem() ==> err.ErrorMem()
+decreases
+func (err scmpError) Duplicate() {
+	if err.IsDuplicableMem() {
+		unfold err.ErrorMem()
+		err.cause.Duplicate()
+		fold err.ErrorMem()
+	}
 }
 
 scmpError implements error
