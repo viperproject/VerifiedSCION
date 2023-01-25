@@ -19,8 +19,11 @@
 
 package scrypto
 
-import "hash"
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"hash"
+	"github.com/scionproto/scion/verification/utils/slices"
+	def "github.com/scionproto/scion/verification/utils/definitions"
+)
 
 // The error returned by initMac is produced deterministically depending on the key.
 // If an initial call to initmac succeeds with a key, then any subsequent

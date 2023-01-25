@@ -226,8 +226,6 @@ func (d *DataPlane) SetIA(ia addr.IA /*@ , ghost key *[]byte @*/) (e error) {
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   res == nil ==> d.Mem(false, keyAddr, ia)
-//
-//	ensures   res == nil ==> d.MacFactoryOperational(keyAddr)
 func (d *DataPlane) SetKey(key []byte /*@ , ghost ia addr.IA @*/) (res error /*@ , ghost keyAddr *[]byte @*/) {
 	// @ share key
 	d.mtx.Lock()
@@ -252,7 +250,6 @@ func (d *DataPlane) SetKey(key []byte /*@ , ghost ia addr.IA @*/) (res error /*@
 	verScionTemp :=
 		// @ requires acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ requires scrypto.ValidKeyForHash(key)
-		//  ensures  acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ ensures  h.Mem()
 		// @ decreases
 		func /*@ f @*/ () (h hash.Hash) {
@@ -265,31 +262,25 @@ func (d *DataPlane) SetKey(key []byte /*@ , ghost ia addr.IA @*/) (res error /*@
 	// @ }
 	// @ unfold MutexInvariant!<d!>()
 	d.macFactory = verScionTemp
-	// @ fold d.Mem(false, keyAddr, ia)
-	//  fold d.MacFactoryOperational(&key) // drop this
 	// @ fold MutexInvariant!<d!>()
+	// @ fold d.Mem(false, keyAddr, ia)
 	return nil /*@ , &key @*/
-} // 2min24s
+}
 
 // AddInternalInterface sets the interface the data-plane will use to
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
 // dataplane.
-// @ requires  acc(&d.running,    1/2) && !d.running
-// @ requires  acc(&d.internal,   1/2) && d.internal == nil
-// @ requires  acc(&d.internalIP, 1/2)
 // @ requires  conn != nil && conn.Mem()
 // @ requires  ip.Mem()
+// @ preserves d.Mem(false, key, ia)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.internal,   1/2)
-// @ ensures   acc(&d.internalIP, 1/2)
-func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
+func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP /*@ , ghost key *[]byte, ghost ia addr.IA @*/) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
-	// @ defer fold MutexInvariant!<d!>()
+	// @ unfold d.Mem(false, key, ia)
+	// @ defer fold d.Mem(false, key, ia)
 	if d.running {
 		return modifyExisting
 	}
@@ -299,8 +290,10 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	if d.internal != nil {
 		return alreadySet
 	}
+	// @ unfold MutexInvariant!<d!>()
 	d.internal = conn
 	d.internalIP = ip
+	// @ fold MutexInvariant!<d!>()
 	return nil
 }
 

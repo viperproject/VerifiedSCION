@@ -86,7 +86,7 @@ pred (d *DataPlane) Mem(running bool, key *[]byte, ia addr.IA) {
 	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
 	// the following overlaps with MacFactoryOperational
 	(d.macFactory != nil        ==> (acc(key)                                     &&
-	                                sl.AbsSlice_Bytes(*key, 0, len(*key))         &&
+	                                acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _) &&
 	                                scrypto.ValidKeyForHash(*key)                 &&
 	                                d.macFactory implements MacFactorySpec{key})) &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
