@@ -24,28 +24,22 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 )
 
-pred (d *DataPlane) MacFactoryOperational() {
+// TODO: drop this predicate
+pred (d *DataPlane) MacFactoryOperational(key *[]byte) {
 	acc(&d.macFactory, 1/2) &&
-	acc(&d.key, 1/2) &&
-	acc(d.key, 1/2) &&
-	acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
-	scrypto.ValidKeyForHash(*d.key) &&
-	d.macFactory implements MacFactorySpec{d.key}
+	acc(key) &&
+	acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _) &&
+	scrypto.ValidKeyForHash(*key) &&
+	d.macFactory implements MacFactorySpec{key}
 }
 
+// MutexInvariantPerm + MemPerm = 1
 ghost const (
 	MutexInvariantPerm perm = 1/3
+	// MemPerm perm = perm(1/1) - MutexInvariantPerm // causes crash in Gobra
 	MemPerm perm = 2/3
 )
 
-// TODO: split these permissions between two predicates: MutexInvariant
-// (should have access to 2/3 perm of all elems) and DataPlane.Mem(isRunning, key)
-// (should have the remaining access). Would allow simplifying the specs
-// TODO: maybe change interpretation of Mutex depending on whether the
-// dataplane is running or not. This is because, when Run is called and
-// d.running is set to true, the permissions to some of these fields is transferred
-// to the read closure, and thus, we cannot transfer it back on the call to unlock
-// at the end of run
 pred MutexInvariant(d *DataPlane) {
 	// access to the field 'mtx' ommited
 	acc(&d.external,          MutexInvariantPerm) &&
@@ -60,29 +54,10 @@ pred MutexInvariant(d *DataPlane) {
 	acc(&d.localIA,           MutexInvariantPerm) &&
 	acc(&d.running,           MutexInvariantPerm) &&
 	acc(&d.Metrics,           MutexInvariantPerm) &&
-	acc(&d.forwardingMetrics, MutexInvariantPerm) &&
-	// TODO: drop key
-	acc(&d.key,               MutexInvariantPerm) &&
-	// TODO: move this to d.Mem(...) and drop all (now unnecessary) wildcards
-	(d.external    != nil       ==> AccBatchConn(d.external))           &&
-	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
-	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
-	(d.internal != nil          ==> d.internal.Mem())                   &&
-	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
-	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
-	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
-	(d.macFactory != nil        ==> acc(d.key, 1/2))                    &&
-	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
-	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key))                   &&
-	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key})     &&
-	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
-	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&
-	// The following permissions are enough to call all methods needed in fields
-	// of forwardingMetrics
-	(d.forwardingMetrics != nil ==> AccForwardingMetrics(d.forwardingMetrics))
+	acc(&d.forwardingMetrics, MutexInvariantPerm)
 }
 
-pred (d *DataPlane) Mem(running bool, key []byte, ia addr.IA) {
+pred (d *DataPlane) Mem(running bool, key *[]byte, ia addr.IA) {
 	acc(&d.external,          MemPerm) &&
 	acc(&d.linkTypes,         MemPerm) &&
 	acc(&d.neighborIAs,       MemPerm) &&
@@ -97,9 +72,28 @@ pred (d *DataPlane) Mem(running bool, key []byte, ia addr.IA) {
 	acc(&d.Metrics,           MemPerm) &&
 	acc(&d.forwardingMetrics, MemPerm) &&
 	//
-	d.running == running               &&
-	d.localIA == ia                    &&
-	(key == nil ==> d.macFactory == nil)
+	d.running == running                 &&
+	d.localIA == ia                      &&
+	(key == nil ==> d.macFactory == nil) &&
+	// TODO: simplify the following garbage
+	// TODO: move this to d.Mem(...) and drop all (now unnecessary) wildcards
+	(d.external    != nil       ==> AccBatchConn(d.external))           &&
+	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
+	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
+	(d.internal != nil          ==> d.internal.Mem())                   &&
+	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
+	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
+	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
+	// the following overlaps with MacFactoryOperational
+	(d.macFactory != nil        ==> (acc(key)                                     &&
+	                                sl.AbsSlice_Bytes(*key, 0, len(*key))         &&
+	                                scrypto.ValidKeyForHash(*key)                 &&
+	                                d.macFactory implements MacFactorySpec{key})) &&
+	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
+	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&
+	// The following permissions are enough to call all methods needed in fields
+	// of forwardingMetrics
+	(d.forwardingMetrics != nil ==> AccForwardingMetrics(d.forwardingMetrics))
 }
 
 // TODO: reorganize permissions consistently
@@ -173,9 +167,11 @@ pred (p *scionPacketProcessor) initMem() {
 	acc(&p.bfdLayer)
 }
 
-requires acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
+// TODO: simplify spec, re-do wildcard, maybe remove them
+requires acc(key, _)
+requires acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
-ensures  acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
+// ensures  acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
 ensures  res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)

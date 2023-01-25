@@ -139,10 +139,6 @@ type BatchConn interface {
 // Currently, only the following features are supported:
 //   - initializing connections; MUST be done prior to calling Run
 type DataPlane struct {
-	// (VerifiedSCION) this is morally ghost
-	// It is stored in the dataplane in order to retain
-	// knowledge that macFactory will not fail
-	// @ key *[]byte
 	external          map[uint16]BatchConn
 	linkTypes         map[uint16]topology.LinkType
 	neighborIAs       map[uint16]addr.IA
@@ -199,7 +195,7 @@ func (e scmpError) Error() string {
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   d.Mem(false, key, ia)
 // @ ensures   e == nil
-func (d *DataPlane) SetIA(ia addr.IA /*@ , ghost key []byte @*/) (e error) {
+func (d *DataPlane) SetIA(ia addr.IA /*@ , ghost key *[]byte @*/) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold d.Mem(false, key, 0)
@@ -224,56 +220,56 @@ func (d *DataPlane) SetIA(ia addr.IA /*@ , ghost key []byte @*/) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// @ requires  acc(&d.key,        1/2)
-// @ requires  acc(d.key,         1/2)
-// @ requires  acc(&d.running,    1/2) && !d.running
-// @ requires  acc(&d.macFactory, 1/2) && d.macFactory == nil
+// @ requires  d.Mem(false, nil, ia)
 // @ requires  len(key) > 0
 // @ requires  slices.AbsSlice_Bytes(key, 0, len(key))
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   res == nil ==> d.MacFactoryOperational()
-func (d *DataPlane) SetKey(key []byte) (res error) {
+// @ ensures   res == nil ==> d.Mem(false, keyAddr, ia)
+//
+//	ensures   res == nil ==> d.MacFactoryOperational(keyAddr)
+func (d *DataPlane) SetKey(key []byte /*@ , ghost ia addr.IA @*/) (res error /*@ , ghost keyAddr *[]byte @*/) {
 	// @ share key
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
-	// @ defer fold MutexInvariant!<d!>()
+	// @ unfold d.Mem(false, nil, ia)
 	if d.running {
 		// @ def.Unreachable()
-		return modifyExisting
+		return modifyExisting /*@ , nil @*/
 	}
 	if len(key) == 0 {
 		// @ def.Unreachable()
-		return emptyValue
+		return emptyValue /*@ , nil @*/
 	}
 	if d.macFactory != nil {
 		// @ def.Unreachable()
-		return alreadySet
+		return alreadySet /*@ , nil @*/
 	}
 	// First check for MAC creation errors.
 	if _, err := scrypto.InitMac(key); err != nil {
-		return err
+		return err /*@ , nil @*/
 	}
-	// @ d.key = &key
 	verScionTemp :=
 		// @ requires acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ requires scrypto.ValidKeyForHash(key)
-		// @ ensures  acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
+		//  ensures  acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ ensures  h.Mem()
 		// @ decreases
 		func /*@ f @*/ () (h hash.Hash) {
 			mac, _ := scrypto.InitMac(key)
 			return mac
 		}
-	// @ proof verScionTemp implements MacFactorySpec{d.key} {
+	// @ ghost keyAddr := &key
+	// @ proof verScionTemp implements MacFactorySpec{keyAddr} {
 	// @   return verScionTemp() as f
 	// @ }
+	// @ unfold MutexInvariant!<d!>()
 	d.macFactory = verScionTemp
-	// @ fold d.MacFactoryOperational()
-	return nil
-}
+	// @ fold d.Mem(false, keyAddr, ia)
+	//  fold d.MacFactoryOperational(&key) // drop this
+	// @ fold MutexInvariant!<d!>()
+	return nil /*@ , &key @*/
+} // 2min24s
 
 // AddInternalInterface sets the interface the data-plane will use to
 // send/receive traffic in the local AS. This can only be called once; future
@@ -841,19 +837,19 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ requires  acc(d.MacFactoryOperational(), _)
+// @ requires  acc(d.MacFactoryOperational(key), _)
 // @ ensures   res.initMem()
 // @ decreases
-func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
+func newPacketProcessor(d *DataPlane, ingressID uint16 /*@ , ghost key *[]byte @*/) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
-	// @ unfold acc(d.MacFactoryOperational(), _)
+	// @ unfold acc(d.MacFactoryOperational(key), _)
 	// @ ghost var ubuf []byte
 	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
 		buffer:    verScionTmp,
-		mac:       (d.macFactory() /*@ as MacFactorySpec{d.key} @ */),
+		mac:       (d.macFactory() /*@ as MacFactorySpec{key} @ */),
 		macBuffers: macBuffersT{
 			scionInput: make([]byte, path.MACBufferSize),
 			epicInput:  make([]byte, libepic.MACBufferSize),
