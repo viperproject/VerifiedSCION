@@ -81,7 +81,7 @@ pred MutexInvariant(d *DataPlane) {
 	(d.forwardingMetrics != nil ==> AccForwardingMetrics(d.forwardingMetrics))
 }
 
-pred (d *DataPlane) Mem(running bool, key []byte) {
+pred (d *DataPlane) Mem(running bool, key []byte, ia addr.IA) {
 	acc(&d.external,          MemPerm) &&
 	acc(&d.linkTypes,         MemPerm) &&
 	acc(&d.neighborIAs,       MemPerm) &&
@@ -95,9 +95,9 @@ pred (d *DataPlane) Mem(running bool, key []byte) {
 	acc(&d.running,           MemPerm) &&
 	acc(&d.Metrics,           MemPerm) &&
 	acc(&d.forwardingMetrics, MemPerm) &&
-	acc(&d.key,               MemPerm) &&
 	//
-	d.running == running
+	d.running == running &&
+	(key == nil ==> d.macFactory == nil)
 }
 
 // TODO: reorganize permissions consistently
