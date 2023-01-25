@@ -63,6 +63,7 @@ pred MutexInvariant(d *DataPlane) {
 	acc(&d.forwardingMetrics, MutexInvariantPerm) &&
 	// TODO: drop key
 	acc(&d.key,               MutexInvariantPerm) &&
+	// TODO: move this to d.Mem(...) and drop all (now unnecessary) wildcards
 	(d.external    != nil       ==> AccBatchConn(d.external))           &&
 	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
 	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
@@ -96,7 +97,8 @@ pred (d *DataPlane) Mem(running bool, key []byte, ia addr.IA) {
 	acc(&d.Metrics,           MemPerm) &&
 	acc(&d.forwardingMetrics, MemPerm) &&
 	//
-	d.running == running &&
+	d.running == running               &&
+	d.localIA == ia                    &&
 	(key == nil ==> d.macFactory == nil)
 }
 

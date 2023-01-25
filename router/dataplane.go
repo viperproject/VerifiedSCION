@@ -193,29 +193,32 @@ func (e scmpError) Error() string {
 }
 
 // SetIA sets the local IA for the dataplane.
-// @ requires  acc(&d.running, 1/2) && !d.running
-// @ requires  acc(&d.localIA, 1/2) && d.localIA.IsZero()
+// @ requires  d.Mem(false, key, 0)
 // @ requires  !ia.IsZero()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running, 1/2) && !d.running
-// @ ensures   acc(&d.localIA, 1/2)
+// @ ensures   d.Mem(false, key, ia)
 // @ ensures   e == nil
-func (d *DataPlane) SetIA(ia addr.IA) (e error) {
+func (d *DataPlane) SetIA(ia addr.IA /*@ , ghost key []byte @*/) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
-	// @ defer fold MutexInvariant!<d!>()
+	// @ unfold d.Mem(false, key, 0)
 	if d.running {
+		// @ def.Unreachable()
 		return modifyExisting
 	}
 	if ia.IsZero() {
+		// @ def.Unreachable()
 		return emptyValue
 	}
 	if !d.localIA.IsZero() {
+		// @ def.Unreachable()
 		return alreadySet
 	}
+	// @ unfold MutexInvariant!<d!>()
 	d.localIA = ia
+	// @ fold MutexInvariant!<d!>()
+	// @ fold d.Mem(false, key, ia)
 	return nil
 }
 
