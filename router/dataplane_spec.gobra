@@ -33,6 +33,11 @@ pred (d *DataPlane) MacFactoryOperational() {
 	d.macFactory implements MacFactorySpec{d.key}
 }
 
+ghost const (
+	MutexInvariantPerm perm = 1/3
+	MemPerm perm = 2/3
+)
+
 // TODO: split these permissions between two predicates: MutexInvariant
 // (should have access to 2/3 perm of all elems) and DataPlane.Mem(isRunning, key)
 // (should have the remaining access). Would allow simplifying the specs
@@ -43,20 +48,21 @@ pred (d *DataPlane) MacFactoryOperational() {
 // at the end of run
 pred MutexInvariant(d *DataPlane) {
 	// access to the field 'mtx' ommited
-	acc(&d.external,          1/2) &&
-	acc(&d.linkTypes,         1/2) &&
-	acc(&d.neighborIAs,       1/2) &&
-	acc(&d.internal,          1/2) &&
-	acc(&d.internalIP,        1/2) &&
-	acc(&d.internalNextHops,  1/2) &&
-	acc(&d.svc,               1/2) &&
-	acc(&d.macFactory,        1/2) &&
-	acc(&d.bfdSessions,       1/2) &&
-	acc(&d.localIA,           1/2) &&
-	acc(&d.running,           1/2) &&
-	acc(&d.Metrics,           1/2) &&
-	acc(&d.forwardingMetrics, 1/2) &&
-	acc(&d.key,               1/2) &&
+	acc(&d.external,          MutexInvariantPerm) &&
+	acc(&d.linkTypes,         MutexInvariantPerm) &&
+	acc(&d.neighborIAs,       MutexInvariantPerm) &&
+	acc(&d.internal,          MutexInvariantPerm) &&
+	acc(&d.internalIP,        MutexInvariantPerm) &&
+	acc(&d.internalNextHops,  MutexInvariantPerm) &&
+	acc(&d.svc,               MutexInvariantPerm) &&
+	acc(&d.macFactory,        MutexInvariantPerm) &&
+	acc(&d.bfdSessions,       MutexInvariantPerm) &&
+	acc(&d.localIA,           MutexInvariantPerm) &&
+	acc(&d.running,           MutexInvariantPerm) &&
+	acc(&d.Metrics,           MutexInvariantPerm) &&
+	acc(&d.forwardingMetrics, MutexInvariantPerm) &&
+	// TODO: drop key
+	acc(&d.key,               MutexInvariantPerm) &&
 	(d.external    != nil       ==> AccBatchConn(d.external))           &&
 	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
 	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
@@ -73,6 +79,25 @@ pred MutexInvariant(d *DataPlane) {
 	// The following permissions are enough to call all methods needed in fields
 	// of forwardingMetrics
 	(d.forwardingMetrics != nil ==> AccForwardingMetrics(d.forwardingMetrics))
+}
+
+pred (d *DataPlane) Mem(running bool, key []byte) {
+	acc(&d.external,          MemPerm) &&
+	acc(&d.linkTypes,         MemPerm) &&
+	acc(&d.neighborIAs,       MemPerm) &&
+	acc(&d.internal,          MemPerm) &&
+	acc(&d.internalIP,        MemPerm) &&
+	acc(&d.internalNextHops,  MemPerm) &&
+	acc(&d.svc,               MemPerm) &&
+	acc(&d.macFactory,        MemPerm) &&
+	acc(&d.bfdSessions,       MemPerm) &&
+	acc(&d.localIA,           MemPerm) &&
+	acc(&d.running,           MemPerm) &&
+	acc(&d.Metrics,           MemPerm) &&
+	acc(&d.forwardingMetrics, MemPerm) &&
+	acc(&d.key,               MemPerm) &&
+	//
+	d.running == running
 }
 
 // TODO: reorganize permissions consistently

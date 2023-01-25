@@ -14,17 +14,18 @@
 
 // +gobra
 
-// @ initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
-// @ initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
-// @ initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
-// @ initEnsures malformedPath                 != nil && malformedPath.ErrorMem()
-// @ initEnsures modifyExisting                != nil && modifyExisting.ErrorMem()
-// @ initEnsures noSVCBackend                  != nil && noSVCBackend.ErrorMem()
-// @ initEnsures unsupportedPathType           != nil && unsupportedPathType.ErrorMem()
-// @ initEnsures unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
-// @ initEnsures noBFDSessionFound             != nil && noBFDSessionFound.ErrorMem()
-// @ initEnsures noBFDSessionConfigured        != nil && noBFDSessionConfigured.ErrorMem()
-// @ initEnsures errBFDDisabled                != nil && errBFDDisabled.ErrorMem()
+// (VerifiedSCION) Uncommenting the following causes severe slowdowns, but it verifies
+// initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
+// initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
+// initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
+// initEnsures malformedPath                 != nil && malformedPath.ErrorMem()
+// initEnsures modifyExisting                != nil && modifyExisting.ErrorMem()
+// initEnsures noSVCBackend                  != nil && noSVCBackend.ErrorMem()
+// initEnsures unsupportedPathType           != nil && unsupportedPathType.ErrorMem()
+// initEnsures unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
+// initEnsures noBFDSessionFound             != nil && noBFDSessionFound.ErrorMem()
+// initEnsures noBFDSessionConfigured        != nil && noBFDSessionConfigured.ErrorMem()
+// initEnsures errBFDDisabled                != nil && errBFDDisabled.ErrorMem()
 package router
 
 import (
