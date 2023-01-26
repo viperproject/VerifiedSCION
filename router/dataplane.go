@@ -282,9 +282,11 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP /*@ , ghost k
 	// @ unfold d.Mem(false, key, ia)
 	// @ defer fold d.Mem(false, key, ia)
 	if d.running {
+		// @ def.Unreachable()
 		return modifyExisting
 	}
 	if conn == nil {
+		// @ def.Unreachable()
 		return emptyValue
 	}
 	if d.internal != nil {
@@ -300,36 +302,38 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP /*@ , ghost k
 // AddExternalInterface adds the inter AS connection for the given interface ID.
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
-// @ requires  acc(&d.running,    1/2) && !d.running
-// @ requires  acc(&d.external,   1/2)
-// @ requires  d.external != nil ==> acc(d.external, 1/2)
-// @ requires  !(ifID in domain(d.external))
 // @ requires  conn != nil && conn.Mem()
+// @ requires  d.Mem(false, key, ia)
+// @ requires  !d.AlreadyRegisteredExternalInterface(ifID, key, ia)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.external,   1/2) && acc(d.external, 1/2)
-func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
+// @ ensures   d.Mem(false, key, ia)
+// @ ensures   d.AlreadyRegisteredExternalInterface(ifID, key, ia)
+func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn /*@ , ghost key *[]byte, ghost ia addr.IA @*/) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
-	// @ defer fold MutexInvariant!<d!>()
+	// @ unfold d.Mem(false, key, ia)
 	if d.running {
+		// @ def.Unreachable()
 		return modifyExisting
 	}
 	if conn == nil {
+		// @ def.Unreachable()
 		return emptyValue
 	}
+	// @ ghost if d.external != nil { unfold AccBatchConn(d.external) }
 	if _, existsB := d.external[ifID]; existsB {
+		// @ def.Unreachable()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
+	// @ unfold MutexInvariant!<d!>()
 	if d.external == nil {
 		d.external = make(map[uint16]BatchConn)
-		// @ fold AccBatchConn(d.external)
 	}
-	// @ unfold AccBatchConn(d.external)
 	d.external[ifID] = conn
 	// @ fold AccBatchConn(d.external)
+	// @ fold d.Mem(false, key, ia)
+	// @ fold MutexInvariant!<d!>()
 	return nil
 }
 

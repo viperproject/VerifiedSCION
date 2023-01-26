@@ -95,7 +95,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ fold internalLockInv!<s!>()
 }
 
-// @ requires acc(s.Mem(), _)
+// @ requires acc(s.Mem(), _) // TODO: only keep this one as is
 // @ ensures  !b ==> r == nil
 // @ ensures  b  ==> acc(r.Mem(), _)
 func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {

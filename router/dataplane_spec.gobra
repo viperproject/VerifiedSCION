@@ -96,6 +96,14 @@ pred (d *DataPlane) Mem(running bool, key *[]byte, ia addr.IA) {
 	(d.forwardingMetrics != nil ==> AccForwardingMetrics(d.forwardingMetrics))
 }
 
+ghost
+pure
+requires d.Mem(false, key, ia)
+decreases
+func (d *DataPlane) AlreadyRegisteredExternalInterface(ifID uint16, key *[]byte, ia addr.IA) bool {
+	return unfolding d.Mem(false, key, ia) in (d.external != nil? (unfolding AccBatchConn(d.external) in (ifID in domain(d.external))) : false)
+}
+
 // TODO: reorganize permissions consistently
 
 // TODO: use lower case for these predicates' names?
@@ -105,7 +113,7 @@ pred AccAddr(addrs map[uint16]*net.UDPAddr) {
 }
 
 pred AccBatchConn(batchConns map[uint16]BatchConn) {
-	acc(batchConns, 1/2) &&
+	acc(batchConns) &&
 	forall b BatchConn :: b in range(batchConns) ==> b.Mem()
 }
 
@@ -171,7 +179,6 @@ pred (p *scionPacketProcessor) initMem() {
 requires acc(key, _)
 requires acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
-// ensures  acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
 ensures  res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
