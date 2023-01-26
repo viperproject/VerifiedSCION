@@ -78,14 +78,14 @@ pred (d *DataPlane) Mem(running bool, key *[]byte, ia addr.IA) {
 	// TODO: simplify the following garbage
 	// TODO: move this to d.Mem(...) and drop all (now unnecessary) wildcards
 	(d.external    != nil       ==> AccBatchConn(d.external))           &&
-	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
-	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
+	(d.linkTypes   != nil       ==> acc(d.linkTypes))                   &&
+	(d.neighborIAs != nil       ==> acc(d.neighborIAs))                 &&
 	(d.internal != nil          ==> d.internal.Mem())                   &&
 	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
-	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
+	(d.svc != nil               ==> d.svc.Mem())                        &&
 	// the following overlaps with MacFactoryOperational
-	(d.macFactory != nil        ==> (acc(key)                                     &&
+	(key           != nil       ==> (acc(key)                                     &&
 	                                acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _) &&
 	                                scrypto.ValidKeyForHash(*key)                 &&
 	                                d.macFactory implements MacFactorySpec{key})) &&
@@ -114,7 +114,7 @@ pred AccAddr(addrs map[uint16]*net.UDPAddr) {
 
 pred AccBatchConn(batchConns map[uint16]BatchConn) {
 	acc(batchConns) &&
-	forall b BatchConn :: b in range(batchConns) ==> b.Mem()
+	forall b BatchConn :: { b in range(batchConns) } b in range(batchConns) ==> b.Mem()
 }
 
 pred AccBfdSession(bfdSessions map[uint16]bfdSession) {

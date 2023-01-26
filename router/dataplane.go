@@ -308,7 +308,8 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP /*@ , ghost k
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   d.Mem(false, key, ia)
-// @ ensures   d.AlreadyRegisteredExternalInterface(ifID, key, ia)
+//
+//	ensures   d.AlreadyRegisteredExternalInterface(ifID, key, ia)
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn /*@ , ghost key *[]byte, ghost ia addr.IA @*/) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
