@@ -49,16 +49,42 @@ pred (e errOrMsg) ErrorMem() {
 	e.err != nil ==> e.err.ErrorMem()
 }
 
-requires acc(m.ErrorMem(), _)
+preserves m.ErrorMem()
 decreases _ // Gobra cannot prove termination of this function yet
 func (m errOrMsg) Error() string {
 	if m.err != nil {
-		unfold acc(m.ErrorMem(), _)
+		unfold m.ErrorMem()
 		res := m.err.Error()
-		fold   acc(m.ErrorMem(), _)
+		fold   m.ErrorMem()
 		return res
 	}
 	return m.str
+}
+
+ghost
+trusted // marked as trusted, otherwise Gobra complains about termination despite the termination measure
+requires  acc(e.ErrorMem(), _)
+decreases _ // Gobra cannot prove termination of this function yet
+pure
+func (e errOrMsg) IsDuplicableMem() (res bool) {
+	return unfolding acc(e.ErrorMem(), _) in e.err == nil || e.err.IsDuplicableMem()
+}
+
+ghost
+trusted // marked as trusted, otherwise Gobra complains about termination despite the termination measure
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() ==> e.ErrorMem() 
+decreases _ // Gobra cannot prove termination of this function yet
+func (e errOrMsg) Duplicate() {
+	if e.IsDuplicableMem() {
+		unfold e.ErrorMem()
+		if e.err != nil {
+			e.err.Duplicate()
+		}
+		fold e.ErrorMem()
+		assert unfolding e.ErrorMem() in true
+		fold e.ErrorMem()
+	}
 }
 
 type basicError struct {
@@ -72,13 +98,38 @@ basicError implements error
 
 pred (e basicError) ErrorMem() {
 	e.msg.ErrorMem() &&
-	(e.fields != nil ==> acc(e.fields)) &&
+	(e.fields != nil ==> acc(e.fields, _)) &&
 	(e.cause  != nil ==> e.cause.ErrorMem()) &&
-	(e.stack  != nil ==> (acc(e.stack) && acc(*(e.stack))))
+	(e.stack  != nil ==> (acc(e.stack, _) && acc(*(e.stack), _)))
+}
+
+ghost
+trusted
+requires acc(e.ErrorMem(), _)
+decreases _ // Gobra cannot prove termination of this function yet
+pure
+func (e basicError) IsDuplicableMem() (res bool) {
+	return cause == nil || e.cause.IsDuplicableMem()
+}
+
+ghost
+trusted
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() ==> e.ErrorMem() 
+decreases _ // Gobra cannot prove termination of this function yet
+func (e basicError) Duplicate() {
+	if e.IsDuplicableMem() {
+		unfold e.ErrorMem()
+		if e.cause != nil {
+			e.cause.Duplicate()
+		}
+		fold e.ErrorMem()
+		fold e.ErrorMem()
+	}
 }
 
 trusted
-requires acc(e.ErrorMem(), _)
+preserves e.ErrorMem()
 decreases _
 func (e basicError) Error() string {
 	var buf bytes.Buffer
@@ -238,12 +289,9 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error) {
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 trusted
-preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
-// The following precondition cannot be adequately captured in Gobra.
-// requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
+preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
 ensures   res != nil && res.ErrorMem()
-ensures   typeOf(res) == type[basicError]
-ensures   isComparable(res) // the result is comparable; it only returns pointers
+ensures   res.IsDuplicableMem()
 decreases
 func New(msg string, errCtx ...interface{}) (res error) {
 	if len(errCtx) == 0 {
@@ -259,39 +307,6 @@ func New(msg string, errCtx ...interface{}) (res error) {
 	}
 }
 
-// List is a slice of errors.
-type List []error
-
-List implements error
-
-pred (l List) ErrorMem() {
-	forall i int :: 0 <= i && i < len(l) ==> (acc(&l[i]) && l[i].ErrorMem())
-}
-
-// Error implements the error interface.
-trusted
-requires acc(e.ErrorMem(), _)
-decreases
-func (e List) Error() string {
-	s := make([]string, 0, len(e))
-	for _, err := range e {
-		s = append(s, err.Error())
-	}
-	return fmt.Sprintf("[ %s ]", strings.Join(s, "; "))
-}
-
-// ToError returns the object as error interface implementation.
-trusted
-requires e.ErrorMem()
-ensures  len(e) == 0 ==> err == nil
-ensures  err.ErrorMem()
-decreases
-func (e List) ToError() (err error) {
-	if len(e) == 0 {
-		return nil
-	}
-	return e
-}
 
 trusted
 preserves acc(errCtx, definitions.ReadL15)
