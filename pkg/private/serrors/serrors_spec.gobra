@@ -104,16 +104,29 @@ pred (e basicError) ErrorMem() {
 }
 
 ghost
+trusted
 requires acc(e.ErrorMem(), _)
 decreases _ // Gobra cannot prove termination of this function yet
 pure
-func (e basicError) IsDuplicableMem() (res bool)
+func (e basicError) IsDuplicableMem() (res bool) {
+	return cause == nil || e.cause.IsDuplicableMem()
+}
 
 ghost
+trusted
 preserves e.ErrorMem()
 ensures   e.IsDuplicableMem() ==> e.ErrorMem() 
 decreases _ // Gobra cannot prove termination of this function yet
-func (e basicError) Duplicate()
+func (e basicError) Duplicate() {
+	if e.IsDuplicableMem() {
+		unfold e.ErrorMem()
+		if e.cause != nil {
+			e.cause.Duplicate()
+		}
+		fold e.ErrorMem()
+		fold e.ErrorMem()
+	}
+}
 
 trusted
 preserves e.ErrorMem()
