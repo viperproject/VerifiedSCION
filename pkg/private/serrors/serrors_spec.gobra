@@ -104,16 +104,29 @@ pred (e basicError) ErrorMem() {
 }
 
 ghost
+trusted
 requires acc(e.ErrorMem(), _)
 decreases _ // Gobra cannot prove termination of this function yet
 pure
-func (e basicError) IsDuplicableMem() (res bool)
+func (e basicError) IsDuplicableMem() (res bool) {
+	return cause == nil || e.cause.IsDuplicableMem()
+}
 
 ghost
+trusted
 preserves e.ErrorMem()
 ensures   e.IsDuplicableMem() ==> e.ErrorMem() 
 decreases _ // Gobra cannot prove termination of this function yet
-func (e basicError) Duplicate()
+func (e basicError) Duplicate() {
+	if e.IsDuplicableMem() {
+		unfold e.ErrorMem()
+		if e.cause != nil {
+			e.cause.Duplicate()
+		}
+		fold e.ErrorMem()
+		fold e.ErrorMem()
+	}
+}
 
 trusted
 preserves e.ErrorMem()
@@ -276,15 +289,8 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error) {
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 trusted
-// TODO: add trigger
-preserves forall i int :: 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
-// The following precondition cannot be adequately captured in Gobra.
-// requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
+preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
 ensures   res != nil && res.ErrorMem()
-// TODO: maybe drop
-ensures   typeOf(res) == type[basicError]
-// TODO: maybe drop
-ensures   isComparable(res) // the result is comparable; it only returns pointers
 ensures   res.IsDuplicableMem()
 decreases
 func New(msg string, errCtx ...interface{}) (res error) {
