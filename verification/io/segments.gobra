@@ -19,7 +19,7 @@ package io
 ghost
 pure
 decreases
-func IO_inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[HFSchemeAhiT]) bool /*{
+func inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[HFSchemeAhiT]) bool /*{
 	return Future(currseg) === seq[HFSchemeAhiT]{hf1} ++ fut &&
 		Future(traversedseg) === fut &&
 		Past(traversedseg) === seq[HFSchemeAhiT]{hf1} ++ Past(currseg) &&
@@ -30,7 +30,7 @@ func IO_inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[HFSchemeAhiT]
 ghost
 pure
 decreases
-func IO_same_segment2(currseg, traversedseg IO_seg2) bool {
+func same_segment2(currseg, traversedseg IO_seg2) bool {
 	return Future(traversedseg) === Future(currseg) &&
 	Past(traversedseg)    === Past(currseg) &&
 	History(traversedseg) === History(currseg)
