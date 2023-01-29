@@ -18,12 +18,18 @@ package io
 
 import "github.com/scionproto/scion/pkg/slayers/path"
 
-// interface IDs
-type IF uint16
+// used everywhere where the Isabel spec has a type-parameter
+type TypeParameter = interface{}
+type TypeParameter1 = interface{}
+type TypeParameter2 = interface{}
+type TypeParameter3 = interface{}
 
-// MsgTerms consist of terms from our term algebra.
+// interface IDs
+type IO_ifs uint16
+
+// msgTerms consist of terms from our term algebra.
 // TODO: is encoding it as a domain the best choice here?
-type MsgTerm domain{}
+type IO_msgterm domain{}
 
 /** Hop-Fields **/
 
@@ -31,21 +37,21 @@ type MsgTerm domain{}
 // We consider 0 to be the ID of the internal network in HopField.
 // We consider None to be the ID of the internal network in HF.
 type HF domain {
-	func InIF2(h HF) option[IF]
-	func EgIF2(h HF) option[IF]
-	func HVF(h HF) MsgTerm
+	func InIF2(h HF) option[IO_ifs]
+	func EgIF2(h HF) option[IO_ifs]
+	func HVF(h HF) IO_msgterm
 }
 
-// We ASSUME the existence of a function that computes the MsgTerm of a HopField
+// We ASSUME the existence of a function that computes the msgTerm of a path.HopField
 ghost
 decreases
-pure func ComputeMsgTerm(h path.HopField) MsgTerm
+pure func ComputeMsgTerm(h path.HopField) IO_msgterm
 
 ghost
-ensures h.ConsIngress == 0 ==> InIF2(res) == none[IF]
-ensures h.ConsIngress != 0 ==> InIF2(res) == some(IF(h.ConsIngress))
-ensures h.ConsEgress  == 0 ==> EgIF2(res) == none[IF]
-ensures h.ConsEgress  != 0 ==> EgIF2(res) == some(IF(h.ConsIngress))
+ensures h.ConsIngress == 0 ==> InIF2(res) == none[IO_ifs]
+ensures h.ConsIngress != 0 ==> InIF2(res) == some(IO_ifs(h.ConsIngress))
+ensures h.ConsEgress  == 0 ==> EgIF2(res) == none[IO_ifs]
+ensures h.ConsEgress  != 0 ==> EgIF2(res) == some(IO_ifs(h.ConsIngress))
 ensures HVF(res) == ComputeMsgTerm(h)
 decreases
 pure func ToHF(h path.HopField) (res HF)
@@ -53,46 +59,43 @@ pure func ToHF(h path.HopField) (res HF)
 /** End of Hop-Fields **/
 
 /** Segments **/
-type Seg2 domain {
-	func AInfo(s Seg2) AInfoT
-	func UInfo(s Seg2) UInfoT
-	func ConsDir(s Seg2) bool
-	func Peer(s Seg2) bool
-	func Past(s Seg2) seq[HFSchemeAhiT]
-	func Future(s Seg2) seq[HFSchemeAhiT]
-	func History(s Seg2) seq[AhiSchemeAhiT]
+type IO_seg2 domain {
+	func AInfo(s IO_seg2) TypeParameter1
+	func UInfo(s IO_seg2) TypeParameter2
+	func ConsDir(s IO_seg2) bool
+	func Peer(s IO_seg2) bool
+	func Past(s IO_seg2) seq[HFSchemeAhiT]
+	func Future(s IO_seg2) seq[HFSchemeAhiT]
+	func History(s IO_seg2) seq[AhiSchemeAhiT]
 }
 
 // TODO: is encoding these as domains the best choice here?
-type AInfoT domain{}
-type UInfoT domain{}
-type HFSchemeAhiT domain{} // check if interpretation of this type is correct
-type AhiSchemeAhiT domain{} // check if interpretation of this type is correct
+// QUESTION: where does HF_scheme come from?
+type HFSchemeAhiT domain{}
+type AhiSchemeAhiT domain{}
 
 /** End of Segments **/
 
 /** Packets **/
-type Pkt2 adt {
-	Packet2 {
-		CurrSeg  Seg2
-		LeftSeg  option[Seg2]
-		MidSeg   option[Seg2]
-		RightSeg option[Seg2]
+type IO_pkt2 adt {
+	IO_pkt2_cons {
+		CurrSeg  IO_seg2
+		LeftSeg  option[IO_seg2]
+		MidSeg   option[IO_seg2]
+		RightSeg option[IO_seg2]
 	}
 }
 
-// TODO: where is this defined?
-type Pkt3 domain{
-
-}
+// pkt3 is not defined anywhere; according to Felix, stands for IO_pkt2
+type IO_pkt3 = IO_pkt2
 
 /** End of Packets **/
 
 /** Router State **/
 
-type DP3sStateLocal domain {
-	func IBuf(s DP3sStateLocal, ifc option[IF]) set[Pkt3]
-	func OBuf(s DP3sStateLocal, ifc option[IF]) set[Pkt3]
+type IO_dp3s_state_local domain {
+	func IBuf(s IO_dp3s_state_local, ifc option[IO_ifs]) set[IO_pkt3]
+	func OBuf(s IO_dp3s_state_local, ifc option[IO_ifs]) set[IO_pkt3]
 }
 
 /** End of Router State **/
@@ -100,46 +103,44 @@ type DP3sStateLocal domain {
 /** Values **/
 
 // TODO: is the encoding correct?
-type Val adt {
-	Unit{}
+type IO_val adt {
+	IO_val_Unit{}
 
-	// Pkt2 in the doc
-	P2{
-		ifcOpt option[IF]
-		pkt Pkt3
+	// IO_pkt2 in the doc
+	IO_val_Pkt2 {
+		IO_val_Pkt2_1 option[IO_ifs]
+		IO_val_Pkt2_2 IO_pkt3
 	}
 
-	Unsupported {
-		ifcOpt option[IF]
-		uns o // type parameter o'
+	IO_val_Unsupported {
+		IO_val_Unsupported_1 option[IO_ifs]
+		IO_val_Unsupported_2 TypeParameter
 	}
 
-	InternalVal1 {
-		p1 Pkt3
-		ifc1 IF
-		p2 Pkt3
-		ifc2 option[IF]
+	IO_Internal_val1 {
+		IO_Internal_val1_1 IO_pkt3
+		IO_Internal_val1_2 IO_ifs
+		IO_Internal_val1_3 IO_pkt3
+		IO_Internal_val1_4 option[IO_ifs]
 	}
 
-	InternalVal2 {
-		p1 Pkt3
-		p2 Pkt3
-		ifc IF
+	IO_Internal_val2 {
+		IO_Internal_val2_1 IO_pkt3
+		IO_Internal_val2_2 IO_pkt3
+		IO_Internal_val2_3 IO_ifs
 	}
 }
 
-type o domain{} // type parameter used in the variant Unsupported
-
-type Bio3sIn adt {
-	Bio3s_enter{}
-	Bio3s_xover_up2down{}
-	Bio3s_xover_core{}
-	Bio3s_exit{}
+type IO_bio3sIN adt {
+	IO_bio3s_enter{}
+	IO_bio3s_xover_up2down{}
+	IO_bio3s_xover_core{}
+	IO_bio3s_exit{}
 }
 
-type Bio3sIO adt {
-	Bio3s_send{}
-	Bio3s_recv{}
+type IO_bio3sIO adt {
+	IO_bio3s_send{}
+	IO_bio3s_recv{}
 }
 
 /** End of Values **/
