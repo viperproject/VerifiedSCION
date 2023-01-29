@@ -36,10 +36,10 @@ type IO_msgterm domain{}
 // Abstract representation of an HopField
 // We consider 0 to be the ID of the internal network in HopField.
 // We consider None to be the ID of the internal network in HF.
-type HF domain {
-	func InIF2(h HF) option[IO_ifs]
-	func EgIF2(h HF) option[IO_ifs]
-	func HVF(h HF) IO_msgterm
+type IO_HF domain {
+	func InIF2(h IO_HF) option[IO_ifs]
+	func EgIF2(h IO_HF) option[IO_ifs]
+	func HVF(h IO_HF) IO_msgterm
 }
 
 // We ASSUME the existence of a function that computes the msgTerm of a path.HopField
@@ -54,7 +54,7 @@ ensures h.ConsEgress  == 0 ==> EgIF2(res) == none[IO_ifs]
 ensures h.ConsEgress  != 0 ==> EgIF2(res) == some(IO_ifs(h.ConsIngress))
 ensures HVF(res) == ComputeMsgTerm(h)
 decreases
-pure func ToHF(h path.HopField) (res HF)
+pure func ToHF(h path.HopField) (res IO_HF)
 
 /** End of Hop-Fields **/
 
@@ -70,8 +70,8 @@ type IO_seg2 domain {
 }
 
 // TODO: is encoding these as domains the best choice here?
-// QUESTION: where does HF_scheme come from?
-type HFSchemeAhiT domain{}
+// QUESTION: (urgent) where does HF_scheme come from?
+type HFSchemeAhiT = IO_HF // domain{}
 type AhiSchemeAhiT domain{}
 
 /** End of Segments **/
