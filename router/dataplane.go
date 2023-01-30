@@ -1896,6 +1896,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ requires acc(&p.buffer)
 // @ requires scmpP.Mem(ubufP)
 // @ requires p.scionLayer.Mem(ubufS) && p.buffer.Mem(ubufB)
+// @ requires cannotRoute.ErrorMem()
 func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SCMPCode, scmpP gopacket.SerializableLayer, cause error /*@, ghost ubufP []byte, ghost ubufS []byte, ghost ubufB []byte @*/) ([]byte, error) {
 
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
@@ -1908,7 +1909,72 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 	// @ assert p.scionLayer.Path.Mem(ubufPath)
 	// @ assert acc(p.scionLayer.Path.Mem(ubufPath), _)
 	pathType := p.scionLayer.Path.Type( /*@ ubufPath @*/ )
-	// @ assert false
+
+	switch pathType {
+	case scion.PathType:
+		var ok bool
+		path, ok = p.scionLayer.Path.(*scion.Raw)
+		if !ok {
+			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
+				"path type", pathType)
+		}
+	case epic.PathType:
+		epicPath, ok := p.scionLayer.Path.(*epic.Path)
+		if !ok {
+			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
+				"path type", pathType)
+		}
+		// @ unfold epicPath.Mem(ubufPath)
+		// @ ubufPath = ubufPath[epic.MetadataLen:]
+		path = epicPath.ScionPath
+	default:
+		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
+			"path type", pathType)
+	}
+	decPath, err := path.ToDecoded( /*@ ubufPath @*/ )
+	if err != nil {
+		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
+	}
+	revPathTmp, err := decPath.Reverse( /*@ unfolding path.NonInitMem() in path.Raw @*/ )
+	// @ assert err != nil ==> err.ErrorMem()
+	if err != nil {
+		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
+	}
+	revPath := revPathTmp.(*scion.Decoded)
+
+	// @ p.d.accToExternalAndBatchConn()
+	// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
+	// Revert potential path segment switches that were done during processing.
+	// @ haveToFold := true
+	if revPath.IsXover() {
+		// @ haveToFold = false
+		// @ fold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
+		if err := revPath.IncPath( /*@ unfolding path.NonInitMem() in path.Raw @*/ ); err != nil {
+			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
+		}
+		// @ assert unfolding revPath.Mem(unfolding path.NonInitMem() in path.Raw) in unfolding revPath.Base.Mem() in revPath.Base.PathMeta.CurrINF < 3 && 0 <= revPath.Base.PathMeta.CurrINF
+	}
+	
+	// @ ghost if haveToFold { fold revPath.Mem(unfolding path.NonInitMem() in path.Raw) }
+	// If the packet is sent to an external+ router, we need to increment the
+	// path to prepare it for the next hop.
+	// @ unfold acc(AccBatchConn(p.d.external), _)
+	_, external := p.d.external[p.ingressID]
+	if external {
+		// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
+		// @ unfold revPath.Base.Mem()
+		// @ assert revPath.PathMeta.CurrINF < 3 && 0 <= revPath.PathMeta.CurrINF
+		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
+		if infoField.ConsDir {
+			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
+			infoField.UpdateSegID(hopField.Mac)
+		}
+		// @ fold revPath.Mem(ubufPath)
+		// @ fold revPath.Base.Mem()
+		if err := revPath.IncPath( /*@ ubufPath @*/ ); err != nil {
+			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
+		}
+	}
 }
 
 func (p *scionPacketProcessor) prdepareSCMP(typ slayers.SCMPType, code slayers.SCMPCode, scmpP gopacket.SerializableLayer, cause error /*@, ghost ubufP []byte, ghost ubufS []byte, ghost ubufB []byte @*/) ([]byte, error) {
