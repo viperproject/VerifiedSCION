@@ -19,21 +19,20 @@ package io
 ghost
 pure
 decreases
-func inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[HFSchemeAhiT]) bool /*{
-	return Future(currseg) === seq[HFSchemeAhiT]{hf1} ++ fut &&
-		Future(traversedseg) === fut &&
-		Past(traversedseg) === seq[HFSchemeAhiT]{hf1} ++ Past(currseg) &&
-		true // TODO: no clue what toab hf1 means; case not defined
+func inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[IO_HF]) bool {
+	return currseg.Future === seq[IO_HF]{hf1} ++ fut &&
+		traversedseg.Future === fut &&
+		traversedseg.Past === seq[IO_HF]{hf1} ++ currseg.Past &&
+        traversedseg.History === seq[IO_ahi]{hf1.Toab()} ++ currseg.History
 }
-*/
 
 ghost
 pure
 decreases
 func same_segment2(currseg, traversedseg IO_seg2) bool {
-	return Future(traversedseg) === Future(currseg) &&
-	Past(traversedseg)    === Past(currseg) &&
-	History(traversedseg) === History(currseg)
+	return traversedseg.Future === currseg.Future &&
+        traversedseg.Past    === currseg.Past &&
+        traversedseg.History === currseg.History
 }
 
 ghost
@@ -46,7 +45,7 @@ ghost
 pure
 decreases
 func same_uinfo2(currseg, traversedseg IO_seg2) bool {
-	return UInfo(currseg) === UInfo(traversedseg)
+	return currseg.UInfo === traversedseg.UInfo
 }
 
 ghost
@@ -60,7 +59,7 @@ ghost
 pure
 decreases
 func same_other(currseg, traversedseg IO_seg2) bool {
-	return AInfo(traversedseg) === AInfo(currseg) &&
-		ConsDir(traversedseg) === ConsDir(currseg) &&
-		Peer(traversedseg) === Peer(currseg)
+	return traversedseg.AInfo === currseg.AInfo &&
+		traversedseg.ConsDir === currseg.ConsDir &&
+		traversedseg.Peer === currseg.Peer
 }

@@ -16,16 +16,9 @@
 
 package io
 
-ghost
-pure
-decreases
-// TODO
-func dp2_check_recvif(d bool, asid uint64, recvif IO_ifs) bool
-
-ghost
-pure
-decreases
-// TODO: check if asid type is the best fit
-func dp2_check_interface(d bool, asid uint64, hf1 IO_HF, recvif IO_ifs) bool {
-    return (d && hf1.InIF2 === some(recvif)) || (!d && hf1.EgIF2 === some(recvif))
+type IO_Link adt {
+    IO_CustProv{}
+    IO_ProvCust{}
+    IO_PeerOrCore{}
+    IO_NoLink{}
 }

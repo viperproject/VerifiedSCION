@@ -27,58 +27,135 @@ type TypeParameter3 = interface{}
 // interface IDs
 type IO_ifs uint16
 
+// type of AS identifiers
+type IO_as uint
+
 // msgTerms consist of terms from our term algebra.
-// TODO: is encoding it as a domain the best choice here?
-type IO_msgterm domain{}
+type IO_msgterm adt {
+	MsgTerm_Empty{}
+
+	MsgTerm_AS {
+		MsgTerm_AS_ IO_as
+	}
+
+	MsgTerm_Num {
+		MsgTerm_Num_ int // formallized as nat in Isabelle
+	}
+
+	MsgTerm_Key {
+		MsgTerm_Key_ IO_key
+	}
+
+	MsgTerm_L {
+		MsgTerm_L_ seq[IO_msgterm]
+	}
+
+	MsgTerm_FS {
+		MsgTerm_FS_ seq[IO_msgterm]
+	}
+
+	MsgTerm_MPair {
+		MsgTerm_MPair_1 IO_msgterm
+		MsgTerm_MPair_2 IO_msgterm
+	}
+
+	MsgTerm_Hash {
+		MsgTerm_Hash_ IO_msgterm
+	}
+
+	MsgTerm_Crypt {
+		MsgTerm_Crypt_1 IO_key
+		MsgTerm_Crypt_2 IO_msgterm
+	}
+}
+
+type IO_key adt {
+	Key_macK {
+		Key_macK_ IO_as
+	}
+
+	Key_pubK {
+		Key_pubK_ IO_as
+	}
+
+	Key_priK {
+		Key_priK_ IO_as
+	}
+}
 
 /** Hop-Fields **/
 
 // Abstract representation of an HopField
 // We consider 0 to be the ID of the internal network in HopField.
 // We consider None to be the ID of the internal network in HF.
-type IO_HF domain {
-	func InIF2(h IO_HF) option[IO_ifs]
-	func EgIF2(h IO_HF) option[IO_ifs]
-	func HVF(h IO_HF) IO_msgterm
+type IO_HF adt {
+	IO_HF_ {
+		InIF2 option[IO_ifs]
+		EgIF2 option[IO_ifs]
+		HVF IO_msgterm
+	}
 }
 
+// "authenticated hop information"
+type IO_ahi adt {
+	IO_ahi_ {
+		InIF option[IO_ifs]
+		EgIF option[IO_ifs]
+		ASID IO_as
+	}
+}
+
+// TODO: how is this defined
+// extract_asid
+ghost
+pure
+decreases
+func (m IO_msgterm) extract_asid() IO_as
+
+// function 'toab' in Isabelle, originally of type HF_scheme -> aahi_scheme
+ghost
+pure
+decreases
+func (h IO_HF) Toab() IO_ahi {
+	return IO_ahi_{h.InIF2, h.EgIF2, h.HVF.extract_asid()}
+}
+
+// TODO: can we get rid of this assumption?
 // We ASSUME the existence of a function that computes the msgTerm of a path.HopField
 ghost
 decreases
 pure func ComputeMsgTerm(h path.HopField) IO_msgterm
 
+// TODO: should be easy to give a body to this now
 ghost
-ensures h.ConsIngress == 0 ==> InIF2(res) == none[IO_ifs]
-ensures h.ConsIngress != 0 ==> InIF2(res) == some(IO_ifs(h.ConsIngress))
-ensures h.ConsEgress  == 0 ==> EgIF2(res) == none[IO_ifs]
-ensures h.ConsEgress  != 0 ==> EgIF2(res) == some(IO_ifs(h.ConsIngress))
-ensures HVF(res) == ComputeMsgTerm(h)
+ensures h.ConsIngress == 0 ==> res.InIF2 == none[IO_ifs]
+ensures h.ConsIngress != 0 ==> res.InIF2 == some(IO_ifs(h.ConsIngress))
+ensures h.ConsEgress  == 0 ==> res.EgIF2 == none[IO_ifs]
+ensures h.ConsEgress  != 0 ==> res.EgIF2 == some(IO_ifs(h.ConsIngress))
+ensures res.HVF == ComputeMsgTerm(h)
 decreases
 pure func ToHF(h path.HopField) (res IO_HF)
 
 /** End of Hop-Fields **/
 
 /** Segments **/
-type IO_seg2 domain {
-	func AInfo(s IO_seg2) TypeParameter1
-	func UInfo(s IO_seg2) TypeParameter2
-	func ConsDir(s IO_seg2) bool
-	func Peer(s IO_seg2) bool
-	func Past(s IO_seg2) seq[HFSchemeAhiT]
-	func Future(s IO_seg2) seq[HFSchemeAhiT]
-	func History(s IO_seg2) seq[AhiSchemeAhiT]
+type IO_seg2 adt {
+	IO_seg2_ {
+		AInfo TypeParameter1
+		UInfo TypeParameter2
+		ConsDir bool
+		Peer bool
+		Past seq[IO_HF]     // formalized originally as a seq of HF_scheme
+		Future seq[IO_HF]   // formalized originally as a seq of HF_scheme
+		History seq[IO_ahi] // formalized originally as a seq of ahi_scheme
+	}
 }
-
-// TODO: is encoding these as domains the best choice here?
-// QUESTION: (urgent) where does HF_scheme come from?
-type HFSchemeAhiT = IO_HF // domain{}
-type AhiSchemeAhiT domain{}
 
 /** End of Segments **/
 
 /** Packets **/
 type IO_pkt2 adt {
-	IO_pkt2_cons {
+	IO_pkt2_ {
 		CurrSeg  IO_seg2
 		LeftSeg  option[IO_seg2]
 		MidSeg   option[IO_seg2]
