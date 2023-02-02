@@ -16,49 +16,57 @@
 
 package io
 
+// the following methods are already concretized for IO_seg3 and IO_pkt3,
+// instead of being fully generic (i.e., taking params of type IO_seg2 and IO_pkt2).
+
 ghost
 pure
 decreases
-func inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[IO_HF]) bool {
+func inc_seg2(currseg, traversedseg IO_seg3, hf1 IO_HF, fut seq[IO_HF]) bool {
 	return currseg.Future === seq[IO_HF]{hf1} ++ fut &&
 		traversedseg.Future === fut &&
 		traversedseg.Past === seq[IO_HF]{hf1} ++ currseg.Past &&
-        traversedseg.History === seq[IO_ahi]{hf1.Toab()} ++ currseg.History
+		traversedseg.History === seq[IO_ahi]{hf1.Toab()} ++ currseg.History
 }
 
 ghost
 pure
 decreases
-func same_segment2(currseg, traversedseg IO_seg2) bool {
+func same_segment2(currseg, traversedseg IO_seg3) bool {
 	return traversedseg.Future === currseg.Future &&
-        traversedseg.Past    === currseg.Past &&
-        traversedseg.History === currseg.History
+		traversedseg.Past    === currseg.Past &&
+		traversedseg.History === currseg.History
+}
+
+ghost
+pure
+requires d != nil
+decreases
+// dp3 is not present in the original signature, but we need it to be able to call upd_uinfo
+func update_uinfo2(currseg, traversedseg IO_seg3, hf1 IO_HF, d dp3) bool {
+	return traversedseg.UInfo === d.upd_uinfo(currseg.UInfo, hf1)
 }
 
 ghost
 pure
 decreases
-// TODO: do not know where upd_info comes from
-func update_uinfo2(currseg, traversedseg IO_seg2, hf1 IO_HF) bool
-
-ghost
-pure
-decreases
-func same_uinfo2(currseg, traversedseg IO_seg2) bool {
+func same_uinfo2(currseg, traversedseg IO_seg3) bool {
 	return currseg.UInfo === traversedseg.UInfo
 }
 
 ghost
 pure
+requires d != nil
 decreases
-func update_info(condition bool, currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
-	return condition? update_uinfo2(currseg, traversedseg, hf1) : same_uinfo2(currseg, traversedseg)
+// dp3 is not present in the original signature, but we need it to be able to call upd_uinfo
+func update_info(condition bool, currseg, traversedseg IO_seg3, hf1 IO_HF, d dp3) bool {
+	return condition? update_uinfo2(currseg, traversedseg, hf1, d) : same_uinfo2(currseg, traversedseg)
 }
 
 ghost
 pure
 decreases
-func same_other(currseg, traversedseg IO_seg2) bool {
+func same_other(currseg, traversedseg IO_seg3) bool {
 	return traversedseg.AInfo === currseg.AInfo &&
 		traversedseg.ConsDir === currseg.ConsDir &&
 		traversedseg.Peer === currseg.Peer

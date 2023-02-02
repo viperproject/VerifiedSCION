@@ -24,11 +24,18 @@ type TypeParameter1 = interface{}
 type TypeParameter2 = interface{}
 type TypeParameter3 = interface{}
 
+type Unit adt {
+	Unit_{}
+}
+
 // interface IDs
 type IO_ifs uint16
 
 // type of AS identifiers
 type IO_as uint
+
+// router ids
+type IO_rid uint
 
 // msgTerms consist of terms from our term algebra.
 type IO_msgterm adt {
@@ -139,10 +146,11 @@ pure func ToHF(h path.HopField) (res IO_HF)
 /** End of Hop-Fields **/
 
 /** Segments **/
-type IO_seg2 adt {
-	IO_seg2_ {
-		AInfo TypeParameter1
-		UInfo TypeParameter2
+// seg3 is the same as seg2 instantiated with type parameters
+type IO_seg3 adt {
+	IO_seg3_ {
+		AInfo int // nat in Isabelle
+		UInfo set[IO_msgterm]
 		ConsDir bool
 		Peer bool
 		Past seq[IO_HF]     // formalized originally as a seq of HF_scheme
@@ -154,17 +162,15 @@ type IO_seg2 adt {
 /** End of Segments **/
 
 /** Packets **/
-type IO_pkt2 adt {
+// pkt3 is the same as pkt2 instantiated with type parameters
+type IO_pkt3 adt {
 	IO_pkt2_ {
-		CurrSeg  IO_seg2
-		LeftSeg  option[IO_seg2]
-		MidSeg   option[IO_seg2]
-		RightSeg option[IO_seg2]
+		CurrSeg  IO_seg3
+		LeftSeg  option[IO_seg3]
+		MidSeg   option[IO_seg3]
+		RightSeg option[IO_seg3]
 	}
 }
-
-// pkt3 is the same as pkt2 instantiated with type parameters
-type IO_pkt3 = IO_pkt2
 
 /** End of Packets **/
 
@@ -236,3 +242,24 @@ type IO_bio3s adt {
 }
 
 /** End of Values **/
+
+// locales are implemented as interfaces in Gobra, where each parameter is
+// implemented as an interface method.
+// Currently, we are translating "for" clauses in locales as methods, like we do for
+// "for" clauses.
+type dp3 interface {
+	ghost
+	pure
+	decreases
+	hf_valid(ghost p1 bool, ghost p2 uint, ghost p3 set[IO_msgterm], ghost p4 IO_HF) (ghost bool)
+
+	ghost
+	pure
+	decreases
+	upd_uinfo(ghost p1 set[IO_msgterm], ghost p2 IO_HF) (ghost set[IO_msgterm])
+
+	ghost
+	pure
+	decreases
+	rid_as(ghost p IO_rid) (ghost IO_as)
+}
