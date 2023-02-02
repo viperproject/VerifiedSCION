@@ -127,6 +127,7 @@ func (h IO_HF) Toab() IO_ahi {
 	return IO_ahi_{h.InIF2, h.EgIF2, h.HVF.extract_asid()}
 }
 
+// TODO: move ToHF to another package
 // TODO: can we get rid of this assumption?
 // We ASSUME the existence of a function that computes the msgTerm of a path.HopField
 ghost
@@ -242,24 +243,3 @@ type IO_bio3s adt {
 }
 
 /** End of Values **/
-
-// locales are implemented as interfaces in Gobra, where each parameter is
-// implemented as an interface method.
-// Currently, we are translating "for" clauses in locales as methods, like we do for
-// "for" clauses.
-type dp3 interface {
-	ghost
-	pure
-	decreases
-	hf_valid(ghost p1 bool, ghost p2 uint, ghost p3 set[IO_msgterm], ghost p4 IO_HF) (ghost bool)
-
-	ghost
-	pure
-	decreases
-	upd_uinfo(ghost p1 set[IO_msgterm], ghost p2 IO_HF) (ghost set[IO_msgterm])
-
-	ghost
-	pure
-	decreases
-	rid_as(ghost p IO_rid) (ghost IO_as)
-}

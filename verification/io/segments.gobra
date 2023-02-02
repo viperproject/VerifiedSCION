@@ -40,11 +40,9 @@ func same_segment2(currseg, traversedseg IO_seg3) bool {
 
 ghost
 pure
-requires d != nil
 decreases
-// dp3 is not present in the original signature, but we need it to be able to call upd_uinfo
-func update_uinfo2(currseg, traversedseg IO_seg3, hf1 IO_HF, d dp3) bool {
-	return traversedseg.UInfo === d.upd_uinfo(currseg.UInfo, hf1)
+func update_uinfo2(currseg, traversedseg IO_seg3, hf1 IO_HF) bool {
+	return traversedseg.UInfo === upd_uinfo(currseg.UInfo, hf1)
 }
 
 ghost
@@ -56,11 +54,9 @@ func same_uinfo2(currseg, traversedseg IO_seg3) bool {
 
 ghost
 pure
-requires d != nil
 decreases
-// dp3 is not present in the original signature, but we need it to be able to call upd_uinfo
-func update_info(condition bool, currseg, traversedseg IO_seg3, hf1 IO_HF, d dp3) bool {
-	return condition? update_uinfo2(currseg, traversedseg, hf1, d) : same_uinfo2(currseg, traversedseg)
+func update_info(condition bool, currseg, traversedseg IO_seg3, hf1 IO_HF) bool {
+	return condition? update_uinfo2(currseg, traversedseg, hf1) : same_uinfo2(currseg, traversedseg)
 }
 
 ghost

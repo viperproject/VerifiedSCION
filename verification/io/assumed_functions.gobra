@@ -16,23 +16,28 @@
 
 package io
 
-type IO_Link adt {
-    IO_CustProv{}
-    IO_ProvCust{}
-    IO_PeerOrCore{}
-    IO_NoLink{}
-}
+// NOTE:
+// The following functions are provided as parameters to various locales in the Isabelle formalization.
+// However, it is not clear at the moment how these should be translated to Gobra and whether they
+// should have proof obligations attached, or can just be assumed to exist.
+// TODO: clarify this translation
 
-// Defined in Network_Model.thy
-// TODO: define
 ghost
 pure
 decreases
-func valid_link_types(hf1 IO_ahi) bool
+func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool
 
-// Defined in Network_Model.thy
-// TODO: define
 ghost
 pure
 decreases
-func valid_link_types_in(hf1 IO_ahi) bool
+func upd_uinfo(p1 set[IO_msgterm], p2 IO_HF) set[IO_msgterm]
+
+ghost
+pure
+decreases
+func rid_as(p IO_rid) IO_as
+
+ghost
+pure
+decreases
+func link_type(p1 IO_as, p2 IO_ifs) IO_Link
