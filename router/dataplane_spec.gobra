@@ -33,11 +33,9 @@ pred (d *DataPlane) MacFactoryOperational(key *[]byte) {
 	d.macFactory implements MacFactorySpec{key}
 }
 
-// MutexInvariantPerm + MemPerm = 1
 ghost const (
-	MutexInvariantPerm perm = 1/3
-	// MemPerm perm = perm(1/1) - MutexInvariantPerm // causes crash in Gobra
-	MemPerm perm = 2/3
+	MutexInvariantPerm perm = 1/2
+	MemPerm perm = 1/2
 )
 
 pred MutexInvariant(d *DataPlane) {
