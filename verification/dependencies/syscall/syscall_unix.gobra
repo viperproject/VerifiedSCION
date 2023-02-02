@@ -31,4 +31,20 @@ preserves e.ErrorMem()
 decreases
 func (e Errno) Error() string
 
+ghost
+decreases
+pure
+func (e Errno) IsDuplicableMem() (res bool) {
+	return true
+}
+
+ghost
+preserves e.ErrorMem()
+ensures   e.ErrorMem() 
+decreases
+func (e Errno) Duplicate() {
+	assert unfolding e.ErrorMem() in true
+	fold e.ErrorMem()
+}
+
 Errno implements error

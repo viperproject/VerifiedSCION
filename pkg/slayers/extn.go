@@ -98,11 +98,12 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 	}
 }
 
-// @ requires  2 <= len(data)
+// @ requires  1 <= len(data)
 // @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL20)
 // @ ensures   err == nil ==> acc(res)
 // @ ensures   (err == nil && res.OptType != OptTypePad1) ==> (
 // @ 	2 <= res.ActualLength && res.ActualLength <= len(data) && res.OptData === data[2:res.ActualLength])
+// @ ensures   err == nil ==> 0 < res.ActualLength
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeTLVOption(data []byte) (res *tlvOption, err error) {
@@ -246,6 +247,7 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 // The following poscondition is more a lot more complicated than it would be if the return type
 // was *extnBase instead of extnBase
 // @ ensures   resErr == nil ==> (
+// @ 	2 <= len(data) &&
 // @ 	0 <= res.ActualLen && res.ActualLen <= len(data) &&
 // @ 	res.BaseLayer.Contents === data[:res.ActualLen] &&
 // @ 	res.BaseLayer.Payload === data[res.ActualLen:])
@@ -296,20 +298,28 @@ func (h *HopByHopExtn) CanDecode() gopacket.LayerClass {
 	return LayerClassHopByHopExtn
 }
 
-// @ trusted
 // @ preserves acc(h.Mem(ubuf), def.ReadL20)
 // @ decreases
 func (h *HopByHopExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerTypeAfterHBH(h.NextHdr)
+	return scionNextLayerTypeAfterHBH( /*@ unfolding acc(h.Mem(ubuf), def.ReadL20) in (unfolding acc(h.extnBase.Mem(ubuf), def.ReadL20) in @*/ h.NextHdr /*@ ) @*/)
 }
 
-// @ trusted
 // @ requires h.Mem(ub)
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* h.Mem(ub)
 // @ decreases
 func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
-	return h.Payload
+	// @ unfold h.Mem(ub)
+	// @ unfold h.extnBase.Mem(ub)
+	// @ ghost base := &h.extnBase.BaseLayer
+	// @ unfold base.Mem(ub)
+	tmp := h.Payload
+	// @ package sl.AbsSlice_Bytes(tmp, 0, len(tmp)) --* h.Mem(ub) {
+	// @ 	fold base.Mem(ub)
+	// @ 	fold h.extnBase.Mem(ub)
+	// @	fold h.Mem(ub)
+	// @ }
+	return tmp
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer.
@@ -330,7 +340,6 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer.
-// @ trusted
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  h.NonInitMem()
 // @ requires  df != nil
@@ -341,36 +350,74 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 // @ decreases
 func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	var err error
+	// @ unfold h.NonInitMem()
 	h.Options = nil
 	h.extnBase, err = decodeExtnBase(data, df)
 	if err != nil {
+		// @ fold h.NonInitMem()
 		return err
 	}
 	if err := checkHopByHopExtnNextHdr(h.NextHdr); err != nil {
+		// @ fold h.NonInitMem()
 		return err
 	}
 	offset := 2
+
+	// @ ghost lenOptions := 0
+
+	// @ invariant 2 <= offset
+	// @ invariant acc(h)
+	// @ invariant 0 <= h.ActualLen && h.ActualLen <= len(data)
+	// @ invariant len(h.Options) == lenOptions
+	// @ invariant forall i int :: { &h.Options[i] } 0 <= i && i < lenOptions ==>
+	// @ 	(acc(&h.Options[i]) && h.Options[i].Mem(i))
+	// @ invariant sl.AbsSlice_Bytes(data, 0, len(data))
+	// framing:
+	// @ invariant h.BaseLayer.Contents === data[:h.ActualLen]
+	// @ invariant h.BaseLayer.Payload === data[h.ActualLen:]
+	// @ decreases h.ActualLen - offset
 	for offset < h.ActualLen {
+		// @ sl.SplitRange_Bytes(data, offset, h.ActualLen, def.ReadL20)
 		opt, err := decodeTLVOption(data[offset:h.ActualLen])
+		// @ sl.CombineRange_Bytes(data, offset, h.ActualLen, def.ReadL20)
 		if err != nil {
+			// @ fold h.NonInitMem()
 			return err
 		}
-		h.Options = append(h.Options, (*HopByHopOption)(opt))
+		// @ ghost tmp := (*HopByHopOption)(opt)
+		h.Options = append( /*@ perm(1/2), @*/ h.Options, (*HopByHopOption)(opt))
 		offset += opt.ActualLength
+		// @ assert h.Options[lenOptions] === tmp
+		// @ fold tmp.Mem(lenOptions)
+		// @ lenOptions += 1
 	}
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), h.ActualLen, writePerm)
+	// @ sl.Reslice_Bytes(data, 0, h.ActualLen, writePerm)
+	// @ sl.Reslice_Bytes(data, h.ActualLen, len(data), writePerm)
+	// @ fold h.extnBase.BaseLayer.Mem(data)
+	// @ fold h.extnBase.Mem(data)
+	// @ fold h.Mem(data)
 	return nil
 }
 
+// (VerifiedSCION) TODO: to be handled when the initialization of slayers is handled in
+// layertypes.go.
 // @ trusted
-// @ requires false
-func decodeHopByHopExtn(data []byte, p gopacket.PacketBuilder) error {
+// @ requires  false
+// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ requires  p != nil
+// @ preserves p.Mem()
+// @ ensures   res != nil ==> res.ErrorMem()
+// @ decreases
+func decodeHopByHopExtn(data []byte, p gopacket.PacketBuilder) (res error) {
 	h := &HopByHopExtn{}
+	// @ fold h.NonInitMem()
 	err := h.DecodeFromBytes(data, p)
 	p.AddLayer(h)
 	if err != nil {
 		return err
 	}
-	return p.NextDecoder(scionNextLayerTypeAfterHBH(h.NextHdr))
+	return p.NextDecoder(scionNextLayerTypeAfterHBH(( /*@ unfolding h.Mem(data) in (unfolding h.extnBase.Mem(data) in @*/ h.NextHdr /*@ ) @*/)))
 }
 
 // @ ensures (t == HopByHopClass) == (err != nil)
@@ -403,24 +450,31 @@ func (e *EndToEndExtn) CanDecode() gopacket.LayerClass {
 	return LayerClassEndToEndExtn
 }
 
-// @ trusted
 // @ preserves acc(e.Mem(ubuf), def.ReadL20)
 // @ decreases
 func (e *EndToEndExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerTypeAfterE2E(e.NextHdr)
+	return scionNextLayerTypeAfterE2E( /*@ unfolding acc(e.Mem(ubuf), def.ReadL20) in (unfolding acc(e.extnBase.Mem(ubuf), def.ReadL20) in @*/ e.NextHdr /*@ ) @*/)
 }
 
-// @ trusted
 // @ requires e.Mem(ub)
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* e.Mem(ub)
 // @ decreases
 func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
-	return e.Payload
+	// @ unfold e.Mem(ub)
+	// @ unfold e.extnBase.Mem(ub)
+	// @ ghost base := &e.extnBase.BaseLayer
+	// @ unfold base.Mem(ub)
+	tmp := e.Payload
+	// @ package sl.AbsSlice_Bytes(tmp, 0, len(tmp)) --* e.Mem(ub) {
+	// @ 	fold base.Mem(ub)
+	// @ 	fold e.extnBase.Mem(ub)
+	// @	fold e.Mem(ub)
+	// @ }
+	return tmp
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer.
-// @ trusted
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  e.NonInitMem()
 // @ requires  df != nil
@@ -431,26 +485,58 @@ func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
 // @ decreases
 func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	var err error
+	// @ unfold e.NonInitMem()
 	e.Options = nil
 	e.extnBase, err = decodeExtnBase(data, df)
 	if err != nil {
+		// @ fold e.NonInitMem()
 		return err
 	}
 	if err := checkEndToEndExtnNextHdr(e.NextHdr); err != nil {
+		// @ fold e.NonInitMem()
 		return err
 	}
 	offset := 2
+
+	// @ ghost lenOptions := 0
+
+	// @ invariant 2 <= offset
+	// @ invariant acc(e)
+	// @ invariant 0 <= e.ActualLen && e.ActualLen <= len(data)
+	// @ invariant len(e.Options) == lenOptions
+	// @ invariant forall i int :: { &e.Options[i] } 0 <= i && i < lenOptions ==>
+	// @ 	(acc(&e.Options[i]) && e.Options[i].Mem(i))
+	// @ invariant sl.AbsSlice_Bytes(data, 0, len(data))
+	// framing:
+	// @ invariant e.BaseLayer.Contents === data[:e.ActualLen]
+	// @ invariant e.BaseLayer.Payload === data[e.ActualLen:]
+	// @ decreases e.ActualLen - offset
 	for offset < e.ActualLen {
+		// @ sl.SplitRange_Bytes(data, offset, e.ActualLen, def.ReadL20)
 		opt, err := decodeTLVOption(data[offset:e.ActualLen])
+		// @ sl.CombineRange_Bytes(data, offset, e.ActualLen, def.ReadL20)
 		if err != nil {
+			// @ fold e.NonInitMem()
 			return err
 		}
-		e.Options = append(e.Options, (*EndToEndOption)(opt))
+		// @ ghost tmp := (*EndToEndOption)(opt)
+		e.Options = append( /*@ perm(1/2), @*/ e.Options, (*EndToEndOption)(opt))
 		offset += opt.ActualLength
+		// @ assert e.Options[lenOptions] === tmp
+		// @ fold tmp.Mem(lenOptions)
+		// @ lenOptions += 1
 	}
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), e.ActualLen, writePerm)
+	// @ sl.Reslice_Bytes(data, 0, e.ActualLen, writePerm)
+	// @ sl.Reslice_Bytes(data, e.ActualLen, len(data), writePerm)
+	// @ fold e.extnBase.BaseLayer.Mem(data)
+	// @ fold e.extnBase.Mem(data)
+	// @ fold e.Mem(data)
 	return nil
 }
 
+// (VerifiedSCION) TODO: to be handled when the initialization of slayers is handled in
+// layertypes.go.
 // @ trusted
 // @ requires false
 func decodeEndToEndExtn(data []byte, p gopacket.PacketBuilder) error {
