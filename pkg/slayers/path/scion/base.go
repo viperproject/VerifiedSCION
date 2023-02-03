@@ -24,6 +24,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
+	// @ b "github.com/scionproto/scion/verification/utils/bitwise"
 )
 
 // MetaLen is the length of the PathMetaHeader.
@@ -211,7 +212,7 @@ type MetaHdr struct {
 // @ preserves acc(m)
 // @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
-// @ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrHF >= 0)
+// @ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrINF < 4 && m.CurrHF >= 0)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
@@ -222,6 +223,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
+	// @ assert m.CurrINF == b.First2Bits(line)
 	m.CurrHF = uint8(line>>24) & 0x3F
 	// (VerifiedSCION) The following assumption is guaranteed by Go but still not modeled in Gobra.
 	//@ assume m.CurrINF >= 0 && m.CurrHF >= 0

@@ -207,6 +207,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ ensures  r == nil ==> p.Mem(ubuf)
 // @ ensures  r == nil ==> p == s
 // @ ensures  r == nil ==> typeOf(p) == type[*Decoded]
+// @ ensures  r == nil && old(unfolding s.Mem(ubuf) in s.Base.InfValid()) ==> unfolding (p.(*Decoded)).Mem(ubuf) in (p.(*Decoded)).Base.InfValid()
 // @ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
 // @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
@@ -221,6 +222,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ fold s.Mem(ubuf)
 	// Reverse order of InfoFields and SegLens
 	//@ invariant s.Mem(ubuf)
+	//@ invariant old(unfolding s.Mem(ubuf) in s.Base.InfValid()) ==> unfolding s.Mem(ubuf) in s.Base.InfValid()
 	//@ invariant 0 <= i && i < unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in s.NumINF)
 	//@ invariant 0 <= j && j < unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in s.NumINF)
 	//@ decreases j-i
@@ -233,6 +235,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ ensures  s.Base.Mem()
 		//@ ensures  s.Base.getNumINF() == before(s.Base.getNumINF())
 		//@ ensures  s.Base.getNumHops() == before(s.Base.getNumHops())
+		//@ ensures  before(s.Base.InfValid()) ==> s.Base.InfValid()
 		//@ decreases
 		//@ outline (
 		//@ unfold s.Base.Mem()
@@ -242,6 +245,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ fold s.Mem(ubuf)
 	}
 	//@ preserves s.Mem(ubuf)
+	//@ ensures before(unfolding s.Mem(ubuf) in s.Base.InfValid()) ==> unfolding s.Mem(ubuf) in s.Base.InfValid()
 	//@ decreases
 	//@ outline(
 	//@ unfold s.Mem(ubuf)
@@ -263,6 +267,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	// Unfortunately, Gobra cannot prove it in a timely fashion.
 	//@ trusted
 	//@ preserves s.Mem(ubuf)
+	//@ ensures before(unfolding s.Mem(ubuf) in s.Base.InfValid()) ==> unfolding s.Mem(ubuf) in s.Base.InfValid()
 	//@ decreases
 	//@ outline(
 	// Reverse order of hop fields
@@ -285,6 +290,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ )
 	// Update CurrINF and CurrHF and SegLens
 	//@ preserves s.Mem(ubuf)
+	//@ ensures before(unfolding s.Mem(ubuf) in s.Base.InfValid()) ==> unfolding s.Mem(ubuf) in s.Base.InfValid()
 	//@ decreases
 	//@ outline(
 	//@ unfold s.Mem(ubuf)

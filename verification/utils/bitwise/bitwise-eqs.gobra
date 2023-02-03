@@ -36,3 +36,10 @@ ensures 0 <= b & 0x7 && b & 0x7 <= 7
 ensures res == b & 0x7
 decreases
 func BitAnd7(b int) (res int)
+
+ghost
+pure
+ensures 0 <= uint8(b >> 30) && uint8(b >> 30) < 4
+ensures res == uint8(b >> 30)
+decreases
+func First2Bits(b uint32) (res uint8)

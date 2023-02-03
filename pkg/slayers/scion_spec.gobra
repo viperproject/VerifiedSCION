@@ -312,6 +312,12 @@ pure func isConvertibleToIPv4(a net.Addr) bool {
 }
 
 ghost
+requires s.Mem(ubuf)
+pure func (s *SCION) GetPathUbuf(ubuf []byte) ([]byte) {
+	return unfolding s.Mem(ubuf) in ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]
+}
+
+ghost
 requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP, _)
 pure func isIPv6(a net.Addr) bool {

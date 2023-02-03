@@ -85,6 +85,7 @@ func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
 requires d.Mem(ubuf)
 ensures  e == nil ==> d.Mem(ubuf)
 ensures  e == nil ==> d.Len(ubuf) == old(d.Len(ubuf))
+ensures  e == nil ==> d.PathCurrINFValid(ubuf)
 ensures  e != nil ==> d.NonInitMem()
 ensures  e != nil ==> e.ErrorMem()
 decreases
@@ -97,6 +98,13 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 		fold d.NonInitMem()
 	}
 	return e
+}
+
+ghost
+requires d.Mem(ubuf)
+decreases
+pure func (d *Decoded) PathCurrINFValid (ghost ubuf []byte) (bool) {
+	return unfolding d.Mem(ubuf) in unfolding d.Base.Mem() in 0 <= d.PathMeta.CurrINF && d.PathMeta.CurrINF < 3
 }
 
 /**** End of Stubs ****/

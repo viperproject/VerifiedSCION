@@ -1896,6 +1896,13 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ requires acc(&p.buffer)
 // @ requires scmpP.Mem(ubufP)
 // @ requires p.scionLayer.Mem(ubufS) && p.buffer.Mem(ubufB)
+// @ requires unfolding p.scionLayer.Mem(ubufS) in
+// @          typeOf(p.scionLayer.Path) == *epic.Path ==>
+// @          unfolding (p.scionLayer.Path.(*epic.Path)).Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]) in
+// @          unfolding (p.scionLayer.Path.(*epic.Path)).ScionPath.Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen][epic.MetadataLen:]) in
+// @          unfolding (p.scionLayer.Path.(*epic.Path)).ScionPath.Base.Mem() in
+// @          0 <= (p.scionLayer.Path.(*epic.Path)).ScionPath.PathMeta.CurrINF && (p.scionLayer.Path.(*epic.Path)).ScionPath.PathMeta.CurrINF < (p.scionLayer.Path.(*epic.Path)).ScionPath.Base.NumINF
+// @ requires unfolding p.scionLayer.Mem(ubufS) in typeOf(p.scionLayer.Path) == *scion.Raw ==> unfolding (p.scionLayer.Path.(*scion.Raw)).Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]) in unfolding (p.scionLayer.Path.(*scion.Raw)).Base.Mem() in 0 <= (p.scionLayer.Path.(*scion.Raw)).PathMeta.CurrINF && (p.scionLayer.Path.(*scion.Raw)).PathMeta.CurrINF < (p.scionLayer.Path.(*scion.Raw)).Base.NumINF
 // @ requires cannotRoute.ErrorMem()
 func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SCMPCode, scmpP gopacket.SerializableLayer, cause error /*@, ghost ubufP []byte, ghost ubufS []byte, ghost ubufB []byte @*/) ([]byte, error) {
 
@@ -1903,9 +1910,9 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 	// back to rawPkt (quote).
 	var path *scion.Raw
 	// assert false // 2m21s
+	// @ ubufPath := p.scionLayer.GetPathUbuf(ubufS)
 	// @ unfold p.scionLayer.Mem(ubufS)
 	// @ assert p.scionLayer.Path.Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen])
-	// @ ubufPath := ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]
 	// @ assert p.scionLayer.Path.Mem(ubufPath)
 	// @ assert acc(p.scionLayer.Path.Mem(ubufPath), _)
 	pathType := p.scionLayer.Path.Type( /*@ ubufPath @*/ )
@@ -1931,6 +1938,7 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
+	// @ assert unfolding path.Mem(ubufPath) in unfolding path.Base.Mem() in 0 <= path.PathMeta.CurrINF && path.PathMeta.CurrINF < path.NumINF
 	decPath, err := path.ToDecoded( /*@ ubufPath @*/ )
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
@@ -1941,6 +1949,7 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	revPath := revPathTmp.(*scion.Decoded)
+	// @ assume false
 
 	// @ p.d.accToExternalAndBatchConn()
 	// @ unfold revPath.Mem(unfolding path.NonInitMem() in path.Raw)
@@ -1952,8 +1961,10 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 		if err := revPath.IncPath( /*@ unfolding path.NonInitMem() in path.Raw @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
-		// @ assert unfolding revPath.Mem(unfolding path.NonInitMem() in path.Raw) in unfolding revPath.Base.Mem() in revPath.Base.PathMeta.CurrINF < 3 && 0 <= revPath.Base.PathMeta.CurrINF
+		// @ assert revPath.PathCurrINFValid(unfolding path.NonInitMem() in path.Raw)
+		// @ assert unfolding revPath.Mem(unfolding path.NonInitMem() in path.Raw) in len(revPath.InfoFields) >= 1
 	}
+	// @ assume false
 	
 	// @ ghost if haveToFold { fold revPath.Mem(unfolding path.NonInitMem() in path.Raw) }
 	// If the packet is sent to an external+ router, we need to increment the
