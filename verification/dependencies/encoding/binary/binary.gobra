@@ -146,12 +146,14 @@ func (e bigEndian) PutUint16(b []byte, v uint16) {
 trusted // related to https://github.com/viperproject/gobra/issues/192
 requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
 ensures  res >= 0
+ensures  res == uint32(b[3]) | uint32(b[2])<<8 | uint32(b[1])<<16 | uint32(b[0])<<24
 decreases
 pure func (e bigEndian) Uint32(b []byte) (res uint32) {
 	return uint32(b[3]) | uint32(b[2])<<8 | uint32(b[1])<<16 | uint32(b[0])<<24
 }
 
 preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
+ensures   b[0] == byte(v >> 24) // only this is needed for now
 decreases
 func (e bigEndian) PutUint32(b []byte, v uint32) {
 	b[0] = byte(v >> 24)

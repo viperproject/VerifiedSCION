@@ -44,7 +44,9 @@ type Decoded struct {
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 // @ requires s.NonInitMem()
 // @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures  r == nil ==> len(data) > 0
 // @ ensures  r == nil ==> s.Mem(data)
+// @ ensures  r == nil ==> (unfolding s.Mem(data) in unfolding s.Base.Mem() in unfolding slices.AbsSlice_Bytes(data, 0, len(data)) in s.PathMeta.CurrINF == data[0] >> 6)
 // @ ensures  r != nil ==> (r.ErrorMem() && s.NonInitMem())
 // @ ensures  r != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 // @ decreases

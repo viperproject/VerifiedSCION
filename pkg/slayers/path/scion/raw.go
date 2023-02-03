@@ -127,6 +127,7 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ ensures  err == nil ==> unfolding s.NonInitMem() in len(s.Raw) <= len(ubuf) && s.Raw === ubuf[:len(s.Raw)]
 // @ ensures  err == nil ==> slices.AbsSlice_Bytes(ubuf, unfolding s.NonInitMem() in len(s.Raw), len(ubuf))
 // @ ensures  err == nil ==> d.Mem(unfolding s.NonInitMem() in s.Raw)
+// @ ensures  err == nil && old(unfolding s.Mem(ubuf) in s.Base.InfValid()) ==> unfolding d.Mem(unfolding s.NonInitMem() in s.Raw) in d.Base.InfValid()
 // @ ensures  err != nil ==> (s.Mem(ubuf) && err.ErrorMem())
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
@@ -138,6 +139,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 		return nil, err
 	}
 	//@ fold acc(s.Base.Mem(), def.ReadL1)
+	//@ assert s.Base.InfValid() ==> unfolding acc(s.Base.Mem(), def.ReadL1) in unfolding slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, len(s.Raw[:MetaLen])) in s.PathMeta.CurrINF == s.Raw[:MetaLen][0] >> 6
 	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
 	decoded := &Decoded{}
 	//@ fold decoded.Base.NonInitMem()

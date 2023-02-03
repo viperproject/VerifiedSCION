@@ -43,3 +43,73 @@ ensures 0 <= uint8(b >> 30) && uint8(b >> 30) < 4
 ensures res == uint8(b >> 30)
 decreases
 func First2Bits(b uint32) (res uint8)
+
+ghost
+pure
+requires b < 2147483648
+ensures  a >> 30 == (a | b) >> 30
+ensures  res == uint8(a >> 30)
+decreases
+func PreservesFirst2Bits(a uint32, b uint32) (res uint8)
+
+ghost
+pure
+requires b < 2147483648 // 2 ^ 31
+requires 0 <= a && a < 4
+ensures (uint32(a) << 30 | b) >> 30 == uint32(a)
+ensures res == a
+decreases
+func GetFirst2Bits(a uint8, b uint32) (res uint8)
+
+ghost
+pure
+requires 0 <= b && b <= 24
+ensures uint32(a & 0x3F) << b < 2147483648
+ensures res == uint32(a & 0x3F) << b
+decreases
+func LessThan2to31(a uint8, b int) (res uint32)
+
+ghost
+pure
+requires 0 <= b && b <= 16
+ensures 0 <= uint32(a) << b && uint32(a) << b < 2147483648
+ensures res == uint32(a) << b
+decreases
+func LessThan2to31_byte(a uint8, b int) (res uint32)
+
+ghost
+pure
+requires 0 <= a && a < 2147483648
+requires 0 <= b && b < 2147483648
+ensures 0 <= a | b && a | b < 2147483648
+ensures res == a | b
+decreases
+func LessThan2to31_bitwiseOr(a uint32, b uint32) (res uint32)
+
+ghost
+pure
+ensures a == a << 0
+ensures res == a
+decreases
+func ShiftBy0(a uint32) (res uint32)
+
+ghost
+pure
+ensures uint8(a >> 24) >> 6 == uint8(a >> 30)
+ensures res == uint8(a >> 30)
+decreases
+func ShiftBy24and6(a uint32) (res uint8)
+
+ghost
+pure
+ensures a | b == b | a
+ensures res == a | b
+decreases
+func BitOrCommutative(a uint32, b uint32) (res uint32)
+
+ghost
+pure
+ensures uint8(uint32(a) << 24) >> 30 == a >> 6
+ensures res == a >> 6
+decreases
+func ShiftBy24and30(a uint8) (res uint8)
