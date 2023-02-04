@@ -189,3 +189,15 @@ func (err scmpError) Duplicate() {
 }
 
 scmpError implements error
+
+requires true
+func readClosureSpec(ingressID uint16, rd BatchConn)
+
+requires true
+func closureSpec1(ifID uint16, c bfdSession)
+
+requires true
+func closureSpec2(i uint16, c BatchConn)
+
+requires true
+func closureSpec3(c BatchConn)

@@ -641,9 +641,8 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
-// @ trusted
-// @ requires false
 func (d *DataPlane) Run(ctx context.Context) error {
+	// @ share d, ctx
 	d.mtx.Lock()
 	d.running = true
 
@@ -654,7 +653,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	//     and on this method.
 	d.initMetrics()
 
-	read := func(ingressID uint16, rd BatchConn) {
+	read /*@@@*/ := func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
 		msgs := conn.NewReadMessages(inputBatchCnt)
 		for _, msg := range msgs {
@@ -664,7 +663,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		writeMsgs[0].Buffers = make([][]byte, 1)
 
 		processor := newPacketProcessor(d, ingressID)
-		var scmpErr scmpError
+		var scmpErr /*@@@*/ scmpError
 		for d.running {
 			pkts, err := rd.ReadBatch(msgs)
 			if err != nil {
@@ -713,7 +712,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 				_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
 				if err != nil {
-					var errno syscall.Errno
+					var errno /*@@@*/ syscall.Errno
 					if !errors.As(err, &errno) ||
 						!(errno == syscall.EAGAIN || errno == syscall.EWOULDBLOCK) {
 						log.Debug("Error writing packet", "err", err)
@@ -736,22 +735,23 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			if err := c.Run(ctx); err != nil && err != bfd.AlreadyRunning {
 				log.Error("BFD session failed to start", "ifID", ifID, "err", err)
 			}
-		}(k, v)
+		}(k, v) // @ as closureSpec1
 	}
 	for ifID, v := range d.external {
 		go func(i uint16, c BatchConn) {
 			defer log.HandlePanic()
-			read(i, c)
-		}(ifID, v)
+			read(i, c) //@ as readClosureSpec
+		}(ifID, v) //@ as closureSpec2
 	}
 	go func(c BatchConn) {
 		defer log.HandlePanic()
-		read(0, c)
-	}(d.internal)
+		read(0, c) //@ as readClosureSpec
+	}(d.internal) //@ as closureSpec3
 
 	d.mtx.Unlock()
 
-	<-ctx.Done()
+	r1 /*@ , r2 @*/ := ctx.Done()
+	<-r1
 	return nil
 }
 
