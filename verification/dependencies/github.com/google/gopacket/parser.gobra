@@ -13,19 +13,6 @@ import (
 	def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
-// TODO: Uncomment when https://github.com/viperproject/gobra/issues/503 is fixed
-//type DecodingLayerFunc func([]byte, *[]LayerType) (LayerType, error)
-
-// DecodingLayerFunc decodes given packet and stores decoded LayerType
-// values into specified slice. Returns either first encountered
-// unsupported LayerType value or decoding error. In case of success,
-// returns (LayerTypeZero, nil).
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL13)
-preserves acc(ltypes, def.ReadL13) && acc(*ltypes, def.ReadL13)
-ensures err != nil ==> err.ErrorMem()
-func decodingLayerFunc_spec(b []byte, ltypes *[]LayerType) (l LayerType, err error)
-
-
 type DecodingLayer interface {
 	pred NonInitMem()
 	pred Mem(ubuf []byte)
@@ -53,43 +40,3 @@ type DecodingLayer interface {
 	decreases
 	LayerPayload(ghost ubuf []byte) (res []byte)
 }
-
-type DecodingLayerContainer interface {
-	pred Mem()
-
-	requires Mem()
-	// (VerifiedSCION) not sure if needed
-	// requires d.Mem()
-	ensures res.Mem()
-	decreases
-	Put(d DecodingLayer, ghost ubuf []byte) (res DecodingLayerContainer)
-
-	preserves Mem()
-	// (VerifiedSCION) not sure if required
-	// ensures d.Mem()
-	decreases
-	Decoder(LayerType) (d DecodingLayer, b bool)
-
-	// TODO: replace return type with DecodingLayerFunc when https://github.com/viperproject/gobra/issues/503 is fixed
-	preserves Mem()
-	ensures f implements decodingLayerFunc_spec
-	LayersDecoder(first LayerType, df DecodeFeedback) (f func([]byte, *[]LayerType) (LayerType, error))
-}
-
-type DecodingLayerParser struct {
-	DecodingLayerParserOptions
-	dlc   DecodingLayerContainer
-	first LayerType
-	df    DecodeFeedback
-	// TODO: replace type with DecodingLayerFunc when https://github.com/viperproject/gobra/issues/503 is fixed
-	decodeFunc func([]byte, *[]LayerType) (LayerType, error)
-	Truncated bool
-}
-
-type DecodingLayerParserOptions struct {
-	IgnorePanic bool
-	IgnoreUnsupported bool
-}
-
-requires  def.Uncallable()
-func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) (res *DecodingLayerParser)

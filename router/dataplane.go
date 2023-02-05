@@ -877,7 +877,9 @@ func (p *scionPacketProcessor) reset() error {
 }
 
 // @ trusted
-// @ requires false
+// @ preserves slices.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ preserves p.initMem()
+// @ decreases
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (processResult, error) {
 
@@ -2013,18 +2015,26 @@ func (p *scionPacketProcessor) prepareSCMP(
 // gopacket.DecodingLayerParser, but customized to our use case with a "base"
 // layer and additional, optional layers in the given order.
 // Returns the last decoded layer.
-// @ trusted
-// @ requires false
+// @ requires base != nil && base.NonInitMem()
+// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+// @ requires forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+// @ 	(acc(&opts[i], def.ReadL20) && opts[i] != nil && opts[i].NonInitMem())
+// @ ensures  reterr == nil ==> retl.Mem(data)
+// @ ensures  reterr != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+// @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
-	opts ...gopacket.DecodingLayer) (gopacket.DecodingLayer, error) {
+	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error) {
 
+	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return nil, err
 	}
 	last := base
-	for _, opt := range opts {
-		if opt.CanDecode().Contains(last.NextLayerType()) {
-			data := last.LayerPayload()
+	// @ invariant 0 <= i0 && i0 < len(opts)
+	// @ decreases len(opts) - i0
+	for _, opt := range ([](gopacket.DecodingLayer))(opts) /*@ with i0 @*/ {
+		if opt.CanDecode().Contains(last.NextLayerType( /*@ data @*/ )) {
+			data := last.LayerPayload( /*@ data @*/ )
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 				return nil, err
 			}
@@ -2034,16 +2044,16 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	return last, nil
 }
 
-// @ trusted
-// @ requires false
-func nextHdr(layer gopacket.DecodingLayer) slayers.L4ProtocolType {
+// @ preserves acc(layer.Mem(ubuf), def.ReadL20)
+// @ decreases
+func nextHdr(layer gopacket.DecodingLayer /*@ , ghost ubuf []byte @*/) slayers.L4ProtocolType {
 	switch v := layer.(type) {
 	case *slayers.SCION:
-		return v.NextHdr
+		return /*@ unfolding acc(v.Mem(ubuf), def.ReadL20) in @*/ v.NextHdr
 	case *slayers.EndToEndExtnSkipper:
-		return v.NextHdr
+		return /*@ unfolding acc(v.Mem(ubuf), def.ReadL20) in (unfolding acc(v.extnBase.Mem(ubuf), def.ReadL20) in @*/ v.NextHdr /*@ ) @*/
 	case *slayers.HopByHopExtnSkipper:
-		return v.NextHdr
+		return /*@ unfolding acc(v.Mem(ubuf), def.ReadL20) in (unfolding acc(v.extnBase.Mem(ubuf), def.ReadL20) in @*/ v.NextHdr /*@ ) @*/
 	default:
 		return slayers.L4None
 	}
