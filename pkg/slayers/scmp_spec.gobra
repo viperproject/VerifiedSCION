@@ -58,6 +58,13 @@ func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte) {
 	}
 }
 
+ghost
+requires s.Mem(ubuf)
+ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* s.Mem(ubuf)
+decreases
+func (s *SCMP) BorrowUbuf(ghost ubuf []byte) // TODO
+
 (*SCMP) implements gopacket.Layer
 (*SCMP) implements gopacket.SerializableLayer
 (*SCMP) implements gopacket.DecodingLayer

@@ -2018,22 +2018,38 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ requires base != nil && base.NonInitMem()
 // @ requires slices.AbsSlice_Bytes(data, 0, len(data))
 // @ requires forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
-// @ 	(acc(&opts[i], def.ReadL20) && opts[i] != nil && opts[i].NonInitMem())
+// @ 	(acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
 // @ ensures  reterr == nil ==> retl.Mem(data)
 // @ ensures  reterr != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 // @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error) {
 
+	// @ ghost dataOriginal := data
 	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return nil, err
 	}
 	last := base
-	// @ invariant 0 <= i0 && i0 < len(opts)
+	optsSlice := ([](gopacket.DecodingLayer))(opts)
+	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 < len(opts)
+	// @ invariant forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+	// @       acc(&opts[i], def.ReadL10)
+	// @ invariant forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+	// @       opts[i] != nil
+	// @ invariant forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+	// @       opts[i].NonInitMem()
+	// @ invariant last != nil
+	// @ invariant 0 < len(opts) && i0 == 0 ==> last === base
+	// @ invariant 0 < len(opts) && i0  > 0 ==> last === opts[i0 - 1]
+	// @ invariant last.Mem(data)
+	// @ invariant gopacket.NilDecodeFeedback.Mem()
+	// TODO: have a magic wand from every processed element to ubuf
 	// @ decreases len(opts) - i0
-	for _, opt := range ([](gopacket.DecodingLayer))(opts) /*@ with i0 @*/ {
-		if opt.CanDecode().Contains(last.NextLayerType( /*@ data @*/ )) {
+	for _, opt := range optsSlice /*@ with i0 @*/ {
+		layerClassTmp := opt.CanDecode()
+		// @ fold layerClassTmp.Mem()
+		if layerClassTmp.Contains(last.NextLayerType( /*@ data @*/ )) {
 			data := last.LayerPayload( /*@ data @*/ )
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 				return nil, err
