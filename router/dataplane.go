@@ -2020,6 +2020,15 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ requires forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
 // @ 	(acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
 // @ ensures  reterr == nil ==> retl.Mem(data)
+//
+//			 TODO:
+//				ensures  reterr == nil ==> slices.mem(data) --* retl.Mem(data) // we may need a 'widen' theorem for this, but should be easy.
+//	         // widen will not work, as some predicates mention the offsets precisely. Instead, we can say that if they are different, one of the underlying bufs
+//	         // is contained in another and we return the wands and the permission to the underlying slice of the base
+//				ensures  reterr == nil && retl !== base ==> slices.mem(data) --* base.Mem(data)
+//		     ensures  reterr == nil ==> all other ones are nil
+//		     ensures  != nil ==> original resources
+//
 // @ ensures  reterr != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 // @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
@@ -2050,7 +2059,7 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 		layerClassTmp := opt.CanDecode()
 		// @ fold layerClassTmp.Mem()
 		if layerClassTmp.Contains(last.NextLayerType( /*@ data @*/ )) {
-			data := last.LayerPayload( /*@ data @*/ )
+			data := last.LayerPayload( /*@ data @*/ ) // TODO: we need to prove somehow that the things returned here are a subslice of the orignal
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 				return nil, err
 			}
