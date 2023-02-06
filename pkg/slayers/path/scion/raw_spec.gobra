@@ -68,6 +68,22 @@ decreases
 func (s *Raw) Len(ghost buf []byte) (l int) {
 	return unfolding acc(s.Mem(buf), _) in s.Base.Len()
 }
+
+ghost
+pure
+requires acc(s.Mem(buf), _)
+decreases
+func (s *Raw) RawBufferMem(ghost buf []byte) []byte {
+	return unfolding acc(s.Mem(buf), _) in s.Raw
+}
+
+ghost
+pure
+requires acc(s.NonInitMem(), _)
+decreases
+func (s *Raw) RawBufferNonInitMem() []byte {
+	return unfolding acc(s.NonInitMem(), _) in s.Raw
+}
 /**** End of Stubs ****/
 
 /**** Lemmas ****/
@@ -75,6 +91,7 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
 ghost
 requires s.Mem(buf)
 ensures  s.NonInitMem()
+ensures  old(s.RawBufferMem(buf)) === s.RawBufferNonInitMem()
 decreases
 func (s *Raw) DowngradePerm(buf []byte) {
 	unfold s.Mem(buf)
@@ -230,7 +247,6 @@ ghost
 requires r.Mem(ubuf1)
 requires len(ubuf1) <= len(ubuf2)
 requires ubuf1 === ubuf2[:len(ubuf1)]
-requires slices.AbsSlice_Bytes(ubuf2, len(ubuf1), len(ubuf2))
 ensures  r.Mem(ubuf2)
 decreases
 func (r *Raw) Widen(ubuf1, ubuf2 []byte) {

@@ -106,32 +106,30 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	if err != nil {
 		return nil, err
 	}
-	reversed, err := decoded.Reverse( /*@ unfolding s.NonInitMem() in s.Raw @*/ )
+	reversed, err := decoded.Reverse( /*@ unfolding s.Mem(ubuf) in s.Raw @*/ )
 	if err != nil {
 		return nil, err
 	}
-	//@ unfold s.NonInitMem()
+	//@ unfold s.Mem(ubuf)
+	//@ slices.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	if err := reversed. /*@ (*Decoded). @*/ SerializeTo(s.Raw /*@, s.Raw @*/); err != nil {
+		//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 		return nil, err
 	}
 	//@ ghost sraw := s.Raw
-	//@ fold s.NonInitMem()
-	//@ reversed.DowngradePerm(sraw)
+	//@ fold s.Mem(ubuf)
+	//@ s.DowngradePerm(ubuf)
 	err = s.DecodeFromBytes( /*@ unfolding s.NonInitMem() in @*/ s.Raw)
+	//@ slices.CombineRange_Bytes(ubuf, 0, len(sraw), writePerm)
 	//@ ghost if err == nil { s.Widen(sraw, ubuf) }
 	return s, err
 }
 
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
-// @ requires s.Mem(ubuf)
+// @ preserves s.Mem(ubuf)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ ensures  err == nil ==> s.NonInitMem()
-// @ ensures  err == nil ==> unfolding s.NonInitMem() in len(s.Raw) <= len(ubuf) && s.Raw === ubuf[:len(s.Raw)]
-//
-//	TODO ensures  err == nil ==> slices.AbsSlice_Bytes(ubuf, unfolding s.NonInitMem() in len(s.Raw), len(ubuf))
-//
-// @ ensures  err == nil ==> d.Mem(unfolding s.NonInitMem() in s.Raw)
-// @ ensures  err != nil ==> (s.Mem(ubuf) && err.ErrorMem())
+// @ ensures   err == nil ==> d.Mem(unfolding acc(s.Mem(ubuf), _) in s.Raw)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ s.RawIdxPerm(ubuf, MetaLen, writePerm)
@@ -155,9 +153,10 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 		//@ fold s.Mem(ubuf)
 		return nil, err
 	}
-	//@ unfold s.Base.Mem()
-	//@ fold s.Base.NonInitMem()
-	//@ fold s.NonInitMem()
+	// decoded.Widen(s.Raw, ubuf)
+	//@ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
+	//@ fold s.Mem(ubuf)
 	return decoded, nil
 }
 

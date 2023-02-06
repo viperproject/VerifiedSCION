@@ -174,6 +174,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 		offset += path.InfoLen
 	}
 	//@ invariant s.Mem(ubuf)
+	//@ invariant slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 	//@ invariant b !== ubuf ==> slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ invariant s.Len(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenHopFields(ubuf)
