@@ -32,11 +32,10 @@ type Raw struct {
 
 // DecodeFromBytes only decodes the PathMetaHeader. Otherwise the nothing is decoded and simply kept
 // as raw bytes.
-// @ requires s.NonInitMem()
-// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
-// @ ensures  res == nil ==> s.Mem(data)
-// @ ensures  res != nil ==> (s.NonInitMem() && res.ErrorMem())
-// @ ensures  res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+// @ requires  s.NonInitMem()
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures   res == nil ==> s.Mem(data)
+// @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()
@@ -60,6 +59,7 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
 // @ preserves s.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -91,11 +91,12 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 }
 
 // Reverse reverses the path such that it can be used in the reverse direction.
-// @ requires s.Mem(ubuf)
-// @ ensures  err == nil ==> typeOf(p) == type[*Raw]
-// @ ensures  err == nil ==> p != nil && p != (*Raw)(nil)
-// @ ensures  err == nil ==> p.Mem(ubuf)
-// @ ensures  err != nil ==> err.ErrorMem()
+// @ requires  s.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ ensures   err == nil ==> typeOf(p) == type[*Raw]
+// @ ensures   err == nil ==> p != nil && p != (*Raw)(nil)
+// @ ensures   err == nil ==> p.Mem(ubuf)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
@@ -123,9 +124,12 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
 // @ requires s.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures  err == nil ==> s.NonInitMem()
 // @ ensures  err == nil ==> unfolding s.NonInitMem() in len(s.Raw) <= len(ubuf) && s.Raw === ubuf[:len(s.Raw)]
-// @ ensures  err == nil ==> slices.AbsSlice_Bytes(ubuf, unfolding s.NonInitMem() in len(s.Raw), len(ubuf))
+//
+//	TODO ensures  err == nil ==> slices.AbsSlice_Bytes(ubuf, unfolding s.NonInitMem() in len(s.Raw), len(ubuf))
+//
 // @ ensures  err == nil ==> d.Mem(unfolding s.NonInitMem() in s.Raw)
 // @ ensures  err != nil ==> (s.Mem(ubuf) && err.ErrorMem())
 // @ decreases
@@ -159,6 +163,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 
 // IncPath increments the path and writes it to the buffer.
 // @ requires s.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
 // @   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
 // @ ensures  r == nil ==> s.Mem(ubuf)
@@ -183,6 +188,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 // GetInfoField returns the InfoField at a given index.
 // @ requires acc(s.Mem(ubuf), def.ReadL1)
 // @ requires 0 <= idx
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
 // @ ensures  acc(s.Mem(ubuf), def.ReadL1)
 // @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
@@ -211,6 +217,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
 // @ ensures r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoField, r error) {
@@ -228,6 +235,7 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // SetInfoField updates the InfoField at a given index.
 // @ requires  0 <= idx
 // @ preserves s.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) {
@@ -252,6 +260,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 // GetHopField returns the HopField at a given index.
 // @ requires  0 <= idx
 // @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
@@ -280,6 +289,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {
@@ -297,6 +307,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 // SetHopField updates the HopField at a given index.
 // @ requires  0 <= idx
 // @ preserves s.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/) (r error) {
