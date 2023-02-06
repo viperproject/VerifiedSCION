@@ -30,13 +30,12 @@ type DecodingLayer interface {
 	pred NonInitMem()
 	pred Mem(ubuf []byte)
 
-	requires  slices.AbsSlice_Bytes(data, 0, len(data))
 	requires  NonInitMem()
 	requires  df != nil
+	preserves slices.AbsSlice_Bytes(data, 0, len(data))
 	preserves df.Mem()
 	ensures   res == nil ==> Mem(data)
 	ensures   res != nil ==> (NonInitMem() && res.ErrorMem())
-	ensures   res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 	decreases
 	DecodeFromBytes(data []byte, df DecodeFeedback) (res error)
 
@@ -47,49 +46,10 @@ type DecodingLayer interface {
 	decreases
 	NextLayerType(ghost ubuf []byte) LayerType
 
-	requires Mem(ubuf)
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem(ubuf)
+	preserves Mem(ubuf)
+	ensures   0 <= start && start <= end && end <= len(ubuf)
+	ensures   len(res) == end - start
+	ensures   len(res) != 0 ==> res === ubuf[start:end]
 	decreases
-	LayerPayload(ghost ubuf []byte) (res []byte)
+	LayerPayload(ghost ubuf []byte) (res []byte, ghost start int, ghost end int)
 }
-
-type DecodingLayerContainer interface {
-	pred Mem()
-
-	requires Mem()
-	// (VerifiedSCION) not sure if needed
-	// requires d.Mem()
-	ensures res.Mem()
-	decreases
-	Put(d DecodingLayer, ghost ubuf []byte) (res DecodingLayerContainer)
-
-	preserves Mem()
-	// (VerifiedSCION) not sure if required
-	// ensures d.Mem()
-	decreases
-	Decoder(LayerType) (d DecodingLayer, b bool)
-
-	// TODO: replace return type with DecodingLayerFunc when https://github.com/viperproject/gobra/issues/503 is fixed
-	preserves Mem()
-	ensures f implements decodingLayerFunc_spec
-	LayersDecoder(first LayerType, df DecodeFeedback) (f func([]byte, *[]LayerType) (LayerType, error))
-}
-
-type DecodingLayerParser struct {
-	DecodingLayerParserOptions
-	dlc   DecodingLayerContainer
-	first LayerType
-	df    DecodeFeedback
-	// TODO: replace type with DecodingLayerFunc when https://github.com/viperproject/gobra/issues/503 is fixed
-	decodeFunc func([]byte, *[]LayerType) (LayerType, error)
-	Truncated bool
-}
-
-type DecodingLayerParserOptions struct {
-	IgnorePanic bool
-	IgnoreUnsupported bool
-}
-
-requires  def.Uncallable()
-func NewDecodingLayerParser(first LayerType, decoders ...DecodingLayer) (res *DecodingLayerParser)

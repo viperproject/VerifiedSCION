@@ -14,6 +14,7 @@ import "github.com/scionproto/scion/verification/utils/slices"
 type SerializableLayer interface {
 	pred Mem(ubuf []byte)
 
+	// TODO: adapt this spec
 	requires !opts.FixLengths
 	requires b != nil && b.Mem(buf)
 	requires Mem(ubuf)
