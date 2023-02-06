@@ -308,7 +308,7 @@ func (h *HopByHopExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.Layer
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* h.Mem(ub)
 // @ decreases
-func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
+func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
 	// @ unfold h.Mem(ub)
 	// @ unfold h.extnBase.Mem(ub)
 	// @ ghost base := &h.extnBase.BaseLayer
@@ -319,7 +319,7 @@ func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
 	// @ 	fold h.extnBase.Mem(ub)
 	// @	fold h.Mem(ub)
 	// @ }
-	return tmp
+	return tmp /*@ , start, end @*/
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer.
@@ -460,7 +460,7 @@ func (e *EndToEndExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.Layer
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
 // @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* e.Mem(ub)
 // @ decreases
-func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
+func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
 	// @ unfold e.Mem(ub)
 	// @ unfold e.extnBase.Mem(ub)
 	// @ ghost base := &e.extnBase.BaseLayer
@@ -471,7 +471,7 @@ func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
 	// @ 	fold e.extnBase.Mem(ub)
 	// @	fold e.Mem(ub)
 	// @ }
-	return tmp
+	return tmp /*@ , start, end @*/
 }
 
 // DecodeFromBytes implementation according to gopacket.DecodingLayer.

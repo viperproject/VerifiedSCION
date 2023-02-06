@@ -49,13 +49,14 @@ requires b.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 decreases
-func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte) {
+func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold b.Mem(ub)
-	res = b.BaseLayer.LayerPayload(ub)
+	res, start, end = b.BaseLayer.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
 		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
 		fold b.Mem(ub)
 	}
+    return res, start, end
 }
 
 (*SCMP) implements gopacket.Layer

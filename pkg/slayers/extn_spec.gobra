@@ -86,17 +86,17 @@ requires h.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* h.Mem(ub)
 decreases
-func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
+func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold h.Mem(ub)
 	unfold h.extnBase.Mem(ub)
 	ghost base := &h.extnBase.BaseLayer
-	r := base.LayerPayload(ub)
+	r, start, end := base.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(r, 0, len(r)) --* h.Mem(ub) {
 		apply slices.AbsSlice_Bytes(r, 0, len(r)) --* base.Mem(ub)
 		fold h.extnBase.Mem(ub)
 		fold h.Mem(ub)
 	}
-	return r
+	return r, start, end
 }
 
 (*HopByHopExtnSkipper) implements gopacket.Layer
@@ -154,17 +154,17 @@ requires e.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* e.Mem(ub)
 decreases
-func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
+func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold e.Mem(ub)
 	unfold e.extnBase.Mem(ub)
 	ghost base := &e.extnBase.BaseLayer
-	r := base.LayerPayload(ub)
+	r, start, end := base.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(r, 0, len(r)) --* e.Mem(ub) {
 		apply slices.AbsSlice_Bytes(r, 0, len(r)) --* base.Mem(ub)
 		fold e.extnBase.Mem(ub)
 		fold e.Mem(ub)
 	}
-	return r
+	return r, start, end
 }
 
 (*EndToEndExtnSkipper) implements gopacket.Layer

@@ -40,14 +40,14 @@ requires b.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 decreases
-func (b *SCMPExternalInterfaceDown) LayerPayload(ghost ub []byte) (res []byte) {
+func (b *SCMPExternalInterfaceDown) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold b.Mem(ub)
-	res = b.BaseLayer.LayerPayload(ub)
+	res, start, end = b.BaseLayer.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
 		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
 		fold b.Mem(ub)
 	}
-	return res
+	return res, start, end
 }
 
 
@@ -72,14 +72,14 @@ requires b.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 decreases
-func (b *SCMPInternalConnectivityDown) LayerPayload(ghost ub []byte) (res []byte) {
+func (b *SCMPInternalConnectivityDown) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold b.Mem(ub)
-	res = b.BaseLayer.LayerPayload(ub)
+	res, start, end = b.BaseLayer.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
 		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
 		fold b.Mem(ub)
 	}
-	return res
+	return res, start, end
 }
 
 (*SCMPInternalConnectivityDown) implements gopacket.Layer
@@ -103,14 +103,14 @@ requires b.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 decreases
-func (b *SCMPEcho) LayerPayload(ghost ub []byte) (res []byte) {
+func (b *SCMPEcho) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold b.Mem(ub)
-	res = b.BaseLayer.LayerPayload(ub)
+	res, start, end = b.BaseLayer.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
 		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
 		fold b.Mem(ub)
 	}
-	return res
+	return res, start, end
 }
 
 (*SCMPEcho) implements gopacket.Layer
@@ -135,14 +135,14 @@ requires b.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 decreases
-func (b *SCMPParameterProblem) LayerPayload(ghost ub []byte) (res []byte) {
+func (b *SCMPParameterProblem) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold b.Mem(ub)
-	res = b.BaseLayer.LayerPayload(ub)
+	res, start, end = b.BaseLayer.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
 		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
 		fold b.Mem(ub)
 	}
-	return res
+	return res, start, end
 }
 
 (*SCMPParameterProblem) implements gopacket.Layer
@@ -167,14 +167,14 @@ requires b.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 decreases
-func (b *SCMPTraceroute) LayerPayload(ghost ub []byte) (res []byte) {
+func (b *SCMPTraceroute) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold b.Mem(ub)
-	res = b.BaseLayer.LayerPayload(ub)
+	res, start, end = b.BaseLayer.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
 		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
 		fold b.Mem(ub)
 	}
-	return res
+	return res, start, end
 }
 
 (*SCMPTraceroute) implements gopacket.Layer
@@ -199,14 +199,14 @@ requires b.Mem(ub)
 ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 decreases
-func (b *SCMPDestinationUnreachable) LayerPayload(ghost ub []byte) (res []byte) {
+func (b *SCMPDestinationUnreachable) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold b.Mem(ub)
-	res = b.BaseLayer.LayerPayload(ub)
+	res, start, end = b.BaseLayer.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
 		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
 		fold b.Mem(ub)
 	}
-	return res
+	return res, start, end
 }
 
 (*SCMPDestinationUnreachable) implements gopacket.Layer
@@ -230,13 +230,14 @@ requires b.Mem(ub)
 ensures slices.AbsSlice_Bytes(res, 0, len(res))
 ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
 decreases
-func (b *SCMPPacketTooBig) LayerPayload(ub []byte) (res []byte) {
+func (b *SCMPPacketTooBig) LayerPayload(ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold b.Mem(ub)
-	res = b.BaseLayer.LayerPayload(ub)
+	res, start, end = b.BaseLayer.LayerPayload(ub)
 	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
 		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
 		fold b.Mem(ub)
 	}
+    return res, start, end
 }
 
 (*SCMPPacketTooBig) implements gopacket.Layer

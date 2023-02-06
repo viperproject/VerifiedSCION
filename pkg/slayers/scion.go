@@ -109,11 +109,13 @@ func (b *BaseLayer) LayerContents() (res []byte) {
 }
 
 // LayerPayload returns the bytes contained within the packet layer.
-// @ requires b.Mem(ub)
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
+// @ preserves acc(b.Mem(ub), def.ReadL20)
+//
+//	ensures  sl.AbsSlice_Bytes(res, 0, len(res))
+//	ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
+//
 // @ decreases
-func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
+func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@, ghost start int, ghost end int @*/) {
 	//@ unfold b.Mem(ub)
 	//@ unfold sl.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
 	res = b.Payload
@@ -121,7 +123,7 @@ func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
 	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
 	//@   fold b.Mem(ub)
 	//@ }
-	return res
+	return res /*@, start, end @*/
 }
 
 // SCION is the header of a SCION packet.
@@ -194,20 +196,18 @@ func (s *SCION) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 	return scionNextLayerType( /*@ unfolding acc(s.Mem(ub), def.ReadL20) in @*/ s.NextHdr)
 }
 
-// @ requires s.Mem(ub)
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem(ub)
+// @ preserves acc(s.Mem(ub), def.ReadL20)
+// @ ensures   0 <= start && start <= end && end <= len(ub)
+// @ ensures   len(res) == end - start
+// @ ensures   res === ub[start:end]
 // @ decreases
-func (s *SCION) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
-	//@ unfold s.Mem(ub)
+func (s *SCION) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
+	//@ unfold acc(s.Mem(ub), def.ReadL20)
 	res = s.Payload
-	//@ l := int(s.HdrLen*LineLen)
-	//@ sl.Reslice_Bytes(ub, l, len(ub), writePerm)
-	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem(ub) {
-	//@ 	sl.Unslice_Bytes(ub, l, len(ub), writePerm)
-	//@ 	fold s.Mem(ub)
-	//@ }
-	return res
+	//@ start = int(s.HdrLen*LineLen)
+	//@ end = len(ub)
+	//@ fold acc(s.Mem(ub), def.ReadL20)
+	return res /*@, start, end @*/
 }
 
 // @ ensures res == gopacket.Flow{}
@@ -276,7 +276,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 
 	// @ ghost sPath := s.Path
 	// @ ghost pathSlice := ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]
-	// @ sPath.AccUnderlyingBuf(pathSlice, def.ReadL10)
 	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
 
 	// Serialize address header.
@@ -311,11 +310,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
 // @ requires  s.NonInitMem()
-// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
-// @ ensures   res != nil ==> (s.NonInitMem() && sl.AbsSlice_Bytes(data, 0, len(data)) &&
-// @	res.ErrorMem())
+// @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
 // @ decreases
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	// Decode common header.
@@ -410,6 +408,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
 
+	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
 	// @ fold s.Mem(data)
 
 	return nil
@@ -656,7 +655,7 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (!isIPv4(src) && !isIPv6(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
 // @ decreases
-func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/ ) (res error) {
+func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error) {
 	var err error
 	var verScionTmp []byte
 	s.SrcAddrType, verScionTmp, err = packAddr(src /*@ , wildcard @*/)
