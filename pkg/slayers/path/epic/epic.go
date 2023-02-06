@@ -81,6 +81,7 @@ type Path struct {
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
 // @ preserves p.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ ensures   !old(p.hasScionPath(ubuf)) ==> r != nil
@@ -143,17 +144,18 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ defer fold acc(p.Mem(ubuf), definitions.ReadL1)
 	//@ ghost defer slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
 	//@ ghost defer slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
+	//@ slices.SplitRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
+	//@ ghost defer slices.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	return p.ScionPath.SerializeTo(b[MetadataLen:] /*@, ubuf[MetadataLen:] @*/)
 }
 
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
 // otherwise SerializeTo will return nil.
 // @ requires p.NonInitMem()
-// @ requires slices.AbsSlice_Bytes(b, 0, len(b))
+// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures  len(b) < MetadataLen ==> r != nil
 // @ ensures  r == nil ==> p.Mem(b)
 // @ ensures  r != nil ==> p.NonInitMem() && r.ErrorMem()
-// @ ensures  r != nil ==> slices.AbsSlice_Bytes(b, 0, len(b))
 // @ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	if len(b) < MetadataLen {
@@ -217,16 +219,17 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ ghost if ret == nil {
 	//@ 	fold p.Mem(b)
 	//@ } else {
-	//@ 	slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
-	//@ 	slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
 	//@ 	fold p.NonInitMem()
 	//@ }
+	//@ slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
+	//@ slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
 	return ret
 }
 
 // Reverse reverses the EPIC path. In particular, this means that the SCION path type subheader
 // is reversed.
 // @ requires p.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures  r == nil ==> ret != nil
 // @ ensures  r == nil ==> ret.Mem(ubuf)
 // @ ensures  r == nil ==> ret != nil
@@ -238,10 +241,13 @@ func (p *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (ret path.Path, r error) {
 		//@ fold p.Mem(ubuf)
 		return nil, serrors.New("scion subpath must not be nil")
 	}
+	// @ slices.SplitRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	revScion, err := p.ScionPath.Reverse( /*@ ubuf[MetadataLen:] @*/ )
 	if err != nil {
+		// @ slices.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 		return nil, err
 	}
+	// @ slices.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	ScionPath, ok := revScion.(*scion.Raw)
 	if !ok {
 		return nil, serrors.New("reversed path of type scion.Raw must not change type")
