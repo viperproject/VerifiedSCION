@@ -168,12 +168,7 @@ pred (s *SCION) Mem(ubuf []byte) {
 	s.Payload  === ubuf[s.HdrLen*LineLen:] &&
 	// end of base layer fields
 	CmnHdrLen <= len(ubuf) &&
-	s.HeaderMem(ubuf[CmnHdrLen:]) // &&
-    // TODO: drop
-	// permissions to the rest of the underlying slice:
-	// slices.AbsSlice_Bytes(ubuf, 0, CmnHdrLen+s.AddrHdrLen(nil, true)) &&
-	// slices.AbsSlice_Bytes(ubuf, int(s.HdrLen*LineLen), len(ubuf))
-	// end of permissions to the rest of the underlying slice
+	s.HeaderMem(ubuf[CmnHdrLen:])
 }
 
 pred (s *SCION) HeaderMem(ubuf []byte) {
@@ -207,11 +202,11 @@ pred (s *SCION) ChecksumMem() {
 	slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 }
 
-pred (b *BaseLayer) Mem(ghost ub []byte) {
-	// TODO: at some point, use the ghost param in the body here
-	acc(b) // &&
-	// slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
-	// slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
+	0 <= breakPoint && breakPoint <= len(ub) &&
+	acc(b) &&
+	b.Contents === ub[:breakPoint] &&
+	b.Payload  === ub[breakPoint:]
 }
 
 ghost

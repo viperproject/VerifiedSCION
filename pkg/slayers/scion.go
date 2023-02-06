@@ -109,21 +109,16 @@ func (b *BaseLayer) LayerContents() (res []byte) {
 }
 
 // LayerPayload returns the bytes contained within the packet layer.
-// @ preserves acc(b.Mem(ub), def.ReadL20)
-//
-//	ensures  sl.AbsSlice_Bytes(res, 0, len(res))
-//	ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
-//
+// @ preserves acc(b.Mem(ub, bp), def.ReadL20)
+// @ ensures   len(res) == len(ub) - bp
+// @ ensures   0 <= bp && bp <= len(ub)
+// @ ensures   res === ub[bp:]
 // @ decreases
-func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@, ghost start int, ghost end int @*/) {
-	//@ unfold b.Mem(ub)
-	//@ unfold sl.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte, ghost bp int @*/ ) (res []byte) {
+	// @ unfold acc(b.Mem(ub, bp), def.ReadL20)
 	res = b.Payload
-	//@ fold sl.AbsSlice_Bytes(res, 0, len(res))
-	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
-	//@   fold b.Mem(ub)
-	//@ }
-	return res /*@, start, end @*/
+	// @ fold acc(b.Mem(ub, bp), def.ReadL20)
+	return res
 }
 
 // SCION is the header of a SCION packet.
@@ -220,12 +215,15 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ requires  !opts.FixLengths
 // @ requires  b != nil && b.Mem(uSerBuf)
 // @ preserves s.Mem(ubuf)
+// @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   b.Mem(newUSerBuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte, ghost uSerBuf []byte @*/) (e error /*@ , ghost newUSerBuf []byte @*/) {
 	// @ unfold s.Mem(ubuf)
 	// @ defer  fold s.Mem(ubuf)
+	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
+	// @ ghost defer sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
@@ -285,7 +283,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
 		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
 		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
-		// @ apply acc(sl.AbsSlice_Bytes(pathSlice, 0, len(pathSlice)), def.ReadL10) --* acc(sPath.Mem(pathSlice), def.ReadL10)
 		// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
 		// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* b.Mem(uSerBufN)
 		return err /*@ , uSerBufN @*/
@@ -295,7 +292,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
 	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
 	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
-	// @ apply acc(sl.AbsSlice_Bytes(pathSlice, 0, len(pathSlice)), def.ReadL10) --* acc(sPath.Mem(pathSlice), def.ReadL10)
 	// Serialize path header.
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +gobra
-
 package slayers
 
 import (
@@ -312,13 +310,8 @@ func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ ,
 	// @ unfold h.Mem(ub)
 	// @ unfold h.extnBase.Mem(ub)
 	// @ ghost base := &h.extnBase.BaseLayer
-	// @ unfold base.Mem(ub)
+	//  unfold base.Mem(ub)
 	tmp := h.Payload
-	// @ package sl.AbsSlice_Bytes(tmp, 0, len(tmp)) --* h.Mem(ub) {
-	// @ 	fold base.Mem(ub)
-	// @ 	fold h.extnBase.Mem(ub)
-	// @	fold h.Mem(ub)
-	// @ }
 	return tmp /*@ , start, end @*/
 }
 
@@ -394,7 +387,7 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), h.ActualLen, writePerm)
 	// @ sl.Reslice_Bytes(data, 0, h.ActualLen, writePerm)
 	// @ sl.Reslice_Bytes(data, h.ActualLen, len(data), writePerm)
-	// @ fold h.extnBase.BaseLayer.Mem(data)
+	// @ fold h.extnBase.BaseLayer.Mem(data, h.extnBase.ActualLen)
 	// @ fold h.extnBase.Mem(data)
 	// @ fold h.Mem(data)
 	return nil
@@ -464,13 +457,9 @@ func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ ,
 	// @ unfold e.Mem(ub)
 	// @ unfold e.extnBase.Mem(ub)
 	// @ ghost base := &e.extnBase.BaseLayer
-	// @ unfold base.Mem(ub)
+	//  unfold base.Mem(ub)
 	tmp := e.Payload
-	// @ package sl.AbsSlice_Bytes(tmp, 0, len(tmp)) --* e.Mem(ub) {
-	// @ 	fold base.Mem(ub)
-	// @ 	fold e.extnBase.Mem(ub)
-	// @	fold e.Mem(ub)
-	// @ }
+
 	return tmp /*@ , start, end @*/
 }
 
@@ -529,7 +518,7 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), e.ActualLen, writePerm)
 	// @ sl.Reslice_Bytes(data, 0, e.ActualLen, writePerm)
 	// @ sl.Reslice_Bytes(data, e.ActualLen, len(data), writePerm)
-	// @ fold e.extnBase.BaseLayer.Mem(data)
+	//  fold e.extnBase.BaseLayer.Mem(data)
 	// @ fold e.extnBase.Mem(data)
 	// @ fold e.Mem(data)
 	return nil
@@ -626,7 +615,7 @@ func (s *HopByHopExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFee
 	// @ assert sl.AbsSlice_Bytes(s.extnBase.Contents, 0, len(s.extnBase.Contents))
 	// @ assert sl.AbsSlice_Bytes(s.extnBase.Payload, 0, len(s.extnBase.Payload))
 	// @ assert acc(&s.extnBase)
-	// @ fold s.extnBase.BaseLayer.Mem(data)
+	//  fold s.extnBase.BaseLayer.Mem(data)
 	// @ fold s.extnBase.Mem(data)
 	// @ fold s.Mem(data)
 	return nil
@@ -685,7 +674,7 @@ func (s *EndToEndExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFee
 	// @ assert sl.AbsSlice_Bytes(s.extnBase.Contents, 0, len(s.extnBase.Contents))
 	// @ assert sl.AbsSlice_Bytes(s.extnBase.Payload, 0, len(s.extnBase.Payload))
 	// @ assert acc(&s.extnBase)
-	// @ fold s.extnBase.BaseLayer.Mem(data)
+	//  fold s.extnBase.BaseLayer.Mem(data)
 	// @ fold s.extnBase.Mem(data)
 	// @ fold s.Mem(data)
 	return nil
