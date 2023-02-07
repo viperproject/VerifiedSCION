@@ -50,13 +50,6 @@ pred (h *HopByHopExtn) Mem(ubuf []byte) {
 		(acc(&h.Options[i]) && h.Options[i].Mem(i))
 }
 
-ghost
-requires s.Mem(ubuf)
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* s.Mem(ubuf)
-decreases
-func (s *HopByHopExtn) BorrowUbuf(ghost ubuf []byte) // TODO
-
 // Gobra is not able to infer that HopByHopExtn is "inheriting"
 // the implementation of LayerContents from extnBase.
 requires def.Uncallable()
@@ -106,13 +99,6 @@ func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
 	return r
 }
 
-ghost
-requires s.Mem(ubuf)
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* s.Mem(ubuf)
-decreases
-func (s *HopByHopExtnSkipper) BorrowUbuf(ghost ubuf []byte) // TODO
-
 (*HopByHopExtnSkipper) implements gopacket.Layer
 (*HopByHopExtnSkipper) implements gopacket.DecodingLayer
 
@@ -137,13 +123,6 @@ func (e *EndToEndExtn) LayerContents() (res []byte) {
 	res = e.BaseLayer.LayerContents()
 	return res
 }
-
-ghost
-requires s.Mem(ubuf)
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* s.Mem(ubuf)
-decreases
-func (s *EndToEndExtn) BorrowUbuf(ghost ubuf []byte) // TODO
 
 (*EndToEndExtn) implements gopacket.Layer
 (*EndToEndExtn) implements gopacket.DecodingLayer
@@ -187,13 +166,6 @@ func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
 	}
 	return r
 }
-
-ghost
-requires s.Mem(ubuf)
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* s.Mem(ubuf)
-decreases
-func (s *EndToEndExtnSkipper) BorrowUbuf(ghost ubuf []byte) // TODO
 
 (*EndToEndExtnSkipper) implements gopacket.Layer
 (*EndToEndExtnSkipper) implements gopacket.DecodingLayer

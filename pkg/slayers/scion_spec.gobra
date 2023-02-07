@@ -295,13 +295,6 @@ func (s *SCION) InitPathPoolExchange(pathType path.Type, p path.Path) {
 	}
 }
 
-ghost
-requires s.Mem(ubuf)
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* s.Mem(ubuf)
-decreases
-func (s *SCION) BorrowUbuf(ghost ubuf []byte) // TODO
-
 // gopacket subtyping
 *SCION implements gopacket.Layer
 *SCION implements gopacket.NetworkLayer

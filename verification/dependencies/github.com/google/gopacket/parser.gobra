@@ -41,14 +41,6 @@ type DecodingLayer interface {
 	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem(ubuf)
 	decreases
-	// TODO: return indexes to equal the underlying buf
 	LayerPayload(ghost ubuf []byte) (res []byte)
 
-	// TODO: implement this everywhere
-	ghost
-	requires Mem(ubuf)
-	ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-	ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) --* Mem(ubuf)
-	decreases
-	BorrowUbuf(ghost ubuf []byte)
 }
