@@ -2013,13 +2013,12 @@ func (p *scionPacketProcessor) prepareSCMP(
 // gopacket.DecodingLayerParser, but customized to our use case with a "base"
 // layer and additional, optional layers in the given order.
 // Returns the last decoded layer.
-// @ requires base != nil && base.NonInitMem()
-// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
-// @ requires forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+// @ requires  base != nil && base.NonInitMem()
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ requires  forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
 // @ 	(acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
-// @ ensures  reterr == nil ==> base.Mem(data)
 // TODO: add more postconditions about what is actually processed in the list opts
-// @ ensures  reterr != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+// TODO: ensures   reterr == nil ==> base.Mem(data)
 // @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error) {
@@ -2048,8 +2047,7 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } i0 <= i && i < len(opts) ==>
 	// @       opts[i].NonInitMem()
 	// @ invariant last != nil
-	// @ invariant 0 < len(opts) && i0 == 0 ==> (base.Mem(data) && last === base && iteratedData === oldData)
-	// @ invariant 0 < len(opts) && i0 >  0 ==> (base.Mem(data) && last.Mem(iteratedData))
+	// @ invariant last.Mem(iteratedData)
 	// @ invariant gopacket.NilDecodeFeedback.Mem()
 	// @ invariant 0 <= oldStart && oldStart <= oldEnd && oldEnd <= len(oldData)
 	// @ invariant iteratedData === oldData[oldStart:oldEnd] || iteratedData == nil
