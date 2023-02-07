@@ -73,8 +73,11 @@ func (s *SCMP) LayerType() gopacket.LayerType {
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
+// @ ensures res != nil && res === LayerClassSCMP
+// @ ensures typeOf(res) == gopacket.LayerType
 // @ decreases
-func (s *SCMP) CanDecode() gopacket.LayerClass {
+func (s *SCMP) CanDecode() (res gopacket.LayerClass) {
+	// @ LayerClassSCMPIsLayerType()
 	return LayerClassSCMP
 }
 

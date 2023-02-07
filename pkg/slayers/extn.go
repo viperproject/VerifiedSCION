@@ -292,8 +292,11 @@ func (h *HopByHopExtn) LayerType() gopacket.LayerType {
 	return LayerTypeHopByHopExtn
 }
 
+// @ ensures res != nil && res === LayerClassHopByHopExtn
+// @ ensures typeOf(res) == gopacket.LayerType
 // @ decreases
-func (h *HopByHopExtn) CanDecode() gopacket.LayerClass {
+func (h *HopByHopExtn) CanDecode() (res gopacket.LayerClass) {
+	// @ LayerClassHopByHopExtnIsLayerType()
 	return LayerClassHopByHopExtn
 }
 
@@ -440,8 +443,11 @@ func (e *EndToEndExtn) LayerType() gopacket.LayerType {
 	return LayerTypeEndToEndExtn
 }
 
+// @ ensures res != nil && res === LayerClassEndToEndExtn
+// @ ensures typeOf(res) == gopacket.LayerType
 // @ decreases
-func (e *EndToEndExtn) CanDecode() gopacket.LayerClass {
+func (e *EndToEndExtn) CanDecode() (res gopacket.LayerClass) {
+	// @ LayerClassEndToEndExtnIsLayerType()
 	return LayerClassEndToEndExtn
 }
 
@@ -622,8 +628,11 @@ func (e *HopByHopExtnSkipper) LayerType() gopacket.LayerType {
 	return LayerTypeHopByHopExtn
 }
 
+// @ ensures res != nil && res === LayerClassHopByHopExtn
+// @ ensures typeOf(res) == gopacket.LayerType
 // @ decreases
-func (s *HopByHopExtnSkipper) CanDecode() gopacket.LayerClass {
+func (s *HopByHopExtnSkipper) CanDecode() (res gopacket.LayerClass) {
+	// @ LayerClassHopByHopExtnIsLayerType()
 	return LayerClassHopByHopExtn
 }
 
@@ -674,8 +683,11 @@ func (e *EndToEndExtnSkipper) LayerType() gopacket.LayerType {
 	return LayerTypeEndToEndExtn
 }
 
+// @ ensures res != nil && res === LayerClassEndToEndExtn
+// @ ensures typeOf(res) == gopacket.LayerType
 // @ decreases
-func (s *EndToEndExtnSkipper) CanDecode() gopacket.LayerClass {
+func (s *EndToEndExtnSkipper) CanDecode() (res gopacket.LayerClass) {
+	// @ LayerClassEndToEndExtnIsLayerType()
 	return LayerClassEndToEndExtn
 }
 

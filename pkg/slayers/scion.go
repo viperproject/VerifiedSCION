@@ -179,10 +179,13 @@ func (s *SCION) LayerType() (res gopacket.LayerType) {
 	return LayerTypeSCION
 }
 
-// @ ensures res === LayerClassSCION
+// @ ensures res != nil && res === LayerClassSCION
+// @ ensures typeOf(res) == gopacket.LayerType
 // @ decreases
 func (s *SCION) CanDecode() (res gopacket.LayerClass) {
-	return LayerClassSCION
+	res = LayerClassSCION
+	// @ LayerClassSCIONIsLayerType()
+	return res
 }
 
 // @ preserves acc(s.Mem(ub), def.ReadL20)
