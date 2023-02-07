@@ -39,6 +39,8 @@ type DecodingLayer interface {
 	decreases
 	DecodeFromBytes(data []byte, df DecodeFeedback) (res error)
 
+	ensures res != nil
+	ensures typeOf(res) == LayerType
 	decreases
 	CanDecode() (res LayerClass)
 
