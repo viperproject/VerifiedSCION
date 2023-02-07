@@ -36,15 +36,15 @@ type SerializeOptions struct {
 type SerializeBuffer interface {
 	pred Mem()
 
-    ghost
-    pure
-    requires acc(Mem(), _)
-    decreases
-    UBuf() []byte
+	ghost
+	pure
+	requires acc(Mem(), _)
+	decreases
+	UBuf() []byte
 
 	ghost
 	requires Mem()
-    ensures  res === old(UBuf())
+	ensures  res === old(UBuf())
 	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
 	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* (Mem() && UBuf() === res)
 	decreases
