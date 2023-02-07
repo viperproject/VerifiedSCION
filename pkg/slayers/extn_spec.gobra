@@ -30,10 +30,10 @@ pred (e *extnBase) NonInitMem() {
 }
 
 pred (e *extnBase) Mem(ubuf []byte) {
-	e.BaseLayer.Mem(ubuf) &&
 	acc(&e.NextHdr)   &&
 	acc(&e.ExtLen)    &&
-	acc(&e.ActualLen)
+	acc(&e.ActualLen) &&
+	e.BaseLayer.Mem(ubuf, e.ActualLen)
 }
 
 /** end of extnBase **/
@@ -82,21 +82,21 @@ func (h *HopByHopExtnSkipper) LayerContents() (res []byte) {
 
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
-requires h.Mem(ub)
-ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* h.Mem(ub)
+preserves acc(h.Mem(ub), def.ReadL20)
+ensures   0 <= start && start <= end && end <= len(ub)
+ensures   len(res) == end - start
+ensures   res === ub[start:end]
 decreases
-func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
-	unfold h.Mem(ub)
-	unfold h.extnBase.Mem(ub)
+func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
+	unfold acc(h.Mem(ub), def.ReadL20)
+	unfold acc(h.extnBase.Mem(ub), def.ReadL20)
 	ghost base := &h.extnBase.BaseLayer
-	r := base.LayerPayload(ub)
-	package slices.AbsSlice_Bytes(r, 0, len(r)) --* h.Mem(ub) {
-		apply slices.AbsSlice_Bytes(r, 0, len(r)) --* base.Mem(ub)
-		fold h.extnBase.Mem(ub)
-		fold h.Mem(ub)
-	}
-	return r
+	res = base.LayerPayload(ub, h.ActualLen)
+	start = h.ActualLen
+	end = len(ub)
+	fold acc(h.extnBase.Mem(ub), def.ReadL20)
+	fold acc(h.Mem(ub), def.ReadL20)
+	return res, start, end
 }
 
 (*HopByHopExtnSkipper) implements gopacket.Layer
@@ -150,21 +150,21 @@ func (e *EndToEndExtnSkipper) LayerContents() (res []byte) {
 
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
-requires e.Mem(ub)
-ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* e.Mem(ub)
+preserves acc(e.Mem(ub), def.ReadL20)
+ensures   0 <= start && start <= end && end <= len(ub)
+ensures   len(res) == end - start
+ensures   res === ub[start:end]
 decreases
-func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
-	unfold e.Mem(ub)
-	unfold e.extnBase.Mem(ub)
+func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
+	unfold acc(e.Mem(ub), def.ReadL20)
+	unfold acc(e.extnBase.Mem(ub), def.ReadL20)
 	ghost base := &e.extnBase.BaseLayer
-	r := base.LayerPayload(ub)
-	package slices.AbsSlice_Bytes(r, 0, len(r)) --* e.Mem(ub) {
-		apply slices.AbsSlice_Bytes(r, 0, len(r)) --* base.Mem(ub)
-		fold e.extnBase.Mem(ub)
-		fold e.Mem(ub)
-	}
-	return r
+	res = base.LayerPayload(ub, e.ActualLen)
+	start = e.ActualLen
+	end = len(ub)
+	fold acc(e.extnBase.Mem(ub), def.ReadL20)
+	fold acc(e.Mem(ub), def.ReadL20)
+	return res, start, end
 }
 
 (*EndToEndExtnSkipper) implements gopacket.Layer
@@ -173,27 +173,6 @@ func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte) {
 /** end of EndToEndExtnSkipper **/
 
 /** Definitions required for serializeTLVOptions **/
-ghost
-requires  acc(&o.OptType, _) && acc(&o.OptData, _) && acc(&o.OptDataLen, _)
-// may need: ensures 0 <= res
-decreases
-pure func (o *tlvOption) lengthGhost(fixLengths bool) (res int) {
-	return o.OptType == OptTypePad1? 1 : (fixLengths? len(o.OptData) + 2 : int(o.OptDataLen) + 2)
-}
-
-// The following computes the sum of elements from right to left, makes it trivial to prove
-// computeLen(options, start, end-1) + options[end].lengthGhost(false) == computeLen(options, start, end)
-// when start, end, and end-1 are valid indexes in options.
-ghost
-requires 0 <= start && start <= end && end < len(options)
-requires forall i int :: { &options[i] } start <= i && i <= end ==> acc(&options[i], _)
-requires forall i int :: { &options[i] } start <= i && i <= end ==>
-	(acc(&options[i].OptType, _) && acc(&options[i].OptData, _) && acc(&options[i].OptDataLen, _))
-// decreases end
-pure func computeLen(options []*tlvOption, start, end int) (res int) {
-	return start < end? options[end].lengthGhost(false) + computeLen(options, start, end-1) : /* start==end */ options[start].lengthGhost(false)
-}
-
 /** End of definitions required for serializeTLVOptions **/
 
 /** start of options **/

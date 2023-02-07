@@ -17,6 +17,7 @@ type SerializableLayer interface {
 	requires !opts.FixLengths
 	requires b != nil && b.Mem(buf)
 	requires Mem(ubuf)
+	preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 	ensures  err == nil ==> (Mem(ubuf) && b.Mem(bufRes))
 	ensures  err != nil ==> err.ErrorMem()
 	decreases

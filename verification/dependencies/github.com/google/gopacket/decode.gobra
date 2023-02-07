@@ -96,3 +96,10 @@ type Decoder interface {
 	decreases
 	Decode(b []byte, p PacketBuilder) error
 }
+
+// post init property
+ghost
+ensures NilDecodeFeedback != nil
+ensures NilDecodeFeedback.Mem()
+decreases
+func AssertInvariantNilDecodeFeedback()

@@ -2013,22 +2013,68 @@ func (p *scionPacketProcessor) prepareSCMP(
 // gopacket.DecodingLayerParser, but customized to our use case with a "base"
 // layer and additional, optional layers in the given order.
 // Returns the last decoded layer.
-// @ trusted
-// @ requires false
+// @ requires  base != nil && base.NonInitMem()
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ requires  forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+// @ 	(acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
+// TODO: add more postconditions about what is actually processed in the list opts
+// TODO: ensures   reterr == nil ==> base.Mem(data)
+// @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
-	opts ...gopacket.DecodingLayer) (gopacket.DecodingLayer, error) {
+	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error) {
 
+	// @ ghost dataOriginal := data
+	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return nil, err
 	}
 	last := base
-	for _, opt := range opts {
-		if opt.CanDecode().Contains(last.NextLayerType()) {
-			data := last.LayerPayload()
+	optsSlice := ([](gopacket.DecodingLayer))(opts)
+
+	// @ ghost oldData := data
+	// @ ghost iteratedData := data
+	// @ ghost oldStart := 0
+	// @ ghost oldEnd := len(data)
+	// TODO: to have stronger postconditions, we need to introduce the following:
+	// @ ghost var processed seq[bool] = seq[bool]{}
+
+	// @ invariant slices.AbsSlice_Bytes(oldData, 0, len(oldData))
+	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)
+	// @ invariant forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+	// @       acc(&opts[i], def.ReadL10)
+	// @ invariant forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+	// @       opts[i] != nil
+	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } i0 <= i && i < len(opts) ==>
+	// @       opts[i].NonInitMem()
+	// @ invariant last != nil
+	// @ invariant last.Mem(iteratedData)
+	// @ invariant gopacket.NilDecodeFeedback.Mem()
+	// @ invariant 0 <= oldStart && oldStart <= oldEnd && oldEnd <= len(oldData)
+	// @ invariant iteratedData === oldData[oldStart:oldEnd] || iteratedData == nil
+	// @ decreases len(opts) - i0
+	for _, opt := range optsSlice /*@ with i0 @*/ {
+		// @ assert last.Mem(iteratedData)
+		layerClassTmp := opt.CanDecode()
+		// @ fold layerClassTmp.Mem()
+		if layerClassTmp.Contains(last.NextLayerType( /*@ iteratedData @*/ )) {
+			data /*@ , start, end @*/ := last.LayerPayload( /*@ iteratedData @*/ )
+			// @ iteratedData = data
+			// @ assert data == nil || data === oldData[oldStart:oldEnd][start:end]
+			// @ assert data == nil || data === oldData[oldStart+start:oldStart+end]
+			// @ oldEnd   = oldStart + end
+			// @ oldStart = oldStart + start
+			// @ ghost if data == nil {
+			// @ 	slices.NilAcc_Bytes()
+			// @ } else {
+			// @	slices.SplitRange_Bytes(oldData, oldStart, oldEnd, writePerm)
+			// @ }
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
+				// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 				return nil, err
 			}
+			// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 			last = opt
+			// @ assert last.Mem(iteratedData)
 		}
 	}
 	return last, nil

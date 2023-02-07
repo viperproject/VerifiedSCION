@@ -73,8 +73,11 @@ func (s *SCMP) LayerType() gopacket.LayerType {
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
+// @ ensures res != nil && res === LayerClassSCMP
+// @ ensures typeOf(res) == gopacket.LayerType
 // @ decreases
-func (s *SCMP) CanDecode() gopacket.LayerClass {
+func (s *SCMP) CanDecode() (res gopacket.LayerClass) {
+	// @ LayerClassSCMPIsLayerType()
 	return LayerClassSCMP
 }
 
@@ -196,12 +199,11 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
-// @ requires  slices.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  s.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
-// @ ensures   res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 // @ decreases
 func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	if size := len(data); size < 4 {
@@ -236,20 +238,8 @@ func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res err
 	// @ slices.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
 	// @ slices.CombineAtIndex_Bytes(data, 0, len(data), 4, writePerm)
 	// @ )
-	// @ requires len(data) >= 4
-	// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
-	// @ requires acc(&s.BaseLayer)
-	// @ ensures  s.BaseLayer.Mem(data)
-	// @ decreases
-	// @ outline (
-	// @ unfold slices.AbsSlice_Bytes(data, 0, len(data))
-	// @ assert forall i int :: { &data[4:][i] } 0 <= i && i < len(data) ==> &data[4:][i] == &data[4 + i]
 	s.BaseLayer = BaseLayer{Contents: data[:4], Payload: data[4:]}
-	// @ assert forall l int :: { &s.Payload[l] } 0 <= l && l < len(s.Payload) ==> &data[4+l] == &s.Payload[l]
-	// @ fold slices.AbsSlice_Bytes(s.Contents, 0, len(s.Contents))
-	// @ fold slices.AbsSlice_Bytes(s.Payload, 0, len(s.Payload))
-	// @ fold s.BaseLayer.Mem(data)
-	// @ )
+	// @ fold s.BaseLayer.Mem(data, 4)
 	// @ fold s.Mem(data)
 	return nil
 }
@@ -263,8 +253,9 @@ func (s *SCMP) String() string {
 
 // SetNetworkLayerForChecksum tells this layer which network layer is wrapping it.
 // This is needed for computing the checksum when serializing,
-// @ trusted
-// @ requires false
+// @ preserves acc(&s.scn)
+// @ ensures   s.scn == scn
+// @ decreases
 func (s *SCMP) SetNetworkLayerForChecksum(scn *SCION) {
 	s.scn = scn
 }
