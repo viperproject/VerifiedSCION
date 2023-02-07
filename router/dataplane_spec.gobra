@@ -24,10 +24,6 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 )
 
-pred nonNilErr(e error) {
-	isComparable(e) && e != nil && e.ErrorMem()
-}
-
 pred (d *DataPlane) MacFactoryOperational() {
 	acc(&d.macFactory, 1/2) &&
 	acc(&d.key, 1/2) &&
