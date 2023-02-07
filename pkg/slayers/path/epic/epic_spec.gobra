@@ -32,8 +32,7 @@ pred (p *Path) Mem(ubuf []byte) {
 	acc(&p.ScionPath) &&
 	p.ScionPath != nil &&
 	MetadataLen <= len(ubuf) &&
-	p.ScionPath.Mem(ubuf[MetadataLen:]) // &&
-	// slices.AbsSlice_Bytes(ubuf, 0, MetadataLen)
+	p.ScionPath.Mem(ubuf[MetadataLen:])
 }
 
 ghost
@@ -42,9 +41,6 @@ ensures  p.NonInitMem()
 decreases
 func (p *Path) DowngradePerm(buf []byte) {
 	unfold p.Mem(buf)
-	// p.ScionPath.DowngradePerm(buf[MetadataLen:])
-	// slices.Unslice_Bytes(buf, MetadataLen, len(buf), writePerm)
-	// slices.CombineAtIndex_Bytes(buf, 0, len(buf), MetadataLen, writePerm)
 	fold  p.NonInitMem()
 }
 

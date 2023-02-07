@@ -80,7 +80,7 @@ type Path struct {
 
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
-// @ preserves p.Mem(ubuf)
+// @ preserves acc(p.Mem(ubuf), definitions.ReadL1)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
@@ -110,11 +110,6 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	p.PktID.SerializeTo(b[:PktIDLen])
 	//@ slices.Unslice_Bytes(b, 0, PktIDLen, writePerm)
 	//@ slices.SplitByIndex_Bytes(b, PktIDLen, len(b), PktIDLen+HVFLen, writePerm)
-	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen, PktIDLen + HVFLen)
-	//@ preserves acc(&p.PHVF, definitions.ReadL2)
-	//@ preserves acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL2)
-	//@ decreases
-	//@ outline(
 	//@ slices.Reslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
 	//@ unfold slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen)
 	//@ unfold acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL2)
@@ -122,14 +117,8 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ fold slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen)
 	//@ fold acc(slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)), definitions.ReadL2)
 	//@ slices.Unslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
-	//@ )
 	//@ slices.CombineAtIndex_Bytes(b, 0, PktIDLen+HVFLen, PktIDLen, writePerm)
 	//@ slices.SplitByIndex_Bytes(b, PktIDLen+HVFLen, len(b), MetadataLen, writePerm)
-	//@ preserves slices.AbsSlice_Bytes(b, PktIDLen+HVFLen, MetadataLen)
-	//@ preserves acc(&p.LHVF, definitions.ReadL1)
-	//@ preserves acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL2)
-	//@ decreases
-	//@ outline(
 	//@ slices.Reslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
 	//@ unfold acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL3)
 	//@ unfold slices.AbsSlice_Bytes(b[(PktIDLen+HVFLen):MetadataLen], 0, HVFLen)
@@ -137,11 +126,8 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ fold slices.AbsSlice_Bytes(b[(PktIDLen+HVFLen):MetadataLen], 0, HVFLen)
 	//@ fold acc(slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)), definitions.ReadL3)
 	//@ slices.Unslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
-	//@ )
 	//@ slices.CombineAtIndex_Bytes(b, 0, MetadataLen, PktIDLen+HVFLen, writePerm)
 	//@ slices.Reslice_Bytes(b, MetadataLen, len(b), writePerm)
-	//@ unfold acc(p.Mem(ubuf), definitions.ReadL1)
-	//@ defer fold acc(p.Mem(ubuf), definitions.ReadL1)
 	//@ ghost defer slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
 	//@ ghost defer slices.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
 	//@ slices.SplitRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
@@ -151,11 +137,11 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
 // otherwise SerializeTo will return nil.
-// @ requires p.NonInitMem()
+// @ requires  p.NonInitMem()
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-// @ ensures  len(b) < MetadataLen ==> r != nil
-// @ ensures  r == nil ==> p.Mem(b)
-// @ ensures  r != nil ==> p.NonInitMem() && r.ErrorMem()
+// @ ensures   len(b) < MetadataLen ==> r != nil
+// @ ensures   r == nil ==> p.Mem(b)
+// @ ensures   r != nil ==> p.NonInitMem() && r.ErrorMem()
 // @ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	if len(b) < MetadataLen {
@@ -241,13 +227,13 @@ func (p *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (ret path.Path, r error) {
 		//@ fold p.Mem(ubuf)
 		return nil, serrors.New("scion subpath must not be nil")
 	}
-	// @ slices.SplitRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
+	//@ slices.SplitRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	revScion, err := p.ScionPath.Reverse( /*@ ubuf[MetadataLen:] @*/ )
 	if err != nil {
 		// @ slices.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 		return nil, err
 	}
-	// @ slices.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
+	//@ slices.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	ScionPath, ok := revScion.(*scion.Raw)
 	if !ok {
 		return nil, serrors.New("reversed path of type scion.Raw must not change type")

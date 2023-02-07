@@ -72,7 +72,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
 	//@ preserves sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-	//@ preserves Mem(underlyingBuf)
+	//@ preserves acc(Mem(underlyingBuf), def.ReadL1)
 	//@ preserves sl.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases

@@ -58,7 +58,7 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-// @ preserves s.Mem(ubuf)
+// @ preserves acc(s.Mem(ubuf), def.ReadL1)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
@@ -70,23 +70,26 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	if minLen := s.Len( /*@ ubuf @*/ ); len(b) < minLen {
 		return serrors.New("buffer too small", "expected", minLen, "actual", len(b))
 	}
-	//@ s.RawIdxPerm(ubuf, MetaLen, writePerm)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL1)
 	// XXX(roosd): This modifies the underlying buffer. Consider writing to data
 	// directly.
-	//@ unfold acc(s.Base.Mem(), 1/2)
+	//@ unfold acc(s.Base.Mem(), def.ReadL1)
+	//@ slices.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ assert slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
+	//@ slices.SplitRange_Bytes(s.Raw, 0, MetaLen, writePerm)
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		// @ def.Unreachable()
 		return err
 	}
-	//@ fold acc(s.Base.Mem(), 1/2)
-	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
-	//@ s.RawPerm(ubuf, writePerm)
+	//@ fold acc(s.Base.Mem(), def.ReadL1)
+	//@ slices.CombineRange_Bytes(s.Raw, 0, MetaLen, writePerm)
 	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), def.ReadL2)
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	copy(b, s.Raw /*@ , def.ReadL2 @*/)
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), def.ReadL2)
-	//@ s.UndoRawPerm(ubuf, writePerm)
+	//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ fold acc(s.Mem(ubuf), def.ReadL1)
 	return nil
 }
 
@@ -153,7 +156,6 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 		//@ fold s.Mem(ubuf)
 		return nil, err
 	}
-	// decoded.Widen(s.Raw, ubuf)
 	//@ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
 	//@ fold s.Mem(ubuf)
@@ -233,26 +235,29 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 
 // SetInfoField updates the InfoField at a given index.
 // @ requires  0 <= idx
-// @ preserves s.Mem(ubuf)
+// @ preserves acc(s.Mem(ubuf), def.ReadL20)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) {
 	//@ share info
-	//@ unfold s.Mem(ubuf)
-	//@ unfold acc(s.Base.Mem(), def.ReadL1)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
+	//@ unfold acc(s.Base.Mem(), def.ReadL20)
 	if idx >= s.NumINF {
 		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), def.ReadL1)
-		//@ fold s.Mem(ubuf)
+		//@ fold acc(s.Base.Mem(), def.ReadL20)
+		//@ fold acc(s.Mem(ubuf), def.ReadL20)
 		return err
 	}
-	//@ fold acc(s.Base.Mem(), def.ReadL1)
-	//@ fold s.Mem(ubuf)
 	infOffset := MetaLen + idx*path.InfoLen
-	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, writePerm)
+	//@ slices.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ assert slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
+	//@ slices.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
 	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
-	//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, writePerm)
+	//@ slices.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
+	//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ fold acc(s.Base.Mem(), def.ReadL20)
+	//@ fold acc(s.Mem(ubuf), def.ReadL20)
 	return ret
 }
 
@@ -305,7 +310,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 
 // SetHopField updates the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves s.Mem(ubuf)
+// @ preserves acc(s.Mem(ubuf), def.ReadL20)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -315,21 +320,24 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
 	//@ fold hop.Mem()
-	//@ unfold s.Mem(ubuf)
-	//@ unfold s.Base.Mem()
+	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
+	//@ unfold acc(s.Base.Mem(), def.ReadL20)
 	if idx >= s.NumHops {
 		// (gavin) introduced `err`
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold s.Base.Mem()
-		//@ fold s.Mem(ubuf)
+		//@ fold acc(s.Base.Mem(), def.ReadL20)
+		//@ fold acc(s.Mem(ubuf), def.ReadL20)
 		return err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-	//@ fold s.Base.Mem()
-	//@ fold s.Mem(ubuf)
-	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, writePerm)
+	//@ slices.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ assert slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
+	//@ slices.SplitRange_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
 	ret := hop.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
-	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, writePerm)
+	//@ slices.CombineRange_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
+	//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ fold acc(s.Base.Mem(), def.ReadL20)
+	//@ fold acc(s.Mem(ubuf), def.ReadL20)
 	return ret
 }
 

@@ -32,7 +32,6 @@ pred (s *Raw) Mem(buf []byte) {
 	acc(&s.Raw) &&
 	len(s.Raw) <= len(buf) &&
 	s.Raw === buf[:len(s.Raw)] &&
-	// slices.AbsSlice_Bytes(buf, 0, len(buf)) &&
 	len(s.Raw) == s.Base.Len()
 }
 /**** End of Predicates ****/

@@ -2046,14 +2046,13 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } i0 <= i && i < len(opts) ==>
 	// @       opts[i].NonInitMem()
 	// @ invariant last != nil
-	// @ invariant 0 < len(opts) && i0 == 0 ==> last === base
-	// @ invariant 0 < len(opts) && i0  > 0 ==> last === opts[i0 - 1]
 	// @ invariant last.Mem(data)
 	// @ invariant gopacket.NilDecodeFeedback.Mem()
 	// @ invariant 0 <= oldStart && oldStart <= oldEnd && oldEnd <= len(oldData)
 	// @ invariant data === oldData[oldStart:oldEnd] || data == nil
 	// @ decreases len(opts) - i0
 	for _, opt := range optsSlice /*@ with i0 @*/ {
+		// @ assert last.Mem(data)
 		layerClassTmp := opt.CanDecode()
 		// @ fold layerClassTmp.Mem()
 		if layerClassTmp.Contains(last.NextLayerType( /*@ data @*/ )) {
@@ -2072,11 +2071,11 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 				// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 				return nil, err
 			}
-			// @ assert opt.Mem(data)
 			// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 			last = opt
 			// @ assert last.Mem(data)
 		}
+		// @ assert last.Mem(data)
 	}
 	return last, nil
 }

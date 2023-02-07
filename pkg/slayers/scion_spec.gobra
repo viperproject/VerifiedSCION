@@ -188,8 +188,7 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	// end of helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
 	// RawDstAddr & RawSrcAddr locations. The memory for these is kept
-	// outside of HeaderMem, in the Mem predicate where we just keep
-	// access to the entire slice.
+	// outside of HeaderMem, together with access to the entire slice.
 	s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+s.DstAddrType.Length()] &&
 	s.RawSrcAddr === ubuf[2*addr.IABytes+s.DstAddrType.Length():2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()]
 }

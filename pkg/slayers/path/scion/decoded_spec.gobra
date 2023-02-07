@@ -35,10 +35,10 @@ pred (d *Decoded) Mem(ubuf []byte) {
 	acc(&d.InfoFields) &&
 	d.Base.getNumINF() <= MaxINFs &&
 	len(d.InfoFields) == d.Base.getNumINF() &&
-	(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
+	(forall i int :: { &d.InfoFields[i] } 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
 	acc(&d.HopFields) &&
 	len(d.HopFields) == d.Base.getNumHops() &&
-	(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
+	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
 /**** End of Predicates ****/
