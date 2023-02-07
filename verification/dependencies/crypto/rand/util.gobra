@@ -16,6 +16,8 @@ import (
 	"github.com/scionproto/scion/verification/utils/definitions/"
 )
 
+var Reader io.Reader
+
 // Int returns a uniform random value in [0, max). It panics if max <= 0.
 preserves rand.Mem()
 requires acc(max.Mem(), definitions.ReadL13)

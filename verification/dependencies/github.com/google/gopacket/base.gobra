@@ -64,12 +64,12 @@ func (p Payload) Payload(ghost ub []byte) (res []byte, ghost start int, ghost en
     return res, 0, len(p)
 }
 
-requires b != nil && b.Mem(buf)
+requires b != nil && b.Mem()
 requires p.Mem(ubuf)
-ensures  err == nil ==> (p.Mem(ubuf) && b.Mem(bufRes))
+ensures  err == nil ==> (p.Mem(ubuf) && b.Mem())
 ensures  err != nil ==> err.ErrorMem()
 decreases
-func (p Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte, ghost buf []byte) (err error, ghost bufRes []byte)
+func (p Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)
 
 Payload implements Layer
 Payload implements ApplicationLayer

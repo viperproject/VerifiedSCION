@@ -107,24 +107,23 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-// @ requires b != nil
-// @ requires i.Mem(ubufMem)
-// @ requires b.Mem(underlyingBuf)
-// @ ensures  err == nil ==> underlyingBufRes != nil
-// @ ensures  err == nil ==> i.Mem(ubufMem) && b.Mem(underlyingBufRes)
-// @ ensures  err != nil ==> b.Mem(underlyingBuf)
-// @ ensures  err != nil ==> err.ErrorMem()
+// @ requires  b != nil
+// @ requires  i.Mem(ubufMem)
+// @ preserves b.Mem()
+// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte, ghost underlyingBuf []byte @*/) (err error /*@, ghost underlyingBufRes []byte @*/) {
+func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
 
-	buf, err /*@, underlyingBufRes@*/ := b.PrependBytes(addr.IABytes + scmpRawInterfaceLen /*@, underlyingBuf@*/)
+	buf, err := b.PrependBytes(addr.IABytes + scmpRawInterfaceLen)
 	if err != nil {
-		return err /*@, underlyingBufRes @*/
+		return err
 	}
+	// @ ghost underlyingBufRes := b.UBuf()
 	offset := 0
 	// @ unfold i.Mem(ubufMem)
 	// @ defer fold i.Mem(ubufMem)
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ assert buf === underlyingBufRes[:addr.IABytes+scmpRawInterfaceLen]
 	// @ sl.SplitRange_Bytes(underlyingBufRes, 0, len(buf), writePerm)
 	// @ assert sl.AbsSlice_Bytes(buf, 0, len(buf))
@@ -139,8 +138,8 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 	// @ fold sl.AbsSlice_Bytes(newSlice, 0, len(newSlice))
 	// @ sl.CombineRange_Bytes(buf, offset, offset+scmpRawInterfaceLen, writePerm)
 	// @ sl.CombineRange_Bytes(underlyingBufRes, 0, len(buf), writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
-	return nil /*@, underlyingBufRes@*/
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	return nil
 }
 
 // @ requires pb != nil
@@ -254,24 +253,23 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-// @ requires b != nil
-// @ requires i.Mem(ubufMem)
-// @ requires b.Mem(underlyingBuf)
-// @ ensures err == nil ==> underlyingBufRes != nil
-// @ ensures err == nil ==> i.Mem(ubufMem) && b.Mem(underlyingBufRes)
-// @ ensures err != nil ==> b.Mem(underlyingBuf)
-// @ ensures err != nil ==> err.ErrorMem()
+// @ requires  b != nil
+// @ requires  i.Mem(ubufMem)
+// @ preserves b.Mem()
+// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte, ghost underlyingBuf []byte @*/) (err error /*@, ghost underlyingBufRes []byte @*/) {
+func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
 
-	buf, err /*@, underlyingBufRes@*/ := b.PrependBytes(addr.IABytes + 2*scmpRawInterfaceLen /*@, underlyingBuf@*/)
+	buf, err := b.PrependBytes(addr.IABytes + 2*scmpRawInterfaceLen)
+	// @ ghost underlyingBufRes := b.UBuf()
 	if err != nil {
-		return err /*@, underlyingBufRes@*/
+		return err
 	}
 	offset := 0
 	// @ unfold i.Mem(ubufMem)
 	// @ defer fold i.Mem(ubufMem)
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitRange_Bytes(underlyingBufRes, 0, len(buf), writePerm)
 	// @ assert sl.AbsSlice_Bytes(buf, 0, len(buf))
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
@@ -294,8 +292,8 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 	// @ fold sl.AbsSlice_Bytes(newSlice, 0, len(newSlice))
 	// @ sl.CombineRange_Bytes(buf, offset, offset+scmpRawInterfaceLen, writePerm)
 	// @ sl.CombineRange_Bytes(underlyingBufRes, 0, len(buf), writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
-	return nil /*@, underlyingBufRes@*/
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	return nil
 }
 
 // @ requires pb != nil
@@ -418,18 +416,17 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-// @ requires b != nil
-// @ requires i.Mem(ubufMem)
-// @ requires b.Mem(underlyingBuf)
-// @ ensures  err == nil ==> underlyingBufRes != nil
-// @ ensures  err == nil ==> i.Mem(ubufMem) && b.Mem(underlyingBufRes)
-// @ ensures  err != nil ==> b.Mem(underlyingBuf)
-// @ ensures  err != nil ==> err.ErrorMem()
+// @ requires  b != nil
+// @ requires  i.Mem(ubufMem)
+// @ preserves b.Mem()
+// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte, ghost underlyingBuf []byte @*/) (err error /*@, ghost underlyingBufRes []byte @*/) {
-	buf, err /*@, underlyingBufRes@*/ := b.PrependBytes(4 /*@, underlyingBuf@*/)
+func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
+	buf, err := b.PrependBytes(4)
+	// @ ghost underlyingBufRes :=b.UBuf()
 	if err != nil {
-		return err /*@, underlyingBufRes@*/
+		return err
 	}
 	offset := 0
 	// @ unfold i.Mem(ubufMem)
@@ -439,16 +436,16 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	// @ requires buf === underlyingBufRes[:4]
 	// @ requires b != nil
 	// @ preserves acc(&i.Identifier)
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	binary.BigEndian.PutUint16(buf[:2], i.Identifier)
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
 	offset += 2
 	// @ requires offset == 2
@@ -456,10 +453,10 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	// @ requires buf === underlyingBufRes[:4]
 	// @ requires b != nil
 	// @ preserves acc(&i.SeqNumber)
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
@@ -468,9 +465,9 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
-	return nil /*@, underlyingBufRes@*/
+	return nil
 }
 
 // @ requires pb != nil
@@ -567,44 +564,43 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-// @ requires b != nil
-// @ requires i.Mem(ubufMem)
-// @ requires b.Mem(underlyingBuf)
-// @ ensures err == nil ==> underlyingBufRes != nil
-// @ ensures err == nil ==> i.Mem(ubufMem) && b.Mem(underlyingBufRes)
-// @ ensures err != nil ==> b.Mem(underlyingBuf)
-// @ ensures err != nil ==> err.ErrorMem()
+// @ requires  b != nil
+// @ requires  i.Mem(ubufMem)
+// @ preserves b.Mem()
+// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte, ghost underlyingBuf []byte @*/) (err error /*@, ghost underlyingBufRes []byte @*/) {
+func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
 
-	buf, err /*@, underlyingBufRes@*/ := b.PrependBytes(2 + 2 /*@, underlyingBuf@*/)
+	buf, err := b.PrependBytes(2 + 2)
+	// @ ghost underlyingBufRes := b.UBuf()
 	if err != nil {
-		return err /*@, underlyingBufRes@*/
+		return err
 	}
 	// @ unfold i.Mem(ubufMem)
 	// @ defer fold i.Mem(ubufMem)
-	// @ requires len(underlyingBufRes) >= 4
-	// @ requires buf === underlyingBufRes[:4]
-	// @ requires b != nil
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ requires  len(underlyingBufRes) >= 4
+	// @ requires  buf === underlyingBufRes[:4]
+	// @ requires  b != nil
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	binary.BigEndian.PutUint16(buf[0:2], uint16(0)) //Reserved
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
-	// @ requires len(underlyingBufRes) >= 4
-	// @ requires buf === underlyingBufRes[:4]
-	// @ requires b != nil
+	// @ requires  len(underlyingBufRes) >= 4
+	// @ requires  buf === underlyingBufRes[:4]
+	// @ requires  b != nil
 	// @ preserves acc(&i.Pointer)
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
@@ -613,9 +609,9 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
-	return nil /*@, underlyingBufRes@*/
+	return nil
 }
 
 // @ requires  pb != nil
@@ -764,19 +760,18 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-// @ requires b != nil
-// @ requires i.Mem(ubufMem)
-// @ requires b.Mem(underlyingBuf)
-// @ ensures err == nil ==> underlyingBufRes != nil
-// @ ensures err == nil ==> i.Mem(ubufMem) && b.Mem(underlyingBufRes)
-// @ ensures err != nil ==> b.Mem(underlyingBuf)
-// @ ensures err != nil ==> err.ErrorMem()
+// @ requires  b != nil
+// @ requires  i.Mem(ubufMem)
+// @ preserves b.Mem()
+// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte, ghost underlyingBuf []byte @*/) (err error /*@, ghost underlyingBufRes []byte @*/) {
+func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
 
-	buf, err /*@, underlyingBufRes@*/ := b.PrependBytes(2 + 2 + addr.IABytes + scmpRawInterfaceLen /*@, underlyingBuf@*/)
+	buf, err := b.PrependBytes(2 + 2 + addr.IABytes + scmpRawInterfaceLen)
+	//@ ghost underlyingBufRes := b.UBuf()
 	if err != nil {
-		return err /*@, underlyingBufRes@*/
+		return err
 	}
 	offset := 0
 	// @ unfold i.Mem(ubufMem)
@@ -786,16 +781,16 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ requires buf === underlyingBufRes[:2+2+addr.IABytes+scmpRawInterfaceLen]
 	// @ requires b != nil
 	// @ preserves acc(&i.Identifier)
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	binary.BigEndian.PutUint16(buf[:2], i.Identifier)
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
 	offset += 2
 	// @ requires offset == 2
@@ -803,10 +798,10 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ requires buf === underlyingBufRes[:2 + 2 + addr.IABytes + scmpRawInterfaceLen]
 	// @ requires b != nil
 	// @ preserves acc(&i.Sequence)
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2, 2+2)
@@ -815,7 +810,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 2+2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
 	offset += 2
 	// @ requires offset == 2 + 2
@@ -823,10 +818,10 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ requires buf === underlyingBufRes[:2 + 2 + addr.IABytes + scmpRawInterfaceLen]
 	// @ requires b != nil
 	// @ preserves acc(&i.IA)
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
@@ -835,7 +830,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
 	offset += addr.IABytes
 	// @ requires offset == 2 + 2 + addr.IABytes
@@ -843,10 +838,10 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ requires buf === underlyingBufRes[:2 + 2 + addr.IABytes + scmpRawInterfaceLen]
 	// @ requires b != nil
 	// @ preserves acc(&i.Interface)
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
@@ -855,9 +850,9 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
-	return nil /*@, underlyingBufRes@*/
+	return nil
 }
 
 // @ requires  pb != nil
@@ -937,29 +932,28 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-// @ requires b != nil
-// @ requires i.Mem(ubufMem)
-// @ requires b.Mem(underlyingBuf)
-// @ ensures err == nil ==> underlyingBufRes != nil
-// @ ensures err == nil ==> i.Mem(ubufMem) && b.Mem(underlyingBufRes)
-// @ ensures err != nil ==> b.Mem(underlyingBuf)
-// @ ensures err != nil ==> err.ErrorMem()
+// @ requires  b != nil
+// @ requires  i.Mem(ubufMem)
+// @ preserves b.Mem()
+// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte, ghost underlyingBuf []byte @*/) (err error /*@, ghost underlyingBufRes []byte @*/) {
+func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
 
-	buf, err /*@, underlyingBufRes@*/ := b.PrependBytes(4 /*@, underlyingBuf@*/)
+	buf, err := b.PrependBytes(4)
+	// @ ghost underlyingBufRes := b.UBuf()
 	if err != nil {
-		return err /*@, underlyingBufRes@*/
+		return err
 	}
 	// @ assert buf === underlyingBufRes[:4]
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 	copy(buf, make([]byte, 4) /*@, writePerm@*/)
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
-	return nil /*@, underlyingBufRes@*/
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	return nil
 }
 
 // @ requires  pb != nil
@@ -1057,44 +1051,43 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-// @ requires b != nil
-// @ requires i.Mem(ubufMem)
-// @ requires b.Mem(underlyingBuf)
-// @ ensures err == nil ==> underlyingBufRes != nil
-// @ ensures err == nil ==> i.Mem(ubufMem) && b.Mem(underlyingBufRes)
-// @ ensures err != nil ==> b.Mem(underlyingBuf)
-// @ ensures err != nil ==> err.ErrorMem()
+// @ requires  b != nil
+// @ requires  i.Mem(ubufMem)
+// @ preserves b.Mem()
+// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte, ghost underlyingBuf []byte @*/) (err error /*@, ghost underlyingBufRes []byte @*/) {
+func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
 
-	buf, err /*@, underlyingBufRes@*/ := b.PrependBytes(2 + 2 /*@, underlyingBuf@*/)
+	buf, err := b.PrependBytes(2 + 2)
+	// @ ghost underlyingBufRes := b.UBuf()
 	if err != nil {
-		return err /*@, underlyingBufRes@*/
+		return err
 	}
 	// @ unfold i.Mem(ubufMem)
 	// @ defer fold i.Mem(ubufMem)
 	// @ requires len(underlyingBufRes) >= 4
 	// @ requires buf === underlyingBufRes[:4]
 	// @ requires b != nil
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	binary.BigEndian.PutUint16(buf[0:2], uint16(0)) //Reserved
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
 	// @ requires len(underlyingBufRes) >= 4
 	// @ requires buf === underlyingBufRes[:4]
 	// @ requires b != nil
 	// @ preserves acc(&i.MTU)
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ unfold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
@@ -1103,9 +1096,9 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
-	return nil /*@, underlyingBufRes@*/
+	return nil
 }
 
 // @ requires  pb != nil
