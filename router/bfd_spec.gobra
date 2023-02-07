@@ -25,7 +25,7 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 )
 
-pred (b *bfdSend) Mem(ghost ub []byte) {
+pred (b *bfdSend) Mem() {
 	acc(b) &&
 	b.srcAddr.Mem() &&
 	b.dstAddr.Mem() &&
@@ -33,5 +33,5 @@ pred (b *bfdSend) Mem(ghost ub []byte) {
 	acc(b.ohp) &&
 	b.mac.Mem() &&
 	sl.AbsSlice_Bytes(b.macBuffer, 0, path.MACBufferSize) &&
-	b.buffer.Mem(ub)
+	b.buffer.Mem()
 }

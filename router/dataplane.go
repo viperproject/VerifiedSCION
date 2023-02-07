@@ -460,6 +460,8 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 
 // (VerifiedSCION) marked as trusted because we currently do not support bfd.Session
 // @ trusted
+// @ requires  acc(metrics.PacketsSent.Mem(), _) && acc(metrics.PacketsReceived.Mem(), _)
+// @ requires  acc(metrics.Up.Mem(), _) && acc(metrics.StateChanges.Mem(), _)
 // @ preserves MutexInvariant!<d!>()
 // @ requires  s.Mem()
 // @ decreases
@@ -843,8 +845,7 @@ type processResult struct {
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
 	// @ unfold acc(d.MacFactoryOperational(), _)
-	// @ ghost var ubuf []byte
-	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
+	verScionTmp = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
@@ -1811,9 +1812,9 @@ type bfdSend struct {
 
 // newBFDSend creates and initializes a BFD Sender
 // @ trusted
-// @ requires false
+// @ decreases
 func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPAddr,
-	ifID uint16, mac hash.Hash) *bfdSend {
+	ifID uint16, mac hash.Hash) (res *bfdSend) {
 
 	scn := &slayers.SCION{
 		Version:      0,
@@ -1824,10 +1825,10 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 		DstIA:        dstIA,
 	}
 
-	if err := scn.SetSrcAddr(&net.IPAddr{IP: srcAddr.IP}); err != nil {
+	if err := scn.SetSrcAddr(&net.IPAddr{IP: srcAddr.IP} /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
-	if err := scn.SetDstAddr(&net.IPAddr{IP: dstAddr.IP}); err != nil {
+	if err := scn.SetDstAddr(&net.IPAddr{IP: dstAddr.IP} /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
 
