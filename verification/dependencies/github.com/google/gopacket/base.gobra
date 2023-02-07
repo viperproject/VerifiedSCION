@@ -26,6 +26,7 @@ type Layer interface {
 	ensures   0 <= start && start <= end && end <= len(ub)
 	ensures   len(res) == end - start
 	ensures   len(res) != 0 ==> res === ub[start:end]
+	ensures   len(res) == 0 ==> (res == nil || res === ub[start:end])
 	decreases
 	LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int)
 }

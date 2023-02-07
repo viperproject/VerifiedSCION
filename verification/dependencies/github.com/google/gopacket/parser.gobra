@@ -50,6 +50,7 @@ type DecodingLayer interface {
 	ensures   0 <= start && start <= end && end <= len(ubuf)
 	ensures   len(res) == end - start
 	ensures   len(res) != 0 ==> res === ubuf[start:end]
+	ensures   len(res) == 0 ==> (res == nil || res === ubuf[start:end])
 	decreases
 	LayerPayload(ghost ubuf []byte) (res []byte, ghost start int, ghost end int)
 }

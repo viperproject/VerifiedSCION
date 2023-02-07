@@ -200,6 +200,13 @@ func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 	CombineAtIndex_Bytes(s, 0, len(s), start, p)
 }
 
+ghost
+ensures AbsSlice_Bytes(nil, 0, 0)
+decreases
+func NilAcc_Bytes() {
+	fold AbsSlice_Bytes(nil, 0, 0)
+}
+
 /** End of slices of Bytes without Contents **/
 
 /** Auxiliar definitions Any **/

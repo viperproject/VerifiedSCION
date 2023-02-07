@@ -48,7 +48,7 @@ func (b *SCMP) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), def.ReadL20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   len(res) != 0 ==> res === ub[start:end]
+ensures   res === ub[start:end]
 decreases
 func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), def.ReadL20)
