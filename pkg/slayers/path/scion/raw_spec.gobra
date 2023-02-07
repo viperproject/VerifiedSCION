@@ -32,7 +32,7 @@ pred (s *Raw) Mem(buf []byte) {
 	acc(&s.Raw) &&
 	len(s.Raw) <= len(buf) &&
 	s.Raw === buf[:len(s.Raw)] &&
-	slices.AbsSlice_Bytes(buf, 0, len(buf)) &&
+	// slices.AbsSlice_Bytes(buf, 0, len(buf)) &&
 	len(s.Raw) == s.Base.Len()
 }
 /**** End of Predicates ****/
@@ -68,6 +68,22 @@ decreases
 func (s *Raw) Len(ghost buf []byte) (l int) {
 	return unfolding acc(s.Mem(buf), _) in s.Base.Len()
 }
+
+ghost
+pure
+requires acc(s.Mem(buf), _)
+decreases
+func (s *Raw) RawBufferMem(ghost buf []byte) []byte {
+	return unfolding acc(s.Mem(buf), _) in s.Raw
+}
+
+ghost
+pure
+requires acc(s.NonInitMem(), _)
+decreases
+func (s *Raw) RawBufferNonInitMem() []byte {
+	return unfolding acc(s.NonInitMem(), _) in s.Raw
+}
 /**** End of Stubs ****/
 
 /**** Lemmas ****/
@@ -75,26 +91,13 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
 ghost
 requires s.Mem(buf)
 ensures  s.NonInitMem()
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
+ensures  old(s.RawBufferMem(buf)) === s.RawBufferNonInitMem()
 decreases
 func (s *Raw) DowngradePerm(buf []byte) {
 	unfold s.Mem(buf)
 	unfold s.Base.Mem()
 	fold s.Base.NonInitMem()
 	fold s.NonInitMem()
-}
-
-ghost
-requires 0 < pm
-requires acc(p.Mem(ub), pm)
-ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm)
-ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm) --* acc(p.Mem(ub), pm)
-decreases
-func (p *Raw) AccUnderlyingBuf(ghost ub []byte, ghost pm perm) {
-	unfold acc(p.Mem(ub), pm)
-	package acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm) --* acc(p.Mem(ub), pm) {
-		fold acc(p.Mem(ub), pm)
-	}
 }
 
 /******** Lemma: RawPerm ********/
@@ -113,6 +116,7 @@ requires 0 < p
 requires acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
 requires r.RawPermRemainder(ubuf, p)
 ensures  acc(r.Mem(ubuf), p)
+ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 decreases
 func (r *Raw) UndoRawPerm(ubuf []byte, p perm) {
 	unfold r.RawPermRemainder(ubuf, p)
@@ -124,6 +128,7 @@ func (r *Raw) UndoRawPerm(ubuf []byte, p perm) {
 ghost
 requires 0 < p
 requires acc(r.Mem(ubuf), p)
+requires acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 ensures  acc(&r.Raw, p/2)
 ensures  acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p)
 ensures  acc(r.Base.Mem(), p/2)
@@ -157,6 +162,7 @@ requires 0 <= idx && idx <= len(r.Raw)
 requires acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
 requires r.RawIdxPermRemainder(ubuf, idx, p)
 ensures  acc(r.Mem(ubuf), p)
+ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 decreases
 func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
 	unfold r.RawIdxPermRemainder(ubuf, idx, p)
@@ -168,6 +174,7 @@ func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
 ghost
 requires 0 < p
 requires acc(r.Mem(ubuf), p)
+requires acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 requires 0 <= idx && idx <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
 ensures  acc(&r.Raw, p/2)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
@@ -203,6 +210,7 @@ requires 0 <= start && start <= end && end <= len(r.Raw)
 requires acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
 requires r.RawRangePermRemainder(ubuf, start, end, p)
 ensures  acc(r.Mem(ubuf), p)
+ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 decreases
 func (r *Raw) UndoRawRangePerm(ubuf []byte, start, end int, p perm) {
 	unfold r.RawRangePermRemainder(ubuf, start, end, p)
@@ -217,6 +225,7 @@ func (r *Raw) UndoRawRangePerm(ubuf []byte, start, end int, p perm) {
 ghost
 requires 0 < p
 requires acc(r.Mem(ubuf), p)
+requires acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 requires 0 <= start && start <= end && end <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
 ensures  acc(&r.Raw, p/2)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
@@ -238,13 +247,10 @@ ghost
 requires r.Mem(ubuf1)
 requires len(ubuf1) <= len(ubuf2)
 requires ubuf1 === ubuf2[:len(ubuf1)]
-requires slices.AbsSlice_Bytes(ubuf2, len(ubuf1), len(ubuf2))
 ensures  r.Mem(ubuf2)
 decreases
 func (r *Raw) Widen(ubuf1, ubuf2 []byte) {
 	unfold r.Mem(ubuf1)
-	slices.Unslice_Bytes(ubuf2, 0, len(ubuf1), writePerm)
-	slices.CombineAtIndex_Bytes(ubuf2, 0, len(ubuf2), len(ubuf1), writePerm)
 	fold r.Mem(ubuf2)
 }
 

@@ -66,12 +66,11 @@ type Path struct {
 }
 
 // @ requires o.NonInitMem()
-// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures  (len(data) >= PathLen) == (r == nil)
 // @ ensures  r == nil ==> o.Mem(data)
 // @ ensures  r != nil ==> o.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
-// @ ensures  r != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 // @ decreases
 func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	if len(data) < PathLen {
@@ -108,6 +107,7 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 }
 
 // @ preserves acc(o.Mem(ubuf), definitions.ReadL1)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), definitions.ReadL1)
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   (len(b) >= PathLen) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
@@ -152,6 +152,7 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
 // @ preserves o.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   err == nil ==> (sd != nil && sd.Mem(ubuf))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -214,6 +215,7 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 
 // Reverse a OneHop path that returns a reversed SCION path.
 // @ requires o.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures err == nil ==> p != nil
 // @ ensures err == nil ==> p.Mem(ubuf)
 // @ ensures err == nil ==> typeOf(p) == type[*scion.Decoded]

@@ -100,7 +100,7 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
-	// @ fold i.BaseLayer.Mem(data)
+	// @ fold i.BaseLayer.Mem(data, addr.IABytes+scmpRawInterfaceLen)
 	// @ fold i.Mem(data)
 	return nil
 }
@@ -248,7 +248,7 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
-	// @ fold i.BaseLayer.Mem(data)
+	// @ fold i.BaseLayer.Mem(data, addr.IABytes+2*scmpRawInterfaceLen)
 	return nil
 }
 
@@ -396,7 +396,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ requires sl.AbsSlice_Bytes(data, 0, 2)
 	// @ requires sl.AbsSlice_Bytes(data, 2, 4)
 	// @ requires sl.AbsSlice_Bytes(data, 4, len(data))
-	// @ ensures  acc(i.BaseLayer.Mem(data))
+	// @ ensures  acc(i.BaseLayer.Mem(data, 4))
 	// @ decreases
 	// @ outline (
 	// @ sl.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
@@ -411,7 +411,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
 	// @ fold sl.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	// @ fold sl.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
-	// @ fold i.BaseLayer.Mem(data)
+	// @ fold i.BaseLayer.Mem(data, 4)
 	// @ )
 	return nil
 }
@@ -547,7 +547,7 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 	// @ )
 	// @ requires len(data) >= 4
 	// @ requires acc(&i.BaseLayer)
-	// @ ensures  i.BaseLayer.Mem(data)
+	// @ ensures  i.BaseLayer.Mem(data, 4)
 	// @ requires sl.AbsSlice_Bytes(data, 0, len(data))
 	// @ decreases
 	// @ outline (
@@ -560,7 +560,7 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[4+l] == &i.Payload[l]
 	// @ fold sl.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	// @ fold sl.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
-	// @ fold i.BaseLayer.Mem(data)
+	// @ fold i.BaseLayer.Mem(data, 4)
 	// @ )
 	return nil
 }
@@ -676,10 +676,10 @@ func (*SCMPTraceroute) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
-// @ ensures   res != nil ==> (i.NonInitMem() && sl.AbsSlice_Bytes(data, 0, len(data)))
+// @ ensures   res != nil ==> i.NonInitMem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
@@ -750,33 +750,15 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ fold sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	// @ )
 	offset += scmpRawInterfaceLen
-	// @ requires offset == 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires len(data) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires acc(&i.BaseLayer)
-	// @ requires sl.AbsSlice_Bytes(data, 0, 2)
-	// @ requires sl.AbsSlice_Bytes(data, 2, 2+2)
-	// @ requires sl.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes)
-	// @ requires sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
-	// @ requires sl.AbsSlice_Bytes(data, 2+2+addr.IABytes+scmpRawInterfaceLen, len(data))
-	// @ ensures  i.BaseLayer.Mem(data)
-	// @ decreases
-	// @ outline (
 	// @ sl.CombineAtIndex_Bytes(data, 0, 2+2, 2, writePerm)
 	// @ sl.CombineAtIndex_Bytes(data, 0, 2+2+addr.IABytes, 2+2, writePerm)
 	// @ sl.CombineAtIndex_Bytes(data, 0, 2+2+addr.IABytes+scmpRawInterfaceLen, 2+2+addr.IABytes, writePerm)
-	// @ unfold sl.AbsSlice_Bytes(data, 0, 2+2+addr.IABytes+scmpRawInterfaceLen)
-	// @ unfold sl.AbsSlice_Bytes(data, 2+2+addr.IABytes+scmpRawInterfaceLen, len(data))
-	// @ assert forall i int :: { &data[offset:][i] } 0 <= i && i < len(data)-offset ==> &data[offset:][i] == &data[offset + i]
-	// @ assert forall l int :: { &data[l] } offset <= l && l < len(data) ==> acc(&data[l])
+	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
-	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
-	// @ fold sl.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
-	// @ fold sl.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
-	// @ fold i.BaseLayer.Mem(data)
-	// @ )
+	// @ fold i.BaseLayer.Mem(data, 4+addr.IABytes+scmpRawInterfaceLen)
 	return nil
 }
 
@@ -940,7 +922,7 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 	}
 	// @ unfold i.NonInitMem()
 	// @ defer fold i.Mem(data)
-	// @ defer fold i.BaseLayer.Mem(data)
+	// @ defer fold i.BaseLayer.Mem(data, minLength)
 	// @ unfold sl.AbsSlice_Bytes(data, 0, len(data))
 	// @ assert forall i int :: { &data[minLength:][i] } 0 <= i && i < len(data) - minLength ==> &data[minLength:][i] == &data[minLength + i]
 	i.BaseLayer = BaseLayer{
@@ -1056,7 +1038,7 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 	// @ requires len(data) >= 4
 	// @ requires acc(&i.BaseLayer)
 	// @ requires sl.AbsSlice_Bytes(data, 0, len(data))
-	// @ ensures  i.BaseLayer.Mem(data)
+	// @ ensures  i.BaseLayer.Mem(data, 4)
 	// @ decreases
 	// @ outline (
 	// @ unfold sl.AbsSlice_Bytes(data, 0, len(data))
@@ -1068,7 +1050,7 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[4+l] == &i.Payload[l]
 	// @ fold sl.AbsSlice_Bytes(i.Contents, 0, len(i.Contents))
 	// @ fold sl.AbsSlice_Bytes(i.Payload, 0, len(i.Payload))
-	// @ fold i.BaseLayer.Mem(data)
+	// @ fold i.BaseLayer.Mem(data, 4)
 	// @ )
 	return nil
 }

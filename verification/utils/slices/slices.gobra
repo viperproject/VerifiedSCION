@@ -23,18 +23,6 @@ package slices
 // - For each type, there might be two different types of operations: those that keep track
 //   of contents (the name of the operation ends in "C"), and those who do not.
 
-/** Auxiliar definitions Bytes **/
-ghost
-requires size >= 0
-ensures len(res) == size
-ensures forall i int :: 0 <= i && i < size ==> res[i] == 0
-pure func NewSeq_Bytes(size int) (res seq[byte])
-
-// TODO:
-// func ToSeq_Bytes
-
-/** End of Auxiliar definitions Bytes **/
-
 /** Slices of Bytes with Contents **/
 pred AbsSliceC_Bytes(s []byte, start int, end int, ghost contents seq[byte]) {
 	// start inclusive

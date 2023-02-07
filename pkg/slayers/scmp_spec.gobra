@@ -34,7 +34,7 @@ pred (s *SCMP) NonInitMem() {
 pred (s *SCMP) Mem(ub []byte) {
 	acc(&s.TypeCode) &&
 	acc(&s.Checksum) &&
-	s.BaseLayer.Mem(ub) &&
+	s.BaseLayer.Mem(ub, 4) &&
 	acc(&s.scn) &&
 	(s.scn != nil ==> s.scn.ChecksumMem())
 }
@@ -45,17 +45,18 @@ func (b *SCMP) LayerContents() (res []byte) {
 	return res
 }
 
-requires b.Mem(ub)
-ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
+preserves acc(b.Mem(ub), def.ReadL20)
+ensures   0 <= start && start <= end && end <= len(ub)
+ensures   len(res) == end - start
+ensures   len(res) != 0 ==> res === ub[start:end]
 decreases
-func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte) {
-	unfold b.Mem(ub)
-	res = b.BaseLayer.LayerPayload(ub)
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
-		apply slices.AbsSlice_Bytes(res, 0, len(res)) --* b.BaseLayer.Mem(ub)
-		fold b.Mem(ub)
-	}
+func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
+	unfold acc(b.Mem(ub), def.ReadL20)
+	res = b.BaseLayer.LayerPayload(ub, 4)
+	start = 4
+	end = len(ub)
+	fold acc(b.Mem(ub), def.ReadL20)
+	return res, start, end
 }
 
 (*SCMP) implements gopacket.Layer
