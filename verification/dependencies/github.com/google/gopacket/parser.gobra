@@ -13,6 +13,21 @@ import (
 	def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
+// TODO: drop the following comment and decodingLayerFunc_spec
+
+// TODO: Uncomment when https://github.com/viperproject/gobra/issues/503 is fixed
+//type DecodingLayerFunc func([]byte, *[]LayerType) (LayerType, error)
+
+// DecodingLayerFunc decodes given packet and stores decoded LayerType
+// values into specified slice. Returns either first encountered
+// unsupported LayerType value or decoding error. In case of success,
+// returns (LayerTypeZero, nil).
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL13)
+preserves acc(ltypes, def.ReadL13) && acc(*ltypes, def.ReadL13)
+ensures err != nil ==> err.ErrorMem()
+func decodingLayerFunc_spec(b []byte, ltypes *[]LayerType) (l LayerType, err error)
+
+
 type DecodingLayer interface {
 	pred NonInitMem()
 	pred Mem(ubuf []byte)
