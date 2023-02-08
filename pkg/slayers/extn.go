@@ -215,8 +215,8 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions, tlvOptions []*tlvOption) error {
 
 	l := serializeTLVOptions(nil, tlvOptions, opts.FixLengths)
-	// @ ghost var resPB1 []byte
-	bytes, err /*@ , resPB1 @*/ := b.PrependBytes(l /*@, nil @*/)
+	bytes, err := b.PrependBytes(l)
+	// @ ghost resPB1 := b.UBuf()
 	if err != nil {
 		return err
 	}
@@ -226,8 +226,8 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 	if length%LineLen != 0 {
 		return serrors.New("SCION extension actual length must be multiple of 4")
 	}
-	// @ ghost var resPB2 []byte
-	bytes, err /*@ , resPB2 @*/ = b.PrependBytes(2 /*@, nil @*/)
+	bytes, err = b.PrependBytes(2)
+	// @ ghost resPB2 := b.UBuf()
 	if err != nil {
 		return err
 	}

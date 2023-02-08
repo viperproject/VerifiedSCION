@@ -97,8 +97,8 @@ type bfdSession interface {
 	// @ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
 	// @ requires acc(Mem(), _)
-	// @ requires msg.Mem()
-	ReceiveMessage(msg *layers.BFD)
+	// @ requires msg.Mem(ub)
+	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
 	// @ requires acc(Mem(), _)
 	IsUp() bool
 }
@@ -458,9 +458,13 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	return control.InterfaceUp
 }
 
-// (VerifiedSCION) marked as trusted, otherwise we need to support bfd.Session
+// (VerifiedSCION) marked as trusted because we currently do not support bfd.Session
 // @ trusted
-// @ requires false
+// @ requires  acc(metrics.PacketsSent.Mem(), _) && acc(metrics.PacketsReceived.Mem(), _)
+// @ requires  acc(metrics.Up.Mem(), _) && acc(metrics.StateChanges.Mem(), _)
+// @ preserves MutexInvariant!<d!>()
+// @ requires  s.Mem()
+// @ decreases
 func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 	metrics bfd.Metrics) error {
 
@@ -841,8 +845,7 @@ type processResult struct {
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
 	// @ unfold acc(d.MacFactoryOperational(), _)
-	// @ ghost var ubuf []byte
-	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
+	verScionTmp = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
@@ -859,9 +862,15 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	return p
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) reset() error {
+// @ preserves acc(p)
+// @ preserves p.buffer != nil && p.buffer.Mem()
+// @ preserves p.mac != nil && p.mac.Mem()
+// @ ensures   p.rawPkt == nil && p.path == nil
+// @ ensures   p.hopField == path.HopField{} && p.infoField == path.InfoField{}
+// @ ensures   !p.segmentChange
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) reset() (err error) {
 	p.rawPkt = nil
 	//p.scionLayer // cannot easily be reset
 	p.path = nil
@@ -1810,8 +1819,9 @@ type bfdSend struct {
 // newBFDSend creates and initializes a BFD Sender
 // @ trusted
 // @ requires false
+// @ decreases
 func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPAddr,
-	ifID uint16, mac hash.Hash) *bfdSend {
+	ifID uint16, mac hash.Hash) (res *bfdSend) {
 
 	scn := &slayers.SCION{
 		Version:      0,
@@ -1822,10 +1832,10 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 		DstIA:        dstIA,
 	}
 
-	if err := scn.SetSrcAddr(&net.IPAddr{IP: srcAddr.IP}); err != nil {
+	if err := scn.SetSrcAddr(&net.IPAddr{IP: srcAddr.IP} /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
-	if err := scn.SetDstAddr(&net.IPAddr{IP: dstAddr.IP}); err != nil {
+	if err := scn.SetDstAddr(&net.IPAddr{IP: dstAddr.IP} /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
 
@@ -1860,9 +1870,11 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 	}
 }
 
-// @ trusted
-// @ requires false
+// @ preserves acc(b.Mem(), def.ReadL10)
+// @ decreases
 func (b *bfdSend) String() string {
+	// @ unfold acc(b.Mem(), def.ReadL10)
+	// @ ghost defer fold acc(b.Mem(), def.ReadL10)
 	return b.srcAddr.String()
 }
 

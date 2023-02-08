@@ -46,9 +46,11 @@ func UDPAddrDummyTrigger(i int) bool {
 
 // Network returns the address's network name, "udp".
 ensures res == "udp"
+decreases
 func (a *UDPAddr) Network() (res string) { return "udp" }
 
-preserves a != nil ==> acc(a.Mem(), 1/1000)
+preserves a != nil ==> acc(a.Mem(), definitions.ReadL20)
+decreases
 func (a *UDPAddr) String() string
 
 // UDPConn is the implementation of the Conn and PacketConn interfaces

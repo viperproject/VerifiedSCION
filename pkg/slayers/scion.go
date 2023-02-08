@@ -216,13 +216,13 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 }
 
 // @ requires  !opts.FixLengths
-// @ requires  b != nil && b.Mem(uSerBuf)
+// @ requires  b != nil && b.Mem()
 // @ preserves s.Mem(ubuf)
 // @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ ensures   b.Mem(newUSerBuf)
+// @ ensures   b.Mem()
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
-func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte, ghost uSerBuf []byte @*/) (e error /*@ , ghost newUSerBuf []byte @*/) {
+func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
 	// @ unfold s.Mem(ubuf)
 	// @ defer  fold s.Mem(ubuf)
 	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
@@ -230,23 +230,24 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
-			"max", MaxHdrLen, "actual", scnLen) /*@ , uSerBuf @*/
+			"max", MaxHdrLen, "actual", scnLen)
 	}
 	if scnLen%LineLen != 0 {
 		return serrors.New("header length is not an integer multiple of line length",
-			"actual", scnLen) /*@ , uSerBuf @*/
+			"actual", scnLen)
 	}
-	buf, err /*@ , uSerBufN @*/ := b.PrependBytes(scnLen /*@, uSerBuf @*/)
+	buf, err := b.PrependBytes(scnLen)
 	if err != nil {
-		return err /*@ , uSerBuf @*/
+		return err
 	}
 	if opts.FixLengths {
 		// @ def.Unreachable()
 		s.HdrLen = uint8(scnLen / LineLen)
-		s.PayloadLen = uint16(len(b.Bytes( /*@ uSerBufN @*/ )) - scnLen)
+		s.PayloadLen = uint16(len(b.Bytes()) - scnLen)
 	}
+	// @ ghost uSerBufN := b.UBuf()
 	// @ assert buf === uSerBufN[:scnLen]
-	// @ b.ExchangePred(uSerBufN)
+	// @ b.ExchangePred()
 	// @ sl.SplitRange_Bytes(uSerBufN, 0, scnLen, writePerm)
 
 	// Serialize common header.
@@ -287,8 +288,8 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
 		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
 		// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
-		// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* b.Mem(uSerBufN)
-		return err /*@ , uSerBufN @*/
+		// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* (b.Mem() && b.UBuf() === uSerBufN)
+		return err
 	}
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
 
@@ -300,8 +301,8 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
-	// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* b.Mem(uSerBufN)
-	return tmp /*@ , uSerBufN @*/
+	// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* (b.Mem() && b.UBuf() === uSerBufN)
+	return tmp
 }
 
 // DecodeFromBytes decodes the SCION layer. DecodeFromBytes resets the internal state of this layer
@@ -617,6 +618,7 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr) + 12))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (!isIPv4(dst) && !isIPv6(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
+// @ ensures   (res == nil) == (typeOf(dst) == type[*net.IPAddr] || typeOf(dst) == type[addr.HostSVC])
 // @ decreases
 func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res error) {
 	var err error
@@ -653,6 +655,7 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr) + 12))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (!isIPv4(src) && !isIPv6(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
+// @ ensures   (res == nil) == (typeOf(src) == type[*net.IPAddr] || typeOf(src) == type[addr.HostSVC])
 // @ decreases
 func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error) {
 	var err error
@@ -723,6 +726,7 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b) + 12))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
+// @ ensures   (err == nil) == (typeOf(hostAddr) == type[*net.IPAddr] || typeOf(hostAddr) == type[addr.HostSVC])
 // @ decreases
 func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType, b []byte, err error) {
 	switch a := hostAddr.(type) {
