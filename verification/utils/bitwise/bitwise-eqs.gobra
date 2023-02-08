@@ -113,3 +113,10 @@ ensures uint8(uint32(a) << 24) >> 30 == a >> 6
 ensures res == a >> 6
 decreases
 func ShiftBy24and30(a uint8) (res uint8)
+
+ghost
+pure
+requires 0 >= a && a <= 0x3F
+ensures a == a & 0x3F
+ensures res == a & 0x3F
+func Preserved0x3F(a uint32) (res uint32)

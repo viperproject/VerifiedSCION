@@ -44,7 +44,16 @@ ghost
 requires acc(b.Mem(), _)
 decreases
 pure func (b *Base) InfValid() (bool) {
-	return unfolding acc(b.Mem(), _) in 0 <= b.PathMeta.CurrINF && b.PathMeta.CurrINF < b.NumINF && b.NumINF < 4
+	return unfolding acc(b.Mem(), _) in
+		0 <= b.PathMeta.CurrINF &&
+		b.PathMeta.CurrINF < b.NumINF &&
+		b.NumINF < 4 &&
+		b.PathMeta.SegLen[0] >= 0 &&
+		b.PathMeta.SegLen[0] <= 0x3F &&
+		b.PathMeta.SegLen[1] >= 0 &&
+		b.PathMeta.SegLen[1] <= 0x3F &&
+		b.PathMeta.SegLen[2] >= 0 &&
+		b.PathMeta.SegLen[2] <= 0x3F
 }
 
 ghost
