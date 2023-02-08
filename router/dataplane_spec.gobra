@@ -190,3 +190,11 @@ type offsetPair struct {
 	start int
 	end int
 }
+
+ghost
+pure
+requires 0 <= n
+ensures  len(res) == n
+ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> res[i] == offsetPair{}
+decreases
+func newOffsetPair(n int) (res seq[offsetPair])

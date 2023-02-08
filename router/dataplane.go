@@ -68,6 +68,7 @@ import (
 	// @ def "github.com/scionproto/scion/verification/utils/definitions"
 	// @ "github.com/scionproto/scion/verification/utils/slices"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
+	// @ "github.com/scionproto/scion/verification/utils/seqs"
 )
 
 const (
@@ -907,7 +908,8 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 
 	// parse SCION header and skip extensions;
 	var err error
-	p.lastLayer, err = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
+	// @ ghost var processed seq[bool]
+	p.lastLayer, err /*@ , processed @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
 	if err != nil {
 		return processResult{}, err
 	}
@@ -2043,13 +2045,17 @@ func (p *scionPacketProcessor) prepareSCMP(
 // TODO: ensures   reterr == nil ==> base.Mem(data)
 // @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
-	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error) {
+	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error /*@ , ghost processed seq[bool] @*/) {
 
+	// @ ghost var offsets seq[offsetPair] = newOffsetPair(len(opts)+1)
+	// @ processed = seqs.NewSeqBool(len(opts) + 1)
 	// @ ghost dataOriginal := data
 	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
-		return nil, err
+		return nil, err /*@ , processed @*/
 	}
+	// @ processed[0] = true
+	// @ offsets[0] = offsetPair{0, len(data)}
 	last := base
 	optsSlice := ([](gopacket.DecodingLayer))(opts)
 
@@ -2057,8 +2063,6 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	// @ ghost iteratedData := data
 	// @ ghost oldStart := 0
 	// @ ghost oldEnd := len(data)
-	// TODO: to have stronger postconditions, we need to introduce the following:
-	// @ ghost var processed seq[bool] = seq[bool]{}
 
 	// @ invariant slices.AbsSlice_Bytes(oldData, 0, len(oldData))
 	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)
@@ -2068,6 +2072,12 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	// @       opts[i] != nil
 	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } i0 <= i && i < len(opts) ==>
 	// @       opts[i].NonInitMem()
+	// @ invariant len(processed) == len(opts)+1
+	// @ invariant len(offsets) == len(opts)+1
+	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } 1 <= i && i <= i0 ==>
+	// @       (processed[i] ==> opts[i-1].Mem(data[offsets[i].start:offsets[i].end]))
+	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } 1 <= i && i <= i0 ==>
+	// @       (!processed[i] ==> opts[i-1].NonInitMem())
 	// @ invariant last != nil
 	// @ invariant last.Mem(iteratedData)
 	// @ invariant gopacket.NilDecodeFeedback.Mem()
@@ -2092,14 +2102,14 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 			// @ }
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 				// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
-				return nil, err
+				return nil, err /*@, processed @*/
 			}
 			// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 			last = opt
 			// @ assert last.Mem(iteratedData)
 		}
 	}
-	return last, nil
+	return last, nil /*@ , processed @*/
 }
 
 // @ preserves acc(layer.Mem(ubuf), def.ReadL20)
