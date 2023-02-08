@@ -1812,6 +1812,7 @@ type bfdSend struct {
 
 // newBFDSend creates and initializes a BFD Sender
 // @ trusted
+// @ requires false
 // @ decreases
 func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPAddr,
 	ifID uint16, mac hash.Hash) (res *bfdSend) {
