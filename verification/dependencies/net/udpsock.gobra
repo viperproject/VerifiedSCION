@@ -49,7 +49,7 @@ ensures res == "udp"
 decreases
 func (a *UDPAddr) Network() (res string) { return "udp" }
 
-preserves a != nil ==> acc(a.Mem(), 1/1000)
+preserves a != nil ==> acc(a.Mem(), definitions.ReadL20)
 decreases
 func (a *UDPAddr) String() string
 
