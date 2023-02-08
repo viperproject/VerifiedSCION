@@ -67,6 +67,7 @@ import (
 	"github.com/scionproto/scion/router/control"
 	// @ def "github.com/scionproto/scion/verification/utils/definitions"
 	// @ "github.com/scionproto/scion/verification/utils/slices"
+	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 const (
@@ -862,7 +863,8 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	return p
 }
 
-// @ preserves acc(p)
+// @ preserves acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
+// @ preserves acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
 // @ preserves p.buffer != nil && p.buffer.Mem()
 // @ preserves p.mac != nil && p.mac.Mem()
 // @ ensures   p.rawPkt == nil && p.path == nil
@@ -885,8 +887,15 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
-// @ trusted
-// @ requires false
+// @ preserves sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ preserves acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
+// @ preserves acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
+// @ preserves acc(&p.srcAddr) && acc(&p.lastLayer)
+// @ preserves p.buffer != nil && p.buffer.Mem()
+// @ preserves p.mac != nil && p.mac.Mem()
+// @ preserves p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+// @ preserves acc(srcAddr.Mem(), _)
+// @ decreases
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (processResult, error) {
 
@@ -902,18 +911,19 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	if err != nil {
 		return processResult{}, err
 	}
-	pld := p.lastLayer.LayerPayload()
+	pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ nil @*/ ) // (VS) TODO: replace nil by the proper spec
 
 	pathType := p.scionLayer.PathType
 	switch pathType {
 	case empty.PathType:
-		if p.lastLayer.NextLayerType() == layers.LayerTypeBFD {
+		// (VS) TODO: drop nil later
+		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
 			return processResult{}, p.processIntraBFD(pld)
 		}
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
-			"type", pathType, "header", nextHdr(p.lastLayer))
+			"type", pathType, "header", nextHdr(p.lastLayer /*@, nil @*/)) // (VS) drop
 	case onehop.PathType:
-		if p.lastLayer.NextLayerType() == layers.LayerTypeBFD {
+		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
 			ohp, ok := p.scionLayer.Path.(*onehop.Path)
 			if !ok {
 				return processResult{}, malformedPath
