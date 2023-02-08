@@ -189,6 +189,7 @@ scmpError implements error
 type offsetPair struct {
 	start int
 	end int
+	isNil bool
 }
 
 ghost

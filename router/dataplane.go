@@ -2040,63 +2040,72 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ requires  base != nil && base.NonInitMem()
 // @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
-// @ 	(acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
+// @     (acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
+// Due to Viper's very strict injectivity constraints:
+// @ requires  forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==>
+// @     opts[i] !== opts[j]
 // TODO: add more postconditions about what is actually processed in the list opts
 // TODO: ensures   reterr == nil ==> base.Mem(data)
 // @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error /*@ , ghost processed seq[bool] @*/) {
 
-	// @ ghost var offsets seq[offsetPair] = newOffsetPair(len(opts)+1)
-	// @ processed = seqs.NewSeqBool(len(opts) + 1)
+	// @ ghost var offsets seq[offsetPair] = newOffsetPair(len(opts))
+	// @ processed = seqs.NewSeqBool(len(opts))
 	// @ ghost dataOriginal := data
 	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return nil, err /*@ , processed @*/
 	}
-	// @ processed[0] = true
-	// @ offsets[0] = offsetPair{0, len(data)}
 	last := base
 	optsSlice := ([](gopacket.DecodingLayer))(opts)
 
 	// @ ghost oldData := data
-	// @ ghost iteratedData := data
 	// @ ghost oldStart := 0
 	// @ ghost oldEnd := len(data)
+	// @ ghost idx := -1
 
 	// @ invariant slices.AbsSlice_Bytes(oldData, 0, len(oldData))
+	// @ invariant base.Mem(oldData)
 	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)
-	// @ invariant forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
-	// @       acc(&opts[i], def.ReadL10)
-	// @ invariant forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
-	// @       opts[i] != nil
-	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } i0 <= i && i < len(opts) ==>
-	// @       opts[i].NonInitMem()
-	// @ invariant len(processed) == len(opts)+1
-	// @ invariant len(offsets) == len(opts)+1
-	// @ invariant forall i int :: { &opts[i] }{ processed[i] } 0 <= i && i <= len(opts) ==>
-	// @       (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
-	// @ invariant forall i int :: { &opts[i] }{ processed[i] } 0 < i && i <= len(opts) ==>
-	// @       (processed[i] ==> opts[i-1].Mem(oldData[offsets[i].start:offsets[i].end]))
-	//  invariant forall i int :: { &opts[i] }{ processed[i] } 0 < i && i <= len(opts) ==>
-	//        (!processed[i] ==> opts[i-1].NonInitMem())
-	// @ invariant last != nil
-	// @ invariant last.Mem(iteratedData)
+	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], def.ReadL10)
+	// @ invariant forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
+	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> opts[i] != nil
+	// @ invariant len(processed) == len(opts)
+	// @ invariant len(offsets) == len(opts)
+	// @ invariant -1 <= idx && idx < len(opts)
+	// @ invariant idx == -1 ==> (last === base && oldStart == 0 && oldEnd == len(oldData))
+	// @ invariant 0 <= idx ==> (processed[idx] && last === opts[idx])
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+	// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+	// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+	// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && i0 <= i && i < len(opts) ==>
+	// @     !processed[i]
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+	// @     (!processed[i] ==> opts[i].NonInitMem())
 	// @ invariant gopacket.NilDecodeFeedback.Mem()
 	// @ invariant 0 <= oldStart && oldStart <= oldEnd && oldEnd <= len(oldData)
-	// @ invariant iteratedData === oldData[oldStart:oldEnd] || iteratedData == nil
 	// @ decreases len(opts) - i0
 	for _, opt := range optsSlice /*@ with i0 @*/ {
-		// @ assert last.Mem(iteratedData)
 		layerClassTmp := opt.CanDecode()
 		// @ fold layerClassTmp.Mem()
-		if layerClassTmp.Contains(last.NextLayerType( /*@ iteratedData @*/ )) {
-			data /*@ , start, end @*/ := last.LayerPayload( /*@ iteratedData @*/ )
-			// @ iteratedData = data
-			// @ assert data == nil || data === oldData[oldStart:oldEnd][start:end]
-			// @ assert data == nil || data === oldData[oldStart+start:oldStart+end]
-			// @ oldEnd   = oldStart + end
-			// @ oldStart = oldStart + start
+		// @ ghost var pos offsetPair
+		// @ ghost var ub []byte
+		// @ ghost if idx == -1 {
+		// @     pos = offsetPair{0, len(oldData), false}
+		// @     ub = oldData
+		// @ } else {
+		// @     pos = offsets[idx]
+		// @     if pos.isNil { ub = nil } else { ub  = oldData[pos.start:pos.end] }
+		// @ }
+		if layerClassTmp.Contains(last.NextLayerType( /*@ ub @*/ )) {
+			data /*@ , start, end @*/ := last.LayerPayload( /*@ ub @*/ )
+			// @ assert data == nil || data === oldData[pos.start:pos.end][start:end]
+			// @ oldEnd   = pos.start + end
+			// @ oldStart = pos.start + start
 			// @ ghost if data == nil {
 			// @ 	slices.NilAcc_Bytes()
 			// @ } else {
@@ -2106,15 +2115,11 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 				// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 				return nil, err /*@, processed @*/
 			}
-			// @ processed[i0+1] = true
-			// @ ghost offsets[i0+1] = offsetPair{oldStart, oldEnd}
-			// @ assert forall i int :: { &opts[i] } 1 <= i && i <= i0+1 ==>
-			// @       (processed[i] ==> opts[i-1].Mem(data[offsets[i].start:offsets[i].end]))
-			// @ assert forall i int :: { &opts[i] } 1 <= i && i <= i0+1 ==>
-			// @       (!processed[i] ==> opts[i-1].NonInitMem())
+			// @ processed[i0] = true
+			// @ ghost offsets[i0] = offsetPair{oldStart, oldEnd, data == nil}
+			// @ idx = i0
 			// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 			last = opt
-			// @ assert last.Mem(iteratedData)
 		}
 	}
 	return last, nil /*@ , processed @*/
