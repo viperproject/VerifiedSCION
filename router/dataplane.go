@@ -97,8 +97,8 @@ type bfdSession interface {
 	// @ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
 	// @ requires acc(Mem(), _)
-	// @ requires msg.Mem()
-	ReceiveMessage(msg *layers.BFD)
+	// @ requires msg.Mem(ub)
+	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
 	// @ requires acc(Mem(), _)
 	IsUp() bool
 }
@@ -862,9 +862,15 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	return p
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) reset() error {
+// @ preserves acc(p)
+// @ preserves p.buffer != nil && p.buffer.Mem()
+// @ preserves p.mac != nil && p.mac.Mem()
+// @ ensures   p.rawPkt == nil && p.path == nil
+// @ ensures   p.hopField == path.HopField{} && p.infoField == path.InfoField{}
+// @ ensures   !p.segmentChange
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) reset() (err error) {
 	p.rawPkt = nil
 	//p.scionLayer // cannot easily be reset
 	p.path = nil
@@ -1864,9 +1870,11 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 	}
 }
 
-// @ trusted
-// @ requires false
+// @ preserves acc(b.Mem(), def.ReadL10)
+// @ decreases
 func (b *bfdSend) String() string {
+	// @ unfold acc(b.Mem(), def.ReadL10)
+	// @ ghost defer fold acc(b.Mem(), def.ReadL10)
 	return b.srcAddr.String()
 }
 

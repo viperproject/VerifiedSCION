@@ -170,7 +170,7 @@ type BFD struct {
 	AuthHeader                *BFDAuthHeader      // Authentication data, variable length.
 }
 
-pred (b *BFD) Mem() {
+pred (b *BFD) Mem(_ []byte) {
 	acc(b) &&
 	slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload)) &&
 	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
@@ -184,18 +184,19 @@ func (d *BFD) Length() int
 decreases
 pure func (d *BFD) LayerType() gopacket.LayerType
 
-requires d.Mem()
+requires d.Mem(ub)
 requires df.Mem()
 preserves slices.AbsSlice_Bytes(data, 0, len(data))
 ensures df.Mem()
-ensures err == nil ==> d.Mem()
+ensures err == nil ==> d.Mem(ub)
 decreases
-func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err error)
+func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback, ghost ub []byte) (err error)
 
-requires d.Mem() && b.Mem()
-ensures  err != nil ==> d.Mem() && b.Mem()
+requires d.Mem(ub) && b.Mem()
+ensures  err == nil ==> d.Mem(ub) && b.Mem()
+ensures  err != nil ==> err.ErrorMem()
 decreases
-func (d *BFD) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions, ghost buf []byte) (err error)
+func (d *BFD) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions, ghost ub []byte) (err error)
 
 decreases
 pure func (d *BFD) CanDecode() gopacket.LayerClass
@@ -207,3 +208,5 @@ decreases
 func (d *BFD) Payload() []byte {
 	return nil
 }
+
+(*BFD) implements gopacket.SerializableLayer

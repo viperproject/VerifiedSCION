@@ -78,8 +78,9 @@ type SerializeBuffer interface {
 	AppendBytes(num int) (res []byte, err error)
 
 	preserves Mem()
+	ensures   err != nil ==> err.ErrorMem()
 	decreases
-	Clear() error
+	Clear() (err error)
 
 	preserves Mem()
 	ensures forall i int :: {&res[i]} 0 <= i && i < len(res) ==> acc(&res[i])
