@@ -2074,10 +2074,12 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	// @       opts[i].NonInitMem()
 	// @ invariant len(processed) == len(opts)+1
 	// @ invariant len(offsets) == len(opts)+1
-	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } 1 <= i && i <= i0 ==>
-	// @       (processed[i] ==> opts[i-1].Mem(data[offsets[i].start:offsets[i].end]))
-	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } 1 <= i && i <= i0 ==>
-	// @       (!processed[i] ==> opts[i-1].NonInitMem())
+	// @ invariant forall i int :: { &opts[i] }{ processed[i] } 0 <= i && i <= len(opts) ==>
+	// @       (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+	// @ invariant forall i int :: { &opts[i] }{ processed[i] } 0 < i && i <= len(opts) ==>
+	// @       (processed[i] ==> opts[i-1].Mem(oldData[offsets[i].start:offsets[i].end]))
+	//  invariant forall i int :: { &opts[i] }{ processed[i] } 0 < i && i <= len(opts) ==>
+	//        (!processed[i] ==> opts[i-1].NonInitMem())
 	// @ invariant last != nil
 	// @ invariant last.Mem(iteratedData)
 	// @ invariant gopacket.NilDecodeFeedback.Mem()
@@ -2104,6 +2106,12 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 				// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 				return nil, err /*@, processed @*/
 			}
+			// @ processed[i0+1] = true
+			// @ ghost offsets[i0+1] = offsetPair{oldStart, oldEnd}
+			// @ assert forall i int :: { &opts[i] } 1 <= i && i <= i0+1 ==>
+			// @       (processed[i] ==> opts[i-1].Mem(data[offsets[i].start:offsets[i].end]))
+			// @ assert forall i int :: { &opts[i] } 1 <= i && i <= i0+1 ==>
+			// @       (!processed[i] ==> opts[i-1].NonInitMem())
 			// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 			last = opt
 			// @ assert last.Mem(iteratedData)
