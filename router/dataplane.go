@@ -14,18 +14,18 @@
 
 // +gobra
 
-// Currently disabled. Proving that this holds after initialization causes a big slowdown.
-// initEnsures nonNilErr(&alreadySet)
-// initEnsures nonNilErr(&cannotRoute)
-// initEnsures nonNilErr(&emptyValue)
-// initEnsures nonNilErr(&malformedPath)
-// initEnsures nonNilErr(&modifyExisting)
-// initEnsures nonNilErr(&noSVCBackend)
-// initEnsures nonNilErr(&unsupportedPathType)
-// initEnsures nonNilErr(&unsupportedPathTypeNextHeader)
-// initEnsures nonNilErr(&noBFDSessionFound)
-// initEnsures nonNilErr(&noBFDSessionConfigured)
-// initEnsures nonNilErr(&errBFDDisabled)
+// (VerifiedSCION) Uncommenting the following causes severe slowdowns, but it verifies
+// initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
+// initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
+// initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
+// initEnsures malformedPath                 != nil && malformedPath.ErrorMem()
+// initEnsures modifyExisting                != nil && modifyExisting.ErrorMem()
+// initEnsures noSVCBackend                  != nil && noSVCBackend.ErrorMem()
+// initEnsures unsupportedPathType           != nil && unsupportedPathType.ErrorMem()
+// initEnsures unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
+// initEnsures noBFDSessionFound             != nil && noBFDSessionFound.ErrorMem()
+// initEnsures noBFDSessionConfigured        != nil && noBFDSessionConfigured.ErrorMem()
+// initEnsures errBFDDisabled                != nil && errBFDDisabled.ErrorMem()
 package router
 
 import (
@@ -97,8 +97,8 @@ type bfdSession interface {
 	// @ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
 	// @ requires acc(Mem(), _)
-	// @ requires msg.Mem()
-	ReceiveMessage(msg *layers.BFD)
+	// @ requires msg.Mem(ub)
+	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
 	// @ requires acc(Mem(), _)
 	IsUp() bool
 }
@@ -458,9 +458,13 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	return control.InterfaceUp
 }
 
-// (VerifiedSCION) marked as trusted, otherwise we need to support bfd.Session
+// (VerifiedSCION) marked as trusted because we currently do not support bfd.Session
 // @ trusted
-// @ requires false
+// @ requires  acc(metrics.PacketsSent.Mem(), _) && acc(metrics.PacketsReceived.Mem(), _)
+// @ requires  acc(metrics.Up.Mem(), _) && acc(metrics.StateChanges.Mem(), _)
+// @ preserves MutexInvariant!<d!>()
+// @ requires  s.Mem()
+// @ decreases
 func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 	metrics bfd.Metrics) error {
 
@@ -841,8 +845,7 @@ type processResult struct {
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
 	// @ unfold acc(d.MacFactoryOperational(), _)
-	// @ ghost var ubuf []byte
-	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
+	verScionTmp = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
@@ -859,9 +862,15 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	return p
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) reset() error {
+// @ preserves acc(p)
+// @ preserves p.buffer != nil && p.buffer.Mem()
+// @ preserves p.mac != nil && p.mac.Mem()
+// @ ensures   p.rawPkt == nil && p.path == nil
+// @ ensures   p.hopField == path.HopField{} && p.infoField == path.InfoField{}
+// @ ensures   !p.segmentChange
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) reset() (err error) {
 	p.rawPkt = nil
 	//p.scionLayer // cannot easily be reset
 	p.path = nil
@@ -1810,8 +1819,9 @@ type bfdSend struct {
 // newBFDSend creates and initializes a BFD Sender
 // @ trusted
 // @ requires false
+// @ decreases
 func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPAddr,
-	ifID uint16, mac hash.Hash) *bfdSend {
+	ifID uint16, mac hash.Hash) (res *bfdSend) {
 
 	scn := &slayers.SCION{
 		Version:      0,
@@ -1822,10 +1832,10 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 		DstIA:        dstIA,
 	}
 
-	if err := scn.SetSrcAddr(&net.IPAddr{IP: srcAddr.IP}); err != nil {
+	if err := scn.SetSrcAddr(&net.IPAddr{IP: srcAddr.IP} /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
-	if err := scn.SetDstAddr(&net.IPAddr{IP: dstAddr.IP}); err != nil {
+	if err := scn.SetDstAddr(&net.IPAddr{IP: dstAddr.IP} /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
 
@@ -1860,9 +1870,11 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 	}
 }
 
-// @ trusted
-// @ requires false
+// @ preserves acc(b.Mem(), def.ReadL10)
+// @ decreases
 func (b *bfdSend) String() string {
+	// @ unfold acc(b.Mem(), def.ReadL10)
+	// @ ghost defer fold acc(b.Mem(), def.ReadL10)
 	return b.srcAddr.String()
 }
 
@@ -2131,37 +2143,83 @@ func (p *scionPacketProcessor) prdepareSCMP(typ slayers.SCMPType, code slayers.S
 // gopacket.DecodingLayerParser, but customized to our use case with a "base"
 // layer and additional, optional layers in the given order.
 // Returns the last decoded layer.
-// @ trusted
-// @ requires false
+// @ requires  base != nil && base.NonInitMem()
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ requires  forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+// @ 	(acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
+// TODO: add more postconditions about what is actually processed in the list opts
+// TODO: ensures   reterr == nil ==> base.Mem(data)
+// @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
-	opts ...gopacket.DecodingLayer) (gopacket.DecodingLayer, error) {
+	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error) {
 
+	// @ ghost dataOriginal := data
+	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return nil, err
 	}
 	last := base
-	for _, opt := range opts {
-		if opt.CanDecode().Contains(last.NextLayerType()) {
-			data := last.LayerPayload()
+	optsSlice := ([](gopacket.DecodingLayer))(opts)
+
+	// @ ghost oldData := data
+	// @ ghost iteratedData := data
+	// @ ghost oldStart := 0
+	// @ ghost oldEnd := len(data)
+	// TODO: to have stronger postconditions, we need to introduce the following:
+	// @ ghost var processed seq[bool] = seq[bool]{}
+
+	// @ invariant slices.AbsSlice_Bytes(oldData, 0, len(oldData))
+	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)
+	// @ invariant forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+	// @       acc(&opts[i], def.ReadL10)
+	// @ invariant forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+	// @       opts[i] != nil
+	// @ invariant 0 < len(opts) ==> forall i int :: { &opts[i] } i0 <= i && i < len(opts) ==>
+	// @       opts[i].NonInitMem()
+	// @ invariant last != nil
+	// @ invariant last.Mem(iteratedData)
+	// @ invariant gopacket.NilDecodeFeedback.Mem()
+	// @ invariant 0 <= oldStart && oldStart <= oldEnd && oldEnd <= len(oldData)
+	// @ invariant iteratedData === oldData[oldStart:oldEnd] || iteratedData == nil
+	// @ decreases len(opts) - i0
+	for _, opt := range optsSlice /*@ with i0 @*/ {
+		// @ assert last.Mem(iteratedData)
+		layerClassTmp := opt.CanDecode()
+		// @ fold layerClassTmp.Mem()
+		if layerClassTmp.Contains(last.NextLayerType( /*@ iteratedData @*/ )) {
+			data /*@ , start, end @*/ := last.LayerPayload( /*@ iteratedData @*/ )
+			// @ iteratedData = data
+			// @ assert data == nil || data === oldData[oldStart:oldEnd][start:end]
+			// @ assert data == nil || data === oldData[oldStart+start:oldStart+end]
+			// @ oldEnd   = oldStart + end
+			// @ oldStart = oldStart + start
+			// @ ghost if data == nil {
+			// @ 	slices.NilAcc_Bytes()
+			// @ } else {
+			// @	slices.SplitRange_Bytes(oldData, oldStart, oldEnd, writePerm)
+			// @ }
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
+				// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 				return nil, err
 			}
+			// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 			last = opt
+			// @ assert last.Mem(iteratedData)
 		}
 	}
 	return last, nil
 }
 
-// @ trusted
-// @ requires false
-func nextHdr(layer gopacket.DecodingLayer) slayers.L4ProtocolType {
+// @ preserves acc(layer.Mem(ubuf), def.ReadL20)
+// @ decreases
+func nextHdr(layer gopacket.DecodingLayer /*@ , ghost ubuf []byte @*/) slayers.L4ProtocolType {
 	switch v := layer.(type) {
 	case *slayers.SCION:
-		return v.NextHdr
+		return /*@ unfolding acc(v.Mem(ubuf), def.ReadL20) in @*/ v.NextHdr
 	case *slayers.EndToEndExtnSkipper:
-		return v.NextHdr
+		return /*@ unfolding acc(v.Mem(ubuf), def.ReadL20) in (unfolding acc(v.extnBase.Mem(ubuf), def.ReadL20) in @*/ v.NextHdr /*@ ) @*/
 	case *slayers.HopByHopExtnSkipper:
-		return v.NextHdr
+		return /*@ unfolding acc(v.Mem(ubuf), def.ReadL20) in (unfolding acc(v.extnBase.Mem(ubuf), def.ReadL20) in @*/ v.NextHdr /*@ ) @*/
 	default:
 		return slayers.L4None
 	}

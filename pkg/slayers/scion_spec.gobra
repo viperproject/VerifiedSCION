@@ -168,11 +168,7 @@ pred (s *SCION) Mem(ubuf []byte) {
 	s.Payload  === ubuf[s.HdrLen*LineLen:] &&
 	// end of base layer fields
 	CmnHdrLen <= len(ubuf) &&
-	s.HeaderMem(ubuf[CmnHdrLen:]) &&
-	// permissions to the rest of the underlying slice:
-	slices.AbsSlice_Bytes(ubuf, 0, CmnHdrLen+s.AddrHdrLen(nil, true)) &&
-	slices.AbsSlice_Bytes(ubuf, int(s.HdrLen*LineLen), len(ubuf))
-	// end of permissions to the rest of the underlying slice
+	s.HeaderMem(ubuf[CmnHdrLen:])
 }
 
 pred (s *SCION) HeaderMem(ubuf []byte) {
@@ -192,8 +188,7 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	// end of helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
 	// RawDstAddr & RawSrcAddr locations. The memory for these is kept
-	// outside of HeaderMem, in the Mem predicate where we just keep
-	// access to the entire slice.
+	// outside of HeaderMem, together with access to the entire slice.
 	s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+s.DstAddrType.Length()] &&
 	s.RawSrcAddr === ubuf[2*addr.IABytes+s.DstAddrType.Length():2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()]
 }
@@ -206,11 +201,11 @@ pred (s *SCION) ChecksumMem() {
 	slices.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 }
 
-pred (b *BaseLayer) Mem(ghost _ []byte) {
-	// TODO: at some point, use the ghost param in the body here
+pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
+	0 <= breakPoint && breakPoint <= len(ub) &&
 	acc(b) &&
-	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
-	slices.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+	b.Contents === ub[:breakPoint] &&
+	b.Payload  === ub[breakPoint:]
 }
 
 ghost

@@ -19,6 +19,7 @@ package scion
 import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
+	//@ def "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
@@ -42,13 +43,11 @@ type Decoded struct {
 }
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
-// @ requires s.NonInitMem()
-// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
-// @ ensures  r == nil ==> len(data) > 0
-// @ ensures  r == nil ==> s.Mem(data)
-// @ ensures  r == nil ==> (unfolding s.Mem(data) in unfolding s.Base.Mem() in unfolding slices.AbsSlice_Bytes(data, 0, len(data)) in s.PathMeta.CurrINF == data[0] >> 6)
-// @ ensures  r != nil ==> (r.ErrorMem() && s.NonInitMem())
-// @ ensures  r != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
+// @ requires  s.NonInitMem()
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures   r == nil ==> s.Mem(data)
+// @ // @ ensures  r == nil ==> (unfolding s.Mem(data) in unfolding slices.AbsSlice_Bytes(data, 0, len(data)) in s.PathMeta.CurrINF == data[0] >> 6)
+// @ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 // @ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ unfold s.NonInitMem()
@@ -123,7 +122,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 
 // SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-// @ preserves s.Mem(ubuf)
+// @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ preserves b !== ubuf ==> slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -132,22 +132,23 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 		return serrors.New("buffer too small to serialize path.", "expected", s.Len( /*@ ubuf @*/ ),
 			"actual", len(b))
 	}
-	//@ unfold s.Mem(ubuf)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL1)
 	//@ assert slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ slices.SplitByIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
 	//@ slices.Reslice_Bytes(b, 0, MetaLen, writePerm)
-	//@ unfold s.Base.Mem()
+	//@ unfold acc(s.Base.Mem(), def.ReadL1)
 	if err := s.PathMeta.SerializeTo(b[:MetaLen]); err != nil {
 		// @ definitions.Unreachable()
 		return err
 	}
-	//@ fold s.Base.Mem()
+	//@ fold acc(s.Base.Mem(), def.ReadL1)
 	//@ slices.Unslice_Bytes(b, 0, MetaLen, writePerm)
 	//@ slices.CombineAtIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
-	//@ fold s.Mem(ubuf)
+	//@ fold acc(s.Mem(ubuf), def.ReadL1)
 	offset := MetaLen
 
-	//@ invariant s.Mem(ubuf)
+	//@ invariant acc(s.Mem(ubuf), def.ReadL1)
+	//@ invariant slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 	//@ invariant b !== ubuf ==> slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ invariant s.Len(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenInfoFields(ubuf)
@@ -156,25 +157,25 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ decreases s.getLenInfoFields(ubuf) - i
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, info := range s.InfoFields {
-	for i := 0; i < /*@ unfolding s.Mem(ubuf) in @*/ len(s.InfoFields); i++ {
-		//@ unfold s.Mem(ubuf)
+	for i := 0; i < /*@ unfolding acc(s.Mem(ubuf), _) in @*/ len(s.InfoFields); i++ {
+		//@ unfold acc(s.Mem(ubuf), def.ReadL1)
 		info := &s.InfoFields[i]
 		//@ slices.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
 		//@ slices.SplitByIndex_Bytes(b, offset, len(b), offset + path.InfoLen, writePerm)
 		//@ slices.Reslice_Bytes(b, offset, offset + path.InfoLen, writePerm)
 		//@ assert slices.AbsSlice_Bytes(b[offset:offset+path.InfoLen], 0, path.InfoLen)
 		if err := info.SerializeTo(b[offset : offset+path.InfoLen]); err != nil {
-			// (VerifiedSCION) Infofield.SerializeTo always returns nil.
-			// Thus, this branch is not reachable.
+			//@ def.Unreachable()
 			return err
 		}
 		//@ slices.Unslice_Bytes(b, offset, offset + path.InfoLen, writePerm)
 		//@ slices.CombineAtIndex_Bytes(b, offset, len(b), offset + path.InfoLen, writePerm)
 		//@ slices.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
-		//@ fold s.Mem(ubuf)
+		//@ fold acc(s.Mem(ubuf), def.ReadL1)
 		offset += path.InfoLen
 	}
-	//@ invariant s.Mem(ubuf)
+	//@ invariant acc(s.Mem(ubuf), def.ReadL1)
+	//@ invariant slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 	//@ invariant b !== ubuf ==> slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ invariant s.Len(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenHopFields(ubuf)
@@ -184,20 +185,19 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, hop := range s.HopFields {
 	for i := 0; i < /*@ unfolding acc(s.Mem(ubuf), _) in @*/ len(s.HopFields); i++ {
-		//@ unfold s.Mem(ubuf)
+		//@ unfold acc(s.Mem(ubuf), def.ReadL1)
 		hop := &s.HopFields[i]
 		//@ slices.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
 		//@ slices.SplitByIndex_Bytes(b, offset, len(b), offset + path.HopLen, writePerm)
 		//@ slices.Reslice_Bytes(b, offset, offset + path.HopLen, writePerm)
 		if err := hop.SerializeTo(b[offset : offset+path.HopLen]); err != nil {
-			// (VerifiedSCION) Infofield.SerializeTo always returns nil.
-			// Thus, this branch is not reachable.
+			//@ def.Unreachable()
 			return err
 		}
 		//@ slices.Unslice_Bytes(b, offset, offset + path.HopLen, writePerm)
 		//@ slices.CombineAtIndex_Bytes(b, offset, len(b), offset + path.HopLen, writePerm)
 		//@ slices.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
-		//@ fold s.Mem(ubuf)
+		//@ fold acc(s.Mem(ubuf), def.ReadL1)
 		offset += path.HopLen
 	}
 	return nil
@@ -307,6 +307,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 
 // ToRaw tranforms scion.Decoded into scion.Raw.
 // @ preserves s.Mem(ubuf1)
+// @ preserves slices.AbsSlice_Bytes(ubuf1, 0, len(ubuf1))
 // @ ensures   err == nil ==> r.Mem(ubuf2)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases

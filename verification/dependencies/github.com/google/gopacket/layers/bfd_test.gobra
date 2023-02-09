@@ -33,13 +33,6 @@ func BFD_test() {
 	fold slices.AbsSlice_Bytes(s3, 0, len(s3))
 	)
 	var bf *BFD = &BFD{ BaseLayer{s2, s3}, BFDVersion(1), BFDDiagnostic(1), BFDState(1), true, true, true, true, true, true, BFDDetectMultiplier(1), BFDDiscriminator(1), BFDDiscriminator(1), BFDTimeInterval(1), BFDTimeInterval(1), BFDTimeInterval(1), b }
-	fold bf.Mem()
+	fold bf.Mem(nil)
 }
 
-requires b.Mem()
-func BFD_test2(b *BFD) {
-	unfold b.Mem()
-	// following assertion fails
-	//assert false
-}
-	
