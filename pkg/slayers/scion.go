@@ -479,17 +479,24 @@ func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 	return tmp, nil
 }
 
-// @ trusted
-// @ requires false
-func decodeSCION(data []byte, pb gopacket.PacketBuilder) error {
+// @ requires  pb != nil
+// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves pb.Mem()
+// @ ensures   res != nil ==> res.ErrorMem()
+// @ decreases
+func decodeSCION(data []byte, pb gopacket.PacketBuilder) (res error) {
 	scn := &SCION{}
+	// @ fold PathPoolMem(scn.pathPool, scn.pathPoolRaw)
+	// @ fold scn.NonInitMem()
 	err := scn.DecodeFromBytes(data, pb)
 	if err != nil {
 		return err
 	}
 	pb.AddLayer(scn)
 	pb.SetNetworkLayer(scn)
-	return pb.NextDecoder(scionNextLayerType(scn.NextHdr))
+	nextTmp := scionNextLayerType( /*@ unfolding scn.Mem(data) in @*/ scn.NextHdr)
+	// @ fold nextTmp.Mem()
+	return pb.NextDecoder(nextTmp)
 }
 
 // scionNextLayerType returns the layer type for the given protocol identifier

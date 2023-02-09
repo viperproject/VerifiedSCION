@@ -58,12 +58,16 @@ func (h *HopByHopExtn) LayerContents() (res []byte) {
 	return res
 }
 
-// TODO
 ghost
 requires s.Mem(ub)
 ensures  s.NonInitMem()
 decreases
-func (s *HopByHopExtn) DowngradePerm(ghost ub []byte)
+func (s *HopByHopExtn) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.extnBase.Mem(ub)
+	unfold s.BaseLayer.Mem(ub, s.ActualLen)
+	fold   s.NonInitMem()
+}
 
 (*HopByHopExtn) implements gopacket.Layer
 (*HopByHopExtn) implements gopacket.DecodingLayer
@@ -106,12 +110,16 @@ func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost s
 	return res, start, end
 }
 
-// TODO
 ghost
 requires s.Mem(ub)
 ensures  s.NonInitMem()
 decreases
-func (s *HopByHopExtnSkipper) DowngradePerm(ghost ub []byte)
+func (s *HopByHopExtnSkipper) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.extnBase.Mem(ub)
+	unfold s.BaseLayer.Mem(ub, s.ActualLen)
+	fold   s.NonInitMem()
+}
 
 (*HopByHopExtnSkipper) implements gopacket.Layer
 (*HopByHopExtnSkipper) implements gopacket.DecodingLayer
@@ -138,12 +146,16 @@ func (e *EndToEndExtn) LayerContents() (res []byte) {
 	return res
 }
 
-// TODO
 ghost
 requires s.Mem(ub)
 ensures  s.NonInitMem()
 decreases
-func (s *EndToEndExtn) DowngradePerm(ghost ub []byte)
+func (s *EndToEndExtn) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.extnBase.Mem(ub)
+	unfold s.BaseLayer.Mem(ub, s.ActualLen)
+	fold   s.NonInitMem()
+}
 
 (*EndToEndExtn) implements gopacket.Layer
 (*EndToEndExtn) implements gopacket.DecodingLayer
@@ -192,7 +204,12 @@ ghost
 requires s.Mem(ub)
 ensures  s.NonInitMem()
 decreases
-func (s *EndToEndExtnSkipper) DowngradePerm(ghost ub []byte)
+func (s *EndToEndExtnSkipper) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.extnBase.Mem(ub)
+	unfold s.BaseLayer.Mem(ub, s.ActualLen)
+	fold   s.NonInitMem()
+}
 
 (*EndToEndExtnSkipper) implements gopacket.Layer
 (*EndToEndExtnSkipper) implements gopacket.DecodingLayer
