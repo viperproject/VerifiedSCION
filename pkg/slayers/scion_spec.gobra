@@ -100,6 +100,13 @@ pure func (s *SCION) pathPoolInitialized() bool {
 }
 
 ghost
+requires acc(s.NonInitMem(), _)
+decreases
+pure func (s *SCION) PathPoolInitializedNonInitMem() bool {
+	return unfolding acc(s.NonInitMem(), _) in s.pathPool != nil
+}
+
+ghost
 requires 0 <= pathType && pathType < path.MaxPathType
 requires acc(&s.pathPool, _) && acc(&s.pathPoolRaw, _)
 requires s.pathPool != nil

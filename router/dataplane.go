@@ -859,8 +859,8 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 		},
 	}
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
-	// @ fold p.scionLayer.NonInitMem()
 	p.scionLayer.RecyclePaths()
+	// @ fold p.scionLayer.NonInitMem()
 	// @ fold p.initMem()
 	return p
 }
@@ -2077,7 +2077,6 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	// @ processed = seqs.NewSeqBool(len(opts))
 	// @ offsets = newOffsetPair(len(opts))
 	// @ idx = -1
-	// @ ghost dataOriginal := data
 	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return nil, err /*@ , processed, offsets, idx @*/
@@ -2137,6 +2136,39 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 			// @ }
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 				// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
+				// @ base.DowngradePerm(oldData)
+
+				// ghost clean-up:
+				// @ ghost
+				// @ invariant 0 <= i0 && i0 <= len(opts)
+				// @ invariant -1 <= c && c <= i0
+				// @ invariant len(processed) == len(opts)
+				// @ invariant len(offsets) == len(opts)
+				// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], def.ReadL10)
+				// @ invariant forall i, j int :: {&opts[i], &opts[j]} 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
+				// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> opts[i] != nil
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+				// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(oldData)))
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+				// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+				// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+				// @     (!processed[i] ==> opts[i].NonInitMem())
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && c < i && i < len(opts) ==>
+				// @     !processed[i]
+				// @ decreases c
+				// @ for c := i0-1; 0 <= c; c=c-1 {
+				// @	if processed[c] {
+				// @		off := offsets[c]
+				// @        if off.isNil {
+				// @ 			opts[c].DowngradePerm(nil)
+				// @		} else {
+				// @ 			opts[c].DowngradePerm(oldData[off.start:off.end])
+				// @ 		}
+				// @ 	}
+				// @ 	processed[c] = false
+				// @ }
 				return nil, err /*@, processed, offsets, idx @*/
 			}
 			// @ processed[i0] = true

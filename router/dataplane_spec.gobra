@@ -131,6 +131,7 @@ pred (p *scionPacketProcessor) initMem() {
 	acc(&p.buffer) &&
 	acc(&p.mac) &&
 	acc(p.scionLayer.NonInitMem()) &&
+	p.scionLayer.PathPoolInitializedNonInitMem() &&
 	acc(&p.hbhLayer) &&
 	acc(&p.e2eLayer) &&
 	acc(&p.lastLayer) &&
