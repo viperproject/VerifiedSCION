@@ -858,7 +858,8 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 			epicInput:  make([]byte, libepic.MACBufferSize),
 		},
 	}
-	// @ fold p.scionLayer.NonInitPathPool()
+	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
+	// @ fold p.scionLayer.NonInitMem()
 	p.scionLayer.RecyclePaths()
 	// @ fold p.initMem()
 	return p

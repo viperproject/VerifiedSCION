@@ -32,12 +32,9 @@ func foldMem_test() {
 	d.AddNeighborIA(uint16(2), addr.IA(11))
 }
 
-requires acc(s)
-requires s.InitPathPool()
-func foldScionPacketProcessorInitMem_test(s *slayers.SCION) {
+func foldScionPacketProcessorInitMem_test() {
 	d := &scionPacketProcessor{}
-	unfold s.InitPathPool()
-	d.scionLayer = *s
-	fold d.scionLayer.InitPathPool()
+	fold slayers.PathPoolMem(d.scionLayer.pathPool, d.scionLayer.pathPoolRaw)
+	fold d.scionLayer.NonInitMem()
 	fold d.initMem()
 }
