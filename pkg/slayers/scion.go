@@ -387,7 +387,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("provided buffer is too small", "expected", minLen, "actual", len(data))
 	}
 
-	s.Path, err = s.getPath(s.PathType)
+	s.Path, err = s.getPath(s.PathType) // TODO: make this more versatile, allow failre
 	if err != nil {
 		// @ def.Unreachable()
 		return err
@@ -456,6 +456,7 @@ func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 	// @ assume 0 <= pathType
 	// @ unfold s.InitPathPool()
 	if s.pathPool == nil {
+		// TODO: make this case reachable
 		// @ def.Unreachable()
 		return path.NewPath(pathType)
 	}

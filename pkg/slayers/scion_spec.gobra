@@ -31,6 +31,8 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
+// TOOD: redo this and the next Init predicates,
+// otherwise complicates stuff too much
 pred (s *SCION) NonInitPathPool() {
 	acc(&s.pathPool) &&
 	acc(&s.pathPoolRaw) &&
@@ -191,6 +193,16 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	// outside of HeaderMem, together with access to the entire slice.
 	s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+s.DstAddrType.Length()] &&
 	s.RawSrcAddr === ubuf[2*addr.IABytes+s.DstAddrType.Length():2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()]
+}
+
+ghost
+requires s.Mem(ub)
+ensures  s.NonInitMem()
+decreases
+func (s *SCION) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.HeaderMem(ub[CmnHdrLen:])
+	fold s.NonInitMem()
 }
 
 pred (s *SCION) ChecksumMem() {

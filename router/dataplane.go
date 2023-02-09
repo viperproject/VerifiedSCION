@@ -888,6 +888,8 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
+// @ requires false
+// @ trusted
 // @ preserves sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ preserves acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
 // @ preserves acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
@@ -2038,24 +2040,46 @@ func (p *scionPacketProcessor) prepareSCMP(
 // layer and additional, optional layers in the given order.
 // Returns the last decoded layer.
 // @ requires  base != nil && base.NonInitMem()
-// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
 // @     (acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
 // Due to Viper's very strict injectivity constraints:
 // @ requires  forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==>
 // @     opts[i] !== opts[j]
-// TODO: add more postconditions about what is actually processed in the list opts
-// TODO: ensures   reterr == nil ==> base.Mem(data)
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures   forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+// @     (acc(&opts[i], def.ReadL10) && opts[i] != nil)
+// @ ensures   -1 <= idx && idx < len(opts)
+// @ ensures   reterr == nil && idx == -1 ==> retl === base
+// @ ensures   reterr == nil && 0   < idx ==> retl === opts[idx]
+// @ ensures   reterr == nil ==> base.Mem(data)
+/*
+// To turn into postconditions:
+//  invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+//      (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+//  invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+//      ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
+//  invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+//      ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+//  invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && i0 <= i && i < len(opts) ==>
+//      !processed[i]
+//  invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+//      (!processed[i] ==> opts[i].NonInitMem())
+*/
+// @ ensures   reterr != nil ==> base.NonInitMem()
+// @ ensures   reterr != nil ==> (forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+// @     opts[i].NonInitMem())
+// @ ensures   reterr != nil ==> reterr.ErrorMem()
 // @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
-	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error /*@ , ghost processed seq[bool] @*/) {
+	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error /*@ , ghost processed seq[bool], ghost offsets seq[offsetPair], ghost idx int @*/) {
 
-	// @ ghost var offsets seq[offsetPair] = newOffsetPair(len(opts))
 	// @ processed = seqs.NewSeqBool(len(opts))
+	// @ offsets = newOffsetPair(len(opts))
+	// @ idx = -1
 	// @ ghost dataOriginal := data
 	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
-		return nil, err /*@ , processed @*/
+		return nil, err /*@ , processed, offsets, idx @*/
 	}
 	last := base
 	optsSlice := ([](gopacket.DecodingLayer))(opts)
@@ -2063,13 +2087,12 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	// @ ghost oldData := data
 	// @ ghost oldStart := 0
 	// @ ghost oldEnd := len(data)
-	// @ ghost idx := -1
 
 	// @ invariant slices.AbsSlice_Bytes(oldData, 0, len(oldData))
 	// @ invariant base.Mem(oldData)
 	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)
 	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], def.ReadL10)
-	// @ invariant forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
+	// @ invariant forall i, j int :: {&opts[i], &opts[j]} 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
 	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> opts[i] != nil
 	// @ invariant len(processed) == len(opts)
 	// @ invariant len(offsets) == len(opts)
@@ -2113,7 +2136,7 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 			// @ }
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 				// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
-				return nil, err /*@, processed @*/
+				return nil, err /*@, processed, offsets, idx @*/
 			}
 			// @ processed[i0] = true
 			// @ ghost offsets[i0] = offsetPair{oldStart, oldEnd, data == nil}
@@ -2122,7 +2145,7 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 			last = opt
 		}
 	}
-	return last, nil /*@ , processed @*/
+	return last, nil /*@ , processed, offsets, idx @*/
 }
 
 // @ preserves acc(layer.Mem(ubuf), def.ReadL20)

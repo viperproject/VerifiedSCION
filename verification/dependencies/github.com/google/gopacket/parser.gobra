@@ -25,7 +25,6 @@ preserves acc(ltypes, def.ReadL13) && acc(*ltypes, def.ReadL13)
 ensures err != nil ==> err.ErrorMem()
 func decodingLayerFunc_spec(b []byte, ltypes *[]LayerType) (l LayerType, err error)
 
-
 type DecodingLayer interface {
 	pred NonInitMem()
 	pred Mem(ubuf []byte)
@@ -55,4 +54,10 @@ type DecodingLayer interface {
 	ensures   len(res) == 0 ==> (res == nil || res === ubuf[start:end])
 	decreases
 	LayerPayload(ghost ubuf []byte) (res []byte, ghost start int, ghost end int)
+
+	ghost
+	requires Mem(ub)
+	ensures  NonInitMem()
+	decreases
+	DowngradePerm(ghost ub []byte)
 }
