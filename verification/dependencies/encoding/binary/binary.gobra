@@ -154,6 +154,9 @@ pure func (e bigEndian) Uint32(b []byte) (res uint32) {
 
 preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
 ensures   b[0] == byte(v >> 24) // only this is needed for now
+ensures   b[1] == byte(v >> 16)
+ensures   b[2] == byte(v >> 8)
+ensures   b[3] == byte(v)
 decreases
 func (e bigEndian) PutUint32(b []byte, v uint32) {
 	b[0] = byte(v >> 24)

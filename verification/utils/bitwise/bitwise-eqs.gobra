@@ -54,15 +54,6 @@ func PreservesFirst2Bits(a uint32, b uint32) (res uint8)
 
 ghost
 pure
-requires b < 2147483648 // 2 ^ 31
-requires 0 <= a && a < 4
-ensures (uint32(a) << 30 | b) >> 30 == uint32(a)
-ensures res == a
-decreases
-func GetFirst2Bits(a uint8, b uint32) (res uint8)
-
-ghost
-pure
 requires 0 <= b && b <= 24
 ensures uint32(a & 0x3F) << b < 2147483648
 ensures res == uint32(a & 0x3F) << b
@@ -116,7 +107,17 @@ func ShiftBy24and30(a uint8) (res uint8)
 
 ghost
 pure
-requires 0 >= a && a <= 0x3F
-ensures a == a & 0x3F
-ensures res == a & 0x3F
-func Preserved0x3F(a uint32) (res uint32)
+requires 0 <= CurrINF && CurrINF < 4
+requires 0 <= SegLen0 && SegLen0 <= 0x3F
+requires 0 <= SegLen1 && SegLen1 <= 0x3F
+requires 0 <= SegLen2 && SegLen2 <= 0x3F
+ensures uint8(line >> 30) == CurrINF
+ensures uint8(line >> 24) >> 6 == CurrINF
+ensures uint8(line >> 12) &0x3F == SegLen0
+ensures (uint8(line >> 8) >> 4 | (uint8(line >> 16) << 4)) & 0x3F == SegLen0
+ensures uint8(line >> 6) &0x3F == SegLen1
+ensures (uint8(line >> 6) | uint8(line >> 8) << 2) &0x3F == SegLen1
+ensures uint8(line) &0x3F == SegLen2
+ensures line == uint32(CurrINF)<<30 | uint32(CurrHF & 0x3F)<<24 | uint32(SegLen0 & 0x3F)<<12 | uint32(SegLen1 & 0x3F)<<6 | uint32(SegLen2 & 0x3F)
+decreases
+func SerializingHdr(CurrINF, CurrHF, SegLen0, SegLen1, SegLen2 uint8) (line uint32)

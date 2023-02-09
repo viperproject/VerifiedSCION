@@ -227,7 +227,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
 		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+	// @ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 	line := binary.BigEndian.Uint32(raw)
 	// @ assert bitwise.LessThan2to31_byte(raw[3], 0) == uint32(raw[3]) << 0
 	// @ assert bitwise.ShiftBy0(uint32(raw[3])) == uint32(raw[3])
@@ -242,11 +242,11 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	// @ assert m.CurrINF == bitwise.ShiftBy24and30(raw[0]) //uint8((uint32(raw[0]) << 24) >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
 	// (VerifiedSCION) The following assumption is guaranteed by Go but still not modeled in Gobra.
-	//@ assume m.CurrINF >= 0 && m.CurrHF >= 0
+	// @ assume m.CurrINF >= 0 && m.CurrHF >= 0
 	m.SegLen[0] = uint8(line>>12) & 0x3F
 	m.SegLen[1] = uint8(line>>6) & 0x3F
 	m.SegLen[2] = uint8(line) & 0x3F
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+	// @ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 	return nil
 }
 
@@ -255,7 +255,11 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 // @ requires  len(b) >= MetaLen
 // @ preserves acc(m, definitions.ReadL10)
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-// @ ensures   m.CurrINF >= 0 && m.CurrINF < 4 ==> m.CurrINF == unfolding slices.AbsSlice_Bytes(b, 0, len(b)) in b[0] >> 6
+// @ ensures   m.InfValid() ==> unfolding slices.AbsSlice_Bytes(b, 0, len(b)) in
+// @                            m.CurrINF == b[0] >> 6 &&
+// @                            m.SegLen[0] == (b[2] >> 4 | b[1] << 4) & 0x3F &&
+// @                            m.SegLen[1] == (b[3] >> 6 | b[2] << 2) & 0x3F &&
+// @                            m.SegLen[2] == b[3] & 0x3F
 // @ ensures   e == nil
 // @ decreases
 func (m *MetaHdr) SerializeTo(b []byte) (e error) {
@@ -263,25 +267,13 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 		return serrors.New("buffer for MetaHdr too short", "expected", MetaLen, "actual", len(b))
 	}
 	line := uint32(m.CurrINF)<<30 | uint32(m.CurrHF&0x3F)<<24
-	//@ assert bitwise.LessThan2to31(m.CurrHF, 24) == uint32(m.CurrHF&0x3F)<<24
-	//@ assert m.CurrINF >= 0 && m.CurrINF < 4 ==> m.CurrINF == bitwise.GetFirst2Bits(m.CurrINF, uint32(m.CurrHF&0x3F)<<24)
-	//@ assert bitwise.LessThan2to31(m.SegLen[0], 12) == uint32(m.SegLen[0]&0x3F) << 12
-	//@ assert m.CurrINF >= 0 && m.CurrINF < 4 ==> bitwise.PreservesFirst2Bits(line, uint32(m.SegLen[0]&0x3F) << 12) == m.CurrINF
 	line |= uint32(m.SegLen[0]&0x3F) << 12
-	//@ assert bitwise.LessThan2to31(m.SegLen[1], 6) == uint32(m.SegLen[1]&0x3F) << 6
-	//@ assert m.CurrINF >= 0 && m.CurrINF < 4 ==> bitwise.PreservesFirst2Bits(line, uint32(m.SegLen[1]&0x3F) << 6) == m.CurrINF
 	line |= uint32(m.SegLen[1]&0x3F) << 6
-	//@ assert bitwise.LessThan2to31(m.SegLen[2], 0) == uint32(m.SegLen[2]&0x3F) << 0
-	//@ assert bitwise.ShiftBy0(uint32(m.SegLen[2]&0x3F)) == uint32(m.SegLen[2]&0x3F)
-	//@ assert m.CurrINF >= 0 && m.CurrINF < 4 ==> bitwise.PreservesFirst2Bits(line, uint32(m.SegLen[2]&0x3F) << 0) == m.CurrINF
 	line |= uint32(m.SegLen[2] & 0x3F)
-	//@ assert m.CurrINF >= 0 && m.CurrINF < 4 ==> uint8(line >> 30) == m.CurrINF
-	//@ unfold acc(slices.AbsSlice_Bytes(b, 0, len(b)))
+	//@ assert m.InfValid() ==> line == bitwise.SerializingHdr(m.CurrINF, m.CurrHF, m.SegLen[0], m.SegLen[1], m.SegLen[2])
+	// @ unfold acc(slices.AbsSlice_Bytes(b, 0, len(b)))
 	binary.BigEndian.PutUint32(b, line)
-	//@ assert uint8(b[0]) >> 6 == uint8(line >> 24) >> 6
-	//@ assert bitwise.ShiftBy24and6(line) == uint8(line >> 30)
-	//@ assert m.CurrINF >= 0 && m.CurrINF < 4 ==> uint8(line >> 24) >> 6 == m.CurrINF
-	//@ fold acc(slices.AbsSlice_Bytes(b, 0, len(b)))
+	// @ fold acc(slices.AbsSlice_Bytes(b, 0, len(b)))
 	return nil
 }
 

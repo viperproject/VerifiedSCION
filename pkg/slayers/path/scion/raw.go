@@ -132,7 +132,7 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ preserves s.Mem(ubuf)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   err == nil ==> d.Mem(unfolding acc(s.Mem(ubuf), _) in s.Raw)
-// @ ensures   err == nil && old(unfolding s.Mem(ubuf) in s.Base.InfValid()) ==> unfolding d.Mem(unfolding acc(s.Mem(ubuf), _) in s.Raw) in d.Base.InfValid()
+// ensures   err == nil ==> old(unfolding s.Mem(ubuf) in s.Base.InfValid()) ==> unfolding d.Mem(unfolding acc(s.Mem(ubuf), _) in s.Raw) in d.Base.InfValid()
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
