@@ -52,7 +52,10 @@ pure func (b *Base) InfValid() (bool) {
 		b.PathMeta.SegLen[1] >= 0 &&
 		b.PathMeta.SegLen[1] <= 0x3F &&
 		b.PathMeta.SegLen[2] >= 0 &&
-		b.PathMeta.SegLen[2] <= 0x3F
+		b.PathMeta.SegLen[2] <= 0x3F &&
+		b.NumINF == b.NumINFValue() &&
+		// TODO: Could we avoid the heap dependent trigger here?
+		forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==> b.PathMeta.SegLen[i] > 0
 }
 
 ghost
@@ -60,6 +63,7 @@ requires acc(&m.SegLen[0], _)
 requires acc(&m.SegLen[1], _)
 requires acc(&m.SegLen[2], _)
 requires acc(&m.CurrINF, _)
+decreases
 pure func (m *MetaHdr) InfValid() (bool) {
 	return m.CurrINF >= 0 &&
 		m.CurrINF < 4 &&
@@ -69,6 +73,17 @@ pure func (m *MetaHdr) InfValid() (bool) {
 		m.SegLen[1] <= 0x3F &&
 		m.SegLen[2] >= 0 &&
 		m.SegLen[2] <= 0x3F
+}
+
+ghost
+requires acc(&s.PathMeta.SegLen[0], _)
+requires acc(&s.PathMeta.SegLen[1], _)
+requires acc(&s.PathMeta.SegLen[2], _)
+requires acc(&s.NumINF, _)
+decreases
+pure func (s *Base) NumINFValue() (int) {
+	//return let p := s.PathMeta.SegLen in p[0] == 0 ? 0 : p[1] == 0 ? 1 : p[2] == 0 ? 2 : 3
+	return s.PathMeta.SegLen[2] > 0 ? 3 : s.PathMeta.SegLen[1] > 0 ? 2 : s.PathMeta.SegLen[0] > 0 ? 1 : 0
 }
 
 ghost

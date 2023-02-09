@@ -77,6 +77,7 @@ type Base struct {
 // @ ensures   r == nil ==> len(data) > 0
 // @ ensures   r == nil ==> s.Mem() && (s.Mem() --* s.NonInitMem())
 // @ ensures   r == nil ==> (unfolding s.Mem() in s.PathMeta.CurrINF) == (unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1) in data[0] >> 6)
+// @ ensures   r == nil ==> unfolding s.Mem() in s.NumINF == s.NumINFValue()
 // @ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
 // @ ensures   len(data) < MetaLen ==> r != nil
 // @ decreases
@@ -88,36 +89,38 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		//@ fold s.NonInitMem()
 		return err
 	}
-	// @ assert s.PathMeta.CurrINF == (unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1) in data[0] >> 6)
 	s.NumINF = 0
 	s.NumHops = 0
-	//@ invariant -1 <= i && i <= 2
-	//@ invariant acc(s)
-	//@ invariant 0 <= s.NumHops && 0 <= s.NumINF && s.NumINF <= 3
-	//@ invariant 0 < s.NumINF ==> 0 < s.NumHops
-	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-	//@ invariant s.PathMeta.CurrINF == (unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1) in data[0] >> 6)
-	//@ decreases i
+	// @ invariant -1 <= i && i <= 2
+	// @ invariant acc(s)
+	// @ invariant 0 <= s.NumHops && 0 <= s.NumINF && s.NumINF <= 3
+	// @ invariant 0 < s.NumINF ==> 0 < s.NumHops
+	// @ invariant acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
+	// @ invariant s.PathMeta.CurrINF == (unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1) in data[0] >> 6)
+	// @ invariant s.NumINF == 0 ==> forall j int :: { s.PathMeta.SegLen[j] } j > i && j <= 2 ==> s.PathMeta.SegLen[j] == 0
+	// @ invariant s.NumINF > 0 ==> s.NumINF == s.NumINFValue()
+	// @ decreases i
 	for i := 2; i >= 0; i-- {
 		if s.PathMeta.SegLen[i] == 0 && s.NumINF > 0 {
 			e := serrors.New(
 				fmt.Sprintf("Meta.SegLen[%d] == 0, but Meta.SegLen[%d] > 0", i, s.NumINF-1))
-			//@ fold s.NonInitMem()
+			// @ fold s.NonInitMem()
 			return e
 		}
 		if s.PathMeta.SegLen[i] > 0 && s.NumINF == 0 {
 			s.NumINF = i + 1
+			// @ assert i == 2 ==> s.NumINF == 3
 		}
 		// (VerifiedSCION) Cannot assert bounds of uint:
 		// https://github.com/viperproject/gobra/issues/192
-		//@ assume int(s.PathMeta.SegLen[i]) >= 0
+		// @ assume int(s.PathMeta.SegLen[i]) >= 0
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
-	//@ fold s.Mem()
-	//@ package s.Mem() --* s.NonInitMem() {
-	//@   unfold s.Mem()
-	//@   fold   s.NonInitMem()
-	//@ }
+	// @ fold s.Mem()
+	// @ package s.Mem() --* s.NonInitMem() {
+	// @   unfold s.Mem()
+	// @   fold   s.NonInitMem()
+	// @ }
 	return nil
 }
 
@@ -219,7 +222,11 @@ type MetaHdr struct {
 // @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
 // @ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrINF < 4 && m.CurrHF >= 0)
-// @ ensures   e == nil ==> (m.CurrINF == unfolding acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1) in raw[0] >> 6)
+// @ ensures   e == nil ==> unfolding acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1) in
+// @                        m.CurrINF == raw[0] >> 6 &&
+// @                        m.SegLen[0] == (raw[2] >> 4 | raw[1] << 4) & 0x3F &&
+// @                        m.SegLen[1] == (raw[3] >> 6 | raw[2] << 2) & 0x3F &&
+// @                        m.SegLen[2] == raw[3] & 0x3F
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
@@ -229,17 +236,8 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	}
 	// @ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 	line := binary.BigEndian.Uint32(raw)
-	// @ assert bitwise.LessThan2to31_byte(raw[3], 0) == uint32(raw[3]) << 0
-	// @ assert bitwise.ShiftBy0(uint32(raw[3])) == uint32(raw[3])
-	// @ assert bitwise.LessThan2to31_byte(raw[2], 8) == uint32(raw[2]) << 8
-	// @ assert bitwise.LessThan2to31_byte(raw[1], 16) == uint32(raw[1]) << 16
-	// @ assert bitwise.LessThan2to31_bitwiseOr(uint32(raw[3]), uint32(raw[2]) << 8) == uint32(raw[3]) | uint32(raw[2]) << 8
-	// @ assert bitwise.LessThan2to31_bitwiseOr(uint32(raw[3]) | uint32(raw[2]) << 8, uint32(raw[1]) << 16) == uint32(raw[3]) | uint32(raw[2]) << 8 | uint32(raw[1]) << 16
-	// @ assert uint8((uint32(raw[0]) << 24) >> 30) == bitwise.PreservesFirst2Bits(uint32(raw[0]) << 24, uint32(raw[3]) | uint32(raw[2])<<8 | uint32(raw[1])<<16 )
-	// @ assert line == bitwise.BitOrCommutative(uint32(raw[0]) << 24, uint32(raw[3]) | uint32(raw[2])<<8 | uint32(raw[1])<<16)
+	// @ assert bitwise.DeserializingHdr(raw[0], raw[1], raw[2], raw[3], line)
 	m.CurrINF = uint8(line >> 30)
-	// @ assert m.CurrINF == bitwise.First2Bits(line)
-	// @ assert m.CurrINF == bitwise.ShiftBy24and30(raw[0]) //uint8((uint32(raw[0]) << 24) >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
 	// (VerifiedSCION) The following assumption is guaranteed by Go but still not modeled in Gobra.
 	// @ assume m.CurrINF >= 0 && m.CurrHF >= 0
