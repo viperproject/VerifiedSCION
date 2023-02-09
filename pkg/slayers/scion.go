@@ -339,6 +339,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ preserves acc(&s.DstAddrType) && acc(&s.SrcAddrType)
 	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
 	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
+	// @ ensures   0 <= s.PathType && s.PathType < 256
 	// @ decreases
 	// @ outline(
 	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
@@ -346,7 +347,9 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.HdrLen = data[5]
 	// @ assert &data[6:8][0] == &data[6] && &data[6:8][1] == &data[7]
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
+	// @ b.ByteValue(data[8])
 	s.PathType = path.Type(data[8])
+	// @ assert 0 <= s.PathType && s.PathType < 256
 	s.DstAddrType = AddrType(data[9] >> 4 & 0x7)
 	// @ assert int(s.DstAddrType) == b.BitAnd7(int(data[9] >> 4))
 	s.SrcAddrType = AddrType(data[9] & 0x7)
@@ -387,15 +390,18 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("provided buffer is too small", "expected", minLen, "actual", len(data))
 	}
 
-	s.Path, err = s.getPath(s.PathType) // TODO: make this more versatile, allow failre
+	// @ fold s.PathPoolMem()
+	s.Path, err = s.getPath(s.PathType)
 	if err != nil {
-		// @ def.Unreachable()
+		// @ unfold s.PathPoolMem()
+		// @ unfold s.HeaderMem(data[CmnHdrLen:])
+		// @ fold s.NonInitMem()
 		return err
 	}
 	// (VerifiedSCION) Gobra cannot currently prove this, even though it must hold as s.PathType is of type
 	//                 path.Type (defined as uint8)
 	// @ assume 0 <= s.PathType
-	// @ ghost if s.PathType == empty.PathType { fold s.Path.NonInitMem() }
+	// ghost if s.PathType == empty.PathType { fold s.Path.NonInitMem() }
 	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, writePerm)
 	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
 	if err != nil {
@@ -414,6 +420,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	return nil
 }
 
+// TODO: change, use pure functions instead
 // RecyclePaths enables recycling of paths used for DecodeFromBytes. This is
 // only useful if the layer itself is reused.
 // When this is enabled, the Path instance may be overwritten in
@@ -435,29 +442,31 @@ func (s *SCION) RecyclePaths() {
 		// @ assert acc(&s.pathPool[empty.PathType]) && acc(&s.pathPool[onehop.PathType])
 		// @ assert acc(&s.pathPool[scion.PathType]) && acc(&s.pathPool[epic.PathType])
 		// @ assert s.pathPool[onehop.PathType].NonInitMem() && s.pathPool[scion.PathType].NonInitMem() && s.pathPool[epic.PathType].NonInitMem()
+		// @ fold s.pathPool[empty.PathType].NonInitMem()
 		// @ fold s.InitPathPool()
 	}
 }
 
 // getPath returns a new or recycled path for pathType
-// @ requires s.InitPathPool()
-// @ ensures  res != nil && err == nil
-// @ ensures  pathType == 0 ==> (typeOf(res) == type[empty.Path] && s.InitPathPool())
-// @ ensures  0 < pathType  ==> (
-// @ 	res.NonInitMem() &&
+// @ requires s.PathPoolMem()
+// @ requires 0 <= pathType && pathType < path.MaxPathType
+// @ ensures  err != nil ==> (s.PathPoolMem() && err.ErrorMem())
+// @ ensures  err == nil ==> res != nil
+// @ ensures  err == nil ==> res.NonInitMem()
+// @ ensures  (err == nil && !old(s.pathPoolInitialized())) ==> s.PathPoolMem()
+// @ ensures  (err == nil && old(s.pathPoolInitialized()))  ==> (
 // @ 	s.InitPathPoolExceptOne(pathType) &&
 // @ 	(pathType < s.lenPathPool(pathType) ==> res === s.elemPathPool(pathType)) &&
 // @	(s.lenPathPool(pathType) <= pathType ==> res === s.pathPoolRawPath(pathType)))
-// @ ensures  err == nil
 // @ decreases
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
 	//                 path.Type is defined as an uint8.
 	// @ assume 0 <= pathType
-	// @ unfold s.InitPathPool()
+	// @ unfold s.PathPoolMem()
 	if s.pathPool == nil {
-		// TODO: make this case reachable
-		// @ def.Unreachable()
+		// @ ghost defer fold s.PathPoolMem()
+		// @ EstablishPathPkgMem()
 		return path.NewPath(pathType)
 	}
 	if int(pathType) < len(s.pathPool) {
@@ -466,7 +475,8 @@ func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 		// @ 	fold   s.InitPathPoolExceptOne(pathType)
 		// @ 	assert tmp.NonInitMem()
 		// @ } else {
-		// @ 	fold s.InitPathPool()
+		// @ 	fold s.InitPathPoolExceptOne(pathType)
+		// @ 	fold tmp.NonInitMem()
 		// @ }
 		return tmp, nil
 	}

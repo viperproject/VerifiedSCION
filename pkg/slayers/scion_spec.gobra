@@ -32,7 +32,10 @@ import (
 )
 
 // TOOD: redo this and the next Init predicates,
-// otherwise complicates stuff too much
+// otherwise complicates stuff too much. define pure
+// function that says if the path pool is initialized or not
+// and specify recycle paths in those terms (by preserving the PathPool pred and ensuring that it is initialized)
+// TODO: drop
 pred (s *SCION) NonInitPathPool() {
 	acc(&s.pathPool) &&
 	acc(&s.pathPoolRaw) &&
@@ -40,6 +43,7 @@ pred (s *SCION) NonInitPathPool() {
 	s.pathPoolRaw == nil
 }
 
+// TODO: drop
 pred (s *SCION) InitPathPool() {
 	acc(&s.pathPool)     &&
 	acc(&s.pathPoolRaw)  &&
@@ -50,6 +54,7 @@ pred (s *SCION) InitPathPool() {
 	acc(&s.pathPool[empty.PathType])  &&
 	s.pathPool[empty.PathType] != nil &&
 	typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
+	s.pathPool[empty.PathType].NonInitMem() &&
 	// onehop
 	acc(&s.pathPool[onehop.PathType])  &&
 	s.pathPool[onehop.PathType] != nil &&
@@ -70,6 +75,7 @@ pred (s *SCION) InitPathPool() {
 	s.pathPoolRaw.NonInitMem()
 }
 
+// TODO: drop or rename/repurpose
 // Captures the same obligations as InitPathPool. Initially, I tried using a magic wand
 // but they are a lot harder to use then just this predicate.
 pred (s *SCION) InitPathPoolExceptOne(pathType path.Type) {
@@ -82,6 +88,7 @@ pred (s *SCION) InitPathPoolExceptOne(pathType path.Type) {
 	(acc(&s.pathPool[empty.PathType]) &&
 	s.pathPool[empty.PathType] != nil &&
 	typeOf(s.pathPool[empty.PathType]) == type[empty.Path]) &&
+//	(pathType != empty.PathType ==> s.pathPool[empty.PathType].NonInitMem()) &&
 	// onehop
 	acc(&s.pathPool[onehop.PathType])  &&
 	s.pathPool[onehop.PathType] != nil &&
@@ -124,8 +131,6 @@ pure func (s *SCION)pathPoolRawPath(pathType path.Type) path.Path {
 	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPoolRaw
 }
 
-// Has the permission for all fields, except those related to the path pools.
-// These will come from NonInitPathPool/InitPathPool.
 pred (s *SCION) NonInitMem() {
 	acc(&s.Version) &&
 	acc(&s.TrafficClass) &&
@@ -142,7 +147,77 @@ pred (s *SCION) NonInitMem() {
 	acc(&s.RawSrcAddr) &&
 	acc(&s.Path) &&
 	acc(&s.BaseLayer) &&
-	s.InitPathPool()
+	// TODO: have pathPoolMem() here instead of the following
+	// path pool properties
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw) &&
+	// non-initialized path pool:
+	(s.pathPool == nil ==> s.pathPoolRaw == nil) &&
+	// initialized path pool:
+	(s.pathPool != nil ==> (
+		len(s.pathPool) == 4 &&
+		// empty
+		acc(&s.pathPool[empty.PathType])  &&
+		s.pathPool[empty.PathType] != nil &&
+		typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
+		// onehop
+		acc(&s.pathPool[onehop.PathType])  &&
+		s.pathPool[onehop.PathType] != nil &&
+		typeOf(s.pathPool[onehop.PathType]) == type[*onehop.Path] &&
+		s.pathPool[onehop.PathType].NonInitMem() &&
+		// scion
+		acc(&s.pathPool[scion.PathType])  &&
+		s.pathPool[scion.PathType] != nil &&
+		typeOf(s.pathPool[scion.PathType]) == type[*scion.Raw] &&
+		s.pathPool[scion.PathType].NonInitMem() &&
+		// epic
+		acc(&s.pathPool[epic.PathType])  &&
+		s.pathPool[epic.PathType] != nil &&
+		typeOf(s.pathPool[epic.PathType]) == type[*epic.Path] &&
+		s.pathPool[epic.PathType].NonInitMem() &&
+		// raw path
+		s.pathPoolRaw != nil &&
+		s.pathPoolRaw.NonInitMem()))
+}
+
+pred (s *SCION) PathPoolMem() {
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw) &&
+	// non-initialized path pool:
+	(s.pathPool == nil ==> s.pathPoolRaw == nil) &&
+	// initialized path pool:
+	(s.pathPool != nil ==> (
+		len(s.pathPool) == 4 &&
+		// empty
+		acc(&s.pathPool[empty.PathType])  &&
+		s.pathPool[empty.PathType] != nil &&
+		typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
+		// onehop
+		acc(&s.pathPool[onehop.PathType])  &&
+		s.pathPool[onehop.PathType] != nil &&
+		typeOf(s.pathPool[onehop.PathType]) == type[*onehop.Path] &&
+		s.pathPool[onehop.PathType].NonInitMem() &&
+		// scion
+		acc(&s.pathPool[scion.PathType])  &&
+		s.pathPool[scion.PathType] != nil &&
+		typeOf(s.pathPool[scion.PathType]) == type[*scion.Raw] &&
+		s.pathPool[scion.PathType].NonInitMem() &&
+		// epic
+		acc(&s.pathPool[epic.PathType])  &&
+		s.pathPool[epic.PathType] != nil &&
+		typeOf(s.pathPool[epic.PathType]) == type[*epic.Path] &&
+		s.pathPool[epic.PathType].NonInitMem() &&
+		// raw path
+		s.pathPoolRaw != nil &&
+		s.pathPoolRaw.NonInitMem()))
+}
+
+ghost
+pure
+requires acc(s.PathPoolMem(), _)
+decreases
+func (s *SCION) pathPoolInitialized() bool {
+	return unfolding acc(s.PathPoolMem(), _) in s.pathPool != nil
 }
 
 pred (s *SCION) Mem(ubuf []byte) {
@@ -283,6 +358,7 @@ func (s *SCION) LayerContents() (res []byte) {
 	return res
 }
 
+// TODO: drop
 ghost
 requires pathType == 0 ==> s.InitPathPool()
 requires 0 < pathType  ==> (
@@ -341,3 +417,9 @@ ghost
 pure func isHostSVC(a net.Addr) bool {
 	return typeOf(a) == addr.HostSVC
 }
+
+// invariant established by initialization
+ghost
+ensures acc(path.PathPackageMem(), _)
+decreases
+func EstablishPathPkgMem()

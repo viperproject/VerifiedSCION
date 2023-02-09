@@ -20,7 +20,7 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 
 func foldNonInitMem_Test() {
 	s@ := SCION{}
-	fold s.NonInitPathPool()
-	s.RecyclePaths()
+	// fold s.NonInitPathPool()
+	// s.RecyclePaths()
 	fold s.NonInitMem()
 }
