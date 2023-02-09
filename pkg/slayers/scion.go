@@ -390,24 +390,19 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("provided buffer is too small", "expected", minLen, "actual", len(data))
 	}
 
-	// @ fold s.PathPoolMem()
+	// @ assert unfolding PathPoolMem(s.pathPool, s.pathPoolRaw) in (s.pathPool == nil) == (s.pathPoolRaw == nil)
 	s.Path, err = s.getPath(s.PathType)
 	if err != nil {
-		// @ unfold s.PathPoolMem()
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
 		// @ fold s.NonInitMem()
 		return err
 	}
-	// (VerifiedSCION) Gobra cannot currently prove this, even though it must hold as s.PathType is of type
-	//                 path.Type (defined as uint8)
-	// @ assume 0 <= s.PathType
-	// ghost if s.PathType == empty.PathType { fold s.Path.NonInitMem() }
 	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, writePerm)
 	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
 	if err != nil {
 		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
-		// @ s.InitPathPoolExchange(s.PathType, s.Path)
+		// @ s.PathPoolMemExchange(s.PathType, s.Path)
 		// @ fold s.NonInitMem()
 		return err
 	}
@@ -420,17 +415,17 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	return nil
 }
 
-// TODO: change, use pure functions instead
 // RecyclePaths enables recycling of paths used for DecodeFromBytes. This is
 // only useful if the layer itself is reused.
 // When this is enabled, the Path instance may be overwritten in
 // DecodeFromBytes. No references to Path should be kept in use between
 // invocations of DecodeFromBytes.
-// @ requires s.NonInitPathPool()
-// @ ensures  s.InitPathPool()
+// @ preserves acc(&s.pathPool) && acc(&s.pathPoolRaw)
+// @ preserves PathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ ensures   s.pathPoolInitialized()
 // @ decreases
 func (s *SCION) RecyclePaths() {
-	// @ unfold s.NonInitPathPool()
+	// @ unfold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	if s.pathPool == nil {
 		s.pathPool = []path.Path{
 			empty.PathType:  empty.Path{},
@@ -443,45 +438,43 @@ func (s *SCION) RecyclePaths() {
 		// @ assert acc(&s.pathPool[scion.PathType]) && acc(&s.pathPool[epic.PathType])
 		// @ assert s.pathPool[onehop.PathType].NonInitMem() && s.pathPool[scion.PathType].NonInitMem() && s.pathPool[epic.PathType].NonInitMem()
 		// @ fold s.pathPool[empty.PathType].NonInitMem()
-		// @ fold s.InitPathPool()
 	}
+	// @ fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 }
 
 // getPath returns a new or recycled path for pathType
-// @ requires s.PathPoolMem()
-// @ requires 0 <= pathType && pathType < path.MaxPathType
-// @ ensures  err != nil ==> (s.PathPoolMem() && err.ErrorMem())
-// @ ensures  err == nil ==> res != nil
-// @ ensures  err == nil ==> res.NonInitMem()
-// @ ensures  (err == nil && !old(s.pathPoolInitialized())) ==> s.PathPoolMem()
-// @ ensures  (err == nil && old(s.pathPoolInitialized()))  ==> (
-// @ 	s.InitPathPoolExceptOne(pathType) &&
-// @ 	(pathType < s.lenPathPool(pathType) ==> res === s.elemPathPool(pathType)) &&
-// @	(s.lenPathPool(pathType) <= pathType ==> res === s.pathPoolRawPath(pathType)))
+// @ requires  acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+// @ requires  PathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ requires  0 <= pathType && pathType < path.MaxPathType
+// @ ensures   acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+// @ ensures   err == nil ==> res != nil
+// @ ensures   err == nil ==> res.NonInitMem()
+// @ ensures   (err == nil && !s.pathPoolInitialized()) ==> PathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ ensures   (err == nil && s.pathPoolInitialized())  ==> (
+// @ 	PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
+// @    res === s.getPathPure(pathType))
+// @ ensures   err != nil ==> (PathPoolMem(s.pathPool, s.pathPoolRaw) && err.ErrorMem())
 // @ decreases
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
-	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
-	//                 path.Type is defined as an uint8.
-	// @ assume 0 <= pathType
-	// @ unfold s.PathPoolMem()
+	// @ unfold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	if s.pathPool == nil {
-		// @ ghost defer fold s.PathPoolMem()
+		// @ ghost defer fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 		// @ EstablishPathPkgMem()
 		return path.NewPath(pathType)
 	}
 	if int(pathType) < len(s.pathPool) {
 		tmp := s.pathPool[pathType]
 		// @ ghost if 0 < pathType {
-		// @ 	fold   s.InitPathPoolExceptOne(pathType)
+		// @ 	fold   PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 		// @ 	assert tmp.NonInitMem()
 		// @ } else {
-		// @ 	fold s.InitPathPoolExceptOne(pathType)
+		// @ 	fold PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 		// @ 	fold tmp.NonInitMem()
 		// @ }
 		return tmp, nil
 	}
 	tmp := s.pathPoolRaw
-	// @ fold   s.InitPathPoolExceptOne(pathType)
+	// @ fold   PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 	// @ assert tmp.NonInitMem()
 	return tmp, nil
 }
