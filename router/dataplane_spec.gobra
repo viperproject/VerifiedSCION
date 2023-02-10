@@ -208,3 +208,13 @@ ghost
 ensures unsupportedPathType.ErrorMem()
 decreases _
 func establishMemUnsupportedPathType()
+
+ghost
+ensures malformedPath.ErrorMem()
+decreases _
+func establishMemMalformedPath()
+
+ghost
+ensures unsupportedPathTypeNextHeader.ErrorMem()
+decreases _
+func establishMemUnsupportedPathTypeNextHeader()

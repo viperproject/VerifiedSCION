@@ -897,13 +897,14 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires p.buffer != nil && p.buffer.Mem()
 // @ requires p.mac != nil && p.mac.Mem()
 // @ requires acc(srcAddr.Mem(), _)
+// @ ensures  reserr != nil ==> reserr.ErrorMem()
 // TODO:
 //
-//	ensures p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+//	ensure every resource that appears in the precondition
 //
 // @ decreases
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
-	srcAddr *net.UDPAddr) (processResult, error) {
+	srcAddr *net.UDPAddr) (respr processResult, reserr error) {
 
 	if err := p.reset(); err != nil {
 		return processResult{}, err
@@ -924,19 +925,12 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	ghost var ub []byte
 	ghost if lastLayerIdx == -1 {
 		ub = p.rawPkt
-		assert p.lastLayer.Mem(ub)
 	} else {
-		assert processed[lastLayerIdx]
-		assert 0 <= lastLayerIdx && lastLayerIdx <= 1
-		assert p.lastLayer == &p.scionLayer || p.lastLayer == &p.hbhLayer || p.lastLayer == &p.e2eLayer
-		assert processed[lastLayerIdx] && offsets[lastLayerIdx].isNil ==> p.lastLayer.Mem(nil)
 		if offsets[lastLayerIdx].isNil {
 			ub = nil
-			assert p.lastLayer.Mem(ub)
 		} else {
 			o := offsets[lastLayerIdx]
 			ub = p.rawPkt[o.start:o.end]
-			assert p.lastLayer.Mem(ub)
 		}
 	}
 	@*/
@@ -945,21 +939,25 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	pathType := /*@ unfolding p.scionLayer.Mem(rawPkt) in @*/ p.scionLayer.PathType
 	switch pathType {
 	case empty.PathType:
-		// @ def.TODO()
-		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
+		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
+			// @ def.TODO()
 			return processResult{}, p.processIntraBFD(pld)
 		}
+		// @ establishMemUnsupportedPathTypeNextHeader()
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
-			"type", pathType, "header", nextHdr(p.lastLayer /*@, nil @*/)) // (VS) drop
+			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/))
 	case onehop.PathType:
-		// @ def.TODO()
-		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
+		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
+			// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL10)
 			ohp, ok := p.scionLayer.Path.(*onehop.Path)
+			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL10)
 			if !ok {
 				return processResult{}, malformedPath
 			}
+			// @ def.TODO()
 			return processResult{}, p.processInterBFD(ohp, pld)
 		}
+		// @ def.TODO()
 		return p.processOHP()
 	case scion.PathType:
 		// @ def.TODO()
