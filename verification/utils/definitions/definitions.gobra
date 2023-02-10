@@ -59,3 +59,7 @@ ensures res == x+y
 decreases _
 pure
 func add(x, y int) (res int)
+
+// type to be used as a stub for sets of private fields in formalizations of
+// third party libs
+type PrivateField *int
