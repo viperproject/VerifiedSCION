@@ -51,6 +51,10 @@ pure func Uncallable() (res bool) {
 	return false
 }
 
+ghost
+ensures false
+func KillBranch()
+
 ensures res == x+y
 decreases _
 pure

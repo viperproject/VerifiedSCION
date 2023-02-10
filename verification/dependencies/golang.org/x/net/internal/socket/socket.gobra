@@ -39,7 +39,7 @@ type Message struct {
 pred (m *Message) Mem(lenBuffers int) {
 	acc(m) &&
 	len(m.Buffers) == lenBuffers &&
-	(forall i int :: 0 <= i && i < len(m.Buffers) ==> (acc(&m.Buffers[i]) && slices.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))) &&
+	(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==> (acc(&m.Buffers[i]) && slices.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))) &&
 	slices.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
 	(m.Addr != nil ==> acc(m.Addr.Mem(), _))
 }

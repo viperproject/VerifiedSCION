@@ -339,6 +339,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ preserves acc(&s.DstAddrType) && acc(&s.SrcAddrType)
 	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
 	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
+	// @ ensures   0 <= s.PathType && s.PathType < 256
 	// @ decreases
 	// @ outline(
 	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
@@ -346,7 +347,9 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.HdrLen = data[5]
 	// @ assert &data[6:8][0] == &data[6] && &data[6:8][1] == &data[7]
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
+	// @ b.ByteValue(data[8])
 	s.PathType = path.Type(data[8])
+	// @ assert 0 <= s.PathType && s.PathType < 256
 	s.DstAddrType = AddrType(data[9] >> 4 & 0x7)
 	// @ assert int(s.DstAddrType) == b.BitAnd7(int(data[9] >> 4))
 	s.SrcAddrType = AddrType(data[9] & 0x7)
@@ -387,21 +390,19 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("provided buffer is too small", "expected", minLen, "actual", len(data))
 	}
 
+	// @ assert unfolding PathPoolMem(s.pathPool, s.pathPoolRaw) in (s.pathPool == nil) == (s.pathPoolRaw == nil)
 	s.Path, err = s.getPath(s.PathType)
 	if err != nil {
-		// @ def.Unreachable()
+		// @ unfold s.HeaderMem(data[CmnHdrLen:])
+		// @ fold s.NonInitMem()
 		return err
 	}
-	// (VerifiedSCION) Gobra cannot currently prove this, even though it must hold as s.PathType is of type
-	//                 path.Type (defined as uint8)
-	// @ assume 0 <= s.PathType
-	// @ ghost if s.PathType == empty.PathType { fold s.Path.NonInitMem() }
 	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, writePerm)
 	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
 	if err != nil {
 		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
-		// @ s.InitPathPoolExchange(s.PathType, s.Path)
+		// @ s.PathPoolMemExchange(s.PathType, s.Path)
 		// @ fold s.NonInitMem()
 		return err
 	}
@@ -419,11 +420,12 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 // When this is enabled, the Path instance may be overwritten in
 // DecodeFromBytes. No references to Path should be kept in use between
 // invocations of DecodeFromBytes.
-// @ requires s.NonInitPathPool()
-// @ ensures  s.InitPathPool()
+// @ preserves acc(&s.pathPool) && acc(&s.pathPoolRaw)
+// @ preserves PathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ ensures   s.pathPoolInitialized()
 // @ decreases
 func (s *SCION) RecyclePaths() {
-	// @ unfold s.NonInitPathPool()
+	// @ unfold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	if s.pathPool == nil {
 		s.pathPool = []path.Path{
 			empty.PathType:  empty.Path{},
@@ -435,57 +437,66 @@ func (s *SCION) RecyclePaths() {
 		// @ assert acc(&s.pathPool[empty.PathType]) && acc(&s.pathPool[onehop.PathType])
 		// @ assert acc(&s.pathPool[scion.PathType]) && acc(&s.pathPool[epic.PathType])
 		// @ assert s.pathPool[onehop.PathType].NonInitMem() && s.pathPool[scion.PathType].NonInitMem() && s.pathPool[epic.PathType].NonInitMem()
-		// @ fold s.InitPathPool()
+		// @ fold s.pathPool[empty.PathType].NonInitMem()
 	}
+	// @ fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 }
 
 // getPath returns a new or recycled path for pathType
-// @ requires s.InitPathPool()
-// @ ensures  res != nil && err == nil
-// @ ensures  pathType == 0 ==> (typeOf(res) == type[empty.Path] && s.InitPathPool())
-// @ ensures  0 < pathType  ==> (
-// @ 	res.NonInitMem() &&
-// @ 	s.InitPathPoolExceptOne(pathType) &&
-// @ 	(pathType < s.lenPathPool(pathType) ==> res === s.elemPathPool(pathType)) &&
-// @	(s.lenPathPool(pathType) <= pathType ==> res === s.pathPoolRawPath(pathType)))
-// @ ensures  err == nil
+// @ requires  acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+// @ requires  PathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ requires  0 <= pathType && pathType < path.MaxPathType
+// @ ensures   acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+// @ ensures   err == nil ==> res != nil
+// @ ensures   err == nil ==> res.NonInitMem()
+// @ ensures   (err == nil && !s.pathPoolInitialized()) ==> PathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ ensures   (err == nil && s.pathPoolInitialized())  ==> (
+// @ 	PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
+// @    res === s.getPathPure(pathType))
+// @ ensures   err != nil ==> (PathPoolMem(s.pathPool, s.pathPoolRaw) && err.ErrorMem())
 // @ decreases
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
-	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
-	//                 path.Type is defined as an uint8.
-	// @ assume 0 <= pathType
-	// @ unfold s.InitPathPool()
+	// @ unfold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	if s.pathPool == nil {
-		// @ def.Unreachable()
+		// @ ghost defer fold PathPoolMem(s.pathPool, s.pathPoolRaw)
+		// @ EstablishPathPkgMem()
 		return path.NewPath(pathType)
 	}
 	if int(pathType) < len(s.pathPool) {
 		tmp := s.pathPool[pathType]
 		// @ ghost if 0 < pathType {
-		// @ 	fold   s.InitPathPoolExceptOne(pathType)
+		// @ 	fold   PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 		// @ 	assert tmp.NonInitMem()
 		// @ } else {
-		// @ 	fold s.InitPathPool()
+		// @ 	fold PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
+		// @ 	fold tmp.NonInitMem()
 		// @ }
 		return tmp, nil
 	}
 	tmp := s.pathPoolRaw
-	// @ fold   s.InitPathPoolExceptOne(pathType)
+	// @ fold   PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 	// @ assert tmp.NonInitMem()
 	return tmp, nil
 }
 
-// @ trusted
-// @ requires false
-func decodeSCION(data []byte, pb gopacket.PacketBuilder) error {
+// @ requires  pb != nil
+// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves pb.Mem()
+// @ ensures   res != nil ==> res.ErrorMem()
+// @ decreases
+func decodeSCION(data []byte, pb gopacket.PacketBuilder) (res error) {
 	scn := &SCION{}
+	// @ fold PathPoolMem(scn.pathPool, scn.pathPoolRaw)
+	// @ fold scn.NonInitMem()
 	err := scn.DecodeFromBytes(data, pb)
 	if err != nil {
 		return err
 	}
 	pb.AddLayer(scn)
 	pb.SetNetworkLayer(scn)
-	return pb.NextDecoder(scionNextLayerType(scn.NextHdr))
+	nextTmp := scionNextLayerType( /*@ unfolding scn.Mem(data) in @*/ scn.NextHdr)
+	// @ fold nextTmp.Mem()
+	return pb.NextDecoder(nextTmp)
 }
 
 // scionNextLayerType returns the layer type for the given protocol identifier

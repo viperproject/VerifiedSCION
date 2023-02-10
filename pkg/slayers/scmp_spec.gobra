@@ -39,6 +39,16 @@ pred (s *SCMP) Mem(ub []byte) {
 	(s.scn != nil ==> s.scn.ChecksumMem())
 }
 
+ghost
+requires s.Mem(ub)
+ensures  s.NonInitMem()
+decreases
+func (s *SCMP) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.BaseLayer.Mem(ub, 4)
+	fold s.NonInitMem()
+}
+
 requires def.Uncallable()
 func (b *SCMP) LayerContents() (res []byte) {
 	res = b.BaseLayer.LayerContents()
