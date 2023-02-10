@@ -127,3 +127,9 @@ requires acc(slices.AbsSlice_Bytes(ip, 0, len(ip)), _)
 requires acc(slices.AbsSlice_Bytes(x, 0, len(x)), _)
 decreases _
 func (ip IP) Equal(x IP) bool
+
+// ParseIP parses s as an IP address, returning the result.
+ensures forall i int :: {&res[i]} 0 <= i && i < len(res) ==> acc(&res[i])
+ensures res != nil ==> len(res) == IPv4len || len(res) == IPv6len
+decreases _
+func ParseIP(s string) (res IP)
