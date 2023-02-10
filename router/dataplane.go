@@ -948,10 +948,11 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/))
 	case onehop.PathType:
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
-			// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL10)
+			// @ unfold acc(p.scionLayer.Mem(p.rawPkt), def.ReadL10)
 			ohp, ok := p.scionLayer.Path.(*onehop.Path)
-			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL10)
+			// @ fold acc(p.scionLayer.Mem(p.rawPkt), def.ReadL10)
 			if !ok {
+				// @ establishMemMalformedPath()
 				return processResult{}, malformedPath
 			}
 			// @ def.TODO()
