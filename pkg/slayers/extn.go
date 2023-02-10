@@ -530,7 +530,7 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	return nil
 }
 
-// @ requires  pb != nil
+// @ requires  p != nil
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves p.Mem()
 // @ ensures   res != nil ==> res.ErrorMem()
