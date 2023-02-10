@@ -398,12 +398,8 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	return nil
 }
 
-// (VerifiedSCION) TODO: to be handled when the initialization of slayers is handled in
-// layertypes.go.
-// @ trusted
-// @ requires  false
-// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  p != nil
+// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves p.Mem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -415,7 +411,9 @@ func decodeHopByHopExtn(data []byte, p gopacket.PacketBuilder) (res error) {
 	if err != nil {
 		return err
 	}
-	return p.NextDecoder(scionNextLayerTypeAfterHBH(( /*@ unfolding h.Mem(data) in (unfolding h.extnBase.Mem(data) in @*/ h.NextHdr /*@ ) @*/)))
+	nextTmp := scionNextLayerTypeAfterHBH(( /*@ unfolding h.Mem(data) in (unfolding h.extnBase.Mem(data) in @*/ h.NextHdr /*@ ) @*/))
+	// @ fold nextTmp.Mem()
+	return p.NextDecoder(nextTmp)
 }
 
 // @ ensures (t == HopByHopClass) == (err != nil)
@@ -532,18 +530,22 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	return nil
 }
 
-// (VerifiedSCION) TODO: to be handled when the initialization of slayers is handled in
-// layertypes.go.
-// @ trusted
-// @ requires false
-func decodeEndToEndExtn(data []byte, p gopacket.PacketBuilder) error {
+// @ requires  p != nil
+// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves p.Mem()
+// @ ensures   res != nil ==> res.ErrorMem()
+// @ decreases
+func decodeEndToEndExtn(data []byte, p gopacket.PacketBuilder) (res error) {
 	e := &EndToEndExtn{}
+	// @ fold e.NonInitMem()
 	err := e.DecodeFromBytes(data, p)
 	p.AddLayer(e)
 	if err != nil {
 		return err
 	}
-	return p.NextDecoder(scionNextLayerTypeAfterE2E(e.NextHdr))
+	nextTmp := scionNextLayerTypeAfterE2E( /*@ unfolding e.Mem(data) in (unfolding e.extnBase.Mem(data) in @*/ e.NextHdr /*@ ) @*/)
+	// @ fold nextTmp.Mem()
+	return p.NextDecoder(nextTmp)
 }
 
 // @ ensures (err != nil) == (t == HopByHopClass || t == End2EndClass)
