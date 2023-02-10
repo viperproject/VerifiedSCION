@@ -532,18 +532,18 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 
 // @ requires  pb != nil
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
-// @ preserves pb.Mem()
+// @ preserves p.Mem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func decodeEndToEndExtn(data []byte, p gopacket.PacketBuilder) (res error) {
 	e := &EndToEndExtn{}
-	// @ fold h.NonInitMem()
+	// @ fold e.NonInitMem()
 	err := e.DecodeFromBytes(data, p)
 	p.AddLayer(e)
 	if err != nil {
 		return err
 	}
-	nextTmp := scionNextLayerTypeAfterE2E( /*@ unfolding h.Mem(data) in (unfolding h.extnBase.Mem(data) in @*/ e.NextHdr /*@ ) @*/)
+	nextTmp := scionNextLayerTypeAfterE2E( /*@ unfolding e.Mem(data) in (unfolding e.extnBase.Mem(data) in @*/ e.NextHdr /*@ ) @*/)
 	// @ fold nextTmp.Mem()
 	return p.NextDecoder(nextTmp)
 }
