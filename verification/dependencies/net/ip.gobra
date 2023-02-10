@@ -20,25 +20,9 @@ const (
 
 type IP []byte
 
-type IPMask []byte
-
-type IPNet struct {
-	IP   IP
-	Mask IPMask
-}
-
 pred (ip IP) Mem() {
 	(len(ip) == IPv4len || len(ip) == IPv6len) &&
 	forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i])
-}
-
-pred (mask IPMask) Mem() {
-	(len(mask) == IPv4len || len(mask) == IPv6len) &&
-	forall i int :: 0 <= i && i < len(mask) ==> acc(&mask[i])
-}
-
-pred (ipnet *IPNet) Mem() {
-	acc(ipnet) && ipnet.IP.Mem() && ipnet.Mask.Mem()
 }
 
 // IPv4 returns the IP address (in 16-byte form) of the
@@ -46,56 +30,14 @@ pred (ipnet *IPNet) Mem() {
 ensures len(res) == 4 && forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
 func IPv4(a, b, c, d byte) (res IP)
 
-// IPv4Mask returns the IP mask (in 4-byte form) of the
-// IPv4 mask a.b.c.d.
-ensures len(res) == 4 && forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
-func IPv4Mask(a, b, c, d byte) (res IPMask)
-
-// CIDRMask returns an IPMask consisting of 'ones' 1 bits
-// followed by 0s up to a total length of 'bits' bits.
-requires bits >= 0
-ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
-func CIDRMask(ones, bits int) (res IPMask)
-
-// Well-known IPv4 addresses
-// TODO: add support for global vars
-/*
-var (
-	IPv4bcast     = IPv4(255, 255, 255, 255) // limited broadcast
-	IPv4allsys    = IPv4(224, 0, 0, 1)       // all systems
-	IPv4allrouter = IPv4(224, 0, 0, 2)       // all routers
-	IPv4zero      = IPv4(0, 0, 0, 0)         // all zeros
-)
-*/
-
-// Well-known IPv6 addresses
-// TODO: add support for global vars
-/*
-var (
-	IPv6zero                   = IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	IPv6unspecified            = IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	IPv6loopback               = IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	IPv6interfacelocalallnodes = IP{255, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	IPv6linklocalallnodes      = IP{255, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	IPv6linklocalallrouters    = IP{255, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
-)
-*/
-
 // IsUnspecified reports whether ip is an unspecified address, either
 // the IPv4 address "0.0.0.0" or the IPv6 address "::".
 preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-func (ip IP) IsUnspecified() bool /*{
-	return ip.Equal(IPv4zero) || ip.Equal(IPv6unspecified)
-}*/
+func (ip IP) IsUnspecified() bool
 
 // IsLoopback reports whether ip is a loopback address.
 preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-func (ip IP) IsLoopback() bool // {
-//	if ip4 := ip.To4(); ip4 != nil {
-//		return ip4[0] == 127
-//	}
-//	return ip.Equal(IPv6loopback)
-//}
+func (ip IP) IsLoopback() bool
 
 // IsMulticast reports whether ip is a multicast address.
 preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
@@ -107,23 +49,16 @@ func (ip IP) IsInterfaceLocalMulticast() bool
 
 // IsLinkLocalMulticast reports whether ip is a link-local multicast address.
 preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-func (ip IP) IsLinkLocalMulticast() bool 
+func (ip IP) IsLinkLocalMulticast() bool
 
 // IsLinkLocalUnicast reports whether ip is a link-local unicast address.
 preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-func (ip IP) IsLinkLocalUnicast() bool 
+func (ip IP) IsLinkLocalUnicast() bool
 
 // IsGlobalUnicast reports whether ip is a global unicast
 // address.
 preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-func (ip IP) IsGlobalUnicast() bool /*{
-	return (len(ip) == IPv4len || len(ip) == IPv6len) &&
-		!ip.Equal(IPv4bcast) &&
-		!ip.IsUnspecified() &&
-		!ip.IsLoopback() &&
-		!ip.IsMulticast() &&
-		!ip.IsLinkLocalUnicast()
-}*/
+func (ip IP) IsGlobalUnicast() bool
 
 // To4 converts the IPv4 address ip to a 4-byte representation.
 preserves wildcard ==> forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], _)
@@ -166,14 +101,6 @@ func (ip IP) To16() (res IP) {
 	return nil
 }
 
-// DefaultMask returns the default IP mask for the IP address ip.
-preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-func (ip IP) DefaultMask() IPMask
-
-// Mask returns the result of masking the IP address ip with mask.
-preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-func (ip IP) Mask(mask IPMask) IP
-
 preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
 decreases _
 func (ip IP) String() string
@@ -182,27 +109,14 @@ func (ip IP) String() string
 preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
 ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
 ensures (len(ip) == IPv4len || len(ip) == IPv6len || len(ip) == 0) ==> err == nil
-func (ip IP) MarshalText() (res []byte, err error) {
-	if len(ip) == 0 {
-		return []byte(""), nil
-	}
-	if len(ip) != IPv4len && len(ip) != IPv6len {
-		// (joao) Gobra cannot assign `*AddrError` to `error`
-		assume false
-		// return nil, &AddrError{Err: "invalid IP address", Addr: hexString(ip)}
-	}
-	return []byte(ip.String()), nil
-}
-
-preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-func hexString(ip IP) string
+func (ip IP) MarshalText() (res []byte, err error)
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 // The IP address is expected in a form accepted by ParseIP.
 preserves acc(ip)
 preserves forall i int :: 0 <= i && i < len(text) ==> acc(&text[i], definitions.ReadL15)
 ensures forall i int :: 0 <= i && i < len(*ip) ==> acc(&((*ip)[i]))
-func (ip *IP) UnmarshalText(text []byte) error 
+func (ip *IP) UnmarshalText(text []byte) error
 
 // Equal reports whether ip and x are the same IP address.
 // An IPv4 address and that same address in IPv6 form are
@@ -212,51 +126,4 @@ pure
 requires acc(slices.AbsSlice_Bytes(ip, 0, len(ip)), _)
 requires acc(slices.AbsSlice_Bytes(x, 0, len(x)), _)
 decreases _
-func (ip IP) Equal(x IP) bool // {
-//	if len(ip) == len(x) {
-//		return bytealg.Equal(ip, x)
-//	}
-//	if len(ip) == IPv4len && len(x) == IPv6len {
-//		return bytealg.Equal(x[0:12], v4InV6Prefix) && bytealg.Equal(ip, x[12:])
-//	}
-//	if len(ip) == IPv6len && len(x) == IPv4len {
-//		return bytealg.Equal(ip[0:12], v4InV6Prefix) && bytealg.Equal(ip[12:], x)
-//	}
-//	return false
-//}
-
-// Size returns the number of leading ones and total bits in the mask.
-preserves forall i int :: 0 <= i && i < len(m) ==> acc(&m[i], definitions.ReadL15)
-func (m IPMask) Size() (ones, bits int)
-
-// String returns the hexadecimal form of m, with no punctuation.
-preserves forall i int :: 0 <= i && i < len(m) ==> acc(&m[i], definitions.ReadL15)
-func (m IPMask) String() string 
-
-// Contains reports whether the network includes ip.
-preserves acc(n) && forall i int :: 0 <= i && i < len(n.IP) ==> acc(&(n.IP)[i], definitions.ReadL15)
-preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
-func (n *IPNet) Contains(ip IP) bool
-
-// Network returns the address's network name, "ip+net".
-func (n *IPNet) Network() string { return "ip+net" }
-
-// String returns the CIDR notation of n like "192.0.2.0/24"
-// or "2001:db8::/48" as defined in RFC 4632 and RFC 4291.
-preserves acc(n)
-preserves forall i int :: 0 <= i && i < len(n.IP) ==> acc(&(n.IP)[i], definitions.ReadL15)
-preserves forall i int :: 0 <= i && i < len(n.Mask) ==> acc(&(n.Mask)[i], definitions.ReadL15)
-func (n *IPNet) String() string
-
-// ParseIP parses s as an IP address, returning the result.
-ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
-ensures res != nil ==> len(res) == IPv4len || len(res) == IPv6len
-decreases _
-func ParseIP(s string) (res IP)
-
-// ParseCIDR parses s as a CIDR notation IP address and prefix length,
-// like "192.0.2.0/24" or "2001:db8::/32", as defined in
-// RFC 4632 and RFC 4291.
-ensures err == nil ==> acc(ipnet)
-ensures forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i])
-func ParseCIDR(s string) (ip IP, ipnet *IPNet, err error)
+func (ip IP) Equal(x IP) bool

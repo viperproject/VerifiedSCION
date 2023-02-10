@@ -9,32 +9,9 @@
 
 package strings
 
-import (
-	//"internal/bytealg"
-	// "unicode"
-	// "unicode/utf8"
-)
-
 // Count counts the number of non-overlapping instances of substr in s.
 // If substr is an empty string, Count returns 1 + the number of Unicode code points in s.
-func Count(s, substr string) int /*{
-	// special case
-	if len(substr) == 0 {
-		return utf8.RuneCountInString(s) + 1
-	}
-	if len(substr) == 1 {
-		return bytealg.CountString(s, substr[0])
-	}
-	n := 0
-	for {
-		i := Index(s, substr)
-		if i == -1 {
-			return n
-		}
-		n++
-		s = s[i+len(substr):]
-	}
-}*/
+func Count(s, substr string) int
 
 // Contains reports whether substr is within s.
 func Contains(s, substr string) bool {
@@ -64,24 +41,7 @@ func IndexByte(s string, c byte) int /*{
 // r, or -1 if rune is not present in s.
 // If r is utf8.RuneError, it returns the first instance of any
 // invalid UTF-8 byte sequence.
-func IndexRune(s string, r rune) int /*{
-	switch {
-	case 0 <= r && r < utf8.RuneSelf:
-		return IndexByte(s, byte(r))
-	case r == utf8.RuneError:
-		for i, r := range s {
-			if r == utf8.RuneError {
-				return i
-			}
-		}
-		return -1
-	case !utf8.ValidRune(r):
-		return -1
-	default:
-		return Index(s, string(r))
-	}
-}
-*/
+func IndexRune(s string, r rune) int
 
 // IndexAny returns the index of the first instance of any Unicode code point
 // from chars in s, or -1 if no Unicode code point from chars is present in s.
@@ -137,17 +97,8 @@ func SplitAfter(s, sep string) (res []string) /*{
 ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
 func Fields(s string) (res []string)
 
-// FieldsFunc splits the string s at each run of Unicode code points c satisfying f(c)
-// and returns an array of slices of s. If all code points in s satisfy f(c) or the
-// string is empty, an empty slice is returned.
-// (joao) no support for higher-order functions
-/*
-func FieldsFunc(s string, f func(rune) bool) []string 
-*/
-
 // Join concatenates the elements of its first argument to create a single string. The separator
 // string sep is placed between elements in the resulting string.
-
 requires forall i int :: 0 <= i && i < len(elems) ==> acc(&elems[i], _)
 ensures len(elems) == 0 ==> res == ""
 ensures len(elems) == 1 ==> res == elems[0]
@@ -248,115 +199,13 @@ func ToLower(s string) string
 decreases _
 func ToTitle(s string) string // { return Map(unicode.ToTitle, s) }
 
-// ToUpperSpecial returns a copy of the string s with all Unicode letters mapped to their
-// upper case using the case mapping specified by c.
-// (joao) No support for the unicode package yet
-/*
-func ToUpperSpecial(c unicode.SpecialCase, s string) string {
-	return Map(c.ToUpper, s)
-}
-*/
-
-// ToLowerSpecial returns a copy of the string s with all Unicode letters mapped to their
-// lower case using the case mapping specified by c.
-// (joao) No support for the unicode package yet
-/*
-func ToLowerSpecial(c unicode.SpecialCase, s string) string {
-	return Map(c.ToLower, s)
-}
-*/
-
-// ToTitleSpecial returns a copy of the string s with all Unicode letters mapped to their
-// Unicode title case, giving priority to the special casing rules.
-// (joao) No support for the unicode package yet
-/*
-func ToTitleSpecial(c unicode.SpecialCase, s string) string {
-	return Map(c.ToTitle, s)
-}
-*/
-
 // ToValidUTF8 returns a copy of the string s with each run of invalid UTF-8 byte sequences
 // replaced by the replacement string, which may be empty.
 func ToValidUTF8(s, replacement string) string
 
-// isSeparator reports whether the rune could mark a word boundary.
-func isSeparator(r rune) bool /*{
-	// ASCII alphanumerics and underscore are not separators
-	if r <= 0x7F {
-		switch {
-		case '0' <= r && r <= '9':
-			return false
-		case 'a' <= r && r <= 'z':
-			return false
-		case 'A' <= r && r <= 'Z':
-			return false
-		case r == '_':
-			return false
-		}
-		return true
-	}
-	// Letters and digits are not separators
-	if unicode.IsLetter(r) || unicode.IsDigit(r) {
-		return false
-	}
-	// Otherwise, all we can do for now is treat spaces as separators.
-	return unicode.IsSpace(r)
-}
-*/
-
 // Title returns a copy of the string s with all Unicode letters that begin words
 // mapped to their Unicode title case.
 func Title(s string) string 
-
-// TrimLeftFunc returns a slice of the string s with all leading
-// Unicode code points c satisfying f(c) removed.
-// (joao) no support for higher-order functions
-/*
-func TrimLeftFunc(s string, f func(rune) bool) string {
-	i := indexFunc(s, f, false)
-	if i == -1 {
-		return ""
-	}
-	return s[i:]
-}
-*/
-
-// TrimRightFunc returns a slice of the string s with all trailing
-// Unicode code points c satisfying f(c) removed.
-// (joao) no support for higher-order functions
-/*
-func TrimRightFunc(s string, f func(rune) bool) string {
-	i := lastIndexFunc(s, f, false)
-	if i >= 0 && s[i] >= utf8.RuneSelf {
-		_, wid := utf8.DecodeRuneInString(s[i:])
-		i += wid
-	} else {
-		i++
-	}
-	return s[0:i]
-}
-
-// TrimFunc returns a slice of the string s with all leading
-// and trailing Unicode code points c satisfying f(c) removed.
-func TrimFunc(s string, f func(rune) bool) string {
-	// (joao) no support for higher-order functions
-	return TrimRightFunc(TrimLeftFunc(s, f), f)
-}
-
-// IndexFunc returns the index into s of the first Unicode
-// code point satisfying f(c), or -1 if none do.
-func IndexFunc(s string, f func(rune) bool) int {
-	// (joao) no support for higher-order functions
-	return indexFunc(s, f, true)
-}
-
-// LastIndexFunc returns the index into s of the last
-// Unicode code point satisfying f(c), or -1 if none do.
-func LastIndexFunc(s string, f func(rune) bool) int {
-	// (joao) no support for higher-order functions
-	return lastIndexFunc(s, f, true)
-}
-*/
 
 // Trim returns a slice of the string s with all leading and
 // trailing Unicode code points contained in cutset removed.

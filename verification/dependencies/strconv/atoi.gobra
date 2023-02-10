@@ -9,14 +9,6 @@
 
 package strconv
 
-// import "errors" //(joao) stub errors package still not implemented
-
-// ErrRange indicates that a value is out of range for the target type.
-// var ErrRange = errors.New("value out of range") // (joao): no support for global vars and for the errors package
-
-// ErrSyntax indicates that a value does not have the right syntax for the target type.
-// var ErrSyntax = errors.New("invalid syntax") // (joao): no support for global vars and for the errors package
-
 // A NumError records a failed conversion.
 type NumError struct {
 	Func string // the failing function (ParseBool, ParseInt, ParseUint, ParseFloat, ParseComplex)
@@ -28,19 +20,11 @@ requires p > 0
 requires acc(e, p)
 ensures acc(e, p)
 decreases _
-func (e *NumError) Error(ghost p perm) string /*{
-	return "strconv." + e.Func + ": " + "parsing " + Quote(e.Num) + ": " + e.Err.Error()
-}*/
-
+func (e *NumError) Error(ghost p perm) string
 
 requires acc(e, _)
 decreases
 pure func (e *NumError) Unwrap() error { return e.Err }
-
-// const intSize = 32 << (^uint(0) >> 63)
-
-// IntSize is the size in bits of an int or uint value.
-// const IntSize = intSize
 
 // a to the power of b
 ghost
