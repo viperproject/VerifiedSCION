@@ -200,3 +200,11 @@ ensures  len(res) == n
 ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> res[i] == offsetPair{}
 decreases
 func newOffsetPair(n int) (res seq[offsetPair])
+
+// post-init invariants
+
+// unsupportedPathType is duplicable: we can always establish its invariant
+ghost
+ensures unsupportedPathType.ErrorMem()
+decreases _
+func establishMemUnsupportedPathType()

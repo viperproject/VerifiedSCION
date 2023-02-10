@@ -889,16 +889,18 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
-// @ requires false
-// @ trusted
-// @ preserves sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
-// @ preserves acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
-// @ preserves acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
-// @ preserves acc(&p.srcAddr) && acc(&p.lastLayer)
-// @ preserves p.buffer != nil && p.buffer.Mem()
-// @ preserves p.mac != nil && p.mac.Mem()
-// @ preserves p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
-// @ preserves acc(srcAddr.Mem(), _)
+// @ requires  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+// @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
+// @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
+// @ requires acc(&p.srcAddr) && acc(&p.lastLayer)
+// @ requires p.buffer != nil && p.buffer.Mem()
+// @ requires p.mac != nil && p.mac.Mem()
+// @ requires acc(srcAddr.Mem(), _)
+// TODO:
+//
+//	ensures p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+//
 // @ decreases
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (processResult, error) {
@@ -912,22 +914,45 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	// parse SCION header and skip extensions;
 	var err error
 	// @ ghost var processed seq[bool]
-	p.lastLayer, err /*@ , processed @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
+	// @ ghost var offsets   seq[offsetPair]
+	// @ ghost var lastLayerIdx int
+	p.lastLayer, err /*@ , processed, offsets, lastLayerIdx @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
 	if err != nil {
 		return processResult{}, err
 	}
-	pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ nil @*/ ) // (VS) TODO: replace nil by the proper spec
+	/*@
+	ghost var ub []byte
+	ghost if lastLayerIdx == -1 {
+		ub = p.rawPkt
+		assert p.lastLayer.Mem(ub)
+	} else {
+		assert processed[lastLayerIdx]
+		assert 0 <= lastLayerIdx && lastLayerIdx <= 1
+		assert p.lastLayer == &p.scionLayer || p.lastLayer == &p.hbhLayer || p.lastLayer == &p.e2eLayer
+		assert processed[lastLayerIdx] && offsets[lastLayerIdx].isNil ==> p.lastLayer.Mem(nil)
+		if offsets[lastLayerIdx].isNil {
+			ub = nil
+			assert p.lastLayer.Mem(ub)
+		} else {
+			o := offsets[lastLayerIdx]
+			ub = p.rawPkt[o.start:o.end]
+			assert p.lastLayer.Mem(ub)
+		}
+	}
+	@*/
+	pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ub @*/ )
 
-	pathType := p.scionLayer.PathType
+	pathType := /*@ unfolding p.scionLayer.Mem(rawPkt) in @*/ p.scionLayer.PathType
 	switch pathType {
 	case empty.PathType:
-		// (VS) TODO: drop nil later
+		// @ def.TODO()
 		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
 			return processResult{}, p.processIntraBFD(pld)
 		}
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
 			"type", pathType, "header", nextHdr(p.lastLayer /*@, nil @*/)) // (VS) drop
 	case onehop.PathType:
+		// @ def.TODO()
 		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
 			ohp, ok := p.scionLayer.Path.(*onehop.Path)
 			if !ok {
@@ -937,10 +962,13 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		}
 		return p.processOHP()
 	case scion.PathType:
+		// @ def.TODO()
 		return p.processSCION()
 	case epic.PathType:
+		// @ def.TODO()
 		return p.processEPIC()
 	default:
+		// @ establishMemUnsupportedPathType()
 		return processResult{}, serrors.WithCtx(unsupportedPathType, "type", pathType)
 	}
 }
@@ -2050,11 +2078,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
 // @     (acc(&opts[i], def.ReadL10) && opts[i] != nil)
 // @ ensures   -1 <= idx && idx < len(opts)
-// @ ensures   reterr == nil && idx == -1 ==> retl === base
-// @ ensures   reterr == nil && 0   < idx ==> retl === opts[idx]
-// @ ensures   reterr == nil ==> base.Mem(data)
 // @ ensures   len(processed) == len(opts)
 // @ ensures   len(offsets) == len(opts)
+// @ ensures   reterr == nil && 0  <= idx ==> processed[idx]
+// @ ensures   reterr == nil && idx == -1  ==> retl === base
+// @ ensures   reterr == nil && 0   <= idx ==> retl === opts[idx]
+// @ ensures   reterr == nil ==> retl != nil
+// @ ensures   reterr == nil ==> base.Mem(data)
 // @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
 // @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
