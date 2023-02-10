@@ -1897,7 +1897,7 @@ func (b *bfdSend) String() string {
 // Due to the internal state of the MAC computation, this is not goroutine
 // safe.
 // @ trusted
-// @ requires false
+// @ requires def.Uncallable()
 func (b *bfdSend) Send(bfd *layers.BFD) error {
 	if b.ohp != nil {
 		// Subtract 10 seconds to deal with possible clock drift.
@@ -2053,22 +2053,18 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   reterr == nil && idx == -1 ==> retl === base
 // @ ensures   reterr == nil && 0   < idx ==> retl === opts[idx]
 // @ ensures   reterr == nil ==> base.Mem(data)
-/*
-// To turn into postconditions:
-//  invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-//      (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
-//  invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-//      ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
-//  invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-//      ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
-//  invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && i0 <= i && i < len(opts) ==>
-//      !processed[i]
-//  invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-//      (!processed[i] ==> opts[i].NonInitMem())
-*/
+// @ ensures   len(processed) == len(opts)
+// @ ensures   len(offsets) == len(opts)
+// @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+// @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(data[offsets[i].start:offsets[i].end]))
+// @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+// @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+// @     (!processed[i] ==> opts[i].NonInitMem())
 // @ ensures   reterr != nil ==> base.NonInitMem()
-// @ ensures   reterr != nil ==> (forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
-// @     opts[i].NonInitMem())
+// @ ensures   reterr != nil ==> (forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==> opts[i].NonInitMem())
 // @ ensures   reterr != nil ==> reterr.ErrorMem()
 // @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
