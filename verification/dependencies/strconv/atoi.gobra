@@ -9,23 +9,6 @@
 
 package strconv
 
-// A NumError records a failed conversion.
-type NumError struct {
-	Func string // the failing function (ParseBool, ParseInt, ParseUint, ParseFloat, ParseComplex)
-	Num  string // the input
-	Err  error  // the reason the conversion failed (e.g. ErrRange, ErrSyntax, etc.)
-}
-
-requires p > 0
-requires acc(e, p)
-ensures acc(e, p)
-decreases _
-func (e *NumError) Error(ghost p perm) string
-
-requires acc(e, _)
-decreases
-pure func (e *NumError) Unwrap() error { return e.Err }
-
 // a to the power of b
 ghost
 requires exp >= 0
