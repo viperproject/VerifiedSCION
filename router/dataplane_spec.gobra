@@ -209,12 +209,26 @@ ensures unsupportedPathType.ErrorMem()
 decreases _
 func establishMemUnsupportedPathType()
 
+// malformedPath is duplicable: we can always establish its invariant
 ghost
 ensures malformedPath.ErrorMem()
 decreases _
 func establishMemMalformedPath()
 
+// unsupportedPathTypeNextHeader is duplicable: we can always establish its invariant
 ghost
 ensures unsupportedPathTypeNextHeader.ErrorMem()
 decreases _
 func establishMemUnsupportedPathTypeNextHeader()
+
+// noBFDSessionConfigured is duplicable: we can always establish its invariant
+ghost
+ensures noBFDSessionConfigured .ErrorMem()
+decreases _
+func establishMemNoBFDSessionConfigured()
+
+// noBFDSessionFound is duplicable: we can always establish its invariant
+ghost
+ensures noBFDSessionFound .ErrorMem()
+decreases _
+func establishMemNoBFDSessionFound()

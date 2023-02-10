@@ -891,6 +891,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 
 // @ requires  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
 // @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
 // @ requires acc(&p.srcAddr) && acc(&p.lastLayer)
@@ -974,6 +975,10 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 
 // @ trusted
 // @ requires false
+// @ requires acc(&p.d, def.ReadL20)
+// @ requires acc(MutexInvariant!<p.d!>(), _)
+// @ ensures  acc(&p.d, def.ReadL20)
+// @ decreases
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) error {
 	if len(p.d.bfdSessions) == 0 {
 		return noBFDSessionConfigured
@@ -992,10 +997,20 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) err
 	return noBFDSessionFound
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) processIntraBFD(data []byte) error {
+// @ requires acc(&p.d, def.ReadL20)
+// @ requires acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
+// @ requires acc(&p.bfdLayer, def.ReadL20) && p.bfdLayer.NonInitMem()
+// @ requires acc(MutexInvariant!<p.d!>(), _)
+// @ ensures  acc(&p.d, def.ReadL20)
+// @ ensures  acc(&p.srcAddr, def.ReadL20)
+// @ ensures  acc(&p.bfdLayer, def.ReadL20)
+// @ ensures  res != nil ==> res.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
+	// @ unfold acc(MutexInvariant!<p.d!>(), _)
+	// @ unfold acc(AccBfdSession(p.d.bfdSessions), _)
 	if len(p.d.bfdSessions) == 0 {
+		// @ establishMemNoBFDSessionConfigured()
 		return noBFDSessionConfigured
 	}
 
@@ -1013,10 +1028,11 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) error {
 	}
 
 	if v, ok := p.d.bfdSessions[ifID]; ok {
-		v.ReceiveMessage(bfd)
+		v.ReceiveMessage(bfd /*@ , data @*/)
 		return nil
 	}
 
+	// @ establishMemNoBFDSessionFound()
 	return noBFDSessionFound
 }
 

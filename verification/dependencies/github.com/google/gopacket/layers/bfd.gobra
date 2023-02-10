@@ -170,12 +170,11 @@ type BFD struct {
 	AuthHeader                *BFDAuthHeader      // Authentication data, variable length.
 }
 
-pred (b *BFD) Mem(_ []byte) {
-	acc(b) &&
-	slices.AbsSlice_Bytes(b.BaseLayer.Payload, 0, len(b.BaseLayer.Payload)) &&
-	slices.AbsSlice_Bytes(b.Contents, 0, len(b.Contents)) &&
-	(b.AuthPresent ==> b.AuthHeader.Mem())
+pred (b *BFD) NonInitMem() {
+	acc(b)
 }
+
+pred (b *BFD) Mem(ub []byte)
 
 preserves acc(d, 1/10000)
 decreases
@@ -184,13 +183,13 @@ func (d *BFD) Length() int
 decreases
 pure func (d *BFD) LayerType() gopacket.LayerType
 
-requires d.Mem(ub)
-requires df.Mem()
+requires  d.NonInitMem()
+preserves df.Mem()
 preserves slices.AbsSlice_Bytes(data, 0, len(data))
-ensures df.Mem()
-ensures err == nil ==> d.Mem(ub)
+ensures   err == nil ==> d.Mem(data)
+ensures   err != nil ==> err.ErrorMem() && d.NonInitMem()
 decreases
-func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback, ghost ub []byte) (err error)
+func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err error)
 
 requires d.Mem(ub) && b.Mem()
 ensures  err == nil ==> d.Mem(ub) && b.Mem()
@@ -204,8 +203,9 @@ pure func (d *BFD) CanDecode() gopacket.LayerClass
 decreases
 pure func (d *BFD) NextLayerType() gopacket.LayerType
 
+ensures res == nil
 decreases
-func (d *BFD) Payload() []byte {
+func (d *BFD) Payload() (res []byte) {
 	return nil
 }
 
