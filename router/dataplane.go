@@ -997,35 +997,41 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) err
 	return noBFDSessionFound
 }
 
-// @ requires acc(&p.d, def.ReadL20)
-// @ requires acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
-// @ requires acc(&p.bfdLayer, def.ReadL20) && p.bfdLayer.NonInitMem()
-// @ requires acc(MutexInvariant!<p.d!>(), _)
-// @ ensures  acc(&p.d, def.ReadL20)
-// @ ensures  acc(&p.srcAddr, def.ReadL20)
-// @ ensures  acc(&p.bfdLayer, def.ReadL20)
-// @ ensures  res != nil ==> res.ErrorMem()
+// @ requires  acc(&p.d, def.ReadL20)
+// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
+// @ requires  acc(&p.bfdLayer, def.ReadL20) && p.bfdLayer.NonInitMem()
+// @ requires  acc(MutexInvariant!<p.d!>(), _)
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   acc(&p.srcAddr, def.ReadL20)
+// @ ensures   acc(&p.bfdLayer, def.ReadL20)
+// @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
-	// @ unfold acc(AccBfdSession(p.d.bfdSessions), _)
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		// @ establishMemNoBFDSessionConfigured()
 		return noBFDSessionConfigured
 	}
 
 	bfd := &p.bfdLayer
+	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := bfd.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return err
 	}
 
 	ifID := uint16(0)
-	for k, v := range p.d.internalNextHops {
+	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
+	// @ assume false
+	for k, v := range p.d.internalNextHops /*@ with i0 @*/ {
+		// @ assume false
 		if bytes.Equal(v.IP, p.srcAddr.IP) && v.Port == p.srcAddr.Port {
 			ifID = k
 			break
 		}
 	}
+	// @ assume false
 
 	if v, ok := p.d.bfdSessions[ifID]; ok {
 		v.ReceiveMessage(bfd /*@ , data @*/)
