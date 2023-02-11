@@ -1023,7 +1023,9 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 
 	ifID := uint16(0)
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
-	// @ assume false
+	// @ invariant acc(&p.d, def.ReadL20)
+	// @ invariant acc(&p.d.internalNextHops, _)
+	// @ invariant acc(p.d.internalNextHops, _)
 	for k, v := range p.d.internalNextHops /*@ with i0 @*/ {
 		// @ assume false
 		if bytes.Equal(v.IP, p.srcAddr.IP) && v.Port == p.srcAddr.Port {
