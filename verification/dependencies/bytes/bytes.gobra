@@ -15,8 +15,8 @@ package bytes
 // Equal reports whether a and b
 // are the same length and contain the same bytes.
 // A nil argument is equivalent to an empty slice.
-requires forall i int :: 0 <= i && i < len(a) ==> acc(&a[i], _)
-requires forall i int :: 0 <= i && i < len(b) ==> acc(&b[i], _)
+requires forall i int :: { &a[i] } 0 <= i && i < len(a) ==> acc(&a[i], _)
+requires forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], _)
 decreases
 pure func Equal(a, b []byte) bool {
 	return string(a) == string(b)

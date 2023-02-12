@@ -1015,12 +1015,11 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 // @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
 // @ requires  acc(&p.bfdLayer, def.ReadL20) && p.bfdLayer.NonInitMem()
 // @ requires  acc(MutexInvariant!<p.d!>(), _)
-// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ requires  slices.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   acc(&p.d, def.ReadL20)
 // @ ensures   acc(&p.srcAddr, def.ReadL20)
 // @ ensures   acc(&p.bfdLayer, def.ReadL20)
 // @ ensures   res != nil ==> res.ErrorMem()
-// @ decreases
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
@@ -1038,28 +1037,44 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	ifID := uint16(0)
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
 
-	// (VerifiedSCION) establish ability to use range loops
-	// @ assert acc(&p.d.internalNextHops, _)
-	// @ inhale acc(&p.d.internalNextHops, def.ReadL20)
-
+	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission)
 	// @ ghost m := p.d.internalNextHops
+	// @ assert m != nil ==> acc(m, _)
+	// @ inhale m != nil ==> acc(m, def.ReadL20)
+
 	// @ invariant acc(&p.d, def.ReadL20)
 	// @ invariant acc(&p.d.internalNextHops, _)
+	// @ invariant m === p.d.internalNextHops
 	// @ invariant m != nil ==> acc(m, def.ReadL20)
+	// @ invariant acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
 	// @ invariant forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
-	//  invariant m != nil ==> forall key uint16 :: { m[key] } key in domain(m) ==> acc(AccAddrInjective(m[key], key), _)
-	// @ decreases len(m) - len(keys)
 	for k, v := range p.d.internalNextHops /*@ with keys @*/ {
-		// @ assume false
-		if bytes.Equal(v.IP, p.srcAddr.IP) && v.Port == p.srcAddr.Port {
+		// (VerifiedSCION) assumption to deal with the insufficient encoding of
+		// ranging over a map
+		// @ assert acc(&p.d.internalNextHops, _)
+		// @ assume p.d.internalNextHops != nil
+		// @ assume 0 < len(p.d.internalNextHops)
+		// @ assert v === p.d.internalNextHops[k]
+		// @ assert v in range(p.d.internalNextHops)
+		// @ requires acc(v.Mem(), _)
+		// @ requires acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
+		// @ ensures  acc(&p.srcAddr, def.ReadL20)
+		// @ outline(
+		// @ unfold acc(v.Mem(), _)
+		// @ unfold acc(slices.AbsSlice_Bytes(v.IP, 0, len(v.IP)), _)
+		// @ unfold acc(p.srcAddr.Mem(), _)
+		// @ unfold acc(slices.AbsSlice_Bytes(p.srcAddr.IP, 0, len(p.srcAddr.IP)), _)
+		tmp := bytes.Equal(v.IP, p.srcAddr.IP) && v.Port == p.srcAddr.Port
+		// @ )
+		if tmp {
 			ifID = k
 			break
 		}
 	}
-	// @ assume false
 	// (VerifiedSCION) clean-up code to deal with range loop
-	// @ exhale acc(&p.d.internalNextHops, def.ReadL20)
-	// @ assert acc(&p.d.internalNextHops, _)
+	// @ assert m != nil ==> acc(m, def.ReadL20)
+	// @ exhale m != nil ==> acc(m, def.ReadL20)
+	// @ assert m != nil ==> acc(m, _)
 
 	if v, ok := p.d.bfdSessions[ifID]; ok {
 		v.ReceiveMessage(bfd /*@ , data @*/)
