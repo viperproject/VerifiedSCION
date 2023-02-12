@@ -14,32 +14,24 @@
 
 // +gobra
 
-package onehop
+package router
 
 import (
+	"net"
+	"hash"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/pkg/scrypto"
+	"github.com/scionproto/scion/pkg/addr"
 )
 
-pred (o *Path) NonInitMem() {
-	acc(o)
+pred (b *bfdSend) Mem() {
+	acc(b) &&
+	b.srcAddr.Mem() &&
+	b.dstAddr.Mem() &&
+	acc(b.scn) &&
+	acc(b.ohp) &&
+	b.mac.Mem() &&
+	sl.AbsSlice_Bytes(b.macBuffer, 0, path.MACBufferSize) &&
+	b.buffer.Mem()
 }
-
-pred (o *Path) Mem(ubuf []byte) {
-	acc(&o.Info) &&
-	o.FirstHop.Mem() &&
-	o.SecondHop.Mem()
-}
-
-ghost
-requires p.Mem(buf)
-ensures  p.NonInitMem()
-decreases
-func (p *Path) DowngradePerm(buf []byte) {
-	unfold p.Mem(buf)
-	unfold p.FirstHop.Mem()
-	unfold p.SecondHop.Mem()
-	fold  p.NonInitMem()
-}
-
-(*Path) implements path.Path

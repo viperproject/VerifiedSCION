@@ -73,8 +73,11 @@ func (s *SCMP) LayerType() gopacket.LayerType {
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
+// @ ensures res != nil && res === LayerClassSCMP
+// @ ensures typeOf(res) == gopacket.LayerType
 // @ decreases
-func (s *SCMP) CanDecode() gopacket.LayerClass {
+func (s *SCMP) CanDecode() (res gopacket.LayerClass) {
+	// @ LayerClassSCMPIsLayerType()
 	return LayerClassSCMP
 }
 
@@ -105,17 +108,17 @@ func (s *SCMP) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 
 // SerializeTo writes the serialized form of this layer into the
 // SerializationBuffer, implementing gopacket.SerializableLayer.
-// @ requires b != nil
-// @ requires s.Mem(ubufMem)
-// @ requires b.Mem(underlyingBuf)
-// @ ensures err == nil ==> underlyingBufRes != nil
-// @ ensures err == nil ==> s.Mem(ubufMem) && b.Mem(underlyingBufRes)
-// @ ensures err != nil ==> err.ErrorMem()
+// @ requires  b != nil
+// @ requires  s.Mem(ubufMem)
+// @ preserves b.Mem()
+// @ ensures   err == nil ==> s.Mem(ubufMem)
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte,  ghost underlyingBuf []byte @*/) (err error /*@, ghost underlyingBufRes []byte @*/) {
-	bytes, err /*@, underlyingBufRes@*/ := b.PrependBytes(4 /*@, underlyingBuf@*/)
+func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
+	bytes, err := b.PrependBytes(4)
+	// @ underlyingBufRes := b.UBuf()
 	if err != nil {
-		return err /*@, underlyingBufRes @*/
+		return err
 	}
 	// @ unfold s.Mem(ubufMem)
 
@@ -123,11 +126,10 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// @ requires bytes === underlyingBufRes[:4]
 	// @ requires b != nil
 	// @ preserves acc(&s.TypeCode)
-	// @ preserves b.Mem(underlyingBufRes)
-	// @ ensures underlyingBufRes === before(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 2 ==> &bytes[i] == &underlyingBufRes[i]
@@ -136,23 +138,22 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// @ unfold slices.AbsSlice_Bytes(bytes, 0, 2)
 	// @ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
 
 	if opts.ComputeChecksums {
 		if s.scn == nil {
 			// @ fold s.Mem(ubufMem)
-			return serrors.New("can not calculate checksum without SCION header") /*@, underlyingBufRes @*/
+			return serrors.New("can not calculate checksum without SCION header")
 		}
 		// zero out checksum bytes
 		// @ requires len(underlyingBufRes) >= 4
 		// @ requires bytes === underlyingBufRes[:4]
 		// @ requires b != nil
-		// @ preserves b.Mem(underlyingBufRes)
-		// @ ensures underlyingBufRes === before(underlyingBufRes)
+		// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 		// @ decreases
 		// @ outline (
-		// @ b.ExchangePred(underlyingBufRes)
+		// @ b.ExchangePred()
 		// @ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 		// @ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 		// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
@@ -160,16 +161,16 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		bytes[3] = 0
 		// @ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 		// @ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-		// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+		// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 		// @ )
-		verScionTmp := b.Bytes( /*@underlyingBufRes@*/ )
+		verScionTmp := b.Bytes()
 		// @ unfold s.scn.ChecksumMem()
 		s.Checksum, err = s.scn.computeChecksum(verScionTmp, uint8(L4SCMP))
 		// @ fold s.scn.ChecksumMem()
-		// @ apply slices.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)) --* b.Mem(underlyingBufRes)
+		// @ apply slices.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)) --* (b.Mem() && b.UBuf() === verScionTmp)
 		if err != nil {
 			// @ fold s.Mem(ubufMem)
-			return err /*@, underlyingBufRes @*/
+			return err
 		}
 
 	}
@@ -177,10 +178,10 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// @ requires bytes === underlyingBufRes[:4]
 	// @ requires b != nil
 	// @ preserves acc(&s.Checksum)
-	// @ preserves b.Mem(underlyingBufRes)
+	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
 	// @ decreases
 	// @ outline (
-	// @ b.ExchangePred(underlyingBufRes)
+	// @ b.ExchangePred()
 	// @ slices.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 	// @ unfold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
@@ -188,20 +189,19 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	binary.BigEndian.PutUint16(bytes[2:], s.Checksum)
 	// @ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 	// @ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-	// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* b.Mem(underlyingBufRes)
+	// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
 	// @ )
 	// @ fold s.Mem(ubufMem)
-	return nil /*@, underlyingBufRes @*/
+	return nil
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
-// @ requires  slices.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
 // @ requires  s.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
-// @ ensures   res != nil ==> slices.AbsSlice_Bytes(data, 0, len(data))
 // @ decreases
 func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	if size := len(data); size < 4 {
@@ -236,20 +236,8 @@ func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res err
 	// @ slices.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
 	// @ slices.CombineAtIndex_Bytes(data, 0, len(data), 4, writePerm)
 	// @ )
-	// @ requires len(data) >= 4
-	// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
-	// @ requires acc(&s.BaseLayer)
-	// @ ensures  s.BaseLayer.Mem(data)
-	// @ decreases
-	// @ outline (
-	// @ unfold slices.AbsSlice_Bytes(data, 0, len(data))
-	// @ assert forall i int :: { &data[4:][i] } 0 <= i && i < len(data) ==> &data[4:][i] == &data[4 + i]
 	s.BaseLayer = BaseLayer{Contents: data[:4], Payload: data[4:]}
-	// @ assert forall l int :: { &s.Payload[l] } 0 <= l && l < len(s.Payload) ==> &data[4+l] == &s.Payload[l]
-	// @ fold slices.AbsSlice_Bytes(s.Contents, 0, len(s.Contents))
-	// @ fold slices.AbsSlice_Bytes(s.Payload, 0, len(s.Payload))
-	// @ fold s.BaseLayer.Mem(data)
-	// @ )
+	// @ fold s.BaseLayer.Mem(data, 4)
 	// @ fold s.Mem(data)
 	return nil
 }
@@ -263,8 +251,9 @@ func (s *SCMP) String() string {
 
 // SetNetworkLayerForChecksum tells this layer which network layer is wrapping it.
 // This is needed for computing the checksum when serializing,
-// @ trusted
-// @ requires false
+// @ preserves acc(&s.scn)
+// @ ensures   s.scn == scn
+// @ decreases
 func (s *SCMP) SetNetworkLayerForChecksum(scn *SCION) {
 	s.scn = scn
 }

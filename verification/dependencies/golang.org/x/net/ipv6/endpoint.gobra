@@ -8,10 +8,9 @@ package ipv6
 import (
 	"net"
 	"time"
-
 	"golang.org/x/net/internal/socket"
-
 	"github.com/scionproto/scion/verification/utils/definitions"
+	def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (p *PacketConn) Mem()
@@ -24,12 +23,7 @@ pred (c *Conn) Mem() {
 // It allows to set basic IP-level socket options such as traffic
 // class and hop limit.
 type Conn struct {
-	genericOpt
-}
-
-type genericOpt struct {
-	// (VerifiedSCION) this is originally an embedded field, but Gobra does not yet support imported embedded fields
-	connGenericOpt *socket.Conn
+	privateFields def.PrivateField
 }
 
 // PathMTU returns a path MTU value for the destination associated
@@ -71,24 +65,8 @@ func NewConn(c net.Conn) (conn *Conn) {
 // based network I/O methods specific to the IPv6 and higher layer
 // protocols such as OSPF, GRE, and UDP.
 type PacketConn struct {
-	genericOpt
-	dgramOpt
-	// payloadHandler
+	privateFields def.PrivateField
 }
-
-type dgramOpt struct {
-	// (VerifiedSCION) this is originally an embedded field, but Gobra does not yet support imported embedded fields
-	conn *socket.Conn
-}
-
-// SetControlMessage allows to receive the per packet basis IP-level
-// socket options.
-// func (c *PacketConn) SetControlMessage(cf ControlFlags, on bool) error //{
-// 	if !c.payloadHandler.ok() {
-// 		return errInvalidConn
-// 	}
-// 	return setControlMessage(c.dgramOpt.Conn, &c.payloadHandler.rawOpt, cf, on)
-// }
 
 // SetDeadline sets the read and write deadlines associated with the
 // endpoint.
@@ -159,7 +137,6 @@ func NewPacketConn(c net.PacketConn) (p *PacketConn) {
 		payloadHandler: payloadHandler{PacketConn: c, Conn: cc},
 	}
 }
-
 
 ghost
 requires acc(p.Mem(), _)

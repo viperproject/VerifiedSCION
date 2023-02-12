@@ -21,6 +21,11 @@
 package bitwise
 
 ghost
+ensures 0 <= b && b < 256
+decreases
+func ByteValue(b byte)
+
+ghost
 pure
 ensures 0 <= b & 0x3 && b & 0x3 <= 3
 ensures b == 0 ==> res == 0

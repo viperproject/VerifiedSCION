@@ -35,11 +35,10 @@ pred (d *Decoded) Mem(ubuf []byte) {
 	acc(&d.InfoFields) &&
 	d.Base.getNumINF() <= MaxINFs &&
 	len(d.InfoFields) == d.Base.getNumINF() &&
-	(forall i int :: 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
+	(forall i int :: { &d.InfoFields[i] } 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
 	acc(&d.HopFields) &&
 	len(d.HopFields) == d.Base.getNumHops() &&
-	(forall i int :: 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem()) &&
-	slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
 /**** End of Predicates ****/
@@ -121,42 +120,23 @@ pure func (d *Decoded) getLenHopFields(ubuf []byte) int {
 
 ghost
 requires d.Mem(ubuf)
-ensures  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 ensures  d.NonInitMem()
 decreases
 func (d *Decoded) DowngradePerm(ubuf []byte) {
 	unfold d.Mem(ubuf)
 	unfold d.Base.Mem()
-	assert slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 	fold d.Base.NonInitMem()
 	fold d.NonInitMem()
-}
-
-ghost
-requires 0 < p
-requires acc(d.Mem(ub), p)
-ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p)
-ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p) --* acc(d.Mem(ub), p)
-decreases
-func (d *Decoded) AccUnderlyingBuf(ghost ub []byte, ghost p perm) {
-	unfold acc(d.Mem(ub), p)
-	package acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p) --* acc(d.Mem(ub), p) {
-		fold acc(d.Mem(ub), p)
-	}
 }
 
 ghost
 requires d.Mem(ubuf1)
 requires len(ubuf1) <= len(ubuf2)
 requires ubuf1 === ubuf2[:len(ubuf1)]
-requires slices.AbsSlice_Bytes(ubuf2, len(ubuf1), len(ubuf2))
 ensures  d.Mem(ubuf2)
 decreases
 func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
 	unfold d.Mem(ubuf1)
-	slices.Unslice_Bytes(ubuf2, 0, len(ubuf1), writePerm)
-	slices.CombineAtIndex_Bytes(ubuf2, 0, len(ubuf2), len(ubuf1), writePerm)
-	assert slices.AbsSlice_Bytes(ubuf2, 0, len(ubuf2))
 	fold d.Mem(ubuf2)
 }
 

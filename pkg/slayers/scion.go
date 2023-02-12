@@ -109,18 +109,15 @@ func (b *BaseLayer) LayerContents() (res []byte) {
 }
 
 // LayerPayload returns the bytes contained within the packet layer.
-// @ requires b.Mem(ub)
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub)
+// @ preserves acc(b.Mem(ub, bp), def.ReadL20)
+// @ ensures   len(res) == len(ub) - bp
+// @ ensures   0 <= bp && bp <= len(ub)
+// @ ensures   res === ub[bp:]
 // @ decreases
-func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
-	//@ unfold b.Mem(ub)
-	//@ unfold sl.AbsSlice_Bytes(b.Payload, 0, len(b.Payload))
+func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte, ghost bp int @*/ ) (res []byte) {
+	// @ unfold acc(b.Mem(ub, bp), def.ReadL20)
 	res = b.Payload
-	//@ fold sl.AbsSlice_Bytes(res, 0, len(res))
-	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* b.Mem(ub) {
-	//@   fold b.Mem(ub)
-	//@ }
+	// @ fold acc(b.Mem(ub, bp), def.ReadL20)
 	return res
 }
 
@@ -182,10 +179,13 @@ func (s *SCION) LayerType() (res gopacket.LayerType) {
 	return LayerTypeSCION
 }
 
-// @ ensures res === LayerClassSCION
+// @ ensures res != nil && res === LayerClassSCION
+// @ ensures typeOf(res) == gopacket.LayerType
 // @ decreases
 func (s *SCION) CanDecode() (res gopacket.LayerClass) {
-	return LayerClassSCION
+	res = LayerClassSCION
+	// @ LayerClassSCIONIsLayerType()
+	return res
 }
 
 // @ preserves acc(s.Mem(ub), def.ReadL20)
@@ -194,20 +194,18 @@ func (s *SCION) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 	return scionNextLayerType( /*@ unfolding acc(s.Mem(ub), def.ReadL20) in @*/ s.NextHdr)
 }
 
-// @ requires s.Mem(ub)
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res))
-// @ ensures  sl.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem(ub)
+// @ preserves acc(s.Mem(ub), def.ReadL20)
+// @ ensures   0 <= start && start <= end && end <= len(ub)
+// @ ensures   len(res) == end - start
+// @ ensures   res === ub[start:end]
 // @ decreases
-func (s *SCION) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte) {
-	//@ unfold s.Mem(ub)
+func (s *SCION) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
+	//@ unfold acc(s.Mem(ub), def.ReadL20)
 	res = s.Payload
-	//@ l := int(s.HdrLen*LineLen)
-	//@ sl.Reslice_Bytes(ub, l, len(ub), writePerm)
-	//@ package sl.AbsSlice_Bytes(res, 0, len(res)) --* s.Mem(ub) {
-	//@ 	sl.Unslice_Bytes(ub, l, len(ub), writePerm)
-	//@ 	fold s.Mem(ub)
-	//@ }
-	return res
+	//@ start = int(s.HdrLen*LineLen)
+	//@ end = len(ub)
+	//@ fold acc(s.Mem(ub), def.ReadL20)
+	return res /*@, start, end @*/
 }
 
 // @ ensures res == gopacket.Flow{}
@@ -218,34 +216,38 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 }
 
 // @ requires  !opts.FixLengths
-// @ requires  b != nil && b.Mem(uSerBuf)
+// @ requires  b != nil && b.Mem()
 // @ preserves s.Mem(ubuf)
-// @ ensures   b.Mem(newUSerBuf)
+// @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ ensures   b.Mem()
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
-func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte, ghost uSerBuf []byte @*/) (e error /*@ , ghost newUSerBuf []byte @*/) {
+func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
 	// @ unfold s.Mem(ubuf)
 	// @ defer  fold s.Mem(ubuf)
+	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
+	// @ ghost defer sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
-			"max", MaxHdrLen, "actual", scnLen) /*@ , uSerBuf @*/
+			"max", MaxHdrLen, "actual", scnLen)
 	}
 	if scnLen%LineLen != 0 {
 		return serrors.New("header length is not an integer multiple of line length",
-			"actual", scnLen) /*@ , uSerBuf @*/
+			"actual", scnLen)
 	}
-	buf, err /*@ , uSerBufN @*/ := b.PrependBytes(scnLen /*@, uSerBuf @*/)
+	buf, err := b.PrependBytes(scnLen)
 	if err != nil {
-		return err /*@ , uSerBuf @*/
+		return err
 	}
 	if opts.FixLengths {
 		// @ def.Unreachable()
 		s.HdrLen = uint8(scnLen / LineLen)
-		s.PayloadLen = uint16(len(b.Bytes( /*@ uSerBufN @*/ )) - scnLen)
+		s.PayloadLen = uint16(len(b.Bytes()) - scnLen)
 	}
+	// @ ghost uSerBufN := b.UBuf()
 	// @ assert buf === uSerBufN[:scnLen]
-	// @ b.ExchangePred(uSerBufN)
+	// @ b.ExchangePred()
 	// @ sl.SplitRange_Bytes(uSerBufN, 0, scnLen, writePerm)
 
 	// Serialize common header.
@@ -276,7 +278,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 
 	// @ ghost sPath := s.Path
 	// @ ghost pathSlice := ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]
-	// @ sPath.AccUnderlyingBuf(pathSlice, def.ReadL10)
 	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
 
 	// Serialize address header.
@@ -286,24 +287,22 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
 		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
 		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
-		// @ apply acc(sl.AbsSlice_Bytes(pathSlice, 0, len(pathSlice)), def.ReadL10) --* acc(sPath.Mem(pathSlice), def.ReadL10)
 		// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
-		// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* b.Mem(uSerBufN)
-		return err /*@ , uSerBufN @*/
+		// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* (b.Mem() && b.UBuf() === uSerBufN)
+		return err
 	}
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
 
 	// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
 	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
 	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
-	// @ apply acc(sl.AbsSlice_Bytes(pathSlice, 0, len(pathSlice)), def.ReadL10) --* acc(sPath.Mem(pathSlice), def.ReadL10)
 	// Serialize path header.
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
-	// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* b.Mem(uSerBufN)
-	return tmp /*@ , uSerBufN @*/
+	// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* (b.Mem() && b.UBuf() === uSerBufN)
+	return tmp
 }
 
 // DecodeFromBytes decodes the SCION layer. DecodeFromBytes resets the internal state of this layer
@@ -311,11 +310,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
 // @ requires  s.NonInitMem()
-// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
-// @ ensures   res != nil ==> (s.NonInitMem() && sl.AbsSlice_Bytes(data, 0, len(data)) &&
-// @	res.ErrorMem())
+// @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
 // @ decreases
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	// Decode common header.
@@ -341,6 +339,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ preserves acc(&s.DstAddrType) && acc(&s.SrcAddrType)
 	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
 	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
+	// @ ensures   0 <= s.PathType && s.PathType < 256
 	// @ decreases
 	// @ outline(
 	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
@@ -348,7 +347,9 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.HdrLen = data[5]
 	// @ assert &data[6:8][0] == &data[6] && &data[6:8][1] == &data[7]
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
+	// @ b.ByteValue(data[8])
 	s.PathType = path.Type(data[8])
+	// @ assert 0 <= s.PathType && s.PathType < 256
 	s.DstAddrType = AddrType(data[9] >> 4 & 0x7)
 	// @ assert int(s.DstAddrType) == b.BitAnd7(int(data[9] >> 4))
 	s.SrcAddrType = AddrType(data[9] & 0x7)
@@ -389,27 +390,26 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("provided buffer is too small", "expected", minLen, "actual", len(data))
 	}
 
+	// @ assert unfolding PathPoolMem(s.pathPool, s.pathPoolRaw) in (s.pathPool == nil) == (s.pathPoolRaw == nil)
 	s.Path, err = s.getPath(s.PathType)
 	if err != nil {
-		// @ def.Unreachable()
+		// @ unfold s.HeaderMem(data[CmnHdrLen:])
+		// @ fold s.NonInitMem()
 		return err
 	}
-	// (VerifiedSCION) Gobra cannot currently prove this, even though it must hold as s.PathType is of type
-	//                 path.Type (defined as uint8)
-	// @ assume 0 <= s.PathType
-	// @ ghost if s.PathType == empty.PathType { fold s.Path.NonInitMem() }
 	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, writePerm)
 	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
 	if err != nil {
 		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
-		// @ s.InitPathPoolExchange(s.PathType, s.Path)
+		// @ s.PathPoolMemExchange(s.PathType, s.Path)
 		// @ fold s.NonInitMem()
 		return err
 	}
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
 
+	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
 	// @ fold s.Mem(data)
 
 	return nil
@@ -420,11 +420,12 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 // When this is enabled, the Path instance may be overwritten in
 // DecodeFromBytes. No references to Path should be kept in use between
 // invocations of DecodeFromBytes.
-// @ requires s.NonInitPathPool()
-// @ ensures  s.InitPathPool()
+// @ preserves acc(&s.pathPool) && acc(&s.pathPoolRaw)
+// @ preserves PathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ ensures   s.pathPoolInitialized()
 // @ decreases
 func (s *SCION) RecyclePaths() {
-	// @ unfold s.NonInitPathPool()
+	// @ unfold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	if s.pathPool == nil {
 		s.pathPool = []path.Path{
 			empty.PathType:  empty.Path{},
@@ -436,57 +437,66 @@ func (s *SCION) RecyclePaths() {
 		// @ assert acc(&s.pathPool[empty.PathType]) && acc(&s.pathPool[onehop.PathType])
 		// @ assert acc(&s.pathPool[scion.PathType]) && acc(&s.pathPool[epic.PathType])
 		// @ assert s.pathPool[onehop.PathType].NonInitMem() && s.pathPool[scion.PathType].NonInitMem() && s.pathPool[epic.PathType].NonInitMem()
-		// @ fold s.InitPathPool()
+		// @ fold s.pathPool[empty.PathType].NonInitMem()
 	}
+	// @ fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 }
 
 // getPath returns a new or recycled path for pathType
-// @ requires s.InitPathPool()
-// @ ensures  res != nil && err == nil
-// @ ensures  pathType == 0 ==> (typeOf(res) == type[empty.Path] && s.InitPathPool())
-// @ ensures  0 < pathType  ==> (
-// @ 	res.NonInitMem() &&
-// @ 	s.InitPathPoolExceptOne(pathType) &&
-// @ 	(pathType < s.lenPathPool(pathType) ==> res === s.elemPathPool(pathType)) &&
-// @	(s.lenPathPool(pathType) <= pathType ==> res === s.pathPoolRawPath(pathType)))
-// @ ensures  err == nil
+// @ requires  acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+// @ requires  PathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ requires  0 <= pathType && pathType < path.MaxPathType
+// @ ensures   acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+// @ ensures   err == nil ==> res != nil
+// @ ensures   err == nil ==> res.NonInitMem()
+// @ ensures   (err == nil && !s.pathPoolInitialized()) ==> PathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ ensures   (err == nil && s.pathPoolInitialized())  ==> (
+// @ 	PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
+// @    res === s.getPathPure(pathType))
+// @ ensures   err != nil ==> (PathPoolMem(s.pathPool, s.pathPoolRaw) && err.ErrorMem())
 // @ decreases
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
-	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
-	//                 path.Type is defined as an uint8.
-	// @ assume 0 <= pathType
-	// @ unfold s.InitPathPool()
+	// @ unfold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	if s.pathPool == nil {
-		// @ def.Unreachable()
+		// @ ghost defer fold PathPoolMem(s.pathPool, s.pathPoolRaw)
+		// @ EstablishPathPkgMem()
 		return path.NewPath(pathType)
 	}
 	if int(pathType) < len(s.pathPool) {
 		tmp := s.pathPool[pathType]
 		// @ ghost if 0 < pathType {
-		// @ 	fold   s.InitPathPoolExceptOne(pathType)
+		// @ 	fold   PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 		// @ 	assert tmp.NonInitMem()
 		// @ } else {
-		// @ 	fold s.InitPathPool()
+		// @ 	fold PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
+		// @ 	fold tmp.NonInitMem()
 		// @ }
 		return tmp, nil
 	}
 	tmp := s.pathPoolRaw
-	// @ fold   s.InitPathPoolExceptOne(pathType)
+	// @ fold   PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 	// @ assert tmp.NonInitMem()
 	return tmp, nil
 }
 
-// @ trusted
-// @ requires false
-func decodeSCION(data []byte, pb gopacket.PacketBuilder) error {
+// @ requires  pb != nil
+// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves pb.Mem()
+// @ ensures   res != nil ==> res.ErrorMem()
+// @ decreases
+func decodeSCION(data []byte, pb gopacket.PacketBuilder) (res error) {
 	scn := &SCION{}
+	// @ fold PathPoolMem(scn.pathPool, scn.pathPoolRaw)
+	// @ fold scn.NonInitMem()
 	err := scn.DecodeFromBytes(data, pb)
 	if err != nil {
 		return err
 	}
 	pb.AddLayer(scn)
 	pb.SetNetworkLayer(scn)
-	return pb.NextDecoder(scionNextLayerType(scn.NextHdr))
+	nextTmp := scionNextLayerType( /*@ unfolding scn.Mem(data) in @*/ scn.NextHdr)
+	// @ fold nextTmp.Mem()
+	return pb.NextDecoder(nextTmp)
 }
 
 // scionNextLayerType returns the layer type for the given protocol identifier
@@ -619,6 +629,7 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr) + 12))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (!isIPv4(dst) && !isIPv6(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
+// @ ensures   (res == nil) == (typeOf(dst) == type[*net.IPAddr] || typeOf(dst) == type[addr.HostSVC])
 // @ decreases
 func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res error) {
 	var err error
@@ -655,8 +666,9 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr) + 12))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (!isIPv4(src) && !isIPv6(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
+// @ ensures   (res == nil) == (typeOf(src) == type[*net.IPAddr] || typeOf(src) == type[addr.HostSVC])
 // @ decreases
-func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/ ) (res error) {
+func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error) {
 	var err error
 	var verScionTmp []byte
 	s.SrcAddrType, verScionTmp, err = packAddr(src /*@ , wildcard @*/)
@@ -725,6 +737,7 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b) + 12))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
+// @ ensures   (err == nil) == (typeOf(hostAddr) == type[*net.IPAddr] || typeOf(hostAddr) == type[addr.HostSVC])
 // @ decreases
 func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType, b []byte, err error) {
 	switch a := hostAddr.(type) {

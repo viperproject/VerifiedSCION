@@ -1,4 +1,4 @@
-// Copyright 2022 ETH Zurich
+// Copyright 2022-2023 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,32 +14,12 @@
 
 // +gobra
 
-package onehop
-
-import (
-	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/verification/utils/slices"
-)
-
-pred (o *Path) NonInitMem() {
-	acc(o)
-}
-
-pred (o *Path) Mem(ubuf []byte) {
-	acc(&o.Info) &&
-	o.FirstHop.Mem() &&
-	o.SecondHop.Mem()
-}
+package seqs
 
 ghost
-requires p.Mem(buf)
-ensures  p.NonInitMem()
-decreases
-func (p *Path) DowngradePerm(buf []byte) {
-	unfold p.Mem(buf)
-	unfold p.FirstHop.Mem()
-	unfold p.SecondHop.Mem()
-	fold  p.NonInitMem()
-}
-
-(*Path) implements path.Path
+pure
+requires 0 <= n
+ensures  len(res) == n
+ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> !res[i]
+decreases _
+func NewSeqBool(n int) (res seq[bool])
