@@ -1023,10 +1023,19 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 
 	ifID := uint16(0)
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
+
+	// (VerifiedSCION) establish ability to use range loops
+	// @ assert acc(&p.d.internalNextHops, _)
+	// @ inhale acc(&p.d.internalNextHops, def.ReadL20)
+
+	// @ ghost m := p.d.internalNextHops
 	// @ invariant acc(&p.d, def.ReadL20)
 	// @ invariant acc(&p.d.internalNextHops, _)
-	// @ invariant acc(p.d.internalNextHops, _)
-	for k, v := range p.d.internalNextHops /*@ with i0 @*/ {
+	// @ invariant m != nil ==> acc(m, def.ReadL20)
+	// @ invariant forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
+	//  invariant m != nil ==> forall key uint16 :: { m[key] } key in domain(m) ==> acc(AccAddrInjective(m[key], key), _)
+	// @ decreases len(m) - len(keys)
+	for k, v := range p.d.internalNextHops /*@ with keys @*/ {
 		// @ assume false
 		if bytes.Equal(v.IP, p.srcAddr.IP) && v.Port == p.srcAddr.Port {
 			ifID = k
@@ -1034,6 +1043,9 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 		}
 	}
 	// @ assume false
+	// (VerifiedSCION) clean-up code to deal with range loop
+	// @ exhale acc(&p.d.internalNextHops, def.ReadL20)
+	// @ assert acc(&p.d.internalNextHops, _)
 
 	if v, ok := p.d.bfdSessions[ifID]; ok {
 		v.ReceiveMessage(bfd /*@ , data @*/)

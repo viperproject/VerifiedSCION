@@ -79,6 +79,16 @@ pred AccAddr(addrs map[uint16]*net.UDPAddr) {
 	acc(addrs, 1/2) &&
 	forall a *net.UDPAddr :: { a in range(addrs) } a in range(addrs) ==> acc(a.Mem(), _)
 }
+/*
+pred AccAddr(addrs map[uint16]*net.UDPAddr) {
+	acc(addrs, 1/2) &&
+	forall key uint16 :: { addrs[key] } key in domain(addrs) ==> acc(AccAddrInjective(addrs[key], key), _)
+}
+
+pred AccAddrInjective(a *net.UDPAddr, key uint16) {
+	a.Mem()
+}
+*/
 
 pred AccBatchConn(batchConns map[uint16]BatchConn) {
 	acc(batchConns, 1/2) &&
