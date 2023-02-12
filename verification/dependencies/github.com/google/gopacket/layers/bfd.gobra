@@ -209,4 +209,10 @@ func (d *BFD) Payload() (res []byte) {
 	return nil
 }
 
+ghost
+requires d.Mem(ub)
+ensures  d.NonInitMem()
+decreases
+func (d *BFD) DowngradePerm(ghost ub []byte)
+
 (*BFD) implements gopacket.SerializableLayer

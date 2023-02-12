@@ -100,6 +100,8 @@ type bfdSession interface {
 	Run(ctx context.Context) (err error)
 	// @ requires acc(Mem(), _)
 	// @ requires msg.Mem(ub)
+	// @ requires slices.AbsSlice_Bytes(ub, 0, len(ub))
+	// @ ensures  msg.NonInitMem() // an implementation must copy the fields it needs from msg
 	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
 	// @ requires acc(Mem(), _)
 	IsUp() bool
@@ -892,18 +894,16 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires acc(&p.ingressID)
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
 // @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
 // @ requires acc(&p.srcAddr) && acc(&p.lastLayer)
 // @ requires p.buffer != nil && p.buffer.Mem()
 // @ requires p.mac != nil && p.mac.Mem()
 // @ requires acc(srcAddr.Mem(), _)
+// @ requires p.bfdLayer.NonInitMem()
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
-// TODO:
-//
-//	ensure every resource that appears in the precondition
-//
-// @ decreases
+// TODO: ensure every resource that appears in the precondition
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error) {
 
@@ -929,13 +929,18 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	} else {
 		if offsets[lastLayerIdx].isNil {
 			ub = nil
+			sl.NilAcc_Bytes()
 		} else {
 			o := offsets[lastLayerIdx]
 			ub = p.rawPkt[o.start:o.end]
+			sl.SplitRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		}
 	}
 	@*/
+	// @ assert sl.AbsSlice_Bytes(ub, 0, len(ub))
 	pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ub @*/ )
+	// @ sl.SplitRange_Bytes(ub, start, end, writePerm)
+	// @ sl.NilAcc_Bytes()
 
 	pathType := /*@ unfolding p.scionLayer.Mem(rawPkt) in @*/ p.scionLayer.PathType
 	switch pathType {
@@ -956,7 +961,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 				// @ establishMemMalformedPath()
 				return processResult{}, malformedPath
 			}
-			// @ def.TODO()
 			return processResult{}, p.processInterBFD(ohp, pld)
 		}
 		// @ def.TODO()
@@ -973,27 +977,37 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	}
 }
 
-// @ trusted
-// @ requires false
-// @ requires acc(&p.d, def.ReadL20)
-// @ requires acc(MutexInvariant!<p.d!>(), _)
-// @ ensures  acc(&p.d, def.ReadL20)
-// @ decreases
-func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) error {
+// @ requires  acc(&p.d, def.ReadL20)
+// @ requires  acc(&p.ingressID, def.ReadL20)
+// @ requires  acc(MutexInvariant!<p.d!>(), _)
+// @ requires  p.bfdLayer.NonInitMem()
+// @ requires  slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   acc(&p.ingressID, def.ReadL20)
+// @ ensures   p.bfdLayer.NonInitMem()
+// @ ensures   err != nil ==> err.ErrorMem()
+func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (err error) {
+	// @ unfold acc(MutexInvariant!<p.d!>(), _)
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
+		// @ establishMemNoBFDSessionConfigured()
 		return noBFDSessionConfigured
 	}
 
 	bfd := &p.bfdLayer
+	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := bfd.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return err
 	}
 
 	if v, ok := p.d.bfdSessions[p.ingressID]; ok {
-		v.ReceiveMessage(bfd)
+		// @ assert v in range(p.d.bfdSessions)
+		v.ReceiveMessage(bfd /*@ , data @*/)
 		return nil
 	}
 
+	// @ bfd.DowngradePerm(data)
+	// @ establishMemNoBFDSessionFound()
 	return noBFDSessionFound
 }
 
