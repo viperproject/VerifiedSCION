@@ -1040,25 +1040,27 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission)
 	// @ ghost m := p.d.internalNextHops
 	// @ assert m != nil ==> acc(m, _)
-	// @ inhale m != nil ==> acc(m, def.ReadL20)
+	// @ inhale m != nil ==> acc(m, def.ReadL19)
 
-	// @ invariant acc(&p.d, def.ReadL20)
+	// @ invariant acc(&p.d, def.ReadL20/2)
 	// @ invariant acc(&p.d.internalNextHops, _)
 	// @ invariant m === p.d.internalNextHops
 	// @ invariant m != nil ==> acc(m, def.ReadL20)
+	// @ invariant m != nil ==> forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
 	// @ invariant acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
-	// @ invariant forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
 	for k, v := range p.d.internalNextHops /*@ with keys @*/ {
 		// (VerifiedSCION) assumption to deal with the insufficient encoding of
 		// ranging over a map
 		// @ assert acc(&p.d.internalNextHops, _)
 		// @ assume p.d.internalNextHops != nil
 		// @ assume 0 < len(p.d.internalNextHops)
-		// @ assert v === p.d.internalNextHops[k]
-		// @ assert v in range(p.d.internalNextHops)
+		// @ assume v in range(p.d.internalNextHops)
+		// @ assume v === p.d.internalNextHops[k]
+		// @ assert forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
+		// @ assert acc(v.Mem(), _)
 		// @ requires acc(v.Mem(), _)
 		// @ requires acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
-		// @ ensures  acc(&p.srcAddr, def.ReadL20)
+		// @ ensures  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
 		// @ outline(
 		// @ unfold acc(v.Mem(), _)
 		// @ unfold acc(slices.AbsSlice_Bytes(v.IP, 0, len(v.IP)), _)
@@ -1072,11 +1074,13 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 		}
 	}
 	// (VerifiedSCION) clean-up code to deal with range loop
-	// @ assert m != nil ==> acc(m, def.ReadL20)
 	// @ exhale m != nil ==> acc(m, def.ReadL20)
-	// @ assert m != nil ==> acc(m, _)
+	// @ inhale m != nil ==> acc(m, _)
 
+	// @ assert acc(&p.d.bfdSessions, _)
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
 	if v, ok := p.d.bfdSessions[ifID]; ok {
+		// @ assert v in range(p.d.bfdSessions)
 		v.ReceiveMessage(bfd /*@ , data @*/)
 		return nil
 	}
