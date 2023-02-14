@@ -12,11 +12,14 @@
 
 package bytes
 
+import sl "github.com/scionproto/scion/verification/utils/slices"
+
 // Equal reports whether a and b
 // are the same length and contain the same bytes.
 // A nil argument is equivalent to an empty slice.
-requires forall i int :: { &a[i] } 0 <= i && i < len(a) ==> acc(&a[i], _)
-requires forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], _)
+trusted
+requires acc(sl.AbsSlice_Bytes(a, 0, len(a)), _)
+requires acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
 decreases
 pure func Equal(a, b []byte) bool {
 	return string(a) == string(b)

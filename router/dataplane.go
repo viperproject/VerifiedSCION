@@ -110,6 +110,7 @@ type bfdSession interface {
 // BatchConn is a connection that supports batch reads and writes.
 // (VerifiedSCION) the spec of this interface exactly matches that of the same methods
 // in private/underlay/conn/Conn
+// TODO: better triggers, pass the permission to the underlying buffer?
 type BatchConn interface {
 	// @ pred Mem()
 
@@ -1063,9 +1064,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 		// @ ensures  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
 		// @ outline(
 		// @ unfold acc(v.Mem(), _)
-		// @ unfold acc(slices.AbsSlice_Bytes(v.IP, 0, len(v.IP)), _)
 		// @ unfold acc(p.srcAddr.Mem(), _)
-		// @ unfold acc(slices.AbsSlice_Bytes(p.srcAddr.IP, 0, len(p.srcAddr.IP)), _)
 		tmp := bytes.Equal(v.IP, p.srcAddr.IP) && v.Port == p.srcAddr.Port
 		// @ )
 		if tmp {
