@@ -947,7 +947,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	switch pathType {
 	case empty.PathType:
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
-			// @ def.TODO()
+			// @ assert p.bfdLayer.NonInitMem()
 			return processResult{}, p.processIntraBFD(pld)
 		}
 		// @ establishMemUnsupportedPathTypeNextHeader()
