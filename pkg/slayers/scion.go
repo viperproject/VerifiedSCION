@@ -288,7 +288,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
 		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
 		// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
-		// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* (b.Mem() && b.UBuf() === uSerBufN)
+		// @ b.RestoreMem(uSerBufN)
 		return err
 	}
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
@@ -301,7 +301,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
-	// @ apply sl.AbsSlice_Bytes(uSerBufN, 0, len(uSerBufN)) --* (b.Mem() && b.UBuf() === uSerBufN)
+	// @ b.RestoreMem(uSerBufN)
 	return tmp
 }
 
