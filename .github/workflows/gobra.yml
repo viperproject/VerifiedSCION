@@ -269,7 +269,6 @@ jobs:
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          chop: 10
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: '1'
           imageVersion: ${{ env.imageVersion }}
