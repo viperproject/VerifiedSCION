@@ -82,8 +82,7 @@ requires acc(&s.PathMeta.SegLen[2], _)
 requires acc(&s.NumINF, _)
 decreases
 pure func (s *Base) NumINFValue() (int) {
-	//return let p := s.PathMeta.SegLen in p[0] == 0 ? 0 : p[1] == 0 ? 1 : p[2] == 0 ? 2 : 3
-	return s.PathMeta.SegLen[2] > 0 ? 3 : s.PathMeta.SegLen[1] > 0 ? 2 : s.PathMeta.SegLen[0] > 0 ? 1 : 0
+	return let p := s.PathMeta.SegLen in p[2] > 0 ? 3 : p[1] > 0 ? 2 : p[0] > 0 ? 1 : 0
 }
 
 ghost

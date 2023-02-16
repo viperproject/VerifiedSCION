@@ -45,9 +45,3 @@ func AbsSlice_Any_test() {
 	fold AbsSlice_Any(s, 0, 10)
 	// assert false // fails
 }
-
-ghost
-requires size >= 0
-ensures len(res) == size
-ensures forall i int :: 0 <= i && i < size ==> res[i] == 0
-pure func NewSeq_Bytes(size int) (res seq[byte])
