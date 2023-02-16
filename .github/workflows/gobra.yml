@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2011-2020 ETH Zurich.
 
-name: Verify the specified codebase
+name: Verify the router and its dependencies
 
 on:
   push:
