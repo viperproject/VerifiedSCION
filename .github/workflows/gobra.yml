@@ -13,7 +13,7 @@ on:
   pull_request: # run this workflow on every pull_request
 
 jobs:
-  verify:
+  verify-deps:
     runs-on: ubuntu-latest
     env:
       headerOnly: 1
@@ -208,17 +208,6 @@ jobs:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
-      - name: Verify package 'router/'
-        uses: viperproject/gobra-action@main
-        with:
-          packages: 'router/'
-          timeout: 6h
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
       - name: Verify package 'router/bfd'
         uses: viperproject/gobra-action@main
         with:
@@ -247,3 +236,21 @@ jobs:
           name: stats_addr.json
           path: /stats/stats_addr.json
           if-no-files-found: error # could also be 'warn' or 'ignore'
+  verify-router:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'router/'
+          timeout: 6h
+          headerOnly: '1'
+          module: 'github.com/scionproto/scion'
+          includePaths: '. verification/dependencies'
+          assumeInjectivityOnInhale: '1'
+          chop: 10
+          checkConsistency: '1'
+          parallelizeBranches: '1'
+
