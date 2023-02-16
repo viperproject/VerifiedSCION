@@ -138,7 +138,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// @ unfold slices.AbsSlice_Bytes(bytes, 0, 2)
 	// @ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 
 	if opts.ComputeChecksums {
@@ -161,13 +161,13 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		bytes[3] = 0
 		// @ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 		// @ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-		// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+		// @ b.RestoreMem(underlyingBufRes)
 		// @ )
 		verScionTmp := b.Bytes()
 		// @ unfold s.scn.ChecksumMem()
 		s.Checksum, err = s.scn.computeChecksum(verScionTmp, uint8(L4SCMP))
 		// @ fold s.scn.ChecksumMem()
-		// @ apply slices.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)) --* (b.Mem() && b.UBuf() === verScionTmp)
+		// @ b.RestoreMem(verScionTmp)
 		if err != nil {
 			// @ fold s.Mem(ubufMem)
 			return err
@@ -189,7 +189,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	binary.BigEndian.PutUint16(bytes[2:], s.Checksum)
 	// @ fold slices.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 	// @ slices.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-	// @ apply slices.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	// @ fold s.Mem(ubufMem)
 	return nil
