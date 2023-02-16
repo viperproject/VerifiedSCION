@@ -57,7 +57,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	// (VerifiedSCION) Gobra expects a stronger contract for s.Len() when in fact
 	// what happens here is that we just call the same function in s.Base.
 	if minLen := s. /*@ Base. @*/ Len(); len(data) < minLen {
-		//@ apply s.Base.Mem() --* s.Base.NonInitMem()
+		//@ s.Base.DowngradePerm()
 		//@ fold s.NonInitMem()
 		return serrors.New("DecodedPath raw too short", "expected", minLen, "actual", int(len(data)))
 	}
