@@ -23,3 +23,10 @@ ensures  len(res) == n
 ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> !res[i]
 decreases _
 func NewSeqBool(n int) (res seq[bool])
+
+ghost
+requires size >= 0
+ensures len(res) == size
+ensures forall i int :: 0 <= i && i < size ==> res[i] == byte(0)
+decreases
+pure func NewSeqByte(size int) (res seq[byte])
