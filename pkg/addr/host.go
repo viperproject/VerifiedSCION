@@ -93,12 +93,12 @@ type HostAddr interface {
 	Type() HostAddrType
 
 	//@ requires acc(Mem(), definitions.ReadL13)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
+	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
 	//@ decreases
 	Pack() (res []byte)
 
 	//@ requires acc(Mem(), definitions.ReadL13)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
+	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
 	//@ decreases
 	IP() (res net.IP)
 
@@ -183,14 +183,14 @@ func (h HostIPv4) Type() HostAddrType {
 }
 
 // @ requires acc(h.Mem(), definitions.ReadL13)
-// @ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
+// @ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
 // @ decreases
 func (h HostIPv4) Pack() (res []byte) {
 	return []byte(h.IP())
 }
 
 // @ requires acc(h.Mem(), definitions.ReadL13)
-// @ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13) && &res[i] == &h[i]
+// @ ensures forall i int :: { &res[i] }{ &h[i] } 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13) && &res[i] == &h[i]
 // @ ensures len(res) == HostLenIPv4
 // @ decreases
 func (h HostIPv4) IP() (res net.IP) {
@@ -259,7 +259,7 @@ func (h HostIPv6) Pack() (res []byte) {
 }
 
 // @ requires acc(h.Mem(), definitions.ReadL13)
-// @ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13) && &res[i] == &h[i]
+// @ ensures forall i int :: { &res[i] }{ &h[i] } 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13) && &res[i] == &h[i]
 // @ ensures len(res) == HostLenIPv6
 // @ decreases
 func (h HostIPv6) IP() (res net.IP) {
@@ -440,7 +440,7 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		if len(b) < HostLenIPv4 {
 			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
-		//@ assert forall i int :: 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
+		//@ assert forall i int :: { &b[:HostLenIPv4][i] } 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
 		tmp := HostIPv4(b[:HostLenIPv4])
 		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
 		//@ fold tmp.Mem()
@@ -449,7 +449,7 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		if len(b) < HostLenIPv6 {
 			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
-		//@ assert forall i int :: 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
+		//@ assert forall i int :: { &b[:HostLenIPv4][i] } 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
 		tmp := HostIPv6(b[:HostLenIPv6])
 		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
 		//@ fold tmp.Mem()
