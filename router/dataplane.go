@@ -1014,12 +1014,11 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 
 // @ requires  acc(&p.d, def.ReadL20)
 // @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
-// @ requires  acc(&p.bfdLayer, def.ReadL20) && p.bfdLayer.NonInitMem()
+// @ requires  p.bfdLayer.NonInitMem()
 // @ requires  acc(MutexInvariant!<p.d!>(), _)
 // @ requires  slices.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   acc(&p.d, def.ReadL20)
 // @ ensures   acc(&p.srcAddr, def.ReadL20)
-// @ ensures   acc(&p.bfdLayer, def.ReadL20)
 // @ ensures   res != nil ==> res.ErrorMem()
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
@@ -1050,24 +1049,12 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ invariant m != nil ==> forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
 	// @ invariant acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
 	for k, v := range p.d.internalNextHops /*@ with keys @*/ {
-		// (VerifiedSCION) assumption to deal with the insufficient encoding of
-		// ranging over a map
 		// @ assert acc(&p.d.internalNextHops, _)
-		// @ assume p.d.internalNextHops != nil
-		// @ assume 0 < len(p.d.internalNextHops)
-		// @ assume v in range(p.d.internalNextHops)
-		// @ assume v === p.d.internalNextHops[k]
 		// @ assert forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
 		// @ assert acc(v.Mem(), _)
-		// @ requires acc(v.Mem(), _)
-		// @ requires acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
-		// @ ensures  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
-		// @ outline(
 		// @ unfold acc(v.Mem(), _)
 		// @ unfold acc(p.srcAddr.Mem(), _)
-		tmp := bytes.Equal(v.IP, p.srcAddr.IP) && v.Port == p.srcAddr.Port
-		// @ )
-		if tmp {
+		if bytes.Equal(v.IP, p.srcAddr.IP) && v.Port == p.srcAddr.Port {
 			ifID = k
 			break
 		}
