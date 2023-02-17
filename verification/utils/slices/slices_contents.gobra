@@ -16,7 +16,8 @@
 
 package slices
 
-This file contains predicates for describing the contents of slices and functions that manipulate the knowledge in those predicates. 
+// This file contains predicates for describing the contents of slices and
+// functions that manipulate the knowledge in those predicates. 
 
 // How to extend this file:
 // - if we need to support slices of non-supported types, we must repeat all definitions
