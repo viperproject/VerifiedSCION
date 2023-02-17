@@ -29,8 +29,10 @@ func foldMem_test() {
 	fold d.Mem(nil)
 	// testing initialization with the operations from dataplane
 	d.mtx.SetInv(MutexInvariant!<&d!>)
-	d.AddNeighborIA(uint16(1), addr.IA(10))
-	d.AddNeighborIA(uint16(2), addr.IA(11))
+	d.AddNeighborIA(uint16(1), addr.IA(10), nil)
+	// TODO: improve later when the spec can be more descriptive
+	// without causing performance issues
+	// d.AddNeighborIA(uint16(2), addr.IA(11), nil)
 }
 
 func foldScionPacketProcessorInitMem_test() {

@@ -98,7 +98,7 @@ pure
 requires acc(d.Mem(key), _)
 decreases
 func (d *DataPlane) AlreadyRegisteredExternalInterface(ifID uint16, key *[]byte) bool {
-	return unfolding acc(d.Mem(key), _) in (d.external != nil? (unfolding AccBatchConn(d.external) in (ifID in domain(d.external))) : false)
+	return unfolding acc(d.Mem(key), _) in (d.external != nil? (unfolding acc(AccBatchConn(d.external), _) in (ifID in domain(d.external))) : false)
 }
 
 ghost
@@ -115,6 +115,14 @@ requires acc(d.Mem(key), _)
 decreases
 func (d *DataPlane) IsRunning(key *[]byte) bool {
 	return unfolding acc(d.Mem(key), _) in d.running
+}
+
+ghost
+pure
+requires acc(d.Mem(key), _)
+decreases
+func (d *DataPlane) RegisteredIfcNeighborIA(key *[]byte) set[uint16] {
+	return unfolding acc(d.Mem(key), _) in domain(d.neighborIAs)
 }
 
 // TODO: reorganize permissions consistently

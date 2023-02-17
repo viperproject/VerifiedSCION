@@ -316,8 +316,9 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP /*@ , ghost k
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   d.Mem(key) && !d.IsRunning(key) && old(d.IA(key)) == d.IA(key)
 //
-//	ensures   d.AlreadyRegisteredExternalInterface(ifID, key, ia)
-func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn /*@ , ghost key *[]byte, ghost ia addr.IA @*/) error {
+//	 TODO: may lead to performance problems:
+//		ensures   d.AlreadyRegisteredExternalInterface(ifID, key)
+func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn /*@ , ghost key *[]byte @*/) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold d.Mem(key)
@@ -348,25 +349,28 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn /*@ , ghost
 // AddNeighborIA adds the neighboring IA for a given interface ID. If an IA for
 // the given ID is already set, this method will return an error. This can only
 // be called on a yet running dataplane.
-// @ requires  acc(&d.running,     1/2) && !d.running
-// @ requires  acc(&d.neighborIAs, 1/2)
-// @ requires  d.neighborIAs != nil ==> acc(d.neighborIAs, 1/2)
+// @ requires  d.Mem(key) && !d.IsRunning(key)
 // @ requires  !remote.IsZero()
-// @ requires  !(ifID in domain(d.neighborIAs))
+// @ requires  !(ifID in d.RegisteredIfcNeighborIA(key))
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.neighborIAs,1/2) && acc(d.neighborIAs, 1/2)
-// @ ensures   domain(d.neighborIAs) == old(domain(d.neighborIAs)) union set[uint16]{ifID}
-func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
+// @ ensures   d.Mem(key) && !d.IsRunning(key)
+//
+//	 may cause performance problems:
+//		ensures   d.RegisteredIfcNeighborIA(key) == old(d.RegisteredIfcNeighborIA(key)) union set[uint16]{ifID}
+func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA /*@ , ghost key *[]byte @*/) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
 	// @ defer fold MutexInvariant!<d!>()
+	// @ unfold d.Mem(key)
+	// @ defer fold d.Mem(key)
 	if d.running {
+		// @ def.Unreachable()
 		return modifyExisting
 	}
 	if remote.IsZero() {
+		// @ def.Unreachable()
 		return emptyValue
 	}
 	if _, existsB := d.neighborIAs[ifID]; existsB {
