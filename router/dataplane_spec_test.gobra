@@ -26,7 +26,7 @@ import (
 func foldMem_test() {
 	d@ := DataPlane{}
 	fold MutexInvariant!<&d!>()
-	fold d.Mem(false, nil, 0)
+	fold d.Mem(nil)
 	// testing initialization with the operations from dataplane
 	d.mtx.SetInv(MutexInvariant!<&d!>)
 	d.AddNeighborIA(uint16(1), addr.IA(10))

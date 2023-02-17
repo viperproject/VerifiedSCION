@@ -55,7 +55,7 @@ pred MutexInvariant(d *DataPlane) {
 	acc(&d.forwardingMetrics, MutexInvariantPerm)
 }
 
-pred (d *DataPlane) Mem(running bool, key *[]byte, ia addr.IA) {
+pred (d *DataPlane) Mem(key *[]byte) {
 	acc(&d.external,          MemPerm) &&
 	acc(&d.linkTypes,         MemPerm) &&
 	acc(&d.neighborIAs,       MemPerm) &&
@@ -70,11 +70,10 @@ pred (d *DataPlane) Mem(running bool, key *[]byte, ia addr.IA) {
 	acc(&d.Metrics,           MemPerm) &&
 	acc(&d.forwardingMetrics, MemPerm) &&
 	//
-	d.running == running                 &&
-	d.localIA == ia                      &&
 	(key == nil ==> d.macFactory == nil) &&
 	// TODO: simplify the following garbage
 	// TODO: move this to d.Mem(...) and drop all (now unnecessary) wildcards
+	// TODO: the transformations from --conditionalizeBranches myself
 	(d.external    != nil       ==> AccBatchConn(d.external))           &&
 	(d.linkTypes   != nil       ==> acc(d.linkTypes))                   &&
 	(d.neighborIAs != nil       ==> acc(d.neighborIAs))                 &&
@@ -84,9 +83,9 @@ pred (d *DataPlane) Mem(running bool, key *[]byte, ia addr.IA) {
 	(d.svc != nil               ==> d.svc.Mem())                        &&
 	// the following overlaps with MacFactoryOperational
 	(key           != nil       ==> (acc(key)                                     &&
-	                                acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _) &&
-	                                scrypto.ValidKeyForHash(*key)                 &&
-	                                d.macFactory implements MacFactorySpec{key})) &&
+									acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _) &&
+									scrypto.ValidKeyForHash(*key)                 &&
+									d.macFactory implements MacFactorySpec{key})) &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
 	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&
 	// The following permissions are enough to call all methods needed in fields
@@ -96,10 +95,26 @@ pred (d *DataPlane) Mem(running bool, key *[]byte, ia addr.IA) {
 
 ghost
 pure
-requires d.Mem(false, key, ia)
+requires acc(d.Mem(key), _)
 decreases
-func (d *DataPlane) AlreadyRegisteredExternalInterface(ifID uint16, key *[]byte, ia addr.IA) bool {
-	return unfolding d.Mem(false, key, ia) in (d.external != nil? (unfolding AccBatchConn(d.external) in (ifID in domain(d.external))) : false)
+func (d *DataPlane) AlreadyRegisteredExternalInterface(ifID uint16, key *[]byte) bool {
+	return unfolding acc(d.Mem(key), _) in (d.external != nil? (unfolding AccBatchConn(d.external) in (ifID in domain(d.external))) : false)
+}
+
+ghost
+pure
+requires acc(d.Mem(key), _)
+decreases
+func (d *DataPlane) IA(key *[]byte) addr.IA {
+	return unfolding acc(d.Mem(key), _) in d.localIA
+}
+
+ghost
+pure
+requires acc(d.Mem(key), _)
+decreases
+func (d *DataPlane) IsRunning(key *[]byte) bool {
+	return unfolding acc(d.Mem(key), _) in d.running
 }
 
 // TODO: reorganize permissions consistently

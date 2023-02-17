@@ -191,16 +191,18 @@ func (e scmpError) Error() string {
 }
 
 // SetIA sets the local IA for the dataplane.
-// @ requires  d.Mem(false, key, 0)
+// @ requires  d.Mem(key)
+// @ requires  !d.IsRunning(key) && d.IA(key) == 0
 // @ requires  !ia.IsZero()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   d.Mem(false, key, ia)
+// @ ensures   d.Mem(key)
+// @ ensures   !d.IsRunning(key) && d.IA(key) == ia
 // @ ensures   e == nil
 func (d *DataPlane) SetIA(ia addr.IA /*@ , ghost key *[]byte @*/) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold d.Mem(false, key, 0)
+	// @ unfold d.Mem(key)
 	if d.running {
 		// @ def.Unreachable()
 		return modifyExisting
@@ -216,23 +218,25 @@ func (d *DataPlane) SetIA(ia addr.IA /*@ , ghost key *[]byte @*/) (e error) {
 	// @ unfold MutexInvariant!<d!>()
 	d.localIA = ia
 	// @ fold MutexInvariant!<d!>()
-	// @ fold d.Mem(false, key, ia)
+	// @ fold d.Mem(key)
 	return nil
 }
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// @ requires  d.Mem(false, nil, ia)
+// @ requires  d.Mem(nil)
+// @ requires  !d.IsRunning(nil)
 // @ requires  len(key) > 0
 // @ requires  slices.AbsSlice_Bytes(key, 0, len(key))
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   res == nil ==> d.Mem(false, keyAddr, ia)
-func (d *DataPlane) SetKey(key []byte /*@ , ghost ia addr.IA @*/) (res error /*@ , ghost keyAddr *[]byte @*/) {
+// @ ensures   res == nil ==> (
+// @	d.Mem(keyAddr) && !d.IsRunning(keyAddr) && old(d.IA(nil)) == d.IA(keyAddr))
+func (d *DataPlane) SetKey(key []byte) (res error /*@ , ghost keyAddr *[]byte @*/) {
 	// @ share key
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold d.Mem(false, nil, ia)
+	// @ unfold d.Mem(nil)
 	if d.running {
 		// @ def.Unreachable()
 		return modifyExisting /*@ , nil @*/
@@ -265,7 +269,7 @@ func (d *DataPlane) SetKey(key []byte /*@ , ghost ia addr.IA @*/) (res error /*@
 	// @ unfold MutexInvariant!<d!>()
 	d.macFactory = verScionTemp
 	// @ fold MutexInvariant!<d!>()
-	// @ fold d.Mem(false, keyAddr, ia)
+	// @ fold d.Mem(keyAddr)
 	return nil /*@ , &key @*/
 }
 
@@ -275,14 +279,15 @@ func (d *DataPlane) SetKey(key []byte /*@ , ghost ia addr.IA @*/) (res error /*@
 // dataplane.
 // @ requires  conn != nil && conn.Mem()
 // @ requires  ip.Mem()
-// @ preserves d.Mem(false, key, ia)
+// @ preserves d.Mem(key) && !d.IsRunning(key)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP /*@ , ghost key *[]byte, ghost ia addr.IA @*/) error {
+// @ ensures   old(d.IA(key)) == d.IA(key)
+func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP /*@ , ghost key *[]byte @*/) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold d.Mem(false, key, ia)
-	// @ defer fold d.Mem(false, key, ia)
+	// @ unfold d.Mem(key)
+	// @ defer fold d.Mem(key)
 	if d.running {
 		// @ def.Unreachable()
 		return modifyExisting
@@ -305,17 +310,17 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP /*@ , ghost k
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
 // @ requires  conn != nil && conn.Mem()
-// @ requires  d.Mem(false, key, ia)
-// @ requires  !d.AlreadyRegisteredExternalInterface(ifID, key, ia)
+// @ requires  d.Mem(key) && !d.IsRunning(key)
+// @ requires  !d.AlreadyRegisteredExternalInterface(ifID, key)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   d.Mem(false, key, ia)
+// @ ensures   d.Mem(key) && !d.IsRunning(key) && old(d.IA(key)) == d.IA(key)
 //
 //	ensures   d.AlreadyRegisteredExternalInterface(ifID, key, ia)
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn /*@ , ghost key *[]byte, ghost ia addr.IA @*/) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold d.Mem(false, key, ia)
+	// @ unfold d.Mem(key)
 	if d.running {
 		// @ def.Unreachable()
 		return modifyExisting
@@ -335,7 +340,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn /*@ , ghost
 	}
 	d.external[ifID] = conn
 	// @ fold AccBatchConn(d.external)
-	// @ fold d.Mem(false, key, ia)
+	// @ fold d.Mem(key)
 	// @ fold MutexInvariant!<d!>()
 	return nil
 }
