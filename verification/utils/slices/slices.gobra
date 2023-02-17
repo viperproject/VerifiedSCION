@@ -23,78 +23,6 @@ package slices
 // - For each type, there might be two different types of operations: those that keep track
 //   of contents (the name of the operation ends in "C"), and those who do not.
 
-/** Slices of Bytes with Contents **/
-pred AbsSliceC_Bytes(s []byte, start int, end int, ghost contents seq[byte]) {
-	// start inclusive
-	0 <= start &&
-	start < end &&
-	// end exclusive
-	end <= cap(s) &&
-	len(contents) == end - start &&
-	// Maybe, it is worth having different versions with
-	// different triggers, or using a different trigger
-	// than the one that is inferred.
-	forall i int :: start <= i && i < end ==> (acc(&s[i]) && s[i] == contents[i - start])
-}
-
-ghost
-requires AbsSliceC_Bytes(s, start, end, contents)
-requires start < idx && idx < end
-ensures  AbsSliceC_Bytes(s, start, idx, contents[:idx-start]) && AbsSliceC_Bytes(s, idx, end, contents[idx-start:])
-func SplitByIndexC_Bytes(s []byte, start int, end int, idx int, contents seq[byte]) {
-	unfold AbsSliceC_Bytes(s, start, end, contents)
-	assert len(contents) == end - start
-	fold   AbsSliceC_Bytes(s, start, idx, contents[:idx-start])
-	fold   AbsSliceC_Bytes(s, idx, end, contents[idx-start:])
-}
-
-ghost
-requires AbsSliceC_Bytes(s, start, idx, contents1)
-requires AbsSliceC_Bytes(s, idx,   end, contents2)
-ensures  AbsSliceC_Bytes(s, start, end, contents1 ++ contents2)
-func CombineAtIndexC_Bytes(s []byte, start int, end int, idx int, contents1 seq[byte], contents2 seq[byte]) {
-	unfold AbsSliceC_Bytes(s, start, idx, contents1)
-	unfold AbsSliceC_Bytes(s, idx,   end, contents2)
-	fold   AbsSliceC_Bytes(s, start, end, contents1 ++ contents2)
-}
-
-ghost
-requires AbsSliceC_Bytes(s, start, end, contents)
-// the following precondition convinces Gobra that
-// the slice operation is well-formed
-requires unfolding AbsSliceC_Bytes(s, start, end, contents) in true
-ensures  AbsSliceC_Bytes(s[start:end], 0, len(s[start:end]), contents)
-func ResliceC_Bytes(s []byte, start int, end int, contents seq[byte]) {
-	unfold AbsSliceC_Bytes(s, start, end, contents)
-	assert forall i int :: 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
-	fold  AbsSliceC_Bytes(s[start:end], 0, len(s[start:end]), contents)
-}
-
-/* TODO
-// The slice axiomatization is very incomplete.
-// The following body cannot be verified yet.
-ghost
-requires 0 <= start && start < end && end <= cap(s)
-requires len(s[start:end]) <= cap(s)
-requires AbsSliceC_Bytes(s[start:end], 0, len(s[start:end]), contents)
-ensures  AbsSliceC_Bytes(s, start, end, contents)
-func UnsliceC_Bytes(s []byte, start int, end int, contents seq[byte]) {
-	unfold AbsSliceC_Bytes(s[start:end], 0, len(s[start:end]), contents)
-	assert 0 <= start && start < end && end <= cap(s)
-	assert len(contents) == end - start
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i])
-	// failling assertion:
-	assert forall i int :: start <= i && i < end ==> acc(&s[i])
-	assert forall i int :: start <= i && i < end ==> s[i] == contents[i - start]
-	fold   AbsSliceC_Bytes(s, start, end, contents)
-}
-*/
-
-/** End of slices of Bytes with Contents **/
-
-/** Slices of Bytes without Contents **/
 pred AbsSlice_Bytes(s []byte, start int, end int) {
 	// start inclusive
 	0 <= start &&
@@ -102,6 +30,16 @@ pred AbsSlice_Bytes(s []byte, start int, end int) {
 	// end exclusive
 	end <= cap(s) &&
 	forall i int :: start <= i && i < end ==> acc(&s[i])
+}
+
+ghost
+requires 0 < p
+requires acc(AbsSliceC_Bytes(s, 0, len(s), contents), p)
+ensures  acc(AbsSlice_Bytes(s, 0, len(s)), p)
+decreases
+func GetAbsSlice_Bytes(s []byte, contents seq[byte], p perm) {
+	unfold acc(AbsSliceC_Bytes(s, 0, len(s), contents), p)
+	fold acc(AbsSlice_Bytes(s, 0, len(s)), p)
 }
 
 ghost
@@ -207,8 +145,6 @@ func NilAcc_Bytes() {
 	fold AbsSlice_Bytes(nil, 0, 0)
 }
 
-/** End of slices of Bytes without Contents **/
-
 /** Auxiliar definitions Any **/
 ghost
 requires size >= 0
@@ -221,35 +157,6 @@ pure func NewSeq_Any(size int) (res seq[any])
 // ResliceC_Any
 
 /** End of Auxiliar definitions Any **/
-
-/** Slices of Any with Contents **/
-
-// The elements in contents are required to be comparable
-pred AbsSliceC_Any(s []any, start int, end int, ghost contents seq[any]) {
-	// start inclusive
-	0 <= start &&
-	start < end &&
-	// end exclusive
-	end <= cap(s) &&
-	len(contents) == end - start &&
-	// Maybe, it is worth having different versions with
-	// different triggers, or using a different trigger
-	// than the one that is inferred.
-	forall i int :: start <= i && i < end ==> (acc(&s[i]) && s[i] === contents[i - start])
-}
-
-ghost
-requires AbsSliceC_Any(s, start, end, contents)
-requires start < idx && idx < end
-ensures  AbsSliceC_Any(s, start, idx, contents[:idx-start]) && AbsSliceC_Any(s, idx, end, contents[idx-start:])
-func SplitByIndexC_Any(s []any, start int, end int, idx int, contents seq[any]) {
-	unfold AbsSliceC_Any(s, start, end, contents)
-	assert len(contents) == end - start
-	fold   AbsSliceC_Any(s, start, idx, contents[:idx-start])
-	fold   AbsSliceC_Any(s, idx, end, contents[idx-start:])
-}
-
-/** End of slices of Any with Contents **/
 
 /** Slices of Any without Contents **/
 pred AbsSlice_Any(s []any, start int, end int) {
