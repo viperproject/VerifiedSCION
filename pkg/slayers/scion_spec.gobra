@@ -231,6 +231,22 @@ func (a AddrType) Has3Bits() (res bool) {
 }
 
 ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) UBPath(ub []byte) []byte {
+	return unfolding acc(s.Mem(ub), _) in ub[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) GetPath(ub []byte) path.Path {
+	return unfolding acc(s.Mem(ub), _) in s.Path
+}
+
+ghost
 requires acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
 requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 ensures  0 <= res

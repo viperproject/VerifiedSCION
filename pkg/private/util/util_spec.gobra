@@ -19,3 +19,8 @@
 // +gobra
 
 package util
+
+import "time"
+
+decreases
+func SecsToTime(t uint32) time.Time

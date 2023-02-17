@@ -1215,16 +1215,20 @@ func (p *scionPacketProcessor) packSCMP(
 	return processResult{OutPkt: rawSCMP}, err
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) parsePath() (processResult, error) {
+// @ preserves acc(&p.path, def.ReadL20)
+// @ preserves acc(&p.hopField) && acc(&p.infoField)
+// @ preserves acc(p.path.Mem(ub), def.ReadL1)
+// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL1)
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
 	var err error
-	p.hopField, err = p.path.GetCurrentHopField()
+	p.hopField, err = p.path.GetCurrentHopField( /*@ ub @*/ )
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
-	p.infoField, err = p.path.GetCurrentInfoField()
+	p.infoField, err = p.path.GetCurrentInfoField( /*@ ub @*/ )
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
@@ -1232,8 +1236,9 @@ func (p *scionPacketProcessor) parsePath() (processResult, error) {
 	return processResult{}, nil
 }
 
-// @ trusted
-// @ requires false
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ preserves acc(&p.hopField, def.ReadL20)
+// @ decreases
 func (p *scionPacketProcessor) validateHopExpiry() (processResult, error) {
 	expiration := util.SecsToTime(p.infoField.Timestamp).
 		Add(path.ExpTimeToDuration(p.hopField.ExpTime))
@@ -1241,18 +1246,26 @@ func (p *scionPacketProcessor) validateHopExpiry() (processResult, error) {
 	if !expired {
 		return processResult{}, nil
 	}
+	// @ def.TODO()
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		slayers.SCMPCodePathExpired,
-		&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer()},
+		&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 		serrors.New("expired hop", "cons_dir", p.infoField.ConsDir, "if_id", p.ingressID,
 			"curr_inf", p.path.PathMeta.CurrINF, "curr_hf", p.path.PathMeta.CurrHF),
 	)
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) validateIngressID() (processResult, error) {
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ preserves acc(&p.hopField, def.ReadL20)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ ensures   reserr == nil && p.infoField.ConsDir ==> (
+// @ 	p.ingressID == 0 || p.hopField.ConsIngress == p.ingressID)
+// @ ensures   reserr == nil && !p.infoField.ConsDir ==> (
+// @ 	p.ingressID == 0 || p.hopField.ConsEgress == p.ingressID)
+// @ decreases
+func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr error) {
 	pktIngressID := p.hopField.ConsIngress
 	errCode := slayers.SCMPCodeUnknownHopFieldIngress
 	if !p.infoField.ConsDir {
@@ -1260,10 +1273,11 @@ func (p *scionPacketProcessor) validateIngressID() (processResult, error) {
 		errCode = slayers.SCMPCodeUnknownHopFieldEgress
 	}
 	if p.ingressID != 0 && p.ingressID != pktIngressID {
+		// @ def.TODO()
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			errCode,
-			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer()},
+			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 			serrors.New("ingress interface invalid",
 				"pkt_ingress", pktIngressID, "router_ingress", p.ingressID),
 		)
@@ -1427,10 +1441,23 @@ func (p *scionPacketProcessor) currentInfoPointer() uint16 {
 		scion.MetaLen + path.InfoLen*int(p.path.PathMeta.CurrINF))
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) currentHopPointer() uint16 {
-	return uint16(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen() +
+// (VerifiedSCION) This could probably be made pure, but it is likely not beneficial, nor needed
+// to expose the body of this function at the moment.
+// @ requires acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ requires acc(&p.path, def.ReadL20)
+// @ requires p.path == p.scionLayer.GetPath(ubScionL)
+// @ ensures  acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ ensures  acc(&p.path, def.ReadL20)
+// @ decreases
+func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ ) uint16 {
+	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL20/2)
+	// @ defer  fold acc(p.scionLayer.Mem(ubScionL), def.ReadL20/2)
+	// @ unfold acc(p.scionLayer.Path.Mem(ubPath), def.ReadL20/2)
+	// @ defer  fold acc(p.scionLayer.Path.Mem(ubPath), def.ReadL20/2)
+	// @ unfold acc(p.scionLayer.Path.(*scion.Raw).Base.Mem(), def.ReadL20/2)
+	// @ defer  fold acc(p.scionLayer.Path.(*scion.Raw).Base.Mem(), def.ReadL20/2)
+	return uint16(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen( /*@ ubScionL, false @*/ ) +
 		scion.MetaLen + path.InfoLen*p.path.NumINF + path.HopLen*int(p.path.PathMeta.CurrHF))
 }
 
@@ -1656,12 +1683,15 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 	return p.packSCMP(slayers.SCMPTypeTracerouteReply, 0, &scmpP, nil)
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) validatePktLen() (processResult, error) {
+// @ preserves acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ decreases
+func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (processResult, error) {
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+	// @ defer fold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
 	if int(p.scionLayer.PayloadLen) == len(p.scionLayer.Payload) {
 		return processResult{}, nil
 	}
+	// @ def.TODO()
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		slayers.SCMPCodeInvalidPacketSize,
@@ -1671,11 +1701,11 @@ func (p *scionPacketProcessor) validatePktLen() (processResult, error) {
 	)
 }
 
-// @ trusted
 // @ requires false
-func (p *scionPacketProcessor) process() (processResult, error) {
+// @ preserves acc(p)
+func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult, error) {
 
-	if r, err := p.parsePath(); err != nil {
+	if r, err := p.parsePath( /*@ ub @*/ ); err != nil {
 		return r, err
 	}
 	if r, err := p.validateHopExpiry(); err != nil {
@@ -1684,7 +1714,7 @@ func (p *scionPacketProcessor) process() (processResult, error) {
 	if r, err := p.validateIngressID(); err != nil {
 		return r, err
 	}
-	if r, err := p.validatePktLen(); err != nil {
+	if r, err := p.validatePktLen( /*@ nil @*/ ); err != nil {
 		return r, err
 	}
 	if r, err := p.validateTransitUnderlaySrc(); err != nil {
@@ -1759,7 +1789,7 @@ func (p *scionPacketProcessor) process() (processResult, error) {
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		errCode,
-		&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer()},
+		&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 		cannotRoute,
 	)
 }
