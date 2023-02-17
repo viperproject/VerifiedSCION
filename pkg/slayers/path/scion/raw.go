@@ -47,7 +47,7 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	// happens here is that we just call the same function in s.Base.
 	pathLen := s. /*@ Base. @*/ Len()
 	if len(data) < pathLen {
-		//@ apply s.Base.Mem() --* s.Base.NonInitMem()
+		//@ s.Base.DowngradePerm()
 		//@ fold s.NonInitMem()
 		return serrors.New("RawPath raw too short", "expected", pathLen, "actual", int(len(data)))
 	}

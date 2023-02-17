@@ -284,9 +284,9 @@ type PktID struct {
 // @ decreases
 func (i *PktID) DecodeFromBytes(raw []byte) {
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
-	//@ assert forall i int :: 0 <= i && i < 4 ==> &raw[:4][i] == &raw[i]
+	//@ assert forall i int :: { &raw[:4][i] } 0 <= i && i < 4 ==> &raw[:4][i] == &raw[i]
 	i.Timestamp = binary.BigEndian.Uint32(raw[:4])
-	//@ assert forall i int :: 0 <= i && i < 4 ==> &raw[4:8][i] == &raw[4 + i]
+	//@ assert forall i int :: { &raw[4:8][i] } 0 <= i && i < 4 ==> &raw[4:8][i] == &raw[4 + i]
 	i.Counter = binary.BigEndian.Uint32(raw[4:8])
 	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
 }
@@ -298,9 +298,9 @@ func (i *PktID) DecodeFromBytes(raw []byte) {
 // @ decreases
 func (i *PktID) SerializeTo(b []byte) {
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
-	//@ assert forall j int :: 0 <= 4 ==> &b[:4][j] == &b[j]
+	//@ assert forall j int :: { &b[:4][j] } 0 <= 4 ==> &b[:4][j] == &b[j]
 	binary.BigEndian.PutUint32(b[:4], i.Timestamp)
-	//@ assert forall j int :: 0 <= 4 ==> &b[4:8][j] == &b[4 + j]
+	//@ assert forall j int :: { &b[4:8][j] } 0 <= 4 ==> &b[4:8][j] == &b[4 + j]
 	binary.BigEndian.PutUint32(b[4:8], i.Counter)
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 }

@@ -47,7 +47,7 @@ ghost const MaxPathType = maxPathType
 pred PathPackageMem() {
 	acc(&registeredPaths) &&
 	acc(&strictDecoding) &&
-	forall t Type :: (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==> registeredPaths[t].Metadata.New implements NewPathSpec
+	forall t Type :: { &registeredPaths[t].inUse } (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==> registeredPaths[t].Metadata.New implements NewPathSpec
 }
 
 ghost
