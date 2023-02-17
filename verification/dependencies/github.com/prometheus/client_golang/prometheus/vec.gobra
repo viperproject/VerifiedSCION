@@ -17,6 +17,8 @@
 
 package prometheus
 
+import def "github.com/scionproto/scion/verification/utils/definitions"
+
 // MetricVec is a Collector to bundle metrics of the same name that differ in
 // their label values. MetricVec is not used directly but as a building block
 // for implementations of vectors of a given metric type, like GaugeVec,
@@ -31,14 +33,10 @@ package prometheus
 // add the convenience methods WithLabelValues, With, and MustCurryWith, which
 // panic instead of returning errors. See also the MetricVec example.
 type MetricVec struct {
-	// (VerifiedSCION) commented out some private fields
-	// *metricMap
-	// curry []curriedLabelValue
+    privateFields def.PrivateField
 	// hashAdd and hashAddByte can be replaced for testing collision handling.
 	hashAdd     func(h uint64, s string) uint64
 	hashAddByte func(h uint64, b byte) uint64
 }
 
-pred (m MetricVec) Mem() {
-	true
-}
+pred (m MetricVec) Mem()

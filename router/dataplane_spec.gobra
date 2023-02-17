@@ -82,12 +82,13 @@ pred (d *DataPlane) Mem(key *[]byte) {
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
 	(d.svc != nil               ==> d.svc.Mem())                        &&
 	// the following overlaps with MacFactoryOperational
-	(key           != nil       ==> (acc(key)                                     &&
-									acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _) &&
-									scrypto.ValidKeyForHash(*key)                 &&
-									d.macFactory implements MacFactorySpec{key})) &&
+	(key           != nil       ==> (
+		acc(key)                                      &&
+		acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _) &&
+		scrypto.ValidKeyForHash(*key)                 &&
+		d.macFactory implements MacFactorySpec{key}))                   &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
-	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&
+	(d.Metrics != nil           ==> d.Metrics.Mem())                    &&
 	// The following permissions are enough to call all methods needed in fields
 	// of forwardingMetrics
 	(d.forwardingMetrics != nil ==> AccForwardingMetrics(d.forwardingMetrics))
@@ -125,12 +126,18 @@ func (d *DataPlane) RegisteredIfcNeighborIA(key *[]byte) set[uint16] {
 	return unfolding acc(d.Mem(key), _) in domain(d.neighborIAs)
 }
 
-// TODO: reorganize permissions consistently
+ghost
+pure
+requires acc(d.Mem(key), _)
+decreases
+func (d *DataPlane) RegisteredIfcLinkType(key *[]byte) set[uint16] {
+	return unfolding acc(d.Mem(key), _) in domain(d.linkTypes)
+}
 
 // TODO: use lower case for these predicates' names?
 pred AccAddr(addrs map[uint16]*net.UDPAddr) {
-	acc(addrs, 1/2) &&
-	forall a *net.UDPAddr :: a in range(addrs) ==> acc(a.Mem(), _)
+	acc(addrs) &&
+	forall a *net.UDPAddr :: a in range(addrs) ==> a.Mem()
 }
 
 pred AccBatchConn(batchConns map[uint16]BatchConn) {
@@ -139,13 +146,13 @@ pred AccBatchConn(batchConns map[uint16]BatchConn) {
 }
 
 pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
-	acc(bfdSessions, 1/2) &&
-	forall bfd bfdSession :: bfd in range(bfdSessions) ==> (bfd != nil && acc(bfd.Mem(), _))
+	acc(bfdSessions) &&
+	forall bfd bfdSession :: bfd in range(bfdSessions) ==> bfd != nil && acc(bfd.Mem(), _)
 }
 
 pred AccForwardingMetrics(metrics map[uint16]forwardingMetrics) {
-	acc(metrics, 1/2) &&
-	forall id uint16 :: { metrics[id] } id in domain(metrics) ==> acc(forwardingMetricsMem(metrics[id], id), _)
+	acc(metrics) &&
+	forall id uint16 :: { metrics[id] } id in domain(metrics) ==> forwardingMetricsMem(metrics[id], id)
 }
 
 pred forwardingMetricsMem(v forwardingMetrics, ignoredForInjectivity uint16) {
@@ -165,17 +172,12 @@ pred forwardingMetricsNonInjectiveMem(v forwardingMetrics) {
 }
 
 ghost
-requires  acc(forwardingMetricsNonInjectiveMem(v), _)
-ensures   acc(forwardingMetricsMem(v, id), _)
+requires  forwardingMetricsNonInjectiveMem(v)
+ensures   forwardingMetricsMem(v, id)
 decreases
 func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
-	unfold acc(forwardingMetricsNonInjectiveMem(v), _)
-	fold acc(forwardingMetricsMem(v, id), _)
-}
-
-// useful for hidding permissions to avoid incompletenesses of Gobra
-pred (d *DataPlane) HalfLinkTypes() {
-	acc(&d.linkTypes, 1/2) && (d.linkTypes != nil ==> acc(d.linkTypes, 1/2))
+	unfold forwardingMetricsNonInjectiveMem(v)
+	fold forwardingMetricsMem(v, id)
 }
 
 pred (p *scionPacketProcessor) initMem() {
@@ -204,11 +206,6 @@ requires scrypto.ValidKeyForHash(*key)
 ensures  res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
-
-// useful to deal with incompletnesses
-pred hideLocalIA(p *addr.IA) {
-	acc(p)
-}
 
 pred (err scmpError) ErrorMem() {
 	err.Cause != nil ==> err.Cause.ErrorMem()

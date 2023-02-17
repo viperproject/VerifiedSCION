@@ -38,14 +38,14 @@ type Counter interface {
 
 	// Inc increments the counter by 1. Use Add to increment it by arbitrary
 	// non-negative values.
-	preserves acc(Mem(), _)
+	preserves Mem()
 	decreases
 	Inc()
 
 	// Add adds the given value to the counter. It panics if the value is <
 	// 0.
-	requires float64(0) <= v
-	preserves acc(Mem(), _)
+	requires  float64(0) <= v
+	preserves Mem()
 	decreases
 	Add(v float64)
 }
@@ -67,9 +67,15 @@ type CounterVec struct {
 	*MetricVec
 }
 
-pred (c *CounterVec) Mem() {
-	acc(&c.MetricVec) && (c.MetricVec != nil ==> acc(c.MetricVec) && c.MetricVec.Mem())
-}
+pred (c *CounterVec) Mem()
+
+// The prometheus reference implementation of Counter ensures thread-safety.
+// Thus, we consider its invariant to be duplicable.
+ghost
+preserves c.Mem()
+ensures   c.Mem()
+decreases _
+func (c *CounterVec) DupMem()
 
 // NewCounterVec creates a new CounterVec based on the provided CounterOpts and
 // partitioned by the given label names.
@@ -83,9 +89,9 @@ func NewCounterVec(opts CounterOpts, labelNames []string) (c *CounterVec)
 // With works as GetMetricWith, but panics where GetMetricWithLabels would have
 // returned an error. Not returning an error allows shortcuts like
 //     myVec.With(prometheus.Labels{"code": "404", "method": "GET"}).Add(42)
-preserves acc(v.Mem(), _)
+preserves v.Mem()
 preserves acc(labels, _)
 ensures   c != nil
-ensures   acc(c.Mem(), _)
+ensures   c.Mem()
 decreases _
 func (v *CounterVec) With(labels Labels) (c Counter)
