@@ -67,6 +67,8 @@ import (
 	"github.com/scionproto/scion/router/control"
 	// @ def "github.com/scionproto/scion/verification/utils/definitions"
 	// @ "github.com/scionproto/scion/verification/utils/slices"
+	// @ sl "github.com/scionproto/scion/verification/utils/slices"
+	// @ "github.com/scionproto/scion/verification/utils/seqs"
 )
 
 const (
@@ -97,8 +99,8 @@ type bfdSession interface {
 	// @ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
 	// @ requires acc(Mem(), _)
-	// @ requires msg.Mem()
-	ReceiveMessage(msg *layers.BFD)
+	// @ requires msg.Mem(ub)
+	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
 	// @ requires acc(Mem(), _)
 	IsUp() bool
 }
@@ -455,9 +457,13 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	return control.InterfaceUp
 }
 
-// (VerifiedSCION) marked as trusted, otherwise we need to support bfd.Session
+// (VerifiedSCION) marked as trusted because we currently do not support bfd.Session
 // @ trusted
-// @ requires false
+// @ requires  acc(metrics.PacketsSent.Mem(), _) && acc(metrics.PacketsReceived.Mem(), _)
+// @ requires  acc(metrics.Up.Mem(), _) && acc(metrics.StateChanges.Mem(), _)
+// @ preserves MutexInvariant!<d!>()
+// @ requires  s.Mem()
+// @ decreases
 func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 	metrics bfd.Metrics) error {
 
@@ -841,8 +847,7 @@ type processResult struct {
 func newPacketProcessor(d *DataPlane, ingressID uint16 /*@ , ghost key *[]byte @*/) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
 	// @ unfold acc(d.MacFactoryOperational(key), _)
-	// @ ghost var ubuf []byte
-	verScionTmp /*@, ubuf @*/ = gopacket.NewSerializeBuffer()
+	verScionTmp = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
@@ -853,15 +858,23 @@ func newPacketProcessor(d *DataPlane, ingressID uint16 /*@ , ghost key *[]byte @
 			epicInput:  make([]byte, libepic.MACBufferSize),
 		},
 	}
-	// @ fold p.scionLayer.NonInitPathPool()
+	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
+	// @ fold p.scionLayer.NonInitMem()
 	// @ fold p.initMem()
 	return p
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) reset() error {
+// @ preserves acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
+// @ preserves acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
+// @ preserves p.buffer != nil && p.buffer.Mem()
+// @ preserves p.mac != nil && p.mac.Mem()
+// @ ensures   p.rawPkt == nil && p.path == nil
+// @ ensures   p.hopField == path.HopField{} && p.infoField == path.InfoField{}
+// @ ensures   !p.segmentChange
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) reset() (err error) {
 	p.rawPkt = nil
 	//p.scionLayer // cannot easily be reset
 	p.path = nil
@@ -876,8 +889,17 @@ func (p *scionPacketProcessor) reset() error {
 	return nil
 }
 
-// @ trusted
 // @ requires false
+// @ trusted
+// @ preserves sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ preserves acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
+// @ preserves acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
+// @ preserves acc(&p.srcAddr) && acc(&p.lastLayer)
+// @ preserves p.buffer != nil && p.buffer.Mem()
+// @ preserves p.mac != nil && p.mac.Mem()
+// @ preserves p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+// @ preserves acc(srcAddr.Mem(), _)
+// @ decreases
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (processResult, error) {
 
@@ -889,22 +911,24 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 
 	// parse SCION header and skip extensions;
 	var err error
-	p.lastLayer, err = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
+	// @ ghost var processed seq[bool]
+	p.lastLayer, err /*@ , processed @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
 	if err != nil {
 		return processResult{}, err
 	}
-	pld := p.lastLayer.LayerPayload()
+	pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ nil @*/ ) // (VS) TODO: replace nil by the proper spec
 
 	pathType := p.scionLayer.PathType
 	switch pathType {
 	case empty.PathType:
-		if p.lastLayer.NextLayerType() == layers.LayerTypeBFD {
+		// (VS) TODO: drop nil later
+		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
 			return processResult{}, p.processIntraBFD(pld)
 		}
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
-			"type", pathType, "header", nextHdr(p.lastLayer))
+			"type", pathType, "header", nextHdr(p.lastLayer /*@, nil @*/)) // (VS) drop
 	case onehop.PathType:
-		if p.lastLayer.NextLayerType() == layers.LayerTypeBFD {
+		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
 			ohp, ok := p.scionLayer.Path.(*onehop.Path)
 			if !ok {
 				return processResult{}, malformedPath
@@ -1810,8 +1834,9 @@ type bfdSend struct {
 // newBFDSend creates and initializes a BFD Sender
 // @ trusted
 // @ requires false
+// @ decreases
 func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPAddr,
-	ifID uint16, mac hash.Hash) *bfdSend {
+	ifID uint16, mac hash.Hash) (res *bfdSend) {
 
 	scn := &slayers.SCION{
 		Version:      0,
@@ -1822,10 +1847,10 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 		DstIA:        dstIA,
 	}
 
-	if err := scn.SetSrcAddr(&net.IPAddr{IP: srcAddr.IP}); err != nil {
+	if err := scn.SetSrcAddr(&net.IPAddr{IP: srcAddr.IP} /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
-	if err := scn.SetDstAddr(&net.IPAddr{IP: dstAddr.IP}); err != nil {
+	if err := scn.SetDstAddr(&net.IPAddr{IP: dstAddr.IP} /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
 
@@ -1860,9 +1885,11 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 	}
 }
 
-// @ trusted
-// @ requires false
+// @ preserves acc(b.Mem(), def.ReadL10)
+// @ decreases
 func (b *bfdSend) String() string {
+	// @ unfold acc(b.Mem(), def.ReadL10)
+	// @ ghost defer fold acc(b.Mem(), def.ReadL10)
 	return b.srcAddr.String()
 }
 
@@ -1870,7 +1897,7 @@ func (b *bfdSend) String() string {
 // Due to the internal state of the MAC computation, this is not goroutine
 // safe.
 // @ trusted
-// @ requires false
+// @ requires def.Uncallable()
 func (b *bfdSend) Send(bfd *layers.BFD) error {
 	if b.ohp != nil {
 		// Subtract 10 seconds to deal with possible clock drift.
@@ -2013,37 +2040,153 @@ func (p *scionPacketProcessor) prepareSCMP(
 // gopacket.DecodingLayerParser, but customized to our use case with a "base"
 // layer and additional, optional layers in the given order.
 // Returns the last decoded layer.
-// @ trusted
-// @ requires false
+// @ requires  base != nil && base.NonInitMem()
+// @ requires  forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+// @     (acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
+// Due to Viper's very strict injectivity constraints:
+// @ requires  forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==>
+// @     opts[i] !== opts[j]
+// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures   forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+// @     (acc(&opts[i], def.ReadL10) && opts[i] != nil)
+// @ ensures   -1 <= idx && idx < len(opts)
+// @ ensures   reterr == nil && idx == -1 ==> retl === base
+// @ ensures   reterr == nil && 0   < idx ==> retl === opts[idx]
+// @ ensures   reterr == nil ==> base.Mem(data)
+// @ ensures   len(processed) == len(opts)
+// @ ensures   len(offsets) == len(opts)
+// @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+// @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(data[offsets[i].start:offsets[i].end]))
+// @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+// @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+// @     (!processed[i] ==> opts[i].NonInitMem())
+// @ ensures   reterr != nil ==> base.NonInitMem()
+// @ ensures   reterr != nil ==> (forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==> opts[i].NonInitMem())
+// @ ensures   reterr != nil ==> reterr.ErrorMem()
+// @ decreases
 func decodeLayers(data []byte, base gopacket.DecodingLayer,
-	opts ...gopacket.DecodingLayer) (gopacket.DecodingLayer, error) {
+	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error /*@ , ghost processed seq[bool], ghost offsets seq[offsetPair], ghost idx int @*/) {
 
+	// @ processed = seqs.NewSeqBool(len(opts))
+	// @ offsets = newOffsetPair(len(opts))
+	// @ idx = -1
+	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
-		return nil, err
+		return nil, err /*@ , processed, offsets, idx @*/
 	}
 	last := base
-	for _, opt := range opts {
-		if opt.CanDecode().Contains(last.NextLayerType()) {
-			data := last.LayerPayload()
+	optsSlice := ([](gopacket.DecodingLayer))(opts)
+
+	// @ ghost oldData := data
+	// @ ghost oldStart := 0
+	// @ ghost oldEnd := len(data)
+
+	// @ invariant slices.AbsSlice_Bytes(oldData, 0, len(oldData))
+	// @ invariant base.Mem(oldData)
+	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)
+	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], def.ReadL10)
+	// @ invariant forall i, j int :: {&opts[i], &opts[j]} 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
+	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> opts[i] != nil
+	// @ invariant len(processed) == len(opts)
+	// @ invariant len(offsets) == len(opts)
+	// @ invariant -1 <= idx && idx < len(opts)
+	// @ invariant idx == -1 ==> (last === base && oldStart == 0 && oldEnd == len(oldData))
+	// @ invariant 0 <= idx ==> (processed[idx] && last === opts[idx])
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+	// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+	// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+	// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && i0 <= i && i < len(opts) ==>
+	// @     !processed[i]
+	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+	// @     (!processed[i] ==> opts[i].NonInitMem())
+	// @ invariant gopacket.NilDecodeFeedback.Mem()
+	// @ invariant 0 <= oldStart && oldStart <= oldEnd && oldEnd <= len(oldData)
+	// @ decreases len(opts) - i0
+	for _, opt := range optsSlice /*@ with i0 @*/ {
+		layerClassTmp := opt.CanDecode()
+		// @ fold layerClassTmp.Mem()
+		// @ ghost var pos offsetPair
+		// @ ghost var ub []byte
+		// @ ghost if idx == -1 {
+		// @     pos = offsetPair{0, len(oldData), false}
+		// @     ub = oldData
+		// @ } else {
+		// @     pos = offsets[idx]
+		// @     if pos.isNil { ub = nil } else { ub  = oldData[pos.start:pos.end] }
+		// @ }
+		if layerClassTmp.Contains(last.NextLayerType( /*@ ub @*/ )) {
+			data /*@ , start, end @*/ := last.LayerPayload( /*@ ub @*/ )
+			// @ assert data == nil || data === oldData[pos.start:pos.end][start:end]
+			// @ oldEnd   = pos.start + end
+			// @ oldStart = pos.start + start
+			// @ ghost if data == nil {
+			// @ 	slices.NilAcc_Bytes()
+			// @ } else {
+			// @	slices.SplitRange_Bytes(oldData, oldStart, oldEnd, writePerm)
+			// @ }
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
-				return nil, err
+				// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
+				// @ base.DowngradePerm(oldData)
+
+				// ghost clean-up:
+				// @ ghost
+				// @ invariant 0 <= i0 && i0 <= len(opts)
+				// @ invariant -1 <= c && c <= i0
+				// @ invariant len(processed) == len(opts)
+				// @ invariant len(offsets) == len(opts)
+				// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], def.ReadL10)
+				// @ invariant forall i, j int :: {&opts[i], &opts[j]} 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
+				// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> opts[i] != nil
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+				// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(oldData)))
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+				// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+				// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
+				// @     (!processed[i] ==> opts[i].NonInitMem())
+				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && c < i && i < len(opts) ==>
+				// @     !processed[i]
+				// @ decreases c
+				// @ for c := i0-1; 0 <= c; c=c-1 {
+				// @	if processed[c] {
+				// @		off := offsets[c]
+				// @        if off.isNil {
+				// @ 			opts[c].DowngradePerm(nil)
+				// @		} else {
+				// @ 			opts[c].DowngradePerm(oldData[off.start:off.end])
+				// @ 		}
+				// @ 	}
+				// @ 	processed[c] = false
+				// @ }
+				return nil, err /*@, processed, offsets, idx @*/
 			}
+			// @ processed[i0] = true
+			// @ ghost offsets[i0] = offsetPair{oldStart, oldEnd, data == nil}
+			// @ idx = i0
+			// @ ghost if data != nil { slices.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
 			last = opt
 		}
 	}
-	return last, nil
+	return last, nil /*@ , processed, offsets, idx @*/
 }
 
-// @ trusted
-// @ requires false
-func nextHdr(layer gopacket.DecodingLayer) slayers.L4ProtocolType {
+// @ preserves acc(layer.Mem(ubuf), def.ReadL20)
+// @ decreases
+func nextHdr(layer gopacket.DecodingLayer /*@ , ghost ubuf []byte @*/) slayers.L4ProtocolType {
 	switch v := layer.(type) {
 	case *slayers.SCION:
-		return v.NextHdr
+		return /*@ unfolding acc(v.Mem(ubuf), def.ReadL20) in @*/ v.NextHdr
 	case *slayers.EndToEndExtnSkipper:
-		return v.NextHdr
+		return /*@ unfolding acc(v.Mem(ubuf), def.ReadL20) in (unfolding acc(v.extnBase.Mem(ubuf), def.ReadL20) in @*/ v.NextHdr /*@ ) @*/
 	case *slayers.HopByHopExtnSkipper:
-		return v.NextHdr
+		return /*@ unfolding acc(v.Mem(ubuf), def.ReadL20) in (unfolding acc(v.extnBase.Mem(ubuf), def.ReadL20) in @*/ v.NextHdr /*@ ) @*/
 	default:
 		return slayers.L4None
 	}

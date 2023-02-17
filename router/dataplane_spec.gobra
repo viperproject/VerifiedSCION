@@ -160,7 +160,8 @@ pred (p *scionPacketProcessor) initMem() {
 	acc(&p.ingressID) &&
 	acc(&p.buffer) &&
 	acc(&p.mac) &&
-	acc(p.scionLayer.InitPathPool()) &&
+	acc(p.scionLayer.NonInitMem()) &&
+	p.scionLayer.PathPoolInitializedNonInitMem() &&
 	acc(&p.hbhLayer) &&
 	acc(&p.e2eLayer) &&
 	acc(&p.lastLayer) &&
@@ -216,3 +217,17 @@ func (err scmpError) Duplicate() {
 }
 
 scmpError implements error
+
+type offsetPair struct {
+	start int
+	end int
+	isNil bool
+}
+
+ghost
+pure
+requires 0 <= n
+ensures  len(res) == n
+ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> res[i] == offsetPair{}
+decreases
+func newOffsetPair(n int) (res seq[offsetPair])
