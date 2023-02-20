@@ -1287,7 +1287,7 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 
 // @ trusted
 // @ requires false
-func (p *scionPacketProcessor) validateSrcDstIA() (processResult, error) {
+func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubPath []byte, ghost ubScionL []byte @*/ ) (processResult, error) {
 	srcIsLocal := (p.scionLayer.SrcIA == p.d.localIA)
 	dstIsLocal := (p.scionLayer.DstIA == p.d.localIA)
 	if p.ingressID == 0 {
@@ -1342,17 +1342,41 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // Provided that underlying network infrastructure prevents address spoofing,
 // this check prevents malicious end hosts in the local AS from bypassing the
 // SrcIA checks by disguising packets as transit traffic.
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) validateTransitUnderlaySrc() (processResult, error) {
-	if p.path.IsFirstHop() || p.ingressID != 0 {
+// @ requires  acc(&p.path, def.ReadL20)
+// @ requires  acc(p.path.Mem(ubPath), def.ReadL4)
+// @ requires  acc(&p.ingressID, def.ReadL20)
+// @ requires  acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
+// @ requires  0 < p.path.GetCurrINF(ubPath) && p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
+// @ requires  0 < p.path.GetCurrHF(ubPath) && p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
+// @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL4)
+// @ ensures   acc(&p.path, def.ReadL20)
+// @ ensures   acc(p.path.Mem(ubPath), def.ReadL4)
+// @ ensures   acc(&p.ingressID, def.ReadL20)
+// @ ensures   acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ubPath []byte @*/ ) (respr processResult, reserr error) {
+	if p.path.IsFirstHop( /*@ ubPath @*/ ) || p.ingressID != 0 {
 		// not a transit packet, nothing to check
 		return processResult{}, nil
 	}
-	pktIngressID := p.ingressInterface()
+	pktIngressID := p.ingressInterface( /*@ ubPath @*/ )
+	// @ p.d.getInternalNextHops()
+	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
 	expectedSrc, ok := p.d.internalNextHops[pktIngressID]
+	// @ ghost if ok {
+	// @	assert expectedSrc in range(p.d.internalNextHops)
+	// @    unfold acc(expectedSrc.Mem(), _)
+	// @ }
+	// @ unfold acc(p.srcAddr.Mem(), def.ReadL20)
+	// @ defer  fold acc(p.srcAddr.Mem(), def.ReadL20)
 	if !ok || !expectedSrc.IP.Equal(p.srcAddr.IP) {
 		// Drop
+		// @ establishInvalidSrcAddrForTransit()
 		return processResult{}, invalidSrcAddrForTransit
 	}
 	return processResult{}, nil
@@ -1551,13 +1575,13 @@ func (p *scionPacketProcessor) doXover() (processResult, error) {
 	return processResult{}, nil
 }
 
-// @ requires  acc(&p.path, def.ReadL5)
+// @ requires  acc(&p.path, def.ReadL20)
 // @ requires  acc(p.path.Mem(ubPath), def.ReadL5)
 // @ requires  acc(&p.infoField, def.ReadL5) && acc(&p.hopField, def.ReadL5)
 // @ requires  0 < p.path.GetCurrINF(ubPath) && p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
 // @ requires  0 < p.path.GetCurrHF(ubPath) && p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
 // @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL5)
-// @ ensures   acc(&p.path, def.ReadL5)
+// @ ensures   acc(&p.path, def.ReadL20)
 // @ ensures   acc(p.path.Mem(ubPath), def.ReadL5)
 // @ ensures   acc(&p.infoField, def.ReadL5) && acc(&p.hopField, def.ReadL5)
 // @ decreases
@@ -1736,10 +1760,10 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult
 	if r, err := p.validatePktLen( /*@ nil @*/ ); err != nil {
 		return r, err
 	}
-	if r, err := p.validateTransitUnderlaySrc(); err != nil {
+	if r, err := p.validateTransitUnderlaySrc( /*@ nil @*/ ); err != nil {
 		return r, err
 	}
-	if r, err := p.validateSrcDstIA(); err != nil {
+	if r, err := p.validateSrcDstIA( /*@ nil, nil @*/ ); err != nil {
 		return r, err
 	}
 	if err := p.updateNonConsDirIngressSegID(); err != nil {
