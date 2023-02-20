@@ -1285,28 +1285,41 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 	return processResult{}, nil
 }
 
-// @ trusted
-// @ requires false
+// @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
+// @ preserves acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ preserves acc(&p.path, def.ReadL20) && acc(p.path.Mem(ubPath), def.ReadL20)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ decreases
 func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubPath []byte, ghost ubScionL []byte @*/ ) (processResult, error) {
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+	// @ unfold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), def.ReadL20)
+	// @ p.d.getLocalIA()
 	srcIsLocal := (p.scionLayer.SrcIA == p.d.localIA)
 	dstIsLocal := (p.scionLayer.DstIA == p.d.localIA)
+	// @ fold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), def.ReadL20)
+	// @ fold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
 	if p.ingressID == 0 {
 		// Outbound
 		// Only check SrcIA if first hop, for transit this already checked by ingress router.
 		// Note: SCMP error messages triggered by the sibling router may use paths that
 		// don't start with the first hop.
-		if p.path.IsFirstHop() && !srcIsLocal {
+		if p.path.IsFirstHop( /*@ ubPath @*/ ) && !srcIsLocal {
+			// @ def.TODO() // depends on packSCMP
 			return p.invalidSrcIA()
 		}
 		if dstIsLocal {
+			// @ def.TODO() // depends on packSCMP
 			return p.invalidDstIA()
 		}
 	} else {
 		// Inbound
 		if srcIsLocal {
+			// @ def.TODO() // depends on packSCMP
 			return p.invalidSrcIA()
 		}
-		if p.path.IsLastHop() != dstIsLocal {
+		if p.path.IsLastHop( /*@ ubPath @*/ ) != dstIsLocal {
+			// @ def.TODO() // depends on packSCMP
 			return p.invalidDstIA()
 		}
 	}
