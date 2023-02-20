@@ -1672,6 +1672,7 @@ func (p *scionPacketProcessor) validateEgressUp() (processResult, error) {
 
 // @ trusted
 // @ requires false
+// @ decreases
 func (p *scionPacketProcessor) handleIngressRouterAlert() (processResult, error) {
 	if p.ingressID == 0 {
 		return processResult{}, nil
@@ -1687,9 +1688,10 @@ func (p *scionPacketProcessor) handleIngressRouterAlert() (processResult, error)
 	return p.handleSCMPTraceRouteRequest(p.ingressID)
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) ingressRouterAlertFlag() *bool {
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ ensures   res == &p.hopField.EgressRouterAlert || res == &p.hopField.IngressRouterAlert
+// @ decreases
+func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 	if !p.infoField.ConsDir {
 		return &p.hopField.EgressRouterAlert
 	}
@@ -1723,17 +1725,22 @@ func (p *scionPacketProcessor) egressRouterAlertFlag() *bool {
 	return &p.hopField.EgressRouterAlert
 }
 
-// @ trusted
-// @ requires false
+// @ requires  acc(&p.lastLayer, def.ReadL20)
+// @ requires  p.lastLayer != nil && acc(p.lastLayer.Mem(ubLastLayer), def.ReadL15)
+// @ ensures   acc(&p.lastLayer, def.ReadL20)
+// @ ensures   acc(p.lastLayer.Mem(ubLastLayer), def.ReadL15)
+// @ decreases
 func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
-	interfaceID uint16) (processResult, error) {
+	interfaceID uint16 /*@ , ghost ubLastLayer []byte @*/) (processResult, error) {
 
-	if p.lastLayer.NextLayerType() != slayers.LayerTypeSCMP {
+	if p.lastLayer.NextLayerType( /*@ ubLastLayer @*/ ) != slayers.LayerTypeSCMP {
 		log.Debug("Packet with router alert, but not SCMP")
 		return processResult{}, nil
 	}
-	scionPld := p.lastLayer.LayerPayload()
-	var scmpH slayers.SCMP
+	scionPld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ubLastLayer @*/ )
+	// @ gopacket.AssertInvariantNilDecodeFeedback()
+	var scmpH /*@@@*/ slayers.SCMP
+	// @ fold scmpH.NonInitMem()
 	if err := scmpH.DecodeFromBytes(scionPld, gopacket.NilDecodeFeedback); err != nil {
 		log.Debug("Parsing SCMP header of router alert", "err", err)
 		return processResult{}, nil
@@ -1743,7 +1750,8 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 			"type_code", scmpH.TypeCode)
 		return processResult{}, nil
 	}
-	var scmpP slayers.SCMPTraceroute
+	var scmpP /*@@@*/ slayers.SCMPTraceroute
+	// @ fold scmpP.NonInitMem()
 	if err := scmpP.DecodeFromBytes(scmpH.Payload, gopacket.NilDecodeFeedback); err != nil {
 		log.Debug("Parsing SCMPTraceroute", "err", err)
 		return processResult{}, nil
@@ -1754,6 +1762,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 		IA:         p.d.localIA,
 		Interface:  uint64(interfaceID),
 	}
+	// @ def.TODO()
 	return p.packSCMP(slayers.SCMPTypeTracerouteReply, 0, &scmpP, nil)
 }
 

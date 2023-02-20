@@ -13,9 +13,6 @@ import (
 	def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
-// TODO: Uncomment when https://github.com/viperproject/gobra/issues/503 is fixed
-//type DecodingLayerFunc func([]byte, *[]LayerType) (LayerType, error)
-
 // DecodingLayerFunc decodes given packet and stores decoded LayerType
 // values into specified slice. Returns either first encountered
 // unsupported LayerType value or decoding error. In case of success,
@@ -47,7 +44,7 @@ type DecodingLayer interface {
 	decreases
 	NextLayerType(ghost ubuf []byte) LayerType
 
-	preserves Mem(ubuf)
+	preserves acc(Mem(ubuf), def.ReadL15)
 	ensures   0 <= start && start <= end && end <= len(ubuf)
 	ensures   len(res) == end - start
 	ensures   len(res) != 0 ==> res === ubuf[start:end]
