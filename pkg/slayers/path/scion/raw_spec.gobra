@@ -18,6 +18,7 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
+	def "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -68,20 +69,18 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
 	return unfolding acc(s.Mem(buf), _) in s.Base.Len()
 }
 
-ghost
-pure
-requires acc(s.Mem(buf), _)
+/**
+  * This method is not part of the original SCION codebase.
+  * Instead, `IsFirstHopAfterXover` was defined in `*Base` via embedded structs.
+  * Unfortunately, Gobra does not fully support them yet, so we
+  * introduced this wrapper method which acts as a wrapper.
+  */
+preserves acc(s.Mem(ub), def.ReadL5)
 decreases
-func (s *Raw) RawBufferMem(ghost buf []byte) []byte {
-	return unfolding acc(s.Mem(buf), _) in s.Raw
-}
-
-ghost
-pure
-requires acc(s.NonInitMem(), _)
-decreases
-func (s *Raw) RawBufferNonInitMem() []byte {
-	return unfolding acc(s.NonInitMem(), _) in s.Raw
+func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) bool {
+	unfold acc(s.Mem(ub), def.ReadL6)
+	defer fold acc(s.Mem(ub), def.ReadL6)
+	return s.Base.IsFirstHopAfterXover()
 }
 /**** End of Stubs ****/
 
@@ -254,3 +253,49 @@ func (r *Raw) Widen(ubuf1, ubuf2 []byte) {
 }
 
 /**** End of Lemmas ****/
+
+/**** Start of helpful pure functions ****/
+ghost
+requires acc(r.Mem(ub), _)
+decreases
+pure func (r *Raw) GetNumINF(ghost ub []byte) int {
+	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.NumINF)
+}
+
+ghost
+requires acc(r.Mem(ub), _)
+decreases
+pure func (r *Raw) GetNumHops(ghost ub []byte) int {
+	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.NumHops)
+}
+
+ghost
+requires acc(r.Mem(ub), _)
+decreases
+pure func (r *Raw) GetCurrINF(ghost ub []byte) uint8 {
+	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrINF)
+}
+
+ghost
+requires acc(r.Mem(ub), _)
+decreases
+pure func (r *Raw) GetCurrHF(ghost ub []byte) uint8 {
+	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrHF)
+}
+
+ghost
+pure
+requires acc(s.Mem(buf), _)
+decreases
+func (s *Raw) RawBufferMem(ghost buf []byte) []byte {
+	return unfolding acc(s.Mem(buf), _) in s.Raw
+}
+
+ghost
+pure
+requires acc(s.NonInitMem(), _)
+decreases
+func (s *Raw) RawBufferNonInitMem() []byte {
+	return unfolding acc(s.NonInitMem(), _) in s.Raw
+}
+/**** End of helpful pure functions ****/

@@ -187,31 +187,32 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 }
 
 // GetInfoField returns the InfoField at a given index.
-// @ requires acc(s.Mem(ubuf), def.ReadL1)
-// @ requires 0 <= idx
-// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
-// @ ensures  acc(s.Mem(ubuf), def.ReadL1)
-// @ ensures  err != nil ==> err.ErrorMem()
+// @ requires  acc(s.Mem(ubuf), def.ReadL10)
+// @ requires  0 <= idx
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL10)
+// @ ensures   acc(s.Mem(ubuf), def.ReadL10)
+// @ ensures   idx < old(s.GetNumINF(ubuf)) ==> err == nil
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL2)
-	//@ unfold acc(s.Base.Mem(), def.ReadL3)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL10)
+	//@ unfold acc(s.Base.Mem(), def.ReadL11)
 	if idx >= s.NumINF {
 		e := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), def.ReadL3)
-		//@ fold acc(s.Mem(ubuf), def.ReadL2)
+		//@ fold acc(s.Base.Mem(), def.ReadL11)
+		//@ fold acc(s.Mem(ubuf), def.ReadL10)
 		return path.InfoField{}, e
 	}
-	//@ fold acc(s.Base.Mem(), def.ReadL3)
-	//@ fold acc(s.Mem(ubuf), def.ReadL2)
+	//@ fold acc(s.Base.Mem(), def.ReadL11)
+	//@ fold acc(s.Mem(ubuf), def.ReadL10)
 	infOffset := MetaLen + idx*path.InfoLen
 	info /*@@@*/ := path.InfoField{}
-	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL1)
+	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL10)
 	if err := info.DecodeFromBytes(s.Raw[infOffset : infOffset+path.InfoLen]); err != nil {
-		//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL1)
+		//@ def.Unreachable()
 		return path.InfoField{}, err
 	}
-	//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL1)
+	//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL10)
 	return info, nil
 }
 
@@ -265,6 +266,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 // @ requires  0 <= idx
 // @ preserves acc(s.Mem(ubuf), def.ReadL1)
 // @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
+// @ ensures   idx < old(s.GetNumHops(ubuf)) ==> r == nil
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
@@ -282,7 +284,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 	hop /*@@@*/ := path.HopField{}
 	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL2)
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
-		//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, writePerm)
+		//@ def.Unreachable()
 		return path.HopField{}, err
 	}
 	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL2)

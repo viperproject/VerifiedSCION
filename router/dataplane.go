@@ -1434,10 +1434,21 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID() error {
 	return nil
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) currentInfoPointer() uint16 {
-	return uint16(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen() +
+// @ requires acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ requires acc(&p.path, def.ReadL20)
+// @ requires p.path == p.scionLayer.GetPath(ubScionL)
+// @ ensures  acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ ensures  acc(&p.path, def.ReadL20)
+// @ decreases
+func (p *scionPacketProcessor) currentInfoPointer( /*@ ghost ubScionL []byte @*/ ) uint16 {
+	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL20/2)
+	// @ defer  fold acc(p.scionLayer.Mem(ubScionL), def.ReadL20/2)
+	// @ unfold acc(p.scionLayer.Path.Mem(ubPath), def.ReadL20/2)
+	// @ defer  fold acc(p.scionLayer.Path.Mem(ubPath), def.ReadL20/2)
+	// @ unfold acc(p.scionLayer.Path.(*scion.Raw).Base.Mem(), def.ReadL20/2)
+	// @ defer  fold acc(p.scionLayer.Path.(*scion.Raw).Base.Mem(), def.ReadL20/2)
+	return uint16(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen( /*@ ubScionL, false @*/ ) +
 		scion.MetaLen + path.InfoLen*int(p.path.PathMeta.CurrINF))
 }
 
@@ -1540,18 +1551,26 @@ func (p *scionPacketProcessor) doXover() (processResult, error) {
 	return processResult{}, nil
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) ingressInterface() uint16 {
+// @ requires  acc(&p.path, def.ReadL1)
+// @ requires  acc(p.path.Mem(ubPath), def.ReadL1)
+// @ requires  acc(&p.infoField, def.ReadL1) && acc(&p.hopField, def.ReadL1)
+// @ requires  0 < p.path.GetCurrINF(ubPath) && p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
+// @ requires  0 < p.path.GetCurrHF(ubPath) && p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL1)
+// @ ensures   acc(&p.path, def.ReadL1)
+// @ ensures   acc(p.path.Mem(ubPath), def.ReadL1)
+// @ ensures   acc(&p.infoField, def.ReadL1) && acc(&p.hopField, def.ReadL1)
+// @ decreases
+func (p *scionPacketProcessor) ingressInterface( /*@ ghost ubPath []byte @*/ ) uint16 {
 	info := p.infoField
 	hop := p.hopField
-	if p.path.IsFirstHopAfterXover() {
+	if p.path.IsFirstHopAfterXover( /*@ ubPath @*/ ) {
 		var err error
-		info, err = p.path.GetInfoField(int(p.path.PathMeta.CurrINF) - 1)
+		info, err = p.path.GetInfoField(int( /*@ unfolding acc(p.path.Mem(ubPath), _) in (unfolding acc(p.path.Base.Mem(), _) in @*/ p.path.PathMeta.CurrINF /*@ ) @*/) - 1 /*@ , ubPath @*/)
 		if err != nil { // cannot be out of range
 			panic(err)
 		}
-		hop, err = p.path.GetHopField(int(p.path.PathMeta.CurrHF) - 1)
+		hop, err = p.path.GetHopField(int( /*@ unfolding acc(p.path.Mem(ubPath), _) in (unfolding acc(p.path.Base.Mem(), _) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) - 1 /*@ , ubPath @*/)
 		if err != nil { // cannot be out of range
 			panic(err)
 		}
