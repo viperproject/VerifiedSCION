@@ -75,11 +75,11 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(ub), def.ReadL5)
+preserves acc(s.Mem(ub), def.ReadL18)
 decreases
 func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) bool {
-	unfold acc(s.Mem(ub), def.ReadL6)
-	defer fold acc(s.Mem(ub), def.ReadL6)
+	unfold acc(s.Mem(ub), def.ReadL18)
+	defer fold acc(s.Mem(ub), def.ReadL18)
 	return s.Base.IsFirstHopAfterXover()
 }
 /**** End of Stubs ****/

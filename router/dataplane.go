@@ -1551,15 +1551,15 @@ func (p *scionPacketProcessor) doXover() (processResult, error) {
 	return processResult{}, nil
 }
 
-// @ requires  acc(&p.path, def.ReadL1)
-// @ requires  acc(p.path.Mem(ubPath), def.ReadL1)
-// @ requires  acc(&p.infoField, def.ReadL1) && acc(&p.hopField, def.ReadL1)
+// @ requires  acc(&p.path, def.ReadL5)
+// @ requires  acc(p.path.Mem(ubPath), def.ReadL5)
+// @ requires  acc(&p.infoField, def.ReadL5) && acc(&p.hopField, def.ReadL5)
 // @ requires  0 < p.path.GetCurrINF(ubPath) && p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
 // @ requires  0 < p.path.GetCurrHF(ubPath) && p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
-// @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL1)
-// @ ensures   acc(&p.path, def.ReadL1)
-// @ ensures   acc(p.path.Mem(ubPath), def.ReadL1)
-// @ ensures   acc(&p.infoField, def.ReadL1) && acc(&p.hopField, def.ReadL1)
+// @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL5)
+// @ ensures   acc(&p.path, def.ReadL5)
+// @ ensures   acc(p.path.Mem(ubPath), def.ReadL5)
+// @ ensures   acc(&p.infoField, def.ReadL5) && acc(&p.hopField, def.ReadL5)
 // @ decreases
 func (p *scionPacketProcessor) ingressInterface( /*@ ghost ubPath []byte @*/ ) uint16 {
 	info := p.infoField

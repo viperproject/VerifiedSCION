@@ -264,30 +264,30 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 
 // GetHopField returns the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), def.ReadL1)
-// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
+// @ preserves acc(s.Mem(ubuf), def.ReadL10)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL10)
 // @ ensures   idx < old(s.GetNumHops(ubuf)) ==> r == nil
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL2)
-	//@ unfold acc(s.Base.Mem(), def.ReadL3)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL10)
+	//@ unfold acc(s.Base.Mem(), def.ReadL11)
 	if idx >= s.NumHops {
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), def.ReadL3)
-		//@ fold acc(s.Mem(ubuf), def.ReadL2)
+		//@ fold acc(s.Base.Mem(), def.ReadL11)
+		//@ fold acc(s.Mem(ubuf), def.ReadL10)
 		return path.HopField{}, err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-	//@ fold acc(s.Base.Mem(), def.ReadL3)
-	//@ fold acc(s.Mem(ubuf), def.ReadL2)
+	//@ fold acc(s.Base.Mem(), def.ReadL11)
+	//@ fold acc(s.Mem(ubuf), def.ReadL10)
 	hop /*@@@*/ := path.HopField{}
-	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL2)
+	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL10)
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
 		//@ def.Unreachable()
 		return path.HopField{}, err
 	}
-	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL2)
+	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL10)
 	//@ unfold hop.Mem()
 	return hop, nil
 }
@@ -344,34 +344,34 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 }
 
 // IsFirstHop returns whether the current hop is the first hop on the path.
-// @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves acc(s.Mem(ubuf), def.ReadL20)
 // @ decreases
 func (s *Raw) IsFirstHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL2)
-	//@ defer  fold acc(s.Mem(ubuf), def.ReadL2)
-	//@ unfold acc(s.Base.Mem(), def.ReadL3)
-	//@ defer  fold acc(s.Base.Mem(), def.ReadL3)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
+	//@ defer  fold acc(s.Mem(ubuf), def.ReadL20)
+	//@ unfold acc(s.Base.Mem(), def.ReadL20)
+	//@ defer  fold acc(s.Base.Mem(), def.ReadL20)
 	return s.PathMeta.CurrHF == 0
 }
 
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.
-// @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves acc(s.Mem(ubuf), def.ReadL20)
 // @ decreases
 func (s *Raw) IsPenultimateHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL2)
-	//@ defer  fold acc(s.Mem(ubuf), def.ReadL2)
-	//@ unfold acc(s.Base.Mem(), def.ReadL3)
-	//@ defer  fold acc(s.Base.Mem(), def.ReadL3)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
+	//@ defer  fold acc(s.Mem(ubuf), def.ReadL20)
+	//@ unfold acc(s.Base.Mem(), def.ReadL20)
+	//@ defer  fold acc(s.Base.Mem(), def.ReadL20)
 	return int(s.PathMeta.CurrHF) == (s.NumHops - 2)
 }
 
 // IsLastHop returns whether the current hop is the last hop on the path.
-// @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves acc(s.Mem(ubuf), def.ReadL20)
 // @ decreases
 func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL2)
-	//@ defer  fold acc(s.Mem(ubuf), def.ReadL2)
-	//@ unfold acc(s.Base.Mem(), def.ReadL3)
-	//@ defer  fold acc(s.Base.Mem(), def.ReadL3)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
+	//@ defer  fold acc(s.Mem(ubuf), def.ReadL20)
+	//@ unfold acc(s.Base.Mem(), def.ReadL20)
+	//@ defer  fold acc(s.Base.Mem(), def.ReadL20)
 	return int(s.PathMeta.CurrHF) == (s.NumHops - 1)
 }
