@@ -273,6 +273,6 @@ jobs:
           parallelizeBranches: '1'
           # The following flag has a significant influence on the number of branches verified.
           # Without it, verification would take a lot longer.
-          conditionalizeBranches: '1'
+          conditionalizePermissions: '1'
           imageVersion: ${{ env.imageVersion }}
 
