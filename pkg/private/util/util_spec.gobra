@@ -24,3 +24,6 @@ import "time"
 
 decreases
 func SecsToTime(t uint32) time.Time
+
+decreases
+func SecsToCompact(t uint32) string

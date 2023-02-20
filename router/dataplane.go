@@ -904,7 +904,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires acc(srcAddr.Mem(), _)
 // @ requires p.bfdLayer.NonInitMem()
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
-// TODO: enrich postcondition
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error) {
 
@@ -1455,16 +1454,23 @@ func (p *scionPacketProcessor) validateEgressID() (processResult, error) {
 	}
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) updateNonConsDirIngressSegID() error {
+// @ preserves acc(&p.infoField)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ preserves acc(&p.hopField,  def.ReadL20)
+// @ preserves acc(&p.path,      def.ReadL20) && acc(p.path.Mem(ubPath), def.ReadL20)
+// @ preserves slices.AbsSlice_Bytes(ubPath, 0, len(ubPath))
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ubPath []byte @*/ ) (err error) {
 	// against construction dir the ingress router updates the SegID, ifID == 0
 	// means this comes from this AS itself, so nothing has to be done.
 	// TODO(lukedirtwalker): For packets destined to peer links this shouldn't
 	// be updated.
 	if !p.infoField.ConsDir && p.ingressID != 0 {
 		p.infoField.UpdateSegID(p.hopField.Mac)
-		if err := p.path.SetInfoField(p.infoField, int(p.path.PathMeta.CurrINF)); err != nil {
+		// (VerifiedSCION) the following property is guaranteed by the type system, but Gobra cannot infer it yet
+		// @ assume 0 <= p.path.GetCurrINF(ubPath)
+		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), _) in (unfolding acc(p.path.Base.Mem(), _) in @*/ p.path.PathMeta.CurrINF) /*@ ) , ubPath @*/); err != nil {
 			return serrors.WrapStr("update info field", err)
 		}
 	}
@@ -1509,15 +1515,19 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 		scion.MetaLen + path.InfoLen*p.path.NumINF + path.HopLen*int(p.path.PathMeta.CurrHF))
 }
 
-// @ trusted
-// @ requires false
+// @ preserves acc(&p.mac, def.ReadL20) && p.mac.Mem()
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ preserves acc(&p.hopField,  def.ReadL20)
+// @ preserves acc(&p.cachedMac)
+// @ decreases
 func (p *scionPacketProcessor) verifyCurrentMAC() (processResult, error) {
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput)
 	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen]) == 0 {
+		// def.TODO()
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidHopFieldMAC,
-			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer()},
+			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 			serrors.New("MAC verification failed", "expected", fmt.Sprintf(
 				"%x", fullMac[:path.MacLen]),
 				"actual", fmt.Sprintf("%x", p.hopField.Mac[:path.MacLen]),
@@ -1779,7 +1789,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult
 	if r, err := p.validateSrcDstIA( /*@ nil, nil @*/ ); err != nil {
 		return r, err
 	}
-	if err := p.updateNonConsDirIngressSegID(); err != nil {
+	if err := p.updateNonConsDirIngressSegID( /*@ nil @*/ ); err != nil {
 		return processResult{}, err
 	}
 	if r, err := p.verifyCurrentMAC(); err != nil {
