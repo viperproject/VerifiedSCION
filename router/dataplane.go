@@ -1515,15 +1515,23 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 		scion.MetaLen + path.InfoLen*p.path.NumINF + path.HopLen*int(p.path.PathMeta.CurrHF))
 }
 
-// @ preserves acc(&p.mac, def.ReadL20) && p.mac.Mem()
+// @ preserves acc(&p.mac, def.ReadL20) && p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.infoField, def.ReadL20)
 // @ preserves acc(&p.hopField,  def.ReadL20)
+// @ preserves acc(&p.macBuffers.scionInput, def.ReadL20)
+// @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
+// @ ensures   len(p.cachedMac) == path.MACBufferSize
+// @ ensures   sl.AbsSlice_Bytes(p.cachedMac, 0, len(p.cachedMac))
 // @ decreases
 func (p *scionPacketProcessor) verifyCurrentMAC() (processResult, error) {
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput)
+	// @ fold acc(sl.AbsSlice_Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), def.ReadL20)
+	// @ defer unfold acc(sl.AbsSlice_Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), def.ReadL20)
+	// @ sl.SplitRange_Bytes(fullMac, 0, path.MacLen, def.ReadL20)
+	// @ ghost defer sl.CombineRange_Bytes(fullMac, 0, path.MacLen, def.ReadL20)
 	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen]) == 0 {
-		// def.TODO()
+		// @ def.TODO()
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidHopFieldMAC,

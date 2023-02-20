@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"hash"
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ def "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -63,6 +64,7 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byt
 	//@ defer fold slices.AbsSlice_Bytes(buffer, 0, len(buffer))
 	// Write must not return an error: https://godoc.org/hash#Hash
 	if _, err := h.Write(buffer); err != nil {
+		// @ def.Unreachable()
 		panic(err)
 	}
 	//@ assert h.Size() >= 16
