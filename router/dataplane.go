@@ -1670,10 +1670,20 @@ func (p *scionPacketProcessor) validateEgressUp() (processResult, error) {
 	return processResult{}, nil
 }
 
-// @ trusted
-// @ requires false
+// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires  0 <= startP && startP <= endP && endP <= len(ub)
+// @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
+// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ preserves acc(&p.lastLayer, def.ReadL19)
+// @ preserves p.lastLayer != nil && acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
+// @ preserves acc(&p.path, def.ReadL20)
+// @ preserves acc(p.path.Mem(ub[startP:endP]), def.ReadL20)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ preserves acc(&p.hopField)
+// @ ensures   acc(&p.d, def.ReadL20)
 // @ decreases
-func (p *scionPacketProcessor) handleIngressRouterAlert() (processResult, error) {
+func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, ghost startLL int, ghost endLL int, ghost startP int, ghost endP int @*/ ) (processResult, error) {
 	if p.ingressID == 0 {
 		return processResult{}, nil
 	}
@@ -1682,10 +1692,17 @@ func (p *scionPacketProcessor) handleIngressRouterAlert() (processResult, error)
 		return processResult{}, nil
 	}
 	*alert = false
-	if err := p.path.SetHopField(p.hopField, int(p.path.PathMeta.CurrHF)); err != nil {
+	// (VerifiedSCION) the following is guaranteed by the type system, but Gobra cannot prove it yet
+	// @ assume 0 <= p.path.GetCurrHF(ub[startP:endP])
+	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ub[startP:endP]), _) in (unfolding acc(p.path.Base.Mem(), _) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ub[startP:endP] @*/); err != nil {
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
-	return p.handleSCMPTraceRouteRequest(p.ingressID)
+	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	// @ sl.SplitRange_Bytes(ub, startLL, endLL, writePerm)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
+	return p.handleSCMPTraceRouteRequest(p.ingressID /*@ , ub[startLL:endLL] @*/)
 }
 
 // @ preserves acc(&p.infoField, def.ReadL20)
@@ -1727,8 +1744,11 @@ func (p *scionPacketProcessor) egressRouterAlertFlag() *bool {
 
 // @ requires  acc(&p.lastLayer, def.ReadL20)
 // @ requires  p.lastLayer != nil && acc(p.lastLayer.Mem(ubLastLayer), def.ReadL15)
+// @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
+// @ preserves sl.AbsSlice_Bytes(ubLastLayer, 0, len(ubLastLayer))
 // @ ensures   acc(&p.lastLayer, def.ReadL20)
 // @ ensures   acc(p.lastLayer.Mem(ubLastLayer), def.ReadL15)
+// @ ensures   acc(&p.d, def.ReadL20)
 // @ decreases
 func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 	interfaceID uint16 /*@ , ghost ubLastLayer []byte @*/) (processResult, error) {
@@ -1738,6 +1758,11 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 		return processResult{}, nil
 	}
 	scionPld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ubLastLayer @*/ )
+	// @ assert scionPld === ubLastLayer[start:end] || scionPld == nil
+	// @ if scionPld == nil { sl.NilAcc_Bytes() } else {
+	// @	sl.SplitRange_Bytes(ubLastLayer, start, end, writePerm)
+	// @ 	ghost defer sl.CombineRange_Bytes(ubLastLayer, start, end, writePerm)
+	// @ }
 	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	var scmpH /*@@@*/ slayers.SCMP
 	// @ fold scmpH.NonInitMem()
@@ -1745,17 +1770,24 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 		log.Debug("Parsing SCMP header of router alert", "err", err)
 		return processResult{}, nil
 	}
-	if scmpH.TypeCode != slayers.CreateSCMPTypeCode(slayers.SCMPTypeTracerouteRequest, 0) {
+	if /*@ (unfolding acc(scmpH.Mem(scionPld), _) in @*/ scmpH.TypeCode /*@ ) @*/ != slayers.CreateSCMPTypeCode(slayers.SCMPTypeTracerouteRequest, 0) {
 		log.Debug("Packet with router alert, but not traceroute request",
-			"type_code", scmpH.TypeCode)
+			"type_code", ( /*@ unfolding acc(scmpH.Mem(scionPld), _) in @*/ scmpH.TypeCode))
 		return processResult{}, nil
 	}
 	var scmpP /*@@@*/ slayers.SCMPTraceroute
 	// @ fold scmpP.NonInitMem()
+	// @ unfold scmpH.Mem(scionPld)
+	// @ unfold scmpH.BaseLayer.Mem(scionPld, 4)
+	// @ sl.SplitRange_Bytes(scionPld, 4, len(scionPld), writePerm)
+	// @ ghost defer sl.CombineRange_Bytes(scionPld, 4, len(scionPld), writePerm)
 	if err := scmpP.DecodeFromBytes(scmpH.Payload, gopacket.NilDecodeFeedback); err != nil {
 		log.Debug("Parsing SCMPTraceroute", "err", err)
 		return processResult{}, nil
 	}
+	// @ unfold scmpP.Mem(scmpH.Payload)
+	// @ unfold scmpP.BaseLayer.Mem(scmpH.Payload, 4+addr.IABytes+slayers.scmpRawInterfaceLen)
+	// @ p.d.getLocalIA()
 	scmpP = slayers.SCMPTraceroute{
 		Identifier: scmpP.Identifier,
 		Sequence:   scmpP.Sequence,
@@ -1812,7 +1844,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult
 	if r, err := p.verifyCurrentMAC(); err != nil {
 		return r, err
 	}
-	if r, err := p.handleIngressRouterAlert(); err != nil {
+	if r, err := p.handleIngressRouterAlert( /*@ nil, 0, 0, 0, 0 @*/ ); err != nil {
 		return r, err
 	}
 
