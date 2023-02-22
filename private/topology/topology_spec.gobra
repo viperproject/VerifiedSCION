@@ -16,7 +16,11 @@
 
 package topology
 
-import "time"
+import (
+	"time"
+
+	"github.com/scionproto/scion/private/topology/underlay"
+)
 
 // BFD is the configuration for a BFD session
 type BFD struct {
@@ -25,3 +29,5 @@ type BFD struct {
 	DesiredMinTxInterval  time.Duration
 	RequiredMinRxInterval time.Duration
 }
+
+const EndhostPort = underlay.EndhostPort
