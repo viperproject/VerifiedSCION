@@ -2000,7 +2000,10 @@ func (p *scionPacketProcessor) processOHP() (processResult, error) {
 
 // @ trusted
 // @ requires false
+// @ requires  s.DstAddrType == slayers.T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
+// @ preserves acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL15)
 func (d *DataPlane) resolveLocalDst(s slayers.SCION) (*net.UDPAddr, error) {
+	// @ share s
 	dst, err := s.DstAddr()
 	if err != nil {
 		// TODO parameter problem.
@@ -2022,9 +2025,12 @@ func (d *DataPlane) resolveLocalDst(s slayers.SCION) (*net.UDPAddr, error) {
 	}
 }
 
-// @ trusted
-// @ requires false
-func addEndhostPort(dst *net.IPAddr) *net.UDPAddr {
+// @ preserves acc(&dst.IP, def.ReadL20)
+// @ ensures   acc(res)
+// @ ensures   res.IP  === dst.IP
+// @ ensures   res.Port == topology.EndhostPort
+// @ decreases
+func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 	return &net.UDPAddr{IP: dst.IP, Port: topology.EndhostPort}
 }
 
