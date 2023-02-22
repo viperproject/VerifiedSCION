@@ -100,6 +100,8 @@ type bfdSession interface {
 	Run(ctx context.Context) (err error)
 	// @ requires acc(Mem(), _)
 	// @ requires msg.Mem(ub)
+	// @ requires slices.AbsSlice_Bytes(ub, 0, len(ub))
+	// @ ensures  msg.NonInitMem() // an implementation must copy the fields it needs from msg
 	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
 	// @ requires acc(Mem(), _)
 	IsUp() bool
@@ -108,6 +110,7 @@ type bfdSession interface {
 // BatchConn is a connection that supports batch reads and writes.
 // (VerifiedSCION) the spec of this interface exactly matches that of the same methods
 // in private/underlay/conn/Conn
+// TODO: better triggers,
 type BatchConn interface {
 	// @ pred Mem()
 
@@ -889,19 +892,21 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
-// @ requires false
-// @ trusted
-// @ preserves sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
-// @ preserves acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
-// @ preserves acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
-// @ preserves acc(&p.srcAddr) && acc(&p.lastLayer)
-// @ preserves p.buffer != nil && p.buffer.Mem()
-// @ preserves p.mac != nil && p.mac.Mem()
-// @ preserves p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
-// @ preserves acc(srcAddr.Mem(), _)
-// @ decreases
+// @ requires  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+// @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires acc(&p.ingressID)
+// @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
+// @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
+// @ requires acc(&p.srcAddr) && acc(&p.lastLayer)
+// @ requires p.buffer != nil && p.buffer.Mem()
+// @ requires p.mac != nil && p.mac.Mem()
+// @ requires acc(srcAddr.Mem(), _)
+// @ requires p.bfdLayer.NonInitMem()
+// @ ensures  reserr != nil ==> reserr.ErrorMem()
+// TODO: enrich postcondition
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
-	srcAddr *net.UDPAddr) (processResult, error) {
+	srcAddr *net.UDPAddr) (respr processResult, reserr error) {
 
 	if err := p.reset(); err != nil {
 		return processResult{}, err
@@ -912,84 +917,161 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	// parse SCION header and skip extensions;
 	var err error
 	// @ ghost var processed seq[bool]
-	p.lastLayer, err /*@ , processed @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
+	// @ ghost var offsets   seq[offsetPair]
+	// @ ghost var lastLayerIdx int
+	p.lastLayer, err /*@ , processed, offsets, lastLayerIdx @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
 	if err != nil {
 		return processResult{}, err
 	}
-	pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ nil @*/ ) // (VS) TODO: replace nil by the proper spec
+	/*@
+	ghost var ub []byte
+	ghost if lastLayerIdx == -1 {
+		ub = p.rawPkt
+	} else {
+		if offsets[lastLayerIdx].isNil {
+			ub = nil
+			sl.NilAcc_Bytes()
+		} else {
+			o := offsets[lastLayerIdx]
+			ub = p.rawPkt[o.start:o.end]
+			sl.SplitRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
+		}
+	}
+	@*/
+	// @ assert sl.AbsSlice_Bytes(ub, 0, len(ub))
+	pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ub @*/ )
+	// @ sl.SplitRange_Bytes(ub, start, end, writePerm)
+	// @ sl.NilAcc_Bytes()
 
-	pathType := p.scionLayer.PathType
+	pathType := /*@ unfolding p.scionLayer.Mem(rawPkt) in @*/ p.scionLayer.PathType
 	switch pathType {
 	case empty.PathType:
-		// (VS) TODO: drop nil later
-		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
+		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
+			// @ assert p.bfdLayer.NonInitMem()
 			return processResult{}, p.processIntraBFD(pld)
 		}
+		// @ establishMemUnsupportedPathTypeNextHeader()
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
-			"type", pathType, "header", nextHdr(p.lastLayer /*@, nil @*/)) // (VS) drop
+			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/))
 	case onehop.PathType:
-		if p.lastLayer.NextLayerType( /*@ nil @*/ ) == layers.LayerTypeBFD {
+		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
+			// @ unfold acc(p.scionLayer.Mem(p.rawPkt), def.ReadL10)
 			ohp, ok := p.scionLayer.Path.(*onehop.Path)
+			// @ fold acc(p.scionLayer.Mem(p.rawPkt), def.ReadL10)
 			if !ok {
+				// @ establishMemMalformedPath()
 				return processResult{}, malformedPath
 			}
 			return processResult{}, p.processInterBFD(ohp, pld)
 		}
+		// @ def.TODO()
 		return p.processOHP()
 	case scion.PathType:
+		// @ def.TODO()
 		return p.processSCION()
 	case epic.PathType:
+		// @ def.TODO()
 		return p.processEPIC()
 	default:
+		// @ establishMemUnsupportedPathType()
 		return processResult{}, serrors.WithCtx(unsupportedPathType, "type", pathType)
 	}
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) error {
+// @ requires  acc(&p.d, def.ReadL20)
+// @ requires  acc(&p.ingressID, def.ReadL20)
+// @ requires  acc(MutexInvariant!<p.d!>(), _)
+// @ requires  p.bfdLayer.NonInitMem()
+// @ requires  slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   acc(&p.ingressID, def.ReadL20)
+// @ ensures   p.bfdLayer.NonInitMem()
+// @ ensures   err != nil ==> err.ErrorMem()
+func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (err error) {
+	// @ unfold acc(MutexInvariant!<p.d!>(), _)
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
+		// @ establishMemNoBFDSessionConfigured()
 		return noBFDSessionConfigured
 	}
 
 	bfd := &p.bfdLayer
+	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := bfd.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return err
 	}
 
 	if v, ok := p.d.bfdSessions[p.ingressID]; ok {
-		v.ReceiveMessage(bfd)
+		// @ assert v in range(p.d.bfdSessions)
+		v.ReceiveMessage(bfd /*@ , data @*/)
 		return nil
 	}
 
+	// @ bfd.DowngradePerm(data)
+	// @ establishMemNoBFDSessionFound()
 	return noBFDSessionFound
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) processIntraBFD(data []byte) error {
+// @ requires  acc(&p.d, def.ReadL20)
+// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
+// @ requires  p.bfdLayer.NonInitMem()
+// @ requires  acc(MutexInvariant!<p.d!>(), _)
+// @ requires  slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   acc(&p.srcAddr, def.ReadL20)
+// @ ensures   res != nil ==> res.ErrorMem()
+func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
+	// @ unfold acc(MutexInvariant!<p.d!>(), _)
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
+		// @ establishMemNoBFDSessionConfigured()
 		return noBFDSessionConfigured
 	}
 
 	bfd := &p.bfdLayer
+	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	if err := bfd.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return err
 	}
 
 	ifID := uint16(0)
-	for k, v := range p.d.internalNextHops {
+	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
+
+	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission)
+	// @ ghost m := p.d.internalNextHops
+	// @ assert m != nil ==> acc(m, _)
+	// @ inhale m != nil ==> acc(m, def.ReadL19)
+
+	// @ invariant acc(&p.d, def.ReadL20/2)
+	// @ invariant acc(&p.d.internalNextHops, _)
+	// @ invariant m === p.d.internalNextHops
+	// @ invariant m != nil ==> acc(m, def.ReadL20)
+	// @ invariant m != nil ==> forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
+	// @ invariant acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
+	for k, v := range p.d.internalNextHops /*@ with keys @*/ {
+		// @ assert acc(&p.d.internalNextHops, _)
+		// @ assert forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
+		// @ assert acc(v.Mem(), _)
+		// @ unfold acc(v.Mem(), _)
+		// @ unfold acc(p.srcAddr.Mem(), _)
 		if bytes.Equal(v.IP, p.srcAddr.IP) && v.Port == p.srcAddr.Port {
 			ifID = k
 			break
 		}
 	}
+	// (VerifiedSCION) clean-up code to deal with range loop
+	// @ exhale m != nil ==> acc(m, def.ReadL20)
+	// @ inhale m != nil ==> acc(m, _)
 
+	// @ assert acc(&p.d.bfdSessions, _)
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
 	if v, ok := p.d.bfdSessions[ifID]; ok {
-		v.ReceiveMessage(bfd)
+		// @ assert v in range(p.d.bfdSessions)
+		v.ReceiveMessage(bfd /*@ , data @*/)
 		return nil
 	}
 
+	// @ establishMemNoBFDSessionFound()
 	return noBFDSessionFound
 }
 
@@ -2050,11 +2132,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
 // @     (acc(&opts[i], def.ReadL10) && opts[i] != nil)
 // @ ensures   -1 <= idx && idx < len(opts)
-// @ ensures   reterr == nil && idx == -1 ==> retl === base
-// @ ensures   reterr == nil && 0   < idx ==> retl === opts[idx]
-// @ ensures   reterr == nil ==> base.Mem(data)
 // @ ensures   len(processed) == len(opts)
 // @ ensures   len(offsets) == len(opts)
+// @ ensures   reterr == nil && 0  <= idx ==> processed[idx]
+// @ ensures   reterr == nil && idx == -1  ==> retl === base
+// @ ensures   reterr == nil && 0   <= idx ==> retl === opts[idx]
+// @ ensures   reterr == nil ==> retl != nil
+// @ ensures   reterr == nil ==> base.Mem(data)
 // @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
 // @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>

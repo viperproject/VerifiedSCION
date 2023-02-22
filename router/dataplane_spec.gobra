@@ -77,7 +77,7 @@ pred MutexInvariant(d *DataPlane) {
 // TODO: use lower case for these predicates' names?
 pred AccAddr(addrs map[uint16]*net.UDPAddr) {
 	acc(addrs, 1/2) &&
-	forall a *net.UDPAddr :: a in range(addrs) ==> acc(a.Mem(), _)
+	forall a *net.UDPAddr :: { a in range(addrs) } a in range(addrs) ==> acc(a.Mem(), _)
 }
 
 pred AccBatchConn(batchConns map[uint16]BatchConn) {
@@ -87,7 +87,7 @@ pred AccBatchConn(batchConns map[uint16]BatchConn) {
 
 pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
 	acc(bfdSessions, 1/2) &&
-	forall bfd bfdSession :: bfd in range(bfdSessions) ==> (bfd != nil && acc(bfd.Mem(), _))
+	(forall bfd bfdSession :: { bfd in range(bfdSessions) } bfd in range(bfdSessions) ==> (bfd != nil && acc(bfd.Mem(), _)))
 }
 
 pred AccForwardingMetrics(metrics map[uint16]forwardingMetrics) {
@@ -118,11 +118,6 @@ decreases
 func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
 	unfold acc(forwardingMetricsNonInjectiveMem(v), _)
 	fold acc(forwardingMetricsMem(v, id), _)
-}
-
-// useful for hidding permissions to avoid incompletenesses of Gobra
-pred (d *DataPlane) HalfLinkTypes() {
-	acc(&d.linkTypes, 1/2) && (d.linkTypes != nil ==> acc(d.linkTypes, 1/2))
 }
 
 pred (p *scionPacketProcessor) initMem() {
@@ -200,3 +195,35 @@ ensures  len(res) == n
 ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> res[i] == offsetPair{}
 decreases
 func newOffsetPair(n int) (res seq[offsetPair])
+
+// post-init invariants
+
+// unsupportedPathType is duplicable: we can always establish its invariant
+ghost
+ensures unsupportedPathType.ErrorMem()
+decreases _
+func establishMemUnsupportedPathType()
+
+// malformedPath is duplicable: we can always establish its invariant
+ghost
+ensures malformedPath.ErrorMem()
+decreases _
+func establishMemMalformedPath()
+
+// unsupportedPathTypeNextHeader is duplicable: we can always establish its invariant
+ghost
+ensures unsupportedPathTypeNextHeader.ErrorMem()
+decreases _
+func establishMemUnsupportedPathTypeNextHeader()
+
+// noBFDSessionConfigured is duplicable: we can always establish its invariant
+ghost
+ensures noBFDSessionConfigured .ErrorMem()
+decreases _
+func establishMemNoBFDSessionConfigured()
+
+// noBFDSessionFound is duplicable: we can always establish its invariant
+ghost
+ensures noBFDSessionFound .ErrorMem()
+decreases _
+func establishMemNoBFDSessionFound()
