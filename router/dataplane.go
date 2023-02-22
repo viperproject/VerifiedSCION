@@ -1998,11 +1998,11 @@ func (p *scionPacketProcessor) processOHP() (processResult, error) {
 	return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil
 }
 
-// @ trusted
-// @ requires false
 // @ requires  s.DstAddrType == slayers.T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
+// @ requires  acc(MutexInvariant!<d!>(), _)
 // @ preserves acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL15)
-func (d *DataPlane) resolveLocalDst(s slayers.SCION) (*net.UDPAddr, error) {
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+func (d *DataPlane) resolveLocalDst(s slayers.SCION) (resaddr *net.UDPAddr, reserr error) {
 	// @ share s
 	dst, err := s.DstAddr()
 	if err != nil {
@@ -2013,8 +2013,10 @@ func (d *DataPlane) resolveLocalDst(s slayers.SCION) (*net.UDPAddr, error) {
 	case addr.HostSVC:
 		// For map lookup use the Base address, i.e. strip the multi cast
 		// information, because we only register base addresses in the map.
+		// @ d.getSvc()
 		a, ok := d.svc.Any(v.Base())
 		if !ok {
+			// @ establishNoSVCBackend()
 			return nil, noSVCBackend
 		}
 		return a, nil
