@@ -216,9 +216,9 @@ func (d *DataPlane) getLocalIA() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures  acc(&d.svc, _) && acc(d.svc.Mem(), _)
+ensures  acc(&d.svc, _) && (d.svc != nil ==> acc(d.svc.Mem(), _))
 decreases
-func (d *DataPlane) getSvc() {
+func (d *DataPlane) getSvcMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
 }
 

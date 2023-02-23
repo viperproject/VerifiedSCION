@@ -964,7 +964,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			return processResult{}, p.processInterBFD(ohp, pld)
 		}
 		// @ def.TODO()
-		return p.processOHP()
+		return p.processOHP( /*@ nil @*/ )
 	case scion.PathType:
 		// @ def.TODO()
 		return p.processSCION()
@@ -1910,16 +1910,25 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult
 }
 
 // @ trusted
-// @ requires false
-func (p *scionPacketProcessor) processOHP() (processResult, error) {
+// @ requires  false
+// @ requires  acc(p, def.ReadL10)
+// @ requires  acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+// @ ensures   acc(p, def.ReadL10)
+// @ ensures   acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (processResult, error) {
 	s := p.scionLayer
+	// @ ghost  ubPath := p.scionLayer.UBPath(ubScionL)
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+	// @ defer  fold acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
 	ohp, ok := s.Path.(*onehop.Path)
 	if !ok {
 		// TODO parameter problem -> invalid path
+		// @ establishMemMalformedPath()
 		return processResult{}, malformedPath
 	}
-	if !ohp.Info.ConsDir {
+	if /*@ unfolding acc(s.Path.Mem(ubPath), _) in @*/ !ohp.Info.ConsDir {
 		// TODO parameter problem -> invalid path
+		// @ establishMemMalformedPath()
 		return processResult{}, serrors.WrapStr(
 			"OneHop path in reverse construction direction is not allowed",
 			malformedPath, "srcIA", s.SrcIA, "dstIA", s.DstIA)
@@ -1944,7 +1953,7 @@ func (p *scionPacketProcessor) processOHP() (processResult, error) {
 				"type", "ohp", "egress", ohp.FirstHop.ConsEgress,
 				"neighborIA", neighborIA, "dstIA", s.DstIA)
 		}
-		mac := path.MAC(p.mac, ohp.Info, ohp.FirstHop, p.macBuffers.scionInput)
+		mac /*@@@*/ := path.MAC(p.mac, ohp.Info, ohp.FirstHop, p.macBuffers.scionInput)
 		if subtle.ConstantTimeCompare(ohp.FirstHop.Mac[:], mac[:]) == 0 {
 			// TODO parameter problem -> invalid MAC
 			return processResult{}, serrors.New("MAC", "expected", fmt.Sprintf("%x", mac),
@@ -2000,6 +2009,7 @@ func (p *scionPacketProcessor) processOHP() (processResult, error) {
 
 // @ requires  s.DstAddrType == slayers.T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
 // @ requires  acc(MutexInvariant!<d!>(), _)
+// @ requires  acc(&d.svc, _) && d.svc != nil
 // @ preserves acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL15)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (d *DataPlane) resolveLocalDst(s slayers.SCION) (resaddr *net.UDPAddr, reserr error) {
@@ -2013,7 +2023,7 @@ func (d *DataPlane) resolveLocalDst(s slayers.SCION) (resaddr *net.UDPAddr, rese
 	case addr.HostSVC:
 		// For map lookup use the Base address, i.e. strip the multi cast
 		// information, because we only register base addresses in the map.
-		// @ d.getSvc()
+		// @ d.getSvcMem()
 		a, ok := d.svc.Any(v.Base())
 		if !ok {
 			// @ establishNoSVCBackend()
