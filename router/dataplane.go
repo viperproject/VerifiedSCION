@@ -1552,11 +1552,12 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (processResult, error) {
 }
 
 // @ trusted
-// @ requires false
-func (p *scionPacketProcessor) resolveInbound() (*net.UDPAddr, processResult, error) {
+// @ requires  false
+func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (*net.UDPAddr, processResult, error) {
 	a, err := p.d.resolveLocalDst(p.scionLayer)
 	switch {
 	case errors.Is(err, noSVCBackend):
+		// @ def.TODO()
 		r, err := p.packSCMP(
 			slayers.SCMPTypeDestinationUnreachable,
 			slayers.SCMPCodeNoRoute,
@@ -1586,20 +1587,27 @@ func (p *scionPacketProcessor) processEgress() error {
 	return nil
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) doXover() (processResult, error) {
+// @ requires  acc(&p.path, def.ReadL20) && p.path.Mem(ubPath)
+// @ preserves acc(&p.segmentChange) && acc(&p.hopField) && acc(&p.infoField)
+// @ preserves sl.AbsSlice_Bytes(ubPath, 0, len(ubPath))
+// @ ensures   reserr == nil ==> acc(&p.path, def.ReadL20) && p.path.Mem(ubPath)
+// @ ensures   reserr != nil ==> acc(&p.path, def.ReadL20) && p.path.NonInitMem()
+// @ ensures   p.segmentChange
+// @ decreases
+func (p *scionPacketProcessor) doXover( /*@ ghost ubPath []byte @*/ ) (respr processResult, reserr error) {
 	p.segmentChange = true
-	if err := p.path.IncPath(); err != nil {
+	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// TODO parameter problem invalid path
 		return processResult{}, serrors.WrapStr("incrementing path", err)
 	}
 	var err error
-	if p.hopField, err = p.path.GetCurrentHopField(); err != nil {
+	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
+		// @ p.path.DowngradePerm(ubPath)
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
-	if p.infoField, err = p.path.GetCurrentInfoField(); err != nil {
+	if p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ ); err != nil {
+		// @ p.path.DowngradePerm(ubPath)
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
@@ -1850,7 +1858,8 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult
 
 	// Inbound: pkts destined to the local IA.
 	if p.scionLayer.DstIA == p.d.localIA {
-		a, r, err := p.resolveInbound()
+		// @ def.TODO()
+		a, r, err := p.resolveInbound( /*@ nil @*/ )
 		if err != nil {
 			return r, err
 		}
@@ -1861,7 +1870,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult
 	// BRTransit: pkts leaving from the same BR different interface.
 
 	if p.path.IsXover() {
-		if r, err := p.doXover(); err != nil {
+		if r, err := p.doXover( /*@ nil @*/ ); err != nil {
 			return r, err
 		}
 		if r, err := p.validateHopExpiry(); err != nil {
@@ -1901,6 +1910,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult
 	if !p.infoField.ConsDir {
 		errCode = slayers.SCMPCodeUnknownHopFieldIngress
 	}
+	// @ def.TODO()
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		errCode,
