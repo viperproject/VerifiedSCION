@@ -1551,6 +1551,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (processResult, error) {
 	return processResult{}, nil
 }
 
+// (VerifiedSCION) verify later, once we have a contract for processPkt
 // @ trusted
 // @ requires  false
 func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (*net.UDPAddr, processResult, error) {
@@ -1568,19 +1569,28 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (
 	}
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) processEgress() error {
+// @ requires  acc(&p.path, def.ReadL20)
+// @ requires  p.path.Mem(ubPath)
+// @ preserves acc(&p.infoField)
+// @ preserves acc(&p.hopField, def.ReadL20)
+// @ preserves sl.AbsSlice_Bytes(ubPath, 0, len(ubPath))
+// @ ensures   acc(&p.path, def.ReadL20)
+// @ ensures   reserr == nil ==> p.path.Mem(ubPath)
+// @ ensures   reserr != nil ==> p.path.NonInitMem()
+// @ decreases
+func (p *scionPacketProcessor) processEgress( /*@ ghost ubPath []byte @*/ ) (reserr error) {
 	// we are the egress router and if we go in construction direction we
 	// need to update the SegID.
 	if p.infoField.ConsDir {
 		p.infoField.UpdateSegID(p.hopField.Mac)
-		if err := p.path.SetInfoField(p.infoField, int(p.path.PathMeta.CurrINF)); err != nil {
+		// @ assume 0 <= p.path.GetCurrINF(ubPath)
+		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), _) in (unfolding acc(p.path.Base.Mem(), _) in @*/ p.path.PathMeta.CurrINF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
 			// TODO parameter problem invalid path
+			// @ p.path.DowngradePerm(ubPath)
 			return serrors.WrapStr("update info field", err)
 		}
 	}
-	if err := p.path.IncPath(); err != nil {
+	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// TODO parameter problem invalid path
 		return serrors.WrapStr("incrementing path", err)
 	}
@@ -1644,8 +1654,9 @@ func (p *scionPacketProcessor) ingressInterface( /*@ ghost ubPath []byte @*/ ) u
 	return hop.ConsEgress
 }
 
-// @ trusted
-// @ requires false
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ preserves acc(&p.hopField, def.ReadL20)
+// @ decreases
 func (p *scionPacketProcessor) egressInterface() uint16 {
 	if p.infoField.ConsDir {
 		return p.hopField.ConsEgress
@@ -1896,7 +1907,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult
 
 	egressID := p.egressInterface()
 	if c, ok := p.d.external[egressID]; ok {
-		if err := p.processEgress(); err != nil {
+		if err := p.processEgress( /*@ nil @*/ ); err != nil {
 			return processResult{}, err
 		}
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil
