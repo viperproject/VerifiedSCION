@@ -208,6 +208,22 @@ func (d *DataPlane) getInternalNextHops() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.external, _) && (d.external != nil ==> acc(AccBatchConn(d.external), _))
+decreases
+func (d *DataPlane) getExternalMem() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+ghost
+requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
+decreases
+func (d *DataPlane) getLinkTypesMem() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+ghost
+requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(&d.localIA, _)
 decreases
 func (d *DataPlane) getLocalIA() {

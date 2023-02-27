@@ -1394,25 +1394,36 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ubPath []by
 	return processResult{}, nil
 }
 
-// @ trusted
-// @ requires false
+// @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ preserves acc(&p.segmentChange, def.ReadL20)
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ preserves acc(&p.hopField, def.ReadL20)
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ decreases
 func (p *scionPacketProcessor) validateEgressID() (processResult, error) {
 	pktEgressID := p.egressInterface()
+	// @ p.d.getInternalNextHops()
+	// @ if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
 	_, ih := p.d.internalNextHops[pktEgressID]
+	// @ p.d.getExternalMem()
+	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 	_, eh := p.d.external[pktEgressID]
 	if !ih && !eh {
 		errCode := slayers.SCMPCodeUnknownHopFieldEgress
 		if !p.infoField.ConsDir {
 			errCode = slayers.SCMPCodeUnknownHopFieldIngress
 		}
+		// @ def.TODO()
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			errCode,
-			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer()},
+			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 			cannotRoute,
 		)
 	}
 
+	// @ p.d.getLinkTypesMem()
 	ingress, egress := p.d.linkTypes[p.ingressID], p.d.linkTypes[pktEgressID]
 	if !p.segmentChange {
 		// Check that the interface pair is valid within a single segment.
@@ -1427,10 +1438,11 @@ func (p *scionPacketProcessor) validateEgressID() (processResult, error) {
 		case ingress == topology.Parent && egress == topology.Child:
 			return processResult{}, nil
 		default: // malicious
+			// @ def.TODO()
 			return p.packSCMP(
 				slayers.SCMPTypeParameterProblem,
 				slayers.SCMPCodeInvalidPath, // XXX(matzf) new code InvalidHop?
-				&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer()},
+				&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 				serrors.WithCtx(cannotRoute, "ingress_id", p.ingressID, "ingress_type", ingress,
 					"egress_id", pktEgressID, "egress_type", egress))
 		}
@@ -1445,10 +1457,11 @@ func (p *scionPacketProcessor) validateEgressID() (processResult, error) {
 	case ingress == topology.Child && egress == topology.Child:
 		return processResult{}, nil
 	default:
+		// @ def.TODO()
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidSegmentChange,
-			&slayers.SCMPParameterProblem{Pointer: p.currentInfoPointer()},
+			&slayers.SCMPParameterProblem{Pointer: p.currentInfoPointer( /*@ nil @*/ )},
 			serrors.WithCtx(cannotRoute, "ingress_id", p.ingressID, "ingress_type", ingress,
 				"egress_id", pktEgressID, "egress_type", egress))
 	}
@@ -1752,8 +1765,8 @@ func (p *scionPacketProcessor) handleEgressRouterAlert() (processResult, error) 
 	return p.handleSCMPTraceRouteRequest(egressID)
 }
 
-// @ trusted
-// @ requires false
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ decreases
 func (p *scionPacketProcessor) egressRouterAlertFlag() *bool {
 	if !p.infoField.ConsDir {
 		return &p.hopField.IngressRouterAlert
