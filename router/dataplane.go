@@ -1747,27 +1747,48 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 	return &p.hopField.IngressRouterAlert
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) handleEgressRouterAlert() (processResult, error) {
+// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires  0 <= startP && startP <= endP && endP <= len(ub)
+// @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
+// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ preserves acc(&p.lastLayer, def.ReadL19)
+// @ preserves p.lastLayer != nil && acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
+// @ preserves acc(&p.path, def.ReadL20)
+// @ preserves acc(p.path.Mem(ub[startP:endP]), def.ReadL20)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ preserves acc(&p.hopField)
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ decreases
+func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, ghost startLL int, ghost endLL int, ghost startP int, ghost endP int @*/ ) (respr processResult, reserr error) {
 	alert := p.egressRouterAlertFlag()
 	if !*alert {
 		return processResult{}, nil
 	}
 	egressID := p.egressInterface()
+	// @ p.d.getExternalMem()
+	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 	if _, ok := p.d.external[egressID]; !ok {
 		return processResult{}, nil
 	}
 	*alert = false
-	if err := p.path.SetHopField(p.hopField, int(p.path.PathMeta.CurrHF)); err != nil {
+	// (VerifiedSCION) the following is guaranteed by the type system, but Gobra cannot prove it yet
+	// @ assume 0 <= p.path.GetCurrHF(ub[startP:endP])
+	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ub[startP:endP]), _) in (unfolding acc(p.path.Base.Mem(), _) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ub[startP:endP] @*/); err != nil {
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
-	return p.handleSCMPTraceRouteRequest(egressID)
+	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	// @ sl.SplitRange_Bytes(ub, startLL, endLL, writePerm)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
+	return p.handleSCMPTraceRouteRequest(egressID /*@ , ub[startLL:endLL] @*/)
 }
 
 // @ preserves acc(&p.infoField, def.ReadL20)
+// @ ensures   res == &p.hopField.IngressRouterAlert || res == &p.hopField.EgressRouterAlert
 // @ decreases
-func (p *scionPacketProcessor) egressRouterAlertFlag() *bool {
+func (p *scionPacketProcessor) egressRouterAlertFlag() (res *bool) {
 	if !p.infoField.ConsDir {
 		return &p.hopField.IngressRouterAlert
 	}
@@ -1911,7 +1932,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult
 	// handle egress router alert before we check if it's up because we want to
 	// send the reply anyway, so that trace route can pinpoint the exact link
 	// that failed.
-	if r, err := p.handleEgressRouterAlert(); err != nil {
+	if r, err := p.handleEgressRouterAlert( /*@ nil, 0, 0, 0, 0 @*/ ); err != nil {
 		return r, err
 	}
 	if r, err := p.validateEgressUp(); err != nil {
