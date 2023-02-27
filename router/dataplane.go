@@ -1677,17 +1677,25 @@ func (p *scionPacketProcessor) egressInterface() uint16 {
 	return p.hopField.ConsIngress
 }
 
-// @ trusted
-// @ requires false
+// @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
+// @ preserves acc(&p.infoField, def.ReadL20)
+// @ preserves acc(&p.hopField, def.ReadL20)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ ensures   acc(&p.d, def.ReadL20)
 func (p *scionPacketProcessor) validateEgressUp() (processResult, error) {
 	egressID := p.egressInterface()
+	// @ p.d.getBfdSessionsMem()
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
 	if v, ok := p.d.bfdSessions[egressID]; ok {
 		if !v.IsUp() {
 			typ := slayers.SCMPTypeExternalInterfaceDown
+			// @ p.d.getLocalIA()
 			var scmpP gopacket.SerializableLayer = &slayers.SCMPExternalInterfaceDown{
 				IA:   p.d.localIA,
 				IfID: uint64(egressID),
 			}
+			// @ p.d.getExternalMem()
+			// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 			if _, external := p.d.external[egressID]; !external {
 				typ = slayers.SCMPTypeInternalConnectivityDown
 				scmpP = &slayers.SCMPInternalConnectivityDown{
@@ -1696,6 +1704,7 @@ func (p *scionPacketProcessor) validateEgressUp() (processResult, error) {
 					Egress:  uint64(egressID),
 				}
 			}
+			// @ def.TODO()
 			return p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down"))
 		}
 	}

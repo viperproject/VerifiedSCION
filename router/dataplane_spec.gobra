@@ -238,6 +238,14 @@ func (d *DataPlane) getSvcMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
 }
 
+ghost
+requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.bfdSessions, _) && (d.bfdSessions != nil ==> acc(AccBfdSession(d.bfdSessions), _))
+decreases
+func (d *DataPlane) getBfdSessionsMem() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
 
 /**** Post-init invariants ****/
