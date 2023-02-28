@@ -1218,6 +1218,9 @@ func (p *scionPacketProcessor) packSCMP(
 // @ preserves acc(&p.hopField) && acc(&p.infoField)
 // @ preserves acc(p.path.Mem(ub), def.ReadL1)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL1)
+// @ ensures   respr === processResult{}
+// @ ensures   reserr == nil ==> p.path.GetCurrINF(ub) < p.path.GetNumINF(ub)
+// @ ensures   reserr == nil ==> p.path.GetCurrHF(ub)  < p.path.GetNumHops(ub)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
@@ -1237,8 +1240,9 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 
 // @ preserves acc(&p.infoField, def.ReadL20)
 // @ preserves acc(&p.hopField, def.ReadL20)
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) validateHopExpiry() (processResult, error) {
+func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr error) {
 	expiration := util.SecsToTime(p.infoField.Timestamp).
 		Add(path.ExpTimeToDuration(p.hopField.ExpTime))
 	expired := expiration.Before(time.Now())
@@ -1358,8 +1362,8 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ requires  acc(p.path.Mem(ubPath), def.ReadL4)
 // @ requires  acc(&p.ingressID, def.ReadL20)
 // @ requires  acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
-// @ requires  0 < p.path.GetCurrINF(ubPath) && p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
-// @ requires  0 < p.path.GetCurrHF(ubPath) && p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ requires  p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
+// @ requires  p.path.GetCurrHF(ubPath)  <= p.path.GetNumHops(ubPath)
 // @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
 // @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL4)
@@ -1372,6 +1376,9 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ubPath []byte @*/ ) (respr processResult, reserr error) {
+	// (VerifiedSCION) Gobra cannot prove this property yet, even though it follows
+	// from the type system
+	// @ assume 0 <= p.path.GetCurrHF(ubPath)
 	if p.path.IsFirstHop( /*@ ubPath @*/ ) || p.ingressID != 0 {
 		// not a transit packet, nothing to check
 		return processResult{}, nil
@@ -1640,8 +1647,8 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ubPath []byte @*/ ) (respr pro
 // @ requires  acc(&p.path, def.ReadL20)
 // @ requires  acc(p.path.Mem(ubPath), def.ReadL5)
 // @ requires  acc(&p.infoField, def.ReadL5) && acc(&p.hopField, def.ReadL5)
-// @ requires  0 < p.path.GetCurrINF(ubPath) && p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
-// @ requires  0 < p.path.GetCurrHF(ubPath) && p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ requires  p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
+// @ requires  p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
 // @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL5)
 // @ ensures   acc(&p.path, def.ReadL20)
 // @ ensures   acc(p.path.Mem(ubPath), def.ReadL5)
@@ -1861,8 +1868,10 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 }
 
 // @ preserves acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ ensures   reserr == nil ==> int(p.scionLayer.GetPayloadLen(ubScionL)) == len(p.scionLayer.GetPayload(ubScionL))
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (processResult, error) {
+func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (respr processResult, reserr error) {
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
 	// @ defer fold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
 	if int(p.scionLayer.PayloadLen) == len(p.scionLayer.Payload) {
@@ -1878,22 +1887,43 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 	)
 }
 
-// @ requires false
-// @ preserves acc(p)
-func (p *scionPacketProcessor) process( /*@ ghost ub []byte @*/ ) (processResult, error) {
+// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires  0 <= startP  && startP  <= endP  && endP  <= len(ub)
+// @ requires  0 <= startSL && startSL <= endSL && endSL <= len(ub)
+// @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires  acc(&p.path, def.ReadL10)
+// @ requires  p.path.Mem(ub[startP:endP])
+// @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ preserves acc(&p.lastLayer, def.ReadL19)
+// @ preserves p.lastLayer != nil && acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
+// @ preserves acc(&p.scionLayer, def.ReadL10)
+// @ preserves acc(p.scionLayer.Mem(ub[startSL:endSL]), def.ReadL15)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ preserves acc(&p.infoField)
+// @ preserves acc(&p.hopField)
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   acc(&p.path, def.ReadL10)
+// @ ensures   p.path.Mem(ub[startP:endP])
+// @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, ghost endP int, ghost startLL int, ghost endLL int, ghost startSL int, ghost endSL int @*/ ) (respr processResult, reserr error) {
 
-	if r, err := p.parsePath( /*@ ub @*/ ); err != nil {
+	// @ sl.SplitRange_Bytes(ub, startP, endP, def.ReadL1)
+	if r, err := p.parsePath( /*@ ub[startP:endP] @*/ ); err != nil {
+		// @ sl.CombineRange_Bytes(ub, startP, endP, def.ReadL1)
 		return r, err
 	}
+	// @ sl.CombineRange_Bytes(ub, startP, endP, def.ReadL1)
 	if r, err := p.validateHopExpiry(); err != nil {
 		return r, err
 	}
 	if r, err := p.validateIngressID(); err != nil {
 		return r, err
 	}
-	if r, err := p.validatePktLen( /*@ nil @*/ ); err != nil {
+	if r, err := p.validatePktLen( /*@ ub[startSL:endSL] @*/ ); err != nil {
 		return r, err
 	}
+	// @ def.TODO()
 	if r, err := p.validateTransitUnderlaySrc( /*@ nil @*/ ); err != nil {
 		return r, err
 	}
