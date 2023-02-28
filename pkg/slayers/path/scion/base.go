@@ -150,8 +150,9 @@ func (s *Base) IsXover() bool {
 
 // IsFirstHopAfterXover returns whether this is the first hop field after a crossover point.
 // @ preserves acc(s.Mem(), definitions.ReadL19)
+// @ ensures   res ==> unfolding acc(s.Mem(), _) in s.PathMeta.CurrINF > 0 && s.PathMeta.CurrHF > 0
 // @ decreases
-func (s *Base) IsFirstHopAfterXover() bool {
+func (s *Base) IsFirstHopAfterXover() (res bool) {
 	//@ unfold acc(s.Mem(), definitions.ReadL19)
 	//@ defer fold acc(s.Mem(), definitions.ReadL19)
 	return s.PathMeta.CurrINF > 0 && s.PathMeta.CurrHF > 0 &&

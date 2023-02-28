@@ -191,7 +191,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 // @ requires  0 <= idx
 // @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL10)
 // @ ensures   acc(s.Mem(ubuf), def.ReadL10)
-// @ ensures   idx < old(s.GetNumINF(ubuf)) ==> err == nil
+// @ ensures   (idx < old(s.GetNumINF(ubuf))) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) {
@@ -218,19 +218,20 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
-// @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves acc(s.Mem(ubuf), def.ReadL8)
 // @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
-// @ ensures r != nil ==> r.ErrorMem()
+// @ ensures   (r == nil) == (s.GetCurrINF(ubuf) < s.GetNumINF(ubuf))
+// @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoField, r error) {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL1)
-	//@ unfold acc(s.Base.Mem(), def.ReadL1)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL9)
+	//@ unfold acc(s.Base.Mem(), def.ReadL10)
 	idx := int(s.PathMeta.CurrINF)
 	// (VerifiedSCION) Cannot assert bounds of uint:
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= idx
-	//@ fold acc(s.Base.Mem(), def.ReadL1)
-	//@ fold acc(s.Mem(ubuf), def.ReadL1)
+	//@ fold acc(s.Base.Mem(), def.ReadL10)
+	//@ fold acc(s.Mem(ubuf), def.ReadL9)
 	return s.GetInfoField(idx /*@, ubuf @*/)
 }
 
@@ -266,7 +267,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 // @ requires  0 <= idx
 // @ preserves acc(s.Mem(ubuf), def.ReadL10)
 // @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL10)
-// @ ensures   idx < old(s.GetNumHops(ubuf)) ==> r == nil
+// @ ensures   (idx < old(s.GetNumHops(ubuf))) == (r == nil)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
@@ -294,19 +295,20 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
-// @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves acc(s.Mem(ubuf), def.ReadL8)
 // @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
+// @ ensures   (r == nil) == (s.GetCurrHF(ubuf) < s.GetNumHops(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL2)
-	//@ unfold acc(s.Base.Mem(), def.ReadL3)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL9)
+	//@ unfold acc(s.Base.Mem(), def.ReadL10)
 	idx := int(s.PathMeta.CurrHF)
 	// (VerifiedSCION) Cannot assert bounds of uint:
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= idx
-	//@ fold acc(s.Base.Mem(), def.ReadL3)
-	//@ fold acc(s.Mem(ubuf), def.ReadL2)
+	//@ fold acc(s.Base.Mem(), def.ReadL10)
+	//@ fold acc(s.Mem(ubuf), def.ReadL9)
 	return s.GetHopField(idx /*@, ubuf @*/)
 }
 
@@ -344,14 +346,11 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 }
 
 // IsFirstHop returns whether the current hop is the first hop on the path.
-// @ preserves acc(s.Mem(ubuf), def.ReadL20)
+// @ pure
+// @ requires  acc(s.Mem(ubuf), _)
 // @ decreases
 func (s *Raw) IsFirstHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
-	//@ defer  fold acc(s.Mem(ubuf), def.ReadL20)
-	//@ unfold acc(s.Base.Mem(), def.ReadL20)
-	//@ defer  fold acc(s.Base.Mem(), def.ReadL20)
-	return s.PathMeta.CurrHF == 0
+	return /*@ unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.Base.Mem(), _) in @*/ s.PathMeta.CurrHF == 0 /*@ ) @*/
 }
 
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.
