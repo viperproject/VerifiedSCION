@@ -967,7 +967,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		return p.processOHP( /*@ nil @*/ )
 	case scion.PathType:
 		// @ def.TODO()
-		return p.processSCION()
+		return p.processSCION( /*@ nil, 0, 0, 0, 0, 0, 0 @*/ )
 	case epic.PathType:
 		// @ def.TODO()
 		return p.processEPIC()
@@ -1076,7 +1076,36 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 
 // @ trusted
 // @ requires false
-func (p *scionPacketProcessor) processSCION() (processResult, error) {
+// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires  0 <= startP  && startP  <= endP  && endP  <= len(ub)
+// @ requires  0 <= startSL && startSL <= endSL && endSL <= len(ub)
+// @ requires  acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
+// The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
+// which slightly simplifies the spec
+// @ requires  acc(&p.rawPkt, def.ReadL1) && ub === p.rawPkt
+// @ requires  acc(&p.path)
+// @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), def.ReadL10)
+// @ preserves acc(&p.lastLayer, def.ReadL19)
+// @ preserves p.lastLayer != nil && acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
+// @ preserves acc(&p.scionLayer, def.ReadL10)
+// @ preserves acc(p.scionLayer.Mem(ub[startSL:endSL]), def.ReadL15)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ preserves acc(&p.infoField)
+// @ preserves acc(&p.hopField)
+// @ preserves acc(&p.segmentChange)
+// @ preserves acc(&p.mac, def.ReadL10) && p.mac != nil && p.mac.Mem()
+// @ preserves acc(&p.macBuffers.scionInput, def.ReadL10)
+// @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+// @ preserves acc(&p.cachedMac)
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   acc(&p.path)
+// @ ensures   acc(&p.rawPkt, def.ReadL1)
+// @ ensures   reserr == nil ==> p.path.Mem(ub[startP:endP])
+// @ ensures   reserr != nil ==> p.path.NonInitMem()
+// @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost startP int, ghost endP int, ghost startLL int, ghost endLL int, ghost startSL int, ghost endSL int @*/ ) (respr processResult, reserr error) {
 
 	var ok bool
 	p.path, ok = p.scionLayer.Path.(*scion.Raw)
@@ -1216,7 +1245,7 @@ func (p *scionPacketProcessor) packSCMP(
 
 // @ preserves acc(&p.path, def.ReadL20)
 // @ preserves acc(&p.hopField) && acc(&p.infoField)
-// @ preserves acc(p.path.Mem(ub), def.ReadL1)
+// @ preserves acc(p.path.Mem(ub), def.ReadL7)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL1)
 // @ ensures   respr === processResult{}
 // @ ensures   reserr == nil ==> p.path.GetCurrINF(ub) < p.path.GetNumINF(ub)
@@ -1912,13 +1941,13 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // which slightly simplifies the spec
 // @ requires  acc(&p.rawPkt, def.ReadL1) && ub === p.rawPkt
 // @ requires  acc(&p.path, def.ReadL10)
-// @ requires  p.path.Mem(ub[startP:endP])
+// @ requires  p.scionLayer.Mem(ub[startSL:endSL])
+// @ requires  p.path == p.scionLayer.GetPath(ub[startSL:endSL])
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), def.ReadL10)
 // @ preserves acc(&p.lastLayer, def.ReadL19)
-// @ preserves p.lastLayer != nil && acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
-// @ preserves acc(&p.scionLayer, def.ReadL10)
-// @ preserves acc(p.scionLayer.Mem(ub[startSL:endSL]), def.ReadL15)
+// @ preserves p.lastLayer != nil
+// @ preserves p.lastLayer !== &p.scionLayer ==> acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
 // @ preserves acc(&p.ingressID, def.ReadL20)
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField)
@@ -1930,8 +1959,8 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures   acc(&p.d, def.ReadL20)
 // @ ensures   acc(&p.path, def.ReadL10)
 // @ ensures   acc(&p.rawPkt, def.ReadL1)
-// @ ensures   reserr == nil ==> p.path.Mem(ub[startP:endP])
-// @ ensures   reserr != nil ==> p.path.NonInitMem()
+// @ ensures   reserr == nil ==> p.scionLayer.Mem(ub[startSL:endSL])
+// @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, ghost endP int, ghost startLL int, ghost endLL int, ghost startSL int, ghost endSL int @*/ ) (respr processResult, reserr error) {
