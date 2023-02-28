@@ -83,6 +83,20 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
 	defer fold acc(s.Mem(ub), def.ReadL18)
 	return s.Base.IsFirstHopAfterXover()
 }
+
+/**
+  * This method is not part of the original SCION codebase.
+  * Instead, `IsXover` was defined in `*Base` via embedded structs.
+  * Unfortunately, Gobra does not fully support them yet, so we
+  * introduced this wrapper method which acts as a wrapper.
+  */
+preserves acc(s.Mem(ub), def.ReadL9)
+decreases
+func (s *Raw) IsXover(ghost ub []byte) bool {
+	unfold acc(s.Mem(ub), def.ReadL9)
+	defer fold acc(s.Mem(ub), def.ReadL9)
+	return s.Base.IsXover()
+}
 /**** End of Stubs ****/
 
 /**** Lemmas ****/
