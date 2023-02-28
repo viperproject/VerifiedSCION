@@ -246,6 +246,14 @@ func (d *DataPlane) getBfdSessionsMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
 }
 
+ghost
+requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.internal, _) && (d.internal != nil ==> acc(d.internal.Mem(), _))
+decreases
+func (d *DataPlane) getInternal() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
 
 /**** Post-init invariants ****/
