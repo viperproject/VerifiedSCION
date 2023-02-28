@@ -1293,8 +1293,9 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 // @ preserves acc(&p.path, def.ReadL20) && acc(p.path.Mem(ubPath), def.ReadL20)
 // @ preserves acc(&p.ingressID, def.ReadL20)
 // @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubPath []byte, ghost ubScionL []byte @*/ ) (processResult, error) {
+func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubPath []byte, ghost ubScionL []byte @*/ ) (respr processResult, reserr error) {
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
 	// @ unfold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), def.ReadL20)
 	// @ p.d.getLocalIA()
@@ -1543,8 +1544,9 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ preserves acc(&p.cachedMac)
 // @ ensures   len(p.cachedMac) == path.MACBufferSize
 // @ ensures   sl.AbsSlice_Bytes(p.cachedMac, 0, len(p.cachedMac))
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) verifyCurrentMAC() (processResult, error) {
+func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr error) {
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput)
 	// @ fold acc(sl.AbsSlice_Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), def.ReadL20)
 	// @ defer unfold acc(sl.AbsSlice_Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), def.ReadL20)
@@ -1730,8 +1732,9 @@ func (p *scionPacketProcessor) validateEgressUp() (processResult, error) {
 // @ preserves acc(&p.infoField, def.ReadL20)
 // @ preserves acc(&p.hopField)
 // @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, ghost startLL int, ghost endLL int, ghost startP int, ghost endP int @*/ ) (processResult, error) {
+func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, ghost startLL int, ghost endLL int, ghost startP int, ghost endP int @*/ ) (respr processResult, reserr error) {
 	if p.ingressID == 0 {
 		return processResult{}, nil
 	}
@@ -1818,9 +1821,10 @@ func (p *scionPacketProcessor) egressRouterAlertFlag() (res *bool) {
 // @ ensures   acc(&p.lastLayer, def.ReadL20)
 // @ ensures   acc(p.lastLayer.Mem(ubLastLayer), def.ReadL15)
 // @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
-	interfaceID uint16 /*@ , ghost ubLastLayer []byte @*/) (processResult, error) {
+	interfaceID uint16 /*@ , ghost ubLastLayer []byte @*/) (respr processResult, reserr error) {
 
 	if p.lastLayer.NextLayerType( /*@ ubLastLayer @*/ ) != slayers.LayerTypeSCMP {
 		log.Debug("Packet with router alert, but not SCMP")
@@ -1890,10 +1894,11 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires  0 <= startP  && startP  <= endP  && endP  <= len(ub)
 // @ requires  0 <= startSL && startSL <= endSL && endSL <= len(ub)
-// @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires  acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires  acc(&p.path, def.ReadL10)
 // @ requires  p.path.Mem(ub[startP:endP])
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), def.ReadL10)
 // @ preserves acc(&p.lastLayer, def.ReadL19)
 // @ preserves p.lastLayer != nil && acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
 // @ preserves acc(&p.scionLayer, def.ReadL10)
@@ -1901,15 +1906,20 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ preserves acc(&p.ingressID, def.ReadL20)
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField)
+// @ preserves acc(&p.mac, def.ReadL10) && p.mac != nil && p.mac.Mem()
+// @ preserves acc(&p.macBuffers.scionInput, def.ReadL10)
+// @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+// @ preserves acc(&p.cachedMac)
 // @ ensures   acc(&p.d, def.ReadL20)
 // @ ensures   acc(&p.path, def.ReadL10)
 // @ ensures   p.path.Mem(ub[startP:endP])
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, ghost endP int, ghost startLL int, ghost endLL int, ghost startSL int, ghost endSL int @*/ ) (respr processResult, reserr error) {
-
+	// @ ghost ubPath := ub[startP:endP]
+	// @ ghost ubScionL := ub[startSL:endSL]
 	// @ sl.SplitRange_Bytes(ub, startP, endP, def.ReadL1)
-	if r, err := p.parsePath( /*@ ub[startP:endP] @*/ ); err != nil {
+	if r, err := p.parsePath( /*@ ubPath @*/ ); err != nil {
 		// @ sl.CombineRange_Bytes(ub, startP, endP, def.ReadL1)
 		return r, err
 	}
@@ -1920,26 +1930,31 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 	if r, err := p.validateIngressID(); err != nil {
 		return r, err
 	}
-	if r, err := p.validatePktLen( /*@ ub[startSL:endSL] @*/ ); err != nil {
+	if r, err := p.validatePktLen( /*@ ubScionL @*/ ); err != nil {
 		return r, err
 	}
-	// @ def.TODO()
-	if r, err := p.validateTransitUnderlaySrc( /*@ nil @*/ ); err != nil {
+	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+	if r, err := p.validateTransitUnderlaySrc( /*@ ubPath @*/ ); err != nil {
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		return r, err
 	}
-	if r, err := p.validateSrcDstIA( /*@ nil, nil @*/ ); err != nil {
+	if r, err := p.validateSrcDstIA( /*@ ubPath, ubScionL @*/ ); err != nil {
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		return r, err
 	}
-	if err := p.updateNonConsDirIngressSegID( /*@ nil @*/ ); err != nil {
+	if err := p.updateNonConsDirIngressSegID( /*@ ubPath @*/ ); err != nil {
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		return processResult{}, err
 	}
+	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 	if r, err := p.verifyCurrentMAC(); err != nil {
 		return r, err
 	}
-	if r, err := p.handleIngressRouterAlert( /*@ nil, 0, 0, 0, 0 @*/ ); err != nil {
+	if r, err := p.handleIngressRouterAlert( /*@ ub, startLL, endLL, startP, endP @*/ ); err != nil {
 		return r, err
 	}
 
+	// @ def.TODO()
 	// Inbound: pkts destined to the local IA.
 	if p.scionLayer.DstIA == p.d.localIA {
 		// @ def.TODO()
