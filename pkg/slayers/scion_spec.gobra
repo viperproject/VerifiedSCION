@@ -250,14 +250,14 @@ ghost
 requires  acc(s.Mem(ub), _)
 decreases
 pure func (s *SCION) GetPayloadLen(ghost ub []byte) uint16 {
-    return unfolding acc(s.Mem(ub), _) in s.PayloadLen
+	return unfolding acc(s.Mem(ub), _) in s.PayloadLen
 }
 
 ghost
 requires  acc(s.Mem(ub), _)
 decreases
 pure func (s *SCION) GetPayload(ghost ub []byte) []byte {
-    return unfolding acc(s.Mem(ub), _) in s.Payload
+	return unfolding acc(s.Mem(ub), _) in s.Payload
 }
 
 ghost
