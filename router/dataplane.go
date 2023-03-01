@@ -967,7 +967,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		return p.processOHP( /*@ nil @*/ )
 	case scion.PathType:
 		// @ def.TODO()
-		return p.processSCION( /*@ nil, 0, 0, 0, 0, 0, 0 @*/ )
+		return p.processSCION( /*@ nil, 0, 0, 0, 0 @*/ )
 	case epic.PathType:
 		// @ def.TODO()
 		return p.processEPIC()
@@ -1076,7 +1076,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 
 // @ trusted
 // @ requires false
-func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost startP int, ghost endP int, ghost startLL int, ghost endLL int, ghost startSL int, ghost endSL int @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost startP int, ghost endP int, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 
 	var ok bool
 	p.path, ok = p.scionLayer.Path.(*scion.Raw)
@@ -1629,31 +1629,47 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ubPath []byte @*/ ) (res
 	return nil
 }
 
-// @ requires  acc(&p.path, def.ReadL20) && p.path.Mem(ubPath)
+// @ requires  acc(&p.path, def.ReadL20)
+// @ requires  p.scionLayer.Mem(ub)
+// @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ preserves acc(&p.segmentChange) && acc(&p.hopField) && acc(&p.infoField)
-// @ preserves sl.AbsSlice_Bytes(ubPath, 0, len(ubPath))
-// @ ensures   reserr == nil ==> acc(&p.path, def.ReadL20) && p.path.Mem(ubPath)
-// @ ensures   reserr != nil ==> acc(&p.path, def.ReadL20) && p.path.NonInitMem()
+// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   acc(&p.path, def.ReadL20)
+// @ ensures   reserr == nil ==> (p.scionLayer.Mem(ub) && p.scionLayer.UBPath(ub) === old(p.scionLayer.UBPath(ub)) && p.scionLayer.GetPath(ub) === old(p.scionLayer.GetPath(ub)))
+// @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   p.segmentChange
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) doXover( /*@ ghost ubPath []byte @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
 	p.segmentChange = true
+	// @ unfold p.scionLayer.Mem(ub)
+	// @ ghost  startP := int(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen(nil, true))
+	// @ ghost  endP   := int(p.scionLayer.HdrLen * slayers.LineLen)
+	// @ ghost  ubPath := ub[startP:endP]
+	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// TODO parameter problem invalid path
+		// TODO(joao): we currently expose a lot of internal information from slayers here. Can we avoid it?
+		// @ unfold p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:])
+		// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
+		// @ fold p.scionLayer.NonInitMem()
 		return processResult{}, serrors.WrapStr("incrementing path", err)
 	}
 	var err error
 	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+		// @ fold p.scionLayer.Mem(ub)
+		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
 	if p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ ); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+		// @ fold p.scionLayer.Mem(ub)
+		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
+	// @ fold p.scionLayer.Mem(ub)
 	return processResult{}, nil
 }
 
@@ -1905,20 +1921,18 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 }
 
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires  0 <= startP  && startP  <= endP  && endP  <= len(ub)
-// @ requires  0 <= startSL && startSL <= endSL && endSL <= len(ub)
 // @ requires  acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
 // @ requires  acc(&p.rawPkt, def.ReadL1) && ub === p.rawPkt
 // @ requires  acc(&p.path, def.ReadL10)
-// @ requires  p.scionLayer.Mem(ub[startSL:endSL])
-// @ requires  p.path == p.scionLayer.GetPath(ub[startSL:endSL])
+// @ requires  p.scionLayer.Mem(ub)
+// @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), def.ReadL10)
 // @ preserves acc(&p.lastLayer, def.ReadL19)
 // @ preserves p.lastLayer != nil
-// @ preserves p.lastLayer !== &p.scionLayer ==> acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
+// @ preserves p.lastLayer !== &p.scionLayer ==> acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL10)
 // @ preserves acc(&p.ingressID, def.ReadL20)
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField)
@@ -1930,61 +1944,74 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures   acc(&p.d, def.ReadL20)
 // @ ensures   acc(&p.path, def.ReadL10)
 // @ ensures   acc(&p.rawPkt, def.ReadL1)
-// @ ensures   reserr == nil ==> p.scionLayer.Mem(ub[startSL:endSL])
+// @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, ghost endP int, ghost startLL int, ghost endLL int, ghost startSL int, ghost endSL int @*/ ) (respr processResult, reserr error) {
-	// @ ghost ubPath := ub[startP:endP]
-	// @ ghost ubScionL := ub[startSL:endSL]
+func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
+	// @ ghost  ubPath := p.scionLayer.UBPath(ub)
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL5)
+	// @ ghost  startP := int(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen(nil, true))
+	// @ ghost  endP   := int(p.scionLayer.HdrLen * slayers.LineLen)
+	// @ assert ubPath === ub[startP:endP]
 	// @ sl.SplitRange_Bytes(ub, startP, endP, def.ReadL1)
 	if r, err := p.parsePath( /*@ ubPath @*/ ); err != nil {
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 		// @ sl.CombineRange_Bytes(ub, startP, endP, def.ReadL1)
-		// @ p.path.DowngradePerm(ubPath)
+		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
+	// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 	// @ sl.CombineRange_Bytes(ub, startP, endP, def.ReadL1)
 	if r, err := p.validateHopExpiry(); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
 	if r, err := p.validateIngressID(); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	if r, err := p.validatePktLen( /*@ ubScionL @*/ ); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+	if r, err := p.validatePktLen( /*@ ub @*/ ); err != nil {
+		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
 	if r, err := p.validateTransitUnderlaySrc( /*@ ubPath @*/ ); err != nil {
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		// @ p.path.DowngradePerm(ubPath)
+		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	if r, err := p.validateSrcDstIA( /*@ ubPath, ubScionL @*/ ); err != nil {
+	if r, err := p.validateSrcDstIA( /*@ ubPath, ub @*/ ); err != nil {
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		// @ p.path.DowngradePerm(ubPath)
+		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
 	if err := p.updateNonConsDirIngressSegID( /*@ ubPath @*/ ); err != nil {
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		// @ p.path.DowngradePerm(ubPath)
+		// @ p.scionLayer.DowngradePerm(ub)
 		return processResult{}, err
 	}
 	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 	if r, err := p.verifyCurrentMAC(); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
+		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
 	if r, err := p.handleIngressRouterAlert( /*@ ub, startLL, endLL, startP, endP @*/ ); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
+		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
+	// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
+	// @ assert p.scionLayer.Mem(ub)
 
 	// Inbound: pkts destined to the local IA.
 	// @ p.d.getLocalIA()
-	if /*@ unfolding acc(p.scionLayer.Mem(ubScionL), _) in @*/ p.scionLayer.DstIA == p.d.localIA {
+	if /*@ unfolding acc(p.scionLayer.Mem(ub), _) in (unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), _) in @*/ p.scionLayer.DstIA /*@ ) @*/ == p.d.localIA {
 		// @ def.TODO()
 		a, r, err := p.resolveInbound( /*@ nil @*/ )
 		if err != nil {
@@ -1996,34 +2023,37 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 	// Outbound: pkts leaving the local IA.
 	// BRTransit: pkts leaving from the same BR different interface.
 
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	if p.path.IsXover( /*@ ubPath @*/ ) {
-		// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
-		if r, err := p.doXover( /*@ ubPath @*/ ); err != nil {
-			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
+		if r, err := p.doXover( /*@ ub @*/ ); err != nil {
 			return r, err
 		}
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		if r, err := p.validateHopExpiry(); err != nil {
-			// @ p.path.DowngradePerm(ubPath)
+			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover")
 		}
 		// verify the new block
 		if r, err := p.verifyCurrentMAC(); err != nil {
-			// @ p.path.DowngradePerm(ubPath)
+			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
+			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover")
 		}
 	}
 	if r, err := p.validateEgressID(); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
 	// handle egress router alert before we check if it's up because we want to
 	// send the reply anyway, so that trace route can pinpoint the exact link
 	// that failed.
 	if r, err := p.handleEgressRouterAlert( /*@ ub, startLL, endLL, startP, endP @*/ ); err != nil {
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		// @ p.path.DowngradePerm(ubPath)
 		return r, err
 	}
+	// @ assume false
+	// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	if r, err := p.validateEgressUp(); err != nil {
 		// @ p.path.DowngradePerm(ubPath)
 		return r, err
@@ -2034,10 +2064,13 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
 		// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+		// @ unfold p.scionLayer.Mem(ub)
 		if err := p.processEgress( /*@ ubPath @*/ ); err != nil {
+			// @ fold p.scionLayer.Mem(ub)
 			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 			return processResult{}, err
 		}
+		// @ fold p.scionLayer.Mem(ub)
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil
 	}
