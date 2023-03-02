@@ -1930,7 +1930,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), def.ReadL10)
-// @ preserves acc(&p.lastLayer, def.ReadL19)
+// @ preserves acc(&p.lastLayer, def.ReadL10)
 // @ preserves p.lastLayer != nil
 // @ preserves p.lastLayer !== &p.scionLayer ==> acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL10)
 // @ preserves acc(&p.ingressID, def.ReadL20)
@@ -2001,6 +2001,8 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
+	// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	if r, err := p.handleIngressRouterAlert( /*@ ub, startLL, endLL, startP, endP @*/ ); err != nil {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		// @ p.scionLayer.DowngradePerm(ub)
@@ -2040,19 +2042,19 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 			return r, serrors.WithCtx(err, "info", "after xover")
 		}
 	}
+	// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	if r, err := p.validateEgressID(); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
+	// @ assume false
 	// handle egress router alert before we check if it's up because we want to
 	// send the reply anyway, so that trace route can pinpoint the exact link
 	// that failed.
 	if r, err := p.handleEgressRouterAlert( /*@ ub, startLL, endLL, startP, endP @*/ ); err != nil {
-		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		// @ p.path.DowngradePerm(ubPath)
 		return r, err
 	}
-	// @ assume false
 	// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	if r, err := p.validateEgressUp(); err != nil {
 		// @ p.path.DowngradePerm(ubPath)
