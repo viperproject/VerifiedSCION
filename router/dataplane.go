@@ -1214,23 +1214,35 @@ func (p *scionPacketProcessor) packSCMP(
 	return processResult{OutPkt: rawSCMP}, err
 }
 
+// @ preserves acc(p.scionLayer.Mem(ub), def.ReadL5)
 // @ preserves acc(&p.path, def.ReadL20)
+// @ preserves p.path === p.scionLayer.GetPath(ub)
 // @ preserves acc(&p.hopField) && acc(&p.infoField)
-// @ preserves acc(p.path.Mem(ub), def.ReadL7)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL1)
 // @ ensures   respr === processResult{}
-// @ ensures   reserr == nil ==> p.path.GetCurrINF(ub) < p.path.GetNumINF(ub)
-// @ ensures   reserr == nil ==> p.path.GetCurrHF(ub)  < p.path.GetNumHops(ub)
+// @ ensures   reserr == nil ==> (
+// @	let ubPath := p.scionLayer.UBPath(ub) in
+// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in	(p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath)))
+// @ ensures   reserr == nil ==> (
+// @	let ubPath := p.scionLayer.UBPath(ub) in
+// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in (p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath)))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
 	var err error
-	p.hopField, err = p.path.GetCurrentHopField( /*@ ub @*/ )
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL6)
+	// @ defer fold acc(p.scionLayer.Mem(ub), def.ReadL6)
+	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
+	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
+	// @ ghost ubPath := ub[startP:endP]
+	// @ sl.SplitRange_Bytes(ub, startP, endP, def.ReadL1)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, def.ReadL1)
+	p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
-	p.infoField, err = p.path.GetCurrentInfoField( /*@ ub @*/ )
+	p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ )
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
@@ -1360,23 +1372,35 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // this check prevents malicious end hosts in the local AS from bypassing the
 // SrcIA checks by disguising packets as transit traffic.
 // @ requires  acc(&p.path, def.ReadL20)
-// @ requires  acc(p.path.Mem(ubPath), def.ReadL4)
+// @ requires  acc(p.scionLayer.Mem(ub), def.ReadL4)
+// @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.ingressID, def.ReadL20)
 // @ requires  acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
-// @ requires  p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
-// @ requires  p.path.GetCurrHF(ubPath)  <= p.path.GetNumHops(ubPath)
+// @ requires  reserr == nil ==> (
+// @	let ubPath := p.scionLayer.UBPath(ub) in
+// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in	(p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)))
+// @ requires  reserr == nil ==> (
+// @	let ubPath := p.scionLayer.UBPath(ub) in
+// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in (p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)))
 // @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
-// @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL4)
+// @ preserves acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL4)
 // @ ensures   acc(&p.path, def.ReadL20)
-// @ ensures   acc(p.path.Mem(ubPath), def.ReadL4)
+// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL4)
 // @ ensures   acc(&p.ingressID, def.ReadL20)
 // @ ensures   acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
 // @ ensures   acc(&p.d, def.ReadL20)
 // @ ensures   acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ubPath []byte @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL5)
+	// @ defer fold acc(p.scionLayer.Mem(ub), def.ReadL5)
+	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
+	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
+	// @ ghost ubPath := ub[startP:endP]
+	// @ sl.SplitRange_Bytes(ub, startP, endP, def.ReadL5)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, def.ReadL5)
 	// (VerifiedSCION) Gobra cannot prove this property yet, even though it follows
 	// from the type system
 	// @ assume 0 <= p.path.GetCurrHF(ubPath)
@@ -1949,20 +1973,10 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
-	// @ ghost  ubPath := p.scionLayer.UBPath(ub)
-	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL5)
-	// @ ghost  startP := int(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen(nil, true))
-	// @ ghost  endP   := int(p.scionLayer.HdrLen * slayers.LineLen)
-	// @ assert ubPath === ub[startP:endP]
-	// @ sl.SplitRange_Bytes(ub, startP, endP, def.ReadL1)
-	if r, err := p.parsePath( /*@ ubPath @*/ ); err != nil {
-		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
-		// @ sl.CombineRange_Bytes(ub, startP, endP, def.ReadL1)
+	if r, err := p.parsePath( /*@ ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
-	// @ sl.CombineRange_Bytes(ub, startP, endP, def.ReadL1)
 	if r, err := p.validateHopExpiry(); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
@@ -1975,27 +1989,24 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL3)
-	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
-	if r, err := p.validateTransitUnderlaySrc( /*@ ubPath @*/ ); err != nil {
-		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	// @ assume false
+	if r, err := p.validateTransitUnderlaySrc( /*@ ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	if r, err := p.validateSrcDstIA( /*@ ubPath, ub @*/ ); err != nil {
+	if r, err := p.validateSrcDstIA( /*@ nil, ub @*/ ); err != nil {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	if err := p.updateNonConsDirIngressSegID( /*@ ubPath @*/ ); err != nil {
+	if err := p.updateNonConsDirIngressSegID( /*@ nil @*/ ); err != nil {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		//  sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ p.scionLayer.DowngradePerm(ub)
 		return processResult{}, err
 	}
-	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	//  sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 	if r, err := p.verifyCurrentMAC(); err != nil {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		// @ p.scionLayer.DowngradePerm(ub)
@@ -2003,7 +2014,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 	}
 	// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL3)
-	if r, err := p.handleIngressRouterAlert( /*@ ub, startLL, endLL, startP, endP @*/ ); err != nil {
+	if r, err := p.handleIngressRouterAlert( /*@ ub, startLL, endLL, 0, 0 @*/ ); err != nil {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
@@ -2026,12 +2037,12 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 	// BRTransit: pkts leaving from the same BR different interface.
 
 	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL3)
-	if p.path.IsXover( /*@ ubPath @*/ ) {
+	if p.path.IsXover( /*@ nil @*/ ) {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		if r, err := p.doXover( /*@ ub @*/ ); err != nil {
 			return r, err
 		}
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		//  sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		if r, err := p.validateHopExpiry(); err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover")
@@ -2052,29 +2063,29 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 	// handle egress router alert before we check if it's up because we want to
 	// send the reply anyway, so that trace route can pinpoint the exact link
 	// that failed.
-	if r, err := p.handleEgressRouterAlert( /*@ ub, startLL, endLL, startP, endP @*/ ); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+	if r, err := p.handleEgressRouterAlert( /*@ ub, startLL, endLL, 0, 0 @*/ ); err != nil {
+		//  p.path.DowngradePerm(ubPath)
 		return r, err
 	}
 	// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	if r, err := p.validateEgressUp(); err != nil {
-		// @ p.path.DowngradePerm(ubPath)
+		//  p.path.DowngradePerm(ubPath)
 		return r, err
 	}
 
 	egressID := p.egressInterface()
-	// @ p.d.getExternalMem()
-	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
+	//  p.d.getExternalMem()
+	//  if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
-		// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
-		// @ unfold p.scionLayer.Mem(ub)
-		if err := p.processEgress( /*@ ubPath @*/ ); err != nil {
-			// @ fold p.scionLayer.Mem(ub)
-			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		//  sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+		//  unfold p.scionLayer.Mem(ub)
+		if err := p.processEgress( /*@ nil @*/ ); err != nil {
+			//  fold p.scionLayer.Mem(ub)
+			//  sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 			return processResult{}, err
 		}
-		// @ fold p.scionLayer.Mem(ub)
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		//  fold p.scionLayer.Mem(ub)
+		//  sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil
 	}
 
