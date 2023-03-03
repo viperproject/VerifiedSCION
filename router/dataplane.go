@@ -1220,10 +1220,11 @@ func (p *scionPacketProcessor) packSCMP(
 // @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL1)
 // @ ensures   acc(&p.path, def.ReadL20)
 // @ ensures   acc(&p.hopField) && acc(&p.infoField)
-// @ ensures   acc(p.path.Mem(ub), def.ReadL7)
 // @ ensures   acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL1)
 // @ ensures   respr === processResult{}
+// @ ensures   acc(p.path.Mem(ub), def.ReadL8)
 // @ ensures   reserr == nil ==> p.path.GetCurrINF(ub) < p.path.GetNumINF(ub)
+// @ ensures   acc(p.path.Mem(ub), def.ReadL8)
 // @ ensures   reserr == nil ==> p.path.GetCurrHF(ub)  < p.path.GetNumHops(ub)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
