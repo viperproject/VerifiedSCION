@@ -2031,7 +2031,6 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 		if r, err := p.doXover( /*@ ub @*/ ); err != nil {
 			return r, err
 		}
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		if r, err := p.validateHopExpiry(); err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover")
