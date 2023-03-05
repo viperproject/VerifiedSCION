@@ -1214,18 +1214,25 @@ func (p *scionPacketProcessor) packSCMP(
 	return processResult{OutPkt: rawSCMP}, err
 }
 
-// @ preserves acc(p.scionLayer.Mem(ub), def.ReadL5)
-// @ preserves acc(&p.path, def.ReadL20)
-// @ preserves p.path === p.scionLayer.GetPath(ub)
-// @ preserves acc(&p.hopField) && acc(&p.infoField)
+// @ requires  acc(p.scionLayer.Mem(ub), def.ReadL5)
+// @ requires  acc(&p.path, def.ReadL20)
+// @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires  acc(&p.hopField) && acc(&p.infoField)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL1)
+// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL6)
+// @ ensures   acc(&p.path, def.ReadL20)
+// @ ensures   p.path === p.scionLayer.GetPath(ub)
+// @ ensures   acc(&p.hopField) && acc(&p.infoField)
 // @ ensures   respr === processResult{}
 // @ ensures   reserr == nil ==> (
 // @	let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in	(p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath)))
+// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in
+// @	p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath))
+// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL6)
 // @ ensures   reserr == nil ==> (
 // @	let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in (p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath)))
+// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in
+// @ 	p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
@@ -1376,12 +1383,12 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.ingressID, def.ReadL20)
 // @ requires  acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
-// @ requires  reserr == nil ==> (
-// @	let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in	(p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)))
-// @ requires  reserr == nil ==> (
-// @	let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in (p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)))
+// @ requires  let ubPath := p.scionLayer.UBPath(ub) in
+// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in
+// @	p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ requires  let ubPath := p.scionLayer.UBPath(ub) in
+// @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in
+// @	p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
 // @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
 // @ preserves acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL4)
@@ -1394,10 +1401,10 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
-	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL5)
-	// @ defer fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL4)
+	// @ defer fold acc(p.scionLayer.Mem(ub), def.ReadL4)
 	// @ ghost ubPath := ub[startP:endP]
 	// @ sl.SplitRange_Bytes(ub, startP, endP, def.ReadL5)
 	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, def.ReadL5)
