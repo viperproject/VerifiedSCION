@@ -7,7 +7,7 @@ package socket
 
 import (
 	"net"
-	
+
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -42,4 +42,38 @@ pred (m *Message) Mem(lenBuffers int) {
 	(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==> (acc(&m.Buffers[i]) && slices.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))) &&
 	slices.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
 	(m.Addr != nil ==> acc(m.Addr.Mem(), _))
+}
+
+ghost
+requires acc(m.Mem(lenBuffers), _)
+requires 0 <= i && i < lenBuffers
+decreases
+pure func (m *Message) GetBuffer(lenBuffers int, i int) []byte {
+	return unfolding acc(m.Mem(lenBuffers), _) in m.Buffers[i]
+}
+
+// Only defined for the case where lenBuffers == 1
+ghost
+requires acc(m.Mem(1), _)
+decreases
+pure func (m *Message) GetFstBuffer() []byte {
+	return unfolding acc(m.Mem(1), _) in m.Buffers[0]
+}
+
+ghost
+requires acc(m.Mem(1), 1/2)
+ensures  acc(m, 1/4)
+ensures  acc(m, 1/4) --* acc(m.Mem(1), 1/2)
+decreases
+func (m *Message) SplitPerm() {
+	unfold acc(m.Mem(1), 1/2)
+	fold helper(m)
+	package acc(m, 1/4) --* acc(m.Mem(1), 1/2) {
+		fold acc(m.Mem(1), 1/2)
+	}
+	unfold helper(m)
+}
+
+pred helper(m *Message) {
+	acc(m, 1/4)
 }

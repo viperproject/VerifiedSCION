@@ -650,11 +650,15 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
-// @ trusted
-// @ requires false
+// @ requires  acc(&d.running, 1/2) && !d.running
+// @ requires  acc(&d.forwardingMetrics, 1/2)
+// @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
+// @ preserves d.mtx.LockP()
+// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) Run(ctx context.Context) error {
 	// @ share d, ctx
 	d.mtx.Lock()
+	// @ unfold MutexInvariant!<d!>()
 	d.running = true
 
 	// (VerifiedSCION) TODO: change the invariant to have the resources only
@@ -667,8 +671,32 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	read /*@@@*/ := func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
 		msgs := conn.NewReadMessages(inputBatchCnt)
-		for _, msg := range msgs {
+		// @ ghost buffers := seqs.NewSeqByteSlice(inputBatchCnt)
+
+		// TODO: drop
+		/*
+			invariant 0 <= i && i <= len(msgs)
+			invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
+			invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> (acc(msgs[j].Mem(1), 1/2) && acc(&msgs[j], 1/4) && acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
+			decreases len(msgs) - i
+			for i := 0; i < len(msgs); i++ {
+				msgs[i].SplitPerm()
+			}
+		*/
+
+		// @ invariant acc(&msg)
+		// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
+		// @ invariant len(buffers) == len(msgs)
+		// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+		// @ invariant forall j int :: { buffers[j] } 0 <= j && j < len(buffers) ==> buffers[j] === msgs[j].GetFstBuffer() && len(buffers[j]) == bufSize
+		// @ decreases len(msgs) - i0
+		for _, msg /*@@@*/ := range msgs /*@ with i0 @*/ {
+			// @ unfold msg.Mem(1)
+			// @ assert acc(&msg.Buffers[0])
 			msg.Buffers[0] = make([]byte, bufSize)
+			// @ buffers[i0] == msg.Buffers[0]
+			// @ fold slices.AbsSlice_Bytes(msg.Buffers[0], 0, len(msg.Buffers[0]))
+			// @ fold msg.Mem(1)
 		}
 		writeMsgs := make(underlayconn.Messages, 1)
 		writeMsgs[0].Buffers = make([][]byte, 1)
@@ -740,6 +768,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		}
 	}
 
+	// @ assume false
 	for k, v := range d.bfdSessions {
 		go func(ifID uint16, c bfdSession) {
 			defer log.HandlePanic()
