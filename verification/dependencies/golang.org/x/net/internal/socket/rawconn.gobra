@@ -8,10 +8,12 @@
 
 package socket
 
-import "syscall"
+import (
+	"syscall"
+	def "github.com/scionproto/scion/verification/utils/definitions"
+)
 
 // A Conn represents a raw connection.
 type Conn struct {
-	network string
-	c       syscall.RawConn
+	privateField def.PrivateField
 }

@@ -20,16 +20,6 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 
 func foldNonInitMem_Test() {
 	s@ := SCION{}
-	fold s.NonInitPathPool()
-	s.RecyclePaths()
+	fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	fold s.NonInitMem()
-}
-
-func baseLayer_Tests() {
-	p := []byte{1,2,3}
-	d := []byte{1,2,3,4}
-	fold sl.AbsSlice_Bytes(p, 0, len(p))
-	fold sl.AbsSlice_Bytes(d, 0, len(d))
-	b := &BaseLayer{d, p}
-	fold b.Mem(nil)
 }

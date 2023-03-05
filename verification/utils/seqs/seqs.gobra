@@ -1,4 +1,4 @@
- // Copyright 2022 Eth Zurich
+// Copyright 2022-2023 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,20 +14,19 @@
 
 // +gobra
 
-package topology
+package seqs
 
-import (
-	"time"
+ghost
+pure
+requires 0 <= n
+ensures  len(res) == n
+ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> !res[i]
+decreases _
+func NewSeqBool(n int) (res seq[bool])
 
-	"github.com/scionproto/scion/private/topology/underlay"
-)
-
-// BFD is the configuration for a BFD session
-type BFD struct {
-	Disable               bool
-	DetectMult            uint8
-	DesiredMinTxInterval  time.Duration
-	RequiredMinRxInterval time.Duration
-}
-
-const EndhostPort = underlay.EndhostPort
+ghost
+requires size >= 0
+ensures len(res) == size
+ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == byte(0)
+decreases
+pure func NewSeqByte(size int) (res seq[byte])

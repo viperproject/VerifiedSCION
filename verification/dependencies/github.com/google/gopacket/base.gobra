@@ -22,16 +22,18 @@ type Layer interface {
 	requires def.Uncallable()
 	LayerContents() (res []byte)
 
-	requires Mem(ub)
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem(ub)
+	preserves Mem(ub)
+	ensures   0 <= start && start <= end && end <= len(ub)
+	ensures   len(res) == end - start
+	ensures   len(res) != 0 ==> res === ub[start:end]
+	ensures   len(res) == 0 ==> (res == nil || res === ub[start:end])
 	decreases
-	LayerPayload(ghost ub []byte) (res []byte)
+	LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int)
 }
 
 type Payload []byte
 
-pred (p Payload) Mem(ub []byte) { acc(p) }
+pred (p Payload) Mem(ub []byte) { ub === p }
 
 decreases
 pure func (p Payload) LayerType() LayerType {
@@ -43,43 +45,31 @@ func (p Payload) LayerContents() (res []byte) {
 	res = []byte(p)
 }
 
-requires p.Mem(ub)
+ensures  start == 0 && end == 0
 ensures  res == nil
-ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* p.Mem(ub)
 decreases
-func (p Payload) LayerPayload(ghost ub []byte) (res []byte) {
-	unfold p.Mem(ub)
+func (p Payload) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	res = nil
-	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.Mem(ub) {
-		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold p.Mem(ub)
-	}
 }
 
-requires p.Mem(ub)
-ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* p.Mem(ub)
-ensures  res === []byte(p)
+preserves acc(p.Mem(ub), def.ReadL20)
+ensures   start == 0 && end == len(p) && len(p) == len(ub)
+ensures   res === []byte(p)
+ensures   len(res) == end - start
+ensures   len(res) != 0 ==> res === ub[start:end]
 decreases
-func (p Payload) Payload(ghost ub []byte) (res []byte) {
-	unfold p.Mem(ub)
+func (p Payload) Payload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	res = []byte(p)
-	assert forall i int :: 0 <= i && i < len(p) ==> acc(&p[i])
-	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* p.Mem(ub) {
-		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold p.Mem(ub)
-	}
+    assert unfolding acc(p.Mem(ub), def.ReadL20) in true
+    return res, 0, len(p)
 }
 
-requires b != nil && b.Mem(buf)
+requires b != nil && b.Mem()
 requires p.Mem(ubuf)
-ensures  err == nil ==> (p.Mem(ubuf) && b.Mem(bufRes))
+ensures  err == nil ==> (p.Mem(ubuf) && b.Mem())
 ensures  err != nil ==> err.ErrorMem()
 decreases
-func (p Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte, ghost buf []byte) (err error, ghost bufRes []byte)
+func (p Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)
 
 Payload implements Layer
 Payload implements ApplicationLayer
@@ -112,11 +102,12 @@ type TransportLayer interface {
 type ApplicationLayer interface {
 	Layer
 
-	requires Mem(ub)
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem(ub)
+	preserves Mem(ub)
+	ensures   0 <= start && start <= end && end <= len(ub)
+	ensures   len(res) == end - start
+	ensures   len(res) != 0 ==> res === ub[start:end]
 	decreases
-	Payload(ghost ub []byte) (res []byte)
+	Payload(ghost ub []byte) (res []byte, ghost start int, ghost end int)
 }
 
 type ErrorLayer interface {

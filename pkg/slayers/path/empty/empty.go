@@ -42,7 +42,7 @@ func RegisterPath() {
 		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
-			emptyTmp /*@@@*/ := Path{}
+			emptyTmp := Path{}
 			//@ fold emptyTmp.NonInitMem()
 			return emptyTmp
 		},

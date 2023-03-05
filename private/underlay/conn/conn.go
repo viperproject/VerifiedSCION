@@ -51,7 +51,7 @@ type Conn interface {
 	//@ ensures   err != nil ==> err.ErrorMem()
 	ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error)
 	//@ preserves Mem()
-	//@ preserves forall i int :: 0 <= i && i < len(m) ==> m[i].Mem(1)
+	//@ preserves forall i int :: { &m[i] } 0 <= i && i < len(m) ==> m[i].Mem(1)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(m)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(m Messages) (n int, err error)
@@ -67,7 +67,7 @@ type Conn interface {
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, u *net.UDPAddr) (n int, err error)
 	//@ preserves Mem()
-	//@ preserves forall i int :: 0 <= i && i < len(m) ==> acc(m[i].Mem(1), definitions.ReadL10)
+	//@ preserves forall i int :: { &m[i] } 0 <= i && i < len(m) ==> acc(m[i].Mem(1), definitions.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(m)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(m Messages, k int) (n int, err error)
@@ -130,7 +130,7 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	assert remote == nil ==> a == listen
 	unfold acc(a.Mem(), definitions.ReadL15)
 	unfold acc(slices.AbsSlice_Bytes(a.IP, 0, len(a.IP)), definitions.ReadL15)
-	assert forall i int :: 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], definitions.ReadL15)
+	assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], definitions.ReadL15)
 	@*/
 	if a.IP.To4( /*@ false @*/ ) != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
@@ -164,7 +164,7 @@ func newConnUDPIPv4(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv4,
 // ReadBatch reads up to len(msgs) packets, and stores them in msgs.
 // It returns the number of packets read, and an error if any.
 // @ preserves c.Mem()
-// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 // @ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
 // @ ensures   errRet != nil ==> errRet.ErrorMem()
 func (c *connUDPIPv4) ReadBatch(msgs Messages) (nRet int, errRet error) {
@@ -176,7 +176,7 @@ func (c *connUDPIPv4) ReadBatch(msgs Messages) (nRet int, errRet error) {
 }
 
 // @ preserves c.Mem()
-// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
 // @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) WriteBatch(msgs Messages, flags int) (n int, err error) {
@@ -240,7 +240,7 @@ func newConnUDPIPv6(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv6,
 // ReadBatch reads up to len(msgs) packets, and stores them in msgs.
 // It returns the number of packets read, and an error if any.
 // @ preserves c.Mem()
-// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 // @ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
 // @ ensures   errRet != nil ==> errRet.ErrorMem()
 func (c *connUDPIPv6) ReadBatch(msgs Messages) (nRet int, errRet error) {
@@ -252,7 +252,7 @@ func (c *connUDPIPv6) ReadBatch(msgs Messages) (nRet int, errRet error) {
 }
 
 // @ preserves c.Mem()
-// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
 // @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) WriteBatch(msgs Messages, flags int) (n int, err error) {
@@ -470,12 +470,12 @@ func (c *connUDPBase) Close() (err error) {
 // messages.
 // @ requires 0 < n
 // @ ensures  len(res) == n
-// @ ensures  forall i int :: 0 <= i && i < n ==> res[i].Mem(1)
+// @ ensures  forall i int :: { &res[i] } 0 <= i && i < n ==> res[i].Mem(1)
 // @ decreases
 func NewReadMessages(n int) (res Messages) {
 	m := make(Messages, n)
-	//@ invariant forall j int :: (0 <= j && j < i0) ==> m[j].Mem(1)
-	//@ invariant forall j int :: (i0 <= j && j < len(m)) ==> acc(&m[j])
+	//@ invariant forall j int :: { &m[j] } (0 <= j && j < i0) ==> m[j].Mem(1)
+	//@ invariant forall j int :: { &m[j] } (i0 <= j && j < len(m)) ==> acc(&m[j])
 	//@ invariant forall j int :: { m[j].Addr } (i0 <= j && j < len(m)) ==> m[j].Addr == nil
 	//@ invariant forall j int :: { m[j].OOB } (i0 <= j && j < len(m)) ==> m[j].OOB == nil
 	//@ decreases len(m) - i

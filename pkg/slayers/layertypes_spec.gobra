@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	LayerTypeSCION = gopacket.LayerType(1000) 
+	LayerTypeSCION = gopacket.LayerType(1000)
 	LayerClassSCION gopacket.LayerClass = LayerTypeSCION
 	LayerTypeSCIONUDP = gopacket.LayerType(1001)
 	LayerClassSCIONUDP gopacket.LayerClass = LayerTypeSCIONUDP
@@ -56,3 +56,32 @@ var (
 	// where gopacket/layers is imported.
 	layerTypeBFD = gopacket.LayerType(122)
 )
+
+// post init properties
+ghost
+ensures res === LayerClassSCION
+ensures res != nil
+ensures res == (gopacket.LayerClass)(gopacket.LayerType(1000))
+decreases
+func LayerClassSCIONIsLayerType() (res gopacket.LayerClass)
+
+ghost
+ensures res === LayerClassSCMP
+ensures res != nil
+ensures res == (gopacket.LayerClass)(gopacket.LayerType(1002))
+decreases
+func LayerClassSCMPIsLayerType() (res gopacket.LayerClass)
+
+ghost
+ensures res === LayerClassHopByHopExtn
+ensures res != nil
+ensures res == (gopacket.LayerClass)(gopacket.LayerType(1003))
+decreases
+func LayerClassHopByHopExtnIsLayerType() (res gopacket.LayerClass)
+
+ghost
+ensures res === LayerClassEndToEndExtn
+ensures res != nil
+ensures res == (gopacket.LayerClass)(gopacket.LayerType(1004))
+decreases
+func LayerClassEndToEndExtnIsLayerType() (res gopacket.LayerClass)
