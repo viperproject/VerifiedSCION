@@ -650,6 +650,8 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
+// @ trusted
+// @ requires false
 func (d *DataPlane) Run(ctx context.Context) error {
 	// @ share d, ctx
 	d.mtx.Lock()
@@ -924,6 +926,8 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	}
 	/*@
 	ghost var ub []byte
+	ghost llStart := 0
+	ghost llEnd := 0
 	ghost if lastLayerIdx == -1 {
 		ub = p.rawPkt
 	} else {
@@ -933,6 +937,8 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		} else {
 			o := offsets[lastLayerIdx]
 			ub = p.rawPkt[o.start:o.end]
+			llStart = o.start
+			llEnd = o.end
 			sl.SplitRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		}
 	}
@@ -966,8 +972,16 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ def.TODO()
 		return p.processOHP( /*@ nil @*/ )
 	case scion.PathType:
-		// @ def.TODO()
-		return p.processSCION()
+		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
+		// (VerifiedSCION) Nested if because short-circuiting && is not working
+		// @ ghost if lastLayerIdx >= 0 {
+		// @	ghost if !offsets[lastLayerIdx].isNil {
+		// @		o := offsets[lastLayerIdx]
+		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
+		// @ 	}
+		// @ }
+		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
+		return p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd @*/ )
 	case epic.PathType:
 		// @ def.TODO()
 		return p.processEPIC()
@@ -1075,8 +1089,30 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 }
 
 // @ trusted
-// @ requires false
-func (p *scionPacketProcessor) processSCION() (processResult, error) {
+// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires  acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
+// The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
+// which slightly simplifies the spec
+// @ requires  acc(&p.rawPkt, def.ReadL1) && ub === p.rawPkt
+// @ requires  acc(&p.path)
+// @ requires  p.scionLayer.Mem(ub)
+// @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), _)
+// @ preserves acc(&p.lastLayer, def.ReadL10)
+// @ preserves p.lastLayer != nil
+// @ preserves (p.lastLayer !== &p.scionLayer && llIsNil) ==> acc(p.lastLayer.Mem(nil), def.ReadL10)
+// @ preserves (p.lastLayer !== &p.scionLayer && !llIsNil) ==> acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL10)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ preserves acc(&p.infoField)
+// @ preserves acc(&p.hopField)
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   acc(&p.path)
+// @ ensures   acc(&p.rawPkt, def.ReadL1)
+// @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
+// @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
+// @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 
 	var ok bool
 	p.path, ok = p.scionLayer.Path.(*scion.Raw)
@@ -1914,7 +1950,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  acc(&p.path, def.ReadL10)
 // @ requires  p.path.Mem(ub[startP:endP])
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), def.ReadL10)
+// @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, def.ReadL19)
 // @ preserves p.lastLayer != nil && acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
 // @ preserves acc(&p.scionLayer, def.ReadL10)
