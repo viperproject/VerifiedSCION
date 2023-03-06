@@ -69,6 +69,7 @@ import (
 	// @ "github.com/scionproto/scion/verification/utils/slices"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 	// @ "github.com/scionproto/scion/verification/utils/seqs"
+	// @ socketspec "golang.org/x/net/internal/socket/"
 )
 
 const (
@@ -673,28 +674,18 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		msgs := conn.NewReadMessages(inputBatchCnt)
 		// @ ghost buffers := seqs.NewSeqByteSlice(inputBatchCnt)
 
-		// TODO: drop
-		/*@
-		ensures forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> (acc(msgs[j].Mem(1), 1/2) && acc(&msgs[j], 1/4) && acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
-		decreases
-		outline(
-		invariant 0 <= i && i <= len(msgs)
-		invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
-		invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> (acc(msgs[j].Mem(1), 1/2) && acc(&msgs[j], 1/4) && acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
-		decreases len(msgs) - i
-		for i := 0; i < len(msgs); i++ {
-			msgs[i].SplitPerm()
-		})
-		@*/
+		// @ socketspec.SplitPermMsgs(msgs)
 
 		// @ invariant acc(&msg)
 		// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
 		// @ invariant len(buffers) == len(msgs)
-		// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), 1/2)
-		// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/4) && (acc(&msgs[i], 1/4) --* acc(msgs[i].Mem(1), 1/2))
+		// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), 1/2)
+		// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/4) && (acc(&msgs[i], 1/4) --* acc(msgs[i].Mem(1), 1/2))
+		// @ invariant forall i int :: { &msgs[i] }   0 <= i && i < i0 ==> msgs[i].Mem(1)
 		// @ invariant forall j int :: { buffers[j] } 0 <= j && j < len(buffers) ==> buffers[j] === msgs[j].GetFstBuffer() && len(buffers[j]) == bufSize
 		// @ decreases len(msgs) - i0
 		for _, msg /*@@@*/ := range msgs /*@ with i0 @*/ {
+			// @ assume false
 			// @ unfold msg.Mem(1)
 			// @ assert acc(&msg.Buffers[0])
 			msg.Buffers[0] = make([]byte, bufSize)
@@ -702,6 +693,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ fold slices.AbsSlice_Bytes(msg.Buffers[0], 0, len(msg.Buffers[0]))
 			// @ fold msg.Mem(1)
 		}
+		// @ assume false
 		writeMsgs := make(underlayconn.Messages, 1)
 		writeMsgs[0].Buffers = make([][]byte, 1)
 

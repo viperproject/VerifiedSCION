@@ -78,3 +78,19 @@ func (m *Message) SplitPerm() {
 pred helper(m *Message) {
 	acc(m, 1/4)
 }
+
+ghost
+requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> acc(msgs[j].Mem(1), 1/2)
+ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
+	acc(&msgs[j], 1/4) && (acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
+decreases
+func SplitPermMsgs(msgs []Message) {
+	invariant 0 <= i && i <= len(msgs)
+	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> acc(msgs[j].Mem(1), 1/2)
+	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==>
+		acc(&msgs[j], 1/4) && (acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
+	decreases len(msgs) - i
+	for i := 0; i < len(msgs); i++ {
+		msgs[i].SplitPerm()
+	}
+}
