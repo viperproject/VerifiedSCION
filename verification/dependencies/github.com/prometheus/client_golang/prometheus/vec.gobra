@@ -33,10 +33,7 @@ import def "github.com/scionproto/scion/verification/utils/definitions"
 // add the convenience methods WithLabelValues, With, and MustCurryWith, which
 // panic instead of returning errors. See also the MetricVec example.
 type MetricVec struct {
-    privateFields def.PrivateField
-	// hashAdd and hashAddByte can be replaced for testing collision handling.
-	hashAdd     func(h uint64, s string) uint64
-	hashAddByte func(h uint64, b byte) uint64
+	privateFields def.PrivateField
 }
 
 pred (m MetricVec) Mem()
