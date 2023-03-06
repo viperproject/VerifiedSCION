@@ -667,28 +667,40 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	read /*@@@*/ := func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
 		msgs := conn.NewReadMessages(inputBatchCnt)
-		// @ ghost buffers := seqs.NewSeqByteSlice(inputBatchCnt)
 		// @ socketspec.SplitPermMsgs(msgs)
 
 		// @ invariant acc(&msg)
 		// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
-		// @ invariant len(buffers) == len(msgs)
 		// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
 		// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem(1)
-		// @ invariant forall i int :: { &msgs[i] }{ buffers[i] } 0 <= i && i < i0 ==> buffers[i] === msgs[i].GetFstBuffer() && len(buffers[i]) == bufSize
+		// invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> let b := msgs[i].GetFstBuffer() in len(b) == bufSize
 		// @ decreases len(msgs) - i0
 		for _, msg /*@@@*/ := range msgs /*@ with i0 @*/ {
-			// @ assert msgs[i0].MemWithoutHalf(1)
+			// @ ensures sl.AbsSlice_Bytes(tmp, 0, len(tmp))
+			// @ ensures len(tmp) == bufSize
+			// @ decreases
+			// @ outline (
+			tmp := make([]byte, bufSize)
+			// @ assert forall i int :: { &tmp[i] } 0 <= i && i < len(tmp) ==> acc(&tmp[i])
+			// @ fold sl.AbsSlice_Bytes(tmp, 0, len(tmp))
+			// @ )
 			// @ assert msgs[i0] === msg
 			// @ unfold msgs[i0].MemWithoutHalf(1)
-			msg.Buffers[0] = make([]byte, bufSize)
-			// @ fold slices.AbsSlice_Bytes(msg.Buffers[0], 0, len(msg.Buffers[0]))
-			// @ buffers[i0] = msg.Buffers[0]
+			msg.Buffers[0] = tmp
 			// @ fold msg.Mem(1)
+			// @ assert forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem(1)
+			// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
+			// @ assert false
 		}
 		// @ def.TODO() // do the following inside an outline
+		// @ ensures writeMsgs[0].Mem(1)
+		// @ decreases
+		// @ outline (
 		writeMsgs := make(underlayconn.Messages, 1)
 		writeMsgs[0].Buffers = make([][]byte, 1)
+		// @ sl.NilAcc_Bytes()
+		// @ fold writeMsgs[0].Mem(1)
+		// @ )
 
 		processor := newPacketProcessor(d, ingressID)
 		var scmpErr /*@@@*/ scmpError
