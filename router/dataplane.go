@@ -675,13 +675,16 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 		// TODO: drop
 		/*@
-			invariant 0 <= i && i <= len(msgs)
-			invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
-			invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> (acc(msgs[j].Mem(1), 1/2) && acc(&msgs[j], 1/4) && acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
-			decreases len(msgs) - i
-			for i := 0; i < len(msgs); i++ {
-				msgs[i].SplitPerm()
-			}
+		ensures forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> (acc(msgs[j].Mem(1), 1/2) && acc(&msgs[j], 1/4) && acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
+		decreases
+		outline(
+		invariant 0 <= i && i <= len(msgs)
+		invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
+		invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> (acc(msgs[j].Mem(1), 1/2) && acc(&msgs[j], 1/4) && acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
+		decreases len(msgs) - i
+		for i := 0; i < len(msgs); i++ {
+			msgs[i].SplitPerm()
+		})
 		@*/
 
 		// @ invariant acc(&msg)
