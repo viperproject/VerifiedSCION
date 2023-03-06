@@ -201,6 +201,18 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+      - name: Verify package 'private/topology/underlay'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'private/topology/underlay'
+          timeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
+          imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'private/underlay/conn'
         uses: viperproject/gobra-action@main
         with:
@@ -271,5 +283,8 @@ jobs:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          conditionalizePermissions: '1'
           imageVersion: ${{ env.imageVersion }}
 

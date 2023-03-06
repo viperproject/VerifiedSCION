@@ -53,7 +53,13 @@ pure func Uncallable() (res bool) {
 
 ghost
 ensures false
-func KillBranch()
+decreases _
+func IgnoreBranch()
+
+ghost
+ensures false
+decreases _
+func TODO()
 
 ensures res == x+y
 decreases _
