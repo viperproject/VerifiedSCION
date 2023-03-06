@@ -662,38 +662,31 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// @ unfold MutexInvariant!<d!>()
 	d.running = true
 
-	// (VerifiedSCION) TODO: change the invariant to have the resources only
-	//     when it is not runnning. That way, we can unfold the memory predicate
-	//     right after setting running to true, which is required for the call to unlock
-	//     to succeed. the rest of the permissions will be held in the closure footprint
-	//     and on this method.
 	d.initMetrics()
 
 	read /*@@@*/ := func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
 		msgs := conn.NewReadMessages(inputBatchCnt)
 		// @ ghost buffers := seqs.NewSeqByteSlice(inputBatchCnt)
-
 		// @ socketspec.SplitPermMsgs(msgs)
 
 		// @ invariant acc(&msg)
 		// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
 		// @ invariant len(buffers) == len(msgs)
-		// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), 1/2)
-		// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/4) && (acc(&msgs[i], 1/4) --* acc(msgs[i].Mem(1), 1/2))
-		// @ invariant forall i int :: { &msgs[i] }   0 <= i && i < i0 ==> msgs[i].Mem(1)
-		// @ invariant forall j int :: { buffers[j] } 0 <= j && j < len(buffers) ==> buffers[j] === msgs[j].GetFstBuffer() && len(buffers[j]) == bufSize
+		// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
+		// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem(1)
+		// @ invariant forall i int :: { &msgs[i] }{ buffers[i] } 0 <= i && i < i0 ==> buffers[i] === msgs[i].GetFstBuffer() && len(buffers[i]) == bufSize
 		// @ decreases len(msgs) - i0
 		for _, msg /*@@@*/ := range msgs /*@ with i0 @*/ {
-			// @ assume false
-			// @ unfold msg.Mem(1)
-			// @ assert acc(&msg.Buffers[0])
+			// @ assert msgs[i0].MemWithoutHalf(1)
+			// @ assert msgs[i0] === msg
+			// @ unfold msgs[i0].MemWithoutHalf(1)
 			msg.Buffers[0] = make([]byte, bufSize)
-			// @ buffers[i0] = msg.Buffers[0]
 			// @ fold slices.AbsSlice_Bytes(msg.Buffers[0], 0, len(msg.Buffers[0]))
+			// @ buffers[i0] = msg.Buffers[0]
 			// @ fold msg.Mem(1)
 		}
-		// @ assume false
+		// @ def.TODO() // do the following inside an outline
 		writeMsgs := make(underlayconn.Messages, 1)
 		writeMsgs[0].Buffers = make([][]byte, 1)
 
@@ -764,7 +757,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		}
 	}
 
-	// @ assume false
+	// @ def.TODO()
 	for k, v := range d.bfdSessions {
 		go func(ifID uint16, c bfdSession) {
 			defer log.HandlePanic()

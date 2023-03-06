@@ -44,6 +44,14 @@ pred (m *Message) Mem(lenBuffers int) {
 	(m.Addr != nil ==> acc(m.Addr.Mem(), _))
 }
 
+pred (m *Message) MemWithoutHalf(lenBuffers int) {
+	acc(m, 1/2) &&
+	len(m.Buffers) == lenBuffers &&
+	(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==> (acc(&m.Buffers[i]) && slices.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))) &&
+	slices.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
+	(m.Addr != nil ==> acc(m.Addr.Mem(), _))
+}
+
 ghost
 requires acc(m.Mem(lenBuffers), _)
 requires 0 <= i && i < lenBuffers
@@ -60,35 +68,23 @@ pure func (m *Message) GetFstBuffer() []byte {
 	return unfolding acc(m.Mem(1), _) in m.Buffers[0]
 }
 
-// TODO: drop
 ghost
-requires acc(m.Mem(1), 1/2)
-ensures  acc(m, 1/4)
-ensures  acc(m, 1/4) --* acc(m.Mem(1), 1/2)
+requires m.Mem(1)
+ensures  acc(m, 1/2) && m.MemWithoutHalf(1)
 decreases
 func (m *Message) SplitPerm() {
-	unfold acc(m.Mem(1), 1/2)
-	fold helper(m)
-	package acc(m, 1/4) --* acc(m.Mem(1), 1/2) {
-		fold acc(m.Mem(1), 1/2)
-	}
-	unfold helper(m)
-}
-
-pred helper(m *Message) {
-	acc(m, 1/4)
+	unfold m.Mem(1)
+	fold m.MemWithoutHalf(1)
 }
 
 ghost
-requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> acc(msgs[j].Mem(1), 1/2)
-ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
-	acc(&msgs[j], 1/4) && (acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
+requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].Mem(1)
+ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
 decreases
 func SplitPermMsgs(msgs []Message) {
 	invariant 0 <= i && i <= len(msgs)
-	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> acc(msgs[j].Mem(1), 1/2)
-	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==>
-		acc(&msgs[j], 1/4) && (acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
+	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
+	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
 	decreases len(msgs) - i
 	for i := 0; i < len(msgs); i++ {
 		msgs[i].SplitPerm()
