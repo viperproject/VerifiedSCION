@@ -674,7 +674,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ ghost buffers := seqs.NewSeqByteSlice(inputBatchCnt)
 
 		// TODO: drop
-		/*
+		/*@
 			invariant 0 <= i && i <= len(msgs)
 			invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
 			invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> (acc(msgs[j].Mem(1), 1/2) && acc(&msgs[j], 1/4) && acc(&msgs[j], 1/4) --* acc(msgs[j].Mem(1), 1/2))
@@ -682,19 +682,20 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			for i := 0; i < len(msgs); i++ {
 				msgs[i].SplitPerm()
 			}
-		*/
+		@*/
 
 		// @ invariant acc(&msg)
 		// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
 		// @ invariant len(buffers) == len(msgs)
-		// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+		// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), 1/2)
+		// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/4) && (acc(&msgs[i], 1/4) --* acc(msgs[i].Mem(1), 1/2))
 		// @ invariant forall j int :: { buffers[j] } 0 <= j && j < len(buffers) ==> buffers[j] === msgs[j].GetFstBuffer() && len(buffers[j]) == bufSize
 		// @ decreases len(msgs) - i0
 		for _, msg /*@@@*/ := range msgs /*@ with i0 @*/ {
 			// @ unfold msg.Mem(1)
 			// @ assert acc(&msg.Buffers[0])
 			msg.Buffers[0] = make([]byte, bufSize)
-			// @ buffers[i0] == msg.Buffers[0]
+			// @ buffers[i0] = msg.Buffers[0]
 			// @ fold slices.AbsSlice_Bytes(msg.Buffers[0], 0, len(msg.Buffers[0]))
 			// @ fold msg.Mem(1)
 		}
