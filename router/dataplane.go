@@ -1469,14 +1469,14 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ requires  p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
 // @ requires  p.path.GetCurrHF(ubPath)  <= p.path.GetNumHops(ubPath)
 // @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
-// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
+// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL4)
 // @ ensures   acc(&p.path, def.ReadL20)
 // @ ensures   acc(p.path.Mem(ubPath), def.ReadL4)
 // @ ensures   acc(&p.ingressID, def.ReadL20)
 // @ ensures   acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
 // @ ensures   acc(&p.d, def.ReadL20)
-// @ ensures   acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
+// @ ensures   acc(&p.srcAddr, def.ReadL20)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ubPath []byte @*/ ) (respr processResult, reserr error) {
@@ -1495,8 +1495,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ubPath []by
 	// @	assert expectedSrc in range(p.d.internalNextHops)
 	// @    unfold acc(expectedSrc.Mem(), _)
 	// @ }
-	// @ unfold acc(p.srcAddr.Mem(), def.ReadL20)
-	// @ defer  fold acc(p.srcAddr.Mem(), def.ReadL20)
+	// @ unfold acc(p.srcAddr.Mem(), _)
 	if !ok || !expectedSrc.IP.Equal(p.srcAddr.IP) {
 		// Drop
 		// @ establishInvalidSrcAddrForTransit()
