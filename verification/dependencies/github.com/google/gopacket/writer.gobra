@@ -35,6 +35,8 @@ type SerializeOptions struct {
 
 type SerializeBuffer interface {
 	pred Mem()
+	// morally, corresponds to slices.AbsSlice_Bytes(ub, 0, len(ub)) --* (Mem() && UBuf() === ub)
+	pred MemWithoutUBuf(ub []byte)
 
 	ghost
 	pure
@@ -46,14 +48,21 @@ type SerializeBuffer interface {
 	requires Mem()
 	ensures  res === old(UBuf())
 	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* (Mem() && UBuf() === res)
+	ensures  MemWithoutUBuf(res)
 	decreases
 	ExchangePred() (res []byte)
+
+	ghost
+	requires MemWithoutUBuf(ub)
+	requires slices.AbsSlice_Bytes(ub, 0, len(ub))
+	ensures  Mem() && UBuf() === ub
+	decreases
+	RestoreMem(ghost ub []byte)
 
 	requires Mem()
 	ensures  res === old(UBuf())
 	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res)) --* (Mem() && UBuf() === res)
+	ensures  MemWithoutUBuf(res)
 	decreases
 	Bytes() (res []byte)
 
@@ -96,7 +105,7 @@ ensures res.Mem()
 decreases
 func NewSerializeBuffer() (res SerializeBuffer)
 
-// TODO: requires changing to provide access to the underluing layers 
+// TODO: requires changes to provide access to the underlying layers
 requires  false
 requires  len(layerBufs) == len(layers)
 preserves w.Mem()

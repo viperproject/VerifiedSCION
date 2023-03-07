@@ -13,9 +13,6 @@ import (
 	def "github.com/scionproto/scion/verification/utils/definitions"
 )
 
-// TODO: Uncomment when https://github.com/viperproject/gobra/issues/503 is fixed
-//type DecodingLayerFunc func([]byte, *[]LayerType) (LayerType, error)
-
 // DecodingLayerFunc decodes given packet and stores decoded LayerType
 // values into specified slice. Returns either first encountered
 // unsupported LayerType value or decoding error. In case of success,
@@ -24,7 +21,6 @@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL13)
 preserves acc(ltypes, def.ReadL13) && acc(*ltypes, def.ReadL13)
 ensures err != nil ==> err.ErrorMem()
 func decodingLayerFunc_spec(b []byte, ltypes *[]LayerType) (l LayerType, err error)
-
 
 type DecodingLayer interface {
 	pred NonInitMem()
@@ -48,11 +44,17 @@ type DecodingLayer interface {
 	decreases
 	NextLayerType(ghost ubuf []byte) LayerType
 
-	preserves Mem(ubuf)
+	preserves acc(Mem(ubuf), def.ReadL15)
 	ensures   0 <= start && start <= end && end <= len(ubuf)
 	ensures   len(res) == end - start
 	ensures   len(res) != 0 ==> res === ubuf[start:end]
 	ensures   len(res) == 0 ==> (res == nil || res === ubuf[start:end])
 	decreases
 	LayerPayload(ghost ubuf []byte) (res []byte, ghost start int, ghost end int)
+
+	ghost
+	requires Mem(ub)
+	ensures  NonInitMem()
+	decreases
+	DowngradePerm(ghost ub []byte)
 }

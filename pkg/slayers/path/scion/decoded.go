@@ -59,7 +59,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	// (VerifiedSCION) Gobra expects a stronger contract for s.Len() when in fact
 	// what happens here is that we just call the same function in s.Base.
 	if minLen := s. /*@ Base. @*/ Len(); len(data) < minLen {
-		//@ apply s.Base.Mem() --* s.Base.NonInitMem()
+		//@ s.Base.DowngradePerm()
 		//@ fold s.NonInitMem()
 		return serrors.New("DecodedPath raw too short", "expected", minLen, "actual", int(len(data)))
 	}
@@ -74,7 +74,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant 0 <= i && i <= s.Base.getNumINF()
 	//@ invariant len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + i * path.InfoLen
-	//@ invariant forall j int :: 0 <= j && j < s.Base.getNumINF() ==> acc(&s.InfoFields[j])
+	//@ invariant forall j int :: { &s.InfoFields[j] } 0 <= j && j < s.Base.getNumINF() ==> acc(&s.InfoFields[j])
 	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL1)
 	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL1)
 	//@ decreases s.Base.getNumINF() - i
@@ -96,8 +96,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant acc(s.Base.Mem(), definitions.ReadL1)
 	//@ invariant len(s.HopFields) == s.Base.getNumHops()
 	//@ invariant 0 <= i && i <= s.Base.getNumHops()
-	//@ invariant forall j int :: i <= j && j < s.Base.getNumHops() ==> acc(&s.HopFields[j])
-	//@ invariant forall j int :: 0 <= j && j < i ==> s.HopFields[j].Mem()
+	//@ invariant forall j int :: { &s.HopFields[j] } i <= j && j < s.Base.getNumHops() ==> acc(&s.HopFields[j])
+	//@ invariant forall j int :: { &s.HopFields[j] } 0 <= j && j < i ==> s.HopFields[j].Mem()
 	//@ invariant len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + s.Base.getNumINF() * path.InfoLen + i * path.HopLen
 	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL1)
@@ -256,7 +256,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ invariant 0 <= i && i <= s.getNumINF()
 	//@ invariant acc(&s.InfoFields, definitions.ReadL10)
 	//@ invariant len(s.InfoFields) == s.getNumINF()
-	//@ invariant forall i int :: 0 <= i && i < len(s.InfoFields) ==> (acc(&s.InfoFields[i].ConsDir))
+	//@ invariant forall i int :: { &s.InfoFields[i] } 0 <= i && i < len(s.InfoFields) ==> (acc(&s.InfoFields[i].ConsDir))
 	//@ decreases MaxINFs-i
 	// Reverse cons dir flags
 	for i := 0; i < ( /*@ unfolding acc(s.Base.Mem(), definitions.ReadL11) in @*/ s.NumINF); i++ {

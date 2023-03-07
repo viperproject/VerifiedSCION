@@ -171,14 +171,12 @@ func StrictDecoding(strict bool) {
 
 // NewPath returns a new path object of pathType.
 // @ requires 0 <= pathType && pathType < maxPathType
-// @ requires acc(PathPackageMem(), def.ReadL20)
-// @ ensures  acc(PathPackageMem(), def.ReadL20)
+// @ requires acc(PathPackageMem(), _)
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ ensures  e == nil ==> p != nil && p.NonInitMem()
 // @ decreases
 func NewPath(pathType Type) (p Path, e error) {
-	//@ unfold acc(PathPackageMem(), def.ReadL20)
-	//@ defer fold acc(PathPackageMem(), def.ReadL20)
+	//@ unfold acc(PathPackageMem(), _)
 	pm := registeredPaths[pathType]
 	if !pm.inUse {
 		if strictDecoding {

@@ -138,7 +138,7 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 	// @ fold sl.AbsSlice_Bytes(newSlice, 0, len(newSlice))
 	// @ sl.CombineRange_Bytes(buf, offset, offset+scmpRawInterfaceLen, writePerm)
 	// @ sl.CombineRange_Bytes(underlyingBufRes, 0, len(buf), writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	return nil
 }
 
@@ -292,7 +292,7 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 	// @ fold sl.AbsSlice_Bytes(newSlice, 0, len(newSlice))
 	// @ sl.CombineRange_Bytes(buf, offset, offset+scmpRawInterfaceLen, writePerm)
 	// @ sl.CombineRange_Bytes(underlyingBufRes, 0, len(buf), writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	return nil
 }
 
@@ -445,7 +445,7 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	binary.BigEndian.PutUint16(buf[:2], i.Identifier)
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	offset += 2
 	// @ requires offset == 2
@@ -465,7 +465,7 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	return nil
 }
@@ -591,7 +591,7 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 	binary.BigEndian.PutUint16(buf[0:2], uint16(0)) //Reserved
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	// @ requires  len(underlyingBufRes) >= 4
 	// @ requires  buf === underlyingBufRes[:4]
@@ -609,7 +609,7 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	return nil
 }
@@ -790,7 +790,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	binary.BigEndian.PutUint16(buf[:2], i.Identifier)
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	offset += 2
 	// @ requires offset == 2
@@ -810,7 +810,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 2+2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	offset += 2
 	// @ requires offset == 2 + 2
@@ -830,7 +830,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	offset += addr.IABytes
 	// @ requires offset == 2 + 2 + addr.IABytes
@@ -850,7 +850,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	return nil
 }
@@ -952,7 +952,7 @@ func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opt
 	copy(buf, make([]byte, 4) /*@, writePerm@*/)
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	return nil
 }
 
@@ -1078,7 +1078,7 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 	binary.BigEndian.PutUint16(buf[0:2], uint16(0)) //Reserved
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 0, 2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	// @ requires len(underlyingBufRes) >= 4
 	// @ requires buf === underlyingBufRes[:4]
@@ -1096,7 +1096,7 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 	// @ fold sl.AbsSlice_Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ apply sl.AbsSlice_Bytes(underlyingBufRes, 0, len(underlyingBufRes)) --* (b.Mem() && b.UBuf() === underlyingBufRes)
+	// @ b.RestoreMem(underlyingBufRes)
 	// @ )
 	return nil
 }

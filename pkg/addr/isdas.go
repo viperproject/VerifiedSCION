@@ -142,7 +142,7 @@ func (_as AS) MarshalText() ([]byte, error) {
 }
 
 // @ preserves acc(_as)
-// @ preserves forall i int :: 0 <= i && i < len(text) ==> acc(&text[i])
+// @ preserves forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
 // @ decreases
 func (_as *AS) UnmarshalText(text []byte) error {
 	parsed, err := ParseAS(string(text))
@@ -219,7 +219,7 @@ func (ia IA) MarshalText() ([]byte, error) {
 }
 
 // @ preserves acc(ia)
-// @ preserves forall i int :: 0 <= i && i < len(b) ==> acc(&b[i])
+// @ preserves forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ decreases
 func (ia *IA) UnmarshalText(b []byte) error {
 	parsed, err := ParseIA(string(b))

@@ -31,99 +31,92 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-pred (s *SCION) NonInitPathPool() {
-	acc(&s.pathPool) &&
-	acc(&s.pathPoolRaw) &&
-	s.pathPool == nil &&
-	s.pathPoolRaw == nil
+pred PathPoolMem(pathPool []path.Path, pathPoolRaw path.Path) {
+	// non-initialized path pool:
+	(pathPool == nil ==> pathPoolRaw == nil) &&
+	// initialized path pool:
+	(pathPool != nil ==> (
+		len(pathPool) == 4 &&
+		// empty
+		acc(&pathPool[empty.PathType])  &&
+		pathPool[empty.PathType] != nil &&
+		typeOf(pathPool[empty.PathType]) == type[empty.Path] &&
+		// onehop
+		acc(&pathPool[onehop.PathType])  &&
+		pathPool[onehop.PathType] != nil &&
+		typeOf(pathPool[onehop.PathType]) == type[*onehop.Path] &&
+		pathPool[onehop.PathType].NonInitMem() &&
+		// scion
+		acc(&pathPool[scion.PathType])  &&
+		pathPool[scion.PathType] != nil &&
+		typeOf(pathPool[scion.PathType]) == type[*scion.Raw] &&
+		pathPool[scion.PathType].NonInitMem() &&
+		// epic
+		acc(&pathPool[epic.PathType])  &&
+		pathPool[epic.PathType] != nil &&
+		typeOf(pathPool[epic.PathType]) == type[*epic.Path] &&
+		pathPool[epic.PathType].NonInitMem() &&
+		// raw path
+		pathPoolRaw != nil &&
+		pathPoolRaw.NonInitMem()))
 }
 
-pred (s *SCION) InitPathPool() {
-	acc(&s.pathPool)     &&
-	acc(&s.pathPoolRaw)  &&
-	s.pathPool != nil    &&
-	len(s.pathPool) == 4 &&
+// Captures the same obligations as PathPoolMem. Initially, I tried using a magic wand
+// but they cause loads of additional problems (e.g., storing in a predicate is not possible)
+pred PathPoolMemExceptOne(pathPool []path.Path, pathPoolRaw path.Path, pathType path.Type) {
+	pathPool != nil    &&
+	len(pathPool) == 4 &&
 	// entry per path type
 	// empty
-	acc(&s.pathPool[empty.PathType])  &&
-	s.pathPool[empty.PathType] != nil &&
-	typeOf(s.pathPool[empty.PathType]) == type[empty.Path] &&
+	(acc(&pathPool[empty.PathType]) &&
+	pathPool[empty.PathType] != nil &&
+	typeOf(pathPool[empty.PathType]) == type[empty.Path]) &&
+	// (pathType != empty.PathType ==> pathPool[empty.PathType].NonInitMem()) &&
 	// onehop
-	acc(&s.pathPool[onehop.PathType])  &&
-	s.pathPool[onehop.PathType] != nil &&
-	typeOf(s.pathPool[onehop.PathType]) == type[*onehop.Path] &&
-	s.pathPool[onehop.PathType].NonInitMem() &&
+	acc(&pathPool[onehop.PathType])  &&
+	pathPool[onehop.PathType] != nil &&
+	typeOf(pathPool[onehop.PathType]) == type[*onehop.Path] &&
+	(pathType != onehop.PathType ==> pathPool[onehop.PathType].NonInitMem()) &&
 	// scion
-	acc(&s.pathPool[scion.PathType])  &&
-	s.pathPool[scion.PathType] != nil &&
-	typeOf(s.pathPool[scion.PathType]) == type[*scion.Raw] &&
-	s.pathPool[scion.PathType].NonInitMem() &&
+	acc(&pathPool[scion.PathType])  &&
+	pathPool[scion.PathType] != nil &&
+	typeOf(pathPool[scion.PathType]) == type[*scion.Raw] &&
+	(pathType != scion.PathType ==> pathPool[scion.PathType].NonInitMem()) &&
 	// epic
-	acc(&s.pathPool[epic.PathType])  &&
-	s.pathPool[epic.PathType] != nil &&
-	typeOf(s.pathPool[epic.PathType]) == type[*epic.Path] &&
-	s.pathPool[epic.PathType].NonInitMem() &&
+	acc(&pathPool[epic.PathType])  &&
+	pathPool[epic.PathType] != nil &&
+	typeOf(pathPool[epic.PathType]) == type[*epic.Path] &&
+	(pathType != epic.PathType ==> pathPool[epic.PathType].NonInitMem()) &&
 	// raw path
-	s.pathPoolRaw != nil &&
-	s.pathPoolRaw.NonInitMem()
-}
-
-// Captures the same obligations as InitPathPool. Initially, I tried using a magic wand
-// but they are a lot harder to use then just this predicate.
-pred (s *SCION) InitPathPoolExceptOne(pathType path.Type) {
-	acc(&s.pathPool)     &&
-	acc(&s.pathPoolRaw)  &&
-	s.pathPool != nil    &&
-	len(s.pathPool) == 4 &&
-	// entry per path type
-	// empty
-	(acc(&s.pathPool[empty.PathType]) &&
-	s.pathPool[empty.PathType] != nil &&
-	typeOf(s.pathPool[empty.PathType]) == type[empty.Path]) &&
-	// onehop
-	acc(&s.pathPool[onehop.PathType])  &&
-	s.pathPool[onehop.PathType] != nil &&
-	typeOf(s.pathPool[onehop.PathType]) == type[*onehop.Path] &&
-	(pathType != onehop.PathType ==> s.pathPool[onehop.PathType].NonInitMem()) &&
-	// scion
-	acc(&s.pathPool[scion.PathType])  &&
-	s.pathPool[scion.PathType] != nil &&
-	typeOf(s.pathPool[scion.PathType]) == type[*scion.Raw] &&
-	(pathType != scion.PathType ==> s.pathPool[scion.PathType].NonInitMem()) &&
-	// epic
-	acc(&s.pathPool[epic.PathType])  &&
-	s.pathPool[epic.PathType] != nil &&
-	typeOf(s.pathPool[epic.PathType]) == type[*epic.Path] &&
-	(pathType != epic.PathType ==> s.pathPool[epic.PathType].NonInitMem()) &&
-	// raw path
-	s.pathPoolRaw != nil &&
-	(pathType < len(s.pathPool) ==> s.pathPoolRaw.NonInitMem())
+	pathPoolRaw != nil &&
+	(pathType < len(pathPool) ==> pathPoolRaw.NonInitMem())
 }
 
 ghost
-requires  s.InitPathPoolExceptOne(pathType)
+requires acc(&s.pathPool, _)
 decreases
-pure func (s *SCION)lenPathPool(pathType path.Type) int {
-	return unfolding s.InitPathPoolExceptOne(pathType) in len(s.pathPool)
+pure func (s *SCION) pathPoolInitialized() bool {
+	return s.pathPool != nil
 }
 
 ghost
-requires  s.InitPathPoolExceptOne(pathType)
-requires  0 <= pathType && pathType < s.lenPathPool(pathType)
+requires acc(s.NonInitMem(), _)
 decreases
-pure func (s *SCION)elemPathPool(pathType path.Type) path.Path {
-	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPool[pathType]
+pure func (s *SCION) PathPoolInitializedNonInitMem() bool {
+	return unfolding acc(s.NonInitMem(), _) in s.pathPool != nil
 }
 
 ghost
-requires  s.InitPathPoolExceptOne(pathType)
+requires 0 <= pathType && pathType < path.MaxPathType
+requires acc(&s.pathPool, _) && acc(&s.pathPoolRaw, _)
+requires s.pathPool != nil
+requires acc(PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType), _)
 decreases
-pure func (s *SCION)pathPoolRawPath(pathType path.Type) path.Path {
-	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPoolRaw
+pure func (s *SCION) getPathPure(pathType path.Type) path.Path {
+	return int(pathType) < len(s.pathPool)? (unfolding acc(PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType), _) in s.pathPool[pathType]) :
+		s.pathPoolRaw
 }
 
-// Has the permission for all fields, except those related to the path pools.
-// These will come from NonInitPathPool/InitPathPool.
 pred (s *SCION) NonInitMem() {
 	acc(&s.Version) &&
 	acc(&s.TrafficClass) &&
@@ -140,7 +133,10 @@ pred (s *SCION) NonInitMem() {
 	acc(&s.RawSrcAddr) &&
 	acc(&s.Path) &&
 	acc(&s.BaseLayer) &&
-	s.InitPathPool()
+	// path pool properties
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw) &&
+	PathPoolMem(s.pathPool, s.pathPoolRaw)
 }
 
 pred (s *SCION) Mem(ubuf []byte) {
@@ -168,7 +164,14 @@ pred (s *SCION) Mem(ubuf []byte) {
 	s.Payload  === ubuf[s.HdrLen*LineLen:] &&
 	// end of base layer fields
 	CmnHdrLen <= len(ubuf) &&
-	s.HeaderMem(ubuf[CmnHdrLen:])
+	s.HeaderMem(ubuf[CmnHdrLen:]) &&
+	// path pool
+	0 <= s.PathType && s.PathType < path.MaxPathType &&
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw) &&
+	(!s.pathPoolInitialized() ==> PathPoolMem(s.pathPool, s.pathPoolRaw)) &&
+	(s.pathPoolInitialized() ==> (s.pathPool != nil && s.pathPoolRaw != nil &&
+		PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, s.PathType) && s.Path === s.getPathPure(s.PathType)))
 }
 
 pred (s *SCION) HeaderMem(ubuf []byte) {
@@ -193,6 +196,18 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	s.RawSrcAddr === ubuf[2*addr.IABytes+s.DstAddrType.Length():2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()]
 }
 
+ghost
+requires s.Mem(ub)
+ensures  s.NonInitMem()
+decreases
+func (s *SCION) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.HeaderMem(ub[CmnHdrLen:])
+	s.Path.DowngradePerm(ub[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen])
+	s.PathPoolMemExchange(s.PathType, s.Path)
+	fold s.NonInitMem()
+}
+
 pred (s *SCION) ChecksumMem() {
 	acc(&s.RawSrcAddr) && acc(&s.RawDstAddr) &&
 	len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0 &&
@@ -213,6 +228,36 @@ pure
 decreases
 func (a AddrType) Has3Bits() (res bool) {
 	return 0 <= a && a <= 7
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) UBPath(ub []byte) []byte {
+	return unfolding acc(s.Mem(ub), _) in ub[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) GetPath(ub []byte) path.Path {
+	return unfolding acc(s.Mem(ub), _) in s.Path
+}
+
+ghost
+requires  acc(s.Mem(ub), _)
+decreases
+pure func (s *SCION) GetPayloadLen(ghost ub []byte) uint16 {
+    return unfolding acc(s.Mem(ub), _) in s.PayloadLen
+}
+
+ghost
+requires  acc(s.Mem(ub), _)
+decreases
+pure func (s *SCION) GetPayload(ghost ub []byte) []byte {
+    return unfolding acc(s.Mem(ub), _) in s.Payload
 }
 
 ghost
@@ -272,21 +317,20 @@ func (s *SCION) LayerContents() (res []byte) {
 }
 
 ghost
-requires pathType == 0 ==> s.InitPathPool()
-requires 0 < pathType  ==> (
+requires  0 <= pathType && pathType < path.MaxPathType
+requires  acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+requires  s.pathPoolInitialized() ==> (
 	p.NonInitMem() &&
-	s.InitPathPoolExceptOne(pathType) &&
-	(pathType < s.lenPathPool(pathType) ==> p === s.elemPathPool(pathType)) &&
-	(s.lenPathPool(pathType) <= pathType ==> p === s.pathPoolRawPath(pathType)))
-ensures  s.InitPathPool()
+	PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
+	p === s.getPathPure(pathType))
+requires !s.pathPoolInitialized() ==> PathPoolMem(s.pathPool, s.pathPoolRaw)
+ensures  acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+ensures  PathPoolMem(s.pathPool, s.pathPoolRaw)
 decreases
-func (s *SCION) InitPathPoolExchange(pathType path.Type, p path.Path) {
-	// (VerifiedSCION) Gobra cannot establish this atm, but must hold because
-	//                 path.Type is defined as an uint8.
-	assume 0 <= pathType
-	if 0 < pathType {
-		unfold s.InitPathPoolExceptOne(pathType)
-		fold s.InitPathPool()
+func (s *SCION) PathPoolMemExchange(pathType path.Type, p path.Path) {
+	if s.pathPoolInitialized() {
+		unfold PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
+		fold   PathPoolMem(s.pathPool, s.pathPoolRaw)
 	}
 }
 
@@ -295,7 +339,6 @@ func (s *SCION) InitPathPoolExchange(pathType path.Type, p path.Path) {
 *SCION implements gopacket.NetworkLayer
 *SCION implements gopacket.SerializableLayer
 *SCION implements gopacket.DecodingLayer
-
 
 ghost
 requires typeOf(a) == *net.IPAddr
@@ -335,3 +378,9 @@ ghost
 pure func isHostSVC(a net.Addr) bool {
 	return typeOf(a) == addr.HostSVC
 }
+
+// invariant established by initialization
+ghost
+ensures acc(path.PathPackageMem(), _)
+decreases
+func EstablishPathPkgMem()
