@@ -673,9 +673,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// Note(VerifiedSCION): this precondition may cause problems ahead because of the lack of permissions to d.mtx
 		// @ requires acc(&d, _)
 		// @ requires acc(&d.running, _)
+		// requires acc(&d.external, _) && (d.external != nil ==> acc(d.external, _))
+		// requires ingressID in domain(d.external)
 		// @ requires acc(&d.macFactory, _) && d.macFactory != nil
 		// @ requires acc(MutexInvariant!<d!>(), _)
 		// @ requires rd != nil && acc(rd.Mem(), _)
+		// requires ingressID in domain(???)
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
 			msgs := conn.NewReadMessages(inputBatchCnt)
