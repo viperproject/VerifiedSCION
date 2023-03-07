@@ -122,6 +122,13 @@ pure func (d *Decoded) getLenHopFields(ubuf []byte) int {
 	return unfolding acc(d.Mem(ubuf), _) in len(d.HopFields)
 }
 
+ghost
+requires acc(d.Mem(ubuf), _)
+decreases
+pure func (d *Decoded) InfValid(ubuf []byte) (bool) {
+	return unfolding d.Mem(ubuf) in d.Base.InfValid()
+}
+
 /**** End of Auxiliary Functions ****/
 
 /**** Lemmas ****/

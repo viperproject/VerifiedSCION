@@ -97,6 +97,7 @@ func (s *Raw) IsXover(ghost ub []byte) bool {
 	defer fold acc(s.Mem(ub), def.ReadL9)
 	return s.Base.IsXover()
 }
+
 /**** End of Stubs ****/
 
 /**** Lemmas ****/
@@ -312,5 +313,12 @@ requires acc(s.NonInitMem(), _)
 decreases
 func (s *Raw) RawBufferNonInitMem() []byte {
 	return unfolding acc(s.NonInitMem(), _) in s.Raw
+}
+
+ghost
+requires acc(s.Mem(ubuf), _)
+decreases
+pure func (s *Raw) InfValid(ubuf []byte) (bool) {
+	return unfolding s.Mem(ubuf) in s.Base.InfValid()
 }
 /**** End of helpful pure functions ****/
