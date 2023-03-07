@@ -24,15 +24,6 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 )
 
-pred (d *DataPlane) MacFactoryOperational() {
-	acc(&d.macFactory, 1/2) &&
-	acc(&d.key, 1/2) &&
-	acc(d.key, 1/2) &&
-	acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
-	scrypto.ValidKeyForHash(*d.key) &&
-	d.macFactory implements MacFactorySpec{d.key}
-}
-
 // TODO: maybe change interpretation of Mutex depending on whether the
 // dataplane is running or not. This is because, when Run is called and
 // d.running is set to true, the permissions to some of these fields is transferred
@@ -121,7 +112,7 @@ func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
 }
 
 pred (p *scionPacketProcessor) initMem() {
-	acc(&p.d) &&
+	acc(&p.d, 1/2) &&
 	acc(&p.ingressID) &&
 	acc(&p.buffer) &&
 	acc(&p.mac) &&

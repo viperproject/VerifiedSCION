@@ -235,8 +235,9 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // @ requires  slices.AbsSlice_Bytes(key, 0, len(key))
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   res == nil ==> d.MacFactoryOperational()
+// @ ensures   acc(&d.running, 1/2) && !d.running
+// @ ensures   acc(&d.macFactory, 1/2)
+// @ ensures   res == nil ==> d.macFactory != nil
 func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ share key
 	d.mtx.Lock()
@@ -273,8 +274,8 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ proof verScionTemp implements MacFactorySpec{d.key} {
 	// @   return verScionTemp() as f
 	// @ }
+	// @ assert verScionTemp != nil
 	d.macFactory = verScionTemp
-	// @ fold d.MacFactoryOperational()
 	return nil
 }
 
@@ -695,12 +696,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ outline (
 		writeMsgs := make(underlayconn.Messages, 1)
 		writeMsgs[0].Buffers = make([][]byte, 1)
+		// @ fold slices.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB))
 		// @ sl.NilAcc_Bytes()
 		// @ fold writeMsgs[0].Mem(1)
 		// @ )
 
-		// @ def.TODO() // do the following inside an outline
 		processor := newPacketProcessor(d, ingressID)
+		// @ def.TODO() // do the following inside an outline
 		var scmpErr /*@@@*/ scmpError
 		for d.running {
 			pkts, err := rd.ReadBatch(msgs)
@@ -874,12 +876,18 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ requires  acc(d.MacFactoryOperational(), _)
-// @ ensures   res.initMem()
+// TODO
+//
+//	requires  acc(d.MacFactoryOperational(), _)
+//	ensures   res.initMem()
+//
+// @ requires acc(&d.macFactory, _) && d.macFactory != nil
+// @ requires acc(MutexInvariant!<d!>(), _)
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
-	// @ unfold acc(d.MacFactoryOperational(), _)
+	//  unfold acc(d.MacFactoryOperational(), _)
+	// @ unfold acc(MutexInvariant!<d!>(), _)
 	verScionTmp = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
