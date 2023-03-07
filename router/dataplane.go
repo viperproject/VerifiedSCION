@@ -669,30 +669,27 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		msgs := conn.NewReadMessages(inputBatchCnt)
 		// @ socketspec.SplitPermMsgs(msgs)
 
-		// @ invariant acc(&msg)
+		// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
+		// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+		// @ decreases
+		// @ outline (
 		// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
-		// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
-		// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem(1)
-		// invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> let b := msgs[i].GetFstBuffer() in len(b) == bufSize
+		// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2)
+		// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> msgs[i].MemWithoutHalf(1)
+		// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> 0 <= i && i < i0 ==> msgs[i].Mem(1)
 		// @ decreases len(msgs) - i0
-		for _, msg /*@@@*/ := range msgs /*@ with i0 @*/ {
-			// @ ensures sl.AbsSlice_Bytes(tmp, 0, len(tmp))
-			// @ ensures len(tmp) == bufSize
-			// @ decreases
-			// @ outline (
+		for _, msg := range msgs /*@ with i0 @*/ {
 			tmp := make([]byte, bufSize)
 			// @ assert forall i int :: { &tmp[i] } 0 <= i && i < len(tmp) ==> acc(&tmp[i])
 			// @ fold sl.AbsSlice_Bytes(tmp, 0, len(tmp))
-			// @ )
 			// @ assert msgs[i0] === msg
 			// @ unfold msgs[i0].MemWithoutHalf(1)
 			msg.Buffers[0] = tmp
-			// @ fold msg.Mem(1)
+			// @ fold msgs[i0].Mem(1)
 			// @ assert forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem(1)
 			// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
-			// @ assert false
 		}
-		// @ def.TODO() // do the following inside an outline
+		// @ )
 		// @ ensures writeMsgs[0].Mem(1)
 		// @ decreases
 		// @ outline (
@@ -702,6 +699,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ fold writeMsgs[0].Mem(1)
 		// @ )
 
+		// @ def.TODO() // do the following inside an outline
 		processor := newPacketProcessor(d, ingressID)
 		var scmpErr /*@@@*/ scmpError
 		for d.running {
