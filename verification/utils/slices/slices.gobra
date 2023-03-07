@@ -22,6 +22,7 @@ package slices
 //   The suffix of the predicate/function should be the type of the elems of the slices.
 // - For each type, there might be two different types of operations: those that keep track
 //   of contents (the name of the operation ends in "C"), and those who do not.
+// - This file contains all the definitions that don't keep track of the slice contents
 
 pred AbsSlice_Bytes(s []byte, start int, end int) {
 	// start inclusive

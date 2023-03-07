@@ -44,10 +44,15 @@ type Decoded struct {
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 // @ requires  s.NonInitMem()
-// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
-// @ ensures   r == nil ==> len(data) > 0
+// @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), def.ReadL1)
+// @ ensures   r == nil ==> len(data) > 3
 // @ ensures   r == nil ==> s.Mem(data)
-// @ ensures   r == nil ==> (unfolding s.Mem(data) in unfolding s.Base.Mem() in unfolding slices.AbsSlice_Bytes(data, 0, len(data)) in s.PathMeta.CurrINF == data[0] >> 6 && s.NumINF == s.Base.NumINFValue())
+// @ ensures   r == nil ==> unfolding s.Mem(data) in unfolding s.Base.Mem() in unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), def.ReadL1) in
+// @                        s.PathMeta.CurrINF == data[0] >> 6 &&
+// @                        s.PathMeta.SegLen[0] == (data[2] >> 4 | data[1] << 4) & 0x3F &&
+// @                        s.PathMeta.SegLen[1] == (data[3] >> 6 | data[2] << 2) & 0x3F &&
+// @                        s.PathMeta.SegLen[2] == data[3] & 0x3F &&
+// @                        s.NumINF == s.Base.NumINFValue()
 // @ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 // @ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
@@ -66,7 +71,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	offset := MetaLen
 	s.InfoFields = make([]path.InfoField, ( /*@ unfolding s.Base.Mem() in @*/ s.NumINF))
 	//@ assert len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
-	//@ slices.SplitByIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
+	//@ slices.SplitByIndex_Bytes(data, 0, len(data), offset, definitions.ReadL2)
 
 	//@ invariant acc(&s.InfoFields)
 	//@ invariant acc(s.Base.Mem(), definitions.ReadL1)
@@ -75,20 +80,20 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + i * path.InfoLen
 	//@ invariant forall j int :: { &s.InfoFields[j] } 0 <= j && j < s.Base.getNumINF() ==> acc(&s.InfoFields[j])
-	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL1)
-	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL1)
+	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL2)
+	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL2)
 	//@ decreases s.Base.getNumINF() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), _) in @*/ s.NumINF; i++ {
-		//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.InfoLen, definitions.ReadL1)
-		//@ slices.Reslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL1)
+		//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.InfoLen, definitions.ReadL2)
+		//@ slices.Reslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL2)
 		if err := s.InfoFields[i].DecodeFromBytes(data[offset : offset+path.InfoLen]); err != nil {
 			// (VerifiedSCION) infofield.DecodeFromBytes guarantees that err == nil.
 			// Thus, this branch is not reachable.
 			return err
 		}
 		//@ assert len(data[offset:offset+path.InfoLen]) == path.InfoLen
-		//@ slices.Unslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL1)
-		//@ slices.CombineAtIndex_Bytes(data, 0, offset + path.InfoLen, offset, definitions.ReadL1)
+		//@ slices.Unslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL2)
+		//@ slices.CombineAtIndex_Bytes(data, 0, offset + path.InfoLen, offset, definitions.ReadL2)
 		offset += path.InfoLen
 	}
 	s.HopFields = make([]path.HopField, ( /*@ unfolding s.Base.Mem() in @*/ s.NumHops))
@@ -100,23 +105,23 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant forall j int :: { &s.HopFields[j] } 0 <= j && j < i ==> s.HopFields[j].Mem()
 	//@ invariant len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + s.Base.getNumINF() * path.InfoLen + i * path.HopLen
-	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL1)
-	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL1)
+	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL2)
+	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL2)
 	//@ decreases s.Base.getNumHops() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), definitions.ReadL2) in @*/ s.NumHops; i++ {
-		//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.HopLen, definitions.ReadL1)
-		//@ slices.Reslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL1)
+		//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.HopLen, definitions.ReadL2)
+		//@ slices.Reslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL2)
 		if err := s.HopFields[i].DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 			// (VerifiedSCION) infofield.DecodeFromBytes guarantees that err == nil.
 			// Thus, this branch should not be reachable.
 			return err
 		}
 		//@ assert len(data[offset:offset+path.HopLen]) == path.HopLen
-		//@ slices.Unslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL1)
-		//@ slices.CombineAtIndex_Bytes(data, 0, offset + path.HopLen, offset, definitions.ReadL1)
+		//@ slices.Unslice_Bytes(data, offset, offset + path.HopLen, definitions.ReadL2)
+		//@ slices.CombineAtIndex_Bytes(data, 0, offset + path.HopLen, offset, definitions.ReadL2)
 		offset += path.HopLen
 	}
-	//@ slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
+	//@ slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL2)
 	//@ fold s.Mem(data)
 	return nil
 }

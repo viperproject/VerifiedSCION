@@ -72,11 +72,16 @@ type Base struct {
 }
 
 // @ requires  s.NonInitMem()
-// @ requires  acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-// @ ensures   acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-// @ ensures   r == nil ==> len(data) > 0
+// @ requires  acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL2)
+// @ ensures   acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL2)
+// @ ensures   r == nil ==> len(data) > 3
 // @ ensures   r == nil ==> s.Mem()
-// @ ensures   r == nil ==> (unfolding s.Mem() in s.PathMeta.CurrINF) == (unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1) in data[0] >> 6)
+// ensures   r == nil ==> (unfolding s.Mem() in s.PathMeta.CurrINF) == (unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL2) in data[0] >> 6)
+// @ ensures   r == nil ==> unfolding s.Mem() in unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL2) in
+// @                        s.PathMeta.CurrINF == data[0] >> 6 &&
+// @                        s.PathMeta.SegLen[0] == (data[2] >> 4 | data[1] << 4) & 0x3F &&
+// @                        s.PathMeta.SegLen[1] == (data[3] >> 6 | data[2] << 2) & 0x3F &&
+// @                        s.PathMeta.SegLen[2] == data[3] & 0x3F
 // @ ensures   r == nil ==> unfolding s.Mem() in s.NumINF == s.NumINFValue()
 // @ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
 // @ ensures   len(data) < MetaLen ==> r != nil
@@ -95,10 +100,15 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// @ invariant acc(s)
 	// @ invariant 0 <= s.NumHops && 0 <= s.NumINF && s.NumINF <= 3
 	// @ invariant 0 < s.NumINF ==> 0 < s.NumHops
-	// @ invariant acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
-	// @ invariant s.PathMeta.CurrINF == (unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1) in data[0] >> 6)
+	// @ invariant acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL2)
+	// @ invariant s.PathMeta.CurrINF == (unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL2) in data[0] >> 6)
 	// @ invariant s.NumINF == 0 ==> forall j int :: { s.PathMeta.SegLen[j] } j > i && j <= 2 ==> s.PathMeta.SegLen[j] == 0
 	// @ invariant s.NumINF > 0 ==> s.NumINF == s.NumINFValue()
+	// @ invariant unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL2) in
+	// @           s.PathMeta.CurrINF == data[0] >> 6 &&
+	// @           s.PathMeta.SegLen[0] == (data[2] >> 4 | data[1] << 4) & 0x3F &&
+	// @           s.PathMeta.SegLen[1] == (data[3] >> 6 | data[2] << 2) & 0x3F &&
+	// @           s.PathMeta.SegLen[2] == data[3] & 0x3F
 	// @ decreases i
 	for i := 2; i >= 0; i-- {
 		if s.PathMeta.SegLen[i] == 0 && s.NumINF > 0 {
@@ -216,10 +226,10 @@ type MetaHdr struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
 // @ preserves acc(m)
-// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL3)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
 // @ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrINF < 4 && m.CurrHF >= 0)
-// @ ensures   e == nil ==> unfolding acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1) in
+// @ ensures   e == nil ==> unfolding acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL3) in
 // @                        m.CurrINF == raw[0] >> 6 &&
 // @                        m.SegLen[0] == (raw[2] >> 4 | raw[1] << 4) & 0x3F &&
 // @                        m.SegLen[1] == (raw[3] >> 6 | raw[2] << 2) & 0x3F &&
@@ -231,7 +241,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
 		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
-	// @ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+	// @ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL3)
 	line := binary.BigEndian.Uint32(raw)
 	// @ assert bitwise.DeserializingHdr(raw[0], raw[1], raw[2], raw[3], line)
 	m.CurrINF = uint8(line >> 30)
@@ -241,7 +251,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	m.SegLen[0] = uint8(line>>12) & 0x3F
 	m.SegLen[1] = uint8(line>>6) & 0x3F
 	m.SegLen[2] = uint8(line) & 0x3F
-	// @ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+	// @ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL3)
 	return nil
 }
 

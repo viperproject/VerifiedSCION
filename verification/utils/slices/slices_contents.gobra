@@ -100,6 +100,17 @@ func ResliceC_Bytes(s []byte, start int, end int, contents seq[byte]) {
 	fold  AbsSliceC_Bytes(s[start:end], 0, len(s[start:end]), contents)
 }
 
+/** Auxiliary definitions of Bytes **/
+
+ghost
+requires size >= 0
+ensures len(res) == size
+ensures forall i int :: 0 <= i && i < size ==> res[i] == byte(0)
+decreases
+pure func NewSeq_Bytes(size int) (res seq[byte])
+
+/** End of auxiliary definitions of Bytes **/
+
 /** Slices of Any with Contents **/
 
 // The elements in contents are required to be comparable
