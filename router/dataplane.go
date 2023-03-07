@@ -655,8 +655,6 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
-// @ trusted
-// @ requires  false
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.forwardingMetrics, 1/2)
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
@@ -677,6 +675,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires acc(&d.running, _)
 		// @ requires acc(&d.macFactory, _) && d.macFactory != nil
 		// @ requires acc(MutexInvariant!<d!>(), _)
+		// @ requires rd != nil && acc(rd.Mem(), _)
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
 			msgs := conn.NewReadMessages(inputBatchCnt)
@@ -715,7 +714,10 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
-			// @ def.TODO() // do the following inside an outline
+			// @ def.TODO()
+
+			// @ invariant acc(&d.running, _) && d.running
+			// @ invariant acc(rd.Mem(), _)
 			for d.running {
 				pkts, err := rd.ReadBatch(msgs)
 				if err != nil {
@@ -795,11 +797,14 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	for ifID, v := range d.external {
 		go func(i uint16, c BatchConn) {
 			defer log.HandlePanic()
+			// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
+			// This should be easily addressable nonethelss
 			read(i, c) //@ as readClosureSpec
 		}(ifID, v) //@ as closureSpec2
 	}
 	go func(c BatchConn) {
 		defer log.HandlePanic()
+		// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
 		read(0, c) //@ as readClosureSpec
 	}(d.internal) //@ as closureSpec3
 
