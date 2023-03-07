@@ -112,7 +112,7 @@ func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
 }
 
 pred (p *scionPacketProcessor) initMem() {
-	acc(&p.d, 1/2) &&
+	acc(&p.d) &&
 	acc(&p.ingressID) &&
 	acc(&p.buffer) &&
 	acc(&p.mac) &&
@@ -244,6 +244,25 @@ ensures  acc(&d.internal, _) && (d.internal != nil ==> acc(d.internal.Mem(), _))
 decreases
 func (d *DataPlane) getInternal() {
 	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.macFactory, _)
+decreases
+func (d *DataPlane) getMacFactoryMem() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+ghost
+requires acc(MutexInvariant!<d!>(), _)
+requires acc(&d.macFactory, _) && d.macFactory != nil
+ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
+ensures  acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
+ensures  scrypto.ValidKeyForHash(*d.key)
+ensures  d.macFactory implements MacFactorySpec{d.key}
+decreases
+func (d *DataPlane) getNewPacketProcessorFootprint() {
+    unfold acc(MutexInvariant!<d!>(), _)
 }
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/

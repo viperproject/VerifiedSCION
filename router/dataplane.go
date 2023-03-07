@@ -271,6 +271,9 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 			mac, _ := scrypto.InitMac(key)
 			return mac
 		}
+	// (VerifiedSCION) Gobra cannot currently prove the following assertion, even though it must
+	// follow from the structure of the declaration of `verScionTemp`.
+	// @ assume verScionTemp != nil
 	// @ proof verScionTemp implements MacFactorySpec{d.key} {
 	// @   return verScionTemp() as f
 	// @ }
@@ -655,6 +658,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.forwardingMetrics, 1/2)
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
+// @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) Run(ctx context.Context) error {
@@ -665,111 +669,119 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 	d.initMetrics()
 
-	read /*@@@*/ := func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
+	read /*@@@*/ :=
+		// Note(VerifiedSCION): this precondition may cause problems ahead because of the lack of permissions to d.mtx
+		// @ requires acc(&d, _)
+		// @ requires acc(&d.running, _)
+		// @ requires acc(&d.macFactory, _) && d.macFactory != nil
+		// @ requires acc(MutexInvariant!<d!>(), _)
+		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
-		msgs := conn.NewReadMessages(inputBatchCnt)
-		// @ socketspec.SplitPermMsgs(msgs)
+			msgs := conn.NewReadMessages(inputBatchCnt)
+			// @ socketspec.SplitPermMsgs(msgs)
 
-		// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
-		// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
-		// @ decreases
-		// @ outline (
-		// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
-		// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2)
-		// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> msgs[i].MemWithoutHalf(1)
-		// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> 0 <= i && i < i0 ==> msgs[i].Mem(1)
-		// @ decreases len(msgs) - i0
-		for _, msg := range msgs /*@ with i0 @*/ {
-			tmp := make([]byte, bufSize)
-			// @ assert forall i int :: { &tmp[i] } 0 <= i && i < len(tmp) ==> acc(&tmp[i])
-			// @ fold sl.AbsSlice_Bytes(tmp, 0, len(tmp))
-			// @ assert msgs[i0] === msg
-			// @ unfold msgs[i0].MemWithoutHalf(1)
-			msg.Buffers[0] = tmp
-			// @ fold msgs[i0].Mem(1)
-			// @ assert forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem(1)
-			// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
-		}
-		// @ )
-		// @ ensures writeMsgs[0].Mem(1)
-		// @ decreases
-		// @ outline (
-		writeMsgs := make(underlayconn.Messages, 1)
-		writeMsgs[0].Buffers = make([][]byte, 1)
-		// @ fold slices.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB))
-		// @ sl.NilAcc_Bytes()
-		// @ fold writeMsgs[0].Mem(1)
-		// @ )
-
-		processor := newPacketProcessor(d, ingressID)
-		// @ def.TODO() // do the following inside an outline
-		var scmpErr /*@@@*/ scmpError
-		for d.running {
-			pkts, err := rd.ReadBatch(msgs)
-			if err != nil {
-				log.Debug("Failed to read batch", "err", err)
-				// error metric
-				continue
+			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
+			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+			// @ decreases
+			// @ outline (
+			// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
+			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2)
+			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> msgs[i].MemWithoutHalf(1)
+			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> 0 <= i && i < i0 ==> msgs[i].Mem(1)
+			// @ decreases len(msgs) - i0
+			for _, msg := range msgs /*@ with i0 @*/ {
+				tmp := make([]byte, bufSize)
+				// @ assert forall i int :: { &tmp[i] } 0 <= i && i < len(tmp) ==> acc(&tmp[i])
+				// @ fold sl.AbsSlice_Bytes(tmp, 0, len(tmp))
+				// @ assert msgs[i0] === msg
+				// @ unfold msgs[i0].MemWithoutHalf(1)
+				msg.Buffers[0] = tmp
+				// @ fold msgs[i0].Mem(1)
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem(1)
+				// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
 			}
-			if pkts == 0 {
-				continue
-			}
-			for _, p := range msgs[:pkts] {
-				// input metric
-				inputCounters := d.forwardingMetrics[ingressID]
-				inputCounters.InputPacketsTotal.Inc()
-				inputCounters.InputBytesTotal.Add(float64(p.N))
+			// @ )
+			// @ ensures writeMsgs[0].Mem(1)
+			// @ decreases
+			// @ outline (
+			writeMsgs := make(underlayconn.Messages, 1)
+			writeMsgs[0].Buffers = make([][]byte, 1)
+			// @ fold slices.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB))
+			// @ sl.NilAcc_Bytes()
+			// @ fold writeMsgs[0].Mem(1)
+			// @ )
 
-				srcAddr := p.Addr.(*net.UDPAddr)
-				result, err := processor.processPkt(p.Buffers[0][:p.N], srcAddr)
-
-				switch {
-				case err == nil:
-				case errors.As(err, &scmpErr):
-					if !scmpErr.TypeCode.InfoMsg() {
-						log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
-					}
-					// SCMP go back the way they came.
-					result.OutAddr = srcAddr
-					result.OutConn = rd
-				default:
-					log.Debug("Error processing packet", "err", err)
-					inputCounters.DroppedPacketsTotal.Inc()
-					continue
-				}
-				if result.OutConn == nil { // e.g. BFD case no message is forwarded
-					continue
-				}
-
-				// Write to OutConn; drop the packet if this would block.
-				// Use WriteBatch because it's the only available function that
-				// supports MSG_DONTWAIT.
-				writeMsgs[0].Buffers[0] = result.OutPkt
-				writeMsgs[0].Addr = nil
-				if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
-					writeMsgs[0].Addr = result.OutAddr
-				}
-
-				_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
+			processor := newPacketProcessor(d, ingressID)
+			var scmpErr /*@@@*/ scmpError
+			// @ def.TODO() // do the following inside an outline
+			for d.running {
+				pkts, err := rd.ReadBatch(msgs)
 				if err != nil {
-					var errno /*@@@*/ syscall.Errno
-					if !errors.As(err, &errno) ||
-						!(errno == syscall.EAGAIN || errno == syscall.EWOULDBLOCK) {
-						log.Debug("Error writing packet", "err", err)
-						// error metric
-					}
-					inputCounters.DroppedPacketsTotal.Inc()
+					log.Debug("Failed to read batch", "err", err)
+					// error metric
 					continue
 				}
-				// ok metric
-				outputCounters := d.forwardingMetrics[result.EgressID]
-				outputCounters.OutputPacketsTotal.Inc()
-				outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
+				if pkts == 0 {
+					continue
+				}
+				for _, p := range msgs[:pkts] {
+					// input metric
+					inputCounters := d.forwardingMetrics[ingressID]
+					inputCounters.InputPacketsTotal.Inc()
+					inputCounters.InputBytesTotal.Add(float64(p.N))
+
+					srcAddr := p.Addr.(*net.UDPAddr)
+					result, err := processor.processPkt(p.Buffers[0][:p.N], srcAddr)
+
+					switch {
+					case err == nil:
+					case errors.As(err, &scmpErr):
+						if !scmpErr.TypeCode.InfoMsg() {
+							log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
+						}
+						// SCMP go back the way they came.
+						result.OutAddr = srcAddr
+						result.OutConn = rd
+					default:
+						log.Debug("Error processing packet", "err", err)
+						inputCounters.DroppedPacketsTotal.Inc()
+						continue
+					}
+					if result.OutConn == nil { // e.g. BFD case no message is forwarded
+						continue
+					}
+
+					// Write to OutConn; drop the packet if this would block.
+					// Use WriteBatch because it's the only available function that
+					// supports MSG_DONTWAIT.
+					writeMsgs[0].Buffers[0] = result.OutPkt
+					writeMsgs[0].Addr = nil
+					if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
+						writeMsgs[0].Addr = result.OutAddr
+					}
+
+					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
+					if err != nil {
+						var errno /*@@@*/ syscall.Errno
+						if !errors.As(err, &errno) ||
+							!(errno == syscall.EAGAIN || errno == syscall.EWOULDBLOCK) {
+							log.Debug("Error writing packet", "err", err)
+							// error metric
+						}
+						inputCounters.DroppedPacketsTotal.Inc()
+						continue
+					}
+					// ok metric
+					outputCounters := d.forwardingMetrics[result.EgressID]
+					outputCounters.OutputPacketsTotal.Inc()
+					outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
+				}
 			}
 		}
-	}
 
 	// @ def.TODO()
+	// TODO: replace by  acc(MutexInvariant(d), _) for the remainder of the proof? - makes proof obligations easier
+	// @ fold acc(MutexInvariant!<d!>(), _)
 	for k, v := range d.bfdSessions {
 		go func(ifID uint16, c bfdSession) {
 			defer log.HandlePanic()
@@ -876,18 +888,28 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// TODO
-//
-//	requires  acc(d.MacFactoryOperational(), _)
-//	ensures   res.initMem()
-//
 // @ requires acc(&d.macFactory, _) && d.macFactory != nil
 // @ requires acc(MutexInvariant!<d!>(), _)
+// @ ensures  acc(&res.d) && res.d === d
+// @ ensures  acc(&res.ingressID)
+// @ ensures  acc(&res.buffer)
+// @ ensures  acc(&res.mac)
+// @ ensures  acc(res.scionLayer.NonInitMem())
+// @ ensures  res.scionLayer.PathPoolInitializedNonInitMem()
+// @ ensures  acc(&res.hbhLayer)
+// @ ensures  acc(&res.e2eLayer)
+// @ ensures  acc(&res.lastLayer)
+// @ ensures  acc(&res.path)
+// @ ensures  acc(&res.hopField)
+// @ ensures  acc(&res.infoField)
+// @ ensures  acc(&res.segmentChange)
+// @ ensures  acc(&res.cachedMac)
+// @ ensures  acc(&res.macBuffers)
+// @ ensures  acc(&res.bfdLayer)
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
-	//  unfold acc(d.MacFactoryOperational(), _)
-	// @ unfold acc(MutexInvariant!<d!>(), _)
+	// @ d.getNewPacketProcessorFootprint()
 	verScionTmp = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
@@ -902,7 +924,6 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
 	// @ fold p.scionLayer.NonInitMem()
-	// @ fold p.initMem()
 	return p
 }
 
