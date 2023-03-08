@@ -177,7 +177,7 @@ requires acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(),
 requires r.RawIdxPermRemainder(ubuf, idx, p)
 ensures  acc(r.Mem(ubuf), p)
 ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-//ensures  unfolding forall i int :: 0 <= i && i < idx ==>
+ensures  forall i int :: 0 <= i && i < idx ==> old(unfolding r.RawIdxPermRemainder(ubuf, idx, p) in unfolding acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) in r.Raw[i]) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p) in ubuf[i])
 ensures  old(unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.CurrINF) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.CurrINF)
 ensures  old(unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.SegLen[0]) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.SegLen[0])
 ensures  old(unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.SegLen[1]) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.SegLen[1])
@@ -186,8 +186,16 @@ ensures  old(unfolding acc(r.Base.Mem(), p/2) in r.Base.NumINF) == (unfolding ac
 decreases
 func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
 	unfold r.RawIdxPermRemainder(ubuf, idx, p)
-	slices.Unslice_Bytes(ubuf, 0, idx, p)
-	slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
+	unfold acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p/2)
+	slices.Unslice_Bytes(ubuf, 0, idx, p/2)
+	unfold acc(slices.AbsSlice_Bytes(ubuf, 0, idx), p/2)
+	fold acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p/2)
+	slices.Unslice_Bytes(ubuf, 0, idx, p/2)
+	slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p/2)
+	unfold acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p/2)
+	fold acc(slices.AbsSlice_Bytes(ubuf, 0, idx), p/2)
+	slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p/2)
+	fold acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p/2)
 	fold acc(r.Mem(ubuf), p)
 }
 
@@ -341,4 +349,5 @@ decreases
 pure func (s *Raw) InfValid(ubuf []byte) (bool) {
 	return unfolding acc(s.Mem(ubuf), _) in s.Base.InfValid()
 }
+
 /**** End of helpful pure functions ****/

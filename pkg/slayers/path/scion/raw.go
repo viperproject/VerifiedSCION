@@ -138,89 +138,50 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
-	// @ ghost var currinf uint8 = unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.CurrINF
-	// @ assert (unfolding s.Mem(ubuf) in unfolding acc(s.Base.Mem()) in s.PathMeta.CurrINF) == old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.CurrINF)
-	// @ assert currinf == old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.CurrINF)
-	// @ assert (unfolding s.Mem(ubuf) in unfolding acc(s.Base.Mem()) in s.PathMeta.CurrINF) == currinf
-	//@ s.RawIdxPerm(ubuf, MetaLen, writePerm)
-	//@ unfold acc(s.Base.Mem(), def.ReadL1)
-	// @ assert currinf == s.PathMeta.CurrINF
-	// @ assert old(unfolding s.Mem(ubuf) in unfolding acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1) in s.Raw[0]) == unfolding acc(slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, len(s.Raw[:MetaLen])), 1/2) in s.Raw[0]
+	// @ s.RawIdxPerm(ubuf, MetaLen, writePerm)
+	// @ unfold acc(s.Base.Mem(), def.ReadL1)
 	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		// @ def.Unreachable()
 		return nil, err
 	}
 
-	// @ assert currinf == old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.CurrINF)
-	// @ assert currinf == s.PathMeta.CurrINF
-	// @ assert (s.PathMeta.CurrINF) == old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.CurrINF)
-	// @ assert s.PathMeta.InfValid() ==> unfolding slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, len(s.Raw[:MetaLen])) in s.PathMeta.CurrINF == s.Raw[0] >> 6
-	//@ fold acc(s.Base.Mem(), def.ReadL1)
-	//@ assert forall i int :: { &s.Raw[:MetaLen][i] } 0 <= i && i < MetaLen ==> &s.Raw[:MetaLen][i] == &s.Raw[i]
-	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
+	// @ fold acc(s.Base.Mem(), def.ReadL1)
+	// @ assert forall i int :: { &s.Raw[:MetaLen][i] } 0 <= i && i < MetaLen ==> &s.Raw[:MetaLen][i] == &s.Raw[i]
+	// @ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
 	decoded := &Decoded{}
-	//@ fold decoded.Base.NonInitMem()
-	//@ fold decoded.NonInitMem()
-	//@ unfold s.Mem(ubuf)
-
+	// @ fold decoded.Base.NonInitMem()
+	// @ fold decoded.NonInitMem()
+	// @ unfold s.Mem(ubuf)
 	// @ unfold acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), 1/2)
-	//@ slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), 1/2)
+	// @ slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), 1/2)
 	// @ unfold acc(slices.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), 1/2)
 	// @ fold acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), 1/2)
 	// @ slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), 1/2)
-	//@ slices.Reslice_Bytes(ubuf, 0, len(s.Raw), 1/2)
+	// @ slices.Reslice_Bytes(ubuf, 0, len(s.Raw), 1/2)
 	// @ unfold acc(slices.AbsSlice_Bytes(ubuf[:len(s.Raw)], 0, len(ubuf[:len(s.Raw)])), 1/2)
 	// @ fold acc(slices.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), 1/2)
 	// @ slices.Reslice_Bytes(ubuf, 0, len(s.Raw), 1/2)
 	// @ fold acc(slices.AbsSlice_Bytes(ubuf[:len(s.Raw)], 0, len(ubuf[:len(s.Raw)])), 1/2)
 
-	// @ assert currinf == unfolding s.Base.Mem() in s.PathMeta.CurrINF
 	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
-		//@ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
-		//@ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
-		//@ fold s.Mem(ubuf)
+		// @ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
+		// @ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
+		// @ fold s.Mem(ubuf)
 		return nil, err
 	}
 
-	// @ assert unfolding s.PathMeta.InfValid() ==> unfolding slices.AbsSlice_Bytes(s.Raw[:MetaLen], 0, len(s.Raw[:MetaLen])) in s.PathMeta.CurrINF == s.Raw[0] >> 6
-
 	// @ unfold acc(slices.AbsSlice_Bytes(ubuf[:len(s.Raw)], 0, len(s.Raw)), 1/2)
-
-	//@ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), 1/2)
-
+	// @ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), 1/2)
 	// @ unfold acc(slices.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), 1/2)
 	// @ fold acc(slices.AbsSlice_Bytes(ubuf[:len(s.Raw)], 0, len(s.Raw)), 1/2)
-
 	// @ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), 1/2)
-	
-	//@ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), 1/2)
-
+	// @ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), 1/2)
 	// @ unfold acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), 1/2)
 	// @ fold acc(slices.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), 1/2)
-	
 	// @ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), 1/2)
-
 	// @ fold acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), 1/2)
-
-	// @ assert   unfolding decoded.Mem(s.Raw) in unfolding decoded.Base.Mem() in unfolding acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1) in
-	// @          decoded.PathMeta.CurrINF == s.Raw[0] >> 6 &&
-	// @          decoded.PathMeta.SegLen[0] == (s.Raw[2] >> 4 | s.Raw[1] << 4) & 0x3F &&
-	// @          decoded.PathMeta.SegLen[1] == (s.Raw[3] >> 6 | s.Raw[2] << 2) & 0x3F &&
-	// @          decoded.PathMeta.SegLen[2] == s.Raw[3] & 0x3F &&
-	// @          decoded.NumINF == decoded.Base.NumINFValue()
-
-	//@ fold s.Mem(ubuf)
-	// @ assert (unfolding s.Mem(ubuf) in unfolding acc(s.Base.Mem()) in s.PathMeta.CurrINF) == old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.CurrINF)
-
-	
-	// assert (unfolding s.Mem(ubuf) in unfolding acc(s.Base.Mem()) in s.PathMeta.CurrINF) == unfolding decoded.Mem(s.Raw) in unfolding decoded.Base.Mem() in d.PathMeta.CurrINF
-	
-	// @ assert old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.CurrINF) == unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.CurrINF
-	// @ assert old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.SegLen[0]) == unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.SegLen[0]
-	// @ assert old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.SegLen[1]) == unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.SegLen[1]
-	// @ assert old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.SegLen[2]) == unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.PathMeta.SegLen[2]
-	// @ assert old(unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.NumINF) == unfolding s.Mem(ubuf) in unfolding s.Base.Mem() in s.NumINF
+	// @ fold s.Mem(ubuf)
 	return decoded, nil
 }
 
