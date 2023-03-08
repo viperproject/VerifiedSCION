@@ -9,10 +9,10 @@
 
 package time
 
+import def "github.com/scionproto/scion/verification/utils/definitions"
+
 type Time struct {
-	wall uint64
-	ext  int64
-	loc *Location
+    privateFields def.PrivateField
 }
 
 // After reports whether the time instant t is after u.
@@ -246,7 +246,6 @@ func (t Time) In(loc *Location) Time
 
 // Location returns the time zone information associated with t.
 // ensures t.loc == nil ==> res == UTC // UTC is currently commented because it is a global var
-ensures t.loc != nil ==> res == t.loc
 decreases
 func (t Time) Location() (res *Location)
 

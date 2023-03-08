@@ -1,4 +1,4 @@
- // Copyright 2022 Eth Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,20 +14,24 @@
 
 // +gobra
 
-package topology
+package router
 
 import (
-	"time"
-
-	"github.com/scionproto/scion/private/topology/underlay"
+	"net"
+	"hash"
+	sl "github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/scrypto"
+	"github.com/scionproto/scion/pkg/addr"
 )
 
-// BFD is the configuration for a BFD session
-type BFD struct {
-	Disable               bool
-	DetectMult            uint8
-	DesiredMinTxInterval  time.Duration
-	RequiredMinRxInterval time.Duration
+pred (b *bfdSend) Mem() {
+	acc(b) &&
+	b.srcAddr.Mem() &&
+	b.dstAddr.Mem() &&
+	acc(b.scn) &&
+	acc(b.ohp) &&
+	b.mac.Mem() &&
+	sl.AbsSlice_Bytes(b.macBuffer, 0, path.MACBufferSize) &&
+	b.buffer.Mem()
 }
-
-const EndhostPort = underlay.EndhostPort

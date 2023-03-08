@@ -16,8 +16,11 @@
 
 package conn
 
+import "net"
+
 func foldConnUDPBaseMem_test() {
 	var c@ connUDPBase
+	c.conn = new(net.UDPConn)
 	fold (&c.conn).Mem()
 	fold (&c).Mem()
 }

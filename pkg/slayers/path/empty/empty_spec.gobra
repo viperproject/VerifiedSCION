@@ -28,26 +28,15 @@ pred (e Path) NonInitMem() { true }
 ghost
 requires e.Mem(buf)
 ensures  e.NonInitMem()
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
 func (e Path) DowngradePerm(buf []byte) {
 	unfold e.Mem(buf)
-	fold slices.AbsSlice_Bytes(buf, 0, len(buf))
 	fold e.NonInitMem()
 }
 
-ghost
-requires 0 < p
-requires acc(e.Mem(ub), p)
-ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p)
-ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p) --* acc(e.Mem(ub), p)
-decreases
-func (e Path) AccUnderlyingBuf(ghost ub []byte, ghost p perm) {
-	unfold acc(e.Mem(ub), p)
-	fold acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p)
-	package acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), p) --* acc(e.Mem(ub), p) {
-		fold acc(e.Mem(ub), p)
-	}
-}
-
 Path implements path.Path
+
+// Definitions to allow *Path to be treated as a path.Path
+pred (e *Path) Mem(buf []byte) { acc(e) && len(buf) == 0 }
+pred (e *Path) NonInitMem() { true }
+(*Path) implements path.Path
