@@ -30,3 +30,10 @@ ensures len(res) == size
 ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == byte(0)
 decreases
 pure func NewSeqByte(size int) (res seq[byte])
+
+ghost
+requires size >= 0
+ensures len(res) == size
+ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
+decreases
+pure func NewSeqByteSlice(size int) (res seq[[]byte])
