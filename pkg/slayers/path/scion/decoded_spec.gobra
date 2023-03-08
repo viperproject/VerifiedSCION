@@ -126,7 +126,7 @@ ghost
 requires acc(d.Mem(ubuf), _)
 decreases
 pure func (d *Decoded) InfValid(ubuf []byte) (bool) {
-	return unfolding d.Mem(ubuf) in d.Base.InfValid()
+	return unfolding acc(d.Mem(ubuf), _) in d.Base.InfValid()
 }
 
 /**** End of Auxiliary Functions ****/

@@ -260,6 +260,10 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 // @ requires  len(b) >= MetaLen
 // @ preserves acc(m, definitions.ReadL10)
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ ensures   old(m.CurrINF) == m.CurrINF
+// @ ensures   old(m.SegLen[0]) == m.SegLen[0]
+// @ ensures   old(m.SegLen[1]) == m.SegLen[1]
+// @ ensures   old(m.SegLen[2]) == m.SegLen[2]
 // @ ensures   m.InfValid() ==> unfolding slices.AbsSlice_Bytes(b, 0, len(b)) in
 // @                            m.CurrINF == b[0] >> 6 &&
 // @                            m.SegLen[0] == (b[2] >> 4 | b[1] << 4) & 0x3F &&
