@@ -2320,7 +2320,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ requires unfolding acc(MutexInvariant(p.d), _) in p.d.external != nil
 // @ requires acc(&p.buffer)
 // @ requires scmpP.Mem(ubufP)
-// @ requires p.scionLayer.Mem(ubufS) && p.buffer.Mem(ubufB)
+// @ requires p.scionLayer.Mem(ubufS) && p.buffer.Mem()
 // @ requires unfolding p.scionLayer.Mem(ubufS) in
 // @          typeOf(p.scionLayer.Path) == *epic.Path ==>
 // @          unfolding (p.scionLayer.Path.(*epic.Path)).Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]) in
@@ -2331,7 +2331,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @          unfolding (p.scionLayer.Path.(*scion.Raw)).Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen]) in
 // @          (p.scionLayer.Path.(*scion.Raw)).Base.InfValid()
 // @ requires cannotRoute.ErrorMem()
-func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SCMPCode, scmpP gopacket.SerializableLayer, cause error /*@, ghost ubufP []byte, ghost ubufS []byte, ghost ubufB []byte @*/) ([]byte, error) {
+func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SCMPCode, scmpP gopacket.SerializableLayer, cause error /*@, ghost ubufP []byte, ghost ubufS []byte @*/) ([]byte, error) {
 
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
 	// back to rawPkt (quote).
@@ -2367,6 +2367,8 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 	}
 	// @ assert unfolding path.Mem(ubufPath) in unfolding path.Base.Mem() in 0 <= path.PathMeta.CurrINF && path.PathMeta.CurrINF < path.NumINF
 	decPath, err := path.ToDecoded( /*@ ubufPath @*/ )
+	// @ assume false
+	// @ assert unfolding path.Mem(ubufPath) in unfolding path.Base.Mem() in 0 <= path.PathMeta.CurrINF && path.PathMeta.CurrINF < path.NumINF
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
@@ -2516,7 +2518,7 @@ func (p *scionPacketProcessor) prdepareSCMP(typ slayers.SCMPType, code slayers.S
 	scmpH/*@@@*/ := slayers.SCMP{TypeCode: typeCode}
 	scmpH.SetNetworkLayerForChecksum(&scionL)
 
-	if err := p.buffer.Clear( /*@ ubufB @*/ ); err != nil {
+	if err := p.buffer.Clear(); err != nil {
 		return nil, err
 	}
 
@@ -2545,11 +2547,11 @@ func (p *scionPacketProcessor) prdepareSCMP(typ slayers.SCMPType, code slayers.S
 		scmpLayers = append( /*@ writePerm, @*/ scmpLayers, verScionTmp...)
 	}
 	// XXX(matzf) could we use iovec gather to avoid copying quote?
-	err = gopacket.SerializeLayers( /*@ ubufB, @*/ p.buffer, sopts /*@ , []([]byte){ ubufS, ubufP } @*/, scmpLayers...)
+	err = gopacket.SerializeLayers(p.buffer, sopts /*@ , []([]byte){ ubufS, ubufP } @*/, scmpLayers...)
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "serializing SCMP message")
 	}
-	return p.buffer.Bytes( /*@ ubufB @*/ ), scmpError{TypeCode: typeCode, Cause: cause}
+	return p.buffer.Bytes(), scmpError{TypeCode: typeCode, Cause: cause}
 }
 
 // decodeLayers implements roughly the functionality of
