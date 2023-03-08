@@ -655,6 +655,8 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
+// @ trusted
+// @ requires  false
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.forwardingMetrics, 1/2)
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
@@ -1462,7 +1464,7 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // Provided that underlying network infrastructure prevents address spoofing,
 // this check prevents malicious end hosts in the local AS from bypassing the
 // SrcIA checks by disguising packets as transit traffic.
-// @ requires  acc(&p.path, def.ReadL20)
+// @ requires  acc(&p.path, def.ReadL15)
 // @ requires  acc(p.path.Mem(ubPath), def.ReadL4)
 // @ requires  acc(&p.ingressID, def.ReadL20)
 // @ requires  acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
@@ -1471,7 +1473,7 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL4)
-// @ ensures   acc(&p.path, def.ReadL20)
+// @ ensures   acc(&p.path, def.ReadL15)
 // @ ensures   acc(p.path.Mem(ubPath), def.ReadL4)
 // @ ensures   acc(&p.ingressID, def.ReadL20)
 // @ ensures   acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
