@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/private/util"
 	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
@@ -245,7 +244,7 @@ func TestSCIONSerializeLengthCheck(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			pkt.Path = path.NewRawPath()
-			pkt.Path.DecodeFromBytes(make([]byte, tc.pathLen))
+			require.NoError(t, pkt.Path.DecodeFromBytes(make([]byte, tc.pathLen)))
 
 			buffer := gopacket.NewSerializeBuffer()
 			err := pkt.SerializeTo(buffer, gopacket.SerializeOptions{FixLengths: true})
@@ -395,7 +394,8 @@ func BenchmarkDecodePreallocNoParse(b *testing.B) {
 	raw := prepRawPacket(b)
 	s := &slayers.SCION{}
 	for i := 0; i < b.N; i++ {
-		s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		err := s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		require.NoError(b, err)
 	}
 }
 
@@ -403,7 +403,8 @@ func BenchmarkDecodeNoPreallocNoParse(b *testing.B) {
 	raw := prepRawPacket(b)
 	for i := 0; i < b.N; i++ {
 		s := &slayers.SCION{}
-		s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		err := s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		require.NoError(b, err)
 	}
 }
 
@@ -411,9 +412,11 @@ func BenchmarkDecodePreallocFull(b *testing.B) {
 	raw := prepRawPacket(b)
 	s := &slayers.SCION{}
 	for i := 0; i < b.N; i++ {
-		s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		err := s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		require.NoError(b, err)
 		p := s.Path.(*scion.Raw)
-		p.ToDecoded()
+		_, err = p.ToDecoded()
+		require.NoError(b, err)
 	}
 }
 
@@ -422,8 +425,10 @@ func BenchmarkSerializeReuseBuffer(b *testing.B) {
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true}
 	for i := 0; i < b.N; i++ {
-		s.SerializeTo(buffer, opts)
-		buffer.Clear()
+		err := s.SerializeTo(buffer, opts)
+		require.NoError(b, err)
+		err = buffer.Clear()
+		require.NoError(b, err)
 	}
 }
 
@@ -432,7 +437,8 @@ func BenchmarkSerializeNoReuseBuffer(b *testing.B) {
 	opts := gopacket.SerializeOptions{FixLengths: true}
 	for i := 0; i < b.N; i++ {
 		buffer := gopacket.NewSerializeBuffer()
-		s.SerializeTo(buffer, opts)
+		err := s.SerializeTo(buffer, opts)
+		require.NoError(b, err)
 	}
 }
 
@@ -450,9 +456,9 @@ func prepPacket(t testing.TB, c slayers.L4ProtocolType) *slayers.SCION {
 		SrcIA:        xtest.MustParseIA("2-ff00:0:222"),
 		Path:         &scion.Raw{},
 	}
-	spkt.SetDstAddr(ip6Addr)
-	spkt.SetSrcAddr(ip4Addr)
-	spkt.Path.DecodeFromBytes(rawPath())
+	require.NoError(t, spkt.SetDstAddr(ip6Addr))
+	require.NoError(t, spkt.SetSrcAddr(ip4Addr))
+	require.NoError(t, spkt.Path.DecodeFromBytes(rawPath()))
 	return spkt
 }
 
@@ -460,7 +466,7 @@ func prepRawPacket(t testing.TB) []byte {
 	t.Helper()
 	spkt := prepPacket(t, slayers.L4UDP)
 	buffer := gopacket.NewSerializeBuffer()
-	spkt.SerializeTo(buffer, gopacket.SerializeOptions{FixLengths: true})
+	require.NoError(t, spkt.SerializeTo(buffer, gopacket.SerializeOptions{FixLengths: true}))
 	return buffer.Bytes()
 }
 
@@ -486,6 +492,22 @@ func TestSCIONComputeChecksum(t *testing.T) {
 			UpperLayer: xtest.MustParseHexString("aabbccdd"),
 			Protocol:   1,
 			Checksum:   0x2615,
+		},
+		"IPv4/IPv4 odd length": {
+			Header: func(t *testing.T) *slayers.SCION {
+				s := &slayers.SCION{
+					SrcIA: xtest.MustParseIA("1-ff00:0:110"),
+					DstIA: xtest.MustParseIA("1-ff00:0:112"),
+				}
+				err := s.SetSrcAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()})
+				require.NoError(t, err)
+				err = s.SetDstAddr(&net.IPAddr{IP: net.ParseIP("172.16.4.2").To4()})
+				require.NoError(t, err)
+				return s
+			},
+			UpperLayer: xtest.MustParseHexString("aabbccddee"),
+			Protocol:   1,
+			Checksum:   0x3813,
 		},
 		"IPv4/IPv6": {
 			Header: func(t *testing.T) *slayers.SCION {
@@ -530,7 +552,10 @@ func TestSCIONComputeChecksum(t *testing.T) {
 			ul := append([]byte{0, 0}, tc.UpperLayer...)
 
 			// Reference checksum
-			reference := util.Checksum(pseudoHeader(t, s, len(ul), tc.Protocol), ul)
+			reference := referenceChecksum(append(
+				pseudoHeader(t, s, len(ul), tc.Protocol),
+				ul...,
+			))
 
 			// Compute checksum
 			csum, err := s.ComputeChecksum(ul, tc.Protocol)
@@ -557,4 +582,19 @@ func pseudoHeader(t *testing.T, s *slayers.SCION, upperLayerLength int, protocol
 	offset += 4
 	binary.BigEndian.PutUint32(pseudo[offset:], uint32(protocol))
 	return pseudo
+}
+
+func referenceChecksum(data []byte) uint16 {
+	// pad at end with 0
+	if len(data)%2 == 1 {
+		data = append(data, 0)
+	}
+	var csum uint32
+	for i := 0; i+1 < len(data); i += 2 {
+		csum += uint32(binary.BigEndian.Uint16(data[i:]))
+	}
+	for csum > 0xffff {
+		csum = (csum >> 16) + (csum & 0xffff)
+	}
+	return ^uint16(csum)
 }

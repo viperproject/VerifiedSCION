@@ -137,6 +137,7 @@ func (ps *PathSegment) FullID() []byte {
 	return ps.calculateHash(false)
 }
 
+//nolint:errcheck // hash.Write never returns an error
 func (ps *PathSegment) calculateHash(hopOnly bool) []byte {
 	h := sha256.New()
 	for _, ase := range ps.ASEntries {
@@ -275,6 +276,7 @@ func (ps *PathSegment) AddASEntry(ctx context.Context, asEntry ASEntry, signer S
 		Extensions:  extensionsToPB(asEntry.Extensions),
 	}
 	for _, peer := range asEntry.PeerEntries {
+		peer := peer
 		asEntryPB.PeerEntries = append(asEntryPB.PeerEntries,
 			&cppb.PeerEntry{
 				PeerIsdAs:     uint64(peer.Peer),

@@ -28,7 +28,6 @@ import (
 
 	"github.com/scionproto/scion/pkg/log"
 	"github.com/scionproto/scion/pkg/private/serrors"
-	"github.com/scionproto/scion/pkg/private/util"
 	"github.com/scionproto/scion/private/env"
 	"github.com/scionproto/scion/private/topology"
 )
@@ -128,9 +127,13 @@ func (s StatusPages) Register(serveMux *http.ServeMux, elemId string) error {
 // NewConfigStatusPage returns a page with the specified TOML config.
 func NewConfigStatusPage(config interface{}) StatusPage {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
 		var buf bytes.Buffer
-		toml.NewEncoder(&buf).Order(toml.OrderPreserve).Encode(config)
+		err := toml.NewEncoder(&buf).Order(toml.OrderPreserve).Encode(config)
+		if err != nil {
+			http.Error(w, "Error encoding toml config", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprint(w, buf.String())
 	}
 	return StatusPage{
@@ -143,7 +146,7 @@ func NewConfigStatusPage(config interface{}) StatusPage {
 func NewInfoStatusPage() StatusPage {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		info := env.VersionInfo()
-		inDocker, err := util.RunsInDocker()
+		inDocker, err := env.RunsInDocker()
 		if err == nil {
 			info += fmt.Sprintf("  In docker:     %v\n", inDocker)
 		}

@@ -1,4 +1,4 @@
-// Copyright 2017 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package xtest implements common functionality for unit tests.
-package xtest
+package spao
 
-import (
-	"errors"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+var (
+	SerializeAuthenticatedData = serializeAuthenticatedData
 )
-
-// AssertErrorsIs checks that errors.Is(actualErr, expectedErr) returns true, if
-// expectedErr is not nil.
-func AssertErrorsIs(t *testing.T, actualErr, expectedErr error) {
-	assert.True(t, errors.Is(actualErr, expectedErr), "Expect '%v' to be or contain '%v'",
-		actualErr, expectedErr)
-}
