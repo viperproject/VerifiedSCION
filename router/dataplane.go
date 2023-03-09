@@ -2168,7 +2168,8 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 // @ requires  acc(&p.scionLayer, def.ReadL15) && acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
 // @ requires  acc(&p.ingressID,  def.ReadL15)
 // @ requires  acc(&p.d,          def.ReadL15) && acc(MutexInvariant!<p.d!>(), _)
-// @ preserves acc(&p.mac, def.ReadL10) && p.mac != nil && p.mac.Mem()
+// @ preserves acc(&p.mac, def.ReadL10)
+// @ preserves p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ ensures   acc(&p.scionLayer, def.ReadL15) && acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
@@ -2218,14 +2219,20 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 				"neighborIA", neighborIA, "dstIA", s.DstIA)
 		}
 		// @ unfold acc(s.Path.Mem(ubPath), def.ReadL15)
-		mac /*@@@*/ := path.MAC(p.mac, ohp.Info, ( /*@ unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop), p.macBuffers.scionInput)
-		// @ fold acc(s.Path.Mem(ubPath), def.ReadL15)
-		// @ assume false
+		// @ unfold acc(ohp.FirstHop.Mem(), def.ReadL15)
+		mac /*@@@*/ := path.MAC(p.mac, ohp.Info, ohp.FirstHop, p.macBuffers.scionInput)
+		// @ fold acc(sl.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
+		// @ fold acc(sl.AbsSlice_Bytes(mac[:], 0, len(mac)), def.ReadL20)
 		if subtle.ConstantTimeCompare(ohp.FirstHop.Mac[:], mac[:]) == 0 {
+			// @ unfold acc(slices.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
+			// @ defer fold acc(s.Path.Mem(ubPath), def.ReadL15)
+			// @ defer fold acc(ohp.FirstHop.Mem(), def.ReadL15)
 			// TODO parameter problem -> invalid MAC
 			return processResult{}, serrors.New("MAC", "expected", fmt.Sprintf("%x", mac),
 				"actual", fmt.Sprintf("%x", ohp.FirstHop.Mac), "type", "ohp")
 		}
+		// @ fold acc(s.Path.Mem(ubPath), def.ReadL15)
+		// @ assume false
 		ohp.Info.UpdateSegID(ohp.FirstHop.Mac)
 
 		if err := updateSCIONLayer(p.rawPkt, s, p.buffer); err != nil {
@@ -2243,13 +2250,17 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 	}
 
 	// OHP entering our IA
+	// @ p.d.getLocalIA()
 	if !p.d.localIA.Equal(s.DstIA) {
+		// @ establishCannotRoute()
 		return processResult{}, serrors.WrapStr("bad destination IA", cannotRoute,
 			"type", "ohp", "ingress", p.ingressID,
 			"localIA", p.d.localIA, "dstIA", s.DstIA)
 	}
+	// @ p.d.getNeighborIAs()
 	neighborIA := p.d.neighborIAs[p.ingressID]
 	if !neighborIA.Equal(s.SrcIA) {
+		// @ establishCannotRoute()
 		return processResult{}, serrors.WrapStr("bad source IA", cannotRoute,
 			"type", "ohp", "ingress", p.ingressID,
 			"neighborIA", neighborIA, "srcIA", s.SrcIA)
