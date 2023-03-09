@@ -317,6 +317,13 @@ ghost
 ensures noSVCBackend.ErrorMem()
 decreases _
 func establishNoSVCBackend()
+
+// cannotRoute is duplicable: we can always establish its invariant after init
+ghost
+ensures cannotRoute.ErrorMem()
+decreases _
+func establishCannotRoute()
+
 /**** End of post-init invariants ****/
 
 /** Start of closure specs for the Run method **/
