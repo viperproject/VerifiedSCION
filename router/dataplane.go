@@ -69,6 +69,7 @@ import (
 	// @ "github.com/scionproto/scion/verification/utils/slices"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 	// @ "github.com/scionproto/scion/verification/utils/seqs"
+	// @ socketspec "golang.org/x/net/internal/socket/"
 )
 
 const (
@@ -234,8 +235,9 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // @ requires  slices.AbsSlice_Bytes(key, 0, len(key))
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   res == nil ==> d.MacFactoryOperational()
+// @ ensures   acc(&d.running, 1/2) && !d.running
+// @ ensures   acc(&d.macFactory, 1/2)
+// @ ensures   res == nil ==> d.macFactory != nil
 func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ share key
 	d.mtx.Lock()
@@ -269,11 +271,14 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 			mac, _ := scrypto.InitMac(key)
 			return mac
 		}
+	// (VerifiedSCION) Gobra cannot currently prove the following assertion, even though it must
+	// follow from the structure of the declaration of `verScionTemp`.
+	// @ assume verScionTemp != nil
 	// @ proof verScionTemp implements MacFactorySpec{d.key} {
 	// @   return verScionTemp() as f
 	// @ }
+	// @ assert verScionTemp != nil
 	d.macFactory = verScionTemp
-	// @ fold d.MacFactoryOperational()
 	return nil
 }
 
@@ -651,116 +656,167 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
 // @ trusted
-// @ requires false
+// @ requires  false
+// @ requires  acc(&d.running, 1/2) && !d.running
+// @ requires  acc(&d.forwardingMetrics, 1/2)
+// @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
+// @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
+// @ preserves d.mtx.LockP()
+// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) Run(ctx context.Context) error {
+	// @ share d, ctx
 	d.mtx.Lock()
+	// @ unfold MutexInvariant!<d!>()
 	d.running = true
 
-	// (VerifiedSCION) TODO: change the invariant to have the resources only
-	//     when it is not runnning. That way, we can unfold the memory predicate
-	//     right after setting running to true, which is required for the call to unlock
-	//     to succeed. the rest of the permissions will be held in the closure footprint
-	//     and on this method.
 	d.initMetrics()
 
-	read := func(ingressID uint16, rd BatchConn) {
+	read /*@@@*/ :=
+		// Note(VerifiedSCION): this precondition may cause problems ahead because of the lack of permissions to d.mtx
+		// @ requires acc(&d, _)
+		// @ requires acc(&d.running, _)
+		// requires acc(&d.external, _) && (d.external != nil ==> acc(d.external, _))
+		// requires ingressID in domain(d.external)
+		// @ requires acc(&d.macFactory, _) && d.macFactory != nil
+		// @ requires acc(MutexInvariant!<d!>(), _)
+		// @ requires rd != nil && acc(rd.Mem(), _)
+		// requires ingressID in domain(???)
+		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
-		msgs := conn.NewReadMessages(inputBatchCnt)
-		for _, msg := range msgs {
-			msg.Buffers[0] = make([]byte, bufSize)
-		}
-		writeMsgs := make(underlayconn.Messages, 1)
-		writeMsgs[0].Buffers = make([][]byte, 1)
+			msgs := conn.NewReadMessages(inputBatchCnt)
+			// @ socketspec.SplitPermMsgs(msgs)
 
-		processor := newPacketProcessor(d, ingressID)
-		var scmpErr scmpError
-		for d.running {
-			pkts, err := rd.ReadBatch(msgs)
-			if err != nil {
-				log.Debug("Failed to read batch", "err", err)
-				// error metric
-				continue
+			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
+			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+			// @ decreases
+			// @ outline (
+			// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
+			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2)
+			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> msgs[i].MemWithoutHalf(1)
+			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> 0 <= i && i < i0 ==> msgs[i].Mem(1)
+			// @ decreases len(msgs) - i0
+			for _, msg := range msgs /*@ with i0 @*/ {
+				tmp := make([]byte, bufSize)
+				// @ assert forall i int :: { &tmp[i] } 0 <= i && i < len(tmp) ==> acc(&tmp[i])
+				// @ fold sl.AbsSlice_Bytes(tmp, 0, len(tmp))
+				// @ assert msgs[i0] === msg
+				// @ unfold msgs[i0].MemWithoutHalf(1)
+				msg.Buffers[0] = tmp
+				// @ fold msgs[i0].Mem(1)
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem(1)
+				// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
 			}
-			if pkts == 0 {
-				continue
-			}
-			for _, p := range msgs[:pkts] {
-				// input metric
-				inputCounters := d.forwardingMetrics[ingressID]
-				inputCounters.InputPacketsTotal.Inc()
-				inputCounters.InputBytesTotal.Add(float64(p.N))
+			// @ )
+			// @ ensures writeMsgs[0].Mem(1)
+			// @ decreases
+			// @ outline (
+			writeMsgs := make(underlayconn.Messages, 1)
+			writeMsgs[0].Buffers = make([][]byte, 1)
+			// @ fold slices.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB))
+			// @ sl.NilAcc_Bytes()
+			// @ fold writeMsgs[0].Mem(1)
+			// @ )
 
-				srcAddr := p.Addr.(*net.UDPAddr)
-				result, err := processor.processPkt(p.Buffers[0][:p.N], srcAddr)
+			processor := newPacketProcessor(d, ingressID)
+			var scmpErr /*@@@*/ scmpError
+			// @ def.TODO()
 
-				switch {
-				case err == nil:
-				case errors.As(err, &scmpErr):
-					if !scmpErr.TypeCode.InfoMsg() {
-						log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
-					}
-					// SCMP go back the way they came.
-					result.OutAddr = srcAddr
-					result.OutConn = rd
-				default:
-					log.Debug("Error processing packet", "err", err)
-					inputCounters.DroppedPacketsTotal.Inc()
-					continue
-				}
-				if result.OutConn == nil { // e.g. BFD case no message is forwarded
-					continue
-				}
-
-				// Write to OutConn; drop the packet if this would block.
-				// Use WriteBatch because it's the only available function that
-				// supports MSG_DONTWAIT.
-				writeMsgs[0].Buffers[0] = result.OutPkt
-				writeMsgs[0].Addr = nil
-				if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
-					writeMsgs[0].Addr = result.OutAddr
-				}
-
-				_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
+			// @ invariant acc(&d.running, _) && d.running
+			// @ invariant acc(rd.Mem(), _)
+			for d.running {
+				pkts, err := rd.ReadBatch(msgs)
 				if err != nil {
-					var errno syscall.Errno
-					if !errors.As(err, &errno) ||
-						!(errno == syscall.EAGAIN || errno == syscall.EWOULDBLOCK) {
-						log.Debug("Error writing packet", "err", err)
-						// error metric
-					}
-					inputCounters.DroppedPacketsTotal.Inc()
+					log.Debug("Failed to read batch", "err", err)
+					// error metric
 					continue
 				}
-				// ok metric
-				outputCounters := d.forwardingMetrics[result.EgressID]
-				outputCounters.OutputPacketsTotal.Inc()
-				outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
+				if pkts == 0 {
+					continue
+				}
+				for _, p := range msgs[:pkts] {
+					// input metric
+					inputCounters := d.forwardingMetrics[ingressID]
+					inputCounters.InputPacketsTotal.Inc()
+					inputCounters.InputBytesTotal.Add(float64(p.N))
+
+					srcAddr := p.Addr.(*net.UDPAddr)
+					result, err := processor.processPkt(p.Buffers[0][:p.N], srcAddr)
+
+					switch {
+					case err == nil:
+					case errors.As(err, &scmpErr):
+						if !scmpErr.TypeCode.InfoMsg() {
+							log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
+						}
+						// SCMP go back the way they came.
+						result.OutAddr = srcAddr
+						result.OutConn = rd
+					default:
+						log.Debug("Error processing packet", "err", err)
+						inputCounters.DroppedPacketsTotal.Inc()
+						continue
+					}
+					if result.OutConn == nil { // e.g. BFD case no message is forwarded
+						continue
+					}
+
+					// Write to OutConn; drop the packet if this would block.
+					// Use WriteBatch because it's the only available function that
+					// supports MSG_DONTWAIT.
+					writeMsgs[0].Buffers[0] = result.OutPkt
+					writeMsgs[0].Addr = nil
+					if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
+						writeMsgs[0].Addr = result.OutAddr
+					}
+
+					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
+					if err != nil {
+						var errno /*@@@*/ syscall.Errno
+						if !errors.As(err, &errno) ||
+							!(errno == syscall.EAGAIN || errno == syscall.EWOULDBLOCK) {
+							log.Debug("Error writing packet", "err", err)
+							// error metric
+						}
+						inputCounters.DroppedPacketsTotal.Inc()
+						continue
+					}
+					// ok metric
+					outputCounters := d.forwardingMetrics[result.EgressID]
+					outputCounters.OutputPacketsTotal.Inc()
+					outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
+				}
 			}
 		}
-	}
 
+	// @ def.TODO()
+	// TODO: replace by  acc(MutexInvariant(d), _) for the remainder of the proof? - makes proof obligations easier
+	// @ fold acc(MutexInvariant!<d!>(), _)
 	for k, v := range d.bfdSessions {
 		go func(ifID uint16, c bfdSession) {
 			defer log.HandlePanic()
 			if err := c.Run(ctx); err != nil && err != bfd.AlreadyRunning {
 				log.Error("BFD session failed to start", "ifID", ifID, "err", err)
 			}
-		}(k, v)
+		}(k, v) // @ as closureSpec1
 	}
 	for ifID, v := range d.external {
 		go func(i uint16, c BatchConn) {
 			defer log.HandlePanic()
-			read(i, c)
-		}(ifID, v)
+			// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
+			// This should be easily addressable nonethelss
+			read(i, c) //@ as readClosureSpec
+		}(ifID, v) //@ as closureSpec2
 	}
 	go func(c BatchConn) {
 		defer log.HandlePanic()
-		read(0, c)
-	}(d.internal)
+		// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
+		read(0, c) //@ as readClosureSpec
+	}(d.internal) //@ as closureSpec3
 
 	d.mtx.Unlock()
 
-	<-ctx.Done()
+	r1 /*@ , r2 @*/ := ctx.Done()
+	<-r1
 	return nil
 }
 
@@ -844,12 +900,28 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ requires  acc(d.MacFactoryOperational(), _)
-// @ ensures   res.initMem()
+// @ requires acc(&d.macFactory, _) && d.macFactory != nil
+// @ requires acc(MutexInvariant!<d!>(), _)
+// @ ensures  acc(&res.d) && res.d === d
+// @ ensures  acc(&res.ingressID)
+// @ ensures  acc(&res.buffer)
+// @ ensures  acc(&res.mac)
+// @ ensures  acc(res.scionLayer.NonInitMem())
+// @ ensures  res.scionLayer.PathPoolInitializedNonInitMem()
+// @ ensures  acc(&res.hbhLayer)
+// @ ensures  acc(&res.e2eLayer)
+// @ ensures  acc(&res.lastLayer)
+// @ ensures  acc(&res.path)
+// @ ensures  acc(&res.hopField)
+// @ ensures  acc(&res.infoField)
+// @ ensures  acc(&res.segmentChange)
+// @ ensures  acc(&res.cachedMac)
+// @ ensures  acc(&res.macBuffers)
+// @ ensures  acc(&res.bfdLayer)
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
-	// @ unfold acc(d.MacFactoryOperational(), _)
+	// @ d.getNewPacketProcessorFootprint()
 	verScionTmp = gopacket.NewSerializeBuffer()
 	p := &scionPacketProcessor{
 		d:         d,
@@ -864,7 +936,6 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
 	// @ fold p.scionLayer.NonInitMem()
-	// @ fold p.initMem()
 	return p
 }
 
@@ -924,6 +995,8 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	}
 	/*@
 	ghost var ub []byte
+	ghost llStart := 0
+	ghost llEnd := 0
 	ghost if lastLayerIdx == -1 {
 		ub = p.rawPkt
 	} else {
@@ -933,6 +1006,8 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		} else {
 			o := offsets[lastLayerIdx]
 			ub = p.rawPkt[o.start:o.end]
+			llStart = o.start
+			llEnd = o.end
 			sl.SplitRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		}
 	}
@@ -966,8 +1041,16 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ def.TODO()
 		return p.processOHP( /*@ nil @*/ )
 	case scion.PathType:
-		// @ def.TODO()
-		return p.processSCION()
+		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
+		// (VerifiedSCION) Nested if because short-circuiting && is not working
+		// @ ghost if lastLayerIdx >= 0 {
+		// @	ghost if !offsets[lastLayerIdx].isNil {
+		// @		o := offsets[lastLayerIdx]
+		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
+		// @ 	}
+		// @ }
+		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
+		return p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd @*/ )
 	case epic.PathType:
 		// @ def.TODO()
 		return p.processEPIC()
@@ -1075,8 +1158,30 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 }
 
 // @ trusted
-// @ requires false
-func (p *scionPacketProcessor) processSCION() (processResult, error) {
+// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires  acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
+// The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
+// which slightly simplifies the spec
+// @ requires  acc(&p.rawPkt, def.ReadL1) && ub === p.rawPkt
+// @ requires  acc(&p.path)
+// @ requires  p.scionLayer.Mem(ub)
+// @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), _)
+// @ preserves acc(&p.lastLayer, def.ReadL10)
+// @ preserves p.lastLayer != nil
+// @ preserves (p.lastLayer !== &p.scionLayer && llIsNil) ==> acc(p.lastLayer.Mem(nil), def.ReadL10)
+// @ preserves (p.lastLayer !== &p.scionLayer && !llIsNil) ==> acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL10)
+// @ preserves acc(&p.ingressID, def.ReadL20)
+// @ preserves acc(&p.infoField)
+// @ preserves acc(&p.hopField)
+// @ ensures   acc(&p.d, def.ReadL20)
+// @ ensures   acc(&p.path)
+// @ ensures   acc(&p.rawPkt, def.ReadL1)
+// @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
+// @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
+// @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 
 	var ok bool
 	p.path, ok = p.scionLayer.Path.(*scion.Raw)
@@ -1359,21 +1464,21 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // Provided that underlying network infrastructure prevents address spoofing,
 // this check prevents malicious end hosts in the local AS from bypassing the
 // SrcIA checks by disguising packets as transit traffic.
-// @ requires  acc(&p.path, def.ReadL20)
+// @ requires  acc(&p.path, def.ReadL15)
 // @ requires  acc(p.path.Mem(ubPath), def.ReadL4)
 // @ requires  acc(&p.ingressID, def.ReadL20)
 // @ requires  acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
 // @ requires  p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
 // @ requires  p.path.GetCurrHF(ubPath)  <= p.path.GetNumHops(ubPath)
 // @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
-// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
+// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), def.ReadL4)
-// @ ensures   acc(&p.path, def.ReadL20)
+// @ ensures   acc(&p.path, def.ReadL15)
 // @ ensures   acc(p.path.Mem(ubPath), def.ReadL4)
 // @ ensures   acc(&p.ingressID, def.ReadL20)
 // @ ensures   acc(&p.infoField, def.ReadL4) && acc(&p.hopField, def.ReadL4)
 // @ ensures   acc(&p.d, def.ReadL20)
-// @ ensures   acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
+// @ ensures   acc(&p.srcAddr, def.ReadL20)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ubPath []byte @*/ ) (respr processResult, reserr error) {
@@ -1392,8 +1497,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ubPath []by
 	// @	assert expectedSrc in range(p.d.internalNextHops)
 	// @    unfold acc(expectedSrc.Mem(), _)
 	// @ }
-	// @ unfold acc(p.srcAddr.Mem(), def.ReadL20)
-	// @ defer  fold acc(p.srcAddr.Mem(), def.ReadL20)
+	// @ unfold acc(p.srcAddr.Mem(), _)
 	if !ok || !expectedSrc.IP.Equal(p.srcAddr.IP) {
 		// Drop
 		// @ establishInvalidSrcAddrForTransit()
@@ -1914,7 +2018,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  acc(&p.path, def.ReadL10)
 // @ requires  p.path.Mem(ub[startP:endP])
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), def.ReadL10)
+// @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, def.ReadL19)
 // @ preserves p.lastLayer != nil && acc(p.lastLayer.Mem(ub[startLL:endLL]), def.ReadL15)
 // @ preserves acc(&p.scionLayer, def.ReadL10)
