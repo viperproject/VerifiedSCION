@@ -223,6 +223,14 @@ func (d *DataPlane) getLocalIA() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
+decreases
+func (d *DataPlane) getNeighborIAs() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+ghost
+requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(&d.svc, _) && (d.svc != nil ==> acc(d.svc.Mem(), _))
 decreases
 func (d *DataPlane) getSvcMem() {

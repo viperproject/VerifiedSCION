@@ -277,7 +277,6 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ proof verScionTemp implements MacFactorySpec{d.key} {
 	// @   return verScionTemp() as f
 	// @ }
-	// @ assert verScionTemp != nil
 	d.macFactory = verScionTemp
 	return nil
 }
@@ -2166,12 +2165,15 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 	)
 }
 
-// @ trusted
-// @ requires  false
-// @ requires  acc(p, def.ReadL10)
-// @ requires  acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
-// @ ensures   acc(p, def.ReadL10)
-// @ ensures   acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+// @ requires  acc(&p.scionLayer, def.ReadL15) && acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+// @ requires  acc(&p.ingressID,  def.ReadL15)
+// @ requires  acc(&p.d,          def.ReadL15) && acc(MutexInvariant!<p.d!>(), _)
+// @ preserves acc(&p.mac, def.ReadL10) && p.mac != nil && p.mac.Mem()
+// @ preserves acc(&p.macBuffers.scionInput, def.ReadL10)
+// @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+// @ ensures   acc(&p.scionLayer, def.ReadL15) && acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+// @ ensures   acc(&p.ingressID,  def.ReadL15)
+// @ ensures   acc(&p.d,          def.ReadL15)
 func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (processResult, error) {
 	s := p.scionLayer
 	// @ ghost  ubPath := p.scionLayer.UBPath(ubScionL)
@@ -2193,21 +2195,23 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 
 	// OHP leaving our IA
 	if p.ingressID == 0 {
+		// @ p.d.getLocalIA()
 		if !p.d.localIA.Equal(s.SrcIA) {
 			// TODO parameter problem -> invalid path
 			return processResult{}, serrors.WrapStr("bad source IA", cannotRoute,
-				"type", "ohp", "egress", ohp.FirstHop.ConsEgress,
+				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), _) in (unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/),
 				"localIA", p.d.localIA, "srcIA", s.SrcIA)
 		}
-		neighborIA, ok := p.d.neighborIAs[ohp.FirstHop.ConsEgress]
+		// @ p.d.getNeighborIAs()
+		neighborIA, ok := p.d.neighborIAs[ /*@ unfolding acc(ohp.Mem(ubPath), _) in (unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/]
 		if !ok {
 			// TODO parameter problem invalid interface
 			return processResult{}, serrors.WithCtx(cannotRoute,
-				"type", "ohp", "egress", ohp.FirstHop.ConsEgress)
+				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), _) in (unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/))
 		}
 		if !neighborIA.Equal(s.DstIA) {
 			return processResult{}, serrors.WrapStr("bad destination IA", cannotRoute,
-				"type", "ohp", "egress", ohp.FirstHop.ConsEgress,
+				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), _) in (unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/),
 				"neighborIA", neighborIA, "dstIA", s.DstIA)
 		}
 		mac /*@@@*/ := path.MAC(p.mac, ohp.Info, ohp.FirstHop, p.macBuffers.scionInput)
