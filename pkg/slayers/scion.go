@@ -216,14 +216,14 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 
 // @ requires  !opts.FixLengths
 // @ requires  b != nil && b.Mem()
-// @ preserves s.Mem(ubuf)
+// @ preserves acc(s.Mem(ubuf), def.ReadL0)
 // @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   b.Mem()
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
-	// @ unfold s.Mem(ubuf)
-	// @ defer  fold s.Mem(ubuf)
+	// @ unfold acc(s.Mem(ubuf), def.ReadL0)
+	// @ defer  fold acc(s.Mem(ubuf), def.ReadL0)
 	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
 	// @ ghost defer sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )

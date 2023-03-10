@@ -39,6 +39,10 @@ const (
 	ReadL20
 )
 
+// to avoid modifying pre-existing contracts:
+const ReadL0 = (ReadL1 + 1)/2
+const ReadL00 = (ReadL0 + 1)/2
+
 // To be used as a precondition of functions and methods that can never be called
 // from the router.
 ghost

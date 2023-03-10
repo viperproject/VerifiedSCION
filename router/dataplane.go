@@ -2165,21 +2165,28 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 	)
 }
 
-// @ requires  acc(&p.scionLayer, def.ReadL15) && acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+// @ requires  p.scionLayer.Mem(ubScionL)
 // @ requires  acc(&p.ingressID,  def.ReadL15)
 // @ requires  acc(&p.d,          def.ReadL15) && acc(MutexInvariant!<p.d!>(), _)
 // @ preserves acc(&p.mac, def.ReadL10)
 // @ preserves p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
-// @ ensures   acc(&p.scionLayer, def.ReadL15) && acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+//
+//	ensures   p.scionLayer.Mem(ubScionL)
+//
 // @ ensures   acc(&p.ingressID,  def.ReadL15)
 // @ ensures   acc(&p.d,          def.ReadL15)
 func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (processResult, error) {
+	// @ p.scionLayer.ExtractAcc(ubScionL)
 	s := p.scionLayer
 	// @ ghost  ubPath := p.scionLayer.UBPath(ubScionL)
-	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
-	// @ defer  fold acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), 1-def.ReadL15)
+	// @ apply acc(&p.scionLayer, def.ReadL16) --* acc(p.scionLayer.Mem(ubScionL), def.ReadL15)
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL15)
+	// @ assert s.Path === p.scionLayer.Path
+	// @ assert s.Path.Mem(ubPath)
+	//  defer  fold p.scionLayer.Mem(ubScionL)
 	ohp, ok := s.Path.(*onehop.Path)
 	if !ok {
 		// TODO parameter problem -> invalid path
@@ -2218,22 +2225,23 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), _) in (unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/),
 				"neighborIA", neighborIA, "dstIA", s.DstIA)
 		}
-		// @ unfold acc(s.Path.Mem(ubPath), def.ReadL15)
-		// @ unfold acc(ohp.FirstHop.Mem(), def.ReadL15)
+		// @ unfold s.Path.Mem(ubPath)
+		// @ unfold ohp.FirstHop.Mem()
 		mac /*@@@*/ := path.MAC(p.mac, ohp.Info, ohp.FirstHop, p.macBuffers.scionInput)
 		// @ fold acc(sl.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
 		// @ fold acc(sl.AbsSlice_Bytes(mac[:], 0, len(mac)), def.ReadL20)
 		if subtle.ConstantTimeCompare(ohp.FirstHop.Mac[:], mac[:]) == 0 {
 			// @ unfold acc(slices.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
-			// @ defer fold acc(s.Path.Mem(ubPath), def.ReadL15)
-			// @ defer fold acc(ohp.FirstHop.Mem(), def.ReadL15)
+			// @ defer fold s.Path.Mem(ubPath)
+			// @ defer fold ohp.FirstHop.Mem()
 			// TODO parameter problem -> invalid MAC
 			return processResult{}, serrors.New("MAC", "expected", fmt.Sprintf("%x", mac),
 				"actual", fmt.Sprintf("%x", ohp.FirstHop.Mac), "type", "ohp")
 		}
-		// @ fold acc(s.Path.Mem(ubPath), def.ReadL15)
-		// @ assume false
 		ohp.Info.UpdateSegID(ohp.FirstHop.Mac)
+		// @ unfold acc(sl.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
+		// @ fold ohp.FirstHop.Mem()
+		// @ fold s.Path.Mem(ubPath)
 
 		if err := updateSCIONLayer(p.rawPkt, s, p.buffer); err != nil {
 			return processResult{}, err
@@ -2248,6 +2256,7 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 		return processResult{}, serrors.WithCtx(cannotRoute, "type", "ohp",
 			"egress", ohp.FirstHop.ConsEgress, "consDir", ohp.Info.ConsDir)
 	}
+	// @ assume false // to avoid confusion for now
 
 	// OHP entering our IA
 	// @ p.d.getLocalIA()
@@ -2268,8 +2277,9 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 
 	ohp.SecondHop = path.HopField{
 		ConsIngress: p.ingressID,
-		ExpTime:     ohp.FirstHop.ExpTime,
+		ExpTime:/*@ unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ExpTime,
 	}
+	// @ assert false
 	// XXX(roosd): Here we leak the buffer into the SCION packet header.
 	// This is okay because we do not operate on the buffer or the packet
 	// for the rest of processing.
@@ -2329,6 +2339,9 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 // the scion.Raw path.
 // @ trusted
 // @ requires false
+// @ requires buffer != nil && buffer.Mem()
+// @ ensures  buffer.Mem()
+// @ decreases
 func updateSCIONLayer(rawPkt []byte, s slayers.SCION, buffer gopacket.SerializeBuffer) error {
 	if err := buffer.Clear(); err != nil {
 		return err

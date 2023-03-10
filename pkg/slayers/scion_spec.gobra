@@ -224,6 +224,22 @@ pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
 }
 
 ghost
+requires acc(s.Mem(ub), def.ReadL15)
+ensures  acc(s, def.ReadL16)
+ensures  acc(s, def.ReadL16) --* acc(s.Mem(ub), def.ReadL15)
+decreases
+func (s *SCION) ExtractAcc(ghost ub []byte) {
+	unfold acc(s.Mem(ub), def.ReadL16)
+	unfold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL16)
+	package acc(s, def.ReadL16) --* acc(s.Mem(ub), def.ReadL15) {
+		unfold acc(s.Mem(ub), def.ReadL16)
+		unfold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL16)
+		fold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL15)
+		fold acc(s.Mem(ub), def.ReadL15)
+	}
+}
+
+ghost
 pure
 decreases
 func (a AddrType) Has3Bits() (res bool) {
@@ -250,14 +266,14 @@ ghost
 requires  acc(s.Mem(ub), _)
 decreases
 pure func (s *SCION) GetPayloadLen(ghost ub []byte) uint16 {
-    return unfolding acc(s.Mem(ub), _) in s.PayloadLen
+	return unfolding acc(s.Mem(ub), _) in s.PayloadLen
 }
 
 ghost
 requires  acc(s.Mem(ub), _)
 decreases
 pure func (s *SCION) GetPayload(ghost ub []byte) []byte {
-    return unfolding acc(s.Mem(ub), _) in s.Payload
+	return unfolding acc(s.Mem(ub), _) in s.Payload
 }
 
 ghost
