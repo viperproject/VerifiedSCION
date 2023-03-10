@@ -4,7 +4,7 @@
 #
 # Copyright (c) 2011-2020 ETH Zurich.
 
-name: Check that code still compiles
+name: Run `go test `
 
 on:
   push:
@@ -20,5 +20,11 @@ jobs:
     - uses: actions/setup-go@v3
       with:
         go-version: '1.19.1' # The Go version to download (if necessary) and use.
-    - name: Run all tests from the SCION implementation
-      run: go test ./...
+    - name: Test pkg/*
+      run: |
+        cd pkg
+        go test ./...
+    - name: Test router/*
+      run: |
+        cd router
+        go test ./...
