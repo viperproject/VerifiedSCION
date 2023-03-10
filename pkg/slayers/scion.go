@@ -781,7 +781,7 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 //	multiple contracts per method.
 //
 // @ pure
-// @ requires insideSlayers ==> (acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20))
+// @ requires insideSlayers ==> acc(&s.DstAddrType, _) && acc(&s.SrcAddrType, _)
 // @ requires insideSlayers ==> s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 // @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
 // @ ensures  insideSlayers  ==> res == s.addrHdrLenAbstractionLeak()
