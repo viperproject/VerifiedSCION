@@ -111,6 +111,7 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   (len(b) >= PathLen) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
+// @ ensures   err == nil ==> o.Len(ubuf) <= len(b)
 // @ decreases
 func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	if len(b) < PathLen {

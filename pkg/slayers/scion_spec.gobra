@@ -394,3 +394,9 @@ ghost
 ensures acc(path.PathPackageMem(), _)
 decreases
 func EstablishPathPkgMem()
+
+ghost
+requires acc(s.Mem(ub), _)
+pure func (s *SCION) HasOneHopPath(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in typeOf(s.Path) == type[*onehop.Path]
+}

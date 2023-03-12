@@ -2165,6 +2165,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 	)
 }
 
+// @ requires  acc(&p.rawPkt, def.ReadL15)
 // @ requires  p.scionLayer.Mem(ubScionL)
 // @ requires  acc(&p.ingressID,  def.ReadL15)
 // @ requires  acc(&p.d,          def.ReadL15) && acc(MutexInvariant!<p.d!>(), _)
@@ -2172,6 +2173,8 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 // @ preserves p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+// @ preserves acc(&p.buffer, def.ReadL10) && p.buffer != nil && p.buffer.Mem()
+// @ ensures   acc(&p.rawPkt, def.ReadL15)
 //
 //	ensures   p.scionLayer.Mem(ubScionL)
 //
@@ -2243,7 +2246,9 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 		// @ fold ohp.FirstHop.Mem()
 		// @ fold s.Path.Mem(ubPath)
 
-		if err := updateSCIONLayer(p.rawPkt, s, p.buffer); err != nil {
+		// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
+		// changes made to 'updateSCIONLayer'.
+		if err := updateSCIONLayer(p.rawPkt, &p.scionLayer /* s */, p.buffer); err != nil {
 			return processResult{}, err
 		}
 		// OHP should always be directed to the correct BR.
@@ -2285,7 +2290,9 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 	// for the rest of processing.
 	ohp.SecondHop.Mac = path.MAC(p.mac, ohp.Info, ohp.SecondHop, p.macBuffers.scionInput)
 
-	if err := updateSCIONLayer(p.rawPkt, s, p.buffer); err != nil {
+	// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
+	// changes made to 'updateSCIONLayer'.
+	if err := updateSCIONLayer(p.rawPkt, &p.scionLayer /* s */, p.buffer); err != nil {
 		return processResult{}, err
 	}
 	a, err := p.d.resolveLocalDst(s)
@@ -2337,23 +2344,25 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 // TODO(matzf) this function is now only used to update the OneHop-path.
 // This should be changed so that the OneHop-path can be updated in-place, like
 // the scion.Raw path.
-// @ trusted
-// @ requires false
-// @ requires buffer != nil && buffer.Mem()
-// @ ensures  buffer.Mem()
+// @ preserves buffer != nil && buffer.Mem()
+// @ preserves acc(s.Mem(rawPkt), def.ReadL00)
+// @ preserves sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ decreases
-func updateSCIONLayer(rawPkt []byte, s slayers.SCION, buffer gopacket.SerializeBuffer) error {
+// (VerifiedSCION) the type of 's' was changed from slayers.SCION to *slayers.SCION. This makes
+// specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
+// by value. We should consider porting merging this in upstream SCION.
+func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.SerializeBuffer) error {
 	if err := buffer.Clear(); err != nil {
 		return err
 	}
-	if err := s.SerializeTo(buffer, gopacket.SerializeOptions{}); err != nil {
+	if err := s.SerializeTo(buffer, gopacket.SerializeOptions{} /*@ , rawPkt @*/); err != nil {
 		return err
 	}
 	// TODO(lukedirtwalker): We should add a method to the scion layers
 	// which can write into the existing buffer, see also the discussion in
 	// https://fsnets.slack.com/archives/C8ADBBG0J/p1592805884250700
 	rawContents := buffer.Bytes()
-	copy(rawPkt[:len(rawContents)], rawContents)
+	copy(rawPkt[:len(rawContents)], rawContents /*@ , def.ReadL20 @*/)
 	return nil
 }
 
