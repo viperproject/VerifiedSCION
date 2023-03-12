@@ -98,7 +98,6 @@ type Path interface {
 	Reverse( /*@ ghost underlyingBuf []byte @*/ ) (p Path, e error)
 	// Len returns the length of a path in bytes.
 	//@ pure
-	//@ requires acc(sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)), _)
 	//@ requires acc(Mem(underlyingBuf), _)
 	//@ ensures  l >= 0
 	//@ decreases
