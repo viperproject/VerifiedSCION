@@ -277,7 +277,7 @@ pure func (s *SCION) GetPayload(ghost ub []byte) []byte {
 }
 
 ghost
-requires acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
+requires acc(&s.DstAddrType, _) && acc(&s.SrcAddrType, _)
 requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 ensures  0 <= res
 decreases
