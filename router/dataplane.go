@@ -2270,6 +2270,7 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 				nil
 		}
 		// TODO parameter problem invalid interface
+		// @ establishCannotRoute()
 		return processResult{}, serrors.WithCtx(cannotRoute, "type", "ohp",
 			"egress", ohp.FirstHop.ConsEgress, "consDir", ohp.Info.ConsDir)
 	}
