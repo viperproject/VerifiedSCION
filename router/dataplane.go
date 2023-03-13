@@ -2166,6 +2166,8 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 }
 
 // @ requires  acc(&p.rawPkt, def.ReadL15)
+// TODO: delete ghost param
+// @ requires p.rawPkt === ubScionL
 // @ requires  p.scionLayer.Mem(ubScionL)
 // @ requires  acc(&p.ingressID,  def.ReadL15)
 // @ requires  acc(&p.d,          def.ReadL15) && acc(MutexInvariant!<p.d!>(), _)
@@ -2173,11 +2175,14 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 // @ preserves p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+// @ requires sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.buffer, def.ReadL10) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   acc(&p.rawPkt, def.ReadL15)
+// TODO
 // ensures   p.scionLayer.Mem(ubScionL)
 // @ ensures   acc(&p.ingressID,  def.ReadL15)
 // @ ensures   acc(&p.d,          def.ReadL15)
+// @ ensures  sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (processResult, error) {
 	// @ p.scionLayer.ExtractAcc(ubScionL)
 	s := p.scionLayer
@@ -2187,7 +2192,7 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL15)
 	// @ assert s.Path === p.scionLayer.Path
 	// @ assert s.Path.Mem(ubPath)
-	//  defer  fold p.scionLayer.Mem(ubScionL)
+	// defer  fold p.scionLayer.Mem(ubScionL)
 	ohp, ok := s.Path.(*onehop.Path)
 	if !ok {
 		// TODO parameter problem -> invalid path
@@ -2243,13 +2248,22 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 		// @ unfold acc(sl.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
 		// @ fold ohp.FirstHop.Mem()
 		// @ fold s.Path.Mem(ubPath)
+		// @ fold p.scionLayer.Mem(ubScionL)
 
 		// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
 		// changes made to 'updateSCIONLayer'.
 		if err := updateSCIONLayer(p.rawPkt, &p.scionLayer /* s */, p.buffer); err != nil {
 			return processResult{}, err
 		}
+		// @ unfold p.scionLayer.Mem(ubScionL)
+		// @ defer fold p.scionLayer.Mem(ubScionL) // TODO: maybe drop this and use the defer fold on top
+		// @ unfold s.Path.Mem(ubPath)
+		// @ defer fold s.Path.Mem(ubPath)
+		// @ unfold ohp.FirstHop.Mem()
+		// @ defer fold ohp.FirstHop.Mem()
 		// OHP should always be directed to the correct BR.
+		// @ p.d.getExternalMem()
+		// @ ghost if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
 			// buffer should already be correct
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
