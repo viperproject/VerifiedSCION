@@ -1038,7 +1038,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			return processResult{}, p.processInterBFD(ohp, pld)
 		}
 		// @ def.TODO()
-		return p.processOHP( /*@ nil @*/ )
+		return p.processOHP()
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
@@ -2166,24 +2166,22 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 }
 
 // @ requires  acc(&p.rawPkt, def.ReadL15)
-// TODO: delete ghost param
-// @ requires p.rawPkt === ubScionL
-// @ requires  p.scionLayer.Mem(ubScionL)
+// @ requires  p.scionLayer.Mem(p.rawPkt)
 // @ requires  acc(&p.ingressID,  def.ReadL15)
 // @ requires  acc(&p.d,          def.ReadL15) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires  sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.mac, def.ReadL10)
 // @ preserves p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
-// @ requires sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.buffer, def.ReadL10) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   acc(&p.rawPkt, def.ReadL15)
-// TODO
-// ensures   p.scionLayer.Mem(ubScionL)
+// @ ensures   p.scionLayer.Mem(p.rawPkt)
 // @ ensures   acc(&p.ingressID,  def.ReadL15)
 // @ ensures   acc(&p.d,          def.ReadL15)
-// @ ensures  sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
-func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (processResult, error) {
+// @ ensures   sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
+func (p *scionPacketProcessor) processOHP() (processResult, error) {
+	// @ ghost ubScionL := p.rawPkt
 	// @ p.scionLayer.ExtractAcc(ubScionL)
 	s := p.scionLayer
 	// @ ghost  ubPath := p.scionLayer.UBPath(ubScionL)
@@ -2192,16 +2190,17 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL15)
 	// @ assert s.Path === p.scionLayer.Path
 	// @ assert s.Path.Mem(ubPath)
-	// defer  fold p.scionLayer.Mem(ubScionL)
 	ohp, ok := s.Path.(*onehop.Path)
 	if !ok {
 		// TODO parameter problem -> invalid path
 		// @ establishMemMalformedPath()
+		// @ fold p.scionLayer.Mem(ubScionL)
 		return processResult{}, malformedPath
 	}
 	if /*@ unfolding acc(s.Path.Mem(ubPath), _) in @*/ !ohp.Info.ConsDir {
 		// TODO parameter problem -> invalid path
 		// @ establishMemMalformedPath()
+		// @ defer fold p.scionLayer.Mem(ubScionL)
 		return processResult{}, serrors.WrapStr(
 			"OneHop path in reverse construction direction is not allowed",
 			malformedPath, "srcIA", s.SrcIA, "dstIA", s.DstIA)
@@ -2213,6 +2212,7 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 		if !p.d.localIA.Equal(s.SrcIA) {
 			// @ establishCannotRoute()
 			// TODO parameter problem -> invalid path
+			// @ defer fold p.scionLayer.Mem(ubScionL)
 			return processResult{}, serrors.WrapStr("bad source IA", cannotRoute,
 				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), _) in (unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/),
 				"localIA", p.d.localIA, "srcIA", s.SrcIA)
@@ -2222,11 +2222,13 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 		if !ok {
 			// @ establishCannotRoute()
 			// TODO parameter problem invalid interface
+			// @ defer fold p.scionLayer.Mem(ubScionL)
 			return processResult{}, serrors.WithCtx(cannotRoute,
 				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), _) in (unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/))
 		}
 		if !neighborIA.Equal(s.DstIA) {
 			// @ establishCannotRoute()
+			// @ defer fold p.scionLayer.Mem(ubScionL)
 			return processResult{}, serrors.WrapStr("bad destination IA", cannotRoute,
 				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), _) in (unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/),
 				"neighborIA", neighborIA, "dstIA", s.DstIA)
@@ -2238,6 +2240,7 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 		// @ fold acc(sl.AbsSlice_Bytes(mac[:], 0, len(mac)), def.ReadL20)
 		if subtle.ConstantTimeCompare(ohp.FirstHop.Mac[:], mac[:]) == 0 {
 			// @ unfold acc(slices.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
+			// @ defer fold p.scionLayer.Mem(ubScionL)
 			// @ defer fold s.Path.Mem(ubPath)
 			// @ defer fold ohp.FirstHop.Mem()
 			// TODO parameter problem -> invalid MAC
@@ -2266,11 +2269,13 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (proc
 		// @ ghost if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
 			// buffer should already be correct
+			// @ defer fold p.scionLayer.Mem(ubScionL)
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
 				nil
 		}
 		// TODO parameter problem invalid interface
 		// @ establishCannotRoute()
+		// @ defer fold p.scionLayer.Mem(ubScionL)
 		return processResult{}, serrors.WithCtx(cannotRoute, "type", "ohp",
 			"egress", ohp.FirstHop.ConsEgress, "consDir", ohp.Info.ConsDir)
 	}
