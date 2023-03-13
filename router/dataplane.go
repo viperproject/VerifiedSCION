@@ -2175,9 +2175,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.buffer, def.ReadL10) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   acc(&p.rawPkt, def.ReadL15)
-//
-//	ensures   p.scionLayer.Mem(ubScionL)
-//
+// ensures   p.scionLayer.Mem(ubScionL)
 // @ ensures   acc(&p.ingressID,  def.ReadL15)
 // @ ensures   acc(&p.d,          def.ReadL15)
 func (p *scionPacketProcessor) processOHP( /*@ ghost ubScionL []byte @*/ ) (processResult, error) {

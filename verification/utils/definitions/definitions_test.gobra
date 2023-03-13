@@ -17,5 +17,6 @@
 package definitions
 
 func test() {
+	assert Write == writePerm
 	assert ReadL0 < ReadL00
 }

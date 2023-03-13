@@ -17,7 +17,8 @@
 package definitions
 
 const (
-	ReadL00 perm = 1/(2 << iota)
+	Write perm = 1/(2 << iota)
+	ReadL00
 	ReadL0
 	ReadL1
 	ReadL2
