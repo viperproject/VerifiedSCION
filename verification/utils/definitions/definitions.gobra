@@ -16,9 +16,9 @@
 
 package definitions
 
+const HalfPerm perm = 1/2
 const (
-	Write perm = 1/(2 << iota)
-	ReadL00
+	ReadL00 perm = 1/(2 << iota)
 	ReadL0
 	ReadL1
 	ReadL2

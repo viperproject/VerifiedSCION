@@ -147,8 +147,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 	acc(&s.HdrLen) &&
 	acc(&s.PayloadLen) &&
 	acc(&s.PathType) &&
-	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.Has3Bits() &&
-	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.Has3Bits() &&
+	acc(&s.DstAddrType, def.HalfPerm) && s.DstAddrType.Has3Bits() &&
+	acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits() &&
 	// len of ubuf:
 	0 <= s.HdrLen &&
 	0 <= CmnHdrLen + s.AddrHdrLen(nil, true) &&
@@ -181,8 +181,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.DstIA) &&
 	acc(&s.SrcIA) &&
-	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.Has3Bits() &&
-	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.Has3Bits() &&
+	acc(&s.DstAddrType, def.HalfPerm) && s.DstAddrType.Has3Bits() &&
+	acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits() &&
 	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
 	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	s.AddrHdrLen(nil, true) == s.addrHdrLenAbstractionLeak() &&
