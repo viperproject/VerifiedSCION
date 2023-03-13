@@ -2235,20 +2235,28 @@ func (p *scionPacketProcessor) processOHP() (processResult, error) {
 		}
 		// @ unfold s.Path.Mem(ubPath)
 		// @ unfold ohp.FirstHop.Mem()
+		// @ preserves acc(&ohp.Info, def.ReadL15) && acc(&ohp.FirstHop, def.ReadL15)
+		// @ preserves acc(&p.macBuffers.scionInput, def.ReadL15)
+		// @ preserves acc(&p.mac, def.ReadL15) && p.mac != nil && p.mac.Mem()
+		// @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+		// @ decreases
+		// @ outline (
 		mac /*@@@*/ := path.MAC(p.mac, ohp.Info, ohp.FirstHop, p.macBuffers.scionInput)
+		macCopy := mac
 		// @ fold acc(sl.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
 		// @ fold acc(sl.AbsSlice_Bytes(mac[:], 0, len(mac)), def.ReadL20)
-		if subtle.ConstantTimeCompare(ohp.FirstHop.Mac[:], mac[:]) == 0 {
-			// @ unfold acc(slices.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
+		compRes := subtle.ConstantTimeCompare(ohp.FirstHop.Mac[:], mac[:]) == 0
+		// @ unfold acc(slices.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
+		// @ )
+		if compRes {
 			// @ defer fold p.scionLayer.Mem(ubScionL)
 			// @ defer fold s.Path.Mem(ubPath)
 			// @ defer fold ohp.FirstHop.Mem()
 			// TODO parameter problem -> invalid MAC
-			return processResult{}, serrors.New("MAC", "expected", fmt.Sprintf("%x", mac),
+			return processResult{}, serrors.New("MAC", "expected", fmt.Sprintf("%x", macCopy),
 				"actual", fmt.Sprintf("%x", ohp.FirstHop.Mac), "type", "ohp")
 		}
 		ohp.Info.UpdateSegID(ohp.FirstHop.Mac)
-		// @ unfold acc(sl.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
 		// @ fold ohp.FirstHop.Mem()
 		// @ fold s.Path.Mem(ubPath)
 		// @ fold p.scionLayer.Mem(ubScionL)
@@ -2259,7 +2267,7 @@ func (p *scionPacketProcessor) processOHP() (processResult, error) {
 			return processResult{}, err
 		}
 		// @ unfold p.scionLayer.Mem(ubScionL)
-		// @ defer fold p.scionLayer.Mem(ubScionL) // TODO: maybe drop this and use the defer fold on top
+		// @ defer fold p.scionLayer.Mem(ubScionL)
 		// @ unfold s.Path.Mem(ubPath)
 		// @ defer fold s.Path.Mem(ubPath)
 		// @ unfold ohp.FirstHop.Mem()
@@ -2269,13 +2277,11 @@ func (p *scionPacketProcessor) processOHP() (processResult, error) {
 		// @ ghost if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
 			// buffer should already be correct
-			// @ defer fold p.scionLayer.Mem(ubScionL)
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
 				nil
 		}
 		// TODO parameter problem invalid interface
 		// @ establishCannotRoute()
-		// @ defer fold p.scionLayer.Mem(ubScionL)
 		return processResult{}, serrors.WithCtx(cannotRoute, "type", "ohp",
 			"egress", ohp.FirstHop.ConsEgress, "consDir", ohp.Info.ConsDir)
 	}
