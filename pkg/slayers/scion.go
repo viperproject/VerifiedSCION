@@ -223,13 +223,10 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ ensures   sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // TODO: hide internal spec details
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @ 	let delta := unfolding acc(s.Mem(ubuf), _) in
-// @		(CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen])) in
-// @ 	len(b.UBuf()) == old(len(b.UBuf())) + delta
+// @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), _) in
+// @		(CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]))
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @ 	let delta := unfolding acc(s.Mem(ubuf), _) in
-// @		(CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen])) in
-// @ 	delta <= len(ubuf)
+// @	(unfolding acc(s.Mem(ubuf), _) in CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen])) <= len(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
@@ -309,8 +306,8 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// Serialize path header.
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
-	// @ assert typeOf(s.Path) == type[*onehop.Path] && tmp == nil ==> s.Path.Len(pathSlice) <= len(buf[offset:])
-	// @ assert typeOf(s.Path) == type[*onehop.Path] && tmp == nil ==> offset+s.Path.Len(pathSlice) <= len(buf)
+	// assert typeOf(s.Path) == type[*onehop.Path] && tmp == nil ==> s.Path.Len(pathSlice) <= len(buf[offset:])
+	// assert typeOf(s.Path) == type[*onehop.Path] && tmp == nil ==> offset+s.Path.Len(pathSlice) <= len(buf)
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
 	// @ b.RestoreMem(uSerBufN)
