@@ -71,6 +71,7 @@ type SerializeBuffer interface {
 	ensures   err == nil ==> len(UBuf()) == len(old(UBuf())) + num
 	ensures   err == nil ==> len(res) == num
 	ensures   err == nil ==> res === (UBuf())[:num]
+	ensures   err != nil ==> UBuf() === old(UBuf())
 	ensures   err != nil ==> err.ErrorMem()
 	decreases
 	PrependBytes(num int) (res []byte, err error)
@@ -80,6 +81,7 @@ type SerializeBuffer interface {
 	ensures   err == nil ==> len(UBuf()) == len(old(UBuf())) + num
 	ensures   err == nil ==> len(res) == num
 	ensures   err == nil ==> res === (UBuf())[len(UBuf()) - num:]
+	ensures   err != nil ==> UBuf() === old(UBuf())
 	ensures   err != nil ==> err.ErrorMem()
 	decreases
 	AppendBytes(num int) (res []byte, err error)
