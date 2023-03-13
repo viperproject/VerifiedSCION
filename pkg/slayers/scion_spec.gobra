@@ -171,7 +171,11 @@ pred (s *SCION) Mem(ubuf []byte) {
 	acc(&s.pathPoolRaw) &&
 	(!s.pathPoolInitialized() ==> PathPoolMem(s.pathPool, s.pathPoolRaw)) &&
 	(s.pathPoolInitialized() ==> (s.pathPool != nil && s.pathPoolRaw != nil &&
-		PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, s.PathType) && s.Path === s.getPathPure(s.PathType)))
+		PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, s.PathType) && s.Path === s.getPathPure(s.PathType))) &&
+	// end of path pool
+	// helpful facts for other methods:
+	// - for router::updateScionLayer:
+	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) <= len(ubuf))
 }
 
 pred (s *SCION) HeaderMem(ubuf []byte) {
@@ -399,4 +403,12 @@ ghost
 requires acc(s.Mem(ub), _)
 pure func (s *SCION) HasOneHopPath(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in typeOf(s.Path) == type[*onehop.Path]
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+requires s.HasOneHopPath(ub)
+ensures  b
+pure func (s *SCION) InferSizeOHP(ghost ub []byte) (b bool) {
+	return unfolding acc(s.Mem(ub), _) in CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ub[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) <= len(ub)
 }

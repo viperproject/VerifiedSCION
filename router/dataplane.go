@@ -2344,9 +2344,11 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 // TODO(matzf) this function is now only used to update the OneHop-path.
 // This should be changed so that the OneHop-path can be updated in-place, like
 // the scion.Raw path.
+// @ requires  acc(s.Mem(rawPkt), def.ReadL00)
+// @ requires  s.HasOneHopPath(rawPkt)
 // @ preserves buffer != nil && buffer.Mem()
-// @ preserves acc(s.Mem(rawPkt), def.ReadL00)
 // @ preserves sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ ensures   acc(s.Mem(rawPkt), def.ReadL00)
 // @ decreases
 // (VerifiedSCION) the type of 's' was changed from slayers.SCION to *slayers.SCION. This makes
 // specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
@@ -2362,7 +2364,18 @@ func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.Serialize
 	// which can write into the existing buffer, see also the discussion in
 	// https://fsnets.slack.com/archives/C8ADBBG0J/p1592805884250700
 	rawContents := buffer.Bytes()
+	// @ s.InferSizeOHP(rawPkt)
+	// @ assert len(rawContents) <= len(rawPkt)
+	// @ unfold sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+	// @ unfold acc(sl.AbsSlice_Bytes(rawContents, 0, len(rawContents)), def.ReadL20)
+	// (VerifiedSCION) proving that the reslicing operation below is safe
+	// was tricky and required enriching (non-modularly) the invariants of *onehop.Path
+	// and *slayers.SCION.
+	// @ assert forall i int :: 0 <= i && i < len(rawContents) ==> &rawPkt[i] == &rawPkt[:len(rawContents)][i]
 	copy(rawPkt[:len(rawContents)], rawContents /*@ , def.ReadL20 @*/)
+	// @ fold sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+	// @ fold acc(sl.AbsSlice_Bytes(rawContents, 0, len(rawContents)), def.ReadL20)
+	// @ buffer.RestoreMem(rawContents)
 	return nil
 }
 

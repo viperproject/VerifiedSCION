@@ -306,6 +306,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// Serialize path header.
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
+	// ghost if tmp == nil && typeOf(s.Path) == type[*onehop.Path] {
+	// 	assert unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in
+	// 	(CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) <= len(ubuf))
+	// }
 	// assert typeOf(s.Path) == type[*onehop.Path] && tmp == nil ==> s.Path.Len(pathSlice) <= len(buf[offset:])
 	// assert typeOf(s.Path) == type[*onehop.Path] && tmp == nil ==> offset+s.Path.Len(pathSlice) <= len(buf)
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
@@ -415,6 +419,11 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		// @ fold s.NonInitMem()
 		return err
 	}
+	/*@ ghost if typeOf(s.Path) == type[*onehop.Path] {
+		s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
+		assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
+		assert CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(data[offset : offset+pathLen]) <= len(data)
+	} @*/
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
 
