@@ -967,6 +967,9 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires acc(&p.ingressID)
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
+// @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ requires acc(&p.macBuffers.scionInput, def.ReadL10)
+// @ requires sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
 // @ requires acc(&p.srcAddr) && acc(&p.lastLayer)
 // @ requires p.buffer != nil && p.buffer.Mem()
@@ -1037,7 +1040,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			}
 			return processResult{}, p.processInterBFD(ohp, pld)
 		}
-		// @ def.TODO()
 		return p.processOHP()
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
@@ -2180,7 +2182,8 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 // @ ensures   acc(&p.ingressID,  def.ReadL15)
 // @ ensures   acc(&p.d,          def.ReadL15)
 // @ ensures   sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
-func (p *scionPacketProcessor) processOHP() (processResult, error) {
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) {
 	// @ ghost ubScionL := p.rawPkt
 	// @ p.scionLayer.ExtractAcc(ubScionL)
 	s := p.scionLayer
@@ -2373,11 +2376,12 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 // @ preserves buffer != nil && buffer.Mem()
 // @ preserves sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ ensures   acc(s.Mem(rawPkt), def.ReadL00)
+// @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 // (VerifiedSCION) the type of 's' was changed from slayers.SCION to *slayers.SCION. This makes
 // specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
 // by value. We should consider porting merging this in upstream SCION.
-func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.SerializeBuffer) error {
+func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.SerializeBuffer) (res error) {
 	if err := buffer.Clear(); err != nil {
 		return err
 	}
