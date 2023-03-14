@@ -20,6 +20,7 @@ env:
   parallelizeBranches: '0'
   checkConsistency: '1'
   imageVersion: 'latest'
+  mceMode: "od"
 
 jobs:
   verify-deps:
@@ -55,6 +56,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
@@ -68,6 +70,7 @@ jobs:
           statsFile: '/stats/stats_addr.json'
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/experimental/epic'
         uses: viperproject/gobra-action@main
         with:
@@ -80,6 +83,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/log'
         uses: viperproject/gobra-action@main
         with:
@@ -92,6 +96,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/private/serrors'
         uses: viperproject/gobra-action@main
         with:
@@ -104,6 +109,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/scrypto'
         uses: viperproject/gobra-action@main
         with:
@@ -116,6 +122,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/slayers'
         uses: viperproject/gobra-action@main
         with:
@@ -128,6 +135,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
@@ -140,6 +148,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/slayers/path/empty'
         uses: viperproject/gobra-action@main
         with:
@@ -152,6 +161,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/slayers/path/epic'
         uses: viperproject/gobra-action@main
         with:
@@ -165,6 +175,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/slayers/path/onehop'
         uses: viperproject/gobra-action@main
         with:
@@ -177,6 +188,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:
@@ -189,6 +201,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'private/topology'
         uses: viperproject/gobra-action@main
         with:
@@ -201,6 +214,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'private/topology/underlay'
         uses: viperproject/gobra-action@main
         with:
@@ -213,6 +227,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'private/underlay/conn'
         uses: viperproject/gobra-action@main
         with:
@@ -225,6 +240,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'private/underlay/sockctrl'
         uses: viperproject/gobra-action@main
         with:
@@ -237,6 +253,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'router/bfd'
         uses: viperproject/gobra-action@main
         with:
@@ -249,6 +266,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Verify package 'router/control'
         uses: viperproject/gobra-action@main
         with:
@@ -261,6 +279,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
       - name: Upload the verification report
         uses: actions/upload-artifact@v2
         with:
@@ -287,4 +306,5 @@ jobs:
           # Without it, verification would take a lot longer.
           conditionalizePermissions: '1'
           imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
 
