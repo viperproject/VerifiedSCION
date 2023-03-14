@@ -19,9 +19,8 @@
 package io
 
 ghost
-pure
 decreases
-func dp2_check_recvif(d bool, asid IO_as, recvif IO_ifs) bool {
+pure func dp2_check_recvif(d bool, asid IO_as, recvif IO_ifs) bool {
 	return d?
 		(link_type(asid, recvif) == IO_CustProv{} || link_type(asid, recvif) == IO_PeerOrCore{}) :
 		(link_type(asid, recvif) == IO_ProvCust{} || link_type(asid, recvif) == IO_PeerOrCore{})
@@ -29,18 +28,16 @@ func dp2_check_recvif(d bool, asid IO_as, recvif IO_ifs) bool {
 
 /* Abbreviations */
 ghost
-pure
 decreases
-func valid_link_types2(hf1 IO_HF, a IO_as) bool {
+pure func valid_link_types2(hf1 IO_HF, a IO_as) bool {
 	return  (egif_prov2(hf1, a) && inif_cust2(hf1, a)) ||
 			(egif_core2(hf1, a) && inif_core2(hf1, a)) ||
 			(egif_cust2(hf1, a) && inif_prov2(hf1, a))
 }
 
 ghost
-pure
 decreases
-func valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
+pure func valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
 	return  (inif_prov2(hf1, a) && egif_cust2(hf1, a)) ||
 			(inif_core2(hf1, a) && egif_core2(hf1, a)) ||
 			(inif_cust2(hf1, a) && egif_prov2(hf1, a))
@@ -48,16 +45,42 @@ func valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
 /* End of Abbreviations */
 
 ghost
-pure
 decreases
-func dp2_check_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
+pure func dp2_check_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
 	return (d && hf1.InIF2 === some(recvif) && valid_link_types_in2(hf1, asid)) ||
 		(!d && hf1.EgIF2 === some(recvif) && valid_link_types2(hf1, asid))
 }
 
 ghost
-pure
 decreases
-func dp2_exit_interface(d bool, asid IO_as, hf1 IO_HF, outif IO_ifs) bool {
+pure func dp2_exit_interface(d bool, asid IO_as, hf1 IO_HF, outif IO_ifs) bool {
 	return (d && hf1.EgIF2 == some(outif)) || (!d && hf1.InIF2 == some(outif))
+}
+
+// Takes a packet and forwards it externally, incrementing the segment before doing so.
+ghost
+decreases
+pure func dp2_forward_ext_guard(asid IO_as, m IO_pkt2, nextif IO_ifs, currseg, traversedseg IO_seg2, newpkt IO_pkt2, fut seq[IO_HF], hf1 IO_HF) bool {
+	return m.CurrSeg == currseg &&
+		newpkt == IO_pkt2(IO_Packet2{traversedseg, m.LeftSeg, m.MidSeg, m.RightSeg}) &&
+		// The outgoing interface is correct:
+		dp2_exit_interface(currseg.ConsDir, asid, hf1, nextif) &&
+		// Next validate the current hop field with the *original* UInfo field):
+		hf_valid(currseg.ConsDir, currseg.AInfo, currseg.UInfo, hf1) &&
+		hf1.extr_asid() == asid &&
+		// Segment update: push current hop field into the Past path and History:
+		inc_seg2(currseg, traversedseg, hf1, fut) &&
+		// If the current segment is an *down*-segment, then we need to update the
+		// uinfo field *after* validating the hop field
+		update_uinfo(currseg.ConsDir, currseg, traversedseg, hf1) &&
+		// Other fields: no update
+		same_other2(currseg, traversedseg)
+}
+
+ghost
+decreases
+pure func dp2_forward_ext(s IO_dp2_state, sprime IO_dp2_state, asid IO_as, m IO_pkt2) bool {
+	return exists nextif IO_ifs, currseg IO_seg2, traversedseg IO_seg2, newpkt IO_pkt2, fut seq[IO_HF], hf1 IO_HF :: dp2_forward_ext_guard(asid, m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		dp2_add_ext(s, sprime, asid, nextif, newpkt)
+
 }

@@ -18,10 +18,12 @@
 
 package io
 
+type IO_ainfo = uint
+
 type IO_seg2 adt {
 	// Here, we already instantiated the type params
 	IO_seg3_ {
-		AInfo int // nat in Isabelle
+		AInfo IO_ainfo // nat in Isabelle
 		UInfo set[IO_msgterm]
 		ConsDir bool
 		Peer bool

@@ -22,9 +22,8 @@ package io
 // instead of being fully generic (i.e., taking params of type IO_seg2/IO_pkt2).
 
 ghost
-pure
 decreases
-func inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[IO_HF]) bool {
+pure func inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[IO_HF]) bool {
 	return currseg.Future === seq[IO_HF]{hf1} ++ fut &&
 		traversedseg.Future === fut &&
 		traversedseg.Past === seq[IO_HF]{hf1} ++ currseg.Past &&
@@ -32,39 +31,34 @@ func inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[IO_HF]) bool {
 }
 
 ghost
-pure
 decreases
-func same_segment2(currseg, traversedseg IO_seg2) bool {
+pure func same_segment2(currseg, traversedseg IO_seg2) bool {
 	return traversedseg.Future === currseg.Future &&
 		traversedseg.Past    === currseg.Past &&
 		traversedseg.History === currseg.History
 }
 
 ghost
-pure
 decreases
-func update_uinfo2(currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
+pure func update_uinfo2(currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
 	return traversedseg.UInfo === upd_uinfo(currseg.UInfo, hf1)
 }
 
 ghost
-pure
 decreases
-func same_uinfo2(currseg, traversedseg IO_seg2) bool {
+pure func same_uinfo2(currseg, traversedseg IO_seg2) bool {
 	return currseg.UInfo === traversedseg.UInfo
 }
 
 ghost
-pure
 decreases
-func update_info(condition bool, currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
+pure func update_uinfo(condition bool, currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
 	return condition? update_uinfo2(currseg, traversedseg, hf1) : same_uinfo2(currseg, traversedseg)
 }
 
 ghost
-pure
 decreases
-func same_other2(currseg, traversedseg IO_seg3) bool {
+pure func same_other2(currseg, traversedseg IO_seg3) bool {
 	return traversedseg.AInfo === currseg.AInfo &&
 		traversedseg.ConsDir === currseg.ConsDir &&
 		traversedseg.Peer === currseg.Peer

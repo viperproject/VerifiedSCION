@@ -102,11 +102,16 @@ type IO_ahi adt {
 }
 
 // TODO: how is this defined
+ghost
+decreases
+pure func (hf IO_HF) extr_asid() IO_as {
+	return hf.HVF.extract_asid()
+}
+
 // extract_asid
 ghost
-pure
 decreases
-func (m IO_msgterm) extract_asid() IO_as
+pure func (m IO_msgterm) extract_asid() IO_as
 
 // function 'toab' in Isabelle, originally of type HF_scheme -> aahi_scheme
 ghost
@@ -135,10 +140,10 @@ pure func ToHF(h path.HopField) (res IO_HF)
 
 /* Link Types */
 type IO_Link adt {
-    IO_CustProv{}
-    IO_ProvCust{}
-    IO_PeerOrCore{}
-    IO_NoLink{}
+	IO_CustProv{}
+	IO_ProvCust{}
+	IO_PeerOrCore{}
+	IO_NoLink{}
 }
 /* End of Link Types */
 
@@ -149,53 +154,49 @@ type IO_Link adt {
 // should have proof obligations attached, or can just be assumed to exist.
 
 ghost
-pure
 decreases
-func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool
+pure func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool
 
 ghost
-pure
 decreases
-func upd_uinfo(p1 set[IO_msgterm], p2 IO_HF) set[IO_msgterm]
+pure func upd_uinfo(p1 set[IO_msgterm], p2 IO_HF) set[IO_msgterm]
 
 ghost
-pure
 decreases
-func rid_as(p IO_rid) IO_as
+pure func rid_as(p IO_rid) IO_as
 
 ghost
-pure
 decreases
-func link_type(p1 IO_as, p2 IO_ifs) IO_Link
+pure func link_type(p1 IO_as, p2 IO_ifs) IO_Link
 
 ghost
-pure
 decreases
-func egif_prov2(hf1 IO_HF, asid IO_as) bool
+pure func egif_prov2(hf1 IO_HF, asid IO_as) bool
 
 ghost
-pure
 decreases
-func egif_core2(hf1 IO_HF, asid IO_as) bool
+pure func egif_core2(hf1 IO_HF, asid IO_as) bool
 
 ghost
-pure
 decreases
-func egif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func egif_cust2(hf1 IO_HF, asid IO_as) bool
 
 ghost
-pure
 decreases
-func inif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func inif_cust2(hf1 IO_HF, asid IO_as) bool
 
 ghost
-pure
 decreases
-func inif_core2(hf1 IO_HF, asid IO_as) bool
+pure func inif_core2(hf1 IO_HF, asid IO_as) bool
 
 ghost
-pure
 decreases
-func inif_prov2(hf1 IO_HF, asid IO_as) bool
+pure func inif_prov2(hf1 IO_HF, asid IO_as) bool
+
+type IO_dp2_state domain{}
+
+ghost
+decreases
+pure func dp2_add_ext(s, sprime IO_dp2_state, asid IO_as, nextif IO_ifs, newpkt IO_pkt2) bool
 
 /* End of To clarify */
