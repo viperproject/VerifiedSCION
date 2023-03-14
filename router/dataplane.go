@@ -965,6 +965,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires acc(&p.d.svc, _) && p.d.svc != nil
 // @ requires acc(&p.ingressID)
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
@@ -1691,7 +1692,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 // ensures   acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
 // ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (resaddr *net.UDPAddr, respr processResult, reserr error) {
-	a, err := p.d.resolveLocalDst(p.scionLayer)
+	a, err := p.d.resolveLocalDst(&p.scionLayer /*@, nil @*/) // (VerifiedSCION) the parameter used to be only p.scionLayer
 	switch {
 	case errors.Is(err, noSVCBackend):
 		// @ def.TODO()
@@ -2172,6 +2173,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startP int, g
 // @ requires  acc(&p.ingressID,  def.ReadL15)
 // @ requires  acc(&p.d,          def.ReadL15) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires  sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
+// @ requires  acc(&p.d.svc, _) && p.d.svc != nil
 // @ preserves acc(&p.mac, def.ReadL10)
 // @ preserves p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.macBuffers.scionInput, def.ReadL10)
@@ -2245,6 +2247,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 		// @ decreases
 		// @ outline (
 		mac /*@@@*/ := path.MAC(p.mac, ohp.Info, ohp.FirstHop, p.macBuffers.scionInput)
+		// (VerifiedSCION) introduced separate copy to avoid exposing quantified permissions outside the scope of this outline block.
 		macCopy := mac
 		// @ fold acc(sl.AbsSlice_Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), def.ReadL20)
 		// @ fold acc(sl.AbsSlice_Bytes(mac[:], 0, len(mac)), def.ReadL20)
@@ -2288,12 +2291,12 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 		return processResult{}, serrors.WithCtx(cannotRoute, "type", "ohp",
 			"egress", ohp.FirstHop.ConsEgress, "consDir", ohp.Info.ConsDir)
 	}
-	// @ assume false // to avoid confusion for now
 
 	// OHP entering our IA
 	// @ p.d.getLocalIA()
 	if !p.d.localIA.Equal(s.DstIA) {
 		// @ establishCannotRoute()
+		// @ defer fold p.scionLayer.Mem(ubScionL)
 		return processResult{}, serrors.WrapStr("bad destination IA", cannotRoute,
 			"type", "ohp", "ingress", p.ingressID,
 			"localIA", p.d.localIA, "dstIA", s.DstIA)
@@ -2302,41 +2305,69 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 	neighborIA := p.d.neighborIAs[p.ingressID]
 	if !neighborIA.Equal(s.SrcIA) {
 		// @ establishCannotRoute()
+		// @ defer fold p.scionLayer.Mem(ubScionL)
 		return processResult{}, serrors.WrapStr("bad source IA", cannotRoute,
 			"type", "ohp", "ingress", p.ingressID,
 			"neighborIA", neighborIA, "srcIA", s.SrcIA)
 	}
 
+	// @ unfold s.Path.Mem(ubPath)
+	// @ unfold ohp.SecondHop.Mem()
 	ohp.SecondHop = path.HopField{
 		ConsIngress: p.ingressID,
 		ExpTime:/*@ unfolding acc(ohp.FirstHop.Mem(), _) in @*/ ohp.FirstHop.ExpTime,
 	}
-	// @ assert false
+	// (VerifiedSCION) the following property follows from the type system, but
+	// Gobra cannot prove it yet.
+	// @ assume 0 <= p.ingressID
 	// XXX(roosd): Here we leak the buffer into the SCION packet header.
 	// This is okay because we do not operate on the buffer or the packet
 	// for the rest of processing.
+	// @ preserves acc(&ohp.Info, def.ReadL15) && acc(&ohp.SecondHop, def.ReadL15)
+	// @ preserves acc(&ohp.SecondHop.Mac, 1-def.ReadL15)
+	// @ preserves acc(&p.macBuffers.scionInput, def.ReadL15)
+	// @ preserves acc(&p.mac, def.ReadL15) && p.mac != nil && p.mac.Mem()
+	// @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+	// @ decreases
+	// @ outline (
 	ohp.SecondHop.Mac = path.MAC(p.mac, ohp.Info, ohp.SecondHop, p.macBuffers.scionInput)
+	// @ )
+	// @ fold ohp.SecondHop.Mem()
+	// @ fold s.Path.Mem(ubPath)
 
 	// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
 	// changes made to 'updateSCIONLayer'.
+	// @ fold p.scionLayer.Mem(ubScionL)
 	if err := updateSCIONLayer(p.rawPkt, &p.scionLayer /* s */, p.buffer); err != nil {
 		return processResult{}, err
 	}
-	a, err := p.d.resolveLocalDst(s)
+	// @ p.d.getSvcMem()
+	// (VerifiedSCION) the parameter was changed from 's' to '&p.scionLayer' due to the
+	// changes made to 'resolveLocalDst'.
+	a, err := p.d.resolveLocalDst(&p.scionLayer /* s */ /*@ , ubScionL @*/)
 	if err != nil {
 		return processResult{}, err
 	}
+	// @ p.d.getInternal()
 	return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil
 }
 
-// @ requires  s.DstAddrType == slayers.T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
 // @ requires  acc(MutexInvariant!<d!>(), _)
 // @ requires  acc(&d.svc, _) && d.svc != nil
-// @ preserves acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL15)
+// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL15)
+// @ preserves acc(s.Mem(ub), def.ReadL14)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-func (d *DataPlane) resolveLocalDst(s slayers.SCION) (resaddr *net.UDPAddr, reserr error) {
-	// @ share s
+// (VerifiedSCION) the type of 's' was changed from slayers.SCION to *slayers.SCION. This makes
+// specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
+// by value. We should consider porting merging this in upstream SCION.
+func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (resaddr *net.UDPAddr, reserr error) {
+	// @ ghost start, end := s.ExtractAcc(ub)
+	// @ assert s.RawDstAddr === ub[start:end]
+	// @ sl.SplitRange_Bytes(ub, start, end, def.ReadL15)
+	// @ assert acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL15)
 	dst, err := s.DstAddr()
+	// @ sl.CombineRange_Bytes(ub, start, end, def.ReadL15)
+	// @ apply acc(s, def.ReadL16) --* acc(s.Mem(ub), def.ReadL15)
 	if err != nil {
 		// TODO parameter problem.
 		return nil, err

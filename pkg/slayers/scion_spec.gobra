@@ -230,17 +230,24 @@ pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
 ghost
 requires acc(s.Mem(ub), def.ReadL15)
 ensures  acc(s, def.ReadL16)
+ensures  s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
+ensures  0 <= start && start <= end && end <= len(ub)
+ensures  s.RawDstAddr === ub[start:end]
 ensures  acc(s, def.ReadL16) --* acc(s.Mem(ub), def.ReadL15)
 decreases
-func (s *SCION) ExtractAcc(ghost ub []byte) {
+func (s *SCION) ExtractAcc(ghost ub []byte) (start, end int) {
 	unfold acc(s.Mem(ub), def.ReadL16)
 	unfold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL16)
+	start = CmnHdrLen+2*addr.IABytes
+	end = CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()
+	assert s.RawDstAddr === ub[start:end]
 	package acc(s, def.ReadL16) --* acc(s.Mem(ub), def.ReadL15) {
 		unfold acc(s.Mem(ub), def.ReadL16)
 		unfold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL16)
 		fold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL15)
 		fold acc(s.Mem(ub), def.ReadL15)
 	}
+	return start, end
 }
 
 ghost
