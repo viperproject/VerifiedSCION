@@ -14,27 +14,50 @@
 
 // +gobra
 
+/**** Definitions used to define our router events ****/
+
 package io
 
 ghost
 pure
 decreases
 func dp2_check_recvif(d bool, asid IO_as, recvif IO_ifs) bool {
-	return d? (link_type(asid, recvif) == IO_CustProv{} || link_type(asid, recvif) == IO_PeerOrCore{}) :
+	return d?
+		(link_type(asid, recvif) == IO_CustProv{} || link_type(asid, recvif) == IO_PeerOrCore{}) :
 		(link_type(asid, recvif) == IO_ProvCust{} || link_type(asid, recvif) == IO_PeerOrCore{})
+}
+
+/* Abbreviations */
+ghost
+pure
+decreases
+func valid_link_types2(hf1 IO_HF, a IO_as) bool {
+	return  (egif_prov2(hf1, a) && inif_cust2(hf1, a)) ||
+			(egif_core2(hf1, a) && inif_core2(hf1, a)) ||
+			(egif_cust2(hf1, a) && inif_prov2(hf1, a))
 }
 
 ghost
 pure
 decreases
+func valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
+	return  (inif_prov2(hf1, a) && egif_cust2(hf1, a)) ||
+			(inif_core2(hf1, a) && egif_core2(hf1, a)) ||
+			(inif_cust2(hf1, a) && egif_prov2(hf1, a))
+}
+/* End of Abbreviations */
+
+ghost
+pure
+decreases
 func dp2_check_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
-	return (d && hf1.InIF2 === some(recvif)) || (!d && hf1.EgIF2 === some(recvif))
+	return (d && hf1.InIF2 === some(recvif) && valid_link_types_in2(hf1, asid)) ||
+		(!d && hf1.EgIF2 === some(recvif) && valid_link_types2(hf1, asid))
 }
 
 ghost
 pure
 decreases
 func dp2_exit_interface(d bool, asid IO_as, hf1 IO_HF, outif IO_ifs) bool {
-	return (d && hf1.EgIF2 == some(outif) && valid_link_types(hf1.Toab())) ||
-		(!d && hf1.InIF2 == some(outif) && valid_link_types_in(hf1.Toab()))
+	return (d && hf1.EgIF2 == some(outif)) || (!d && hf1.InIF2 == some(outif))
 }
