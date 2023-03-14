@@ -14,25 +14,19 @@
 
 // +gobra
 
+/**** PACKETS ****/
+
 package io
 
-type IO_Link adt {
-    IO_CustProv{}
-    IO_ProvCust{}
-    IO_PeerOrCore{}
-    IO_NoLink{}
+type IO_pkt2 adt {
+	// Here, we already instantiated the type params
+	IO_pkt2_ {
+		CurrSeg  IO_seg3
+		LeftSeg  option[IO_seg3]
+		MidSeg   option[IO_seg3]
+		RightSeg option[IO_seg3]
+	}
 }
 
-// Defined in Network_Model.thy
-// TODO: define
-ghost
-pure
-decreases
-func valid_link_types(hf1 IO_ahi) bool
-
-// Defined in Network_Model.thy
-// TODO: define
-ghost
-pure
-decreases
-func valid_link_types_in(hf1 IO_ahi) bool
+// pkt3 is the same as pkt2 instantiated with type parameters
+type IO_pkt3 = IO_pkt2

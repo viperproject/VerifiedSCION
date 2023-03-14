@@ -14,22 +14,17 @@
 
 // +gobra
 
-/**** SEGMENTS ****/
+/**** HOP-FIELDS ****/
 
 package io
 
-type IO_seg2 adt {
-	// Here, we already instantiated the type params
-	IO_seg3_ {
-		AInfo int // nat in Isabelle
-		UInfo set[IO_msgterm]
-		ConsDir bool
-		Peer bool
-		Past seq[IO_HF]     // formalized originally as a seq of HF_scheme
-		Future seq[IO_HF]   // formalized originally as a seq of HF_scheme
-		History seq[IO_ahi] // formalized originally as a seq of ahi_scheme
+// Abstract representation of an HopField
+// We consider 0 to be the ID of the internal network in HopField.
+// We consider None to be the ID of the internal network in HF.
+type IO_HF adt {
+	IO_HF_ {
+		InIF2 option[IO_ifs]
+		EgIF2 option[IO_ifs]
+		HVF IO_msgterm
 	}
 }
-
-// seg3 is the same as seg2 instantiated with type parameters
-type IO_seg3 = IO_seg2

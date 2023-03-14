@@ -14,6 +14,8 @@
 
 // +gobra
 
+/**** Symbols that are not explicitly defined in any section of the IO spec document ****/
+
 package io
 
 import "github.com/scionproto/scion/pkg/slayers/path"
@@ -90,19 +92,6 @@ type IO_key adt {
 	}
 }
 
-/** Hop-Fields **/
-
-// Abstract representation of an HopField
-// We consider 0 to be the ID of the internal network in HopField.
-// We consider None to be the ID of the internal network in HF.
-type IO_HF adt {
-	IO_HF_ {
-		InIF2 option[IO_ifs]
-		EgIF2 option[IO_ifs]
-		HVF IO_msgterm
-	}
-}
-
 // "authenticated hop information"
 type IO_ahi adt {
 	IO_ahi_ {
@@ -144,102 +133,25 @@ ensures res.HVF == ComputeMsgTerm(h)
 decreases
 pure func ToHF(h path.HopField) (res IO_HF)
 
-/** End of Hop-Fields **/
-
-/** Segments **/
-// seg3 is the same as seg2 instantiated with type parameters
-type IO_seg3 adt {
-	IO_seg3_ {
-		AInfo int // nat in Isabelle
-		UInfo set[IO_msgterm]
-		ConsDir bool
-		Peer bool
-		Past seq[IO_HF]     // formalized originally as a seq of HF_scheme
-		Future seq[IO_HF]   // formalized originally as a seq of HF_scheme
-		History seq[IO_ahi] // formalized originally as a seq of ahi_scheme
-	}
+/* Link Types */
+type IO_Link adt {
+    IO_CustProv{}
+    IO_ProvCust{}
+    IO_PeerOrCore{}
+    IO_NoLink{}
 }
 
-/** End of Segments **/
+// Defined in Network_Model.thy
+// TODO: define
+ghost
+pure
+decreases
+func valid_link_types(hf1 IO_ahi) bool
 
-/** Packets **/
-// pkt3 is the same as pkt2 instantiated with type parameters
-type IO_pkt3 adt {
-	IO_pkt2_ {
-		CurrSeg  IO_seg3
-		LeftSeg  option[IO_seg3]
-		MidSeg   option[IO_seg3]
-		RightSeg option[IO_seg3]
-	}
-}
-
-/** End of Packets **/
-
-/** Router State **/
-
-type IO_dp3s_state_local domain {
-	func IBuf(s IO_dp3s_state_local, ifc option[IO_ifs]) set[IO_pkt3]
-	func OBuf(s IO_dp3s_state_local, ifc option[IO_ifs]) set[IO_pkt3]
-}
-
-/** End of Router State **/
-
-/** Values **/
-
-// TODO: is the encoding correct?
-type IO_val adt {
-	IO_val_Unit{}
-
-	// IO_pkt2 in the doc
-	IO_val_Pkt2 {
-		IO_val_Pkt2_1 option[IO_ifs]
-		IO_val_Pkt2_2 IO_pkt3
-	}
-
-	IO_val_Unsupported {
-		IO_val_Unsupported_1 option[IO_ifs]
-		IO_val_Unsupported_2 TypeParameter
-	}
-
-	IO_Internal_val1 {
-		IO_Internal_val1_1 IO_pkt3
-		IO_Internal_val1_2 IO_ifs
-		IO_Internal_val1_3 IO_pkt3
-		IO_Internal_val1_4 option[IO_ifs]
-	}
-
-	IO_Internal_val2 {
-		IO_Internal_val2_1 IO_pkt3
-		IO_Internal_val2_2 IO_pkt3
-		IO_Internal_val2_3 IO_ifs
-	}
-}
-
-type IO_bio3sIN adt {
-	IO_bio3s_enter{}
-	IO_bio3s_xover_up2down{}
-	IO_bio3s_xover_core{}
-	IO_bio3s_exit{}
-}
-
-type IO_bio3sIO adt {
-	IO_bio3s_send{}
-	IO_bio3s_recv{}
-}
-
-// defined in Isabelle as (bios3sIN, bios3sIO) events
-type IO_bio3s adt {
-	IO_bio3s_IN {
-		IN IO_bio3sIN
-	}
-
-	IO_bio3s_IO {
-		IO IO_bio3sIN
-	}
-
-	IO_bio3s_Skip{}
-
-	IO_bio3s_Stop{}
-}
-
-/** End of Values **/
+// Defined in Network_Model.thy
+// TODO: define
+ghost
+pure
+decreases
+func valid_link_types_in(hf1 IO_ahi) bool
+/* End of Link Types */

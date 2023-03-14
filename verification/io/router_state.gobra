@@ -14,22 +14,11 @@
 
 // +gobra
 
-/**** SEGMENTS ****/
+/**** ROUTER STATE ****/
 
 package io
 
-type IO_seg2 adt {
-	// Here, we already instantiated the type params
-	IO_seg3_ {
-		AInfo int // nat in Isabelle
-		UInfo set[IO_msgterm]
-		ConsDir bool
-		Peer bool
-		Past seq[IO_HF]     // formalized originally as a seq of HF_scheme
-		Future seq[IO_HF]   // formalized originally as a seq of HF_scheme
-		History seq[IO_ahi] // formalized originally as a seq of ahi_scheme
-	}
+type IO_dp3s_state_local domain {
+	func IBuf(s IO_dp3s_state_local, ifc option[IO_ifs]) set[IO_pkt3]
+	func OBuf(s IO_dp3s_state_local, ifc option[IO_ifs]) set[IO_pkt3]
 }
-
-// seg3 is the same as seg2 instantiated with type parameters
-type IO_seg3 = IO_seg2
