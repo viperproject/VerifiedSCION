@@ -189,6 +189,10 @@ ghost
 decreases
 pure func inif_prov2(hf1 IO_HF, asid IO_as) bool
 
+ghost
+decreases
+pure func if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool
+
 type ext2_rec struct {
 	op1 IO_as
 	op2 IO_ifs

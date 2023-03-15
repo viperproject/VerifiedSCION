@@ -1,0 +1,153 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+/**** Switching between segments (xover) ****/
+
+package io
+
+// TODO: delete everything except guards
+
+// Xover events are similar to the enter event in that a packet is received form an external
+// channel and forwarded (internally or externally), but in contrast to the enter event,
+// additional processing steps are required to switch from the current segment,
+// which has reached its end, to the next segment.
+// We have two events for xovering segments. One in which we xover from a segment against
+// construction direction to one in construction direction (up2down), and one in which we
+// xover between segments of the same directionality. The latter can only happen at a
+// core node, hence we call it “xover_core"
+
+// Common guard between"dp2_xover_up2down"and "dp2_xover_core":
+// Check if we are at the end of one segment and that there is a non empty
+// Future segment. There are three different segments in this definition:
+// currseg, the 'old segment' with exactly one hop field remaining in the
+// Future path, traversedseg, which is currseg after we push its
+// remaining hop field into the Past path, and nextseg, which is
+// the new segment that we are xovering over to.
+ghost
+decreases
+pure func dp2_xover_common_guard(m IO_pkt2,
+	currseg IO_seg2,
+	nextseg IO_seg2,
+	traversedseg IO_seg2,
+	newpkt IO_pkt2,
+	hf1 IO_HF,
+	hf2 IO_HF,
+	nextfut seq[IO_HF],
+	asid IO_as,
+	recvif IO_ifs) bool {
+		return m.CurrSeg == currseg &&
+			m.LeftSeg == some(nextseg) &&
+			nextseg.History == seq[IO_ahi]{} &&
+			newpkt == IO_pkt2(IO_Packet2{nextseg, m.MidSeg, m.RightSeg, some(traversedseg)}) &&
+			currseg.Future == seq[IO_HF]{hf1} &&
+			nextseg.Future == seq[IO_HF]{hf2} ++ nextfut &&
+			dp2_check_interface(currseg.ConsDir, asid, hf1, recvif) &&
+			dp2_check_recvif(currseg.ConsDir, asid, recvif) &&
+			update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
+			inc_seg2(currseg, traversedseg, hf1, seq[IO_HF]{}) &&
+			hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1) &&
+			hf_valid(nextseg.ConsDir, nextseg.AInfo, nextseg.UInfo, hf2) &&
+			hf1.extr_asid() == asid &&
+			hf2.extr_asid() == asid &&
+			same_other2(currseg, traversedseg)
+}
+
+ghost
+decreases
+pure func dp2_xover_common(
+	s IO_dp2_state,
+	m IO_pkt2,
+	currseg IO_seg2,
+	nextseg IO_seg2,
+	traversedseg IO_seg2,
+	newpkt IO_pkt2,
+	hf1 IO_HF,
+	hf2 IO_HF,
+	nextfut seq[IO_HF],
+	asid IO_as,
+	recvif IO_ifs,
+	sprime IO_dp2_state) bool {
+		return dp2_in_ext(s, asid, recvif, m) &&
+			dp2_xover_common_guard(m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, nextfut, asid, recvif) &&
+			dp2_forward(s, sprime, asid, newpkt)
+}
+
+ghost
+decreases
+pure func egif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
+	return if_type(a, hf.EgIF2, link)
+}
+
+ghost
+decreases
+pure func inif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
+	return if_type(a, hf.InIF2, link)
+}
+
+ghost
+decreases
+pure func xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
+	return (egif2_type(hf1, asid, IO_ProvCust{}) && egif2_type(hf2, asid, IO_ProvCust{})) ||
+	(egif2_type(hf1, asid, IO_ProvCust{}) && egif2_type(hf2, asid, IO_PeerOrCore{})) ||
+	(egif2_type(hf1, asid, IO_PeerOrCore{}) && egif2_type(hf2, asid, IO_ProvCust{}))
+}
+
+ghost
+decreases
+pure func dp2_xover_up2down(
+	s IO_dp2_state,
+	m IO_pkt2,
+	currseg IO_seg2,
+	nextseg IO_seg2,
+	traversedseg IO_seg2,
+	newpkt IO_pkt2,
+	asid IO_as,
+	recvif IO_ifs,
+	hf1 IO_HF,
+	hf2 IO_HF,
+	nextfut seq[IO_HF],
+	sprime IO_dp2_state) bool {
+		return !currseg.ConsDir &&
+			nextseg.ConsDir &&
+			xover_up2down2_link_type(asid, hf1, hf2) &&
+			dp2_xover_common(s, m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, nextfut, asid, recvif, sprime)
+}
+
+ghost
+decreases
+pure func xover_core2_link_type(hf1 IO_HF, hf2 IO_HF, asid IO_as, d bool) bool {
+	return (!d && egif2_type(hf1, asid, IO_ProvCust{}) && inif2_type(hf2, asid, IO_PeerOrCore{})) ||
+		(d && inif2_type(hf1, asid, IO_PeerOrCore{}) && egif2_type(hf2, asid, IO_ProvCust{}))
+}
+
+// TODO: how to formulate "asid in core"?
+// TODO: drop
+ghost
+decreases
+pure func dp2_xover_core(
+	s IO_dp2_state,
+	m IO_pkt2,
+	currseg IO_seg2,
+	nextseg IO_seg2,
+	traversedseg IO_seg2,
+	newpkt IO_pkt2,
+	asid IO_as,
+	recvif IO_ifs,
+	d1 bool,
+	hf1 IO_HF,
+	hf2 IO_HF,
+	nextfut seq[IO_HF],
+	sprime IO_dp2_state) bool
