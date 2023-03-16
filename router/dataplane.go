@@ -2323,15 +2323,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 	// XXX(roosd): Here we leak the buffer into the SCION packet header.
 	// This is okay because we do not operate on the buffer or the packet
 	// for the rest of processing.
-	// @ preserves acc(&ohp.Info, def.ReadL15) && acc(&ohp.SecondHop, def.ReadL15)
-	// @ preserves acc(&ohp.SecondHop.Mac, 1-def.ReadL15)
-	// @ preserves acc(&p.macBuffers.scionInput, def.ReadL15)
-	// @ preserves acc(&p.mac, def.ReadL15) && p.mac != nil && p.mac.Mem()
-	// @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
-	// @ decreases
-	// @ outline (
 	ohp.SecondHop.Mac = path.MAC(p.mac, ohp.Info, ohp.SecondHop, p.macBuffers.scionInput)
-	// @ )
 	// @ fold ohp.SecondHop.Mem()
 	// @ fold s.Path.Mem(ubPath)
 
