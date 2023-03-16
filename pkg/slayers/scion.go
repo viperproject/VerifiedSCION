@@ -216,14 +216,22 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 
 // @ requires  !opts.FixLengths
 // @ requires  b != nil && b.Mem()
-// @ preserves s.Mem(ubuf)
-// @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ requires  acc(s.Mem(ubuf), def.ReadL0)
+// @ requires  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   b.Mem()
+// @ ensures   acc(s.Mem(ubuf), def.ReadL0)
+// @ ensures   sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// TODO: hide internal spec details
+// @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
+// @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), _) in
+// @		(CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]))
+// @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
+// @	(unfolding acc(s.Mem(ubuf), _) in CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen])) <= len(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
-	// @ unfold s.Mem(ubuf)
-	// @ defer  fold s.Mem(ubuf)
+	// @ unfold acc(s.Mem(ubuf), def.ReadL0)
+	// @ defer  fold acc(s.Mem(ubuf), def.ReadL0)
 	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
 	// @ ghost defer sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
@@ -405,6 +413,11 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		// @ fold s.NonInitMem()
 		return err
 	}
+	/*@ ghost if typeOf(s.Path) == type[*onehop.Path] {
+		s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
+		assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
+		assert CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(data[offset : offset+pathLen]) <= len(data)
+	} @*/
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
 
@@ -855,15 +868,15 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err er
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
 // @ requires  acc(&s.SrcIA) && acc(&s.DstIA)
-// @ requires  acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.Has3Bits()
-// @ requires  acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.Has3Bits()
+// @ requires  acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits()
+// @ requires  acc(&s.DstAddrType, def.HalfPerm) && s.DstAddrType.Has3Bits()
 // @ requires  acc(&s.RawSrcAddr) && acc(&s.RawDstAddr)
 // @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
 // @ ensures   res == nil ==> s.HeaderMem(data)
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res != nil ==> (
 // @	acc(&s.SrcIA) && acc(&s.DstIA) &&
-// @ 	acc(&s.SrcAddrType, def.ReadL1) && acc(&s.DstAddrType, def.ReadL1) &&
+// @ 	acc(&s.SrcAddrType, def.HalfPerm) && acc(&s.DstAddrType, def.HalfPerm) &&
 // @ 	acc(&s.RawSrcAddr) && acc(&s.RawDstAddr))
 // @ decreases
 func (s *SCION) DecodeAddrHdr(data []byte) (res error) {

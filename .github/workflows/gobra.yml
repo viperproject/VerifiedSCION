@@ -20,7 +20,7 @@ env:
   parallelizeBranches: '0'
   checkConsistency: '1'
   imageVersion: 'latest'
-  mceMode: "od"
+  mceMode: 'od'
 
 jobs:
   verify-deps:
@@ -306,5 +306,5 @@ jobs:
           # Without it, verification would take a lot longer.
           conditionalizePermissions: '1'
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
+          mceMode: 'on'
 
