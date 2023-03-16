@@ -1497,7 +1497,7 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @	unfolding acc(p.scionLayer.Mem(ub), def.ReadL10) in
 // @	p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
 // @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
-// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), def.ReadL20)
+// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL4)
 // @ ensures   acc(&p.path, def.ReadL15)
 // @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL4)
@@ -2102,11 +2102,11 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	// @ assume false
 	if r, err := p.validateTransitUnderlaySrc( /*@ ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL10)
 	if r, err := p.validateSrcDstIA( /*@ nil, ub @*/ ); err != nil {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		// sl.CombineRange_Bytes(ub, startP, endP, writePerm)
