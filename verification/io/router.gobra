@@ -17,3 +17,92 @@
 /**** Definitions regarding a particular router’s event system ****/
 
 package io
+
+// TODO: make individual_router an interface type with the following methods
+
+ghost
+decreases
+pure func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool
+
+ghost
+decreases
+pure func upd_uinfo(p1 set[IO_msgterm], p2 IO_HF) set[IO_msgterm]
+
+ghost
+decreases
+pure func rid() IO_rid
+
+ghost
+decreases
+pure func asid() IO_as {
+	return rid_as(rid())
+}
+
+ghost
+decreases
+pure func is_target(asid IO_as, nextif IO_ifs, a2 IO_as, i2 IO_ifs) bool
+
+ghost
+decreases
+pure func dp3s_add_ibuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
+	return IO_dp3s_state_local_{
+		ibuf: insert(s.ibuf, i, pkt),
+		obuf: s.obuf,
+	}
+}
+
+ghost
+decreases
+pure func dp3s_add_obuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
+	return IO_dp3s_state_local_{
+		ibuf: s.ibuf,
+		obuf: insert(s.obuf, i, pkt),
+	}
+}
+
+// helper func
+ghost
+decreases
+pure func insert(buf dict[option[IO_ifs]](set[IO_pkt3]), k option[IO_ifs], v IO_pkt3) dict[option[IO_ifs]](set[IO_pkt3]) {
+	return let newSet := (k in domain(buf)? (let pre := buf[k] in pre union set[IO_pkt3]{v}) : set[IO_pkt3]{v}) in
+		buf[k = newSet]
+}
+
+// TODO: try to remove the existencials here
+ghost
+decreases
+pure func dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
+	return (exists currseg IO_seg3, traversedseg IO_seg3, fut seq[IO_HF], hf1 IO_HF :: dp2_forward_ext_guard(asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1)) &&
+			(exists a2 IO_as, i2 IO_ifs :: is_target(asid(), nextif, a2, i2))
+}
+
+// TODO: should we change IO_ifs to being implemented as an option type?
+ghost
+decreases
+pure func dp3s_forward(m IO_pkt3, newpkt IO_pkt3, nextif option[IO_ifs]) bool {
+	return nextif == none[IO_ifs] ? newpkt == m : dp3s_forward_ext(m, newpkt, get(nextif))
+}
+
+ghost
+decreases
+pure func dp3s_xover_common(
+	s IO_dp3s_state_local,
+	m IO_pkt3,
+	currseg IO_seg3,
+	nextseg IO_seg3,
+	traversedseg IO_seg3,
+	intermediatepkt IO_pkt3,
+	hf1 IO_HF,
+	hf2 IO_HF,
+	nextfut seq[IO_HF],
+	recvif IO_ifs,
+	newpkt IO_pkt3,
+	nextif option[IO_ifs],
+	) bool {
+		// the first conjunct was added to Gobra, even though it was not in the original isabelle spec.
+		// this is because of the way math. maps are implemented, we can only obtain a key that is in the map before.
+		return some(recvif) in domain(s.ibuf) &&
+			(let lookupRes := s.ibuf[some(recvif)] in (m in lookupRes)) &&
+			dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, nextfut, asid(), recvif) &&
+			dp3s_forward(intermediatepkt, newpkt, nextif)
+}

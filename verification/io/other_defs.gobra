@@ -151,14 +151,6 @@ type IO_Link adt {
 
 ghost
 decreases
-pure func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool
-
-ghost
-decreases
-pure func upd_uinfo(p1 set[IO_msgterm], p2 IO_HF) set[IO_msgterm]
-
-ghost
-decreases
 pure func rid_as(p IO_rid) IO_as
 
 ghost
