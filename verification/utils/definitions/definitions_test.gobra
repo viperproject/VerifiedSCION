@@ -15,3 +15,8 @@
 // +gobra
 
 package definitions
+
+func test() {
+	assert ReadL00 < writePerm
+	assert ReadL0 < ReadL00
+}

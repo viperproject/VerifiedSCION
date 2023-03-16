@@ -28,7 +28,8 @@ pred (o *Path) NonInitMem() {
 pred (o *Path) Mem(ubuf []byte) {
 	acc(&o.Info) &&
 	o.FirstHop.Mem() &&
-	o.SecondHop.Mem()
+	o.SecondHop.Mem() &&
+	PathLen <= len(ubuf)
 }
 
 ghost
@@ -40,6 +41,14 @@ func (p *Path) DowngradePerm(buf []byte) {
 	unfold p.FirstHop.Mem()
 	unfold p.SecondHop.Mem()
 	fold  p.NonInitMem()
+}
+
+ghost
+requires acc(o.Mem(ub), _)
+ensures  b
+decreases
+pure func (o *Path) InferSizeUb(ghost ub []byte) (b bool) {
+	return unfolding acc(o.Mem(ub), _) in o.Len(ub) <= len(ub)
 }
 
 (*Path) implements path.Path
