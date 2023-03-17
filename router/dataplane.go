@@ -1730,19 +1730,17 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 	return processResult{}, nil
 }
 
-// (VerifiedSCION) verify later, once we have a contract for processPkt
-// @ trusted
-// @ requires def.Uncallable()
-// TODO
-// requires  acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
-// requires  s.DstAddrType == slayers.T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
-// requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
-// requires  acc(&p.d.svc, _) && p.d.svc != nil
-// preserves acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL15)
-// ensures   acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
-// ensures   reserr != nil ==> reserr.ErrorMem()
+// @ requires  acc(&p.d, def.ReadL15)
+// @ requires  acc(MutexInvariant!<p.d!>(), _)
+// (VerifiedSCION) permission to acc(&p.d.svc, _) would not be necessary
+// if one was using something other than a predicate expression instance.
+// @ requires  acc(&p.d.svc, _) && p.d.svc != nil
+// @ preserves acc(p.scionLayer.Mem(ubScionL), def.ReadL10)
+// @ preserves acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), def.ReadL10)
+// @ ensures   acc(&p.d, def.ReadL15)
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (resaddr *net.UDPAddr, respr processResult, reserr error) {
-	a, err := p.d.resolveLocalDst(&p.scionLayer /*@, nil @*/) // (VerifiedSCION) the parameter used to be only p.scionLayer
+	a, err := p.d.resolveLocalDst(&p.scionLayer /*@, ubScionL @*/) // (VerifiedSCION) the parameter used to be only p.scionLayer
 	switch {
 	case errors.Is(err, noSVCBackend):
 		// @ def.TODO()
@@ -2096,6 +2094,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires  acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires  acc(&p.d.svc, _) && p.d.svc != nil
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
 // @ requires  acc(&p.rawPkt, def.ReadL1) && ub === p.rawPkt
@@ -2159,17 +2158,16 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	// @ assert false
 
-	// @ assume false
 	// Inbound: pkts destined to the local IA.
 	// @ p.d.getLocalIA()
 	if /*@ unfolding acc(p.scionLayer.Mem(ub), _) in (unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), _) in @*/ p.scionLayer.DstIA /*@ ) @*/ == p.d.localIA {
-		// @ def.TODO()
-		a, r, err := p.resolveInbound( /*@ nil @*/ )
+		a, r, err := p.resolveInbound( /*@ ub @*/ )
 		if err != nil {
+			// @ p.scionLayer.DowngradePerm(ub)
 			return r, err
 		}
+		// @ p.d.getInternal()
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil
 	}
 
@@ -2177,19 +2175,19 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 	// BRTransit: pkts leaving from the same BR different interface.
 
 	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL3)
-	if p.path.IsXover( /*@ nil @*/ ) {
+	// @ ghost ubPath := p.scionLayer.UBPath(ub)
+	if p.path.IsXover( /*@ ubPath @*/ ) {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		if r, err := p.doXover( /*@ ub @*/ ); err != nil {
 			return r, err
 		}
-		//  sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		if r, err := p.validateHopExpiry(); err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover")
 		}
 		// verify the new block
 		if r, err := p.verifyCurrentMAC(); err != nil {
-			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
+			//  fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover")
 		}
