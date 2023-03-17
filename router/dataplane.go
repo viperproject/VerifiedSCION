@@ -1415,20 +1415,26 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 }
 
 // @ requires  acc(&p.d, def.ReadL20) && acc(MutexInvariant!<p.d!>(), _)
-// @ preserves acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
-// @ preserves acc(&p.path, def.ReadL20) && acc(p.path.Mem(ubPath), def.ReadL20)
+// @ requires  acc(p.scionLayer.Mem(ubScionL), def.ReadL19)
+// @ requires  acc(&p.path, def.ReadL20)
+// @ requires  p.path === p.scionLayer.GetPath(ubScionL)
 // @ preserves acc(&p.ingressID, def.ReadL20)
+// @ ensures   acc(p.scionLayer.Mem(ubScionL), def.ReadL19)
+// @ ensures   acc(&p.path, def.ReadL20)
 // @ ensures   acc(&p.d, def.ReadL20)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubPath []byte, ghost ubScionL []byte @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ ) (respr processResult, reserr error) {
+	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+	// @ defer fold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
 	// @ unfold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), def.ReadL20)
+	// @ defer fold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), def.ReadL20)
 	// @ p.d.getLocalIA()
 	srcIsLocal := (p.scionLayer.SrcIA == p.d.localIA)
 	dstIsLocal := (p.scionLayer.DstIA == p.d.localIA)
-	// @ fold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), def.ReadL20)
-	// @ fold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+	// fold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), def.ReadL20)
+	// fold acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
 	if p.ingressID == 0 {
 		// Outbound
 		// Only check SrcIA if first hop, for transit this already checked by ingress router.
@@ -1614,13 +1620,24 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 }
 
 // @ preserves acc(&p.infoField)
+// @ requires  acc(&p.path,      def.ReadL20)
+// @ requires  acc(p.scionLayer.Mem(ub), def.ReadL19)
+// @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ preserves acc(&p.ingressID, def.ReadL20)
 // @ preserves acc(&p.hopField,  def.ReadL20)
-// @ preserves acc(&p.path,      def.ReadL20) && acc(p.path.Mem(ubPath), def.ReadL20)
-// @ preserves slices.AbsSlice_Bytes(ubPath, 0, len(ubPath))
+// @ preserves slices.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   acc(&p.path,      def.ReadL20)
+// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL19)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ubPath []byte @*/ ) (err error) {
+func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte @*/ ) (err error) {
+	// @ ghost ubPath := p.scionLayer.UBPath(ub)
+	// @ ghost start := p.scionLayer.PathStartIdx(ub)
+	// @ ghost end   := p.scionLayer.PathEndIdx(ub)
+	// @ assert ub[start:end] === ubPath
+
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL20)
+	// @ defer fold acc(p.scionLayer.Mem(ub), def.ReadL20)
 	// against construction dir the ingress router updates the SegID, ifID == 0
 	// means this comes from this AS itself, so nothing has to be done.
 	// TODO(lukedirtwalker): For packets destined to peer links this shouldn't
@@ -1629,6 +1646,8 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ubPath []
 		p.infoField.UpdateSegID(p.hopField.Mac)
 		// (VerifiedSCION) the following property is guaranteed by the type system, but Gobra cannot infer it yet
 		// @ assume 0 <= p.path.GetCurrINF(ubPath)
+		// @ sl.SplitRange_Bytes(ub, start, end, writePerm)
+		// @ ghost defer sl.CombineRange_Bytes(ub, start, end, writePerm)
 		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), _) in (unfolding acc(p.path.Base.Mem(), _) in @*/ p.path.PathMeta.CurrINF) /*@ ) , ubPath @*/); err != nil {
 			return serrors.WrapStr("update info field", err)
 		}
@@ -2106,19 +2125,15 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost startLL int, 
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL10)
-	if r, err := p.validateSrcDstIA( /*@ nil, ub @*/ ); err != nil {
-		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
-		// sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	if r, err := p.validateSrcDstIA( /*@ ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err
 	}
-	if err := p.updateNonConsDirIngressSegID( /*@ nil @*/ ); err != nil {
-		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
-		//  sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	if err := p.updateNonConsDirIngressSegID( /*@ ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return processResult{}, err
 	}
+	// @ assume false
 	//  sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 	if r, err := p.verifyCurrentMAC(); err != nil {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
