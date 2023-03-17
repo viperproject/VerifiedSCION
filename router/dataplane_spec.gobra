@@ -284,6 +284,7 @@ func establishMemUnsupportedPathType()
 
 // malformedPath is duplicable: we can always establish its invariant
 ghost
+ensures malformedPath != nil
 ensures malformedPath.ErrorMem()
 decreases _
 func establishMemMalformedPath()
