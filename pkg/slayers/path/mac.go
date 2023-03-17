@@ -32,6 +32,7 @@ const MACBufferSize = 16
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // @ requires  h != nil && h.Mem()
 // @ preserves len(buffer) >= MACBufferSize ==> slices.AbsSlice_Bytes(buffer, 0, len(buffer))
+// @ ensures   h.Mem()
 // @ decreases
 func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 	mac := FullMAC(h, info, hf, buffer)
