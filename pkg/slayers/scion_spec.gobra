@@ -269,6 +269,22 @@ ghost
 pure
 requires acc(s.Mem(ub), _)
 decreases
+func (s *SCION) PathStartIdx(ub []byte) int {
+	return unfolding acc(s.Mem(ub), _) in CmnHdrLen+s.AddrHdrLen(nil, true)
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) PathEndIdx(ub []byte) int {
+	return unfolding acc(s.Mem(ub), _) in int(s.HdrLen*LineLen)
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
 func (s *SCION) GetPath(ub []byte) path.Path {
 	return unfolding acc(s.Mem(ub), _) in s.Path
 }
