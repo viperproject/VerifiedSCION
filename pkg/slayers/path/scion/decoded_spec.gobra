@@ -33,8 +33,8 @@ pred (d *Decoded) NonInitMem() {
 pred (d *Decoded) Mem(ubuf []byte) {
 	d.Base.Mem() &&
 	acc(&d.InfoFields) &&
-	d.Base.getNumINF() <= MaxINFs &&
-	len(d.InfoFields) == d.Base.getNumINF() &&
+	d.Base.GetNumINF() <= MaxINFs &&
+	len(d.InfoFields) == d.Base.GetNumINF() &&
 	(forall i int :: { &d.InfoFields[i] } 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
 	acc(&d.HopFields) &&
 	len(d.HopFields) == d.Base.getNumHops() &&
@@ -103,7 +103,9 @@ ghost
 requires d.Mem(ubuf)
 decreases
 pure func (d *Decoded) PathCurrINFValid (ghost ubuf []byte) (bool) {
-	return unfolding d.Mem(ubuf) in unfolding d.Base.Mem() in 0 <= d.PathMeta.CurrINF && d.PathMeta.CurrINF < 3
+	return unfolding d.Mem(ubuf) in
+		unfolding d.Base.Mem() in
+		0 <= d.PathMeta.CurrINF && d.PathMeta.CurrINF < 3
 }
 
 /**** End of Stubs ****/
@@ -127,6 +129,22 @@ requires acc(d.Mem(ubuf), _)
 decreases
 pure func (d *Decoded) InfValid(ubuf []byte) (bool) {
 	return unfolding acc(d.Mem(ubuf), _) in d.Base.InfValid()
+}
+
+ghost
+requires acc(slices.AbsSlice_Bytes(data, 0, len(data)), _)
+requires len(data) > 3
+requires acc(s.Mem(data), _)
+decreases
+pure func (s *Decoded) DecodingFromBytes(data []byte) bool {
+	return unfolding acc(s.Mem(data), _) in
+	unfolding acc(s.Base.Mem(), _) in
+	unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), _) in
+	s.PathMeta.CurrINF == data[0] >> 6 &&
+	s.PathMeta.SegLen[0] == (data[2] >> 4 | data[1] << 4) & 0x3F &&
+	s.PathMeta.SegLen[1] == (data[3] >> 6 | data[2] << 2) & 0x3F &&
+	s.PathMeta.SegLen[2] == data[3] & 0x3F &&
+	s.NumINF == s.Base.NumINFValue()
 }
 
 /**** End of Auxiliary Functions ****/

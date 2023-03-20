@@ -136,7 +136,7 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 // @ ensures  old(unfolding s.Mem() in int(s.PathMeta.CurrHF) >= s.NumHops-1) ==> e != nil
 // @ ensures  e == nil ==> s.Mem()
 // @ ensures  e == nil ==> s.Len() == old(s.Len())
-// @ ensures  e == nil ==> s.getNumINF() == old(s.getNumINF())
+// @ ensures  e == nil ==> s.GetNumINF() == old(s.GetNumINF())
 // @ ensures  e == nil ==> unfolding s.Mem() in 0 <= s.PathMeta.CurrINF && s.PathMeta.CurrINF < 3
 // @ ensures  e != nil ==> s.NonInitMem()
 // @ ensures  e != nil ==> e.ErrorMem()
@@ -279,7 +279,8 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	line |= uint32(m.SegLen[0]&0x3F) << 12
 	line |= uint32(m.SegLen[1]&0x3F) << 6
 	line |= uint32(m.SegLen[2] & 0x3F)
-	//@ assert m.InfValid() ==> line == bitwise.SerializingHdr(m.CurrINF, m.CurrHF, m.SegLen[0], m.SegLen[1], m.SegLen[2])
+	// @ assert m.InfValid() ==>
+	// @   line == bitwise.SerializingHdr(m.CurrINF, m.CurrHF, m.SegLen[0], m.SegLen[1], m.SegLen[2])
 	// @ unfold acc(slices.AbsSlice_Bytes(b, 0, len(b)))
 	binary.BigEndian.PutUint32(b, line)
 	// @ fold acc(slices.AbsSlice_Bytes(b, 0, len(b)))

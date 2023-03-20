@@ -89,8 +89,23 @@ ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res && res <= 3
 decreases
-pure func (b *Base) getNumINF() (res int) {
+pure func (b *Base) GetNumINF() (res int) {
 	return unfolding acc(b.Mem(), _) in b.NumINF
+}
+
+ghost
+requires acc(b.Mem(), _)
+decreases
+pure func (b *Base) GetCurrINF() (res uint8) {
+	return unfolding acc(b.Mem(), _) in b.PathMeta.CurrINF
+}
+
+ghost
+requires acc(b.Mem(), _)
+requires 0 <= index && index < 3
+decreases
+pure func (b *Base) GetSegLen(index int) (res uint8) {
+	return unfolding acc(b.Mem(), _) in b.PathMeta.SegLen[index]
 }
 
 ghost

@@ -20,6 +20,8 @@
 
 package bitwise
 
+const TWOTO31 = 2147483648
+
 ghost
 ensures 0 <= b && b < 256
 decreases
@@ -51,16 +53,8 @@ func First2Bits(b uint32) (res uint8)
 
 ghost
 pure
-requires b < 2147483648
-ensures  a >> 30 == (a | b) >> 30
-ensures  res == uint8(a >> 30)
-decreases
-func PreservesFirst2Bits(a uint32, b uint32) (res uint8)
-
-ghost
-pure
 requires 0 <= b && b <= 24
-ensures uint32(a & 0x3F) << b < 2147483648
+ensures uint32(a & 0x3F) << b < TWOTO31
 ensures res == uint32(a & 0x3F) << b
 decreases
 func LessThan2to31(a uint8, b int) (res uint32)
@@ -68,16 +62,16 @@ func LessThan2to31(a uint8, b int) (res uint32)
 ghost
 pure
 requires 0 <= b && b <= 16
-ensures 0 <= uint32(a) << b && uint32(a) << b < 2147483648
+ensures 0 <= uint32(a) << b && uint32(a) << b < TWOTO31
 ensures res == uint32(a) << b
 decreases
 func LessThan2to31_byte(a uint8, b int) (res uint32)
 
 ghost
 pure
-requires 0 <= a && a < 2147483648
-requires 0 <= b && b < 2147483648
-ensures 0 <= a | b && a | b < 2147483648
+requires 0 <= a && a < TWOTO31
+requires 0 <= b && b < TWOTO31
+ensures 0 <= a | b && a | b < TWOTO31
 ensures res == a | b
 decreases
 func LessThan2to31_bitwiseOr(a uint32, b uint32) (res uint32)

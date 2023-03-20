@@ -47,12 +47,7 @@ type Decoded struct {
 // @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), def.ReadL1)
 // @ ensures   r == nil ==> len(data) > 3
 // @ ensures   r == nil ==> s.Mem(data)
-// @ ensures   r == nil ==> unfolding s.Mem(data) in unfolding s.Base.Mem() in unfolding acc(slices.AbsSlice_Bytes(data, 0, len(data)), def.ReadL1) in
-// @                        s.PathMeta.CurrINF == data[0] >> 6 &&
-// @                        s.PathMeta.SegLen[0] == (data[2] >> 4 | data[1] << 4) & 0x3F &&
-// @                        s.PathMeta.SegLen[1] == (data[3] >> 6 | data[2] << 2) & 0x3F &&
-// @                        s.PathMeta.SegLen[2] == data[3] & 0x3F &&
-// @                        s.NumINF == s.Base.NumINFValue()
+// @ ensures   r == nil ==> s.DecodingFromBytes(data)
 // @ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 // @ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
@@ -70,19 +65,19 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	}
 	offset := MetaLen
 	s.InfoFields = make([]path.InfoField, ( /*@ unfolding s.Base.Mem() in @*/ s.NumINF))
-	//@ assert len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
+	//@ assert len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
 	//@ slices.SplitByIndex_Bytes(data, 0, len(data), offset, definitions.ReadL2)
 
 	//@ invariant acc(&s.InfoFields)
 	//@ invariant acc(s.Base.Mem(), definitions.ReadL1)
-	//@ invariant len(s.InfoFields) == s.Base.getNumINF()
-	//@ invariant 0 <= i && i <= s.Base.getNumINF()
-	//@ invariant len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
+	//@ invariant len(s.InfoFields) == s.Base.GetNumINF()
+	//@ invariant 0 <= i && i <= s.Base.GetNumINF()
+	//@ invariant len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + i * path.InfoLen
-	//@ invariant forall j int :: { &s.InfoFields[j] } 0 <= j && j < s.Base.getNumINF() ==> acc(&s.InfoFields[j])
+	//@ invariant forall j int :: { &s.InfoFields[j] } 0 <= j && j < s.Base.GetNumINF() ==> acc(&s.InfoFields[j])
 	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL2)
 	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL2)
-	//@ decreases s.Base.getNumINF() - i
+	//@ decreases s.Base.GetNumINF() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), _) in @*/ s.NumINF; i++ {
 		//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset + path.InfoLen, definitions.ReadL2)
 		//@ slices.Reslice_Bytes(data, offset, offset + path.InfoLen, definitions.ReadL2)
@@ -103,8 +98,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant 0 <= i && i <= s.Base.getNumHops()
 	//@ invariant forall j int :: { &s.HopFields[j] } i <= j && j < s.Base.getNumHops() ==> acc(&s.HopFields[j])
 	//@ invariant forall j int :: { &s.HopFields[j] } 0 <= j && j < i ==> s.HopFields[j].Mem()
-	//@ invariant len(data) >= MetaLen + s.Base.getNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
-	//@ invariant offset == MetaLen + s.Base.getNumINF() * path.InfoLen + i * path.HopLen
+	//@ invariant len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.getNumHops() * path.HopLen
+	//@ invariant offset == MetaLen + s.Base.GetNumINF() * path.InfoLen + i * path.HopLen
 	//@ invariant acc(slices.AbsSlice_Bytes(data, 0, offset), definitions.ReadL2)
 	//@ invariant acc(slices.AbsSlice_Bytes(data, offset, len(data)), definitions.ReadL2)
 	//@ decreases s.Base.getNumHops() - i
@@ -215,7 +210,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ ensures  r == nil ==> p.Mem(ubuf)
 // @ ensures  r == nil ==> p == s
 // @ ensures  r == nil ==> typeOf(p) == type[*Decoded]
-// @ ensures  r == nil && old(unfolding s.Mem(ubuf) in s.Base.InfValid()) ==> unfolding (p.(*Decoded)).Mem(ubuf) in (p.(*Decoded)).Base.InfValid()
+// @ ensures  r == nil && old(s.InfValid(ubuf)) ==> (p.(*Decoded)).InfValid(ubuf)
 // @ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
 // @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
@@ -241,7 +236,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ requires 0 <= i && i < unfolding s.Base.Mem() in s.NumINF
 		//@ requires 0 <= j && j < unfolding s.Base.Mem() in s.NumINF
 		//@ ensures  s.Base.Mem()
-		//@ ensures  s.Base.getNumINF() == before(s.Base.getNumINF())
+		//@ ensures  s.Base.GetNumINF() == before(s.Base.GetNumINF())
 		//@ ensures  s.Base.getNumHops() == before(s.Base.getNumHops())
 		//@ ensures  before(s.Base.InfValid()) ==> s.Base.InfValid()
 		//@ decreases
@@ -258,9 +253,9 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ outline(
 	//@ unfold s.Mem(ubuf)
 	//@ invariant acc(s.Base.Mem(), definitions.ReadL10)
-	//@ invariant 0 <= i && i <= s.getNumINF()
+	//@ invariant 0 <= i && i <= s.GetNumINF()
 	//@ invariant acc(&s.InfoFields, definitions.ReadL10)
-	//@ invariant len(s.InfoFields) == s.getNumINF()
+	//@ invariant len(s.InfoFields) == s.GetNumINF()
 	//@ invariant forall i int :: { &s.InfoFields[i] } 0 <= i && i < len(s.InfoFields) ==> (acc(&s.InfoFields[i].ConsDir))
 	//@ decreases MaxINFs-i
 	// Reverse cons dir flags

@@ -2337,7 +2337,7 @@ func (p *scionPacketProcessor) prepareSCMP(typ slayers.SCMPType, code slayers.SC
 	// back to rawPkt (quote).
 	var path *scion.Raw
 	// assert false // 2m21s
-	// @ ubufPath := p.scionLayer.GetPathUbuf(ubufS)
+	// @ ubufPath := p.scionLayer.UBPath(ubufS)
 	// @ unfold p.scionLayer.Mem(ubufS)
 	// @ assert p.scionLayer.Path.Mem(ubufS[slayers.CmnHdrLen+p.scionLayer.AddrHdrLen(nil, true) : p.scionLayer.HdrLen*slayers.LineLen])
 	// @ assert p.scionLayer.Path.Mem(ubufPath)

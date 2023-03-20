@@ -129,10 +129,8 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 }
 
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
-// @ requires  slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ requires  s.Mem(ubuf)
-// @ ensures   slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ ensures   s.Mem(ubuf)
+// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ preserves s.Mem(ubuf)
 // @ ensures   err == nil ==> d.Mem(unfolding acc(s.Mem(ubuf), _) in s.Raw)
 // @ ensures   err == nil ==> (old(s.InfValid(ubuf)) ==> d.InfValid(unfolding acc(s.Mem(ubuf), _) in s.Raw))
 // @ ensures   err != nil ==> err.ErrorMem()

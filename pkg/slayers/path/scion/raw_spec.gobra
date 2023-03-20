@@ -178,13 +178,16 @@ requires r.RawIdxPermRemainder(ubuf, idx, p)
 ensures  acc(r.Mem(ubuf), p)
 ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 ensures  forall i int :: 0 <= i && i < idx ==> old(unfolding r.RawIdxPermRemainder(ubuf, idx, p) in unfolding acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) in r.Raw[i]) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p) in ubuf[i])
-ensures  old(unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.CurrINF) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.CurrINF)
-ensures  old(unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.SegLen[0]) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.SegLen[0])
-ensures  old(unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.SegLen[1]) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.SegLen[1])
-ensures  old(unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.SegLen[2]) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.SegLen[2])
-ensures  old(unfolding acc(r.Base.Mem(), p/2) in r.Base.NumINF) == (unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.NumINF)
+ensures  old(r.Base.GetCurrINF()) == r.GetCurrINF(ubuf)
+ensures  old(r.Base.GetSegLen(0)) == r.GetSegLen(ubuf, 0)
+ensures  old(r.Base.GetSegLen(1)) == r.GetSegLen(ubuf, 1)
+ensures  old(r.Base.GetSegLen(2)) == r.GetSegLen(ubuf, 2)
+ensures  old(r.Base.GetNumINF()) == r.GetNumINF(ubuf)
 decreases
 func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
+	// These foldings and unfoldings are done in two steps
+	// so that Gobra can maintain the knowledge that the
+	// contents of the slices are unchanged
 	unfold r.RawIdxPermRemainder(ubuf, idx, p)
 	unfold acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p/2)
 	slices.Unslice_Bytes(ubuf, 0, idx, p/2)
@@ -208,14 +211,17 @@ ensures  acc(&r.Raw, p/2)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
 ensures  acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
 ensures  forall i int :: 0 <= i && i < idx ==> (unfolding acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) in &r.Raw[:idx][i] == &r.Raw[i] && r.Raw[i] == old(unfolding acc(r.Mem(ubuf), p) in unfolding acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p) in r.Raw[i]))
-ensures  (unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.CurrINF) == old(unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.CurrINF)
-ensures  (unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.SegLen[0]) == old(unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.SegLen[0])
-ensures  (unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.SegLen[1]) == old(unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.SegLen[1])
-ensures  (unfolding acc(r.Base.Mem(), p/2) in r.Base.PathMeta.SegLen[2]) == old(unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.PathMeta.SegLen[2])
-ensures  (unfolding acc(r.Base.Mem(), p/2) in r.Base.NumINF) == old(unfolding acc(r.Mem(ubuf), p) in unfolding acc(r.Base.Mem(), p) in r.Base.NumINF)
+ensures  r.Base.GetCurrINF() == old(r.GetCurrINF(ubuf))
+ensures  r.Base.GetSegLen(0) == old(r.GetSegLen(ubuf, 0))
+ensures  r.Base.GetSegLen(1) == old(r.GetSegLen(ubuf, 1))
+ensures  r.Base.GetSegLen(2) == old(r.GetSegLen(ubuf, 2))
+ensures  r.Base.GetNumINF() == old(r.GetNumINF(ubuf))
 ensures  r.RawIdxPermRemainder(ubuf, idx, p)
 decreases
 func (r *Raw) RawIdxPerm(ubuf []byte, idx int, p perm) {
+	// These foldings and unfoldings are done in two steps
+	// so that Gobra can maintain the knowledge that the
+	// contents of the slices are unchanged
 	unfold acc(r.Mem(ubuf), p)
 	unfold acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p/2)
 	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, p/2)
@@ -318,6 +324,14 @@ requires acc(r.Mem(ub), _)
 decreases
 pure func (r *Raw) GetCurrINF(ghost ub []byte) uint8 {
 	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrINF)
+}
+
+ghost
+requires acc(r.Mem(ub), _)
+requires 0 <= index && index < 3
+decreases
+pure func (r *Raw) GetSegLen(ghost ub []byte, index int) uint8 {
+	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.SegLen[index])
 }
 
 ghost
