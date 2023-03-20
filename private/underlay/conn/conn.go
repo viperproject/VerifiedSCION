@@ -44,29 +44,29 @@ type Messages []ipv4.Message
 type Conn interface {
 	//@ pred Mem()
 	// (VerifiedSCION) Reads a message to b. Returns the number of read bytes.
-	//@ preserves Mem()
+	//@ requires  acc(Mem(), _)
 	//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err == nil ==> acc(addr.Mem(), _)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error)
-	//@ preserves Mem()
+	//@ requires  acc(Mem(), _)
 	//@ preserves forall i int :: { &m[i] } 0 <= i && i < len(m) ==> m[i].Mem(1)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(m)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(m Messages) (n int, err error)
-	//@ preserves Mem()
+	//@ requires  acc(Mem(), _)
 	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	Write(b []byte) (n int, err error)
 	//@ requires  acc(u.Mem(), _)
-	//@ preserves Mem()
+	//@ requires  acc(Mem(), _)
 	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, u *net.UDPAddr) (n int, err error)
-	//@ preserves Mem()
+	//@ requires  acc(Mem(), _)
 	//@ preserves forall i int :: { &m[i] } 0 <= i && i < len(m) ==> acc(m[i].Mem(1), definitions.ReadL10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(m)
 	//@ ensures   err != nil ==> err.ErrorMem()
@@ -163,25 +163,23 @@ func newConnUDPIPv4(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv4,
 
 // ReadBatch reads up to len(msgs) packets, and stores them in msgs.
 // It returns the number of packets read, and an error if any.
-// @ preserves c.Mem()
+// @ requires  acc(c.Mem(), _)
 // @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 // @ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
 // @ ensures   errRet != nil ==> errRet.ErrorMem()
 func (c *connUDPIPv4) ReadBatch(msgs Messages) (nRet int, errRet error) {
-	//@ unfold c.Mem()
+	//@ unfold acc(c.Mem(), _)
 	// (VerifiedSCION) 1 is the length of the buffers of the messages in msgs
 	n, err := c.pconn.ReadBatch(msgs, syscall.MSG_WAITFORONE /*@, 1 @*/)
-	//@ fold c.Mem()
 	return n, err
 }
 
-// @ preserves c.Mem()
+// @ requires  acc(c.Mem(), _)
 // @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
 // @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) WriteBatch(msgs Messages, flags int) (n int, err error) {
-	//@ unfold c.Mem()
-	//@ defer fold c.Mem()
+	//@ unfold acc(c.Mem(), _)
 	// (VerifiedSCION) 1 is the length of the buffers of the messages in msgs
 	return c.pconn.WriteBatch(msgs, flags /*@, 1 @*/)
 }
@@ -239,25 +237,23 @@ func newConnUDPIPv6(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv6,
 
 // ReadBatch reads up to len(msgs) packets, and stores them in msgs.
 // It returns the number of packets read, and an error if any.
-// @ preserves c.Mem()
+// @ requires  acc(c.Mem(), _)
 // @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 // @ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
 // @ ensures   errRet != nil ==> errRet.ErrorMem()
 func (c *connUDPIPv6) ReadBatch(msgs Messages) (nRet int, errRet error) {
-	//@ unfold c.Mem()
+	//@ unfold acc(c.Mem(), _)
 	// (VerifiedSCION) 1 is the length of the buffers of the messages in msgs
 	n, err := c.pconn.ReadBatch(msgs, syscall.MSG_WAITFORONE /*@, 1 @*/)
-	//@ fold c.Mem()
 	return n, err
 }
 
-// @ preserves c.Mem()
+// @ requires  acc(c.Mem(), _)
 // @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
 // @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) WriteBatch(msgs Messages, flags int) (n int, err error) {
-	//@ unfold c.Mem()
-	//@ defer fold c.Mem()
+	//@ unfold acc(c.Mem(), _)
 	// (VerifiedSCION) 1 is the length of the buffers of the messages in msgs
 	return c.pconn.WriteBatch(msgs, flags /*@, 1 @*/)
 }
@@ -398,38 +394,35 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 	return nil
 }
 
-// @ preserves c.Mem()
+// @ preserves acc(c.Mem(), _)
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-// @ preserves unfolding c.Mem() in c.conn == underlyingConn
+// @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err == nil ==> acc(addr.Mem(), _)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) ReadFrom(b []byte /*@, ghost underlyingConn *net.UDPConn @*/) (n int, addr *net.UDPAddr, err error) {
-	//@ unfold c.Mem()
-	//@ defer fold c.Mem()
+	//@ unfold acc(c.Mem(), _)
 	return c.conn.ReadFromUDP(b)
 }
 
-// @ preserves c.Mem()
+// @ preserves acc(c.Mem(), _)
 // @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
-// @ preserves unfolding c.Mem() in c.conn == underlyingConn
+// @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) Write(b []byte /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
-	//@ unfold c.Mem()
-	//@ defer fold c.Mem()
+	//@ unfold acc(c.Mem(), _)
 	return c.conn.Write(b)
 }
 
 // @ requires  acc(dst.Mem(), _)
-// @ preserves c.Mem()
-// @ preserves unfolding c.Mem() in c.conn == underlyingConn
+// @ preserves acc(c.Mem(), _)
+// @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
 // @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
-	//@ unfold c.Mem()
-	//@ defer fold c.Mem()
+	//@ unfold acc(c.Mem(), _)
 	if c.Remote != nil {
 		return c.conn.Write(b)
 	}

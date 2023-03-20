@@ -121,12 +121,19 @@ requires acc(p.Mem(), _)
 pure func (p *PacketConn) GetUnderlyingConn() (c net.PacketConn)
 
 ghost
-requires p.Mem()
+requires acc(p.Mem(), _)
 ensures  c === old(p.GetUnderlyingConn())
 ensures  c.Mem()
 ensures  c.Mem() --* (p.Mem() && p.GetUnderlyingConn() === c)
 decreases _
 func (p *PacketConn) ExchangePerm() (c net.PacketConn)
+
+ghost
+requires acc(p.Mem(), _)
+ensures  c === old(p.GetUnderlyingConn())
+ensures  acc(c.Mem(), _)
+decreases _
+func (p *PacketConn) ExchangeWildcardPerm() (c net.PacketConn)
 
 // A RawConn represents a packet network endpoint that uses the IPv4
 // transport. It is used to control several IP-level socket options
@@ -220,8 +227,8 @@ func NewRawConn(c net.PacketConn) (r *RawConn, err error) {
 // On a successful read it returns the number of messages received, up
 // to len(ms).
 trusted
+preserves acc(c.Mem(), _)
 preserves forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem(lenBuffers)
-preserves c.Mem()
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> (0 <= n && n <= len(ms))
 ensures   err != nil ==> err.ErrorMem()
@@ -234,7 +241,7 @@ func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers 
 // It returns the number of messages written on a successful write.
 trusted
 preserves forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), definitions.ReadL10)
-preserves c.Mem()
+preserves acc(c.Mem(), _)
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> 0 <= n && n <= len(ms)
 ensures   err != nil ==> err.ErrorMem()

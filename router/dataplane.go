@@ -111,7 +111,8 @@ type bfdSession interface {
 // BatchConn is a connection that supports batch reads and writes.
 // (VerifiedSCION) the spec of this interface exactly matches that of the same methods
 // in private/underlay/conn/Conn
-// TODO: better triggers,
+// TODO: better triggers
+// TODO: add IO spec here
 type BatchConn interface {
 	// @ pred Mem()
 
@@ -716,7 +717,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
-			// @ def.TODO()
 
 			// @ invariant acc(&d.running, _) && d.running
 			// @ invariant acc(rd.Mem(), _)
