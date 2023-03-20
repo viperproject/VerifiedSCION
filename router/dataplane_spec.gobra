@@ -25,15 +25,6 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 )
 
-pred (d *DataPlane) MacFactoryOperational() {
-	acc(&d.macFactory, 1/2) &&
-	acc(&d.key, 1/2) &&
-	acc(d.key, 1/2) &&
-	acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
-	scrypto.ValidKeyForHash(*d.key) &&
-	d.macFactory implements MacFactorySpec{d.key}
-}
-
 // TODO: maybe change interpretation of Mutex depending on whether the
 // dataplane is running or not. This is because, when Run is called and
 // d.running is set to true, the permissions to some of these fields is transferred
@@ -243,6 +234,14 @@ func (d *DataPlane) getLocalIA() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
+decreases
+func (d *DataPlane) getNeighborIAs() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+ghost
+requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(&d.svc, _) && (d.svc != nil ==> acc(d.svc.Mem(), _))
 decreases
 func (d *DataPlane) getSvcMem() {
@@ -263,6 +262,25 @@ ensures  acc(&d.internal, _) && (d.internal != nil ==> acc(d.internal.Mem(), _))
 decreases
 func (d *DataPlane) getInternal() {
 	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.macFactory, _)
+decreases
+func (d *DataPlane) getMacFactoryMem() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+ghost
+requires acc(MutexInvariant!<d!>(), _)
+requires acc(&d.macFactory, _) && d.macFactory != nil
+ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
+ensures  acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
+ensures  scrypto.ValidKeyForHash(*d.key)
+ensures  d.macFactory implements MacFactorySpec{d.key}
+decreases
+func (d *DataPlane) getNewPacketProcessorFootprint() {
+    unfold acc(MutexInvariant!<d!>(), _)
 }
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
@@ -310,4 +328,25 @@ ghost
 ensures noSVCBackend.ErrorMem()
 decreases _
 func establishNoSVCBackend()
+
+// cannotRoute is duplicable: we can always establish its invariant after init
+ghost
+ensures cannotRoute.ErrorMem()
+decreases _
+func establishCannotRoute()
+
 /**** End of post-init invariants ****/
+
+/** Start of closure specs for the Run method **/
+requires true
+func readClosureSpec(ingressID uint16, rd BatchConn)
+
+requires true
+func closureSpec1(ifID uint16, c bfdSession)
+
+requires true
+func closureSpec2(i uint16, c BatchConn)
+
+requires true
+func closureSpec3(c BatchConn)
+/** End of closure specs for the Run method **/

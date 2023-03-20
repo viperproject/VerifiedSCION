@@ -14,9 +14,20 @@
 
 // +gobra
 
-package definitions
+/**** PACKETS ****/
 
-func test() {
-	assert ReadL00 < writePerm
-	assert ReadL0 < ReadL00
+package io
+
+// pkt2
+type IO_pkt2 adt {
+	// Here, we already instantiated the type params
+	IO_Packet2 {
+		CurrSeg  IO_seg3
+		LeftSeg  option[IO_seg2]
+		MidSeg   option[IO_seg2]
+		RightSeg option[IO_seg2]
+	}
 }
+
+// pkt3 is the same as pkt2 instantiated with type parameters
+type IO_pkt3 = IO_pkt2

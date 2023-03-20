@@ -14,9 +14,24 @@
 
 // +gobra
 
-package definitions
+/**** SEGMENTS ****/
 
-func test() {
-	assert ReadL00 < writePerm
-	assert ReadL0 < ReadL00
+package io
+
+type IO_ainfo = uint
+
+type IO_seg2 adt {
+	// Here, we already instantiated the type params
+	IO_seg3_ {
+		AInfo IO_ainfo // nat in Isabelle
+		UInfo set[IO_msgterm]
+		ConsDir bool
+		Peer bool
+		Past seq[IO_HF]     // formalized originally as a seq of HF_scheme
+		Future seq[IO_HF]   // formalized originally as a seq of HF_scheme
+		History seq[IO_ahi] // formalized originally as a seq of ahi_scheme
+	}
 }
+
+// seg3 is the same as seg2 instantiated with type parameters
+type IO_seg3 = IO_seg2

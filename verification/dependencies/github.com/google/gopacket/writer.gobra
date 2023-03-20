@@ -88,6 +88,7 @@ type SerializeBuffer interface {
 
 	preserves Mem()
 	ensures   err != nil ==> err.ErrorMem()
+	ensures   err == nil ==> len(UBuf()) == 0
 	decreases
 	Clear() (err error)
 

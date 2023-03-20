@@ -147,8 +147,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 	acc(&s.HdrLen) &&
 	acc(&s.PayloadLen) &&
 	acc(&s.PathType) &&
-	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.Has3Bits() &&
-	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.Has3Bits() &&
+	acc(&s.DstAddrType, def.HalfPerm) && s.DstAddrType.Has3Bits() &&
+	acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits() &&
 	// len of ubuf:
 	0 <= s.HdrLen &&
 	0 <= CmnHdrLen + s.AddrHdrLen(nil, true) &&
@@ -171,14 +171,18 @@ pred (s *SCION) Mem(ubuf []byte) {
 	acc(&s.pathPoolRaw) &&
 	(!s.pathPoolInitialized() ==> PathPoolMem(s.pathPool, s.pathPoolRaw)) &&
 	(s.pathPoolInitialized() ==> (s.pathPool != nil && s.pathPoolRaw != nil &&
-		PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, s.PathType) && s.Path === s.getPathPure(s.PathType)))
+		PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, s.PathType) && s.Path === s.getPathPure(s.PathType))) &&
+	// end of path pool
+	// helpful facts for other methods:
+	// - for router::updateScionLayer:
+	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) <= len(ubuf))
 }
 
 pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.DstIA) &&
 	acc(&s.SrcIA) &&
-	acc(&s.DstAddrType, def.ReadL1) && s.DstAddrType.Has3Bits() &&
-	acc(&s.SrcAddrType, def.ReadL1) && s.SrcAddrType.Has3Bits() &&
+	acc(&s.DstAddrType, def.HalfPerm) && s.DstAddrType.Has3Bits() &&
+	acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits() &&
 	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
 	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	s.AddrHdrLen(nil, true) == s.addrHdrLenAbstractionLeak() &&
@@ -224,6 +228,29 @@ pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
 }
 
 ghost
+requires acc(s.Mem(ub), def.ReadL15)
+ensures  acc(s, def.ReadL16)
+ensures  s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
+ensures  0 <= start && start <= end && end <= len(ub)
+ensures  s.RawDstAddr === ub[start:end]
+ensures  acc(s, def.ReadL16) --* acc(s.Mem(ub), def.ReadL15)
+decreases
+func (s *SCION) ExtractAcc(ghost ub []byte) (start, end int) {
+	unfold acc(s.Mem(ub), def.ReadL16)
+	unfold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL16)
+	start = CmnHdrLen+2*addr.IABytes
+	end = CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()
+	assert s.RawDstAddr === ub[start:end]
+	package acc(s, def.ReadL16) --* acc(s.Mem(ub), def.ReadL15) {
+		unfold acc(s.Mem(ub), def.ReadL16)
+		unfold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL16)
+		fold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL15)
+		fold acc(s.Mem(ub), def.ReadL15)
+	}
+	return start, end
+}
+
+ghost
 pure
 decreases
 func (a AddrType) Has3Bits() (res bool) {
@@ -250,18 +277,18 @@ ghost
 requires  acc(s.Mem(ub), _)
 decreases
 pure func (s *SCION) GetPayloadLen(ghost ub []byte) uint16 {
-    return unfolding acc(s.Mem(ub), _) in s.PayloadLen
+	return unfolding acc(s.Mem(ub), _) in s.PayloadLen
 }
 
 ghost
 requires  acc(s.Mem(ub), _)
 decreases
 pure func (s *SCION) GetPayload(ghost ub []byte) []byte {
-    return unfolding acc(s.Mem(ub), _) in s.Payload
+	return unfolding acc(s.Mem(ub), _) in s.Payload
 }
 
 ghost
-requires acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
+requires acc(&s.DstAddrType, _) && acc(&s.SrcAddrType, _)
 requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 ensures  0 <= res
 decreases
@@ -378,3 +405,17 @@ ghost
 ensures acc(path.PathPackageMem(), _)
 decreases
 func EstablishPathPkgMem()
+
+ghost
+requires acc(s.Mem(ub), _)
+pure func (s *SCION) HasOneHopPath(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in typeOf(s.Path) == type[*onehop.Path]
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+requires s.HasOneHopPath(ub)
+ensures  b
+pure func (s *SCION) InferSizeOHP(ghost ub []byte) (b bool) {
+	return unfolding acc(s.Mem(ub), _) in CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ub[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) <= len(ub)
+}
