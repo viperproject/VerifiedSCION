@@ -160,11 +160,11 @@ func (s *Base) IncPath() (e error) {
 }
 
 // IsXover returns whether we are at a crossover point.
-// @ preserves acc(s.Mem(), definitions.ReadL10)
+// @ preserves acc(s.Mem(), definitions.ReadL19)
 // @ decreases
 func (s *Base) IsXover() bool {
-	//@ unfold acc(s.Mem(), definitions.ReadL10)
-	//@ defer fold acc(s.Mem(), definitions.ReadL10)
+	//@ unfold acc(s.Mem(), definitions.ReadL19)
+	//@ defer fold acc(s.Mem(), definitions.ReadL19)
 	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
 		s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1)
 }
