@@ -94,8 +94,8 @@ type bfdSession interface {
 	// @ pred Mem()
 
 	// (VerifiedSCION) ctx is used to obtain a logger from ctx by
-	// calling the method Value. ReadL20 permissions are enough for that.
-	// @ requires acc(ctx.Mem(), def.ReadL20)
+	// calling the method Value. Wildcard permission is enough for that.
+	// @ requires acc(ctx.Mem(), _)
 	// @ requires acc(Mem(), _)
 	// @ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
@@ -111,13 +111,12 @@ type bfdSession interface {
 // BatchConn is a connection that supports batch reads and writes.
 // (VerifiedSCION) the spec of this interface exactly matches that of the same methods
 // in private/underlay/conn/Conn
-// TODO: better triggers
 // TODO: add IO spec here
 type BatchConn interface {
 	// @ pred Mem()
 
 	// @ requires  acc(Mem(), _)
-	// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(msgs underlayconn.Messages) (n int, err error)
@@ -128,7 +127,7 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
-	// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), def.ReadL10)
+	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), def.ReadL10)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
@@ -672,12 +671,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	read /*@@@*/ :=
 		// Note(VerifiedSCION): this precondition may cause problems ahead because of the lack of permissions to d.mtx
 		// @ requires acc(&d, _)
-		// @ requires acc(&d.running, _)
-		// requires acc(&d.external, _) && (d.external != nil ==> acc(d.external, _))
-		// requires ingressID in domain(d.external)
-		// @ requires acc(&d.macFactory, _) && d.macFactory != nil
+		// @ requires acc(d,  _)
 		// @ requires acc(MutexInvariant!<d!>(), _)
+		// @ requires d.macFactory != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
+		// @ requires d.external != nil && acc(AccBatchConn(d.external), _)
+		// @ requires unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
+		// requires d.running
 		// requires ingressID in domain(???)
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
@@ -718,8 +718,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
 
-			// @ invariant acc(&d.running, _) && d.running
+			// @ invariant acc(&d, _)
+			// @ invariant acc(d, _)
+			// @ invariant acc(MutexInvariant!<d!>(), _)
 			// @ invariant acc(rd.Mem(), _)
+			// @ invariant d.external != nil && acc(AccBatchConn(d.external), _)
+			// @ invariant unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
+			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 			for d.running {
 				pkts, err := rd.ReadBatch(msgs)
 				if err != nil {
