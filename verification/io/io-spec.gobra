@@ -134,7 +134,7 @@ pred dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Place) {
 			(exists currseg IO_seg3, nextseg IO_seg3 ::
 			currseg.ConsDir == nextseg.ConsDir &&
 				(exists traversedseg IO_seg3, intermediatepkt IO_pkt3, hf1 IO_HF, hf2 IO_HF ::
-				xover_core2_link_type(hf1 IO_HF, hf2 IO_HF, asid(), currseg.ConsDir) &&
+				xover_core2_link_type(hf1, hf2, asid(), currseg.ConsDir) &&
 					(exists nextfut seq[IO_HF] ::
 					dp3s_xover_common(
 						s,
@@ -157,11 +157,11 @@ pred dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Place) {
 			(exists currseg IO_seg3, nextseg IO_seg3 ::
 			currseg.ConsDir == nextseg.ConsDir &&
 				(exists traversedseg IO_seg3, intermediatepkt IO_pkt3, hf1 IO_HF, hf2 IO_HF ::
-				xover_core2_link_type(hf1 IO_HF, hf2 IO_HF, asid(), currseg.ConsDir) &&
+				xover_core2_link_type(hf1, hf2, asid(), currseg.ConsDir) &&
 					(exists nextfut seq[IO_HF]::
 					dp3s_xover_common(
 						s,
-						$pkt,
+						v.IO_Internal_val1_1,
 						currseg,
 						nextseg,
 						traversedseg,
@@ -169,9 +169,9 @@ pred dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Place) {
 						hf1,
 						hf2,
 						nextfut,
-						$recvif,
-						$newpkt,
-						$nextif)))))) ==> (true)) &&
+						v.IO_Internal_val1_2,
+						v.IO_Internal_val1_3,
+						v.IO_Internal_val1_4)))))) ==> (true)) &&
 		(!(v.isIO_Internal_val1) ==> true)
 }
 /* s t ≡ ∀⋆ (λv. case v of
@@ -195,12 +195,12 @@ pred dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
 	forall v IO_val ::
 	(v.isIO_Internal_val2 ==>
 		((None{} in domain(s.ibuf) ==>
-			($pkt in s.ibuf[None{}] ==>
+			(v.IO_Internal_val2_1 in s.ibuf[None{}] ==>
 				CBio_IN_bio3s_exit(t, v) &&
 					dp3s_iospec_ordered(
 						dp3s_add_obuf(s, v.IO_Internal_val2_3, v.IO_Internal_val2_2),
 						dp3s_iospec_bio3s_exit_T(s, t, v))) &&
-			(!($pkg in s.ibuf[None{}]) ==> true)) &&
+			(!(v.IO_Internal_val2_1 in s.ibuf[None{}]) ==> true)) &&
 			(!(None{} in domain(s.ibuf) ==> true)))) &&
 		(!(v.isIO_Internal_val1) ==> true)
 }
