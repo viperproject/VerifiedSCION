@@ -22,6 +22,10 @@ package io
 
 ghost
 decreases
+pure func core_as_set() set[IO_as]
+
+ghost
+decreases
 pure func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool
 
 ghost
