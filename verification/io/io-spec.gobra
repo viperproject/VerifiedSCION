@@ -49,8 +49,8 @@ pure func CBio_IN_bio3s_enter_T(s IO_dp3s_state_local, t Place, v IO_val) Place
 pred dp3s_iospec_bio3s_enter(s IO_dp3s_state_local, t Place) {
 	forall v IO_val ::
 	(v.isIO_Internal_val1 ==>
-		((v.IO_Internal_val1_2 in domain(s.ibuf) ==>
-			((v.IO_Internal_val1_1 in s.ibuf[v.IO_Internal_val1_2] &&
+		((some(v.IO_Internal_val1_2) in domain(s.ibuf) ==>
+			((v.IO_Internal_val1_1 in s.ibuf[some(v.IO_Internal_val1_2)] &&
 				(exists currseg IO_seg3, traversedseg IO_seg3 ::
 				(exists hf1 IO_HF, fut seq[IO_HF] ::
 					dp2_enter_guard(v.IO_Internal_val1_1, currseg, traversedseg, asid(), hf1, v.IO_Internal_val1_2, fut) &&
@@ -59,12 +59,12 @@ pred dp3s_iospec_bio3s_enter(s IO_dp3s_state_local, t Place) {
 					dp3s_iospec_ordered(
 						dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3),
 						CBio_IN_bio3s_enter_T(s, t, v)))) &&
-			(!(v.IO_Internal_val1_1 in s.ibuf[v.IO_Internal_val1_2] &&
+			(!(v.IO_Internal_val1_1 in s.ibuf[some(v.IO_Internal_val1_2)] &&
 				(exists currseg IO_seg3, traversedseg IO_seg3 ::
 				(exists hf1 IO_HF, fut seq[IO_HF] ::
 					dp2_enter_guard(v.IO_Internal_val1_1, currseg, traversedseg, asid(), hf1, v.IO_Internal_val1_2, fut) &&
 						dp3s_forward(IO_pkt2(IO_Packet2{traversedseg, v.IO_Internal_val1_1.LeftSeg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg}), v.IO_Internal_val1_3, v.IO_Internal_val1_4)))) ==> true)) &&
-			(!(v.IO_Internal_val1_2 in domain(s.ibuf)) ==> true))) &&
+			(!(some(v.IO_Internal_val1_2) in domain(s.ibuf)) ==> true))) &&
 		(!(v.isIO_Internal_val1) ==> true)
 }
 
@@ -194,14 +194,14 @@ pure func dp3s_iospec_bio3s_exit_T(s IO_dp3s_state_local, t Place, v IO_val) Pla
 pred dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
 	forall v IO_val ::
 	(v.isIO_Internal_val2 ==>
-		((None{} in domain(s.ibuf) ==>
-			(v.IO_Internal_val2_1 in s.ibuf[None{}] ==>
+		((none[IO_ifs] in domain(s.ibuf) ==>
+			((v.IO_Internal_val2_1 in s.ibuf[none[IO_ifs]]) ==>
 				CBio_IN_bio3s_exit(t, v) &&
 					dp3s_iospec_ordered(
-						dp3s_add_obuf(s, v.IO_Internal_val2_3, v.IO_Internal_val2_2),
+						dp3s_add_obuf(s, some(v.IO_Internal_val2_3), v.IO_Internal_val2_2),
 						dp3s_iospec_bio3s_exit_T(s, t, v))) &&
-			(!(v.IO_Internal_val2_1 in s.ibuf[None{}]) ==> true)) &&
-			(!(None{} in domain(s.ibuf) ==> true)))) &&
+			(!(v.IO_Internal_val2_1 in s.ibuf[none[IO_ifs]]) ==> true)) &&
+			(!(none[IO_ifs] in domain(s.ibuf) ==> true)))) &&
 		(!(v.isIO_Internal_val1) ==> true)
 }
 
@@ -221,17 +221,14 @@ pred dp3s_iospec_bio3s_send(s IO_dp3s_state_local, t Place) {
 				CBioIO_bio3s_send(t, v) &&
 					dp3s_iospec_ordered(
 						s,
-						dp3s_iospec_bio3s_send_T(s, t, v)
-					)) &&
+						dp3s_iospec_bio3s_send_T(s, t, v))) &&
 			(!(v.IO_val_Pkt2_2 in s.obuf[v.IO_val_Pkt2_1]) ==> true)) &&
 		(!(v.IO_val_Pkt2_1 in domain(s.obuf)) ==> true)) &&
 		(v.isIO_val_Unsupported ==>
 			CBioIO_bio3s_send(t, v) &&
 				dp3s_iospec_ordered(
 					s,
-					dp3s_iospec_bio3s_send_T(s, t, v)
-				)
-		) &&
+					dp3s_iospec_bio3s_send_T(s, t, v))) &&
 		(!v.isIO_val_Pkt2 && !v.isIO_val_Unsupported ==> true)
 }
 
