@@ -192,10 +192,10 @@ pred dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
 	(v.isIO_Internal_val2 ==>
 		((none[IO_ifs] in domain(s.ibuf) ==>
 			(dp3s_iospec_bio3s_exit_guard(s, t, v) ==>
-				CBio_IN_bio3s_exit(t, v) &&
+				(CBio_IN_bio3s_exit(t, v) &&
 					dp3s_iospec_ordered(
 						dp3s_add_obuf(s, some(v.IO_Internal_val2_3), v.IO_Internal_val2_2),
-						dp3s_iospec_bio3s_exit_T(s, t, v))) &&
+						dp3s_iospec_bio3s_exit_T(s, t, v)))) &&
 			(!dp3s_iospec_bio3s_exit_guard(s, t, v) ==> true)) &&
 			(!(none[IO_ifs] in domain(s.ibuf) ==> true)))) &&
 		(!(v.isIO_Internal_val1) ==> true)
