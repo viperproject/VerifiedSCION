@@ -169,7 +169,7 @@ pred dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Place) {
 				dp3s_iospec_ordered(
 					dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3),
 					dp3s_iospec_bio3s_xover_core_T(s, t, v)))) &&
-		(!dp3s_iospec_bio3s_xover_core_guard(s, t, v)) ==> true) &&
+		((!dp3s_iospec_bio3s_xover_core_guard(s, t, v)) ==> true)) &&
 		(!(v.isIO_Internal_val1) ==> true)
 }
 
