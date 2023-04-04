@@ -1,0 +1,161 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+/**** IO-Specification ****/
+
+package io
+
+// This is the main IO Specification.
+pred dp3s_iospec_ordered(s IO_dp3s_state_local, t Place) {
+	dp3s_iospec_bio3s_enter(s, t) &&
+	dp3s_iospec_bio3s_xover_up2down(s, t) &&
+	dp3s_iospec_bio3s_xover_core(s, t) &&
+	dp3s_iospec_bio3s_exit(s, t) &&
+	dp3s_iospec_bio3s_send(s, t) &&
+	dp3s_iospec_bio3s_recv(s, t) &&
+	dp3s_iospec_skip(s, t) &&
+	dp3s_iospec_stop(s, t)
+}
+
+// TODO: match does not work with assertions yet
+// TODO: let cannot have resources
+
+type Place int
+
+pred token(t Place)
+
+ghost
+pure func undefined() IO_dp3s_state_local
+
+pred dp3s_iospec_bio3s_enter(s IO_dp3s_state_local, t Place)
+/*
+∀⋆ (λv. case v of
+Internal_val1 pkt recvif newpkt nextif ⇒
+if pkt ∈ ibuf s (Some recvif) ∧ (∃currseg traversedseg.
+(∃hf1 fut. dp2_enter_guard pkt currseg traversedseg asid hf1 recvif fut) ∧
+dp3s_forward (Packet2 traversedseg (LeftSeg pkt) (MidSeg pkt) (RightSeg pkt)) newpkt
+nextif)
+then ExT (λT'. ExV (λX. CBio (IN bio3s_enter) t (Internal_val1 pkt recvif newpkt nextif) X T'
+⋆ dp3s_iospec_ordered (dp3s_add_obuf s nextif newpkt) T')) else Bool True | _ ⇒ Bool True)
+*/
+
+pred dp3s_iospec_bio3s_xover_up2down(s IO_dp3s_state_local, t Place)
+/*
+∀⋆ (λv. case v of
+Internal_val1 pkt recvif newpkt nextif ⇒
+if ∃currseg. ¬ ConsDir currseg ∧ (∃nextseg. ConsDir nextseg ∧
+(∃traversedseg intermediatepkt hf1 hf2.
+xover_up2down2_link_type asid hf1 hf2 ∧
+(∃nextfut. dp3s_xover_common s pkt currseg nextseg traversedseg intermediatepkt hf1
+hf2 nextfut recvif newpkt nextif)))
+then ExT (λT'. ExV (λX. CBio (IN bio3s_xover_up2down) t (Internal_val1 pkt recvif newpkt
+nextif) X T'
+)
+⋆ dp3s_iospec_ordered (dp3s_add_obuf s nextif newpkt) T')) else Bool True
+| _ ⇒ Bool True)
+*/
+
+pred dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Place)
+/* s t ≡ ∀⋆ (λv. case v of
+Internal_val1 pkt recvif newpkt nextif ⇒
+if asid ∈ core ∧ (∃currseg nextseg.
+ConsDir nextseg = ConsDir currseg ∧ (∃traversedseg intermediatepkt hf1 hf2.
+xover_core2_link_type hf1 hf2 asid (ConsDir currseg) ∧
+(∃nextfut. dp3s_xover_common s pkt currseg nextseg traversedseg intermediatepkt hf1 hf2 nextfut recvif newpkt nextif)))
+then ExT (λT'. ExV (λX. CBio (IN bio3s_xover_core) t (Internal_val1 pkt recvif newpkt nextif) X
+T' * dp3s_iospec_ordered (dp3s_add_obuf s nextif newpkt) T')) else Bool True
+| _ ⇒ Bool True)
+*/
+
+pred dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place)
+/* s t ≡ ∀⋆ (λv. case v of
+Internal_val2 pkt newpkt nextif ⇒
+if pkt ∈ ibuf s None ∧ dp3s_forward_ext pkt newpkt nextif
+then ExT (λT'. ExV (λX. CBio (IN bio3s_exit) t (Internal_val2 pkt newpkt nextif) X T' ⋆ dp3s_iospec_ordered (dp3s_add_obuf s (Some nextif) newpkt) T'))
+else Bool True | _ ⇒ Bool True)
+*/
+
+pred CBioIO_bio3s_send(t Place)
+
+ghost
+requires CBioIO_bio3s_send(t)
+pure func dp3s_iospec_bio3s_send_T(s IO_dp3s_state_local, t Place) Place
+
+ghost
+requires CBioIO_bio3s_send(t)
+pure func dp3s_iospec_bio3s_send_R(s IO_dp3s_state_local, t Place) IO_val
+
+// TODO: annotate WriteBatch, skipped for now
+pred dp3s_iospec_bio3s_send(s IO_dp3s_state_local, t Place)
+/* ≡ ∀⋆ (λv. case v of
+Pkt2 recvif pkt ⇒
+if pkt ∈ obuf s recvif
+then ExT (λT'. ExV (λX. CBio (IO bio3s_send) t (Pkt2 recvif pkt) X T'
+⋆ dp3s_iospec_ordered s T')) else Bool True | Unsupported recvif pkt ⇒
+ExT (λT'. ExV (λX. CBio (IO bio3s_send) t (Unsupported recvif pkt) X T' ⋆ dp3s_iospec_ordered s T')) | _ ⇒ Bool True)
+*/
+
+pred CBioIO_bio3s_recv(t Place)
+
+ghost
+requires CBioIO_bio3s_recv(t)
+pure func dp3s_iospec_bio3s_recv_T(s IO_dp3s_state_local, t Place) Place
+
+ghost
+requires CBioIO_bio3s_recv(t)
+pure func dp3s_iospec_bio3s_recv_R(s IO_dp3s_state_local, t Place) IO_val
+
+// TODO: annotate ReadBatch, should be ignored for now
+// TODO: make simplifying assumption that one packet is received per call to ReadBatch.
+pred dp3s_iospec_bio3s_recv(s IO_dp3s_state_local, t Place) {
+	CBioIO_bio3s_recv(t) &&
+	(dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Pkt2 ==>
+		dp3s_iospec_ordered(
+			dp3s_add_ibuf(
+				s,
+				dp3s_iospec_bio3s_recv_R(s, t).IO_val_Pkt2_1,
+				dp3s_iospec_bio3s_recv_R(s, t).IO_val_Pkt2_2),
+			dp3s_iospec_bio3s_recv_T(s, t))) &&
+	(dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Unsupported ==>
+		dp3s_iospec_ordered(s, dp3s_iospec_bio3s_recv_T(s, t))) &&
+	((!dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Pkt2 && !dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Unsupported) ==>
+		dp3s_iospec_ordered(undefined(), dp3s_iospec_bio3s_recv_T(s, t)))
+
+	/*
+	Ideally:
+	(match dp3s_iospec_bio3s_recv_R(s, t) {
+		case IO_val_Pkt2{?recvif, ?pkt}: true // TODO
+		case IO_val_Unsupported{?recvif, ?pkt}:
+			true // todo
+		default:
+			dp3s_iospec_ordered(undefined(), dp3s_iospec_bio3s_recv_T(s, t))))
+	})
+	*/
+}
+
+pred CBio_Skip(t Place)
+
+ghost
+requires CBio_Skip(t)
+pure func dp3s_iospec_skip_T(s IO_dp3s_state_local, t Place) Place
+
+pred dp3s_iospec_skip(s IO_dp3s_state_local, t Place) {
+	CBio_Skip(t) && dp3s_iospec_ordered(s, dp3s_iospec_skip_T(s, t))
+}
+
+pred dp3s_iospec_stop(s IO_dp3s_state_local, t Place) {
+	true
+}
