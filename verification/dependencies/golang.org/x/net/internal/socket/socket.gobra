@@ -78,6 +78,15 @@ func (m *Message) SplitPerm() {
 }
 
 ghost
+requires acc(m, 1/2) && m.MemWithoutHalf(1)
+ensures  m.Mem(1)
+decreases
+func (m *Message) CombinePerm() {
+	unfold m.MemWithoutHalf(1)
+	fold m.Mem(1)
+}
+
+ghost
 requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].Mem(1)
 ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
 decreases

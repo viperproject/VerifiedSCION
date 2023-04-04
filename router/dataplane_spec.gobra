@@ -199,6 +199,16 @@ func (d *DataPlane) getInternalNextHops() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.forwardingMetrics, _)
+ensures  d.forwardingMetrics != nil  ==> acc(AccForwardingMetrics(d.forwardingMetrics), _)
+decreases
+func (d *DataPlane) getForwardingMetrics() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+
+ghost
+requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(&d.external, _) && (d.external != nil ==> acc(AccBatchConn(d.external), _))
 decreases
 func (d *DataPlane) getExternalMem() {

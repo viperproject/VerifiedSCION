@@ -673,12 +673,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires acc(&d, _)
 		// @ requires acc(d,  _)
 		// @ requires acc(MutexInvariant!<d!>(), _)
+		// @ requires d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
+		// @ requires ingressID in domain(d.forwardingMetrics)
 		// @ requires d.macFactory != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// @ requires d.external != nil && acc(AccBatchConn(d.external), _)
 		// @ requires unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
-		// requires d.running
-		// requires ingressID in domain(???)
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
 			msgs := conn.NewReadMessages(inputBatchCnt)
@@ -721,6 +721,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&d, _)
 			// @ invariant acc(d, _)
 			// @ invariant acc(MutexInvariant!<d!>(), _)
+			// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
+			// @ invariant ingressID in domain(d.forwardingMetrics)
 			// @ invariant acc(rd.Mem(), _)
 			// @ invariant d.external != nil && acc(AccBatchConn(d.external), _)
 			// @ invariant unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
@@ -735,8 +737,26 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				if pkts == 0 {
 					continue
 				}
-				for _, p := range msgs[:pkts] {
+				// @ assert pkts <= len(msgs)
+				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
+				// complications with permissions
+				// @ invariant pkts <= len(msgs)
+				// @ invariant 0 <= i0 && i0 <= pkts
+				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+				// @ invariant acc(&d, _)
+				// @ invariant acc(d, _)
+				// @ invariant acc(MutexInvariant!<d!>(), _)
+				// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
+				// @ invariant ingressID in domain(d.forwardingMetrics)
+				for i0 := 0; i0 < pkts; i0++ {
+					// @ assert &msgs[:pkts][i0] == &msgs[i0]
+					// @ msgs[:pkts][i0].SplitPerm()
+					p := msgs[:pkts][i0]
+					// @ msgs[:pkts][i0].CombinePerm()
 					// input metric
+					// @ d.getForwardingMetrics()
+					// @ unfold acc(AccForwardingMetrics(d.forwardingMetrics), _)
+					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[ingressID], ingressID), _)
 					inputCounters := d.forwardingMetrics[ingressID]
 					inputCounters.InputPacketsTotal.Inc()
 					inputCounters.InputBytesTotal.Add(float64(p.N))
