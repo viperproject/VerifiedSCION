@@ -84,6 +84,14 @@ pure func (m *Message) GetFstBuffer() []byte {
 	return unfolding acc(m.Mem(1), _) in m.Buffers[0]
 }
 
+// Only defined for the case where lenBuffers == 1
+ghost
+requires acc(m.Mem(1), _)
+decreases
+pure func (m *Message) GetN() int {
+	return unfolding acc(m.Mem(1), _) in m.N
+}
+
 ghost
 requires m.Mem(1)
 ensures  acc(m, 1/2) && m.MemWithoutHalf(1)
@@ -91,6 +99,7 @@ ensures  old(m.GetAddr(1)) === m.GetAddrWithoutHalf(1)
 ensures  m.N == old(unfolding m.Mem(1) in m.N)
 ensures  m.Buffers === old(unfolding m.Mem(1) in m.Buffers)
 ensures  old(m.GetFstBuffer()) === unfolding m.MemWithoutHalf(1) in m.Buffers[0]
+ensures  old(m.GetN()) == m.N
 decreases
 func (m *Message) SplitPerm() {
 	unfold m.Mem(1)
@@ -104,6 +113,7 @@ ensures  m.GetAddr(1) === old(m.GetAddrWithoutHalf(1))
 ensures  old(m.N) == unfolding m.Mem(1) in m.N
 ensures  m.GetFstBuffer() === old(unfolding m.MemWithoutHalf(1) in m.Buffers[0])
 ensures  unfolding m.Mem(1) in m.Buffers === old(m.Buffers)
+ensures  m.GetN() == old(m.N)
 decreases
 func (m *Message) CombinePerm() {
 	unfold m.MemWithoutHalf(1)
