@@ -58,6 +58,18 @@ pred (m *Message) MemWithoutHalf(lenBuffers int) {
 
 ghost
 requires acc(m.Mem(lenBuffers), _)
+pure func (m *Message) GetAddr(lenBuffers int) net.Addr {
+	return unfolding acc(m.Mem(lenBuffers), _) in m.Addr
+}
+
+ghost
+requires acc(m.MemWithoutHalf(lenBuffers), _)
+pure func (m *Message) GetAddrWithoutHalf(lenBuffers int) net.Addr {
+	return unfolding acc(m.MemWithoutHalf(lenBuffers), _) in m.Addr
+}
+
+ghost
+requires acc(m.Mem(lenBuffers), _)
 requires 0 <= i && i < lenBuffers
 decreases
 pure func (m *Message) GetBuffer(lenBuffers int, i int) []byte {
@@ -75,6 +87,7 @@ pure func (m *Message) GetFstBuffer() []byte {
 ghost
 requires m.Mem(1)
 ensures  acc(m, 1/2) && m.MemWithoutHalf(1)
+ensures  old(m.GetAddr(1)) === m.GetAddrWithoutHalf(1)
 decreases
 func (m *Message) SplitPerm() {
 	unfold m.Mem(1)
@@ -84,6 +97,7 @@ func (m *Message) SplitPerm() {
 ghost
 requires acc(m, 1/2) && m.MemWithoutHalf(1)
 ensures  m.Mem(1)
+ensures  m.GetAddr(1) === old(m.GetAddrWithoutHalf(1))
 decreases
 func (m *Message) CombinePerm() {
 	unfold m.MemWithoutHalf(1)

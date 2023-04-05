@@ -17,8 +17,8 @@
 package socket
 
 import (
-	"net"
-	// "github.com/scionproto/scion/verification/utils/slices"
+	// "net"
+	"github.com/scionproto/scion/verification/utils/slices"
 )
 
 func foldMem_test() {

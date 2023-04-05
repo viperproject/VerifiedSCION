@@ -118,6 +118,10 @@ type BatchConn interface {
 	// @ requires  acc(Mem(), _)
 	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+	// @ ensures   err == nil ==>
+	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
+	// @ ensures   err == nil ==>
+	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> (unfolding msgs[i].Mem(1) in (len(msgs[i].Buffers) == 1 && msgs[i].N <= len(msgs[i].Buffers[0])))
 	// @ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(msgs underlayconn.Messages) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
@@ -743,6 +747,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
+				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
 				// @ invariant acc(&d, _)
 				// @ invariant acc(d, _)
 				// @ invariant acc(MutexInvariant!<d!>(), _)
