@@ -1070,7 +1070,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	case epic.PathType:
 		// @ def.TODO()
 		respr, reserr = p.processEPIC()
-		// @ assert io.dp3s_iospec_ordered(new_s, new_t)
 		return respr, reserr /*@ , new_s, new_t @*/
 	default:
 		// @ establishMemUnsupportedPathType()
