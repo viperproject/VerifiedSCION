@@ -752,13 +752,25 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
 					p := msgs[:pkts][i0]
+					// @ assert unfolding msgs[:pkts][i0].MemWithoutHalf(1) in 0 <= p.N
 					// @ msgs[:pkts][i0].CombinePerm()
 					// input metric
 					// @ d.getForwardingMetrics()
 					// @ unfold acc(AccForwardingMetrics(d.forwardingMetrics), _)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[ingressID], ingressID), _)
 					inputCounters := d.forwardingMetrics[ingressID]
+					// @ assert acc(inputCounters.InputPacketsTotal.Mem(), _)
+					// @ assert acc(inputCounters.InputBytesTotal.Mem(), _)
+					// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
+					// the assertions above moreally imply it. In the future, we should either enrich the predicate
+					// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
+					// @ assume inputCounters.InputPacketsTotal != nil
+					// @ assume inputCounters.InputBytesTotal != nil
 					inputCounters.InputPacketsTotal.Inc()
+					// @ assert 0 <= p.N
+					// (VerifiedSCION) we still cannot properly reason about conversions between ints and floats in Gobra,
+					// and thus, the following trivial assertion cannot currently be proven.
+					// @ assume float64(0) <= float64(p.N)
 					inputCounters.InputBytesTotal.Add(float64(p.N))
 
 					srcAddr := p.Addr.(*net.UDPAddr)
