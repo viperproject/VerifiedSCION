@@ -680,6 +680,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
 		// @ requires ingressID in domain(d.forwardingMetrics)
 		// @ requires d.macFactory != nil
+		// @ requires d.svc != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// @ requires d.external != nil && acc(AccBatchConn(d.external), _)
 		// @ requires unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
@@ -722,15 +723,37 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
 
+			// properties about the data-plane
 			// @ invariant acc(&d, _)
 			// @ invariant acc(d, _)
 			// @ invariant acc(MutexInvariant!<d!>(), _)
 			// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
 			// @ invariant ingressID in domain(d.forwardingMetrics)
-			// @ invariant acc(rd.Mem(), _)
 			// @ invariant d.external != nil && acc(AccBatchConn(d.external), _)
 			// @ invariant unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
+			// @ invariant d.svc != nil
+			// properties about the connection:
+			// @ invariant acc(rd.Mem(), _)
+			// properties about messages:
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+			// properties about packetProcessor:
+			// @ invariant acc(&processor.d) && processor.d === d
+			// @ invariant acc(&processor.ingressID)
+			// @ invariant acc(&processor.buffer)
+			// @ invariant acc(&processor.mac)
+			// @ invariant processor.scionLayer.NonInitMem()
+			// @ invariant processor.scionLayer.PathPoolInitializedNonInitMem()
+			// @ invariant processor.hbhLayer.NonInitMem()
+			// @ invariant processor.e2eLayer.NonInitMem()
+			// @ invariant acc(&processor.lastLayer)
+			// @ invariant acc(&processor.path)
+			// @ invariant acc(&processor.hopField)
+			// @ invariant acc(&processor.infoField)
+			// @ invariant acc(&processor.segmentChange)
+			// @ invariant acc(&processor.cachedMac)
+			// @ invariant acc(&processor.macBuffers)
+			// @ invariant acc(&processor.bfdLayer)
+			// @ invariant acc(&processor.rawPkt)
 			for d.running {
 				pkts, err := rd.ReadBatch(msgs)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
@@ -765,6 +788,25 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(MutexInvariant!<d!>(), _)
 				// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
 				// @ invariant ingressID in domain(d.forwardingMetrics)
+				// @ invariant d.svc != nil
+				// properties about packetProcessor:
+				// @ invariant acc(&processor.d) && processor.d === d
+				// @ invariant acc(&processor.ingressID)
+				// @ invariant acc(&processor.buffer)
+				// @ invariant acc(&processor.mac)
+				// @ invariant processor.scionLayer.NonInitMem()
+				// @ invariant processor.scionLayer.PathPoolInitializedNonInitMem()
+				// @ invariant processor.hbhLayer.NonInitMem()
+				// @ invariant processor.e2eLayer.NonInitMem()
+				// @ invariant acc(&processor.lastLayer)
+				// @ invariant acc(&processor.path)
+				// @ invariant acc(&processor.hopField)
+				// @ invariant acc(&processor.infoField)
+				// @ invariant acc(&processor.segmentChange)
+				// @ invariant acc(&processor.cachedMac)
+				// @ invariant acc(&processor.macBuffers)
+				// @ invariant acc(&processor.bfdLayer)
+				// @ invariant acc(&processor.rawPkt)
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
@@ -964,10 +1006,10 @@ type processResult struct {
 // @ ensures  acc(&res.ingressID)
 // @ ensures  acc(&res.buffer)
 // @ ensures  acc(&res.mac)
-// @ ensures  acc(res.scionLayer.NonInitMem())
+// @ ensures  res.scionLayer.NonInitMem()
 // @ ensures  res.scionLayer.PathPoolInitializedNonInitMem()
-// @ ensures  acc(&res.hbhLayer)
-// @ ensures  acc(&res.e2eLayer)
+// @ ensures  res.hbhLayer.NonInitMem()
+// @ ensures  res.e2eLayer.NonInitMem()
 // @ ensures  acc(&res.lastLayer)
 // @ ensures  acc(&res.path)
 // @ ensures  acc(&res.hopField)
@@ -976,6 +1018,7 @@ type processResult struct {
 // @ ensures  acc(&res.cachedMac)
 // @ ensures  acc(&res.macBuffers)
 // @ ensures  acc(&res.bfdLayer)
+// @ ensures  acc(&res.rawPkt)
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
@@ -994,6 +1037,8 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
 	// @ fold p.scionLayer.NonInitMem()
+	// @ fold p.hbhLayer.NonInitMem()
+	// @ fold p.e2eLayer.NonInitMem()
 	return p
 }
 
