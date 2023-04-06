@@ -658,6 +658,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
+// (VerifiedSCION) needs to be verified with mce on demand
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.forwardingMetrics, 1/2)
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
@@ -739,8 +740,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// properties about packetProcessor:
 			// @ invariant acc(&processor.d) && processor.d === d
 			// @ invariant acc(&processor.ingressID)
-			// @ invariant acc(&processor.buffer) && processor.buffer != nil
-			// @ invariant acc(&processor.mac)
+			// @ invariant acc(&processor.buffer) && processor.buffer != nil && processor.buffer.Mem()
+			// @ invariant acc(&processor.mac) && processor.mac != nil && processor.mac.Mem()
 			// @ invariant processor.scionLayer.NonInitMem()
 			// @ invariant processor.scionLayer.PathPoolInitializedNonInitMem()
 			// @ invariant processor.hbhLayer.NonInitMem()
@@ -753,9 +754,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&processor.cachedMac)
 			// @ invariant acc(&processor.macBuffers)
 			// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
-			// @ invariant acc(&processor.bfdLayer)
 			// @ invariant acc(&processor.rawPkt)
 			// @ invariant acc(&processor.srcAddr)
+			// @ invariant processor.bfdLayer.NonInitMem()
+			// @ invariant acc(&scmpErr)
+			// @ invariant writeMsgs[0].Mem(1)
 			for d.running {
 				pkts, err := rd.ReadBatch(msgs)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
@@ -788,8 +791,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// properties about packetProcessor:
 				// @ invariant acc(&processor.d) && processor.d === d
 				// @ invariant acc(&processor.ingressID)
-				// @ invariant acc(&processor.buffer) && processor.buffer != nil
-				// @ invariant acc(&processor.mac)
+				// @ invariant acc(&processor.buffer) && processor.buffer != nil && processor.buffer.Mem()
+				// @ invariant acc(&processor.mac) && processor.mac != nil && processor.mac.Mem()
 				// @ invariant processor.scionLayer.NonInitMem()
 				// @ invariant processor.scionLayer.PathPoolInitializedNonInitMem()
 				// @ invariant processor.hbhLayer.NonInitMem()
@@ -802,9 +805,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&processor.cachedMac)
 				// @ invariant acc(&processor.macBuffers)
 				// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
-				// @ invariant acc(&processor.bfdLayer)
 				// @ invariant acc(&processor.rawPkt)
 				// @ invariant acc(&processor.srcAddr)
+				// @ invariant processor.bfdLayer.NonInitMem()
+				// @ invariant acc(&scmpErr)
+				// @ invariant writeMsgs[0].Mem(1)
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
@@ -863,11 +868,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// Write to OutConn; drop the packet if this would block.
 					// Use WriteBatch because it's the only available function that
 					// supports MSG_DONTWAIT.
+					// @ unfold writeMsgs[0].Mem(1)
 					writeMsgs[0].Buffers[0] = result.OutPkt
 					writeMsgs[0].Addr = nil
 					if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
 						writeMsgs[0].Addr = result.OutAddr
 					}
+					// @ fold writeMsgs[0].Mem(1)
 
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
 					if err != nil {
@@ -1005,7 +1012,8 @@ type processResult struct {
 // @ ensures  acc(&res.d) && res.d === d
 // @ ensures  acc(&res.ingressID)
 // @ ensures  acc(&res.buffer) && res.buffer != nil
-// @ ensures  acc(&res.mac)
+// @ ensures  res.buffer.Mem()
+// @ ensures  acc(&res.mac) && res.mac != nil && res.mac.Mem()
 // @ ensures  res.scionLayer.NonInitMem()
 // @ ensures  res.scionLayer.PathPoolInitializedNonInitMem()
 // @ ensures  res.hbhLayer.NonInitMem()
@@ -1018,7 +1026,7 @@ type processResult struct {
 // @ ensures  acc(&res.cachedMac)
 // @ ensures  acc(&res.macBuffers)
 // @ ensures  sl.AbsSlice_Bytes(res.macBuffers.scionInput, 0, len(res.macBuffers.scionInput))
-// @ ensures  acc(&res.bfdLayer)
+// @ ensures  res.bfdLayer.NonInitMem()
 // @ ensures  acc(&res.srcAddr)
 // @ ensures  acc(&res.rawPkt)
 // @ decreases
@@ -1042,6 +1050,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	// @ fold p.scionLayer.NonInitMem()
 	// @ fold p.hbhLayer.NonInitMem()
 	// @ fold p.e2eLayer.NonInitMem()
+	// @ fold p.bfdLayer.NonInitMem()
 	return p
 }
 
@@ -1492,6 +1501,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 
 // @ preserves acc(&p.infoField, def.ReadL20)
 // @ preserves acc(&p.hopField, def.ReadL20)
+// @ ensures   reserr == nil ==> respr === processResult{}
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr error) {

@@ -102,7 +102,7 @@ type SerializeBuffer interface {
 	PushLayer(LayerType)
 }
 
-ensures res.Mem()
+ensures res != nil && res.Mem()
 decreases
 func NewSerializeBuffer() (res SerializeBuffer)
 
