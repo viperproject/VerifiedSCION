@@ -759,9 +759,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 				// @ assert err == nil ==>
 				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
-				// fails:
-				//  assert err == nil ==>
-				//  	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> unfolding msgs[i].Mem(1) in msgs[i].N <= len(msgs[i].Buffers[0])
 				if err != nil {
 					log.Debug("Failed to read batch", "err", err)
 					// error metric
@@ -771,7 +768,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					continue
 				}
 				// @ assert pkts <= len(msgs)
-				// assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> (unfolding msgs[i].Mem(1) in msgs[i].N <= len(msgs[i].Buffers[0]))
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
@@ -780,8 +776,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
-				//  invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
-				//  	unfolding msgs[i].Mem(1) in msgs[i].N <= len(msgs[i].Buffers[0])
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant acc(&d, _)
 				// @ invariant acc(d, _)
@@ -811,14 +805,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
 					p := msgs[:pkts][i0]
-					// assert p.N <= len(p.Buffers[0])
-					// assert unfolding msgs[:pkts][i0].MemWithoutHalf(1) in 0 <= p.N
 					// @ msgs[:pkts][i0].CombinePerm()
 					// @ assert msgs[i0].GetN() <= len(msgs[i0].GetFstBuffer())
-					// input metric
 					// @ d.getForwardingMetrics()
 					// @ unfold acc(AccForwardingMetrics(d.forwardingMetrics), _)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[ingressID], ingressID), _)
+					// input metric
 					inputCounters := d.forwardingMetrics[ingressID]
 					// @ assert acc(inputCounters.InputPacketsTotal.Mem(), _)
 					// @ assert acc(inputCounters.InputBytesTotal.Mem(), _)
@@ -840,6 +832,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert acc(&p.Buffers[0])
 					// @ assert p.N <= len(p.Buffers[0])
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
+					// @ assert sl.AbsSlice_Bytes(p.Buffers[0][:p.N], 0, p.N)
+					// @ assert sl.AbsSlice_Bytes(p.Buffers[0][:p.N], 0, len(p.Buffers[0][:p.N]))
 					result, err := processor.processPkt(p.Buffers[0][:p.N], srcAddr)
 
 					switch {
@@ -1066,7 +1060,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
-// @ requires  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+// @ requires p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires acc(&p.d.svc, _) && p.d.svc != nil
