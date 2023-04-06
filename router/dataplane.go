@@ -739,7 +739,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// properties about packetProcessor:
 			// @ invariant acc(&processor.d) && processor.d === d
 			// @ invariant acc(&processor.ingressID)
-			// @ invariant acc(&processor.buffer)
+			// @ invariant acc(&processor.buffer) && processor.buffer != nil
 			// @ invariant acc(&processor.mac)
 			// @ invariant processor.scionLayer.NonInitMem()
 			// @ invariant processor.scionLayer.PathPoolInitializedNonInitMem()
@@ -752,8 +752,10 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&processor.segmentChange)
 			// @ invariant acc(&processor.cachedMac)
 			// @ invariant acc(&processor.macBuffers)
+			// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
 			// @ invariant acc(&processor.bfdLayer)
 			// @ invariant acc(&processor.rawPkt)
+			// @ invariant acc(&processor.srcAddr)
 			for d.running {
 				pkts, err := rd.ReadBatch(msgs)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
@@ -786,7 +788,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// properties about packetProcessor:
 				// @ invariant acc(&processor.d) && processor.d === d
 				// @ invariant acc(&processor.ingressID)
-				// @ invariant acc(&processor.buffer)
+				// @ invariant acc(&processor.buffer) && processor.buffer != nil
 				// @ invariant acc(&processor.mac)
 				// @ invariant processor.scionLayer.NonInitMem()
 				// @ invariant processor.scionLayer.PathPoolInitializedNonInitMem()
@@ -799,8 +801,10 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&processor.segmentChange)
 				// @ invariant acc(&processor.cachedMac)
 				// @ invariant acc(&processor.macBuffers)
+				// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
 				// @ invariant acc(&processor.bfdLayer)
 				// @ invariant acc(&processor.rawPkt)
+				// @ invariant acc(&processor.srcAddr)
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
@@ -835,6 +839,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					tmpBuf := p.Buffers[0][:p.N]
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
+					// @ assert sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
 					result, err := processor.processPkt(tmpBuf, srcAddr)
 
 					switch {
@@ -999,7 +1004,7 @@ type processResult struct {
 // @ requires acc(MutexInvariant!<d!>(), _)
 // @ ensures  acc(&res.d) && res.d === d
 // @ ensures  acc(&res.ingressID)
-// @ ensures  acc(&res.buffer)
+// @ ensures  acc(&res.buffer) && res.buffer != nil
 // @ ensures  acc(&res.mac)
 // @ ensures  res.scionLayer.NonInitMem()
 // @ ensures  res.scionLayer.PathPoolInitializedNonInitMem()
@@ -1012,7 +1017,9 @@ type processResult struct {
 // @ ensures  acc(&res.segmentChange)
 // @ ensures  acc(&res.cachedMac)
 // @ ensures  acc(&res.macBuffers)
+// @ ensures  sl.AbsSlice_Bytes(res.macBuffers.scionInput, 0, len(res.macBuffers.scionInput))
 // @ ensures  acc(&res.bfdLayer)
+// @ ensures  acc(&res.srcAddr)
 // @ ensures  acc(&res.rawPkt)
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
@@ -1029,6 +1036,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 			epicInput:  make([]byte, libepic.MACBufferSize),
 		},
 	}
+	// @ fold sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
 	// @ fold p.scionLayer.NonInitMem()
