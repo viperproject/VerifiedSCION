@@ -963,7 +963,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
-// Memory safety
 // @ requires  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
@@ -979,15 +978,8 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires p.mac != nil && p.mac.Mem()
 // @ requires acc(srcAddr.Mem(), _)
 // @ requires p.bfdLayer.NonInitMem()
-// @ ensures  reserr != nil ==> reserr.ErrorMem()
-// IO specification
 // @ requires io.dp3s_iospec_ordered(s, t)
-// @ ensures  reserr == nil ==> io.CBioIO_bio3s_recv(t)
-// @ ensures  reserr == nil ==> new_s == io.dp3s_add_ibuf(
-// @ 		s,
-// @ 		io.dp3s_iospec_bio3s_recv_R(s, t).IO_val_Pkt2_1,
-// @ 		io.dp3s_iospec_bio3s_recv_R(s, t).IO_val_Pkt2_2)
-// @ ensures  reserr == nil ==> new_t == io.dp3s_iospec_bio3s_recv_T(s, t)
+// @ ensures  reserr != nil ==> reserr.ErrorMem()
 // @ ensures  reserr == nil ==> io.dp3s_iospec_ordered(new_s, new_t)
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@ , ghost s io.IO_dp3s_state_local, ghost t io.Place @*/) (respr processResult, reserr error /*@ , ghost new_s io.IO_dp3s_state_local, ghost new_t io.Place @*/) {
@@ -1843,6 +1835,8 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ requires  acc(&p.path, def.ReadL20)
 // @ requires  p.scionLayer.Mem(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
+// @ requires io.dp3s_iospec_ordered(s, t)
+// @ requires io.dp3s_iospec_bio3s_xover
 // @ preserves acc(&p.segmentChange) && acc(&p.hopField) && acc(&p.infoField)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.path, def.ReadL20)
@@ -1850,8 +1844,9 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   p.segmentChange
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ ensures reserr == nil ==> io.dp3s_iospec_ordered(new_s, new_t)
 // @ decreases
-func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost s io.IO_dp3s_state_local, ghost t io.Place @*/ ) (respr processResult, reserr error /*@ , ghost new_s io.IO_dp3s_state_local, ghost new_t io.Place @*/) {
 	p.segmentChange = true
 	// @ unfold p.scionLayer.Mem(ub)
 	// @ ghost  startP := int(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen(nil, true))
@@ -1865,8 +1860,10 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr process
 		// @ unfold p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:])
 		// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
 		// @ fold p.scionLayer.NonInitMem()
-		return processResult{}, serrors.WrapStr("incrementing path", err)
+		return processResult{}, serrors.WrapStr("incrementing path", err) /*@ , new_s, new_t @*/
 	}
+	// @ unfold io.dp3s_iospec_ordered(s, t)
+	// @ unfold io.dp3s_iospec_bio3s_xover
 	var err error
 	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
 		// @ fold p.scionLayer.Mem(ub)
@@ -2269,9 +2266,10 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 
 	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
-	if p.path.IsXover( /*@ ubPath @*/ ) {
+	// @ ghost var is_up2down bool
+	if isxover /*@ , isup2down @*/ := p.path.IsXover( /*@ ubPath @*/ ); isxover {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
-		if r, err := p.doXover( /*@ ub @*/ ); err != nil {
+		if r, err /*@ , new_s, new_t @*/ := p.doXover( /*@ ub, s, t @*/ ); err != nil {
 			return r, err /*@ , new_s, new_t @*/
 		}
 		if r, err /*@ , new_s, new_t @*/ := p.validateHopExpiry(/*@ s, t @*/); err != nil {
