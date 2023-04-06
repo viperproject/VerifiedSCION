@@ -832,9 +832,10 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert acc(&p.Buffers[0])
 					// @ assert p.N <= len(p.Buffers[0])
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
-					// @ assert sl.AbsSlice_Bytes(p.Buffers[0][:p.N], 0, p.N)
-					// @ assert sl.AbsSlice_Bytes(p.Buffers[0][:p.N], 0, len(p.Buffers[0][:p.N]))
-					result, err := processor.processPkt(p.Buffers[0][:p.N], srcAddr)
+					tmpBuf := p.Buffers[0][:p.N]
+					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
+					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
+					result, err := processor.processPkt(tmpBuf, srcAddr)
 
 					switch {
 					case err == nil:
@@ -1066,7 +1067,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires acc(&p.d.svc, _) && p.d.svc != nil
 // @ requires acc(&p.ingressID)
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
-// @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ requires sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
@@ -1139,6 +1139,15 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			}
 			return processResult{}, p.processInterBFD(ohp, pld)
 		}
+		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
+		// (VerifiedSCION) Nested if because short-circuiting && is not working
+		// @ ghost if lastLayerIdx >= 0 {
+		// @	ghost if !offsets[lastLayerIdx].isNil {
+		// @		o := offsets[lastLayerIdx]
+		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
+		// @ 	}
+		// @ }
+		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		return p.processOHP()
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
