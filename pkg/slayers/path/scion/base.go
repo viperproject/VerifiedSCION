@@ -139,21 +139,13 @@ func (s *Base) IncPath() (e error) {
 }
 
 // IsXover returns whether we are at a crossover point.
-// (VerifiedSCION) For IO specification, there are two crossover actions:
-// 1. Core crossover where we switch from an up segment to a core segment or
-//    a core segment to a down segment
-// 2. Up2down crossover which happens when we switch immediately from an up segment
-//    to a down segment
-// The ghost variable is_up2down determines just that. If we have two segments in total
-// then the crossover must be an up2down one, otherwise a core crossover.
 // @ preserves acc(s.Mem(), definitions.ReadL19)
 // @ decreases
-func (s *Base) IsXover() /*@ ( res @*/ bool /*@ , ghost is_up2down bool ) @*/ {
+func (s *Base) IsXover() bool {
 	// @ unfold acc(s.Mem(), definitions.ReadL19)
 	// @ defer fold acc(s.Mem(), definitions.ReadL19)
-	// @ is_up2down = s.NumINF == 2
 	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
-		s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1) /*@ , is_up2down @*/
+		s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1)
 }
 
 // IsFirstHopAfterXover returns whether this is the first hop field after a crossover point.

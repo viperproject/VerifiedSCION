@@ -48,6 +48,20 @@ pure func (b *Base) getNumINF() (res int) {
 	return unfolding acc(b.Mem(), _) in b.NumINF
 }
 
+// For IO specification, there are two crossover actions:
+// 1. Core crossover where we switch from an up segment to a core segment or
+//    a core segment to a down segment
+// 2. Up2down crossover which happens when we switch immediately from an up segment
+//    to a down segment
+// The ghost variable is_up2down determines just that. If we have two segments in total
+// then the crossover must be an up2down one, otherwise a core crossover.
+ghost
+requires acc(b.Mem(), _)
+decreases
+pure func (b *Base) IsUp2Down() (res bool) {
+	return unfolding acc(b.Mem(), _) in b.NumINF == 2
+}
+
 ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res

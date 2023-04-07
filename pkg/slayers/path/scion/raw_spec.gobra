@@ -92,7 +92,7 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
   */
 preserves acc(s.Mem(ub), def.ReadL9)
 decreases
-func (s *Raw) IsXover(ghost ub []byte) (res bool, ghost is_up2down bool) {
+func (s *Raw) IsXover(ghost ub []byte) bool {
 	unfold acc(s.Mem(ub), def.ReadL9)
 	defer fold acc(s.Mem(ub), def.ReadL9)
 	return s.Base.IsXover()

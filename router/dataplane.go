@@ -1862,8 +1862,6 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost s io.IO_dp3s_
 		// @ fold p.scionLayer.NonInitMem()
 		return processResult{}, serrors.WrapStr("incrementing path", err) /*@ , new_s, new_t @*/
 	}
-	// @ unfold io.dp3s_iospec_ordered(s, t)
-	// @ unfold io.dp3s_iospec_bio3s_xover
 	var err error
 	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
 		// @ fold p.scionLayer.Mem(ub)
@@ -2266,8 +2264,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 
 	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL3)
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
-	// @ ghost var is_up2down bool
-	if isxover /*@ , isup2down @*/ := p.path.IsXover( /*@ ubPath @*/ ); isxover {
+	if  p.path.IsXover( /*@ ubPath @*/ ) {
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL3)
 		if r, err /*@ , new_s, new_t @*/ := p.doXover( /*@ ub, s, t @*/ ); err != nil {
 			return r, err /*@ , new_s, new_t @*/
