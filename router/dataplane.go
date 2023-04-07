@@ -131,7 +131,7 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
-	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), def.ReadL10)
+	// @ preserves acc(msgs[0].Mem(1), def.ReadL20)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
@@ -845,11 +845,15 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ assert sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
-					result, err := processor.processPkt(tmpBuf, srcAddr)
+					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
+					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
 
 					switch {
 					case err == nil:
 					case errors.As(err, &scmpErr):
+						// (VerifiedSCION) the specification mechanisms of Gobra cannot specify
+						// the behaviour of errors.As. As such, we axiomatize it.
+						// @ inhale typeOf(err) == type[scmpError]
 						if !scmpErr.TypeCode.InfoMsg() {
 							log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
 						}
@@ -857,7 +861,15 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						result.OutAddr = srcAddr
 						result.OutConn = rd
 					default:
+						// (VerifiedSCION) the specification mechanisms of Gobra cannot specify
+						// the behaviour of errors.As. As such, we axiomatize it.
+						// @ inhale typeOf(err) != type[scmpError]
 						log.Debug("Error processing packet", "err", err)
+						// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
+						// the assertions above moreally imply it. In the future, we should either enrich the predicate
+						// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
+						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
+						// @ assume inputCounters.DroppedPacketsTotal != nil
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
@@ -875,19 +887,25 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
 						writeMsgs[0].Addr = result.OutAddr
 					}
-					// @ fold writeMsgs[0].Mem(1)
-
+					// @ assert acc(result.OutConn.Mem(), _)
+					// @ fold acc(writeMsgs[0].Mem(1), def.ReadL10)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
+					// @ unfold acc(writeMsgs[0].Mem(1), def.ReadL10)
 					if err != nil {
+						// @ decreases
+						// @ outline (
 						var errno /*@@@*/ syscall.Errno
+						// @ assert acc(&errno)
 						if !errors.As(err, &errno) ||
 							!(errno == syscall.EAGAIN || errno == syscall.EWOULDBLOCK) {
 							log.Debug("Error writing packet", "err", err)
 							// error metric
 						}
+						// @ )
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
+					// @ def.TODO()
 					// ok metric
 					outputCounters := d.forwardingMetrics[result.EgressID]
 					outputCounters.OutputPacketsTotal.Inc()
@@ -1096,13 +1114,42 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires p.mac != nil && p.mac.Mem()
 // @ requires acc(srcAddr.Mem(), _)
 // @ requires p.bfdLayer.NonInitMem()
+//
+// @ ensures  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+// @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - def.ReadL15)
+// @ ensures  acc(&p.d)
+// @ ensures  acc(&p.ingressID)
+// @ ensures  acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
+// @ ensures  acc(&p.macBuffers.scionInput, def.ReadL10)
+// @ ensures  sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+// @ ensures  acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
+// @ ensures  acc(&p.srcAddr) && acc(&p.lastLayer)
+// @ ensures  p.buffer.Mem()
+// @ ensures  p.mac.Mem()
+// @ ensures  p.bfdLayer.NonInitMem()
+// properties of the return values:
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
-// ensures  reserr != nil && typeOf(reserr) != type[scmpError] ==> respr === processResult{}
+// properties about the processResult:
+// @ ensures  (reserr == nil) == (respr.OutConn != nil)
+// @ ensures  respr.OutConn != nil ==> acc(respr.OutConn.Mem(), _)
+// @ ensures  reserr == nil ==> respr.OutPkt === rawPkt
+// @ ensures  (reserr != nil && typeOf(reserr) == type[scmpError]) ==>
+// @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
+// @ ensures  respr.OutAddr != nil && addrAliasesPkt ==>
+// @ 	(respr.OutAddr != nil &&
+// @	acc(respr.OutAddr.Mem(), def.ReadL15) &&
+// @ 	(acc(respr.OutAddr.Mem(), def.ReadL15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15)))
+// @ ensures  respr.OutAddr != nil && !addrAliasesPkt ==>
+// @ 	(respr.OutAddr != nil &&
+// @	acc(respr.OutAddr.Mem(), _) &&
+// @	acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15))
+//
+//	ensures  respr.EgressID != 0 ==> respr.EgressID in domain ...
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
-	srcAddr *net.UDPAddr) (respr processResult, reserr error) {
+	srcAddr *net.UDPAddr) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 
 	if err := p.reset(); err != nil {
-		return processResult{}, err
+		return processResult{}, err /*@, false @*/
 	}
 	p.rawPkt = rawPkt
 	p.srcAddr = srcAddr
@@ -1114,7 +1161,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	// @ ghost var lastLayerIdx int
 	p.lastLayer, err /*@ , processed, offsets, lastLayerIdx @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
 	if err != nil {
-		return processResult{}, err
+		return processResult{}, err /*@, false @*/
 	}
 	/*@
 	ghost var ub []byte
@@ -1145,11 +1192,11 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	case empty.PathType:
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
 			// @ assert p.bfdLayer.NonInitMem()
-			return processResult{}, p.processIntraBFD(pld)
+			return processResult{}, p.processIntraBFD(pld) /*@, false @*/
 		}
 		// @ establishMemUnsupportedPathTypeNextHeader()
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
-			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/))
+			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/)) /*@, false @*/
 	case onehop.PathType:
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
 			// @ unfold acc(p.scionLayer.Mem(p.rawPkt), def.ReadL10)
@@ -1157,9 +1204,9 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			// @ fold acc(p.scionLayer.Mem(p.rawPkt), def.ReadL10)
 			if !ok {
 				// @ establishMemMalformedPath()
-				return processResult{}, malformedPath
+				return processResult{}, malformedPath /*@, false @*/
 			}
-			return processResult{}, p.processInterBFD(ohp, pld)
+			return processResult{}, p.processInterBFD(ohp, pld) /*@, false @*/
 		}
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
@@ -1170,7 +1217,8 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ 	}
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
-		return p.processOHP()
+		v1, v2 := p.processOHP()
+		return v1, v2 /*@, false @*/
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
@@ -1181,13 +1229,15 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ 	}
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
-		return p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd @*/ )
+		v1, v2 := p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd @*/ )
+		return v1, v2 /*@, false @*/
 	case epic.PathType:
 		// @ def.TODO()
-		return p.processEPIC()
+		v1, v2 := p.processEPIC()
+		return v1, v2 /*@, false @*/
 	default:
 		// @ establishMemUnsupportedPathType()
-		return processResult{}, serrors.WithCtx(unsupportedPathType, "type", pathType)
+		return processResult{}, serrors.WithCtx(unsupportedPathType, "type", pathType) /*@, false @*/
 	}
 }
 
@@ -2307,7 +2357,6 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures   acc(&p.rawPkt, def.ReadL1)
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
-// @ ensures   reserr != nil && typeOf(reserr) != type[scmpError] ==> respr === processResult{}
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
