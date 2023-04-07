@@ -1836,7 +1836,6 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ requires  p.scionLayer.Mem(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires io.dp3s_iospec_ordered(s, t)
-// @ requires io.dp3s_iospec_bio3s_xover
 // @ preserves acc(&p.segmentChange) && acc(&p.hopField) && acc(&p.infoField)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.path, def.ReadL20)
@@ -1862,21 +1861,27 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost s io.IO_dp3s_
 		// @ fold p.scionLayer.NonInitMem()
 		return processResult{}, serrors.WrapStr("incrementing path", err) /*@ , new_s, new_t @*/
 	}
+	// @ unfold io.dp3s_iospec_ordered(s, t)
+	// @ ghost if p.path.IsUp2Down() {
+	// @   unfold io.dp3s_iospec_bio3s_xover_up2down(s, t)
+	// @ } else {
+	// @   unfold io.dp3s_iospec_bio3s_xover_core(s, t)
+	// @ }
 	var err error
 	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
 		// @ fold p.scionLayer.Mem(ub)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
-		return processResult{}, err
+		return processResult{}, err /*@ , new_s, new_t @*/
 	}
 	if p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ ); err != nil {
 		// @ fold p.scionLayer.Mem(ub)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
-		return processResult{}, err
+		return processResult{}, err /*@ , new_s, new_t @*/
 	}
 	// @ fold p.scionLayer.Mem(ub)
-	return processResult{}, nil
+	return processResult{}, nil /*@ , new_s, new_t @*/
 }
 
 // @ requires  acc(&p.path, def.ReadL20)
