@@ -1835,7 +1835,10 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ requires  acc(&p.path, def.ReadL20)
 // @ requires  p.scionLayer.Mem(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
-// @ requires io.dp3s_iospec_ordered(s, t)
+// @ requires  io.dp3s_iospec_ordered(s, t)
+// @ requires  p.IsUp2Down() ==> io.dp3s_iospec_bio3s_xover_up2down_guard(s, t, p.IOvalue())
+// @ requires  (!p.IsUp2Down()) ==> io.dp3s_iospec_bio3s_xover_core_guard(s, t, p.IOvalue())
+// @ requires  io.token(t)
 // @ preserves acc(&p.segmentChange) && acc(&p.hopField) && acc(&p.infoField)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.path, def.ReadL20)
@@ -1843,7 +1846,9 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   p.segmentChange
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// @ ensures reserr == nil ==> io.dp3s_iospec_ordered(new_s, new_t)
+// @ ensures   reserr == nil ==> io.dp3s_iospec_ordered(new_s, new_t)
+// @ ensures   reserr == nil ==> new_s == let v := p.IOvalue() in io.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3)
+// @ ensures   reserr == nil ==> io.token(new_t)
 // @ decreases
 func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost s io.IO_dp3s_state_local, ghost t io.Place @*/ ) (respr processResult, reserr error /*@ , ghost new_s io.IO_dp3s_state_local, ghost new_t io.Place @*/) {
 	p.segmentChange = true
@@ -1861,12 +1866,19 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost s io.IO_dp3s_
 		// @ fold p.scionLayer.NonInitMem()
 		return processResult{}, serrors.WrapStr("incrementing path", err) /*@ , new_s, new_t @*/
 	}
+	// @ ghost v := p.IOvalue()
 	// @ unfold io.dp3s_iospec_ordered(s, t)
-	// @ ghost if p.path.IsUp2Down() {
+	// @ exhale io.token(t)
+	// @ ghost if p.IsUp2Down() {
 	// @   unfold io.dp3s_iospec_bio3s_xover_up2down(s, t)
+	// @   new_s = io.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3)
+	// @   new_t = io.dp3s_iospec_bio3s_xover_up2down_T(s, t, v)
 	// @ } else {
 	// @   unfold io.dp3s_iospec_bio3s_xover_core(s, t)
+	// @   new_s = io.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3)
+	// @   new_t = io.dp3s_iospec_bio3s_xover_core_T(s, t, v)
 	// @ }
+	// @ inhale io.token(new_t)
 	var err error
 	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
 		// @ fold p.scionLayer.Mem(ub)

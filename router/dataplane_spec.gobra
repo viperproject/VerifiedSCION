@@ -22,6 +22,7 @@ import (
 	sl "github.com/scionproto/scion/verification/utils/slices"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/verification/io"
 )
 
 // TODO: maybe change interpretation of Mutex depending on whether the
@@ -340,3 +341,23 @@ func closureSpec2(i uint16, c BatchConn)
 requires true
 func closureSpec3(c BatchConn)
 /** End of closure specs for the Run method **/
+
+/**** IO spec correlation ****/
+
+ghost
+ensures v.isIO_Internal_val1
+decreases
+pure func (p *scionPacketProcessor) IOvalue() (v io.IO_val)
+
+
+// For IO specification, there are two crossover actions:
+// 1. Core crossover where we switch from an up segment to a core segment or
+//    a core segment to a down segment
+// 2. Up2down crossover which happens when we switch immediately from an up segment
+//    to a down segment
+// The ghost variable is_up2down determines just that. If we have two segments in total
+// then the crossover must be an up2down one, otherwise a core crossover.
+// TODO: Define it. Maybe it needs not to be in base
+ghost
+decreases
+pure func (p *scionPacketProcessor) IsUp2Down() (res bool)
