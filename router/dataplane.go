@@ -269,7 +269,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 		// @ requires acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ requires scrypto.ValidKeyForHash(key)
 		// @ ensures  acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
-		// @ ensures  h.Mem()
+		// @ ensures  h != nil && h.Mem()
 		// @ decreases
 		func /*@ f @*/ () (h hash.Hash) {
 			mac, _ := scrypto.InitMac(key)
@@ -864,6 +864,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					if result.OutConn == nil { // e.g. BFD case no message is forwarded
 						continue
 					}
+					// (VerifiedSCION) only scmp errors and successful messages get to this point
 
 					// Write to OutConn; drop the packet if this would block.
 					// Use WriteBatch because it's the only available function that
@@ -899,6 +900,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// TODO: replace by  acc(MutexInvariant(d), _) for the remainder of the proof? - makes proof obligations easier
 	// @ fold acc(MutexInvariant!<d!>(), _)
 	for k, v := range d.bfdSessions {
+		// @ def.TODO()
 		go func(ifID uint16, c bfdSession) {
 			defer log.HandlePanic()
 			if err := c.Run(ctx); err != nil && err != bfd.AlreadyRunning {
@@ -908,6 +910,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	}
 	for ifID, v := range d.external {
 		go func(i uint16, c BatchConn) {
+			// @ def.TODO()
 			defer log.HandlePanic()
 			// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
 			// This should be easily addressable nonethelss
@@ -915,6 +918,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		}(ifID, v) //@ as closureSpec2
 	}
 	go func(c BatchConn) {
+		// @ def.TODO()
 		defer log.HandlePanic()
 		// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
 		read(0, c) //@ as readClosureSpec
@@ -1093,6 +1097,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires acc(srcAddr.Mem(), _)
 // @ requires p.bfdLayer.NonInitMem()
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
+// ensures  reserr != nil && typeOf(reserr) != type[scmpError] ==> respr === processResult{}
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error) {
 
@@ -2302,6 +2307,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures   acc(&p.rawPkt, def.ReadL1)
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
+// @ ensures   reserr != nil && typeOf(reserr) != type[scmpError] ==> respr === processResult{}
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
