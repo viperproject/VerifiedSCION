@@ -902,6 +902,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 							// error metric
 						}
 						// @ )
+						// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
+						// the assertions above moreally imply it. In the future, we should either enrich the predicate
+						// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
+						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
+						// @ assume inputCounters.DroppedPacketsTotal != nil
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
@@ -1144,7 +1149,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @	acc(respr.OutAddr.Mem(), _) &&
 // @	acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15))
 //
-//	ensures  respr.EgressID != 0 ==> respr.EgressID in domain ...
+//	ensures respr.EgressID != 0 ==> respr.EgressID in domain(???)
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 
