@@ -19,9 +19,11 @@ package router
 import (
 	"net"
 	"hash"
-	sl "github.com/scionproto/scion/verification/utils/slices"
-	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/scrypto"
+	underlayconn "github.com/scionproto/scion/private/underlay/conn"
+
+	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // TODO: maybe change interpretation of Mutex depending on whether the
@@ -279,7 +281,7 @@ ensures  scrypto.ValidKeyForHash(*d.key)
 ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
 func (d *DataPlane) getNewPacketProcessorFootprint() {
-    unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant!<d!>(), _)
 }
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
@@ -350,3 +352,15 @@ func closureSpec2(i uint16, c BatchConn)
 requires true
 func closureSpec3(c BatchConn)
 /** End of closure specs for the Run method **/
+
+/** definitions used internally for the proof of Run **/
+pred writeMsgInv(writeMsgs underlayconn.Messages) {
+	len(writeMsgs) == 1 &&
+	acc(&writeMsgs[0]) &&
+	len(writeMsgs[0].Buffers) == 1 &&
+	acc(&writeMsgs[0].Buffers[0]) &&
+	sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])) &&
+	sl.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB)) &&
+	0 <= writeMsgs[0].N
+}
+/** end of definitions used internally for the proof of Run **/

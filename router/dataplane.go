@@ -711,14 +711,21 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
 			}
 			// @ )
-			// @ ensures writeMsgs[0].Mem(1)
+			// ensures writeMsgs[0].Mem(1)
+			// @ ensures len(writeMsgs) == 1
+			// @ ensures acc(&writeMsgs[0])
+			// @ ensures len(writeMsgs[0].Buffers) == 1
+			// @ ensures acc(&writeMsgs[0].Buffers[0])
+			// @ ensures sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0]))
+			// @ ensures sl.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB))
+			// @ ensures 0 <= writeMsgs[0].N
 			// @ decreases
 			// @ outline (
 			writeMsgs := make(underlayconn.Messages, 1)
 			writeMsgs[0].Buffers = make([][]byte, 1)
 			// @ fold slices.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB))
 			// @ sl.NilAcc_Bytes()
-			// @ fold writeMsgs[0].Mem(1)
+			// fold writeMsgs[0].Mem(1)
 			// @ )
 
 			processor := newPacketProcessor(d, ingressID)
@@ -758,7 +765,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&processor.srcAddr)
 			// @ invariant processor.bfdLayer.NonInitMem()
 			// @ invariant acc(&scmpErr)
-			// @ invariant writeMsgs[0].Mem(1)
+			//   invariant writeMsgs[0].Mem(1)
+			// @ invariant acc(&writeMsgs[0])
+			// @ invariant len(writeMsgs[0].Buffers) == 1
+			// @ invariant acc(&writeMsgs[0].Buffers[0])
+			// @ invariant sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0]))
+			// @ invariant sl.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB))
+			// @ invariant 0 <= writeMsgs[0].N
 			for d.running {
 				pkts, err := rd.ReadBatch(msgs)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
@@ -809,7 +822,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&processor.srcAddr)
 				// @ invariant processor.bfdLayer.NonInitMem()
 				// @ invariant acc(&scmpErr)
-				// @ invariant writeMsgs[0].Mem(1)
+				// invariant writeMsgs[0].Mem(1)
+				// @ invariant acc(&writeMsgs[0])
+				// @ invariant len(writeMsgs[0].Buffers) == 1
+				// @ invariant acc(&writeMsgs[0].Buffers[0])
+				// @ invariant sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0]))
+				// @ invariant sl.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB))
+				// @ invariant 0 <= writeMsgs[0].N
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
@@ -881,7 +900,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// Write to OutConn; drop the packet if this would block.
 					// Use WriteBatch because it's the only available function that
 					// supports MSG_DONTWAIT.
-					// @ unfold writeMsgs[0].Mem(1)
+					//  unfold writeMsgs[0].Mem(1)
 					writeMsgs[0].Buffers[0] = result.OutPkt
 					writeMsgs[0].Addr = nil
 					if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
@@ -891,6 +910,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ fold acc(writeMsgs[0].Mem(1), def.ReadL10)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
 					// @ unfold acc(writeMsgs[0].Mem(1), def.ReadL10)
+					// @ assert false
+					// @ ghost if addrAliasesPkt {
+					// @	inhale acc(result.OutAddr.Mem(), def.ReadL15) // TODO: doc
+					// @ 	apply acc(result.OutAddr.Mem(), def.ReadL15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), def.ReadL15)
+					// @ }
+					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
+					// @ fold msgs[:pkts][i0].Mem(1)
 					if err != nil {
 						// @ decreases
 						// @ outline (
