@@ -932,6 +932,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
+					// @ assert false
 					// @ def.TODO()
 					// ok metric
 					outputCounters := d.forwardingMetrics[result.EgressID]
@@ -1144,7 +1145,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 //
 // @ ensures  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - def.ReadL15)
-// @ ensures  acc(&p.d)
+// @ ensures  acc(&p.d, def.ReadL10)
 // @ ensures  acc(&p.ingressID)
 // @ ensures  acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
 // @ ensures  acc(&p.macBuffers.scionInput, def.ReadL10)
