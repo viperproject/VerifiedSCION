@@ -1129,7 +1129,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 
 // @ requires p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
-// @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires acc(&p.d, def.ReadL10) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires acc(&p.d.svc, _) && p.d.svc != nil
 // @ requires acc(&p.ingressID)
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
