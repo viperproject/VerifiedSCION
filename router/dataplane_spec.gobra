@@ -347,7 +347,14 @@ func closureSpec3(c BatchConn)
 ghost
 ensures v.isIO_Internal_val1
 decreases
-pure func (p *scionPacketProcessor) IOvalue() (v io.IO_val)
+pure func (p *scionPacketProcessor) IOvalue() (v io.IO_val) {
+	return IOvalue(p.rawPkt)
+}
+
+ghost
+ensures v.isIO_Internal_val1
+decreases
+pure func IOvalue(rawPkt []byte) (v io.IO_val)
 
 
 // For IO specification, there are two crossover actions:

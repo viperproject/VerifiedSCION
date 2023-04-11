@@ -116,11 +116,14 @@ type bfdSession interface {
 type BatchConn interface {
 	// @ pred Mem()
 
+	// (VerifiedSCION) This function performs the recv operation of the IO specification
+	// @ requires io.token(t)
 	// @ preserves Mem()
 	// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
-	ReadBatch(msgs underlayconn.Messages) (n int, err error)
+	// @ ensures io.token(new_t)
+	ReadBatch(msgs underlayconn.Messages /*@ , ghost s io.IO_dp3s_state_local, ghost t io.Place @*/) (n int, err error /*@ , ghost new_s io.IO_dp3s_state_local, ghost new_t io.Place @*/)
 	// @ requires  acc(addr.Mem(), _)
 	// @ preserves Mem()
 	// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL10)
@@ -132,8 +135,8 @@ type BatchConn interface {
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
-	// @ requires Mem()
-	// @ ensures  err != nil ==> err.ErrorMem()
+	// @ requires  Mem()
+	// @ ensures   err != nil ==> err.ErrorMem()
 	// @ decreases
 	Close() (err error)
 }
@@ -263,10 +266,10 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	}
 	// @ d.key = &key
 	verScionTemp :=
-		// @ requires acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
-		// @ requires scrypto.ValidKeyForHash(key)
-		// @ ensures  acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
-		// @ ensures  h.Mem()
+		// @ requires  acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
+		// @ requires  scrypto.ValidKeyForHash(key)
+		// @ ensures   acc(&key, _) && acc(slices.AbsSlice_Bytes(key, 0, len(key)), _)
+		// @ ensures   h.Mem()
 		// @ decreases
 		func /*@ f @*/ () (h hash.Hash) {
 			mac, _ := scrypto.InitMac(key)
@@ -388,10 +391,10 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // AddLinkType adds the link type for a given interface ID. If a link type for
 // the given ID is already set, this method will return an error. This can only
 // be called on a not yet running dataplane.
-// @ requires  acc(&d.running,   1/2) && !d.running
-// @ requires  acc(&d.linkTypes, 1/2)
-// @ requires  d.linkTypes != nil ==> acc(d.linkTypes, 1/2)
-// @ requires  !(ifID in domain(d.linkTypes))
+// @ requires acc(&d.running,   1/2) && !d.running
+// @ requires acc(&d.linkTypes, 1/2)
+// @ requires d.linkTypes != nil ==> acc(d.linkTypes, 1/2)
+// @ requires !(ifID in domain(d.linkTypes))
 // (VerifiedSCION) unlike all other setter methods, this does not lock
 // d.mtx. Did the devs forget about it?
 // @ preserves MutexInvariant!<d!>()
@@ -532,10 +535,10 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
 		labels := serviceMetricLabels(d.localIA, svc)
-		// @ requires acc(&d.Metrics, def.ReadL20)
-		// @ requires acc(d.Metrics.Mem(), _)
-		// @ requires acc(labels, _)
-		// @ ensures  acc(&d.Metrics, def.ReadL20)
+		// @ requires  acc(&d.Metrics, def.ReadL20)
+		// @ requires  acc(d.Metrics.Mem(), _)
+		// @ requires  acc(labels, _)
+		// @ ensures   acc(&d.Metrics, def.ReadL20)
 		// @ decreases
 		// @ outline (
 		// @ unfold acc(d.Metrics.Mem(), _)
@@ -686,8 +689,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			msgs := conn.NewReadMessages(inputBatchCnt)
 			// @ socketspec.SplitPermMsgs(msgs)
 
-			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
-			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+			// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
+			// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 			// @ decreases
 			// @ outline (
 			// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
@@ -707,7 +710,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
 			}
 			// @ )
-			// @ ensures writeMsgs[0].Mem(1)
+			// @ ensures   writeMsgs[0].Mem(1)
 			// @ decreases
 			// @ outline (
 			writeMsgs := make(underlayconn.Messages, 1)
@@ -724,7 +727,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&d.running, _) && d.running
 			// @ invariant acc(rd.Mem(), _)
 			for d.running {
-				pkts, err := rd.ReadBatch(msgs)
+				pkts, err /*@ , new_s, new_t @*/ := rd.ReadBatch(msgs)
 				if err != nil {
 					log.Debug("Failed to read batch", "err", err)
 					// error metric
@@ -740,7 +743,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					inputCounters.InputBytesTotal.Add(float64(p.N))
 
 					srcAddr := p.Addr.(*net.UDPAddr)
-					result, err := processor.processPkt(p.Buffers[0][:p.N], srcAddr)
+					result, err /*@ , new_s, new_t @*/ := processor.processPkt(p.Buffers[0][:p.N], srcAddr /*@ , new_s, new_t @*/)
 
 					switch {
 					case err == nil:
@@ -900,24 +903,24 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ requires acc(&d.macFactory, _) && d.macFactory != nil
-// @ requires acc(MutexInvariant!<d!>(), _)
-// @ ensures  acc(&res.d) && res.d === d
-// @ ensures  acc(&res.ingressID)
-// @ ensures  acc(&res.buffer)
-// @ ensures  acc(&res.mac)
-// @ ensures  acc(res.scionLayer.NonInitMem())
-// @ ensures  res.scionLayer.PathPoolInitializedNonInitMem()
-// @ ensures  acc(&res.hbhLayer)
-// @ ensures  acc(&res.e2eLayer)
-// @ ensures  acc(&res.lastLayer)
-// @ ensures  acc(&res.path)
-// @ ensures  acc(&res.hopField)
-// @ ensures  acc(&res.infoField)
-// @ ensures  acc(&res.segmentChange)
-// @ ensures  acc(&res.cachedMac)
-// @ ensures  acc(&res.macBuffers)
-// @ ensures  acc(&res.bfdLayer)
+// @ requires  acc(&d.macFactory, _) && d.macFactory != nil
+// @ requires  acc(MutexInvariant!<d!>(), _)
+// @ ensures   acc(&res.d) && res.d === d
+// @ ensures   acc(&res.ingressID)
+// @ ensures   acc(&res.buffer)
+// @ ensures   acc(&res.mac)
+// @ ensures   acc(res.scionLayer.NonInitMem())
+// @ ensures   res.scionLayer.PathPoolInitializedNonInitMem()
+// @ ensures   acc(&res.hbhLayer)
+// @ ensures   acc(&res.e2eLayer)
+// @ ensures   acc(&res.lastLayer)
+// @ ensures   acc(&res.path)
+// @ ensures   acc(&res.hopField)
+// @ ensures   acc(&res.infoField)
+// @ ensures   acc(&res.segmentChange)
+// @ ensures   acc(&res.cachedMac)
+// @ ensures   acc(&res.macBuffers)
+// @ ensures   acc(&res.bfdLayer)
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
@@ -963,7 +966,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
-// @ requires  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+// @ requires p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires acc(&p.d.svc, _) && p.d.svc != nil
@@ -979,8 +982,13 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires acc(srcAddr.Mem(), _)
 // @ requires p.bfdLayer.NonInitMem()
 // @ requires io.dp3s_iospec_ordered(s, t)
+// @ requires io.token(t)
+// @ requires let v := IOvalue(rawPkt) in io.dp3s_iospec_bio3s_enter_guard(s, t, v)
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
 // @ ensures  reserr == nil ==> io.dp3s_iospec_ordered(new_s, new_t)
+// @ ensures  reserr == nil ==> io.token(new_t)
+// @ ensures  reserr == nil ==> new_s == let v := p.IOvalue() in io.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3)
+// @ ensures  reserr == nil ==> let v := p.IOvalue() in io.dp3s_iospec_bio3s_send_guard(new_s, new_t, v)
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@ , ghost s io.IO_dp3s_state_local, ghost t io.Place @*/) (respr processResult, reserr error /*@ , ghost new_s io.IO_dp3s_state_local, ghost new_t io.Place @*/) {
 
@@ -989,6 +997,14 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	}
 	p.rawPkt = rawPkt
 	p.srcAddr = srcAddr
+	// (VerifiedSCION) Perform enter io action
+	// @ ghost v := p.IOvalue()
+	// @ exhale io.token(t)
+	// @ unfold io.dp3s_iospec_ordered(s, t)
+	// @ unfold io.dp3s_iospec_bio3s_enter(s, t)
+	// @ new_s = io.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3)
+	// @ new_t = io.CBio_IN_bio3s_enter_T(s, t, v)
+	// @ inhale io.token(new_t)
 
 	// parse SCION header and skip extensions;
 	var err error
@@ -1069,15 +1085,15 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	}
 }
 
-// @ requires  acc(&p.d, def.ReadL20)
-// @ requires  acc(&p.ingressID, def.ReadL20)
-// @ requires  acc(MutexInvariant!<p.d!>(), _)
-// @ requires  p.bfdLayer.NonInitMem()
-// @ requires  slices.AbsSlice_Bytes(data, 0, len(data))
-// @ ensures   acc(&p.d, def.ReadL20)
-// @ ensures   acc(&p.ingressID, def.ReadL20)
-// @ ensures   p.bfdLayer.NonInitMem()
-// @ ensures   err != nil ==> err.ErrorMem()
+// @ requires acc(&p.d, def.ReadL20)
+// @ requires acc(&p.ingressID, def.ReadL20)
+// @ requires acc(MutexInvariant!<p.d!>(), _)
+// @ requires p.bfdLayer.NonInitMem()
+// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures  acc(&p.d, def.ReadL20)
+// @ ensures  acc(&p.ingressID, def.ReadL20)
+// @ ensures  p.bfdLayer.NonInitMem()
+// @ ensures  err != nil ==> err.ErrorMem()
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (err error) {
 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
@@ -1103,14 +1119,14 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 	return noBFDSessionFound
 }
 
-// @ requires  acc(&p.d, def.ReadL20)
-// @ requires  acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
-// @ requires  p.bfdLayer.NonInitMem()
-// @ requires  acc(MutexInvariant!<p.d!>(), _)
-// @ requires  slices.AbsSlice_Bytes(data, 0, len(data))
-// @ ensures   acc(&p.d, def.ReadL20)
-// @ ensures   acc(&p.srcAddr, def.ReadL20)
-// @ ensures   res != nil ==> res.ErrorMem()
+// @ requires acc(&p.d, def.ReadL20)
+// @ requires acc(&p.srcAddr, def.ReadL20) && acc(p.srcAddr.Mem(), _)
+// @ requires p.bfdLayer.NonInitMem()
+// @ requires acc(MutexInvariant!<p.d!>(), _)
+// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+// @ ensures  acc(&p.d, def.ReadL20)
+// @ ensures  acc(&p.srcAddr, def.ReadL20)
+// @ ensures  res != nil ==> res.ErrorMem()
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
@@ -1166,16 +1182,16 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	return noBFDSessionFound
 }
 
-// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires  acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
-// @ requires  acc(&p.d.svc, _) && p.d.svc != nil
+// @ requires 0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires acc(&p.d.svc, _) && p.d.svc != nil
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
 // @ requires  acc(&p.rawPkt, def.ReadL1) && ub === p.rawPkt
 // @ requires  acc(&p.path)
 // @ requires  p.scionLayer.Mem(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ requires io.dp3s_iospec_ordered(s, t)
+// @ requires  io.dp3s_iospec_ordered(s, t)
 // @ preserves acc(&p.srcAddr, def.ReadL10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, def.ReadL10)
 // @ preserves p.lastLayer != nil
@@ -1684,11 +1700,11 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 	return nil
 }
 
-// @ requires acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
-// @ requires acc(&p.path, def.ReadL20)
-// @ requires p.path == p.scionLayer.GetPath(ubScionL)
-// @ ensures  acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
-// @ ensures  acc(&p.path, def.ReadL20)
+// @ requires  acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ requires  acc(&p.path, def.ReadL20)
+// @ requires  p.path == p.scionLayer.GetPath(ubScionL)
+// @ ensures   acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ ensures   acc(&p.path, def.ReadL20)
 // @ decreases
 func (p *scionPacketProcessor) currentInfoPointer( /*@ ghost ubScionL []byte @*/ ) uint16 {
 	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
@@ -1704,11 +1720,11 @@ func (p *scionPacketProcessor) currentInfoPointer( /*@ ghost ubScionL []byte @*/
 
 // (VerifiedSCION) This could probably be made pure, but it is likely not beneficial, nor needed
 // to expose the body of this function at the moment.
-// @ requires acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
-// @ requires acc(&p.path, def.ReadL20)
-// @ requires p.path == p.scionLayer.GetPath(ubScionL)
-// @ ensures  acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
-// @ ensures  acc(&p.path, def.ReadL20)
+// @ requires  acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ requires  acc(&p.path, def.ReadL20)
+// @ requires  p.path == p.scionLayer.GetPath(ubScionL)
+// @ ensures   acc(p.scionLayer.Mem(ubScionL), def.ReadL20)
+// @ ensures   acc(&p.path, def.ReadL20)
 // @ decreases
 func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ ) uint16 {
 	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
@@ -1761,8 +1777,8 @@ func (p *scionPacketProcessor) verifyCurrentMAC(/*@ ghost s io.IO_dp3s_state_loc
 	return processResult{}, nil /*@ , new_s, new_t @*/
 }
 
-// @ requires  acc(&p.d, def.ReadL15)
-// @ requires  acc(MutexInvariant!<p.d!>(), _)
+// @ requires acc(&p.d, def.ReadL15)
+// @ requires acc(MutexInvariant!<p.d!>(), _)
 // (VerifiedSCION) permission to acc(&p.d.svc, _) would not be necessary
 // if one was using something other than a predicate expression instance.
 // @ requires  acc(&p.d.svc, _) && p.d.svc != nil
@@ -2194,9 +2210,9 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 	)
 }
 
-// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires  acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
-// @ requires  acc(&p.d.svc, _) && p.d.svc != nil
+// @ requires 0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires acc(&p.d, def.ReadL5) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires acc(&p.d.svc, _) && p.d.svc != nil
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
 // @ requires  acc(&p.rawPkt, def.ReadL1) && ub === p.rawPkt
@@ -2629,7 +2645,7 @@ type bfdSend struct {
 
 // newBFDSend creates and initializes a BFD Sender
 // @ trusted
-// @ requires false
+// @ requires  false
 // @ decreases
 func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPAddr,
 	ifID uint16, mac hash.Hash) (res *bfdSend) {
@@ -2836,8 +2852,8 @@ func (p *scionPacketProcessor) prepareSCMP(
 // gopacket.DecodingLayerParser, but customized to our use case with a "base"
 // layer and additional, optional layers in the given order.
 // Returns the last decoded layer.
-// @ requires  base != nil && base.NonInitMem()
-// @ requires  forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
+// @ requires base != nil && base.NonInitMem()
+// @ requires forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
 // @     (acc(&opts[i], def.ReadL10) && opts[i] != nil && opts[i].NonInitMem())
 // Due to Viper's very strict injectivity constraints:
 // @ requires  forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==>
@@ -3045,7 +3061,7 @@ func interfaceToMetricLabels(id uint16, localIA addr.IA,
 	}
 }
 
-// @ ensures acc(res)
+// @ ensures   acc(res)
 // @ decreases
 func serviceMetricLabels(localIA addr.IA, svc addr.HostSVC) (res prometheus.Labels) {
 	return prometheus.Labels{
