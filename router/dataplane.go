@@ -1152,8 +1152,8 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ ensures  acc(&p.segmentChange) && acc(&p.buffer, def.ReadL10) && acc(&p.mac) && acc(&p.cachedMac)
 // @ ensures  acc(&p.srcAddr) && acc(&p.lastLayer)
-// @ ensures  p.buffer.Mem()
-// @ ensures  p.mac.Mem()
+// @ ensures  p.buffer != nil && p.buffer.Mem()
+// @ ensures  p.mac != nil && p.mac.Mem()
 // @ ensures  p.bfdLayer.NonInitMem()
 // properties of the return values:
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
