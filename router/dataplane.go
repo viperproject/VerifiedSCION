@@ -841,14 +841,14 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 					srcAddr := p.Addr.(*net.UDPAddr)
 					// @ unfold msgs[:pkts][i0].Mem(1)
-					// @ assert p.Buffers === msgs[:pkts][i0].Buffers
-					// @ assert acc(&p.Buffers[0])
-					// @ assert p.N <= len(p.Buffers[0])
+					//  assert p.Buffers === msgs[:pkts][i0].Buffers
+					//  assert acc(&p.Buffers[0])
+					//  assert p.N <= len(p.Buffers[0])
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					tmpBuf := p.Buffers[0][:p.N]
-					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
-					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
-					// @ assert sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
+					//  assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
+					//  assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
+					//  assert sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
 					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
 					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
 
@@ -898,7 +898,10 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ ghost if addrAliasesPkt {
 					// @	inhale acc(result.OutAddr.Mem(), def.ReadL15) // TODO: doc
 					// @ 	apply acc(result.OutAddr.Mem(), def.ReadL15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), def.ReadL15)
+					// @ 	assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ }
+					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
+					// @ assert tmpBuf === p.Buffers[0][:p.N]
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					// @ fold writeMsgInv(writeMsgs)
 					// @ fold msgs[:pkts][i0].Mem(1)
@@ -1169,9 +1172,8 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	(respr.OutAddr != nil &&
 // @	acc(respr.OutAddr.Mem(), def.ReadL15) &&
 // @ 	(acc(respr.OutAddr.Mem(), def.ReadL15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15)))
-// @ ensures  respr.OutAddr != nil && !addrAliasesPkt ==>
-// @ 	(acc(respr.OutAddr.Mem(), _) &&
-// @	acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15))
+// @ ensures  respr.OutAddr != nil && !addrAliasesPkt ==> acc(respr.OutAddr.Mem(), _)
+// @ ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15)
 // @ ensures  acc(&p.d.forwardingMetrics, _)
 // @ ensures  p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
 // @ ensures  respr.EgressID != 0 ==> respr.EgressID in domain(p.d.forwardingMetrics)
