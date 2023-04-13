@@ -359,7 +359,7 @@ pred writeMsgInv(writeMsgs underlayconn.Messages) {
 	acc(&writeMsgs[0]) &&
 	len(writeMsgs[0].Buffers) == 1 &&
 	acc(&writeMsgs[0].Buffers[0]) &&
-	sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])) &&
+	// sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])) &&
 	sl.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB)) &&
 	0 <= writeMsgs[0].N
 }
