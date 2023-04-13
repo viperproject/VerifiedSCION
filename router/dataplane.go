@@ -658,7 +658,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
-// (VerifiedSCION) needs to be verified with mce on demand
+// (VerifiedSCION) needs to be verified with mce-on-demand
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.forwardingMetrics, 1/2)
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
@@ -743,7 +743,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&processor.buffer) && processor.buffer != nil && processor.buffer.Mem()
 			// @ invariant acc(&processor.mac) && processor.mac != nil && processor.mac.Mem()
 			// @ invariant processor.scionLayer.NonInitMem()
-			// @ invariant processor.scionLayer.PathPoolInitializedNonInitMem()
 			// @ invariant processor.hbhLayer.NonInitMem()
 			// @ invariant processor.e2eLayer.NonInitMem()
 			// @ invariant acc(&processor.lastLayer)
@@ -795,7 +794,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&processor.buffer) && processor.buffer != nil && processor.buffer.Mem()
 				// @ invariant acc(&processor.mac) && processor.mac != nil && processor.mac.Mem()
 				// @ invariant processor.scionLayer.NonInitMem()
-				// @ invariant processor.scionLayer.PathPoolInitializedNonInitMem()
 				// @ invariant processor.hbhLayer.NonInitMem()
 				// @ invariant processor.e2eLayer.NonInitMem()
 				// @ invariant acc(&processor.lastLayer)
@@ -919,8 +917,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
-					// @ assert false
-					// @ def.TODO()
 					// ok metric
 					outputCounters := d.forwardingMetrics[result.EgressID]
 					outputCounters.OutputPacketsTotal.Inc()
