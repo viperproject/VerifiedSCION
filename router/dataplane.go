@@ -660,9 +660,10 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // after calling this method.
 // (VerifiedSCION) needs to be verified with mce-on-demand
 // @ requires  acc(&d.running, 1/2) && !d.running
-// @ requires  acc(&d.forwardingMetrics, 1/2)
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
+// @ requires  acc(&d.forwardingMetrics, 1/2) && acc(d.forwardingMetrics, 1/2)
+// @ requires  0 in domain(d.forwardingMetrics)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) Run(ctx context.Context) error {
@@ -679,6 +680,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires acc(d,  _)
 		// @ requires acc(MutexInvariant!<d!>(), _)
 		// @ requires d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
+		// @ requires 0 in domain(d.forwardingMetrics)
 		// @ requires ingressID in domain(d.forwardingMetrics)
 		// @ requires d.macFactory != nil
 		// @ requires d.svc != nil
@@ -729,6 +731,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(d, _)
 			// @ invariant acc(MutexInvariant!<d!>(), _)
 			// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
+			// @ invariant 0 in domain(d.forwardingMetrics)
 			// @ invariant ingressID in domain(d.forwardingMetrics)
 			// @ invariant d.external != nil && acc(AccBatchConn(d.external), _)
 			// @ invariant unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
@@ -787,6 +790,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(MutexInvariant!<d!>(), _)
 				// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
 				// @ invariant ingressID in domain(d.forwardingMetrics)
+				// @ invariant 0 in domain(d.forwardingMetrics)
 				// @ invariant d.svc != nil
 				// properties about packetProcessor:
 				// @ invariant acc(&processor.d) && processor.d === d
@@ -918,8 +922,21 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						continue
 					}
 					// ok metric
+					// @ d.getForwardingMetrics()
+					// @ unfold acc(AccForwardingMetrics(d.forwardingMetrics), _)
+					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[result.EgressID], result.EgressID), _)
 					outputCounters := d.forwardingMetrics[result.EgressID]
+					// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
+					// the assertions above moreally imply it. In the future, we should either enrich the predicate
+					// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
+					// @ assert acc(outputCounters.OutputPacketsTotal.Mem(), _)
+					// @ assume outputCounters.OutputPacketsTotal != nil
 					outputCounters.OutputPacketsTotal.Inc()
+					// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
+					// the assertions above moreally imply it. In the future, we should either enrich the predicate
+					// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
+					// @ assert acc(outputCounters.OutputBytesTotal.Mem(), _)
+					// @ assume outputCounters.OutputBytesTotal != nil
 					outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
 				}
 			}
@@ -1115,6 +1132,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(&p.d, def.ReadL10) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires acc(&p.d.svc, _) && p.d.svc != nil
+// @ requires acc(&p.d.forwardingMetrics, _)
 // @ requires acc(&p.ingressID)
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
 // @ requires acc(&p.macBuffers.scionInput, def.ReadL10)
@@ -1125,6 +1143,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires p.mac != nil && p.mac.Mem()
 // @ requires acc(srcAddr.Mem(), _)
 // @ requires p.bfdLayer.NonInitMem()
+// @ requires p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
 //
 // @ ensures  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - def.ReadL15)
@@ -1146,16 +1165,16 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  reserr == nil ==> respr.OutPkt === rawPkt
 // @ ensures  (reserr != nil && typeOf(reserr) == type[scmpError]) ==>
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
-// @ ensures  respr.OutAddr != nil && addrAliasesPkt ==>
+// @ ensures  addrAliasesPkt ==>
 // @ 	(respr.OutAddr != nil &&
 // @	acc(respr.OutAddr.Mem(), def.ReadL15) &&
 // @ 	(acc(respr.OutAddr.Mem(), def.ReadL15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15)))
 // @ ensures  respr.OutAddr != nil && !addrAliasesPkt ==>
-// @ 	(respr.OutAddr != nil &&
-// @	acc(respr.OutAddr.Mem(), _) &&
+// @ 	(acc(respr.OutAddr.Mem(), _) &&
 // @	acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15))
-//
-//	ensures respr.EgressID != 0 ==> respr.EgressID in domain(???)
+// @ ensures  acc(&p.d.forwardingMetrics, _)
+// @ ensures  p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
+// @ ensures  respr.EgressID != 0 ==> respr.EgressID in domain(p.d.forwardingMetrics)
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 
