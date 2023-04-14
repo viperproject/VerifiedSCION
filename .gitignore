@@ -100,3 +100,4 @@ target
 *.unparsed
 *.gobrafied
 *.internal
+.devcontainer

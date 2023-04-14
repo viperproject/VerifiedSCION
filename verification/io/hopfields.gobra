@@ -14,25 +14,17 @@
 
 // +gobra
 
-package path
+/**** HOP-FIELDS ****/
 
-// interface IDs
-type IF uint16
-// terms in the term algebra
-type MsgTerm seq[byte]
+package io
 
 // Abstract representation of an HopField
-type HF domain {
-    func inIF2(h HF) option[IF]
-    func egIF2(h HF) option[IF]
-    func HVF(h HF) MsgTerm
+// We consider 0 to be the ID of the internal network in HopField.
+// We consider None to be the ID of the internal network in HF.
+type IO_HF adt {
+	IO_HF_ {
+		InIF2 option[IO_ifs]
+		EgIF2 option[IO_ifs]
+		HVF IO_msgterm
+	}
 }
-
-// we consider 0 to be the ID of the internal network in HopField
-// we consider None to be the ID of the internal network in HF
-ghost
-ensures h.ConsIngress == 0 ==> inIF2(res) == none[IF]
-ensures h.ConsIngress != 0 ==> inIF2(res) == some(IF(h.ConsIngress))
-ensures h.ConsEgress == 0 ==> egIF2(res) == none[IF]
-ensures h.ConsEgress != 0 ==> egIF2(res) == some(IF(h.ConsIngress))
-pure func AbstractHopField(h HopField) (res HF)

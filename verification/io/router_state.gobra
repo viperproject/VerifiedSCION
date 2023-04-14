@@ -14,9 +14,13 @@
 
 // +gobra
 
-package definitions
+/**** ROUTER STATE ****/
 
-func test() {
-	assert ReadL00 < writePerm
-	assert ReadL0 < ReadL00
+package io
+
+type IO_dp3s_state_local adt {
+	IO_dp3s_state_local_ {
+		ibuf dict[option[IO_ifs]](set[IO_pkt3])
+		obuf dict[option[IO_ifs]](set[IO_pkt3])
+	}
 }

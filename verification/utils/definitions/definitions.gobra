@@ -16,8 +16,11 @@
 
 package definitions
 
+const HalfPerm perm = 1/2
 const (
-	ReadL1 perm = 1/(2 << iota)
+	ReadL00 perm = 1/(2 << iota)
+	ReadL0
+	ReadL1
 	ReadL2
 	ReadL3
 	ReadL4
@@ -69,3 +72,11 @@ func add(x, y int) (res int)
 // type to be used as a stub for sets of private fields in formalizations of
 // third party libs
 type PrivateField *int
+
+// ghost
+pure
+requires b
+decreases
+func Asserting(ghost b bool) bool {
+    return true
+}
