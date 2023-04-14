@@ -840,14 +840,14 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 					srcAddr := p.Addr.(*net.UDPAddr)
 					// @ unfold msgs[:pkts][i0].Mem(1)
-					//  assert p.Buffers === msgs[:pkts][i0].Buffers
-					//  assert acc(&p.Buffers[0])
-					//  assert p.N <= len(p.Buffers[0])
+					// @ assert p.Buffers === msgs[:pkts][i0].Buffers
+					// @ assert acc(&p.Buffers[0])
+					// @ assert p.N <= len(p.Buffers[0])
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					tmpBuf := p.Buffers[0][:p.N]
-					//  assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
-					//  assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
-					//  assert sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
+					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
+					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
+					// @ assert sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
 					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
 					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
 
