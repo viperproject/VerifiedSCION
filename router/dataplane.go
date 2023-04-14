@@ -856,7 +856,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					case errors.As(err, &scmpErr):
 						// (VerifiedSCION) the specification mechanisms of Gobra cannot specify
 						// the behaviour of errors.As. As such, we axiomatize it.
-						// @ inhale typeOf(err) == type[scmpError]
+						// @ assume typeOf(err) == type[scmpError]
 						if !scmpErr.TypeCode.InfoMsg() {
 							log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
 						}
@@ -866,7 +866,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					default:
 						// (VerifiedSCION) the specification mechanisms of Gobra cannot specify
 						// the behaviour of errors.As. As such, we axiomatize it.
-						// @ inhale typeOf(err) != type[scmpError]
+						// @ assume typeOf(err) != type[scmpError]
 						log.Debug("Error processing packet", "err", err)
 						// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
 						// the assertions above moreally imply it. In the future, we should either enrich the predicate
@@ -879,7 +879,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					if result.OutConn == nil { // e.g. BFD case no message is forwarded
 						continue
 					}
-					// (VerifiedSCION) only scmp errors and successful messages get to this point
+					// (VerifiedSCION) only scmp errors and successful messages get to this point,
+					// but we cannot assert that because errors.As cannot be properly specified at the moment.
+					// @ assume err == nil || typeOf(err) == type[scmpError]
 
 					// Write to OutConn; drop the packet if this would block.
 					// Use WriteBatch because it's the only available function that
@@ -962,14 +964,14 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			defer log.HandlePanic()
 			// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
 			// This should be easily addressable nonethelss
-			read(i, c) //@ as readClosureSpec
+			read(i, c) //@ as readClosureSpec // TODO: maybe use rc as the spec instead and delete readClosureSpec
 		}(ifID, v) //@ as closureSpec2
 	}
 	go func(c BatchConn) {
 		// @ def.TODO()
 		defer log.HandlePanic()
 		// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
-		read(0, c) //@ as readClosureSpec
+		read(0, c) //@ as readClosureSpec  // TODO: maybe use rc as the spec instead and delete readClosureSpec
 	}(d.internal) //@ as closureSpec3
 
 	d.mtx.Unlock()
