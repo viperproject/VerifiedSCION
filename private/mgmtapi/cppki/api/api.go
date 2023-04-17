@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"time"
@@ -50,7 +49,7 @@ func (s *Server) GetCertificates(
 	q := trust.ChainQuery{Date: time.Now()}
 	var errs serrors.List
 	if params.IsdAs != nil {
-		if ia, err := addr.ParseIA(string(*params.IsdAs)); err == nil {
+		if ia, err := addr.ParseIA(*params.IsdAs); err == nil {
 			q.IA = ia
 		} else {
 			errs = append(errs, serrors.WithCtx(err, "parameter", "isd_as"))
@@ -92,9 +91,9 @@ func (s *Server) GetCertificates(
 			continue
 		}
 		results = append(results, ChainBrief{
-			Id:      ChainID(fmt.Sprintf("%x", truststorage.ChainID(chain))),
-			Issuer:  IsdAs(issuer.String()),
-			Subject: IsdAs(subject.String()),
+			Id:      fmt.Sprintf("%x", truststorage.ChainID(chain)),
+			Issuer:  issuer.String(),
+			Subject: subject.String(),
 			Validity: Validity{
 				NotAfter:  chain[0].NotAfter,
 				NotBefore: chain[0].NotBefore,
@@ -118,7 +117,7 @@ func (s *Server) GetCertificates(
 func (s *Server) GetCertificate(w http.ResponseWriter, r *http.Request, chainID ChainID) {
 	w.Header().Set("Content-Type", "application/json")
 
-	id, err := hex.DecodeString(string(chainID))
+	id, err := hex.DecodeString(chainID)
 	if err != nil {
 		Error(w, Problem{
 			Detail: api.StringRef(err.Error()),
@@ -146,9 +145,9 @@ func (s *Server) GetCertificate(w http.ResponseWriter, r *http.Request, chainID 
 	result := Chain{
 		Subject: Certificate{
 			DistinguishedName: chain[0].Subject.String(),
-			IsdAs:             IsdAs(subject.String()),
+			IsdAs:             subject.String(),
 			SubjectKeyAlgo:    chain[0].PublicKeyAlgorithm.String(),
-			SubjectKeyId:      SubjectKeyID(fmt.Sprintf("% X", chain[0].SubjectKeyId)),
+			SubjectKeyId:      fmt.Sprintf("% X", chain[0].SubjectKeyId),
 			Validity: Validity{
 				NotAfter:  chain[0].NotAfter,
 				NotBefore: chain[0].NotBefore,
@@ -156,9 +155,9 @@ func (s *Server) GetCertificate(w http.ResponseWriter, r *http.Request, chainID 
 		},
 		Issuer: Certificate{
 			DistinguishedName: chain[1].Subject.String(),
-			IsdAs:             IsdAs(issuer.String()),
+			IsdAs:             issuer.String(),
 			SubjectKeyAlgo:    chain[1].PublicKeyAlgorithm.String(),
-			SubjectKeyId:      SubjectKeyID(fmt.Sprintf("% X", chain[1].SubjectKeyId)),
+			SubjectKeyId:      fmt.Sprintf("% X", chain[1].SubjectKeyId),
 			Validity: Validity{
 				NotAfter:  chain[1].NotAfter,
 				NotBefore: chain[1].NotBefore,
@@ -183,7 +182,7 @@ func (s *Server) GetCertificate(w http.ResponseWriter, r *http.Request, chainID 
 func (s *Server) GetCertificateBlob(w http.ResponseWriter, r *http.Request, chainID ChainID) {
 	w.Header().Set("Content-Type", "application/x-pem-file")
 
-	id, err := hex.DecodeString(string(chainID))
+	id, err := hex.DecodeString(chainID)
 	if err != nil {
 		Error(w, Problem{
 			Detail: api.StringRef(err.Error()),
@@ -216,7 +215,7 @@ func (s *Server) GetCertificateBlob(w http.ResponseWriter, r *http.Request, chai
 			return
 		}
 	}
-	io.Copy(w, &buf)
+	_, _ = w.Write(buf.Bytes())
 }
 
 func (s *Server) GetTrcs(w http.ResponseWriter, r *http.Request, params GetTrcsParams) {
@@ -299,11 +298,11 @@ func (s *Server) GetTrc(w http.ResponseWriter, r *http.Request, isd int, base in
 	}
 	authASes := make([]IsdAs, 0, len(trc.TRC.AuthoritativeASes))
 	for _, as := range trc.TRC.AuthoritativeASes {
-		authASes = append(authASes, IsdAs(addr.MustIAFrom(trc.TRC.ID.ISD, as).String()))
+		authASes = append(authASes, addr.MustIAFrom(trc.TRC.ID.ISD, as).String())
 	}
 	coreAses := make([]IsdAs, 0, len(trc.TRC.CoreASes))
 	for _, as := range trc.TRC.CoreASes {
-		coreAses = append(coreAses, IsdAs(addr.MustIAFrom(trc.TRC.ID.ISD, as).String()))
+		coreAses = append(coreAses, addr.MustIAFrom(trc.TRC.ID.ISD, as).String())
 	}
 	rep := TRC{
 		AuthoritativeAses: authASes,
@@ -378,5 +377,5 @@ func Error(w http.ResponseWriter, p Problem) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	// no point in catching error here, there is nothing we can do about it anymore.
-	enc.Encode(p)
+	_ = enc.Encode(p)
 }

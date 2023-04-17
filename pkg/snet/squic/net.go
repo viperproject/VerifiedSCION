@@ -17,6 +17,7 @@ package squic
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	mrand "math/rand"
 	"net"
@@ -216,8 +217,10 @@ func (c *acceptingConn) acceptStreamOnce() {
 
 	// Potentially set the deadlines to the values that were set before the
 	// stream was accepted.
-	c.stream.SetReadDeadline(c.readDeadline)
-	c.stream.SetWriteDeadline(c.writeDeadline)
+	c.err = serrors.Join(
+		c.stream.SetReadDeadline(c.readDeadline),
+		c.stream.SetWriteDeadline(c.writeDeadline),
+	)
 }
 
 func (c *acceptingConn) SetDeadline(t time.Time) error {
@@ -312,6 +315,10 @@ func (c *acceptingConn) RemoteAddr() net.Addr {
 	return c.session.RemoteAddr()
 }
 
+func (c *acceptingConn) ConnectionState() tls.ConnectionState {
+	return c.session.ConnectionState().TLS.ConnectionState
+}
+
 func (c *acceptingConn) Close() error {
 	// Prevent the stream from being accepted.
 	c.once.Do(func() {
@@ -376,9 +383,8 @@ func (d ConnDialer) Dial(ctx context.Context, dst net.Addr) (net.Conn, error) {
 		if err == nil {
 			break
 		}
-		// Unfortunately there is no better way to check the error.
-		// https://github.com/lucas-clemente/quic-go/issues/2441
-		if err.Error() != "SERVER_BUSY" {
+		var transportErr *quic.TransportError
+		if !errors.As(err, &transportErr) || transportErr.ErrorCode != quic.ConnectionRefused {
 			return nil, serrors.WrapStr("dialing QUIC/SCION", err)
 		}
 
@@ -394,7 +400,7 @@ func (d ConnDialer) Dial(ctx context.Context, dst net.Addr) (net.Conn, error) {
 	}
 	stream, err := session.OpenStreamSync(ctx)
 	if err != nil {
-		session.CloseWithError(OpenStreamError, "")
+		_ = session.CloseWithError(OpenStreamError, "")
 		return nil, serrors.WrapStr("opening stream", err)
 	}
 	return &acceptedConn{
@@ -408,7 +414,7 @@ func (d ConnDialer) Dial(ctx context.Context, dst net.Addr) (net.Conn, error) {
 // with QUIC SNI.
 func computeAddressStr(address net.Addr) string {
 	if v, ok := address.(*snet.UDPAddr); ok {
-		return fmt.Sprintf("[%s]:%d", v.Host.IP, v.Host.Port)
+		return fmt.Sprintf("[%s,%s]:%d", v.IA, v.Host.IP, v.Host.Port)
 	}
 	return address.String()
 }
@@ -445,6 +451,10 @@ func (c *acceptedConn) LocalAddr() net.Addr {
 
 func (c *acceptedConn) RemoteAddr() net.Addr {
 	return c.session.RemoteAddr()
+}
+
+func (c *acceptedConn) ConnectionState() tls.ConnectionState {
+	return c.session.ConnectionState().TLS.ConnectionState
 }
 
 func (c *acceptedConn) Close() error {

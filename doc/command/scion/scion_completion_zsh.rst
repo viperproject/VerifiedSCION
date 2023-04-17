@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion_completion_zsh:
 
 scion completion zsh
@@ -16,6 +18,10 @@ to enable it.  You can execute the following once:
 
 	echo "autoload -U compinit; compinit" >> ~/.zshrc
 
+To load completions in your current shell session:
+
+	source <(scion completion zsh); compdef _scion scion
+
 To load completions for every new session, execute once:
 
 #### Linux:
@@ -24,7 +30,7 @@ To load completions for every new session, execute once:
 
 #### macOS:
 
-	scion completion zsh > /usr/local/share/zsh/site-functions/_scion
+	scion completion zsh > $(brew --prefix)/share/zsh/site-functions/_scion
 
 You will need to start a new shell for this setup to take effect.
 
@@ -44,5 +50,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion completion <scion_completion.html>`_ 	 - Generate the autocompletion script for the specified shell
+* :ref:`scion completion <scion_completion>` 	 - Generate the autocompletion script for the specified shell
 

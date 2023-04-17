@@ -1,4 +1,4 @@
-// Copyright 2017 ETH Zurich
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
-
-import (
-	"encoding/binary"
-	"unsafe"
-)
-
-var (
-	NativeOrder binary.ByteOrder
-	IsBigEndian bool
-)
-
-func init() {
-	var v uint16 = 0x11FF
-	if (*[2]uint8)(unsafe.Pointer(&v))[0] == 0x11 {
-		IsBigEndian = true
-		NativeOrder = binary.BigEndian
-	} else {
-		IsBigEndian = false
-		NativeOrder = binary.LittleEndian
-	}
-}
+// Package spao implements the logic needed to provide support for the
+// SCION Packet Authenticator Option defined on:
+// https://docs.scion.org/en/latest/protocols/authenticator-option.html
+//
+// It provides support for the MAC and the timestamp computations
+// used when utilizing the SPAO header.
+package spao
