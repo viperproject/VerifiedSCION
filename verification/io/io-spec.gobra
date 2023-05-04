@@ -55,11 +55,11 @@ decreases
 pure func dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return some(v.IO_Internal_val1_2) in domain(s.ibuf) ==>
 		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 in ibuf_set)) &&
-		(exists currseg IO_seg3, traversedseg IO_seg3 ::
+		(exists traversedseg IO_seg3 ::
 		(exists hf1 IO_HF, fut seq[IO_HF] ::
 			dp2_enter_guard(
 				v.IO_Internal_val1_1,
-				currseg,
+				v.IO_Internal_val1_1.CurrSeg,
 				traversedseg,
 				asid(),
 				hf1,
@@ -97,24 +97,23 @@ pure func dp3s_iospec_bio3s_xover_up2down_T(s IO_dp3s_state_local, t Place, v IO
 ghost
 decreases
 pure func dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return (exists currseg IO_seg3 :: !currseg.ConsDir &&
-		(exists nextseg IO_seg3 :: nextseg.ConsDir &&
-			(exists traversedseg IO_seg3, intermediatepkt IO_pkt3, hf1 IO_HF, hf2 IO_HF ::
-			xover_up2down2_link_type(asid(), hf1, hf2) &&
-				(exists nextfut seq[IO_HF] ::
-				dp3s_xover_common(
-					s,
-					v.IO_Internal_val1_1,
-					currseg,
-					nextseg,
-					traversedseg,
-					intermediatepkt,
-					hf1,
-					hf2,
-					nextfut,
-					v.IO_Internal_val1_2,
-					v.IO_Internal_val1_3,
-					v.IO_Internal_val1_4,)))))
+	return (exists nextseg IO_seg3 :: nextseg.ConsDir &&
+		(exists traversedseg IO_seg3, hf1 IO_HF, hf2 IO_HF ::
+		xover_up2down2_link_type(asid(), hf1, hf2) &&
+			(exists nextfut seq[IO_HF] ::
+			dp3s_xover_common(
+				s,
+				v.IO_Internal_val1_1,
+				v.IO_Internal_val1_1.CurrSeg,
+				nextseg,
+				traversedseg,
+				IO_pkt2(IO_Packet2{nextseg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg, some(traversedseg)}),
+				hf1, // IO_HF {v.IO_Internal_val1_1.CurrSeg.ConsDir ? some(recvif)}
+				hf2,
+				nextfut,
+				v.IO_Internal_val1_2,
+				v.IO_Internal_val1_3,
+				v.IO_Internal_val1_4,))))
 }
 
 pred dp3s_iospec_bio3s_xover_up2down(s IO_dp3s_state_local, t Place) {
@@ -138,18 +137,18 @@ ghost
 decreases
 pure func dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return (asid() in core_as_set() &&
-		(exists currseg IO_seg3, nextseg IO_seg3 ::
-		currseg.ConsDir == nextseg.ConsDir &&
-			(exists traversedseg IO_seg3, intermediatepkt IO_pkt3, hf1 IO_HF, hf2 IO_HF ::
-			xover_core2_link_type(hf1, hf2, asid(), currseg.ConsDir) &&
+		(exists nextseg IO_seg3 ::
+		v.IO_Internal_val1_1.CurrSeg.ConsDir == nextseg.ConsDir &&
+			(exists traversedseg IO_seg3, hf1 IO_HF, hf2 IO_HF ::
+			xover_core2_link_type(hf1, hf2, asid(), v.IO_Internal_val1_1.CurrSeg.ConsDir) &&
 				(exists nextfut seq[IO_HF] ::
 				dp3s_xover_common(
 					s,
 					v.IO_Internal_val1_1,
-					currseg,
+					v.IO_Internal_val1_1.CurrSeg,
 					nextseg,
 					traversedseg,
-					intermediatepkt,
+					IO_pkt2(IO_Packet2{nextseg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg, some(traversedseg)}),
 					hf1,
 					hf2,
 					nextfut,
