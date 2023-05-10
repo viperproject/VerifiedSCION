@@ -49,17 +49,36 @@ decreases
 pure func CBio_IN_bio3s_enter_T(s IO_dp3s_state_local, t Place, v IO_val) Place
 
 
+ghost
+requires len(currseg.Future) > 0
+decreases
+pure func dp3s_iospec_bio3s_enter_guard_traversedseg(currseg IO_seg3) IO_seg3 {
+	return let uinfo := !currseg.ConsDir ?
+	  upd_uinfo(currseg.UInfo, currseg.Future[0]) :
+	  currseg.UInfo in
+		  IO_seg3_ {
+				AInfo: currseg.AInfo,
+				UInfo: uinfo,
+				ConsDir: currseg.ConsDir,
+				Peer: currseg.Peer,
+				Past: currseg.Past,
+				Future: currseg.Future,
+				History: currseg.History}
+}
+
 // This corresponds to the condition of the if statement in the io-spec case for enter
 ghost
 decreases
 pure func dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return some(v.IO_Internal_val1_2) in domain(s.ibuf) ==>
 		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 in ibuf_set)) &&
-		(exists traversedseg IO_seg3 ::
-		(exists hf1 IO_HF, fut seq[IO_HF] ::
+			len(v.IO_Internal_val1_1.CurrSeg.Future) > 0 &&
+			(let currseg := v.IO_Internal_val1_1.CurrSeg in
+			let hf1, fut := currseg.Future[0], currseg.Future[1:] in
+			let traversedseg := dp3s_iospec_bio3s_enter_guard_traversedseg(currseg) in
 			dp2_enter_guard(
 				v.IO_Internal_val1_1,
-				v.IO_Internal_val1_1.CurrSeg,
+				currseg,
 				traversedseg,
 				asid(),
 				hf1,
@@ -73,7 +92,7 @@ pure func dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local, t Place, v IO_val
 							v.IO_Internal_val1_1.MidSeg,
 							v.IO_Internal_val1_1.RightSeg}),
 					v.IO_Internal_val1_3,
-					v.IO_Internal_val1_4)))
+					v.IO_Internal_val1_4))
 }
 
 pred dp3s_iospec_bio3s_enter(s IO_dp3s_state_local, t Place) {
