@@ -1244,7 +1244,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
 		// @ ghost if lastLayerIdx >= 0 {
-		// @	ghost if !offsets[lastLayerIdx].isNil {
+		// @	if !offsets[lastLayerIdx].isNil {
 		// @		o := offsets[lastLayerIdx]
 		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		// @ 	}
