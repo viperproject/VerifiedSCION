@@ -14,7 +14,7 @@
 
 // +gobra
 
-// (VerifiedSCION) Uncommenting the following causes severe slowdowns, but it verifies
+// (VerifiedSCION) the following init-postconditions causes severe slowdowns
 // @ initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
 // @ initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
 // @ initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
