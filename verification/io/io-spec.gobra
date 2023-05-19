@@ -21,13 +21,13 @@ package io
 // This is the main IO Specification.
 pred dp3s_iospec_ordered(s IO_dp3s_state_local, t Place) {
 	dp3s_iospec_bio3s_enter(s, t) &&
-	dp3s_iospec_bio3s_xover_up2down(s, t) &&
-	dp3s_iospec_bio3s_xover_core(s, t) &&
-	dp3s_iospec_bio3s_exit(s, t) &&
-	dp3s_iospec_bio3s_send(s, t) &&
-	dp3s_iospec_bio3s_recv(s, t) &&
-	dp3s_iospec_skip(s, t) &&
-	dp3s_iospec_stop(s, t)
+		dp3s_iospec_bio3s_xover_up2down(s, t) &&
+		dp3s_iospec_bio3s_xover_core(s, t) &&
+		dp3s_iospec_bio3s_exit(s, t) &&
+		dp3s_iospec_bio3s_send(s, t) &&
+		dp3s_iospec_bio3s_recv(s, t) &&
+		dp3s_iospec_skip(s, t) &&
+		dp3s_iospec_stop(s, t)
 }
 
 // TODO: match does not work with assertions yet
@@ -52,18 +52,18 @@ pure func CBio_IN_bio3s_enter_T(s IO_dp3s_state_local, t Place, v IO_val) Place
 ghost
 requires len(currseg.Future) > 0
 decreases
-pure func dp3s_iospec_bio3s_enter_guard_traversedseg(currseg IO_seg3) IO_seg3 {
+pure func dp3s_iospec_bio3s_create_guard_traversedseg(currseg IO_seg3) IO_seg3 {
 	return let uinfo := !currseg.ConsDir ?
-	  upd_uinfo(currseg.UInfo, currseg.Future[0]) :
-	  currseg.UInfo in
-		  IO_seg3_ {
-				AInfo: currseg.AInfo,
-				UInfo: uinfo,
-				ConsDir: currseg.ConsDir,
-				Peer: currseg.Peer,
-				Past: currseg.Past,
-				Future: currseg.Future,
-				History: currseg.History}
+	upd_uinfo(currseg.UInfo, currseg.Future[0]) :
+	currseg.UInfo in
+	IO_seg3_ {
+		AInfo: currseg.AInfo,
+			UInfo: uinfo,
+			ConsDir: currseg.ConsDir,
+			Peer: currseg.Peer,
+			Past: currseg.Past,
+			Future: currseg.Future,
+			History: currseg.History}
 }
 
 // This corresponds to the condition of the if statement in the io-spec case for enter
@@ -73,26 +73,26 @@ pure func dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local, t Place, v IO_val
 	return some(v.IO_Internal_val1_2) in domain(s.ibuf) ==>
 		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 in ibuf_set)) &&
 			len(v.IO_Internal_val1_1.CurrSeg.Future) > 0 &&
-			(let currseg := v.IO_Internal_val1_1.CurrSeg in
-			let hf1, fut := currseg.Future[0], currseg.Future[1:] in
-			let traversedseg := dp3s_iospec_bio3s_enter_guard_traversedseg(currseg) in
-			dp2_enter_guard(
-				v.IO_Internal_val1_1,
-				currseg,
-				traversedseg,
-				asid(),
-				hf1,
-				v.IO_Internal_val1_2,
-				fut) &&
-				dp3s_forward(
-					IO_pkt2(
-						IO_Packet2{
-							traversedseg,
-							v.IO_Internal_val1_1.LeftSeg,
-							v.IO_Internal_val1_1.MidSeg,
-							v.IO_Internal_val1_1.RightSeg}),
-					v.IO_Internal_val1_3,
-					v.IO_Internal_val1_4))
+			let currseg := v.IO_Internal_val1_1.CurrSeg in
+	let hf1, fut := currseg.Future[0], currseg.Future[1:] in
+	let traversedseg := dp3s_iospec_bio3s_create_guard_traversedseg(currseg) in
+	dp2_enter_guard(
+		v.IO_Internal_val1_1,
+		currseg,
+		traversedseg,
+		asid(),
+		hf1,
+		v.IO_Internal_val1_2,
+		fut) &&
+		dp3s_forward(
+			IO_pkt2(
+				IO_Packet2{
+					traversedseg,
+					v.IO_Internal_val1_1.LeftSeg,
+					v.IO_Internal_val1_1.MidSeg,
+					v.IO_Internal_val1_1.RightSeg}),
+			v.IO_Internal_val1_3,
+			v.IO_Internal_val1_4)
 }
 
 pred dp3s_iospec_bio3s_enter(s IO_dp3s_state_local, t Place) {
@@ -111,28 +111,37 @@ ghost
 requires CBio_IN_bio3s_xover_up2down(t, v)
 pure func dp3s_iospec_bio3s_xover_up2down_T(s IO_dp3s_state_local, t Place, v IO_val) Place
 
+// nextseg.Future[0] == hf2
+// currseg.Future == seq[IO_HF]{hf1}
+
+// hf1.InIF2 === some(recvif)
+// hf1.EgIF2 === some(recvif)
 
 // This corresponds to the condition of the if statement in the io-spec case for xover_up2down
 ghost
 decreases
 pure func dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return (exists nextseg IO_seg3 :: nextseg.ConsDir &&
-		(exists traversedseg IO_seg3, hf1 IO_HF, hf2 IO_HF ::
-		xover_up2down2_link_type(asid(), hf1, hf2) &&
-			(exists nextfut seq[IO_HF] ::
+	return let currseg := v.IO_Internal_val1_1.CurrSeg in
+	v.IO_Internal_val1_1.LeftSeg == none[IO_seg2] ? false :
+	let nextseg := get(v.IO_Internal_val1_1.LeftSeg) in
+	(nextseg.ConsDir &&
+		len(nextseg.Future) > 0 &&
+		len(currseg.Future) > 0 &&
+		let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
+		let traversedseg := dp3s_iospec_bio3s_create_guard_traversedseg(currseg) in
+		(xover_up2down2_link_type(asid(), hf1, hf2) &&
 			dp3s_xover_common(
 				s,
 				v.IO_Internal_val1_1,
-				v.IO_Internal_val1_1.CurrSeg,
+				currseg,
 				nextseg,
 				traversedseg,
 				IO_pkt2(IO_Packet2{nextseg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg, some(traversedseg)}),
-				hf1, // IO_HF {v.IO_Internal_val1_1.CurrSeg.ConsDir ? some(recvif)}
+				hf1,
 				hf2,
-				nextfut,
 				v.IO_Internal_val1_2,
 				v.IO_Internal_val1_3,
-				v.IO_Internal_val1_4,))))
+				v.IO_Internal_val1_4,)))
 }
 
 pred dp3s_iospec_bio3s_xover_up2down(s IO_dp3s_state_local, t Place) {
@@ -156,24 +165,27 @@ ghost
 decreases
 pure func dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return (asid() in core_as_set() &&
-		(exists nextseg IO_seg3 ::
-		v.IO_Internal_val1_1.CurrSeg.ConsDir == nextseg.ConsDir &&
-			(exists traversedseg IO_seg3, hf1 IO_HF, hf2 IO_HF ::
-			xover_core2_link_type(hf1, hf2, asid(), v.IO_Internal_val1_1.CurrSeg.ConsDir) &&
-				(exists nextfut seq[IO_HF] ::
+		let currseg := v.IO_Internal_val1_1.CurrSeg in
+		(v.IO_Internal_val1_1.LeftSeg == none[IO_seg2] ? false :
+			let nextseg := get(v.IO_Internal_val1_1.LeftSeg) in
+			currseg.ConsDir == nextseg.ConsDir &&
+				len(nextseg.Future) > 0 &&
+				len(currseg.Future) > 0 &&
+				let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
+			let traversedseg := dp3s_iospec_bio3s_create_guard_traversedseg(currseg) in
+			(xover_core2_link_type(hf1, hf2, asid(), currseg.ConsDir) &&
 				dp3s_xover_common(
 					s,
 					v.IO_Internal_val1_1,
-					v.IO_Internal_val1_1.CurrSeg,
+					currseg,
 					nextseg,
 					traversedseg,
 					IO_pkt2(IO_Packet2{nextseg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg, some(traversedseg)}),
 					hf1,
 					hf2,
-					nextfut,
 					v.IO_Internal_val1_2,
 					v.IO_Internal_val1_3,
-					v.IO_Internal_val1_4)))))
+					v.IO_Internal_val1_4))))
 }
 
 pred dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Place) {
@@ -205,10 +217,10 @@ pred dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
 	forall v IO_val ::
 	(v.isIO_Internal_val2 ==>
 		(dp3s_iospec_bio3s_exit_guard(s, t, v) ==>
-				(CBio_IN_bio3s_exit(t, v) &&
-					dp3s_iospec_ordered(
-						dp3s_add_obuf(s, some(v.IO_Internal_val2_3), v.IO_Internal_val2_2),
-						dp3s_iospec_bio3s_exit_T(s, t, v)))))
+			(CBio_IN_bio3s_exit(t, v) &&
+				dp3s_iospec_ordered(
+					dp3s_add_obuf(s, some(v.IO_Internal_val2_3), v.IO_Internal_val2_2),
+					dp3s_iospec_bio3s_exit_T(s, t, v)))))
 }
 
 
@@ -256,25 +268,25 @@ pure func dp3s_iospec_bio3s_recv_R(s IO_dp3s_state_local, t Place) IO_val
 // TODO: make simplifying assumption that one packet is received per call to ReadBatch.
 pred dp3s_iospec_bio3s_recv(s IO_dp3s_state_local, t Place) {
 	CBioIO_bio3s_recv(t) &&
-	(dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Pkt2 ==>
-		dp3s_iospec_ordered(
-			dp3s_add_ibuf(
-				s,
-				dp3s_iospec_bio3s_recv_R(s, t).IO_val_Pkt2_1,
-				dp3s_iospec_bio3s_recv_R(s, t).IO_val_Pkt2_2),
-			dp3s_iospec_bio3s_recv_T(s, t))) &&
-	(dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Unsupported ==>
-		dp3s_iospec_ordered(s, dp3s_iospec_bio3s_recv_T(s, t))) &&
-	((!dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Pkt2 && !dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Unsupported) ==>
-		dp3s_iospec_ordered(undefined(), dp3s_iospec_bio3s_recv_T(s, t)))
+		(dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Pkt2 ==>
+			dp3s_iospec_ordered(
+				dp3s_add_ibuf(
+					s,
+					dp3s_iospec_bio3s_recv_R(s, t).IO_val_Pkt2_1,
+					dp3s_iospec_bio3s_recv_R(s, t).IO_val_Pkt2_2),
+				dp3s_iospec_bio3s_recv_T(s, t))) &&
+		(dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Unsupported ==>
+			dp3s_iospec_ordered(s, dp3s_iospec_bio3s_recv_T(s, t))) &&
+		((!dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Pkt2 && !dp3s_iospec_bio3s_recv_R(s, t).isIO_val_Unsupported) ==>
+			dp3s_iospec_ordered(undefined(), dp3s_iospec_bio3s_recv_T(s, t)))
 
 	/*
-	Ideally:
+Ideally:
 	(match dp3s_iospec_bio3s_recv_R(s, t) {
-		case IO_val_Pkt2{?recvif, ?pkt}: true // TODO
-		case IO_val_Unsupported{?recvif, ?pkt}:
+	case IO_val_Pkt2{?recvif, ?pkt}: true // TODO
+	case IO_val_Unsupported{?recvif, ?pkt}:
 			true // todo
-		default:
+	default:
 			dp3s_iospec_ordered(undefined(), dp3s_iospec_bio3s_recv_T(s, t))))
 	})
 	*/

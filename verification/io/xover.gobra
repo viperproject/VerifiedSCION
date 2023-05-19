@@ -45,7 +45,6 @@ pure func dp2_xover_common_guard(m IO_pkt2,
 	newpkt IO_pkt2,
 	hf1 IO_HF,
 	hf2 IO_HF,
-	nextfut seq[IO_HF],
 	asid IO_as,
 	recvif IO_ifs) bool {
 		return m.CurrSeg == currseg &&
@@ -53,7 +52,8 @@ pure func dp2_xover_common_guard(m IO_pkt2,
 			nextseg.History == seq[IO_ahi]{} &&
 			newpkt == IO_pkt2(IO_Packet2{nextseg, m.MidSeg, m.RightSeg, some(traversedseg)}) &&
 			currseg.Future == seq[IO_HF]{hf1} &&
-			nextseg.Future == seq[IO_HF]{hf2} ++ nextfut &&
+			len(nextseg.Future) > 0 &&
+			nextseg.Future[0] == hf2 &&
 			dp2_check_interface(currseg.ConsDir, asid, hf1, recvif) &&
 			dp2_check_recvif(currseg.ConsDir, asid, recvif) &&
 			update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
@@ -76,12 +76,11 @@ pure func dp2_xover_common(
 	newpkt IO_pkt2,
 	hf1 IO_HF,
 	hf2 IO_HF,
-	nextfut seq[IO_HF],
 	asid IO_as,
 	recvif IO_ifs,
 	sprime IO_dp2_state) bool {
 		return dp2_in_ext(s, asid, recvif, m) &&
-			dp2_xover_common_guard(m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, nextfut, asid, recvif) &&
+			dp2_xover_common_guard(m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, asid, recvif) &&
 			dp2_forward(s, sprime, asid, newpkt)
 }
 
@@ -118,12 +117,11 @@ pure func dp2_xover_up2down(
 	recvif IO_ifs,
 	hf1 IO_HF,
 	hf2 IO_HF,
-	nextfut seq[IO_HF],
 	sprime IO_dp2_state) bool {
 		return !currseg.ConsDir &&
 			nextseg.ConsDir &&
 			xover_up2down2_link_type(asid, hf1, hf2) &&
-			dp2_xover_common(s, m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, nextfut, asid, recvif, sprime)
+			dp2_xover_common(s, m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, asid, recvif, sprime)
 }
 
 ghost
