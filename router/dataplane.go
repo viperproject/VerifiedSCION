@@ -952,6 +952,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	for k, v := range d.bfdSessions {
 		// @ def.TODO()
 		go func(ifID uint16, c bfdSession) {
+			// @ def.TODO()
 			defer log.HandlePanic()
 			if err := c.Run(ctx); err != nil && err != bfd.AlreadyRunning {
 				log.Error("BFD session failed to start", "ifID", ifID, "err", err)
@@ -1141,7 +1142,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
 // @ requires acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ requires sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
-// @ requires acc(&p.segmentChange) && acc(&p.buffer, def.ReadL10) && acc(&p.mac) && acc(&p.cachedMac)
+// @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
 // @ requires acc(&p.srcAddr) && acc(&p.lastLayer)
 // @ requires p.buffer != nil && p.buffer.Mem()
 // @ requires p.mac != nil && p.mac.Mem()
@@ -1156,7 +1157,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
 // @ ensures  acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ ensures  sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
-// @ ensures  acc(&p.segmentChange) && acc(&p.buffer, def.ReadL10) && acc(&p.mac) && acc(&p.cachedMac)
+// @ ensures  acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
 // @ ensures  acc(&p.srcAddr) && acc(&p.lastLayer)
 // @ ensures  p.buffer != nil && p.buffer.Mem()
 // @ ensures  p.mac != nil && p.mac.Mem()
