@@ -1336,7 +1336,7 @@ func (p *scionPacketProcessor) packSCMP(
 		}
 	}
 
-	rawSCMP, err := p.prepareSCMP(typ, code, scmpP, cause)
+	rawSCMP, err := p.prepareSCMP(typ, code, scmpP, cause /*@ , nil @*/) // (VerifiedSCION) replace nil by sth else
 	return processResult{OutPkt: rawSCMP}, err
 }
 
@@ -2662,43 +2662,53 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-// @ trusted
-// @ requires false
+// @ requires  acc(p.scionLayer.Mem(ub), def.ReadL15)
+// @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL15)
+// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL15)
+// @ ensures   acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL15)
+// @ decreases
 func (p *scionPacketProcessor) prepareSCMP(
 	typ slayers.SCMPType,
 	code slayers.SCMPCode,
 	scmpP gopacket.SerializableLayer,
 	cause error,
+	// @ ghost ub []byte,
 ) ([]byte, error) {
 
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
 	// back to rawPkt (quote).
 	var path *scion.Raw
-	pathType := p.scionLayer.Path.Type()
+	// @ ghost ubPath := p.scionLayer.UBPath(ub)
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL15)
+	pathType := p.scionLayer.Path.Type( /*@ ubPath @*/ )
 	switch pathType {
 	case scion.PathType:
 		var ok bool
 		path, ok = p.scionLayer.Path.(*scion.Raw)
 		if !ok {
+			// @ establishCannotRoute()
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
 	case epic.PathType:
 		epicPath, ok := p.scionLayer.Path.(*epic.Path)
 		if !ok {
+			// @ establishCannotRoute()
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
 		path = epicPath.ScionPath
 	default:
+		// @ establishCannotRoute()
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
-	decPath, err := path.ToDecoded()
+	// @ assert false
+	decPath, err := path.ToDecoded( /*@ nil @*/ )
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
-	revPathTmp, err := decPath.Reverse()
+	revPathTmp, err := decPath.Reverse( /*@ nil @*/ )
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
@@ -2706,7 +2716,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover() {
-		if err := revPath.IncPath(); err != nil {
+		if err := revPath.IncPath( /*@ nil @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
@@ -2719,16 +2729,16 @@ func (p *scionPacketProcessor) prepareSCMP(
 			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
 			infoField.UpdateSegID(hopField.Mac)
 		}
-		if err := revPath.IncPath(); err != nil {
+		if err := revPath.IncPath( /*@ nil @*/ ); err != nil {
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
 
 	// create new SCION header for reply.
-	var scionL slayers.SCION
+	var scionL /*@@@*/ slayers.SCION
 	scionL.FlowID = p.scionLayer.FlowID
 	scionL.TrafficClass = p.scionLayer.TrafficClass
-	scionL.PathType = revPath.Type()
+	scionL.PathType = revPath.Type( /*@ nil @*/ )
 	scionL.Path = revPath
 	scionL.DstIA = p.scionLayer.SrcIA
 	scionL.SrcIA = p.d.localIA
@@ -2736,16 +2746,16 @@ func (p *scionPacketProcessor) prepareSCMP(
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "extracting src addr")
 	}
-	if err := scionL.SetDstAddr(srcA); err != nil {
+	if err := scionL.SetDstAddr(srcA /*@ , false @*/); err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "setting dest addr")
 	}
-	if err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP}); err != nil {
+	if err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP} /*@ , false @*/); err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "setting src addr")
 	}
 	scionL.NextHdr = slayers.L4SCMP
 
 	typeCode := slayers.CreateSCMPTypeCode(typ, code)
-	scmpH := slayers.SCMP{TypeCode: typeCode}
+	scmpH /*@@@*/ := slayers.SCMP{TypeCode: typeCode}
 	scmpH.SetNetworkLayerForChecksum(&scionL)
 
 	if err := p.buffer.Clear(); err != nil {
@@ -2759,7 +2769,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	scmpLayers := []gopacket.SerializableLayer{&scionL, &scmpH, scmpP}
 	if cause != nil {
 		// add quote for errors.
-		hdrLen := slayers.CmnHdrLen + scionL.AddrHdrLen() + scionL.Path.Len()
+		hdrLen := slayers.CmnHdrLen + scionL.AddrHdrLen( /*@ nil, false @*/ ) + scionL.Path.Len( /*@ nil @*/ )
 		switch scmpH.TypeCode.Type() {
 		case slayers.SCMPTypeExternalInterfaceDown:
 			hdrLen += 20
@@ -2773,10 +2783,10 @@ func (p *scionPacketProcessor) prepareSCMP(
 		if len(quote) > maxQuoteLen {
 			quote = quote[:maxQuoteLen]
 		}
-		scmpLayers = append(scmpLayers, gopacket.Payload(quote))
+		scmpLayers = append( /*@ noPerm, @*/ scmpLayers, gopacket.Payload(quote))
 	}
 	// XXX(matzf) could we use iovec gather to avoid copying quote?
-	err = gopacket.SerializeLayers(p.buffer, sopts, scmpLayers...)
+	err = gopacket.SerializeLayers(p.buffer, sopts /*@ , nil @*/, scmpLayers...)
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "serializing SCMP message")
 	}
