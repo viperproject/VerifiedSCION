@@ -14,18 +14,18 @@
 
 // +gobra
 
-// (VerifiedSCION) Uncommenting the following causes severe slowdowns, but it verifies
-// initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
-// initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
-// initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
-// initEnsures malformedPath                 != nil && malformedPath.ErrorMem()
-// initEnsures modifyExisting                != nil && modifyExisting.ErrorMem()
-// initEnsures noSVCBackend                  != nil && noSVCBackend.ErrorMem()
-// initEnsures unsupportedPathType           != nil && unsupportedPathType.ErrorMem()
-// initEnsures unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
-// initEnsures noBFDSessionFound             != nil && noBFDSessionFound.ErrorMem()
-// initEnsures noBFDSessionConfigured        != nil && noBFDSessionConfigured.ErrorMem()
-// initEnsures errBFDDisabled                != nil && errBFDDisabled.ErrorMem()
+// (VerifiedSCION) the following init-postconditions causes severe slowdowns
+// @ initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
+// @ initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
+// @ initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
+// @ initEnsures malformedPath                 != nil && malformedPath.ErrorMem()
+// @ initEnsures modifyExisting                != nil && modifyExisting.ErrorMem()
+// @ initEnsures noSVCBackend                  != nil && noSVCBackend.ErrorMem()
+// @ initEnsures unsupportedPathType           != nil && unsupportedPathType.ErrorMem()
+// @ initEnsures unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
+// @ initEnsures noBFDSessionFound             != nil && noBFDSessionFound.ErrorMem()
+// @ initEnsures noBFDSessionConfigured        != nil && noBFDSessionConfigured.ErrorMem()
+// @ initEnsures errBFDDisabled                != nil && errBFDDisabled.ErrorMem()
 package router
 
 import (
@@ -968,7 +968,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires acc(&p.d.svc, _) && p.d.svc != nil
 // @ requires acc(&p.ingressID)
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
-// @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ requires sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
@@ -1041,6 +1040,15 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			}
 			return processResult{}, p.processInterBFD(ohp, pld)
 		}
+		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
+		// (VerifiedSCION) Nested if because short-circuiting && is not working
+		// @ ghost if lastLayerIdx >= 0 {
+		// @	if !offsets[lastLayerIdx].isNil {
+		// @		o := offsets[lastLayerIdx]
+		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
+		// @ 	}
+		// @ }
+		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		return p.processOHP()
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
