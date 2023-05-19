@@ -2662,10 +2662,10 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-// @ requires  acc(p.scionLayer.Mem(ub), def.ReadL15)
-// @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL15)
-// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL15)
-// @ ensures   acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL15)
+// @ requires  acc(p.scionLayer.Mem(ub), def.ReadL10)
+// @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL10)
+// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL10)
+// @ ensures   acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL10)
 // @ decreases
 func (p *scionPacketProcessor) prepareSCMP(
 	typ slayers.SCMPType,
@@ -2678,41 +2678,43 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
 	// back to rawPkt (quote).
 	var path *scion.Raw
-	// @ ghost ubPath := p.scionLayer.UBPath(ub)
+	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
+	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
+	// @ slayers.LemmaPathIdxStartEnd(&p.scionLayer, ub, def.ReadL20)
+	// @ ghost ubPath := ub[startP:endP]
 	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL15)
 	pathType := p.scionLayer.Path.Type( /*@ ubPath @*/ )
+	// @ establishCannotRoute()
 	switch pathType {
 	case scion.PathType:
 		var ok bool
 		path, ok = p.scionLayer.Path.(*scion.Raw)
 		if !ok {
-			// @ establishCannotRoute()
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
 	case epic.PathType:
 		epicPath, ok := p.scionLayer.Path.(*epic.Path)
 		if !ok {
-			// @ establishCannotRoute()
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
 		path = epicPath.ScionPath
 	default:
-		// @ establishCannotRoute()
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
-	// @ assert false
-	decPath, err := path.ToDecoded( /*@ nil @*/ )
+	// @ sl.SplitRange_Bytes(ub, startP, endP, def.ReadL15)
+	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
-	revPathTmp, err := decPath.Reverse( /*@ nil @*/ )
+	revPathTmp, err := decPath.Reverse( /*@ ubPath @*/ )
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	revPath := revPathTmp.(*scion.Decoded)
+	// @ assert false
 
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover() {

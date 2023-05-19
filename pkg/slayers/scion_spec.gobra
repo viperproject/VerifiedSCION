@@ -282,6 +282,18 @@ func (s *SCION) PathEndIdx(ub []byte) int {
 }
 
 ghost
+requires  0 < p
+preserves acc(s.Mem(ub), p)
+ensures   let start := s.PathStartIdx(ub) in
+		  let end   := s.PathEndIdx(ub) in
+		  0 <= start && start <= end && end <= len(ub)
+decreases
+func LemmaPathIdxStartEnd(s *SCION, ub []byte, p perm) {
+	unfold acc(s.Mem(ub), p)
+	fold acc(s.Mem(ub), p)
+}
+
+ghost
 pure
 requires acc(s.Mem(ub), _)
 decreases

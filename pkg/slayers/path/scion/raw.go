@@ -129,36 +129,36 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 }
 
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
-// @ preserves s.Mem(ubuf)
+// @ preserves acc(s.Mem(ubuf), def.ReadL5)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   err == nil ==> d.Mem(unfolding acc(s.Mem(ubuf), _) in s.Raw)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
-	//@ s.RawIdxPerm(ubuf, MetaLen, writePerm)
-	//@ unfold acc(s.Base.Mem(), def.ReadL1)
+	//@ s.RawIdxPerm(ubuf, MetaLen, def.ReadL5)
+	//@ unfold acc(s.Base.Mem(), def.ReadL6)
 	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		// @ def.Unreachable()
 		return nil, err
 	}
-	//@ fold acc(s.Base.Mem(), def.ReadL1)
-	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
+	//@ fold acc(s.Base.Mem(), def.ReadL6)
+	//@ s.UndoRawIdxPerm(ubuf, MetaLen, def.ReadL5)
 	decoded := &Decoded{}
 	//@ fold decoded.Base.NonInitMem()
 	//@ fold decoded.NonInitMem()
-	//@ unfold s.Mem(ubuf)
+	//@ unfold s.Mem(ubuf, def.ReadL20)
 	//@ slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
 	//@ slices.Reslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
 		//@ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 		//@ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
-		//@ fold s.Mem(ubuf)
+		//@ fold acc(s.Mem(ubuf), def.ReadL20)
 		return nil, err
 	}
 	//@ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
-	//@ fold s.Mem(ubuf)
+	//@ fold acc(s.Mem(ubuf), def.ReadL20)
 	return decoded, nil
 }
 
