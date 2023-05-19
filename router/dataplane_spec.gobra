@@ -66,6 +66,7 @@ pred MutexInvariant(d *DataPlane) {
 // TODO: reorganize permissions consistently
 
 // TODO: use lower case for these predicates' names?
+// TODO: drop wildcards here
 pred AccAddr(addrs map[uint16]*net.UDPAddr) {
 	acc(addrs, 1/2) &&
 	forall a *net.UDPAddr :: { a in range(addrs) } a in range(addrs) ==> acc(a.Mem(), _)
@@ -76,11 +77,13 @@ pred AccBatchConn(batchConns map[uint16]BatchConn) {
 	forall b BatchConn :: b in range(batchConns) ==> b.Mem()
 }
 
+// TODO: drop wildcards here
 pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
 	acc(bfdSessions, 1/2) &&
 	(forall bfd bfdSession :: { bfd in range(bfdSessions) } bfd in range(bfdSessions) ==> (bfd != nil && acc(bfd.Mem(), _)))
 }
 
+// TODO: drop wildcards here
 pred AccForwardingMetrics(metrics map[uint16]forwardingMetrics) {
 	acc(metrics, 1/2) &&
 	forall id uint16 :: { metrics[id] } id in domain(metrics) ==> acc(forwardingMetricsMem(metrics[id], id), _)
