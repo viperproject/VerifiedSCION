@@ -2662,10 +2662,10 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-// @ requires  acc(p.scionLayer.Mem(ub), def.ReadL10)
-// @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL10)
-// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL10)
-// @ ensures   acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL10)
+// @ requires  acc(p.scionLayer.Mem(ub), def.ReadL5)
+// @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL5)
+// @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ decreases
 func (p *scionPacketProcessor) prepareSCMP(
 	typ slayers.SCMPType,
@@ -2682,7 +2682,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
 	// @ slayers.LemmaPathIdxStartEnd(&p.scionLayer, ub, def.ReadL20)
 	// @ ghost ubPath := ub[startP:endP]
-	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL15)
+	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL5)
 	pathType := p.scionLayer.Path.Type( /*@ ubPath @*/ )
 	// @ establishCannotRoute()
 	switch pathType {
@@ -2690,26 +2690,31 @@ func (p *scionPacketProcessor) prepareSCMP(
 		var ok bool
 		path, ok = p.scionLayer.Path.(*scion.Raw)
 		if !ok {
+			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
 	case epic.PathType:
 		epicPath, ok := p.scionLayer.Path.(*epic.Path)
 		if !ok {
+			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
 		path = epicPath.ScionPath
 	default:
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
-	// @ sl.SplitRange_Bytes(ub, startP, endP, def.ReadL15)
+	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
 	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
-	revPathTmp, err := decPath.Reverse( /*@ ubPath @*/ )
+	// @ ghost rawPath := path.RawBufferMem(ubuf)
+	// TODO: extract perm to access rawPath with the write perm
+	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
