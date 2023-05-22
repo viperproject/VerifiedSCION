@@ -15,8 +15,8 @@
 // +gobra
 
 // This package contains some lemmas that are useful to deal with bitwise
-// operations in a scalable way. Even though we don't include proofs here, we
-// have checked them by hand.
+// operations in a scalable way. Look at the file './proofs.dfy' before
+// exteding this file.
 
 package bitwise
 
