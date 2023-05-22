@@ -20,6 +20,11 @@ package io
 
 // TODO: make individual_router an interface type with the following methods
 
+// This function corresponds to function 'core' in the IO spec
+ghost
+decreases
+pure func core_as_set() set[IO_as]
+
 ghost
 decreases
 pure func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool
@@ -94,7 +99,6 @@ pure func dp3s_xover_common(
 	intermediatepkt IO_pkt3,
 	hf1 IO_HF,
 	hf2 IO_HF,
-	nextfut seq[IO_HF],
 	recvif IO_ifs,
 	newpkt IO_pkt3,
 	nextif option[IO_ifs],
@@ -103,6 +107,6 @@ pure func dp3s_xover_common(
 		// this is because of the way math. maps are implemented, we can only obtain a key that is in the map before.
 		return some(recvif) in domain(s.ibuf) &&
 			(let lookupRes := s.ibuf[some(recvif)] in (m in lookupRes)) &&
-			dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, nextfut, asid(), recvif) &&
+			dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, hf1.extr_asid(), recvif) &&
 			dp3s_forward(intermediatepkt, newpkt, nextif)
 }
