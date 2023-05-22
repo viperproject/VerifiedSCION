@@ -147,7 +147,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	decoded := &Decoded{}
 	//@ fold decoded.Base.NonInitMem()
 	//@ fold decoded.NonInitMem()
-	//@ unfold s.Mem(ubuf, def.ReadL20)
+	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
 	//@ slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
 	//@ slices.Reslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
