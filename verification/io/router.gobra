@@ -20,6 +20,7 @@ package io
 
 // TODO: make individual_router an interface type with the following methods
 
+// This function corresponds to function 'core' in the IO spec
 ghost
 decreases
 pure func core_as_set() set[IO_as]
