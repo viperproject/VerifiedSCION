@@ -2710,9 +2710,10 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
 	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
-	// @ ghost rawPath := path.RawBufferMem(ubuf)
+	// @ ghost rawPath := path.RawBufferMem(ubPath)
 	// TODO: extract perm to access rawPath with the write perm
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
