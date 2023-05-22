@@ -20,7 +20,7 @@ lemma BitAnd3_32bit(b: bv32)
         (b == 4 ==> res == 0)
 {}
 
-lemma BitAnd3_64bit(b: bv32)
+lemma BitAnd3_64bit(b: bv64)
     ensures var res := b & 0x3;
         0 <= res <= 3  &&
         (b == 0 ==> res == 0) &&
@@ -33,7 +33,7 @@ lemma BitAnd7_32bit(b: bv32)
         0 <= res <= 7
 {}
 
-lemma BitAnd7_64bit(b: bv32)
+lemma BitAnd7_64bit(b: bv64)
     ensures var res := b & 0x7;
         0 <= res <= 7
 {}
