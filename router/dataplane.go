@@ -2717,6 +2717,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// TODO: extract perm to access rawPath with the write perm
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
+		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	revPath := revPathTmp.(*scion.Decoded)
