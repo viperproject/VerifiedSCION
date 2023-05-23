@@ -2720,25 +2720,28 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
 	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
 	// @ ghost rawPath := path.RawBufferMem(ubPath)
-	// TODO: extract perm to access rawPath with the write perm
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	revPath := revPathTmp.(*scion.Decoded)
-	// @ assert false
 
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover() {
-		if err := revPath.IncPath( /*@ nil @*/ ); err != nil {
+		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
+			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
+	// @ assert false
 	// If the packet is sent to an external router, we need to increment the
 	// path to prepare it for the next hop.
 	_, external := p.d.external[p.ingressID]
@@ -2755,6 +2758,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 
 	// create new SCION header for reply.
 	var scionL /*@@@*/ slayers.SCION
+	// (VerifiedSCION) TODO: adapt *SCION.Mem(...)
 	scionL.FlowID = p.scionLayer.FlowID
 	scionL.TrafficClass = p.scionLayer.TrafficClass
 	scionL.PathType = revPath.Type( /*@ nil @*/ )

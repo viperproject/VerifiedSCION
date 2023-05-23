@@ -51,6 +51,7 @@ pred (d *Decoded) Mem(ubuf []byte) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this method which acts as a wrapper.
   */
+  // TODO: can this spec be simplified (by removing the access to d.Mem(...))?
 pure
 requires acc(d.Mem(ubuf), _)
 ensures  unfolding acc(d.Mem(ubuf), _) in l == d.Base.Len()
