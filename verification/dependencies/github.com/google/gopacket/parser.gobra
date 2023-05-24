@@ -27,6 +27,7 @@ type DecodingLayer interface {
 	pred Mem(ubuf []byte)
 
 	requires  NonInitMem()
+	requires  data != nil
 	requires  df != nil
 	preserves slices.AbsSlice_Bytes(data, 0, len(data))
 	preserves df.Mem()
