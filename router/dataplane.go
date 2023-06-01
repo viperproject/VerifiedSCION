@@ -2731,17 +2731,18 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
+	// @ assert revPathTmp.Mem(rawPath)
 	revPath := revPathTmp.(*scion.Decoded)
+	// @ assert revPath.Mem(rawPath)
 
 	// Revert potential path segment switches that were done during processing.
-	if revPath.IsXover() {
+	if revPath.IsXover( /*@ rawPath @*/ ) {
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
 			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
-	// @ assert false
 	// If the packet is sent to an external router, we need to increment the
 	// path to prepare it for the next hop.
 	_, external := p.d.external[p.ingressID]
@@ -2755,6 +2756,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
+	// @ assert false
 
 	// create new SCION header for reply.
 	var scionL /*@@@*/ slayers.SCION

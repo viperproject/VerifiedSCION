@@ -77,6 +77,20 @@ func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
 
 /**
   * This method is not part of the original SCION codebase.
+  * Instead, `IsXover` was defined in `*Decoded` via embedded structs.
+  * Unfortunately, Gobra does not fully support them yet, so we
+  * introduced this method which acts as a wrapper.
+  */
+preserves acc(d.Mem(ubuf), definitions.ReadL19)
+decreases
+func (d *Decoded) IsXover(ghost ubuf []byte) bool {
+    unfold acc(d.Mem(ubuf), definitions.ReadL19)
+    defer fold acc(d.Mem(ubuf), definitions.ReadL19)
+    return d.Base.IsXover()
+}
+
+/**
+  * This method is not part of the original SCION codebase.
   * This method creates an override of `IncPath` for `Decoded` which
   * just provides a more suitable contract. All it does is to call `IncPath`
   * on d.Base. Without this, one would need to unfold d.Mem() to call `IncPath`,
