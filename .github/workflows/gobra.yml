@@ -10,8 +10,8 @@ on:
   push:
     branches:
     - master
-    - workflow_dispatch
   pull_request: # run this workflow on every pull_request
+  workflow_dispatch:
 
 env:
   headerOnly: 1
