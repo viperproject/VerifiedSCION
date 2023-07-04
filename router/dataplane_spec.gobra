@@ -20,6 +20,8 @@ import (
 	"net"
 	"hash"
 	sl "github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/verification/io"
+	"github.com/scionproto/scion/verification/dependencies/encoding/binary/binary.gobra"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
 )
@@ -343,3 +345,104 @@ func closureSpec2(i uint16, c BatchConn)
 requires true
 func closureSpec3(c BatchConn)
 /** End of closure specs for the Run method **/
+
+
+
+/** Start of io-spec helper functions **/
+
+ghost
+decreases
+pure func getHopField(raw []byte) io.IO_HF {
+	return let inif2 := binary.BigEndian.Uint16(raw[2:4]) == 0 ? none[io.IO_ifs] : some(io.IO_ifs(binary.BigEndian.Uint16(raw[2:4]))) in
+			let egif2 := binary.BigEndian.Uint16(raw[4:6])== 0 ? none[io.IO_ifs] : some(io.IO_ifs(binary.BigEndian.Uint16(raw[4:6]))) in
+				io.IO_HF(io.IO_HF_{
+					InIF2 : inif2,
+					EgIF2 : egif2,
+					HVF : computeMsgTerm(raw),
+				})
+}
+
+ghost 
+decreases
+pure func getSegments(raw []byte) io.IO_seg2{
+	return let line := binary.BigEndian.Uint32(raw[0:4]) in
+			let currINF := uint8(line >> 30) in
+			let currHF := uint8(line >> 24) & 0x3F in
+			let seg1Len := uint8(line >> 12) & 0x3F in  
+			let seg2Len := uint8(line >> 6) & 0x3F in 
+			let seg3Len := uint8(line) & 0x3F in 
+			let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
+			let rawHopFields := computeSeqBytes(raw[4+8*numINF:], currHF, seg1Len, seg2Len, seg3Len) in
+			let rawHopFieldsOffset := computeSeqOffset(currHF, seg1Len, seg2Len, seg3Len) - 1 in
+			io.IO_seg2(io.IO_seg3_{
+				AInfo : computeAInfo(raw),
+				UInfo : computeUInfo(raw),
+				ConsDir : raw[infoFieldOffsetSeg(currINF)] & 0x1 == 0x1,
+				Peer : raw[infoFieldOffsetSeg(currINF)] & 0x2 == 0x2,
+				Past : getSegPast(rawHopFields, rawHopFieldsOffset - 1),
+				Future : getSegFuture(rawHopFields, rawHopFieldsOffset),
+				History : getSegHistory(rawHopFields, rawHopFieldsOffset - 1),
+			})
+}
+
+//assumption at least seg1Len > 0 correct?
+ghost 
+decreases 
+pure func numInfoFields(seg1Len uint8, seg2Len uint8, seg3Len uint8) uint8 {
+	return seg3Len > 0 ? 3 : (seg2Len > 0 ? 2 : 1)
+}
+
+ghost 
+decreases
+pure func infoFieldOffsetSeg(currINF uint8) uint8{
+	return 4 + 8 * currINF
+}
+
+ghost 
+decreases
+pure func computeSeqOffset(currHF uint8, seg1Len uint8, seg2Len uint8, seg3Len uint8) int{
+	return seg1Len > currHF ? int(currHF)*12 : (seg2Len > currHF ? int(currHF-seg1Len) * 12 : int(currHF-seg2Len-seg1Len)* 12)
+}
+
+ghost 
+decreases
+pure func computeSeqBytes(raw []byte, currHF uint8, seg1Len uint8, seg2Len uint8, seg3Len uint8) []byte {
+	return seg1Len > currHF ? raw[0:seg1Len*12] : (seg2Len > currHF ? raw[seg1Len*12:seg2Len*12] : raw[seg2Len*12:seg3Len*12])
+}
+
+//TODO double check if order is correct
+ghost 
+decreases
+pure func getSegPast(raw []byte, offset int) seq[io.IO_HF]{
+	return offset == -1 ? seq[io.IO_HF]{} : seq[io.IO_HF]{getHopField(raw[offset:offset+12])} ++ getSegPast(raw, offset-12)
+}
+
+
+//TODO double check if order is correct
+ghost 
+decreases
+pure func getSegFuture(raw []byte, offset int) seq[io.IO_HF]{
+	return offset == len(raw) ? seq[io.IO_HF]{} : seq[io.IO_HF]{getHopField(raw[offset:offset+12])} ++ getSegFuture(raw, offset+12)
+}
+
+//TODO double check if order is correct
+ghost 
+decreases
+pure func getSegHistory(raw []byte, offset int) seq[io.IO_ahi]{
+	return offset == -1 ? seq[io.IO_HF]{} : seq[io.IO_HF]{getHopField(raw[offset:offset+12]).Toab()} ++ getSegHistory(raw, offset-12)
+}
+
+// TODO Can we add a body?
+ghost
+decreases
+pure func computeMsgTerm(raw []byte) io.IO_msgterm
+
+ghost
+decreases _
+pure func computeAInfo(raw []byte) io.IO_ainfo
+
+ghost 
+decreases _
+pure func computeUInfo(raw []byte) set[io.IO_msgterm]
+
+/** End of io-spec helper functions **/ 
