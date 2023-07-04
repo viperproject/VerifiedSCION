@@ -21,7 +21,7 @@ import (
 	"hash"
 	sl "github.com/scionproto/scion/verification/utils/slices"
 	"github.com/scionproto/scion/verification/io"
-	"github.com/scionproto/scion/verification/dependencies/encoding/binary/binary.gobra"
+	"github.com/scionproto/scion/verification/dependencies/encoding/binary"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
 )
@@ -350,17 +350,39 @@ func closureSpec3(c BatchConn)
 
 /** Start of io-spec helper functions **/
 
+ghost 
+decreases
+pure func getPkt(raw []byte) io.IO_pkt2{
+	return io.IO_pkt2(io.IO_Packet2{
+		CurrSeg  : tmpCurrSeg(raw),
+		LeftSeg  : tmpLeftSeg(raw),
+		MidSeg   : tmpMidSeg(raw),
+		RightSeg : tmpRightSeg(raw),
+	})
+}
+
 ghost
 decreases
-pure func getHopField(raw []byte) io.IO_HF {
-	return let inif2 := binary.BigEndian.Uint16(raw[2:4]) == 0 ? none[io.IO_ifs] : some(io.IO_ifs(binary.BigEndian.Uint16(raw[2:4]))) in
-			let egif2 := binary.BigEndian.Uint16(raw[4:6])== 0 ? none[io.IO_ifs] : some(io.IO_ifs(binary.BigEndian.Uint16(raw[4:6]))) in
-				io.IO_HF(io.IO_HF_{
-					InIF2 : inif2,
-					EgIF2 : egif2,
-					HVF : computeMsgTerm(raw),
-				})
-}
+pure func tmpCurrSeg(raw []byte) io.IO_seg3
+
+ghost 
+decreases
+pure func tmpLeftSeg(raw []byte) option[io.IO_seg2]
+
+ghost 
+decreases
+pure func tmpMidSeg(raw []byte) option[io.IO_seg2]
+
+ghost
+decreases
+pure func tmpRightSeg(raw []byte) option[io.IO_seg2]
+
+
+
+
+
+
+
 
 ghost 
 decreases
@@ -383,6 +405,18 @@ pure func getSegments(raw []byte) io.IO_seg2{
 				Future : getSegFuture(rawHopFields, rawHopFieldsOffset),
 				History : getSegHistory(rawHopFields, rawHopFieldsOffset - 1),
 			})
+}
+
+ghost
+decreases
+pure func getHopField(raw []byte) io.IO_HF {
+	return let inif2 := binary.BigEndian.Uint16(raw[2:4]) == 0 ? none[io.IO_ifs] : some(io.IO_ifs(binary.BigEndian.Uint16(raw[2:4]))) in
+			let egif2 := binary.BigEndian.Uint16(raw[4:6])== 0 ? none[io.IO_ifs] : some(io.IO_ifs(binary.BigEndian.Uint16(raw[4:6]))) in
+				io.IO_HF(io.IO_HF_{
+					InIF2 : inif2,
+					EgIF2 : egif2,
+					HVF : computeMsgTerm(raw),
+				})
 }
 
 //assumption at least seg1Len > 0 correct?
