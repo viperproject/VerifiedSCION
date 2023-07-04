@@ -403,12 +403,22 @@ decreases
 pure func computeSeqOffset(currHF uint8, seg1Len uint8, seg2Len uint8, seg3Len uint8) int{
 	return seg1Len > currHF ? int(currHF)*12 : (seg2Len > currHF ? int(currHF-seg1Len) * 12 : int(currHF-seg2Len-seg1Len)* 12)
 }
+/*
+ghost 
+decreases
+requires len(raw) > 5
+pure func dummy(raw []byte) []byte{
+	return raw[0:5]
+}
+*/
+
 
 ghost 
 decreases
 pure func computeSeqBytes(raw []byte, currHF uint8, seg1Len uint8, seg2Len uint8, seg3Len uint8) []byte {
-	return seg1Len > currHF ? raw[0:seg1Len*12] : (seg2Len > currHF ? raw[seg1Len*12:seg2Len*12] : raw[seg2Len*12:seg3Len*12])
+	return  seg1Len > currHF ? raw[0:int(seg1Len)*12] : (seg2Len > currHF ? raw[int(seg1Len)*12:int(seg1Len + seg2Len)*12] : raw[int(seg1Len + seg2Len)*12:int(seg1Len + seg2Len + seg3Len)*12])
 }
+
 
 //TODO double check if order is correct
 ghost 
@@ -429,7 +439,7 @@ pure func getSegFuture(raw []byte, offset int) seq[io.IO_HF]{
 ghost 
 decreases
 pure func getSegHistory(raw []byte, offset int) seq[io.IO_ahi]{
-	return offset == -1 ? seq[io.IO_HF]{} : seq[io.IO_HF]{getHopField(raw[offset:offset+12]).Toab()} ++ getSegHistory(raw, offset-12)
+	return offset == -1 ? seq[io.IO_ahi]{} : seq[io.IO_ahi]{getHopField(raw[offset:offset+12]).Toab()} ++ getSegHistory(raw, offset-12)
 }
 
 // TODO Can we add a body?
