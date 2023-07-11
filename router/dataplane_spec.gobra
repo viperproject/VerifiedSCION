@@ -465,6 +465,26 @@ pure func getSegment(raw []byte, consDir bool, peer bool, currHF int, prevSegLen
 			})
 }
 
+ghost 
+//expects the raw bytes of whole path
+requires 4 + 8 * numINF + 12*prevSegLen + 12*segLen <= len(raw)
+requires prevSegLen >= 0 && segLen >= 0
+requires 0 < numINF && numINF < 4
+requires segLen+prevSegLen > currHF && currHF >= prevSegLen
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases _
+pure func getPastSegment(raw []byte, consDir bool, peer bool, currHF int, prevSegLen int, segLen int, numINF int) io.IO_seg2{
+	return io.IO_seg2(io.IO_seg3_{
+				AInfo : computeAInfo(raw),
+				UInfo : computeUInfo(raw),
+				ConsDir : consDir,
+				Peer : peer,
+				Past : getSegPast(raw, prevSegLen, currHF, numINF),
+				Future : seq[io.IO_HF]{},
+				History : getSegHistory(raw, prevSegLen, currHF, numINF),
+			})
+}
+
 
 ghost
 requires seg1Len > 0
@@ -487,6 +507,77 @@ pure func getCurrSeg(raw []byte, currINF int, currHF int, seg1Len int, seg2Len i
 			let prevSegLen := computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) in
 			let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
 			getSegment(raw, consDir, peer, currHF, prevSegLen, segLen, numINF)
+}
+
+
+ghost
+requires seg1Len > 0
+requires seg2Len >= 0
+requires seg3Len >= 0
+requires 4 + 8*numInfoFields(seg1Len, seg2Len, seg3Len) + 12 * seg1Len + 12 * seg2Len + 12 * seg3Len == len(raw)
+//requires 12*computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) + 
+//	12*computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) <= 12 * seg1Len + 12 * seg2Len + 12 * seg3Len
+requires 0 <= currINF && currINF < 3
+requires 0 <= currHF && currHF < seg1Len + seg2Len + seg3Len
+// requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) > currHF
+requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) + computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) > currHF
+//requires currHF >= computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases _
+pure func getLeftSeg(raw []byte, currINF int, currHF int, seg1Len int, seg2Len int, seg3Len int) option[io.IO_seg3] {
+	return let newCurrHF := computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) + computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) in
+		(newCurrHF == seg1Len + seg2Len + seg3Len || currINF == 2) ? none[io.IO_seg3] :
+			some(getCurrSeg(raw, currINF + 1, newCurrHF, seg1Len, seg2Len, seg3Len))
+}
+
+ghost
+requires seg1Len > 0
+requires seg2Len >= 0
+requires seg3Len >= 0
+requires 4 + 8*numInfoFields(seg1Len, seg2Len, seg3Len) + 12 * seg1Len + 12 * seg2Len + 12 * seg3Len == len(raw)
+//requires 12*computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) + 
+//	12*computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) <= 12 * seg1Len + 12 * seg2Len + 12 * seg3Len
+requires 0 <= currINF && currINF < 3
+requires 0 <= currHF && currHF < seg1Len + seg2Len + seg3Len
+// requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) > currHF
+requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) + computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) > currHF
+//requires currHF >= computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases _
+pure func getRightSeg(raw []byte, currINF int, currHF int, seg1Len int, seg2Len int, seg3Len int) option[io.IO_seg3] {
+	return (computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) == 0 || currINF == 0) ? none[io.IO_seg3] :
+			(let newCurrHF := computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len)-1 in
+			let consDir := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in raw[infoFieldOffsetSeg(currINF-1)] & 0x1 == 0x1) in
+			let peer := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in raw[infoFieldOffsetSeg(currINF-1)] & 0x2 == 0x2) in
+			let segLen := computeSeqlen(newCurrHF, seg1Len, seg2Len, seg3Len) in
+			let prevSegLen := computeprevSegLen(newCurrHF, seg1Len, seg2Len, seg3Len) in
+			let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
+			some(getPastSegment(raw, consDir, peer, newCurrHF, prevSegLen, segLen, numINF)))
+}
+
+
+ghost
+requires seg1Len > 0
+requires seg2Len >= 0
+requires seg3Len >= 0
+requires 4 + 8*numInfoFields(seg1Len, seg2Len, seg3Len) + 12 * seg1Len + 12 * seg2Len + 12 * seg3Len == len(raw)
+//requires 12*computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) + 
+//	12*computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) <= 12 * seg1Len + 12 * seg2Len + 12 * seg3Len
+requires 0 <= currINF && currINF < 3
+requires 0 <= currHF && currHF < seg1Len + seg2Len + seg3Len
+// requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) > currHF
+requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) + computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) > currHF
+//requires currHF >= computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases _
+pure func getMidSeg(raw []byte, currINF int, currHF int, seg1Len int, seg2Len int, seg3Len int) option[io.IO_seg3] {
+	return seg3Len == 0 ? none[io.IO_seg3] :
+		(computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) == seg1Len) ? none[io.IO_seg3] :
+			(computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) == 0) ? some(getCurrSeg(raw, 2, seg1Len + seg2Len, seg1Len, seg2Len, seg3Len)) : 
+				(let consDir := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in raw[infoFieldOffsetSeg(0)] & 0x1 == 0x1) in
+				let peer := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in raw[infoFieldOffsetSeg(0)] & 0x2 == 0x2) in
+				let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
+				some(getPastSegment(raw, consDir, peer, seg1Len-1, 0, seg1Len, numINF)))
 }
 
 /** tmp - helper functions 
@@ -536,9 +627,9 @@ pure func getPkt(raw []byte) io.IO_pkt2{
 			let seg3Len := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in uint8(hdr) & 0x3F in  
 	io.IO_pkt2(io.IO_Packet2{
 		CurrSeg  : getCurrSeg(raw, int(currINF), int(currHF), int(seg1Len), int(seg2Len), int(seg3Len)),
-		LeftSeg  : tmpLeftSeg(raw),
-		MidSeg   : tmpMidSeg(raw),
-		RightSeg : tmpRightSeg(raw),
+		LeftSeg  : getLeftSeg(raw, int(currINF), int(currHF), int(seg1Len), int(seg2Len), int(seg3Len)),
+		MidSeg   : getMidSeg(raw, int(currINF), int(currHF), int(seg1Len), int(seg2Len), int(seg3Len)),
+		RightSeg : getRightSeg(raw, int(currINF), int(currHF), int(seg1Len), int(seg2Len), int(seg3Len)),
 	})
 }
 
