@@ -11,7 +11,6 @@ on:
     branches:
     - master
   pull_request: # run this workflow on every pull_request
-  workflow_dispatch:
 
 env:
   headerOnly: 1
