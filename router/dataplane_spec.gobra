@@ -404,7 +404,7 @@ pure func getHopField(raw []byte, start int) io.IO_HF {
 				})
 }
 
-//TODO proof termination
+
 //expects the raw bytes of whole path
 ghost 
 requires 4 + 8 * numINF + offset*12 + 12 <= len(raw)
@@ -418,6 +418,7 @@ pure func getSegPast(raw []byte, prevSegLen int, offset int, numINF int) seq[io.
 			seq[io.IO_HF]{getHopField(raw,4 + 8 * numINF + offset*12)}) ++ getSegPast(raw, prevSegLen, offset-1, numINF)
 }
 
+//expects the raw bytes of whole path
 ghost 
 requires 4 + 8 * numINF + offset*12 + 12 <= len(raw)
 requires offset >= currHF && currHF >= 0
@@ -429,7 +430,6 @@ pure func getSegFuture(raw []byte, currHF int, offset int, numINF int) seq[io.IO
 		getSegFuture(raw, currHF, offset-1, numINF) ++ (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in seq[io.IO_HF]{getHopField(raw, 4 + 8 * numINF + offset*12)})
 }
 
-//TODO proof termination
 //expects the raw bytes of whole path
 ghost 
 requires 4 + 8 * numINF + offset*12 + 12 <= len(raw)
@@ -491,13 +491,9 @@ requires seg1Len > 0
 requires seg2Len >= 0
 requires seg3Len >= 0
 requires 4 + 8*numInfoFields(seg1Len, seg2Len, seg3Len) + 12 * seg1Len + 12 * seg2Len + 12 * seg3Len == len(raw)
-//requires 12*computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) + 
-//	12*computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) <= 12 * seg1Len + 12 * seg2Len + 12 * seg3Len
 requires 0 <= currINF && currINF < 3
 requires 0 <= currHF && currHF < seg1Len + seg2Len + seg3Len
-// requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) > currHF
 requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) + computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) > currHF
-//requires currHF >= computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 decreases 
 pure func getCurrSeg(raw []byte, currINF int, currHF int, seg1Len int, seg2Len int, seg3Len int) io.IO_seg3 {
@@ -515,13 +511,9 @@ requires seg1Len > 0
 requires seg2Len >= 0
 requires seg3Len >= 0
 requires 4 + 8*numInfoFields(seg1Len, seg2Len, seg3Len) + 12 * seg1Len + 12 * seg2Len + 12 * seg3Len == len(raw)
-//requires 12*computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) + 
-//	12*computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) <= 12 * seg1Len + 12 * seg2Len + 12 * seg3Len
 requires 0 <= currINF && currINF < 3
 requires 0 <= currHF && currHF < seg1Len + seg2Len + seg3Len
-// requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) > currHF
 requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) + computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) > currHF
-//requires currHF >= computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 decreases 
 pure func getLeftSeg(raw []byte, currINF int, currHF int, seg1Len int, seg2Len int, seg3Len int) option[io.IO_seg3] {
@@ -535,13 +527,9 @@ requires seg1Len > 0
 requires seg2Len >= 0
 requires seg3Len >= 0
 requires 4 + 8*numInfoFields(seg1Len, seg2Len, seg3Len) + 12 * seg1Len + 12 * seg2Len + 12 * seg3Len == len(raw)
-//requires 12*computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) + 
-//	12*computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) <= 12 * seg1Len + 12 * seg2Len + 12 * seg3Len
 requires 0 <= currINF && currINF < 3
 requires 0 <= currHF && currHF < seg1Len + seg2Len + seg3Len
-// requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) > currHF
 requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) + computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) > currHF
-//requires currHF >= computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 decreases 
 pure func getRightSeg(raw []byte, currINF int, currHF int, seg1Len int, seg2Len int, seg3Len int) option[io.IO_seg3] {
@@ -561,13 +549,9 @@ requires seg1Len > 0
 requires seg2Len >= 0
 requires seg3Len >= 0
 requires 4 + 8*numInfoFields(seg1Len, seg2Len, seg3Len) + 12 * seg1Len + 12 * seg2Len + 12 * seg3Len == len(raw)
-//requires 12*computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) + 
-//	12*computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) <= 12 * seg1Len + 12 * seg2Len + 12 * seg3Len
 requires 0 <= currINF && currINF < 3
 requires 0 <= currHF && currHF < seg1Len + seg2Len + seg3Len
-// requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) > currHF
 requires computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) + computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len) > currHF
-//requires currHF >= computeprevSegLen(currHF, seg1Len, seg2Len, seg3Len)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 decreases 
 pure func getMidSeg(raw []byte, currINF int, currHF int, seg1Len int, seg2Len int, seg3Len int) option[io.IO_seg3] {
@@ -580,42 +564,19 @@ pure func getMidSeg(raw []byte, currINF int, currHF int, seg1Len int, seg2Len in
 				some(getPastSegment(raw, consDir, peer, seg1Len-1, 0, seg1Len, numINF, currINF)))
 }
 
-/** tmp - helper functions 
-TODO prove these functions **/
-
-//TODO too strong assumption?
-ghost
-requires line == uint32(raw3) | uint32(raw2)<<8 | uint32(raw1)<<16 | uint32(raw0)<<24
-//preserves (raw0 & 0x3F) >= 0 //l3
-//preserves (raw2 >> 4 | raw1 << 4) & 0x3F > 0
-//preserves (raw3 >> 6 | raw2 << 2) & 0x3F >= 0
-//preserves (raw3 & 0x3F) >= 0
-ensures  uint8(line >> 30) == raw0 >> 6
-ensures  uint8(line >> 24) & 0x3F == (raw0 & 0x3F)
-ensures  uint8(line >> 12) & 0x3F == (raw2 >> 4 | raw1 << 4) & 0x3F 
-ensures  uint8(line >> 6) & 0x3F == (raw3 >> 6 | raw2 << 2) & 0x3F
-ensures  uint8(line) & 0x3F == raw3 & 0x3F
-ensures  0 <= uint8(line >> 30) && uint8(line >> 30) < 3 //currINF
-ensures  0 <= (uint8(line >> 24) & 0x3F) && (uint8(line >> 24) & 0x3F) < (uint8(line >> 12) & 0x3F) + (uint8(line >> 6) & 0x3F) + (uint8(line) & 0x3F) //currHF
-ensures  0 <  uint8(line >> 12) & 0x3F //seg1Len
-ensures  0 <= uint8(line >> 6) & 0x3F //seg2Len
-ensures  0 <= uint8(line) & 0x3F //seg3Len
-ensures  res == true
-decreases
-pure func DeserializingHdr(raw0, raw1, raw2, raw3 uint8, line uint32) (res bool)
-
-/** End of of assumed functions **/
-
+//TODO improve preconditions
 ghost 
 requires len(raw) > 4
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 requires unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in 
 	let hdr := binary.BigEndian.Uint32(raw[0:4]) in
-	hdr == (uint32(raw[3]) | uint32(raw[2])<<8 | uint32(raw[1])<<16 | uint32(raw[0])<<24) &&
-	DeserializingHdr(raw[0], raw[1], raw[2], raw[3], hdr) &&
-	//uint8(hdr >> 12) & 0x3F > 0 &&
-	//uint8(hdr >> 6) & 0x3F >= 0 &&
-	//uint8(hdr) & 0x3F >= 0 &&
+	//hdr == (uint32(raw[3]) | uint32(raw[2])<<8 | uint32(raw[1])<<16 | uint32(raw[0])<<24) &&
+	//DeserializingHdr(raw[0], raw[1], raw[2], raw[3], hdr) &&
+	0 <= uint8(hdr >> 30) && uint8(hdr >> 30) < 3 && //currINF
+	0 <= (uint8(hdr >> 24) & 0x3F) && (uint8(hdr >> 24) & 0x3F) < (uint8(hdr >> 12) & 0x3F) + (uint8(hdr >> 6) & 0x3F) + (uint8(hdr) & 0x3F) && //currHF
+	0 <  uint8(hdr >> 12) & 0x3F && //seg1Len
+	0 <= uint8(hdr >> 6) & 0x3F && //seg2Len
+	0 <= uint8(hdr) & 0x3F && //seg3Len
 	4 + 8*numInfoFields(int(uint8(hdr >> 12) & 0x3F), int(uint8(hdr >> 6) & 0x3F), int(uint8(hdr) & 0x3F)) + 12 * int(uint8(hdr >> 12) & 0x3F) + 12 * int(uint8(hdr >> 6) & 0x3F) + 12 * int(uint8(hdr) & 0x3F) == len(raw)
 decreases 
 pure func getPkt(raw []byte) io.IO_pkt2{
@@ -632,237 +593,6 @@ pure func getPkt(raw []byte) io.IO_pkt2{
 		RightSeg : getRightSeg(raw, int(currINF), int(currHF), int(seg1Len), int(seg2Len), int(seg3Len)),
 	})
 }
-
-
-// //TODO remove additional variable rawHopFields
-// ghost 
-// //requires int(seg1Len + seg2Len + seg3Len)*12 <= len(raw)
-// //requires 0 <= seg1Len && seg1Len*12 <= len(raw)
-// //requires 0 <= seg2Len && (seg1Len + seg2Len)*12 <= len(raw)
-// //requires 0 <= seg3Len && (seg1Len + seg2Len + seg3Len)*12 <= len(raw)
-// requires len(raw) > infoFieldOffsetSeg(currINF)
-// requires currINF >= 0
-// requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
-// requires acc(sl.AbsSlice_Bytes(rawHopFields, 0, len(rawHopFields)), _)
-// decreases _
-// pure func getCurrSeg(raw []byte, rawHopFields []byte, currINF int, currHF int, seg1Len int, seg2Len int, seg3Len int) io.IO_seg3 {
-// 	return let consDir := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in raw[infoFieldOffsetSeg(currINF)] & 0x1 == 0x1) in
-// 			let peer := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in raw[infoFieldOffsetSeg(currINF)] & 0x2 == 0x2) in
-// 			let numHF := computeSeqlen(currHF, seg1Len, seg2Len, seg3Len) in
-// 		//let rawHopFields := getSegBytes(raw, currHF, seg1Len, seg2Len, seg3Len) in
-// 			getSegment(rawHopFields, consDir, peer, currHF, numHF)
-// }
-// /*
-// ghost 
-// decreases
-// pure func getPkt1Seg(raw []byte, consDir bool, peer bool, currHF int, seg1Len uint8) io.IO_pkt2{
-// 	io.IO_pkt2(io.IO_Packet2{
-// 		CurrSeg  : getSegments2(raw, consDir, peer, currHF),
-// 		LeftSeg  : None,
-// 		MidSeg   : None,
-// 		RightSeg : None,
-// 	})
-// }
-// */
-
-// ghost 
-// decreases
-// pure func getPkt2Seg(raw []byte, seg1Len uint8, seg2Len uint8) io.IO_pkt2
-
-// ghost 
-// decreases
-// pure func getPkt3Seg(raw []byte, seg1Len uint8, seg2Len uint8, seg3Len uint8) io.IO_pkt2
-
-// ghost
-// decreases
-// pure func tmpCurrSeg(raw []byte) io.IO_seg3
-
-ghost 
-decreases
-pure func tmpLeftSeg(raw []byte) option[io.IO_seg2]
-
-ghost 
-decreases
-pure func tmpMidSeg(raw []byte) option[io.IO_seg2]
-
-ghost
-decreases
-pure func tmpRightSeg(raw []byte) option[io.IO_seg2]
-
-
-// ghost 
-// requires numHF*12 + 12 <= len(raw)
-// requires numHF >= currHF  && currHF >= 0
-// requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
-// requires (forall k int, i int :: 0 <=k && k <= numHF && 0 <= i && i < 12 ==> unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in &raw[k*12:k*12+12][i] == &raw[k*12+i])
-// decreases _
-// pure func getSegment(raw []byte, consDir bool, peer bool, currHF int, numHF int) io.IO_seg2{
-// 	return io.IO_seg2(io.IO_seg3_{
-// 				AInfo : computeAInfo(raw),
-// 				UInfo : computeUInfo(raw),
-// 				ConsDir : consDir,
-// 				Peer : peer,
-// 				Past : getSegPast(raw, currHF - 1),
-// 				Future : getSegFuture2(raw, currHF, numHF),
-// 				History : getSegHistory(raw, currHF - 1),
-// 			})
-// }
-
-
-// /*
-// //TODO mistake, 
-// //not interested in currHF's ConsDir, Peer field but for one of the three segments
-// ghost 
-// decreases
-// pure func getSegments(raw []byte) io.IO_seg2{
-// 	return let line := binary.BigEndian.Uint32(raw[0:4]) in
-// 			let currINF := uint8(line >> 30) in
-// 			let currHF := uint8(line >> 24) & 0x3F in
-// 			let seg1Len := uint8(line >> 12) & 0x3F in  
-// 			let seg2Len := uint8(line >> 6) & 0x3F in 
-// 			let seg3Len := uint8(line) & 0x3F in 
-// 			let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
-// 			let rawHopFields := getSegBytes(raw[4+8*numINF:], int(currHF), int(seg1Len), int(seg2Len), int(seg3Len)) in
-// 			let rawHopFieldsOffset := computeSeqOffset(currHF, seg1Len, seg2Len, seg3Len) - 1 in
-// 			io.IO_seg2(io.IO_seg3_{
-// 				AInfo : computeAInfo(raw),
-// 				UInfo : computeUInfo(raw),
-// 				ConsDir : raw[infoFieldOffsetSeg(int(currINF))] & 0x1 == 0x1,
-// 				Peer : raw[infoFieldOffsetSeg(int(currINF))] & 0x2 == 0x2,
-// 				Past : getSegPast(rawHopFields, rawHopFieldsOffset - 1),
-// 				Future : getSegFuture(rawHopFields, rawHopFieldsOffset),
-// 				History : getSegHistory(rawHopFields, rawHopFieldsOffset - 1),
-// 			})
-// }
-// */
-
-
-// //expects the raw bytes of a Hopfield
-// ghost
-// requires len(raw) > 6
-// requires acc(&raw[2], _) && acc(&raw[3], _) && acc(&raw[4], _) && acc(&raw[5], _)
-// decreases
-// pure func getHopField(raw []byte) io.IO_HF {
-// 	return let inif2 := binary.BigEndian.Uint16(raw[2:4]) == 0 ? none[io.IO_ifs] : some(io.IO_ifs(binary.BigEndian.Uint16(raw[2:4]))) in
-// 			let egif2 := binary.BigEndian.Uint16(raw[4:6])== 0 ? none[io.IO_ifs] : some(io.IO_ifs(binary.BigEndian.Uint16(raw[4:6]))) in
-// 				io.IO_HF(io.IO_HF_{
-// 					InIF2 : inif2,
-// 					EgIF2 : egif2,
-// 					HVF : computeMsgTerm(raw),
-// 				})
-// }
-
-// //assumption at least seg1Len > 0 correct?
-// ghost 
-// decreases 
-// pure func numInfoFields(seg1Len uint8, seg2Len uint8, seg3Len uint8) uint8 {
-// 	return seg3Len > 0 ? 3 : (seg2Len > 0 ? 2 : 1)
-// }
-
-// ghost 
-// decreases
-// pure func infoFieldOffsetSeg(currINF int) int{
-// 	return 4 + 8 * currINF
-// }
-
-// ghost 
-// decreases
-// pure func computeSeqOffset(currHF uint8, seg1Len uint8, seg2Len uint8, seg3Len uint8) int{
-// 	return seg1Len > currHF ? int(currHF)*12 : (seg2Len > currHF ? int(currHF-seg1Len) * 12 : int(currHF-seg2Len-seg1Len)* 12)
-// }
-
-// ghost 
-// decreases
-// pure func computeSeqlen(currHF int, seg1Len int, seg2Len int, seg3Len int) int{
-// 	return seg1Len > currHF ? seg1Len : (seg2Len > currHF ?  seg2Len: seg3Len)
-// }
-
-// ghost 
-// requires int(seg1Len + seg2Len + seg3Len)*12 <= len(raw)
-// requires 0 <= seg1Len && seg1Len*12 <= len(raw)
-// requires 0 <= seg2Len && (seg1Len+seg2Len)*12 <= len(raw)
-// requires 0 <= seg3Len && (seg1Len+seg2Len+seg3Len)*12 <= len(raw)
-// //requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
-// //ensures acc(sl.AbsSlice_Bytes(raw, 0, len(res)))
-// decreases
-// pure func getSegBytes(raw []byte, currHF int, seg1Len int, seg2Len int, seg3Len int) []byte {
-// 	//unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in 
-// 	return seg1Len > currHF ? 
-// 		raw[0:seg1Len*12] : (seg2Len > currHF ? 
-// 			raw[seg1Len*12:(seg1Len + seg2Len)*12] : 
-// 				raw[(seg1Len + seg2Len)*12:(seg1Len + seg2Len + seg3Len)*12])
-// }
-// //different approach:
-// //expects bytes of Hopfields of whole packet
-// /*ghost 
-// requires numHF*12 + 12 < len(raw)
-// requires numHF >= 0
-// requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
-// requires forall k int, i int :: 0<=k && k <= numHF && 0 <= i && i < 12 ==> unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in &raw[k*12:k*12+12][i] == &raw[k*12+i]
-// decreases _
-// pure func toSeqIO_HF_rev(raw []byte, numHF int) seq[io.IO_HF]{
-// 	return numHF == 0 ? 
-// 		(unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in seq[io.IO_HF]{getHopField(raw[0:12])}) : 
-// 		(unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in seq[io.IO_HF]{getHopField(raw[numHF*12:numHF*12+12])}) ++ getSegPast(raw, numHF-1)
-// }*/
-
-
-// //---------------------------------------
-
-
-// //TODO proof termination
-// //expects the raw bytes of the Hopfields of a segment
-// ghost 
-// requires offset*12 + 12 <= len(raw)
-// requires offset >= -1
-// requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
-// requires offset >= 0 ==> 
-// 	(forall k int, i int :: 0 <=k && k <= offset && 0 <= i && i < 12 ==> unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in &raw[k*12:k*12+12][i] == &raw[k*12+i])
-// decreases _
-// pure func getSegPast(raw []byte, offset int) seq[io.IO_HF]{
-// 	return offset == -1 ? seq[io.IO_HF]{} : 
-// 		(unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in seq[io.IO_HF]{getHopField(raw[offset*12:offset*12+12])}) ++ getSegPast(raw, offset-1)
-// }
-
-
-// //TODO proof termination
-// //expects the raw bytes of the Hopfields of a segment
-// ghost 
-// requires offset*12 == len(raw) || offset*12 + 12 < len(raw)
-// requires offset >= 0
-// requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
-// requires offset*12 < len(raw) ==> 
-// 	(forall k int, i int :: 0 <= k && k <= offset && 0 <= i && i < 12 ==> unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in &raw[k*12:k*12+12][i] == &raw[k*12+i])
-// decreases _
-// pure func getSegFuture(raw []byte, offset int) seq[io.IO_HF]{
-// 	return offset*12 == len(raw) ? seq[io.IO_HF]{} : 
-// 		getSegFuture(raw, offset-1) ++ (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in seq[io.IO_HF]{getHopField(raw[offset*12:offset*12+12])})
-// }
-
-// ghost 
-// requires offset*12 + 12 <= len(raw)
-// requires offset >= currHF && currHF >= 0
-// requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
-// requires forall k int, i int :: 0 <= k && k <= offset && 0 <= i && i < 12 ==> unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in &raw[k*12:k*12+12][i] == &raw[k*12+i]
-// decreases _
-// pure func getSegFuture2(raw []byte, currHF int, offset int) seq[io.IO_HF]{
-// 	return offset == currHF ? (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in seq[io.IO_HF]{getHopField(raw[offset*12:offset*12+12])}) : 
-// 		getSegFuture2(raw, currHF, offset-1) ++ (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in seq[io.IO_HF]{getHopField(raw[offset*12:offset*12+12])})
-// }
-
-// //TODO proof termination
-// //expects the raw bytes of the Hopfields of a segment
-// ghost 
-// requires offset*12 + 12 <= len(raw)
-// requires offset >= -1
-// requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
-// requires offset >= 0 ==> 
-// 	(forall k int, i int :: 0<=k && k <= offset && 0 <= i && i < 12 ==> unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in &raw[k*12:k*12+12][i] == &raw[k*12+i])
-// decreases _
-// pure func getSegHistory(raw []byte, offset int) seq[io.IO_ahi]{
-// 	return offset == -1 ? seq[io.IO_ahi]{} : 
-// 		(unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in seq[io.IO_ahi]{getHopField(raw[offset*12:offset*12+12]).Toab()}) ++ getSegHistory(raw, offset-1)
-// }
 
 // TODO Do we need a body?
 ghost
