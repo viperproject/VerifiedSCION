@@ -2672,10 +2672,13 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
+// @ requires  acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), def.ReadL5)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ requires  acc(&p.ingressID,  def.ReadL15)
 // @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL5)
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   acc(&p.ingressID,  def.ReadL15)
 // @ decreases
 func (p *scionPacketProcessor) prepareSCMP(
 	typ slayers.SCMPType,
@@ -2711,6 +2714,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
+		// @ scionBuf := epicPath.GetUnderlyingScionPathBuf(ubPath)
+		// @ unfold acc(epicPath.Mem(ubPath), def.ReadL5)
+		// @ defer fold acc(epicPath.Mem(ubPath), def.ReadL5)
+		// @ assert ubPath[epic.MetadataLen:] === scionBuf
+		// @ ubPath = scionBuf
+		// @ startP += epic.MetadataLen
+		// @ assert ubPath === ub[startP:endP]
 		path = epicPath.ScionPath
 	default:
 		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
@@ -2743,8 +2753,11 @@ func (p *scionPacketProcessor) prepareSCMP(
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
+	// @ assume false
 	// If the packet is sent to an external router, we need to increment the
 	// path to prepare it for the next hop.
+	// @ p.d.getExternalMem()
+	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 	_, external := p.d.external[p.ingressID]
 	if external {
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]

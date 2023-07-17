@@ -71,4 +71,10 @@ func (p *Path) hasScionPath(buf []byte) (r bool) {
 	return unfolding acc(p.Mem(buf), _) in p.ScionPath != nil
 }
 
+ghost
+requires acc(p.Mem(buf), _)
+pure func (p *Path) GetUnderlyingScionPathBuf(buf []byte) []byte {
+	return unfolding acc(p.Mem(buf), _) in buf[MetadataLen:]
+}
+
 (*Path) implements path.Path
