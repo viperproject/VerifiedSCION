@@ -27,11 +27,45 @@ pure func core_as_set() set[IO_as]
 
 ghost
 decreases
-pure func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool
+pure func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool {
+	return let inif := p4.InIF2 in
+		let egif := p4.EgIF2 in
+		let x := p4.HVF in
+		let ts := IO_msgterm(MsgTerm_Num{int(p2)}) in 
+		let uinfo := IO_msgterm(MsgTerm_FS{p3}) in
+		let l := IO_msgterm(MsgTerm_L{seq[IO_msgterm]{ts, if2term(inif), if2term(egif), uinfo}}) in 
+		exists a IO_key :: x == mac(macKey(a), l)
+}
 
 ghost
 decreases
-pure func upd_uinfo(p1 set[IO_msgterm], p2 IO_HF) set[IO_msgterm]
+pure func macKey(key IO_key) IO_msgterm {
+	return IO_msgterm(MsgTerm_Key{key})
+}
+
+ghost 
+decreases
+pure func mac(fst IO_msgterm, snd IO_msgterm) IO_msgterm {
+	return IO_msgterm( MsgTerm_Hash { 
+		MsgTerm_Hash_ : IO_msgterm( MsgTerm_MPair{
+			MsgTerm_MPair_1 : fst,
+			MsgTerm_MPair_2 : snd, 
+		}),
+	})
+}
+
+ghost 
+decreases
+pure func if2term(ifs option[IO_ifs]) IO_msgterm {
+	return ifs == none[IO_ifs] ? MsgTerm_Empty{} : IO_msgterm(MsgTerm_AS{IO_as(get(ifs))})
+}
+
+ghost
+decreases
+pure func upd_uinfo(p1 set[IO_msgterm], p2 IO_HF) set[IO_msgterm] {
+	return let setHVF := set[IO_msgterm]{p2.HVF} in
+		(p1 union setHVF) setminus (p1 intersection setHVF)
+}
 
 ghost
 decreases
