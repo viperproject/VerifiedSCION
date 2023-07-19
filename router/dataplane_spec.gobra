@@ -630,10 +630,261 @@ pure func getPeer(raw []byte, offset int) bool{
 		raw[infoFieldOffsetSeg(offset)] & 0x2 == 0x2
 }
 
-// TODO Do we need a body?
 ghost
 decreases
-pure func computeMsgTerm(raw []byte, start int) io.IO_msgterm
+pure func upd_uinfo_bytes(raw []byte, currINFIdx int, currHFIdx int) set[io.IO_msgterm] {
+	return let uinfo := computeUInfo(raw, currINFIdx) in
+		let setHVF := set[io.IO_msgterm]{computeMsgTerm(raw, currHFIdx)} in
+		(uinfo union setHVF) setminus (uinfo intersection setHVF)
+}
+
+ghost
+decreases
+pure func update_uinfo2_bytes(raw []byte, currINFIdx int, currHFIdx int) bool {
+	return computeUInfo(raw, currINFIdx) === upd_uinfo_bytes(raw, currINFIdx, currHFIdx)
+}
+
+//TODO: is === even possible in this case?
+ghost
+decreases
+pure func same_uinfo2_bytes(currRaw []byte, currINFIdx int, travRaw []byte, travINFIdx int) bool {
+	return computeUInfo(currRaw, currINFIdx) === computeUInfo(travRaw, travINFIdx) 
+}
+
+ghost
+requires 0 <= currINFIdx
+requires infoFieldOffsetSeg(currINFIdx) < len(currRaw)
+requires acc(sl.AbsSlice_Bytes(currRaw, 0, len(currRaw)), _)
+decreases
+pure func update_uinfo_bytes(currRaw []byte, currINFIdx int, currHFIdx int, travRaw []byte, travINFIdx int) bool {
+	return getConsDir(currRaw, currINFIdx) ? update_uinfo2_bytes(currRaw, currINFIdx, currHFIdx) : 
+		same_uinfo2_bytes(currRaw, currINFIdx, travRaw, travINFIdx)
+}
+
+
+
+/*
+ghost
+requires 0 <= currINFIdx
+requires 0 <= currHFIdx
+requires infoFieldOffsetSeg(currINFIdx) + 12 * currHFIdx < len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+//requires len(currseg.Future) > 0
+decreases
+pure func dp3s_iospec_bio3s_create_guard_traversedseg_bytes(raw []byte, currINFIdx int, currHFIdx int) IO_seg3 {
+	return let uinfo := getConsDir(raw, currINFIdx) ?
+		upd_uinfo(raw []byte, currINFIdx, currHFIdx) :
+		computeUInfo(raw, currINFIdx) in
+		IO_seg3_ {
+			AInfo: computeAInfo(raw, currINFIdx),
+			UInfo: uinfo,
+			ConsDir: getConsDir(raw, currINFIdx),
+			Peer: getPeer(raw, currINFIdx),
+			Past: getPastSegment(),
+			Future: currseg.Future,
+			History: currseg.History}
+}
+*/
+
+ghost
+decreases
+pure func same_segment2_bytes(currRaw []byte, travRaw []byte) bool {
+	return currRaw === travRaw
+}
+
+ghost
+decreases
+pure func same_other2_bytes(currRaw []byte, currINFIdx int, travRaw []byte, travINFIdx int) bool {
+	return computeAInfo(currRaw, currINFIdx) == computeAInfo(travRaw, travINFIdx) &&
+		getConsDir(currRaw, currINFIdx) == getConsDir(travRaw, travINFIdx) &&
+		getPeer(currRaw, currINFIdx) == getPeer(travRaw, travINFIdx)
+}
+
+ghost
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+requires ifs in domain(links)
+ensures 0 <= res && res <= 4
+decreases
+pure func link_type_bytes(ifs uint16, links map[uint16]int) (res int) {
+	return links[ifs]
+}
+
+ghost
+requires 0 <= link && link <= 4
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+decreases
+pure func if_type_bytes(ifs uint16, link int, links map[uint16]int) bool{
+	return ifs in domain(links) ? link_type_bytes(ifs, links) == link : false
+}
+
+
+ghost
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+requires 0 <= link && link <= 4
+requires 0 < numInfoFields && numInfoFields <= 3
+requires 0 <= currHFIdx
+requires 4 + 8 * numInfoFields + 12 * currHFIdx + 12 <= len(raw)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+4], _)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+5], _)
+decreases
+pure func egif2_type_bytes(raw []byte, currHFIdx int, numInfoFields int, link int, links map[uint16]int) bool {
+	return let idx := 4 + 8 * numInfoFields + 12 * currHFIdx in
+		let egIF2 := binary.BigEndian.Uint16(raw[idx+4:idx+6]) in
+		if_type_bytes(egIF2, link, links)
+}
+
+ghost
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+requires 0 <= link && link <= 4
+requires 0 < numInfoFields && numInfoFields <= 3
+requires 0 <= currHFIdx
+requires 4 + 8 * numInfoFields + 12 * currHFIdx + 12 <= len(raw)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+2], _)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+3], _)
+decreases
+pure func inif2_type_bytes(raw []byte, currHFIdx int, numInfoFields int, link int, links map[uint16]int) bool {
+	return let idx := 4 + 8 * numInfoFields + 12 * currHFIdx in
+		let inIF2 := binary.BigEndian.Uint16(raw[idx+2:idx+4]) in
+		if_type_bytes(inIF2, link, links)
+}
+
+ghost
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+requires 0 < numInfoFields && numInfoFields <= 3
+requires 0 <= currHFIdx
+requires 4 + 8 * numInfoFields + 12 * currHFIdx + 12 <= len(raw)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+4], _)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+5], _)
+decreases
+pure func egif_prov2_bytes(raw []byte, currHFIdx int, numInfoFields int, links map[uint16]int) bool{
+	return egif2_type_bytes(raw, currHFIdx, numInfoFields, 2, links)
+}
+
+ghost
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+requires 0 < numInfoFields && numInfoFields <= 3
+requires 0 <= currHFIdx
+requires 4 + 8 * numInfoFields + 12 * currHFIdx + 12 <= len(raw)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+4], _)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+5], _)
+decreases
+pure func egif_core2_bytes(raw []byte, currHFIdx int, numInfoFields int, links map[uint16]int) bool{
+	return egif2_type_bytes(raw, currHFIdx, numInfoFields, 1, links) ||
+		egif2_type_bytes(raw, currHFIdx, numInfoFields, 4, links)
+}
+
+
+ghost
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+requires 0 < numInfoFields && numInfoFields <= 3
+requires 0 <= currHFIdx
+requires 4 + 8 * numInfoFields + 12 * currHFIdx + 12 <= len(raw)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+4], _)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+5], _)
+decreases
+pure func egif_cust2_bytes(raw []byte, currHFIdx int, numInfoFields int, links map[uint16]int) bool{
+	return egif2_type_bytes(raw, currHFIdx, numInfoFields, 3, links)
+}
+
+ghost
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+requires 0 < numInfoFields && numInfoFields <= 3
+requires 0 <= currHFIdx
+requires 4 + 8 * numInfoFields + 12 * currHFIdx + 12 <= len(raw)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+2], _)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+3], _)
+decreases
+pure func inif_cust2_bytes(raw []byte, currHFIdx int, numInfoFields int, links map[uint16]int) bool{
+	return inif2_type_bytes(raw, currHFIdx, numInfoFields, 3, links)
+}
+
+ghost
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+requires 0 < numInfoFields && numInfoFields <= 3
+requires 0 <= currHFIdx
+requires 4 + 8 * numInfoFields + 12 * currHFIdx + 12 <= len(raw)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+2], _)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+3], _)
+decreases
+pure func inif_core2_bytes(raw []byte, currHFIdx int, numInfoFields int, links map[uint16]int) bool{
+	return inif2_type_bytes(raw, currHFIdx, numInfoFields, 1, links) ||
+		inif2_type_bytes(raw, currHFIdx, numInfoFields, 4, links)
+}
+
+ghost
+requires acc(links)
+requires forall key uint16 :: key in domain(links) ==> 0 <= links[key] && links[key] <= 4
+requires 0 < numInfoFields && numInfoFields <= 3
+requires 0 <= currHFIdx
+requires 4 + 8 * numInfoFields + 12 * currHFIdx + 12 <= len(raw)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+2], _)
+requires acc(&raw[4 + 8 * numInfoFields + 12 * currHFIdx+3], _)
+decreases
+pure func inif_prov2_bytes(raw []byte, currHFIdx int, numInfoFields int, links map[uint16]int) bool{
+	return inif2_type_bytes(raw, currHFIdx, numInfoFields, 2, links)
+}
+
+/*
+ghost
+decreases
+pure func valid_link_types2(hf1 IO_HF, a IO_as) bool {
+	return  (egif_prov2(hf1, a) && inif_cust2(hf1, a)) ||
+			(egif_core2(hf1, a) && inif_core2(hf1, a)) ||
+			(egif_cust2(hf1, a) && inif_prov2(hf1, a))
+}
+*/
+/*
+ghost
+decreases
+pure func valid_link_types_in2_bytes(raw []byte, currHFIdx int, a uint64) bool {
+	return  (inif_prov2(hf1, a) && egif_cust2(hf1, a)) ||
+			(inif_core2(hf1, a) && egif_core2(hf1, a)) ||
+			(inif_cust2(hf1, a) && egif_prov2(hf1, a))
+}
+
+*/
+/*
+ghost
+decreases
+pure func dp2_check_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
+	return (d && hf1.InIF2 === some(recvif) && valid_link_types_in2(hf1, asid)) ||
+		(!d && hf1.EgIF2 === some(recvif) && valid_link_types2(hf1, asid))
+}
+*/
+
+
+/*
+ghost
+decreases
+pure func dp2_enter_guard_bytes(m IO_pkt2, currseg IO_seg2, traversedseg IO_seg2, asid IO_as, hf1 IO_HF, recvif IO_ifs, fut seq[IO_HF]) bool {
+	return m.CurrSeg == currseg &&
+		currseg.Future == seq[IO_HF]{hf1} ++ fut &&
+		dp2_check_interface(currseg.ConsDir, asid, hf1, recvif) &&
+		update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
+		same_segment2(currseg, traversedseg) &&
+		same_other2(currseg, traversedseg) &&
+		hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1) &&
+		hf1.extr_asid() == asid
+}
+*/
+
+
+
+// TODO: Do we need a body?
+// TODO: can we get rid of this assumptions
+ghost
+ensures res.isMsgTerm_Hash
+decreases
+pure func computeMsgTerm(raw []byte, start int) (res io.IO_msgterm)
 
 ghost
 decreases
@@ -642,5 +893,15 @@ pure func computeAInfo(raw []byte, currINF int) io.IO_ainfo
 ghost 
 decreases
 pure func computeUInfo(raw []byte, currINF int) set[io.IO_msgterm]
+
+//TODO: double check last case
+ghost 
+requires 0 <= linkType && linkType <= 4
+decreases 
+pure func linkToIO_Link(linkType int) io.IO_Link{
+	return linkType == 0 ? io.IO_NoLink{} :
+		(linkType == 1 || linkType == 4) ? io.IO_PeerOrCore{} :
+		linkType == 2 ? io.IO_CustProv{} : io.IO_ProvCust{} 
+}
 
 /** End of io-spec helper functions **/ 
