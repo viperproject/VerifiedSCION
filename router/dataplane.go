@@ -70,6 +70,7 @@ import (
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 	// @ "github.com/scionproto/scion/verification/utils/seqs"
 	// @ socketspec "golang.org/x/net/internal/socket/"
+	// @ io "github.com/scionproto/scion/verification/io"
 )
 
 const (
@@ -670,9 +671,11 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  acc(&d.forwardingMetrics, 1/2)
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
+// !@ requires  io.token(p) && dp3s_iospec_ordered(s, p)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-func (d *DataPlane) Run(ctx context.Context) error {
+func (d *DataPlane) Run(ctx context.Context /*!@ , ghost p io.Place, ghost s io.IO_dp3s_state_local !@*/) error {
+	// !@ ghost m, y := InitSharedInv(p, s)
 	// @ share d, ctx
 	d.mtx.Lock()
 	// @ unfold MutexInvariant!<d!>()
@@ -689,8 +692,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires acc(&d.macFactory, _) && d.macFactory != nil
 		// @ requires acc(MutexInvariant!<d!>(), _)
 		// @ requires rd != nil && acc(rd.Mem(), _)
+		// !@ requires acc(m.LockP(), _) && m.LockInv() == SharedInv!< y !>
 		// requires ingressID in domain(???)
-		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
+		func /*@ rc @*/ (ingressID uint16, rd BatchConn /*!@ , ghost m *sync.Mutex, ghost y sharedArg !@*/) {
 
 			msgs := conn.NewReadMessages(inputBatchCnt)
 			// @ socketspec.SplitPermMsgs(msgs)
@@ -733,6 +737,15 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&d.running, _) && d.running
 			// @ invariant acc(rd.Mem(), _)
 			for d.running {
+				// !@ ghost m.Lock()
+				// !@ unfold SharedInv!< y !>()
+				// !@ ghost t, s := *y.Place, *y.State
+				// !@ ghost numberOfReceivedPacketsProphecy := AllocProphecy()
+				// !@ExtractMultiReadBio(t, numberOfReceivedPacketsProphecy, s)
+				// !@MultiUpdateElemWitness2(t, numberOfReceivedPacketsProphecy, numberOfReceivedPacketsProphecy, from, s, y, 1/2)
+				// !@ghost es := MutliReadBio_Pkts(t, numberOfReceivedPacketsProphecy, numberOfReceivedPacketsProphecy)
+				// !@ghost sN := MultiReadBio_Upd(t, numberOfReceivedPacketsProphecy, numberOfReceivedPacketsProphecy, s)
+				// !@ghost tN := MutliReadBio_next(t, numberOfReceivedPacketsProphecy, numberOfReceivedPacketsProphecy)
 				pkts, err := rd.ReadBatch(msgs)
 				if err != nil {
 					log.Debug("Failed to read batch", "err", err)
@@ -808,6 +821,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			}
 		}(k, v) // @ as closureSpec1
 	}
+	// !@ invariant acc(m.LockP(), _) && m.LockInv() == SharedInv!< y !>
 	for ifID, v := range d.external {
 		go func(i uint16, c BatchConn) {
 			defer log.HandlePanic()

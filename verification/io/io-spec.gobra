@@ -45,7 +45,6 @@ requires CBio_IN_bio3s_enter(t, v)
 decreases
 pure func CBio_IN_bio3s_enter_T(s IO_dp3s_state_local, t Place, v IO_val) Place
 
-
 ghost
 requires len(currseg.Future) > 0
 decreases
