@@ -14,18 +14,18 @@
 
 // +gobra
 
-// (VerifiedSCION) Uncommenting the following causes severe slowdowns, but it verifies
-// initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
-// initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
-// initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
-// initEnsures malformedPath                 != nil && malformedPath.ErrorMem()
-// initEnsures modifyExisting                != nil && modifyExisting.ErrorMem()
-// initEnsures noSVCBackend                  != nil && noSVCBackend.ErrorMem()
-// initEnsures unsupportedPathType           != nil && unsupportedPathType.ErrorMem()
-// initEnsures unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
-// initEnsures noBFDSessionFound             != nil && noBFDSessionFound.ErrorMem()
-// initEnsures noBFDSessionConfigured        != nil && noBFDSessionConfigured.ErrorMem()
-// initEnsures errBFDDisabled                != nil && errBFDDisabled.ErrorMem()
+// (VerifiedSCION) the following init-postconditions causes severe slowdowns
+// @ initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
+// @ initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
+// @ initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
+// @ initEnsures malformedPath                 != nil && malformedPath.ErrorMem()
+// @ initEnsures modifyExisting                != nil && modifyExisting.ErrorMem()
+// @ initEnsures noSVCBackend                  != nil && noSVCBackend.ErrorMem()
+// @ initEnsures unsupportedPathType           != nil && unsupportedPathType.ErrorMem()
+// @ initEnsures unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
+// @ initEnsures noBFDSessionFound             != nil && noBFDSessionFound.ErrorMem()
+// @ initEnsures noBFDSessionConfigured        != nil && noBFDSessionConfigured.ErrorMem()
+// @ initEnsures errBFDDisabled                != nil && errBFDDisabled.ErrorMem()
 package router
 
 import (
@@ -299,18 +299,21 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
-	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
+		// @ def.Unreachable()
 		return modifyExisting
 	}
 	if conn == nil {
+		// @ def.Unreachable()
 		return emptyValue
 	}
 	if d.internal != nil {
+		// @ def.Unreachable()
 		return alreadySet
 	}
 	d.internal = conn
 	d.internalIP = ip
+	// @ fold MutexInvariant!<d!>()
 	return nil
 }
 
@@ -330,14 +333,16 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
-	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
+		// @ def.Unreachable()
 		return modifyExisting
 	}
 	if conn == nil {
+		// @ def.Unreachable()
 		return emptyValue
 	}
 	if _, existsB := d.external[ifID]; existsB {
+		// @ def.Unreachable()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	if d.external == nil {
@@ -347,6 +352,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	// @ unfold AccBatchConn(d.external)
 	d.external[ifID] = conn
 	// @ fold AccBatchConn(d.external)
+	// @ fold MutexInvariant!<d!>()
 	return nil
 }
 
@@ -367,20 +373,23 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
-	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
+		// @ def.Unreachable()
 		return modifyExisting
 	}
 	if remote.IsZero() {
+		// @ def.Unreachable()
 		return emptyValue
 	}
 	if _, existsB := d.neighborIAs[ifID]; existsB {
+		// @ def.Unreachable()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	if d.neighborIAs == nil {
 		d.neighborIAs = make(map[uint16]addr.IA)
 	}
 	d.neighborIAs[ifID] = remote
+	// @ fold MutexInvariant!<d!>()
 	return nil
 }
 
@@ -399,6 +408,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // @ ensures   domain(d.linkTypes) == old(domain(d.linkTypes)) union set[uint16]{ifID}
 func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	if _, existsB := d.linkTypes[ifID]; existsB {
+		// @ def.Unreachable()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	// @ unfold MutexInvariant!<d!>()
@@ -968,7 +978,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires acc(&p.d.svc, _) && p.d.svc != nil
 // @ requires acc(&p.ingressID)
 // @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
-// @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(&p.macBuffers.scionInput, def.ReadL10)
 // @ requires sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
@@ -1041,6 +1050,15 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			}
 			return processResult{}, p.processInterBFD(ohp, pld)
 		}
+		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
+		// (VerifiedSCION) Nested if because short-circuiting && is not working
+		// @ ghost if lastLayerIdx >= 0 {
+		// @	if !offsets[lastLayerIdx].isNil {
+		// @		o := offsets[lastLayerIdx]
+		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
+		// @ 	}
+		// @ }
+		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		return p.processOHP()
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)

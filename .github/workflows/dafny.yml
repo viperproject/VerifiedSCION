@@ -1,0 +1,25 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Copyright (c) 2022 ETH Zurich.
+
+name: Verify bitwise operations in Dafny
+
+on:
+  push:
+    branches:
+    - master
+  pull_request: # run this workflow on every pull_request
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the current repository
+        uses: actions/checkout@v3
+      - name: "Install Dafny"
+        uses: dafny-lang/setup-dafny-action@v1
+      - name: "Verify bitwise operations."
+        run: |
+          dafny verification/utils/bitwise/proofs.dfy
