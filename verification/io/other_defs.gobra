@@ -48,7 +48,7 @@ type IO_msgterm adt {
 	}
 
 	MsgTerm_Num {
-		MsgTerm_Num_ int // formallized as nat in Isabelle
+		MsgTerm_Num_ uint // formallized as nat in Isabelle
 	}
 
 	MsgTerm_Key {
@@ -60,7 +60,7 @@ type IO_msgterm adt {
 	}
 
 	MsgTerm_FS {
-		MsgTerm_FS_ seq[IO_msgterm]
+		MsgTerm_FS_ set[IO_msgterm]
 	}
 
 	MsgTerm_MPair {
@@ -106,8 +106,6 @@ decreases
 pure func (hf IO_HF) extr_asid() IO_as {
 	return hf.HVF.extract_asid()
 }
-
-
 
 // function 'toab' in Isabelle, originally of type HF_scheme -> aahi_scheme
 ghost
@@ -159,31 +157,46 @@ pure func link_type(p1 IO_as, p2 IO_ifs) IO_Link
 
 ghost
 decreases
-pure func egif_prov2(hf1 IO_HF, asid IO_as) bool
+pure func egif_prov2(hf1 IO_HF, asid IO_as) bool{
+	return egif2_type(hf1, asid, IO_Link(IO_CustProv{}))
+}
 
 ghost
 decreases
-pure func egif_core2(hf1 IO_HF, asid IO_as) bool
+pure func egif_core2(hf1 IO_HF, asid IO_as) bool{
+	return egif2_type(hf1, asid, IO_Link(IO_PeerOrCore{}))
+}
 
 ghost
 decreases
-pure func egif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func egif_cust2(hf1 IO_HF, asid IO_as) bool{
+	return egif2_type(hf1, asid, IO_Link(IO_ProvCust{}))
+}
 
 ghost
 decreases
-pure func inif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func inif_cust2(hf1 IO_HF, asid IO_as) bool{
+	return inif2_type(hf1, asid, IO_Link(IO_ProvCust{}))
+}
 
 ghost
 decreases
-pure func inif_core2(hf1 IO_HF, asid IO_as) bool
+pure func inif_core2(hf1 IO_HF, asid IO_as) bool{
+	return inif2_type(hf1, asid, IO_Link(IO_PeerOrCore{}))
+}
 
 ghost
 decreases
-pure func inif_prov2(hf1 IO_HF, asid IO_as) bool
+pure func inif_prov2(hf1 IO_HF, asid IO_as) bool{
+	return inif2_type(hf1, asid, IO_Link(IO_CustProv{}))
+}
 
 ghost
 decreases
-pure func if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool
+pure func if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool{
+	return ifs == none[IO_ifs] ? false : link_type(asid, get(ifs)) == link
+	//exists outif IO_ifs :: some(outif) == ifs && link_type(asid, outif) == link
+}
 
 type ext2_rec struct {
 	op1 IO_as
@@ -213,10 +226,9 @@ ghost
 decreases
 pure func dp2_in_ext(s IO_dp2_state, asid IO_as, ifs IO_ifs, pkt IO_pkt2) bool
 
-// TODO: how is this defined?
-// extract_asid
 ghost
 decreases
-pure func (m IO_msgterm) extract_asid() IO_as
-
+pure func (m IO_msgterm) extract_asid() IO_as {
+	return m.MsgTerm_Hash_.MsgTerm_MPair_1.MsgTerm_Key_.Key_macK_
+}
 /* End of To clarify */
