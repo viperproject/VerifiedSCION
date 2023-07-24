@@ -31,10 +31,17 @@ pure func hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool {
 	return let inif := p4.InIF2 in
 		let egif := p4.EgIF2 in
 		let x := p4.HVF in
-		let ts := IO_msgterm(MsgTerm_Num{int(p2)}) in 
+		let ts := IO_msgterm(MsgTerm_Num{p2}) in 
 		let uinfo := IO_msgterm(MsgTerm_FS{p3}) in
 		let l := IO_msgterm(MsgTerm_L{seq[IO_msgterm]{ts, if2term(inif), if2term(egif), uinfo}}) in 
 		exists a IO_key :: x == mac(macKey(a), l)
+}
+
+//Helper function (not in Isabelle)
+ghost
+decreases
+pure func asidToKey(asid IO_as) IO_key{
+	return IO_key(Key_macK{asid})
 }
 
 ghost

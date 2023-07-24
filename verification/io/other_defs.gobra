@@ -48,7 +48,7 @@ type IO_msgterm adt {
 	}
 
 	MsgTerm_Num {
-		MsgTerm_Num_ int // formallized as nat in Isabelle
+		MsgTerm_Num_ uint // formallized as nat in Isabelle
 	}
 
 	MsgTerm_Key {
