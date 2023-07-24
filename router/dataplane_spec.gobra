@@ -109,8 +109,8 @@ pred forwardingMetricsNonInjectiveMem(v forwardingMetrics) {
 }
 
 ghost
-requires acc(forwardingMetricsNonInjectiveMem(v), _)
-ensures acc(forwardingMetricsMem(v, id), _)
+requires  acc(forwardingMetricsNonInjectiveMem(v), _)
+ensures   acc(forwardingMetricsMem(v, id), _)
 decreases
 func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
 	unfold acc(forwardingMetricsNonInjectiveMem(v), _)
@@ -138,8 +138,8 @@ pred (p *scionPacketProcessor) initMem() {
 
 requires acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
-ensures acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
-ensures res.Mem()
+ensures  acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
+ensures  res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
 
@@ -167,7 +167,7 @@ func (err scmpError) IsDuplicableMem() bool {
 ghost
 trusted
 preserves err.ErrorMem()
-ensures err.IsDuplicableMem() ==> err.ErrorMem()
+ensures   err.IsDuplicableMem() ==> err.ErrorMem()
 decreases
 func (err scmpError) Duplicate() {
 	if err.IsDuplicableMem() {
@@ -188,16 +188,16 @@ type offsetPair struct {
 ghost
 pure
 requires 0 <= n
-ensures len(res) == n
-ensures forall i int :: {res[i]} 0 <= i && i < len(res) ==> res[i] == offsetPair{}
+ensures  len(res) == n
+ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> res[i] == offsetPair{}
 decreases
 func newOffsetPair(n int) (res seq[offsetPair])
 
 /**** Acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures acc(&d.internalNextHops, _)
-ensures d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), _)
+ensures  acc(&d.internalNextHops, _)
+ensures  d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), _)
 decreases
 func (d *DataPlane) getInternalNextHops() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -205,7 +205,7 @@ func (d *DataPlane) getInternalNextHops() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures acc(&d.external, _) && (d.external != nil ==> acc(AccBatchConn(d.external), _))
+ensures  acc(&d.external, _) && (d.external != nil ==> acc(AccBatchConn(d.external), _))
 decreases
 func (d *DataPlane) getExternalMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -213,7 +213,7 @@ func (d *DataPlane) getExternalMem() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
+ensures  acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
 decreases
 func (d *DataPlane) getLinkTypesMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -221,7 +221,7 @@ func (d *DataPlane) getLinkTypesMem() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures acc(&d.localIA, _)
+ensures  acc(&d.localIA, _)
 decreases
 func (d *DataPlane) getLocalIA() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -229,7 +229,7 @@ func (d *DataPlane) getLocalIA() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
+ensures  acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
 decreases
 func (d *DataPlane) getNeighborIAs() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -237,7 +237,7 @@ func (d *DataPlane) getNeighborIAs() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures acc(&d.svc, _) && (d.svc != nil ==> acc(d.svc.Mem(), _))
+ensures  acc(&d.svc, _) && (d.svc != nil ==> acc(d.svc.Mem(), _))
 decreases
 func (d *DataPlane) getSvcMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -245,7 +245,7 @@ func (d *DataPlane) getSvcMem() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures acc(&d.bfdSessions, _) && (d.bfdSessions != nil ==> acc(AccBfdSession(d.bfdSessions), _))
+ensures  acc(&d.bfdSessions, _) && (d.bfdSessions != nil ==> acc(AccBfdSession(d.bfdSessions), _))
 decreases
 func (d *DataPlane) getBfdSessionsMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -253,14 +253,14 @@ func (d *DataPlane) getBfdSessionsMem() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures acc(&d.internal, _) && (d.internal != nil ==> acc(d.internal.Mem(), _))
+ensures  acc(&d.internal, _) && (d.internal != nil ==> acc(d.internal.Mem(), _))
 decreases
 func (d *DataPlane) getInternal() {
 	unfold acc(MutexInvariant!<d!>(), _)
 }
 
 requires acc(MutexInvariant!<d!>(), _)
-ensures acc(&d.macFactory, _)
+ensures  acc(&d.macFactory, _)
 decreases
 func (d *DataPlane) getMacFactoryMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -269,10 +269,10 @@ func (d *DataPlane) getMacFactoryMem() {
 ghost
 requires acc(MutexInvariant!<d!>(), _)
 requires acc(&d.macFactory, _) && d.macFactory != nil
-ensures acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
-ensures acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
-ensures scrypto.ValidKeyForHash(*d.key)
-ensures d.macFactory implements MacFactorySpec{d.key}
+ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
+ensures  acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
+ensures  scrypto.ValidKeyForHash(*d.key)
+ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
 func (d *DataPlane) getNewPacketProcessorFootprint() {
 	unfold acc(MutexInvariant!<d!>(), _)
