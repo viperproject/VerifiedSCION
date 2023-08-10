@@ -29,14 +29,14 @@ type SharedArg struct {
 
 pred SharedInv(ghost y SharedArg) {
 	acc(y.Place) && acc(y.State) && // existentials are expressed using ghost pointers
-	token(*y.Place) && io.dp3s_iospec_ordered(*y.State, *y.Place) && 
+	io.token(*y.Place) && io.dp3s_iospec_ordered(*y.State, *y.Place) && 
 	ElemAuth((*y.State).ibuf, y.IBufY) && ElemAuth((*y.State).obuf, y.OBufY)
 }
 
 // initialize the shared invariant:
 
 ghost 
-requires token(p) && io.dp3s_iospec_ordered(s, p)
+requires io.token(p) && io.dp3s_iospec_ordered(s, p)
 ensures  m.LockP() && m.LockInv() == SharedInv!< y !>;
 func InitSharedInv(ghost p io.Place, ghost s io.IO_dp3s_state_local) (ghost m *sync.Mutex, ghost y SharedArg) {
 	mV@ := sync.Mutex{}
@@ -50,62 +50,6 @@ func InitSharedInv(ghost p io.Place, ghost s io.IO_dp3s_state_local) (ghost m *s
 	m.SetInv(SharedInv!< y !>)
 }
 
-/////////////////////////////////////// Lib ///////////////////////////////////////
-
-decreases 
-requires acc(ConnMem(c), _)
-requires token(t) && read_bio(t)
-ensures !err ==> token(old(read_bio_next(t))) && old(read_bio_ifs(t)) == old(ID(c)) && PktMem(p) && old(read_bio_pkt(t)) == Abs(p)
-ensures  err ==> token(t) && read_bio(t) && read_bio_ifs(t) == old(read_bio_ifs(t)) && read_bio_pkt(t) == old(read_bio_pkt(t)) && read_bio_next(t) == old(read_bio_next(t))
-func Recv(c Conn, ghost t io.Place) (p Pkt, err bool)
-
-decreases 
-requires acc(ConnMem(c), _) && Prophecy(prophecyM) // could also just make it dependend on the target
-requires token(t) && MultiReadBio(t, prophecyM)
-requires forall i int :: {&buf[i]} 0 <= i && i < len(buf) ==> acc(&buf[i])
-ensures  prophecyM == m
-ensures  0 <= m && m <= len(buf) 
-ensures  token(old(MutliReadBio_next(t, m, m))) && old(MutliReadBio_correctIfs(t, m, m, ID(c)))
-ensures  forall i int :: {&buf[i]} 0 <= i && i < len(buf) ==> acc(&buf[i])
-ensures  forall i int :: 0 <= i && i < m ==> PktMem(buf[i]) && Abs(buf[i]) == old(MutliReadBio_Pkts(t, m, m)[i])
-func BatchRecv(c Conn, buf []Pkt, ghost prophecyM int, ghost t io.Place) (m int)
-
-pred Prophecy(int)
-
-ghost
-decreases 
-ensures 0 <= expectedM && Prophecy(expectedM)
-func AllocProphecy() (expectedM int)
-
-decreases
-requires acc(ConnMem(c), _) && PktMem(p)
-requires token(t) && send_bio(t, ID(c), Abs(p))
-ensures !err ==> token(old(send_bio_next(t, old(ID(c)), old(Abs(p)))))
-ensures  err ==> PktMem(p) && old(Abs(p)) == Abs(p) && token(t) && send_bio(t, old(ID(c)), old(Abs(p))) && old(send_bio_next(t, old(ID(c)), old(Abs(p)))) == send_bio_next(t, old(ID(c)), old(Abs(p)))
-func Send(c Conn, p Pkt, ghost t io.Place) (err bool)
-
-ghost
-decreases
-requires token(t) && exit_bio(t, from, to, e1, e2)
-ensures  token(old(exit_bio_next(t, from, to, e1, e2))) 
-func Exit(ghost t io.Place, ghost from, to Key, ghost e1, e2 Elem)
-
-type Conn *int
-pred ConnMem(Conn)
-
-ghost
-decreases
-requires acc(ConnMem(c), _)
-pure func ID(c Conn) (ghost k Key)
-
-type Pkt *int 
-pred PktMem(Pkt)
-
-ghost
-decreases
-requires PktMem(p)
-pure func Abs(p Pkt) (ghost e Elem)
-
 /////////////////////////////////////// MultiBio ///////////////////////////////////////
 
 pred MultiReadBio(ghost t io.Place, n int) {
@@ -114,21 +58,21 @@ pred MultiReadBio(ghost t io.Place, n int) {
 
 ghost 
 decreases m
-requires m <= n && acc(MultiReadBio(t,n), _)
-pure func MutliReadBio_next(ghost t io.Place, n,m int) (ghost tn io.Place) {
-  return m <= 0 ? t : unfolding acc(MultiReadBio(t,n), _) in MutliReadBio_next(read_bio_next(t), n-1, m-1)
+requires m <= n && acc(MultiReadBio(t, n), _)
+pure func MutliReadBio_next(ghost t io.Place, n, m int) (ghost tn io.Place) {
+  return m <= 0 ? t : unfolding acc(MultiReadBio(t, n), _) in MutliReadBio_next(read_bio_next(t), n-1, m-1)
 }
 
 ghost 
 decreases m
-requires m <= n && acc(MultiReadBio(t,n), _)
+requires m <= n && acc(MultiReadBio(t, ), _)
 pure func MutliReadBio_correctIfs(ghost t io.Place, n, m int, ghost k Key) bool {
-  return m <= 0 ? true : unfolding acc(MultiReadBio(t,n), _) in k == read_bio_ifs(t) && MutliReadBio_correctIfs(read_bio_next(t), n-1, m-1, k)
+  return m <= 0 ? true : unfolding acc(MultiReadBio(t, ), _) in k == read_bio_ifs(t) && MutliReadBio_correctIfs(read_bio_next(t), n-1, m-1, k)
 }
 
 ghost 
 decreases m
-requires 0 <= m && m <= n && acc(MultiReadBio(t,n), _)
+requires 0 <= m && m <= n && acc(MultiReadBio(t, ), _)
 ensures len(res) == m
 pure func MutliReadBio_Pkts(ghost t io.Place, n, m int) (ghost res seq[Elem]) {
   return m <= 0 ? seq[Elem]{} : unfolding acc(MultiReadBio(t,n), _) in seq[Elem]{read_bio_pkt(t)} ++ MutliReadBio_Pkts(read_bio_next(t), n-1, m-1)
@@ -138,13 +82,13 @@ ghost
 decreases m
 requires m <= n && acc(MultiReadBio(t,n), _)
 pure func MultiReadBio_Upd(ghost t io.Place, n, m int, ghost s io.IO_dp3s_state_local) io.IO_dp3s_state_local {
-  return m <= 0 ? s : unfolding acc(MultiReadBio(t,n), _) in MultiReadBio_Upd(read_bio_next(t), n-1, m-1, dp3s_add_ibuf(s, read_bio_ifs(t), read_bio_pkt(t)))
+  return m <= 0 ? s : unfolding acc(MultiReadBio(t,n), _) in MultiReadBio_Upd(read_bio_next(t), n-1, m-1, io.dp3s_add_ibuf(s, read_bio_ifs(t), read_bio_pkt(t)))
 }
 
 ghost 
 decreases len(es)
 pure func MultiIBuf_Upd(ghost k Key, ghost es seq[Elem], ghost s io.IO_dp3s_state_local) io.IO_dp3s_state_local {
-  return len(es) == 0 ? s : MultiIBuf_Upd(k, es[1:], dp3s_add_ibuf(s, k, es[0]))
+  return len(es) == 0 ? s : MultiIBuf_Upd(k, es[1:], io.dp3s_add_ibuf(s, k, es[0]))
 }
 
 ghost
@@ -155,7 +99,7 @@ func ExtractMultiReadBio(ghost t io.Place, n int, ghost s io.IO_dp3s_state_local
   if n > 0 {
     unfold io.dp3s_iospec_ordered(s,t)
     unfold io.dp3s_iospec_bio3s_recv(s,t)
-    ExtractMultiReadBio(read_bio_next(t), n-1, dp3s_add_ibuf(s, read_bio_ifs(t), read_bio_pkt(t)))
+    ExtractMultiReadBio(read_bio_next(t), n-1, io.dp3s_add_ibuf(s, read_bio_ifs(t), read_bio_pkt(t)))
   } 
   fold MultiReadBio(t,n)
 }
@@ -168,7 +112,7 @@ ensures  MultiElemWitness(y.IBufY, k, es)
 func MultiUpdateElemWitness(ghost k Key, ghost es seq[Elem], ghost s io.IO_dp3s_state_local, ghost y SharedArg) {
   if len(es) > 0 {
     UpdateElemWitness(s.ibuf, y.IBufY, k, es[0])
-    MultiUpdateElemWitness(k, es[1:], dp3s_add_ibuf(s, k, es[0]), y)
+    MultiUpdateElemWitness(k, es[1:], io.dp3s_add_ibuf(s, k, es[0]), y)
   } 
   fold MultiElemWitness(y.IBufY, k, es)
 }
@@ -186,7 +130,7 @@ func MultiUpdateElemWitness2(ghost t io.Place, n, m int, ghost k Key, ghost s io
 
   if n > 0 {
     UpdateElemWitness(s.ibuf, y.IBufY, read_bio_ifs(t), read_bio_pkt(t))
-    MultiUpdateElemWitness2(read_bio_next(t), n-1, m-1, k, dp3s_add_ibuf(s, read_bio_ifs(t), read_bio_pkt(t)), y, p/2)
+    MultiUpdateElemWitness2(read_bio_next(t), n-1, m-1, k, io.dp3s_add_ibuf(s, read_bio_ifs(t), read_bio_pkt(t)), y, p/2)
   } 
 
   if 0 <= m && m <= n && MutliReadBio_correctIfs(t,n,m,k) {
@@ -273,16 +217,16 @@ pure func exit_bio_next(ghost t io.Place, ghost kFrom, kTo Key, ghost e1, e2 Ele
 
 ghost
 decreases
-pure func insert(buf dict[option[IO_ifs]](set[IO_pkt3]), k option[IO_ifs], v IO_pkt3) dict[option[IO_ifs]](set[IO_pkt3]) {
-	return let newSet := (k in domain(buf)? (let pre := buf[k] in pre union set[IO_pkt3]{v}) : set[IO_pkt3]{v}) in
+pure func insert(buf dict[option[io.IO_ifs]](set[io.IO_pkt3]), k option[io.IO_ifs], v io.IO_pkt3) dict[option[io.IO_ifs]](set[io.IO_pkt3]) {
+	return let newSet := (k in domain(buf)? (let pre := buf[k] in pre union set[io.IO_pkt3]{v}) : set[io.IO_pkt3]{v}) in
 		buf[k = newSet]
 }
 
 /////////////////////////////////////// RA definitions ///////////////////////////////////////
 
-type Key = option[IO_ifs]
-type Val = set[IO_pkt3]
-type Elem = IO_pkt3
+type Key = option[io.IO_ifs]
+type Val = set[io.IO_pkt3]
+type Elem = io.IO_pkt3
 
 type ElemRA domain{} 
 
