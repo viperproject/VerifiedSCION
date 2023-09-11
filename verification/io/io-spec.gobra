@@ -201,7 +201,8 @@ ghost
 decreases
 pure func dp3s_iospec_bio3s_exit_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return none[IO_ifs] in domain(s.ibuf) ==>
-		(let ibuf_set := s.ibuf[none[IO_ifs]] in (v.IO_Internal_val2_1 in ibuf_set))
+		(let ibuf_set := s.ibuf[none[IO_ifs]] in (v.IO_Internal_val2_1 in ibuf_set)) &&
+		dp3s_forward_ext(v.IO_Internal_val2_1, v.IO_Internal_val2_2, v.IO_Internal_val2_3)
 }
 
 pred dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
