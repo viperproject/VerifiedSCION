@@ -43,7 +43,7 @@ func GetAbsSlice_Bytes(s []byte, contents seq[byte], p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires acc(AbsSlice_Bytes(s, start, end), p)
 requires start <= idx && idx <= end
 ensures  acc(AbsSlice_Bytes(s, start, idx), p)
@@ -56,7 +56,7 @@ func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires acc(AbsSlice_Bytes(s, start, idx), p)
 requires acc(AbsSlice_Bytes(s, idx,   end), p)
 ensures  acc(AbsSlice_Bytes(s, start, end), p)
@@ -68,7 +68,7 @@ func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires acc(AbsSlice_Bytes(s, start, end), p)
 // the following precondition convinces Gobra that
 // the slice operation is well-formed
@@ -82,7 +82,7 @@ func Reslice_Bytes(s []byte, start int, end int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires 0 <= start && start <= end && end <= cap(s)
 requires len(s[start:end]) <= cap(s)
 requires acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
@@ -111,7 +111,7 @@ func Unslice_Bytes(s []byte, start int, end int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires 0 <= start && start <= end && end <= len(s)
 requires acc(AbsSlice_Bytes(s, 0, len(s)), p)
 ensures  acc(AbsSlice_Bytes(s[start:end], 0, end-start), p)
@@ -125,7 +125,7 @@ func SplitRange_Bytes(s []byte, start int, end int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires 0 <= start && start <= end && end <= len(s)
 requires acc(AbsSlice_Bytes(s[start:end], 0, end-start), p)
 requires acc(AbsSlice_Bytes(s, 0, start), p)
@@ -169,7 +169,7 @@ pred AbsSlice_Any(s []any, start int, end int) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires acc(AbsSlice_Any(s, start, end), p)
 requires start <= idx && idx <= end
 ensures  acc(AbsSlice_Any(s, start, idx), p)
@@ -182,7 +182,7 @@ func SplitByIndex_Any(s []any, start int, end int, idx int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires acc(AbsSlice_Any(s, start, idx), p)
 requires acc(AbsSlice_Any(s, idx,   end), p)
 ensures  acc(AbsSlice_Any(s, start, end), p)
@@ -194,7 +194,7 @@ func CombineAtIndex_Any(s []any, start int, end int, idx int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires acc(AbsSlice_Any(s, start, end), p)
 // the following precondition convinces Gobra that
 // the slice operation is well-formed
@@ -208,7 +208,7 @@ func Reslice_Any(s []any, start int, end int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires 0 <= start && start <= end && end <= cap(s)
 requires len(s[start:end]) <= cap(s)
 requires acc(AbsSlice_Any(s[start:end], 0, len(s[start:end])), p)

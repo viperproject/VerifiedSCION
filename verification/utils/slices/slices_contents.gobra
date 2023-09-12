@@ -63,7 +63,7 @@ func GetAbsSliceC_Bytes(s []byte, start int, end int, p perm) (contents seq[byte
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires AbsSliceC_Bytes(s, start, end, contents)
 requires start < idx && idx < end
 ensures  AbsSliceC_Bytes(s, start, idx, contents[:idx-start]) && AbsSliceC_Bytes(s, idx, end, contents[idx-start:])
