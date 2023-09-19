@@ -19,7 +19,7 @@ package slayers
 import (
 	"github.com/google/gopacket"
 
-	def "github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -52,7 +52,7 @@ pred (h *HopByHopExtn) Mem(ubuf []byte) {
 
 // Gobra is not able to infer that HopByHopExtn is "inheriting"
 // the implementation of LayerContents from extnBase.
-requires def.Uncallable()
+requires Uncallable()
 func (h *HopByHopExtn) LayerContents() (res []byte) {
 	res = h.BaseLayer.LayerContents()
 	return res
@@ -85,7 +85,7 @@ pred (h *HopByHopExtnSkipper) Mem(ubuf []byte) {
 
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
 // the implementation of LayerContents from extnBase.
-requires def.Uncallable()
+requires Uncallable()
 func (h *HopByHopExtnSkipper) LayerContents() (res []byte) {
 	res = h.BaseLayer.LayerContents()
 	return res
@@ -93,20 +93,20 @@ func (h *HopByHopExtnSkipper) LayerContents() (res []byte) {
 
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
-preserves acc(h.Mem(ub), def.ReadL20)
+preserves acc(h.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
 ensures   res === ub[start:end]
 decreases
 func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
-	unfold acc(h.Mem(ub), def.ReadL20)
-	unfold acc(h.extnBase.Mem(ub), def.ReadL20)
+	unfold acc(h.Mem(ub), R20)
+	unfold acc(h.extnBase.Mem(ub), R20)
 	ghost base := &h.extnBase.BaseLayer
 	res = base.LayerPayload(ub, h.ActualLen)
 	start = h.ActualLen
 	end = len(ub)
-	fold acc(h.extnBase.Mem(ub), def.ReadL20)
-	fold acc(h.Mem(ub), def.ReadL20)
+	fold acc(h.extnBase.Mem(ub), R20)
+	fold acc(h.Mem(ub), R20)
 	return res, start, end
 }
 
@@ -140,7 +140,7 @@ pred (e *EndToEndExtn) Mem(ubuf []byte) {
 
 // Gobra is not able to infer that EndToEndExtn is "inheriting"
 // the implementation of LayerContents from extnBase.
-requires def.Uncallable()
+requires Uncallable()
 func (e *EndToEndExtn) LayerContents() (res []byte) {
 	res = e.BaseLayer.LayerContents()
 	return res
@@ -175,7 +175,7 @@ pred (e *EndToEndExtnSkipper) Mem(ubuf []byte)  {
 
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
 // the implementation of LayerContents from extnBase.
-requires def.Uncallable()
+requires Uncallable()
 func (e *EndToEndExtnSkipper) LayerContents() (res []byte) {
 	res = e.BaseLayer.LayerContents()
 	return res
@@ -183,20 +183,20 @@ func (e *EndToEndExtnSkipper) LayerContents() (res []byte) {
 
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
-preserves acc(e.Mem(ub), def.ReadL20)
+preserves acc(e.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
 ensures   res === ub[start:end]
 decreases
 func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
-	unfold acc(e.Mem(ub), def.ReadL20)
-	unfold acc(e.extnBase.Mem(ub), def.ReadL20)
+	unfold acc(e.Mem(ub), R20)
+	unfold acc(e.extnBase.Mem(ub), R20)
 	ghost base := &e.extnBase.BaseLayer
 	res = base.LayerPayload(ub, e.ActualLen)
 	start = e.ActualLen
 	end = len(ub)
-	fold acc(e.extnBase.Mem(ub), def.ReadL20)
-	fold acc(e.Mem(ub), def.ReadL20)
+	fold acc(e.extnBase.Mem(ub), R20)
+	fold acc(e.Mem(ub), R20)
 	return res, start, end
 }
 

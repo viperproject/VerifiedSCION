@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 // SCMPType is the type of the SCMP type code.
@@ -111,12 +111,12 @@ func (a SCMPTypeCode) InfoMsg() bool {
 	return a.Type() > 127
 }
 
-// @ preserves acc(SCMPTypeCodeMem(), definitions.ReadL10)
+// @ preserves acc(SCMPTypeCodeMem(), R10)
 // @ decreases
 func (a SCMPTypeCode) String() string {
 	t, c := a.Type(), a.Code()
-	//@ unfold acc(SCMPTypeCodeMem(), definitions.ReadL10)
-	//@ defer fold acc(SCMPTypeCodeMem(), definitions.ReadL10)
+	//@ unfold acc(SCMPTypeCodeMem(), R10)
+	//@ defer fold acc(SCMPTypeCodeMem(), R10)
 	info, ok := scmpTypeCodeInfo[t]
 	if !ok {
 		return fmt.Sprintf("%d(%d)", t, c)
