@@ -324,8 +324,8 @@ decreases
 pure
 func (s *SCION) AddrHdrLenSpec(ubuf []byte) (res int) {
 	return unfolding acc(s.Mem(ubuf), _) in
-		(unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in
-		(2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()))
+		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in
+		2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
 // Morally ghost
