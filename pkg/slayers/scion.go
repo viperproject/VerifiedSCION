@@ -224,9 +224,9 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // TODO: hide internal spec details
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
 // @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), _) in
-// @		(CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]))
+// @		(CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]))
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @	(unfolding acc(s.Mem(ubuf), _) in CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen])) <= len(ubuf)
+// @	(unfolding acc(s.Mem(ubuf), _) in CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])) <= len(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
@@ -416,7 +416,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	/*@ ghost if typeOf(s.Path) == type[*onehop.Path] {
 		s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
 		assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
-		assert CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(data[offset : offset+pathLen]) <= len(data)
+		assert CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(data[offset : offset+pathLen]) <= len(data)
 	} @*/
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
@@ -793,16 +793,22 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 //	This hack will not be needed when we introduce support for
 //	multiple contracts per method.
 //
-// @ pure
-// @ requires insideSlayers ==> acc(&s.DstAddrType, _) && acc(&s.SrcAddrType, _)
-// @ requires insideSlayers ==> s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
-// @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
-// @ ensures  insideSlayers  ==> res == s.addrHdrLenAbstractionLeak()
-// @ ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak(ubuf)
-// @ ensures  0 <= res
+// @ preserves insideSlayers  ==> acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
+// @ preserves insideSlayers  ==> (s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits())
+// @ preserves !insideSlayers ==> acc(s.Mem(ubuf), def.ReadL20)
+// @ ensures   insideSlayers  ==> res == s.AddrHdrLenSpecInternal()
+// @ ensures   !insideSlayers ==> res == s.AddrHdrLenSpec(ubuf)
+// @ ensures   0 <= res
 // @ decreases
-// @ trusted
 func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
+	/*@
+	ghost if !insideSlayers {
+		unfold acc(s.Mem(ubuf), def.ReadL20/2)
+		defer fold acc(s.Mem(ubuf), def.ReadL20/2)
+		unfold acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL20/2)
+		defer fold acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL20/2)
+	}
+	@*/
 	return 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
