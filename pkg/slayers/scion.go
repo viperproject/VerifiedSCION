@@ -803,6 +803,10 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
 	/*@
 	ghost if !insideSlayers {
+		assert s.AddrHdrLenSpec(ubuf) == (
+			unfolding acc(s.Mem(ubuf), _) in
+			unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in
+			2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length())
 		unfold acc(s.Mem(ubuf), def.ReadL20/2)
 		defer fold acc(s.Mem(ubuf), def.ReadL20/2)
 		unfold acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL20/2)
