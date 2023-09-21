@@ -9,8 +9,7 @@ import (
 	"net"
 	"time"
 	"golang.org/x/net/internal/socket"
-	"github.com/scionproto/scion/verification/utils/definitions"
-	def "github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (p *PacketConn) Mem()
@@ -27,7 +26,7 @@ pred (r *RawConn) Mem() {
 // It is used to control basic IP-level socket options such as TOS and
 // TTL.
 type Conn struct {
-	privateFields def.PrivateField
+	privateFields PrivateField
 }
 
 // NewConn returns a new Conn.
@@ -42,7 +41,7 @@ func NewConn(c net.Conn) (conn *Conn)
 // network I/O methods specific to the IPv4 and higher layer protocols
 // such as UDP.
 type PacketConn struct {
-	privateFields def.PrivateField
+	privateFields PrivateField
 }
 
 // SetDeadline sets the read and write deadlines associated with the
@@ -134,7 +133,7 @@ func (p *PacketConn) ExchangePerm() (c net.PacketConn)
 // based network I/O methods specific to the IPv4 and higher layer
 // protocols that handle IPv4 datagram directly such as OSPF, GRE.
 type RawConn struct {
-	privateFields def.PrivateField
+	privateFields PrivateField
 }
 
 // SetDeadline sets the read and write deadlines associated with the
@@ -233,7 +232,7 @@ func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers 
 // WriteBatch writes a batch of messages.
 // It returns the number of messages written on a successful write.
 trusted
-preserves forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), definitions.ReadL10)
+preserves forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), R10)
 preserves c.Mem()
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> 0 <= n && n <= len(ms)

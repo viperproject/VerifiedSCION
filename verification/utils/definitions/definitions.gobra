@@ -40,41 +40,41 @@ const (
 	R18
 	R19
 	R20
-	ReadL21
-	ReadL22
-	ReadL23
-	ReadL24
-	ReadL25
-	ReadL26
-	ReadL27
-	ReadL28
-	ReadL29
-	ReadL30
-	ReadL31
-	ReadL32
-	ReadL33
-	ReadL34
-	ReadL35
-	ReadL36
-	ReadL37
-	ReadL38
-	ReadL39
-	ReadL40
-	ReadL41
-	ReadL42
-	ReadL43
-	ReadL44
-	ReadL45
-	ReadL46
-	ReadL47
-	ReadL48
-	ReadL49
-	ReadL50
-	ReadL51
-	ReadL52
-	ReadL53
-	ReadL54
-	ReadL55
+	R21
+	R22
+	R23
+	R24
+	R25
+	R26
+	R27
+	R28
+	R29
+	R30
+	R31
+	R32
+	R33
+	R34
+	R35
+	R36
+	R37
+	R38
+	R39
+	R40
+	R41
+	R42
+	R43
+	R44
+	R45
+	R46
+	R47
+	R48
+	R49
+	R50
+	R51
+	R52
+	R53
+	R54
+	R55
 )
 
 // To be used as a precondition of functions and methods that can never be called
@@ -98,11 +98,6 @@ ghost
 ensures false
 decreases _
 func TODO()
-
-ensures res == x+y
-decreases _
-pure
-func add(x, y int) (res int)
 
 // type to be used as a stub for sets of private fields in formalizations of
 // third party libs
