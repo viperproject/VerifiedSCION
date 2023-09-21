@@ -1690,12 +1690,12 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 // @ decreases
 func (p *scionPacketProcessor) currentInfoPointer( /*@ ghost ubScionL []byte @*/ ) uint16 {
 	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
-	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL20/2)
-	// @ defer  fold acc(p.scionLayer.Mem(ubScionL), def.ReadL20/2)
-	// @ unfold acc(p.scionLayer.Path.Mem(ubPath), def.ReadL20/2)
-	// @ defer  fold acc(p.scionLayer.Path.Mem(ubPath), def.ReadL20/2)
-	// @ unfold acc(p.scionLayer.Path.(*scion.Raw).Base.Mem(), def.ReadL20/2)
-	// @ defer  fold acc(p.scionLayer.Path.(*scion.Raw).Base.Mem(), def.ReadL20/2)
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), def.ReadL21)
+	// @ defer  fold acc(p.scionLayer.Mem(ubScionL), def.ReadL21)
+	// @ unfold acc(p.scionLayer.Path.Mem(ubPath), def.ReadL21)
+	// @ defer  fold acc(p.scionLayer.Path.Mem(ubPath), def.ReadL21)
+	// @ unfold acc(p.scionLayer.Path.(*scion.Raw).Base.Mem(), def.ReadL21)
+	// @ defer  fold acc(p.scionLayer.Path.(*scion.Raw).Base.Mem(), def.ReadL21)
 	return uint16(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen( /*@ ubScionL, false @*/ ) +
 		scion.MetaLen + path.InfoLen*int(p.path.PathMeta.CurrINF))
 }

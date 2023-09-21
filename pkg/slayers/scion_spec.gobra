@@ -318,13 +318,13 @@ func (s *SCION) AddrHdrLenSpecInternal() (res int) {
 }
 
 ghost
-requires acc(s.Mem(ubuf), def.ReadL30)
+requires acc(s.Mem(ubuf), def.ReadL55)
 ensures  0 <= res
 decreases
 pure
 func (s *SCION) AddrHdrLenSpec(ubuf []byte) (res int) {
-	return unfolding acc(s.Mem(ubuf), def.ReadL30) in
-		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL30) in
+	return unfolding acc(s.Mem(ubuf), def.ReadL55) in
+		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL55) in
 		2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
@@ -394,6 +394,7 @@ requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP, _)
 requires forall i int :: { &a.(*net.IPAddr).IP[i] } 0 <= i && i < len(a.(*net.IPAddr).IP) ==> acc(&a.(*net.IPAddr).IP[i], _)
 requires len(a.(*net.IPAddr).IP) == net.IPv6len
+decreases
 pure func isConvertibleToIPv4(a net.Addr) bool {
 	return net.isZeros(a.(*net.IPAddr).IP[0:10]) &&
 		a.(*net.IPAddr).IP[10] == 255 &&
@@ -403,6 +404,7 @@ pure func isConvertibleToIPv4(a net.Addr) bool {
 ghost
 requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP, _)
+decreases
 pure func isIPv6(a net.Addr) bool {
 	return len(a.(*net.IPAddr).IP) == net.IPv6len
 }
@@ -410,16 +412,19 @@ pure func isIPv6(a net.Addr) bool {
 ghost
 requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP, _)
+decreases
 pure func isIPv4(a net.Addr) bool {
 	return len(a.(*net.IPAddr).IP) == net.IPv4len
 }
 
 ghost
+decreases
 pure func isIP(a net.Addr) bool {
 	return typeOf(a) == *net.IPAddr
 }
 
 ghost
+decreases
 pure func isHostSVC(a net.Addr) bool {
 	return typeOf(a) == addr.HostSVC
 }
@@ -432,6 +437,7 @@ func EstablishPathPkgMem()
 
 ghost
 requires acc(s.Mem(ub), _)
+decreases
 pure func (s *SCION) HasOneHopPath(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in typeOf(s.Path) == type[*onehop.Path]
 }
@@ -440,6 +446,7 @@ ghost
 requires acc(s.Mem(ub), _)
 requires s.HasOneHopPath(ub)
 ensures  b
+decreases
 pure func (s *SCION) InferSizeOHP(ghost ub []byte) (b bool) {
 	return unfolding acc(s.Mem(ub), _) in
 		let pathSlice := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in

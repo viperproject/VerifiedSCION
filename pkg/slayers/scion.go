@@ -793,9 +793,9 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 //	This hack will not be needed when we introduce support for
 //	multiple contracts per method.
 //
-// @ preserves insideSlayers  ==> acc(&s.DstAddrType, def.ReadL20) && acc(&s.SrcAddrType, def.ReadL20)
+// @ preserves insideSlayers  ==> acc(&s.DstAddrType, def.ReadL50) && acc(&s.SrcAddrType, def.ReadL50)
 // @ preserves insideSlayers  ==> (s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits())
-// @ preserves !insideSlayers ==> acc(s.Mem(ubuf), def.ReadL20)
+// @ preserves !insideSlayers ==> acc(s.Mem(ubuf), def.ReadL50)
 // @ ensures   insideSlayers  ==> res == s.AddrHdrLenSpecInternal()
 // @ ensures   !insideSlayers ==> res == s.AddrHdrLenSpec(ubuf)
 // @ ensures   0 <= res
@@ -803,13 +803,13 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
 	/*@
 	ghost if !insideSlayers {
-		unfold acc(s.Mem(ubuf), def.ReadL25)
-		defer fold acc(s.Mem(ubuf), def.ReadL25)
-		unfold acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL25)
-		defer fold acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL25)
+		unfold acc(s.Mem(ubuf), def.ReadL51)
+		defer fold acc(s.Mem(ubuf), def.ReadL51)
+		unfold acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL51)
+		defer fold acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL51)
 		assert s.AddrHdrLenSpec(ubuf) == (
-			unfolding acc(s.Mem(ubuf), def.ReadL25) in
-			unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL25) in
+			unfolding acc(s.Mem(ubuf), def.ReadL52) in
+			unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL52) in
 			2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length())
 		assert s.AddrHdrLenSpec(ubuf) ==
 			2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
