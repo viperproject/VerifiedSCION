@@ -40,6 +40,16 @@ const (
 	ReadL18
 	ReadL19
 	ReadL20
+	ReadL21
+	ReadL22
+	ReadL23
+	ReadL24
+	ReadL25
+	ReadL26
+	ReadL27
+	ReadL28
+	ReadL29
+	ReadL30
 )
 
 // To be used as a precondition of functions and methods that can never be called

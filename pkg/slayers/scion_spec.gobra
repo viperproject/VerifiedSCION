@@ -318,13 +318,13 @@ func (s *SCION) AddrHdrLenSpecInternal() (res int) {
 }
 
 ghost
-requires acc(s.Mem(ubuf), _)
+requires acc(s.Mem(ubuf), def.ReadL30)
 ensures  0 <= res
 decreases
 pure
 func (s *SCION) AddrHdrLenSpec(ubuf []byte) (res int) {
-	return unfolding acc(s.Mem(ubuf), _) in
-		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in
+	return unfolding acc(s.Mem(ubuf), def.ReadL30) in
+		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL30) in
 		2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
