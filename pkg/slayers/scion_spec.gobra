@@ -139,6 +139,8 @@ pred (s *SCION) NonInitMem() {
 	PathPoolMem(s.pathPool, s.pathPoolRaw)
 }
 
+// TODO: simplify the body of the predicate when let expressions
+//       support predicates
 pred (s *SCION) Mem(ubuf []byte) {
 	acc(&s.Version) &&
 	acc(&s.TrafficClass) &&
@@ -151,13 +153,13 @@ pred (s *SCION) Mem(ubuf []byte) {
 	acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits() &&
 	// len of ubuf:
 	0 <= s.HdrLen &&
-	0 <= CmnHdrLen + s.AddrHdrLen(nil, true) &&
+	0 <= CmnHdrLen + s.AddrHdrLenSpecInternal() &&
 	s.HdrLen * LineLen <= len(ubuf) &&
-	CmnHdrLen + s.AddrHdrLen(nil, true) <= s.HdrLen * LineLen &&
+	CmnHdrLen + s.AddrHdrLenSpecInternal() <= s.HdrLen * LineLen &&
 	// end of len of ubuf
 	acc(&s.Path) &&
 	s.Path != nil &&
-	s.Path.Mem(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) &&
+	s.Path.Mem(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) &&
 	acc(&s.BaseLayer) &&
 	// base layer fields:
 	s.Contents === ubuf[:s.HdrLen*LineLen] &&
@@ -175,18 +177,19 @@ pred (s *SCION) Mem(ubuf []byte) {
 	// end of path pool
 	// helpful facts for other methods:
 	// - for router::updateScionLayer:
-	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) <= len(ubuf))
+	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
 }
 
+// TODO: simplify the body of the predicate when let expressions
+//       support predicates
 pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.DstIA) &&
 	acc(&s.SrcIA) &&
 	acc(&s.DstAddrType, def.HalfPerm) && s.DstAddrType.Has3Bits() &&
 	acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits() &&
-	s.addrHdrLenAbstractionLeak() <= len(ubuf) &&
+	s.AddrHdrLenSpecInternal() <= len(ubuf) &&
 	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
-	s.AddrHdrLen(nil, true) == s.addrHdrLenAbstractionLeak() &&
-	s.AddrHdrLen(nil, true) <= len(ubuf) &&
+	s.AddrHdrLenSpecInternal() <= len(ubuf) &&
 	0 < s.DstAddrType.Length() && 0 < s.SrcAddrType.Length() &&
 	0 < 2*addr.IABytes &&
 	2*addr.IABytes < 2*addr.IABytes+s.DstAddrType.Length() &&
@@ -207,7 +210,7 @@ decreases
 func (s *SCION) DowngradePerm(ghost ub []byte) {
 	unfold s.Mem(ub)
 	unfold s.HeaderMem(ub[CmnHdrLen:])
-	s.Path.DowngradePerm(ub[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen])
+	s.Path.DowngradePerm(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])
 	s.PathPoolMemExchange(s.PathType, s.Path)
 	fold s.NonInitMem()
 }
@@ -262,7 +265,8 @@ pure
 requires acc(s.Mem(ub), _)
 decreases
 func (s *SCION) UBPath(ub []byte) []byte {
-	return unfolding acc(s.Mem(ub), _) in ub[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]
+	return unfolding acc(s.Mem(ub), _) in
+		ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]
 }
 
 ghost
@@ -270,7 +274,7 @@ pure
 requires acc(s.Mem(ub), _)
 decreases
 func (s *SCION) PathStartIdx(ub []byte) int {
-	return unfolding acc(s.Mem(ub), _) in CmnHdrLen+s.AddrHdrLen(nil, true)
+	return unfolding acc(s.Mem(ub), _) in CmnHdrLen+s.AddrHdrLenSpecInternal()
 }
 
 ghost
@@ -309,17 +313,19 @@ requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 ensures  0 <= res
 decreases
 pure
-func (s *SCION) addrHdrLenAbstractionLeak() (res int) {
+func (s *SCION) AddrHdrLenSpecInternal() (res int) {
 	return 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
 ghost
-requires acc(s.Mem(ubuf), _)
+requires acc(s.Mem(ubuf), def.ReadL55)
 ensures  0 <= res
 decreases
 pure
-func (s *SCION) AddrHdrLenNoAbstractionLeak(ubuf []byte) (res int) {
-	return unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in (2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()))
+func (s *SCION) AddrHdrLenSpec(ubuf []byte) (res int) {
+	return unfolding acc(s.Mem(ubuf), def.ReadL55) in
+		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL55) in
+		2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
 // Morally ghost
@@ -388,13 +394,17 @@ requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP, _)
 requires forall i int :: { &a.(*net.IPAddr).IP[i] } 0 <= i && i < len(a.(*net.IPAddr).IP) ==> acc(&a.(*net.IPAddr).IP[i], _)
 requires len(a.(*net.IPAddr).IP) == net.IPv6len
+decreases
 pure func isConvertibleToIPv4(a net.Addr) bool {
-	return net.isZeros(a.(*net.IPAddr).IP[0:10]) && a.(*net.IPAddr).IP[10] == 255 && a.(*net.IPAddr).IP[11] == 255
+	return net.isZeros(a.(*net.IPAddr).IP[0:10]) &&
+		a.(*net.IPAddr).IP[10] == 255 &&
+		a.(*net.IPAddr).IP[11] == 255
 }
 
 ghost
 requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP, _)
+decreases
 pure func isIPv6(a net.Addr) bool {
 	return len(a.(*net.IPAddr).IP) == net.IPv6len
 }
@@ -402,16 +412,19 @@ pure func isIPv6(a net.Addr) bool {
 ghost
 requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP, _)
+decreases
 pure func isIPv4(a net.Addr) bool {
 	return len(a.(*net.IPAddr).IP) == net.IPv4len
 }
 
 ghost
+decreases
 pure func isIP(a net.Addr) bool {
 	return typeOf(a) == *net.IPAddr
 }
 
 ghost
+decreases
 pure func isHostSVC(a net.Addr) bool {
 	return typeOf(a) == addr.HostSVC
 }
@@ -424,6 +437,7 @@ func EstablishPathPkgMem()
 
 ghost
 requires acc(s.Mem(ub), _)
+decreases
 pure func (s *SCION) HasOneHopPath(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in typeOf(s.Path) == type[*onehop.Path]
 }
@@ -432,6 +446,10 @@ ghost
 requires acc(s.Mem(ub), _)
 requires s.HasOneHopPath(ub)
 ensures  b
+decreases
 pure func (s *SCION) InferSizeOHP(ghost ub []byte) (b bool) {
-	return unfolding acc(s.Mem(ub), _) in CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ub[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]) <= len(ub)
+	return unfolding acc(s.Mem(ub), _) in
+		let pathSlice := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
+		let pathLen := s.Path.Len(pathSlice) in
+		CmnHdrLen + s.AddrHdrLenSpecInternal() + pathLen <= len(ub)
 }

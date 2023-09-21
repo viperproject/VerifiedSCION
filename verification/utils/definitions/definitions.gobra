@@ -40,6 +40,41 @@ const (
 	ReadL18
 	ReadL19
 	ReadL20
+	ReadL21
+	ReadL22
+	ReadL23
+	ReadL24
+	ReadL25
+	ReadL26
+	ReadL27
+	ReadL28
+	ReadL29
+	ReadL30
+	ReadL31
+	ReadL32
+	ReadL33
+	ReadL34
+	ReadL35
+	ReadL36
+	ReadL37
+	ReadL38
+	ReadL39
+	ReadL40
+	ReadL41
+	ReadL42
+	ReadL43
+	ReadL44
+	ReadL45
+	ReadL46
+	ReadL47
+	ReadL48
+	ReadL49
+	ReadL50
+	ReadL51
+	ReadL52
+	ReadL53
+	ReadL54
+	ReadL55
 )
 
 // To be used as a precondition of functions and methods that can never be called
@@ -78,5 +113,5 @@ pure
 requires b
 decreases
 func Asserting(ghost b bool) bool {
-    return true
+	return true
 }
