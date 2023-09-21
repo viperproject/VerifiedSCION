@@ -17,7 +17,7 @@
 
 package prometheus
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 
 // Desc is the descriptor used by every Prometheus Metric. It is essentially
 // the immutable meta-data of a Metric. The normal Metric implementations
@@ -72,7 +72,7 @@ pred (d *Desc) Mem()
 // For constLabels, the label values are constant. Therefore, they are fully
 // specified in the Desc. See the Collector example for a usage pattern.
 requires fqName != ""
-requires forall i int :: 0 <= i && i < len(variableLabels) ==> acc(&variableLabels[i], definitions.ReadL16)
+requires forall i int :: 0 <= i && i < len(variableLabels) ==> acc(&variableLabels[i], R16)
 requires acc(constLabels)
 ensures  res.Mem()
 decreases _
@@ -87,6 +87,6 @@ ensures  res.Mem()
 decreases _
 func NewInvalidDesc(err error) (res *Desc)
 
-preserves acc(d.Mem(), definitions.ReadL16)
+preserves acc(d.Mem(), R16)
 decreases _
 func (d *Desc) String() string
