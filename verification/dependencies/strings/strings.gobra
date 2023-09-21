@@ -141,52 +141,6 @@ func HasSuffix(s, suffix string) (ret bool) {
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
 }
 
-// Map returns a copy of the string s with all its characters modified
-// according to the mapping function. If mapping returns a negative value, the character is
-// dropped from the string with no replacement.
-// (joao) no support for higher-order functions
-/*
-func Map(mapping func(rune) rune, s string) string 
-*/
-
-// Repeat returns a new string consisting of count copies of the string s.
-//
-// It panics if count is negative or if
-// the result of (len(s) * count) overflows.
-requires count >= 0
-ensures res == (count == 0? "" : s + Repeat(s, count - 1))
-decreases count
-pure func Repeat(s string, count int) (res string) /*{
-	if count == 0 {
-		return ""
-	}
-
-	// Since we cannot return an error on overflow,
-	// we should panic if the repeat will generate
-	// an overflow.
-	// See Issue golang.org/issue/16237
-	if count < 0 {
-		panic("strings: negative Repeat count")
-	} else if len(s)*count/count != len(s) {
-		panic("strings: Repeat count causes overflow")
-	}
-
-	n := len(s) * count
-	var b Builder
-	b.Grow(n)
-	b.WriteString(s)
-	for b.Len() < n {
-		if b.Len() <= n/2 {
-			b.WriteString(b.String())
-		} else {
-			b.WriteString(b.String()[:n-b.Len()])
-			break
-		}
-	}
-	return b.String()
-}
-*/
-
 // ToUpper returns s with all Unicode letters mapped to their upper case.
 decreases _
 func ToUpper(s string) string
