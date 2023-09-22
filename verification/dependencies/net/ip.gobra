@@ -9,7 +9,7 @@
 
 package net
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 import "github.com/scionproto/scion/verification/utils/slices"
 
 // IP address lengths (bytes).
@@ -32,37 +32,37 @@ func IPv4(a, b, c, d byte) (res IP)
 
 // IsUnspecified reports whether ip is an unspecified address, either
 // the IPv4 address "0.0.0.0" or the IPv6 address "::".
-preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 func (ip IP) IsUnspecified() bool
 
 // IsLoopback reports whether ip is a loopback address.
-preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 func (ip IP) IsLoopback() bool
 
 // IsMulticast reports whether ip is a multicast address.
-preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 func (ip IP) IsMulticast() bool
 
 // IsInterfaceLocalMulticast reports whether ip is an interface-local multicast address.
-preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 func (ip IP) IsInterfaceLocalMulticast() bool
 
 // IsLinkLocalMulticast reports whether ip is a link-local multicast address.
-preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 func (ip IP) IsLinkLocalMulticast() bool
 
 // IsLinkLocalUnicast reports whether ip is a link-local unicast address.
-preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 func (ip IP) IsLinkLocalUnicast() bool
 
 // IsGlobalUnicast reports whether ip is a global unicast
 // address.
-preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 func (ip IP) IsGlobalUnicast() bool
 
 // To4 converts the IPv4 address ip to a 4-byte representation.
 preserves wildcard ==> forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], _)
-preserves !wildcard ==> forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL20)
+preserves !wildcard ==> forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R20)
 ensures   res != nil ==> len(res) == IPv4len
 ensures   len(ip) == IPv4len ==> ip === res
 ensures   (len(ip) == IPv6len && isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255) ==> res != nil
@@ -84,12 +84,12 @@ func (ip IP) To4(ghost wildcard bool) (res IP) {
 }
 
 pure
-preserves forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], definitions.ReadL55)
+preserves forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], R55)
 decreases
 func isZeros(s []byte) bool
 
 // To16 converts the IP address ip to a 16-byte representation.
-preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 ensures len(ip) == IPv4len ==> (len(res) == IPv4len && forall i int :: 0 <= i && i < len(res) ==> acc(&res[i]))
 ensures len(ip) == IPv6len ==> (len(res) == IPv6len && forall i int :: 0 <= i && i < len(res) ==> &ip[i] == &res[i])
 func (ip IP) To16() (res IP) {
@@ -102,12 +102,12 @@ func (ip IP) To16() (res IP) {
 	return nil
 }
 
-preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 decreases _
 func (ip IP) String() string
 
 // MarshalText implements the encoding.TextMarshaler interface.
-preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], definitions.ReadL15)
+preserves forall i int :: 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
 ensures (len(ip) == IPv4len || len(ip) == IPv6len || len(ip) == 0) ==> err == nil
 func (ip IP) MarshalText() (res []byte, err error)
@@ -115,7 +115,7 @@ func (ip IP) MarshalText() (res []byte, err error)
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 // The IP address is expected in a form accepted by ParseIP.
 preserves acc(ip)
-preserves forall i int :: 0 <= i && i < len(text) ==> acc(&text[i], definitions.ReadL15)
+preserves forall i int :: 0 <= i && i < len(text) ==> acc(&text[i], R15)
 ensures forall i int :: 0 <= i && i < len(*ip) ==> acc(&((*ip)[i]))
 func (ip *IP) UnmarshalText(text []byte) error
 

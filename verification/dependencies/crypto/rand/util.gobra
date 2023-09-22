@@ -13,16 +13,16 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/scionproto/scion/verification/utils/definitions/"
+	. "github.com/scionproto/scion/verification/utils/definitions/"
 )
 
 var Reader io.Reader
 
 // Int returns a uniform random value in [0, max). It panics if max <= 0.
 preserves rand.Mem()
-requires acc(max.Mem(), definitions.ReadL13)
+requires acc(max.Mem(), R13)
 requires max.toInt() > 0
-ensures acc(max.Mem(), definitions.ReadL13)
+ensures acc(max.Mem(), R13)
 ensures err != nil ==> err.ErrorMem()
 ensures err == nil ==> n.Mem()
 ensures err == nil ==> n.toInt() >= 0 && n.toInt() < max.toInt()

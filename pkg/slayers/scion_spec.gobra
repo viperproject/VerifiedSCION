@@ -27,7 +27,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path/onehop"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 
-	def "github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -149,8 +149,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 	acc(&s.HdrLen) &&
 	acc(&s.PayloadLen) &&
 	acc(&s.PathType) &&
-	acc(&s.DstAddrType, def.HalfPerm) && s.DstAddrType.Has3Bits() &&
-	acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits() &&
+	acc(&s.DstAddrType, HalfPerm) && s.DstAddrType.Has3Bits() &&
+	acc(&s.SrcAddrType, HalfPerm) && s.SrcAddrType.Has3Bits() &&
 	// len of ubuf:
 	0 <= s.HdrLen &&
 	0 <= CmnHdrLen + s.AddrHdrLenSpecInternal() &&
@@ -185,8 +185,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 pred (s *SCION) HeaderMem(ubuf []byte) {
 	acc(&s.DstIA) &&
 	acc(&s.SrcIA) &&
-	acc(&s.DstAddrType, def.HalfPerm) && s.DstAddrType.Has3Bits() &&
-	acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits() &&
+	acc(&s.DstAddrType, HalfPerm) && s.DstAddrType.Has3Bits() &&
+	acc(&s.SrcAddrType, HalfPerm) && s.SrcAddrType.Has3Bits() &&
 	s.AddrHdrLenSpecInternal() <= len(ubuf) &&
 	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	s.AddrHdrLenSpecInternal() <= len(ubuf) &&
@@ -231,24 +231,24 @@ pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
 }
 
 ghost
-requires acc(s.Mem(ub), def.ReadL15)
-ensures  acc(s, def.ReadL16)
+requires acc(s.Mem(ub), R15)
+ensures  acc(s, R16)
 ensures  s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
 ensures  0 <= start && start <= end && end <= len(ub)
 ensures  s.RawDstAddr === ub[start:end]
-ensures  acc(s, def.ReadL16) --* acc(s.Mem(ub), def.ReadL15)
+ensures  acc(s, R16) --* acc(s.Mem(ub), R15)
 decreases
 func (s *SCION) ExtractAcc(ghost ub []byte) (start, end int) {
-	unfold acc(s.Mem(ub), def.ReadL16)
-	unfold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL16)
+	unfold acc(s.Mem(ub), R16)
+	unfold acc(s.HeaderMem(ub[CmnHdrLen:]), R16)
 	start = CmnHdrLen+2*addr.IABytes
 	end = CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()
 	assert s.RawDstAddr === ub[start:end]
-	package acc(s, def.ReadL16) --* acc(s.Mem(ub), def.ReadL15) {
-		unfold acc(s.Mem(ub), def.ReadL16)
-		unfold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL16)
-		fold acc(s.HeaderMem(ub[CmnHdrLen:]), def.ReadL15)
-		fold acc(s.Mem(ub), def.ReadL15)
+	package acc(s, R16) --* acc(s.Mem(ub), R15) {
+		unfold acc(s.Mem(ub), R16)
+		unfold acc(s.HeaderMem(ub[CmnHdrLen:]), R16)
+		fold acc(s.HeaderMem(ub[CmnHdrLen:]), R15)
+		fold acc(s.Mem(ub), R15)
 	}
 	return start, end
 }
@@ -318,13 +318,13 @@ func (s *SCION) AddrHdrLenSpecInternal() (res int) {
 }
 
 ghost
-requires acc(s.Mem(ubuf), def.ReadL55)
+requires acc(s.Mem(ubuf), R55)
 ensures  0 <= res
 decreases
 pure
 func (s *SCION) AddrHdrLenSpec(ubuf []byte) (res int) {
-	return unfolding acc(s.Mem(ubuf), def.ReadL55) in
-		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), def.ReadL55) in
+	return unfolding acc(s.Mem(ubuf), R55) in
+		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), R55) in
 		2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
@@ -359,7 +359,7 @@ func FoldEpicMem(p *epic.Path) (r *epic.Path) {
 	return p
 }
 
-requires def.Uncallable()
+requires Uncallable()
 func (s *SCION) LayerContents() (res []byte) {
 	res = s.Contents
 	return res
@@ -367,13 +367,13 @@ func (s *SCION) LayerContents() (res []byte) {
 
 ghost
 requires  0 <= pathType && pathType < path.MaxPathType
-requires  acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+requires  acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
 requires  s.pathPoolInitialized() ==> (
 	p.NonInitMem() &&
 	PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
 	p === s.getPathPure(pathType))
 requires !s.pathPoolInitialized() ==> PathPoolMem(s.pathPool, s.pathPoolRaw)
-ensures  acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+ensures  acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
 ensures  PathPoolMem(s.pathPool, s.pathPoolRaw)
 decreases
 func (s *SCION) PathPoolMemExchange(pathType path.Type, p path.Path) {

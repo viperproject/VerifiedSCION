@@ -19,7 +19,6 @@ package slayers
 import (
 	"net"
 	sl "github.com/scionproto/scion/verification/utils/slices"
-	def "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/pkg/addr"
 )
 

@@ -21,30 +21,30 @@ package context
 
 import (
 	"time"
-	"github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 type Context interface {
 
 	pred Mem()
 
-	preserves acc(Mem(), definitions.ReadL20)
+	preserves acc(Mem(), R20)
 	decreases
 	Deadline() (deadline time.Time, ok bool)
 
-	preserves acc(Mem(), definitions.ReadL20)
+	preserves acc(Mem(), R20)
 	ensures isClosed ==> c.Closed()
 	ensures (!isClosed && c != nil) ==>
 		acc(c.RecvChannel(), _)
 	decreases
 	Done() (c <-chan struct{}, ghost isClosed bool)
 
-	preserves acc(Mem(), definitions.ReadL20)
+	preserves acc(Mem(), R20)
 	ensures isClosed ==> (e != nil && e.ErrorMem())
 	decreases
 	Err() (e error, ghost isClosed bool)
 
-	preserves acc(Mem(), definitions.ReadL20)
+	preserves acc(Mem(), R20)
 	requires acc(key.Mem(), _)
 	requires isComparable(key)
 	ensures acc(val.Mem(), _)
@@ -52,7 +52,7 @@ type Context interface {
 	Value(key interface{ pred Mem() }) (val interface{ pred Mem() })
 }
 
-preserves acc(key.Mem(), definitions.ReadL20)
+preserves acc(key.Mem(), R20)
 requires parent.Mem()
 requires isComparable(key)
 requires acc(val.Mem(), _)

@@ -22,7 +22,7 @@ import (
 	"sync"
 
 	"github.com/scionproto/scion/pkg/addr"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 type services struct {
@@ -41,7 +41,7 @@ func newServices() (s *services) {
 }
 
 // @ requires acc(s.Mem(), _)
-// @ requires acc(a.Mem(), definitions.ReadL10)
+// @ requires acc(a.Mem(), R10)
 func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()
@@ -50,15 +50,15 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold internalLockInv!<s!>()
 	addrs := s.m[svc]
 	//@ ghost if addrs == nil { fold validMapValue(svc, addrs) }
-	//@ unfold acc(validMapValue(svc, addrs), definitions.ReadL10)
+	//@ unfold acc(validMapValue(svc, addrs), R10)
 	if _, ok := s.index(a, addrs /*@, svc @*/); ok {
-		//@ fold acc(validMapValue(svc, addrs), definitions.ReadL10)
+		//@ fold acc(validMapValue(svc, addrs), R10)
 		//@ fold internalLockInv!<s!>()
 		return
 	}
-	//@ fold acc(validMapValue(svc, addrs), definitions.ReadL10)
+	//@ fold acc(validMapValue(svc, addrs), R10)
 	//@ unfold validMapValue(svc, addrs)
-	s.m[svc] = append( /*@ definitions.ReadL10, @*/ addrs, a)
+	s.m[svc] = append( /*@ R10, @*/ addrs, a)
 	//@ ghost tmp := s.m[svc]
 	//@ fold InjectiveMem(tmp[len(tmp)-1], len(tmp)-1)
 	//@ fold validMapValue(svc, s.m[svc])
@@ -66,7 +66,7 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 }
 
 // @ requires  acc(s.Mem(), _)
-// @ preserves acc(a.Mem(), definitions.ReadL10)
+// @ preserves acc(a.Mem(), R10)
 func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()
@@ -81,13 +81,13 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 		//@ fold internalLockInv!<s!>()
 		return
 	}
-	//@ fold acc(hiddenPerm(a), definitions.ReadL10)
+	//@ fold acc(hiddenPerm(a), R10)
 	//@ assert 0 < len(addrs)
 	//@ unfold validMapValue(svc, addrs)
 	//@ unfold InjectiveMem(addrs[len(addrs)-1], len(addrs)-1)
 	addrs[index] = addrs[len(addrs)-1]
 	//@ fold InjectiveMem(addrs[index], index)
-	//@ unfold acc(hiddenPerm(a), definitions.ReadL10)
+	//@ unfold acc(hiddenPerm(a), R10)
 	addrs[len(addrs)-1] = nil
 	//@ assert forall i int :: 0 <= i && i < len(addrs)-1 ==> &addrs[:len(addrs)-1][i] == &addrs[i]
 	s.m[svc] = addrs[:len(addrs)-1]
@@ -120,8 +120,8 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	return tmpAddr, true
 }
 
-// @ preserves acc(a.Mem(), definitions.ReadL10)
-// @ preserves acc(validMapValue(k, addrs), definitions.ReadL10)
+// @ preserves acc(a.Mem(), R10)
+// @ preserves acc(validMapValue(k, addrs), R10)
 // @ ensures   b ==> res >= 0 && 0 < len(addrs) && 0 <= res && res < len(addrs)
 // @ ensures   b ==> 0 < len(addrs)
 // @ ensures   b ==> 0 <= res && res < len(addrs)
@@ -130,23 +130,23 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 // but it is unclear right now if we need them.
 // @ decreases
 func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr /*@ , ghost k addr.HostSVC @*/) (res int, b bool) {
-	// @ unfold acc(validMapValue(k, addrs), definitions.ReadL11)
-	// @ defer  fold acc(validMapValue(k, addrs), definitions.ReadL11)
+	// @ unfold acc(validMapValue(k, addrs), R11)
+	// @ defer  fold acc(validMapValue(k, addrs), R11)
 
-	// @ invariant acc(a.Mem(), definitions.ReadL10)
-	// @ invariant acc(addrs, definitions.ReadL11)
-	// @ invariant forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), definitions.ReadL11)
+	// @ invariant acc(a.Mem(), R10)
+	// @ invariant acc(addrs, R11)
+	// @ invariant forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), R11)
 	// @ decreases len(addrs) - i0
 	for i, o := range addrs /*@ with i0 @*/ {
-		// @ unfold acc(a.Mem(), definitions.ReadL10)
-		// @ unfold acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
-		// @ fold   acc(InjectiveMem(addrs[i], i), definitions.ReadL11)
+		// @ unfold acc(a.Mem(), R10)
+		// @ unfold acc(InjectiveMem(addrs[i], i), R11)
+		// @ fold   acc(InjectiveMem(addrs[i], i), R11)
 		// @ unfold acc(o.Mem(), _)
 		if a.IP.Equal(o.IP) && a.Port == o.Port {
-			// @ fold acc(a.Mem(), definitions.ReadL10)
+			// @ fold acc(a.Mem(), R10)
 			return i, true
 		}
-		// @ fold acc(a.Mem(), definitions.ReadL10)
+		// @ fold acc(a.Mem(), R10)
 	}
 	return -1, false
 }
