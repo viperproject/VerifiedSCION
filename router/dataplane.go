@@ -2675,12 +2675,12 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 }
 
 // @ requires  acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
-// @ requires  acc(p.scionLayer.Mem(ub), def.ReadL5)
+// @ requires  acc(p.scionLayer.Mem(ub), R5)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ requires  acc(&p.ingressID,  def.ReadL15)
-// @ ensures   acc(p.scionLayer.Mem(ub), def.ReadL5)
+// @ requires  acc(&p.ingressID,  R15)
+// @ ensures   acc(p.scionLayer.Mem(ub), R5)
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ ensures   acc(&p.ingressID,  def.ReadL15)
+// @ ensures   acc(&p.ingressID,  R15)
 // @ decreases
 func (p *scionPacketProcessor) prepareSCMP(
 	typ slayers.SCMPType,
@@ -2695,9 +2695,9 @@ func (p *scionPacketProcessor) prepareSCMP(
 	var path *scion.Raw
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
-	// @ slayers.LemmaPathIdxStartEnd(&p.scionLayer, ub, def.ReadL20)
+	// @ slayers.LemmaPathIdxStartEnd(&p.scionLayer, ub, R20)
 	// @ ghost ubPath := ub[startP:endP]
-	// @ unfold acc(p.scionLayer.Mem(ub), def.ReadL5)
+	// @ unfold acc(p.scionLayer.Mem(ub), R5)
 	pathType := p.scionLayer.Path.Type( /*@ ubPath @*/ )
 	// @ establishCannotRoute()
 	switch pathType {
@@ -2705,27 +2705,27 @@ func (p *scionPacketProcessor) prepareSCMP(
 		var ok bool
 		path, ok = p.scionLayer.Path.(*scion.Raw)
 		if !ok {
-			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
+			// @ fold acc(p.scionLayer.Mem(ub), R5)
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
 	case epic.PathType:
 		epicPath, ok := p.scionLayer.Path.(*epic.Path)
 		if !ok {
-			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
+			// @ fold acc(p.scionLayer.Mem(ub), R5)
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
 		// @ scionBuf := epicPath.GetUnderlyingScionPathBuf(ubPath)
-		// @ unfold acc(epicPath.Mem(ubPath), def.ReadL5)
-		// @ defer fold acc(epicPath.Mem(ubPath), def.ReadL5)
+		// @ unfold acc(epicPath.Mem(ubPath), R5)
+		// @ defer fold acc(epicPath.Mem(ubPath), R5)
 		// @ assert ubPath[epic.MetadataLen:] === scionBuf
 		// @ ubPath = scionBuf
 		// @ startP += epic.MetadataLen
 		// @ assert ubPath === ub[startP:endP]
 		path = epicPath.ScionPath
 	default:
-		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
+		// @ fold acc(p.scionLayer.Mem(ub), R5)
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
@@ -2733,14 +2733,14 @@ func (p *scionPacketProcessor) prepareSCMP(
 	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
+		// @ fold acc(p.scionLayer.Mem(ub), R5)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
 	// @ ghost rawPath := path.RawBufferMem(ubPath)
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
+		// @ fold acc(p.scionLayer.Mem(ub), R5)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	// @ assert revPathTmp.Mem(rawPath)
@@ -2751,7 +2751,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	if revPath.IsXover( /*@ rawPath @*/ ) {
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
 			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-			// @ fold acc(p.scionLayer.Mem(ub), def.ReadL5)
+			// @ fold acc(p.scionLayer.Mem(ub), R5)
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}

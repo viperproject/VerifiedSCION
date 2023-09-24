@@ -80,11 +80,11 @@ func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this method which acts as a wrapper.
   */
-preserves acc(d.Mem(ubuf), definitions.ReadL19)
+preserves acc(d.Mem(ubuf), R19)
 decreases
 func (d *Decoded) IsXover(ghost ubuf []byte) bool {
-    unfold acc(d.Mem(ubuf), definitions.ReadL19)
-    defer fold acc(d.Mem(ubuf), definitions.ReadL19)
+    unfold acc(d.Mem(ubuf), R19)
+    defer fold acc(d.Mem(ubuf), R19)
     return d.Base.IsXover()
 }
 
