@@ -12,7 +12,7 @@ package net
 import (
 	"time"
 
-	"github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -43,7 +43,7 @@ type Conn interface {
 
 	// Write writes data to the connection.
 	preserves Mem()
-	preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+	preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 	ensures   err == nil ==> 0 <= n && n <= len(b)
 	ensures   err != nil ==> err.ErrorMem()
 	Write(b []byte) (n int, err error)
@@ -54,13 +54,13 @@ type Conn interface {
 	Close() error
 
 	// LocalAddr returns the local network address.
-	preserves acc(Mem(), definitions.ReadL15)
+	preserves acc(Mem(), R15)
 	ensures   acc(a.Mem(), _)
 	decreases
 	LocalAddr() (a Addr)
 
 	// RemoteAddr returns the remote network address.
-	preserves acc(Mem(), definitions.ReadL15)
+	preserves acc(Mem(), R15)
 	ensures   acc(a.Mem(), _)
 	decreases
 	RemoteAddr() (a Addr)
@@ -101,7 +101,7 @@ type PacketConn interface {
 
 	requires  acc(addr.Mem(), _)
 	preserves Mem()
-	preserves acc(slices.AbsSlice_Bytes(p, 0, len(p)), definitions.ReadL15)
+	preserves acc(slices.AbsSlice_Bytes(p, 0, len(p)), R15)
 	ensures   err == nil ==> 0 <= n && n <= len(p)
 	ensures   err != nil ==> err.ErrorMem()
 	WriteTo(p []byte, addr Addr) (n int, err error)
@@ -109,7 +109,7 @@ type PacketConn interface {
 	requires Mem()
 	Close() error
 
-	preserves acc(Mem(), definitions.ReadL15)
+	preserves acc(Mem(), R15)
 	ensures   acc(a.Mem(), _)
 	decreases
 	LocalAddr() (a Addr)
@@ -147,7 +147,7 @@ type Listener interface {
 	Close() error
 
 	// Addr returns the listener's network address.
-	preserves acc(Mem(), definitions.ReadL15)
+	preserves acc(Mem(), R15)
 	ensures   acc(a.Mem(), _)
 	decreases
 	Addr() (a Addr)

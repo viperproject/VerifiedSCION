@@ -16,9 +16,9 @@
 
 package fmt
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 
-preserves forall i int :: 0 <= i && i < len(v) ==> acc(&v[i], 1/1000)
+preserves forall i int :: { &v[i] } 0 <= i && i < len(v) ==> acc(&v[i], R55)
 // TODO:
 // The following precondition cannot be adequately captured in Gobra.
 // preserves forall i int :: 0 <= i && i < len(v) ==> definitions.IsOfPrimitiveType(v[i])

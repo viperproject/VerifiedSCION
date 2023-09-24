@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -98,12 +98,12 @@ func (l LinkType) MarshalText() (res []byte, err error) {
 }
 
 //@ preserves acc(l)
-//@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL15)
+//@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R15)
 //@ ensures   err != nil ==> err.ErrorMem()
 //@ decreases
 func (l *LinkType) UnmarshalText(data []byte) (err error) {
-	//@ unfold acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL15)
-	//@ ghost defer fold acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL15)
+	//@ unfold acc(slices.AbsSlice_Bytes(data, 0, len(data)), R15)
+	//@ ghost defer fold acc(slices.AbsSlice_Bytes(data, 0, len(data)), R15)
 	switch strings.ToLower(string(data)) {
 	case "core":
 		*l = Core

@@ -19,7 +19,6 @@ package addr
 import (
 	"net"
 
-	"github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 

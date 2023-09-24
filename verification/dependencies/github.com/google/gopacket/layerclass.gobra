@@ -8,7 +8,7 @@
 
 package gopacket
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 
 type LayerClass interface {
 	pred Mem()
@@ -17,7 +17,7 @@ type LayerClass interface {
 	decreases
 	pure Contains(LayerType) bool
 
-	preserves acc(Mem(), definitions.ReadL10)
+	preserves acc(Mem(), R10)
 	ensures acc(res)
 	// TODO: we can also ensure that the elements in res are exactly
 	// those for which 'Contains' returns true.
@@ -119,7 +119,7 @@ func NewLayerClassMap(types []LayerType) LayerClassMap {
 
 // TODO: verify after verifying the remainder of the file
 trusted
-preserves acc(types, definitions.ReadL20)
+preserves acc(types, R20)
 // NewLayerClass creates a LayerClass, attempting to be smart about which type
 // it creates based on which types are passed in.
 ensures res.Mem()

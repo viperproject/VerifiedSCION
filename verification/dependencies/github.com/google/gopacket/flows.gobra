@@ -33,8 +33,10 @@ preserves acc(slices.AbsSlice_Bytes(src, 0, len(src)), 1/10000) && acc(slices.Ab
 requires len(src) <= MaxEndpointSize && len(dst) <= MaxEndpointSize
 ensures f.slen == len(src)
 ensures f.dlen == len(dst)
-ensures unfolding acc(slices.AbsSlice_Bytes(src, 0, len(src)), 1/10000) in forall i int :: 0 <= i && i < len(src) ==> f.src[i] == src[i]
-ensures unfolding acc(slices.AbsSlice_Bytes(dst, 0, len(dst)), 1/10000) in forall i int :: 0 <= i && i < len(dst) ==> f.dst[i] == dst[i]
+ensures unfolding acc(slices.AbsSlice_Bytes(src, 0, len(src)), 1/10000) in
+	forall i int :: { &src[i] } 0 <= i && i < len(src) ==> f.src[i] == src[i]
+ensures unfolding acc(slices.AbsSlice_Bytes(dst, 0, len(dst)), 1/10000) in
+	forall i int :: { &dst[i] } 0 <= i && i < len(dst) ==> f.dst[i] == dst[i]
 ensures f.typ == t
 decreases
 func NewFlow(t EndpointType, src, dst []byte) (f Flow)

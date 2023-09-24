@@ -20,7 +20,7 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -32,7 +32,7 @@ const PathType path.Type = 2
 // @ requires path.PathPackageMem()
 // @ requires !path.Registered(PathType)
 // @ ensures  path.PathPackageMem()
-// @ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+// @ ensures  forall t path.Type :: { old(path.Registered(t)) }{ path.Registered(t) } 0 <= t && t < path.MaxPathType ==>
 // @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
 // @ ensures  path.Registered(PathType)
 // @ decreases
@@ -79,35 +79,35 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	}
 	offset := 0
 	//@ unfold o.NonInitMem()
-	//@ slices.SplitByIndex_Bytes(data, 0, len(data), path.InfoLen, definitions.ReadL1)
-	//@ slices.Reslice_Bytes(data, 0, path.InfoLen, definitions.ReadL1)
+	//@ slices.SplitByIndex_Bytes(data, 0, len(data), path.InfoLen, R1)
+	//@ slices.Reslice_Bytes(data, 0, path.InfoLen, R1)
 	if err := o.Info.DecodeFromBytes(data[:path.InfoLen]); err != nil {
-		// @ definitions.Unreachable()
+		// @ Unreachable()
 		return err
 	}
-	//@ slices.Unslice_Bytes(data, 0, path.InfoLen, definitions.ReadL1)
+	//@ slices.Unslice_Bytes(data, 0, path.InfoLen, R1)
 	offset += path.InfoLen
-	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, definitions.ReadL1)
-	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, definitions.ReadL1)
+	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, R1)
+	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, R1)
 	if err := o.FirstHop.DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
-		// @ definitions.Unreachable()
+		// @ Unreachable()
 		return err
 	}
-	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, definitions.ReadL1)
-	//@ slices.CombineAtIndex_Bytes(data, 0, offset+path.HopLen, offset, definitions.ReadL1)
+	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, R1)
+	//@ slices.CombineAtIndex_Bytes(data, 0, offset+path.HopLen, offset, R1)
 	offset += path.HopLen
-	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, definitions.ReadL1)
-	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, definitions.ReadL1)
+	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, R1)
+	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, R1)
 	r = o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen])
-	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, definitions.ReadL1)
-	//@ slices.CombineAtIndex_Bytes(data, offset, len(data), offset+path.HopLen, definitions.ReadL1)
-	//@ slices.CombineAtIndex_Bytes(data, 0, len(data), offset, definitions.ReadL1)
+	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, R1)
+	//@ slices.CombineAtIndex_Bytes(data, offset, len(data), offset+path.HopLen, R1)
+	//@ slices.CombineAtIndex_Bytes(data, 0, len(data), offset, R1)
 	//@ ghost if r == nil { fold o.Mem(data) } else { fold o.NonInitMem() }
 	return r
 }
 
-// @ preserves acc(o.Mem(ubuf), definitions.ReadL1)
-// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), definitions.ReadL1)
+// @ preserves acc(o.Mem(ubuf), R1)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R1)
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   (len(b) >= PathLen) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
@@ -119,7 +119,7 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 			int(len(b)))
 	}
 	offset := 0
-	//@ unfold acc(o.Mem(ubuf), definitions.ReadL1)
+	//@ unfold acc(o.Mem(ubuf), R1)
 	//@ slices.SplitByIndex_Bytes(b, 0, len(b), path.InfoLen, writePerm)
 	//@ slices.Reslice_Bytes(b, 0, path.InfoLen, writePerm)
 	if err := o.Info.SerializeTo(b[:offset+path.InfoLen]); err != nil {
@@ -146,7 +146,7 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	//@ slices.Unslice_Bytes(b, offset, offset+path.HopLen, writePerm)
 	//@ slices.CombineAtIndex_Bytes(b, offset, len(b), offset+path.HopLen, writePerm)
 	//@ slices.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
-	//@ fold acc(o.Mem(ubuf), definitions.ReadL1)
+	//@ fold acc(o.Mem(ubuf), R1)
 	return err
 }
 
@@ -158,14 +158,14 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, err error) {
-	//@ unfold acc(o.Mem(ubuf), definitions.ReadL1)
-	//@ unfold acc(o.SecondHop.Mem(), definitions.ReadL10)
+	//@ unfold acc(o.Mem(ubuf), R1)
+	//@ unfold acc(o.SecondHop.Mem(), R10)
 	if o.SecondHop.ConsIngress == 0 {
-		//@ fold acc(o.SecondHop.Mem(), definitions.ReadL10)
-		//@ fold acc(o.Mem(ubuf), definitions.ReadL1)
+		//@ fold acc(o.SecondHop.Mem(), R10)
+		//@ fold acc(o.Mem(ubuf), R1)
 		return nil, serrors.New("incomplete path can't be converted")
 	}
-	//@ unfold acc(o.FirstHop.Mem(), definitions.ReadL10)
+	//@ unfold acc(o.FirstHop.Mem(), R10)
 	p := &scion.Decoded{
 		Base: scion.Base{
 			PathMeta: scion.MetaHdr{
@@ -200,9 +200,9 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 			},
 		},
 	}
-	//@ fold acc(o.FirstHop.Mem(), definitions.ReadL10)
-	//@ fold acc(o.SecondHop.Mem(), definitions.ReadL10)
-	//@ fold acc(o.Mem(ubuf), definitions.ReadL1)
+	//@ fold acc(o.FirstHop.Mem(), R10)
+	//@ fold acc(o.SecondHop.Mem(), R10)
+	//@ fold acc(o.Mem(ubuf), R1)
 	//@ assert forall i int :: { &p.InfoFields[i] } 0 <= i && i < len(p.InfoFields) ==> acc(&p.InfoFields[i])
 	//@ assert forall i int :: { &p.HopFields[i] } 0 <= i && i < len(p.HopFields) ==> acc(&p.HopFields[i])
 	//@ fold p.Base.Mem()

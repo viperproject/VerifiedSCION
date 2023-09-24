@@ -10,15 +10,15 @@ package gopacket
 
 import (
 	"github.com/scionproto/scion/verification/utils/slices"
-	def "github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 // DecodingLayerFunc decodes given packet and stores decoded LayerType
 // values into specified slice. Returns either first encountered
 // unsupported LayerType value or decoding error. In case of success,
 // returns (LayerTypeZero, nil).
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), def.ReadL13)
-preserves acc(ltypes, def.ReadL13) && acc(*ltypes, def.ReadL13)
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R13)
+preserves acc(ltypes, R13) && acc(*ltypes, R13)
 ensures err != nil ==> err.ErrorMem()
 func decodingLayerFunc_spec(b []byte, ltypes *[]LayerType) (l LayerType, err error)
 
@@ -41,11 +41,11 @@ type DecodingLayer interface {
 	decreases
 	CanDecode() (res LayerClass)
 
-	preserves acc(Mem(ubuf), def.ReadL20)
+	preserves acc(Mem(ubuf), R20)
 	decreases
 	NextLayerType(ghost ubuf []byte) LayerType
 
-	preserves acc(Mem(ubuf), def.ReadL15)
+	preserves acc(Mem(ubuf), R15)
 	ensures   0 <= start && start <= end && end <= len(ubuf)
 	ensures   len(res) == end - start
 	ensures   len(res) != 0 ==> res === ubuf[start:end]
