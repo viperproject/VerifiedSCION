@@ -41,7 +41,7 @@ func init() {
 	// (VerifiedSCION) ghost initialization code to establish the PathPackageMem predicate.
 	// @ assert acc(&registeredPaths)
 	// @ assert acc(&strictDecoding)
-	// @ assert forall t Type :: 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
+	// @ assert forall t Type :: { registeredPaths[t] } 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
 	// @ fold PathPackageMem()
 }
 
@@ -137,7 +137,7 @@ type Metadata struct {
 // @ requires !Registered(pathMeta.Type)
 // @ requires pathMeta.New implements NewPathSpec
 // @ ensures  PathPackageMem()
-// @ ensures  forall t Type :: 0 <= t && t < maxPathType ==>
+// @ ensures  forall t Type :: { old(Registered(t)) }{ Registered(t) } 0 <= t && t < maxPathType ==>
 // @ 	t != pathMeta.Type ==> old(Registered(t)) == Registered(t)
 // @ ensures  Registered(pathMeta.Type)
 // @ decreases

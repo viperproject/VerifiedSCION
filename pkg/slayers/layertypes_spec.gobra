@@ -26,7 +26,8 @@ import (
 
 	// the following comes from gopacket/layers instead of gopacket
 	importRequires gopacket.LayerTypesMem()
-	importRequires forall t gopacket.LayerType :: 1000 <= t ==> !gopacket.Registered(t)
+	importRequires forall t gopacket.LayerType :: { gopacket.Registered(t) } 1000 <= t ==>
+		!gopacket.Registered(t)
 	"github.com/google/gopacket/layers"
 )
 
