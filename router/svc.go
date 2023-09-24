@@ -89,7 +89,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ fold InjectiveMem(addrs[index], index)
 	//@ unfold acc(hiddenPerm(a), R10)
 	addrs[len(addrs)-1] = nil
-	//@ assert forall i int :: 0 <= i && i < len(addrs)-1 ==> &addrs[:len(addrs)-1][i] == &addrs[i]
+	//@ assert forall i int :: { &addrs[:len(addrs)-1][i] }{ &addrs[i] } 0 <= i && i < len(addrs)-1 ==> &addrs[:len(addrs)-1][i] == &addrs[i]
 	s.m[svc] = addrs[:len(addrs)-1]
 	//@ fold validMapValue(svc, s.m[svc])
 	//@ fold internalLockInv!<s!>()
@@ -135,7 +135,7 @@ func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr /*@ , ghost k addr
 
 	// @ invariant acc(a.Mem(), R10)
 	// @ invariant acc(addrs, R11)
-	// @ invariant forall i1 int :: 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), R11)
+	// @ invariant forall i1 int :: { addrs[i1] } 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), R11)
 	// @ decreases len(addrs) - i0
 	for i, o := range addrs /*@ with i0 @*/ {
 		// @ unfold acc(a.Mem(), R10)

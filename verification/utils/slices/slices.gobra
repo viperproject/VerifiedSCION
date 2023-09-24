@@ -29,7 +29,7 @@ pred AbsSlice_Bytes(s []byte, start int, end int) {
 	start <= end &&
 	// end exclusive
 	end <= cap(s) &&
-	forall i int :: start <= i && i < end ==> acc(&s[i])
+	forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i])
 }
 
 ghost
@@ -77,7 +77,7 @@ ensures  acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
 decreases
 func Reslice_Bytes(s []byte, start int, end int, p perm) {
 	unfold acc(AbsSlice_Bytes(s, start, end), p)
-	assert forall i int :: 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
+	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
 	fold  acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
 }
 
@@ -91,21 +91,19 @@ decreases
 func Unslice_Bytes(s []byte, start int, end int, p perm) {
 	unfold acc(AbsSlice_Bytes(s[start:end], 0, len(s[start:end])), p)
 	assert 0 <= start && start <= end && end <= cap(s)
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
+	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
 
 	invariant 0 <= j && j <= len(s[start:end])
-	invariant forall i int :: j <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
-	invariant forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	invariant forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	invariant forall i int :: start <= i && i < start+j ==> acc(&s[i], p)
+	invariant forall i int :: { &s[start:end][i] } j <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
+	invariant forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
 	decreases len(s[start:end]) - j
 	for j := 0; j < len(s[start:end]); j++ {
-		assert forall i int :: start <= i && i < start+j ==> acc(&s[i], p)
+		assert forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
 		assert &s[start:end][j] == &s[start + j]
 		assert acc(&s[start + j], p)
-		assert forall i int :: start <= i && i <= start+j ==> acc(&s[i], p)
+		assert forall i int :: { &s[i] } start <= i && i <= start+j ==> acc(&s[i], p)
 	}
 	fold acc(AbsSlice_Bytes(s, start, end), p)
 }
@@ -149,7 +147,7 @@ func NilAcc_Bytes() {
 ghost
 requires size >= 0
 ensures len(res) == size
-ensures forall i int :: 0 <= i && i < size ==> res[i] == nil
+ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
 pure func NewSeq_Any(size int) (res seq[any])
 
 // TODO:
@@ -165,7 +163,7 @@ pred AbsSlice_Any(s []any, start int, end int) {
 	start <= end &&
 	// end exclusive
 	end <= cap(s) &&
-	forall i int :: start <= i && i < end ==> acc(&s[i])
+	forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i])
 }
 
 ghost
@@ -203,7 +201,7 @@ ensures  acc(AbsSlice_Any(s[start:end], 0, len(s[start:end])), p)
 decreases
 func Reslice_Any(s []any, start int, end int, p perm) {
 	unfold acc(AbsSlice_Any(s, start, end), p)
-	assert forall i int :: 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
+	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
 	fold  acc(AbsSlice_Any(s[start:end], 0, len(s[start:end])), p)
 }
 
@@ -217,21 +215,19 @@ decreases
 func Unslice_Any(s []any, start int, end int, p perm) {
 	unfold acc(AbsSlice_Any(s[start:end], 0, len(s[start:end])), p)
 	assert 0 <= start && start <= end && end <= cap(s)
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	assert forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
+	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
 
 	invariant 0 <= j && j <= len(s[start:end])
-	invariant forall i int :: j <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
-	invariant forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	invariant forall i int :: 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	invariant forall i int :: start <= i && i < start+j ==> acc(&s[i], p)
+	invariant forall i int :: { &s[start:end][i] } j <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
+	invariant forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
 	decreases len(s[start:end]) - j
 	for j := 0; j < len(s[start:end]); j++ {
-		assert forall i int :: start <= i && i < start+j ==> acc(&s[i], p)
+		assert forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
 		assert &s[start:end][j] == &s[start + j]
 		assert acc(&s[start + j], p)
-		assert forall i int :: start <= i && i <= start+j ==> acc(&s[i], p)
+		assert forall i int :: { &s[i] } start <= i && i <= start+j ==> acc(&s[i], p)
 	}
 	fold acc(AbsSlice_Any(s, start, end), p)
 }

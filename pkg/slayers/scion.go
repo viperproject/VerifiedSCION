@@ -1040,7 +1040,7 @@ func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	// @ unfold acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), R20)
 	// @ invariant 0 <= i && i < safeBoundary + 2
 	// @ invariant i % 2 == 0
-	// @ invariant forall i int :: 0 <= i && i < len(upperLayer) ==> acc(&upperLayer[i], R20)
+	// @ invariant forall i int :: { &upperLayer[i] } 0 <= i && i < len(upperLayer) ==> acc(&upperLayer[i], R20)
 	// @ decreases safeBoundary - i
 	for i := 0; i < safeBoundary; i += 2 {
 		csum += uint32(upperLayer[i]) << 8

@@ -159,7 +159,7 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	//@ unfold acc(h.Mem(), R11)
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
-	//@ assert forall i int :: 0 <= i && i < MacLen ==>
+	//@ assert forall i int :: { &b[6:6+MacLen][i] }{ &b[i+6] } 0 <= i && i < MacLen ==>
 	//@     &b[6:6+MacLen][i] == &b[i+6]
 	copy(b[6:6+MacLen], h.Mac[:] /*@, R11 @*/)
 	//@ fold slices.AbsSlice_Bytes(b, 0, HopLen)

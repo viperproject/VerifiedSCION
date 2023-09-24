@@ -219,7 +219,8 @@ func NewRawConn(c net.PacketConn) (r *RawConn, err error) {
 // On a successful read it returns the number of messages received, up
 // to len(ms).
 trusted
-preserves forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem(lenBuffers)
+preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==>
+	(&ms[i]).Mem(lenBuffers)
 preserves c.Mem()
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> (0 <= n && n <= len(ms))
@@ -232,7 +233,8 @@ func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers 
 // WriteBatch writes a batch of messages.
 // It returns the number of messages written on a successful write.
 trusted
-preserves forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), R10)
+preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==>
+	acc((&ms[i]).Mem(lenBuffers), R10)
 preserves c.Mem()
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> 0 <= n && n <= len(ms)

@@ -115,7 +115,8 @@ type BatchConn interface {
 	// @ pred Mem()
 
 	// @ preserves Mem()
-	// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ 	msgs[i].Mem(1)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(msgs underlayconn.Messages) (n int, err error)
@@ -126,7 +127,8 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ preserves Mem()
-	// @ preserves forall i int :: 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), R10)
+	// @ preserves forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ 	acc(msgs[i].Mem(1), R10)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
@@ -2569,7 +2571,8 @@ func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.Serialize
 	// (VerifiedSCION) proving that the reslicing operation below is safe
 	// was tricky and required enriching (non-modularly) the invariants of *onehop.Path
 	// and *slayers.SCION.
-	// @ assert forall i int :: 0 <= i && i < len(rawContents) ==> &rawPkt[i] == &rawPkt[:len(rawContents)][i]
+	// @ assert forall i int :: { &rawPkt[:len(rawContents)][i] }{ &rawPkt[i] } 0 <= i && i < len(rawContents) ==>
+	// @ 	 &rawPkt[i] == &rawPkt[:len(rawContents)][i]
 	copy(rawPkt[:len(rawContents)], rawContents /*@ , R20 @*/)
 	// @ fold sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 	// @ fold acc(sl.AbsSlice_Bytes(rawContents, 0, len(rawContents)), R20)

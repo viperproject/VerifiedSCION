@@ -14,10 +14,15 @@
 
 // +gobra
 
+// TODO!!
+// When there is support for closed functions, we should drop this
+// file and describe the contents of the slice in terms of closed
+// heap-dependent functions.
+
 package slices
 
 // This file contains predicates for describing the contents of slices and
-// functions that manipulate the knowledge in those predicates. 
+// functions that manipulate the knowledge in those predicates.
 
 // How to extend this file:
 // - if we need to support slices of non-supported types, we must repeat all definitions
@@ -38,7 +43,8 @@ pred AbsSliceC_Bytes(s []byte, start int, end int, ghost contents seq[byte]) {
 	// Maybe, it is worth having different versions with
 	// different triggers, or using a different trigger
 	// than the one that is inferred.
-	forall i int :: start <= i && i < end ==> (acc(&s[i]) && s[i] == contents[i - start])
+	forall i int :: { &s[i] } start <= i && i < end ==>
+		(acc(&s[i]) && s[i] == contents[i - start])
 }
 
 ghost
@@ -96,7 +102,7 @@ ensures  AbsSliceC_Bytes(s[start:end], 0, len(s[start:end]), contents)
 decreases
 func ResliceC_Bytes(s []byte, start int, end int, contents seq[byte]) {
 	unfold AbsSliceC_Bytes(s, start, end, contents)
-	assert forall i int :: 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
+	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
 	fold  AbsSliceC_Bytes(s[start:end], 0, len(s[start:end]), contents)
 }
 
