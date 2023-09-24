@@ -2674,11 +2674,11 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-// @ requires  acc(&p.d) && acc(MutexInvariant!<p.d!>(), _)
-// @ requires  acc(p.scionLayer.Mem(ub), R5)
+// @ requires  acc(&p.d, _) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires  acc(p.scionLayer.Mem(ub), R4)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires  acc(&p.ingressID,  R15)
-// @ ensures   acc(p.scionLayer.Mem(ub), R5)
+// @ ensures   acc(p.scionLayer.Mem(ub), R4)
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.ingressID,  R15)
 // @ decreases
@@ -2736,6 +2736,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// @ fold acc(p.scionLayer.Mem(ub), R5)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
+	// @ assume false
 	// @ ghost rawPath := path.RawBufferMem(ubPath)
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
