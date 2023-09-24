@@ -50,7 +50,7 @@ type Packet interface {
 	// (VerifiedSCION) not sure if we need this
 	// ensures forall i int :: 0 <= i && i < len(res) ==> res[i].Mem()
 	// ensures forall i int :: 0 <= i && i < len(res) ==> (res[i].Mem()) --* Mem()
-	ensures  forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
+	ensures  forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])
 	decreases
 	Layers() (res []Layer)
 

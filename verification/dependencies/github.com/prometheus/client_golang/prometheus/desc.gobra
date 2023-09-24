@@ -72,7 +72,8 @@ pred (d *Desc) Mem()
 // For constLabels, the label values are constant. Therefore, they are fully
 // specified in the Desc. See the Collector example for a usage pattern.
 requires fqName != ""
-requires forall i int :: 0 <= i && i < len(variableLabels) ==> acc(&variableLabels[i], R16)
+requires forall i int :: { &variableLabels[i] } 0 <= i && i < len(variableLabels) ==>
+	acc(&variableLabels[i], R16)
 requires acc(constLabels)
 ensures  res.Mem()
 decreases _
