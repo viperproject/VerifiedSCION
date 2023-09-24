@@ -18,7 +18,6 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 

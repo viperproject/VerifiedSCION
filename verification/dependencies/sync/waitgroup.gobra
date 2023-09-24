@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in https://golang.org/LICENSE
 
-// +gobra
+// Warning:
+// This file is ignored for now, as it is not immediately relevant for SCION.
 
 package sync
 

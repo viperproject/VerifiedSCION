@@ -32,7 +32,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 // WithCtx returns an error that is the same as the given error but contains the
@@ -45,8 +45,8 @@ import (
 // with this method.
 requires  err.ErrorMem()
 // The following precondition cannot be adequately captured in Gobra.
-// requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
-preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
+// requires forall i int :: 0 <= i && i < len(errCtx) ==> IsOfPrimitiveType(errCtx[i])
+preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 ensures res != nil && res.ErrorMem()
 ensures res.ErrorMem() --* err.ErrorMem()
 decreases
@@ -61,9 +61,9 @@ func WithCtx(err error, errCtx ...interface{}) (res error)
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 requires  msg.ErrorMem() && cause.ErrorMem()
-preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
+preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 // The following precondition cannot be adequately captured in Gobra.
-// requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
+// requires forall i int :: 0 <= i && i < len(errCtx) ==> IsOfPrimitiveType(errCtx[i])
 ensures   res != nil && res.ErrorMem()
 ensures   res.ErrorMem() --* (msg.ErrorMem() && cause.ErrorMem())
 decreases
@@ -77,9 +77,9 @@ func Wrap(msg, cause error, errCtx ...interface{}) (res error)
 // This is a safe but strict under-approximation of what can be done
 // with this method.
 requires  cause.ErrorMem()
-preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
+preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 // The following precondition cannot be adequately captured in Gobra.
-// requires forall i int :: 0 <= i && i < len(errCtx) ==> definitions.IsOfPrimitiveType(errCtx[i])
+// requires forall i int :: 0 <= i && i < len(errCtx) ==> IsOfPrimitiveType(errCtx[i])
 ensures res != nil && res.ErrorMem()
 ensures res.ErrorMem() --* cause.ErrorMem()
 decreases
@@ -90,7 +90,7 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error)
 // Elements of errCtx are limited to "primitive types" at the moment.
 // This is a safe but strict under-approximation of what can be done
 // with this method.
-preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], definitions.ReadL15)
+preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 ensures   res != nil && res.ErrorMem()
 ensures   res.IsDuplicableMem()
 decreases

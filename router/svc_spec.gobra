@@ -31,12 +31,13 @@ pred internalLockInv(s *services) {
 	acc(&s.m) &&
 	acc(s.m) &&
 	// we can read all keys stored in the map
-	forall k addr.HostSVC :: k in domain(s.m) ==> validMapValue(k, s.m[k])
+	forall k addr.HostSVC :: { k in domain(s.m) }{ validMapValue(k, s.m[k]) } k in domain(s.m) ==>
+		validMapValue(k, s.m[k])
 }
 
 pred validMapValue(k addr.HostSVC, udpSlice []*net.UDPAddr) {
-	(forall i int :: 0 <= i && i < len(udpSlice) ==> acc(&udpSlice[i])) &&
-	(forall i int :: 0 <= i && i < len(udpSlice) ==> InjectiveMem(udpSlice[i], i))
+	(forall i int :: { &udpSlice[i] } 0 <= i && i < len(udpSlice) ==> acc(&udpSlice[i])) &&
+	(forall i int :: { &udpSlice[i] }{ InjectiveMem(udpSlice[i], i) } 0 <= i && i < len(udpSlice) ==> InjectiveMem(udpSlice[i], i))
 }
 
 pred InjectiveMem(u *net.UDPAddr, i int) { acc(u.Mem(), _) }

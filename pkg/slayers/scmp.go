@@ -23,7 +23,7 @@ import (
 	"github.com/google/gopacket"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
-	// @ def "github.com/scionproto/scion/verification/utils/definitions"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
 	// @ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -84,10 +84,10 @@ func (s *SCMP) CanDecode() (res gopacket.LayerClass) {
 // NextLayerType use the typecode to select the right next decoder.
 // If the SCMP type is unknown, the next layer is gopacket.LayerTypePayload.
 // NextLayerType returns the layer type contained by this DecodingLayer.
-// @ preserves acc(s.Mem(ub), def.ReadL20)
+// @ preserves acc(s.Mem(ub), R20)
 // @ decreases
 func (s *SCMP) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
-	switch /*@unfolding acc(s.Mem(ub), def.ReadL20) in @*/ s.TypeCode.Type() {
+	switch /*@unfolding acc(s.Mem(ub), R20) in @*/ s.TypeCode.Type() {
 	case SCMPTypeDestinationUnreachable:
 		return LayerTypeSCMPDestinationUnreachable
 	case SCMPTypePacketTooBig:

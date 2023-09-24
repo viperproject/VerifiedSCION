@@ -74,13 +74,15 @@ pred AccAddr(addrs map[uint16]*net.UDPAddr) {
 
 pred AccBatchConn(batchConns map[uint16]BatchConn) {
 	acc(batchConns, 1/2) &&
-	forall b BatchConn :: b in range(batchConns) ==> b.Mem()
+	forall b BatchConn :: { b in range(batchConns) }{ b.Mem() } b in range(batchConns) ==>
+		b.Mem()
 }
 
 // TODO: drop wildcards here
 pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
 	acc(bfdSessions, 1/2) &&
-	(forall bfd bfdSession :: { bfd in range(bfdSessions) } bfd in range(bfdSessions) ==> (bfd != nil && acc(bfd.Mem(), _)))
+	(forall bfd bfdSession :: { bfd in range(bfdSessions) }{ bfd.Mem() } bfd in range(bfdSessions) ==>
+		(bfd != nil && acc(bfd.Mem(), _)))
 }
 
 // TODO: drop wildcards here
@@ -272,7 +274,7 @@ ensures  scrypto.ValidKeyForHash(*d.key)
 ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
 func (d *DataPlane) getNewPacketProcessorFootprint() {
-    unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant!<d!>(), _)
 }
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/

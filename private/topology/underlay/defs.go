@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
-	// @ def "github.com/scionproto/scion/verification/utils/definitions"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 type Type int
@@ -74,7 +74,7 @@ func TypeFromString(s string) (Type, error) {
 }
 
 // @ trusted
-// @ requires def.Uncallable()
+// @ requires Uncallable()
 func (ot *Type) UnmarshalJSON(data []byte) error {
 	var strVal string
 	if err := json.Unmarshal(data, &strVal); err != nil {
@@ -89,7 +89,7 @@ func (ot *Type) UnmarshalJSON(data []byte) error {
 }
 
 // @ trusted
-// @ requires def.Uncallable()
+// @ requires Uncallable()
 func (ot Type) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ot.String())
 }

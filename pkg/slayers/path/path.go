@@ -25,7 +25,7 @@ import (
 	"fmt"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
-	//@ def "github.com/scionproto/scion/verification/utils/definitions"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -41,7 +41,7 @@ func init() {
 	// (VerifiedSCION) ghost initialization code to establish the PathPackageMem predicate.
 	// @ assert acc(&registeredPaths)
 	// @ assert acc(&strictDecoding)
-	// @ assert forall t Type :: 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
+	// @ assert forall t Type :: { registeredPaths[t] } 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
 	// @ fold PathPackageMem()
 }
 
@@ -49,11 +49,11 @@ func init() {
 type Type uint8
 
 // @ requires 0 <= t && t < maxPathType
-// @ preserves acc(PathPackageMem(), def.ReadL20)
+// @ preserves acc(PathPackageMem(), R20)
 // @ decreases
 func (t Type) String() string {
-	//@ unfold acc(PathPackageMem(), def.ReadL20)
-	//@ ghost defer fold acc(PathPackageMem(), def.ReadL20)
+	//@ unfold acc(PathPackageMem(), R20)
+	//@ ghost defer fold acc(PathPackageMem(), R20)
 	pm := registeredPaths[t]
 	if !pm.inUse {
 		return fmt.Sprintf("UNKNOWN (%d)", t)
@@ -72,7 +72,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
 	//@ preserves sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-	//@ preserves acc(Mem(underlyingBuf), def.ReadL1)
+	//@ preserves acc(Mem(underlyingBuf), R1)
 	//@ preserves sl.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
@@ -136,7 +136,7 @@ type Metadata struct {
 // @ requires !Registered(pathMeta.Type)
 // @ requires pathMeta.New implements NewPathSpec
 // @ ensures  PathPackageMem()
-// @ ensures  forall t Type :: 0 <= t && t < maxPathType ==>
+// @ ensures  forall t Type :: { old(Registered(t)) }{ Registered(t) } 0 <= t && t < maxPathType ==>
 // @ 	t != pathMeta.Type ==> old(Registered(t)) == Registered(t)
 // @ ensures  Registered(pathMeta.Type)
 // @ decreases
@@ -202,18 +202,18 @@ type rawPath struct {
 	pathType Type
 }
 
-// @ preserves acc(p.Mem(underlyingBuf), def.ReadL10)
-// @ preserves acc(sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)), def.ReadL10)
+// @ preserves acc(p.Mem(underlyingBuf), R10)
+// @ preserves acc(sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)), R10)
 // @ preserves sl.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   e == nil
 // @ decreases
 func (p *rawPath) SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e error) {
 	//@ unfold sl.AbsSlice_Bytes(b, 0, len(b))
-	//@ unfold acc(p.Mem(underlyingBuf), def.ReadL10)
-	//@ unfold acc(sl.AbsSlice_Bytes(p.raw, 0, len(p.raw)), def.ReadL11)
-	copy(b, p.raw /*@, def.ReadL11 @*/)
-	//@ fold acc(sl.AbsSlice_Bytes(p.raw, 0, len(p.raw)), def.ReadL11)
-	//@ fold acc(p.Mem(underlyingBuf), def.ReadL10)
+	//@ unfold acc(p.Mem(underlyingBuf), R10)
+	//@ unfold acc(sl.AbsSlice_Bytes(p.raw, 0, len(p.raw)), R11)
+	copy(b, p.raw /*@, R11 @*/)
+	//@ fold acc(sl.AbsSlice_Bytes(p.raw, 0, len(p.raw)), R11)
+	//@ fold acc(p.Mem(underlyingBuf), R10)
 	//@ fold sl.AbsSlice_Bytes(b, 0, len(b))
 	return nil
 }

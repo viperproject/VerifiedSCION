@@ -17,6 +17,6 @@
 package definitions
 
 func test() {
-	assert ReadL00 < writePerm
-	assert ReadL0 < ReadL00
+	assert R00 < writePerm
+	assert R0 < R00
 }
