@@ -2697,51 +2697,84 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
 	// @ slayers.LemmaPathIdxStartEnd(&p.scionLayer, ub, R20)
 	// @ ghost ubPath := ub[startP:endP]
-	// @ unfold acc(p.scionLayer.Mem(ub), R5)
+	// @ unfold acc(p.scionLayer.Mem(ub), R4)
 	pathType := p.scionLayer.Path.Type( /*@ ubPath @*/ )
 	// @ establishCannotRoute()
+	// @ ghost pathFromEpic := false
+	// @ ghost var epicPathUb []byte = nil
 	switch pathType {
 	case scion.PathType:
 		var ok bool
 		path, ok = p.scionLayer.Path.(*scion.Raw)
 		if !ok {
-			// @ fold acc(p.scionLayer.Mem(ub), R5)
+			// @ fold acc(p.scionLayer.Mem(ub), R4)
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
 	case epic.PathType:
 		epicPath, ok := p.scionLayer.Path.(*epic.Path)
 		if !ok {
-			// @ fold acc(p.scionLayer.Mem(ub), R5)
+			// @ fold acc(p.scionLayer.Mem(ub), R4)
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
-		// @ scionBuf := epicPath.GetUnderlyingScionPathBuf(ubPath)
-		// @ unfold acc(epicPath.Mem(ubPath), R5)
-		// @ defer fold acc(epicPath.Mem(ubPath), R5)
-		// @ assert ubPath[epic.MetadataLen:] === scionBuf
-		// @ ubPath = scionBuf
-		// @ startP += epic.MetadataLen
-		// @ assert ubPath === ub[startP:endP]
+		/*@
+		scionBuf := epicPath.GetUnderlyingScionPathBuf(ubPath)
+		unfold acc(epicPath.Mem(ubPath), R4)
+		assert ubPath[epic.MetadataLen:] === scionBuf
+		epicPathUb = ubPath
+		ubPath = scionBuf
+		startP += epic.MetadataLen
+		assert ubPath === ub[startP:endP]
+		@*/
 		path = epicPath.ScionPath
+		// @ pathFromEpic = true
 	default:
-		// @ fold acc(p.scionLayer.Mem(ub), R5)
+		// @ fold acc(p.scionLayer.Mem(ub), R4)
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
-	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+	/*@
+	assert pathType == scion.PathType || pathType == epic.PathType
+	assert typeOf(p.scionLayer.Path) == type[*scion.Raw] || typeOf(p.scionLayer.Path) == type[*epic.Path]
+	assert !pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*scion.Raw]
+	assert pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*epic.Path]
+	sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+	@*/
 	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		// @ fold acc(p.scionLayer.Mem(ub), R5)
+		/*@
+		sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		ghost if pathFromEpic {
+			epicPath := p.scionLayer.Path.(*epic.Path)
+			assert acc(path.Mem(ubPath), R4)
+			fold acc(epicPath.Mem(epicPathUb), R4)
+		} else {
+			rawPath := p.scionLayer.Path.(*scion.Raw)
+			assert acc(path.Mem(ubPath), R4)
+			assert acc(rawPath.Mem(ubPath), R4)
+		}
+		fold acc(p.scionLayer.Mem(ub), R4)
+		@*/
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
 	// @ assume false
 	// @ ghost rawPath := path.RawBufferMem(ubPath)
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		// @ fold acc(p.scionLayer.Mem(ub), R5)
+		/*@
+		sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		ghost if pathFromEpic {
+			epicPath := p.scionLayer.Path.(*epic.Path)
+			assert acc(path.Mem(ubPath), R4)
+			fold acc(epicPath.Mem(epicPathUb), R4)
+		} else {
+			rawPath := p.scionLayer.Path.(*scion.Raw)
+			assert acc(path.Mem(ubPath), R4)
+			assert acc(rawPath.Mem(ubPath), R4)
+		}
+		fold acc(p.scionLayer.Mem(ub), R4)
+		@*/
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	// @ assert revPathTmp.Mem(rawPath)
