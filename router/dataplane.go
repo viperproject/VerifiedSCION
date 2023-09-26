@@ -2799,7 +2799,6 @@ func (p *scionPacketProcessor) prepareSCMP(
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
-	// @ assume false
 	// If the packet is sent to an external router, we need to increment the
 	// path to prepare it for the next hop.
 	// @ p.d.getExternalMem()
