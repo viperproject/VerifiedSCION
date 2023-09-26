@@ -2758,7 +2758,6 @@ func (p *scionPacketProcessor) prepareSCMP(
 		@*/
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
-	// @ assume false
 	// @ ghost rawPath := path.RawBufferMem(ubPath)
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
@@ -2784,8 +2783,19 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover( /*@ rawPath @*/ ) {
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
-			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-			// @ fold acc(p.scionLayer.Mem(ub), R5)
+			/*@
+			sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+			ghost if pathFromEpic {
+				epicPath := p.scionLayer.Path.(*epic.Path)
+				assert acc(path.Mem(ubPath), R4)
+				fold acc(epicPath.Mem(epicPathUb), R4)
+			} else {
+				rawPath := p.scionLayer.Path.(*scion.Raw)
+				assert acc(path.Mem(ubPath), R4)
+				assert acc(rawPath.Mem(ubPath), R4)
+			}
+			fold acc(p.scionLayer.Mem(ub), R4)
+			@*/
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
