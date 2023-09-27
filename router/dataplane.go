@@ -2805,16 +2805,37 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 	_, external := p.d.external[p.ingressID]
 	if external {
+		// @ unfold revPath.Mem(rawPath)
+		// @ unfold revPath.Base.Mem()
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
+		// @ assert revPath.PathMeta.CurrINF < len(revPath.InfoFields)
+		// @ assert forall i int :: { &revPath.InfoFields[i] } 0 <= i && i < len(revPath.InfoFields) ==> acc(&revPath.InfoFields[i])
+		// @ assert acc(&revPath.InfoFields[revPath.PathMeta.CurrINF])
+		// @ assert acc(infoField)
 		if infoField.ConsDir {
 			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
 			infoField.UpdateSegID(hopField.Mac)
 		}
-		if err := revPath.IncPath( /*@ nil @*/ ); err != nil {
+		// @ fold revPath.Base.Mem()
+		// @ fold revPath.Mem(rawPath)
+		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
+			/*@
+			sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+			ghost if pathFromEpic {
+				epicPath := p.scionLayer.Path.(*epic.Path)
+				assert acc(path.Mem(ubPath), R4)
+				fold acc(epicPath.Mem(epicPathUb), R4)
+			} else {
+				rawPath := p.scionLayer.Path.(*scion.Raw)
+				assert acc(path.Mem(ubPath), R4)
+				assert acc(rawPath.Mem(ubPath), R4)
+			}
+			fold acc(p.scionLayer.Mem(ub), R4)
+			@*/
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
-	// @ assert false
+	// @ assume false
 
 	// create new SCION header for reply.
 	var scionL /*@@@*/ slayers.SCION
