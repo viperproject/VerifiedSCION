@@ -8,7 +8,7 @@
 
 package gopacket
 
-import def "github.com/scionproto/scion/verification/utils/definitions"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 import "github.com/scionproto/scion/verification/utils/slices"
 
 type Layer interface {
@@ -19,7 +19,7 @@ type Layer interface {
 	LayerType() LayerType
 
 	// (VerifiedSCION) not used in the dataplane
-	requires def.Uncallable()
+	requires Uncallable()
 	LayerContents() (res []byte)
 
 	preserves Mem(ub)
@@ -40,7 +40,7 @@ pure func (p Payload) LayerType() LayerType {
 	return LayerTypePayload
 }
 
-requires def.Uncallable()
+requires Uncallable()
 func (p Payload) LayerContents() (res []byte) {
 	res = []byte(p)
 }
@@ -52,7 +52,7 @@ func (p Payload) LayerPayload(ghost ub []byte) (res []byte, ghost start int, gho
 	res = nil
 }
 
-preserves acc(p.Mem(ub), def.ReadL20)
+preserves acc(p.Mem(ub), R20)
 ensures   start == 0 && end == len(p) && len(p) == len(ub)
 ensures   res === []byte(p)
 ensures   len(res) == end - start
@@ -60,7 +60,7 @@ ensures   len(res) != 0 ==> res === ub[start:end]
 decreases
 func (p Payload) Payload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	res = []byte(p)
-    assert unfolding acc(p.Mem(ub), def.ReadL20) in true
+    assert unfolding acc(p.Mem(ub), R20) in true
     return res, 0, len(p)
 }
 
@@ -94,7 +94,7 @@ type NetworkLayer interface {
 type TransportLayer interface {
 	Layer
 
-	preserves acc(Mem(ub), def.ReadL15)
+	preserves acc(Mem(ub), R15)
 	decreases
 	TransportFlow(ghost ub []byte) Flow
 }

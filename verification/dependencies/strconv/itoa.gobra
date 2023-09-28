@@ -9,8 +9,6 @@
 
 package strconv
 
-// import "math/bits"
-
 const fastSmalls = true // enable fast path for small integers
 
 // FormatUint returns the string representation of i in the given base,

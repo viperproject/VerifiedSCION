@@ -33,7 +33,7 @@ func NewCounter(opts prometheus.CounterOpts) (c prometheus.Counter)
 // prometheus.DefaultRegisterer. If the registration fails, NewCounterVec
 // panics.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
-requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
+requires forall i int :: { &labelNames[i] } 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
 ensures  c != nil
 ensures  c.Mem()
 decreases _
@@ -52,7 +52,7 @@ func NewGauge(opts prometheus.GaugeOpts) (g prometheus.Gauge)
 // package but it automatically registers the GaugeVec with the
 // prometheus.DefaultRegisterer. If the registration fails, NewGaugeVec panics.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
-requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
+requires forall i int :: { &labelNames[i] } 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
 ensures  g.Mem()
 ensures  g != nil
 decreases _
