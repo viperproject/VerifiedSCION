@@ -22,6 +22,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
+	//@ bit "github.com/scionproto/scion/verification/utils/bitwise"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
@@ -86,8 +87,12 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	}
 	s.NumINF = 0
 	s.NumHops = 0
+
+	//@ ghost var metaHdrCpy MetaHdr = s.PathMeta
+
 	//@ invariant -1 <= i && i <= 2
 	//@ invariant acc(s)
+	//@ invariant metaHdrCpy == s.PathMeta
 	//@ invariant 0 <= s.NumHops && 0 <= s.NumINF && s.NumINF <= 3
 	//@ invariant 0 < s.NumINF ==> 0 < s.NumHops
 	//@ decreases i
@@ -208,6 +213,7 @@ type MetaHdr struct {
 // @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
 // @ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrHF >= 0)
+// @ ensures   e == nil ==> m.CurrINF <= 3
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
@@ -217,6 +223,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	}
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
 	line := binary.BigEndian.Uint32(raw)
+	//@ bit.Shift30LessThan4(line)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
 	// (VerifiedSCION) The following assumption is guaranteed by Go but still not modeled in Gobra.

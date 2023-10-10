@@ -37,3 +37,8 @@ lemma BitAnd7_64bit(b: bv64)
     ensures var res := b & 0x7;
         0 <= res <= 7
 {}
+
+lemma Shift30LessThan4(b: bv32)
+    ensures var res := b >> 30;
+        0 <= res <= 3
+{}

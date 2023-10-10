@@ -41,3 +41,8 @@ ensures 0 <= b & 0x7 && b & 0x7 <= 7
 ensures res == b & 0x7
 decreases
 func BitAnd7(b int) (res int)
+
+ghost
+ensures res == b >> 30
+ensures 0 <= res && res <= 3
+pure func Shift30LessThan4(b uint32) (res uint32)
