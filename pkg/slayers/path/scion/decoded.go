@@ -259,9 +259,6 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ fold s.Mem(ubuf)
 	//@ )
 
-	// (VerifiedSCION) we are fairly confident of the correctness of this loop.
-	// Unfortunately, Gobra cannot prove it in a timely fashion.
-	//@ trusted
 	//@ preserves s.Mem(ubuf)
 	//@ decreases
 	//@ outline(
