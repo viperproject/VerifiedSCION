@@ -80,7 +80,7 @@ pure func dp2_forward_ext_guard(asid IO_as, m IO_pkt2, nextif IO_ifs, currseg, t
 ghost
 decreases
 pure func dp2_forward_ext(s IO_dp2_state, sprime IO_dp2_state, asid IO_as, m IO_pkt2) bool {
-	return exists nextif IO_ifs, currseg IO_seg2, traversedseg IO_seg2, newpkt IO_pkt2, fut seq[IO_HF], hf1 IO_HF :: dp2_forward_ext_guard(asid, m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+	return exists nextif IO_ifs, currseg IO_seg2, traversedseg IO_seg2, newpkt IO_pkt2, fut seq[IO_HF], hf1 IO_HF ::  { dp2_forward_ext_guard(asid, m, nextif, currseg, traversedseg, newpkt, fut, hf1) }{ dp2_add_ext(s, sprime, asid, nextif, newpkt) } dp2_forward_ext_guard(asid, m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
 		dp2_add_ext(s, sprime, asid, nextif, newpkt)
 
 }
