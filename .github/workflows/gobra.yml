@@ -21,7 +21,7 @@ env:
   checkConsistency: '1'
   imageVersion: 'latest'
   mceMode: 'od'
-  requireTriggers: '0'
+  requireTriggers: '1'
 
 jobs:
   verify-deps:
