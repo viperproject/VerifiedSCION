@@ -97,6 +97,23 @@ func (s *Raw) IsXover(ghost ub []byte) bool {
 	defer fold acc(s.Mem(ub), R9)
 	return s.Base.IsXover()
 }
+
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) ValidCurrINF(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		s.Base.ValidCurrINF()
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) ValidCurrHF(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		s.Base.ValidCurrHF()
+}
+
 /**** End of Stubs ****/
 
 /**** Lemmas ****/

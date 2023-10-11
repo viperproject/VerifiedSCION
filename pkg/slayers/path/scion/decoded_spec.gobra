@@ -124,6 +124,14 @@ pure func (d *Decoded) ValidCurrINF(ghost ub []byte) bool {
 ghost
 requires acc(d.Mem(ub), _)
 decreases
+pure func (d *Decoded) ValidCurrHF(ghost ub []byte) bool {
+	return unfolding acc(d.Mem(ub), _) in
+		d.Base.ValidCurrHF()
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
 pure func (d *Decoded) GetNumINF(ghost ub []byte) (res int) {
 	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumINF()
 }

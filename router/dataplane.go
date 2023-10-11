@@ -2674,6 +2674,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
+// TODO: require that the pathMetaHdr is in a valid position (via a pure fn defined on slayers.SCION)
 // @ requires  acc(&p.d, _) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R4)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
@@ -2741,6 +2742,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	assert pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*epic.Path]
 	sl.SplitRange_Bytes(ub, startP, endP, writePerm)
 	@*/
+	// TODO: Preserve Validity of the path here
 	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
 		/*@
@@ -2759,6 +2761,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
 	// @ ghost rawPath := path.RawBufferMem(ubPath)
+	// TODO: preserve validity of the path here
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
 		/*@
@@ -2782,6 +2785,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover( /*@ rawPath @*/ ) {
+		// TODO: preserve validity of the path here
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
 			/*@
 			sl.CombineRange_Bytes(ub, startP, endP, writePerm)
