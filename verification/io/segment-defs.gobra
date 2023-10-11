@@ -23,7 +23,7 @@ package io
 
 ghost
 decreases
-pure func inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[IO_HF]) bool {
+pure func (dp Abs_Dataplane) inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[IO_HF]) bool {
 	return currseg.Future === seq[IO_HF]{hf1} ++ fut &&
 		traversedseg.Future === fut &&
 		traversedseg.Past === seq[IO_HF]{hf1} ++ currseg.Past &&
@@ -32,7 +32,7 @@ pure func inc_seg2(currseg, traversedseg IO_seg2, hf1 IO_HF, fut seq[IO_HF]) boo
 
 ghost
 decreases
-pure func same_segment2(currseg, traversedseg IO_seg2) bool {
+pure func (dp Abs_Dataplane) same_segment2(currseg, traversedseg IO_seg2) bool {
 	return traversedseg.Future === currseg.Future &&
 		traversedseg.Past    === currseg.Past &&
 		traversedseg.History === currseg.History
@@ -40,25 +40,25 @@ pure func same_segment2(currseg, traversedseg IO_seg2) bool {
 
 ghost
 decreases
-pure func update_uinfo2(currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
-	return traversedseg.UInfo === upd_uinfo(currseg.UInfo, hf1)
+pure func (dp Abs_Dataplane) update_uinfo2(currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
+	return traversedseg.UInfo === dp.upd_uinfo(currseg.UInfo, hf1)
 }
 
 ghost
 decreases
-pure func same_uinfo2(currseg, traversedseg IO_seg2) bool {
+pure func (dp Abs_Dataplane) same_uinfo2(currseg, traversedseg IO_seg2) bool {
 	return currseg.UInfo === traversedseg.UInfo
 }
 
 ghost
 decreases
-pure func update_uinfo(condition bool, currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
-	return condition? update_uinfo2(currseg, traversedseg, hf1) : same_uinfo2(currseg, traversedseg)
+pure func (dp Abs_Dataplane) update_uinfo(condition bool, currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
+	return condition? dp.update_uinfo2(currseg, traversedseg, hf1) : dp.same_uinfo2(currseg, traversedseg)
 }
 
 ghost
 decreases
-pure func same_other2(currseg, traversedseg IO_seg3) bool {
+pure func (dp Abs_Dataplane) same_other2(currseg, traversedseg IO_seg3) bool {
 	return traversedseg.AInfo === currseg.AInfo &&
 		traversedseg.ConsDir === currseg.ConsDir &&
 		traversedseg.Peer === currseg.Peer

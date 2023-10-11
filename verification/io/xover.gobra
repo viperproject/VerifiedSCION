@@ -38,7 +38,7 @@ package io
 // the new segment that we are xovering over to.
 ghost
 decreases
-pure func dp2_xover_common_guard(m IO_pkt2,
+pure func (dp Abs_Dataplane) dp2_xover_common_guard(m IO_pkt2,
 	currseg IO_seg2,
 	nextseg IO_seg2,
 	traversedseg IO_seg2,
@@ -54,98 +54,99 @@ pure func dp2_xover_common_guard(m IO_pkt2,
 			currseg.Future == seq[IO_HF]{hf1} &&
 			len(nextseg.Future) > 0 &&
 			nextseg.Future[0] == hf2 &&
-			dp2_check_interface(currseg.ConsDir, asid, hf1, recvif) &&
-			dp2_check_recvif(currseg.ConsDir, asid, recvif) &&
-			update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
-			inc_seg2(currseg, traversedseg, hf1, seq[IO_HF]{}) &&
-			hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1) &&
-			hf_valid(nextseg.ConsDir, nextseg.AInfo, nextseg.UInfo, hf2) &&
+			dp.dp2_check_interface(currseg.ConsDir, asid, hf1, recvif) &&
+			dp.dp2_check_recvif(currseg.ConsDir, asid, recvif) &&
+			dp.update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
+			dp.inc_seg2(currseg, traversedseg, hf1, seq[IO_HF]{}) &&
+			dp.hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1) &&
+			dp.hf_valid(nextseg.ConsDir, nextseg.AInfo, nextseg.UInfo, hf2) &&
 			hf1.extr_asid() == asid &&
 			hf2.extr_asid() == asid &&
-			same_other2(currseg, traversedseg)
+			dp.same_other2(currseg, traversedseg)
+}
+
+//
+// ghost
+// decreases
+// pure func (dp Abs_Dataplane) dp2_xover_common(
+// 	s IO_dp2_state,
+// 	m IO_pkt2,
+// 	currseg IO_seg2,
+// 	nextseg IO_seg2,
+// 	traversedseg IO_seg2,
+// 	newpkt IO_pkt2,
+// 	hf1 IO_HF,
+// 	hf2 IO_HF,
+// 	asid IO_as,
+// 	recvif IO_ifs,
+// 	sprime IO_dp2_state) bool {
+// 		return dp.dp2_in_ext(s, asid, recvif, m) &&
+// 			dp.dp2_xover_common_guard(m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, asid, recvif) &&
+// 			dp.dp2_forward(s, sprime, asid, newpkt)
+// }
+
+ghost
+decreases
+pure func (dp Abs_Dataplane) egif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
+	return dp.if_type(a, hf.EgIF2, link)
 }
 
 ghost
 decreases
-pure func dp2_xover_common(
-	s IO_dp2_state,
-	m IO_pkt2,
-	currseg IO_seg2,
-	nextseg IO_seg2,
-	traversedseg IO_seg2,
-	newpkt IO_pkt2,
-	hf1 IO_HF,
-	hf2 IO_HF,
-	asid IO_as,
-	recvif IO_ifs,
-	sprime IO_dp2_state) bool {
-		return dp2_in_ext(s, asid, recvif, m) &&
-			dp2_xover_common_guard(m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, asid, recvif) &&
-			dp2_forward(s, sprime, asid, newpkt)
+pure func (dp Abs_Dataplane) inif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
+	return dp.if_type(a, hf.InIF2, link)
 }
 
 ghost
 decreases
-pure func egif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
-	return if_type(a, hf.EgIF2, link)
+pure func (dp Abs_Dataplane) xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
+	return (dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_ProvCust{})) ||
+	(dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_PeerOrCore{})) ||
+	(dp.egif2_type(hf1, asid, IO_PeerOrCore{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
 }
+
+// ghost
+// decreases
+// pure func dp2_xover_up2down(
+// 	s IO_dp2_state,
+// 	m IO_pkt2,
+// 	currseg IO_seg2,
+// 	nextseg IO_seg2,
+// 	traversedseg IO_seg2,
+// 	newpkt IO_pkt2,
+// 	asid IO_as,
+// 	recvif IO_ifs,
+// 	hf1 IO_HF,
+// 	hf2 IO_HF,
+// 	sprime IO_dp2_state) bool {
+// 		return !currseg.ConsDir &&
+// 			nextseg.ConsDir &&
+// 			dp.xover_up2down2_link_type(asid, hf1, hf2) &&
+// 			dp.dp2_xover_common(s, m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, asid, recvif, sprime)
+// }
 
 ghost
 decreases
-pure func inif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
-	return if_type(a, hf.InIF2, link)
-}
-
-ghost
-decreases
-pure func xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
-	return (egif2_type(hf1, asid, IO_ProvCust{}) && egif2_type(hf2, asid, IO_ProvCust{})) ||
-	(egif2_type(hf1, asid, IO_ProvCust{}) && egif2_type(hf2, asid, IO_PeerOrCore{})) ||
-	(egif2_type(hf1, asid, IO_PeerOrCore{}) && egif2_type(hf2, asid, IO_ProvCust{}))
-}
-
-ghost
-decreases
-pure func dp2_xover_up2down(
-	s IO_dp2_state,
-	m IO_pkt2,
-	currseg IO_seg2,
-	nextseg IO_seg2,
-	traversedseg IO_seg2,
-	newpkt IO_pkt2,
-	asid IO_as,
-	recvif IO_ifs,
-	hf1 IO_HF,
-	hf2 IO_HF,
-	sprime IO_dp2_state) bool {
-		return !currseg.ConsDir &&
-			nextseg.ConsDir &&
-			xover_up2down2_link_type(asid, hf1, hf2) &&
-			dp2_xover_common(s, m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, asid, recvif, sprime)
-}
-
-ghost
-decreases
-pure func xover_core2_link_type(hf1 IO_HF, hf2 IO_HF, asid IO_as, d bool) bool {
-	return (!d && egif2_type(hf1, asid, IO_ProvCust{}) && inif2_type(hf2, asid, IO_PeerOrCore{})) ||
-		(d && inif2_type(hf1, asid, IO_PeerOrCore{}) && egif2_type(hf2, asid, IO_ProvCust{}))
+pure func (dp Abs_Dataplane) xover_core2_link_type(hf1 IO_HF, hf2 IO_HF, asid IO_as, d bool) bool {
+	return (!d && dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.inif2_type(hf2, asid, IO_PeerOrCore{})) ||
+		(d && dp.inif2_type(hf1, asid, IO_PeerOrCore{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
 }
 
 // TODO: how to formulate "asid in core"?
 // TODO: drop
-ghost
-decreases
-pure func dp2_xover_core(
-	s IO_dp2_state,
-	m IO_pkt2,
-	currseg IO_seg2,
-	nextseg IO_seg2,
-	traversedseg IO_seg2,
-	newpkt IO_pkt2,
-	asid IO_as,
-	recvif IO_ifs,
-	d1 bool,
-	hf1 IO_HF,
-	hf2 IO_HF,
-	nextfut seq[IO_HF],
-	sprime IO_dp2_state) bool
+// ghost
+// decreases
+// pure func dp2_xover_core(
+// 	s IO_dp2_state,
+// 	m IO_pkt2,
+// 	currseg IO_seg2,
+// 	nextseg IO_seg2,
+// 	traversedseg IO_seg2,
+// 	newpkt IO_pkt2,
+// 	asid IO_as,
+// 	recvif IO_ifs,
+// 	d1 bool,
+// 	hf1 IO_HF,
+// 	hf2 IO_HF,
+// 	nextfut seq[IO_HF],
+// 	sprime IO_dp2_state) bool
