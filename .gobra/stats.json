@@ -1,0 +1,39 @@
+[
+  {
+    "id": ".. - tutorial... - tutorial_package_init",
+    "pkgId": ".. - tutorial",
+    "pkg": "tutorial",
+    "name": "tutorial... - tutorial_package_init",
+    "args": "",
+    "nodeType": "Package",
+    "trusted": false,
+    "abstract": false,
+    "viperMembers": [
+      {
+        "name": "$IMPORTS_76e1b866_76e1b866",
+        "taskName": ".. - tutorial",
+        "time": 56,
+        "nodeType": "Method",
+        "success": true,
+        "cached": false,
+        "fromImport": false,
+        "hasBody": true,
+        "verified": true
+      },
+      {
+        "name": "$INIT_76e1b866_34b08296",
+        "taskName": ".. - tutorial",
+        "time": 55,
+        "nodeType": "Method",
+        "success": true,
+        "cached": false,
+        "fromImport": false,
+        "hasBody": true,
+        "verified": true
+      }
+    ],
+    "dependencies": [
+
+    ]
+  }
+]

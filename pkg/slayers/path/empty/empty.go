@@ -57,7 +57,7 @@ func RegisterPath() {
 // bytes on the wire and is used for AS internal communication.
 type Path struct{}
 
-// @ ensures  len(r) == 0 ==> (e == nil && o.Mem(r))
+// @ ensures  len(r) == 0 ==> (e == nil && o.Mem())
 // @ ensures  len(r) != 0 ==> (e != nil && e.ErrorMem() && o.NonInitMem())
 // @ decreases
 func (o Path) DecodeFromBytes(r []byte) (e error) {
@@ -65,7 +65,7 @@ func (o Path) DecodeFromBytes(r []byte) (e error) {
 		//@ fold o.NonInitMem()
 		return serrors.New("decoding an empty path", "len", len(r))
 	}
-	//@ fold o.Mem(r)
+	//@ fold o.Mem()
 	return nil
 }
 
@@ -75,12 +75,12 @@ func (o Path) SerializeTo(b []byte /*@, underlyingBuf []byte @*/) (e error) {
 	return nil
 }
 
-// @ requires o.Mem(underlyingBuf)
+// @ requires o.Mem()
 // @ ensures  p == o
-// @ ensures  p.Mem(underlyingBuf)
+// @ ensures  p.Mem()
 // @ ensures  e == nil
 // @ decreases
-func (o Path) Reverse( /*@ underlyingBuf []byte @*/ ) (p path.Path, e error) {
+func (o Path) Reverse( /*@ ub []byte @*/ ) (p path.Path, e error) {
 	return o, nil
 }
 

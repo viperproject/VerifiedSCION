@@ -17,5 +17,13 @@
 package path
 
 pred (h *HopField) Mem() {
-	acc(h) && h.ConsIngress >= 0 && h.ConsEgress >= 0
+	acc(h)
+}
+
+ghost
+requires acc(h.Mem(), _)
+decreases
+pure func (h *HopField) Valid() bool {
+	return unfolding acc(h.Mem(), _) in
+		(0 <= h.ConsIngress && 0 <= h.ConsEgress)
 }

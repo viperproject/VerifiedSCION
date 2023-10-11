@@ -64,55 +64,62 @@ func (t Type) String() string {
 // Path is the path contained in the SCION header.
 type Path interface {
 	// (VerifiedSCION) Must hold for every valid Path.
-	//@ pred Mem(underlyingBuf []byte)
+	//@ pred Mem()
+
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
 	//@ pred NonInitMem()
+
+	// (VerifiedSCION) Must apply to every Path after initialization
+	//@ ghost
+	//@ requires acc(Mem(), _)
+	// decreases // causes trouble
+	//@ pure Valid(ghost ub []byte) bool
+
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
-	//@ preserves sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
-	//@ preserves acc(Mem(underlyingBuf), R1)
+	//@ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
+	//@ preserves acc(Mem(), R1) && Valid(ub)
 	//@ preserves sl.AbsSlice_Bytes(b, 0, len(b))
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
-	SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e error)
+	SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error)
 	// DecodesFromBytes decodes the path from the provided buffer.
-	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
-	// store b and use it as internal data.
 	//@ requires  NonInitMem()
 	//@ preserves sl.AbsSlice_Bytes(b, 0, len(b))
-	//@ ensures   err == nil ==> Mem(b)
+	//@ ensures   err == nil ==> (Mem() && Valid(b))
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> NonInitMem()
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
-	//@ requires  Mem(underlyingBuf)
-	//@ preserves sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+	//@ requires  Mem() && Valid(ub)
+	//@ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 	//@ ensures   e == nil ==> p != nil
-	//@ ensures   e == nil ==> p.Mem(underlyingBuf)
+	//@ ensures   e == nil ==> p.Mem()
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
-	Reverse( /*@ ghost underlyingBuf []byte @*/ ) (p Path, e error)
+	Reverse( /*@ ghost ub []byte @*/ ) (p Path, e error)
 	// Len returns the length of a path in bytes.
+	// TODO: make this impure and use LenSpec
 	//@ pure
-	//@ requires acc(Mem(underlyingBuf), _)
+	//@ requires acc(Mem(), _)
 	//@ ensures  l >= 0
 	//@ decreases
-	Len( /*@ ghost underlyingBuf []byte @*/ ) (l int)
+	Len( /*@ ghost underlyingBuf []byte @*/ ) (l int) // TODO: drop param
 	// Type returns the type of a path.
 	//@ pure
 	//@ requires acc(sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)), _)
-	//@ requires acc(Mem(underlyingBuf), _)
+	//@ requires acc(Mem(), _)
 	//@ decreases
-	Type( /*@ ghost underlyingBuf []byte @*/ ) Type
+	Type( /*@ ghost underlyingBuf []byte @*/ ) Type // TODO: drop param
 	//@ ghost
-	//@ requires Mem(underlyingBuf)
+	//@ requires Mem()
 	//@ ensures  NonInitMem()
 	//@ decreases
-	//@ DowngradePerm(ghost underlyingBuf []byte)
+	//@ DowngradePerm(ghost underlyingBuf []byte) // TODO: drop param
 }
 
 type metadata struct {
@@ -203,31 +210,31 @@ type rawPath struct {
 	pathType Type
 }
 
-// @ preserves acc(p.Mem(underlyingBuf), R10)
-// @ preserves acc(sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)), R10)
+// @ preserves acc(p.Mem(), R10) && p.Valid(ub)
+// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R10)
 // @ preserves sl.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   e == nil
 // @ decreases
-func (p *rawPath) SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e error) {
+func (p *rawPath) SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error) {
 	//@ unfold sl.AbsSlice_Bytes(b, 0, len(b))
-	//@ unfold acc(p.Mem(underlyingBuf), R10)
+	//@ unfold acc(p.Mem(), R10)
 	//@ unfold acc(sl.AbsSlice_Bytes(p.raw, 0, len(p.raw)), R11)
 	copy(b, p.raw /*@, R11 @*/)
 	//@ fold acc(sl.AbsSlice_Bytes(p.raw, 0, len(p.raw)), R11)
-	//@ fold acc(p.Mem(underlyingBuf), R10)
+	//@ fold acc(p.Mem(), R10)
 	//@ fold sl.AbsSlice_Bytes(b, 0, len(b))
 	return nil
 }
 
 // @ requires  p.NonInitMem()
 // @ preserves sl.AbsSlice_Bytes(b, 0, len(b))
-// @ ensures   p.Mem(b)
+// @ ensures   p.Mem() && p.Valid(b)
 // @ ensures   e == nil
 // @ decreases
 func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
 	//@ unfold p.NonInitMem()
 	p.raw = b
-	//@ fold p.Mem(b)
+	//@ fold p.Mem()
 	return nil
 }
 
@@ -238,16 +245,16 @@ func (p *rawPath) Reverse( /*@ ghost underlyingBuf []byte @*/ ) (r Path, e error
 }
 
 // @ pure
-// @ requires acc(p.Mem(underlyingBuf), _)
+// @ requires acc(p.Mem(), _)
 // @ ensures l >= 0
 // @ decreases
-func (p *rawPath) Len( /*@ ghost underlyingBuf []byte @*/ ) (l int) {
-	return /*@ unfolding acc(p.Mem(underlyingBuf), _) in @*/ len(p.raw)
+func (p *rawPath) Len( /*@ ghost ub []byte @*/ ) (l int) {
+	return /*@ unfolding acc(p.Mem(), _) in @*/ len(p.raw)
 }
 
 // @ pure
-// @ requires acc(p.Mem(underlyingBuf), _)
+// @ requires acc(p.Mem(), _)
 // @ decreases
 func (p *rawPath) Type( /*@ ghost underlyingBuf []byte @*/ ) Type {
-	return /*@ unfolding acc(p.Mem(underlyingBuf), _) in @*/ p.pathType
+	return /*@ unfolding acc(p.Mem(), _) in @*/ p.pathType
 }

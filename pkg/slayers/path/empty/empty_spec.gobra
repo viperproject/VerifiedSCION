@@ -21,22 +21,36 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-pred (e Path) Mem(buf []byte) { len(buf) == 0 }
+pred (e Path) Mem() { true }
 
 pred (e Path) NonInitMem() { true }
 
 ghost
-requires e.Mem(buf)
+requires acc(e.Mem(), _)
+// termination measure missing
+pure func (e Path) Valid(ghost ub []byte) bool {
+	return len(ub) == 0
+}
+
+ghost
+requires e.Mem()
 ensures  e.NonInitMem()
 decreases
 func (e Path) DowngradePerm(buf []byte) {
-	unfold e.Mem(buf)
+	unfold e.Mem()
 	fold e.NonInitMem()
 }
 
 Path implements path.Path
 
 // Definitions to allow *Path to be treated as a path.Path
-pred (e *Path) Mem(buf []byte) { acc(e) && len(buf) == 0 }
+pred (e *Path) Mem() { acc(e) }
 pred (e *Path) NonInitMem() { true }
+
+ghost
+requires acc(e.Mem(), _)
+pure func (e *Path) Valid(ghost ub []byte) bool {
+	return len(ub) == 0
+}
+
 (*Path) implements path.Path

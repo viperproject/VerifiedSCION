@@ -19,9 +19,8 @@ package path
 import "github.com/scionproto/scion/verification/utils/slices"
 
 /** rawPath spec **/
-pred (r *rawPath) Mem(underlyingBuf []byte) {
-	acc(r) &&
-	r.raw === underlyingBuf
+pred (r *rawPath) Mem() {
+	acc(r)
 }
 
 pred (r *rawPath) NonInitMem() {
@@ -29,11 +28,18 @@ pred (r *rawPath) NonInitMem() {
 }
 
 ghost
-requires p.Mem(buf)
+requires acc(r.Mem(), _)
+decreases
+pure func (r *rawPath) Valid(ghost ub []byte) bool {
+	return unfolding acc(r.Mem(), _) in r.raw === ub
+}
+
+ghost
+requires p.Mem()
 ensures  p.NonInitMem()
 decreases
 func (p *rawPath) DowngradePerm(ghost buf []byte) {
-	unfold p.Mem(buf)
+	unfold p.Mem()
 	fold p.NonInitMem()
 }
 
