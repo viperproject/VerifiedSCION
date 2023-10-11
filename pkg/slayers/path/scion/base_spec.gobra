@@ -37,16 +37,23 @@ pred (b *Base) Mem() {
 	// the Code defines 64 as the maximum number of hops,
 	// but this does not seem to be enforced anywhere.
 	0 <= b.NumHops && // && b.NumHops <= MaxHops &&
-	(0 < b.NumINF ==> 0 < b.NumHops) &&
-	// bounds on the parsed pathmeta
-	0 <= b.PathMeta.CurrINF && b.PathMeta.CurrINF <= 3
+	(0 < b.NumINF ==> 0 < b.NumHops)
+}
+
+ghost
+requires acc(b.Mem(), _)
+decreases
+pure func (b *Base) ValidCurrINF() bool {
+	return unfolding acc(b.Mem(), _) in (
+		0 <= b.PathMeta.CurrINF &&
+		b.PathMeta.CurrINF < b.NumINF)
 }
 
 ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res && res <= 3
 decreases
-pure func (b *Base) getNumINF() (res int) {
+pure func (b *Base) GetNumINF() (res int) {
 	return unfolding acc(b.Mem(), _) in b.NumINF
 }
 
@@ -54,8 +61,52 @@ ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res
 decreases
-pure func (b *Base) getNumHops() (res int) {
+pure func (b *Base) GetNumHops() (res int) {
 	return unfolding acc(b.Mem(), _) in b.NumHops
+}
+
+ghost
+requires acc(s.Mem(), _)
+decreases
+pure func (s *Base) GetMetaHdr() MetaHdr {
+	return unfolding acc(s.Mem(), _) in s.PathMeta
+}
+
+ghost
+requires acc(s.Mem(), _)
+decreases
+pure func (s *Base) GetCurrHF() uint8 {
+	return s.GetMetaHdr().CurrHF
+}
+
+ghost
+ensures  0 <= r && r < 3
+decreases
+pure func (s Base) InfForHfSpec(hf uint8) (r uint8) {
+	return hf < s.PathMeta.SegLen[0] ?
+		0 :
+		(hf < s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1] ? 1 : 2)
+}
+
+ghost
+requires acc(s.Mem(), _)
+decreases
+pure func (s *Base) IsXoverSpec() bool {
+	return unfolding acc(s.Mem(), _) in (
+		s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
+		s.PathMeta.CurrINF != s.InfForHfSpec(s.PathMeta.CurrHF+1))
+}
+
+ghost
+requires s.NumINF != 0
+requires int(s.PathMeta.CurrHF) < s.NumHops-1
+decreases
+pure func (s Base) IncPathSpec() Base {
+	return Base{
+		PathMeta: MetaHdr{s.InfForHfSpec(s.PathMeta.CurrHF+1), s.PathMeta.CurrHF+1, s.PathMeta.SegLen},
+		NumINF: s.NumINF,
+		NumHops: s.NumHops,
+	}
 }
 
 ghost

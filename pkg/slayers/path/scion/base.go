@@ -117,13 +117,15 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 
 // IncPath increases the currHF index and currINF index if appropriate.
 // @ requires s.Mem()
-// @ ensures  old(unfolding s.Mem() in s.NumINF == 0) ==> e != nil
-// @ ensures  old(unfolding s.Mem() in int(s.PathMeta.CurrHF) >= s.NumHops-1) ==> e != nil
-// @ ensures  e == nil ==> s.Mem()
-// @ ensures  e == nil ==> s.Len() == old(s.Len())
-// @ ensures  e == nil ==> s.getNumINF() == old(s.getNumINF())
-// @ ensures  e != nil ==> s.NonInitMem()
-// @ ensures  e != nil ==> e.ErrorMem()
+// @ ensures  (e != nil) == (
+// @ 	old(s.GetNumINF()) == 0 ||
+// @ 	old(int(s.GetCurrHF()) >= s.GetNumHops()-1))
+// @ ensures  e == nil ==> (
+// @ 	s.Mem() &&
+// @ 	let oldBase := old(unfolding s.Mem() in *s) in
+// @ 	let newBase := (unfolding s.Mem() in *s) in
+// @ 	newBase == oldBase.IncPathSpec())
+// @ ensures  e != nil ==> (s.NonInitMem() && e.ErrorMem())
 // @ decreases
 func (s *Base) IncPath() (e error) {
 	//@ unfold s.Mem()
@@ -145,8 +147,9 @@ func (s *Base) IncPath() (e error) {
 
 // IsXover returns whether we are at a crossover point.
 // @ preserves acc(s.Mem(), R19)
+// @ ensures   r == s.IsXoverSpec()
 // @ decreases
-func (s *Base) IsXover() bool {
+func (s *Base) IsXover() (r bool) {
 	//@ unfold acc(s.Mem(), R19)
 	//@ defer fold acc(s.Mem(), R19)
 	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
@@ -165,13 +168,9 @@ func (s *Base) IsFirstHopAfterXover() (res bool) {
 }
 
 // @ preserves acc(s, R20)
-// @ preserves 0 <= s.NumINF && s.NumINF <= 3 && 0 <= s.NumHops
-// @ ensures   (0 <= r && r < 3)
+// @ ensures   r == s.InfForHfSpec(hf)
 // @ decreases
 func (s *Base) infIndexForHF(hf uint8) (r uint8) {
-	// (VerifiedSCION) Gobra cannot prove the following propertie, even though it
-	// is ensured by the type system.
-	// @ assume 0 <= hf
 	switch {
 	case hf < s.PathMeta.SegLen[0]:
 		return 0

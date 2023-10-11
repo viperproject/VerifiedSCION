@@ -33,11 +33,11 @@ pred (d *Decoded) NonInitMem() {
 pred (d *Decoded) Mem(ubuf []byte) {
 	d.Base.Mem() &&
 	acc(&d.InfoFields) &&
-	d.Base.getNumINF() <= MaxINFs &&
-	len(d.InfoFields) == d.Base.getNumINF() &&
+	d.Base.GetNumINF() <= MaxINFs &&
+	len(d.InfoFields) == d.Base.GetNumINF() &&
 	(forall i int :: { &d.InfoFields[i] } 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
 	acc(&d.HopFields) &&
-	len(d.HopFields) == d.Base.getNumHops() &&
+	len(d.HopFields) == d.Base.GetNumHops() &&
 	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
@@ -84,9 +84,9 @@ func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
 preserves acc(d.Mem(ubuf), R19)
 decreases
 func (d *Decoded) IsXover(ghost ubuf []byte) bool {
-    unfold acc(d.Mem(ubuf), R19)
-    defer fold acc(d.Mem(ubuf), R19)
-    return d.Base.IsXover()
+	unfold acc(d.Mem(ubuf), R19)
+	defer fold acc(d.Mem(ubuf), R19)
+	return d.Base.IsXover()
 }
 
 /**
@@ -113,6 +113,28 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 	return e
 }
 
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) ValidCurrINF(ghost ub []byte) bool {
+	return unfolding acc(d.Mem(ub), _) in
+		d.Base.ValidCurrINF()
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) GetNumINF(ghost ub []byte) (res int) {
+	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumINF()
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) GetNumHops(ghost ub []byte) (res int) {
+	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumHops()
+}
+
 /**** End of Stubs ****/
 
 /**** Auxiliary Functions ****/
@@ -127,6 +149,14 @@ requires acc(d.Mem(ubuf), _)
 decreases
 pure func (d *Decoded) getLenHopFields(ubuf []byte) int {
 	return unfolding acc(d.Mem(ubuf), _) in len(d.HopFields)
+}
+
+ghost
+requires acc(d.Mem(ubuf), _)
+decreases
+pure func (d *Decoded) GetBase(ubuf []byte) Base {
+	return unfolding acc(d.Mem(ubuf), _) in
+		(unfolding acc(d.Base.Mem(), _) in d.Base)
 }
 
 /**** End of Auxiliary Functions ****/
