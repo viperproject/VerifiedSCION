@@ -87,9 +87,13 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local
 	return some(v.IO_Internal_val1_2) in domain(s.ibuf) ==>
 		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 in ibuf_set)) &&
 		len(v.IO_Internal_val1_1.CurrSeg.Future) > 0 &&
+		len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 		let currseg := v.IO_Internal_val1_1.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
-		let traversedseg := dp.dp3s_iospec_bio3s_create_guard_traversedseg(currseg) in
+		let traversedseg := match v.IO_Internal_val1_4{
+			case none[IO_ifs] : dp.dp3s_iospec_bio3s_create_guard_traversedseg(currseg)
+			default : dp.dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg)
+		} in
 		dp.dp2_enter_guard(
 			v.IO_Internal_val1_1,
 			currseg,
@@ -139,6 +143,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_sta
 			(nextseg.ConsDir &&
 			len(nextseg.Future) > 0 &&
 			len(currseg.Future) > 0 &&
+			len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 			let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
 			let traversedseg := dp.dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg) in
 			(dp.xover_up2down2_link_type(dp.asid(), hf1, hf2) &&
@@ -187,6 +192,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_
 				currseg.ConsDir == nextseg.ConsDir &&
 				len(nextseg.Future) > 0 &&
 				len(currseg.Future) > 0 &&
+				len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 				let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
 				let traversedseg := dp.dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg) in
 				(dp.xover_core2_link_type(hf1, hf2, dp.asid(), currseg.ConsDir) &&
@@ -230,6 +236,8 @@ decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return none[IO_ifs] in domain(s.ibuf) ==>
 		(let ibuf_set := s.ibuf[none[IO_ifs]] in (v.IO_Internal_val2_1 in ibuf_set)) &&
+		len(v.IO_Internal_val2_1.CurrSeg.Future) > 0 &&
+		len(v.IO_Internal_val2_2.CurrSeg.Future) > 0 &&
 		dp.dp3s_forward_ext(v.IO_Internal_val2_1, v.IO_Internal_val2_2, v.IO_Internal_val2_3)
 }
 

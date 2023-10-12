@@ -38,17 +38,20 @@ type TopologySpec adt {
 
 ghost
 requires ifs in domain(dp.linkTypes)
+decreases
 pure func (dp DataPlaneSpec) getLinkType(ifs IO_ifs) IO_Link {
 	return dp.linkTypes[ifs]
 }
 
 ghost
 requires ifs in domain(dp.neighborIAs)
+decreases
 pure func (dp DataPlaneSpec) getNeighborIA(ifs IO_ifs) IO_as {
 	return dp.neighborIAs[ifs]
 }
 
 ghost
+decreases
 pure func (dp DataPlaneSpec) getLocalIA() IO_as {
 	return dp.localIA
 }

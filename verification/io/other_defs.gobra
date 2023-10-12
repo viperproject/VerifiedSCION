@@ -37,7 +37,7 @@ type IO_ifs uint16
 type IO_as uint
 
 // router ids
-type IO_rid uint
+//type IO_rid uint
 
 // msgTerms consist of terms from our term algebra.
 type IO_msgterm adt {
@@ -48,7 +48,7 @@ type IO_msgterm adt {
 	}
 
 	MsgTerm_Num {
-		MsgTerm_Num_ int // formallized as nat in Isabelle
+		MsgTerm_Num_ uint // formallized as nat in Isabelle
 	}
 
 	MsgTerm_Key {
@@ -60,7 +60,7 @@ type IO_msgterm adt {
 	}
 
 	MsgTerm_FS {
-		MsgTerm_FS_ seq[IO_msgterm]
+		MsgTerm_FS_ set[IO_msgterm]
 	}
 
 	MsgTerm_MPair {
@@ -149,41 +149,66 @@ type IO_Link adt {
 // However, it is not clear at the moment how these should be translated to Gobra and whether they
 // should have proof obligations attached, or can just be assumed to exist.
 
+// ghost
+// decreases
+// pure func (dp DataPlaneSpec) rid_as(p IO_rid) IO_as
+
+//TODO: should be put p1 == dp.getLocalIA in the precondition?
+//There is some freedom in how to define the function
 ghost
 decreases
-pure func (dp DataPlaneSpec) rid_as(p IO_rid) IO_as
+pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link{
+	return match p1 {
+		case dp.getLocalIA() : p2 in domain(dp.linkTypes) ? dp.linkTypes[p2] : IO_NoLink{}
+		default : IO_NoLink{}
+	}
+}
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link
+pure func (dp DataPlaneSpec) egif_prov2(hf1 IO_HF, asid IO_as) bool{
+	return dp.egif2_type(hf1, asid, IO_Link(IO_CustProv{}))
+}
+
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) egif_prov2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) egif_core2(hf1 IO_HF, asid IO_as) bool{
+	return dp.egif2_type(hf1, asid, IO_Link(IO_PeerOrCore{}))
+}
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) egif_core2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) egif_cust2(hf1 IO_HF, asid IO_as) bool{
+	return dp.egif2_type(hf1, asid, IO_Link(IO_ProvCust{}))
+}
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) egif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) inif_cust2(hf1 IO_HF, asid IO_as) bool{
+	return dp.inif2_type(hf1, asid, IO_Link(IO_ProvCust{}))
+}
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) inif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) inif_core2(hf1 IO_HF, asid IO_as) bool{
+	return dp.inif2_type(hf1, asid, IO_Link(IO_PeerOrCore{}))
+}
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) inif_core2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) inif_prov2(hf1 IO_HF, asid IO_as) bool{
+	return dp.inif2_type(hf1, asid, IO_Link(IO_CustProv{}))
+}
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) inif_prov2(hf1 IO_HF, asid IO_as) bool
-
-ghost
-decreases
-pure func (dp DataPlaneSpec) if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool
+pure func (dp DataPlaneSpec) if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool{
+	return match ifs {
+		case none[IO_ifs] : false
+		default : dp.link_type(asid, get(ifs)) == link
+	}
+}
 
 type ext2_rec struct {
 	op1 IO_as
@@ -213,10 +238,10 @@ type IO_dp2_state adt {
 // decreases
 // pure func dp2_in_ext(s IO_dp2_state, asid IO_as, ifs IO_ifs, pkt IO_pkt2) bool
 
-// TODO: how is this defined?
-// extract_asid
 ghost
 decreases
-pure func (m IO_msgterm) extract_asid() IO_as
+pure func (m IO_msgterm) extract_asid() IO_as{
+	return m.MsgTerm_Hash_.MsgTerm_MPair_1.MsgTerm_Key_.Key_macK_
+}
 
 /* End of To clarify */
