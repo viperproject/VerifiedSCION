@@ -201,17 +201,17 @@ type IO_dp2_state adt {
 	}
 }
 
-ghost
-decreases
-pure func dp2_add_ext(s, sprime IO_dp2_state, asid IO_as, nextif IO_ifs, newpkt IO_pkt2) bool
+// ghost
+// decreases
+// pure func dp2_add_ext(s, sprime IO_dp2_state, asid IO_as, nextif IO_ifs, newpkt IO_pkt2) bool
 
-ghost
-decreases
-pure func dp2_add_int(s, sprime IO_dp2_state, asid IO_as, newpkt IO_pkt2) bool
+// ghost
+// decreases
+// pure func dp2_add_int(s, sprime IO_dp2_state, asid IO_as, newpkt IO_pkt2) bool
 
-ghost
-decreases
-pure func dp2_in_ext(s IO_dp2_state, asid IO_as, ifs IO_ifs, pkt IO_pkt2) bool
+// ghost
+// decreases
+// pure func dp2_in_ext(s IO_dp2_state, asid IO_as, ifs IO_ifs, pkt IO_pkt2) bool
 
 // TODO: how is this defined?
 // extract_asid

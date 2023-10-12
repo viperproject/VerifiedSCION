@@ -51,7 +51,7 @@ ghost
 decreases
 pure func (dp DataPlaneSpec) dp3s_add_ibuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
 	return IO_dp3s_state_local_{
-		ibuf: dp.insert(s.ibuf, i, pkt),
+		ibuf: insert(s.ibuf, i, pkt),
 		obuf: s.obuf,
 	}
 }
@@ -61,14 +61,14 @@ decreases
 pure func (dp DataPlaneSpec) dp3s_add_obuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
 	return IO_dp3s_state_local_{
 		ibuf: s.ibuf,
-		obuf: dp.insert(s.obuf, i, pkt),
+		obuf: insert(s.obuf, i, pkt),
 	}
 }
 
 // helper func
 ghost
 decreases
-pure func (dp DataPlaneSpec) insert(buf dict[option[IO_ifs]](set[IO_pkt3]), k option[IO_ifs], v IO_pkt3) dict[option[IO_ifs]](set[IO_pkt3]) {
+pure func insert(buf dict[option[IO_ifs]](set[IO_pkt3]), k option[IO_ifs], v IO_pkt3) dict[option[IO_ifs]](set[IO_pkt3]) {
 	return let newSet := (k in domain(buf)? (let pre := buf[k] in pre union set[IO_pkt3]{v}) : set[IO_pkt3]{v}) in
 		buf[k = newSet]
 }
@@ -89,7 +89,6 @@ pure func (dp DataPlaneSpec) dp3s_forward(m IO_pkt3, newpkt IO_pkt3, nextif opti
 		case none[IO_ifs] : newpkt == m
 		default : dp.dp3s_forward_ext(m, newpkt, get(nextif))
 	}
-	//nextif == none[IO_ifs] ? newpkt == m : dp.dp3s_forward_ext(m, newpkt, get(nextif))
 }
 
 ghost
