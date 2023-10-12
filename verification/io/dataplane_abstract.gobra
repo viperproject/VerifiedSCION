@@ -18,45 +18,37 @@
 package io
 
 
-type Abs_Dataplane adt {
-	Abs_Dataplane_ {
+type DataPlaneSpec adt {
+	DataPlaneSpec_{
 		//external          seq[IO_ifs]
-		linkTypes         dict[IO_ifs]IO_Link
-		neighborIAs       dict[IO_ifs]IO_as
-		internal          IO_ifs //TODO: propably not needed, = 0
-		localIA           IO_as
-		running           bool //TODO: needed?
+		linkTypes		dict[IO_ifs]IO_Link
+		neighborIAs     dict[IO_ifs]IO_as
+		internal        IO_ifs //TODO: propably not needed, = 0
+		localIA         IO_as
+		topology 		TopologySpec
 	}
 }
 
-// ghost 
-// requires acc(dp, _)
-// pure func (dp *Abs_Dataplane) (ifs IO_ifs) seq[IO_ifs] {
-// 	return dp.external
-// }
+type TopologySpec adt {
+	TopologySpec_{
+		core_as_set     set[IO_as]
+		links	 		dict[IO_as](dict[IO_ifs]IO_as)
+	}
+}
 
 ghost
-//requires acc(dp, _)
 requires ifs in domain(dp.linkTypes)
-pure func (dp Abs_Dataplane) getLinkType(ifs IO_ifs) IO_Link {
+pure func (dp DataPlaneSpec) getLinkType(ifs IO_ifs) IO_Link {
 	return dp.linkTypes[ifs]
 }
 
 ghost
-//requires acc(dp, _)
 requires ifs in domain(dp.neighborIAs)
-pure func (dp Abs_Dataplane) getNeighborIA(ifs IO_ifs) IO_as {
+pure func (dp DataPlaneSpec) getNeighborIA(ifs IO_ifs) IO_as {
 	return dp.neighborIAs[ifs]
 }
 
 ghost
-//requires acc(dp, _)
-pure func (dp Abs_Dataplane) getLocalIA() IO_as {
+pure func (dp DataPlaneSpec) getLocalIA() IO_as {
 	return dp.localIA
-}
-
-ghost
-//requires acc(dp, _)
-pure func (dp Abs_Dataplane) isRunning() bool {
-	return dp.running
 }

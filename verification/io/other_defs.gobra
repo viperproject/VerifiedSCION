@@ -151,39 +151,39 @@ type IO_Link adt {
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) rid_as(p IO_rid) IO_as
+pure func (dp DataPlaneSpec) rid_as(p IO_rid) IO_as
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) link_type(p1 IO_as, p2 IO_ifs) IO_Link
+pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) egif_prov2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) egif_prov2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) egif_core2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) egif_core2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) egif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) egif_cust2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) inif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) inif_cust2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) inif_core2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) inif_core2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) inif_prov2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) inif_prov2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool
+pure func (dp DataPlaneSpec) if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool
 
 type ext2_rec struct {
 	op1 IO_as

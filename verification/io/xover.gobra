@@ -38,7 +38,7 @@ package io
 // the new segment that we are xovering over to.
 ghost
 decreases
-pure func (dp Abs_Dataplane) dp2_xover_common_guard(m IO_pkt2,
+pure func (dp DataPlaneSpec) dp2_xover_common_guard(m IO_pkt2,
 	currseg IO_seg2,
 	nextseg IO_seg2,
 	traversedseg IO_seg2,
@@ -68,7 +68,7 @@ pure func (dp Abs_Dataplane) dp2_xover_common_guard(m IO_pkt2,
 //
 // ghost
 // decreases
-// pure func (dp Abs_Dataplane) dp2_xover_common(
+// pure func (dp DataPlaneSpec) dp2_xover_common(
 // 	s IO_dp2_state,
 // 	m IO_pkt2,
 // 	currseg IO_seg2,
@@ -87,19 +87,19 @@ pure func (dp Abs_Dataplane) dp2_xover_common_guard(m IO_pkt2,
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) egif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
+pure func (dp DataPlaneSpec) egif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
 	return dp.if_type(a, hf.EgIF2, link)
 }
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) inif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
+pure func (dp DataPlaneSpec) inif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
 	return dp.if_type(a, hf.InIF2, link)
 }
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
+pure func (dp DataPlaneSpec) xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
 	return (dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_ProvCust{})) ||
 	(dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_PeerOrCore{})) ||
 	(dp.egif2_type(hf1, asid, IO_PeerOrCore{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
@@ -127,7 +127,7 @@ pure func (dp Abs_Dataplane) xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2
 
 ghost
 decreases
-pure func (dp Abs_Dataplane) xover_core2_link_type(hf1 IO_HF, hf2 IO_HF, asid IO_as, d bool) bool {
+pure func (dp DataPlaneSpec) xover_core2_link_type(hf1 IO_HF, hf2 IO_HF, asid IO_as, d bool) bool {
 	return (!d && dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.inif2_type(hf2, asid, IO_PeerOrCore{})) ||
 		(d && dp.inif2_type(hf1, asid, IO_PeerOrCore{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
 }
