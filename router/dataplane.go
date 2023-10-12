@@ -2674,9 +2674,9 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-// TODO: require that the pathMetaHdr is in a valid position (via a pure fn defined on slayers.SCION)
 // @ requires  acc(&p.d, _) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R4)
+// @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires  acc(&p.ingressID,  R15)
 // @ ensures   acc(p.scionLayer.Mem(ub), R4)
@@ -2742,7 +2742,6 @@ func (p *scionPacketProcessor) prepareSCMP(
 	assert pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*epic.Path]
 	sl.SplitRange_Bytes(ub, startP, endP, writePerm)
 	@*/
-	// TODO: Preserve Validity of the path here
 	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
 		/*@
@@ -2807,19 +2806,22 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
 	_, external := p.d.external[p.ingressID]
 	if external {
+		// @ requires revPath.Mem(rawPath)
+		// @ requires revPath.ValidCurrIdxs(rawPath)
+		// @ ensures  revPath.Mem(rawPath)
+		// @ decreases
+		// @ outline(
 		// @ unfold revPath.Mem(rawPath)
 		// @ unfold revPath.Base.Mem()
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
-		// @ assert revPath.PathMeta.CurrINF < len(revPath.InfoFields)
-		// @ assert forall i int :: { &revPath.InfoFields[i] } 0 <= i && i < len(revPath.InfoFields) ==> acc(&revPath.InfoFields[i])
-		// @ assert acc(&revPath.InfoFields[revPath.PathMeta.CurrINF])
-		// @ assert acc(infoField)
 		if infoField.ConsDir {
-			hopField := revPath.HopFields[revPath.PathMeta.CurrHF]
+			hopField := /*@ unfolding acc(revPath.HopFields[revPath.PathMeta.CurrHF].Mem(), _) in @*/
+				revPath.HopFields[revPath.PathMeta.CurrHF]
 			infoField.UpdateSegID(hopField.Mac)
 		}
 		// @ fold revPath.Base.Mem()
 		// @ fold revPath.Mem(rawPath)
+		// @ )
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
 			/*@
 			sl.CombineRange_Bytes(ub, startP, endP, writePerm)
@@ -2837,7 +2839,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
-	// @ assume false
+	// @ TODO()
 
 	// create new SCION header for reply.
 	var scionL /*@@@*/ slayers.SCION

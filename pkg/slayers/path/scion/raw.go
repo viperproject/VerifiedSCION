@@ -131,7 +131,10 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
 // @ preserves acc(s.Mem(ubuf), R5)
 // @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ ensures   err == nil ==> d.Mem(s.RawBufferMem(ubuf))
+// @ ensures   err == nil ==> (
+// @ 	let newUb := s.RawBufferMem(ubuf) in
+// @ 	d.Mem(newUb) &&
+// @ 	(old(s.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(newUb)))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {

@@ -180,6 +180,18 @@ pred (s *SCION) Mem(ubuf []byte) {
 	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
 }
 
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *SCION) ValidPathMetaData(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		let ubPath := s.UBPath(ub) in
+		(typeOf(s.Path) == type[*scion.Raw] ==>
+			s.Path.(*scion.Raw).ValidCurrIdxs(ubPath)) &&
+		(typeOf(s.Path) == type[*epic.Path] ==>
+			s.Path.(*epic.Path).ValidCurrIdxs(ubPath))
+}
+
 // TODO: simplify the body of the predicate when let expressions
 //       support predicates
 pred (s *SCION) HeaderMem(ubuf []byte) {
