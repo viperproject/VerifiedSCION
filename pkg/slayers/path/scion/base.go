@@ -237,7 +237,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // scion.MetaLen.
 // @ requires  len(b) >= MetaLen
-// @ preserves acc(m, R10)
+// @ preserves acc(m, R50)
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   e == nil
 // @ decreases
