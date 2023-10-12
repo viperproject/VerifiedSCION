@@ -42,3 +42,8 @@ lemma Shift30LessThan4(b: bv32)
     ensures var res := b >> 30;
         0 <= res <= 3
 {}
+
+lemma And3fAtMost64(b: bv8)
+    ensures var res := b & 0x3F;
+        0 <= res < 64
+{}

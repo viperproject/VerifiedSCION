@@ -93,7 +93,8 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant -1 <= i && i <= 2
 	//@ invariant acc(s)
 	//@ invariant metaHdrCpy == s.PathMeta
-	//@ invariant 0 <= s.NumHops && 0 <= s.NumINF && s.NumINF <= 3
+	//@ invariant 0 <= s.NumHops
+	//@ invariant 0 <= s.NumINF && s.NumINF <= 3
 	//@ invariant 0 < s.NumINF ==> 0 < s.NumHops
 	//@ decreases i
 	for i := 2; i >= 0; i-- {
@@ -211,8 +212,9 @@ type MetaHdr struct {
 // @ preserves acc(m)
 // @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
-// @ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrHF >= 0)
-// @ ensures   e == nil ==> m.CurrINF <= 3
+// @ ensures   e == nil ==> (
+// @ 	0 <= m.CurrINF && m.CurrINF <= 3 &&
+// @ 	0 <= m.CurrHF && m.CurrHF < 64)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
@@ -222,11 +224,10 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	}
 	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
 	line := binary.BigEndian.Uint32(raw)
-	//@ bit.Shift30LessThan4(line)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
-	// (VerifiedSCION) The following assumption is guaranteed by Go but still not modeled in Gobra.
-	//@ assume m.CurrINF >= 0 && m.CurrHF >= 0
+	//@ bit.Shift30LessThan4(line)
+	//@ bit.And3fAtMost64(uint8(line>>24))
 	m.SegLen[0] = uint8(line>>12) & 0x3F
 	m.SegLen[1] = uint8(line>>6) & 0x3F
 	m.SegLen[2] = uint8(line) & 0x3F

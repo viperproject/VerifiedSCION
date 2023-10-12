@@ -45,4 +45,11 @@ func BitAnd7(b int) (res int)
 ghost
 ensures res == b >> 30
 ensures 0 <= res && res <= 3
+decreases
 pure func Shift30LessThan4(b uint32) (res uint32)
+
+ghost
+ensures res == b & 0x3F
+ensures 0 <= res && res < 64
+decreases
+pure func And3fAtMost64(b uint8) (res uint8)
