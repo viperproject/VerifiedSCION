@@ -2785,7 +2785,6 @@ func (p *scionPacketProcessor) prepareSCMP(
 
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover( /*@ rawPath @*/ ) {
-		// TODO: preserve validity of the path here
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
 			/*@
 			sl.CombineRange_Bytes(ub, startP, endP, writePerm)

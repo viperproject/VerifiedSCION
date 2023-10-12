@@ -41,21 +41,50 @@ pred (b *Base) Mem() {
 }
 
 ghost
+decreases
+pure func (b Base) ValidCurrInfSpec() bool {
+	return 0 <= b.PathMeta.CurrINF && b.PathMeta.CurrINF < b.NumINF
+}
+
+ghost
+decreases
+pure func (b Base) ValidCurrHfSpec() bool {
+	return 0 <= b.PathMeta.CurrHF && b.PathMeta.CurrHF < b.NumHops
+}
+
+ghost
+decreases
+pure func (b Base) ValidCurrIdxsSpec() bool {
+	return b.ValidCurrHfSpec() &&
+		b.ValidCurrInfSpec() &&
+		0 <= b.PathMeta.SegLen[0] &&
+		0 <= b.PathMeta.SegLen[1] &&
+		0 <= b.PathMeta.SegLen[2] &&
+		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0])) &&
+		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
+		b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+}
+
+ghost
 requires acc(b.Mem(), _)
 decreases
 pure func (b *Base) ValidCurrINF() bool {
-	return unfolding acc(b.Mem(), _) in (
-		0 <= b.PathMeta.CurrINF &&
-		b.PathMeta.CurrINF < b.NumINF)
+	return unfolding acc(b.Mem(), _) in (*b).ValidCurrInfSpec()
 }
 
 ghost
 requires acc(b.Mem(), _)
 decreases
 pure func (b *Base) ValidCurrHF() bool {
-	return unfolding acc(b.Mem(), _) in (
-		0 <= b.PathMeta.CurrHF &&
-		b.PathMeta.CurrHF < b.NumHops)
+	return unfolding acc(b.Mem(), _) in (*b).ValidCurrHfSpec()
+}
+
+ghost
+requires acc(b.Mem(), _)
+decreases
+pure func (b *Base) ValidCurrIdxs() bool {
+	return unfolding acc(b.Mem(), _) in (*b).ValidCurrIdxsSpec()
 }
 
 ghost
@@ -109,8 +138,9 @@ pure func (s *Base) IsXoverSpec() bool {
 ghost
 requires s.NumINF != 0
 requires int(s.PathMeta.CurrHF) < s.NumHops-1
+ensures  s.ValidCurrIdxsSpec() ==> res.ValidCurrIdxsSpec()
 decreases
-pure func (s Base) IncPathSpec() Base {
+pure func (s Base) IncPathSpec() (res Base) {
 	return Base{
 		PathMeta: MetaHdr{s.InfForHfSpec(s.PathMeta.CurrHF+1), s.PathMeta.CurrHF+1, s.PathMeta.SegLen},
 		NumINF: s.NumINF,

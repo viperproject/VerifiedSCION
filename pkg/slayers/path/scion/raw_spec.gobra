@@ -103,6 +103,7 @@ requires acc(s.Mem(ub), _)
 decreases
 pure func (s *Raw) ValidCurrINF(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
+		unfolding acc(s.Base.Mem(), _) in
 		s.Base.ValidCurrINF()
 }
 
@@ -111,6 +112,7 @@ requires acc(s.Mem(ub), _)
 decreases
 pure func (s *Raw) ValidCurrHF(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
+		unfolding acc(s.Base.Mem(), _) in
 		s.Base.ValidCurrHF()
 }
 

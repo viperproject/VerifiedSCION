@@ -208,6 +208,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @	p.Mem(ubuf)                 &&
 // @	p == s                      &&
 // @	typeOf(p) == type[*Decoded] &&
+// TODO: following and delete next line (old(s.ValidCurrIdxs(ubuf)) ==> s.ValidCurrIdxs(ubuf)))
 // @	(old(s.ValidCurrINF(ubuf)) ==> s.ValidCurrINF(ubuf)))
 // @ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
 // @ decreases

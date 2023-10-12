@@ -97,10 +97,11 @@ func (d *Decoded) IsXover(ghost ubuf []byte) bool {
   * which can be extremely cumbersome.
   */
 requires d.Mem(ubuf)
-ensures  e == nil ==> d.Mem(ubuf)
-ensures  e == nil ==> d.Len(ubuf) == old(d.Len(ubuf))
-ensures  e != nil ==> d.NonInitMem()
-ensures  e != nil ==> e.ErrorMem()
+ensures  e == nil ==> (
+	d.Mem(ubuf) &&
+	d.Len(ubuf) == old(d.Len(ubuf)) &&
+	(old(d.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(ubuf)))
+ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 	unfold d.Mem(ubuf)
@@ -117,16 +118,21 @@ ghost
 requires acc(d.Mem(ub), _)
 decreases
 pure func (d *Decoded) ValidCurrINF(ghost ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in
-		d.Base.ValidCurrINF()
+	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrINF()
 }
 
 ghost
 requires acc(d.Mem(ub), _)
 decreases
 pure func (d *Decoded) ValidCurrHF(ghost ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in
-		d.Base.ValidCurrHF()
+	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrHF()
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) ValidCurrIdxs(ghost ub []byte) bool {
+	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrIdxs()
 }
 
 ghost
