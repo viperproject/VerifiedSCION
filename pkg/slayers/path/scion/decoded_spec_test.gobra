@@ -33,5 +33,5 @@ func testAllocateDecoded() {
 	assert d.Base.Len() == MetaLen
 	b := make([]byte, MetaLen)
 	fold slices.AbsSlice_Bytes(b, 0, MetaLen)
-	fold d.Mem(b)
+	fold d.Mem()
 }

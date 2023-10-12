@@ -28,13 +28,21 @@ pred (s *Raw) NonInitMem() {
 	s.Base.NonInitMem()
 }
 
-pred (s *Raw) Mem(buf []byte) {
+pred (s *Raw) Mem() {
 	s.Base.Mem() &&
-	acc(&s.Raw) &&
-	len(s.Raw) <= len(buf) &&
-	s.Raw === buf[:len(s.Raw)] &&
-	len(s.Raw) == s.Base.Len()
+	acc(&s.Raw)
 }
+
+ghost
+requires acc(s.Mem(), _)
+decreases
+pure func (s *Raw) Valid(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(), _) in
+		len(s.Raw) <= len(ub) &&
+		s.Raw === ub[:len(s.Raw)] &&
+		len(s.Raw) == s.Base.Len()
+}
+
 /**** End of Predicates ****/
 
 (*Raw) implements path.Path
@@ -47,11 +55,10 @@ pred (s *Raw) Mem(buf []byte) {
   * introduced this wrapper method which acts as a wrapper.
   */
 pure
-requires acc(s.Mem(buf), _)
-ensures  unfolding acc(s.Mem(buf), _) in t == s.Base.Type()
+requires acc(s.Mem(), _)
 decreases
 func (s *Raw) Type(ghost buf []byte) (t path.Type) {
-	return unfolding acc(s.Mem(buf), _) in s.Base.Type()
+	return unfolding acc(s.Mem(), _) in s.Base.Type()
 }
 
 /**
@@ -61,12 +68,11 @@ func (s *Raw) Type(ghost buf []byte) (t path.Type) {
   * introduced this wrapper method which acts as a wrapper.
   */
 pure
-requires acc(s.Mem(buf), _)
-ensures  unfolding acc(s.Mem(buf), _) in l == s.Base.Len()
+requires acc(s.Mem(), _)
 ensures  l >= 0
 decreases
 func (s *Raw) Len(ghost buf []byte) (l int) {
-	return unfolding acc(s.Mem(buf), _) in s.Base.Len()
+	return unfolding acc(s.Mem(), _) in s.Base.Len()
 }
 
 /**
@@ -75,12 +81,12 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(ub), R18)
-ensures   res ==> 0 < s.GetCurrINF(ub) && 0 < s.GetCurrHF(ub)
+preserves acc(s.Mem(), R18) && s.Valid(ub)
+ensures   res ==> 0 < s.GetCurrINF() && 0 < s.GetCurrHF()
 decreases
 func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
-	unfold acc(s.Mem(ub), R18)
-	defer fold acc(s.Mem(ub), R18)
+	unfold acc(s.Mem(), R18)
+	defer fold acc(s.Mem(), R18)
 	return s.Base.IsFirstHopAfterXover()
 }
 
@@ -90,11 +96,11 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(ub), R9)
+preserves acc(s.Mem(), R9) && s.Valid(ub)
 decreases
 func (s *Raw) IsXover(ghost ub []byte) bool {
-	unfold acc(s.Mem(ub), R9)
-	defer fold acc(s.Mem(ub), R9)
+	unfold acc(s.Mem(), R9)
+	defer fold acc(s.Mem(), R9)
 	return s.Base.IsXover()
 }
 /**** End of Stubs ****/
@@ -102,12 +108,12 @@ func (s *Raw) IsXover(ghost ub []byte) bool {
 /**** Lemmas ****/
 
 ghost
-requires s.Mem(buf)
+requires s.Mem() && s.Valid(buf)
 ensures  s.NonInitMem()
-ensures  old(s.RawBufferMem(buf)) === s.RawBufferNonInitMem()
+ensures  old(s.RawBufferMem()) === s.RawBufferNonInitMem()
 decreases
 func (s *Raw) DowngradePerm(buf []byte) {
-	unfold s.Mem(buf)
+	unfold s.Mem()
 	unfold s.Base.Mem()
 	fold s.Base.NonInitMem()
 	fold s.NonInitMem()
@@ -128,28 +134,28 @@ ghost
 requires 0 < p
 requires acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
 requires r.RawPermRemainder(ubuf, p)
-ensures  acc(r.Mem(ubuf), p)
+ensures  acc(r.Mem(), p) && r.Valid(ubuf)
 ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 decreases
 func (r *Raw) UndoRawPerm(ubuf []byte, p perm) {
 	unfold r.RawPermRemainder(ubuf, p)
 	slices.Unslice_Bytes(ubuf, 0, len(r.Raw), p)
 	slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
-	fold acc(r.Mem(ubuf), p)
+	fold acc(r.Mem(), p)
 }
 
 ghost
 requires 0 < p
-requires acc(r.Mem(ubuf), p)
+requires acc(r.Mem(), p) && r.Valid(ubuf)
 requires acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 ensures  acc(&r.Raw, p/2)
 ensures  acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p)
 ensures  acc(r.Base.Mem(), p/2)
 ensures  r.RawPermRemainder(ubuf, p)
-ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
+ensures  r.Raw === old(unfolding acc(r.Mem(), p) in r.Raw)
 decreases
 func (r *Raw) RawPerm(ubuf []byte, p perm) {
-	unfold acc(r.Mem(ubuf), p)
+	unfold acc(r.Mem(), p)
 	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
 	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
 	fold r.RawPermRemainder(ubuf, p)
@@ -174,28 +180,28 @@ requires acc(&r.Raw, p/2)
 requires 0 <= idx && idx <= len(r.Raw)
 requires acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
 requires r.RawIdxPermRemainder(ubuf, idx, p)
-ensures  acc(r.Mem(ubuf), p)
+ensures  acc(r.Mem(), p) && r.Valid(ubuf)
 ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 decreases
 func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
 	unfold r.RawIdxPermRemainder(ubuf, idx, p)
 	slices.Unslice_Bytes(ubuf, 0, idx, p)
 	slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
-	fold acc(r.Mem(ubuf), p)
+	fold acc(r.Mem(), p)
 }
 
 ghost
 requires 0 < p
-requires acc(r.Mem(ubuf), p)
+requires acc(r.Mem(), p) && r.Valid(ubuf)
 requires acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-requires 0 <= idx && idx <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
+requires 0 <= idx && idx <= unfolding acc(r.Mem(), p) in len(r.Raw)
 ensures  acc(&r.Raw, p/2)
-ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
+ensures  r.Raw === old(unfolding acc(r.Mem(), p) in r.Raw)
 ensures  acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
 ensures  r.RawIdxPermRemainder(ubuf, idx, p)
 decreases
 func (r *Raw) RawIdxPerm(ubuf []byte, idx int, p perm) {
-	unfold acc(r.Mem(ubuf), p)
+	unfold acc(r.Mem(), p)
 	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
 	slices.Reslice_Bytes(ubuf, 0, idx, p)
 	fold r.RawIdxPermRemainder(ubuf, idx, p)
@@ -222,7 +228,7 @@ requires acc(&r.Raw, p/2)
 requires 0 <= start && start <= end && end <= len(r.Raw)
 requires acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
 requires r.RawRangePermRemainder(ubuf, start, end, p)
-ensures  acc(r.Mem(ubuf), p)
+ensures  acc(r.Mem(), p) && r.Valid(ubuf)
 ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 decreases
 func (r *Raw) UndoRawRangePerm(ubuf []byte, start, end int, p perm) {
@@ -237,16 +243,16 @@ func (r *Raw) UndoRawRangePerm(ubuf []byte, start, end int, p perm) {
 // Notice that no permission to r.Base.Mem() is provided, unlike the previous methods
 ghost
 requires 0 < p
-requires acc(r.Mem(ubuf), p)
+requires acc(r.Mem(), p) && r.Valid(ubuf)
 requires acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-requires 0 <= start && start <= end && end <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
+requires 0 <= start && start <= end && end <= unfolding acc(r.Mem(), p) in len(r.Raw)
 ensures  acc(&r.Raw, p/2)
-ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
+ensures  r.Raw === old(unfolding acc(r.Mem(), p) in r.Raw)
 ensures  acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
 ensures  r.RawRangePermRemainder(ubuf, start, end, p)
 decreases
 func (r *Raw) RawRangePerm(ubuf []byte, start, end int, p perm) {
-	unfold acc(r.Mem(ubuf), p)
+	unfold acc(r.Mem(), p)
 	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
 	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
 	slices.SplitByIndex_Bytes(r.Raw, 0, len(r.Raw), start, p)
@@ -257,53 +263,55 @@ func (r *Raw) RawRangePerm(ubuf []byte, start, end int, p perm) {
 /******** End of Lemma: RawRangePerm ********/
 
 ghost
-requires r.Mem(ubuf1)
+requires r.Mem() && r.Valid(ubuf1)
 requires len(ubuf1) <= len(ubuf2)
 requires ubuf1 === ubuf2[:len(ubuf1)]
-ensures  r.Mem(ubuf2)
+ensures  r.Mem() && r.Valid(ubuf2)
 decreases
 func (r *Raw) Widen(ubuf1, ubuf2 []byte) {
-	unfold r.Mem(ubuf1)
-	fold r.Mem(ubuf2)
+	unfold r.Mem()
+	fold r.Mem()
 }
 
 /**** End of Lemmas ****/
 
 /**** Start of helpful pure functions ****/
 ghost
-requires acc(r.Mem(ub), _)
+requires acc(r.Mem(), _)
 decreases
-pure func (r *Raw) GetNumINF(ghost ub []byte) int {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.NumINF)
+pure func (r *Raw) GetNumINF() int {
+	return unfolding acc(r.Mem(), _) in (unfolding acc(r.Base.Mem(), _) in r.NumINF)
 }
 
 ghost
-requires acc(r.Mem(ub), _)
+requires acc(r.Mem(), _)
 decreases
-pure func (r *Raw) GetNumHops(ghost ub []byte) int {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.NumHops)
+pure func (r *Raw) GetNumHops() int {
+	return unfolding acc(r.Mem(), _) in (unfolding acc(r.Base.Mem(), _) in r.NumHops)
 }
 
 ghost
-requires acc(r.Mem(ub), _)
+requires acc(r.Mem(), _)
 decreases
-pure func (r *Raw) GetCurrINF(ghost ub []byte) uint8 {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrINF)
+pure func (r *Raw) GetCurrINF() uint8 {
+	return unfolding acc(r.Mem(), _) in
+		(unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrINF)
 }
 
 ghost
-requires acc(r.Mem(ub), _)
+requires acc(r.Mem(), _)
 decreases
-pure func (r *Raw) GetCurrHF(ghost ub []byte) uint8 {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrHF)
+pure func (r *Raw) GetCurrHF() uint8 {
+	return unfolding acc(r.Mem(), _) in
+		(unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrHF)
 }
 
 ghost
 pure
-requires acc(s.Mem(buf), _)
+requires acc(s.Mem(), _)
 decreases
-func (s *Raw) RawBufferMem(ghost buf []byte) []byte {
-	return unfolding acc(s.Mem(buf), _) in s.Raw
+func (s *Raw) RawBufferMem() []byte {
+	return unfolding acc(s.Mem(), _) in s.Raw
 }
 
 ghost

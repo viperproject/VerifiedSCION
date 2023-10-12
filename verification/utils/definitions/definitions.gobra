@@ -81,6 +81,7 @@ const (
 // from the router.
 ghost
 requires false
+decreases _
 func Unreachable()
 
 ghost

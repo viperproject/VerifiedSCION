@@ -34,7 +34,7 @@ type Raw struct {
 // as raw bytes.
 // @ requires  s.NonInitMem()
 // @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
-// @ ensures   res == nil ==> s.Mem(data)
+// @ ensures   res == nil ==> s.Mem() && s.Valid(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
@@ -52,25 +52,25 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 		return serrors.New("RawPath raw too short", "expected", pathLen, "actual", int(len(data)))
 	}
 	s.Raw = data[:pathLen]
-	//@ fold s.Mem(data)
+	//@ fold s.Mem()
 	return nil
 }
 
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-// @ preserves acc(s.Mem(ubuf), R1)
+// @ preserves acc(s.Mem(), R1) && s.Valid(ubuf)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
-	if /*@ unfolding acc(s.Mem(ubuf), _) in @*/ s.Raw == nil {
+	if /*@ unfolding acc(s.Mem(), _) in @*/ s.Raw == nil {
 		return serrors.New("raw is nil")
 	}
 	if minLen := s.Len( /*@ ubuf @*/ ); len(b) < minLen {
 		return serrors.New("buffer too small", "expected", minLen, "actual", len(b))
 	}
-	//@ unfold acc(s.Mem(ubuf), R1)
+	//@ unfold acc(s.Mem(), R1)
 	// XXX(roosd): This modifies the underlying buffer. Consider writing to data
 	// directly.
 	//@ unfold acc(s.Base.Mem(), R1)
@@ -89,16 +89,16 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), R2)
 	//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ fold acc(s.Mem(ubuf), R1)
+	//@ fold acc(s.Mem(), R1)
 	return nil
 }
 
 // Reverse reverses the path such that it can be used in the reverse direction.
-// @ requires  s.Mem(ubuf)
+// @ requires  s.Mem() && s.Valid(ubuf)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   err == nil ==> typeOf(p) == type[*Raw]
 // @ ensures   err == nil ==> p != nil && p != (*Raw)(nil)
-// @ ensures   err == nil ==> p.Mem(ubuf)
+// @ ensures   err == nil ==> p.Mem() && p.Valid(ubuf)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
@@ -109,18 +109,18 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	if err != nil {
 		return nil, err
 	}
-	reversed, err := decoded.Reverse( /*@ unfolding s.Mem(ubuf) in s.Raw @*/ )
+	reversed, err := decoded.Reverse( /*@ unfolding s.Mem() in s.Raw @*/ )
 	if err != nil {
 		return nil, err
 	}
-	//@ unfold s.Mem(ubuf)
+	//@ unfold s.Mem()
 	//@ slices.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	if err := reversed. /*@ (*Decoded). @*/ SerializeTo(s.Raw /*@, s.Raw @*/); err != nil {
 		//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 		return nil, err
 	}
 	//@ ghost sraw := s.Raw
-	//@ fold s.Mem(ubuf)
+	//@ fold s.Mem()
 	//@ s.DowngradePerm(ubuf)
 	err = s.DecodeFromBytes( /*@ unfolding s.NonInitMem() in @*/ s.Raw)
 	//@ slices.CombineRange_Bytes(ubuf, 0, len(sraw), writePerm)
@@ -129,9 +129,9 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 }
 
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
-// @ preserves s.Mem(ubuf)
+// @ preserves s.Mem() && s.Valid(ubuf)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ ensures   err == nil ==> d.Mem(unfolding acc(s.Mem(ubuf), _) in s.Raw)
+// @ ensures   err == nil ==> d.Mem() && d.Valid(unfolding acc(s.Mem(), _) in s.Raw)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
@@ -147,37 +147,37 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	decoded := &Decoded{}
 	//@ fold decoded.Base.NonInitMem()
 	//@ fold decoded.NonInitMem()
-	//@ unfold s.Mem(ubuf)
+	//@ unfold s.Mem()
 	//@ slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
 	//@ slices.Reslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
 		//@ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 		//@ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
-		//@ fold s.Mem(ubuf)
+		//@ fold s.Mem()
 		return nil, err
 	}
 	//@ slices.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
-	//@ fold s.Mem(ubuf)
+	//@ fold s.Mem()
 	return decoded, nil
 }
 
 // IncPath increments the path and writes it to the buffer.
-// @ requires s.Mem(ubuf)
+// @ requires s.Mem() && s.Valid(ubuf)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ ensures  old(unfolding s.Mem(ubuf) in unfolding
+// @ ensures  old(unfolding s.Mem() in unfolding
 // @   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
-// @ ensures  r == nil ==> s.Mem(ubuf)
+// @ ensures  r == nil ==> s.Mem() && s.Valid(ubuf)
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
-	//@ unfold s.Mem(ubuf)
+	//@ unfold s.Mem()
 	if err := s.Base.IncPath(); err != nil {
 		//@ fold s.NonInitMem()
 		return err
 	}
-	//@ fold s.Mem(ubuf)
+	//@ fold s.Mem()
 	//@ s.RawIdxPerm(ubuf, MetaLen, writePerm)
 	//@ unfold acc(s.Base.Mem(), 1/2)
 	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
@@ -187,24 +187,24 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 }
 
 // GetInfoField returns the InfoField at a given index.
-// @ requires  acc(s.Mem(ubuf), R10)
+// @ requires  acc(s.Mem(), R10) && s.Valid(ubuf)
 // @ requires  0 <= idx
 // @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
-// @ ensures   acc(s.Mem(ubuf), R10)
-// @ ensures   (idx < old(s.GetNumINF(ubuf))) == (err == nil)
+// @ ensures   acc(s.Mem(), R10) && s.Valid(ubuf)
+// @ ensures   (idx < old(s.GetNumINF())) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) {
-	//@ unfold acc(s.Mem(ubuf), R10)
+	//@ unfold acc(s.Mem(), R10)
 	//@ unfold acc(s.Base.Mem(), R11)
 	if idx >= s.NumINF {
 		e := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
 		//@ fold acc(s.Base.Mem(), R11)
-		//@ fold acc(s.Mem(ubuf), R10)
+		//@ fold acc(s.Mem(), R10)
 		return path.InfoField{}, e
 	}
 	//@ fold acc(s.Base.Mem(), R11)
-	//@ fold acc(s.Mem(ubuf), R10)
+	//@ fold acc(s.Mem(), R10)
 	infOffset := MetaLen + idx*path.InfoLen
 	info /*@@@*/ := path.InfoField{}
 	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, R10)
@@ -218,37 +218,37 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
-// @ preserves acc(s.Mem(ubuf), R8)
+// @ preserves acc(s.Mem(), R8) && s.Valid(ubuf)
 // @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R1)
-// @ ensures   (r == nil) == (s.GetCurrINF(ubuf) < s.GetNumINF(ubuf))
+// @ ensures   (r == nil) == (s.GetCurrINF() < s.GetNumINF())
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoField, r error) {
-	//@ unfold acc(s.Mem(ubuf), R9)
+	//@ unfold acc(s.Mem(), R9)
 	//@ unfold acc(s.Base.Mem(), R10)
 	idx := int(s.PathMeta.CurrINF)
 	// (VerifiedSCION) Cannot assert bounds of uint:
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
-	//@ fold acc(s.Mem(ubuf), R9)
+	//@ fold acc(s.Mem(), R9)
 	return s.GetInfoField(idx /*@, ubuf @*/)
 }
 
 // SetInfoField updates the InfoField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), R20)
+// @ preserves acc(s.Mem(), R20) && s.Valid(ubuf)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) {
 	//@ share info
-	//@ unfold acc(s.Mem(ubuf), R20)
+	//@ unfold acc(s.Mem(), R20)
 	//@ unfold acc(s.Base.Mem(), R20)
 	if idx >= s.NumINF {
 		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
 		//@ fold acc(s.Base.Mem(), R20)
-		//@ fold acc(s.Mem(ubuf), R20)
+		//@ fold acc(s.Mem(), R20)
 		return err
 	}
 	infOffset := MetaLen + idx*path.InfoLen
@@ -259,29 +259,29 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ slices.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
 	//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ fold acc(s.Base.Mem(), R20)
-	//@ fold acc(s.Mem(ubuf), R20)
+	//@ fold acc(s.Mem(), R20)
 	return ret
 }
 
 // GetHopField returns the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), R10)
+// @ preserves acc(s.Mem(), R10) && s.Valid(ubuf)
 // @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
-// @ ensures   (idx < old(s.GetNumHops(ubuf))) == (r == nil)
+// @ ensures   (idx < old(s.GetNumHops())) == (r == nil)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), R10)
+	//@ unfold acc(s.Mem(), R10)
 	//@ unfold acc(s.Base.Mem(), R11)
 	if idx >= s.NumHops {
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
 		//@ fold acc(s.Base.Mem(), R11)
-		//@ fold acc(s.Mem(ubuf), R10)
+		//@ fold acc(s.Mem(), R10)
 		return path.HopField{}, err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
 	//@ fold acc(s.Base.Mem(), R11)
-	//@ fold acc(s.Mem(ubuf), R10)
+	//@ fold acc(s.Mem(), R10)
 	hop /*@@@*/ := path.HopField{}
 	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
@@ -295,26 +295,26 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
-// @ preserves acc(s.Mem(ubuf), R8)
+// @ preserves acc(s.Mem(), R8) && s.Valid(ubuf)
 // @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R1)
-// @ ensures   (r == nil) == (s.GetCurrHF(ubuf) < s.GetNumHops(ubuf))
+// @ ensures   (r == nil) == (s.GetCurrHF() < s.GetNumHops())
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), R9)
+	//@ unfold acc(s.Mem(), R9)
 	//@ unfold acc(s.Base.Mem(), R10)
 	idx := int(s.PathMeta.CurrHF)
 	// (VerifiedSCION) Cannot assert bounds of uint:
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
-	//@ fold acc(s.Mem(ubuf), R9)
+	//@ fold acc(s.Mem(), R9)
 	return s.GetHopField(idx /*@, ubuf @*/)
 }
 
 // SetHopField updates the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), R20)
+// @ preserves acc(s.Mem(), R20) && s.Valid(ubuf)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -324,13 +324,13 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
 	//@ fold hop.Mem()
-	//@ unfold acc(s.Mem(ubuf), R20)
+	//@ unfold acc(s.Mem(), R20)
 	//@ unfold acc(s.Base.Mem(), R20)
 	if idx >= s.NumHops {
 		// (gavin) introduced `err`
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
 		//@ fold acc(s.Base.Mem(), R20)
-		//@ fold acc(s.Mem(ubuf), R20)
+		//@ fold acc(s.Mem(), R20)
 		return err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
@@ -341,35 +341,35 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ slices.CombineRange_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
 	//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ fold acc(s.Base.Mem(), R20)
-	//@ fold acc(s.Mem(ubuf), R20)
+	//@ fold acc(s.Mem(), R20)
 	return ret
 }
 
 // IsFirstHop returns whether the current hop is the first hop on the path.
 // @ pure
-// @ requires  acc(s.Mem(ubuf), _)
+// @ requires  acc(s.Mem(), _) && s.Valid(ubuf)
 // @ decreases
 func (s *Raw) IsFirstHop( /*@ ghost ubuf []byte @*/ ) bool {
-	return /*@ unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.Base.Mem(), _) in @*/ s.PathMeta.CurrHF == 0 /*@ ) @*/
+	return /*@ unfolding acc(s.Mem(), _) in (unfolding acc(s.Base.Mem(), _) in @*/ s.PathMeta.CurrHF == 0 /*@ ) @*/
 }
 
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.
-// @ preserves acc(s.Mem(ubuf), R20)
+// @ preserves acc(s.Mem(), R20) && s.Valid(ubuf)
 // @ decreases
 func (s *Raw) IsPenultimateHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), R20)
-	//@ defer  fold acc(s.Mem(ubuf), R20)
+	//@ unfold acc(s.Mem(), R20)
+	//@ defer  fold acc(s.Mem(), R20)
 	//@ unfold acc(s.Base.Mem(), R20)
 	//@ defer  fold acc(s.Base.Mem(), R20)
 	return int(s.PathMeta.CurrHF) == (s.NumHops - 2)
 }
 
 // IsLastHop returns whether the current hop is the last hop on the path.
-// @ preserves acc(s.Mem(ubuf), R20)
+// @ preserves acc(s.Mem(), R20) && s.Valid(ubuf)
 // @ decreases
 func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), R20)
-	//@ defer  fold acc(s.Mem(ubuf), R20)
+	//@ unfold acc(s.Mem(), R20)
+	//@ defer  fold acc(s.Mem(), R20)
 	//@ unfold acc(s.Base.Mem(), R20)
 	//@ defer  fold acc(s.Base.Mem(), R20)
 	return int(s.PathMeta.CurrHF) == (s.NumHops - 1)
