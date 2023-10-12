@@ -208,12 +208,11 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @	p.Mem(ubuf)                 &&
 // @	p == s                      &&
 // @	typeOf(p) == type[*Decoded] &&
-// TODO: following and delete next line (old(s.ValidCurrIdxs(ubuf)) ==> s.ValidCurrIdxs(ubuf)))
-// @	(old(s.ValidCurrINF(ubuf)) ==> s.ValidCurrINF(ubuf)))
+// @	(old(s.ValidCurrIdxs(ubuf)) ==> s.ValidCurrIdxs(ubuf)))
 // @ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
 // @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
-	//@ ghost isValid := s.ValidCurrINF(ubuf)
+	//@ ghost isValid := s.ValidCurrIdxs(ubuf)
 	//@ unfold s.Mem(ubuf)
 	//@ unfold s.Base.Mem()
 	if s.NumINF == 0 {
@@ -227,7 +226,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 
 	// Reverse order of InfoFields and SegLens
 	//@ invariant s.Mem(ubuf)
-	//@ invariant isValid ==> s.ValidCurrINF(ubuf)
+	//@ invariant isValid ==> s.ValidCurrIdxs(ubuf)
 	//@ invariant 0 <= i && i < s.GetNumINF(ubuf)
 	//@ invariant 0 <= j && j < s.GetNumINF(ubuf)
 	//@ decreases j-i
@@ -240,7 +239,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ fold s.Mem(ubuf)
 	}
 	//@ preserves s.Mem(ubuf)
-	//@ preserves isValid ==> s.ValidCurrINF(ubuf)
+	//@ preserves isValid ==> s.ValidCurrIdxs(ubuf)
 	//@ decreases
 	//@ outline(
 	//@ unfold s.Mem(ubuf)
@@ -249,7 +248,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ invariant acc(&s.InfoFields, R10)
 	//@ invariant len(s.InfoFields) == s.Base.GetNumINF()
 	//@ invariant forall i int :: { &s.InfoFields[i] } 0 <= i && i < len(s.InfoFields) ==> (acc(&s.InfoFields[i].ConsDir))
-	//@ invariant isValid ==> s.Base.ValidCurrINF()
+	//@ invariant isValid ==> s.Base.ValidCurrIdxs()
 	//@ decreases MaxINFs-i
 	// Reverse cons dir flags
 	for i := 0; i < ( /*@ unfolding acc(s.Base.Mem(), R11) in @*/ s.NumINF); i++ {
@@ -259,15 +258,11 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ fold s.Mem(ubuf)
 	//@ )
 
-	//@ preserves s.Mem(ubuf)
-	//@ preserves isValid ==> s.ValidCurrINF(ubuf)
-	//@ decreases
-	//@ outline(
 	// Reverse order of hop fields
 	//@ invariant s.Mem(ubuf)
 	//@ invariant 0 <= i && i <= s.GetNumHops(ubuf)
 	//@ invariant -1 <= j && j < s.GetNumHops(ubuf)
-	//@ invariant isValid ==> s.ValidCurrINF(ubuf)
+	//@ invariant isValid ==> s.ValidCurrIdxs(ubuf)
 	//@ decreases j-i
 	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumHops - 1 /*@ ) @*/); i < j; i, j = i+1, j-1 {
 		//@ unfold s.Mem(ubuf)
@@ -281,10 +276,9 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ fold s.HopFields[j].Mem()
 		//@ fold s.Mem(ubuf)
 	}
-	//@ )
 	// Update CurrINF and CurrHF and SegLens
 	//@ preserves s.Mem(ubuf)
-	//@ preserves isValid ==> s.ValidCurrINF(ubuf)
+	//@ preserves isValid ==> s.ValidCurrIdxs(ubuf)
 	//@ decreases
 	//@ outline(
 	//@ unfold s.Mem(ubuf)

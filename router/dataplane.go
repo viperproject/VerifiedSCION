@@ -2761,7 +2761,6 @@ func (p *scionPacketProcessor) prepareSCMP(
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
 	// @ ghost rawPath := path.RawBufferMem(ubPath)
-	// TODO: preserve validity of the path here
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
 		/*@

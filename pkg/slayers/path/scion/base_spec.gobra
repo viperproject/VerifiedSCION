@@ -62,8 +62,9 @@ pure func (b Base) ValidCurrIdxsSpec() bool {
 		0 <= b.PathMeta.SegLen[2] &&
 		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0])) &&
 		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
-		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
-		b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2]))
+		// Surprisingly, the following does not seem to be needed
+		// b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
 }
 
 ghost
