@@ -117,36 +117,43 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 ghost
 requires acc(d.Mem(ub), _)
 decreases
-pure func (d *Decoded) ValidCurrINF(ghost ub []byte) bool {
+pure func (d *Decoded) ValidCurrINF(ub []byte) bool {
 	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrINF()
 }
 
 ghost
 requires acc(d.Mem(ub), _)
 decreases
-pure func (d *Decoded) ValidCurrHF(ghost ub []byte) bool {
+pure func (d *Decoded) ValidCurrHF(ub []byte) bool {
 	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrHF()
 }
 
 ghost
 requires acc(d.Mem(ub), _)
 decreases
-pure func (d *Decoded) ValidCurrIdxs(ghost ub []byte) bool {
+pure func (d *Decoded) ValidCurrIdxs(ub []byte) bool {
 	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrIdxs()
 }
 
 ghost
 requires acc(d.Mem(ub), _)
 decreases
-pure func (d *Decoded) GetNumINF(ghost ub []byte) (res int) {
+pure func (d *Decoded) GetNumINF(ub []byte) (res int) {
 	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumINF()
 }
 
 ghost
 requires acc(d.Mem(ub), _)
 decreases
-pure func (d *Decoded) GetNumHops(ghost ub []byte) (res int) {
+pure func (d *Decoded) GetNumHops(ub []byte) (res int) {
 	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumHops()
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Decoded) GetMetaHdr(ub []byte) MetaHdr {
+	return unfolding acc(s.Mem(ub), _) in s.Base.GetMetaHdr()
 }
 
 /**** End of Stubs ****/

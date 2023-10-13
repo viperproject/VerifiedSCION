@@ -74,7 +74,16 @@ type Base struct {
 // @ requires  s.NonInitMem()
 // @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R50)
 // @ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
-// @ ensures   r == nil ==> s.Mem()
+// @ ensures   r == nil ==> (
+// @ 	s.Mem() &&
+// @ 	let lenD := len(data) in
+// @ 	MetaLen <= lenD &&
+// @ 	let b0 := sl.GetByte(data, 0, lenD, 0) in
+// @ 	let b1 := sl.GetByte(data, 0, lenD, 1) in
+// @ 	let b2 := sl.GetByte(data, 0, lenD, 2) in
+// @ 	let b3 := sl.GetByte(data, 0, lenD, 3) in
+// @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
+// @ 	DecodedFrom(line) == s.GetMetaHdr())
 // @ ensures   len(data) < MetaLen ==> r != nil
 // @ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
@@ -213,16 +222,17 @@ type MetaHdr struct {
 // @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
 // @ ensures   e == nil ==> (
+// @ 	MetaLen <= len(raw)              &&
 // @ 	0 <= m.CurrINF && m.CurrINF <= 3 &&
 // @ 	0 <= m.CurrHF  && m.CurrHF < 64  &&
 // @ 	m.SegsInBounds() &&
 // @ 	let lenR := len(raw) in
-// @ 		let b0 := sl.GetByte(raw, 0, lenR, 0) in
-// @ 		let b1 := sl.GetByte(raw, 0, lenR, 1) in
-// @ 		let b2 := sl.GetByte(raw, 0, lenR, 2) in
-// @ 		let b3 := sl.GetByte(raw, 0, lenR, 3) in
-// @ 		let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
-// @ 		DecodedFrom(line) == *m)
+// @ 	let b0 := sl.GetByte(raw, 0, lenR, 0) in
+// @ 	let b1 := sl.GetByte(raw, 0, lenR, 1) in
+// @ 	let b2 := sl.GetByte(raw, 0, lenR, 2) in
+// @ 	let b3 := sl.GetByte(raw, 0, lenR, 3) in
+// @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
+// @ 	DecodedFrom(line) == *m)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {

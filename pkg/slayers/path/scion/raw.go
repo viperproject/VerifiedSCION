@@ -174,7 +174,6 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	decoded := &Decoded{}
 	//@ fold decoded.Base.NonInitMem()
 	//@ fold decoded.NonInitMem()
-	//@ unfold acc(s.Mem(ubuf), R20)
 	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
 	//@ assert unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), _) in
 	//@ 	(ubuf[0] == (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[0]))
@@ -194,18 +193,21 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
 		//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 		//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
-		//@ fold acc(s.Mem(ubuf), R20)
+		//@ fold acc(s.Mem(ubuf), R6)
 		return nil, err
 	}
 	//@ ghost lenR := len(s.Raw) // TODO: move to the top and rewrite body
-	//@ ghost if validIdxs { s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3) }
+	//@ ghost if validIdxs {
+	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
+	//@ 	assert pathMeta == decoded.GetMetaHdr(s.Raw)
+	//@ 	assert decoded.ValidCurrIdxs(s.Raw)
+	//@ }
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
 	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
 	//@ fold acc(s.Base.Mem(), R6)
 	//@ fold acc(s.Mem(ubuf), R6)
-	//@ fold acc(s.Mem(ubuf), R20)
 	return decoded, nil
 }
 

@@ -65,7 +65,7 @@ pure func (b Base) ValidCurrIdxsSpec() bool {
 		0 <= b.PathMeta.SegLen[0] && b.PathMeta.SegLen[0] < MaxHops &&
 		0 <= b.PathMeta.SegLen[1] && b.PathMeta.SegLen[1] < MaxHops &&
 		0 <= b.PathMeta.SegLen[2] && b.PathMeta.SegLen[2] < MaxHops &&
-		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0])) &&
+		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
 		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
 		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2]))
 		// Surprisingly, the following does not seem to be needed
