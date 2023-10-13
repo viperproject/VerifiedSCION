@@ -24,7 +24,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	//@ bit "github.com/scionproto/scion/verification/utils/bitwise"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
+	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // MetaLen is the length of the PathMetaHeader.
@@ -72,7 +72,7 @@ type Base struct {
 }
 
 // @ requires  s.NonInitMem()
-// @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R1)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R50)
 // @ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
 // @ ensures   r == nil ==> s.Mem()
 // @ ensures   len(data) < MetaLen ==> r != nil
@@ -210,11 +210,19 @@ type MetaHdr struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
 // @ preserves acc(m)
-// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
+// @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
 // @ ensures   e == nil ==> (
 // @ 	0 <= m.CurrINF && m.CurrINF <= 3 &&
-// @ 	0 <= m.CurrHF && m.CurrHF < 64)
+// @ 	0 <= m.CurrHF  && m.CurrHF < 64  &&
+// @ 	m.SegsInBounds() &&
+// @ 	let lenR := len(raw) in
+// @ 		let b0 := sl.GetByte(raw, 0, lenR, 0) in
+// @ 		let b1 := sl.GetByte(raw, 0, lenR, 1) in
+// @ 		let b2 := sl.GetByte(raw, 0, lenR, 2) in
+// @ 		let b3 := sl.GetByte(raw, 0, lenR, 3) in
+// @ 		let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
+// @ 		DecodedFrom(line) == *m)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
@@ -222,7 +230,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
 		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
+	//@ unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
@@ -231,7 +239,10 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	m.SegLen[0] = uint8(line>>12) & 0x3F
 	m.SegLen[1] = uint8(line>>6) & 0x3F
 	m.SegLen[2] = uint8(line) & 0x3F
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
+	//@ bit.And3fAtMost64(uint8(line>>12))
+	//@ bit.And3fAtMost64(uint8(line>>6))
+	//@ bit.And3fAtMost64(uint8(line))
+	//@ fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 	return nil
 }
 
@@ -239,8 +250,15 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 // scion.MetaLen.
 // @ requires  len(b) >= MetaLen
 // @ preserves acc(m, R50)
-// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ preserves sl.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   e == nil
+// @ ensures   let lenR := len(b)           in
+// @ 	let b0 := sl.GetByte(b, 0, lenR, 0) in
+// @ 	let b1 := sl.GetByte(b, 0, lenR, 1) in
+// @ 	let b2 := sl.GetByte(b, 0, lenR, 2) in
+// @ 	let b3 := sl.GetByte(b, 0, lenR, 3) in
+// @ 	let v  := m.SerializedToLine()      in
+// @ 	binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, v)
 // @ decreases
 func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	if len(b) < MetaLen {
@@ -250,9 +268,9 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	line |= uint32(m.SegLen[0]&0x3F) << 12
 	line |= uint32(m.SegLen[1]&0x3F) << 6
 	line |= uint32(m.SegLen[2] & 0x3F)
-	//@ unfold acc(slices.AbsSlice_Bytes(b, 0, len(b)))
+	//@ unfold acc(sl.AbsSlice_Bytes(b, 0, len(b)))
 	binary.BigEndian.PutUint32(b, line)
-	//@ fold acc(slices.AbsSlice_Bytes(b, 0, len(b)))
+	//@ fold acc(sl.AbsSlice_Bytes(b, 0, len(b)))
 	return nil
 }
 

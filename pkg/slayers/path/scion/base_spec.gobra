@@ -16,6 +16,11 @@
 
 package scion
 
+import (
+	"encoding/binary"
+	sl "github.com/scionproto/scion/verification/utils/slices"
+)
+
 pred (b *Base) NonInitMem() {
 	acc(b)
 }
@@ -55,10 +60,11 @@ ghost
 decreases
 pure func (b Base) ValidCurrIdxsSpec() bool {
 	return b.ValidCurrHfSpec() &&
-		b.ValidCurrInfSpec() &&
-		0 <= b.PathMeta.SegLen[0] &&
-		0 <= b.PathMeta.SegLen[1] &&
-		0 <= b.PathMeta.SegLen[2] &&
+		b.ValidCurrInfSpec()   &&
+		b.NumHops <= MaxHops   &&
+		0 <= b.PathMeta.SegLen[0] && b.PathMeta.SegLen[0] < MaxHops &&
+		0 <= b.PathMeta.SegLen[1] && b.PathMeta.SegLen[1] < MaxHops &&
+		0 <= b.PathMeta.SegLen[2] && b.PathMeta.SegLen[2] < MaxHops &&
 		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0])) &&
 		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
 		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2]))
@@ -156,3 +162,50 @@ func (b *Base) DowngradePerm() {
 	unfold b.Mem()
 	fold b.NonInitMem()
 }
+
+ghost
+decreases
+pure func DecodedFrom(line uint32) MetaHdr {
+	return MetaHdr {
+		CurrINF: uint8(line >> 30),
+		CurrHF: uint8(line>>24) & 0x3F,
+		SegLen: [3]uint8{uint8(line>>12) & 0x3F, uint8(line>>6) & 0x3F, uint8(line) & 0x3F},
+	}
+}
+
+ghost
+decreases
+pure func (m MetaHdr) SegsInBounds() bool {
+	return 0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&
+		0 <= m.SegLen[1] && m.SegLen[1] <= 63    &&
+		0 <= m.SegLen[2] && m.SegLen[2] <= 63
+}
+
+ghost
+decreases
+pure func (m MetaHdr) SerializedToLine() uint32 {
+	return uint32(m.CurrINF)<<30 |
+		uint32(m.CurrHF&0x3F)<<24 |
+		uint32(m.SegLen[0]&0x3F) << 12 |
+		uint32(m.SegLen[1]&0x3F) << 6 |
+		uint32(m.SegLen[2] & 0x3F)
+}
+
+ghost
+decreases
+pure func (m MetaHdr) inBounds() bool {
+	return 0 <= m.CurrINF && m.CurrINF <= 3   &&
+		0 <= m.CurrHF && m.CurrHF <= 63       &&
+		0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&
+		0 <= m.SegLen[1] && m.SegLen[1] <= 63 &&
+		0 <= m.SegLen[2] && m.SegLen[2] <= 63
+}
+
+/** Lemma proven in /VerifiedSCION/verification/utils/bitwise/proofs.dfy **/
+ghost
+requires m.inBounds()
+ensures  let line1 := m.SerializedToLine() in
+	binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, line1) ==>
+		let line2 := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in DecodedFrom(line2) == m
+decreases
+func (m MetaHdr) SerializeAndDeserializeLemma(b0, b1, b2, b3 byte)

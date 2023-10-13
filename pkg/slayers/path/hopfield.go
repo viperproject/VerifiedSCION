@@ -40,16 +40,16 @@ const expTimeUnit = MaxTTL / 256 // ~5m38s
 // HopField is the HopField used in the SCION and OneHop path types.
 //
 // The Hop Field has the following format:
-//    0                   1                   2                   3
-//    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |r r r r r r I E|    ExpTime    |           ConsIngress         |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//   |        ConsEgress             |                               |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
-//   |                              MAC                              |
-//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
+//	 0                   1                   2                   3
+//	 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|r r r r r r I E|    ExpTime    |           ConsIngress         |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//	|        ConsEgress             |                               |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
+//	|                              MAC                              |
+//	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 type HopField struct {
 	// IngressRouterAlert flag. If the IngressRouterAlert is set, the ingress router (in
 	// construction direction) will process the L4 payload in the packet.
@@ -74,23 +74,23 @@ type HopField struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // path.HopLen.
-//@ requires  acc(h)
-//@ requires  len(raw) >= HopLen
-//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R10)
-//@ ensures   h.Mem()
-//@ ensures   err == nil
-//@ decreases
+// @ requires  acc(h)
+// @ requires  len(raw) >= HopLen
+// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R45)
+// @ ensures   h.Mem()
+// @ ensures   err == nil
+// @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < HopLen {
 		return serrors.New("HopField raw too short", "expected", HopLen, "actual", len(raw))
 	}
 	//@ preserves acc(h)
-	//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R11)
+	//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
 	//@ ensures h.ConsIngress >= 0
 	//@ ensures h.ConsEgress >= 0
 	//@ decreases
 	//@ outline(
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R11)
+	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
 	h.EgressRouterAlert = raw[0]&0x1 == 0x1
 	h.IngressRouterAlert = raw[0]&0x2 == 0x2
 	h.ExpTime = raw[1]
@@ -98,19 +98,19 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	h.ConsIngress = binary.BigEndian.Uint16(raw[2:4])
 	//@ assert &raw[4:6][0] == &raw[4] && &raw[4:6][1] == &raw[5]
 	h.ConsEgress = binary.BigEndian.Uint16(raw[4:6])
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R11)
+	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
 	//@ )
 	//@ preserves acc(&h.Mac)
-	//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R11)
+	//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
 	//@ decreases
 	//@ outline(
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R11)
+	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac[:]) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
 	//@ assert forall i int :: { &raw[6:6+MacLen][i] } 0 <= i && i < len(raw[6:6+MacLen]) ==>
 	//@     &raw[6:6+MacLen][i] == &raw[i+6]
-	copy(h.Mac[:], raw[6:6+MacLen] /*@ , R12 @*/)
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R11)
+	copy(h.Mac[:], raw[6:6+MacLen] /*@ , R47 @*/)
+	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
 	//@ )
 	//@ fold h.Mem()
 	return nil
@@ -118,11 +118,11 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.HopLen.
-//@ requires  len(b) >= HopLen
-//@ preserves acc(h.Mem(), R10)
-//@ preserves slices.AbsSlice_Bytes(b, 0, HopLen)
-//@ ensures   err == nil
-//@ decreases
+// @ requires  len(b) >= HopLen
+// @ preserves acc(h.Mem(), R10)
+// @ preserves slices.AbsSlice_Bytes(b, 0, HopLen)
+// @ ensures   err == nil
+// @ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {
 	if len(b) < HopLen {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
@@ -170,7 +170,7 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 
 // ExpTimeToDuration calculates the relative expiration time in seconds.
 // Note that for a 0 value ExpTime, the minimal duration is expTimeUnit.
-//@ decreases
+// @ decreases
 func ExpTimeToDuration(expTime uint8) time.Duration {
 	return (time.Duration(expTime) + 1) * time.Duration(expTimeUnit) * time.Second
 }

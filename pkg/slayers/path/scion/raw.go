@@ -17,6 +17,7 @@
 package scion
 
 import (
+	// @ "encoding/binary"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
@@ -140,30 +141,70 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ unfold acc(s.Mem(ubuf), R6)
 	//@ unfold acc(s.Base.Mem(), R6)
+	//@ ghost var pathMeta MetaHdr = s.Base.PathMeta
+	//@ ghost validIdxs := s.ValidCurrIdxs(ubuf)
+	//@ assert validIdxs ==> s.Base.PathMeta.inBounds()
 	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
-	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, writePerm)
+
+	// (VerifiedSCION) In this method, many slice operations are done in two
+	// steps to preserve framming information.
+	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
+	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		// @ Unreachable()
 		return nil, err
 	}
-	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, writePerm)
-	//@ fold acc(s.Base.Mem(), R6)
-	//@ fold acc(s.Mem(ubuf), R6)
+	//@ ghost b0 := (unfolding acc(sl.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in s.Raw[0])
+	//@ ghost b1 := (unfolding acc(sl.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in s.Raw[1])
+	//@ ghost b2 := (unfolding acc(sl.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in s.Raw[2])
+	//@ ghost b3 := (unfolding acc(sl.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in s.Raw[3])
+	//@ assert let line := s.PathMeta.SerializedToLine() in binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, line)
+	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
+	//@ assert &ubuf[0] == &s.Raw[:MetaLen][0]
+	//@ assert &ubuf[1] == &s.Raw[:MetaLen][1]
+	//@ assert &ubuf[2] == &s.Raw[:MetaLen][2]
+	//@ assert &ubuf[3] == &s.Raw[:MetaLen][3]
+	//@ assert b0 == (unfolding acc(sl.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in ubuf[0])
+	//  (VerifiedSCION): for some reason, silicon requires the following line to be able to prove
+	//  bX == ubuf[X].
+	//@ assert unfolding acc(sl.AbsSlice_Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in
+	//@ 	(ubuf[0] == (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), _) in ubuf[0]))
+	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	decoded := &Decoded{}
 	//@ fold decoded.Base.NonInitMem()
 	//@ fold decoded.NonInitMem()
 	//@ unfold acc(s.Mem(ubuf), R20)
-	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
-	//@ sl.Reslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
+	//@ assert unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), _) in
+	//@ 	(ubuf[0] == (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[0]))
+	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
+	//@ sl.Reslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ assert &ubuf[0] == &ubuf[:len(s.Raw)][0]
+	//@ assert &ubuf[1] == &ubuf[:len(s.Raw)][1]
+	//@ assert &ubuf[2] == &ubuf[:len(s.Raw)][2]
+	//@ assert &ubuf[3] == &ubuf[:len(s.Raw)][3]
+	//@ assert unfolding acc(sl.AbsSlice_Bytes(ubuf[:len(s.Raw)], 0, len(s.Raw)), _) in
+	//@ 	(ubuf[0] == (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[0]))
+	//@ assert b0 == (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[0])
+	//@ assert b1 == (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[1])
+	//@ assert b2 == (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[2])
+	//@ assert b3 == (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[3])
+	//@ sl.Reslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
 		//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 		//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
 		//@ fold acc(s.Mem(ubuf), R20)
 		return nil, err
 	}
-	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
+	//@ ghost lenR := len(s.Raw) // TODO: move to the top and rewrite body
+	//@ ghost if validIdxs { s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3) }
+	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
+	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
+	//@ fold acc(s.Base.Mem(), R6)
+	//@ fold acc(s.Mem(ubuf), R6)
 	//@ fold acc(s.Mem(ubuf), R20)
 	return decoded, nil
 }
