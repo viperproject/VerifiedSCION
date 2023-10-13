@@ -68,7 +68,7 @@ type Path interface {
 
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
-	//@ pred NonInitMem()
+	//@ pred NonInitMem() // TODO: In the end, check if it is still necessary
 
 	// (VerifiedSCION) Must apply to every Path after initialization
 	//@ ghost
@@ -115,6 +115,8 @@ type Path interface {
 	//@ requires acc(Mem(), _)
 	//@ decreases
 	Type( /*@ ghost underlyingBuf []byte @*/ ) Type // TODO: drop param
+
+	// TODO: In the end, check if it is still necessary
 	//@ ghost
 	//@ requires Mem()
 	//@ ensures  NonInitMem()
