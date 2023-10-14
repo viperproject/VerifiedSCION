@@ -59,15 +59,20 @@ pure func (b Base) ValidCurrHfSpec() bool {
 ghost
 decreases
 pure func (b Base) ValidCurrIdxsSpec() bool {
-	return b.ValidCurrHfSpec() &&
-		b.ValidCurrInfSpec()   &&
-		b.NumHops <= MaxHops   &&
+	return 0 <= b.NumINF && b.NumINF <= MaxINFs &&
+		0 <= b.NumHops && b.NumHops <= MaxHops  &&
+		b.ValidCurrHfSpec()  &&
+		b.ValidCurrInfSpec() &&
 		0 <= b.PathMeta.SegLen[0] && b.PathMeta.SegLen[0] < MaxHops &&
 		0 <= b.PathMeta.SegLen[1] && b.PathMeta.SegLen[1] < MaxHops &&
 		0 <= b.PathMeta.SegLen[2] && b.PathMeta.SegLen[2] < MaxHops &&
 		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
 		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
-		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2]))
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
+			b.PathMeta.SegLen[i] != 0) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
+			b.PathMeta.SegLen[i] == 0)
 		// Surprisingly, the following does not seem to be needed
 		// b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
 }
@@ -75,9 +80,14 @@ pure func (b Base) ValidCurrIdxsSpec() bool {
 ghost
 decreases
 pure func (b Base) InfsMatchHfsSpec() bool {
-	return (b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
+	return 0 <= b.NumINF && b.NumINF < 3 &&
+		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
 		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
-		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2]))
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
+			b.PathMeta.SegLen[i] != 0) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
+			b.PathMeta.SegLen[i] == 0)
 }
 
 ghost
