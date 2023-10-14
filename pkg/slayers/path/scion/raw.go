@@ -141,9 +141,11 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ unfold acc(s.Mem(ubuf), R6)
 	//@ unfold acc(s.Base.Mem(), R6)
+	//@ ghost var base Base = s.Base
 	//@ ghost var pathMeta MetaHdr = s.Base.PathMeta
 	//@ ghost validIdxs := s.ValidCurrIdxs(ubuf)
-	//@ assert validIdxs ==> s.Base.PathMeta.inBounds()
+	//@ assert validIdxs ==> s.Base.PathMeta.InBounds()
+	//@ assert validIdxs ==> base.ValidCurrIdxsSpec()
 	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
 
 	// (VerifiedSCION) In this method, many slice operations are done in two
@@ -193,6 +195,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
 		//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 		//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
+		//@ fold acc(s.Base.Mem(), R6)
 		//@ fold acc(s.Mem(ubuf), R6)
 		return nil, err
 	}
@@ -200,6 +203,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ ghost if validIdxs {
 	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ 	assert pathMeta == decoded.GetMetaHdr(s.Raw)
+	//@ 	assert decoded.GetBase(s.Raw).ValidCurrIdxsSpec()
 	//@ 	assert decoded.ValidCurrIdxs(s.Raw)
 	//@ }
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)

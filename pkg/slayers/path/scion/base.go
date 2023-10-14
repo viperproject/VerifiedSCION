@@ -83,7 +83,9 @@ type Base struct {
 // @ 	let b2 := sl.GetByte(data, 0, lenD, 2) in
 // @ 	let b3 := sl.GetByte(data, 0, lenD, 3) in
 // @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
-// @ 	DecodedFrom(line) == s.GetMetaHdr())
+// @ 	let metaHdr := DecodedFrom(line) in
+// @ 	metaHdr == s.GetMetaHdr() &&
+// @ 	s.InfsMatchHfs())
 // @ ensures   len(data) < MetaLen ==> r != nil
 // @ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
@@ -105,6 +107,21 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant 0 <= s.NumHops
 	//@ invariant 0 <= s.NumINF && s.NumINF <= 3
 	//@ invariant 0 < s.NumINF ==> 0 < s.NumHops
+	// Invariant provided as a list of all four possible iterations:
+	//@ invariant i == 2 ==> (s.NumINF == 0 && s.NumHops == 0)
+	//@ invariant (i == 1 && s.NumINF == 0) ==> s.NumHops == 0
+	//@ invariant (i == 1 && s.NumINF != 0) ==>
+	//@ 	(s.NumINF == 3 && s.NumHops == int(s.PathMeta.SegLen[2]))
+	//@ invariant (i == 0 && s.NumINF == 0) ==> s.NumHops == 0
+	//@ invariant (i == 0 && s.NumINF != 0) ==> (
+	//@ 	2 <= s.NumINF && s.NumINF <= 3 &&
+	//@ 	(s.NumINF == 2 ==> s.NumHops == int(s.PathMeta.SegLen[1])) &&
+	//@ 	(s.NumINF == 3 ==> s.NumHops == int(s.PathMeta.SegLen[1] + s.PathMeta.SegLen[2])))
+	//@ invariant (i == -1 && s.NumINF == 0) ==> s.NumHops == 0
+	//@ invariant (i == -1 && s.NumINF != 0) ==> (
+	//@ 	(s.NumINF == 1 ==> s.NumHops == int(s.PathMeta.SegLen[0])) &&
+	//@ 	(s.NumINF == 2 ==> s.NumHops == int(s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1])) &&
+	//@ 	(s.NumINF == 3 ==> s.NumHops == int(s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1] +  s.PathMeta.SegLen[2])))
 	//@ decreases i
 	for i := 2; i >= 0; i-- {
 		if s.PathMeta.SegLen[i] == 0 && s.NumINF > 0 {

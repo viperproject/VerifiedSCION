@@ -54,7 +54,9 @@ type Decoded struct {
 // @ 	let b2 := sl.GetByte(data, 0, lenD, 2) in
 // @ 	let b3 := sl.GetByte(data, 0, lenD, 3) in
 // @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
-// @ 	DecodedFrom(line) == s.GetMetaHdr(data))
+// @ 	let metaHdr := DecodedFrom(line) in
+// @ 	metaHdr == s.GetMetaHdr(data) &&
+// @ 	s.InfsMatchHfs(data))
 // @ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 // @ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
