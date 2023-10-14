@@ -80,7 +80,7 @@ pure func (b Base) ValidCurrIdxsSpec() bool {
 ghost
 decreases
 pure func (b Base) InfsMatchHfsSpec() bool {
-	return 0 <= b.NumINF && b.NumINF < 3 &&
+	return 0 <= b.NumINF && b.NumINF <= 3 &&
 		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
 		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
 		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&

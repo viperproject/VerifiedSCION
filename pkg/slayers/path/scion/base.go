@@ -122,6 +122,10 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	//@ 	(s.NumINF == 1 ==> s.NumHops == int(s.PathMeta.SegLen[0])) &&
 	//@ 	(s.NumINF == 2 ==> s.NumHops == int(s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1])) &&
 	//@ 	(s.NumINF == 3 ==> s.NumHops == int(s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1] +  s.PathMeta.SegLen[2])))
+	//@ invariant forall j int :: { s.PathMeta.SegLen[j] } i < j && j < s.NumINF ==>
+	//@ 	s.PathMeta.SegLen[j] != 0
+	//@ invariant forall j int :: { s.PathMeta.SegLen[j] } (s.NumINF <= j && i < j && j < MaxINFs) ==>
+	//@ 	s.PathMeta.SegLen[j] == 0
 	//@ decreases i
 	for i := 2; i >= 0; i-- {
 		if s.PathMeta.SegLen[i] == 0 && s.NumINF > 0 {
