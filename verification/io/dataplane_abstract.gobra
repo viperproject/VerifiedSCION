@@ -14,16 +14,12 @@
 
 // +gobra
 
-
 package io
-
 
 type DataPlaneSpec adt {
 	DataPlaneSpec_{
-		//external          seq[IO_ifs]
 		linkTypes		dict[IO_ifs]IO_Link
 		neighborIAs     dict[IO_ifs]IO_as
-		internal        IO_ifs //TODO: propably not needed, = 0
 		localIA         IO_as
 		topology 		TopologySpec
 	}
@@ -38,17 +34,17 @@ type TopologySpec adt {
 
 ghost
 requires ifs in domain(dp.linkTypes)
-pure func (dp DataPlaneSpec) getLinkType(ifs IO_ifs) IO_Link {
+pure func (dp DataPlaneSpec) GetLinkType(ifs IO_ifs) IO_Link {
 	return dp.linkTypes[ifs]
 }
 
 ghost
 requires ifs in domain(dp.neighborIAs)
-pure func (dp DataPlaneSpec) getNeighborIA(ifs IO_ifs) IO_as {
+pure func (dp DataPlaneSpec) GetNeighborIA(ifs IO_ifs) IO_as {
 	return dp.neighborIAs[ifs]
 }
 
 ghost
-pure func (dp DataPlaneSpec) getLocalIA() IO_as {
+pure func (dp DataPlaneSpec) GetLocalIA() IO_as {
 	return dp.localIA
 }

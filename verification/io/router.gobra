@@ -86,8 +86,10 @@ ghost
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward(m IO_pkt3, newpkt IO_pkt3, nextif option[IO_ifs]) bool {
 	return match nextif {
-		case none[IO_ifs] : newpkt == m
-		default : dp.dp3s_forward_ext(m, newpkt, get(nextif))
+		case none[IO_ifs]: 
+			newpkt == m
+		default: 
+			dp.dp3s_forward_ext(m, newpkt, get(nextif))
 	}
 }
 

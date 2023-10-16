@@ -77,26 +77,6 @@ pure func (dp DataPlaneSpec) dp2_forward_ext_guard(asid IO_as, m IO_pkt2, nextif
 		dp.same_other2(currseg, traversedseg)
 }
 
-// ghost
-// decreases
-// pure func dp2_forward_ext(s IO_dp2_state, sprime IO_dp2_state, asid IO_as, m IO_pkt2) bool {
-// 	return exists nextif IO_ifs, currseg IO_seg2, traversedseg IO_seg2, newpkt IO_pkt2, fut seq[IO_HF], hf1 IO_HF ::  { dp2_forward_ext_guard(asid, m, nextif, currseg, traversedseg, newpkt, fut, hf1) }{ dp2_add_ext(s, sprime, asid, nextif, newpkt) } dp2_forward_ext_guard(asid, m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
-// 		dp2_add_ext(s, sprime, asid, nextif, newpkt)
-
-// }
-
-// Non-deterministically forward the packet internally or externally. In the real system, a router
-// will forward a packet externally if the interface over which the packet is supposed to leave the
-// AS belongs to the router itself. In all other cases, the packet will be forwarded internally.
-// In case the packet is forwarded externally, additional processing is required
-// (e.g., updating the uinfo field depending on direction, and incrementing the segment).
-// ghost
-// decreases
-// pure func dp2_forward(s IO_dp2_state, sprime IO_dp2_state, asid IO_as, m IO_pkt2) bool {
-// 	return dp2_add_int(s, sprime, asid, m) || dp2_forward_ext(s, sprime, asid, m)
-// }
-
-
 // A packet is received from an ext state (i.e., an inter-AS channel) and is forwarded (either internally or externally)
 ghost
 decreases
@@ -110,22 +90,3 @@ pure func (dp DataPlaneSpec) dp2_enter_guard(m IO_pkt2, currseg IO_seg2, travers
 		dp.hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1) &&
 		hf1.extr_asid() == asid
 }
-
-// ghost
-// decreases
-// pure func dp2_enter(s IO_dp2_state, m IO_pkt2, currseg IO_seg2, traversedseg IO_seg2, asid IO_as, hf1 IO_HF, recvif IO_ifs, fut seq[IO_HF], sprime IO_dp2_state) bool {
-// 	return dp2_in_ext(s, asid, recvif, m) &&
-// 		dp2_enter_guard(m, currseg, traversedseg, asid, hf1, recvif, fut) &&
-// 		// Action: Update internal state to include packet.
-// 		dp2_forward(s, sprime, asid, IO_pkt2(IO_Packet2{traversedseg, m.LeftSeg, m.MidSeg, m.RightSeg}))
-// }
-
-// ghost
-// decreases
-// pure func dp2_exit(s IO_dp2_state, m IO_pkt2, asid IO_as, sprime IO_dp2_state) bool {
-// 	// the first conjunct is not in the IO spec document but it is required in Gobra
-// 	// to make this function well formed.
-// 	return asid in domain(s.int2) &&
-// 		(let img := s.int2[asid] in (m in img)) &&
-// 		dp2_forward_ext(s, sprime, asid, m)
-// }
