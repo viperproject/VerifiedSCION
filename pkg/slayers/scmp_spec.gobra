@@ -19,7 +19,7 @@ package slayers
 import (
 	"github.com/google/gopacket"
 
-	def "github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -49,23 +49,23 @@ func (s *SCMP) DowngradePerm(ghost ub []byte) {
 	fold s.NonInitMem()
 }
 
-requires def.Uncallable()
+requires Uncallable()
 func (b *SCMP) LayerContents() (res []byte) {
 	res = b.BaseLayer.LayerContents()
 	return res
 }
 
-preserves acc(b.Mem(ub), def.ReadL20)
+preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
 ensures   res === ub[start:end]
 decreases
 func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
-	unfold acc(b.Mem(ub), def.ReadL20)
+	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
 	start = 4
 	end = len(ub)
-	fold acc(b.Mem(ub), def.ReadL20)
+	fold acc(b.Mem(ub), R20)
 	return res, start, end
 }
 

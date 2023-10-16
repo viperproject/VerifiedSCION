@@ -19,7 +19,7 @@ package conn
 import (
 	"net"
 
-	"github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 
 	"golang.org/x/net/ipv4"
@@ -83,7 +83,7 @@ func (c *connUDPIPv4) ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error) {
 }
 
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) Write(b []byte) (n int, err error) {
@@ -101,7 +101,7 @@ func (c *connUDPIPv4) Write(b []byte) (n int, err error) {
 
 requires  acc(dst.Mem(), _)
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
@@ -117,21 +117,21 @@ func (c *connUDPIPv4) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
 	return n1, err1
 }
 
-preserves acc(c.Mem(), definitions.ReadL15)
+preserves acc(c.Mem(), R15)
 ensures   u != nil ==> acc(u.Mem(), _)
 decreases
 func (c *connUDPIPv4) LocalAddr() (u *net.UDPAddr) {
-	unfold acc(c.Mem(), definitions.ReadL15)
-	defer fold acc(c.Mem(), definitions.ReadL15)
+	unfold acc(c.Mem(), R15)
+	defer fold acc(c.Mem(), R15)
 	return c.connUDPBase.LocalAddr()
 }
 
-preserves acc(c.Mem(), definitions.ReadL15)
+preserves acc(c.Mem(), R15)
 ensures   u != nil ==> acc(u.Mem(), _)
 decreases
 func (c *connUDPIPv4) RemoteAddr() (u *net.UDPAddr) {
-	unfold acc(c.Mem(), definitions.ReadL15)
-	defer fold acc(c.Mem(), definitions.ReadL15)
+	unfold acc(c.Mem(), R15)
+	defer fold acc(c.Mem(), R15)
 	return c.connUDPBase.RemoteAddr()
 }
 
@@ -169,7 +169,7 @@ func (c *connUDPIPv6) ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error) {
 }
 
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) Write(b []byte) (n int, err error) {
@@ -187,7 +187,7 @@ func (c *connUDPIPv6) Write(b []byte) (n int, err error) {
 
 requires  acc(dst.Mem(), _)
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
@@ -203,21 +203,21 @@ func (c *connUDPIPv6) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
 	return n1, err1
 }
 
-preserves acc(c.Mem(), definitions.ReadL15)
+preserves acc(c.Mem(), R15)
 ensures   u != nil ==> acc(u.Mem(), _)
 decreases
 func (c *connUDPIPv6) LocalAddr() (u *net.UDPAddr) {
-	unfold acc(c.Mem(), definitions.ReadL15)
-	defer fold acc(c.Mem(), definitions.ReadL15)
+	unfold acc(c.Mem(), R15)
+	defer fold acc(c.Mem(), R15)
 	return c.connUDPBase.LocalAddr()
 }
 
-preserves acc(c.Mem(), definitions.ReadL15)
+preserves acc(c.Mem(), R15)
 ensures   u != nil ==> acc(u.Mem(), _)
 decreases
 func (c *connUDPIPv6) RemoteAddr() (u *net.UDPAddr) {
-	unfold acc(c.Mem(), definitions.ReadL15)
-	defer fold acc(c.Mem(), definitions.ReadL15)
+	unfold acc(c.Mem(), R15)
+	defer fold acc(c.Mem(), R15)
 	return c.connUDPBase.RemoteAddr()
 }
 

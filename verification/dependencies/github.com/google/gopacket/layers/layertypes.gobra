@@ -9,20 +9,26 @@
 initEnsures gopacket.LayerTypesMem()
 initEnsures LayerTypeBFD == gopacket.LayerType(122)
 initEnsures gopacket.Registered(LayerTypeBFD)
-initEnsures forall t gopacket.LayerType :: (0 <= t && t <= 3) ==> gopacket.Registered(t)
+initEnsures forall t gopacket.LayerType :: { gopacket.Registered(t) } (0 <= t && t <= 3) ==>
+	gopacket.Registered(t)
 // The full postcondition cannot be proven because of performance reasons.
 // Postconditions must be added with care to maintain the code verifiable and to not introduce unsoundness.
 // Similarly, global variables declarations should be uncommented with care.
 // initEnsures forall t gopacket.LayerType :: (10 <= t && t <= 146) ==> gopacket.Registered(t)
-initEnsures forall t gopacket.LayerType :: t < 0 ==> !gopacket.Registered(t)
-initEnsures forall t gopacket.LayerType :: 146 < t ==> !gopacket.Registered(t)
+initEnsures forall t gopacket.LayerType :: { gopacket.Registered(t) } t < 0 ==>
+	!gopacket.Registered(t)
+initEnsures forall t gopacket.LayerType :: { gopacket.Registered(t) } 146 < t ==>
+	!gopacket.Registered(t)
 package layers
 
 import (
 	importRequires gopacket.LayerTypesMem()
-	importRequires forall t gopacket.LayerType :: 0 <= t && t <= 3 ==> gopacket.Registered(t)
-	importRequires forall t gopacket.LayerType :: t < 0 ==> !gopacket.Registered(t)
-	importRequires forall t gopacket.LayerType :: 3 < t ==> !gopacket.Registered(t)
+	importRequires forall t gopacket.LayerType :: { gopacket.Registered(t) } 0 <= t && t <= 3 ==>
+		gopacket.Registered(t)
+	importRequires forall t gopacket.LayerType :: { gopacket.Registered(t) } t < 0 ==>
+		!gopacket.Registered(t)
+	importRequires forall t gopacket.LayerType :: { gopacket.Registered(t) } 3 < t ==>
+		!gopacket.Registered(t)
 	"github.com/google/gopacket"
 )
 

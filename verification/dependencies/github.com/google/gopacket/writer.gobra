@@ -8,7 +8,7 @@
 
 package gopacket
 
-import def "github.com/scionproto/scion/verification/utils/definitions"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 import "github.com/scionproto/scion/verification/utils/slices"
 
 type SerializableLayer interface {
@@ -110,7 +110,7 @@ func NewSerializeBuffer() (res SerializeBuffer)
 requires  false
 requires  len(layerBufs) == len(layers)
 preserves w.Mem()
-preserves acc(layerBufs, def.ReadL20)
+preserves acc(layerBufs, R20)
 preserves forall i int :: {&layers[i]} 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem(layerBufs[i])
 decreases
 func SerializeLayers(w SerializeBuffer, opts SerializeOptions, ghost layerBufs []([]byte), layers ...SerializableLayer) error

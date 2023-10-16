@@ -18,7 +18,7 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-	def "github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -75,12 +75,12 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(ub), def.ReadL18)
+preserves acc(s.Mem(ub), R18)
 ensures   res ==> 0 < s.GetCurrINF(ub) && 0 < s.GetCurrHF(ub)
 decreases
 func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
-	unfold acc(s.Mem(ub), def.ReadL18)
-	defer fold acc(s.Mem(ub), def.ReadL18)
+	unfold acc(s.Mem(ub), R18)
+	defer fold acc(s.Mem(ub), R18)
 	return s.Base.IsFirstHopAfterXover()
 }
 
@@ -90,11 +90,11 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(ub), def.ReadL9)
+preserves acc(s.Mem(ub), R9)
 decreases
 func (s *Raw) IsXover(ghost ub []byte) bool {
-	unfold acc(s.Mem(ub), def.ReadL9)
-	defer fold acc(s.Mem(ub), def.ReadL9)
+	unfold acc(s.Mem(ub), R9)
+	defer fold acc(s.Mem(ub), R9)
 	return s.Base.IsXover()
 }
 /**** End of Stubs ****/

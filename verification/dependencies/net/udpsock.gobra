@@ -11,8 +11,7 @@ package net
 
 import "time"
 
-import "github.com/scionproto/scion/verification/utils/definitions"
-import def "github.com/scionproto/scion/verification/utils/definitions"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 import "github.com/scionproto/scion/verification/utils/slices"
 
 // UDPAddr represents the address of a UDP end point.
@@ -43,14 +42,14 @@ ensures res == "udp"
 decreases
 func (a *UDPAddr) Network() (res string) { return "udp" }
 
-preserves a != nil ==> acc(a.Mem(), definitions.ReadL20)
+preserves a != nil ==> acc(a.Mem(), R20)
 decreases
 func (a *UDPAddr) String() string
 
 // UDPConn is the implementation of the Conn and PacketConn interfaces
 // for UDP network connections.
 type UDPConn struct {
-    privateField def.PrivateField
+    privateField PrivateField
 }
 
 pred (u *UDPConn) Mem() {
@@ -83,12 +82,12 @@ func (c *UDPConn) WriteToUDP(b []byte, addr *UDPAddr) (int, error)
 // WriteTo implements the PacketConn WriteTo method.
 requires  acc(addr.Mem(), _)
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *UDPConn) WriteTo(b []byte, addr Addr) (n int, err error)
 
-preserves acc(c.Mem(), definitions.ReadL15)
+preserves acc(c.Mem(), R15)
 ensures   acc(a.Mem(), _)
 decreases
 func (c *UDPConn) LocalAddr() (a Addr)
@@ -137,7 +136,7 @@ decreases _
 func (c *UDPConn) SetReadBuffer(bytes int) (err error)
 
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *UDPConn) Write(b []byte) (n int, err error)

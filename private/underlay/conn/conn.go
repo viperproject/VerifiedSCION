@@ -32,7 +32,7 @@ import (
 	"github.com/scionproto/scion/pkg/log"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/private/underlay/sockctrl"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -56,26 +56,26 @@ type Conn interface {
 	//@ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(m Messages) (n int, err error)
 	//@ requires  acc(Mem(), _)
-	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL10)
+	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	Write(b []byte) (n int, err error)
 	//@ requires  acc(u.Mem(), _)
 	//@ requires  acc(Mem(), _)
-	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL10)
+	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, u *net.UDPAddr) (n int, err error)
 	//@ requires  acc(Mem(), _)
-	//@ preserves forall i int :: { &m[i] } 0 <= i && i < len(m) ==> acc(m[i].Mem(1), definitions.ReadL10)
+	//@ preserves forall i int :: { &m[i] } 0 <= i && i < len(m) ==> acc(m[i].Mem(1), R10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(m)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(m Messages, k int) (n int, err error)
-	//@ preserves acc(Mem(), definitions.ReadL10)
+	//@ preserves acc(Mem(), R10)
 	//@ ensures   u != nil ==> acc(u.Mem(), _)
 	//@ decreases
 	LocalAddr() (u *net.UDPAddr)
-	//@ preserves acc(Mem(), definitions.ReadL10)
+	//@ preserves acc(Mem(), R10)
 	//@ ensures   u != nil ==> acc(u.Mem(), _)
 	//@ decreases
 	RemoteAddr() (u *net.UDPAddr)
@@ -112,8 +112,8 @@ type Config struct {
 // The config can be used to customize socket behavior.
 // @ requires cfg.Mem()
 // @ requires listen != nil || remote != nil
-// @ requires listen != nil ==> acc(listen.Mem(), definitions.ReadL10)
-// @ requires remote != nil ==> acc(remote.Mem(), definitions.ReadL10)
+// @ requires listen != nil ==> acc(listen.Mem(), R10)
+// @ requires remote != nil ==> acc(remote.Mem(), R10)
 // @ ensures  e == nil ==> res.Mem()
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ decreases
@@ -128,9 +128,9 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	/*@
 	assert remote != nil ==> a == remote
 	assert remote == nil ==> a == listen
-	unfold acc(a.Mem(), definitions.ReadL15)
-	unfold acc(slices.AbsSlice_Bytes(a.IP, 0, len(a.IP)), definitions.ReadL15)
-	assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], definitions.ReadL15)
+	unfold acc(a.Mem(), R15)
+	unfold acc(slices.AbsSlice_Bytes(a.IP, 0, len(a.IP)), R15)
+	assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], R15)
 	@*/
 	if a.IP.To4( /*@ false @*/ ) != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
@@ -175,7 +175,7 @@ func (c *connUDPIPv4) ReadBatch(msgs Messages) (nRet int, errRet error) {
 }
 
 // @ requires  acc(c.Mem(), _)
-// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), R10)
 // @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) WriteBatch(msgs Messages, flags int) (n int, err error) {
@@ -249,7 +249,7 @@ func (c *connUDPIPv6) ReadBatch(msgs Messages) (nRet int, errRet error) {
 }
 
 // @ requires  acc(c.Mem(), _)
-// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), definitions.ReadL10)
+// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(1), R10)
 // @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) WriteBatch(msgs Messages, flags int) (n int, err error) {
@@ -405,8 +405,9 @@ func (c *connUDPBase) ReadFrom(b []byte /*@, ghost underlyingConn *net.UDPConn @
 	return c.conn.ReadFromUDP(b)
 }
 
+
 // @ preserves acc(c.Mem(), _)
-// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 // @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err != nil ==> err.ErrorMem()
@@ -418,7 +419,7 @@ func (c *connUDPBase) Write(b []byte /*@, ghost underlyingConn *net.UDPConn @*/)
 // @ requires  acc(dst.Mem(), _)
 // @ preserves acc(c.Mem(), _)
 // @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
-// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
@@ -429,21 +430,21 @@ func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingCo
 	return c.conn.WriteTo(b, dst)
 }
 
-// @ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
+// @ preserves acc(c.MemWithoutConn(), R16)
 // @ ensures   u != nil ==> acc(u.Mem(), _)
 // @ decreases
 func (c *connUDPBase) LocalAddr() (u *net.UDPAddr) {
-	//@ unfold acc(c.MemWithoutConn(), definitions.ReadL16)
-	//@ defer fold acc(c.MemWithoutConn(), definitions.ReadL16)
+	//@ unfold acc(c.MemWithoutConn(), R16)
+	//@ defer fold acc(c.MemWithoutConn(), R16)
 	return c.Listen
 }
 
-// @ preserves acc(c.MemWithoutConn(), definitions.ReadL16)
+// @ preserves acc(c.MemWithoutConn(), R16)
 // @ ensures   u != nil ==> acc(u.Mem(), _)
 // @ decreases
 func (c *connUDPBase) RemoteAddr() (u *net.UDPAddr) {
-	//@ unfold acc(c.MemWithoutConn(), definitions.ReadL16)
-	//@ defer fold acc(c.MemWithoutConn(), definitions.ReadL16)
+	//@ unfold acc(c.MemWithoutConn(), R16)
+	//@ defer fold acc(c.MemWithoutConn(), R16)
 	return c.Remote
 }
 

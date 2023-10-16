@@ -9,8 +9,7 @@ import (
 	"net"
 	"time"
 	"golang.org/x/net/internal/socket"
-	"github.com/scionproto/scion/verification/utils/definitions"
-	def "github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (p *PacketConn) Mem()
@@ -23,7 +22,7 @@ pred (c *Conn) Mem() {
 // It allows to set basic IP-level socket options such as traffic
 // class and hop limit.
 type Conn struct {
-	privateFields def.PrivateField
+	privateFields PrivateField
 }
 
 // PathMTU returns a path MTU value for the destination associated
@@ -65,7 +64,7 @@ func NewConn(c net.Conn) (conn *Conn) {
 // based network I/O methods specific to the IPv6 and higher layer
 // protocols such as OSPF, GRE, and UDP.
 type PacketConn struct {
-	privateFields def.PrivateField
+	privateFields PrivateField
 }
 
 // SetDeadline sets the read and write deadlines associated with the
@@ -162,9 +161,9 @@ func (p *PacketConn) ExchangeWildcardPerm() (c net.PacketConn)
 // On a successful read it returns the number of messages received, up
 // to len(ms).
 trusted
-requires  forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem(lenBuffers)
+preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==>
+	(&ms[i]).Mem(lenBuffers)
 preserves acc(c.Mem(), _)
-ensures   forall i int :: 0 <= i && i < len(ms) ==> (&ms[i]).Mem(lenBuffers)
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> (0 <= n && n <= len(ms))
 ensures   err != nil ==> err.ErrorMem()
@@ -176,7 +175,7 @@ func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers 
 // WriteBatch writes a batch of messages.
 // It returns the number of messages written on a successful write.
 trusted
-preserves forall i int :: 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), definitions.ReadL10)
+preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), R10)
 preserves acc(c.Mem(), _)
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> 0 <= n && n <= len(ms)

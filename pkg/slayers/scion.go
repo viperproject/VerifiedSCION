@@ -39,7 +39,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path/onehop"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	// @ b "github.com/scionproto/scion/verification/utils/bitwise"
-	// @ def "github.com/scionproto/scion/verification/utils/definitions"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -101,22 +101,22 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
-// @ requires def.Uncallable()
+// @ requires Uncallable()
 func (b *BaseLayer) LayerContents() (res []byte) {
 	res = b.Contents
 	return res
 }
 
 // LayerPayload returns the bytes contained within the packet layer.
-// @ preserves acc(b.Mem(ub, bp), def.ReadL20)
+// @ preserves acc(b.Mem(ub, bp), R20)
 // @ ensures   len(res) == len(ub) - bp
 // @ ensures   0 <= bp && bp <= len(ub)
 // @ ensures   res === ub[bp:]
 // @ decreases
 func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte, ghost bp int @*/ ) (res []byte) {
-	// @ unfold acc(b.Mem(ub, bp), def.ReadL20)
+	// @ unfold acc(b.Mem(ub, bp), R20)
 	res = b.Payload
-	// @ fold acc(b.Mem(ub, bp), def.ReadL20)
+	// @ fold acc(b.Mem(ub, bp), R20)
 	return res
 }
 
@@ -187,23 +187,23 @@ func (s *SCION) CanDecode() (res gopacket.LayerClass) {
 	return res
 }
 
-// @ preserves acc(s.Mem(ub), def.ReadL20)
+// @ preserves acc(s.Mem(ub), R20)
 // @ decreases
 func (s *SCION) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerType( /*@ unfolding acc(s.Mem(ub), def.ReadL20) in @*/ s.NextHdr)
+	return scionNextLayerType( /*@ unfolding acc(s.Mem(ub), R20) in @*/ s.NextHdr)
 }
 
-// @ preserves acc(s.Mem(ub), def.ReadL20)
+// @ preserves acc(s.Mem(ub), R20)
 // @ ensures   0 <= start && start <= end && end <= len(ub)
 // @ ensures   len(res) == end - start
 // @ ensures   res === ub[start:end]
 // @ decreases
 func (s *SCION) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
-	//@ unfold acc(s.Mem(ub), def.ReadL20)
+	//@ unfold acc(s.Mem(ub), R20)
 	res = s.Payload
 	//@ start = int(s.HdrLen*LineLen)
 	//@ end = len(ub)
-	//@ fold acc(s.Mem(ub), def.ReadL20)
+	//@ fold acc(s.Mem(ub), R20)
 	return res /*@, start, end @*/
 }
 
@@ -216,22 +216,22 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 
 // @ requires  !opts.FixLengths
 // @ requires  b != nil && b.Mem()
-// @ requires  acc(s.Mem(ubuf), def.ReadL0)
+// @ requires  acc(s.Mem(ubuf), R0)
 // @ requires  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   b.Mem()
-// @ ensures   acc(s.Mem(ubuf), def.ReadL0)
+// @ ensures   acc(s.Mem(ubuf), R0)
 // @ ensures   sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // TODO: hide internal spec details
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), _) in
-// @		(CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]))
+// @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), R55) in
+// @		(CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]))
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @	(unfolding acc(s.Mem(ubuf), _) in CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen])) <= len(ubuf)
+// @	(unfolding acc(s.Mem(ubuf), R55) in CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])) <= len(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
-	// @ unfold acc(s.Mem(ubuf), def.ReadL0)
-	// @ defer  fold acc(s.Mem(ubuf), def.ReadL0)
+	// @ unfold acc(s.Mem(ubuf), R0)
+	// @ defer  fold acc(s.Mem(ubuf), R0)
 	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
 	// @ ghost defer sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
@@ -248,7 +248,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		return err
 	}
 	if opts.FixLengths {
-		// @ def.Unreachable()
+		// @ Unreachable()
 		s.HdrLen = uint8(scnLen / LineLen)
 		s.PayloadLen = uint16(len(b.Bytes()) - scnLen)
 	}
@@ -285,15 +285,15 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 
 	// @ ghost sPath := s.Path
 	// @ ghost pathSlice := ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]
-	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
+	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), R10)
 
 	// Serialize address header.
 	// @ sl.SplitRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
-	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
+	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
 	if err := s.SerializeAddrHdr(buf[CmnHdrLen:] /*@ , ubuf[CmnHdrLen:] @*/); err != nil {
 		// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
-		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
-		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
+		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
+		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), R10)
 		// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
 		// @ b.RestoreMem(uSerBufN)
 		return err
@@ -301,8 +301,8 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
 
 	// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
-	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), def.ReadL10)
-	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), def.ReadL10)
+	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
+	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), R10)
 	// Serialize path header.
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
@@ -329,27 +329,27 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("packet is shorter than the common header length",
 			"min", CmnHdrLen, "actual", len(data))
 	}
-	// @ sl.SplitRange_Bytes(data, 0, 4, def.ReadL15)
-	// @ preserves 4 <= len(data) && acc(sl.AbsSlice_Bytes(data[:4], 0, 4), def.ReadL15)
+	// @ sl.SplitRange_Bytes(data, 0, 4, R15)
+	// @ preserves 4 <= len(data) && acc(sl.AbsSlice_Bytes(data[:4], 0, 4), R15)
 	// @ decreases
 	// @ outline(
-	// @ unfold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), def.ReadL15)
+	// @ unfold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), R15)
 	firstLine := binary.BigEndian.Uint32(data[:4])
-	// @ fold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), def.ReadL15)
+	// @ fold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), R15)
 	// @ )
-	// @ sl.CombineRange_Bytes(data, 0, 4, def.ReadL15)
+	// @ sl.CombineRange_Bytes(data, 0, 4, R15)
 	// @ unfold s.NonInitMem()
 	s.Version = uint8(firstLine >> 28)
 	s.TrafficClass = uint8((firstLine >> 20) & 0xFF)
 	s.FlowID = firstLine & 0xFFFFF
 	// @ preserves acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) && acc(&s.PathType)
 	// @ preserves acc(&s.DstAddrType) && acc(&s.SrcAddrType)
-	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
+	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), R15)
 	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 	// @ ensures   0 <= s.PathType && s.PathType < 256
 	// @ decreases
 	// @ outline(
-	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R15)
 	s.NextHdr = L4ProtocolType(data[4])
 	s.HdrLen = data[5]
 	// @ assert &data[6:8][0] == &data[6] && &data[6:8][1] == &data[7]
@@ -361,20 +361,20 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ assert int(s.DstAddrType) == b.BitAnd7(int(data[9] >> 4))
 	s.SrcAddrType = AddrType(data[9] & 0x7)
 	// @ assert int(s.SrcAddrType) == b.BitAnd7(int(data[9]))
-	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL15)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R15)
 	// @ )
 	// Decode address header.
-	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
-	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, R5)
+	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), R5)
 	if err := s.DecodeAddrHdr(data[CmnHdrLen:]); err != nil {
 		// @ fold s.NonInitMem()
-		// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
-		// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
+		// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), R5)
+		// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, R5)
 		df.SetTruncated()
 		return err
 	}
-	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), def.ReadL5)
-	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, def.ReadL5)
+	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), R5)
+	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, R5)
 	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
 	//                 is set to nil. As such, we pick the easiest possible value as a placeholder.
 	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
@@ -416,7 +416,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	/*@ ghost if typeOf(s.Path) == type[*onehop.Path] {
 		s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
 		assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
-		assert CmnHdrLen + s.AddrHdrLen(nil, true) + s.Path.Len(data[offset : offset+pathLen]) <= len(data)
+		assert CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(data[offset : offset+pathLen]) <= len(data)
 	} @*/
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
@@ -455,10 +455,10 @@ func (s *SCION) RecyclePaths() {
 }
 
 // getPath returns a new or recycled path for pathType
-// @ requires  acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+// @ requires  acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
 // @ requires  PathPoolMem(s.pathPool, s.pathPoolRaw)
 // @ requires  0 <= pathType && pathType < path.MaxPathType
-// @ ensures   acc(&s.pathPool, def.ReadL20) && acc(&s.pathPoolRaw, def.ReadL20)
+// @ ensures   acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
 // @ ensures   err == nil ==> res != nil
 // @ ensures   err == nil ==> res.NonInitMem()
 // @ ensures   (err == nil && !s.pathPoolInitialized()) ==> PathPoolMem(s.pathPool, s.pathPoolRaw)
@@ -575,11 +575,11 @@ func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 // from the underlaying layer data. Changing the net.Addr object might lead to inconsistent layer
 // information and thus should be treated read-only. Instead, SetDstAddr should be used to update
 // the destination address.
-// @ requires  acc(&s.DstAddrType, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
+// @ requires  acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
 // @ requires  s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
-// @ requires  acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
-// @ ensures   acc(&s.DstAddrType, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
-// @ ensures   acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+// @ requires  acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// @ ensures   acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
+// @ ensures   acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
 // @ ensures   err == nil ==> (s.DstAddrType == T16Ip ==> typeOf(res) == *net.IPAddr)
 // @ ensures   err == nil ==> (s.DstAddrType == T16Ip ==> (acc(res.(*net.IPAddr)) && s.RawDstAddr === []byte(res.(*net.IPAddr).IP)))
 // @ ensures   err == nil ==> (s.DstAddrType == T4Ip ==>  typeOf(res) == *net.IPAddr)
@@ -596,11 +596,11 @@ func (s *SCION) DstAddr() (res net.Addr, err error) {
 // underlaying layer data. Changing the net.Addr object might lead to inconsistent layer information
 // and thus should be treated read-only. Instead, SetDstAddr should be used to update the source
 // address.
-// @ requires  acc(&s.SrcAddrType, def.ReadL20) && acc(&s.RawSrcAddr, def.ReadL20)
+// @ requires  acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
 // @ requires  s.SrcAddrType == T4Svc ==> len(s.RawSrcAddr) >= addr.HostLenSVC
-// @ requires  acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
-// @ ensures   acc(&s.SrcAddrType, def.ReadL20) && acc(&s.RawSrcAddr, def.ReadL20)
-// @ ensures   acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+// @ requires  acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+// @ ensures   acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
+// @ ensures   acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
 // @ ensures   err == nil ==> (s.SrcAddrType == T16Ip ==> typeOf(res) == *net.IPAddr)
 // @ ensures   err == nil ==> (s.SrcAddrType == T16Ip ==> (acc(res.(*net.IPAddr)) && s.RawSrcAddr === []byte(res.(*net.IPAddr).IP)))
 // @ ensures   err == nil ==> (s.SrcAddrType == T4Ip ==>  typeOf(res) == *net.IPAddr)
@@ -619,7 +619,7 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ requires  acc(&s.RawDstAddr)
 // @ requires  acc(&s.DstAddrType)
 // @ requires  wildcard ==> acc(dst.Mem(), _)
-// @ requires  !wildcard ==> acc(dst.Mem(), def.ReadL18)
+// @ requires  !wildcard ==> acc(dst.Mem(), R18)
 // @ ensures   isIP(dst) ==> res == nil
 // @ ensures   isHostSVC(dst) ==> res == nil
 // @ ensures   acc(&s.RawDstAddr) && acc(&s.DstAddrType)
@@ -628,15 +628,15 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ ensures   res == nil && wildcard && isIP(dst) ==> acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), _)
 // @ ensures   res == nil && wildcard && isHostSVC(dst) ==> sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 // @ ensures   res == nil && !wildcard && isHostSVC(dst) ==> sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
-// @ ensures   res == nil && !wildcard ==> acc(dst.Mem(), def.ReadL18)
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[12+i]))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (!isIPv4(dst) && !isIPv6(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv4(dst) ==> len(s.RawDstAddr) == len(dst.(*net.IPAddr).IP)))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr) + 12))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (!isIPv4(dst) && !isIPv6(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), def.ReadL20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
+// @ ensures   res == nil && !wildcard ==> acc(dst.Mem(), R18)
+// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
+// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[12+i]))
+// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (!isIPv4(dst) && !isIPv6(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
+// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
+// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==> len(s.RawDstAddr) == len(dst.(*net.IPAddr).IP)))
+// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr) + 12))
+// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (!isIPv4(dst) && !isIPv6(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
+// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
 // @ ensures   (res == nil) == (typeOf(dst) == type[*net.IPAddr] || typeOf(dst) == type[addr.HostSVC])
 // @ decreases
 func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res error) {
@@ -644,7 +644,7 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 	var verScionTmp []byte
 	s.DstAddrType, verScionTmp, err = packAddr(dst /*@ , wildcard @*/)
 	// @ ghost if !wildcard && err == nil && isIP(dst) {
-	// @   apply acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), def.ReadL20) --* acc(dst.Mem(), def.ReadL20)
+	// @   apply acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(dst.Mem(), R20)
 	// @ }
 	s.RawDstAddr = verScionTmp
 	return err
@@ -656,7 +656,7 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ requires  acc(&s.RawSrcAddr)
 // @ requires  acc(&s.SrcAddrType)
 // @ requires  wildcard ==> acc(src.Mem(), _)
-// @ requires  !wildcard ==> acc(src.Mem(), def.ReadL18)
+// @ requires  !wildcard ==> acc(src.Mem(), R18)
 // @ ensures   isIP(src) ==> res == nil
 // @ ensures   isHostSVC(src) ==> res == nil
 // @ ensures   acc(&s.RawSrcAddr) && acc(&s.SrcAddrType)
@@ -665,15 +665,15 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   res == nil && wildcard && isIP(src) ==> acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 // @ ensures   res == nil && wildcard && isHostSVC(src) ==> sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
 // @ ensures   res == nil && !wildcard && isHostSVC(src) ==> sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
-// @ ensures   res == nil && !wildcard ==> acc(src.Mem(), def.ReadL18)
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[12+i]))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (!isIPv4(src) && !isIPv6(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv4(src) ==> len(s.RawSrcAddr) == len(src.(*net.IPAddr).IP)))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr) + 12))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (!isIPv4(src) && !isIPv6(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), def.ReadL20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
+// @ ensures   res == nil && !wildcard ==> acc(src.Mem(), R18)
+// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
+// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[12+i]))
+// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (!isIPv4(src) && !isIPv6(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
+// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
+// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv4(src) ==> len(s.RawSrcAddr) == len(src.(*net.IPAddr).IP)))
+// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr) + 12))
+// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (!isIPv4(src) && !isIPv6(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
+// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
 // @ ensures   (res == nil) == (typeOf(src) == type[*net.IPAddr] || typeOf(src) == type[addr.HostSVC])
 // @ decreases
 func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error) {
@@ -681,14 +681,14 @@ func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error
 	var verScionTmp []byte
 	s.SrcAddrType, verScionTmp, err = packAddr(src /*@ , wildcard @*/)
 	// @ ghost if !wildcard && err == nil && isIP(src) {
-	// @   apply acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), def.ReadL20) --* acc(src.Mem(), def.ReadL20)
+	// @   apply acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(src.Mem(), R20)
 	// @ }
 	s.RawSrcAddr = verScionTmp
 	return err
 }
 
 // @ requires  addrType == T4Svc ==> len(raw) >= addr.HostLenSVC
-// @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), def.ReadL20)
+// @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R20)
 // @ ensures   err == nil ==> (addrType == T16Ip ==> typeOf(res) == *net.IPAddr)
 // @ ensures   err == nil ==> (addrType == T16Ip ==> (acc(res.(*net.IPAddr)) && raw === []byte(res.(*net.IPAddr).IP)))
 // @ ensures   err == nil ==> (addrType == T4Ip ==> typeOf(res) == *net.IPAddr)
@@ -703,9 +703,9 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
 		return verScionTmp, nil
 	case T4Svc:
-		// @ unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), def.ReadL20)
+		// @ unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R20)
 		verScionTmp := addr.HostSVC(binary.BigEndian.Uint16(raw[:addr.HostLenSVC]))
-		// @ fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), def.ReadL20)
+		// @ fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R20)
 		return verScionTmp, nil
 	case T16Ip:
 		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
@@ -716,8 +716,8 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 }
 
 // @ requires  wildcard ==> acc(hostAddr.Mem(), _)
-// @ requires  !wildcard ==> acc(hostAddr.Mem(), def.ReadL19)
-// @ ensures   !wildcard ==> acc(hostAddr.Mem(), def.ReadL20)
+// @ requires  !wildcard ==> acc(hostAddr.Mem(), R19)
+// @ ensures   !wildcard ==> acc(hostAddr.Mem(), R20)
 // @ ensures   hostAddr === old(hostAddr)
 // @ ensures   isIP(hostAddr) ==> err == nil
 // @ ensures   isHostSVC(hostAddr) ==> err == nil
@@ -726,17 +726,17 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 // @ ensures   err == nil && wildcard && isIP(hostAddr) ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
 // @ ensures   err == nil && wildcard && isHostSVC(hostAddr) ==> sl.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   err == nil && !wildcard && isHostSVC(hostAddr) ==> sl.AbsSlice_Bytes(b, 0, len(b))
-// @ ensures   err == nil && !wildcard && isHostSVC(hostAddr) ==> acc(hostAddr.Mem(), def.ReadL20)
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL20)
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (acc(sl.AbsSlice_Bytes(b, 0, len(b)), def.ReadL20) --* acc(hostAddr.Mem(), def.ReadL20))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv4(hostAddr) ==> len(b) == len(hostAddr.(*net.IPAddr).IP)))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b) + 12))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
+// @ ensures   err == nil && !wildcard && isHostSVC(hostAddr) ==> acc(hostAddr.Mem(), R20)
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> acc(sl.AbsSlice_Bytes(b, 0, len(b)), R20)
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (acc(sl.AbsSlice_Bytes(b, 0, len(b)), R20) --* acc(hostAddr.Mem(), R20))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv4(hostAddr) ==> len(b) == len(hostAddr.(*net.IPAddr).IP)))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b) + 12))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
 // @ ensures   (err == nil) == (typeOf(hostAddr) == type[*net.IPAddr] || typeOf(hostAddr) == type[addr.HostSVC])
 // @ decreases
 func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType, b []byte, err error) {
@@ -745,33 +745,33 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 		// @ ghost if wildcard {
 		// @     unfold acc(hostAddr.Mem(), _)
 		// @ } else {
-		// @ 	 unfold acc(hostAddr.Mem(), def.ReadL20)
+		// @ 	 unfold acc(hostAddr.Mem(), R20)
 		// @ }
 		if ip := a.IP.To4( /*@ wildcard @*/ ); ip != nil {
 			// @ ghost if !wildcard && isIPv6(a) {
 			// @   assert isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &a.IP[12+i]
 			// @ }
-			// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
+			// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 			// @ ghost if wildcard {
 			// @   fold acc(sl.AbsSlice_Bytes(ip, 0, len(ip)), _)
 			// @ } else {
-			// @   fold acc(sl.AbsSlice_Bytes(ip, 0, len(ip)), def.ReadL20)
-			// @   package acc(sl.AbsSlice_Bytes(ip, 0, len(ip)), def.ReadL20) --* acc(hostAddr.Mem(), def.ReadL20) {
-			// @     unfold acc(sl.AbsSlice_Bytes(ip, 0, len(ip)), def.ReadL20)
-			// @     fold acc(hostAddr.Mem(), def.ReadL20)
+			// @   fold acc(sl.AbsSlice_Bytes(ip, 0, len(ip)), R20)
+			// @   package acc(sl.AbsSlice_Bytes(ip, 0, len(ip)), R20) --* acc(hostAddr.Mem(), R20) {
+			// @     unfold acc(sl.AbsSlice_Bytes(ip, 0, len(ip)), R20)
+			// @     fold acc(hostAddr.Mem(), R20)
 			// @   }
 			// @ }
 			return T4Ip, ip, nil
 		}
-		// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), def.ReadL20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
+		// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 		verScionTmp := a.IP
 		// @ ghost if wildcard {
 		// @   fold acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), _)
 		// @ } else {
-		// @   fold acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), def.ReadL20)
-		// @   package acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), def.ReadL20) --* acc(hostAddr.Mem(), def.ReadL20) {
-		// @     unfold acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), def.ReadL20)
-		// @     fold acc(hostAddr.Mem(), def.ReadL20)
+		// @   fold acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), R20)
+		// @   package acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(hostAddr.Mem(), R20) {
+		// @     unfold acc(sl.AbsSlice_Bytes(verScionTmp, 0, len(verScionTmp)), R20)
+		// @     fold acc(hostAddr.Mem(), R20)
 		// @   }
 		// @ }
 		return T16Ip, verScionTmp, nil
@@ -793,30 +793,42 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 //	This hack will not be needed when we introduce support for
 //	multiple contracts per method.
 //
-// @ pure
-// @ requires insideSlayers ==> acc(&s.DstAddrType, _) && acc(&s.SrcAddrType, _)
-// @ requires insideSlayers ==> s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
-// @ requires !insideSlayers ==> acc(s.Mem(ubuf), _)
-// @ ensures  insideSlayers  ==> res == s.addrHdrLenAbstractionLeak()
-// @ ensures  !insideSlayers ==> res == s.AddrHdrLenNoAbstractionLeak(ubuf)
-// @ ensures  0 <= res
+// @ preserves insideSlayers  ==> acc(&s.DstAddrType, R50) && acc(&s.SrcAddrType, R50)
+// @ preserves insideSlayers  ==> (s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits())
+// @ preserves !insideSlayers ==> acc(s.Mem(ubuf), R50)
+// @ ensures   insideSlayers  ==> res == s.AddrHdrLenSpecInternal()
+// @ ensures   !insideSlayers ==> res == s.AddrHdrLenSpec(ubuf)
+// @ ensures   0 <= res
 // @ decreases
-// @ trusted
 func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
+	/*@
+	ghost if !insideSlayers {
+		unfold acc(s.Mem(ubuf), R51)
+		defer fold acc(s.Mem(ubuf), R51)
+		unfold acc(s.HeaderMem(ubuf[CmnHdrLen:]), R51)
+		defer fold acc(s.HeaderMem(ubuf[CmnHdrLen:]), R51)
+		assert s.AddrHdrLenSpec(ubuf) == (
+			unfolding acc(s.Mem(ubuf), R52) in
+			unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), R52) in
+			2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length())
+		assert s.AddrHdrLenSpec(ubuf) ==
+			2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
+	}
+	@*/
 	return 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
 // SerializeAddrHdr serializes destination and source ISD-AS-Host address triples into the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
-// @ preserves acc(s.HeaderMem(ubuf), def.ReadL10)
+// @ preserves acc(s.HeaderMem(ubuf), R10)
 // @ preserves sl.AbsSlice_Bytes(buf, 0, len(buf))
-// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL10)
+// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err error) {
-	// @ unfold acc(s.HeaderMem(ubuf), def.ReadL10)
-	// @ defer fold acc(s.HeaderMem(ubuf), def.ReadL10)
+	// @ unfold acc(s.HeaderMem(ubuf), R10)
+	// @ defer fold acc(s.HeaderMem(ubuf), R10)
 	if len(buf) < s.AddrHdrLen( /*@ nil, true @*/ ) {
 		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen( /*@ nil, true @*/ ),
 			"actual", len(buf))
@@ -837,29 +849,29 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err er
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	offset += addr.IABytes
 	// @ sl.SplitRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
-	// @ sl.SplitRange_Bytes(ubuf, offset, offset+dstAddrBytes, def.ReadL10)
+	// @ sl.SplitRange_Bytes(ubuf, offset, offset+dstAddrBytes, R10)
 
 	// @ unfold sl.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
-	// @ unfold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), def.ReadL10)
-	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@ , def.ReadL10 @*/)
+	// @ unfold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), R10)
+	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@ , R10 @*/)
 	// @ fold sl.AbsSlice_Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
-	// @ fold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), def.ReadL10)
+	// @ fold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), R10)
 	// @ sl.CombineRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
-	// @ sl.CombineRange_Bytes(ubuf, offset, offset+dstAddrBytes, def.ReadL10)
+	// @ sl.CombineRange_Bytes(ubuf, offset, offset+dstAddrBytes, R10)
 
 	offset += dstAddrBytes
 	// @ sl.SplitRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
-	// @ sl.SplitRange_Bytes(ubuf, offset, offset+srcAddrBytes, def.ReadL10)
+	// @ sl.SplitRange_Bytes(ubuf, offset, offset+srcAddrBytes, R10)
 
 	// @ unfold sl.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
-	// @ unfold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), def.ReadL10)
+	// @ unfold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), R10)
 
-	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@ , def.ReadL10 @*/)
+	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@ , R10 @*/)
 
 	// @ fold sl.AbsSlice_Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
-	// @ fold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), def.ReadL10)
+	// @ fold acc(sl.AbsSlice_Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), R10)
 	// @ sl.CombineRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
-	// @ sl.CombineRange_Bytes(ubuf, offset, offset+srcAddrBytes, def.ReadL10)
+	// @ sl.CombineRange_Bytes(ubuf, offset, offset+srcAddrBytes, R10)
 
 	return nil
 }
@@ -868,15 +880,15 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err er
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
 // @ requires  acc(&s.SrcIA) && acc(&s.DstIA)
-// @ requires  acc(&s.SrcAddrType, def.HalfPerm) && s.SrcAddrType.Has3Bits()
-// @ requires  acc(&s.DstAddrType, def.HalfPerm) && s.DstAddrType.Has3Bits()
+// @ requires  acc(&s.SrcAddrType, HalfPerm) && s.SrcAddrType.Has3Bits()
+// @ requires  acc(&s.DstAddrType, HalfPerm) && s.DstAddrType.Has3Bits()
 // @ requires  acc(&s.RawSrcAddr) && acc(&s.RawDstAddr)
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R10)
 // @ ensures   res == nil ==> s.HeaderMem(data)
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res != nil ==> (
 // @	acc(&s.SrcIA) && acc(&s.DstIA) &&
-// @ 	acc(&s.SrcAddrType, def.HalfPerm) && acc(&s.DstAddrType, def.HalfPerm) &&
+// @ 	acc(&s.SrcAddrType, HalfPerm) && acc(&s.DstAddrType, HalfPerm) &&
 // @ 	acc(&s.RawSrcAddr) && acc(&s.RawDstAddr))
 // @ decreases
 func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
@@ -886,13 +898,13 @@ func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 			"actual", len(data))
 	}
 	offset := 0
-	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R10)
 	// @ assert forall i int :: { &data[offset:][i] }{ &data[i] } 0 <= i && i < l ==> &data[offset:][i] == &data[i]
 	s.DstIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
 	offset += addr.IABytes
 	// @ assert forall i int :: { &data[offset:][i] } 0 <= i && i < l ==> &data[offset:][i] == &data[offset+i]
 	s.SrcIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
-	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), def.ReadL10)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R10)
 	offset += addr.IABytes
 	dstAddrBytes := s.DstAddrType.Length()
 	srcAddrBytes := s.SrcAddrType.Length()
@@ -905,16 +917,16 @@ func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 }
 
 // computeChecksum computes the checksum with the SCION pseudo header.
-// @ requires  acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
+// @ requires  acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
 // @ requires  len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-// @ requires  acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
-// @ requires  acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
-// @ requires  acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
-// @ preserves acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
-// @ ensures   acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
-// @ ensures   acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
-// @ ensures   acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
-// @ ensures   acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+// @ requires  acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
+// @ requires  acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+// @ requires  acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), R20)
+// @ ensures   acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
+// @ ensures   acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
+// @ ensures   acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+// @ ensures   acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
 // @ ensures   s == nil ==> err != nil
 // @ ensures   len(s.RawDstAddr) == 0 ==> err != nil
 // @ ensures   len(s.RawSrcAddr) == 0 ==> err != nil
@@ -934,15 +946,15 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (res uint16, 
 	return folded, nil
 }
 
-// @ requires acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
+// @ requires acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
 // @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-// @ requires acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
-// @ requires acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
-// @ requires acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
-// @ ensures  acc(&s.RawSrcAddr, def.ReadL20) && acc(&s.RawDstAddr, def.ReadL20)
-// @ ensures  acc(&s.SrcIA, def.ReadL20) && acc(&s.DstIA, def.ReadL20)
-// @ ensures  acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
-// @ ensures  acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+// @ requires acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
+// @ requires acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+// @ requires acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// @ ensures  acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
+// @ ensures  acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
+// @ ensures  acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+// @ ensures  acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
 // @ ensures  len(s.RawDstAddr) == 0 ==> err != nil
 // @ ensures  len(s.RawSrcAddr) == 0 ==> err != nil
 // @ ensures  err != nil ==> err.ErrorMem()
@@ -972,7 +984,7 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	}
 	// Address length is guaranteed to be a multiple of 2 by the protocol.
 	// @ ghost var rawSrcAddrLen int = len(s.RawSrcAddr)
-	// @ invariant acc(&s.RawSrcAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+	// @ invariant acc(&s.RawSrcAddr, R20) && acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
 	// @ invariant len(s.RawSrcAddr) == rawSrcAddrLen
 	// @ invariant len(s.RawSrcAddr) % 2 == 0
 	// @ invariant i % 2 == 0
@@ -980,20 +992,20 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	// @ decreases len(s.RawSrcAddr) - i
 	for i := 0; i < len(s.RawSrcAddr); i += 2 {
 		// @ preserves err == nil
-		// @ requires acc(&s.RawSrcAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+		// @ requires acc(&s.RawSrcAddr, R20) && acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
 		// @ requires 0 <= i && i < len(s.RawSrcAddr) && i % 2 == 0 && len(s.RawSrcAddr) % 2 == 0
-		// @ ensures acc(&s.RawSrcAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+		// @ ensures acc(&s.RawSrcAddr, R20) && acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
 		// @ ensures s.RawSrcAddr === before(s.RawSrcAddr)
 		// @ decreases
 		// @ outline(
-		// @ unfold acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+		// @ unfold acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
 		csum += uint32(s.RawSrcAddr[i]) << 8
 		csum += uint32(s.RawSrcAddr[i+1])
-		// @ fold acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), def.ReadL20)
+		// @ fold acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
 		// @ )
 	}
 	// @ ghost var rawDstAddrLen int = len(s.RawDstAddr)
-	// @ invariant acc(&s.RawDstAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+	// @ invariant acc(&s.RawDstAddr, R20) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
 	// @ invariant len(s.RawDstAddr) == rawDstAddrLen
 	// @ invariant len(s.RawDstAddr) % 2 == 0
 	// @ invariant i % 2 == 0
@@ -1001,16 +1013,16 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	// @ decreases len(s.RawDstAddr) - i
 	for i := 0; i < len(s.RawDstAddr); i += 2 {
 		// @ preserves err == nil
-		// @ requires acc(&s.RawDstAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+		// @ requires acc(&s.RawDstAddr, R20) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
 		// @ requires 0 <= i && i < len(s.RawDstAddr) && i % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-		// @ ensures acc(&s.RawDstAddr, def.ReadL20) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+		// @ ensures acc(&s.RawDstAddr, R20) && acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
 		// @ ensures s.RawDstAddr === before(s.RawDstAddr)
 		// @ decreases
 		// @ outline(
-		// @ unfold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+		// @ unfold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
 		csum += uint32(s.RawDstAddr[i]) << 8
 		csum += uint32(s.RawDstAddr[i+1])
-		// @ fold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), def.ReadL20)
+		// @ fold acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
 		// @ )
 	}
 	l := uint32(length)
@@ -1019,16 +1031,16 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	return csum, nil
 }
 
-// @ preserves acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
+// @ preserves acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), R20)
 // @ decreases
 func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	// Compute safe boundary to ensure we do not access out of bounds.
 	// Odd lengths are handled at the end.
 	safeBoundary := len(upperLayer) - 1
-	// @ unfold acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
+	// @ unfold acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), R20)
 	// @ invariant 0 <= i && i < safeBoundary + 2
 	// @ invariant i % 2 == 0
-	// @ invariant forall i int :: 0 <= i && i < len(upperLayer) ==> acc(&upperLayer[i], def.ReadL20)
+	// @ invariant forall i int :: { &upperLayer[i] } 0 <= i && i < len(upperLayer) ==> acc(&upperLayer[i], R20)
 	// @ decreases safeBoundary - i
 	for i := 0; i < safeBoundary; i += 2 {
 		csum += uint32(upperLayer[i]) << 8
@@ -1037,7 +1049,7 @@ func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	if len(upperLayer)%2 == 1 {
 		csum += uint32(upperLayer[safeBoundary]) << 8
 	}
-	// @ fold acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), def.ReadL20)
+	// @ fold acc(sl.AbsSlice_Bytes(upperLayer, 0, len(upperLayer)), R20)
 	return csum
 }
 

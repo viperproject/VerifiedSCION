@@ -19,7 +19,7 @@ package scion
 import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
-	//@ def "github.com/scionproto/scion/verification/utils/definitions"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -58,7 +58,7 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-// @ preserves acc(s.Mem(ubuf), def.ReadL1)
+// @ preserves acc(s.Mem(ubuf), R1)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
@@ -70,26 +70,26 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	if minLen := s.Len( /*@ ubuf @*/ ); len(b) < minLen {
 		return serrors.New("buffer too small", "expected", minLen, "actual", len(b))
 	}
-	//@ unfold acc(s.Mem(ubuf), def.ReadL1)
+	//@ unfold acc(s.Mem(ubuf), R1)
 	// XXX(roosd): This modifies the underlying buffer. Consider writing to data
 	// directly.
-	//@ unfold acc(s.Base.Mem(), def.ReadL1)
+	//@ unfold acc(s.Base.Mem(), R1)
 	//@ slices.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ assert slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
 	//@ slices.SplitRange_Bytes(s.Raw, 0, MetaLen, writePerm)
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
-		// @ def.Unreachable()
+		// @ Unreachable()
 		return err
 	}
-	//@ fold acc(s.Base.Mem(), def.ReadL1)
+	//@ fold acc(s.Base.Mem(), R1)
 	//@ slices.CombineRange_Bytes(s.Raw, 0, MetaLen, writePerm)
-	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), def.ReadL2)
+	//@ unfold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), R2)
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
-	copy(b, s.Raw /*@ , def.ReadL2 @*/)
+	copy(b, s.Raw /*@ , R2 @*/)
 	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
-	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), def.ReadL2)
+	//@ fold acc(slices.AbsSlice_Bytes(s.Raw, 0, len(s.Raw)), R2)
 	//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ fold acc(s.Mem(ubuf), def.ReadL1)
+	//@ fold acc(s.Mem(ubuf), R1)
 	return nil
 }
 
@@ -136,13 +136,13 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ s.RawIdxPerm(ubuf, MetaLen, writePerm)
-	//@ unfold acc(s.Base.Mem(), def.ReadL1)
+	//@ unfold acc(s.Base.Mem(), R1)
 	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
-		// @ def.Unreachable()
+		// @ Unreachable()
 		return nil, err
 	}
-	//@ fold acc(s.Base.Mem(), def.ReadL1)
+	//@ fold acc(s.Base.Mem(), R1)
 	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
 	decoded := &Decoded{}
 	//@ fold decoded.Base.NonInitMem()
@@ -187,68 +187,68 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 }
 
 // GetInfoField returns the InfoField at a given index.
-// @ requires  acc(s.Mem(ubuf), def.ReadL10)
+// @ requires  acc(s.Mem(ubuf), R10)
 // @ requires  0 <= idx
-// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL10)
-// @ ensures   acc(s.Mem(ubuf), def.ReadL10)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
+// @ ensures   acc(s.Mem(ubuf), R10)
 // @ ensures   (idx < old(s.GetNumINF(ubuf))) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL10)
-	//@ unfold acc(s.Base.Mem(), def.ReadL11)
+	//@ unfold acc(s.Mem(ubuf), R10)
+	//@ unfold acc(s.Base.Mem(), R11)
 	if idx >= s.NumINF {
 		e := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), def.ReadL11)
-		//@ fold acc(s.Mem(ubuf), def.ReadL10)
+		//@ fold acc(s.Base.Mem(), R11)
+		//@ fold acc(s.Mem(ubuf), R10)
 		return path.InfoField{}, e
 	}
-	//@ fold acc(s.Base.Mem(), def.ReadL11)
-	//@ fold acc(s.Mem(ubuf), def.ReadL10)
+	//@ fold acc(s.Base.Mem(), R11)
+	//@ fold acc(s.Mem(ubuf), R10)
 	infOffset := MetaLen + idx*path.InfoLen
 	info /*@@@*/ := path.InfoField{}
-	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL10)
+	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, R10)
 	if err := info.DecodeFromBytes(s.Raw[infOffset : infOffset+path.InfoLen]); err != nil {
-		//@ def.Unreachable()
+		//@ Unreachable()
 		return path.InfoField{}, err
 	}
-	//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, def.ReadL10)
+	//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, R10)
 	return info, nil
 }
 
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
-// @ preserves acc(s.Mem(ubuf), def.ReadL8)
-// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
+// @ preserves acc(s.Mem(ubuf), R8)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R1)
 // @ ensures   (r == nil) == (s.GetCurrINF(ubuf) < s.GetNumINF(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoField, r error) {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL9)
-	//@ unfold acc(s.Base.Mem(), def.ReadL10)
+	//@ unfold acc(s.Mem(ubuf), R9)
+	//@ unfold acc(s.Base.Mem(), R10)
 	idx := int(s.PathMeta.CurrINF)
 	// (VerifiedSCION) Cannot assert bounds of uint:
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= idx
-	//@ fold acc(s.Base.Mem(), def.ReadL10)
-	//@ fold acc(s.Mem(ubuf), def.ReadL9)
+	//@ fold acc(s.Base.Mem(), R10)
+	//@ fold acc(s.Mem(ubuf), R9)
 	return s.GetInfoField(idx /*@, ubuf @*/)
 }
 
 // SetInfoField updates the InfoField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), def.ReadL20)
+// @ preserves acc(s.Mem(ubuf), R20)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) {
 	//@ share info
-	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
-	//@ unfold acc(s.Base.Mem(), def.ReadL20)
+	//@ unfold acc(s.Mem(ubuf), R20)
+	//@ unfold acc(s.Base.Mem(), R20)
 	if idx >= s.NumINF {
 		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), def.ReadL20)
-		//@ fold acc(s.Mem(ubuf), def.ReadL20)
+		//@ fold acc(s.Base.Mem(), R20)
+		//@ fold acc(s.Mem(ubuf), R20)
 		return err
 	}
 	infOffset := MetaLen + idx*path.InfoLen
@@ -258,63 +258,63 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
 	//@ slices.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
 	//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ fold acc(s.Base.Mem(), def.ReadL20)
-	//@ fold acc(s.Mem(ubuf), def.ReadL20)
+	//@ fold acc(s.Base.Mem(), R20)
+	//@ fold acc(s.Mem(ubuf), R20)
 	return ret
 }
 
 // GetHopField returns the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), def.ReadL10)
-// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL10)
+// @ preserves acc(s.Mem(ubuf), R10)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
 // @ ensures   (idx < old(s.GetNumHops(ubuf))) == (r == nil)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL10)
-	//@ unfold acc(s.Base.Mem(), def.ReadL11)
+	//@ unfold acc(s.Mem(ubuf), R10)
+	//@ unfold acc(s.Base.Mem(), R11)
 	if idx >= s.NumHops {
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), def.ReadL11)
-		//@ fold acc(s.Mem(ubuf), def.ReadL10)
+		//@ fold acc(s.Base.Mem(), R11)
+		//@ fold acc(s.Mem(ubuf), R10)
 		return path.HopField{}, err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-	//@ fold acc(s.Base.Mem(), def.ReadL11)
-	//@ fold acc(s.Mem(ubuf), def.ReadL10)
+	//@ fold acc(s.Base.Mem(), R11)
+	//@ fold acc(s.Mem(ubuf), R10)
 	hop /*@@@*/ := path.HopField{}
-	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL10)
+	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
-		//@ def.Unreachable()
+		//@ Unreachable()
 		return path.HopField{}, err
 	}
-	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, def.ReadL10)
+	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
 	//@ unfold hop.Mem()
 	return hop, nil
 }
 
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
-// @ preserves acc(s.Mem(ubuf), def.ReadL8)
-// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), def.ReadL1)
+// @ preserves acc(s.Mem(ubuf), R8)
+// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R1)
 // @ ensures   (r == nil) == (s.GetCurrHF(ubuf) < s.GetNumHops(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL9)
-	//@ unfold acc(s.Base.Mem(), def.ReadL10)
+	//@ unfold acc(s.Mem(ubuf), R9)
+	//@ unfold acc(s.Base.Mem(), R10)
 	idx := int(s.PathMeta.CurrHF)
 	// (VerifiedSCION) Cannot assert bounds of uint:
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= idx
-	//@ fold acc(s.Base.Mem(), def.ReadL10)
-	//@ fold acc(s.Mem(ubuf), def.ReadL9)
+	//@ fold acc(s.Base.Mem(), R10)
+	//@ fold acc(s.Mem(ubuf), R9)
 	return s.GetHopField(idx /*@, ubuf @*/)
 }
 
 // SetHopField updates the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), def.ReadL20)
+// @ preserves acc(s.Mem(ubuf), R20)
 // @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -324,13 +324,13 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
 	//@ fold hop.Mem()
-	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
-	//@ unfold acc(s.Base.Mem(), def.ReadL20)
+	//@ unfold acc(s.Mem(ubuf), R20)
+	//@ unfold acc(s.Base.Mem(), R20)
 	if idx >= s.NumHops {
 		// (gavin) introduced `err`
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), def.ReadL20)
-		//@ fold acc(s.Mem(ubuf), def.ReadL20)
+		//@ fold acc(s.Base.Mem(), R20)
+		//@ fold acc(s.Mem(ubuf), R20)
 		return err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
@@ -340,8 +340,8 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	ret := hop.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
 	//@ slices.CombineRange_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
 	//@ slices.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ fold acc(s.Base.Mem(), def.ReadL20)
-	//@ fold acc(s.Mem(ubuf), def.ReadL20)
+	//@ fold acc(s.Base.Mem(), R20)
+	//@ fold acc(s.Mem(ubuf), R20)
 	return ret
 }
 
@@ -354,23 +354,23 @@ func (s *Raw) IsFirstHop( /*@ ghost ubuf []byte @*/ ) bool {
 }
 
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.
-// @ preserves acc(s.Mem(ubuf), def.ReadL20)
+// @ preserves acc(s.Mem(ubuf), R20)
 // @ decreases
 func (s *Raw) IsPenultimateHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
-	//@ defer  fold acc(s.Mem(ubuf), def.ReadL20)
-	//@ unfold acc(s.Base.Mem(), def.ReadL20)
-	//@ defer  fold acc(s.Base.Mem(), def.ReadL20)
+	//@ unfold acc(s.Mem(ubuf), R20)
+	//@ defer  fold acc(s.Mem(ubuf), R20)
+	//@ unfold acc(s.Base.Mem(), R20)
+	//@ defer  fold acc(s.Base.Mem(), R20)
 	return int(s.PathMeta.CurrHF) == (s.NumHops - 2)
 }
 
 // IsLastHop returns whether the current hop is the last hop on the path.
-// @ preserves acc(s.Mem(ubuf), def.ReadL20)
+// @ preserves acc(s.Mem(ubuf), R20)
 // @ decreases
 func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), def.ReadL20)
-	//@ defer  fold acc(s.Mem(ubuf), def.ReadL20)
-	//@ unfold acc(s.Base.Mem(), def.ReadL20)
-	//@ defer  fold acc(s.Base.Mem(), def.ReadL20)
+	//@ unfold acc(s.Mem(ubuf), R20)
+	//@ defer  fold acc(s.Mem(ubuf), R20)
+	//@ unfold acc(s.Base.Mem(), R20)
+	//@ defer  fold acc(s.Base.Mem(), R20)
 	return int(s.PathMeta.CurrHF) == (s.NumHops - 1)
 }

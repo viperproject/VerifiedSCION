@@ -22,7 +22,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -34,7 +34,7 @@ const PathType path.Type = 1
 // @ requires path.PathPackageMem()
 // @ requires !path.Registered(PathType)
 // @ ensures  path.PathPackageMem()
-// @ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+// @ ensures  forall t path.Type :: { old(path.Registered(t)) }{ path.Registered(t) } 0 <= t && t < path.MaxPathType ==>
 // @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
 // @ ensures  path.Registered(PathType)
 // @ decreases
@@ -71,7 +71,7 @@ type Base struct {
 }
 
 // @ requires  s.NonInitMem()
-// @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
+// @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R1)
 // @ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
 // @ ensures   r == nil ==> s.Mem()
 // @ ensures   len(data) < MetaLen ==> r != nil
@@ -139,27 +139,27 @@ func (s *Base) IncPath() (e error) {
 }
 
 // IsXover returns whether we are at a crossover point.
-// @ preserves acc(s.Mem(), definitions.ReadL19)
+// @ preserves acc(s.Mem(), R19)
 // @ decreases
 func (s *Base) IsXover() bool {
-	//@ unfold acc(s.Mem(), definitions.ReadL19)
-	//@ defer fold acc(s.Mem(), definitions.ReadL19)
+	//@ unfold acc(s.Mem(), R19)
+	//@ defer fold acc(s.Mem(), R19)
 	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
 		s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1)
 }
 
 // IsFirstHopAfterXover returns whether this is the first hop field after a crossover point.
-// @ preserves acc(s.Mem(), definitions.ReadL19)
+// @ preserves acc(s.Mem(), R19)
 // @ ensures   res ==> unfolding acc(s.Mem(), _) in s.PathMeta.CurrINF > 0 && s.PathMeta.CurrHF > 0
 // @ decreases
 func (s *Base) IsFirstHopAfterXover() (res bool) {
-	//@ unfold acc(s.Mem(), definitions.ReadL19)
-	//@ defer fold acc(s.Mem(), definitions.ReadL19)
+	//@ unfold acc(s.Mem(), R19)
+	//@ defer fold acc(s.Mem(), R19)
 	return s.PathMeta.CurrINF > 0 && s.PathMeta.CurrHF > 0 &&
 		s.PathMeta.CurrINF-1 == s.infIndexForHF(s.PathMeta.CurrHF-1)
 }
 
-// @ preserves acc(s, definitions.ReadL20)
+// @ preserves acc(s, R20)
 // @ preserves 0 <= s.NumINF && s.NumINF <= 3 && 0 <= s.NumHops
 // @ ensures   (0 <= r && r < 3)
 // @ decreases
@@ -205,7 +205,7 @@ type MetaHdr struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
 // @ preserves acc(m)
-// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
 // @ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrHF >= 0)
 // @ ensures   e != nil ==> e.ErrorMem()
@@ -215,7 +215,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
 		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
@@ -224,14 +224,14 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	m.SegLen[0] = uint8(line>>12) & 0x3F
 	m.SegLen[1] = uint8(line>>6) & 0x3F
 	m.SegLen[2] = uint8(line) & 0x3F
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R1)
 	return nil
 }
 
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // scion.MetaLen.
 // @ requires  len(b) >= MetaLen
-// @ preserves acc(m, definitions.ReadL10)
+// @ preserves acc(m, R10)
 // @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   e == nil
 // @ decreases
