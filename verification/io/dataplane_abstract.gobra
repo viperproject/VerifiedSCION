@@ -19,20 +19,39 @@ package io
 type DataPlaneSpec adt {
 	DataPlaneSpec_{
 		linkTypes		dict[IO_ifs]IO_Link
-		neighborIAs     dict[IO_ifs]IO_as
-		localIA         IO_as
+		neighborIAs		dict[IO_ifs]IO_as
+		localIA			IO_as
 		topology 		TopologySpec
 	}
 }
 
+//TopologySpec provides information about the entire network topology because
+//the dataplane lacks information needed for the IO-specification. 
+//core_as_set: set of ASIDs, which are core ASes in the network.
+//links: representation of the network topology as a graph.
+//		links[a1][1] == a2 means that AS a1 has an edge to AS a2 via interface 1.
 type TopologySpec adt {
 	TopologySpec_{
-		core_as_set     set[IO_as]
+		core_as_set		set[IO_as]
 		links	 		dict[IO_as](dict[IO_ifs]IO_as)
 	}
 }
 
+//A DataPlaneSpec is valid if and only if the domain of linkTypes and neighborIAs 
+//are equal, i.e., evey link connects to an AS. The entries of neigborIAs and links[localIA] 
+//are equal, i.e, all local neighbors are part of the network topology. Every core AS 
+//and localIA must be in the domain of links. 
 ghost
+decreases
+pure func (dp DataPlaneSpec) Valid() bool{
+	return domain(dp.linkTypes) == domain(dp.neighborIAs) && 
+		dp.localIA in domain(dp.topology.links) &&
+		dp.neighborIAs == dp.topology.links[dp.localIA] &&
+		(forall core IO_as :: {core in dp.topology.core_as_set} core in dp.topology.core_as_set ==> core in domain(dp.topology.links))
+}
+
+ghost
+decreases
 requires ifs in domain(dp.linkTypes)
 pure func (dp DataPlaneSpec) GetLinkType(ifs IO_ifs) IO_Link {
 	return dp.linkTypes[ifs]
@@ -40,11 +59,19 @@ pure func (dp DataPlaneSpec) GetLinkType(ifs IO_ifs) IO_Link {
 
 ghost
 requires ifs in domain(dp.neighborIAs)
+decreases
 pure func (dp DataPlaneSpec) GetNeighborIA(ifs IO_ifs) IO_as {
 	return dp.neighborIAs[ifs]
 }
 
 ghost
+decreases
 pure func (dp DataPlaneSpec) GetLocalIA() IO_as {
 	return dp.localIA
+}
+
+ghost
+decreases
+pure func (dp DataPlaneSpec) GetCore_as_set() set[IO_as] {
+	return dp.topology.core_as_set
 }
