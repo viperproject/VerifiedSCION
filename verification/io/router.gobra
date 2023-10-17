@@ -118,8 +118,8 @@ pure func insert(buf dict[option[IO_ifs]](set[IO_pkt3]), k option[IO_ifs], v IO_
 ghost
 decreases
 pure func dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
-	return (exists currseg IO_seg3, traversedseg IO_seg3, fut seq[IO_HF], hf1 IO_HF :: dp2_forward_ext_guard(asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1)) &&
-			(exists a2 IO_as, i2 IO_ifs :: is_target(asid(), nextif, a2, i2))
+	return (exists currseg IO_seg3, traversedseg IO_seg3, fut seq[IO_HF], hf1 IO_HF :: { dp2_forward_ext_guard(asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) } dp2_forward_ext_guard(asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1)) &&
+			(exists a2 IO_as, i2 IO_ifs :: { is_target(asid(), nextif, a2, i2) } is_target(asid(), nextif, a2, i2))
 }
 
 // TODO: should we change IO_ifs to being implemented as an option type?
