@@ -18,8 +18,6 @@
 
 package io
 
-// TODO: delete everything except guards
-
 // Xover events are similar to the enter event in that a packet is received form an external
 // channel and forwarded (internally or externally), but in contrast to the enter event,
 // additional processing steps are required to switch from the current segment,
@@ -65,26 +63,6 @@ pure func (dp DataPlaneSpec) dp2_xover_common_guard(m IO_pkt2,
 			dp.same_other2(currseg, traversedseg)
 }
 
-//
-// ghost
-// decreases
-// pure func (dp DataPlaneSpec) dp2_xover_common(
-// 	s IO_dp2_state,
-// 	m IO_pkt2,
-// 	currseg IO_seg2,
-// 	nextseg IO_seg2,
-// 	traversedseg IO_seg2,
-// 	newpkt IO_pkt2,
-// 	hf1 IO_HF,
-// 	hf2 IO_HF,
-// 	asid IO_as,
-// 	recvif IO_ifs,
-// 	sprime IO_dp2_state) bool {
-// 		return dp.dp2_in_ext(s, asid, recvif, m) &&
-// 			dp.dp2_xover_common_guard(m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, asid, recvif) &&
-// 			dp.dp2_forward(s, sprime, asid, newpkt)
-// }
-
 ghost
 decreases
 pure func (dp DataPlaneSpec) egif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
@@ -101,29 +79,9 @@ ghost
 decreases
 pure func (dp DataPlaneSpec) xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
 	return (dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_ProvCust{})) ||
-	(dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_PeerOrCore{})) ||
-	(dp.egif2_type(hf1, asid, IO_PeerOrCore{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
+		(dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_PeerOrCore{})) ||
+		(dp.egif2_type(hf1, asid, IO_PeerOrCore{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
 }
-
-// ghost
-// decreases
-// pure func dp2_xover_up2down(
-// 	s IO_dp2_state,
-// 	m IO_pkt2,
-// 	currseg IO_seg2,
-// 	nextseg IO_seg2,
-// 	traversedseg IO_seg2,
-// 	newpkt IO_pkt2,
-// 	asid IO_as,
-// 	recvif IO_ifs,
-// 	hf1 IO_HF,
-// 	hf2 IO_HF,
-// 	sprime IO_dp2_state) bool {
-// 		return !currseg.ConsDir &&
-// 			nextseg.ConsDir &&
-// 			dp.xover_up2down2_link_type(asid, hf1, hf2) &&
-// 			dp.dp2_xover_common(s, m, currseg, nextseg, traversedseg, newpkt, hf1, hf2, asid, recvif, sprime)
-// }
 
 ghost
 decreases
@@ -131,22 +89,3 @@ pure func (dp DataPlaneSpec) xover_core2_link_type(hf1 IO_HF, hf2 IO_HF, asid IO
 	return (!d && dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.inif2_type(hf2, asid, IO_PeerOrCore{})) ||
 		(d && dp.inif2_type(hf1, asid, IO_PeerOrCore{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
 }
-
-// TODO: how to formulate "asid in core"?
-// TODO: drop
-// ghost
-// decreases
-// pure func dp2_xover_core(
-// 	s IO_dp2_state,
-// 	m IO_pkt2,
-// 	currseg IO_seg2,
-// 	nextseg IO_seg2,
-// 	traversedseg IO_seg2,
-// 	newpkt IO_pkt2,
-// 	asid IO_as,
-// 	recvif IO_ifs,
-// 	d1 bool,
-// 	hf1 IO_HF,
-// 	hf2 IO_HF,
-// 	nextfut seq[IO_HF],
-// 	sprime IO_dp2_state) bool
