@@ -18,8 +18,6 @@
 
 package io
 
-import "github.com/scionproto/scion/pkg/slayers/path"
-
 // used everywhere where the Isabel spec has a type-parameter
 type TypeParameter = interface{}
 type TypeParameter1 = interface{}
@@ -117,23 +115,6 @@ func (h IO_HF) Toab() IO_ahi {
 	return IO_ahi_{h.InIF2, h.EgIF2, h.HVF.extract_asid()}
 }
 
-// TODO: move ToHF to another package
-// TODO: can we get rid of this assumption?
-// We ASSUME the existence of a function that computes the msgTerm of a path.HopField
-ghost
-decreases
-pure func ComputeMsgTerm(h path.HopField) IO_msgterm
-
-// TODO: should be easy to give a body to this now
-ghost
-ensures h.ConsIngress == 0 ==> res.InIF2 == none[IO_ifs]
-ensures h.ConsIngress != 0 ==> res.InIF2 == some(IO_ifs(h.ConsIngress))
-ensures h.ConsEgress  == 0 ==> res.EgIF2 == none[IO_ifs]
-ensures h.ConsEgress  != 0 ==> res.EgIF2 == some(IO_ifs(h.ConsIngress))
-ensures res.HVF == ComputeMsgTerm(h)
-decreases
-pure func ToHF(h path.HopField) (res IO_HF)
-
 /* Link Types */
 type IO_Link adt {
 	IO_CustProv{}
@@ -151,39 +132,39 @@ type IO_Link adt {
 
 ghost
 decreases
-pure func rid_as(p IO_rid) IO_as
+pure func (dp DataPlaneSpec) rid_as(p IO_rid) IO_as
 
 ghost
 decreases
-pure func link_type(p1 IO_as, p2 IO_ifs) IO_Link
+pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link
 
 ghost
 decreases
-pure func egif_prov2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) egif_prov2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func egif_core2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) egif_core2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func egif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) egif_cust2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func inif_cust2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) inif_cust2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func inif_core2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) inif_core2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func inif_prov2(hf1 IO_HF, asid IO_as) bool
+pure func (dp DataPlaneSpec) inif_prov2(hf1 IO_HF, asid IO_as) bool
 
 ghost
 decreases
-pure func if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool
+pure func (dp DataPlaneSpec) if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool
 
 type ext2_rec struct {
 	op1 IO_as
@@ -201,19 +182,6 @@ type IO_dp2_state adt {
 	}
 }
 
-ghost
-decreases
-pure func dp2_add_ext(s, sprime IO_dp2_state, asid IO_as, nextif IO_ifs, newpkt IO_pkt2) bool
-
-ghost
-decreases
-pure func dp2_add_int(s, sprime IO_dp2_state, asid IO_as, newpkt IO_pkt2) bool
-
-ghost
-decreases
-pure func dp2_in_ext(s IO_dp2_state, asid IO_as, ifs IO_ifs, pkt IO_pkt2) bool
-
-// TODO: how is this defined?
 // extract_asid
 ghost
 decreases
