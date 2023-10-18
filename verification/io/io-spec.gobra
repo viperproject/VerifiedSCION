@@ -85,7 +85,7 @@ ghost
 requires v.isIO_Internal_val1
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return some(v.IO_Internal_val1_2) in domain(s.ibuf) ==>
+	return some(v.IO_Internal_val1_2) in domain(s.ibuf) &&
 		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 in ibuf_set)) &&
 		len(v.IO_Internal_val1_1.CurrSeg.Future) > 0 &&
 		len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
@@ -249,7 +249,7 @@ ghost
 requires v.isIO_Internal_val2
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return none[IO_ifs] in domain(s.ibuf) ==>
+	return none[IO_ifs] in domain(s.ibuf) &&
 		(let ibuf_set := s.ibuf[none[IO_ifs]] in (v.IO_Internal_val2_1 in ibuf_set)) &&
 		len(v.IO_Internal_val2_1.CurrSeg.Future) > 0 &&
 		len(v.IO_Internal_val2_2.CurrSeg.Future) > 0 &&
@@ -282,7 +282,7 @@ ghost
 requires v.isIO_val_Pkt2
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_send_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return v.IO_val_Pkt2_1 in domain(s.obuf) ==>
+	return v.IO_val_Pkt2_1 in domain(s.obuf) &&
 		(let obuf_set := s.obuf[v.IO_val_Pkt2_1] in (v.IO_val_Pkt2_2 in obuf_set))
 }
 
