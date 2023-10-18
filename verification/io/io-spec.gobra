@@ -165,7 +165,7 @@ pure func dp3s_iospec_bio3s_xover_core_T(t Place, v IO_val) Place
 ghost
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return (dp.asid() in dp.core_as_set() &&
+	return (dp.asid() in dp.core() &&
 		let currseg := v.IO_Internal_val1_1.CurrSeg in
 		match v.IO_Internal_val1_1.LeftSeg {
 			case none[IO_seg2]: false
@@ -195,7 +195,8 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Place) {
 	forall v IO_val :: { dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) }{ CBio_IN_bio3s_xover_core(t, v) }{ dp.dp3s_iospec_ordered(dp.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3), dp3s_iospec_bio3s_xover_core_T(t, v)) } (
 		match v {
-			case IO_Internal_val1{_, _, ?newpkt, ?nextif}: (dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) ==>
+			case IO_Internal_val1{_, _, ?newpkt, ?nextif}: 
+				(dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) ==>
 				(CBio_IN_bio3s_xover_core(t, v) &&
 				dp.dp3s_iospec_ordered(
 					dp.dp3s_add_obuf(s, nextif, newpkt),

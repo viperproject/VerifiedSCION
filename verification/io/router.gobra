@@ -23,7 +23,7 @@ package io
 // This function corresponds to function 'core' in the IO spec
 ghost
 decreases
-pure func (dp DataPlaneSpec) core_as_set() set[IO_as] //TODO: how
+pure func (dp DataPlaneSpec) core() set[IO_as]
 
 ghost
 decreases
