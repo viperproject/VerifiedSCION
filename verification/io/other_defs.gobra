@@ -34,9 +34,6 @@ type IO_ifs uint16
 // type of AS identifiers
 type IO_as uint
 
-// router ids
-//type IO_rid uint
-
 // msgTerms consist of terms from our term algebra.
 type IO_msgterm adt {
 	MsgTerm_Empty{}
@@ -122,20 +119,9 @@ type IO_Link adt {
 	IO_PeerOrCore{}
 	IO_NoLink{}
 }
-/* End of Link Types */
 
-/* To clarify, the existence of the following functions seems to be assumed */
-// NOTE:
-// The following functions are provided as parameters to various locales in the Isabelle formalization.
-// However, it is not clear at the moment how these should be translated to Gobra and whether they
-// should have proof obligations attached, or can just be assumed to exist.
-
-// ghost
-// decreases
-// pure func (dp DataPlaneSpec) rid_as(p IO_rid) IO_as
-
-//TODO: should be put p1 == dp.GetLocalIA in the precondition?
-//There is some freedom in how to define the function
+// TODO: should be put p1 == dp.GetLocalIA() in the precondition?
+// This function is provided as locale in the Isabelle formalization.
 ghost
 decreases
 pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link{
@@ -211,11 +197,8 @@ type IO_dp2_state adt {
 	}
 }
 
-// extract_asid
 ghost
 decreases
 pure func (m IO_msgterm) extract_asid() IO_as {
 	return m.MsgTerm_Hash_.MsgTerm_MPair_1.MsgTerm_Key_.Key_macK_
 }
-
-/* End of To clarify */
