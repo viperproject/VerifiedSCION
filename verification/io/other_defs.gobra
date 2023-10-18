@@ -134,14 +134,16 @@ type IO_Link adt {
 // decreases
 // pure func (dp DataPlaneSpec) rid_as(p IO_rid) IO_as
 
-//TODO: should be put p1 == dp.getLocalIA in the precondition?
+//TODO: should be put p1 == dp.GetLocalIA in the precondition?
 //There is some freedom in how to define the function
 ghost
 decreases
 pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link{
 	return match p1 {
-		case dp.getLocalIA() : p2 in domain(dp.linkTypes) ? dp.linkTypes[p2] : IO_NoLink{}
-		default : IO_NoLink{}
+		case dp.GetLocalIA(): 
+			p2 in domain(dp.linkTypes) ? dp.linkTypes[p2] : IO_NoLink{}
+		default:
+			IO_NoLink{}
 	}
 }
 
@@ -186,8 +188,10 @@ ghost
 decreases
 pure func (dp DataPlaneSpec) if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool{
 	return match ifs {
-		case none[IO_ifs] : false
-		default : dp.link_type(asid, get(ifs)) == link
+		case none[IO_ifs]: 
+			false
+		default: 
+			dp.link_type(asid, get(ifs)) == link
 	}
 }
 

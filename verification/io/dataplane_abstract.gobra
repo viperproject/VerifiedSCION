@@ -32,7 +32,7 @@ type DataPlaneSpec adt {
 type TopologySpec adt {
 	TopologySpec_{
 		coreAS		set[IO_as]
-		links	 		dict[IO_as](dict[IO_ifs]IO_as)
+		links	 	dict[IO_as](dict[IO_ifs]IO_as)
 	}
 }
 
