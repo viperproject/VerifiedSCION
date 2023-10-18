@@ -118,7 +118,8 @@ decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return let currseg := v.IO_Internal_val1_1.CurrSeg in 
 		match v.IO_Internal_val1_1.LeftSeg{
-			case none[IO_seg2]: false
+			case none[IO_seg2]: 
+				false
 			default: 
 				let nextseg := get(v.IO_Internal_val1_1.LeftSeg) in
 				(nextseg.ConsDir &&
@@ -151,7 +152,8 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down(s IO_dp3s_state_local, t
 					dp.dp3s_iospec_ordered(
 						dp.dp3s_add_obuf(s, nextif, newpkt),
 						dp3s_iospec_bio3s_xover_up2down_T(t, v))))
-			default: true
+			default: 
+				true
 		})
 }
 
@@ -168,7 +170,8 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_
 	return (dp.asid() in dp.core() &&
 		let currseg := v.IO_Internal_val1_1.CurrSeg in
 		match v.IO_Internal_val1_1.LeftSeg {
-			case none[IO_seg2]: false
+			case none[IO_seg2]: 
+				false
 			default: 
 				let nextseg := get(v.IO_Internal_val1_1.LeftSeg) in
 				currseg.ConsDir == nextseg.ConsDir &&
@@ -201,7 +204,8 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Pl
 				dp.dp3s_iospec_ordered(
 					dp.dp3s_add_obuf(s, nextif, newpkt),
 					dp3s_iospec_bio3s_xover_core_T(t, v))))
-			default: true
+			default: 
+				true
 		})
 }
 
@@ -230,7 +234,8 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
 				dp.dp3s_iospec_ordered(
 					dp.dp3s_add_obuf(s, some(nextif), newpkt),
 					dp3s_iospec_bio3s_exit_T(t, v))))
-			default: true
+			default: 
+				true
 		})		
 }
 
@@ -260,7 +265,8 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_send(s IO_dp3s_state_local, t Place) {
 			case IO_val_Unsupported{_, _}: 
 				(CBioIO_bio3s_send(t, v) &&
 				dp.dp3s_iospec_ordered(s, dp3s_iospec_bio3s_send_T(t, v)))
-			default: true
+			default: 
+				true
 		})
 }
 
