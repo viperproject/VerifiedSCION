@@ -65,6 +65,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_create_guard_traversedseg(currseg
 
 // This corresponds to the condition of the if statement in the io-spec case for enter
 ghost
+requires v.isIO_Internal_val1
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return some(v.IO_Internal_val1_2) in domain(s.ibuf) ==>
@@ -114,6 +115,7 @@ pure func dp3s_iospec_bio3s_xover_up2down_T(t Place, v IO_val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for xover_up2down
 ghost
+requires v.isIO_Internal_val1
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return let currseg := v.IO_Internal_val1_1.CurrSeg in 
@@ -166,6 +168,7 @@ pure func dp3s_iospec_bio3s_xover_core_T(t Place, v IO_val) Place
 // This corresponds to the condition of the if statement in the io-spec case for xover_core
 ghost
 decreases
+requires v.isIO_Internal_val1
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return (dp.asid() in dp.core() &&
 		let currseg := v.IO_Internal_val1_1.CurrSeg in
@@ -218,6 +221,7 @@ pure func dp3s_iospec_bio3s_exit_T(t Place, v IO_val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for exit
 ghost
+requires v.isIO_Internal_val2
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return none[IO_ifs] in domain(s.ibuf) ==>
@@ -248,6 +252,7 @@ pure func dp3s_iospec_bio3s_send_T(t Place, v IO_val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for send
 ghost
+requires v.isIO_val_Pkt2
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_send_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return v.IO_val_Pkt2_1 in domain(s.obuf) ==>
