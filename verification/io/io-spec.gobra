@@ -101,7 +101,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_enter(s IO_dp3s_state_local, t Place) 
 				(dp.dp3s_iospec_bio3s_enter_guard(s, t, v) ==>
 				(CBio_IN_bio3s_enter(t, v) &&
 				dp.dp3s_iospec_ordered(
-					dp.dp3s_add_obuf(s, nextif, newpkt),
+					dp3s_add_obuf(s, nextif, newpkt),
 					CBio_IN_bio3s_enter_T(t, v))))
 			default: true
 		})
@@ -111,6 +111,7 @@ pred CBio_IN_bio3s_xover_up2down(t Place, v IO_val)
 
 ghost
 requires CBio_IN_bio3s_xover_up2down(t, v)
+decreases
 pure func dp3s_iospec_bio3s_xover_up2down_T(t Place, v IO_val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for xover_up2down
@@ -146,13 +147,13 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_sta
 }
 
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { dp.dp3s_iospec_bio3s_xover_up2down_guard(s, t, v) }{ CBio_IN_bio3s_xover_up2down(t, v) } { dp.dp3s_iospec_ordered(dp.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3), dp3s_iospec_bio3s_xover_up2down_T(t, v)) } (
+	forall v IO_val :: { dp.dp3s_iospec_bio3s_xover_up2down_guard(s, t, v) }{ CBio_IN_bio3s_xover_up2down(t, v) } { dp.dp3s_iospec_ordered(dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3), dp3s_iospec_bio3s_xover_up2down_T(t, v)) } (
 		match v {
 			case IO_Internal_val1{_, _, ?newpkt, ?nextif}: 
 				(dp.dp3s_iospec_bio3s_xover_up2down_guard(s, t, v) ==>
 				(CBio_IN_bio3s_xover_up2down(t, v) &&
 					dp.dp3s_iospec_ordered(
-						dp.dp3s_add_obuf(s, nextif, newpkt),
+						dp3s_add_obuf(s, nextif, newpkt),
 						dp3s_iospec_bio3s_xover_up2down_T(t, v))))
 			default: 
 				true
@@ -163,6 +164,7 @@ pred CBio_IN_bio3s_xover_core(t Place, v IO_val)
 
 ghost
 requires CBio_IN_bio3s_xover_core(t, v)
+decreases
 pure func dp3s_iospec_bio3s_xover_core_T(t Place, v IO_val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for xover_core
@@ -199,13 +201,13 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_
 }
 
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) }{ CBio_IN_bio3s_xover_core(t, v) }{ dp.dp3s_iospec_ordered(dp.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3), dp3s_iospec_bio3s_xover_core_T(t, v)) } (
+	forall v IO_val :: { dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) }{ CBio_IN_bio3s_xover_core(t, v) }{ dp.dp3s_iospec_ordered(dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3), dp3s_iospec_bio3s_xover_core_T(t, v)) } (
 		match v {
 			case IO_Internal_val1{_, _, ?newpkt, ?nextif}: 
 				(dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) ==>
 				(CBio_IN_bio3s_xover_core(t, v) &&
 				dp.dp3s_iospec_ordered(
-					dp.dp3s_add_obuf(s, nextif, newpkt),
+					dp3s_add_obuf(s, nextif, newpkt),
 					dp3s_iospec_bio3s_xover_core_T(t, v))))
 			default: 
 				true
@@ -217,6 +219,7 @@ pred CBio_IN_bio3s_exit(t Place, v IO_val)
 
 ghost
 requires CBio_IN_bio3s_exit(t, v)
+decreases
 pure func dp3s_iospec_bio3s_exit_T(t Place, v IO_val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for exit
@@ -230,13 +233,13 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s IO_dp3s_state_local,
 }
 
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { dp.dp3s_iospec_bio3s_exit_guard(s, t, v) }{ CBio_IN_bio3s_exit(t, v) }{ dp.dp3s_iospec_ordered(dp.dp3s_add_obuf(s, some(v.IO_Internal_val2_3), v.IO_Internal_val2_2), dp3s_iospec_bio3s_exit_T(t, v)) } (
+	forall v IO_val :: { dp.dp3s_iospec_bio3s_exit_guard(s, t, v) }{ CBio_IN_bio3s_exit(t, v) }{ dp.dp3s_iospec_ordered(dp3s_add_obuf(s, some(v.IO_Internal_val2_3), v.IO_Internal_val2_2), dp3s_iospec_bio3s_exit_T(t, v)) } (
 		match v {
 			case IO_Internal_val2{_, ?newpkt, ?nextif}: 
 				(dp.dp3s_iospec_bio3s_exit_guard(s, t, v) ==>
 				(CBio_IN_bio3s_exit(t, v) &&
 				dp.dp3s_iospec_ordered(
-					dp.dp3s_add_obuf(s, some(nextif), newpkt),
+					dp3s_add_obuf(s, some(nextif), newpkt),
 					dp3s_iospec_bio3s_exit_T(t, v))))
 			default: 
 				true
@@ -248,6 +251,7 @@ pred CBioIO_bio3s_send(t Place, v IO_val)
 
 ghost
 requires CBioIO_bio3s_send(t, v)
+decreases
 pure func dp3s_iospec_bio3s_send_T(t Place, v IO_val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for send
@@ -279,18 +283,21 @@ pred CBioIO_bio3s_recv(t Place)
 
 ghost
 requires CBioIO_bio3s_recv(t)
+decreases
 pure func dp3s_iospec_bio3s_recv_T(t Place) Place
 
 ghost
 requires CBioIO_bio3s_recv(t)
-pure func dp3s_iospec_bio3s_recv_R(t Place) IO_val
+ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported // TODO: Can we make this assumption?
+decreases
+pure func dp3s_iospec_bio3s_recv_R(t Place) (val IO_val)
 
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_recv(s IO_dp3s_state_local, t Place) {
 	CBioIO_bio3s_recv(t) &&
 		(match dp3s_iospec_bio3s_recv_R(t) {
 			case IO_val_Pkt2{?recvif, ?pkt}: 
 				dp.dp3s_iospec_ordered(
-					dp.dp3s_add_ibuf(s, recvif, pkt), dp3s_iospec_bio3s_recv_T(t))
+					dp3s_add_ibuf(s, recvif, pkt), dp3s_iospec_bio3s_recv_T(t))
 			case IO_val_Unsupported{_, _}: 
 				dp.dp3s_iospec_ordered(s, dp3s_iospec_bio3s_recv_T(t))
 			default: 
@@ -302,6 +309,7 @@ pred CBio_Skip(t Place)
 
 ghost
 requires CBio_Skip(t)
+decreases
 pure func dp3s_iospec_skip_T(t Place) Place
 
 pred (dp DataPlaneSpec) dp3s_iospec_skip(s IO_dp3s_state_local, t Place) {
