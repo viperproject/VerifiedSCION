@@ -16,6 +16,11 @@
 
 package scion
 
+import (
+	"encoding/binary"
+	sl "github.com/scionproto/scion/verification/utils/slices"
+)
+
 pred (b *Base) NonInitMem() {
 	acc(b)
 }
@@ -32,19 +37,92 @@ pred (b *Base) Mem() {
 	acc(&b.PathMeta.SegLen[0]) &&
 	acc(&b.PathMeta.SegLen[1]) &&
 	acc(&b.PathMeta.SegLen[2]) &&
-	// 3 is the value of MaxINFs and 64 is the number of MaxHops.
 	0 <= b.NumINF && b.NumINF <= MaxINFs &&
-	// the Code defines 64 as the maximum number of hops,
+	// the program defines 64 as the maximum number of hops,
 	// but this does not seem to be enforced anywhere.
-	0 <= b.NumHops && // && b.NumHops <= MaxHops &&
+	0 <= b.NumHops && // b.NumHops <= MaxHops &&
 	(0 < b.NumINF ==> 0 < b.NumHops)
+}
+
+ghost
+decreases
+pure func (b Base) ValidCurrInfSpec() bool {
+	return 0 <= b.PathMeta.CurrINF && b.PathMeta.CurrINF < b.NumINF
+}
+
+ghost
+decreases
+pure func (b Base) ValidCurrHfSpec() bool {
+	return 0 <= b.PathMeta.CurrHF && b.PathMeta.CurrHF < b.NumHops
+}
+
+ghost
+decreases
+pure func (b Base) ValidCurrIdxsSpec() bool {
+	return 0 <= b.NumINF && b.NumINF <= MaxINFs &&
+		0 <= b.NumHops && b.NumHops <= MaxHops  &&
+		b.ValidCurrHfSpec()  &&
+		b.ValidCurrInfSpec() &&
+		0 <= b.PathMeta.SegLen[0] && b.PathMeta.SegLen[0] < MaxHops &&
+		0 <= b.PathMeta.SegLen[1] && b.PathMeta.SegLen[1] < MaxHops &&
+		0 <= b.PathMeta.SegLen[2] && b.PathMeta.SegLen[2] < MaxHops &&
+		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
+		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
+			b.PathMeta.SegLen[i] != 0) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
+			b.PathMeta.SegLen[i] == 0)
+		// Surprisingly, the following does not seem to be needed
+		// b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+}
+
+ghost
+decreases
+pure func (b Base) InfsMatchHfsSpec() bool {
+	return 0 <= b.NumINF && b.NumINF <= 3 &&
+		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
+		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
+			b.PathMeta.SegLen[i] != 0) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
+			b.PathMeta.SegLen[i] == 0)
+}
+
+ghost
+requires acc(b.Mem(), _)
+decreases
+pure func (b *Base) ValidCurrINF() bool {
+	return unfolding acc(b.Mem(), _) in (*b).ValidCurrInfSpec()
+}
+
+ghost
+requires acc(b.Mem(), _)
+decreases
+pure func (b *Base) ValidCurrHF() bool {
+	return unfolding acc(b.Mem(), _) in (*b).ValidCurrHfSpec()
+}
+
+ghost
+requires acc(b.Mem(), _)
+decreases
+pure func (b *Base) ValidCurrIdxs() bool {
+	return unfolding acc(b.Mem(), _) in (*b).ValidCurrIdxsSpec()
+}
+
+ghost
+requires acc(b.Mem(), _)
+decreases
+pure func (b *Base) InfsMatchHfs() bool {
+	return unfolding acc(b.Mem(), _) in (*b).InfsMatchHfsSpec()
 }
 
 ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res && res <= 3
 decreases
-pure func (b *Base) getNumINF() (res int) {
+pure func (b *Base) GetNumINF() (res int) {
 	return unfolding acc(b.Mem(), _) in b.NumINF
 }
 
@@ -52,8 +130,53 @@ ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res
 decreases
-pure func (b *Base) getNumHops() (res int) {
+pure func (b *Base) GetNumHops() (res int) {
 	return unfolding acc(b.Mem(), _) in b.NumHops
+}
+
+ghost
+requires acc(s.Mem(), _)
+decreases
+pure func (s *Base) GetMetaHdr() MetaHdr {
+	return unfolding acc(s.Mem(), _) in s.PathMeta
+}
+
+ghost
+requires acc(s.Mem(), _)
+decreases
+pure func (s *Base) GetCurrHF() uint8 {
+	return s.GetMetaHdr().CurrHF
+}
+
+ghost
+ensures  0 <= r && r < 3
+decreases
+pure func (s Base) InfForHfSpec(hf uint8) (r uint8) {
+	return hf < s.PathMeta.SegLen[0] ?
+		0 :
+		(hf < s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1] ? 1 : 2)
+}
+
+ghost
+requires acc(s.Mem(), _)
+decreases
+pure func (s *Base) IsXoverSpec() bool {
+	return unfolding acc(s.Mem(), _) in (
+		s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
+		s.PathMeta.CurrINF != s.InfForHfSpec(s.PathMeta.CurrHF+1))
+}
+
+ghost
+requires s.NumINF != 0
+requires int(s.PathMeta.CurrHF) < s.NumHops-1
+ensures  s.ValidCurrIdxsSpec() ==> res.ValidCurrIdxsSpec()
+decreases
+pure func (s Base) IncPathSpec() (res Base) {
+	return Base{
+		PathMeta: MetaHdr{s.InfForHfSpec(s.PathMeta.CurrHF+1), s.PathMeta.CurrHF+1, s.PathMeta.SegLen},
+		NumINF: s.NumINF,
+		NumHops: s.NumHops,
+	}
 }
 
 ghost
@@ -64,3 +187,50 @@ func (b *Base) DowngradePerm() {
 	unfold b.Mem()
 	fold b.NonInitMem()
 }
+
+ghost
+decreases
+pure func DecodedFrom(line uint32) MetaHdr {
+	return MetaHdr {
+		CurrINF: uint8(line >> 30),
+		CurrHF: uint8(line>>24) & 0x3F,
+		SegLen: [3]uint8{uint8(line>>12) & 0x3F, uint8(line>>6) & 0x3F, uint8(line) & 0x3F},
+	}
+}
+
+ghost
+decreases
+pure func (m MetaHdr) SegsInBounds() bool {
+	return 0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&
+		0 <= m.SegLen[1] && m.SegLen[1] <= 63    &&
+		0 <= m.SegLen[2] && m.SegLen[2] <= 63
+}
+
+ghost
+decreases
+pure func (m MetaHdr) SerializedToLine() uint32 {
+	return uint32(m.CurrINF)<<30 |
+		uint32(m.CurrHF&0x3F)<<24 |
+		uint32(m.SegLen[0]&0x3F) << 12 |
+		uint32(m.SegLen[1]&0x3F) << 6 |
+		uint32(m.SegLen[2] & 0x3F)
+}
+
+ghost
+decreases
+pure func (m MetaHdr) InBounds() bool {
+	return 0 <= m.CurrINF && m.CurrINF <= 3   &&
+		0 <= m.CurrHF && m.CurrHF <= 63       &&
+		0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&
+		0 <= m.SegLen[1] && m.SegLen[1] <= 63 &&
+		0 <= m.SegLen[2] && m.SegLen[2] <= 63
+}
+
+/** Lemma proven in /VerifiedSCION/verification/utils/bitwise/proofs.dfy **/
+ghost
+requires m.InBounds()
+ensures  let line1 := m.SerializedToLine() in
+	binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, line1) ==>
+		let line2 := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in DecodedFrom(line2) == m
+decreases
+func (m MetaHdr) SerializeAndDeserializeLemma(b0, b1, b2, b3 byte)
