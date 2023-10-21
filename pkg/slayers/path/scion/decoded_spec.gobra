@@ -26,6 +26,7 @@ import (
 
 /**** Predicates ****/
 
+// TODO: drop?
 pred (d *Decoded) NonInitMem() {
 	acc(&d.InfoFields) &&
 	acc(&d.HopFields) &&
@@ -40,7 +41,7 @@ pred (d *Decoded) Mem() {
 	(forall i int :: { &d.InfoFields[i] } 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
 	acc(&d.HopFields) &&
 	len(d.HopFields) == d.Base.GetNumHops() &&
-	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
+	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> acc(&d.HopFields[i]))
 }
 
 ghost
@@ -48,9 +49,9 @@ requires acc(d.Mem(), _)
 decreases
 pure func (d *Decoded) Valid(ghost ub []byte) bool {
 	return unfolding acc(d.Mem(), _) in (
-		d.Base.getNumINF() <= MaxINFs &&
-		len(d.InfoFields) == d.Base.getNumINF() &&
-		len(d.HopFields) == d.Base.getNumHops() &&
+		d.Base.GetNumINF() <= MaxINFs &&
+		len(d.InfoFields) == d.Base.GetNumINF() &&
+		len(d.HopFields) == d.Base.GetNumHops() &&
 		(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Valid()))
 }
 
@@ -92,11 +93,11 @@ func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this method which acts as a wrapper.
   */
-preserves acc(d.Mem(ubuf), R19)
+preserves acc(d.Mem(), R19)
 decreases
 func (d *Decoded) IsXover(ghost ubuf []byte) bool {
-	unfold acc(d.Mem(ubuf), R19)
-	defer fold acc(d.Mem(ubuf), R19)
+	unfold acc(d.Mem(), R19)
+	defer fold acc(d.Mem(), R19)
 	return d.Base.IsXover()
 }
 
@@ -109,10 +110,10 @@ func (d *Decoded) IsXover(ghost ubuf []byte) bool {
   */
 requires d.Mem() && d.Valid(ubuf)
 ensures  e == nil ==> (
-	d.Mem(ubuf) &&
-    d.Valid(ubuf) &&
+	d.Mem() &&
+	d.Valid(ubuf) &&
 	d.Len(ubuf) == old(d.Len(ubuf)) &&
-	(old(d.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(ubuf)))
+	(old(d.ValidCurrIdxs()) ==> d.ValidCurrIdxs()))
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
@@ -127,52 +128,52 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 }
 
 ghost
-requires acc(d.Mem(ub), _)
+requires acc(d.Mem(), _)
 decreases
-pure func (d *Decoded) ValidCurrINF(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrINF()
+pure func (d *Decoded) ValidCurrINF() bool {
+	return unfolding acc(d.Mem(), _) in d.Base.ValidCurrINF()
 }
 
 ghost
-requires acc(d.Mem(ub), _)
+requires acc(d.Mem(), _)
 decreases
-pure func (d *Decoded) ValidCurrHF(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrHF()
+pure func (d *Decoded) ValidCurrHF() bool {
+	return unfolding acc(d.Mem(), _) in d.Base.ValidCurrHF()
 }
 
 ghost
-requires acc(d.Mem(ub), _)
+requires acc(d.Mem(), _)
 decreases
-pure func (d *Decoded) ValidCurrIdxs(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrIdxs()
+pure func (d *Decoded) ValidCurrIdxs() bool {
+	return unfolding acc(d.Mem(), _) in d.Base.ValidCurrIdxs()
 }
 
 ghost
-requires acc(d.Mem(ub), _)
+requires acc(d.Mem(), _)
 decreases
-pure func (d *Decoded) GetNumINF(ub []byte) (res int) {
-	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumINF()
+pure func (d *Decoded) GetNumINF() (res int) {
+	return unfolding acc(d.Mem(), _) in d.Base.GetNumINF()
 }
 
 ghost
-requires acc(d.Mem(ub), _)
+requires acc(d.Mem(), _)
 decreases
-pure func (d *Decoded) GetNumHops(ub []byte) (res int) {
-	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumHops()
+pure func (d *Decoded) GetNumHops() (res int) {
+	return unfolding acc(d.Mem(), _) in d.Base.GetNumHops()
 }
 
 ghost
-requires acc(s.Mem(ub), _)
+requires acc(s.Mem(), _)
 decreases
-pure func (s *Decoded) GetMetaHdr(ub []byte) MetaHdr {
-	return unfolding acc(s.Mem(ub), _) in s.Base.GetMetaHdr()
+pure func (s *Decoded) GetMetaHdr() MetaHdr {
+	return unfolding acc(s.Mem(), _) in s.Base.GetMetaHdr()
 }
 
 ghost
-requires acc(d.Mem(ub), _)
+requires acc(d.Mem(), _)
 decreases
-pure func (d *Decoded) InfsMatchHfs(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.InfsMatchHfs()
+pure func (d *Decoded) InfsMatchHfs() bool {
+	return unfolding acc(d.Mem(), _) in d.Base.InfsMatchHfs()
 }
 
 /**** End of Stubs ****/
@@ -192,10 +193,10 @@ pure func (d *Decoded) getLenHopFields() int {
 }
 
 ghost
-requires acc(d.Mem(ubuf), _)
+requires acc(d.Mem(), _)
 decreases
-pure func (d *Decoded) GetBase(ubuf []byte) Base {
-	return unfolding acc(d.Mem(ubuf), _) in
+pure func (d *Decoded) GetBase() Base {
+	return unfolding acc(d.Mem(), _) in
 		(unfolding acc(d.Base.Mem(), _) in d.Base)
 }
 

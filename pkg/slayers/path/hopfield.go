@@ -77,6 +77,7 @@ type HopField struct {
 // @ requires  len(raw) >= HopLen
 // @ preserves acc(h)
 // @ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R45)
+// @ ensures   h.Valid()
 // @ ensures   err == nil
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {

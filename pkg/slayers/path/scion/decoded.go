@@ -56,8 +56,8 @@ type Decoded struct {
 // @ 	let b3 := sl.GetByte(data, 0, lenD, 3) in
 // @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
 // @ 	let metaHdr := DecodedFrom(line) in
-// @ 	metaHdr == s.GetMetaHdr(data) &&
-// @ 	s.InfsMatchHfs(data))
+// @ 	metaHdr == s.GetMetaHdr() &&
+// @ 	s.InfsMatchHfs())
 // @ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 // @ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
@@ -106,8 +106,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant acc(s.Base.Mem(), R1)
 	//@ invariant len(s.HopFields) == s.Base.GetNumHops()
 	//@ invariant 0 <= i && i <= s.Base.GetNumHops()
-	//@ invariant forall j int :: { &s.HopFields[j] } i <= j && j < s.Base.GetNumHops() ==> acc(&s.HopFields[j])
-	//@ invariant forall j int :: { &s.HopFields[j] } 0 <= j && j < i ==> s.HopFields[j].Mem()
+	//@ invariant forall j int :: { &s.HopFields[j] } 0 <= j && j < s.Base.GetNumHops() ==> acc(&s.HopFields[j])
+	//@ invariant forall j int :: { &s.HopFields[j] } 0 <= j && j < i ==> s.HopFields[j].Valid()
 	//@ invariant len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.GetNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + s.Base.GetNumINF() * path.InfoLen + i * path.HopLen
 	//@ invariant acc(sl.AbsSlice_Bytes(data, 0, offset), R41)
@@ -155,7 +155,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ fold acc(s.Base.Mem(), R1)
 	//@ sl.Unslice_Bytes(b, 0, MetaLen, writePerm)
 	//@ sl.CombineAtIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
-	//@ fold acc(s.Mem(ubuf), R1)
+	//@ fold acc(s.Mem(), R1)
 	offset := MetaLen
 
 	//@ invariant acc(s.Mem(), R1) && s.Valid(ubuf)
@@ -182,10 +182,10 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 		//@ sl.Unslice_Bytes(b, offset, offset + path.InfoLen, writePerm)
 		//@ sl.CombineAtIndex_Bytes(b, offset, len(b), offset + path.InfoLen, writePerm)
 		//@ sl.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
-		//@ fold acc(s.Mem(ubuf), R1)
+		//@ fold acc(s.Mem(), R1)
 		offset += path.InfoLen
 	}
-	//@ invariant acc(s.Mem(ubuf), R1)
+	//@ invariant acc(s.Mem(), R1) && s.Valid(ubuf)
 	//@ invariant sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 	//@ invariant b !== ubuf ==> sl.AbsSlice_Bytes(b, 0, len(b))
 	//@ invariant s.Len(ubuf) <= len(b)
@@ -215,18 +215,19 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 }
 
 // Reverse reverses a SCION path.
-// @ requires s.Mem(ubuf)
+// @ requires s.Mem() && s.Valid(ubuf)
 // @ ensures  r == nil ==> (
 // @	p != nil                    &&
-// @	p.Mem(ubuf)                 &&
+// @	p.Mem()                     &&
+// @ 	p.Valid(ubuf)               &&
 // @	p == s                      &&
 // @	typeOf(p) == type[*Decoded] &&
-// @	(old(s.ValidCurrIdxs(ubuf)) ==> s.ValidCurrIdxs(ubuf)))
-// @ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
+// @	(old(s.ValidCurrIdxs()) ==> s.ValidCurrIdxs()))
+// @ ensures  r != nil ==> r.ErrorMem() && s.Mem()
 // @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
-	//@ ghost isValid := s.ValidCurrIdxs(ubuf)
-	//@ unfold s.Mem(ubuf)
+	//@ ghost isValid := s.ValidCurrIdxs()
+	//@ unfold s.Mem()
 	//@ unfold s.Base.Mem()
 	if s.NumINF == 0 {
 		//@ fold s.Base.Mem()
@@ -234,14 +235,14 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		return nil, serrors.New("empty decoded path is invalid and cannot be reversed")
 	}
 	//@ fold s.Base.Mem()
-	//@ fold s.Mem(ubuf)
-	//@ ghost base := s.GetBase(ubuf)
+	//@ fold s.Mem()
+	//@ ghost base := s.GetBase()
 
 	// Reverse order of InfoFields and SegLens
-	//@ invariant s.Mem(ubuf)
-	//@ invariant isValid ==> s.ValidCurrIdxs(ubuf)
-	//@ invariant 0 <= i && i < s.GetNumINF(ubuf)
-	//@ invariant 0 <= j && j < s.GetNumINF(ubuf)
+	//@ invariant s.Mem() && s.Valid(ubuf)
+	//@ invariant isValid ==> s.ValidCurrIdxs()
+	//@ invariant 0 <= i && i < s.GetNumINF()
+	//@ invariant 0 <= j && j < s.GetNumINF()
 	//@ decreases j-i
 	for i, j := 0, ( /*@ unfolding s.Mem() in (unfolding s.Base.Mem() in @*/ s.NumINF - 1 /*@) @*/); i < j; i, j = i+1, j-1 {
 		//@ unfold s.Mem()
@@ -249,10 +250,10 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ unfold s.Base.Mem()
 		s.PathMeta.SegLen[i], s.PathMeta.SegLen[j] = s.PathMeta.SegLen[j], s.PathMeta.SegLen[i]
 		//@ fold s.Base.Mem()
-		//@ fold s.Mem(ubuf)
+		//@ fold s.Mem()
 	}
-	//@ preserves s.Mem(ubuf)
-	//@ preserves isValid ==> s.ValidCurrIdxs(ubuf)
+	//@ preserves s.Mem() && s.Valid(ubuf)
+	//@ preserves isValid ==> s.ValidCurrIdxs()
 	//@ decreases
 	//@ outline(
 	//@ unfold s.Mem()
@@ -273,25 +274,21 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 
 	// Reverse order of hop fields
 	//@ invariant s.Mem() && s.Valid(ubuf)
-	//@ invariant 0 <= i && i <= s.GetNumHops(ubuf)
-	//@ invariant -1 <= j && j < s.GetNumHops(ubuf)
-	//@ invariant isValid ==> s.ValidCurrIdxs(ubuf)
+	//@ invariant 0 <= i && i <= s.GetNumHops()
+	//@ invariant -1 <= j && j < s.GetNumHops()
+	//@ invariant isValid ==> s.ValidCurrIdxs()
 	//@ decreases j-i
 	for i, j := 0, ( /*@ unfolding s.Mem() in (unfolding s.Base.Mem() in @*/ s.NumHops - 1 /*@ ) @*/); i < j; i, j = i+1, j-1 {
 		//@ unfold s.Mem()
 		//@ assert &s.HopFields[i] != &s.HopFields[j]
-		//@ unfold s.HopFields[i].Mem()
-		//@ unfold s.HopFields[j].Mem()
 		//@ assert acc(&s.HopFields[i]) && acc(&s.HopFields[j])
 		s.HopFields[i], s.HopFields[j] = s.HopFields[j], s.HopFields[i]
 		//@ assert acc(&s.HopFields[i]) && acc(&s.HopFields[j])
-		//@ fold s.HopFields[i].Mem()
-		//@ fold s.HopFields[j].Mem()
 		//@ fold s.Mem()
 	}
 	// Update CurrINF and CurrHF and SegLens
-	//@ preserves s.Mem(ubuf)
-	//@ preserves isValid ==> s.ValidCurrIdxs(ubuf)
+	//@ preserves s.Mem() && s.Valid(ubuf)
+	//@ preserves isValid ==> s.ValidCurrIdxs()
 	//@ decreases
 	//@ outline(
 	//@ unfold s.Mem()

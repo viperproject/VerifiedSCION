@@ -21,25 +21,6 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-Path implements path.Path
-
-pred (e Path) Mem() { true }
-pred (e Path) NonInitMem() { true }
-
-ghost
-decreases
-pure func (e Path) Valid(ghost ub []byte) bool {
-	return len(ub) == 0
-}
-
-ghost
-ensures  e.NonInitMem()
-decreases
-func (e Path) DowngradePerm(buf []byte) {
-	unfold e.Mem()
-	fold e.NonInitMem()
-}
-
 // Definitions to allow *Path to be treated as a path.Path
 (*Path) implements path.Path
 

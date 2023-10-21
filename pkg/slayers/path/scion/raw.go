@@ -133,18 +133,18 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ preserves acc(s.Mem(), R5) && s.Valid(ubuf)
 // @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   err == nil ==> (
-// @ 	let newUb := s.RawBufferMem(ubuf) in
+// @ 	let newUb := s.RawBufferMem() in
 // @ 	d.Mem() &&
 // @ 	d.Valid(newUb) &&
-// @ 	(old(s.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(newUb)))
+// @ 	(old(s.ValidCurrIdxs()) ==> d.ValidCurrIdxs()))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
-	//@ unfold acc(s.Mem(ubuf), R6)
+	//@ unfold acc(s.Mem(), R6)
 	//@ unfold acc(s.Base.Mem(), R6)
 	//@ ghost var base Base = s.Base
 	//@ ghost var pathMeta MetaHdr = s.Base.PathMeta
-	//@ ghost validIdxs := s.ValidCurrIdxs(ubuf)
+	//@ ghost validIdxs := s.ValidCurrIdxs()
 	//@ assert validIdxs ==> s.Base.PathMeta.InBounds()
 	//@ assert validIdxs ==> base.ValidCurrIdxsSpec()
 	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
@@ -203,9 +203,9 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ ghost lenR := len(s.Raw) // TODO: move to the top and rewrite body
 	//@ ghost if validIdxs {
 	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
-	//@ 	assert pathMeta == decoded.GetMetaHdr(s.Raw)
-	//@ 	assert decoded.GetBase(s.Raw).ValidCurrIdxsSpec()
-	//@ 	assert decoded.ValidCurrIdxs(s.Raw)
+	//@ 	assert pathMeta == decoded.GetMetaHdr()
+	//@ 	assert decoded.GetBase().ValidCurrIdxsSpec()
+	//@ 	assert decoded.ValidCurrIdxs()
 	//@ }
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
@@ -343,7 +343,6 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 		return path.HopField{}, err
 	}
 	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
-	//@ unfold hop.Mem()
 	return hop, nil
 }
 
@@ -369,7 +368,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 // SetHopField updates the HopField at a given index.
 // @ requires  0 <= idx
 // @ preserves acc(s.Mem(), R20) && s.Valid(ubuf)
-// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/) (r error) {
@@ -377,7 +376,6 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	// (VerifiedSCION) Cannot assert bounds of uint:
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
-	//@ fold hop.Mem()
 	//@ unfold acc(s.Mem(), R20)
 	//@ unfold acc(s.Base.Mem(), R20)
 	if idx >= s.NumHops {

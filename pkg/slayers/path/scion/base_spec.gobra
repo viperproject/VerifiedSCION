@@ -21,6 +21,7 @@ import (
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
+// TODO: drop
 pred (b *Base) NonInitMem() {
 	acc(b)
 }

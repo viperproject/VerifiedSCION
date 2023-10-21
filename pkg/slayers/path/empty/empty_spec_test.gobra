@@ -17,11 +17,11 @@
 package empty
 
 func FoldNonInitMem_test() {
-	e := Path{}
+	e@ := Path{}
 	fold e.NonInitMem()
 }
 
 func FoldMem_test() {
-	e := Path{}
+	e@ := Path{}
 	fold e.Mem()
 }

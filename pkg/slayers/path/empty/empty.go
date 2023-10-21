@@ -42,7 +42,7 @@ func RegisterPath() {
 		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
-			emptyTmp := Path{}
+			emptyTmp := &Path{}
 			//@ fold emptyTmp.NonInitMem()
 			return emptyTmp
 		},
@@ -57,6 +57,7 @@ func RegisterPath() {
 // bytes on the wire and is used for AS internal communication.
 type Path struct{}
 
+// @ requires o.NonInitMem()
 // @ ensures  len(r) == 0 ==> (
 // @ 	e == nil &&
 // @ 	o.Mem()  &&
@@ -66,38 +67,38 @@ type Path struct{}
 // @ 	e.ErrorMem() &&
 // @ 	o.NonInitMem())
 // @ decreases
-func (o Path) DecodeFromBytes(r []byte) (e error) {
+func (o *Path) DecodeFromBytes(r []byte) (e error) {
 	if len(r) != 0 {
-		//@ fold o.NonInitMem()
 		return serrors.New("decoding an empty path", "len", len(r))
 	}
+	//@ unfold o.NonInitMem()
 	//@ fold o.Mem()
 	return nil
 }
 
 // @ ensures e == nil
 // @ decreases
-func (o Path) SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error) {
+func (o *Path) SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error) {
 	return nil
 }
 
 // @ ensures   p == o
 // @ ensures   e == nil
 // @ decreases
-func (o Path) Reverse( /*@ ghost ub []byte @*/ ) (p path.Path, e error) {
+func (o *Path) Reverse( /*@ ghost ub []byte @*/ ) (p path.Path, e error) {
 	return o, nil
 }
 
 // @ pure
 // @ ensures 0 <= r
 // @ decreases
-func (o Path) Len( /*@ ghost ub []byte @*/ ) (r int) {
+func (o *Path) Len( /*@ ghost ub []byte @*/ ) (r int) {
 	return PathLen
 }
 
 // @ pure
 // @ ensures r == PathType
 // @ decreases
-func (o Path) Type( /*@ ghost ub []byte @*/ ) (r path.Type) {
+func (o *Path) Type( /*@ ghost ub []byte @*/ ) (r path.Type) {
 	return PathType
 }

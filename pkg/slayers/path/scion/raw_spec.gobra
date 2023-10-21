@@ -96,35 +96,35 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(), R9) && s.Valid(ub)
+preserves acc(s.Mem(), R9)
 decreases
-func (s *Raw) IsXover(ghost ub []byte) bool {
+func (s *Raw) IsXover() bool {
 	unfold acc(s.Mem(), R9)
 	defer fold acc(s.Mem(), R9)
 	return s.Base.IsXover()
 }
 
 ghost
-requires acc(s.Mem(ub), _)
+requires acc(s.Mem(), _)
 decreases
-pure func (s *Raw) ValidCurrINF(ghost ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
+pure func (s *Raw) ValidCurrINF() bool {
+	return unfolding acc(s.Mem(), _) in
 		s.Base.ValidCurrINF()
 }
 
 ghost
-requires acc(s.Mem(ub), _)
+requires acc(s.Mem(), _)
 decreases
-pure func (s *Raw) ValidCurrHF(ghost ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
+pure func (s *Raw) ValidCurrHF() bool {
+	return unfolding acc(s.Mem(), _) in
 		s.Base.ValidCurrHF()
 }
 
 ghost
-requires acc(s.Mem(ub), _)
+requires acc(s.Mem(), _)
 decreases
-pure func (s *Raw) ValidCurrIdxs(ghost ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
+pure func (s *Raw) ValidCurrIdxs() bool {
+	return unfolding acc(s.Mem(), _) in
 		s.Base.ValidCurrIdxs()
 }
 
@@ -133,11 +133,11 @@ pure func (s *Raw) ValidCurrIdxs(ghost ub []byte) bool {
 /**** Lemmas ****/
 
 ghost
-requires s.Mem() && s.Valid(buf)
+requires s.Mem()
 ensures  s.NonInitMem()
 ensures  old(s.RawBufferMem()) === s.RawBufferNonInitMem()
 decreases
-func (s *Raw) DowngradePerm(buf []byte) {
+func (s *Raw) DowngradePerm(ghost ub []byte) {
 	unfold s.Mem()
 	unfold s.Base.Mem()
 	fold s.Base.NonInitMem()
