@@ -45,6 +45,33 @@ func (p *Path) DowngradePerm(buf []byte) {
 }
 
 ghost
+requires acc(p.Mem(ub), _)
+decreases
+pure func (p *Path) ValidCurrINF(ghost ub []byte) bool {
+	return unfolding acc(p.Mem(ub), _) in
+		let ubPath := ub[MetadataLen:] in
+		p.ScionPath.ValidCurrINF(ubPath)
+}
+
+ghost
+requires acc(p.Mem(ub), _)
+decreases
+pure func (p *Path) ValidCurrHF(ghost ub []byte) bool {
+	return unfolding acc(p.Mem(ub), _) in
+		let ubPath := ub[MetadataLen:] in
+		p.ScionPath.ValidCurrHF(ubPath)
+}
+
+ghost
+requires acc(p.Mem(ub), _)
+decreases
+pure func (p *Path) ValidCurrIdxs(ghost ub []byte) bool {
+	return unfolding acc(p.Mem(ub), _) in
+		let ubPath := ub[MetadataLen:] in
+		p.ScionPath.ValidCurrIdxs(ubPath)
+}
+
+ghost
 pure
 requires acc(p.Mem(buf), _)
 ensures l == (unfolding acc(p.Mem(buf), _) in len(p.PHVF))
@@ -69,6 +96,12 @@ ensures  r == (unfolding acc(p.Mem(buf), _) in p.ScionPath != nil)
 decreases
 func (p *Path) hasScionPath(buf []byte) (r bool) {
 	return unfolding acc(p.Mem(buf), _) in p.ScionPath != nil
+}
+
+ghost
+requires acc(p.Mem(buf), _)
+pure func (p *Path) GetUnderlyingScionPathBuf(buf []byte) []byte {
+	return unfolding acc(p.Mem(buf), _) in buf[MetadataLen:]
 }
 
 (*Path) implements path.Path

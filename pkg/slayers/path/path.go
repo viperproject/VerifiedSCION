@@ -111,7 +111,6 @@ type Path interface {
 	Len( /*@ ghost underlyingBuf []byte @*/ ) (l int) // TODO: drop param
 	// Type returns the type of a path.
 	//@ pure
-	//@ requires acc(sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)), _)
 	//@ requires acc(Mem(), _)
 	//@ decreases
 	Type( /*@ ghost underlyingBuf []byte @*/ ) Type // TODO: drop param
