@@ -73,7 +73,7 @@ type Path interface {
 	// (VerifiedSCION) Must apply to every Path after initialization
 	//@ ghost
 	//@ requires acc(Mem(), _)
-	// decreases // causes trouble
+	//@ decreases
 	//@ pure Valid(ghost ub []byte) bool
 
 	// SerializeTo serializes the path into the provided buffer.
