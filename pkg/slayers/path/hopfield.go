@@ -74,10 +74,9 @@ type HopField struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // path.HopLen.
-// @ requires  acc(h)
 // @ requires  len(raw) >= HopLen
+// @ preserves acc(h)
 // @ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R45)
-// @ ensures   h.Mem()
 // @ ensures   err == nil
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
@@ -112,14 +111,13 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	copy(h.Mac[:], raw[6:6+MacLen] /*@ , R47 @*/)
 	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
 	//@ )
-	//@ fold h.Mem()
 	return nil
 }
 
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.HopLen.
 // @ requires  len(b) >= HopLen
-// @ preserves acc(h.Mem(), R10)
+// @ preserves acc(h, R10)
 // @ preserves slices.AbsSlice_Bytes(b, 0, HopLen)
 // @ ensures   err == nil
 // @ decreases
@@ -128,12 +126,11 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
 	}
 	//@ requires  len(b) >= HopLen
-	//@ preserves acc(h.Mem(), R11)
+	//@ preserves acc(h, R11)
 	//@ preserves slices.AbsSlice_Bytes(b, 0, HopLen)
 	//@ decreases
 	//@ outline(
 	//@ unfold slices.AbsSlice_Bytes(b, 0, HopLen)
-	//@ unfold acc(h.Mem(), R11)
 	b[0] = 0
 	if h.EgressRouterAlert {
 		b[0] |= 0x1
@@ -148,22 +145,19 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	binary.BigEndian.PutUint16(b[4:6], h.ConsEgress)
 	//@ assert forall i int :: { &b[i] } 0 <= i && i < HopLen ==> acc(&b[i])
 	//@ fold slices.AbsSlice_Bytes(b, 0, HopLen)
-	//@ fold acc(h.Mem(), R11)
 	//@ )
 	//@ requires  len(b) >= HopLen
-	//@ preserves acc(h.Mem(), R11)
+	//@ preserves acc(h, R11)
 	//@ preserves slices.AbsSlice_Bytes(b, 0, HopLen)
 	//@ decreases
 	//@ outline(
 	//@ unfold slices.AbsSlice_Bytes(b, 0, HopLen)
-	//@ unfold acc(h.Mem(), R11)
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
 	//@ assert forall i int :: { &b[6:6+MacLen][i] }{ &b[i+6] } 0 <= i && i < MacLen ==>
 	//@     &b[6:6+MacLen][i] == &b[i+6]
 	copy(b[6:6+MacLen], h.Mac[:] /*@, R11 @*/)
 	//@ fold slices.AbsSlice_Bytes(b, 0, HopLen)
-	//@ fold acc(h.Mem(), R11)
 	//@ )
 	return nil
 }
