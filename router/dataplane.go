@@ -904,12 +904,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						writeMsgs[0].Addr = result.OutAddr
 					}
 					// @ assert acc(result.OutConn.Mem(), _)
-					// @ fold acc(writeMsgs[0].Mem(1), def.ReadL10)
+					// @ fold acc(writeMsgs[0].Mem(1), R10)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
-					// @ unfold acc(writeMsgs[0].Mem(1), def.ReadL10)
+					// @ unfold acc(writeMsgs[0].Mem(1), R10)
 					// @ ghost if addrAliasesPkt {
-					// @	inhale acc(result.OutAddr.Mem(), def.ReadL15) // TODO: doc
-					// @ 	apply acc(result.OutAddr.Mem(), def.ReadL15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), def.ReadL15)
+					// @	inhale acc(result.OutAddr.Mem(), R15) // TODO: doc
+					// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 					// @ 	assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ }
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
@@ -961,9 +961,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// TODO: replace by  acc(MutexInvariant(d), _) for the remainder of the proof? - makes proof obligations easier
 	// @ fold acc(MutexInvariant!<d!>(), _)
 	for k, v := range d.bfdSessions {
-		// @ def.TODO()
+		// @ TODO()
 		go func(ifID uint16, c bfdSession) {
-			// @ def.TODO()
+			// @ TODO()
 			defer log.HandlePanic()
 			if err := c.Run(ctx); err != nil && err != bfd.AlreadyRunning {
 				log.Error("BFD session failed to start", "ifID", ifID, "err", err)
@@ -972,7 +972,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	}
 	for ifID, v := range d.external {
 		go func(i uint16, c BatchConn) {
-			// @ def.TODO()
+			// @ TODO()
 			defer log.HandlePanic()
 			// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
 			// This should be easily addressable nonethelss
@@ -980,7 +980,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		}(ifID, v) //@ as closureSpec2
 	}
 	go func(c BatchConn) {
-		// @ def.TODO()
+		// @ TODO()
 		defer log.HandlePanic()
 		// TODO(VerifiedSCION): calling this may cause problems because of the lack of permissions to d.mtx
 		read(0, c) //@ as readClosureSpec  // TODO: maybe use rc as the spec instead and delete readClosureSpec
@@ -1146,7 +1146,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 
 // @ requires p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
-// @ requires acc(&p.d, def.ReadL10) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires acc(&p.d, R10) && acc(MutexInvariant!<p.d!>(), _)
 // @ requires acc(&p.d.svc, _) && p.d.svc != nil
 // @ requires acc(&p.d.forwardingMetrics, _)
 // @ requires acc(&p.ingressID)
@@ -1162,11 +1162,11 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
 //
 // @ ensures  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
-// @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - def.ReadL15)
-// @ ensures  acc(&p.d, def.ReadL10)
+// @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
+// @ ensures  acc(&p.d, R10)
 // @ ensures  acc(&p.ingressID)
 // @ ensures  acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
-// @ ensures  acc(&p.macBuffers.scionInput, def.ReadL10)
+// @ ensures  acc(&p.macBuffers.scionInput, R10)
 // @ ensures  sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ ensures  acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
 // @ ensures  acc(&p.srcAddr) && acc(&p.lastLayer)
@@ -1183,10 +1183,10 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures  addrAliasesPkt ==>
 // @ 	(respr.OutAddr != nil &&
-// @	acc(respr.OutAddr.Mem(), def.ReadL15) &&
-// @ 	(acc(respr.OutAddr.Mem(), def.ReadL15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15)))
+// @	acc(respr.OutAddr.Mem(), R15) &&
+// @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)))
 // @ ensures  respr.OutAddr != nil && !addrAliasesPkt ==> acc(respr.OutAddr.Mem(), _)
-// @ ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), def.ReadL15)
+// @ ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)
 // @ ensures  acc(&p.d.forwardingMetrics, _)
 // @ ensures  p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
 // @ ensures  respr.EgressID != 0 ==> respr.EgressID in domain(p.d.forwardingMetrics)
