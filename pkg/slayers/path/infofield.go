@@ -60,14 +60,14 @@ type InfoField struct {
 // path.InfoLen.
 // @ requires  len(raw) >= InfoLen
 // @ preserves acc(inf)
-// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R10)
+// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R45)
 // @ ensures   err == nil
 // @ decreases
 func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < InfoLen {
 		return serrors.New("InfoField raw too short", "expected", InfoLen, "actual", len(raw))
 	}
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R11)
+	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R50)
 	inf.ConsDir = raw[0]&0x1 == 0x1
 	inf.Peer = raw[0]&0x2 == 0x2
 	//@ assert &raw[2:4][0] == &raw[2] && &raw[2:4][1] == &raw[3]
@@ -75,7 +75,7 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert &raw[4:8][0] == &raw[4] && &raw[4:8][1] == &raw[5]
 	//@ assert &raw[4:8][2] == &raw[6] && &raw[4:8][3] == &raw[7]
 	inf.Timestamp = binary.BigEndian.Uint32(raw[4:8])
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R11)
+	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R50)
 	return nil
 }
 
