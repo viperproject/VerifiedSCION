@@ -27,14 +27,12 @@ pred (e Path) Mem() { true }
 pred (e Path) NonInitMem() { true }
 
 ghost
-requires acc(e.Mem(), _)
 decreases
 pure func (e Path) Valid(ghost ub []byte) bool {
 	return len(ub) == 0
 }
 
 ghost
-requires e.Mem()
 ensures  e.NonInitMem()
 decreases
 func (e Path) DowngradePerm(buf []byte) {
@@ -49,8 +47,16 @@ pred (e *Path) Mem() { acc(e) }
 pred (e *Path) NonInitMem() { acc(e) }
 
 ghost
-requires acc(e.Mem(), _)
 decreases
 pure func (e *Path) Valid(ghost ub []byte) bool {
 	return len(ub) == 0
+}
+
+ghost
+requires e.Mem()
+ensures  e.NonInitMem()
+decreases
+func (e *Path) DowngradePerm(buf []byte) {
+	unfold e.Mem()
+	fold e.NonInitMem()
 }

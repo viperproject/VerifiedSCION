@@ -74,7 +74,7 @@ type Path interface {
 	//@ ghost
 	//@ requires acc(Mem(), _)
 	//@ decreases
-	//@ pure Valid(ghost ub []byte) bool
+	//@ pure Valid(ghost ub []byte) bool // TODO: rename to 'DecodedFrom'
 
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
@@ -98,20 +98,20 @@ type Path interface {
 	//@ requires  Mem() && Valid(ub)
 	//@ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 	//@ ensures   e == nil ==> p != nil
-	//@ ensures   e == nil ==> p.Mem()
+	//@ ensures   e == nil ==> p.Mem() && p.Valid(ub)
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	Reverse( /*@ ghost ub []byte @*/ ) (p Path, e error)
 	// Len returns the length of a path in bytes.
 	// TODO: make this impure and use LenSpec
 	//@ pure
-	//@ requires acc(Mem(), _)
+	//@ requires acc(Mem(), _) // TODO: do we need Valid?
 	//@ ensures  l >= 0
 	//@ decreases
 	Len( /*@ ghost underlyingBuf []byte @*/ ) (l int) // TODO: drop param
 	// Type returns the type of a path.
 	//@ pure
-	//@ requires acc(Mem(), _)
+	//@ requires acc(Mem(), _) // TODO: do we need Valid?
 	//@ decreases
 	Type( /*@ ghost underlyingBuf []byte @*/ ) Type // TODO: drop param
 
