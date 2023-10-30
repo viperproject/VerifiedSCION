@@ -18,7 +18,7 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -33,11 +33,11 @@ pred (d *Decoded) NonInitMem() {
 pred (d *Decoded) Mem(ubuf []byte) {
 	d.Base.Mem() &&
 	acc(&d.InfoFields) &&
-	d.Base.getNumINF() <= MaxINFs &&
-	len(d.InfoFields) == d.Base.getNumINF() &&
+	d.Base.GetNumINF() <= MaxINFs &&
+	len(d.InfoFields) == d.Base.GetNumINF() &&
 	(forall i int :: { &d.InfoFields[i] } 0 <= i && i < len(d.InfoFields) ==> acc(&d.InfoFields[i])) &&
 	acc(&d.HopFields) &&
-	len(d.HopFields) == d.Base.getNumHops() &&
+	len(d.HopFields) == d.Base.GetNumHops() &&
 	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
@@ -51,6 +51,7 @@ pred (d *Decoded) Mem(ubuf []byte) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this method which acts as a wrapper.
   */
+  // TODO: can this spec be simplified (by removing the access to d.Mem(...))?
 pure
 requires acc(d.Mem(ubuf), _)
 ensures  unfolding acc(d.Mem(ubuf), _) in l == d.Base.Len()
@@ -76,16 +77,31 @@ func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
 
 /**
   * This method is not part of the original SCION codebase.
+  * Instead, `IsXover` was defined in `*Decoded` via embedded structs.
+  * Unfortunately, Gobra does not fully support them yet, so we
+  * introduced this method which acts as a wrapper.
+  */
+preserves acc(d.Mem(ubuf), R19)
+decreases
+func (d *Decoded) IsXover(ghost ubuf []byte) bool {
+	unfold acc(d.Mem(ubuf), R19)
+	defer fold acc(d.Mem(ubuf), R19)
+	return d.Base.IsXover()
+}
+
+/**
+  * This method is not part of the original SCION codebase.
   * This method creates an override of `IncPath` for `Decoded` which
   * just provides a more suitable contract. All it does is to call `IncPath`
   * on d.Base. Without this, one would need to unfold d.Mem() to call `IncPath`,
   * which can be extremely cumbersome.
   */
 requires d.Mem(ubuf)
-ensures  e == nil ==> d.Mem(ubuf)
-ensures  e == nil ==> d.Len(ubuf) == old(d.Len(ubuf))
-ensures  e != nil ==> d.NonInitMem()
-ensures  e != nil ==> e.ErrorMem()
+ensures  e == nil ==> (
+	d.Mem(ubuf) &&
+	d.Len(ubuf) == old(d.Len(ubuf)) &&
+	(old(d.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(ubuf)))
+ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 	unfold d.Mem(ubuf)
@@ -96,6 +112,55 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 		fold d.NonInitMem()
 	}
 	return e
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) ValidCurrINF(ub []byte) bool {
+	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrINF()
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) ValidCurrHF(ub []byte) bool {
+	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrHF()
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) ValidCurrIdxs(ub []byte) bool {
+	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrIdxs()
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) GetNumINF(ub []byte) (res int) {
+	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumINF()
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) GetNumHops(ub []byte) (res int) {
+	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumHops()
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Decoded) GetMetaHdr(ub []byte) MetaHdr {
+	return unfolding acc(s.Mem(ub), _) in s.Base.GetMetaHdr()
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) InfsMatchHfs(ub []byte) bool {
+	return unfolding acc(d.Mem(ub), _) in d.Base.InfsMatchHfs()
 }
 
 /**** End of Stubs ****/
@@ -112,6 +177,14 @@ requires acc(d.Mem(ubuf), _)
 decreases
 pure func (d *Decoded) getLenHopFields(ubuf []byte) int {
 	return unfolding acc(d.Mem(ubuf), _) in len(d.HopFields)
+}
+
+ghost
+requires acc(d.Mem(ubuf), _)
+decreases
+pure func (d *Decoded) GetBase(ubuf []byte) Base {
+	return unfolding acc(d.Mem(ubuf), _) in
+		(unfolding acc(d.Base.Mem(), _) in d.Base)
 }
 
 /**** End of Auxiliary Functions ****/

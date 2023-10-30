@@ -23,7 +23,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
-	// @ def "github.com/scionproto/scion/verification/utils/definitions"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -80,18 +80,18 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 	}
 	// @ unfold i.NonInitMem()
 	offset := 0
-	// @ sl.SplitRange_Bytes(data, offset, len(data), def.ReadL15)
-	// @ unfold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), def.ReadL15)
+	// @ sl.SplitRange_Bytes(data, offset, len(data), R15)
+	// @ unfold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), R15)
 	i.IA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
-	// @ fold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), def.ReadL15)
-	// @ sl.CombineRange_Bytes(data, offset, len(data), def.ReadL15)
+	// @ fold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), R15)
+	// @ sl.CombineRange_Bytes(data, offset, len(data), R15)
 	offset += addr.IABytes
-	// @ sl.SplitRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
+	// @ sl.SplitRange_Bytes(data, offset, offset+scmpRawInterfaceLen, R15)
 	// @ ghost newSlice := data[offset : offset+scmpRawInterfaceLen]
-	// @ unfold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
+	// @ unfold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), R15)
 	i.IfID = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
-	// @ fold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
-	// @ sl.CombineRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
+	// @ fold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), R15)
+	// @ sl.CombineRange_Bytes(data, offset, offset+scmpRawInterfaceLen, R15)
 	offset += scmpRawInterfaceLen
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), offset, writePerm)
 	// @ sl.Reslice_Bytes(data, 0, offset, writePerm)
@@ -220,25 +220,25 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 	// @ unfold i.NonInitMem()
 	// @ defer fold i.Mem(data)
 	offset := 0
-	// @ sl.SplitRange_Bytes(data, offset, len(data), def.ReadL15)
-	// @ unfold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), def.ReadL15)
+	// @ sl.SplitRange_Bytes(data, offset, len(data), R15)
+	// @ unfold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), R15)
 	i.IA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
-	// @ fold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), def.ReadL15)
-	// @ sl.CombineRange_Bytes(data, offset, len(data), def.ReadL15)
+	// @ fold acc(sl.AbsSlice_Bytes(data[offset:], 0, len(data[offset:])), R15)
+	// @ sl.CombineRange_Bytes(data, offset, len(data), R15)
 	offset += addr.IABytes
-	// @ sl.SplitRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
+	// @ sl.SplitRange_Bytes(data, offset, offset+scmpRawInterfaceLen, R15)
 	// @ ghost newSlice := data[offset : offset+scmpRawInterfaceLen]
-	// @ unfold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
+	// @ unfold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), R15)
 	i.Ingress = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
-	// @ fold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
-	// @ sl.CombineRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
+	// @ fold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), R15)
+	// @ sl.CombineRange_Bytes(data, offset, offset+scmpRawInterfaceLen, R15)
 	offset += scmpRawInterfaceLen
-	// @ sl.SplitRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
+	// @ sl.SplitRange_Bytes(data, offset, offset+scmpRawInterfaceLen, R15)
 	// @ ghost newSlice = data[offset : offset+scmpRawInterfaceLen]
-	// @ unfold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
+	// @ unfold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), R15)
 	i.Egress = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
-	// @ fold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), def.ReadL15)
-	// @ sl.CombineRange_Bytes(data, offset, offset+scmpRawInterfaceLen, def.ReadL15)
+	// @ fold acc(sl.AbsSlice_Bytes(newSlice, 0, len(newSlice)), R15)
+	// @ sl.CombineRange_Bytes(data, offset, offset+scmpRawInterfaceLen, R15)
 	offset += scmpRawInterfaceLen
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), offset, writePerm)
 	// @ sl.Reslice_Bytes(data, 0, offset, writePerm)

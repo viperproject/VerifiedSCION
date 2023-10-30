@@ -18,8 +18,8 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-	def "github.com/scionproto/scion/verification/utils/definitions"
-	"github.com/scionproto/scion/verification/utils/slices"
+	. "github.com/scionproto/scion/verification/utils/definitions"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 /**** Predicates ****/
@@ -75,12 +75,12 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(ub), def.ReadL18)
+preserves acc(s.Mem(ub), R18)
 ensures   res ==> 0 < s.GetCurrINF(ub) && 0 < s.GetCurrHF(ub)
 decreases
 func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
-	unfold acc(s.Mem(ub), def.ReadL18)
-	defer fold acc(s.Mem(ub), def.ReadL18)
+	unfold acc(s.Mem(ub), R18)
+	defer fold acc(s.Mem(ub), R18)
 	return s.Base.IsFirstHopAfterXover()
 }
 
@@ -90,13 +90,38 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(ub), def.ReadL9)
+preserves acc(s.Mem(ub), R9)
 decreases
 func (s *Raw) IsXover(ghost ub []byte) bool {
-	unfold acc(s.Mem(ub), def.ReadL9)
-	defer fold acc(s.Mem(ub), def.ReadL9)
+	unfold acc(s.Mem(ub), R9)
+	defer fold acc(s.Mem(ub), R9)
 	return s.Base.IsXover()
 }
+
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) ValidCurrINF(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		s.Base.ValidCurrINF()
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) ValidCurrHF(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		s.Base.ValidCurrHF()
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) ValidCurrIdxs(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		s.Base.ValidCurrIdxs()
+}
+
 /**** End of Stubs ****/
 
 /**** Lemmas ****/
@@ -120,38 +145,38 @@ pred (r *Raw) RawPermRemainder(ubuf []byte, p perm) {
 	acc(&r.Raw, p/2) &&
 	len(r.Raw) <= len(ubuf) &&
 	r.Raw === ubuf[:len(r.Raw)] &&
-	acc(slices.AbsSlice_Bytes(ubuf, len(r.Raw), len(ubuf)), p) &&
+	acc(sl.AbsSlice_Bytes(ubuf, len(r.Raw), len(ubuf)), p) &&
 	len(r.Raw) == r.Base.Len()
 }
 
 ghost
 requires 0 < p
-requires acc(&r.Raw, p/2) && acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
+requires acc(&r.Raw, p/2) && acc(sl.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
 requires r.RawPermRemainder(ubuf, p)
 ensures  acc(r.Mem(ubuf), p)
-ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
+ensures  acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 decreases
 func (r *Raw) UndoRawPerm(ubuf []byte, p perm) {
 	unfold r.RawPermRemainder(ubuf, p)
-	slices.Unslice_Bytes(ubuf, 0, len(r.Raw), p)
-	slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
+	sl.Unslice_Bytes(ubuf, 0, len(r.Raw), p)
+	sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
 	fold acc(r.Mem(ubuf), p)
 }
 
 ghost
 requires 0 < p
 requires acc(r.Mem(ubuf), p)
-requires acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
+requires acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 ensures  acc(&r.Raw, p/2)
-ensures  acc(slices.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p)
+ensures  acc(sl.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p)
 ensures  acc(r.Base.Mem(), p/2)
 ensures  r.RawPermRemainder(ubuf, p)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
 decreases
 func (r *Raw) RawPerm(ubuf []byte, p perm) {
 	unfold acc(r.Mem(ubuf), p)
-	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
-	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
+	sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
+	sl.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
 	fold r.RawPermRemainder(ubuf, p)
 }
 /******** End of Lemma: RawPerm ********/
@@ -163,7 +188,7 @@ pred (r *Raw) RawIdxPermRemainder(ubuf []byte, idx int, p perm) {
 	acc(&r.Raw, p/2) &&
 	len(r.Raw) <= len(ubuf) &&
 	r.Raw === ubuf[:len(r.Raw)] &&
-	acc(slices.AbsSlice_Bytes(ubuf, idx, len(ubuf)), p) &&
+	acc(sl.AbsSlice_Bytes(ubuf, idx, len(ubuf)), p) &&
 	len(r.Raw) == r.Base.Len() &&
 	idx <= len(r.Raw)
 }
@@ -172,32 +197,32 @@ ghost
 requires 0 < p
 requires acc(&r.Raw, p/2)
 requires 0 <= idx && idx <= len(r.Raw)
-requires acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
+requires acc(sl.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
 requires r.RawIdxPermRemainder(ubuf, idx, p)
 ensures  acc(r.Mem(ubuf), p)
-ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
+ensures  acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 decreases
 func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
 	unfold r.RawIdxPermRemainder(ubuf, idx, p)
-	slices.Unslice_Bytes(ubuf, 0, idx, p)
-	slices.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
+	sl.Unslice_Bytes(ubuf, 0, idx, p)
+	sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
 	fold acc(r.Mem(ubuf), p)
 }
 
 ghost
 requires 0 < p
 requires acc(r.Mem(ubuf), p)
-requires acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
+requires acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 requires 0 <= idx && idx <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
 ensures  acc(&r.Raw, p/2)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
-ensures  acc(slices.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
+ensures  acc(sl.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
 ensures  r.RawIdxPermRemainder(ubuf, idx, p)
 decreases
 func (r *Raw) RawIdxPerm(ubuf []byte, idx int, p perm) {
 	unfold acc(r.Mem(ubuf), p)
-	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
-	slices.Reslice_Bytes(ubuf, 0, idx, p)
+	sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
+	sl.Reslice_Bytes(ubuf, 0, idx, p)
 	fold r.RawIdxPermRemainder(ubuf, idx, p)
 }
 /******** End of Lemma: RawIdxPerm ********/
@@ -210,9 +235,9 @@ pred (r *Raw) RawRangePermRemainder(ubuf []byte, start, end int, p perm) {
 	0 <= start && start <= end && end <= len(r.Raw) &&
 	len(r.Raw) <= len(ubuf) &&
 	r.Raw === ubuf[:len(r.Raw)] &&
-	acc(slices.AbsSlice_Bytes(r.Raw, 0, start), p) &&
-	acc(slices.AbsSlice_Bytes(r.Raw, end, len(r.Raw)), p) &&
-	acc(slices.AbsSlice_Bytes(ubuf, len(r.Raw), len(ubuf)), p) &&
+	acc(sl.AbsSlice_Bytes(r.Raw, 0, start), p) &&
+	acc(sl.AbsSlice_Bytes(r.Raw, end, len(r.Raw)), p) &&
+	acc(sl.AbsSlice_Bytes(ubuf, len(r.Raw), len(ubuf)), p) &&
 	len(r.Raw) == r.Base.Len()
 }
 
@@ -220,16 +245,16 @@ ghost
 requires 0 < p
 requires acc(&r.Raw, p/2)
 requires 0 <= start && start <= end && end <= len(r.Raw)
-requires acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
+requires acc(sl.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
 requires r.RawRangePermRemainder(ubuf, start, end, p)
 ensures  acc(r.Mem(ubuf), p)
-ensures  acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
+ensures  acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 decreases
 func (r *Raw) UndoRawRangePerm(ubuf []byte, start, end int, p perm) {
 	unfold r.RawRangePermRemainder(ubuf, start, end, p)
-	slices.Unslice_Bytes(r.Raw, start, end, p)
-	slices.CombineAtIndex_Bytes(r.Raw, 0, end, start, p)
-	slices.CombineAtIndex_Bytes(r.Raw, 0, len(r.Raw), end, p)
+	sl.Unslice_Bytes(r.Raw, start, end, p)
+	sl.CombineAtIndex_Bytes(r.Raw, 0, end, start, p)
+	sl.CombineAtIndex_Bytes(r.Raw, 0, len(r.Raw), end, p)
 	fold r.RawPermRemainder(ubuf, p)
 	r.UndoRawPerm(ubuf, p)
 }
@@ -238,20 +263,20 @@ func (r *Raw) UndoRawRangePerm(ubuf []byte, start, end int, p perm) {
 ghost
 requires 0 < p
 requires acc(r.Mem(ubuf), p)
-requires acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
+requires acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
 requires 0 <= start && start <= end && end <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
 ensures  acc(&r.Raw, p/2)
 ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
-ensures  acc(slices.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
+ensures  acc(sl.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
 ensures  r.RawRangePermRemainder(ubuf, start, end, p)
 decreases
 func (r *Raw) RawRangePerm(ubuf []byte, start, end int, p perm) {
 	unfold acc(r.Mem(ubuf), p)
-	slices.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
-	slices.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
-	slices.SplitByIndex_Bytes(r.Raw, 0, len(r.Raw), start, p)
-	slices.SplitByIndex_Bytes(r.Raw, start, len(r.Raw), end, p)
-	slices.Reslice_Bytes(r.Raw, start, end, p)
+	sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
+	sl.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
+	sl.SplitByIndex_Bytes(r.Raw, 0, len(r.Raw), start, p)
+	sl.SplitByIndex_Bytes(r.Raw, start, len(r.Raw), end, p)
+	sl.Reslice_Bytes(r.Raw, start, end, p)
 	fold r.RawRangePermRemainder(ubuf, start, end, p)
 }
 /******** End of Lemma: RawRangePerm ********/
