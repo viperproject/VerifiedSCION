@@ -66,6 +66,7 @@ import (
 	"github.com/scionproto/scion/router/bfd"
 	"github.com/scionproto/scion/router/control"
 	// @ . "github.com/scionproto/scion/verification/utils/definitions"
+	// @ fl "github.com/scionproto/scion/verification/utils/floats"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 	// @ "github.com/scionproto/scion/verification/utils/seqs"
 	// @ socketspec "golang.org/x/net/internal/socket/"
@@ -131,7 +132,7 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
-  // @ preserves forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ preserves forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	acc(msgs[i].Mem(1), R20)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
@@ -553,7 +554,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 		// @ decreases
 		// @ outline (
 		// @ unfold acc(d.Metrics.Mem(), _)
-		// @ assume float64(0) < float64(1) // Gobra still does not fully support floats
+		// @ fl.ZeroLessOne64() // Gobra still does not fully support floats
 		// @ assert d.Metrics.ServiceInstanceChanges != nil
 		// @ assert d.Metrics.ServiceInstanceCount   != nil
 		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
@@ -583,7 +584,7 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	if d.Metrics != nil {
 		labels := serviceMetricLabels(d.localIA, svc)
 		// @ unfold acc(d.Metrics.Mem(), _)
-		// @ assume float64(0) < float64(1) // Gobra still does not fully support floats
+		// @ fl.ZeroLessOne64() // Gobra still does not fully support floats
 		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(-1))
 	}
@@ -843,10 +844,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assume inputCounters.InputPacketsTotal != nil
 					// @ assume inputCounters.InputBytesTotal != nil
 					inputCounters.InputPacketsTotal.Inc()
-					// @ assert 0 <= p.N
-					// (VerifiedSCION) we still cannot properly reason about conversions between ints and floats in Gobra,
-					// and thus, the following trivial assertion cannot currently be proven.
-					// @ assume float64(0) <= float64(p.N)
+					// @ fl.CastPreservesOrder64(0, p.N) // Gobra still does not fully support floats
 					inputCounters.InputBytesTotal.Add(float64(p.N))
 
 					srcAddr := p.Addr.(*net.UDPAddr)
@@ -867,7 +865,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					case errors.As(err, &scmpErr):
 						// (VerifiedSCION) the specification mechanisms of Gobra cannot specify
 						// the behaviour of errors.As. As such, we axiomatize it.
-						// @ assume typeOf(err) == type[scmpError]
+						// @ assume typeOf(err) == type[scmpError] // TODO: drop these assumptions
 						if !scmpErr.TypeCode.InfoMsg() {
 							log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
 						}
@@ -1757,7 +1755,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R5)
 	// (VerifiedSCION) Gobra cannot prove this property yet, even though it follows
 	// from the type system
-	// @ assume 0 <= p.path.GetCurrHF(ubPath)
+	// @ assume 0 <= p.path.GetCurrHF(ubPath) // TODO: drop assumptions like this
 	if p.path.IsFirstHop( /*@ ubPath @*/ ) || p.ingressID != 0 {
 		// not a transit packet, nothing to check
 		return processResult{}, nil
