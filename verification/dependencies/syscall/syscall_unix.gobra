@@ -74,7 +74,6 @@ func (s *Errno) Get() error {
 ghost
 pure
 decreases
-func (s *Errno) CanSet(e error) bool /*{
-	// TODO: the body is currently causing a crash
-	return let _, ok := e.(Errno) in ok
-}*/
+func (s *Errno) CanSet(e error) bool {
+	return typeOf(e) == type[Errno]
+}

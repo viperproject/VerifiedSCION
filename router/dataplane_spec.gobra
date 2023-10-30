@@ -400,7 +400,6 @@ ghost
 pure
 requires acc(s.Mem(), _)
 decreases
-func (s *scmpError) CanSet(e error) bool /*{
-	// TODO: the body is currently causing a crash
-	return let _, ok := e.(scmpError) in ok
-}*/
+func (s *scmpError) CanSet(e error) bool {
+	return typeOf(e) == type[scmpError]
+}
