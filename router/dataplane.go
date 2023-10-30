@@ -753,7 +753,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// properties about messages:
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 			// properties about packetProcessor:
-			// @ invariant acc(&processor.d) && processor.d === d
+			// @ invariant acc(&processor.d, R5) && processor.d === d
 			// @ invariant acc(&processor.ingressID)
 			// @ invariant acc(&processor.buffer) && processor.buffer != nil && processor.buffer.Mem()
 			// @ invariant acc(&processor.mac) && processor.mac != nil && processor.mac.Mem()
@@ -789,6 +789,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				}
 				// @ assert pkts <= len(msgs)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
+
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
 				// @ invariant pkts <= len(msgs)
@@ -804,7 +805,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant 0 in domain(d.forwardingMetrics)
 				// @ invariant d.svc != nil
 				// properties about packetProcessor:
-				// @ invariant acc(&processor.d) && processor.d === d
+				// @ invariant acc(&processor.d, R6) && processor.d === d
 				// @ invariant acc(&processor.ingressID)
 				// @ invariant acc(&processor.buffer) && processor.buffer != nil && processor.buffer.Mem()
 				// @ invariant acc(&processor.mac) && processor.mac != nil && processor.mac.Mem()
@@ -841,6 +842,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
 					// the assertions above moreally imply it. In the future, we should either enrich the predicate
 					// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
+					// TODO: make this a Lemma instead!
 					// @ assume inputCounters.InputPacketsTotal != nil
 					// @ assume inputCounters.InputBytesTotal != nil
 					inputCounters.InputPacketsTotal.Inc()
@@ -860,12 +862,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
 					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
 
+					// @ fold scmpErr.Mem()
 					switch {
 					case err == nil:
+						// @ unfold scmpErr.Mem()
 					case errors.As(err, &scmpErr):
-						// (VerifiedSCION) the specification mechanisms of Gobra cannot specify
-						// the behaviour of errors.As. As such, we axiomatize it.
-						// @ assume typeOf(err) == type[scmpError] // TODO: drop these assumptions
+						// @ unfold scmpErr.Mem()
 						if !scmpErr.TypeCode.InfoMsg() {
 							log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
 						}
@@ -873,9 +875,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						result.OutAddr = srcAddr
 						result.OutConn = rd
 					default:
-						// (VerifiedSCION) the specification mechanisms of Gobra cannot specify
-						// the behaviour of errors.As. As such, we axiomatize it.
-						// @ assume typeOf(err) != type[scmpError]
+						// @ unfold scmpErr.Mem()
 						log.Debug("Error processing packet", "err", err)
 						// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
 						// the assertions above moreally imply it. In the future, we should either enrich the predicate
@@ -888,9 +888,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					if result.OutConn == nil { // e.g. BFD case no message is forwarded
 						continue
 					}
-					// (VerifiedSCION) only scmp errors and successful messages get to this point,
-					// but we cannot assert that because errors.As cannot be properly specified at the moment.
-					// @ assume err == nil || typeOf(err) == type[scmpError]
 
 					// Write to OutConn; drop the packet if this would block.
 					// Use WriteBatch because it's the only available function that
@@ -920,7 +917,10 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						// @ outline (
 						var errno /*@@@*/ syscall.Errno
 						// @ assert acc(&errno)
-						if !errors.As(err, &errno) ||
+						// @ fold errno.Mem()
+						errorsAs := errors.As(err, &errno)
+						// @ unfold errno.Mem()
+						if !errorsAs ||
 							!(errno == syscall.EAGAIN || errno == syscall.EWOULDBLOCK) {
 							log.Debug("Error writing packet", "err", err)
 							// error metric

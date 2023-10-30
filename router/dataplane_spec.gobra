@@ -17,8 +17,10 @@
 package router
 
 import (
-	"net"
+	"errors"
 	"hash"
+	"net"
+
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/scrypto"
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
@@ -369,3 +371,36 @@ pred writeMsgInv(writeMsgs underlayconn.Messages) {
 	0 <= writeMsgs[0].N
 }
 /** end of definitions used internally for the proof of Run **/
+
+/** ErrorCell **/
+pred (s *scmpError) Mem() {
+	acc(s)
+}
+
+ghost
+preserves s.Mem() && s.CanSet(e)
+ensures   s.Get() === e
+decreases
+func (s *scmpError) Set(e error) {
+	unfold s.Mem()
+	defer fold s.Mem()
+	newErr := e.(scmpError)
+	*s = newErr
+}
+
+ghost
+pure
+requires acc(s.Mem(), _)
+decreases
+func (s *scmpError) Get() error {
+	return unfolding acc(s.Mem(), _) in *s
+}
+
+ghost
+pure
+requires acc(s.Mem(), _)
+decreases
+func (s *scmpError) CanSet(e error) bool /*{
+	// TODO: the body is currently causing a crash
+	return let _, ok := e.(scmpError) in ok
+}*/
