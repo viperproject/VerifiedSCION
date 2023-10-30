@@ -9,16 +9,61 @@
 
 package errors
 
+/*
+
+// The following currently causes an exception in Gobra
+
+type FinitelyNestedErr interface {
+	pred ErrorMem()
+
+	ghost
+	requires acc(ErrorMem(), _)
+	decreases
+	pure IsDuplicableMem() bool
+
+	ghost
+	preserves ErrorMem()
+	ensures   IsDuplicableMem() ==> ErrorMem()
+	decreases
+	Duplicate()
+
+	preserves ErrorMem()
+	decreases
+	Error() string
+
+	ghost
+	ensures 0 <= r
+	pure DepthSpec() (r int)
+
+	requires ErrorMem()
+	ensures  e.ErrorMem()
+	ensures  e.ErrorMem() --* ErrorMem()
+	Unwrap() (e error)
+}
+
+FinitelyNestedErr implements error
+
+type Unwrappable interface {
+	Unwrap() error
+}
+
+ghost
+pure func IsFinitelyNested(e error) bool {
+	return let _, ok := e.(FinitelyNestedErr) in true
+}
+*/
+
 // Unwrap returns the result of calling the Unwrap method on err, if err's
 // type contains an Unwrap method returning error.
 // Otherwise, Unwrap returns nil.
 trusted
 requires  err.ErrorMem()
 ensures   res.ErrorMem()
-decreases _ // this is a simplifying assumption
+ensures   res.ErrorMem() --* err.ErrorMem()
+decreases _ // this is a simplifying assumption, the solution could use the symbol FinitelyNestedErr
 func Unwrap(err error) (res error) {
 	u, ok := err.(interface {
-        // The function only terminates if this Unwrap terminates
+		// The function only terminates if this Unwrap terminates
 		Unwrap() error
 	})
 	if !ok {
@@ -44,8 +89,10 @@ func Unwrap(err error) (res error) {
 // an example in the standard library. An Is method should only shallowly
 // compare err and the target and not call Unwrap on either.
 trusted
-decreases _
-func Is(err, target error) bool {
+preserves err    != nil && err.ErrorMem()
+preserves target != nil && target.ErrorMem()
+decreases _ // this is a simplifying assumption, the solution could use the symbol FinitelyNestedErr
+func Is(err, target error) (res bool) {
 	if target == nil {
 		return err == target
 	}
@@ -84,11 +131,11 @@ func Is(err, target error) bool {
 // As panics if target is not a non-nil pointer to either a type that implements
 // error, or to any interface type.
 trusted
-requires target != nil
-// Gobra cannot yet precisely capture the precondition "target must be a non-nil
-// pointer to either a type that implements error, or to any interface type.
-decreases _
-func As(err error, target interface{}) bool {
+preserves err    != nil && err.ErrorMem()
+requires  target != nil && target.Mem()
+ensures   res ==>
+decreases _ // this is a simplifying assumption, the solution could use the symbol FinitelyNestedErr
+func As(err error, target ErrorCell) (res bool) {
 	if target == nil {
 		panic("errors: target cannot be nil")
 	}
@@ -112,4 +159,20 @@ func As(err error, target interface{}) bool {
 		err = Unwrap(err)
 	}
 	return false
+}
+
+type ErrorCell interface {
+	pred Mem()
+
+	ghost
+	preserves Mem()
+	ensures   GetCell() === e
+	decreases
+	SetCell(e error)
+
+	ghost
+	pure
+	requires acc(Mem(), _)
+	decreases
+	GetCell() error
 }
