@@ -97,7 +97,7 @@ type ErrorCell interface {
 
 	ghost
 	pure
-	requires acc(Mem(), _) && acc(e.ErrorMem(), _)
+	requires acc(Mem(), _)
 	decreases
 	CanSet(e error) bool
 }
