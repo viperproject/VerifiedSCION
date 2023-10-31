@@ -56,6 +56,7 @@ ensures   !res ==> err.ErrorMem()
 decreases err.Size()
 func As(err error, target ErrorCell) (res bool)
 
+// TODO: doc this as a spec mechanism
 type ErrorCell interface {
 	pred Mem()
 
