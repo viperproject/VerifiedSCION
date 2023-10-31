@@ -189,10 +189,7 @@ type scmpError struct {
 }
 
 // @ preserves e.ErrorMem()
-// (VerifiedSCION): Gobra can't prove termination here because we call Error
-// to the result of New and right now it is not able to prove that this will
-// not be a new scmpError. We assume it.
-// @ decreases _
+// @ decreases e.Size()
 func (e scmpError) Error() string {
 	// @ unfold e.ErrorMem()
 	// @ defer fold e.ErrorMem()

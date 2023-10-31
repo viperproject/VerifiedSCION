@@ -15,11 +15,7 @@ package errors
 requires  err.ErrorMem()
 ensures   res.ErrorMem()
 ensures   res.ErrorMem() --* err.ErrorMem()
-// we assume termination; to lift this assumption, we would
-// some sort of measure into the depth of an error to bound
-// the number of recursive calls that can happen to error.
-// This requires large changes to the error type.
-decreases _
+decreases err.Size()
 func Unwrap(err error) (res error)
 
 // Is reports whether any error in err's chain matches target.
@@ -31,11 +27,7 @@ func Unwrap(err error) (res error)
 // it implements a method Is(error) bool such that Is(target) returns true.
 preserves err    != nil ==> err.ErrorMem()
 preserves target != nil && target.ErrorMem()
-// we assume termination; to lift this assumption, we would
-// some sort of measure into the depth of an error to bound
-// the number of recursive calls that can happen to error.
-// This requires large changes to the error type.
-decreases _
+decreases err.Size()
 func Is(err, target error) (res bool)
 
 // As finds the first error in err's chain that matches target, and if one is found, sets
@@ -61,11 +53,7 @@ ensures   res ==> (
 	nestedErr.ErrorMem() &&
 	(nestedErr.ErrorMem() --* err.ErrorMem()))
 ensures   !res ==> err.ErrorMem()
-// we assume termination; to lift this assumption, we would
-// some sort of measure into the depth of an error to bound
-// the number of recursive calls that can happen to error.
-// This requires large changes to the error type.
-decreases _
+decreases err.Size()
 func As(err error, target ErrorCell) (res bool)
 
 type ErrorCell interface {

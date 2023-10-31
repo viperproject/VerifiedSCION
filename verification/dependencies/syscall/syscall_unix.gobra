@@ -40,11 +40,18 @@ func (e Errno) IsDuplicableMem() (res bool) {
 
 ghost
 preserves e.ErrorMem()
-ensures   e.ErrorMem() 
+ensures   e.ErrorMem()
 decreases
 func (e Errno) Duplicate() {
 	assert unfolding e.ErrorMem() in true
 	fold e.ErrorMem()
+}
+
+ghost
+requires acc(e.ErrorMem(), _)
+ensures  0 <= res
+pure func (e Errno) Size() (res int) {
+	return 0
 }
 
 /** ErrorCell **/

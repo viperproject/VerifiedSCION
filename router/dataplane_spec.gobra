@@ -151,29 +151,36 @@ pred (err scmpError) ErrorMem() {
 	err.Cause != nil ==> err.Cause.ErrorMem()
 }
 
-// Currently assumed, as Gobra cannot currently prove termination
-// of the code below
 ghost
-trusted
 pure
-decreases
+requires  acc(err.ErrorMem(), _)
+decreases err.Size()
 func (err scmpError) IsDuplicableMem() bool {
-	return err != nil? err.cause.IsDuplicableMem() : true
+	return unfolding acc(err.ErrorMem(), _) in
+		err.Cause == nil || err.Cause.IsDuplicableMem()
 }
 
-// Currently assumed, as Gobra cannot currently prove termination
-// of the code below
 ghost
-trusted
 preserves err.ErrorMem()
 ensures   err.IsDuplicableMem() ==> err.ErrorMem()
-decreases
+decreases err.Size()
 func (err scmpError) Duplicate() {
 	if err.IsDuplicableMem() {
 		unfold err.ErrorMem()
-		err.cause.Duplicate()
+		if err.Cause != nil {
+			err.Cause.Duplicate()
+		}
 		fold err.ErrorMem()
 	}
+}
+
+ghost
+requires acc(e.ErrorMem(), _)
+ensures  0 <= res
+pure func (e scmpError) Size() (res int) {
+	return unfolding e.ErrorMem() in 1 + (e.Cause == nil ?
+		0 :
+		e.Cause.Size())
 }
 
 scmpError implements error
