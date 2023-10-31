@@ -398,7 +398,6 @@ func (s *scmpError) Get() error {
 
 ghost
 pure
-requires acc(s.Mem(), _)
 decreases
 func (s *scmpError) CanSet(e error) bool {
 	return typeOf(e) == type[scmpError]
