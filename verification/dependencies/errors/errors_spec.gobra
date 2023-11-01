@@ -48,18 +48,26 @@ requires  target != nil
 preserves target.Mem()
 ensures   res ==> (
 	let nestedErr := target.Get() in
-	err != nil &&
-	nestedErr != nil &&
-	nestedErr.ErrorMem() &&
+	err != nil               &&
+	nestedErr != nil         &&
+	nestedErr.ErrorMem()     &&
+	target.CanSet(nestedErr) &&
 	(nestedErr.ErrorMem() --* err.ErrorMem()))
 ensures   !res ==> err.ErrorMem()
 decreases err.Size()
 func As(err error, target ErrorCell) (res bool)
 
-// TODO: doc this as a spec mechanism
+// Cell where one can store an error. This is used in the function
+// 'As', for the type of 'target', instead of the type 'interface{}'
+// used in the standard library. This way, we can capture the
+// requirement that target must be able to store the error and make
+// sure that no calls to this function can result in a panic.
 type ErrorCell interface {
 	pred Mem()
 
+	// This is not meant to be called. Instead,
+	// it shows that Mem() is strong enough to
+	// allow for the assignment of an error.
 	ghost
 	requires  Mem() && CanSet(e)
 	ensures   Mem() && Get() === e
@@ -72,6 +80,8 @@ type ErrorCell interface {
 	decreases
 	Get() error
 
+	// Determines if 'e' could be stored in the
+	// current cell.
 	ghost
 	pure
 	requires acc(Mem(), _)
