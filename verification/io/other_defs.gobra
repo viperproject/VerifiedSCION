@@ -121,8 +121,10 @@ type IO_Link adt {
 }
 
 // TODO: should be put p1 == dp.GetLocalIA() in the precondition?
+// Should we put dp.Valid() in precondition?
 // This function is provided as locale in the Isabelle formalization.
 ghost
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link{
 	return match p1 {
@@ -134,6 +136,7 @@ pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link{
 }
 
 ghost
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) egif_prov2(hf1 IO_HF, asid IO_as) bool{
 	return dp.egif2_type(hf1, asid, IO_Link(IO_CustProv{}))
@@ -141,36 +144,42 @@ pure func (dp DataPlaneSpec) egif_prov2(hf1 IO_HF, asid IO_as) bool{
 
 
 ghost
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) egif_core2(hf1 IO_HF, asid IO_as) bool{
 	return dp.egif2_type(hf1, asid, IO_Link(IO_PeerOrCore{}))
 }
 
 ghost
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) egif_cust2(hf1 IO_HF, asid IO_as) bool{
 	return dp.egif2_type(hf1, asid, IO_Link(IO_ProvCust{}))
 }
 
 ghost
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) inif_cust2(hf1 IO_HF, asid IO_as) bool{
 	return dp.inif2_type(hf1, asid, IO_Link(IO_ProvCust{}))
 }
 
 ghost
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) inif_core2(hf1 IO_HF, asid IO_as) bool{
 	return dp.inif2_type(hf1, asid, IO_Link(IO_PeerOrCore{}))
 }
 
 ghost
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) inif_prov2(hf1 IO_HF, asid IO_as) bool{
 	return dp.inif2_type(hf1, asid, IO_Link(IO_CustProv{}))
 }
 
 ghost
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool{
 	return match ifs {

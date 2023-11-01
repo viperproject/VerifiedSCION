@@ -22,6 +22,7 @@ package io
 
 // This function corresponds to function 'core' in the IO spec
 ghost
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) core() set[IO_as] {
 	return dp.GetCoreAS()
@@ -79,7 +80,7 @@ pure func asidToKey(asid IO_as) IO_key{
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) upd_uinfo(segid set[IO_msgterm], hf IO_HF) set[IO_msgterm]{
+pure func upd_uinfo(segid set[IO_msgterm], hf IO_HF) set[IO_msgterm]{
 	return let setHVF := set[IO_msgterm]{hf.HVF} in
 		(segid union setHVF) setminus (segid intersection setHVF)
 }
@@ -90,15 +91,15 @@ pure func (dp DataPlaneSpec) asid() IO_as {
 	return dp.GetLocalIA()
 }
 
-// TODO: fix function
+
 // This function is provided as locale in the Isabelle formalization.
 ghost
+requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) is_target(asid IO_as, nextif IO_ifs, a2 IO_as, i2 IO_ifs) bool{
+pure func (dp DataPlaneSpec) is_target(asid IO_as, nextif IO_ifs, a2 IO_as, i2 IO_ifs) bool {
 	return asid == dp.GetLocalIA() && 
-		nextif == i2 &&
-		i2 in domain(dp.neighborIAs) && 
-		a2 == dp.GetNeighborIA(i2)
+		nextif in domain(dp.GetNeighborIAs()) &&
+		dp.Lookup(AsIfsPair{asid, nextif}) == AsIfsPair{a2, i2}
 }
 
 ghost
@@ -127,29 +128,27 @@ pure func insert(buf dict[option[IO_ifs]](set[IO_pkt3]), k option[IO_ifs], v IO_
 		buf[k = newSet]
 }
 
-// TODO: double check that this instantiation of the existential quantifier is correct
 ghost
 requires len(m.CurrSeg.Future) > 0
 requires len(newpkt.CurrSeg.Future) > 0
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
 	return let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
-		let traversedseg := dp.dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg) in
+		let traversedseg := dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg) in
 		dp.dp2_forward_ext_guard(dp.asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
-		//let i2 := currseg.ConsDir ? hf1.EgIF2 : hf1.InIF2 in //not really necessary since the equality i2 == nextif is already checked in dp2_forward_ext_guard
-		let a2 := newpkt.CurrSeg.Future[0].extr_asid() in
-		dp.is_target(dp.asid(), nextif, a2, nextif)
-	// (exists currseg IO_seg3, traversedseg IO_seg3, fut seq[IO_HF], hf1 IO_HF :: { dp.dp2_forward_ext_guard(dp.asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) } 
-	// 	dp.dp2_forward_ext_guard(dp.asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1)) &&
-	// 		(exists a2 IO_as, i2 IO_ifs :: { dp.is_target(dp.asid(), nextif, a2, i2) } 
-	// 			dp.is_target(dp.asid(), nextif, a2, i2))
+		let hf2 := newpkt.CurrSeg.Future[0] in
+		let a2 := dp.GetNeighborIA(nextif) in
+		let i2 := dp.Lookup(AsIfsPair{dp.asid(), nextif}).ifs in
+		dp.is_target(dp.asid(), nextif, a2, i2)
 }
 
 // TODO: should we change IO_ifs to being implemented as an option type?
 ghost
 requires len(m.CurrSeg.Future) > 0
 requires len(newpkt.CurrSeg.Future) > 0
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward(m IO_pkt3, newpkt IO_pkt3, nextif option[IO_ifs]) bool {
 	return match nextif {
@@ -163,6 +162,7 @@ pure func (dp DataPlaneSpec) dp3s_forward(m IO_pkt3, newpkt IO_pkt3, nextif opti
 ghost
 requires len(intermediatepkt.CurrSeg.Future) > 0
 requires len(newpkt.CurrSeg.Future) > 0
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_xover_common(
 	s IO_dp3s_state_local,

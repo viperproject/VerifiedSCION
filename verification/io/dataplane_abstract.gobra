@@ -28,11 +28,11 @@ type DataPlaneSpec adt {
 // TopologySpec provides information about the entire network topology.
 // coreAS: IDs of the core Autonomous Systems
 // links: representation of the network topology as a graph.
-//		links[a1][x] == (a2,y) means that AS a1 and AS a2 share an edge via interface x and y, respectively.
+//		links[(a1,x)] == (a2,y) means that AS a1 and AS a2 share an edge via interface x and y, respectively.
 type TopologySpec adt {
 	TopologySpec_{
 		coreAS		set[IO_as]
-		links	 	dict[IO_as](dict[IO_ifs]AsIfsPair)
+		links	 	dict[AsIfsPair]AsIfsPair
 	}
 }
 
@@ -41,21 +41,18 @@ type AsIfsPair struct {
 	ifs		IO_ifs
 }
 
-// TODO: rewrite function when gobra allows accessing two-dimensional arrays
 ghost
 decreases
-pure func (dp DataPlaneSpec) Valid() bool{
+pure func (dp DataPlaneSpec) Valid() bool {
 	return domain(dp.linkTypes) == domain(dp.neighborIAs) &&
-		dp.localIA in domain(dp.topology.links) &&
-		domain(dp.neighborIAs) == domain(dictCast(dp.topology.links, dp.localIA)) &&
-		(forall core IO_as :: {core in dp.topology.coreAS} core in dp.topology.coreAS ==> 
-			core in domain(dp.topology.links)) &&
-		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==> 
-			dp.neighborIAs[ifs] == dictCast(dp.topology.links, dp.localIA)[ifs].asid) &&
-		(forall asid IO_as, ifs IO_ifs :: (asid in domain(dp.topology.links) && ifs in domain(dictCast(dp.topology.links, asid))) ==>
-					dp.lookup(asid, ifs).asid in domain(dp.topology.links) && 
-					dp.lookup(asid, ifs).ifs in domain(dictCast(dp.topology.links, dp.lookup(asid, ifs).asid)) &&
-					dp.lookup(dp.lookup(asid, ifs).asid, dp.lookup(asid, ifs).ifs) == AsIfsPair{asid, ifs})
+		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==> 
+			(AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) && 
+			dp.Lookup(AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])) &&
+		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==>
+			ifs in domain(dp.neighborIAs)) &&
+		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.topology.links) ==> 
+			dp.Lookup(pairs) in domain(dp.topology.links) &&
+			dp.Lookup(dp.Lookup(pairs)) == pairs)
 }
 
 ghost
@@ -63,6 +60,12 @@ decreases
 requires ifs in domain(dp.linkTypes)
 pure func (dp DataPlaneSpec) GetLinkType(ifs IO_ifs) IO_Link {
 	return dp.linkTypes[ifs]
+}
+
+ghost
+decreases
+pure func (dp DataPlaneSpec) GetNeighborIAs() dict[IO_ifs]IO_as {
+	return dp.neighborIAs
 }
 
 ghost
@@ -85,16 +88,14 @@ pure func (dp DataPlaneSpec) GetCoreAS() set[IO_as] {
 }
 
 ghost
-requires asid in domain(dp.topology.links)
-requires ifs in domain(dictCast(dp.topology.links, asid))
 decreases
-pure func(dp DataPlaneSpec) lookup(asid IO_as, ifs IO_ifs) AsIfsPair {
-	return dictCast(dp.topology.links, asid)[ifs]
+pure func (dp DataPlaneSpec) GetLinks() dict[AsIfsPair]AsIfsPair {
+	return dp.topology.links
 }
 
-ghost 
-requires idx in domain(m)
+ghost
+requires pair in domain(dp.topology.links)
 decreases
-pure func dictCast(m dict[IO_as](dict[IO_ifs]AsIfsPair), idx IO_as) dict[IO_ifs]AsIfsPair{
-	return m[idx]
+pure func(dp DataPlaneSpec) Lookup(pair AsIfsPair) AsIfsPair {
+	return dp.topology.links[pair]
 }
