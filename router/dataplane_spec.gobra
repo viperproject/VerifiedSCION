@@ -357,7 +357,7 @@ requires 0 <= seg2Len
 requires 0 <= seg3Len
 requires currHF < seg1Len + seg2Len + seg3Len
 decreases
-pure func computeSeqLen(currHF int, seg1Len int, seg2Len int, seg3Len int) int{
+pure func lengthOfCurrSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) int{
 	return seg1Len > currHF ? seg1Len : ((seg1Len + seg2Len) > currHF ? seg2Len : seg3Len)
 }
 
@@ -620,7 +620,7 @@ pure func getPkt(raw []byte, asid io.IO_as) io.IO_pkt2{
 		let seg1Len := int(getSeg1Len(hdr)) in
 		let seg2Len := int(getSeg2Len(hdr)) in 
 		let seg3Len := int(getSeg3Len(hdr)) in
-		let segLen := computeSeqLen(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let segLen := lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let prevSegLen := computePrevSegLen(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let numINF := int(numInfoFields(seg1Len, seg2Len, seg3Len)) in
 		let offset := 4 + 8 * numINF in
