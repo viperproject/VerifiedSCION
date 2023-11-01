@@ -26,7 +26,7 @@ func Unwrap(err error) (res error)
 // An error is considered to match a target if it is equal to that target or if
 // it implements a method Is(error) bool such that Is(target) returns true.
 preserves err    != nil ==> err.ErrorMem()
-preserves target != nil && target.ErrorMem()
+preserves target != nil ==> target.ErrorMem()
 decreases err.Size()
 func Is(err, target error) (res bool)
 

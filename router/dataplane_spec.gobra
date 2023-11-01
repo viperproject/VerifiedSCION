@@ -19,6 +19,7 @@ package router
 import (
 	"net"
 	"hash"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
@@ -148,7 +149,7 @@ pred hideLocalIA(p *addr.IA) {
 }
 
 pred (err scmpError) ErrorMem() {
-	err.Cause != nil ==> err.Cause.ErrorMem()
+	err.Cause != nil && err.Cause.ErrorMem()
 }
 
 ghost
@@ -157,7 +158,7 @@ requires  acc(err.ErrorMem(), _)
 decreases err.Size()
 func (err scmpError) IsDuplicableMem() bool {
 	return unfolding acc(err.ErrorMem(), _) in
-		err.Cause == nil || err.Cause.IsDuplicableMem()
+		err.Cause.IsDuplicableMem()
 }
 
 ghost
@@ -167,20 +168,21 @@ decreases err.Size()
 func (err scmpError) Duplicate() {
 	if err.IsDuplicableMem() {
 		unfold err.ErrorMem()
-		if err.Cause != nil {
-			err.Cause.Duplicate()
-		}
+		assert err.Cause.IsDuplicableMem()
+		err.Cause.Duplicate()
+		assert err.Cause.ErrorMem() && err.Cause.ErrorMem()
+		fold err.ErrorMem()
 		fold err.ErrorMem()
 	}
 }
 
 ghost
 requires acc(e.ErrorMem(), _)
-ensures  0 <= res
+ensures  0 < res
 pure func (e scmpError) Size() (res int) {
-	return unfolding e.ErrorMem() in 1 + (e.Cause == nil ?
-		0 :
-		e.Cause.Size())
+	return unfolding acc(e.ErrorMem(), _) in
+		let _ := Asserting(0 <= e.Cause.Size()) in
+		2 + e.Cause.Size()
 }
 
 scmpError implements error

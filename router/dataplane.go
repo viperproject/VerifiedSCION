@@ -127,7 +127,7 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ preserves Mem()
-	// @ preserves forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	acc(msgs[i].Mem(1), R10)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
@@ -193,7 +193,10 @@ type scmpError struct {
 func (e scmpError) Error() string {
 	// @ unfold e.ErrorMem()
 	// @ defer fold e.ErrorMem()
-	return serrors.New("scmp", "typecode", e.TypeCode, "cause", e.Cause).Error()
+	res := serrors.New("scmp", "typecode", e.TypeCode, "cause", e.Cause)
+	// TODO: doc
+	// @ assume res.Size() == 1 + e.Cause.Size()
+	return res.Error()
 }
 
 // SetIA sets the local IA for the dataplane.
@@ -1765,7 +1768,10 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 // @ ensures   acc(&p.d, R15)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (resaddr *net.UDPAddr, respr processResult, reserr error) {
-	a, err := p.d.resolveLocalDst(&p.scionLayer /*@, ubScionL @*/) // (VerifiedSCION) the parameter used to be only p.scionLayer
+	// (VerifiedSCION) the parameter used to be p.scionLayer,
+	// instead of &p.scionLayer.
+	a, err := p.d.resolveLocalDst(&p.scionLayer /*@, ubScionL @*/)
+	// @ establishNoSVCBackend()
 	switch {
 	case errors.Is(err, noSVCBackend):
 		// @ TODO()
