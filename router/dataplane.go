@@ -188,15 +188,17 @@ type scmpError struct {
 	Cause    error
 }
 
+// Gobra cannot currently prove termination of this function,
+// because it is not specified how the ErrorMem() of the result
+// of serrors.New relates to that of e.
+// @ trusted
 // @ preserves e.ErrorMem()
-// @ decreases e.Size()
+// @ ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+// @ decreases e.ErrorMem()
 func (e scmpError) Error() string {
 	// @ unfold e.ErrorMem()
 	// @ defer fold e.ErrorMem()
-	res := serrors.New("scmp", "typecode", e.TypeCode, "cause", e.Cause)
-	// TODO: doc
-	// @ assume res.Size() == 1 + e.Cause.Size()
-	return res.Error()
+	return serrors.New("scmp", "typecode", e.TypeCode, "cause", e.Cause).Error()
 }
 
 // SetIA sets the local IA for the dataplane.

@@ -153,18 +153,26 @@ pred (err scmpError) ErrorMem() {
 }
 
 ghost
-pure
+// Gobra currently runs into unexpected verification errors
+// when trying to prove the termination of this function.
+// (https://github.com/viperproject/gobra/issues/702)
+trusted
 requires  acc(err.ErrorMem(), _)
-decreases err.Size()
-func (err scmpError) IsDuplicableMem() bool {
+decreases err.ErrorMem()
+pure func (err scmpError) IsDuplicableMem() bool {
 	return unfolding acc(err.ErrorMem(), _) in
 		err.Cause.IsDuplicableMem()
 }
 
 ghost
+// Gobra currently runs into unexpected verification errors
+// when trying to prove the termination of this function.
+// (https://github.com/viperproject/gobra/issues/702)
+trusted
 preserves err.ErrorMem()
+ensures   err.IsDuplicableMem() == old(err.IsDuplicableMem())
 ensures   err.IsDuplicableMem() ==> err.ErrorMem()
-decreases err.Size()
+decreases err.ErrorMem()
 func (err scmpError) Duplicate() {
 	if err.IsDuplicableMem() {
 		unfold err.ErrorMem()
@@ -174,15 +182,6 @@ func (err scmpError) Duplicate() {
 		fold err.ErrorMem()
 		fold err.ErrorMem()
 	}
-}
-
-ghost
-requires acc(e.ErrorMem(), _)
-ensures  0 < res
-pure func (e scmpError) Size() (res int) {
-	return unfolding acc(e.ErrorMem(), _) in
-		let _ := Asserting(0 <= e.Cause.Size()) in
-		2 + e.Cause.Size()
 }
 
 scmpError implements error
