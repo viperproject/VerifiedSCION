@@ -149,7 +149,7 @@ pred hideLocalIA(p *addr.IA) {
 }
 
 pred (err scmpError) ErrorMem() {
-	err.Cause != nil && err.Cause.ErrorMem()
+	err.Cause != nil ==> err.Cause.ErrorMem()
 }
 
 scmpError implements error
