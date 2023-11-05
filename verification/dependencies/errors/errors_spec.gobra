@@ -15,7 +15,7 @@ package errors
 requires  err.ErrorMem()
 ensures   res.ErrorMem()
 ensures   res.ErrorMem() --* err.ErrorMem()
-decreases err.Size()
+decreases err.ErrorMem()
 func Unwrap(err error) (res error)
 
 // Is reports whether any error in err's chain matches target.
@@ -27,7 +27,7 @@ func Unwrap(err error) (res error)
 // it implements a method Is(error) bool such that Is(target) returns true.
 preserves err    != nil ==> err.ErrorMem()
 preserves target != nil ==> target.ErrorMem()
-decreases err.Size()
+decreases err.ErrorMem()
 func Is(err, target error) (res bool)
 
 // As finds the first error in err's chain that matches target, and if one is found, sets
@@ -54,7 +54,7 @@ ensures   res ==> (
 	target.CanSet(nestedErr) &&
 	(nestedErr.ErrorMem() --* err.ErrorMem()))
 ensures   !res ==> err.ErrorMem()
-decreases err.Size()
+decreases err.ErrorMem()
 func As(err error, target ErrorCell) (res bool)
 
 // Cell where one can store an error. This is used in the function
