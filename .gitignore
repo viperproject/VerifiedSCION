@@ -100,3 +100,4 @@ target
 *.gobrafied
 *.internal
 .devcontainer
+.metals
