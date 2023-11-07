@@ -15,11 +15,7 @@ package errors
 requires  err.ErrorMem()
 ensures   res.ErrorMem()
 ensures   res.ErrorMem() --* err.ErrorMem()
-// we assume termination; to lift this assumption, we would
-// some sort of measure into the depth of an error to bound
-// the number of recursive calls that can happen to error.
-// This requires large changes to the error type.
-decreases _
+decreases err.ErrorMem()
 func Unwrap(err error) (res error)
 
 // Is reports whether any error in err's chain matches target.
@@ -29,22 +25,9 @@ func Unwrap(err error) (res error)
 //
 // An error is considered to match a target if it is equal to that target or if
 // it implements a method Is(error) bool such that Is(target) returns true.
-//
-// An error type might provide an Is method so it can be treated as equivalent
-// to an existing error. For example, if MyError defines
-//
-//	func (m MyError) Is(target error) bool { return target == fs.ErrExist }
-//
-// then Is(MyError{}, fs.ErrExist) returns true. See syscall.Errno.Is for
-// an example in the standard library. An Is method should only shallowly
-// compare err and the target and not call Unwrap on either.
-preserves err    != nil && err.ErrorMem()
-preserves target != nil && target.ErrorMem()
-// we assume termination; to lift this assumption, we would
-// some sort of measure into the depth of an error to bound
-// the number of recursive calls that can happen to error.
-// This requires large changes to the error type.
-decreases _
+preserves err    != nil ==> err.ErrorMem()
+preserves target != nil ==> target.ErrorMem()
+decreases err.ErrorMem()
 func Is(err, target error) (res bool)
 
 // As finds the first error in err's chain that matches target, and if one is found, sets
@@ -58,9 +41,6 @@ func Is(err, target error) (res bool)
 // As(target) returns true. In the latter case, the As method is responsible for
 // setting target.
 //
-// An error type might provide an As method so it can be treated as if it were a
-// different error type.
-//
 // As panics if target is not a non-nil pointer to either a type that implements
 // error, or to any interface type.
 requires  err    != nil ==> err.ErrorMem()
@@ -68,21 +48,26 @@ requires  target != nil
 preserves target.Mem()
 ensures   res ==> (
 	let nestedErr := target.Get() in
-	err != nil &&
-	nestedErr != nil &&
-	nestedErr.ErrorMem() &&
+	err != nil               &&
+	nestedErr != nil         &&
+	nestedErr.ErrorMem()     &&
+	target.CanSet(nestedErr) &&
 	(nestedErr.ErrorMem() --* err.ErrorMem()))
 ensures   !res ==> err.ErrorMem()
-// we assume termination; to lift this assumption, we would
-// some sort of measure into the depth of an error to bound
-// the number of recursive calls that can happen to error.
-// This requires large changes to the error type.
-decreases _
+decreases err.ErrorMem()
 func As(err error, target ErrorCell) (res bool)
 
+// Cell where one can store an error. This is used in the function
+// 'As', for the type of 'target', instead of the type 'interface{}'
+// used in the standard library. This way, we can capture the
+// requirement that target must be able to store the error and make
+// sure that no calls to this function can result in a panic.
 type ErrorCell interface {
 	pred Mem()
 
+	// This is not meant to be called. Instead,
+	// it shows that Mem() is strong enough to
+	// allow for the assignment of an error.
 	ghost
 	requires  Mem() && CanSet(e)
 	ensures   Mem() && Get() === e
@@ -95,6 +80,8 @@ type ErrorCell interface {
 	decreases
 	Get() error
 
+	// Determines if 'e' could be stored in the
+	// current cell.
 	ghost
 	pure
 	requires acc(Mem(), _)

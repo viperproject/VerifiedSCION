@@ -405,7 +405,6 @@ func (c *connUDPBase) ReadFrom(b []byte /*@, ghost underlyingConn *net.UDPConn @
 	return c.conn.ReadFromUDP(b)
 }
 
-
 // @ preserves acc(c.Mem(), _)
 // @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 // @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn

@@ -31,7 +31,7 @@ pred internalLockInv(s *services) {
 	acc(&s.m) &&
 	acc(s.m) &&
 	// we can read all keys stored in the map
-	forall k addr.HostSVC :: { k in domain(s.m) }{ validMapValue(k, s.m[k]) } k in domain(s.m) ==>
+	forall k addr.HostSVC :: { k in domain(s.m) }{ k in s.m }{ s.m[k] } k in domain(s.m) ==>
 		validMapValue(k, s.m[k])
 }
 

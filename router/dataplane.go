@@ -193,11 +193,13 @@ type scmpError struct {
 	Cause    error
 }
 
+// Gobra cannot currently prove termination of this function,
+// because it is not specified how the ErrorMem() of the result
+// of serrors.New relates to that of e.
+// @ trusted
 // @ preserves e.ErrorMem()
-// (VerifiedSCION): Gobra can't prove termination here because we call Error
-// to the result of New and right now it is not able to prove that this will
-// not be a new scmpError. We assume it.
-// @ decreases _
+// @ ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+// @ decreases e.ErrorMem()
 func (e scmpError) Error() string {
 	// @ unfold e.ErrorMem()
 	// @ defer fold e.ErrorMem()
@@ -1972,7 +1974,10 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 // @ ensures   acc(&p.d, R15)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (resaddr *net.UDPAddr, respr processResult, reserr error) {
-	a, err := p.d.resolveLocalDst(&p.scionLayer /*@, ubScionL @*/) // (VerifiedSCION) the parameter used to be only p.scionLayer
+	// (VerifiedSCION) the parameter used to be p.scionLayer,
+	// instead of &p.scionLayer.
+	a, err := p.d.resolveLocalDst(&p.scionLayer /*@, ubScionL @*/)
+	// @ establishNoSVCBackend()
 	switch {
 	case errors.Is(err, noSVCBackend):
 		// @ TODO()
