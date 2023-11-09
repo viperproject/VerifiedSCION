@@ -915,6 +915,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ fold writeMsgInv(writeMsgs)
 					// @ fold msgs[:pkts][i0].Mem(1)
 					if err != nil {
+						// @ requires err != nil && err.ErrorMem()
 						// @ decreases
 						// @ outline (
 						var errno /*@@@*/ syscall.Errno
