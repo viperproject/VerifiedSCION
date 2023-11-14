@@ -127,12 +127,7 @@ ghost
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link{
-	return match p1 {
-		case dp.GetLocalIA(): 
-			p2 in domain(dp.linkTypes) ? dp.linkTypes[p2] : IO_NoLink{}
-		default:
-			IO_NoLink{}
-	}
+	return p2 in domain(dp.linkTypes) ? dp.linkTypes[p2] : IO_NoLink{}
 }
 
 ghost

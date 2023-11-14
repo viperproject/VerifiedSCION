@@ -52,8 +52,9 @@ pure func (dp DataPlaneSpec) Valid() bool {
 		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==>
 			ifs in domain(dp.neighborIAs)) &&
 		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.topology.links) ==>  
-			dp.Lookup(pairs) in domain(dp.topology.links) &&
-			dp.Lookup(dp.Lookup(pairs)) == pairs)
+			let next_pair := dp.Lookup(pairs) in
+			(next_pair in domain(dp.topology.links)) &&
+			dp.Lookup(next_pair) == pairs)
 }
 
 ghost
@@ -82,6 +83,7 @@ pure func (dp DataPlaneSpec) GetLocalIA() IO_as {
 	return dp.localIA
 }
 
+// This function corresponds to function 'core' in the IO spec
 ghost
 decreases
 pure func (dp DataPlaneSpec) GetCoreAS() set[IO_as] {

@@ -20,14 +20,6 @@ package io
 
 // TODO: make individual_router an interface type with the following methods
 
-// This function corresponds to function 'core' in the IO spec
-ghost
-requires dp.Valid()
-decreases
-pure func (dp DataPlaneSpec) core() set[IO_as] {
-	return dp.GetCoreAS()
-}
-
 ghost 
 decreases
 pure func if2term(ifs option[IO_ifs]) IO_msgterm {
@@ -51,7 +43,7 @@ pure func (dp DataPlaneSpec) hf_valid(d bool, ts uint, uinfo set[IO_msgterm], hf
 				if2term(inif), 
 				if2term(egif), 
 				IO_msgterm(MsgTerm_FS{uinfo})}}) in 
-		x == mac(macKey(asidToKey(dp.asid())), l)
+		x == mac(macKey(asidToKey(dp.GetLocalIA())), l)
 }
 
 ghost
@@ -135,10 +127,10 @@ pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif 
 	return let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := EstablishGuardTraversedsegInc(currseg) in
-		dp.dp2_forward_ext_guard(dp.asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		dp.dp2_forward_ext_guard(dp.GetLocalIA(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
 		let a2 := dp.GetNeighborIA(nextif) in
-		let i2 := dp.Lookup(AsIfsPair{dp.asid(), nextif}).ifs in
-		dp.is_target(dp.asid(), nextif, a2, i2)
+		let i2 := dp.Lookup(AsIfsPair{dp.GetLocalIA(), nextif}).ifs in
+		dp.is_target(dp.GetLocalIA(), nextif, a2, i2)
 }
 
 // TODO: should we change IO_ifs to being implemented as an option type?
