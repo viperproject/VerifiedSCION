@@ -71,7 +71,7 @@ pure func mac(fst IO_msgterm, snd IO_msgterm) IO_msgterm {
 	})
 }
 
-// helper func
+// helper function, not defined in IO spec
 ghost
 decreases
 pure func asidToKey(asid IO_as) IO_key{

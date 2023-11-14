@@ -25,10 +25,11 @@ type DataPlaneSpec adt {
 	}
 }
 
-// TopologySpec provides information about the entire network topology.
+// TopologySpec describes the entire network topology.
 // coreAS: IDs of the core Autonomous Systems
 // links: representation of the network topology as a graph.
-//		links[(a1,x)] == (a2,y) means that AS a1 and AS a2 share an edge via interface x and y, respectively.
+//     `links[(a1,x)] == (a2,y)` means that the interface x of AS a1 is connected
+//     to the interface y of AS a2.
 type TopologySpec adt {
 	TopologySpec_{
 		coreAS		set[IO_as]
