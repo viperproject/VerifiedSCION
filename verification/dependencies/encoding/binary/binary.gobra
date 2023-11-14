@@ -59,7 +59,7 @@ type bigEndian int
 
 (littleEndian) implements ByteOrder
 
-(bigEndian) implements ByteOrder 
+(bigEndian) implements ByteOrder
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
 requires acc(&b[0], _) && acc(&b[1], _)
@@ -78,7 +78,8 @@ func (e littleEndian) PutUint16(b []byte, v uint16) {
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
 requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
-ensures res >= 0
+ensures  0 <= res
+ensures  res == uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 decreases
 pure func (e littleEndian) Uint32(b []byte) (res uint32) {
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
@@ -140,15 +141,30 @@ func (e bigEndian) PutUint16(b []byte, v uint16) {
 	b[1] = byte(v)
 }
 
+decreases
+pure func (e bigEndian) Uint32Spec(b0, b1, b2, b3 byte) (res uint32) {
+	return uint32(b3) | uint32(b2)<<8 | uint32(b1)<<16 | uint32(b0)<<24
+}
+
 trusted // related to https://github.com/viperproject/gobra/issues/192
 requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
-ensures  res >= 0
+ensures  0 <= res
+ensures  res == BigEndian.Uint32Spec(b[0], b[1], b[2], b[3])
 decreases
 pure func (e bigEndian) Uint32(b []byte) (res uint32) {
 	return uint32(b[3]) | uint32(b[2])<<8 | uint32(b[1])<<16 | uint32(b[0])<<24
 }
 
+decreases
+pure func (e bigEndian) PutUint32Spec(b0, b1, b2, b3 byte, v uint32) bool {
+	return b0 == byte(v >> 24) &&
+		b1 == byte(v >> 16)    &&
+		b2 == byte(v >> 8)     &&
+		b3 == byte(v)
+}
+
 preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
+ensures   BigEndian.PutUint32Spec(b[0], b[1], b[2], b[3], v)
 decreases
 func (e bigEndian) PutUint32(b []byte, v uint32) {
 	b[0] = byte(v >> 24)

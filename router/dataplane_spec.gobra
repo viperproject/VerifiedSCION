@@ -19,6 +19,7 @@ package router
 import (
 	"net"
 	"hash"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
 	"github.com/scionproto/scion/verification/io"
 	"github.com/scionproto/scion/verification/dependencies/encoding/binary"
@@ -154,31 +155,6 @@ pred (err scmpError) ErrorMem() {
 	err.Cause != nil ==> err.Cause.ErrorMem()
 }
 
-// Currently assumed, as Gobra cannot currently prove termination
-// of the code below
-ghost
-trusted
-pure
-decreases
-func (err scmpError) IsDuplicableMem() bool {
-	return err != nil? err.cause.IsDuplicableMem() : true
-}
-
-// Currently assumed, as Gobra cannot currently prove termination
-// of the code below
-ghost
-trusted
-preserves err.ErrorMem()
-ensures   err.IsDuplicableMem() ==> err.ErrorMem()
-decreases
-func (err scmpError) Duplicate() {
-	if err.IsDuplicableMem() {
-		unfold err.ErrorMem()
-		err.cause.Duplicate()
-		fold err.ErrorMem()
-	}
-}
-
 scmpError implements error
 
 type offsetPair struct {
@@ -281,59 +257,6 @@ func (d *DataPlane) getNewPacketProcessorFootprint() {
 }
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
-
-/**** Post-init invariants ****/
-
-// unsupportedPathType is duplicable: we can always establish its invariant
-ghost
-ensures unsupportedPathType.ErrorMem()
-decreases _
-func establishMemUnsupportedPathType()
-
-// malformedPath is duplicable: we can always establish its invariant
-ghost
-ensures malformedPath != nil
-ensures malformedPath.ErrorMem()
-decreases _
-func establishMemMalformedPath()
-
-// unsupportedPathTypeNextHeader is duplicable: we can always establish its invariant
-ghost
-ensures unsupportedPathTypeNextHeader.ErrorMem()
-decreases _
-func establishMemUnsupportedPathTypeNextHeader()
-
-// noBFDSessionConfigured is duplicable: we can always establish its invariant
-ghost
-ensures noBFDSessionConfigured.ErrorMem()
-decreases _
-func establishMemNoBFDSessionConfigured()
-
-// noBFDSessionFound is duplicable: we can always establish its invariant
-ghost
-ensures noBFDSessionFound.ErrorMem()
-decreases _
-func establishMemNoBFDSessionFound()
-
-// invalidSrdAddrForTransit is duplicable: we can always establish its invariant
-ghost
-ensures invalidSrcAddrForTransit.ErrorMem()
-decreases _
-func establishInvalidSrcAddrForTransit()
-
-// noSVCBackend is duplicable: we can always establish its invariant
-ghost
-ensures noSVCBackend.ErrorMem()
-decreases _
-func establishNoSVCBackend()
-
-// cannotRoute is duplicable: we can always establish its invariant after init
-ghost
-ensures cannotRoute.ErrorMem()
-decreases _
-func establishCannotRoute()
-
-/**** End of post-init invariants ****/
 
 /** Start of closure specs for the Run method **/
 requires true
