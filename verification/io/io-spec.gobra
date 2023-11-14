@@ -18,6 +18,10 @@
 
 package io
 
+//Unlike the original IO-spec from Isabelle, we need additional information about the network topology. 
+//To ensure the well-formedness of all map accesses we require an additional conjunction 
+//for all the events (dp.Valid())
+
 // This is the main IO Specification.
 pred (dp DataPlaneSpec) dp3s_iospec_ordered(s IO_dp3s_state_local, t Place) {
 	dp.dp3s_iospec_bio3s_enter(s, t) &&
@@ -45,11 +49,12 @@ requires CBio_IN_bio3s_enter(t, v)
 decreases
 pure func CBio_IN_bio3s_enter_T(t Place, v IO_val) Place
 
-
+/*** Helper functions, not in Isabelle ***/
+//Establishes the traversed segment for packets which are not incremented (internal).
 ghost
 requires len(currseg.Future) > 0
 decreases
-pure func dp3s_iospec_bio3s_create_guard_traversedseg(currseg IO_seg3) IO_seg3 {
+pure func EstablishGuardTraversedseg(currseg IO_seg3) IO_seg3 {
 	return let uinfo := !currseg.ConsDir ?
 		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
@@ -63,10 +68,11 @@ pure func dp3s_iospec_bio3s_create_guard_traversedseg(currseg IO_seg3) IO_seg3 {
 			History: currseg.History}
 }
 
+//Establishes the traversed segment for packets that are incremented (external).
 ghost
 requires len(currseg.Future) > 0
 decreases
-pure func dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg IO_seg3) IO_seg3 {
+pure func EstablishGuardTraversedsegInc(currseg IO_seg3) IO_seg3 {
 	return let uinfo := !currseg.ConsDir ?
 		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
@@ -79,6 +85,7 @@ pure func dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg IO_seg3) IO_se
 			Future: currseg.Future[1:],
 			History: seq[IO_ahi]{currseg.Future[0].Toab()} ++ currseg.History}
 }
+/*** End of helper functions, not in Isabelle ***/
 
 // This corresponds to the condition of the if statement in the io-spec case for enter
 ghost
@@ -89,14 +96,13 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local
 	return some(v.IO_Internal_val1_2) in domain(s.ibuf) &&
 		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 in ibuf_set)) &&
 		len(v.IO_Internal_val1_1.CurrSeg.Future) > 0 &&
-		len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 		let currseg := v.IO_Internal_val1_1.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := match v.IO_Internal_val1_4{
 			case none[IO_ifs]: 
-				dp3s_iospec_bio3s_create_guard_traversedseg(currseg)
+				EstablishGuardTraversedseg(currseg)
 			default: 
-				dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg)
+				EstablishGuardTraversedsegInc(currseg)
 		} in
 		dp.dp2_enter_guard(
 			v.IO_Internal_val1_1,
@@ -155,7 +161,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_sta
 				len(currseg.Future) > 0 &&
 				len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 				let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
-				let traversedseg := dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg) in
+				let traversedseg := EstablishGuardTraversedsegInc(currseg) in
 				(dp.xover_up2down2_link_type(dp.asid(), hf1, hf2) &&
 					dp.dp3s_xover_common(
 						s,
@@ -210,7 +216,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_
 				len(currseg.Future) > 0 &&
 				len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 				let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
-				let traversedseg := dp3s_iospec_bio3s_create_guard_traversedseg_inc(currseg) in
+				let traversedseg := EstablishGuardTraversedsegInc(currseg) in
 				(dp.xover_core2_link_type(hf1, hf2, dp.asid(), currseg.ConsDir) &&
 					dp.dp3s_xover_common(
 						s,
@@ -256,7 +262,6 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s IO_dp3s_state_local,
 	return none[IO_ifs] in domain(s.ibuf) &&
 		(let ibuf_set := s.ibuf[none[IO_ifs]] in (v.IO_Internal_val2_1 in ibuf_set)) &&
 		len(v.IO_Internal_val2_1.CurrSeg.Future) > 0 &&
-		len(v.IO_Internal_val2_2.CurrSeg.Future) > 0 &&
 		dp.dp3s_forward_ext(v.IO_Internal_val2_1, v.IO_Internal_val2_2, v.IO_Internal_val2_3)
 }
 
