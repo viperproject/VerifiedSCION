@@ -108,7 +108,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local
 			v.IO_Internal_val1_1,
 			currseg,
 			traversedseg,
-			dp.GetLocalIA(),
+			dp.Asid(),
 			hf1,
 			v.IO_Internal_val1_2,
 			fut) &&
@@ -162,7 +162,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_sta
 				len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 				let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
 				let traversedseg := EstablishGuardTraversedsegInc(currseg) in
-				(dp.xover_up2down2_link_type(dp.GetLocalIA(), hf1, hf2) &&
+				(dp.xover_up2down2_link_type(dp.Asid(), hf1, hf2) &&
 					dp.dp3s_xover_common(
 						s,
 						v.IO_Internal_val1_1,
@@ -204,7 +204,7 @@ requires v.isIO_Internal_val1
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return (dp.GetLocalIA() in dp.GetCoreAS() &&
+	return (dp.Asid() in dp.Core() &&
 		let currseg := v.IO_Internal_val1_1.CurrSeg in
 		match v.IO_Internal_val1_1.LeftSeg {
 			case none[IO_seg2]: 
@@ -217,7 +217,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_
 				len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 				let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
 				let traversedseg := EstablishGuardTraversedsegInc(currseg) in
-				(dp.xover_core2_link_type(hf1, hf2, dp.GetLocalIA(), currseg.ConsDir) &&
+				(dp.xover_core2_link_type(hf1, hf2, dp.Asid(), currseg.ConsDir) &&
 					dp.dp3s_xover_common(
 						s,
 						v.IO_Internal_val1_1,

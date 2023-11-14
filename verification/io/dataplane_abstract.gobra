@@ -77,17 +77,15 @@ pure func (dp DataPlaneSpec) GetNeighborIA(ifs IO_ifs) IO_as {
 	return dp.neighborIAs[ifs]
 }
 
-// This function corresponds to function 'asid' in the IO spec
 ghost
 decreases
-pure func (dp DataPlaneSpec) GetLocalIA() IO_as {
+pure func (dp DataPlaneSpec) Asid() IO_as {
 	return dp.localIA
 }
 
-// This function corresponds to function 'core' in the IO spec
 ghost
 decreases
-pure func (dp DataPlaneSpec) GetCoreAS() set[IO_as] {
+pure func (dp DataPlaneSpec) Core() set[IO_as] {
 	return dp.topology.coreAS
 }
 

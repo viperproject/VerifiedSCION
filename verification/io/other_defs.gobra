@@ -120,7 +120,7 @@ type IO_Link adt {
 	IO_NoLink{}
 }
 
-// TODO: should be put p1 == dp.GetLocalIA() in the precondition?
+// TODO: should be put p1 == dp.Asid() in the precondition?
 // Should we put dp.Valid() in precondition?
 // This function is provided as locale in the Isabelle formalization.
 ghost
