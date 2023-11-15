@@ -18,9 +18,9 @@
 
 package io
 
-//Unlike the original IO-spec from Isabelle, we need additional information about the network topology. 
-//To ensure the well-formedness of all map accesses we require an additional conjunction 
-//for all the events (dp.Valid())
+// Unlike the original IO-spec from Isabelle, we need additional information about the network topology. 
+// To ensure the well-formedness of all map accesses we require an additional conjunction 
+// for all the events (dp.Valid())
 
 // This is the main IO Specification.
 pred (dp DataPlaneSpec) dp3s_iospec_ordered(s IO_dp3s_state_local, t Place) {
