@@ -20,6 +20,7 @@ package io
 
 ghost
 requires dp.Valid()
+requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) dp2_check_recvif(d bool, asid IO_as, recvif IO_ifs) bool {
 	return d?
@@ -30,6 +31,7 @@ pure func (dp DataPlaneSpec) dp2_check_recvif(d bool, asid IO_as, recvif IO_ifs)
 /* Abbreviations */
 ghost
 requires dp.Valid()
+requires a == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) valid_link_types2(hf1 IO_HF, a IO_as) bool {
 	return  (dp.egif_prov2(hf1, a) && dp.inif_cust2(hf1, a)) ||
@@ -39,6 +41,7 @@ pure func (dp DataPlaneSpec) valid_link_types2(hf1 IO_HF, a IO_as) bool {
 
 ghost
 requires dp.Valid()
+requires a == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
 	return  (dp.inif_prov2(hf1, a) && dp.egif_cust2(hf1, a)) ||
@@ -49,6 +52,7 @@ pure func (dp DataPlaneSpec) valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
 
 ghost
 requires dp.Valid()
+requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) dp2_check_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
 	return (d && hf1.InIF2 === some(recvif) && dp.valid_link_types_in2(hf1, asid)) ||
@@ -85,6 +89,7 @@ pure func (dp DataPlaneSpec) dp2_forward_ext_guard(asid IO_as, m IO_pkt2, nextif
 // A packet is received from an ext state (i.e., an inter-AS channel) and is forwarded (either internally or externally)
 ghost
 requires dp.Valid()
+requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) dp2_enter_guard(m IO_pkt2, currseg IO_seg2, traversedseg IO_seg2, asid IO_as, hf1 IO_HF, recvif IO_ifs, fut seq[IO_HF]) bool {
 	return m.CurrSeg == currseg &&
