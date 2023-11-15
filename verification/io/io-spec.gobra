@@ -18,6 +18,10 @@
 
 package io
 
+// Unlike the original IO-spec from Isabelle, we need additional information about the network topology. 
+// To ensure the well-formedness of all map accesses we require an additional conjunction 
+// for all the events (dp.Valid())
+
 // This is the main IO Specification.
 pred (dp DataPlaneSpec) dp3s_iospec_ordered(s IO_dp3s_state_local, t Place) {
 	dp.dp3s_iospec_bio3s_enter(s, t) &&
@@ -45,13 +49,14 @@ requires CBio_IN_bio3s_enter(t, v)
 decreases
 pure func CBio_IN_bio3s_enter_T(t Place, v IO_val) Place
 
-
+/*** Helper functions, not in Isabelle ***/
+// Establishes the traversed segment for packets which are not incremented (internal).
 ghost
 requires len(currseg.Future) > 0
 decreases
-pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_create_guard_traversedseg(currseg IO_seg3) IO_seg3 {
+pure func establishGuardTraversedseg(currseg IO_seg3) IO_seg3 {
 	return let uinfo := !currseg.ConsDir ?
-		dp.upd_uinfo(currseg.UInfo, currseg.Future[0]) :
+		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
 		IO_seg3_ {
 			AInfo: currseg.AInfo,
@@ -63,22 +68,47 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_create_guard_traversedseg(currseg
 			History: currseg.History}
 }
 
+// Establishes the traversed segment for packets that are incremented (external).
+ghost
+requires len(currseg.Future) > 0
+decreases
+pure func establishGuardTraversedsegInc(currseg IO_seg3) IO_seg3 {
+	return let uinfo := !currseg.ConsDir ?
+		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
+		currseg.UInfo in
+		IO_seg3_ {
+			AInfo: currseg.AInfo,
+			UInfo: uinfo,
+			ConsDir: currseg.ConsDir,
+			Peer: currseg.Peer,
+			Past: seq[IO_HF]{currseg.Future[0]} ++ currseg.Past,
+			Future: currseg.Future[1:],
+			History: seq[IO_ahi]{currseg.Future[0].Toab()} ++ currseg.History}
+}
+/*** End of helper functions, not in Isabelle ***/
+
 // This corresponds to the condition of the if statement in the io-spec case for enter
 ghost
 requires v.isIO_Internal_val1
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return some(v.IO_Internal_val1_2) in domain(s.ibuf) ==>
+	return some(v.IO_Internal_val1_2) in domain(s.ibuf) &&
 		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 in ibuf_set)) &&
 		len(v.IO_Internal_val1_1.CurrSeg.Future) > 0 &&
 		let currseg := v.IO_Internal_val1_1.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
-		let traversedseg := dp.dp3s_iospec_bio3s_create_guard_traversedseg(currseg) in
+		let traversedseg := match v.IO_Internal_val1_4{
+			case none[IO_ifs]: 
+				establishGuardTraversedseg(currseg)
+			default: 
+				establishGuardTraversedsegInc(currseg)
+		} in
 		dp.dp2_enter_guard(
 			v.IO_Internal_val1_1,
 			currseg,
 			traversedseg,
-			dp.asid(),
+			dp.Asid(),
 			hf1,
 			v.IO_Internal_val1_2,
 			fut) &&
@@ -98,12 +128,13 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_enter(s IO_dp3s_state_local, t Place) 
 	forall v IO_val :: { dp.dp3s_iospec_bio3s_enter_guard(s, t, v) } (
 		match v {
 			case IO_Internal_val1{_, _, ?newpkt, ?nextif}: 
-				(dp.dp3s_iospec_bio3s_enter_guard(s, t, v) ==>
+				(dp.Valid() && dp.dp3s_iospec_bio3s_enter_guard(s, t, v) ==>
 				(CBio_IN_bio3s_enter(t, v) &&
 				dp.dp3s_iospec_ordered(
-					dp.dp3s_add_obuf(s, nextif, newpkt),
+					dp3s_add_obuf(s, nextif, newpkt),
 					CBio_IN_bio3s_enter_T(t, v))))
-			default: true
+			default: 
+				true
 		})
 }
 
@@ -116,6 +147,7 @@ pure func dp3s_iospec_bio3s_xover_up2down_T(t Place, v IO_val) Place
 // This corresponds to the condition of the if statement in the io-spec case for xover_up2down
 ghost
 requires v.isIO_Internal_val1
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	return let currseg := v.IO_Internal_val1_1.CurrSeg in 
@@ -127,9 +159,10 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_sta
 				(nextseg.ConsDir &&
 				len(nextseg.Future) > 0 &&
 				len(currseg.Future) > 0 &&
+				len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 				let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
-				let traversedseg := dp.dp3s_iospec_bio3s_create_guard_traversedseg(currseg) in
-				(dp.xover_up2down2_link_type(dp.asid(), hf1, hf2) &&
+				let traversedseg := establishGuardTraversedsegInc(currseg) in
+				(dp.xover_up2down2_link_type(dp.Asid(), hf1, hf2) &&
 					dp.dp3s_xover_common(
 						s,
 						v.IO_Internal_val1_1,
@@ -146,14 +179,14 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down_guard(s IO_dp3s_sta
 }
 
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_up2down(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { dp.dp3s_iospec_bio3s_xover_up2down_guard(s, t, v) }{ CBio_IN_bio3s_xover_up2down(t, v) } { dp.dp3s_iospec_ordered(dp.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3), dp3s_iospec_bio3s_xover_up2down_T(t, v)) } (
+	forall v IO_val :: { dp.dp3s_iospec_bio3s_xover_up2down_guard(s, t, v) }{ CBio_IN_bio3s_xover_up2down(t, v) } { dp.dp3s_iospec_ordered(dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3), dp3s_iospec_bio3s_xover_up2down_T(t, v)) } (
 		match v {
 			case IO_Internal_val1{_, _, ?newpkt, ?nextif}: 
-				(dp.dp3s_iospec_bio3s_xover_up2down_guard(s, t, v) ==>
+				(dp.Valid() && dp.dp3s_iospec_bio3s_xover_up2down_guard(s, t, v) ==>
 				(CBio_IN_bio3s_xover_up2down(t, v) &&
-					dp.dp3s_iospec_ordered(
-						dp.dp3s_add_obuf(s, nextif, newpkt),
-						dp3s_iospec_bio3s_xover_up2down_T(t, v))))
+				dp.dp3s_iospec_ordered(
+					dp3s_add_obuf(s, nextif, newpkt),
+					dp3s_iospec_bio3s_xover_up2down_T(t, v))))
 			default: 
 				true
 		})
@@ -167,10 +200,11 @@ pure func dp3s_iospec_bio3s_xover_core_T(t Place, v IO_val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for xover_core
 ghost
-decreases
 requires v.isIO_Internal_val1
+requires dp.Valid()
+decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return (dp.asid() in dp.core() &&
+	return (dp.Asid() in dp.Core() &&
 		let currseg := v.IO_Internal_val1_1.CurrSeg in
 		match v.IO_Internal_val1_1.LeftSeg {
 			case none[IO_seg2]: 
@@ -180,9 +214,10 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_
 				currseg.ConsDir == nextseg.ConsDir &&
 				len(nextseg.Future) > 0 &&
 				len(currseg.Future) > 0 &&
+				len(v.IO_Internal_val1_3.CurrSeg.Future) > 0 &&
 				let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
-				let traversedseg := dp.dp3s_iospec_bio3s_create_guard_traversedseg(currseg) in
-				(dp.xover_core2_link_type(hf1, hf2, dp.asid(), currseg.ConsDir) &&
+				let traversedseg := establishGuardTraversedsegInc(currseg) in
+				(dp.xover_core2_link_type(hf1, hf2, dp.Asid(), currseg.ConsDir) &&
 					dp.dp3s_xover_common(
 						s,
 						v.IO_Internal_val1_1,
@@ -199,19 +234,18 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core_guard(s IO_dp3s_state_
 }
 
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_core(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) }{ CBio_IN_bio3s_xover_core(t, v) }{ dp.dp3s_iospec_ordered(dp.dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3), dp3s_iospec_bio3s_xover_core_T(t, v)) } (
+	forall v IO_val :: { dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) }{ CBio_IN_bio3s_xover_core(t, v) }{ dp.dp3s_iospec_ordered(dp3s_add_obuf(s, v.IO_Internal_val1_4, v.IO_Internal_val1_3), dp3s_iospec_bio3s_xover_core_T(t, v)) } (
 		match v {
 			case IO_Internal_val1{_, _, ?newpkt, ?nextif}: 
-				(dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) ==>
+				(dp.Valid() && dp.dp3s_iospec_bio3s_xover_core_guard(s, t, v) ==>
 				(CBio_IN_bio3s_xover_core(t, v) &&
 				dp.dp3s_iospec_ordered(
-					dp.dp3s_add_obuf(s, nextif, newpkt),
+					dp3s_add_obuf(s, nextif, newpkt),
 					dp3s_iospec_bio3s_xover_core_T(t, v))))
 			default: 
 				true
 		})
 }
-
 
 pred CBio_IN_bio3s_exit(t Place, v IO_val)
 
@@ -222,21 +256,23 @@ pure func dp3s_iospec_bio3s_exit_T(t Place, v IO_val) Place
 // This corresponds to the condition of the if statement in the io-spec case for exit
 ghost
 requires v.isIO_Internal_val2
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return none[IO_ifs] in domain(s.ibuf) ==>
+	return none[IO_ifs] in domain(s.ibuf) &&
 		(let ibuf_set := s.ibuf[none[IO_ifs]] in (v.IO_Internal_val2_1 in ibuf_set)) &&
+		len(v.IO_Internal_val2_1.CurrSeg.Future) > 0 &&
 		dp.dp3s_forward_ext(v.IO_Internal_val2_1, v.IO_Internal_val2_2, v.IO_Internal_val2_3)
 }
 
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { dp.dp3s_iospec_bio3s_exit_guard(s, t, v) }{ CBio_IN_bio3s_exit(t, v) }{ dp.dp3s_iospec_ordered(dp.dp3s_add_obuf(s, some(v.IO_Internal_val2_3), v.IO_Internal_val2_2), dp3s_iospec_bio3s_exit_T(t, v)) } (
+	forall v IO_val :: { dp.dp3s_iospec_bio3s_exit_guard(s, t, v) }{ CBio_IN_bio3s_exit(t, v) }{ dp.dp3s_iospec_ordered(dp3s_add_obuf(s, some(v.IO_Internal_val2_3), v.IO_Internal_val2_2), dp3s_iospec_bio3s_exit_T(t, v)) } (
 		match v {
 			case IO_Internal_val2{_, ?newpkt, ?nextif}: 
-				(dp.dp3s_iospec_bio3s_exit_guard(s, t, v) ==>
+				(dp.Valid() && dp.dp3s_iospec_bio3s_exit_guard(s, t, v) ==>
 				(CBio_IN_bio3s_exit(t, v) &&
 				dp.dp3s_iospec_ordered(
-					dp.dp3s_add_obuf(s, some(nextif), newpkt),
+					dp3s_add_obuf(s, some(nextif), newpkt),
 					dp3s_iospec_bio3s_exit_T(t, v))))
 			default: 
 				true
@@ -253,9 +289,10 @@ pure func dp3s_iospec_bio3s_send_T(t Place, v IO_val) Place
 // This corresponds to the condition of the if statement in the io-spec case for send
 ghost
 requires v.isIO_val_Pkt2
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_send_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return v.IO_val_Pkt2_1 in domain(s.obuf) ==>
+	return v.IO_val_Pkt2_1 in domain(s.obuf) &&
 		(let obuf_set := s.obuf[v.IO_val_Pkt2_1] in (v.IO_val_Pkt2_2 in obuf_set))
 }
 
@@ -264,7 +301,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_send(s IO_dp3s_state_local, t Place) {
 	forall v IO_val :: { dp.dp3s_iospec_bio3s_send_guard(s, t, v) }{ CBioIO_bio3s_send(t, v) }{ dp.dp3s_iospec_ordered(s, dp3s_iospec_bio3s_send_T(t, v)) }{ CBioIO_bio3s_send(t, v) }{ dp.dp3s_iospec_ordered(s, dp3s_iospec_bio3s_send_T(t, v)) } (
 		match v {
 			case IO_val_Pkt2{_, _}: 
-				(dp.dp3s_iospec_bio3s_send_guard(s, t, v) ==>
+				(dp.Valid() && dp.dp3s_iospec_bio3s_send_guard(s, t, v) ==>
 				CBioIO_bio3s_send(t, v) &&
 				dp.dp3s_iospec_ordered(s, dp3s_iospec_bio3s_send_T(t, v)))
 			case IO_val_Unsupported{_, _}: 
@@ -290,7 +327,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_recv(s IO_dp3s_state_local, t Place) {
 		(match dp3s_iospec_bio3s_recv_R(t) {
 			case IO_val_Pkt2{?recvif, ?pkt}: 
 				dp.dp3s_iospec_ordered(
-					dp.dp3s_add_ibuf(s, recvif, pkt), dp3s_iospec_bio3s_recv_T(t))
+					dp3s_add_ibuf(s, recvif, pkt), dp3s_iospec_bio3s_recv_T(t))
 			case IO_val_Unsupported{_, _}: 
 				dp.dp3s_iospec_ordered(s, dp3s_iospec_bio3s_recv_T(t))
 			default: 
