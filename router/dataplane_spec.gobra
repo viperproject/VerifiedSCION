@@ -831,7 +831,7 @@ pure func getHVFSet(hopfield io.IO_HF) set[io.IO_msgterm]{
 ghost
 requires 0 < len(hopfields)
 requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
-requires forall idx int :: 0 <= idx && idx < len(hopfields) ==>
+requires forall idx int :: {hopfields[idx]} 0 <= idx && idx < len(hopfields) ==>
 	len(hopfields[idx].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
 decreases
 pure func getUInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_msgterm]{
