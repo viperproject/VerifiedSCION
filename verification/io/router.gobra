@@ -20,32 +20,78 @@ package io
 
 // TODO: make individual_router an interface type with the following methods
 
-// This function corresponds to function 'core' in the IO spec
-ghost
+ghost 
 decreases
-pure func (dp DataPlaneSpec) core() set[IO_as]
-
-ghost
-decreases
-pure func (dp DataPlaneSpec) hf_valid(p1 bool, p2 uint, p3 set[IO_msgterm], p4 IO_HF) bool
-
-ghost
-decreases
-pure func (dp DataPlaneSpec) upd_uinfo(p1 set[IO_msgterm], p2 IO_HF) set[IO_msgterm]
-
-ghost
-decreases
-pure func (dp DataPlaneSpec) rid() IO_rid
-
-ghost
-decreases
-pure func (dp DataPlaneSpec) asid() IO_as {
-	return dp.rid_as(dp.rid())
+pure func if2term(ifs option[IO_ifs]) IO_msgterm {
+	return match ifs {
+		case none[IO_ifs]: 
+			MsgTerm_Empty{}
+		default: 
+			IO_msgterm(MsgTerm_AS{IO_as(get(ifs))})
+	}
 }
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) is_target(asid IO_as, nextif IO_ifs, a2 IO_as, i2 IO_ifs) bool
+pure func (dp DataPlaneSpec) hf_valid(d bool, ts uint, uinfo set[IO_msgterm], hf IO_HF) bool {
+	return let inif := hf.InIF2 in
+		let egif := hf.EgIF2 in
+		let x := hf.HVF in
+		let l := IO_msgterm(MsgTerm_L{
+			seq[IO_msgterm]{
+				IO_msgterm(MsgTerm_Num{ts}), 
+				if2term(inif), 
+				if2term(egif), 
+				IO_msgterm(MsgTerm_FS{uinfo})}}) in 
+		x == mac(macKey(asidToKey(dp.Asid())), l)
+}
+
+ghost
+decreases
+pure func macKey(key IO_key) IO_msgterm {
+	return IO_msgterm(MsgTerm_Key{key})
+}
+
+ghost 
+decreases
+pure func mac(fst IO_msgterm, snd IO_msgterm) IO_msgterm {
+	return IO_msgterm( MsgTerm_Hash { 
+		MsgTerm_Hash_ : IO_msgterm( MsgTerm_MPair{
+			MsgTerm_MPair_1 : fst,
+			MsgTerm_MPair_2 : snd, 
+		}),
+	})
+}
+
+// helper function, not defined in IO spec
+ghost
+decreases
+pure func asidToKey(asid IO_as) IO_key{
+	return IO_key(Key_macK{asid})
+}
+
+ghost
+decreases
+pure func upd_uinfo(segid set[IO_msgterm], hf IO_HF) set[IO_msgterm]{
+	return let setHVF := set[IO_msgterm]{hf.HVF} in
+		(segid union setHVF) setminus (segid intersection setHVF)
+}
+
+ghost
+decreases
+pure func (dp DataPlaneSpec) asid() IO_as {
+	return dp.Asid()
+}
+
+
+// This function is provided as locale in the Isabelle formalization.
+ghost
+requires dp.Valid()
+decreases
+pure func (dp DataPlaneSpec) is_target(asid IO_as, nextif IO_ifs, a2 IO_as, i2 IO_ifs) bool {
+	return AsIfsPair{asid, nextif} in domain(dp.GetLinks()) && 
+		dp.Lookup(AsIfsPair{asid, nextif}) == AsIfsPair{a2, i2}		
+}
 
 ghost
 decreases
@@ -69,20 +115,28 @@ pure func dp3s_add_obuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO
 ghost
 decreases
 pure func insert(buf dict[option[IO_ifs]](set[IO_pkt3]), k option[IO_ifs], v IO_pkt3) dict[option[IO_ifs]](set[IO_pkt3]) {
-	return let newSet := (k in domain(buf)? (let pre := buf[k] in pre union set[IO_pkt3]{v}) : set[IO_pkt3]{v}) in
+	return let newSet := (k in domain(buf) ? (let pre := buf[k] in pre union set[IO_pkt3]{v}) : set[IO_pkt3]{v}) in
 		buf[k = newSet]
 }
 
-// TODO: try to remove the existencials here
 ghost
+requires len(m.CurrSeg.Future) > 0
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
-	return (exists currseg IO_seg3, traversedseg IO_seg3, fut seq[IO_HF], hf1 IO_HF :: { dp.dp2_forward_ext_guard(dp.asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) } dp.dp2_forward_ext_guard(dp.asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1)) &&
-			(exists a2 IO_as, i2 IO_ifs :: { dp.is_target(dp.asid(), nextif, a2, i2) } dp.is_target(dp.asid(), nextif, a2, i2))
+	return let currseg := m.CurrSeg in
+		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
+		let traversedseg := establishGuardTraversedsegInc(currseg) in
+		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		let a2 := dp.GetNeighborIA(nextif) in
+		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
+		dp.is_target(dp.Asid(), nextif, a2, i2)
 }
 
 // TODO: should we change IO_ifs to being implemented as an option type?
 ghost
+requires len(m.CurrSeg.Future) > 0
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward(m IO_pkt3, newpkt IO_pkt3, nextif option[IO_ifs]) bool {
 	return match nextif {
@@ -94,6 +148,8 @@ pure func (dp DataPlaneSpec) dp3s_forward(m IO_pkt3, newpkt IO_pkt3, nextif opti
 }
 
 ghost
+requires len(intermediatepkt.CurrSeg.Future) > 0
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_xover_common(
 	s IO_dp3s_state_local,
@@ -112,6 +168,6 @@ pure func (dp DataPlaneSpec) dp3s_xover_common(
 		// this is because of the way math. maps are implemented, we can only obtain a key that is in the map before.
 		return some(recvif) in domain(s.ibuf) &&
 			(let lookupRes := s.ibuf[some(recvif)] in (m in lookupRes)) &&
-			dp.dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, hf1.extr_asid(), recvif) &&
+			dp.dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, dp.Asid(), recvif) &&
 			dp.dp3s_forward(intermediatepkt, newpkt, nextif)
 }

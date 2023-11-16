@@ -19,7 +19,10 @@ package router
 import (
 	"net"
 	"hash"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/verification/io"
+	"github.com/scionproto/scion/verification/dependencies/encoding/binary"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
 )
@@ -151,31 +154,6 @@ pred (err scmpError) ErrorMem() {
 	err.Cause != nil ==> err.Cause.ErrorMem()
 }
 
-// Currently assumed, as Gobra cannot currently prove termination
-// of the code below
-ghost
-trusted
-pure
-decreases
-func (err scmpError) IsDuplicableMem() bool {
-	return err != nil? err.cause.IsDuplicableMem() : true
-}
-
-// Currently assumed, as Gobra cannot currently prove termination
-// of the code below
-ghost
-trusted
-preserves err.ErrorMem()
-ensures   err.IsDuplicableMem() ==> err.ErrorMem()
-decreases
-func (err scmpError) Duplicate() {
-	if err.IsDuplicableMem() {
-		unfold err.ErrorMem()
-		err.cause.Duplicate()
-		fold err.ErrorMem()
-	}
-}
-
 scmpError implements error
 
 type offsetPair struct {
@@ -196,7 +174,7 @@ func newOffsetPair(n int) (res seq[offsetPair])
 ghost
 requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(&d.internalNextHops, _)
-ensures  d.internalNextHops != nil  ==> acc(AccAddr(d.internalNextHops), _)
+ensures  d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), _)
 decreases
 func (d *DataPlane) getInternalNextHops() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -279,59 +257,6 @@ func (d *DataPlane) getNewPacketProcessorFootprint() {
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
 
-/**** Post-init invariants ****/
-
-// unsupportedPathType is duplicable: we can always establish its invariant
-ghost
-ensures unsupportedPathType.ErrorMem()
-decreases _
-func establishMemUnsupportedPathType()
-
-// malformedPath is duplicable: we can always establish its invariant
-ghost
-ensures malformedPath != nil
-ensures malformedPath.ErrorMem()
-decreases _
-func establishMemMalformedPath()
-
-// unsupportedPathTypeNextHeader is duplicable: we can always establish its invariant
-ghost
-ensures unsupportedPathTypeNextHeader.ErrorMem()
-decreases _
-func establishMemUnsupportedPathTypeNextHeader()
-
-// noBFDSessionConfigured is duplicable: we can always establish its invariant
-ghost
-ensures noBFDSessionConfigured.ErrorMem()
-decreases _
-func establishMemNoBFDSessionConfigured()
-
-// noBFDSessionFound is duplicable: we can always establish its invariant
-ghost
-ensures noBFDSessionFound.ErrorMem()
-decreases _
-func establishMemNoBFDSessionFound()
-
-// invalidSrdAddrForTransit is duplicable: we can always establish its invariant
-ghost
-ensures invalidSrcAddrForTransit.ErrorMem()
-decreases _
-func establishInvalidSrcAddrForTransit()
-
-// noSVCBackend is duplicable: we can always establish its invariant
-ghost
-ensures noSVCBackend.ErrorMem()
-decreases _
-func establishNoSVCBackend()
-
-// cannotRoute is duplicable: we can always establish its invariant after init
-ghost
-ensures cannotRoute.ErrorMem()
-decreases _
-func establishCannotRoute()
-
-/**** End of post-init invariants ****/
-
 /** Start of closure specs for the Run method **/
 requires true
 func readClosureSpec(ingressID uint16, rd BatchConn)
@@ -345,3 +270,574 @@ func closureSpec2(i uint16, c BatchConn)
 requires true
 func closureSpec3(c BatchConn)
 /** End of closure specs for the Run method **/
+
+/** Start of io-spec helper functions **/
+
+ghost 
+decreases 
+pure func numInfoFields(seg1Len int, seg2Len int, seg3Len int) int {
+	return seg3Len > 0 ? 3 : (seg2Len > 0 ? 2 : 1)
+}
+
+ghost 
+decreases
+pure func infoFieldOffset(currINF int) int {
+	return 4 + 8 * currINF
+}
+
+ghost 
+decreases
+pure func hopFieldOffset(numINF int, currHF int) int {
+	return 4 + 8*numINF + 12 * currHF
+}
+
+
+ghost 
+decreases
+pure func lengthOfCurrSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) int{
+	return seg1Len > currHF ? seg1Len : ((seg1Len + seg2Len) > currHF ? seg2Len : seg3Len)
+}
+
+ghost 
+requires 0 <= currHF
+ensures  res <= currHF
+decreases
+pure func lengthOfPrevSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) (res int){
+	return seg1Len > currHF ? 0 : ((seg1Len + seg2Len) > currHF ? seg1Len : seg1Len + seg2Len)
+}
+/*
+ghost
+requires 1 <= numINF && numINF <= 3
+requires 0 <= currHFIdx
+requires hopFieldOffset(numINF, currHFIdx) + 12 <= len(raw)
+requires dp.Valid()
+requires let idx := hopFieldOffset(numINF, currHFIdx) in
+	acc(&raw[idx+4], _) && acc(&raw[idx+5], _)
+decreases
+pure func getAsidFromEgress(dp io.DataPlaneSpec, raw []byte, numINF int, currHFIdx int, asid io.IO_as) option[io.IO_as] {
+	return let idx := hopFieldOffset(numINF, currHFIdx) in
+		let consEgress := binary.BigEndian.Uint16(raw[idx+4:idx+6]) in
+		let outgoingPair := io.AsIfsPair{asid, io.IO_ifs(consEgress)} in
+		(io.AsIfsPair{asid, io.IO_ifs(consEgress)} in domain(dp.GetLinks()) ?
+			some(dp.Lookup(outgoingPair).asid) : none[io.IO_as])
+}
+
+ghost
+requires 1 <= numINF && numINF <= 3
+requires 0 <= currHFIdx
+requires hopFieldOffset(numINF, currHFIdx) + 12 <= len(raw)
+requires dp.Valid()
+requires let idx := hopFieldOffset(numINF, currHFIdx) in
+	acc(&raw[idx+2], _) && acc(&raw[idx+3], _)
+decreases
+pure func getAsidFromIngress(dp io.DataPlaneSpec, raw []byte, numINF int, currHFIdx int, asid io.IO_as) option[io.IO_as] {
+	return let idx := hopFieldOffset(numINF, currHFIdx) in
+		let consIngress := binary.BigEndian.Uint16(raw[idx+2:idx+4]) in
+		let incommingPair := io.AsIfsPair{asid, io.IO_ifs(consIngress)} in
+		(io.AsIfsPair{asid, io.IO_ifs(consIngress)} in domain(dp.GetLinks()) ?
+			some(dp.Lookup(incommingPair).asid) : none[io.IO_as])
+}
+*/
+ghost
+requires 1 <= numINF
+requires 0 <= currHFIdx
+requires hopFieldOffset(numINF, currHFIdx) + 12 <= len(raw)
+requires dp.Valid()
+requires let idx := hopFieldOffset(numINF, currHFIdx) in
+	acc(&raw[idx+2], _) && acc(&raw[idx+3], _) && acc(&raw[idx+4], _) && acc(&raw[idx+5], _)
+decreases
+pure func getAsidFromIfs(dp io.DataPlaneSpec, raw []byte, numINF int, currHFIdx int, consDir bool, asid io.IO_as) (res option[io.IO_as]) {
+	return let idx := hopFieldOffset(numINF, currHFIdx) in
+		let ifs := consDir ? binary.BigEndian.Uint16(raw[idx+4:idx+6]) : binary.BigEndian.Uint16(raw[idx+2:idx+4]) in
+		let asIfPair := io.AsIfsPair{asid, io.IO_ifs(ifs)} in
+		(asIfPair in domain(dp.GetLinks()) ?
+			some(dp.Lookup(asIfPair).asid) : none[io.IO_as])
+}
+
+ghost
+requires 1 <= numINF
+requires 0 <= prevSegLen && prevSegLen <= currHFIdx
+requires hopFieldOffset(numINF, currHFIdx) + 12 <= len(raw)
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures res != none[seq[io.IO_as]] ==> len(get(res)) == currHFIdx - prevSegLen + 1
+decreases currHFIdx - prevSegLen
+pure func getAsidsBefore(dp io.DataPlaneSpec, raw []byte, numINF int, currHFIdx int, prevSegLen int, consDir bool, asid io.IO_as) (res option[seq[io.IO_as]]) {
+	return let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in getAsidFromIfs(dp, raw, numINF, currHFIdx, !consDir, asid)) in 
+		match next_asid{
+			case none[io.IO_as]:
+				none[seq[io.IO_as]]
+			default: 
+				currHFIdx == prevSegLen ? some(seq[io.IO_as]{get(next_asid)}) : 
+				let next_asid_seq := getAsidsBefore(dp, raw, numINF, currHFIdx-1, prevSegLen, consDir, get(next_asid)) in 
+				match next_asid_seq{
+					case none[seq[io.IO_as]]:
+						none[seq[io.IO_as]]
+					default:
+						some(get(next_asid_seq) ++ seq[io.IO_as]{get(next_asid)})
+				}
+		}
+}
+
+ghost
+requires 1 <= numINF
+requires 0 <= currHFIdx && currHFIdx < segLen
+requires hopFieldOffset(numINF, segLen) <= len(raw)
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures res != none[seq[io.IO_as]] ==> len(get(res)) == segLen - currHFIdx
+decreases segLen - currHFIdx + 1
+pure func getAsidsAfter(dp io.DataPlaneSpec, raw []byte, numINF int, currHFIdx int, segLen int, consDir bool, asid io.IO_as) (res option[seq[io.IO_as]]) {
+	return let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in getAsidFromIfs(dp, raw, numINF, currHFIdx, consDir, asid)) in 
+			match next_asid{
+				case none[io.IO_as]:
+					none[seq[io.IO_as]]
+				default: 
+					currHFIdx == segLen - 1 ? some(seq[io.IO_as]{get(next_asid)}) : 
+					let next_asid_seq := getAsidsAfter(dp, raw, numINF, currHFIdx+1, segLen, consDir, get(next_asid)) in 
+					match next_asid_seq{
+						case none[seq[io.IO_as]]:
+							none[seq[io.IO_as]]
+						default:
+							some(seq[io.IO_as]{get(next_asid)} ++ get(next_asid_seq))
+					}
+			}
+}
+
+ghost
+requires 1 <= numINF
+requires 0 <= prevSegLen && prevSegLen <= currHFIdx
+requires currHFIdx < segLen
+requires hopFieldOffset(numINF, segLen) <= len(raw)
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures res != none[seq[io.IO_as]] ==> len(get(res)) == segLen - prevSegLen
+decreases
+pure func getAsidSeq(dp io.DataPlaneSpec, raw []byte, numINF int, currHFIdx int, segLen int, prevSegLen int, consDir bool, asid io.IO_as) (res option[seq[io.IO_as]]) {
+	return segLen == 0 ? some(seq[io.IO_as]{}) : 
+		let left := getAsidsBefore(dp, raw, numINF, currHFIdx, prevSegLen, consDir, asid) in
+		let right := getAsidsAfter(dp, raw, numINF, currHFIdx, segLen, consDir, asid) in
+		(left == none[seq[io.IO_as]] || right == none[seq[io.IO_as]]) ? none[seq[io.IO_as]] : 
+			some(get(left) ++ get(right)[1:])
+}
+
+ghost
+requires dp.Valid()
+requires 1 <= numINF
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires hopFieldOffset(numINF, seg1Len + seg2Len + seg3Len) <= len(raw)
+requires currINFIdx <= numINF + 1
+requires 1 <= currINFIdx && currINFIdx < 4
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases
+pure func getAsidsLeft(dp io.DataPlaneSpec, raw []byte, numINF int, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, asid io.IO_as) (res option[seq[io.IO_as]]){
+	return let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in getConsDir(raw, currINFIdx) in
+		(currINFIdx == 1 && seg2Len > 0) ? 
+			getAsidSeq(dp, raw, numINF, seg1Len, seg1Len+seg2Len, seg1Len, consDir, asid) :
+			(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ? 
+				getAsidSeq(dp, raw, numINF, seg1Len+seg2Len, seg1Len+seg2Len+seg3Len, seg1Len+seg2Len, consDir, asid) :
+				some(seq[io.IO_as]{})
+}
+
+ghost
+requires dp.Valid()
+requires 1 <= numINF
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires hopFieldOffset(numINF, seg1Len + seg2Len + seg3Len) <= len(raw)
+requires currINFIdx <= numINF + 1
+requires -1 <= currINFIdx && currINFIdx < 2
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures (currINFIdx == 0 && res != none[seq[io.IO_as]]) ==> len(get(res)) == seg1Len
+ensures (currINFIdx == 1 && seg2Len > 0 && res != none[seq[io.IO_as]]) ==> len(get(res)) == seg2Len
+decreases
+pure func getAsidsRight(dp io.DataPlaneSpec, raw []byte, numINF int, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, asid io.IO_as) (res option[seq[io.IO_as]]){
+	return (currINFIdx == 1 && seg2Len > 0) ? 
+		let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in getConsDir(raw, currINFIdx) in
+		getAsidSeq(dp, raw, numINF, seg1Len+seg2Len-1, seg1Len+seg2Len, seg1Len, consDir, asid) :
+		(currINFIdx == 0) ? 
+			let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in getConsDir(raw, currINFIdx) in
+			getAsidSeq(dp, raw, numINF, seg1Len-1, seg1Len, 0, consDir, asid) :
+			some(seq[io.IO_as]{})
+}
+
+ghost
+requires dp.Valid()
+requires 1 <= numINF
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires hopFieldOffset(numINF, seg1Len + seg2Len + seg3Len) <= len(raw)
+requires currINFIdx <= numINF + 1
+requires 2 <= currINFIdx && currINFIdx < 5
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+requires (currINFIdx == 4 && seg2Len > 0) ==> asid != none[io.IO_as]
+requires (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ==> asid != none[io.IO_as]
+decreases
+pure func getAsidsMid(dp io.DataPlaneSpec, raw []byte, numINF int, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, asid option[io.IO_as]) (res option[seq[io.IO_as]]){
+	return (currINFIdx == 4 && seg2Len > 0) ? 
+		let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in getConsDir(raw, 1) in
+		getAsidSeq(dp, raw, numINF, seg1Len-1, seg1Len, 0, consDir, get(asid)) :
+		(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ? 
+			let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in getConsDir(raw, 2) in
+			getAsidSeq(dp, raw, numINF, seg1Len + seg2Len, seg1Len + seg2Len + seg3Len, seg1Len + seg2Len, consDir, get(asid)) :
+			some(seq[io.IO_as]{})
+}
+
+ghost
+requires idx + 12 <= len(raw)
+requires 0 <= idx
+requires acc(&raw[idx+2], _) && acc(&raw[idx+3], _) && acc(&raw[idx+4], _) && acc(&raw[idx+5], _)
+ensures  len(res.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases
+pure func getHopField(raw []byte, idx int, beta set[io.IO_msgterm], asid io.IO_as, ainfo io.IO_ainfo) (res io.IO_HF) {
+	return let inif2 := binary.BigEndian.Uint16(raw[idx+2:idx+4]) in
+		let egif2 := binary.BigEndian.Uint16(raw[idx+4:idx+6]) in
+		let op_inif2 := inif2 == 0 ? none[io.IO_ifs] : some(io.IO_ifs(inif2)) in
+		let op_egif2 := egif2 == 0 ? none[io.IO_ifs] : some(io.IO_ifs(egif2)) in
+		let ts := io.IO_msgterm(io.MsgTerm_Num{ainfo}) in
+		let l := io.IO_msgterm(io.MsgTerm_L{seq[io.IO_msgterm]{ts, io.if2term(op_inif2), io.if2term(op_egif2), 
+			io.IO_msgterm(io.MsgTerm_FS{beta})}}) in
+		let hvf := io.mac(io.macKey(io.asidToKey(asid)), l) in
+		io.IO_HF(io.IO_HF_{
+			InIF2 : op_inif2,
+			EgIF2 : op_egif2,
+			HVF : hvf,
+		})
+}
+
+ghost 
+requires  0 <= offset
+requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  offset + 12 * segLen <= len(raw)
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+requires  len(asid) == segLen
+ensures   len(res) == segLen - currHFIdx
+ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==> 
+	len(res[k].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases segLen - currHFIdx
+pure func getHopfieldsConsDir(
+	raw []byte, 
+	offset int, 
+	currHFIdx int, 
+	segLen int, 
+	beta set[io.IO_msgterm], 
+	asid seq[io.IO_as], 
+	ainfo io.IO_ainfo) (res seq[io.IO_HF]){
+
+	return currHFIdx == segLen ? seq[io.IO_HF]{} : 
+		let hf := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in 
+			getHopField(raw, offset + 12 * currHFIdx, beta, asid[currHFIdx], ainfo)) in
+		seq[io.IO_HF]{hf} ++ getHopfieldsConsDir(raw, offset, currHFIdx + 1, segLen, (beta union set[io.IO_msgterm]{hf.HVF}), asid, ainfo)
+}
+
+ghost 
+requires  0 <= offset 
+requires  -1 <= currHFIdx && currHFIdx < segLen
+requires  offset + 12 * currHFIdx + 12 <= len(raw)
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+requires  len(asid) == segLen
+ensures   len(res) == currHFIdx + 1
+ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==> 
+	len(res[k].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases currHFIdx + 1
+pure func getHopfieldsNotConsDir(
+	raw []byte, 
+	offset int, 
+	currHFIdx int, 
+	segLen int,
+	beta set[io.IO_msgterm], 
+	asid seq[io.IO_as],
+	ainfo io.IO_ainfo) (res seq[io.IO_HF]){
+
+	return currHFIdx == -1 ? seq[io.IO_HF]{} : 
+		let hf := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in 
+			getHopField(raw, offset + 12 * currHFIdx, beta, asid[currHFIdx], ainfo)) in
+		getHopfieldsNotConsDir(raw, offset, currHFIdx -1, segLen, (beta union set[io.IO_msgterm]{hf.HVF}), asid, ainfo) ++ seq[io.IO_HF]{hf}
+}
+
+ghost 
+requires -1 <= currHFIdx && currHFIdx < len(hopfields)
+decreases currHFIdx + 1
+pure func getSegPast(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_HF]{
+	return currHFIdx == -1  ? seq[io.IO_HF]{} : 
+		seq[io.IO_HF]{hopfields[currHFIdx]} ++ getSegPast(hopfields, currHFIdx - 1)
+}
+
+ghost 
+requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
+decreases len(hopfields) - currHFIdx
+pure func getSegFuture(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_HF]{
+	return currHFIdx == len(hopfields) ? seq[io.IO_HF]{} : 
+		seq[io.IO_HF]{hopfields[currHFIdx]} ++ getSegFuture(hopfields, currHFIdx + 1)
+}
+
+ghost 
+requires -1 <= currHFIdx && currHFIdx < len(hopfields)
+decreases currHFIdx + 1
+pure func getSegHistory(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_ahi]{
+	return currHFIdx == -1 ? seq[io.IO_ahi]{} : 
+		seq[io.IO_ahi]{hopfields[currHFIdx].Toab()} ++ getSegHistory(hopfields, currHFIdx - 1)
+			
+}
+
+ghost 
+requires 0 <= offset
+requires 0 < segLen
+requires offset + 12 * segLen <= len(raw)
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires len(asid) == segLen
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases 
+pure func getSegment(raw []byte, 
+	offset int, 
+	currHFIdx int, 
+	segLen int, 
+	asid seq[io.IO_as], 
+	ainfo io.IO_ainfo, 
+	consDir bool, 
+	peer bool) io.IO_seg2{
+
+	return let hopfields := consDir ?
+		getHopfieldsConsDir(raw, offset, 0, segLen, set[io.IO_msgterm]{}, asid, ainfo) : 
+		getHopfieldsNotConsDir(raw, offset, segLen - 1, segLen, set[io.IO_msgterm]{}, asid, ainfo) in
+		let uinfo := getUInfo(hopfields, currHFIdx, consDir) in
+		io.IO_seg2(io.IO_seg3_{
+			AInfo :ainfo,
+			UInfo : uinfo,
+			ConsDir : consDir,
+			Peer : peer,
+			Past : getSegPast(hopfields, currHFIdx - 1),
+			Future : getSegFuture(hopfields, currHFIdx),
+			History : getSegHistory(hopfields, currHFIdx - 1),
+		})
+}
+
+ghost
+requires 4 + 8 * currINFIdx + 8 <= offset
+requires 0 < segLen
+requires offset + 12 * segLen <= len(raw)
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires 0 <= currINFIdx && currINFIdx < 3
+requires len(asid) == segLen
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases 
+pure func getCurrSeg(raw []byte, offset int, currINFIdx int, currHFIdx int, segLen int, asid seq[io.IO_as]) io.IO_seg3 {
+	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in
+		let ainfo := getTimestamp(raw, currINFIdx) in
+		let consDir := getConsDir(raw, currINFIdx) in
+		let peer := getPeer(raw, currINFIdx) in
+		getSegment(raw, offset, currHFIdx, segLen, asid, ainfo, consDir, peer)
+}
+
+ghost
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires 4 + 8 * numInfoFields(seg1Len, seg2Len, seg3Len) == offset
+requires offset + 12 * (seg1Len + seg2Len + seg3Len) <= len(raw)
+requires 1 <= currINFIdx && currINFIdx < 4
+requires (currINFIdx == 1 && seg2Len > 0) ==> len(asid) == seg2Len
+requires (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ==> len(asid) == seg3Len
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases 
+pure func getLeftSeg(
+	raw []byte, 
+	offset int, 
+	currINFIdx int, 
+	seg1Len int, 
+	seg2Len int, 
+	seg3Len int, 
+	asid seq[io.IO_as]) option[io.IO_seg3] {
+
+	return (currINFIdx == 1 && seg2Len > 0) ? 
+		some(getCurrSeg(raw, offset + 12 * seg1Len, currINFIdx, 0, seg2Len, asid)) : 
+		(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ? 
+			some(getCurrSeg(raw, offset + 12 * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, asid)) : 
+			none[io.IO_seg3]
+}
+
+ghost
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires 4 + 8 * numInfoFields(seg1Len, seg2Len, seg3Len) == offset
+requires offset + 12 * (seg1Len + seg2Len + seg3Len) <= len(raw)
+requires -1 <= currINFIdx && currINFIdx < 2
+requires (currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ==> len(asid) == seg2Len
+requires (currINFIdx == 0 && seg2Len > 0) ==> len(asid) == seg1Len
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases
+pure func getRightSeg(
+	raw []byte, 
+	offset int, 
+	currINFIdx int, 
+	seg1Len int,
+	seg2Len int, 
+	seg3Len int, 
+	asid seq[io.IO_as]) option[io.IO_seg3] {
+
+	return (currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ? 
+		some(getCurrSeg(raw, offset + 12 * seg1Len, currINFIdx, seg2Len, seg2Len, asid)) :
+		(currINFIdx == 0 && seg2Len > 0) ? 
+			some(getCurrSeg(raw, offset, currINFIdx, seg1Len, seg1Len, asid)) : 
+			none[io.IO_seg3]					
+}
+
+ghost
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires 4 + 8 * numInfoFields(seg1Len, seg2Len, seg3Len) == offset
+requires offset + 12 * (seg1Len + seg2Len + seg3Len) <= len(raw)
+requires 2 <= currINFIdx && currINFIdx < 5
+requires (currINFIdx == 4) ==> len(asid) == seg1Len
+requires (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ==> len(asid) == seg3Len
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases 
+pure func getMidSeg(
+	raw []byte, 
+	offset int, 
+	currINFIdx int, 
+	seg1Len int, 
+	seg2Len int, 
+	seg3Len int, 
+	asid seq[io.IO_as]) option[io.IO_seg3] {
+
+	return (currINFIdx == 4) ? 
+		some(getCurrSeg(raw, offset, 0, seg1Len, seg1Len, asid)) :
+		(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ? 
+			some(getCurrSeg(raw, offset + 12 * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, asid)) : 
+			none[io.IO_seg3]
+}
+
+ghost 
+requires dp.Valid()
+requires len(raw) > 4
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+requires unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in 
+	let hdr := binary.BigEndian.Uint32(raw[0:4]) in
+	0 <= getCurrINF(hdr) && getCurrINF(hdr) < 3 &&
+	getCurrINF(hdr) + 1 <= numInfoFields(int(getSeg1Len(hdr)), int(getSeg2Len(hdr)), int(getSeg3Len(hdr))) &&
+	0 <= getCurrHF(hdr) && getCurrHF(hdr) < getSeg1Len(hdr) + getSeg2Len(hdr) + getSeg3Len(hdr) &&
+	0 < getSeg1Len(hdr) &&
+	0 <= getSeg2Len(hdr) && 
+	0 <= getSeg3Len(hdr) &&
+	4 + 8 * numInfoFields(int(getSeg1Len(hdr)), int(getSeg2Len(hdr)), int(getSeg3Len(hdr))) + 12 * (int(getSeg1Len(hdr)) + int(getSeg2Len(hdr)) + int(getSeg3Len(hdr))) == len(raw)
+decreases 
+pure func getPkt(dp io.DataPlaneSpec, raw []byte, asid io.IO_as) option[io.IO_pkt2]{
+	return let hdr := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in binary.BigEndian.Uint32(raw[0:4]) in
+		let currINFIdx := int(getCurrINF(hdr)) in
+		let currHFIdx := int(getCurrHF(hdr)) in
+		let seg1Len := int(getSeg1Len(hdr)) in
+		let seg2Len := int(getSeg2Len(hdr)) in 
+		let seg3Len := int(getSeg3Len(hdr)) in
+		let segLen := lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let prevSegLen := lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let numINF := int(numInfoFields(seg1Len, seg2Len, seg3Len)) in
+		let offset := 4 + 8 * numINF in
+		let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in getConsDir(raw, currINFIdx) in
+		let currAsidSeq := getAsidSeq(dp, raw, numINF, currHFIdx, prevSegLen+segLen, prevSegLen, consDir, dp.Asid()) in
+		currAsidSeq == none[seq[io.IO_as]] ? none[io.IO_pkt2] :
+			let last := get(currAsidSeq)[segLen-1] in
+			let first := get(currAsidSeq)[0] in
+			let leftAsidSeq := getAsidsLeft(dp, raw, numINF, currINFIdx + 1, seg1Len, seg2Len, seg3Len, last) in
+			let rightAsidSeq := getAsidsRight(dp, raw, numINF, currINFIdx - 1, seg1Len, seg2Len, seg3Len, first) in
+			(leftAsidSeq == none[seq[io.IO_as]] || rightAsidSeq == none[seq[io.IO_as]]) ? none[io.IO_pkt2] :
+				let midAsid := ((currINFIdx == 0 && seg2Len > 0 && seg3Len > 0) ? some(get(leftAsidSeq)[len(get(leftAsidSeq))-1]) :
+					(currINFIdx == 2 && seg2Len > 0) ? some(get(rightAsidSeq)[0]) : none[io.IO_as]) in
+				let midAsidSeq := getAsidsMid(dp, raw, numINF, currINFIdx + 2, seg1Len, seg2Len, seg3Len, midAsid) in
+				midAsidSeq == none[seq[io.IO_as]] ? none[io.IO_pkt2] :
+					some(io.IO_pkt2(io.IO_Packet2{
+						CurrSeg : getCurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, get(currAsidSeq)),
+						LeftSeg : getLeftSeg(raw, offset, currINFIdx + 1, seg1Len, seg2Len , seg3Len, get(leftAsidSeq)),
+						MidSeg : none[io.IO_seg3],// getMidSeg(raw, offset, currINFIdx + 2, seg1Len, seg2Len , seg3Len, get(midAsidSeq)),
+						RightSeg : getRightSeg(raw, offset, currINFIdx - 1, seg1Len, seg2Len , seg3Len, get(rightAsidSeq)),
+					}))
+}
+
+ghost
+decreases
+pure func getCurrINF(hdr uint32) uint8{
+	return uint8(hdr >> 30)
+}
+
+ghost
+decreases
+pure func getCurrHF(hdr uint32) uint8{
+	return uint8(hdr >> 24) & 0x3F
+}
+
+ghost
+decreases
+pure func getSeg1Len(hdr uint32) uint8{
+	return uint8(hdr >> 12) & 0x3F
+}
+
+ghost
+decreases
+pure func getSeg2Len(hdr uint32) uint8{
+	return uint8(hdr >> 6) & 0x3F
+}
+
+ghost
+decreases
+pure func getSeg3Len(hdr uint32) uint8{
+	return uint8(hdr) & 0x3F
+}
+
+ghost 
+requires 0 <= offset
+requires infoFieldOffset(offset) < len(raw)
+requires acc(&raw[infoFieldOffset(offset)], _)
+decreases
+pure func getConsDir(raw []byte, offset int) bool{
+	return raw[infoFieldOffset(offset)] & 0x1 == 0x1
+}
+
+ghost 
+requires 0 <= offset
+requires infoFieldOffset(offset) < len(raw)
+requires acc(&raw[infoFieldOffset(offset)], _)
+decreases
+pure func getPeer(raw []byte, offset int) bool{
+	return raw[infoFieldOffset(offset)] & 0x2 == 0x2
+}
+
+ghost 
+requires 0 <= offset
+requires infoFieldOffset(offset) + 8 < len(raw)
+requires acc(&raw[infoFieldOffset(offset) + 4], _)
+requires acc(&raw[infoFieldOffset(offset) + 5], _)
+requires acc(&raw[infoFieldOffset(offset) + 6], _)
+requires acc(&raw[infoFieldOffset(offset) + 7], _)
+decreases
+pure func getTimestamp(raw []byte, offset int) io.IO_ainfo{
+	return let idx := infoFieldOffset(offset) + 4 in 
+		io.IO_ainfo(binary.BigEndian.Uint32(raw[idx : idx + 4]))
+}
+
+ghost
+requires len(hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases
+pure func getHVFSet(hopfield io.IO_HF) set[io.IO_msgterm]{
+	return let l := hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_ in
+		l[len(l) - 1].MsgTerm_FS_
+}
+
+ghost
+requires 0 < len(hopfields)
+requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
+requires forall idx int :: {hopfields[idx]} 0 <= idx && idx < len(hopfields) ==>
+	len(hopfields[idx].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases
+pure func getUInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_msgterm]{
+	return currHFIdx == len(hopfields) ? getHVFSet(hopfields[currHFIdx-1]) :
+		currHFIdx == 0 ? getHVFSet(hopfields[currHFIdx]) :
+		consDir ? getHVFSet(hopfields[currHFIdx]) : getHVFSet(hopfields[currHFIdx-1]) 
+}
+
+/** End of io-spec helper functions **/ 

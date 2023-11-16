@@ -1,0 +1,107 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// This file is used for declaring assumptions which we cannot currenlty do
+// away with, due to Gobra's incompletnesses or lack of support for 
+// specific features, like post-initialization invariants or because
+// Gobra does not currently infer that 'x' != nil if 'x.Mem()' holds,
+// where 'x' is of an interface type.
+
+package router
+
+/**** Post-init invariants ****/
+
+// All global variables of type 'error' declared in dataplane.go
+// are duplicable. As such, we can always establish their invariants
+// AFTER INITIALIZATION.
+
+ghost
+ensures unsupportedPathType.ErrorMem()
+decreases _
+func establishMemUnsupportedPathType()
+
+ghost
+ensures malformedPath != nil
+ensures malformedPath.ErrorMem()
+decreases _
+func establishMemMalformedPath()
+
+ghost
+ensures unsupportedPathTypeNextHeader.ErrorMem()
+decreases _
+func establishMemUnsupportedPathTypeNextHeader()
+
+ghost
+ensures noBFDSessionConfigured.ErrorMem()
+decreases _
+func establishMemNoBFDSessionConfigured()
+
+ghost
+ensures noBFDSessionFound.ErrorMem()
+decreases _
+func establishMemNoBFDSessionFound()
+
+ghost
+ensures invalidSrcAddrForTransit.ErrorMem()
+decreases _
+func establishInvalidSrcAddrForTransit()
+
+ghost
+ensures noSVCBackend.ErrorMem()
+decreases _
+func establishNoSVCBackend()
+
+ghost
+ensures cannotRoute.ErrorMem()
+decreases _
+func establishCannotRoute()
+
+/**** End of post-init invariants ****/
+
+/**** scmpError ghost members ****/
+
+// Gobra currently runs into unexpected verification errors
+// when trying to prove the termination of these methods
+// ('IsDuplicableMem' and 'Duplicate').
+// https://github.com/viperproject/gobra/issues/702
+
+ghost
+trusted
+requires  acc(err.ErrorMem(), _)
+decreases err.ErrorMem()
+pure func (err scmpError) IsDuplicableMem() bool {
+	return unfolding acc(err.ErrorMem(), _) in
+		err.Cause.IsDuplicableMem()
+}
+
+ghost
+trusted
+preserves err.ErrorMem()
+ensures   err.IsDuplicableMem() == old(err.IsDuplicableMem())
+ensures   err.IsDuplicableMem() ==> err.ErrorMem()
+decreases err.ErrorMem()
+func (err scmpError) Duplicate() {
+	if err.IsDuplicableMem() {
+		unfold err.ErrorMem()
+		assert err.Cause.IsDuplicableMem()
+		err.Cause.Duplicate()
+		assert err.Cause.ErrorMem() && err.Cause.ErrorMem()
+		fold err.ErrorMem()
+		fold err.ErrorMem()
+	}
+}
+
+/**** End of scmpError ghost members ****/

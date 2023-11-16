@@ -35,14 +35,14 @@ type Conn interface {
 	pred Mem()
 
 	// Read reads data from the connection.
-	preserves Mem()
+	requires  acc(Mem(), _)
 	preserves slices.AbsSlice_Bytes(b, 0, len(b))
 	ensures   err == nil ==> 0 <= n && n <= len(b)
 	ensures   err != nil ==> err.ErrorMem()
 	Read(b []byte) (n int, err error)
 
 	// Write writes data to the connection.
-	preserves Mem()
+	preserves acc(Mem(), _)
 	preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 	ensures   err == nil ==> 0 <= n && n <= len(b)
 	ensures   err != nil ==> err.ErrorMem()
@@ -92,7 +92,7 @@ type Conn interface {
 type PacketConn interface {
 	pred Mem()
 
-	preserves Mem()
+	preserves acc(Mem(), _)
 	preserves slices.AbsSlice_Bytes(p, 0, len(p))
 	ensures   err == nil ==> 0 <= n && n <= len(p)
 	ensures   err == nil ==> acc(addr.Mem(), _)
@@ -100,7 +100,7 @@ type PacketConn interface {
 	ReadFrom(p []byte) (n int, addr Addr, err error)
 
 	requires  acc(addr.Mem(), _)
-	preserves Mem()
+	preserves acc(Mem(), _)
 	preserves acc(slices.AbsSlice_Bytes(p, 0, len(p)), R15)
 	ensures   err == nil ==> 0 <= n && n <= len(p)
 	ensures   err != nil ==> err.ErrorMem()
