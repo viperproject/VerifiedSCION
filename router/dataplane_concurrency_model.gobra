@@ -154,6 +154,8 @@ ghost
 requires MultiReadBio(t,n)
 requires ElemAuth(s.ibuf, y.IBufY) && ElemAuth(s.obuf, y.OBufY)
 ensures  MultiReadBio(t,n)
+ensures  MultiReadBio_Upd(t,n,n,s) == old(MultiReadBio_Upd(t,n,n,s))
+ensures  MutliReadBio_next(t,n,n) == old(MutliReadBio_next(t,n,n))
 ensures  ElemAuth(MultiReadBio_Upd(t,n,n,s).ibuf, y.IBufY) && ElemAuth(MultiReadBio_Upd(t,n,n,s).obuf, y.OBufY)
 ensures  0 <= m && m <= n && MutliReadBio_correctIfs(t,n,m,k) ==> MultiElemWitness(y.IBufY, k, MutliReadBio_IO_val(t,n,m))
 decreases n

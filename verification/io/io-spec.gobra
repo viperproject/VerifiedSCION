@@ -356,3 +356,36 @@ pred (dp DataPlaneSpec) dp3s_iospec_skip(s IO_dp3s_state_local, t Place) {
 pred (dp DataPlaneSpec) dp3s_iospec_stop(s IO_dp3s_state_local, t Place) {
 	true
 }
+
+/** Helper functions to perform BIO operations **/
+ghost
+decreases
+requires token(t) && CBio_IN_bio3s_enter(t, v)
+ensures  token(old(CBio_IN_bio3s_enter_T(t, v))) 
+func Enter(ghost t Place, ghost v IO_val)
+
+ghost
+decreases
+requires token(t) && CBio_IN_bio3s_xover_core(t, v)
+ensures  token(old(dp3s_iospec_bio3s_xover_core_T(t, v))) 
+func Xover_core(ghost t Place, ghost v IO_val)
+
+ghost
+decreases
+requires token(t) && CBio_IN_bio3s_xover_up2down(t, v)
+ensures  token(old(dp3s_iospec_bio3s_xover_up2down_T(t, v))) 
+func Xover_up2down(ghost t Place, ghost v IO_val)
+
+ghost
+decreases
+requires token(t) && CBio_IN_bio3s_exit(t, v)
+ensures  token(old(dp3s_iospec_bio3s_exit_T(t, v))) 
+func Exit(ghost t Place, ghost v IO_val)
+
+ghost
+decreases
+requires token(t) && CBioIO_bio3s_send(t, v)
+ensures  token(old(dp3s_iospec_bio3s_send_T(t, v))) 
+func Send(ghost t Place, ghost v IO_val)
+
+/** End of helper functions to perfrom BIO operations **/
