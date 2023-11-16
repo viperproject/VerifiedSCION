@@ -305,39 +305,7 @@ decreases
 pure func lengthOfPrevSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) (res int){
 	return seg1Len > currHF ? 0 : ((seg1Len + seg2Len) > currHF ? seg1Len : seg1Len + seg2Len)
 }
-/*
-ghost
-requires 1 <= numINF && numINF <= 3
-requires 0 <= currHFIdx
-requires hopFieldOffset(numINF, currHFIdx) + 12 <= len(raw)
-requires dp.Valid()
-requires let idx := hopFieldOffset(numINF, currHFIdx) in
-	acc(&raw[idx+4], _) && acc(&raw[idx+5], _)
-decreases
-pure func getAsidFromEgress(dp io.DataPlaneSpec, raw []byte, numINF int, currHFIdx int, asid io.IO_as) option[io.IO_as] {
-	return let idx := hopFieldOffset(numINF, currHFIdx) in
-		let consEgress := binary.BigEndian.Uint16(raw[idx+4:idx+6]) in
-		let outgoingPair := io.AsIfsPair{asid, io.IO_ifs(consEgress)} in
-		(io.AsIfsPair{asid, io.IO_ifs(consEgress)} in domain(dp.GetLinks()) ?
-			some(dp.Lookup(outgoingPair).asid) : none[io.IO_as])
-}
 
-ghost
-requires 1 <= numINF && numINF <= 3
-requires 0 <= currHFIdx
-requires hopFieldOffset(numINF, currHFIdx) + 12 <= len(raw)
-requires dp.Valid()
-requires let idx := hopFieldOffset(numINF, currHFIdx) in
-	acc(&raw[idx+2], _) && acc(&raw[idx+3], _)
-decreases
-pure func getAsidFromIngress(dp io.DataPlaneSpec, raw []byte, numINF int, currHFIdx int, asid io.IO_as) option[io.IO_as] {
-	return let idx := hopFieldOffset(numINF, currHFIdx) in
-		let consIngress := binary.BigEndian.Uint16(raw[idx+2:idx+4]) in
-		let incommingPair := io.AsIfsPair{asid, io.IO_ifs(consIngress)} in
-		(io.AsIfsPair{asid, io.IO_ifs(consIngress)} in domain(dp.GetLinks()) ?
-			some(dp.Lookup(incommingPair).asid) : none[io.IO_as])
-}
-*/
 ghost
 requires 1 <= numINF
 requires 0 <= currHFIdx
@@ -694,7 +662,7 @@ requires 0 <= seg3Len
 requires 4 + 8 * numInfoFields(seg1Len, seg2Len, seg3Len) == offset
 requires offset + 12 * (seg1Len + seg2Len + seg3Len) <= len(raw)
 requires 2 <= currINFIdx && currINFIdx < 5
-requires (currINFIdx == 4) ==> len(asid) == seg1Len
+requires (currINFIdx == 4 && seg2Len > 0) ==> len(asid) == seg1Len
 requires (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ==> len(asid) == seg3Len
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 decreases 
@@ -707,7 +675,7 @@ pure func getMidSeg(
 	seg3Len int, 
 	asid seq[io.IO_as]) option[io.IO_seg3] {
 
-	return (currINFIdx == 4) ? 
+	return (currINFIdx == 4 && seg2Len > 0) ? 
 		some(getCurrSeg(raw, offset, 0, seg1Len, seg1Len, asid)) :
 		(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ? 
 			some(getCurrSeg(raw, offset + 12 * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, asid)) : 
@@ -754,7 +722,7 @@ pure func getPkt(dp io.DataPlaneSpec, raw []byte, asid io.IO_as) option[io.IO_pk
 					some(io.IO_pkt2(io.IO_Packet2{
 						CurrSeg : getCurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, get(currAsidSeq)),
 						LeftSeg : getLeftSeg(raw, offset, currINFIdx + 1, seg1Len, seg2Len , seg3Len, get(leftAsidSeq)),
-						MidSeg : none[io.IO_seg3],// getMidSeg(raw, offset, currINFIdx + 2, seg1Len, seg2Len , seg3Len, get(midAsidSeq)),
+						MidSeg : getMidSeg(raw, offset, currINFIdx + 2, seg1Len, seg2Len , seg3Len, get(midAsidSeq)),
 						RightSeg : getRightSeg(raw, offset, currINFIdx - 1, seg1Len, seg2Len , seg3Len, get(rightAsidSeq)),
 					}))
 }
