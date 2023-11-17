@@ -288,7 +288,7 @@ pure func infoFieldOffset(currINF int) int {
 ghost 
 decreases
 pure func hopFieldOffset(numINF int, currHF int) int {
-	return 4 + 8*numINF + 12 * currHF
+	return 4 + 8 * numINF + 12 * currHF
 }
 
 
