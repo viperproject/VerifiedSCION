@@ -24,24 +24,24 @@ pred (h *HopField) Mem() {
 
 ghost 
 decreases
-pure func infoFieldOffset(currINF int) int {
+pure func InfoFieldOffset(currINF int) int {
 	return MetaLen + InfoLen * currINF
 }
 
 ghost 
 requires 0 <= currINF
-requires infoFieldOffset(currINF) < len(raw)
-requires acc(&raw[infoFieldOffset(currINF)], _)
+requires InfoFieldOffset(currINF) < len(raw)
+requires acc(&raw[InfoFieldOffset(currINF)], _)
 decreases
 pure func ConsDir(raw []byte, currINF int) bool {
-	return raw[infoFieldOffset(currINF)] & 0x1 == 0x1
+	return raw[InfoFieldOffset(currINF)] & 0x1 == 0x1
 }
 
 ghost 
 requires 0 <= currINF
-requires infoFieldOffset(currINF) < len(raw)
-requires acc(&raw[infoFieldOffset(currINF)], _)
+requires InfoFieldOffset(currINF) < len(raw)
+requires acc(&raw[InfoFieldOffset(currINF)], _)
 decreases
 pure func Peer(raw []byte, currINF int) bool {
-	return raw[infoFieldOffset(currINF)] & 0x2 == 0x2
+	return raw[InfoFieldOffset(currINF)] & 0x2 == 0x2
 }

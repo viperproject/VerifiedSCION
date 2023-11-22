@@ -24,8 +24,6 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 )
 
-/** Start of io-spec helper functions **/
-
 ghost 
 decreases 
 pure func numInfoFields(seg1Len int, seg2Len int, seg3Len int) int {
@@ -34,14 +32,8 @@ pure func numInfoFields(seg1Len int, seg2Len int, seg3Len int) int {
 
 ghost 
 decreases
-pure func infoFieldOffset(currINF int) int {
-	return scion.MetaLen + path.InfoLen * currINF
-}
-
-ghost 
-decreases
 pure func hopFieldOffset(numINF int, currHF int) int {
-	return infoFieldOffset(numINF) + path.HopLen * currHF
+	return path.InfoFieldOffset(numINF) + path.HopLen * currHF
 }
 
 ghost 
@@ -373,7 +365,7 @@ pure func segment(raw []byte,
 }
 
 ghost
-requires infoFieldOffset(currINFIdx) + path.InfoLen <= offset
+requires path.InfoFieldOffset(currINFIdx) + path.InfoLen <= offset
 requires 0 < len(asid)
 requires offset + path.HopLen * len(asid) <= len(raw)
 requires 0 <= currHFIdx && currHFIdx <= len(asid)
@@ -517,14 +509,14 @@ pure func absPkt(dp io.DataPlaneSpec, raw []byte, asid io.IO_as) option[io.IO_pk
 
 ghost 
 requires 0 <= offset
-requires infoFieldOffset(offset) + 8 < len(raw)
-requires acc(&raw[infoFieldOffset(offset) + 4], _)
-requires acc(&raw[infoFieldOffset(offset) + 5], _)
-requires acc(&raw[infoFieldOffset(offset) + 6], _)
-requires acc(&raw[infoFieldOffset(offset) + 7], _)
+requires path.InfoFieldOffset(offset) + 8 < len(raw)
+requires acc(&raw[path.InfoFieldOffset(offset) + 4], _)
+requires acc(&raw[path.InfoFieldOffset(offset) + 5], _)
+requires acc(&raw[path.InfoFieldOffset(offset) + 6], _)
+requires acc(&raw[path.InfoFieldOffset(offset) + 7], _)
 decreases
 pure func timestamp(raw []byte, offset int) io.IO_ainfo {
-	return let idx := infoFieldOffset(offset) + 4 in 
+	return let idx := path.InfoFieldOffset(offset) + 4 in 
 		io.IO_ainfo(binary.BigEndian.Uint32(raw[idx : idx + 4]))
 }
 
