@@ -45,13 +45,6 @@ pred (b *Base) Mem() {
 	(0 < b.NumINF ==> 0 < b.NumHops)
 }
 
-ghost 
-ensures res
-decreases
-pure func validMetaLenInPath() (res bool) {
-	return MetaLen == path.MetaLen
-}
-
 ghost
 decreases
 pure func (b Base) ValidCurrInfSpec() bool {
