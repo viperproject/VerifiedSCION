@@ -29,7 +29,7 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path/epic"
-	// @ def "github.com/scionproto/scion/verification/utils/definitions"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -108,7 +108,7 @@ func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) (err err
 // EPIC MAC may get overwritten. Only the most recently returned EPIC MAC is guaranteed to be
 // valid.
 // @ trusted
-// @ requires def.Uncallable()
+// @ requires Uncallable()
 func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	timestamp uint32, buffer []byte) ([]byte, error) {
 
@@ -139,7 +139,7 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 // returns nil.
 // TODO
 // @ trusted
-// @ requires def.Uncallable()
+// @ requires Uncallable()
 func VerifyHVF(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	timestamp uint32, hvf []byte, buffer []byte) error {
 
@@ -192,8 +192,8 @@ func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 }
 
 // @ requires  MACBufferSize <= len(inputBuffer)
-// @ preserves acc(s.Mem(ub), def.ReadL20)
-// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), def.ReadL20)
+// @ preserves acc(s.Mem(ub), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
 // @ preserves sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
@@ -213,10 +213,10 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	if s == nil {
 		return 0, serrors.New("SCION common+address header must not be nil")
 	}
-	// @ unfold acc(s.Mem(ub), def.ReadL20/2)
-	// @ defer fold acc(s.Mem(ub), def.ReadL20/2)
-	// @ unfold acc(s.HeaderMem(ub[slayers.CmnHdrLen:]), def.ReadL20/2)
-	// @ defer fold acc(s.HeaderMem(ub[slayers.CmnHdrLen:]), def.ReadL20/2)
+	// @ unfold acc(s.Mem(ub), R20/2)
+	// @ defer fold acc(s.Mem(ub), R20/2)
+	// @ unfold acc(s.HeaderMem(ub[slayers.CmnHdrLen:]), R20/2)
+	// @ defer fold acc(s.HeaderMem(ub[slayers.CmnHdrLen:]), R20/2)
 	srcAddr := s.RawSrcAddr
 	// @ ghost start := slayers.CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()
 	// @ ghost end := slayers.CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()
@@ -248,11 +248,11 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	offset += addr.IABytes
 	// @ assert forall i int :: { &inputBuffer[offset:][i] } 0 <= i && i < len(inputBuffer[offset:]) ==>
 	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
-	// @ sl.SplitRange_Bytes(ub, start, end, def.ReadL20)
-	// @ unfold acc(sl.AbsSlice_Bytes(srcAddr, 0, len(srcAddr)), def.ReadL20)
-	copy(inputBuffer[offset:], srcAddr /*@ , def.ReadL20 @*/)
-	// @ fold acc(sl.AbsSlice_Bytes(srcAddr, 0, len(srcAddr)), def.ReadL20)
-	// @ sl.CombineRange_Bytes(ub, start, end, def.ReadL20)
+	// @ sl.SplitRange_Bytes(ub, start, end, R20)
+	// @ unfold acc(sl.AbsSlice_Bytes(srcAddr, 0, len(srcAddr)), R20)
+	copy(inputBuffer[offset:], srcAddr /*@ , R20 @*/)
+	// @ fold acc(sl.AbsSlice_Bytes(srcAddr, 0, len(srcAddr)), R20)
+	// @ sl.CombineRange_Bytes(ub, start, end, R20)
 	offset += l
 	// @ assert forall i int :: { &inputBuffer[offset:][i] } 0 <= i && i < len(inputBuffer[offset:]) ==>
 	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
@@ -260,7 +260,7 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	offset += 2
 	// @ assert forall i int :: { &inputBuffer[offset:inputLength][i] } 0 <= i && i < len(inputBuffer[offset:inputLength]) ==>
 	// @ 	&inputBuffer[offset:inputLength][i] == &inputBuffer[offset+i]
-	copy(inputBuffer[offset:inputLength], zeroInitVector[:] /*@ , def.ReadL20 @*/)
+	copy(inputBuffer[offset:inputLength], zeroInitVector[:] /*@ , R20 @*/)
 	// @ fold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
 	return inputLength, nil
 }
