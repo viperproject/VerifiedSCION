@@ -102,8 +102,6 @@ pure func (hf IO_HF) extr_asid() IO_as {
 	return hf.HVF.extract_asid()
 }
 
-
-
 // function 'toab' in Isabelle, originally of type HF_scheme -> aahi_scheme
 ghost
 pure

@@ -172,7 +172,7 @@ func newOffsetPair(n int) (res seq[offsetPair])
 ghost
 requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(&d.internalNextHops, _)
-ensures  d.internalNextHops != nil  ==> acc(AccAddr(d.internalNextHops), _)
+ensures  d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), _)
 decreases
 func (d *DataPlane) getInternalNextHops() {
 	unfold acc(MutexInvariant!<d!>(), _)

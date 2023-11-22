@@ -16,7 +16,18 @@
 
 package scion
 
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+)
+
 func canAllocateBase() {
 	b := &Base{}
 	fold b.Mem()
+}
+
+ghost 
+ensures res
+decreases
+pure func validMetaLenInPath() (res bool) {
+	return MetaLen == path.MetaLen
 }
