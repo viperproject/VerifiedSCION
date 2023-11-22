@@ -177,7 +177,8 @@ pure func asidForCurrSeg(
 	return segLen == 0 ? some(seq[io.IO_as]{}) : 
 		let left := asidsBefore(dp, raw, numINF, currHFIdx, prevSegLen, consDir, asid) in
 		let right := asidsAfter(dp, raw, numINF, currHFIdx, segLen, consDir, asid) in
-		(left == none[seq[io.IO_as]] || right == none[seq[io.IO_as]]) ? none[seq[io.IO_as]] : 
+		(left == none[seq[io.IO_as]] || right == none[seq[io.IO_as]]) ?
+			none[seq[io.IO_as]] : 
 			some(get(left) ++ get(right)[1:])
 }
 
