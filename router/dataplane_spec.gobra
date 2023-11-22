@@ -288,7 +288,7 @@ pure func infoFieldOffset(currINF int) int {
 ghost 
 decreases
 pure func hopFieldOffset(numINF int, currHF int) int {
-	return 4 + 8 * numINF + 12 * currHF
+	return infoFieldOffset(numINF) + 12 * currHF
 }
 
 
@@ -531,7 +531,8 @@ ghost
 requires -1 <= currHFIdx && currHFIdx < len(hopfields)
 decreases currHFIdx + 1
 pure func getSegPast(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_HF]{
-	return currHFIdx == -1  ? seq[io.IO_HF]{} : 
+	return currHFIdx == -1  ?
+		seq[io.IO_HF]{} : 
 		seq[io.IO_HF]{hopfields[currHFIdx]} ++ getSegPast(hopfields, currHFIdx - 1)
 }
 
@@ -803,9 +804,13 @@ requires forall idx int :: {hopfields[idx]} 0 <= idx && idx < len(hopfields) ==>
 	len(hopfields[idx].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
 decreases
 pure func getUInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_msgterm]{
-	return currHFIdx == len(hopfields) ? getHVFSet(hopfields[currHFIdx-1]) :
-		currHFIdx == 0 ? getHVFSet(hopfields[currHFIdx]) :
-		consDir ? getHVFSet(hopfields[currHFIdx]) : getHVFSet(hopfields[currHFIdx-1]) 
+	return currHFIdx == len(hopfields) ?
+		getHVFSet(hopfields[currHFIdx-1]) :
+		(currHFIdx == 0 ?
+				getHVFSet(hopfields[currHFIdx]) :
+				(consDir ?
+						getHVFSet(hopfields[currHFIdx]) :
+						getHVFSet(hopfields[currHFIdx-1]))
 }
 
 /** End of io-spec helper functions **/ 
