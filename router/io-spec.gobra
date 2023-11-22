@@ -372,7 +372,7 @@ pure func segment(raw []byte,
 }
 
 ghost
-requires 4 + 8 * currINFIdx + 8 <= offset
+requires infoFieldOffset(currINFIdx) + path.InfoLen <= offset
 requires 0 < len(asid)
 requires offset + path.HopLen * len(asid) <= len(raw)
 requires 0 <= currHFIdx && currHFIdx <= len(asid)
