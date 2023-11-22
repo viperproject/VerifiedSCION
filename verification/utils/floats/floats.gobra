@@ -1,4 +1,4 @@
-// Copyright 2020 Anapaya Systems
+// Copyright 2022 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,20 +14,17 @@
 
 // +gobra
 
-package scion
+// This package contains some lemmas that are useful to deal with floats.
 
-import (
-	"github.com/scionproto/scion/pkg/slayers/path"
-)
+package floats
 
-func canAllocateBase() {
-	b := &Base{}
-	fold b.Mem()
-}
+ghost
+requires  l <= h
+ensures   float64(l) <= float64(h)
+decreases _
+func CastPreservesOrder64(l, h int)
 
-ghost 
-ensures res
-decreases
-pure func validMetaLenInPath() (res bool) {
-	return MetaLen == path.MetaLen
-}
+ghost
+ensures float64(0) < float64(1)
+decreases _
+func ZeroLessOne64()
