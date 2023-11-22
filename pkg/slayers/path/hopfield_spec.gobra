@@ -19,3 +19,28 @@ package path
 pred (h *HopField) Mem() {
 	acc(h) && h.ConsIngress >= 0 && h.ConsEgress >= 0
 }
+
+//TODO how to import MetaLen from scion
+ghost 
+decreases
+pure func infoFieldOffset(currINF int) int {
+	return 4 + InfoLen * currINF
+}
+
+ghost 
+requires 0 <= currINF
+requires infoFieldOffset(currINF) < len(raw)
+requires acc(&raw[infoFieldOffset(currINF)], _)
+decreases
+pure func ConsDir(raw []byte, currINF int) bool {
+	return raw[infoFieldOffset(currINF)] & 0x1 == 0x1
+}
+
+ghost 
+requires 0 <= currINF
+requires infoFieldOffset(currINF) < len(raw)
+requires acc(&raw[infoFieldOffset(currINF)], _)
+decreases
+pure func Peer(raw []byte, currINF int) bool {
+	return raw[infoFieldOffset(currINF)] & 0x2 == 0x2
+}
