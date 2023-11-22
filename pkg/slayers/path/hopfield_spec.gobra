@@ -16,15 +16,16 @@
 
 package path
 
+ghost const MetaLen = 4
+
 pred (h *HopField) Mem() {
 	acc(h) && h.ConsIngress >= 0 && h.ConsEgress >= 0
 }
 
-//TODO how to import MetaLen from scion
 ghost 
 decreases
 pure func infoFieldOffset(currINF int) int {
-	return 4 + InfoLen * currINF
+	return MetaLen + InfoLen * currINF
 }
 
 ghost 

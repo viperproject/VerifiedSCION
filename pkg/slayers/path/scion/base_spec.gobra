@@ -18,6 +18,7 @@ package scion
 
 import (
 	"encoding/binary"
+	"github.com/scionproto/scion/pkg/slayers/path"
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -42,6 +43,13 @@ pred (b *Base) Mem() {
 	// but this does not seem to be enforced anywhere.
 	0 <= b.NumHops && // b.NumHops <= MaxHops &&
 	(0 < b.NumINF ==> 0 < b.NumHops)
+}
+
+ghost 
+ensures res
+decreases
+pure func validMetaLenInPath() (res bool) {
+	return MetaLen == path.MetaLen
 }
 
 ghost
