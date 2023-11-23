@@ -173,8 +173,12 @@ func CoreFromPktCounter(counter uint32) (uint8, uint32) {
 	return coreID, coreCounter
 }
 
+// (VerifiedSCION) The following verifies if we remove `Uncallable()“
+// from the precondition, but it seems to suffer from perf. problems.
+// @ requires  Uncallable()
 // @ requires  len(key) == 16
-// @ preserves sl.AbsSlice_Bytes(key, 0, len(key))
+// @ requires  sl.AbsSlice_Bytes(key, 0, len(key))
+// @ ensures   acc(sl.AbsSlice_Bytes(key, 0, len(key)), _)
 // @ ensures   reserr == nil ==> res.Mem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
@@ -191,6 +195,7 @@ func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 	return mode, nil
 }
 
+// @ requires  Uncallable()
 // @ requires  MACBufferSize <= len(inputBuffer)
 // @ preserves acc(s.Mem(ub), R20)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
