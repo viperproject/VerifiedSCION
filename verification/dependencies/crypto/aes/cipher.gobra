@@ -19,10 +19,11 @@ const BlockSize = 16
 // either 16, 24, or 32 bytes to select
 // AES-128, AES-192, or AES-256.
 trusted
-requires len(key) == 16 || len(key) == 24 || len(key) == 32
-requires slices.AbsSlice_Bytes(key, 0, len(key))
-ensures  err == nil ==> (result != nil && result.Mem())
-ensures  err != nil ==> err.ErrorMem()
+requires  len(key) == 16 || len(key) == 24 || len(key) == 32
+preserves slices.AbsSlice_Bytes(key, 0, len(key))
+ensures   err == nil ==>
+	(result != nil && result.Mem() && result.BlockSize() == len(key))
+ensures   err != nil ==> err.ErrorMem()
 decreases
 func NewCipher(key []byte) (result cipher.Block, err error) {
 	k := len(key)

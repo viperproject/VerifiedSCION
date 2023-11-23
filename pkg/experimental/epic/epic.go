@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
+// @ initEnsures acc(postInitInvariant(), _)
 package epic
 
 import (
@@ -26,6 +29,8 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path/epic"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
+	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 const (
@@ -41,13 +46,23 @@ const (
 	MACBufferSize = 48
 )
 
-var zeroInitVector [16]byte
+var zeroInitVector /*@@@*/ [16]byte
+
+/*@
+// ghost init
+func init() {
+	fold acc(sl.AbsSlice_Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), _)
+	fold acc(postInitInvariant(), _)
+}
+@*/
 
 // CreateTimestamp returns the epic timestamp, which encodes the current time (now) relative to the
 // input timestamp. The input timestamp must not be in the future (compared to the current time),
 // otherwise an error is returned. An error is also returned if the current time is more than 1 day
 // and 63 minutes after the input timestamp.
-func CreateTimestamp(input time.Time, now time.Time) (uint32, error) {
+// @ ensures err != nil ==> err.ErrorMem()
+// @ decreases
+func CreateTimestamp(input time.Time, now time.Time) (res uint32, err error) {
 	if input.After(now) {
 		return 0, serrors.New("provided input timestamp is in the future",
 			"input", input, "now", now)
@@ -67,7 +82,9 @@ func CreateTimestamp(input time.Time, now time.Time) (uint32, error) {
 // does not date back more than the maximal packet lifetime of two seconds. The function also takes
 // a possible clock drift between the packet source and the verifier of up to one second into
 // account.
-func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) error {
+// @ ensures err != nil ==> err.ErrorMem()
+// @ decreases
+func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) (err error) {
 	diff := (time.Duration(epicTS) + 1) * TimestampResolution
 	tsSender := timestamp.Add(diff)
 
@@ -90,6 +107,8 @@ func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) error {
 // If the same buffer is provided in subsequent calls to this function, the previously returned
 // EPIC MAC may get overwritten. Only the most recently returned EPIC MAC is guaranteed to be
 // valid.
+// @ trusted
+// @ requires Uncallable()
 func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	timestamp uint32, buffer []byte) ([]byte, error) {
 
@@ -118,6 +137,8 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 // bytes of the SCION path type MAC, has invalid length, or if the MAC calculation gives an error,
 // also VerifyHVF returns an error. The verification was successful if and only if VerifyHVF
 // returns nil.
+// @ trusted
+// @ requires Uncallable()
 func VerifyHVF(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	timestamp uint32, hvf []byte, buffer []byte) error {
 
@@ -151,19 +172,39 @@ func CoreFromPktCounter(counter uint32) (uint8, uint32) {
 	return coreID, coreCounter
 }
 
-func initEpicMac(key []byte) (cipher.BlockMode, error) {
+// (VerifiedSCION) The following verifies if we remove `Uncallable()“
+// from the precondition, but it seems to suffer from perf. problems.
+// @ requires  Uncallable()
+// @ requires  len(key) == 16
+// @ requires  sl.AbsSlice_Bytes(key, 0, len(key))
+// @ ensures   reserr == nil ==> res.Mem()
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ decreases
+func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, serrors.New("Unable to initialize AES cipher")
 	}
 
+	// @ establishPostInitInvariant()
+	// @ unfold acc(postInitInvariant(), _)
 	// CBC-MAC = CBC-Encryption with zero initialization vector
 	mode := cipher.NewCBCEncrypter(block, zeroInitVector[:])
 	return mode, nil
 }
 
+// (VerifiedSCION) This function is mostly verified, but needs to be revisited before
+// dropping the precondition `Uncallable()`.
+// @ requires  Uncallable()
+// @ requires  MACBufferSize <= len(inputBuffer)
+// @ preserves acc(s.Mem(ub), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
+// @ preserves sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ decreases
 func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
-	inputBuffer []byte) (int, error) {
+	inputBuffer []byte /*@ , ghost ub []byte @*/) (res int, reserr error) {
+	// @ share pktID
 
 	//   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	//   | flags (1B) | timestamp (4B) |    packet ID (8B)     |
@@ -177,27 +218,54 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	if s == nil {
 		return 0, serrors.New("SCION common+address header must not be nil")
 	}
+	// @ unfold acc(s.Mem(ub), R20/2)
+	// @ defer fold acc(s.Mem(ub), R20/2)
+	// @ unfold acc(s.HeaderMem(ub[slayers.CmnHdrLen:]), R20/2)
+	// @ defer fold acc(s.HeaderMem(ub[slayers.CmnHdrLen:]), R20/2)
 	srcAddr := s.RawSrcAddr
+	// @ ghost start := slayers.CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()
+	// @ ghost end := slayers.CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()
+	// @ assert srcAddr === ub[start:end]
 	l := len(srcAddr)
 
 	// Calculate a multiple of 16 such that the input fits in
-	nrBlocks := int(math.Ceil((23 + float64(l)) / 16))
+	nrBlocks := int(math.Ceil((float64(23) + float64(l)) / float64(16)))
 	inputLength := 16 * nrBlocks
 
 	// Fill input
+	// @ unfold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
 	offset := 0
 	inputBuffer[0] = uint8(s.SrcAddrType & 0x3) // extract length bits
 	offset += 1
+	// @ assert forall i int :: { &inputBuffer[offset:][i] } 0 <= i && i < len(inputBuffer[offset:]) ==>
+	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
 	binary.BigEndian.PutUint32(inputBuffer[offset:], timestamp)
 	offset += 4
+	// @ fold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
+	// @ sl.SplitRange_Bytes(inputBuffer, offset, len(inputBuffer), writePerm)
 	pktID.SerializeTo(inputBuffer[offset:])
+	// @ sl.CombineRange_Bytes(inputBuffer, offset, len(inputBuffer), writePerm)
 	offset += epic.PktIDLen
+	// @ unfold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
+	// @ assert forall i int :: { &inputBuffer[offset:][i] } 0 <= i && i < len(inputBuffer[offset:]) ==>
+	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
 	binary.BigEndian.PutUint64(inputBuffer[offset:], uint64(s.SrcIA))
 	offset += addr.IABytes
-	copy(inputBuffer[offset:], srcAddr)
+	// @ assert forall i int :: { &inputBuffer[offset:][i] } 0 <= i && i < len(inputBuffer[offset:]) ==>
+	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
+	// @ sl.SplitRange_Bytes(ub, start, end, R20)
+	// @ unfold acc(sl.AbsSlice_Bytes(srcAddr, 0, len(srcAddr)), R20)
+	copy(inputBuffer[offset:], srcAddr /*@ , R20 @*/)
+	// @ fold acc(sl.AbsSlice_Bytes(srcAddr, 0, len(srcAddr)), R20)
+	// @ sl.CombineRange_Bytes(ub, start, end, R20)
 	offset += l
+	// @ assert forall i int :: { &inputBuffer[offset:][i] } 0 <= i && i < len(inputBuffer[offset:]) ==>
+	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
 	binary.BigEndian.PutUint16(inputBuffer[offset:], s.PayloadLen)
 	offset += 2
-	copy(inputBuffer[offset:inputLength], zeroInitVector[:])
+	// @ assert forall i int :: { &inputBuffer[offset:inputLength][i] } 0 <= i && i < len(inputBuffer[offset:inputLength]) ==>
+	// @ 	&inputBuffer[offset:inputLength][i] == &inputBuffer[offset+i]
+	copy(inputBuffer[offset:inputLength], zeroInitVector[:] /*@ , R20 @*/)
+	// @ fold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
 	return inputLength, nil
 }
