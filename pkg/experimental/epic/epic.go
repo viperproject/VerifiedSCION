@@ -193,6 +193,8 @@ func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 	return mode, nil
 }
 
+// (VerifiedSCION) This function is mostly verified, but needs to be revisited before
+// dropping the precondition `Uncallable()`.
 // @ requires  Uncallable()
 // @ requires  MACBufferSize <= len(inputBuffer)
 // @ preserves acc(s.Mem(ub), R20)
