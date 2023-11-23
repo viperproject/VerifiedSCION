@@ -23,7 +23,7 @@ import "github.com/scionproto/scion/verification/utils/slices"
 trusted
 requires b != nil && b.Mem()
 requires len(iv) == b.BlockSize()
-requires acc(slices.AbsSlice_Bytes(iv, 0, len(iv)), _)
+requires slices.AbsSlice_Bytes(iv, 0, len(iv))
 ensures  result.Mem()
 decreases _
 func NewCBCEncrypter(b Block, iv []byte) (result BlockMode) {

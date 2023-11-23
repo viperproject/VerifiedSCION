@@ -178,7 +178,6 @@ func CoreFromPktCounter(counter uint32) (uint8, uint32) {
 // @ requires  Uncallable()
 // @ requires  len(key) == 16
 // @ requires  sl.AbsSlice_Bytes(key, 0, len(key))
-// @ ensures   acc(sl.AbsSlice_Bytes(key, 0, len(key)), _)
 // @ ensures   reserr == nil ==> res.Mem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
