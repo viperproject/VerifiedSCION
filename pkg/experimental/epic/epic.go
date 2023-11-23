@@ -137,7 +137,6 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 // bytes of the SCION path type MAC, has invalid length, or if the MAC calculation gives an error,
 // also VerifyHVF returns an error. The verification was successful if and only if VerifyHVF
 // returns nil.
-// TODO
 // @ trusted
 // @ requires Uncallable()
 func VerifyHVF(auth []byte, pktID epic.PktID, s *slayers.SCION,
