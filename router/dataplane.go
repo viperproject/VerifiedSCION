@@ -93,8 +93,7 @@ const (
 type bfdSession interface {
 	// @ pred Mem()
 
-	// (VerifiedSCION) ctx is used to obtain a logger from ctx by
-	// calling the method Value. Wildcard permission is enough for that.
+	// (VerifiedSCION) a logger is obtained from ctx through the method Value.
 	// @ requires acc(ctx.Mem(), _)
 	// @ requires acc(Mem(), _)
 	// @ ensures  err != nil ==> err.ErrorMem()
