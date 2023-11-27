@@ -842,12 +842,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					inputCounters := d.forwardingMetrics[ingressID]
 					// @ assert acc(inputCounters.InputPacketsTotal.Mem(), _)
 					// @ assert acc(inputCounters.InputBytesTotal.Mem(), _)
-					// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
-					// the assertions above moreally imply it. In the future, we should either enrich the predicate
-					// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
-					// TODO: make this a Lemma instead!
-					// @ assume inputCounters.InputPacketsTotal != nil
-					// @ assume inputCounters.InputBytesTotal != nil
+					// @ prometheus.CounterMemImpliesNonNil(inputCounters.InputPacketsTotal)
+					// @ prometheus.CounterMemImpliesNonNil(inputCounters.InputBytesTotal)
 					inputCounters.InputPacketsTotal.Inc()
 					// @ fl.CastPreservesOrder64(0, p.N) // Gobra still does not fully support floats
 					inputCounters.InputBytesTotal.Add(float64(p.N))
@@ -880,11 +876,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					default:
 						// @ unfold scmpErr.Mem()
 						log.Debug("Error processing packet", "err", err)
-						// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
-						// the assertions above moreally imply it. In the future, we should either enrich the predicate
-						// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
 						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
-						// @ assume inputCounters.DroppedPacketsTotal != nil
+						// @ prometheus.CounterMemImpliesNonNil(inputCounters.DroppedPacketsTotal)
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
@@ -930,11 +923,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 							// error metric
 						}
 						// @ )
-						// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
-						// the assertions above moreally imply it. In the future, we should either enrich the predicate
-						// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
 						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
-						// @ assume inputCounters.DroppedPacketsTotal != nil
+						// @ prometheus.CounterMemImpliesNonNil(inputCounters.DroppedPacketsTotal)
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
@@ -943,17 +933,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ unfold acc(AccForwardingMetrics(d.forwardingMetrics), _)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[result.EgressID], result.EgressID), _)
 					outputCounters := d.forwardingMetrics[result.EgressID]
-					// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
-					// the assertions above moreally imply it. In the future, we should either enrich the predicate
-					// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
 					// @ assert acc(outputCounters.OutputPacketsTotal.Mem(), _)
-					// @ assume outputCounters.OutputPacketsTotal != nil
+					// @ prometheus.CounterMemImpliesNonNil(outputCounters.OutputPacketsTotal)
 					outputCounters.OutputPacketsTotal.Inc()
-					// (VerifiedSCION) currently assumed because Gobra cannot prove it, even though
-					// the assertions above moreally imply it. In the future, we should either enrich the predicate
-					// forwardingMetricsMem with these conditions or merge the PR #536 of Gobra.
 					// @ assert acc(outputCounters.OutputBytesTotal.Mem(), _)
-					// @ assume outputCounters.OutputBytesTotal != nil
+					// @ prometheus.CounterMemImpliesNonNil(outputCounters.OutputBytesTotal)
 					outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
 				}
 			}
