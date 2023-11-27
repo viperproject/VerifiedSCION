@@ -828,6 +828,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&scmpErr)
 				// properties of the write msg:
 				// @ invariant writeMsgInv(writeMsgs)
+				// @ invariant acc(rd.Mem(), _)
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
