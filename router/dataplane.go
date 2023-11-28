@@ -1331,6 +1331,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
 
 	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission)
+	// (VerifiedSCION) TODO: Rewrite this to use regular loop instead to avoid complications with permissions.
 	// @ ghost m := p.d.internalNextHops
 	// @ assert m != nil ==> acc(m, _)
 	// @ inhale m != nil ==> acc(m, R19)
