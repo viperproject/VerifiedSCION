@@ -21,8 +21,6 @@ import (
 	"hash"
 	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
-	"github.com/scionproto/scion/verification/io"
-	"github.com/scionproto/scion/verification/dependencies/encoding/binary"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/addr"
 )
