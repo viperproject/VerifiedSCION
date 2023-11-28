@@ -357,7 +357,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_stop(s IO_dp3s_state_local, t Place) {
 	true
 }
 
-/** Helper functions to perform BIO operations **/
+/** BIO operations **/
 ghost
 decreases
 requires token(t) && CBio_IN_bio3s_enter(t, v)
