@@ -555,7 +555,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 		// @ decreases
 		// @ outline (
 		// @ unfold acc(d.Metrics.Mem(), _)
-		// @ fl.ZeroLessOne64() // Gobra still does not fully support floats
+		// @ fl.ZeroLessOne64()
 		// @ assert d.Metrics.ServiceInstanceChanges != nil
 		// @ assert d.Metrics.ServiceInstanceCount   != nil
 		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
@@ -585,7 +585,7 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	if d.Metrics != nil {
 		labels := serviceMetricLabels(d.localIA, svc)
 		// @ unfold acc(d.Metrics.Mem(), _)
-		// @ fl.ZeroLessOne64() // Gobra still does not fully support floats
+		// @ fl.ZeroLessOne64()
 		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(-1))
 	}
