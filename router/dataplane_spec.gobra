@@ -191,7 +191,6 @@ func (d *DataPlane) getForwardingMetrics() {
 	unfold acc(MutexInvariant!<d!>(), _)
 }
 
-
 ghost
 requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(&d.external, _) && (d.external != nil ==> acc(AccBatchConn(d.external), _))
