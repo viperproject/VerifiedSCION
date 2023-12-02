@@ -66,6 +66,7 @@ import (
 	"github.com/scionproto/scion/router/bfd"
 	"github.com/scionproto/scion/router/control"
 	// @ . "github.com/scionproto/scion/verification/utils/definitions"
+	// @ fl "github.com/scionproto/scion/verification/utils/floats"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 	// @ "github.com/scionproto/scion/verification/utils/seqs"
 	// @ socketspec "golang.org/x/net/internal/socket/"
@@ -92,9 +93,8 @@ const (
 type bfdSession interface {
 	// @ pred Mem()
 
-	// (VerifiedSCION) ctx is used to obtain a logger from ctx by
-	// calling the method Value. R20 permissions are enough for that.
-	// @ requires acc(ctx.Mem(), R20)
+	// (VerifiedSCION) a logger is obtained from ctx through the method Value.
+	// @ requires acc(ctx.Mem(), _)
 	// @ requires acc(Mem(), _)
 	// @ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
@@ -110,25 +110,29 @@ type bfdSession interface {
 // BatchConn is a connection that supports batch reads and writes.
 // (VerifiedSCION) the spec of this interface exactly matches that of the same methods
 // in private/underlay/conn/Conn
-// TODO: better triggers,
+// TODO: add IO spec here
 type BatchConn interface {
 	// @ pred Mem()
 
-	// @ preserves Mem()
+	// @ requires  acc(Mem(), _)
 	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].Mem(1)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+	// @ ensures   err == nil ==>
+	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
+	// @ ensures   err == nil ==>
+	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 	// @ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(msgs underlayconn.Messages) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
-	// @ preserves Mem()
+	// @ requires  acc(Mem(), _)
 	// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R10)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(b)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
-	// @ preserves Mem()
-	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	acc(msgs[i].Mem(1), R10)
+	// @ requires  acc(Mem(), _)
+	// @ preserves forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ 	acc(msgs[i].Mem(1), R20)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
@@ -268,7 +272,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 		// @ requires acc(&key, _) && acc(sl.AbsSlice_Bytes(key, 0, len(key)), _)
 		// @ requires scrypto.ValidKeyForHash(key)
 		// @ ensures  acc(&key, _) && acc(sl.AbsSlice_Bytes(key, 0, len(key)), _)
-		// @ ensures  h.Mem()
+		// @ ensures  h != nil && h.Mem()
 		// @ decreases
 		func /*@ f @*/ () (h hash.Hash) {
 			mac, _ := scrypto.InitMac(key)
@@ -551,7 +555,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 		// @ decreases
 		// @ outline (
 		// @ unfold acc(d.Metrics.Mem(), _)
-		// @ assume float64(0) < float64(1) // Gobra still does not fully support floats
+		// @ fl.ZeroLessOne64()
 		// @ assert d.Metrics.ServiceInstanceChanges != nil
 		// @ assert d.Metrics.ServiceInstanceCount   != nil
 		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
@@ -581,7 +585,7 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	if d.Metrics != nil {
 		labels := serviceMetricLabels(d.localIA, svc)
 		// @ unfold acc(d.Metrics.Mem(), _)
-		// @ assume float64(0) < float64(1) // Gobra still does not fully support floats
+		// @ fl.ZeroLessOne64()
 		d.Metrics.ServiceInstanceChanges.With(labels).Add(float64(1))
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(-1))
 	}

@@ -17,12 +17,16 @@
 package router
 
 import (
-	"net"
+	"errors"
 	"hash"
+	"net"
+
+	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/scrypto"
+	underlayconn "github.com/scionproto/scion/private/underlay/conn"
+
 	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
-	"github.com/scionproto/scion/pkg/scrypto"
-	"github.com/scionproto/scion/pkg/addr"
 )
 
 // TODO: maybe change interpretation of Mutex depending on whether the
@@ -139,7 +143,7 @@ pred (p *scionPacketProcessor) initMem() {
 requires acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
 ensures  acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
-ensures  res.Mem()
+ensures  res != nil && res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
 
@@ -175,6 +179,15 @@ ensures  acc(&d.internalNextHops, _)
 ensures  d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), _)
 decreases
 func (d *DataPlane) getInternalNextHops() {
+	unfold acc(MutexInvariant!<d!>(), _)
+}
+
+ghost
+requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(&d.forwardingMetrics, _)
+ensures  d.forwardingMetrics != nil ==> acc(AccForwardingMetrics(d.forwardingMetrics), _)
+decreases
+func (d *DataPlane) getForwardingMetrics() {
 	unfold acc(MutexInvariant!<d!>(), _)
 }
 
@@ -268,3 +281,46 @@ func closureSpec2(i uint16, c BatchConn)
 requires true
 func closureSpec3(c BatchConn)
 /** End of closure specs for the Run method **/
+
+/** definitions used internally for the proof of Run **/
+pred writeMsgInv(writeMsgs underlayconn.Messages) {
+	len(writeMsgs) == 1 &&
+	acc(&writeMsgs[0]) &&
+	len(writeMsgs[0].Buffers) == 1 &&
+	acc(&writeMsgs[0].Buffers[0]) &&
+	// sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])) &&
+	sl.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB)) &&
+	0 <= writeMsgs[0].N
+}
+/** end of definitions used internally for the proof of Run **/
+
+/** ErrorCell **/
+pred (s *scmpError) Mem() {
+	acc(s)
+}
+
+ghost
+preserves s.Mem() && s.CanSet(e)
+ensures   s.Get() === e
+decreases
+func (s *scmpError) Set(e error) {
+	unfold s.Mem()
+	defer fold s.Mem()
+	newErr := e.(scmpError)
+	*s = newErr
+}
+
+ghost
+pure
+requires acc(s.Mem(), _)
+decreases
+func (s *scmpError) Get() error {
+	return unfolding acc(s.Mem(), _) in *s
+}
+
+ghost
+pure
+decreases
+func (s *scmpError) CanSet(e error) bool {
+	return typeOf(e) == type[scmpError]
+}
