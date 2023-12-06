@@ -2844,6 +2844,25 @@ func (p *scionPacketProcessor) prepareSCMP(
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
+	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	/* @
+	ghost if pathFromEpic {
+				epicPath := p.scionLayer.Path.(*epic.Path)
+				assert acc(path.Mem(ubPath), R4)
+				fold acc(epicPath.Mem(epicPathUb), R4)
+			} else {
+				rawPath := p.scionLayer.Path.(*scion.Raw)
+				assert acc(path.Mem(ubPath), R4)
+				assert acc(rawPath.Mem(ubPath), R4)
+			}
+	@ */
+	// @ fold acc(p.scionLayer.Mem(ub), R4)
+	// @ assert  revPath.Mem(rawPath)
+	// @ assert  acc(&p.d, _) && acc(MutexInvariant!<p.d!>(), _)
+	// @ assert  acc(&p.ingressID,  R15)
+	// @ assert  acc(p.scionLayer.Mem(ub), R4)
+	// @ assert  p.scionLayer.ValidPathMetaData(ub)
+	// @ assert  sl.AbsSlice_Bytes(ub, 0, len(ub))
 	// @ TODO()
 
 	// create new SCION header for reply.
@@ -2856,6 +2875,91 @@ func (p *scionPacketProcessor) prepareSCMP(
 	scionL.DstIA = p.scionLayer.SrcIA
 	scionL.SrcIA = p.d.localIA
 	srcA, err := p.scionLayer.SrcAddr()
+	if err != nil {
+		return nil, serrors.Wrap(cannotRoute, err, "details", "extracting src addr")
+	}
+	if err := scionL.SetDstAddr(srcA /*@ , false @*/); err != nil {
+		return nil, serrors.Wrap(cannotRoute, err, "details", "setting dest addr")
+	}
+	if err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP} /*@ , false @*/); err != nil {
+		return nil, serrors.Wrap(cannotRoute, err, "details", "setting src addr")
+	}
+	scionL.NextHdr = slayers.L4SCMP
+
+	typeCode := slayers.CreateSCMPTypeCode(typ, code)
+	scmpH /*@@@*/ := slayers.SCMP{TypeCode: typeCode}
+	scmpH.SetNetworkLayerForChecksum(&scionL)
+
+	if err := p.buffer.Clear(); err != nil {
+		return nil, err
+	}
+
+	sopts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
+	scmpLayers := []gopacket.SerializableLayer{&scionL, &scmpH, scmpP}
+	if cause != nil {
+		// add quote for errors.
+		hdrLen := slayers.CmnHdrLen + scionL.AddrHdrLen( /*@ nil, false @*/ ) + scionL.Path.Len( /*@ nil @*/ )
+		switch scmpH.TypeCode.Type() {
+		case slayers.SCMPTypeExternalInterfaceDown:
+			hdrLen += 20
+		case slayers.SCMPTypeInternalConnectivityDown:
+			hdrLen += 28
+		default:
+			hdrLen += 8
+		}
+		quote := p.rawPkt
+		maxQuoteLen := slayers.MaxSCMPPacketLen - hdrLen
+		if len(quote) > maxQuoteLen {
+			quote = quote[:maxQuoteLen]
+		}
+		scmpLayers = append( /*@ noPerm, @*/ scmpLayers, gopacket.Payload(quote))
+	}
+	// XXX(matzf) could we use iovec gather to avoid copying quote?
+	err = gopacket.SerializeLayers(p.buffer, sopts /*@ , nil @*/, scmpLayers...)
+	if err != nil {
+		return nil, serrors.Wrap(cannotRoute, err, "details", "serializing SCMP message")
+	}
+	return p.buffer.Bytes(), scmpError{TypeCode: typeCode, Cause: cause}
+}
+
+// @ requires  revPath.Mem(rawPath)
+// @ requires  acc(&p.d, _) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires  acc(&p.ingressID,  R15)
+// @ requires  acc(p.scionLayer.Mem(ub), R4)
+// @ requires  p.scionLayer.ValidPathMetaData(ub)
+// @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   acc(p.scionLayer.Mem(ub), R4)
+// @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   acc(&p.ingressID,  R15)
+// @ decreases
+func (p *scionPacketProcessor) prepareSCMPtemp(
+	typ slayers.SCMPType,
+	code slayers.SCMPCode,
+	scmpP gopacket.SerializableLayer,
+	cause error,
+	revPath *scion.Decoded,
+	// @ ghost ub []byte,
+	// @ ghost rawPath []byte,
+) ([]byte, error) {
+		// create new SCION header for reply.
+	var scionL /*@@@*/ slayers.SCION
+	// (VerifiedSCION) TODO: adapt *SCION.Mem(...)
+	// @ unfold acc(p.scionLayer.Mem(ub), R4)
+	scionL.FlowID = p.scionLayer.FlowID
+	scionL.TrafficClass = p.scionLayer.TrafficClass
+	scionL.PathType = revPath.Type( /*@ rawPath @*/ )
+	scionL.Path = revPath
+	scionL.DstIA = /* @ unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4) in @ */ p.scionLayer.SrcIA
+	// @ unfold acc(MutexInvariant!<p.d!>(), _)
+	scionL.SrcIA = p.d.localIA
+	// @ unfold acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4)
+	srcA, err := p.scionLayer.SrcAddr() // Permission to acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20) might not suffice.
+	// @ fold acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4)
+	// @ TODO()
+	
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "extracting src addr")
 	}
