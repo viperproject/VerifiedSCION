@@ -323,9 +323,11 @@ requires CBioIO_bio3s_recv(t)
 decreases
 pure func dp3s_iospec_bio3s_recv_T(t Place) Place
 
+// We can safely make this assumption as Isabelle's IO-spec never 
+// receives the other IO values (Unit and Internal).
 ghost
 requires CBioIO_bio3s_recv(t)
-ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported // TODO: Can we make this assumption?
+ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func dp3s_iospec_bio3s_recv_R(t Place) (val IO_val)
 
