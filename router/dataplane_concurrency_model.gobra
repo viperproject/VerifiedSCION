@@ -122,6 +122,7 @@ pure func MultiReadBioUpd(
 }
 
 ghost 
+requires val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases 
 pure func addIbuf(s io.IO_dp3s_state_local, val io.IO_val) io.IO_dp3s_state_local {
  return match val {
@@ -135,6 +136,7 @@ pure func addIbuf(s io.IO_dp3s_state_local, val io.IO_val) io.IO_dp3s_state_loca
 }
 
 ghost 
+requires forall k int :: {es[k]} 0 <= k && k < len(es) ==> es[k].isIO_val_Pkt2 || es[k].isIO_val_Unsupported
 decreases len(es)
 pure func MultiIBufUpd(
   ghost es seq[io.IO_val], 
@@ -160,7 +162,6 @@ func ExtractMultiReadBio(
   fold MultiReadBio(t,n)
 }
 
-// 
 ghost 
 requires MultiReadBio(t, n)
 requires ElemAuth(s.ibuf, y.IBufY) && ElemAuth(s.obuf, y.OBufY)
