@@ -135,15 +135,6 @@ pure func addIbuf(s io.IO_dp3s_state_local, val io.IO_val) io.IO_dp3s_state_loca
  }
 }
 
-ghost 
-requires forall k int :: {es[k]} 0 <= k && k < len(es) ==> es[k].isIO_val_Pkt2 || es[k].isIO_val_Unsupported
-decreases len(es)
-pure func MultiIBufUpd(
-  ghost es seq[io.IO_val], 
-  ghost s io.IO_dp3s_state_local) io.IO_dp3s_state_local {
-  return len(es) == 0 ? s : MultiIBufUpd(es[1:], addIbuf(s, es[0]))
-}
-
 ghost
 decreases n
 requires dp.dp3s_iospec_ordered(s, t)
