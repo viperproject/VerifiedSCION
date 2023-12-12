@@ -70,6 +70,7 @@ import (
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 	// @ "github.com/scionproto/scion/verification/utils/seqs"
 	// @ socketspec "golang.org/x/net/internal/socket/"
+	// @ io "github.com/scionproto/scion/verification/io"
 )
 
 const (
@@ -115,15 +116,21 @@ type BatchConn interface {
 	// @ pred Mem()
 
 	// @ requires  acc(Mem(), _)
+	// @ requires  Prophecy(prophecyM)
+	// @ requires  io.token(place) && MultiReadBio(place, prophecyM)
 	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].Mem(1)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
+	// @ ensures   err == nil ==> prophecyM == n
+	// @ ensures   err == nil ==> io.token(old(MutliReadBioNext(place, n))) && old(MutliReadBioCorrectIfs(place, n, ioIngressID))
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
+	// @ ensures   err == nil ==>
+	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==> unfolding msgs[i].Mem(1) in absIO_val(msgs[i].Buffers[0]) == old(MutliReadBioIO_val(place, n)[i]) //TODO (Markus): fix [:msgs[i].N]
 	// @ ensures   err != nil ==> err.ErrorMem()
-	ReadBatch(msgs underlayconn.Messages) (n int, err error)
+	ReadBatch(msgs underlayconn.Messages /*@, ghost ioIngressID option[io.IO_ifs], ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
 	// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R10)
@@ -677,9 +684,11 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  acc(&d.forwardingMetrics, 1/2)
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
+// @ requires dp.Valid()
+// @ requires io.token(place) && dp.dp3s_iospec_ordered(state, place)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-func (d *DataPlane) Run(ctx context.Context) error {
+func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost state io.IO_dp3s_state_local, ghost dp io.DataPlaneSpec @*/) error {
 	// @ share d, ctx
 	d.mtx.Lock()
 	// @ unfold MutexInvariant!<d!>()
@@ -696,8 +705,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires acc(&d.macFactory, _) && d.macFactory != nil
 		// @ requires acc(MutexInvariant!<d!>(), _)
 		// @ requires rd != nil && acc(rd.Mem(), _)
+		// @ requires dp.Valid()
+		// @ requires io.token(place) && dp.dp3s_iospec_ordered(state, place)
 		// requires ingressID in domain(???)
-		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
+		func /*@ rc @*/ (ingressID uint16, rd BatchConn /*@, ghost place io.Place, ghost state io.IO_dp3s_state_local, ghost dp io.DataPlaneSpec @*/) {
+			// @ ghost ioLock, ioSharedArg := InitSharedInv(dp, place, state)
+			// @ ghost ioIngressID := ifsToIO_ifs(ingressID)
 
 			msgs := conn.NewReadMessages(inputBatchCnt)
 			// @ socketspec.SplitPermMsgs(msgs)
@@ -739,7 +752,21 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 			// @ invariant acc(&d.running, _) && d.running
 			// @ invariant acc(rd.Mem(), _)
+			// @ invariant acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, sharedArg !>
+
 			for d.running {
+				// Multi recv event
+				// @ ghost ioLock.Lock()
+				// @ unfold SharedInv!< dp, sharedArg !>()
+				// @ ghost t, s := *sharedArg.Place, *sharedArg.State
+				// @ ghost numberOfReceivedPacketsProphecy := AllocProphecy()
+				// @ ExtractMultiReadBio(dp, t, numberOfReceivedPacketsProphecy, s)
+				// @ MultiUpdateElemWitness(t, numberOfReceivedPacketsProphecy, ioIngressID, s, y)
+				// @ ghost ioValSeq := MutliReadBioIO_val(t,numberOfReceivedPacketsProphecy)
+
+				// @ ghost sN := MultiReadBioUpd(t, numberOfReceivedPacketsProphecy, s)
+				// @ ghost tN := MutliReadBioNext(t, numberOfReceivedPacketsProphecy)
+				// @ assert dp.dp3s_iospec_ordered(sN, tN)
 				pkts, err := rd.ReadBatch(msgs)
 				if err != nil {
 					log.Debug("Failed to read batch", "err", err)

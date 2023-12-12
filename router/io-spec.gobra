@@ -543,3 +543,16 @@ pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_
 						hvfSet(hopfields[currHFIdx]) :
 						hvfSet(hopfields[currHFIdx-1])))
 }
+
+ghost
+decreases
+pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs]{
+    return ifs == 0 ? none[io.IO_ifs] : some(io.IO_ifs(ifs))
+}
+
+// TODO: add body
+ghost
+decreases
+requires sl.AbsSlice_Bytes(raw, 0, len(raw))
+ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
+pure func absIO_val(raw []byte) (ghost val io.IO_val)
