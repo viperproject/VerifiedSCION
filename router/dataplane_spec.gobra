@@ -29,11 +29,6 @@ import (
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
-// TODO: maybe change interpretation of Mutex depending on whether the
-// dataplane is running or not. This is because, when Run is called and
-// d.running is set to true, the permissions to some of these fields is transferred
-// to the read closure, and thus, we cannot transfer it back on the call to unlock
-// at the end of run
 pred MutexInvariant(d *DataPlane) {
 	// access to the field 'mtx' ommited
 	acc(&d.external,          1/2) &&
@@ -50,19 +45,19 @@ pred MutexInvariant(d *DataPlane) {
 	acc(&d.Metrics,           1/2) &&
 	acc(&d.forwardingMetrics, 1/2) &&
 	acc(&d.key,               1/2) &&
-	(d.external    != nil       ==> AccBatchConn(d.external))           &&
-	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
-	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
-	(d.internal != nil          ==> d.internal.Mem())                   &&
-	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
-	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
-	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
-	(d.macFactory != nil        ==> acc(d.key, 1/2))                    &&
-	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
-	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key)) &&
+	(d.external    != nil       ==> AccBatchConn(d.external))                      &&
+	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))                         &&
+	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))                       &&
+	(d.internal != nil          ==> d.internal.Mem())                              &&
+	(d.internalIP != nil        ==> d.internalIP.Mem())                            &&
+	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))                   &&
+	(d.svc != nil               ==> d.svc.Mem())                                   &&
+	(d.macFactory != nil        ==> acc(d.key, 1/2))                               &&
+	(d.macFactory != nil        ==> sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)))     &&
+	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key))               &&
 	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key}) &&
-	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
-	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&
+	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))                  &&
+	(d.Metrics != nil           ==> d.Metrics.Mem())                               &&
 	// The following permissions are enough to call all methods needed in fields
 	// of forwardingMetrics
 	(d.forwardingMetrics != nil ==> AccForwardingMetrics(d.forwardingMetrics))
@@ -97,18 +92,18 @@ pred AccForwardingMetrics(metrics map[uint16]forwardingMetrics) {
 }
 
 pred forwardingMetricsMem(v forwardingMetrics, ignoredForInjectivity uint16) {
-	v.InputBytesTotal.Mem()      &&
-	v.OutputBytesTotal.Mem()     &&
-	v.InputPacketsTotal.Mem()    &&
-	v.OutputPacketsTotal.Mem()   &&
+	v.InputBytesTotal.Mem()     &&
+	v.OutputBytesTotal.Mem()    &&
+	v.InputPacketsTotal.Mem()   &&
+	v.OutputPacketsTotal.Mem()  &&
 	v.DroppedPacketsTotal.Mem()
 }
 
 pred forwardingMetricsNonInjectiveMem(v forwardingMetrics) {
-	v.InputBytesTotal.Mem()      &&
-	v.OutputBytesTotal.Mem()     &&
-	v.InputPacketsTotal.Mem()    &&
-	v.OutputPacketsTotal.Mem()   &&
+	v.InputBytesTotal.Mem()     &&
+	v.OutputBytesTotal.Mem()    &&
+	v.InputPacketsTotal.Mem()   &&
+	v.OutputPacketsTotal.Mem()  &&
 	v.DroppedPacketsTotal.Mem()
 }
 
@@ -122,21 +117,21 @@ func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
 }
 
 pred (p *scionPacketProcessor) initMem() {
-	acc(&p.d) &&
-	acc(&p.ingressID) &&
-	acc(&p.buffer) &&
-	acc(&p.mac) &&
-	acc(p.scionLayer.NonInitMem()) &&
+	acc(&p.d)                                    &&
+	acc(&p.ingressID)                            &&
+	acc(&p.buffer)                               &&
+	acc(&p.mac)                                  &&
+	acc(p.scionLayer.NonInitMem())               &&
 	p.scionLayer.PathPoolInitializedNonInitMem() &&
-	acc(&p.hbhLayer) &&
-	acc(&p.e2eLayer) &&
-	acc(&p.lastLayer) &&
-	acc(&p.path) &&
-	acc(&p.hopField) &&
-	acc(&p.infoField) &&
-	acc(&p.segmentChange) &&
-	acc(&p.cachedMac) &&
-	acc(&p.macBuffers) &&
+	acc(&p.hbhLayer)                             &&
+	acc(&p.e2eLayer)                             &&
+	acc(&p.lastLayer)                            &&
+	acc(&p.path)                                 &&
+	acc(&p.hopField)                             &&
+	acc(&p.infoField)                            &&
+	acc(&p.segmentChange)                        &&
+	acc(&p.cachedMac)                            &&
+	acc(&p.macBuffers)                           &&
 	acc(&p.bfdLayer)
 }
 
