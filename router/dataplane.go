@@ -220,12 +220,15 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	// @ unfold MutexInvariant!<d!>()
 	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
+		// @ Unreachable()
 		return modifyExisting
 	}
 	if ia.IsZero() {
+		// @ Unreachable()
 		return emptyValue
 	}
 	if !d.localIA.IsZero() {
+		// @ Unreachable()
 		return alreadySet
 	}
 	d.localIA = ia
