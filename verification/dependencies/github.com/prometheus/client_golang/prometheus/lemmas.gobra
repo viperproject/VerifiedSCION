@@ -1,4 +1,4 @@
-// Copyright 2022 ETH Zurich
+// Copyright 2023 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,18 +14,15 @@
 
 // +gobra
 
-package epic
+package prometheus
 
-import sl "github.com/scionproto/scion/verification/utils/slices"
+type Unit struct{}
 
-pred postInitInvariant() {
-	acc(&zeroInitVector, _) &&
-	len(zeroInitVector[:]) == 16 &&
-	acc(sl.AbsSlice_Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), _)
-}
-
-// learn the invariant established by init
+// The following is currently assumed because Gobra cannot prove it,
+// even though the precondition morally implies it. This should be
+// fixed by PR #536 of Gobra.
 ghost
-ensures acc(postInitInvariant(), _)
+requires  acc(c.Mem(), _)
+ensures   c != nil
 decreases _
-func establishPostInitInvariant()
+pure func CounterMemImpliesNonNil(c Counter) Unit
