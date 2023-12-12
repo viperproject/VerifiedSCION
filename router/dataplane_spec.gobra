@@ -52,10 +52,11 @@ pred MutexInvariant(d *DataPlane) {
 	(d.internalIP != nil        ==> d.internalIP.Mem())                            &&
 	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))                   &&
 	(d.svc != nil               ==> d.svc.Mem())                                   &&
-	(d.macFactory != nil        ==> acc(d.key, 1/2))                               &&
-	(d.macFactory != nil        ==> sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)))     &&
-	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key))               &&
-	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key}) &&
+	(d.macFactory != nil        ==> (
+		acc(d.key, 1/2)                                &&
+		sl.AbsSlice_Bytes(*d.key, 0, len(*d.key))      &&
+		scrypto.ValidKeyForHash(*d.key)                &&
+		d.macFactory implements MacFactorySpec{d.key}))                            &&
 	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))                  &&
 	(d.Metrics != nil           ==> d.Metrics.Mem())                               &&
 	// The following permissions are enough to call all methods needed in fields
