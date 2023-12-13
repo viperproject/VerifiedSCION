@@ -325,6 +325,6 @@ jobs:
           # Without it, verification would take a lot longer.
           conditionalizePermissions: '1'
           imageVersion: ${{ env.imageVersion }}
-          mceMode: 'od' # should it be 'od'?
+          mceMode: 'od'
           requireTriggers: ${{ env.requireTriggers }}
 
