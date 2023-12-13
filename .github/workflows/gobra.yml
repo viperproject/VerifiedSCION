@@ -20,7 +20,7 @@ env:
   parallelizeBranches: '0'
   checkConsistency: '1'
   imageVersion: 'latest'
-  mceMode: 'off' # should it be 'od'?
+  mceMode: 'od'
   requireTriggers: '1'
 
 jobs:
