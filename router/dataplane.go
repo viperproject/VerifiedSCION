@@ -671,7 +671,6 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
-// (VerifiedSCION) needs to be verified with mce-on-demand
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
