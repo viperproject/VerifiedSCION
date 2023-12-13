@@ -739,28 +739,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
 
-			// properties about the data-plane
-			// @ invariant acc(&d, _)
-			// @ invariant acc(d, _)
-			// @ invariant acc(MutexInvariant!<d!>(), _)
-			// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
-			// @ invariant 0 in domain(d.forwardingMetrics)
-			// @ invariant ingressID in domain(d.forwardingMetrics)
-			// @ invariant d.external != nil && acc(AccBatchConn(d.external), _)
-			// @ invariant unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
-			// @ invariant d.svc != nil
-			// properties about the connection:
-			// @ invariant acc(rd.Mem(), _)
-			// properties about messages:
-			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
-			// properties about packetProcessor:
-			// @ invariant acc(&processor.d, R5) && processor.d === d
+			// non-wildcard permissions:
+			// @ invariant acc(&processor.d, R5)
 			// @ invariant acc(&processor.ingressID)
-			// @ invariant acc(&processor.buffer) && processor.buffer != nil && processor.buffer.Mem()
-			// @ invariant acc(&processor.mac) && processor.mac != nil && processor.mac.Mem()
-			// @ invariant processor.scionLayer.NonInitMem()
-			// @ invariant processor.hbhLayer.NonInitMem()
-			// @ invariant processor.e2eLayer.NonInitMem()
+			// @ invariant acc(&processor.buffer)
+			// @ invariant acc(&processor.mac)
 			// @ invariant acc(&processor.lastLayer)
 			// @ invariant acc(&processor.path)
 			// @ invariant acc(&processor.hopField)
@@ -768,11 +751,32 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&processor.segmentChange)
 			// @ invariant acc(&processor.cachedMac)
 			// @ invariant acc(&processor.macBuffers)
-			// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
 			// @ invariant acc(&processor.rawPkt)
 			// @ invariant acc(&processor.srcAddr)
-			// @ invariant processor.bfdLayer.NonInitMem()
 			// @ invariant acc(&scmpErr)
+			// wildcard permissions:
+			// @ invariant acc(&d, _)
+			// @ invariant acc(d, _)
+			// @ invariant acc(MutexInvariant!<d!>(), _)
+			// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
+			// @ invariant d.external != nil && acc(AccBatchConn(d.external), _)
+			// @ invariant acc(rd.Mem(), _)
+			// properties about the dataplane:
+			// @ invariant 0 in domain(d.forwardingMetrics)
+			// @ invariant ingressID in domain(d.forwardingMetrics)
+			// @ invariant unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
+			// @ invariant d.svc != nil
+			// properties about messages:
+			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+			// properties about packetProcessor:
+			// @ invariant processor.d === d
+			// @ invariant processor.buffer != nil && processor.buffer.Mem()
+			// @ invariant processor.mac != nil && processor.mac.Mem()
+			// @ invariant processor.scionLayer.NonInitMem()
+			// @ invariant processor.hbhLayer.NonInitMem()
+			// @ invariant processor.e2eLayer.NonInitMem()
+			// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
+			// @ invariant processor.bfdLayer.NonInitMem()
 			// properties of the write msg:
 			// @ invariant writeMsgInv(writeMsgs)
 			for d.running {
@@ -793,26 +797,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
-				// @ invariant pkts <= len(msgs)
-				// @ invariant 0 <= i0 && i0 <= pkts
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
-				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
-				// @ invariant acc(&d, _)
-				// @ invariant acc(d, _)
-				// @ invariant acc(MutexInvariant!<d!>(), _)
-				// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
-				// @ invariant ingressID in domain(d.forwardingMetrics)
-				// @ invariant 0 in domain(d.forwardingMetrics)
-				// @ invariant d.svc != nil
-				// properties about packetProcessor:
-				// @ invariant acc(&processor.d, R6) && processor.d === d
+				// non-wildcard permissions:
+				// @ invariant acc(&processor.d, R6)
 				// @ invariant acc(&processor.ingressID)
-				// @ invariant acc(&processor.buffer) && processor.buffer != nil && processor.buffer.Mem()
-				// @ invariant acc(&processor.mac) && processor.mac != nil && processor.mac.Mem()
-				// @ invariant processor.scionLayer.NonInitMem()
-				// @ invariant processor.hbhLayer.NonInitMem()
-				// @ invariant processor.e2eLayer.NonInitMem()
+				// @ invariant acc(&processor.buffer)
+				// @ invariant acc(&processor.mac)
 				// @ invariant acc(&processor.lastLayer)
 				// @ invariant acc(&processor.path)
 				// @ invariant acc(&processor.hopField)
@@ -820,14 +809,36 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&processor.segmentChange)
 				// @ invariant acc(&processor.cachedMac)
 				// @ invariant acc(&processor.macBuffers)
-				// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
 				// @ invariant acc(&processor.rawPkt)
 				// @ invariant acc(&processor.srcAddr)
-				// @ invariant processor.bfdLayer.NonInitMem()
 				// @ invariant acc(&scmpErr)
+				// wildcard permissions:
+				// @ invariant acc(&d, _)
+				// @ invariant acc(d, _)
+				// @ invariant acc(MutexInvariant!<d!>(), _)
+				// @ invariant acc(d.forwardingMetrics, _)
+				// @ invariant acc(rd.Mem(), _)
+				// other properties:
+				// @ invariant pkts <= len(msgs)
+				// @ invariant 0 <= i0 && i0 <= pkts
+				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
+				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
+				// @ invariant d.forwardingMetrics != nil
+				// @ invariant ingressID in domain(d.forwardingMetrics)
+				// @ invariant 0 in domain(d.forwardingMetrics)
+				// @ invariant d.svc != nil
+				// properties about packetProcessor:
+				// @ invariant processor.d === d
+				// @ invariant processor.buffer != nil && processor.buffer.Mem()
+				// @ invariant processor.mac != nil && processor.mac.Mem()
+				// @ invariant processor.scionLayer.NonInitMem()
+				// @ invariant processor.hbhLayer.NonInitMem()
+				// @ invariant processor.e2eLayer.NonInitMem()
+				// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
+				// @ invariant processor.bfdLayer.NonInitMem()
 				// properties of the write msg:
 				// @ invariant writeMsgInv(writeMsgs)
-				// @ invariant acc(rd.Mem(), _)
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
