@@ -20,7 +20,7 @@ env:
   parallelizeBranches: '0'
   checkConsistency: '1'
   imageVersion: 'latest'
-  mceMode: 'od'
+  mceMode: 'off' # should it be 'od'?
   requireTriggers: '1'
 
 jobs:
@@ -325,6 +325,6 @@ jobs:
           # Without it, verification would take a lot longer.
           conditionalizePermissions: '1'
           imageVersion: ${{ env.imageVersion }}
-          mceMode: 'on'
+          mceMode: 'off' # should it be 'od'?
           requireTriggers: ${{ env.requireTriggers }}
 
