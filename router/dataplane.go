@@ -103,7 +103,6 @@ type bfdSession interface {
 	// @ requires sl.AbsSlice_Bytes(ub, 0, len(ub))
 	// @ ensures  msg.NonInitMem() // an implementation must copy the fields it needs from msg
 	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
-	// @ pure
 	// @ requires acc(Mem(), _)
 	IsUp() bool
 }
