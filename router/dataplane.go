@@ -109,8 +109,7 @@ type bfdSession interface {
 
 // BatchConn is a connection that supports batch reads and writes.
 // (VerifiedSCION) the spec of this interface exactly matches that of the same methods
-// in private/underlay/conn/Conn
-// TODO: add IO spec here
+// in private/underlay/conn/Conn, except for a few ghost args in WriteBatch.
 type BatchConn interface {
 	// @ pred Mem()
 
@@ -119,7 +118,9 @@ type BatchConn interface {
 	// @ 	msgs[i].Mem(1)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err == nil ==>
-	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
+	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> (
+	// @ 		typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr] &&
+	// @ 		!msgs[i].HasWildcardPermAddr(1))
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 	// @ ensures   err != nil ==> err.ErrorMem()
@@ -131,11 +132,13 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
-	// @ preserves forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	acc(msgs[i].Mem(1), R20)
+	// @ preserves !hasWildcardPerm ==> forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ 	acc(msgs[i].Mem(1), R50)
+	// @ preserves hasWildcardPerm ==> forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ 	acc(msgs[i].Mem(1), _)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
-	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
+	WriteBatch(msgs underlayconn.Messages, flags int /*@ , ghost hasWildcardPerm bool @*/) (n int, err error)
 	// @ requires Mem()
 	// @ ensures  err != nil ==> err.ErrorMem()
 	// @ decreases
@@ -690,7 +693,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	d.initMetrics()
 
 	read /*@@@*/ :=
-		// Note(VerifiedSCION): this precondition may cause problems ahead because of the lack of permissions to d.mtx
 		// @ requires acc(&d, _)
 		// @ requires acc(d,  _)
 		// @ requires acc(MutexInvariant!<d!>(), _)
@@ -795,6 +797,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					continue
 				}
 				// @ assert pkts <= len(msgs)
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> !msgs[i].HasWildcardPermAddr(1)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
@@ -824,6 +827,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
+				// @ 	!msgs[i].HasWildcardPermAddr(1)
 				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant d.forwardingMetrics != nil
@@ -907,12 +912,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						writeMsgs[0].Addr = result.OutAddr
 					}
 					// @ assert acc(result.OutConn.Mem(), _)
-					// @ fold acc(writeMsgs[0].Mem(1), R10)
-					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
-					// @ unfold acc(writeMsgs[0].Mem(1), R10)
+					// @ fold acc(writeMsgs[0].Mem(1), R30)
+					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@ , !addrAliasesPkt @*/)
+					// @ unfold acc(writeMsgs[0].Mem(1), R30)
 					// @ ghost if addrAliasesPkt {
-					// @	inhale acc(result.OutAddr.Mem(), R15) // TODO: doc
-					// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
+					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 					// @ 	assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ }
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
