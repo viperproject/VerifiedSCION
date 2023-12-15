@@ -78,7 +78,7 @@ pred accBatchConn(batchConns map[uint16]BatchConn) {
 pred accBfdSession(bfdSessions map[uint16]bfdSession) {
 	acc(bfdSessions, 1/2) &&
 	(forall bfd bfdSession :: { bfd in range(bfdSessions) }{ bfd.Mem() } bfd in range(bfdSessions) ==>
-		(bfd != nil && acc(bfd.Mem()), _))
+		(bfd != nil && acc(bfd.Mem(), _)))
 }
 
 pred accForwardingMetrics(metrics map[uint16]forwardingMetrics) {
