@@ -700,8 +700,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires d.macFactory != nil
 		// @ requires d.svc != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
-		// @ requires d.external != nil && acc(AccBatchConn(d.external), _)
-		// @ requires unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
+		// @ requires d.external != nil && acc(accBatchConn(d.external), _)
+		// @ requires unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 
 			msgs := conn.NewReadMessages(inputBatchCnt)
@@ -761,12 +761,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(d, _)
 			// @ invariant acc(MutexInvariant!<d!>(), _)
 			// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
-			// @ invariant d.external != nil && acc(AccBatchConn(d.external), _)
+			// @ invariant d.external != nil && acc(accBatchConn(d.external), _)
 			// @ invariant acc(rd.Mem(), _)
 			// properties about the dataplane:
 			// @ invariant 0 in domain(d.forwardingMetrics)
 			// @ invariant ingressID in domain(d.forwardingMetrics)
-			// @ invariant unfolding acc(AccBatchConn(d.external), _) in (ingressID in domain(d.external))
+			// @ invariant unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
 			// @ invariant d.svc != nil
 			// properties about messages:
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
@@ -848,7 +848,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ msgs[:pkts][i0].CombinePerm()
 					// @ assert msgs[i0].GetN() <= len(msgs[i0].GetFstBuffer())
 					// @ d.getForwardingMetrics()
-					// @ unfold acc(AccForwardingMetrics(d.forwardingMetrics), _)
+					// @ unfold acc(accForwardingMetrics(d.forwardingMetrics), _)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[ingressID], ingressID), _)
 					// input metric
 					inputCounters := d.forwardingMetrics[ingressID]
@@ -942,7 +942,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					}
 					// ok metric
 					// @ d.getForwardingMetrics()
-					// @ unfold acc(AccForwardingMetrics(d.forwardingMetrics), _)
+					// @ unfold acc(accForwardingMetrics(d.forwardingMetrics), _)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[result.EgressID], result.EgressID), _)
 					outputCounters := d.forwardingMetrics[result.EgressID]
 					// @ assert acc(outputCounters.OutputPacketsTotal.Mem(), _)
