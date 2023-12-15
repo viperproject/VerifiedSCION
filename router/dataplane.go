@@ -220,12 +220,15 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	// @ unfold MutexInvariant!<d!>()
 	// @ defer fold MutexInvariant!<d!>()
 	if d.running {
+		// @ Unreachable()
 		return modifyExisting
 	}
 	if ia.IsZero() {
+		// @ Unreachable()
 		return emptyValue
 	}
 	if !d.localIA.IsZero() {
+		// @ Unreachable()
 		return alreadySet
 	}
 	d.localIA = ia
@@ -354,11 +357,11 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	}
 	if d.external == nil {
 		d.external = make(map[uint16]BatchConn)
-		// @ fold AccBatchConn(d.external)
+		// @ fold accBatchConn(d.external)
 	}
-	// @ unfold AccBatchConn(d.external)
+	// @ unfold accBatchConn(d.external)
 	d.external[ifID] = conn
-	// @ fold AccBatchConn(d.external)
+	// @ fold accBatchConn(d.external)
 	// @ fold MutexInvariant!<d!>()
 	return nil
 }
@@ -468,8 +471,8 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	// @ defer fold acc(MutexInvariant!<d!>(), R5)
 	bfdSessions := d.bfdSessions
 	// @ ghost if bfdSessions != nil {
-	// @		unfold acc(AccBfdSession(d.bfdSessions), R20)
-	// @		defer fold acc(AccBfdSession(d.bfdSessions), R20)
+	// @		unfold acc(accBfdSession(d.bfdSessions), R20)
+	// @		defer fold acc(accBfdSession(d.bfdSessions), R20)
 	// @ }
 	// (VerifiedSCION) had to rewrite this, as Gobra does not correctly
 	// implement short-circuiting.
@@ -534,7 +537,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	}
 	// @ preserves MutexInvariant!<d!>()
 	// @ preserves acc(&d.svc, 1/2)
-	// @ ensures   d.svc != nil && acc(d.svc.Mem(), _)
+	// @ ensures   d.svc != nil
 	// @ decreases
 	// @ outline(
 	// @ unfold MutexInvariant!<d!>()
@@ -599,7 +602,7 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // @ requires  acc(&d.internalNextHops, 1/2)
 // @ requires  d.internalNextHops != nil ==> acc(d.internalNextHops, 1/2)
 // @ requires  !(ifID in domain(d.internalNextHops))
-// @ requires  a != nil && acc(a.Mem(), _)
+// @ requires  a != nil && a.Mem()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   acc(&d.running,          1/2) && !d.running
@@ -620,10 +623,10 @@ func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	}
 	if d.internalNextHops == nil {
 		d.internalNextHops = make(map[uint16]*net.UDPAddr)
-		// @ fold AccAddr(d.internalNextHops)
+		// @ fold accAddr(d.internalNextHops)
 	}
-	// @ unfold AccAddr(d.internalNextHops)
-	// @ defer fold AccAddr(d.internalNextHops)
+	// @ unfold accAddr(d.internalNextHops)
+	// @ defer fold accAddr(d.internalNextHops)
 	d.internalNextHops[ifID] = a
 	return nil
 }
@@ -997,10 +1000,10 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // @ preserves d.neighborIAs != nil ==> acc(d.neighborIAs, R15) // required for call
 // @ preserves acc(&d.Metrics, R15) && acc(d.Metrics.Mem(), _)
 // @ preserves acc(&d.external, R15)
-// @ preserves d.external != nil ==> acc(AccBatchConn(d.external), R15) // required for call
+// @ preserves d.external != nil ==> acc(accBatchConn(d.external), R15) // required for call
 // @ preserves acc(&d.internalNextHops, R15)
-// @ preserves d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), R15)
-// @ ensures   AccForwardingMetrics(d.forwardingMetrics)
+// @ preserves d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
+// @ ensures   accForwardingMetrics(d.forwardingMetrics)
 // @ decreases
 func (d *DataPlane) initMetrics() {
 	// @ preserves acc(&d.forwardingMetrics)
@@ -1019,7 +1022,7 @@ func (d *DataPlane) initMetrics() {
 	d.forwardingMetrics[0] = initForwardingMetrics(d.Metrics, labels)
 	// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[0], 0)
 	// @ )
-	// @ ghost if d.external != nil { unfold acc(AccBatchConn(d.external), R15) }
+	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R15) }
 
 	// @ fold acc(hideLocalIA(&d.localIA), R15)
 
@@ -1030,7 +1033,7 @@ func (d *DataPlane) initMetrics() {
 	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
 	// @ invariant acc(&d.internalNextHops, R15)
 	// @ invariant d.internalNextHops === old(d.internalNextHops)
-	// @ invariant d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), R15)
+	// @ invariant d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
 	// @ invariant acc(&d.neighborIAs, R15)
 	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, R15)
 	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i in domain(d.forwardingMetrics) ==>
@@ -1040,24 +1043,24 @@ func (d *DataPlane) initMetrics() {
 	// @ decreases len(d.external) - len(visitedSet)
 	for id := range d.external /*@ with visitedSet @*/ {
 		// @ ghost if d.internalNextHops != nil {
-		// @	unfold acc(AccAddr(d.internalNextHops), R20)
+		// @	unfold acc(accAddr(d.internalNextHops), R20)
 		// @ }
 		if _, notOwned := d.internalNextHops[id]; notOwned {
 			// @ ghost if d.internalNextHops != nil {
-			// @ 	fold acc(AccAddr(d.internalNextHops), R20)
+			// @ 	fold acc(accAddr(d.internalNextHops), R20)
 			// @ }
 			continue
 		}
 		// @ ghost if d.internalNextHops != nil {
-		// @ 	fold acc(AccAddr(d.internalNextHops), R20)
+		// @ 	fold acc(accAddr(d.internalNextHops), R20)
 		// @ }
 		labels = interfaceToMetricLabels(id, ( /*@ unfolding acc(hideLocalIA(&d.localIA), R20) in @*/ d.localIA), d.neighborIAs)
 		d.forwardingMetrics[id] = initForwardingMetrics(d.Metrics, labels)
 		// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[id], id)
 		// @ assert acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	}
-	// @ ghost if d.external != nil { fold acc(AccBatchConn(d.external), R15) }
-	// @ fold AccForwardingMetrics(d.forwardingMetrics)
+	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), R15) }
+	// @ fold accForwardingMetrics(d.forwardingMetrics)
 	// @ unfold acc(hideLocalIA(&d.localIA), R15)
 }
 
@@ -1292,7 +1295,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 // @ ensures   err != nil ==> err.ErrorMem()
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (err error) {
 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
-	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		// @ establishMemNoBFDSessionConfigured()
 		return noBFDSessionConfigured
@@ -1325,7 +1328,7 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 // @ ensures   res != nil ==> res.ErrorMem()
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
-	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		// @ establishMemNoBFDSessionConfigured()
 		return noBFDSessionConfigured
@@ -1338,7 +1341,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	}
 
 	ifID := uint16(0)
-	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
+	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 
 	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission)
 	// (VerifiedSCION) TODO: Rewrite this to use regular loop instead to avoid complications with permissions.
@@ -1368,7 +1371,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ inhale m != nil ==> acc(m, _)
 
 	// @ assert acc(&p.d.bfdSessions, _)
-	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if v, ok := p.d.bfdSessions[ifID]; ok {
 		// @ assert v in range(p.d.bfdSessions)
 		v.ReceiveMessage(bfd /*@ , data @*/)
@@ -1760,7 +1763,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	}
 	pktIngressID := p.ingressInterface( /*@ ubPath @*/ )
 	// @ p.d.getInternalNextHops()
-	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
+	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	expectedSrc, ok := p.d.internalNextHops[pktIngressID]
 	// @ ghost if ok {
 	// @	assert expectedSrc in range(p.d.internalNextHops)
@@ -1786,10 +1789,10 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr error) {
 	pktEgressID := p.egressInterface()
 	// @ p.d.getInternalNextHops()
-	// @ if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
+	// @ if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	_, ih := p.d.internalNextHops[pktEgressID]
 	// @ p.d.getExternalMem()
-	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
+	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	_, eh := p.d.external[pktEgressID]
 	if !ih && !eh {
 		errCode := slayers.SCMPCodeUnknownHopFieldEgress
@@ -2125,7 +2128,7 @@ func (p *scionPacketProcessor) egressInterface() uint16 {
 func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr error) {
 	egressID := p.egressInterface()
 	// @ p.d.getBfdSessionsMem()
-	// @ ghost if p.d.bfdSessions != nil { unfold acc(AccBfdSession(p.d.bfdSessions), _) }
+	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if v, ok := p.d.bfdSessions[egressID]; ok {
 		if !v.IsUp() {
 			typ := slayers.SCMPTypeExternalInterfaceDown
@@ -2135,7 +2138,7 @@ func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr e
 				IfID: uint64(egressID),
 			}
 			// @ p.d.getExternalMem()
-			// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
+			// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 			if _, external := p.d.external[egressID]; !external {
 				typ = slayers.SCMPTypeInternalConnectivityDown
 				scmpP = &slayers.SCMPInternalConnectivityDown{
@@ -2252,7 +2255,7 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	}
 	egressID := p.egressInterface()
 	// @ p.d.getExternalMem()
-	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
+	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if _, ok := p.d.external[egressID]; !ok {
 		return processResult{}, nil
 	}
@@ -2493,7 +2496,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 
 	egressID := p.egressInterface()
 	// @ p.d.getExternalMem()
-	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
+	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
 		if err := p.processEgress( /*@ ub @*/ ); err != nil {
 			return processResult{}, err
@@ -2503,7 +2506,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 
 	// ASTransit: pkts leaving from another AS BR.
 	// @ p.d.getInternalNextHops()
-	// @ ghost if p.d.internalNextHops != nil { unfold acc(AccAddr(p.d.internalNextHops), _) }
+	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	if a, ok := p.d.internalNextHops[egressID]; ok {
 		// @ p.d.getInternal()
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil
@@ -2634,7 +2637,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 		// @ defer fold ohp.FirstHop.Mem()
 		// OHP should always be directed to the correct BR.
 		// @ p.d.getExternalMem()
-		// @ ghost if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
+		// @ ghost if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
 			// buffer should already be correct
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
@@ -3008,7 +3011,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// If the packet is sent to an external router, we need to increment the
 	// path to prepare it for the next hop.
 	// @ p.d.getExternalMem()
-	// @ if p.d.external != nil { unfold acc(AccBatchConn(p.d.external), _) }
+	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	_, external := p.d.external[p.ingressID]
 	if external {
 		// @ requires revPath.Mem(rawPath)
