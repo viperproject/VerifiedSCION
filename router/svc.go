@@ -65,10 +65,10 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ fold internalLockInv!<s!>()
 }
 
-// @ requires  acc(s.Mem(), _)
+// @ preserves acc(s.Mem(), R10)
 // @ preserves acc(a.Mem(), R10)
 func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
-	//@ unfold acc(s.Mem(), _)
+	//@ unfold acc(s.Mem(), R10)
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -79,6 +79,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	index, ok := s.index(a, addrs /*@, svc @*/)
 	if !ok {
 		//@ fold internalLockInv!<s!>()
+		//@ fold acc(s.Mem(), R10)
 		return
 	}
 	//@ fold acc(hiddenPerm(a), R10)
@@ -93,6 +94,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	s.m[svc] = addrs[:len(addrs)-1]
 	//@ fold validMapValue(svc, s.m[svc])
 	//@ fold internalLockInv!<s!>()
+	//@ fold acc(s.Mem(), R10)
 }
 
 // @ requires acc(s.Mem(), _)
