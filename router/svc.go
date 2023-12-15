@@ -40,10 +40,10 @@ func newServices() (s *services) {
 	return tmp
 }
 
-// @ requires acc(s.Mem(), _)
-// @ requires acc(a.Mem(), R10)
+// @ preserves acc(s.Mem(), R50)
+// @ requires  acc(a.Mem(), R10)
 func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
-	//@ unfold acc(s.Mem(), _)
+	//@ unfold acc(s.Mem(), R50)
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -54,6 +54,7 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	if _, ok := s.index(a, addrs /*@, svc @*/); ok {
 		//@ fold acc(validMapValue(svc, addrs), R10)
 		//@ fold internalLockInv!<s!>()
+		//@ fold acc(s.Mem(), R50)
 		return
 	}
 	//@ fold acc(validMapValue(svc, addrs), R10)
@@ -63,12 +64,13 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ fold InjectiveMem(tmp[len(tmp)-1], len(tmp)-1)
 	//@ fold validMapValue(svc, s.m[svc])
 	//@ fold internalLockInv!<s!>()
+	//@ fold acc(s.Mem(), R50)
 }
 
-// @ requires  acc(s.Mem(), _)
+// @ preserves acc(s.Mem(), R50)
 // @ preserves acc(a.Mem(), R10)
 func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
-	//@ unfold acc(s.Mem(), _)
+	//@ unfold acc(s.Mem(), R50)
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -79,6 +81,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	index, ok := s.index(a, addrs /*@, svc @*/)
 	if !ok {
 		//@ fold internalLockInv!<s!>()
+		//@ fold acc(s.Mem(), R50)
 		return
 	}
 	//@ fold acc(hiddenPerm(a), R10)
@@ -93,6 +96,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	s.m[svc] = addrs[:len(addrs)-1]
 	//@ fold validMapValue(svc, s.m[svc])
 	//@ fold internalLockInv!<s!>()
+	//@ fold acc(s.Mem(), R50)
 }
 
 // @ requires acc(s.Mem(), _)

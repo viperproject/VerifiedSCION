@@ -29,11 +29,6 @@ import (
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
-// TODO: maybe change interpretation of Mutex depending on whether the
-// dataplane is running or not. This is because, when Run is called and
-// d.running is set to true, the permissions to some of these fields is transferred
-// to the read closure, and thus, we cannot transfer it back on the call to unlock
-// at the end of run
 pred MutexInvariant(d *DataPlane) {
 	// access to the field 'mtx' ommited
 	acc(&d.external,          1/2) &&
@@ -50,65 +45,60 @@ pred MutexInvariant(d *DataPlane) {
 	acc(&d.Metrics,           1/2) &&
 	acc(&d.forwardingMetrics, 1/2) &&
 	acc(&d.key,               1/2) &&
-	(d.external    != nil       ==> AccBatchConn(d.external))           &&
-	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))              &&
-	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))            &&
-	(d.internal != nil          ==> d.internal.Mem())                   &&
-	(d.internalIP != nil        ==> d.internalIP.Mem())                 &&
-	(d.internalNextHops != nil  ==> AccAddr(d.internalNextHops))        &&
-	(d.svc != nil               ==> acc(d.svc.Mem(), _))                &&
-	(d.macFactory != nil        ==> acc(d.key, 1/2))                    &&
-	(d.macFactory != nil        ==> acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)) &&
-	(d.macFactory != nil        ==> scrypto.ValidKeyForHash(*d.key)) &&
-	(d.macFactory != nil        ==> d.macFactory implements MacFactorySpec{d.key}) &&
-	(d.bfdSessions != nil       ==> AccBfdSession(d.bfdSessions))       &&
-	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))            &&
+	(d.external    != nil       ==> accBatchConn(d.external))                      &&
+	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))                         &&
+	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))                       &&
+	(d.internal != nil          ==> d.internal.Mem())                              &&
+	(d.internalIP != nil        ==> d.internalIP.Mem())                            &&
+	(d.internalNextHops != nil  ==> accAddr(d.internalNextHops))                   &&
+	(d.svc != nil               ==> d.svc.Mem())                                   &&
+	(d.macFactory != nil        ==> (
+		acc(d.key, 1/2)                                   &&
+		acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
+		scrypto.ValidKeyForHash(*d.key)                   &&
+		d.macFactory implements MacFactorySpec{d.key}))                            &&
+	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions))                  &&
+	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))                       &&
 	// The following permissions are enough to call all methods needed in fields
 	// of forwardingMetrics
-	(d.forwardingMetrics != nil ==> AccForwardingMetrics(d.forwardingMetrics))
+	(d.forwardingMetrics != nil ==> accForwardingMetrics(d.forwardingMetrics))
 }
 
-// TODO: reorganize permissions consistently
-
-// TODO: use lower case for these predicates' names?
-// TODO: drop wildcards here
-pred AccAddr(addrs map[uint16]*net.UDPAddr) {
+pred accAddr(addrs map[uint16]*net.UDPAddr) {
 	acc(addrs, 1/2) &&
 	forall a *net.UDPAddr :: { a in range(addrs) } a in range(addrs) ==> acc(a.Mem(), _)
 }
 
-pred AccBatchConn(batchConns map[uint16]BatchConn) {
+pred accBatchConn(batchConns map[uint16]BatchConn) {
 	acc(batchConns, 1/2) &&
 	forall b BatchConn :: { b in range(batchConns) }{ b.Mem() } b in range(batchConns) ==>
 		b.Mem()
 }
 
-// TODO: drop wildcards here
-pred AccBfdSession(bfdSessions map[uint16]bfdSession) {
+pred accBfdSession(bfdSessions map[uint16]bfdSession) {
 	acc(bfdSessions, 1/2) &&
 	(forall bfd bfdSession :: { bfd in range(bfdSessions) }{ bfd.Mem() } bfd in range(bfdSessions) ==>
 		(bfd != nil && acc(bfd.Mem(), _)))
 }
 
-// TODO: drop wildcards here
-pred AccForwardingMetrics(metrics map[uint16]forwardingMetrics) {
+pred accForwardingMetrics(metrics map[uint16]forwardingMetrics) {
 	acc(metrics, 1/2) &&
 	forall id uint16 :: { metrics[id] } id in domain(metrics) ==> acc(forwardingMetricsMem(metrics[id], id), _)
 }
 
 pred forwardingMetricsMem(v forwardingMetrics, ignoredForInjectivity uint16) {
-	v.InputBytesTotal.Mem()      &&
-	v.OutputBytesTotal.Mem()     &&
-	v.InputPacketsTotal.Mem()    &&
-	v.OutputPacketsTotal.Mem()   &&
+	v.InputBytesTotal.Mem()     &&
+	v.OutputBytesTotal.Mem()    &&
+	v.InputPacketsTotal.Mem()   &&
+	v.OutputPacketsTotal.Mem()  &&
 	v.DroppedPacketsTotal.Mem()
 }
 
 pred forwardingMetricsNonInjectiveMem(v forwardingMetrics) {
-	v.InputBytesTotal.Mem()      &&
-	v.OutputBytesTotal.Mem()     &&
-	v.InputPacketsTotal.Mem()    &&
-	v.OutputPacketsTotal.Mem()   &&
+	v.InputBytesTotal.Mem()     &&
+	v.OutputBytesTotal.Mem()    &&
+	v.InputPacketsTotal.Mem()   &&
+	v.OutputPacketsTotal.Mem()  &&
 	v.DroppedPacketsTotal.Mem()
 }
 
@@ -122,21 +112,21 @@ func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
 }
 
 pred (p *scionPacketProcessor) initMem() {
-	acc(&p.d) &&
-	acc(&p.ingressID) &&
-	acc(&p.buffer) &&
-	acc(&p.mac) &&
-	acc(p.scionLayer.NonInitMem()) &&
+	acc(&p.d)                                    &&
+	acc(&p.ingressID)                            &&
+	acc(&p.buffer)                               &&
+	acc(&p.mac)                                  &&
+	acc(p.scionLayer.NonInitMem())               &&
 	p.scionLayer.PathPoolInitializedNonInitMem() &&
-	acc(&p.hbhLayer) &&
-	acc(&p.e2eLayer) &&
-	acc(&p.lastLayer) &&
-	acc(&p.path) &&
-	acc(&p.hopField) &&
-	acc(&p.infoField) &&
-	acc(&p.segmentChange) &&
-	acc(&p.cachedMac) &&
-	acc(&p.macBuffers) &&
+	acc(&p.hbhLayer)                             &&
+	acc(&p.e2eLayer)                             &&
+	acc(&p.lastLayer)                            &&
+	acc(&p.path)                                 &&
+	acc(&p.hopField)                             &&
+	acc(&p.infoField)                            &&
+	acc(&p.segmentChange)                        &&
+	acc(&p.cachedMac)                            &&
+	acc(&p.macBuffers)                           &&
 	acc(&p.bfdLayer)
 }
 
@@ -176,7 +166,7 @@ func newOffsetPair(n int) (res seq[offsetPair])
 ghost
 requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(&d.internalNextHops, _)
-ensures  d.internalNextHops != nil ==> acc(AccAddr(d.internalNextHops), _)
+ensures  d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), _)
 decreases
 func (d *DataPlane) getInternalNextHops() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -185,7 +175,7 @@ func (d *DataPlane) getInternalNextHops() {
 ghost
 requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(&d.forwardingMetrics, _)
-ensures  d.forwardingMetrics != nil ==> acc(AccForwardingMetrics(d.forwardingMetrics), _)
+ensures  d.forwardingMetrics != nil ==> acc(accForwardingMetrics(d.forwardingMetrics), _)
 decreases
 func (d *DataPlane) getForwardingMetrics() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -193,7 +183,7 @@ func (d *DataPlane) getForwardingMetrics() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures  acc(&d.external, _) && (d.external != nil ==> acc(AccBatchConn(d.external), _))
+ensures  acc(&d.external, _) && (d.external != nil ==> acc(accBatchConn(d.external), _))
 decreases
 func (d *DataPlane) getExternalMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
@@ -233,7 +223,7 @@ func (d *DataPlane) getSvcMem() {
 
 ghost
 requires acc(MutexInvariant!<d!>(), _)
-ensures  acc(&d.bfdSessions, _) && (d.bfdSessions != nil ==> acc(AccBfdSession(d.bfdSessions), _))
+ensures  acc(&d.bfdSessions, _) && (d.bfdSessions != nil ==> acc(accBfdSession(d.bfdSessions), _))
 decreases
 func (d *DataPlane) getBfdSessionsMem() {
 	unfold acc(MutexInvariant!<d!>(), _)
