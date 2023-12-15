@@ -547,7 +547,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	// @ fold MutexInvariant!<d!>()
 	// @ )
 	// @ unfold acc(MutexInvariant!<d!>(), R15)
-	// @ assert acc(d.svc.Mem(), R15)
+	// @ assert acc(d.svc.Mem(), _)
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
 		labels := serviceMetricLabels(d.localIA, svc)
