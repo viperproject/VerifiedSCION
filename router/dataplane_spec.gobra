@@ -66,7 +66,7 @@ pred MutexInvariant(d *DataPlane) {
 
 pred accAddr(addrs map[uint16]*net.UDPAddr) {
 	acc(addrs, 1/2) &&
-	forall a *net.UDPAddr :: { a in range(addrs) } a in range(addrs) ==> a.Mem()
+	forall a *net.UDPAddr :: { a in range(addrs) } a in range(addrs) ==> acc(a.Mem(), _)
 }
 
 pred accBatchConn(batchConns map[uint16]BatchConn) {
