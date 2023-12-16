@@ -892,6 +892,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						result.OutAddr = srcAddr
 						result.OutConn = rd
 					default:
+						// @ assume false // TODO: take this out
 						// @ fold msgs[:pkts][i0].Mem(1)
 						// @ unfold scmpErr.Mem()
 						log.Debug("Error processing packet", "err", err)
