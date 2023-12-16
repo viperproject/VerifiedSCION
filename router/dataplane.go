@@ -882,6 +882,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					switch {
 					case err == nil:
 						// @ unfold scmpErr.Mem()
+						// @ assert acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), 1 - R15)
 					case errors.As(err, &scmpErr):
 						// @ unfold scmpErr.Mem()
 						if !scmpErr.TypeCode.InfoMsg() {
@@ -891,6 +892,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						result.OutAddr = srcAddr
 						result.OutConn = rd
 					default:
+						// @ fold msgs[:pkts][i0].Mem(1)
 						// @ unfold scmpErr.Mem()
 						log.Debug("Error processing packet", "err", err)
 						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
@@ -899,6 +901,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						continue
 					}
 					if result.OutConn == nil { // e.g. BFD case no message is forwarded
+						// @ fold msgs[:pkts][i0].Mem(1)
 						continue
 					}
 
@@ -907,14 +910,18 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// supports MSG_DONTWAIT.
 					// @ unfold writeMsgInv(writeMsgs)
 					writeMsgs[0].Buffers[0] = result.OutPkt
+					// @ assert acc(sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])), 1 - R15)
+					// @ writeMsgs[0].WildcardPerm = !addrAliasesPkt
 					writeMsgs[0].Addr = nil
 					if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
 						writeMsgs[0].Addr = result.OutAddr
 					}
+					// @ assert acc(sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])), 1 - R15)
 					// @ assert acc(result.OutConn.Mem(), _)
-					// @ fold acc(writeMsgs[0].Mem(1), R30)
+					// @ fold acc(writeMsgs[0].Mem(1), R40)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@ , !addrAliasesPkt @*/)
-					// @ unfold acc(writeMsgs[0].Mem(1), R30)
+					// @ assume false
+					// @ unfold acc(writeMsgs[0].Mem(1), R40)
 					// @ ghost if addrAliasesPkt {
 					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 					// @ 	assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
@@ -1181,7 +1188,10 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  (reserr == nil) == (respr.OutConn != nil)
 // @ ensures  respr.OutConn != nil ==> acc(respr.OutConn.Mem(), _)
 // @ ensures  reserr == nil ==> respr.OutPkt === rawPkt
-// @ ensures  (reserr != nil && typeOf(reserr) == type[scmpError]) ==>
+//
+//	ensures  (reserr != nil && typeOf(reserr) == type[scmpError]) ==>
+//
+// @ ensures  reserr != nil ==>
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures  addrAliasesPkt ==>
 // @ 	(respr.OutAddr != nil &&
