@@ -1,0 +1,545 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package router
+
+import (
+	sl "github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/verification/io"
+	"github.com/scionproto/scion/verification/dependencies/encoding/binary"
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
+)
+
+ghost 
+decreases 
+pure func numInfoFields(seg1Len int, seg2Len int, seg3Len int) int {
+	return seg3Len > 0 ? 3 : (seg2Len > 0 ? 2 : 1)
+}
+
+ghost 
+decreases
+pure func hopFieldOffset(numINF int, currHF int) int {
+	return path.InfoFieldOffset(numINF) + path.HopLen * currHF
+}
+
+ghost 
+decreases
+pure func pktLen(seg1Len int, seg2Len int, seg3Len int) int {
+	return hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) + 
+        path.HopLen * (seg1Len + seg2Len + seg3Len)
+}
+
+
+ghost 
+decreases
+pure func lengthOfCurrSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) int {
+	return seg1Len > currHF ? seg1Len : ((seg1Len + seg2Len) > currHF ? seg2Len : seg3Len)
+}
+
+ghost 
+requires 0 <= currHF
+ensures  res <= currHF
+decreases
+pure func lengthOfPrevSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) (res int) {
+	return seg1Len > currHF ? 0 : ((seg1Len + seg2Len) > currHF ? seg1Len : seg1Len + seg2Len)
+}
+
+// returns the ASid of a hopfield
+ghost
+requires 1 <= numINF
+requires 0 <= currHFIdx
+requires hopFieldOffset(numINF, currHFIdx) + path.HopLen <= len(raw)
+requires dp.Valid()
+requires let idx := hopFieldOffset(numINF, currHFIdx) in
+	acc(&raw[idx+2], _) && acc(&raw[idx+3], _) && acc(&raw[idx+4], _) && acc(&raw[idx+5], _)
+decreases
+pure func asidFromIfs(
+    dp io.DataPlaneSpec, 
+    raw []byte, 
+    numINF int, 
+    currHFIdx int, 
+    consDir bool, 
+    asid io.IO_as) (res option[io.IO_as]) {
+	return let idx := hopFieldOffset(numINF, currHFIdx) in
+		let ifs := consDir ? binary.BigEndian.Uint16(raw[idx+4:idx+6]) : binary.BigEndian.Uint16(raw[idx+2:idx+4]) in
+		let asIfPair := io.AsIfsPair{asid, io.IO_ifs(ifs)} in
+		(asIfPair in domain(dp.GetLinks()) ?
+			some(dp.Lookup(asIfPair).asid) : none[io.IO_as])
+}
+
+// returns a list of ASids of hopfields that are before the current hopfield in a segment
+ghost
+requires 1 <= numINF
+requires 0 <= prevSegLen && prevSegLen <= currHFIdx
+requires hopFieldOffset(numINF, currHFIdx) + path.HopLen <= len(raw)
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures res != none[seq[io.IO_as]] ==> len(get(res)) == currHFIdx - prevSegLen + 1
+decreases currHFIdx - prevSegLen
+pure func asidsBefore(
+    dp io.DataPlaneSpec, 
+    raw []byte, 
+    numINF int, 
+    currHFIdx int, 
+    prevSegLen int, 
+    consDir bool, 
+    asid io.IO_as) (res option[seq[io.IO_as]]) {
+	return let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, !consDir, asid)) in 
+		match next_asid{
+			case none[io.IO_as]:
+				none[seq[io.IO_as]]
+			default: 
+				currHFIdx == prevSegLen ? some(seq[io.IO_as]{get(next_asid)}) : 
+				let next_asid_seq := asidsBefore(dp, raw, numINF, currHFIdx-1, prevSegLen, consDir, get(next_asid)) in 
+				match next_asid_seq{
+					case none[seq[io.IO_as]]:
+						none[seq[io.IO_as]]
+					default:
+						some(get(next_asid_seq) ++ seq[io.IO_as]{get(next_asid)})
+				}
+		}
+}
+
+// returns a list of ASids of hopfields that are after the current hopfield in a segment
+ghost
+requires 1 <= numINF
+requires 0 <= currHFIdx && currHFIdx < segLen
+requires hopFieldOffset(numINF, segLen) <= len(raw)
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures res != none[seq[io.IO_as]] ==> len(get(res)) == segLen - currHFIdx
+decreases segLen - currHFIdx + 1
+pure func asidsAfter(
+    dp io.DataPlaneSpec, 
+    raw []byte, 
+    numINF int, 
+    currHFIdx int, 
+    segLen int, 
+    consDir bool, 
+    asid io.IO_as) (res option[seq[io.IO_as]]) {
+	return let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, consDir, asid)) in 
+        match next_asid{
+            case none[io.IO_as]:
+                none[seq[io.IO_as]]
+            default: 
+                currHFIdx == segLen - 1 ? some(seq[io.IO_as]{get(next_asid)}) : 
+                let next_asid_seq := asidsAfter(dp, raw, numINF, currHFIdx+1, segLen, consDir, get(next_asid)) in 
+                match next_asid_seq{
+                    case none[seq[io.IO_as]]:
+                        none[seq[io.IO_as]]
+                    default:
+                        some(seq[io.IO_as]{get(next_asid)} ++ get(next_asid_seq))
+                }
+        }
+}
+
+// returns a list of ASids of hopfields for CurrSeg in the abstract packet
+ghost
+requires 1 <= numINF
+requires 0 <= prevSegLen && prevSegLen <= currHFIdx
+requires currHFIdx < segLen
+requires hopFieldOffset(numINF, segLen) <= len(raw)
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures res != none[seq[io.IO_as]] ==> len(get(res)) == segLen - prevSegLen
+decreases
+pure func asidForCurrSeg(
+    dp io.DataPlaneSpec, 
+    raw []byte, 
+    numINF int, 
+    currHFIdx int, 
+    segLen int, 
+    prevSegLen int, 
+    consDir bool, 
+    asid io.IO_as) (res option[seq[io.IO_as]]) {
+	return segLen == 0 ? some(seq[io.IO_as]{}) : 
+		let left := asidsBefore(dp, raw, numINF, currHFIdx, prevSegLen, consDir, asid) in
+		let right := asidsAfter(dp, raw, numINF, currHFIdx, segLen, consDir, asid) in
+		(left == none[seq[io.IO_as]] || right == none[seq[io.IO_as]]) ?
+			none[seq[io.IO_as]] : 
+			some(get(left) ++ get(right)[1:])
+}
+
+// returns a list of ASids of hopfields for LeftSeg in the abstract packet
+ghost
+requires dp.Valid()
+requires 1 <= numINF
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires hopFieldOffset(numINF, seg1Len + seg2Len + seg3Len) <= len(raw)
+requires currINFIdx <= numINF + 1
+requires 1 <= currINFIdx && currINFIdx < 4
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases
+pure func asidsForLeftSeg(dp io.DataPlaneSpec, raw []byte, numINF int, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, asid io.IO_as) (res option[seq[io.IO_as]]) {
+	return let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in path.ConsDir(raw, currINFIdx) in
+		(currINFIdx == 1 && seg2Len > 0) ? 
+			asidForCurrSeg(dp, raw, numINF, seg1Len, seg1Len+seg2Len, seg1Len, consDir, asid) :
+			(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ? 
+				asidForCurrSeg(dp, raw, numINF, seg1Len+seg2Len, seg1Len+seg2Len+seg3Len, seg1Len+seg2Len, consDir, asid) :
+				some(seq[io.IO_as]{})
+}
+
+// returns a list of ASids of hopfields for RightSeg in the abstract packet
+ghost
+requires dp.Valid()
+requires 1 <= numINF
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires hopFieldOffset(numINF, seg1Len + seg2Len + seg3Len) <= len(raw)
+requires currINFIdx <= numINF + 1
+requires -1 <= currINFIdx && currINFIdx < 2
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures (currINFIdx == 0 && res != none[seq[io.IO_as]]) ==> len(get(res)) == seg1Len
+ensures (currINFIdx == 1 && seg2Len > 0 && res != none[seq[io.IO_as]]) ==> len(get(res)) == seg2Len
+decreases
+pure func asidsForRightSeg(dp io.DataPlaneSpec, raw []byte, numINF int, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, asid io.IO_as) (res option[seq[io.IO_as]]) {
+	return (currINFIdx == 1 && seg2Len > 0) ? 
+		let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in path.ConsDir(raw, currINFIdx) in
+		asidForCurrSeg(dp, raw, numINF, seg1Len+seg2Len-1, seg1Len+seg2Len, seg1Len, consDir, asid) :
+		(currINFIdx == 0) ? 
+			let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in path.ConsDir(raw, currINFIdx) in
+			asidForCurrSeg(dp, raw, numINF, seg1Len-1, seg1Len, 0, consDir, asid) :
+			some(seq[io.IO_as]{})
+}
+
+// returns a list of ASids of hopfields for MidSeg in the abstract packet
+ghost
+requires dp.Valid()
+requires 1 <= numINF
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires hopFieldOffset(numINF, seg1Len + seg2Len + seg3Len) <= len(raw)
+requires currINFIdx <= numINF + 1
+requires 2 <= currINFIdx && currINFIdx < 5
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+requires (currINFIdx == 4 && seg2Len > 0) ==> asid != none[io.IO_as]
+requires (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ==> asid != none[io.IO_as]
+decreases
+pure func asidsForMidSeg(dp io.DataPlaneSpec, raw []byte, numINF int, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, asid option[io.IO_as]) (res option[seq[io.IO_as]]) {
+	return (currINFIdx == 4 && seg2Len > 0) ? 
+		let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in path.ConsDir(raw, 1) in
+		asidForCurrSeg(dp, raw, numINF, seg1Len-1, seg1Len, 0, consDir, get(asid)) :
+		(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ? 
+			let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in path.ConsDir(raw, 2) in
+			asidForCurrSeg(dp, raw, numINF, seg1Len + seg2Len, seg1Len + seg2Len + seg3Len, seg1Len + seg2Len, consDir, get(asid)) :
+			some(seq[io.IO_as]{})
+}
+
+ghost
+requires idx + path.HopLen <= len(raw)
+requires 0 <= idx
+requires acc(&raw[idx+2], _) && acc(&raw[idx+3], _) && acc(&raw[idx+4], _) && acc(&raw[idx+5], _)
+ensures  len(res.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases
+pure func hopField(raw []byte, idx int, beta set[io.IO_msgterm], asid io.IO_as, ainfo io.IO_ainfo) (res io.IO_HF) {
+	return let inif2 := binary.BigEndian.Uint16(raw[idx+2:idx+4]) in
+		let egif2 := binary.BigEndian.Uint16(raw[idx+4:idx+6]) in
+		let op_inif2 := inif2 == 0 ? none[io.IO_ifs] : some(io.IO_ifs(inif2)) in
+		let op_egif2 := egif2 == 0 ? none[io.IO_ifs] : some(io.IO_ifs(egif2)) in
+		let ts := io.IO_msgterm(io.MsgTerm_Num{ainfo}) in
+		let l := io.IO_msgterm(io.MsgTerm_L{seq[io.IO_msgterm]{ts, io.if2term(op_inif2), io.if2term(op_egif2), 
+			io.IO_msgterm(io.MsgTerm_FS{beta})}}) in
+		let hvf := io.mac(io.macKey(io.asidToKey(asid)), l) in
+		io.IO_HF(io.IO_HF_{
+			InIF2 : op_inif2,
+			EgIF2 : op_egif2,
+			HVF : hvf,
+		})
+}
+
+ghost 
+requires  0 <= offset
+requires  0 <= currHFIdx && currHFIdx <= len(asid)
+requires  offset + path.HopLen * len(asid) <= len(raw)
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures   len(res) == len(asid) - currHFIdx
+ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==> 
+	len(res[k].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases len(asid) - currHFIdx
+pure func hopFieldsConsDir(
+	raw []byte, 
+	offset int, 
+	currHFIdx int, 
+	beta set[io.IO_msgterm], 
+	asid seq[io.IO_as], 
+	ainfo io.IO_ainfo) (res seq[io.IO_HF]) {
+	return currHFIdx == len(asid) ? seq[io.IO_HF]{} : 
+		let hf := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in 
+			hopField(raw, offset + path.HopLen * currHFIdx, beta, asid[currHFIdx], ainfo)) in
+		seq[io.IO_HF]{hf} ++ hopFieldsConsDir(raw, offset, currHFIdx + 1, (beta union set[io.IO_msgterm]{hf.HVF}), asid, ainfo)
+}
+
+ghost 
+requires  0 <= offset 
+requires  -1 <= currHFIdx && currHFIdx < len(asid)
+requires  offset + path.HopLen * currHFIdx + path.HopLen <= len(raw)
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures   len(res) == currHFIdx + 1
+ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==> 
+	len(res[k].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases currHFIdx + 1
+pure func hopFieldsNotConsDir(
+	raw []byte, 
+	offset int, 
+	currHFIdx int, 
+	beta set[io.IO_msgterm], 
+	asid seq[io.IO_as],
+	ainfo io.IO_ainfo) (res seq[io.IO_HF]) {
+	return currHFIdx == -1 ? seq[io.IO_HF]{} : 
+		let hf := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in 
+			hopField(raw, offset + path.HopLen * currHFIdx, beta, asid[currHFIdx], ainfo)) in
+		hopFieldsNotConsDir(raw, offset, currHFIdx -1, (beta union set[io.IO_msgterm]{hf.HVF}), asid, ainfo) ++ seq[io.IO_HF]{hf}
+}
+
+ghost 
+requires -1 <= currHFIdx && currHFIdx < len(hopfields)
+decreases currHFIdx + 1
+pure func segPast(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_HF] {
+	return currHFIdx == -1  ?
+		seq[io.IO_HF]{} : 
+		seq[io.IO_HF]{hopfields[currHFIdx]} ++ segPast(hopfields, currHFIdx - 1)
+}
+
+ghost 
+requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
+decreases len(hopfields) - currHFIdx
+pure func segFuture(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_HF] {
+	return currHFIdx == len(hopfields) ? seq[io.IO_HF]{} : 
+		seq[io.IO_HF]{hopfields[currHFIdx]} ++ segFuture(hopfields, currHFIdx + 1)
+}
+
+ghost 
+requires -1 <= currHFIdx && currHFIdx < len(hopfields)
+decreases currHFIdx + 1
+pure func segHistory(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_ahi] {
+	return currHFIdx == -1 ? seq[io.IO_ahi]{} : 
+		seq[io.IO_ahi]{hopfields[currHFIdx].Toab()} ++ segHistory(hopfields, currHFIdx - 1)
+			
+}
+
+ghost 
+requires 0 <= offset
+requires 0 < len(asid)
+requires offset + path.HopLen * len(asid) <= len(raw)
+requires 0 <= currHFIdx && currHFIdx <= len(asid)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases 
+pure func segment(raw []byte, 
+	offset int, 
+	currHFIdx int, 
+	asid seq[io.IO_as], 
+	ainfo io.IO_ainfo, 
+	consDir bool, 
+	peer bool) io.IO_seg2 {
+	return let hopfields := consDir ?
+		hopFieldsConsDir(raw, offset, 0, set[io.IO_msgterm]{}, asid, ainfo) : 
+		hopFieldsNotConsDir(raw, offset, len(asid) - 1, set[io.IO_msgterm]{}, asid, ainfo) in
+		let uinfo := uInfo(hopfields, currHFIdx, consDir) in
+		io.IO_seg2(io.IO_seg3_{
+			AInfo :ainfo,
+			UInfo : uinfo,
+			ConsDir : consDir,
+			Peer : peer,
+			Past : segPast(hopfields, currHFIdx - 1),
+			Future : segFuture(hopfields, currHFIdx),
+			History : segHistory(hopfields, currHFIdx - 1),
+		})
+}
+
+ghost
+requires path.InfoFieldOffset(currINFIdx) + path.InfoLen <= offset
+requires 0 < len(asid)
+requires offset + path.HopLen * len(asid) <= len(raw)
+requires 0 <= currHFIdx && currHFIdx <= len(asid)
+requires 0 <= currINFIdx && currINFIdx < 3
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases 
+pure func currSeg(raw []byte, offset int, currINFIdx int, currHFIdx int, asid seq[io.IO_as]) io.IO_seg3 {
+	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in
+		let ainfo := timestamp(raw, currINFIdx) in
+		let consDir := path.ConsDir(raw, currINFIdx) in
+		let peer := path.Peer(raw, currINFIdx) in
+		segment(raw, offset, currHFIdx, asid, ainfo, consDir, peer)
+}
+
+ghost
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires pktLen(seg1Len, seg2Len, seg3Len) <= len(raw)
+requires 1 <= currINFIdx && currINFIdx < 4
+requires (currINFIdx == 1 && seg2Len > 0) ==> len(asid) == seg2Len
+requires (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ==> len(asid) == seg3Len
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases 
+pure func leftSeg(
+	raw []byte, 
+	currINFIdx int, 
+	seg1Len int, 
+	seg2Len int, 
+	seg3Len int, 
+	asid seq[io.IO_as]) option[io.IO_seg3] {
+	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
+        (currINFIdx == 1 && seg2Len > 0) ? 
+		some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, asid)) : 
+		(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ? 
+			some(currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, asid)) : 
+			none[io.IO_seg3]
+}
+
+ghost
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires pktLen(seg1Len, seg2Len, seg3Len) <= len(raw)
+requires -1 <= currINFIdx && currINFIdx < 2
+requires (currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ==> len(asid) == seg2Len
+requires (currINFIdx == 0 && seg2Len > 0) ==> len(asid) == seg1Len
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases
+pure func rightSeg(
+	raw []byte, 
+	currINFIdx int, 
+	seg1Len int,
+	seg2Len int, 
+	seg3Len int, 
+	asid seq[io.IO_as]) option[io.IO_seg3] {
+	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
+    (currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ? 
+		some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, asid)) :
+		(currINFIdx == 0 && seg2Len > 0) ? 
+			some(currSeg(raw, offset, currINFIdx, seg1Len, asid)) : 
+			none[io.IO_seg3]					
+}
+
+ghost
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires pktLen(seg1Len, seg2Len, seg3Len) <= len(raw)
+requires 2 <= currINFIdx && currINFIdx < 5
+requires (currINFIdx == 4 && seg2Len > 0) ==> len(asid) == seg1Len
+requires (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ==> len(asid) == seg3Len
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+decreases 
+pure func midSeg(
+	raw []byte, 
+	currINFIdx int, 
+	seg1Len int, 
+	seg2Len int, 
+	seg3Len int, 
+	asid seq[io.IO_as]) option[io.IO_seg3] {
+	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
+        (currINFIdx == 4 && seg2Len > 0) ? 
+		some(currSeg(raw, offset, 0, seg1Len, asid)) :
+		(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ? 
+			some(currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, asid)) : 
+			none[io.IO_seg3]
+}
+
+ghost 
+requires dp.Valid()
+requires len(raw) > 4
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+requires unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in 
+	let hdr := binary.BigEndian.Uint32(raw[0:4]) in
+    let metaHdr := scion.DecodedFrom(hdr) in
+	let seg1 := int(metaHdr.SegLen[0]) in
+	let seg2 := int(metaHdr.SegLen[1]) in
+	let seg3 := int(metaHdr.SegLen[2]) in
+    let base := scion.Base{metaHdr, 
+        numInfoFields(seg1, seg2, seg3),
+        seg1 + seg2 + seg3} in
+    metaHdr.InBounds() &&
+    0 < metaHdr.SegLen[0] &&
+    base.ValidCurrInfSpec() &&
+    base.ValidCurrHfSpec() &&
+    len(raw) == pktLen(seg1, seg2, seg3)
+decreases 
+pure func absPkt(dp io.DataPlaneSpec, raw []byte, asid io.IO_as) option[io.IO_pkt2] {
+	return let hdr := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in binary.BigEndian.Uint32(raw[0:4]) in
+		let metaHdr := scion.DecodedFrom(hdr) in
+        let currINFIdx := int(metaHdr.CurrINF) in
+		let currHFIdx := int(metaHdr.CurrHF) in
+		let seg1Len := int(metaHdr.SegLen[0]) in
+		let seg2Len := int(metaHdr.SegLen[1]) in 
+		let seg3Len := int(metaHdr.SegLen[2]) in
+		let segLen := lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let prevSegLen := lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
+		let offset := hopFieldOffset(numINF, 0) in
+		let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in path.ConsDir(raw, currINFIdx) in
+		let currAsidSeq := asidForCurrSeg(dp, raw, numINF, currHFIdx, prevSegLen+segLen, prevSegLen, consDir, dp.Asid()) in
+		currAsidSeq == none[seq[io.IO_as]] ? none[io.IO_pkt2] :
+			let last := get(currAsidSeq)[segLen-1] in
+			let first := get(currAsidSeq)[0] in
+			let leftAsidSeq := asidsForLeftSeg(dp, raw, numINF, currINFIdx + 1, seg1Len, seg2Len, seg3Len, last) in
+			let rightAsidSeq := asidsForRightSeg(dp, raw, numINF, currINFIdx - 1, seg1Len, seg2Len, seg3Len, first) in
+			(leftAsidSeq == none[seq[io.IO_as]] || rightAsidSeq == none[seq[io.IO_as]]) ? none[io.IO_pkt2] :
+				let midAsid := ((currINFIdx == 0 && seg2Len > 0 && seg3Len > 0) ? some(get(leftAsidSeq)[len(get(leftAsidSeq))-1]) :
+					(currINFIdx == 2 && seg2Len > 0) ? some(get(rightAsidSeq)[0]) : none[io.IO_as]) in
+				let midAsidSeq := asidsForMidSeg(dp, raw, numINF, currINFIdx + 2, seg1Len, seg2Len, seg3Len, midAsid) in
+				midAsidSeq == none[seq[io.IO_as]] ? none[io.IO_pkt2] :
+					some(io.IO_pkt2(io.IO_Packet2{
+						CurrSeg : currSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, get(currAsidSeq)),
+						LeftSeg : leftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, get(leftAsidSeq)),
+						MidSeg : midSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, get(midAsidSeq)),
+						RightSeg : rightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, get(rightAsidSeq)),
+					}))
+}
+
+
+ghost 
+requires 0 <= offset
+requires path.InfoFieldOffset(offset) + 8 < len(raw)
+requires acc(&raw[path.InfoFieldOffset(offset) + 4], _)
+requires acc(&raw[path.InfoFieldOffset(offset) + 5], _)
+requires acc(&raw[path.InfoFieldOffset(offset) + 6], _)
+requires acc(&raw[path.InfoFieldOffset(offset) + 7], _)
+decreases
+pure func timestamp(raw []byte, offset int) io.IO_ainfo {
+	return let idx := path.InfoFieldOffset(offset) + 4 in 
+		io.IO_ainfo(binary.BigEndian.Uint32(raw[idx : idx + 4]))
+}
+
+ghost
+requires len(hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases
+pure func hvfSet(hopfield io.IO_HF) set[io.IO_msgterm] {
+	return let l := hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_ in
+		l[len(l) - 1].MsgTerm_FS_
+}
+
+ghost
+requires 0 < len(hopfields)
+requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
+requires forall idx int :: {hopfields[idx]} 0 <= idx && idx < len(hopfields) ==>
+	len(hopfields[idx].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+decreases
+pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_msgterm] {
+	return currHFIdx == len(hopfields) ?
+		hvfSet(hopfields[currHFIdx-1]) :
+		(currHFIdx == 0 ?
+				hvfSet(hopfields[currHFIdx]) :
+				(consDir ?
+						hvfSet(hopfields[currHFIdx]) :
+						hvfSet(hopfields[currHFIdx-1])))
+}
