@@ -2947,17 +2947,49 @@ func (p *scionPacketProcessor) prepareSCMPtemp(
 		// create new SCION header for reply.
 	var scionL /*@@@*/ slayers.SCION
 	// (VerifiedSCION) TODO: adapt *SCION.Mem(...)
+	// @ preserves acc(p.scionLayer.Mem(ub), R4)
+	// @ preserves acc(&scionL.FlowID) && acc(&scionL.TrafficClass)
+	// @ decreases
+	// @ outline (
 	// @ unfold acc(p.scionLayer.Mem(ub), R4)
 	scionL.FlowID = p.scionLayer.FlowID
 	scionL.TrafficClass = p.scionLayer.TrafficClass
+	// @ fold acc(p.scionLayer.Mem(ub), R4)
+	// @ )
 	scionL.PathType = revPath.Type( /*@ rawPath @*/ )
 	scionL.Path = revPath
+	// @ preserves acc(p.scionLayer.Mem(ub), R4)
+	// @ preserves acc(&scionL.DstIA)
+	// @ decreases
+	// @ outline (
+	// @ unfold acc(p.scionLayer.Mem(ub), R4)
 	scionL.DstIA = /* @ unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4) in @ */ p.scionLayer.SrcIA
+	// @ fold acc(p.scionLayer.Mem(ub), R4)
+	// @ )
+	// @ preserves acc(&p.d, _) && acc(MutexInvariant!<p.d!>(), _)
+	// @ preserves acc(&scionL.SrcIA)
+	// @ decreases
+	// @ outline (
 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
 	scionL.SrcIA = p.d.localIA
+	// @ )
+	// @ TODO()
+	// @ requires sl.AbsSlice_Bytes(ub, 0, len(ub))
+	// @ requires acc(&p.scionLayer.HdrLen)
+	// @ requires acc(&p.scionLayer.SrcAddrType) && acc(&p.scionLayer.DstAddrType)
+	// @ requires p.scionLayer.DstAddrType.Has3Bits() && p.scionLayer.SrcAddrType.Has3Bits()
+	// @ requires 0 <= p.scionLayer.HdrLen && 0 <= slayers.CmnHdrLen + p.scionLayer.AddrHdrLenSpecInternal() && p.scionLayer.HdrLen * slayers.LineLen <= len(ub) && slayers.CmnHdrLen + p.scionLayer.AddrHdrLenSpecInternal() <= p.scionLayer.HdrLen * slayers.LineLen
+	// @ requires acc(&p.scionLayer)
+	// @ requires acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4)
+	// @ decreases
+	// @ outline (
+	// @ TODO()
 	// @ unfold acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4)
+	// @ sl.SplitRange_Bytes(ub, 2*addr.IABytes+p.scionLayer.DstAddrType.Length(), 2*addr.IABytes+p.scionLayer.DstAddrType.Length()+p.scionLayer.SrcAddrType.Length(), R4)
 	srcA, err := p.scionLayer.SrcAddr() // Permission to acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20) might not suffice.
+	// @ sl.CombineRange_Bytes(ub, 2*addr.IABytes+p.scionLayer.DstAddrType.Length(), 2*addr.IABytes+p.scionLayer.DstAddrType.Length()+p.scionLayer.SrcAddrType.Length(), R4)
 	// @ fold acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4)
+	// @ )
 	// @ TODO()
 	
 	if err != nil {
