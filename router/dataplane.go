@@ -892,7 +892,22 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						result.OutAddr = srcAddr
 						result.OutConn = rd
 					default:
-						// @ assume false // TODO: take this out
+						// @ ghost m := &msgs[:pkts][i0]
+
+						// TODO: refactor
+						// @ ghost if addrAliasesPkt {
+						// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
+						// @ }
+						// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
+						// @ assert acc(m)
+						// @ assert len(m.Buffers) == 1
+						// @ assert (m.WildcardPerm ==> (forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
+						// @ 	(acc(&m.Buffers[i]) && acc(sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])), _))))
+						// @ assert (!m.WildcardPerm ==> (forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
+						// @ 	(acc(&m.Buffers[i]) && sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))))
+						// @ assert sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB))
+						// @ assert (m.Addr != nil ==> acc(m.Addr.Mem(), _))
+						// @ assert 0 <= m.N
 						// @ fold msgs[:pkts][i0].Mem(1)
 						// @ unfold scmpErr.Mem()
 						log.Debug("Error processing packet", "err", err)

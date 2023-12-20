@@ -141,11 +141,13 @@ func (m *Message) CombinePerm() {
 ghost
 requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].Mem(1)
 ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
+ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
 decreases
 func SplitPermMsgs(msgs []Message) {
 	invariant 0 <= i && i <= len(msgs)
 	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
 	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
+	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
 	decreases len(msgs) - i
 	for i := 0; i < len(msgs); i++ {
 		msgs[i].SplitPerm()
