@@ -936,7 +936,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert acc(result.OutConn.Mem(), _)
 					// @ fold acc(writeMsgs[0].Mem(1), R40)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@ , !addrAliasesPkt @*/)
-					// @ assume false
 					// @ unfold acc(writeMsgs[0].Mem(1), R40)
 					// @ ghost if addrAliasesPkt {
 					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
