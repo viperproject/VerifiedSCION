@@ -35,18 +35,23 @@ type Message struct {
 	NN    int // # of bytes read or written from/to OOB
 	Flags int // protocol-specific information on the received message
 
-	// (VerifiedSCION) the following is, morally, a ghost field that indicates
-	// if we have a fixed amount of perms to the Addr or if we have a wildcard amount:
+	// (VerifiedSCION) the following are, morally, ghost fields:
+	// is it still ok to read the buffers of the Message?
+	IsActive bool
+	// do we have a fixed amount of perms to the Addr a wildcard amount?
 	WildcardPerm bool
 }
 
 pred (m *Message) Mem(lenBuffers int) {
 	acc(m) &&
 	len(m.Buffers) == lenBuffers &&
-	(m.WildcardPerm ==> (forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
-		(acc(&m.Buffers[i]) && acc(sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])), _)))) &&
-	(!m.WildcardPerm ==> (forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
-		(acc(&m.Buffers[i]) && sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i]))))) &&
+	(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==> acc(&m.Buffers[i])) &&
+	((m.IsActive && m.WildcardPerm) ==>
+		(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
+			acc(sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])), _))) &&
+	((m.IsActive && !m.WildcardPerm) ==>
+		(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
+			sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))) &&
 	sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
 	// typeOf(m.Addr) == type[*net.UDPAddr] &&
 	(m.Addr != nil ==> acc(m.Addr.Mem(), _)) &&
@@ -56,10 +61,13 @@ pred (m *Message) Mem(lenBuffers int) {
 pred (m *Message) MemWithoutHalf(lenBuffers int) {
 	acc(m, 1/2) &&
 	len(m.Buffers) == lenBuffers &&
-	(m.WildcardPerm ==> (forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
-		(acc(&m.Buffers[i]) && acc(sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])), _)))) &&
-	(!m.WildcardPerm ==> (forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
-		(acc(&m.Buffers[i]) && sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i]))))) &&
+	(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==> acc(&m.Buffers[i])) &&
+	((m.IsActive && m.WildcardPerm) ==>
+		(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
+			acc(sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])), _))) &&
+	((m.IsActive && !m.WildcardPerm) ==>
+		(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
+			sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))) &&
 	sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
 	// typeOf(m.Addr) == type[*net.UDPAddr] &&
 	(m.Addr != nil ==> acc(m.Addr.Mem(), _)) &&
@@ -70,6 +78,12 @@ ghost
 requires acc(m.Mem(lenBuffers), _)
 pure func (m *Message) HasWildcardPermAddr(lenBuffers int) bool {
 	return unfolding acc(m.Mem(lenBuffers), _) in m.WildcardPerm
+}
+
+ghost
+requires acc(m.Mem(lenBuffers), _)
+pure func (m *Message) HasActiveBuffers(lenBuffers int) bool {
+	return unfolding acc(m.Mem(lenBuffers), _) in m.IsActive
 }
 
 ghost
@@ -123,6 +137,7 @@ ensures  m.Buffers === old(unfolding m.Mem(1) in m.Buffers)
 ensures  old(m.GetFstBuffer()) === unfolding m.MemWithoutHalf(1) in m.Buffers[0]
 ensures  old(m.GetN()) == m.N
 ensures  old(m.HasWildcardPermAddr(1)) == m.WildcardPerm
+ensures  old(m.HasActiveBuffers(1)) == m.IsActive
 ensures  old(m.GetMessage(1)) === *m
 decreases
 func (m *Message) SplitPerm() {
@@ -139,6 +154,8 @@ ensures  m.GetFstBuffer() === old(unfolding m.MemWithoutHalf(1) in m.Buffers[0])
 ensures  unfolding m.Mem(1) in m.Buffers === old(m.Buffers)
 ensures  m.GetN() == old(m.N)
 ensures  m.HasWildcardPermAddr(1) == old(m.WildcardPerm)
+ensures  m.HasActiveBuffers(1) == old(m.IsActive)
+ensures  m.GetMessage(1) === old(*m)
 decreases
 func (m *Message) CombinePerm() {
 	unfold m.MemWithoutHalf(1)
@@ -148,13 +165,17 @@ func (m *Message) CombinePerm() {
 ghost
 requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].Mem(1)
 ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
+ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> old(msgs[j].GetMessage(1)) === msgs[j]
 ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
+ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].IsActive == old(msgs[j].HasActiveBuffers(1))
 decreases
 func SplitPermMsgs(msgs []Message) {
 	invariant 0 <= i && i <= len(msgs)
 	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
 	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
 	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
+	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].IsActive == old(msgs[j].HasActiveBuffers(1))
+	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j] === old(msgs[j].GetMessage(1))
 	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].GetMessage(1) === old(msgs[j].GetMessage(1))
 	decreases len(msgs) - i
 	for i := 0; i < len(msgs); i++ {
