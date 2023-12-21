@@ -132,9 +132,9 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
-	// @ preserves !hasWildcardPerm ==> forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ preserves !hasWildcardPerm ==> forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	acc(msgs[i].Mem(1), R50)
-	// @ preserves hasWildcardPerm ==> forall i int :: { msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ preserves hasWildcardPerm ==> forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	acc(msgs[i].Mem(1), _)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
@@ -879,6 +879,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
 
 					// @ fold scmpErr.Mem()
+					// @ ghost m := &msgs[:pkts][i0]
 					switch {
 					case err == nil:
 						// @ unfold scmpErr.Mem()
@@ -892,8 +893,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						result.OutAddr = srcAddr
 						result.OutConn = rd
 					default:
-						// @ ghost m := &msgs[:pkts][i0]
-
 						// TODO: refactor
 						// @ ghost if addrAliasesPkt {
 						// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
@@ -935,17 +934,27 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert acc(sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])), 1 - R15)
 					// @ assert acc(result.OutConn.Mem(), _)
 					// @ fold acc(writeMsgs[0].Mem(1), R40)
+					// @ assert !addrAliasesPkt ==> acc(writeMsgs[0].Mem(1), _)
+					// @ assert addrAliasesPkt ==> acc(writeMsgs[0].Mem(1), R50)
+					// @ assert addrAliasesPkt ==> forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
+					// @ 	acc(writeMsgs[i].Mem(1), R50)
+					// @ assert !addrAliasesPkt ==> forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
+					// @ 	acc(writeMsgs[i].Mem(1), _)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@ , !addrAliasesPkt @*/)
+					/// -- Checked until here
 					// @ unfold acc(writeMsgs[0].Mem(1), R40)
 					// @ ghost if addrAliasesPkt {
+					// @ assume false
 					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 					// @ 	assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ }
+
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ assert tmpBuf === p.Buffers[0][:p.N]
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					// @ fold writeMsgInv(writeMsgs)
 					// @ fold msgs[:pkts][i0].Mem(1)
+					// @ assume false
 					if err != nil {
 						// @ requires err != nil && err.ErrorMem()
 						// @ decreases
