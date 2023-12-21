@@ -18,21 +18,21 @@ package router
 
 pred (m *Metrics) Mem() {
 	acc(m) &&
-	acc(m.InputBytesTotal.Mem(), _)           &&
-	acc(m.OutputBytesTotal.Mem(), _)          &&
-	acc(m.InputPacketsTotal.Mem(), _)         &&
-	acc(m.OutputPacketsTotal.Mem(), _)        &&
-	acc(m.DroppedPacketsTotal.Mem(), _)       &&
-	acc(m.InterfaceUp.Mem(), _)               &&
-	acc(m.BFDInterfaceStateChanges.Mem(), _)  &&
-	acc(m.BFDPacketsSent.Mem(), _)            &&
-	acc(m.BFDPacketsReceived.Mem(), _)        &&
-	acc(m.ServiceInstanceCount.Mem(), _)      &&
-	acc(m.ServiceInstanceChanges.Mem(), _)    &&
-	acc(m.SiblingReachable.Mem(), _)          &&
-	acc(m.SiblingBFDPacketsSent.Mem(), _)     &&
-	acc(m.SiblingBFDPacketsReceived.Mem(), _) &&
-	acc(m.SiblingBFDStateChanges.Mem(), _)    &&
+	m.InputBytesTotal.Mem()            &&
+	m.OutputBytesTotal.Mem()           &&
+	m.InputPacketsTotal.Mem()          &&
+	m.OutputPacketsTotal.Mem()         &&
+	m.DroppedPacketsTotal.Mem()        &&
+	m.InterfaceUp.Mem()                &&
+	m.BFDInterfaceStateChanges.Mem()   &&
+	m.BFDPacketsSent.Mem()             &&
+	m.BFDPacketsReceived.Mem()         &&
+	m.ServiceInstanceCount.Mem()       &&
+	m.ServiceInstanceChanges.Mem()     &&
+	m.SiblingReachable.Mem()           &&
+	m.SiblingBFDPacketsSent.Mem()      &&
+	m.SiblingBFDPacketsReceived.Mem()  &&
+	m.SiblingBFDStateChanges.Mem()     &&
 	// Currently not guaranteed by Gobra:
 	// https://github.com/viperproject/gobra/issues/512
 	m.InputBytesTotal != nil           &&
