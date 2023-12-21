@@ -79,6 +79,12 @@ pure func (m *Message) GetAddr(lenBuffers int) net.Addr {
 }
 
 ghost
+requires acc(m.Mem(lenBuffers), _)
+pure func (m *Message) GetMessage(lenBuffers int) Message {
+	return unfolding acc(m.Mem(lenBuffers), _) in *m
+}
+
+ghost
 requires acc(m.MemWithoutHalf(lenBuffers), _)
 pure func (m *Message) GetAddrWithoutHalf(lenBuffers int) net.Addr {
 	return unfolding acc(m.MemWithoutHalf(lenBuffers), _) in m.Addr
@@ -117,6 +123,7 @@ ensures  m.Buffers === old(unfolding m.Mem(1) in m.Buffers)
 ensures  old(m.GetFstBuffer()) === unfolding m.MemWithoutHalf(1) in m.Buffers[0]
 ensures  old(m.GetN()) == m.N
 ensures  old(m.HasWildcardPermAddr(1)) == m.WildcardPerm
+ensures  old(m.GetMessage(1)) === *m
 decreases
 func (m *Message) SplitPerm() {
 	unfold m.Mem(1)
@@ -148,8 +155,12 @@ func SplitPermMsgs(msgs []Message) {
 	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
 	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
 	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
+	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].GetMessage(1) === old(msgs[j].GetMessage(1))
 	decreases len(msgs) - i
 	for i := 0; i < len(msgs); i++ {
+		assert forall j int :: { &msgs[j] }{ &msgs[j].WildcardPerm } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
 		msgs[i].SplitPerm()
+		assert forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
+		assert msgs[i].WildcardPerm == old(msgs[i].HasWildcardPermAddr(1))
 	}
 }
