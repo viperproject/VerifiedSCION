@@ -1125,25 +1125,13 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
-// TODO:
-// requires p.sInit() && acc(MutexInvariant!<p.sInitD()!>(), _)
-
-// @ requires p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
+// @ requires p.sInit()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
-// @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _) // Note: perm dropped from here
-// @ requires acc(&p.d.svc, _) && p.d.svc != nil
-// @ requires acc(&p.d.forwardingMetrics, _)
-// @ requires acc(&p.ingressID)
-// @ requires acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
-// @ requires acc(&p.macBuffers.scionInput, R10)
-// @ requires sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
-// @ requires acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
-// @ requires acc(&p.srcAddr) && acc(&p.lastLayer)
-// @ requires p.buffer != nil && p.buffer.Mem()
-// @ requires p.mac != nil && p.mac.Mem()
 // @ requires acc(srcAddr.Mem(), _)
-// @ requires p.bfdLayer.NonInitMem()
-// @ requires p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
+// @ requires let d := p.sInitD() in
+// @ 	acc(MutexInvariant(d), _) &&
+// @ 	d.getValSvc() != nil      &&
+// @ 	d.getValForwardingMetrics() != nil
 //
 // TODO: specify state for packet processor after processing
 // @ ensures  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
@@ -1179,8 +1167,10 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 
 	if err := p.reset(); err != nil {
+		// @ unfold p.sInit()
 		return processResult{}, err /*@, false @*/
 	}
+	// @ unfold p.sInit()
 	p.rawPkt = rawPkt
 	p.srcAddr = srcAddr
 
