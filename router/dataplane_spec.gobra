@@ -23,6 +23,8 @@ import (
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/scrypto"
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
 
 	. "github.com/scionproto/scion/verification/utils/definitions"
@@ -316,3 +318,75 @@ decreases
 func (s *scmpError) CanSet(e error) bool {
 	return typeOf(e) == type[scmpError]
 }
+
+/** spec for newPacketProcessor **/
+
+// initial state, established after allocating with newPacketProcessor.
+pred (s* scionPacketProcessor) sInit() {
+	acc(&s.d)                                    &&
+	acc(&s.ingressID)                            &&
+	acc(&s.buffer) && s.buffer != nil            &&
+	s.buffer.Mem()                               &&
+	acc(&s.mac) && s.mac != nil && s.mac.Mem()   &&
+	s.scionLayer.NonInitMem()                    &&
+	s.scionLayer.PathPoolInitializedNonInitMem() &&
+	s.hbhLayer.NonInitMem()                      &&
+	s.e2eLayer.NonInitMem()                      &&
+	acc(&s.lastLayer)                            &&
+	acc(&s.path)                                 &&
+	acc(&s.hopField)                             &&
+	acc(&s.infoField)                            &&
+	acc(&s.segmentChange)                        &&
+	acc(&s.cachedMac)                            &&
+	acc(&s.macBuffers)                           &&
+	sl.AbsSlice_Bytes(s.macBuffers.scionInput, 0, len(s.macBuffers.scionInput)) &&
+	s.bfdLayer.NonInitMem()                      &&
+	acc(&s.srcAddr)                              &&
+	acc(&s.rawPkt)
+}
+
+// each ghost method on *scionPacketProcessor has, in the name, the state in which it
+// expects to find the packet processor. In the case below, the state `Init` is expected.
+ghost
+requires acc(s.sInit(), _)
+decreases
+pure func (s* scionPacketProcessor) sInitD() (res *DataPlane) {
+	return unfolding acc(s.sInit(), _) in s.d
+}
+
+ghost
+requires acc(s.sInit(), _)
+decreases
+pure func (s* scionPacketProcessor) sInitRawPkt() (res []byte) {
+	return unfolding acc(s.sInit(), _) in s.rawPkt
+}
+
+ghost
+requires acc(s.sInit(), _)
+decreases
+pure func (s* scionPacketProcessor) sInitPath() (res *scion.Raw) {
+	return unfolding acc(s.sInit(), _) in s.path
+}
+
+ghost
+requires acc(s.sInit(), _)
+decreases
+pure func (s* scionPacketProcessor) sInitHopField() (res path.HopField) {
+	return unfolding acc(s.sInit(), _) in s.hopField
+}
+
+ghost
+requires acc(s.sInit(), _)
+decreases
+pure func (s* scionPacketProcessor) sInitInfoField() (res path.InfoField) {
+	return unfolding acc(s.sInit(), _) in s.infoField
+}
+
+ghost
+requires acc(s.sInit(), _)
+decreases
+pure func (s* scionPacketProcessor) sInitSegmentChange() (res bool) {
+	return unfolding acc(s.sInit(), _) in s.segmentChange
+}
+
+/** end spec for newPacketProcessor **/

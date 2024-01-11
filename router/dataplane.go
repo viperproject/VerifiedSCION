@@ -742,28 +742,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			var scmpErr /*@@@*/ scmpError
 
 			// non-wildcard permissions:
-			// @ invariant acc(&processor.d, R5)
-			// @ invariant acc(&processor.ingressID)
-			// @ invariant acc(&processor.buffer)
-			// @ invariant acc(&processor.mac)
-			// @ invariant acc(&processor.lastLayer)
-			// @ invariant acc(&processor.path)
-			// @ invariant acc(&processor.hopField)
-			// @ invariant acc(&processor.infoField)
-			// @ invariant acc(&processor.segmentChange)
-			// @ invariant acc(&processor.cachedMac)
-			// @ invariant acc(&processor.macBuffers)
-			// @ invariant acc(&processor.rawPkt)
-			// @ invariant acc(&processor.srcAddr)
 			// @ invariant acc(&scmpErr)
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
-			// @ invariant processor.buffer != nil && processor.buffer.Mem()
-			// @ invariant processor.mac != nil && processor.mac.Mem()
-			// @ invariant processor.scionLayer.NonInitMem()
-			// @ invariant processor.hbhLayer.NonInitMem()
-			// @ invariant processor.e2eLayer.NonInitMem()
-			// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
-			// @ invariant processor.bfdLayer.NonInitMem()
 			// @ invariant writeMsgInv(writeMsgs)
 			// wildcard permissions:
 			// @ invariant acc(&d, _)
@@ -780,7 +760,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// properties about messages:
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].HasActiveBuffers(1)
 			// properties about packetProcessor:
-			// @ invariant processor.d === d
+			// @ invariant processor.sInit() && processor.sInitD() === d
 			for d.running {
 				pkts, err := rd.ReadBatch(msgs)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
@@ -801,27 +781,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
 				// non-wildcard permissions:
-				// @ invariant acc(&processor.d, R6)
-				// @ invariant acc(&processor.ingressID)
-				// @ invariant acc(&processor.buffer)
-				// @ invariant acc(&processor.mac)
-				// @ invariant acc(&processor.lastLayer)
-				// @ invariant acc(&processor.path)
-				// @ invariant acc(&processor.hopField)
-				// @ invariant acc(&processor.infoField)
-				// @ invariant acc(&processor.segmentChange)
-				// @ invariant acc(&processor.cachedMac)
-				// @ invariant acc(&processor.macBuffers)
-				// @ invariant acc(&processor.rawPkt)
-				// @ invariant acc(&processor.srcAddr)
 				// @ invariant acc(&scmpErr)
-				// @ invariant processor.buffer != nil && processor.buffer.Mem()
-				// @ invariant processor.mac != nil && processor.mac.Mem()
-				// @ invariant processor.scionLayer.NonInitMem()
-				// @ invariant processor.hbhLayer.NonInitMem()
-				// @ invariant processor.e2eLayer.NonInitMem()
-				// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
-				// @ invariant processor.bfdLayer.NonInitMem()
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
 				// @ invariant writeMsgInv(writeMsgs)
 				// wildcard permissions:
@@ -843,7 +803,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant 0 in domain(d.forwardingMetrics)
 				// @ invariant d.svc != nil
 				// properties about packetProcessor:
-				// @ invariant processor.d === d
+				// @ invariant processor.sInit() && processor.sInitD() === d
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
@@ -872,7 +832,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					tmpBuf := p.Buffers[0][:p.N]
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
-					// @ assert sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
+					// TODO: drop the assert and change spec processPkt to only use sInit
+					// assert sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
 					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
 					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
 
@@ -1111,26 +1072,7 @@ type processResult struct {
 
 // @ requires acc(&d.macFactory, _) && d.macFactory != nil
 // @ requires acc(MutexInvariant!<d!>(), _)
-// @ ensures  acc(&res.d) && res.d === d
-// @ ensures  acc(&res.ingressID)
-// @ ensures  acc(&res.buffer) && res.buffer != nil
-// @ ensures  res.buffer.Mem()
-// @ ensures  acc(&res.mac) && res.mac != nil && res.mac.Mem()
-// @ ensures  res.scionLayer.NonInitMem()
-// @ ensures  res.scionLayer.PathPoolInitializedNonInitMem()
-// @ ensures  res.hbhLayer.NonInitMem()
-// @ ensures  res.e2eLayer.NonInitMem()
-// @ ensures  acc(&res.lastLayer)
-// @ ensures  acc(&res.path)
-// @ ensures  acc(&res.hopField)
-// @ ensures  acc(&res.infoField)
-// @ ensures  acc(&res.segmentChange)
-// @ ensures  acc(&res.cachedMac)
-// @ ensures  acc(&res.macBuffers)
-// @ ensures  sl.AbsSlice_Bytes(res.macBuffers.scionInput, 0, len(res.macBuffers.scionInput))
-// @ ensures  res.bfdLayer.NonInitMem()
-// @ ensures  acc(&res.srcAddr)
-// @ ensures  acc(&res.rawPkt)
+// @ ensures  res.sInit() && res.sInitD() == d
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
@@ -1153,19 +1095,22 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	// @ fold p.hbhLayer.NonInitMem()
 	// @ fold p.e2eLayer.NonInitMem()
 	// @ fold p.bfdLayer.NonInitMem()
+	// @ fold p.sInit()
 	return p
 }
 
-// @ preserves acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
-// @ preserves acc(&p.segmentChange) && acc(&p.buffer) && acc(&p.mac) && acc(&p.cachedMac)
-// @ preserves p.buffer != nil && p.buffer.Mem()
-// @ preserves p.mac != nil && p.mac.Mem()
-// @ ensures   p.rawPkt == nil && p.path == nil
-// @ ensures   p.hopField == path.HopField{} && p.infoField == path.InfoField{}
-// @ ensures   !p.segmentChange
+// @ preserves p.sInit()
+// @ ensures   p.sInitD()         == old(p.sInitD())
+// @ ensures   p.sInitRawPkt()    == nil
+// @ ensures   p.sInitPath()      == nil
+// @ ensures   p.sInitHopField()  == path.HopField{}
+// @ ensures   p.sInitInfoField() == path.InfoField{}
+// @ ensures   !p.sInitSegmentChange()
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) reset() (err error) {
+	// @ unfold p.sInit()
+	// @ defer fold p.sInit()
 	p.rawPkt = nil
 	//p.scionLayer // cannot easily be reset
 	p.path = nil
@@ -1180,9 +1125,12 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
+// TODO:
+// requires p.sInit() && acc(MutexInvariant!<p.sInitD()!>(), _)
+
 // @ requires p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
-// @ requires acc(&p.d, R10) && acc(MutexInvariant!<p.d!>(), _)
+// @ requires acc(&p.d) && acc(MutexInvariant!<p.d!>(), _) // Note: perm dropped from here
 // @ requires acc(&p.d.svc, _) && p.d.svc != nil
 // @ requires acc(&p.d.forwardingMetrics, _)
 // @ requires acc(&p.ingressID)
@@ -1197,9 +1145,10 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires p.bfdLayer.NonInitMem()
 // @ requires p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
 //
+// TODO: specify state for packet processor after processing
 // @ ensures  p.scionLayer.NonInitMem() && p.hbhLayer.NonInitMem() && p.e2eLayer.NonInitMem()
 // @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
-// @ ensures  acc(&p.d, R10)
+// @ ensures  acc(&p.d) // Note: perm dropped from here
 // @ ensures  acc(&p.ingressID)
 // @ ensures  acc(&p.rawPkt) && acc(&p.path) && acc(&p.hopField) && acc(&p.infoField)
 // @ ensures  acc(&p.macBuffers.scionInput, R10)
@@ -1215,9 +1164,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  (reserr == nil) == (respr.OutConn != nil)
 // @ ensures  respr.OutConn != nil ==> acc(respr.OutConn.Mem(), _)
 // @ ensures  reserr == nil ==> respr.OutPkt === rawPkt
-//
-//	ensures  (reserr != nil && typeOf(reserr) == type[scmpError]) ==>
-//
 // @ ensures  reserr != nil ==>
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures  addrAliasesPkt ==>
