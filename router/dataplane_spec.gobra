@@ -273,6 +273,8 @@ func closureSpec3(c BatchConn)
 /** End of closure specs for the Run method **/
 
 /** definitions used internally for the proof of Run **/
+// TODO: maybe drop and use the invariant of Messages instead now that we have IsActive?
+
 pred writeMsgInv(writeMsgs underlayconn.Messages) {
 	len(writeMsgs) == 1 &&
 	acc(&writeMsgs[0]) &&

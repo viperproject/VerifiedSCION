@@ -109,13 +109,13 @@ type bfdSession interface {
 
 // BatchConn is a connection that supports batch reads and writes.
 // (VerifiedSCION) the spec of this interface exactly matches that of the same methods
-// in private/underlay/conn/Conn, except for a few ghost args in WriteBatch.
+// in private/underlay/conn/Conn.
 type BatchConn interface {
 	// @ pred Mem()
 
 	// @ requires  acc(Mem(), _)
 	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	msgs[i].Mem(1)
+	// @ 	(msgs[i].Mem(1) && msgs[i].HasActiveBuffers(1))
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> (
@@ -132,13 +132,11 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
-	// @ preserves !hasWildcardPerm ==> forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	acc(msgs[i].Mem(1), R50)
-	// @ preserves hasWildcardPerm ==> forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	acc(msgs[i].Mem(1), _)
+	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ 	(acc(msgs[i].Mem(1), R50) && msgs[i].HasActiveBuffers(1))
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
-	WriteBatch(msgs underlayconn.Messages, flags int /*@ , ghost hasWildcardPerm bool @*/) (n int, err error)
+	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
 	// @ requires Mem()
 	// @ ensures  err != nil ==> err.ErrorMem()
 	// @ decreases
@@ -710,7 +708,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ socketspec.SplitPermMsgs(msgs)
 
 			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf(1)
-			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1) && msgs[i].HasActiveBuffers(1)
 			// @ decreases
 			// @ outline (
 			// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
@@ -758,6 +756,15 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&processor.rawPkt)
 			// @ invariant acc(&processor.srcAddr)
 			// @ invariant acc(&scmpErr)
+			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+			// @ invariant processor.buffer != nil && processor.buffer.Mem()
+			// @ invariant processor.mac != nil && processor.mac.Mem()
+			// @ invariant processor.scionLayer.NonInitMem()
+			// @ invariant processor.hbhLayer.NonInitMem()
+			// @ invariant processor.e2eLayer.NonInitMem()
+			// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
+			// @ invariant processor.bfdLayer.NonInitMem()
+			// @ invariant writeMsgInv(writeMsgs)
 			// wildcard permissions:
 			// @ invariant acc(&d, _)
 			// @ invariant acc(d, _)
@@ -771,18 +778,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
 			// @ invariant d.svc != nil
 			// properties about messages:
-			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].HasActiveBuffers(1)
 			// properties about packetProcessor:
 			// @ invariant processor.d === d
-			// @ invariant processor.buffer != nil && processor.buffer.Mem()
-			// @ invariant processor.mac != nil && processor.mac.Mem()
-			// @ invariant processor.scionLayer.NonInitMem()
-			// @ invariant processor.hbhLayer.NonInitMem()
-			// @ invariant processor.e2eLayer.NonInitMem()
-			// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
-			// @ invariant processor.bfdLayer.NonInitMem()
-			// properties of the write msg:
-			// @ invariant writeMsgInv(writeMsgs)
 			for d.running {
 				pkts, err := rd.ReadBatch(msgs)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
@@ -817,6 +815,15 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&processor.rawPkt)
 				// @ invariant acc(&processor.srcAddr)
 				// @ invariant acc(&scmpErr)
+				// @ invariant processor.buffer != nil && processor.buffer.Mem()
+				// @ invariant processor.mac != nil && processor.mac.Mem()
+				// @ invariant processor.scionLayer.NonInitMem()
+				// @ invariant processor.hbhLayer.NonInitMem()
+				// @ invariant processor.e2eLayer.NonInitMem()
+				// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
+				// @ invariant processor.bfdLayer.NonInitMem()
+				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+				// @ invariant writeMsgInv(writeMsgs)
 				// wildcard permissions:
 				// @ invariant acc(&d, _)
 				// @ invariant acc(d, _)
@@ -826,7 +833,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// other properties:
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem(1)
+				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].HasActiveBuffers(1)
 				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
 				// @ 	!msgs[i].HasWildcardPermAddr(1)
 				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr(1)) == type[*net.UDPAddr]
@@ -837,15 +844,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant d.svc != nil
 				// properties about packetProcessor:
 				// @ invariant processor.d === d
-				// @ invariant processor.buffer != nil && processor.buffer.Mem()
-				// @ invariant processor.mac != nil && processor.mac.Mem()
-				// @ invariant processor.scionLayer.NonInitMem()
-				// @ invariant processor.hbhLayer.NonInitMem()
-				// @ invariant processor.e2eLayer.NonInitMem()
-				// @ invariant sl.AbsSlice_Bytes(processor.macBuffers.scionInput, 0, len(processor.macBuffers.scionInput))
-				// @ invariant processor.bfdLayer.NonInitMem()
-				// properties of the write msg:
-				// @ invariant writeMsgInv(writeMsgs)
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ msgs[:pkts][i0].SplitPerm()
@@ -885,6 +883,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						// @ unfold scmpErr.Mem()
 						// @ assert acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), 1 - R15)
 					case errors.As(err, &scmpErr):
+						// @ assume false
 						// @ unfold scmpErr.Mem()
 						if !scmpErr.TypeCode.InfoMsg() {
 							log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
@@ -893,6 +892,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						result.OutAddr = srcAddr
 						result.OutConn = rd
 					default:
+						// @ assume false
 						// TODO: refactor
 						// @ ghost if addrAliasesPkt {
 						// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
@@ -916,6 +916,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						continue
 					}
 					if result.OutConn == nil { // e.g. BFD case no message is forwarded
+						// @ assume false
 						// @ fold msgs[:pkts][i0].Mem(1)
 						continue
 					}
@@ -927,31 +928,33 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					writeMsgs[0].Buffers[0] = result.OutPkt
 					// @ assert acc(sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])), 1 - R15)
 					// @ writeMsgs[0].WildcardPerm = !addrAliasesPkt
+					// TODO: writeMsgs[0].Mem(1) should be an invariant
+					// @ writeMsgs[0].IsActive = true
 					writeMsgs[0].Addr = nil
 					if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
 						writeMsgs[0].Addr = result.OutAddr
 					}
 					// @ assert acc(sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])), 1 - R15)
-					// @ assert acc(result.OutConn.Mem(), _)
-					// @ fold acc(writeMsgs[0].Mem(1), R40)
-					// @ assert !addrAliasesPkt ==> acc(writeMsgs[0].Mem(1), _)
-					// @ assert addrAliasesPkt ==> acc(writeMsgs[0].Mem(1), R50)
-					// @ assert addrAliasesPkt ==> forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
+					// @ assume !addrAliasesPkt
+					// @ fold acc(writeMsgs[0].Mem(1), R50)
+					// @ assert forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
 					// @ 	acc(writeMsgs[i].Mem(1), R50)
-					// @ assert !addrAliasesPkt ==> forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
-					// @ 	acc(writeMsgs[i].Mem(1), _)
-					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@ , !addrAliasesPkt @*/)
-					/// -- Checked until here
-					// @ unfold acc(writeMsgs[0].Mem(1), R40)
+					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
+					/// -- Checked until here // TODO: drop comment
+					// @ unfold acc(writeMsgs[0].Mem(1), R50)
 					// @ ghost if addrAliasesPkt {
-					// @ assume false
 					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
-					// @ 	assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
+					//  	assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ }
 
+					// @ assume false
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ assert tmpBuf === p.Buffers[0][:p.N]
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
+					// @ writeMsgs[0].IsActive = false
+
+					// @ assume false
+
 					// @ fold writeMsgInv(writeMsgs)
 					// @ fold msgs[:pkts][i0].Mem(1)
 					// @ assume false
