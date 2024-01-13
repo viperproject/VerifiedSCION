@@ -20,5 +20,5 @@ requires acc(slices.AbsSlice_Bytes(y, 0, len(y)), _)
 // ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> (forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 1)
 // ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> !(forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 0)
 ensures len(x) != len(y) ==> res == 0
-decreases
+decreases _
 pure func ConstantTimeCompare(x, y []byte) (res int)
