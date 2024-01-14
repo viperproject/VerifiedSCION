@@ -156,6 +156,7 @@ ghost
 requires size >= 0
 ensures len(res) == size
 ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
+decreases _
 pure func NewSeq_Any(size int) (res seq[any])
 
 // TODO:
