@@ -72,18 +72,21 @@ pred (m *Message) MemWithoutHalf(lenBuffers int) {
 
 ghost
 requires acc(m.Mem(lenBuffers), _)
+decreases
 pure func (m *Message) HasWildcardPermAddr(lenBuffers int) bool {
 	return unfolding acc(m.Mem(lenBuffers), _) in m.WildcardPerm
 }
 
 ghost
 requires acc(m.Mem(lenBuffers), _)
+decreases
 pure func (m *Message) HasActiveBuffers(lenBuffers int) bool {
 	return unfolding acc(m.Mem(lenBuffers), _) in m.IsActive
 }
 
 ghost
 requires acc(m.Mem(lenBuffers), _)
+decreases
 pure func (m *Message) GetAddr(lenBuffers int) net.Addr {
 	return unfolding acc(m.Mem(lenBuffers), _) in m.Addr
 }
@@ -96,6 +99,7 @@ pure func (m *Message) GetMessage(lenBuffers int) Message {
 
 ghost
 requires acc(m.MemWithoutHalf(lenBuffers), _)
+decreases
 pure func (m *Message) GetAddrWithoutHalf(lenBuffers int) net.Addr {
 	return unfolding acc(m.MemWithoutHalf(lenBuffers), _) in m.Addr
 }
