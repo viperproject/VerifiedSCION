@@ -93,6 +93,7 @@ pure func (m *Message) GetAddr(lenBuffers int) net.Addr {
 
 ghost
 requires acc(m.Mem(lenBuffers), _)
+decreases
 pure func (m *Message) GetMessage(lenBuffers int) Message {
 	return unfolding acc(m.Mem(lenBuffers), _) in *m
 }
