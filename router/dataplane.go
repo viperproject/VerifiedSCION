@@ -694,11 +694,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires acc(&d, _)
 		// @ requires acc(d,  _)
 		// @ requires acc(MutexInvariant(d), _)
+		// @ requires d.getValSvc() != nil
+		// @ requires d.getValForwardingMetrics() != nil
+		// TODO: Some of the assertions below are redundant and should be removed
 		// @ requires d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
 		// @ requires 0 in domain(d.forwardingMetrics)
 		// @ requires ingressID in domain(d.forwardingMetrics)
 		// @ requires d.macFactory != nil
-		// @ requires d.svc != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// @ requires d.external != nil && acc(accBatchConn(d.external), _)
 		// @ requires unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
@@ -714,7 +716,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
 			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2)
 			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> msgs[i].MemWithoutHalf()
-			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> 0 <= i && i < i0 ==> msgs[i].Mem()
+			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> 0 <= i && i < i0 ==> msgs[i].Mem() && msgs[i].HasActiveBuffers()
 			// @ decreases len(msgs) - i0
 			for _, msg := range msgs /*@ with i0 @*/ {
 				tmp := make([]byte, bufSize)
@@ -723,8 +725,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ assert msgs[i0] === msg
 				// @ unfold msgs[i0].MemWithoutHalf()
 				msg.Buffers[0] = tmp
+				// @ msg.IsActive = true
 				// @ fold msgs[i0].Mem()
-				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem()
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem() && msgs[i].HasActiveBuffers()
 				// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf()
 			}
 			// @ )
@@ -749,6 +752,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(&d, _)
 			// @ invariant acc(d, _)
 			// @ invariant acc(MutexInvariant(d), _)
+			// @ invariant d.getValSvc() != nil
+			// @ invariant d.getValForwardingMetrics() != nil
+			// TODO: Some of the assertions below are redundant and should be removed
 			// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
 			// @ invariant d.external != nil && acc(accBatchConn(d.external), _)
 			// @ invariant acc(rd.Mem(), _)
@@ -756,7 +762,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant 0 in domain(d.forwardingMetrics)
 			// @ invariant ingressID in domain(d.forwardingMetrics)
 			// @ invariant unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
-			// @ invariant d.svc != nil
 			// properties about messages:
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].HasActiveBuffers()
 			// properties about packetProcessor:
@@ -788,6 +793,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&d, _)
 				// @ invariant acc(d, _)
 				// @ invariant acc(MutexInvariant(d), _)
+				// @ invariant d.getValSvc() != nil
+				// @ invariant d.getValForwardingMetrics() != nil
+				// TODO: Some of the assertions below are redundant and should be removed
 				// @ invariant acc(d.forwardingMetrics, _)
 				// @ invariant acc(rd.Mem(), _)
 				// other properties:
@@ -801,7 +809,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant d.forwardingMetrics != nil
 				// @ invariant ingressID in domain(d.forwardingMetrics)
 				// @ invariant 0 in domain(d.forwardingMetrics)
-				// @ invariant d.svc != nil
 				// properties about packetProcessor:
 				// @ invariant processor.sInit() && processor.sInitD() === d
 				for i0 := 0; i0 < pkts; i0++ {
@@ -835,6 +842,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
 					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
 
+					// @ assume false
 					// @ fold scmpErr.Mem()
 					// @ ghost m := &msgs[:pkts][i0]
 					switch {

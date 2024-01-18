@@ -45,7 +45,7 @@ type Message struct {
 	// (VerifiedSCION) the following are, morally, ghost fields:
 	// is it still ok to read the buffers and Addr of the Message?
 	IsActive bool
-	// do we have a fixed amount of perms to the Addr a wildcard amount?
+	// do we have a fixed amount of perms to the Addr or a wildcard amount?
 	WildcardPerm bool
 }
 
