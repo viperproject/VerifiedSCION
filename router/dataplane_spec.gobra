@@ -21,8 +21,11 @@ import (
 	"hash"
 	"net"
 
+	"github.com/google/gopacket"
+
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/scrypto"
+	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
@@ -164,23 +167,101 @@ ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> res[i] == offsetPai
 decreases
 func newOffsetPair(n int) (res seq[offsetPair])
 
-/**** Acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
 ghost
 requires acc(MutexInvariant!<d!>(), _)
+ensures  acc(MutexInvariant(d), _)
+decreases
+func (d *DataPlane) SimplifyPermInv() {
+	unfold acc(MutexInvariant!<d!>(), _)
+	// This big assertion seems to be necessary for the fold to succeed :(
+	assert acc(&d.external,       _) &&
+		acc(&d.linkTypes,         _) &&
+		acc(&d.neighborIAs,       _) &&
+		acc(&d.internal,          _) &&
+		acc(&d.internalIP,        _) &&
+		acc(&d.internalNextHops,  _) &&
+		acc(&d.svc,               _) &&
+		acc(&d.macFactory,        _) &&
+		acc(&d.bfdSessions,       _) &&
+		acc(&d.localIA,           _) &&
+		acc(&d.running,           _) &&
+		acc(&d.Metrics,           _) &&
+		acc(&d.forwardingMetrics, _) &&
+		acc(&d.key,               _) &&
+		(d.external    != nil       ==> acc(accBatchConn(d.external), _))     &&
+		(d.linkTypes   != nil       ==> acc(d.linkTypes, _))                  &&
+		(d.neighborIAs != nil       ==> acc(d.neighborIAs, _))                &&
+		(d.internal != nil          ==> acc(d.internal.Mem(), _))             &&
+		(d.internalIP != nil        ==> acc(d.internalIP.Mem(), _))           &&
+		(d.internalNextHops != nil  ==> acc(accAddr(d.internalNextHops), _))  &&
+		(d.svc != nil               ==> acc(d.svc.Mem(), _))                  &&
+		(d.macFactory != nil        ==> (
+			acc(d.key, _)                                     &&
+			acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
+			scrypto.ValidKeyForHash(*d.key)                   &&
+			d.macFactory implements MacFactorySpec{d.key}))                   &&
+		(d.bfdSessions != nil       ==> acc(accBfdSession(d.bfdSessions), _)) &&
+		(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))              &&
+		(d.forwardingMetrics != nil ==> acc(accForwardingMetrics(d.forwardingMetrics), _))
+	fold acc(MutexInvariant(d), _)
+}
+
+ghost
+requires acc(MutexInvariant(d), _)
+ensures  acc(MutexInvariant!<d!>(), _)
+decreases
+func (d *DataPlane) ElaboratePermInv() {
+	unfold acc(MutexInvariant(d), _)
+	// This big assertion seems to be necessary for the fold to succeed :(
+	assert acc(&d.external,       _) &&
+		acc(&d.linkTypes,         _) &&
+		acc(&d.neighborIAs,       _) &&
+		acc(&d.internal,          _) &&
+		acc(&d.internalIP,        _) &&
+		acc(&d.internalNextHops,  _) &&
+		acc(&d.svc,               _) &&
+		acc(&d.macFactory,        _) &&
+		acc(&d.bfdSessions,       _) &&
+		acc(&d.localIA,           _) &&
+		acc(&d.running,           _) &&
+		acc(&d.Metrics,           _) &&
+		acc(&d.forwardingMetrics, _) &&
+		acc(&d.key,               _) &&
+		(d.external    != nil       ==> acc(accBatchConn(d.external), _))     &&
+		(d.linkTypes   != nil       ==> acc(d.linkTypes, _))                  &&
+		(d.neighborIAs != nil       ==> acc(d.neighborIAs, _))                &&
+		(d.internal != nil          ==> acc(d.internal.Mem(), _))             &&
+		(d.internalIP != nil        ==> acc(d.internalIP.Mem(), _))           &&
+		(d.internalNextHops != nil  ==> acc(accAddr(d.internalNextHops), _))  &&
+		(d.svc != nil               ==> acc(d.svc.Mem(), _))                  &&
+		(d.macFactory != nil        ==> (
+			acc(d.key, _)                                     &&
+			acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
+			scrypto.ValidKeyForHash(*d.key)                   &&
+			d.macFactory implements MacFactorySpec{d.key}))                   &&
+		(d.bfdSessions != nil       ==> acc(accBfdSession(d.bfdSessions), _)) &&
+		(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))              &&
+		(d.forwardingMetrics != nil ==> acc(accForwardingMetrics(d.forwardingMetrics), _))
+	fold acc(MutexInvariant!<d!>(), _)
+}
+
+/**** Acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
+ghost
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.internalNextHops, _)
 ensures  d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), _)
 decreases
 func (d *DataPlane) getInternalNextHops() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 ghost
-requires acc(MutexInvariant!<d!>(), _)
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.forwardingMetrics, _)
 ensures  d.forwardingMetrics != nil ==> acc(accForwardingMetrics(d.forwardingMetrics), _)
 decreases
 func (d *DataPlane) getForwardingMetrics() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 ghost
@@ -191,43 +272,43 @@ pure func (d *DataPlane) getValForwardingMetrics() map[uint16]forwardingMetrics 
 }
 
 ghost
-requires acc(MutexInvariant!<d!>(), _)
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.external, _) && (d.external != nil ==> acc(accBatchConn(d.external), _))
 decreases
 func (d *DataPlane) getExternalMem() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 ghost
-requires acc(MutexInvariant!<d!>(), _)
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
 decreases
 func (d *DataPlane) getLinkTypesMem() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 ghost
-requires acc(MutexInvariant!<d!>(), _)
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.localIA, _)
 decreases
 func (d *DataPlane) getLocalIA() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 ghost
-requires acc(MutexInvariant!<d!>(), _)
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
 decreases
 func (d *DataPlane) getNeighborIAs() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 ghost
-requires acc(MutexInvariant!<d!>(), _)
-ensures  acc(&d.svc, _) && (d.svc != nil ==> acc(d.svc.Mem(), _))
+requires acc(MutexInvariant(d), _) && d.getValSvc() != nil
+ensures  acc(&d.svc, _) && d.svc != nil && acc(d.svc.Mem(), _)
 decreases
 func (d *DataPlane) getSvcMem() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 ghost
@@ -238,30 +319,30 @@ pure func (d *DataPlane) getValSvc() *services {
 }
 
 ghost
-requires acc(MutexInvariant!<d!>(), _)
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.bfdSessions, _) && (d.bfdSessions != nil ==> acc(accBfdSession(d.bfdSessions), _))
 decreases
 func (d *DataPlane) getBfdSessionsMem() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 ghost
-requires acc(MutexInvariant!<d!>(), _)
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.internal, _) && (d.internal != nil ==> acc(d.internal.Mem(), _))
 decreases
 func (d *DataPlane) getInternal() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
-requires acc(MutexInvariant!<d!>(), _)
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.macFactory, _)
 decreases
 func (d *DataPlane) getMacFactoryMem() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 ghost
-requires acc(MutexInvariant!<d!>(), _)
+requires acc(MutexInvariant(d), _)
 requires acc(&d.macFactory, _) && d.macFactory != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
 ensures  acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
@@ -269,7 +350,7 @@ ensures  scrypto.ValidKeyForHash(*d.key)
 ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
 func (d *DataPlane) getNewPacketProcessorFootprint() {
-	unfold acc(MutexInvariant!<d!>(), _)
+	unfold acc(MutexInvariant(d), _)
 }
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
@@ -343,7 +424,8 @@ pred (s* scionPacketProcessor) sInit() {
 	s.buffer.Mem()                               &&
 	acc(&s.mac) && s.mac != nil && s.mac.Mem()   &&
 	s.scionLayer.NonInitMem()                    &&
-	s.scionLayer.PathPoolInitializedNonInitMem() &&
+	// The following is not necessary
+	// s.scionLayer.PathPoolInitializedNonInitMem() &&
 	s.hbhLayer.NonInitMem()                      &&
 	s.e2eLayer.NonInitMem()                      &&
 	acc(&s.lastLayer)                            &&
@@ -404,3 +486,37 @@ pure func (s* scionPacketProcessor) sInitSegmentChange() (res bool) {
 }
 
 /** end spec for newPacketProcessor **/
+
+/** **/
+
+ghost
+requires hasScionLayer ==> scionLayer.Mem(ubScionLayer)
+requires hasHbhLayer   ==> hbhLayer.Mem(ubHbhLayer)
+requires hasE2eLayer   ==> e2eLayer.Mem(ubE2eLayer)
+ensures  hasScionLayer ==> scionLayer.NonInitMem()
+ensures  hasHbhLayer   ==> hbhLayer.NonInitMem()
+ensures  hasE2eLayer   ==> e2eLayer.NonInitMem()
+decreases
+func ResetDecodingLayers(
+	scionLayer *slayers.SCION,
+	hbhLayer *slayers.HopByHopExtnSkipper,
+	e2eLayer *slayers.EndToEndExtnSkipper,
+	ubScionLayer []byte,
+	ubHbhLayer   []byte,
+	ubE2eLayer   []byte,
+	hasScionLayer bool,
+	hasHbhLayer   bool,
+	hasE2eLayer   bool,
+) {
+	if hasScionLayer {
+		scionLayer.DowngradePerm(ubScionLayer)
+	}
+	if hasHbhLayer {
+		hbhLayer.DowngradePerm(ubHbhLayer)
+	}
+	if hasE2eLayer {
+		e2eLayer.DowngradePerm(ubE2eLayer)
+	}
+}
+
+/** **/
