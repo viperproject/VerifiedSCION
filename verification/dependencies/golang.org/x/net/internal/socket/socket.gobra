@@ -174,21 +174,19 @@ ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> old(msgs[j].Ge
 ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr())
 ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].IsActive == old(msgs[j].HasActiveBuffers())
 decreases
-func SplitPermMsgs(msgs []Message) /*{
+func SplitPermMsgs(msgs []Message) {
 	invariant 0 <= i && i <= len(msgs)
-	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
-	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
-	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
-	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].IsActive == old(msgs[j].HasActiveBuffers(1))
-	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j] === old(msgs[j].GetMessage(1))
-	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].GetMessage(1) === old(msgs[j].GetMessage(1))
+	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem()
+	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf()
+	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr())
+	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].IsActive == old(msgs[j].HasActiveBuffers())
+	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j] === old(msgs[j].GetMessage())
+	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].GetMessage() === old(msgs[j].GetMessage())
 	decreases len(msgs) - i
 	for i := 0; i < len(msgs); i++ {
-		assert forall j int :: { &msgs[j] }{ &msgs[j].WildcardPerm } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
+		assert forall j int :: { &msgs[j] }{ &msgs[j].WildcardPerm } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr())
 		msgs[i].SplitPerm()
-		assert forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr(1))
-		assert msgs[i].WildcardPerm == old(msgs[i].HasWildcardPermAddr(1))
+		assert forall j int :: { &msgs[j] } 0 <= j && j < i ==> msgs[j].WildcardPerm == old(msgs[j].HasWildcardPermAddr())
+		assert msgs[i].WildcardPerm == old(msgs[i].HasWildcardPermAddr())
 	}
 }
-*/
-// TODO: adapt
