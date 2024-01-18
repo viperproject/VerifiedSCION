@@ -832,7 +832,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					tmpBuf := p.Buffers[0][:p.N]
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
-					// @ d.SimplifyPermInv()
 					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
 					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
 
