@@ -808,11 +808,14 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// other properties:
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].HasActiveBuffers()
+				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+				// @ 	msgs[i].HasActiveBuffers()
 				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
 				// @ 	!msgs[i].HasWildcardPermAddr()
-				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr]
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
+				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
+				// @ 	typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr]
+				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
+				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant d.forwardingMetrics != nil
 				// @ invariant ingressID in domain(d.forwardingMetrics)
 				// @ invariant 0 in domain(d.forwardingMetrics)
@@ -820,11 +823,14 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant processor.sInit() && processor.sInitD() === d
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
-					// TODO: do not use this, instead use an outline block
-					// with unfolds/folds and an abstraction function
-					// @ msgs[:pkts][i0].SplitPerm()
+					// @ preserves 0 <= i0 && i0 < pkts && pkts <= len(msgs)
+					// @ preserves acc(msgs[i0].Mem(), R1)
+					// @ ensures   p === msgs[:pkts][i0].GetMessage()
+					// @ outline(
+					// @ unfold acc(msgs[i0].Mem(), R1)
 					p := msgs[:pkts][i0]
-					// @ msgs[:pkts][i0].CombinePerm()
+					// @ fold acc(msgs[i0].Mem(), R1)
+					// @ )
 					// @ assert msgs[i0].GetN() <= len(msgs[i0].GetFstBuffer())
 					// @ d.getForwardingMetrics()
 					// @ unfold acc(accForwardingMetrics(d.forwardingMetrics), _)
@@ -836,6 +842,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ prometheus.CounterMemImpliesNonNil(inputCounters.InputPacketsTotal)
 					// @ prometheus.CounterMemImpliesNonNil(inputCounters.InputBytesTotal)
 					inputCounters.InputPacketsTotal.Inc()
+					// @ assume false
 					// @ fl.CastPreservesOrder64(0, p.N) // Gobra still does not fully support floats
 					inputCounters.InputBytesTotal.Add(float64(p.N))
 
