@@ -703,8 +703,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires ingressID in d.getDomForwardingMetrics()
 		// @ requires d.macFactory != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
-		// @ requires d.external != nil && acc(accBatchConn(d.external), _)
-		// @ requires unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
 			msgs := conn.NewReadMessages(inputBatchCnt)
 			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
@@ -752,11 +750,10 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
 
-			// non-wildcard permissions:
 			// @ invariant acc(&scmpErr)
-			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
+			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+			// @ 	msgs[i].Mem()
 			// @ invariant writeMsgInv(writeMsgs)
-			// wildcard permissions:
 			// @ invariant acc(&d, _)
 			// @ invariant acc(d, _)
 			// @ invariant acc(MutexInvariant(d), _)
@@ -764,12 +761,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant d.getValForwardingMetrics() != nil
 			// @ invariant 0 in d.getDomForwardingMetrics()
 			// @ invariant ingressID in d.getDomForwardingMetrics()
-			// @ invariant d.external != nil && acc(accBatchConn(d.external), _)
 			// @ invariant acc(rd.Mem(), _)
-			// properties about the dataplane:
-			// TODO: the following is redundant and should be removed; same for acc(d, _) (same applies for inner loop)
-			// @ invariant unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
-			// properties about packetProcessor:
 			// @ invariant processor.sInit() && processor.sInitD() === d
 			for d.running {
 				pkts, err := rd.ReadBatch(msgs)
@@ -792,11 +784,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
-				// non-wildcard permissions:
 				// @ invariant acc(&scmpErr)
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ invariant writeMsgInv(writeMsgs)
-				// wildcard permissions:
 				// @ invariant acc(&d, _)
 				// @ invariant acc(d, _)
 				// @ invariant acc(MutexInvariant(d), _)
@@ -805,7 +795,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant 0 in d.getDomForwardingMetrics()
 				// @ invariant ingressID in d.getDomForwardingMetrics()
 				// @ invariant acc(rd.Mem(), _)
-				// other properties:
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
 				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
@@ -814,7 +803,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ 	typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr]
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
-				// properties about packetProcessor:
 				// @ invariant processor.sInit() && processor.sInitD() === d
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
