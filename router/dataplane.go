@@ -1199,6 +1199,8 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 
 	ghost llStart := 0
 	ghost llEnd := 0
+	ghost mustCombineRanges := lastLayerIdx != -1 && !offsets[lastLayerIdx].isNil
+	ghost var o offsetPair
 	ghost if lastLayerIdx == -1 {
 		ub = p.rawPkt
 	} else {
@@ -1206,12 +1208,11 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			ub = nil
 			sl.NilAcc_Bytes()
 		} else {
-			o := offsets[lastLayerIdx]
+			o = offsets[lastLayerIdx]
 			ub = p.rawPkt[o.start:o.end]
 			llStart = o.start
 			llEnd = o.end
 			sl.SplitRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
-			ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		}
 	}
 	hasHbhLayer := processed[0]
@@ -1231,6 +1232,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	pathType := /*@ unfolding p.scionLayer.Mem(rawPkt) in @*/ p.scionLayer.PathType
 	switch pathType {
 	case empty.PathType:
+		// @ ghost if mustCombineRanges { ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm) }
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
 			// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 			// @ defer fold p.sInit()
@@ -1246,21 +1248,25 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
 			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/)) /*@, false @*/
 	case onehop.PathType:
-		// @ assume false // TODO: drop
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
+			// @ ghost if mustCombineRanges { ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm) }
+			// @ ghost defer sl.CombineRange_Bytes(ub, start, end, writePerm)
 			// @ unfold acc(p.scionLayer.Mem(p.rawPkt), R10)
 			ohp, ok := p.scionLayer.Path.(*onehop.Path)
 			// @ fold acc(p.scionLayer.Mem(p.rawPkt), R10)
 			if !ok {
 				// @ establishMemMalformedPath()
 				// @ defer fold p.sInit()
+				// @ defer fold p.d.validResult(processResult{}, false)
 				// @ ghost defer ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 				return processResult{}, malformedPath /*@, false @*/
 			}
 			// @ defer fold p.sInit()
+			// @ defer fold p.d.validResult(processResult{}, false)
 			// @ ghost defer ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 			return processResult{}, p.processInterBFD(ohp, pld) /*@, false @*/
 		}
+		// @ assume false // TODO: drop
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
 		// @ ghost if lastLayerIdx >= 0 {
@@ -1296,6 +1302,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ fold p.sInit()
 		return v1, v2 /*@, false @*/
 	default:
+		// @ ghost if mustCombineRanges { ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm) }
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// @ fold p.d.validResult(processResult{}, false)
@@ -1309,7 +1316,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 // @ requires  acc(&p.ingressID, R20)
 // @ requires  acc(MutexInvariant(p.d), _)
 // @ requires  p.bfdLayer.NonInitMem()
-// @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   acc(&p.d, R20)
 // @ ensures   acc(&p.ingressID, R20)
 // @ ensures   p.bfdLayer.NonInitMem()
