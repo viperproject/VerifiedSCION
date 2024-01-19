@@ -957,6 +957,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// ok metric
 					// @ d.getForwardingMetrics()
 					// @ unfold acc(accForwardingMetrics(d.forwardingMetrics), _)
+					// (VerifiedSCION) the following is failing:
+					// @ assert result.EgressID != 0 ==> result.EgressID in d.getDomForwardingMetrics()
+					// @ assert result.EgressID != 0 ==> result.EgressID in domain(d.forwardingMetrics)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[result.EgressID], result.EgressID), _)
 					outputCounters := d.forwardingMetrics[result.EgressID]
 					// @ assert acc(outputCounters.OutputPacketsTotal.Mem(), _)
@@ -964,11 +967,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					outputCounters.OutputPacketsTotal.Inc()
 					// @ assert acc(outputCounters.OutputBytesTotal.Mem(), _)
 					// @ prometheus.CounterMemImpliesNonNil(outputCounters.OutputBytesTotal)
+					// @ fl.CastPreservesOrder64(0, len(result.OutPkt))
 					outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
 				}
 			}
 		}
 
+	// (VerifiedSCION) Continue from here after adapting processPkt and processOHP
 	// @ TODO()
 	for k, v := range d.bfdSessions {
 		// @ TODO()
