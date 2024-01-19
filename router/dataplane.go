@@ -115,8 +115,10 @@ type BatchConn interface {
 	// @ pred Mem()
 
 	// @ requires  acc(Mem(), _)
-	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	(msgs[i].Mem() && msgs[i].HasActiveBuffers())
+	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ 	msgs[i].Mem()
+	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr())
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> (
@@ -134,7 +136,7 @@ type BatchConn interface {
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
 	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	(acc(msgs[i].Mem(), R50) && msgs[i].HasActiveBuffers())
+	// @ 	(acc(msgs[i].Mem(), R50) && msgs[i].HasActiveAddr())
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
@@ -711,7 +713,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
 			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() &&
-			// @ 	msgs[i].HasActiveBuffers() &&
+			// @ 	msgs[i].HasActiveAddr() &&
 			// @ 	msgs[i].GetAddr() == nil
 			// @ decreases
 			// @ outline(
@@ -719,7 +721,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==>
-			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil && msgs[i].HasActiveBuffers()
+			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil && msgs[i].HasActiveAddr()
 			// @ decreases len(msgs) - i0
 			for i0 := 0; i0 < len(msgs); i0 += 1 {
 				// (VerifiedSCION) changed a range loop in favor of a normal loop
@@ -770,8 +772,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant 0 in domain(d.forwardingMetrics)
 			// @ invariant ingressID in domain(d.forwardingMetrics)
 			// @ invariant unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
-			// properties about messages:
-			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].HasActiveBuffers()
 			// properties about packetProcessor:
 			// @ invariant processor.sInit() && processor.sInitD() === d
 			for d.running {
@@ -811,10 +811,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// other properties:
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-				// @ 	msgs[i].HasActiveBuffers()
-				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
-				// @ 	!msgs[i].HasWildcardPermAddr()
+				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
+				// @ 	msgs[i].HasActiveAddr()
 				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
 				// @ 	typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr]
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
@@ -864,11 +862,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ fold scmpErr.Mem()
 					switch {
 					case err == nil:
-						// @ assume false
 						// @ unfold scmpErr.Mem()
-						// @ assert acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), 1 - R15)
+						// assert acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), 1 - R15)
 					case errors.As(err, &scmpErr):
-						// @ assume false
+						// @ unfold d.validResult(result, addrAliasesPkt)
+						// @ ghost if addrAliasesPkt  && result.OutAddr != nil {
+						// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
+						// @ }
 						// @ unfold scmpErr.Mem()
 						if !scmpErr.TypeCode.InfoMsg() {
 							log.Debug("SCMP", "err", scmpErr, "dst_addr", p.Addr)
@@ -876,6 +876,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						// SCMP go back the way they came.
 						result.OutAddr = srcAddr
 						result.OutConn = rd
+						// @ addrAliasesPkt = false
+						// @ fold d.validResult(result, addrAliasesPkt)
 					default:
 						// @ unfold d.validResult(result, addrAliasesPkt)
 						// @ ghost if addrAliasesPkt {
@@ -886,7 +888,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						// @ assert sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB))
 						// @ assert (m.Addr != nil ==> acc(m.Addr.Mem(), _))
 						// @ assert 0 <= m.N
-						// @ msgs[:pkts][i0].WildcardPerm = !addrAliasesPkt
+						// @ msgs[:pkts][i0].IsActive = false
 						// @ fold msgs[:pkts][i0].Mem()
 						log.Debug("Error processing packet", "err", err)
 						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
@@ -896,7 +898,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						continue
 					}
 					if result.OutConn == nil { // e.g. BFD case no message is forwarded
-						// @ assume false
+						// @ unfold d.validResult(result, addrAliasesPkt)
+						// @ ghost if addrAliasesPkt {
+						// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
+						// @ }
+						// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
+						// @ msgs[:pkts][i0].IsActive = false
 						// @ fold msgs[:pkts][i0].Mem()
 						continue
 					}
@@ -904,39 +911,29 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// Write to OutConn; drop the packet if this would block.
 					// Use WriteBatch because it's the only available function that
 					// supports MSG_DONTWAIT.
+					// @ unfold d.validResult(result, addrAliasesPkt)
 					// @ unfold writeMsgInv(writeMsgs)
 					writeMsgs[0].Buffers[0] = result.OutPkt
-					// @ assert acc(sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])), 1 - R15)
 					// @ writeMsgs[0].WildcardPerm = !addrAliasesPkt
-					// TODO: writeMsgs[0].Mem() should be an invariant
 					// @ writeMsgs[0].IsActive = true
 					writeMsgs[0].Addr = nil
 					if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
 						writeMsgs[0].Addr = result.OutAddr
 					}
-					// @ assert acc(sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])), 1 - R15)
+					// @ sl.NilAcc_Bytes()
 					// @ fold acc(writeMsgs[0].Mem(), R50)
 					// @ assert forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
 					// @ 	acc(writeMsgs[i].Mem(), R50)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
-					/// -- Checked until here // TODO: drop comment
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
-					// @ ghost if addrAliasesPkt {
+					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
 					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 					//  	assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ }
-
-					// @ assume false
-					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
-					// @ assert tmpBuf === p.Buffers[0][:p.N]
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
-					// @ writeMsgs[0].IsActive = false
-
-					// @ assume false
-
-					// @ fold writeMsgInv(writeMsgs)
+					// @ msgs[:pkts][i0].IsActive = false
 					// @ fold msgs[:pkts][i0].Mem()
-					// @ assume false
+					// @ fold writeMsgInv(writeMsgs)
 					if err != nil {
 						// @ requires err != nil && err.ErrorMem()
 						// @ decreases
@@ -973,8 +970,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		}
 
 	// @ TODO()
-	// TODO: replace by  acc(MutexInvariant(d), _) for the remainder of the proof? - makes proof obligations easier
-	// @ fold acc(MutexInvariant(d), _)
 	for k, v := range d.bfdSessions {
 		// @ TODO()
 		go func(ifID uint16, c bfdSession) {
