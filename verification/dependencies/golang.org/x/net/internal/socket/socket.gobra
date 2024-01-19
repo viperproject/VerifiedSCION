@@ -106,7 +106,8 @@ pure func (m *Message) GetFstBuffer() []byte {
 
 ghost
 requires acc(m.Mem(), _)
+ensures  0 <= res
 decreases
-pure func (m *Message) GetN() int {
+pure func (m *Message) GetN() (res int) {
 	return unfolding acc(m.Mem(), _) in m.N
 }

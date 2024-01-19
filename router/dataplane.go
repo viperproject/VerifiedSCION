@@ -787,8 +787,10 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					continue
 				}
 				// @ assert pkts <= len(msgs)
-				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> !msgs[i].HasWildcardPermAddr()
-				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
+				// @ 	!msgs[i].HasWildcardPermAddr()
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
+				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
@@ -842,8 +844,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ prometheus.CounterMemImpliesNonNil(inputCounters.InputPacketsTotal)
 					// @ prometheus.CounterMemImpliesNonNil(inputCounters.InputBytesTotal)
 					inputCounters.InputPacketsTotal.Inc()
-					// @ assume false
-					// @ fl.CastPreservesOrder64(0, p.N) // Gobra still does not fully support floats
+					// @ assert msgs[i0].GetN() == p.N
+					// (VerifiedSCION) Gobra still does not fully support floats
+					// @ fl.CastPreservesOrder64(0, p.N)
 					inputCounters.InputBytesTotal.Add(float64(p.N))
 
 					srcAddr := p.Addr.(*net.UDPAddr)
