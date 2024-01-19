@@ -98,10 +98,11 @@ type bfdSession interface {
 	// @ requires acc(Mem(), _)
 	// @ ensures  err != nil ==> err.ErrorMem()
 	Run(ctx context.Context) (err error)
-	// @ requires acc(Mem(), _)
-	// @ requires msg.Mem(ub)
-	// @ requires sl.AbsSlice_Bytes(ub, 0, len(ub))
-	// @ ensures  msg.NonInitMem() // an implementation must copy the fields it needs from msg
+	// @ requires  acc(Mem(), _)
+	// @ requires  msg.Mem(ub)
+	// (VerifiedSCION) an implementation must copy the fields it needs from msg
+	// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
+	// @ ensures   msg.NonInitMem()
 	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
 	// @ requires acc(Mem(), _)
 	IsUp() bool
@@ -850,8 +851,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					inputCounters.InputBytesTotal.Add(float64(p.N))
 
 					srcAddr := p.Addr.(*net.UDPAddr)
-					// @ unfold msgs[:pkts][i0].Mem()
-					// @ assert p.Buffers === msgs[:pkts][i0].Buffers
+					// @ ghost m := &msgs[:pkts][i0]
+					// @ unfold m.Mem()
+					// @ assert p.Buffers === m.Buffers
 					// @ assert acc(&p.Buffers[0])
 					// @ assert p.N <= len(p.Buffers[0])
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
@@ -859,14 +861,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
-					// @ assume false
-					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
-
-					// @ assume false
 					// @ fold scmpErr.Mem()
-					// @ ghost m := &msgs[:pkts][i0]
 					switch {
 					case err == nil:
+						// @ assert acc(result.OutConn.Mem(), _)
+						// @ assume false
 						// @ unfold scmpErr.Mem()
 						// @ assert acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), 1 - R15)
 					case errors.As(err, &scmpErr):
@@ -1159,30 +1158,43 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	d.getValSvc() != nil      &&
 // @ 	d.getValForwardingMetrics() != nil
 // @ ensures  p.sInit()
+// @ ensures  acc(MutexInvariant(p.sInitD()), _)
 // @ ensures  p.sInitD() == old(p.sInitD())
+// @ ensures  p.sInitD().validResult(respr, addrAliasesPkt)
+// @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
+// @ ensures  addrAliasesPkt ==> (
+// @ 	respr.OutAddr != nil &&
+// @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)))
+// @ ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
+
+// ensures  reserr == nil ==> p.sInitD().validResult(respr, addrAliasesPkt)
 //
-//	 ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15) // TODO: re-add
-//	 ensures  (reserr == nil) == (respr.OutConn != nil)
-//	 ensures  respr.OutConn != nil ==> acc(respr.OutConn.Mem(), _)
-//	 ensures  reserr == nil ==> respr.OutPkt === rawPkt
-//	 ensures  reserr != nil ==>
-//	 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
-//	 ensures  addrAliasesPkt ==>
-//	 	(respr.OutAddr != nil &&
-//		acc(respr.OutAddr.Mem(), R15) &&
-//	 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)))
-//	 ensures  respr.OutAddr != nil && !addrAliasesPkt ==> acc(respr.OutAddr.Mem(), _)
-//	 ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)
-//	 ensures  acc(&p.d.forwardingMetrics, _)
-//	 ensures  p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
-//	 ensures  respr.EgressID != 0 ==> respr.EgressID in domain(p.d.forwardingMetrics)
+//	 ensures  reserr == nil ==> (
+//	 	respr.OutConn != nil &&
+//	 	acc(respr.OutConn.Mem(), _) &&
+//	 	respr.OutPkt === rawPkt)
+//
+//		 ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15) // TODO: re-add
+//		 ensures  (reserr == nil) == (respr.OutConn != nil)
+//		 ensures  respr.OutConn != nil ==> acc(respr.OutConn.Mem(), _)
+//		 ensures  reserr == nil ==> respr.OutPkt === rawPkt
+//		 ensures  reserr != nil ==>
+//		 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
+//		 ensures  addrAliasesPkt ==>
+//		 	(respr.OutAddr != nil &&
+//			acc(respr.OutAddr.Mem(), R15) &&
+//		 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)))
+//		 ensures  respr.OutAddr != nil && !addrAliasesPkt ==> acc(respr.OutAddr.Mem(), _)
+//		 ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)
+//		 ensures  acc(&p.d.forwardingMetrics, _)
+//		 ensures  p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
+//		 ensures  respr.EgressID != 0 ==> respr.EgressID in domain(p.d.forwardingMetrics)
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 
 	if err := p.reset(); err != nil {
-		// @ unfold p.sInit()
-		// @ fold p.sInit()
+		// @ fold p.sInitD().validResult(processResult{}, false)
 		return processResult{}, err /*@, false @*/
 	}
 	// @ assert p.sInitD().getValForwardingMetrics() != nil
@@ -1199,6 +1211,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	p.lastLayer, err /*@ , processed, offsets, lastLayerIdx @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
 	if err != nil {
 		// @ fold p.sInit()
+		// @ fold p.sInitD().validResult(processResult{}, false)
 		return processResult{}, err /*@, false @*/
 	}
 	/*@
@@ -1221,6 +1234,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			llStart = o.start
 			llEnd = o.end
 			sl.SplitRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
+			ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		}
 	}
 	hasHbhLayer := processed[0]
@@ -1243,14 +1257,19 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
 			// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 			// @ defer fold p.sInit()
+			// @ defer fold p.d.validResult(processResult{}, false)
+			// @ ghost defer sl.CombineRange_Bytes(ub, start, end, writePerm)
 			return processResult{}, p.processIntraBFD(pld) /*@, false @*/
 		}
 		// @ establishMemUnsupportedPathTypeNextHeader()
 		// @ defer fold p.sInit()
+		// @ defer fold p.d.validResult(processResult{}, false)
 		// @ ghost defer ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
+		// @ ghost defer sl.CombineRange_Bytes(ub, start, end, writePerm)
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
 			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/)) /*@, false @*/
 	case onehop.PathType:
+		// @ assume false // TODO: drop
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
 			// @ unfold acc(p.scionLayer.Mem(p.rawPkt), R10)
 			ohp, ok := p.scionLayer.Path.(*onehop.Path)
@@ -1280,6 +1299,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ fold p.sInit()
 		return v1, v2 /*@, false @*/
 	case scion.PathType:
+		// @ assume false // TODO: drop
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
 		// @ ghost if lastLayerIdx >= 0 {
@@ -1300,6 +1320,8 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		return v1, v2 /*@, false @*/
 	default:
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
+		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
+		// @ fold p.d.validResult(processResult{}, false)
 		// @ fold p.sInit()
 		// @ establishMemUnsupportedPathType()
 		return processResult{}, serrors.WithCtx(unsupportedPathType, "type", pathType) /*@, false @*/
@@ -1348,6 +1370,7 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 // @ ensures   acc(&p.d, R20)
 // @ ensures   acc(&p.srcAddr, R20)
 // @ ensures   p.bfdLayer.NonInitMem()
+// @ ensures   sl.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   res != nil ==> res.ErrorMem()
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ unfold acc(MutexInvariant(p.d), _)
