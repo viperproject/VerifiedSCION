@@ -705,35 +705,37 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires d.external != nil && acc(accBatchConn(d.external), _)
 		// @ requires unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
-
 			msgs := conn.NewReadMessages(inputBatchCnt)
-			// @ socketspec.SplitPermMsgs(msgs)
-
-			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf()
-			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem() && msgs[i].HasActiveBuffers()
+			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
+			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+			// @ 	msgs[i].Mem() &&
+			// @ 	msgs[i].HasActiveBuffers() &&
+			// @ 	msgs[i].GetAddr() == nil
 			// @ decreases
-			// @ outline (
-			// @ invariant len(msgs) != 0 ==> 0 <= i0 && i0 <= len(msgs)
-			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> acc(&msgs[i], 1/2)
-			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> i0 <= i && i < len(msgs) ==> msgs[i].MemWithoutHalf()
-			// @ invariant forall i int :: { &msgs[i] } 0 < len(msgs) ==> 0 <= i && i < i0 ==> msgs[i].Mem() && msgs[i].HasActiveBuffers()
+			// @ outline(
+			// @ invariant 0 <= i0 && i0 <= len(msgs)
+			// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
+			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
+			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==>
+			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil && msgs[i].HasActiveBuffers()
 			// @ decreases len(msgs) - i0
-			for _, msg := range msgs /*@ with i0 @*/ {
+			for i0 := 0; i0 < len(msgs); i0 += 1 {
+				// (VerifiedSCION) changed a range loop in favor of a normal loop
+				// to be able to perform this unfold.
+				// @ unfold msgs[i0].Mem()
+				msg := msgs[i0]
+				// @ ensures sl.AbsSlice_Bytes(tmp, 0, len(tmp))
+				// @ decreases
+				// @ outline(
 				tmp := make([]byte, bufSize)
 				// @ assert forall i int :: { &tmp[i] } 0 <= i && i < len(tmp) ==> acc(&tmp[i])
 				// @ fold sl.AbsSlice_Bytes(tmp, 0, len(tmp))
+				// @ )
 				// @ assert msgs[i0] === msg
-				// @ unfold msgs[i0].MemWithoutHalf()
 				msg.Buffers[0] = tmp
-				// @ msg.IsActive = true
-				// @ assume false
-				// @ fold acc(msgs[i0].Mem(), 1/2)
-				// @ assert msgs[i0].HasActiveBuffers() == msg.IsActive
-				// @ fold acc(msgs[i0].Mem(), 1/2)
-				// @ assert msgs[i0].HasActiveBuffers()
-				// @ assert forall i int :: { &msgs[i] } 0 <= i && i <= i0 ==> msgs[i].Mem()
-				// @ assert forall i int :: { &msgs[i] } 0 <= i && i <= i0 ==> msgs[i].HasActiveBuffers()
-				// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf()
+				// @ msgs[i0].IsActive = true
+				// @ fold msgs[i0].Mem()
 			}
 			// @ )
 			// @ ensures writeMsgInv(writeMsgs)
@@ -818,6 +820,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant processor.sInit() && processor.sInitD() === d
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
+					// TODO: do not use this, instead use an outline block
+					// with unfolds/folds and an abstraction function
 					// @ msgs[:pkts][i0].SplitPerm()
 					p := msgs[:pkts][i0]
 					// @ msgs[:pkts][i0].CombinePerm()

@@ -61,6 +61,7 @@ pred (m *Message) Mem() {
 	0 <= m.N
 }
 
+// TODO: delete everything related to this predicate?
 pred (m *Message) MemWithoutHalf() {
 	acc(m, 1/2) &&
 	len(m.Buffers) == 1 &&
