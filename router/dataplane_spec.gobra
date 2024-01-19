@@ -557,9 +557,3 @@ pred (d *DataPlane) validResult(result processResult, addrAliasesPkt bool) {
 	(!addrAliasesPkt && result.OutAddr != nil ==> acc(result.OutAddr.Mem(), _))
 	// OutPkt moved out
 }
-
-// put outside
-//(acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), R15))
-
-// 	(result.OutPkt != nil ==> acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), 1 - R15)) &&
-//	(!addrAliasesPkt && result.OutPkt != nil ==> acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), R15))

@@ -1167,29 +1167,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)))
 // @ ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
-
-// ensures  reserr == nil ==> p.sInitD().validResult(respr, addrAliasesPkt)
-//
-//	 ensures  reserr == nil ==> (
-//	 	respr.OutConn != nil &&
-//	 	acc(respr.OutConn.Mem(), _) &&
-//	 	respr.OutPkt === rawPkt)
-//
-//		 ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15) // TODO: re-add
-//		 ensures  (reserr == nil) == (respr.OutConn != nil)
-//		 ensures  respr.OutConn != nil ==> acc(respr.OutConn.Mem(), _)
-//		 ensures  reserr == nil ==> respr.OutPkt === rawPkt
-//		 ensures  reserr != nil ==>
-//		 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
-//		 ensures  addrAliasesPkt ==>
-//		 	(respr.OutAddr != nil &&
-//			acc(respr.OutAddr.Mem(), R15) &&
-//		 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)))
-//		 ensures  respr.OutAddr != nil && !addrAliasesPkt ==> acc(respr.OutAddr.Mem(), _)
-//		 ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)
-//		 ensures  acc(&p.d.forwardingMetrics, _)
-//		 ensures  p.d.forwardingMetrics != nil && acc(p.d.forwardingMetrics, _)
-//		 ensures  respr.EgressID != 0 ==> respr.EgressID in domain(p.d.forwardingMetrics)
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 
