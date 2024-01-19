@@ -139,6 +139,7 @@ func NewPacketConn(c net.PacketConn) (p *PacketConn) {
 
 ghost
 requires acc(p.Mem(), _)
+decreases _
 pure func (p *PacketConn) GetUnderlyingConn() (c net.PacketConn)
 
 ghost
