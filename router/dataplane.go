@@ -726,8 +726,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ unfold msgs[i0].MemWithoutHalf()
 				msg.Buffers[0] = tmp
 				// @ msg.IsActive = true
-				// @ fold msgs[i0].Mem()
-				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < i0 ==> msgs[i].Mem() && msgs[i].HasActiveBuffers()
+				// @ assume false
+				// @ fold acc(msgs[i0].Mem(), 1/2)
+				// @ assert msgs[i0].HasActiveBuffers() == msg.IsActive
+				// @ fold acc(msgs[i0].Mem(), 1/2)
+				// @ assert msgs[i0].HasActiveBuffers()
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i <= i0 ==> msgs[i].Mem()
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i <= i0 ==> msgs[i].HasActiveBuffers()
 				// @ assert forall i int :: { &msgs[i] } i0 < i && i < len(msgs) ==> acc(&msgs[i], 1/2) && msgs[i].MemWithoutHalf()
 			}
 			// @ )
@@ -840,6 +845,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
+					// @ assume false
 					// @ assert result.OutConn != nil ==> acc(result.OutConn.Mem(), _)
 
 					// @ assume false

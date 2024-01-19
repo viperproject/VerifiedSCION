@@ -463,11 +463,11 @@ func (c *connUDPBase) Close() (err error) {
 // messages.
 // @ requires 0 < n
 // @ ensures  len(res) == n
-// @ ensures  forall i int :: { &res[i] } 0 <= i && i < n ==> res[i].Mem()
+// @ ensures  forall i int :: { &res[i] } 0 <= i && i < n ==> res[i].Mem() && res[i].GetAddr() == nil
 // @ decreases
 func NewReadMessages(n int) (res Messages) {
 	m := make(Messages, n)
-	//@ invariant forall j int :: { &m[j] } (0 <= j && j < i0) ==> m[j].Mem()
+	//@ invariant forall j int :: { &m[j] } (0 <= j && j < i0) ==> m[j].Mem() && m[j].GetAddr() == nil
 	//@ invariant forall j int :: { &m[j] } (i0 <= j && j < len(m)) ==> acc(&m[j]) && m[j].N == 0
 	//@ invariant forall j int :: { m[j].Addr } (i0 <= j && j < len(m)) ==> m[j].Addr == nil
 	//@ invariant forall j int :: { m[j].OOB } (i0 <= j && j < len(m)) ==> m[j].OOB == nil
