@@ -864,7 +864,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ fold scmpErr.Mem()
 					switch {
 					case err == nil:
-						// @ assert acc(result.OutConn.Mem(), _)
 						// @ assume false
 						// @ unfold scmpErr.Mem()
 						// @ assert acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), 1 - R15)
@@ -878,27 +877,22 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						result.OutAddr = srcAddr
 						result.OutConn = rd
 					default:
-						// @ assume false
-						// TODO: refactor
+						// @ unfold d.validResult(result, addrAliasesPkt)
 						// @ ghost if addrAliasesPkt {
 						// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 						// @ }
 						// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 						// @ assert acc(m)
-						// @ assert len(m.Buffers) == 1
-						// @ assert (m.WildcardPerm ==> (forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
-						// @ 	(acc(&m.Buffers[i]) && acc(sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])), _))))
-						// @ assert (!m.WildcardPerm ==> (forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==>
-						// @ 	(acc(&m.Buffers[i]) && sl.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))))
 						// @ assert sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB))
 						// @ assert (m.Addr != nil ==> acc(m.Addr.Mem(), _))
 						// @ assert 0 <= m.N
+						// @ msgs[:pkts][i0].WildcardPerm = !addrAliasesPkt
 						// @ fold msgs[:pkts][i0].Mem()
-						// @ unfold scmpErr.Mem()
 						log.Debug("Error processing packet", "err", err)
 						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
 						// @ prometheus.CounterMemImpliesNonNil(inputCounters.DroppedPacketsTotal)
 						inputCounters.DroppedPacketsTotal.Inc()
+						// @ unfold scmpErr.Mem()
 						continue
 					}
 					if result.OutConn == nil { // e.g. BFD case no message is forwarded
@@ -921,7 +915,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						writeMsgs[0].Addr = result.OutAddr
 					}
 					// @ assert acc(sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])), 1 - R15)
-					// @ assume !addrAliasesPkt
 					// @ fold acc(writeMsgs[0].Mem(), R50)
 					// @ assert forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
 					// @ 	acc(writeMsgs[i].Mem(), R50)
@@ -1166,6 +1159,8 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	respr.OutAddr != nil &&
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)))
 // @ ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)
+// @ ensures  respr.OutPkt !== rawPkt && respr.OutPkt != nil ==>
+// @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
@@ -1266,7 +1261,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			// @ ghost defer ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 			return processResult{}, p.processInterBFD(ohp, pld) /*@, false @*/
 		}
-		// @ assume false // TODO: drop
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
 		// @ ghost if lastLayerIdx >= 0 {
@@ -1277,10 +1271,10 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		// @ unfold acc(MutexInvariant(p.d), _)
-		v1, v2 := p.processOHP()
+		v1, v2 /*@, aliasesPkt @*/ := p.processOHP()
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
-		return v1, v2 /*@, false @*/
+		return v1, v2 /*@, aliasesPkt @*/
 	case scion.PathType:
 		// @ assume false // TODO: drop
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
@@ -2569,9 +2563,18 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 // @ ensures   p.scionLayer.Mem(p.rawPkt)
 // @ ensures   acc(&p.ingressID,  R15)
 // @ ensures   acc(&p.d,          R15)
-// @ ensures   sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
-// @ ensures   reserr != nil ==> reserr.ErrorMem()
-func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) {
+// New spec: // TODO: drop comment
+// @ ensures  p.d.validResult(respr, addrAliasesPkt)
+// @ ensures  acc(sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt)), 1 - R15)
+// @ ensures  addrAliasesPkt ==> (
+// @ 	respr.OutAddr != nil &&
+// @ 	let rawPkt := p.rawPkt in
+// @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)))
+// @ ensures  !addrAliasesPkt ==> acc(sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt)), R15)
+// @ ensures  respr.OutPkt !== p.rawPkt && respr.OutPkt != nil ==>
+// @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
+// @ ensures  reserr != nil ==> reserr.ErrorMem()
+func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 	// @ ghost ubScionL := p.rawPkt
 	// @ p.scionLayer.ExtractAcc(ubScionL)
 	s := p.scionLayer
@@ -2581,12 +2584,13 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), R15)
 	// @ assert s.Path === p.scionLayer.Path
 	// @ assert s.Path.Mem(ubPath)
+	// @ assume false
 	ohp, ok := s.Path.(*onehop.Path)
 	if !ok {
 		// TODO parameter problem -> invalid path
 		// @ establishMemMalformedPath()
 		// @ fold p.scionLayer.Mem(ubScionL)
-		return processResult{}, malformedPath
+		return processResult{}, malformedPath /*@ , false @*/
 	}
 	if /*@ unfolding acc(s.Path.Mem(ubPath), R50) in @*/ !ohp.Info.ConsDir {
 		// TODO parameter problem -> invalid path
@@ -2594,7 +2598,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 		// @ defer fold p.scionLayer.Mem(ubScionL)
 		return processResult{}, serrors.WrapStr(
 			"OneHop path in reverse construction direction is not allowed",
-			malformedPath, "srcIA", s.SrcIA, "dstIA", s.DstIA)
+			malformedPath, "srcIA", s.SrcIA, "dstIA", s.DstIA) /*@ , false @*/
 	}
 
 	// OHP leaving our IA
@@ -2606,7 +2610,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 			// @ defer fold p.scionLayer.Mem(ubScionL)
 			return processResult{}, serrors.WrapStr("bad source IA", cannotRoute,
 				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), R50) in (unfolding acc(ohp.FirstHop.Mem(), R55) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/),
-				"localIA", p.d.localIA, "srcIA", s.SrcIA)
+				"localIA", p.d.localIA, "srcIA", s.SrcIA) /*@ , false @*/
 		}
 		// @ p.d.getNeighborIAs()
 		neighborIA, ok := p.d.neighborIAs[ /*@ unfolding acc(ohp.Mem(ubPath), R50) in (unfolding acc(ohp.FirstHop.Mem(), R55) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/]
@@ -2615,14 +2619,14 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 			// TODO parameter problem invalid interface
 			// @ defer fold p.scionLayer.Mem(ubScionL)
 			return processResult{}, serrors.WithCtx(cannotRoute,
-				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), R50) in (unfolding acc(ohp.FirstHop.Mem(), R55) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/))
+				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), R50) in (unfolding acc(ohp.FirstHop.Mem(), R55) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/)) /*@ , false @*/
 		}
 		if !neighborIA.Equal(s.DstIA) {
 			// @ establishCannotRoute()
 			// @ defer fold p.scionLayer.Mem(ubScionL)
 			return processResult{}, serrors.WrapStr("bad destination IA", cannotRoute,
 				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), R50) in (unfolding acc(ohp.FirstHop.Mem(), R55) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/),
-				"neighborIA", neighborIA, "dstIA", s.DstIA)
+				"neighborIA", neighborIA, "dstIA", s.DstIA) /*@ , false @*/
 		}
 		// @ unfold s.Path.Mem(ubPath)
 		// @ unfold ohp.FirstHop.Mem()
@@ -2646,7 +2650,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 			// @ defer fold ohp.FirstHop.Mem()
 			// TODO parameter problem -> invalid MAC
 			return processResult{}, serrors.New("MAC", "expected", fmt.Sprintf("%x", macCopy),
-				"actual", fmt.Sprintf("%x", ohp.FirstHop.Mac), "type", "ohp")
+				"actual", fmt.Sprintf("%x", ohp.FirstHop.Mac), "type", "ohp") /*@ , false @*/
 		}
 		ohp.Info.UpdateSegID(ohp.FirstHop.Mac)
 		// @ fold ohp.FirstHop.Mem()
@@ -2656,7 +2660,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 		// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
 		// changes made to 'updateSCIONLayer'.
 		if err := updateSCIONLayer(p.rawPkt, &p.scionLayer /* s */, p.buffer); err != nil {
-			return processResult{}, err
+			return processResult{}, err /*@ , false @*/
 		}
 		// @ unfold p.scionLayer.Mem(ubScionL)
 		// @ defer fold p.scionLayer.Mem(ubScionL)
@@ -2670,12 +2674,12 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
 			// buffer should already be correct
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
-				nil
+				nil /*@ , false @*/
 		}
 		// TODO parameter problem invalid interface
 		// @ establishCannotRoute()
 		return processResult{}, serrors.WithCtx(cannotRoute, "type", "ohp",
-			"egress", ohp.FirstHop.ConsEgress, "consDir", ohp.Info.ConsDir)
+			"egress", ohp.FirstHop.ConsEgress, "consDir", ohp.Info.ConsDir) /*@ , false @*/
 	}
 
 	// OHP entering our IA
@@ -2685,7 +2689,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 		// @ defer fold p.scionLayer.Mem(ubScionL)
 		return processResult{}, serrors.WrapStr("bad destination IA", cannotRoute,
 			"type", "ohp", "ingress", p.ingressID,
-			"localIA", p.d.localIA, "dstIA", s.DstIA)
+			"localIA", p.d.localIA, "dstIA", s.DstIA) /*@ , false @*/
 	}
 	// @ p.d.getNeighborIAs()
 	neighborIA := p.d.neighborIAs[p.ingressID]
@@ -2694,7 +2698,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 		// @ defer fold p.scionLayer.Mem(ubScionL)
 		return processResult{}, serrors.WrapStr("bad source IA", cannotRoute,
 			"type", "ohp", "ingress", p.ingressID,
-			"neighborIA", neighborIA, "srcIA", s.SrcIA)
+			"neighborIA", neighborIA, "srcIA", s.SrcIA) /*@ , false @*/
 	}
 
 	// @ unfold s.Path.Mem(ubPath)
@@ -2717,16 +2721,16 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error) 
 	// changes made to 'updateSCIONLayer'.
 	// @ fold p.scionLayer.Mem(ubScionL)
 	if err := updateSCIONLayer(p.rawPkt, &p.scionLayer /* s */, p.buffer); err != nil {
-		return processResult{}, err
+		return processResult{}, err /*@ , false @*/
 	}
 	// (VerifiedSCION) the parameter was changed from 's' to '&p.scionLayer' due to the
 	// changes made to 'resolveLocalDst'.
 	a, err := p.d.resolveLocalDst(&p.scionLayer /* s */ /*@ , ubScionL @*/)
 	if err != nil {
-		return processResult{}, err
+		return processResult{}, err /*@ , false @*/
 	}
 	// @ p.d.getInternal()
-	return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil
+	return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@ , false @*/
 }
 
 // @ requires  acc(MutexInvariant(d), _)
