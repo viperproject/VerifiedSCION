@@ -241,3 +241,11 @@ func Unslice_Any(s []any, start int, end int, p perm) {
 }
 
 /** End of slices of Any without Contents **/
+
+/** Intermediate lemmas for completeness **/
+
+ghost
+requires 0 <= start && start < end && end <= len(s)
+requires forall i int :: { &s[i] } 0 <= i && i < end - start ==> &s[start:end][i] == &s[start+i]
+decreases
+pure func AssertSubslicingEq_bytes(s []byte, start int, end int) bool
