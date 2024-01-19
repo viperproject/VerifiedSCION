@@ -294,6 +294,28 @@ pure func (d *DataPlane) getDomForwardingMetrics() set[uint16] {
 
 ghost
 requires acc(MutexInvariant(d), _)
+requires id in d.getDomForwardingMetrics()
+ensures  acc(&d.forwardingMetrics, _)
+ensures  acc(d.forwardingMetrics, _)
+ensures  acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
+decreases
+func (d *DataPlane) getForwardingMetricsMem(id uint16) {
+	unfold acc(MutexInvariant(d), _)
+	assert id in d.getDomForwardingMetrics()
+	assert d.getDomForwardingMetrics() == (d.forwardingMetrics == nil ?
+		set[uint16]{} :
+		(unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
+				domain(d.forwardingMetrics)))
+	assert id in (d.forwardingMetrics == nil ?
+		set[uint16]{} :
+		(unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
+				domain(d.forwardingMetrics)))
+	unfold acc(accForwardingMetrics(d.forwardingMetrics), _)
+	assert id in domain(d.forwardingMetrics)
+}
+
+ghost
+requires acc(MutexInvariant(d), _)
 ensures  acc(&d.external, _) && (d.external != nil ==> acc(accBatchConn(d.external), _))
 decreases
 func (d *DataPlane) getExternalMem() {

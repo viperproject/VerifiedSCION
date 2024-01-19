@@ -699,10 +699,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires acc(MutexInvariant(d), _)
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
-		// TODO: Some of the assertions below are redundant and should be removed
-		// @ requires d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
-		// @ requires 0 in domain(d.forwardingMetrics)
-		// @ requires ingressID in domain(d.forwardingMetrics)
+		// @ requires 0 in d.getDomForwardingMetrics()
+		// @ requires ingressID in d.getDomForwardingMetrics()
 		// @ requires d.macFactory != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// @ requires d.external != nil && acc(accBatchConn(d.external), _)
@@ -764,13 +762,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant acc(MutexInvariant(d), _)
 			// @ invariant d.getValSvc() != nil
 			// @ invariant d.getValForwardingMetrics() != nil
-			// TODO: Some of the assertions below are redundant and should be removed
-			// @ invariant d.forwardingMetrics != nil && acc(d.forwardingMetrics, _)
+			// @ invariant 0 in d.getDomForwardingMetrics()
+			// @ invariant ingressID in d.getDomForwardingMetrics()
 			// @ invariant d.external != nil && acc(accBatchConn(d.external), _)
 			// @ invariant acc(rd.Mem(), _)
 			// properties about the dataplane:
-			// @ invariant 0 in domain(d.forwardingMetrics)
-			// @ invariant ingressID in domain(d.forwardingMetrics)
+			// TODO: the following is redundant and should be removed; same for acc(d, _) (same applies for inner loop)
 			// @ invariant unfolding acc(accBatchConn(d.external), _) in (ingressID in domain(d.external))
 			// properties about packetProcessor:
 			// @ invariant processor.sInit() && processor.sInitD() === d
@@ -805,8 +802,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(MutexInvariant(d), _)
 				// @ invariant d.getValSvc() != nil
 				// @ invariant d.getValForwardingMetrics() != nil
-				// TODO: Some of the assertions below are redundant and should be removed
-				// @ invariant acc(d.forwardingMetrics, _)
+				// @ invariant 0 in d.getDomForwardingMetrics()
+				// @ invariant ingressID in d.getDomForwardingMetrics()
 				// @ invariant acc(rd.Mem(), _)
 				// other properties:
 				// @ invariant pkts <= len(msgs)
@@ -817,9 +814,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ 	typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr]
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
-				// @ invariant d.forwardingMetrics != nil
-				// @ invariant ingressID in domain(d.forwardingMetrics)
-				// @ invariant 0 in domain(d.forwardingMetrics)
 				// properties about packetProcessor:
 				// @ invariant processor.sInit() && processor.sInitD() === d
 				for i0 := 0; i0 < pkts; i0++ {
@@ -833,8 +827,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ fold acc(msgs[i0].Mem(), R1)
 					// @ )
 					// @ assert msgs[i0].GetN() <= len(msgs[i0].GetFstBuffer())
-					// @ d.getForwardingMetrics()
-					// @ unfold acc(accForwardingMetrics(d.forwardingMetrics), _)
+					// @ d.getForwardingMetricsMem(ingressID)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[ingressID], ingressID), _)
 					// input metric
 					inputCounters := d.forwardingMetrics[ingressID]
@@ -863,7 +856,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					switch {
 					case err == nil:
 						// @ unfold scmpErr.Mem()
-						// assert acc(sl.AbsSlice_Bytes(result.OutPkt, 0, len(result.OutPkt)), 1 - R15)
 					case errors.As(err, &scmpErr):
 						// @ unfold d.validResult(result, addrAliasesPkt)
 						// @ ghost if addrAliasesPkt  && result.OutAddr != nil {
@@ -928,7 +920,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
 					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
 					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
-					//  	assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					// @ }
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					// @ msgs[:pkts][i0].IsActive = false
@@ -954,12 +945,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
+					// @ requires acc(&d, _)
+					// @ requires acc(MutexInvariant(d), _)
+					// @ requires result.EgressID in d.getDomForwardingMetrics()
+					// @ decreases
+					// @ outline(
 					// ok metric
-					// @ d.getForwardingMetrics()
-					// @ unfold acc(accForwardingMetrics(d.forwardingMetrics), _)
-					// (VerifiedSCION) the following is failing:
-					// @ assert result.EgressID != 0 ==> result.EgressID in d.getDomForwardingMetrics()
-					// @ assert result.EgressID != 0 ==> result.EgressID in domain(d.forwardingMetrics)
+					// @ d.getForwardingMetricsMem(result.EgressID)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[result.EgressID], result.EgressID), _)
 					outputCounters := d.forwardingMetrics[result.EgressID]
 					// @ assert acc(outputCounters.OutputPacketsTotal.Mem(), _)
@@ -969,6 +961,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					// @ prometheus.CounterMemImpliesNonNil(outputCounters.OutputBytesTotal)
 					// @ fl.CastPreservesOrder64(0, len(result.OutPkt))
 					outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
+					// @ )
 				}
 			}
 		}
