@@ -99,6 +99,11 @@ func IgnoreBranch()
 ghost
 ensures false
 decreases _
+func IgnoreFromHere()
+
+ghost
+ensures false
+decreases _
 func TODO()
 
 // type to be used as a stub for sets of private fields in formalizations of

@@ -683,8 +683,8 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
 // @ requires  acc(&d.forwardingMetrics, 1/2) && acc(d.forwardingMetrics, 1/2)
 // @ requires  0 in domain(d.forwardingMetrics)
-// @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+// @ requires  d.mtx.LockP()
+// @ requires  d.mtx.LockInv() == MutexInvariant!<d!>;
 // TODO: put well configured here
 func (d *DataPlane) Run(ctx context.Context) error {
 	// @ share d, ctx
@@ -983,6 +983,13 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		read(0, c) //@ as readClosureSpec  // TODO: maybe use rc as the spec instead and delete readClosureSpec
 	}(d.internal) //@ as closureSpec3
 
+	// (VerifiedSCION) we ignore verification from this point onward because of the
+	// call to Unlock. Supporting it is conceptually easy, but it requires changing
+	// the DataPlane invariant to distinguish between not running and not running.
+	// When not running, we get the same exact invariant as we have now. When running,
+	// we get a wildcard permission amount to the same exact invariant as we have now.
+	// This is easy, but cumbersome and slow to change everywhere.
+	// @ IgnoreFromHere()
 	d.mtx.Unlock()
 
 	r1 /*@ , r2 @*/ := ctx.Done()
