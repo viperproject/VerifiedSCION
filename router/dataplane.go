@@ -109,8 +109,8 @@ type bfdSession interface {
 }
 
 // BatchConn is a connection that supports batch reads and writes.
-// (VerifiedSCION) the spec of this interface exactly matches that of the same methods
-// in private/underlay/conn/Conn.
+// (VerifiedSCION) the spec of this interface matches that of the methods
+// with the same name in private/underlay/conn/Conn.
 type BatchConn interface {
 	// @ pred Mem()
 
@@ -685,6 +685,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  0 in domain(d.forwardingMetrics)
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
+// TODO: put well configured here
 func (d *DataPlane) Run(ctx context.Context) error {
 	// @ share d, ctx
 	d.mtx.Lock()
@@ -696,7 +697,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	read /*@@@*/ :=
 		// @ requires acc(&d, _)
 		// @ requires acc(d,  _)
-		// @ requires acc(MutexInvariant(d), _)
+		// @ requires acc(MutexInvariant(d), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
 		// @ requires 0 in d.getDomForwardingMetrics()
@@ -756,7 +757,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant writeMsgInv(writeMsgs)
 			// @ invariant acc(&d, _)
 			// @ invariant acc(d, _)
-			// @ invariant acc(MutexInvariant(d), _)
+			// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
 			// @ invariant d.getValSvc() != nil
 			// @ invariant d.getValForwardingMetrics() != nil
 			// @ invariant 0 in d.getDomForwardingMetrics()
@@ -789,7 +790,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(&d, _)
 				// @ invariant acc(d, _)
-				// @ invariant acc(MutexInvariant(d), _)
+				// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
 				// @ invariant d.getValSvc() != nil
 				// @ invariant d.getValForwardingMetrics() != nil
 				// @ invariant 0 in d.getDomForwardingMetrics()
@@ -1132,7 +1133,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	d.getValSvc() != nil      &&
 // @ 	d.getValForwardingMetrics() != nil
 // @ ensures  p.sInit()
-// @ ensures  acc(MutexInvariant(p.sInitD()), _)
+// @ ensures  acc(MutexInvariant(p.sInitD()), _) && p.sInitD().WellConfigured()
 // @ ensures  p.sInitD() == old(p.sInitD())
 // @ ensures  p.sInitD().validResult(respr, addrAliasesPkt)
 // @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
@@ -1979,7 +1980,10 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (resaddr *net.UDPAddr, respr processResult, reserr error) {
 	// (VerifiedSCION) the parameter used to be p.scionLayer,
 	// instead of &p.scionLayer.
-	a, err := p.d.resolveLocalDst(&p.scionLayer /*@, ubScionL @*/)
+	a, err /*@ , addrAliases @*/ := p.d.resolveLocalDst(&p.scionLayer /*@, ubScionL @*/)
+	// @ ghost if addrAliases {
+	// @ 	apply acc(a.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R15)
+	// @ }
 	// @ establishNoSVCBackend()
 	switch {
 	case errors.Is(err, noSVCBackend):
@@ -2532,7 +2536,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 // @ requires  acc(&p.rawPkt, R15)
 // @ requires  p.scionLayer.Mem(p.rawPkt)
 // @ requires  acc(&p.ingressID,  R15)
-// @ requires  acc(&p.d,          R15) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, 15) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // @ requires  sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.mac, R10)
@@ -2565,18 +2569,19 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), R15)
 	// @ assert s.Path === p.scionLayer.Path
 	// @ assert s.Path.Mem(ubPath)
-	// @ assume false
 	ohp, ok := s.Path.(*onehop.Path)
 	if !ok {
 		// TODO parameter problem -> invalid path
 		// @ establishMemMalformedPath()
 		// @ fold p.scionLayer.Mem(ubScionL)
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, malformedPath /*@ , false @*/
 	}
 	if /*@ unfolding acc(s.Path.Mem(ubPath), R50) in @*/ !ohp.Info.ConsDir {
 		// TODO parameter problem -> invalid path
 		// @ establishMemMalformedPath()
 		// @ defer fold p.scionLayer.Mem(ubScionL)
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WrapStr(
 			"OneHop path in reverse construction direction is not allowed",
 			malformedPath, "srcIA", s.SrcIA, "dstIA", s.DstIA) /*@ , false @*/
@@ -2589,6 +2594,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 			// @ establishCannotRoute()
 			// TODO parameter problem -> invalid path
 			// @ defer fold p.scionLayer.Mem(ubScionL)
+			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, serrors.WrapStr("bad source IA", cannotRoute,
 				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), R50) in (unfolding acc(ohp.FirstHop.Mem(), R55) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/),
 				"localIA", p.d.localIA, "srcIA", s.SrcIA) /*@ , false @*/
@@ -2599,12 +2605,14 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 			// @ establishCannotRoute()
 			// TODO parameter problem invalid interface
 			// @ defer fold p.scionLayer.Mem(ubScionL)
+			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, serrors.WithCtx(cannotRoute,
 				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), R50) in (unfolding acc(ohp.FirstHop.Mem(), R55) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/)) /*@ , false @*/
 		}
 		if !neighborIA.Equal(s.DstIA) {
 			// @ establishCannotRoute()
 			// @ defer fold p.scionLayer.Mem(ubScionL)
+			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, serrors.WrapStr("bad destination IA", cannotRoute,
 				"type", "ohp", "egress", ( /*@ unfolding acc(ohp.Mem(ubPath), R50) in (unfolding acc(ohp.FirstHop.Mem(), R55) in @*/ ohp.FirstHop.ConsEgress /*@ ) @*/),
 				"neighborIA", neighborIA, "dstIA", s.DstIA) /*@ , false @*/
@@ -2630,6 +2638,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 			// @ defer fold s.Path.Mem(ubPath)
 			// @ defer fold ohp.FirstHop.Mem()
 			// TODO parameter problem -> invalid MAC
+			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, serrors.New("MAC", "expected", fmt.Sprintf("%x", macCopy),
 				"actual", fmt.Sprintf("%x", ohp.FirstHop.Mac), "type", "ohp") /*@ , false @*/
 		}
@@ -2641,6 +2650,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 		// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
 		// changes made to 'updateSCIONLayer'.
 		if err := updateSCIONLayer(p.rawPkt, &p.scionLayer /* s */, p.buffer); err != nil {
+			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@ , false @*/
 		}
 		// @ unfold p.scionLayer.Mem(ubScionL)
@@ -2654,11 +2664,15 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 		// @ ghost if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
 			// buffer should already be correct
+			// (VerifiedSCION) TODO: we need to add a pre to run that says that the
+			// domain of forwardingMetrics is the same as the one for external
+			// @ fold p.d.validResult(processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt}, false)
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
 				nil /*@ , false @*/
 		}
 		// TODO parameter problem invalid interface
 		// @ establishCannotRoute()
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WithCtx(cannotRoute, "type", "ohp",
 			"egress", ohp.FirstHop.ConsEgress, "consDir", ohp.Info.ConsDir) /*@ , false @*/
 	}
@@ -2668,6 +2682,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	if !p.d.localIA.Equal(s.DstIA) {
 		// @ establishCannotRoute()
 		// @ defer fold p.scionLayer.Mem(ubScionL)
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WrapStr("bad destination IA", cannotRoute,
 			"type", "ohp", "ingress", p.ingressID,
 			"localIA", p.d.localIA, "dstIA", s.DstIA) /*@ , false @*/
@@ -2677,6 +2692,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	if !neighborIA.Equal(s.SrcIA) {
 		// @ establishCannotRoute()
 		// @ defer fold p.scionLayer.Mem(ubScionL)
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WrapStr("bad source IA", cannotRoute,
 			"type", "ohp", "ingress", p.ingressID,
 			"neighborIA", neighborIA, "srcIA", s.SrcIA) /*@ , false @*/
@@ -2702,27 +2718,39 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	// changes made to 'updateSCIONLayer'.
 	// @ fold p.scionLayer.Mem(ubScionL)
 	if err := updateSCIONLayer(p.rawPkt, &p.scionLayer /* s */, p.buffer); err != nil {
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, err /*@ , false @*/
 	}
 	// (VerifiedSCION) the parameter was changed from 's' to '&p.scionLayer' due to the
 	// changes made to 'resolveLocalDst'.
-	a, err := p.d.resolveLocalDst(&p.scionLayer /* s */ /*@ , ubScionL @*/)
+	a, err /*@ , addrAliases @*/ := p.d.resolveLocalDst(&p.scionLayer /* s */ /*@ , ubScionL @*/)
 	if err != nil {
+		// @ ghost if a != nil && addrAliases {
+		// @ 	apply acc(a.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R15)
+		// @ 	assert ubScionL === p.rawPkt
+		// @ }
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, err /*@ , false @*/
 	}
 	// @ p.d.getInternal()
-	return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@ , false @*/
+	// @ assert p.d.internal != nil ==> acc(p.d.internal.Mem(), _)
+	// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, addrAliases)
+	return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@ , addrAliases @*/
 }
 
 // @ requires  acc(MutexInvariant(d), _)
 // @ requires  d.getValSvc() != nil
-// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15)
+// @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15)
 // @ preserves acc(s.Mem(ub), R14)
+// @ ensures   !addrAliasesUb ==> acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15)
+// @ ensures   !addrAliasesUb && resaddr != nil ==> acc(resaddr.Mem(), _)
+// @ ensures   addrAliasesUb ==>
+// @ 	resaddr != nil && acc(resaddr.Mem(), R15) && (acc(resaddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // (VerifiedSCION) the type of 's' was changed from slayers.SCION to *slayers.SCION. This makes
 // specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
 // by value. We should consider porting merging this in upstream SCION.
-func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (resaddr *net.UDPAddr, reserr error) {
+func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (resaddr *net.UDPAddr, reserr error /*@ , addrAliasesUb bool @*/) {
 	// @ ghost start, end := s.ExtractAcc(ub)
 	// @ assert s.RawDstAddr === ub[start:end]
 	// @ sl.SplitRange_Bytes(ub, start, end, R15)
@@ -2732,7 +2760,7 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 	// @ apply acc(s, R16) --* acc(s.Mem(ub), R15)
 	if err != nil {
 		// TODO parameter problem.
-		return nil, err
+		return nil, err /*@ , false @*/
 	}
 	switch v := dst.(type) {
 	case addr.HostSVC:
@@ -2742,11 +2770,16 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 		a, ok := d.svc.Any(v.Base())
 		if !ok {
 			// @ establishNoSVCBackend()
-			return nil, noSVCBackend
+			return nil, noSVCBackend /*@ , false @*/
 		}
-		return a, nil
+		return a, nil /*@ , false @*/
 	case *net.IPAddr:
-		return addEndhostPort(v), nil
+		tmp := addEndhostPort(v)
+		// @ fold acc(tmp.Mem(), R15)
+		// @ package acc(resaddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15) {
+		// @
+		// @ }
+		return tmp, nil /*@ , true @*/
 	default:
 		panic("unexpected address type returned from DstAddr")
 	}
