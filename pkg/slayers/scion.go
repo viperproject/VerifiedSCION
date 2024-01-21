@@ -575,32 +575,33 @@ func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 // from the underlaying layer data. Changing the net.Addr object might lead to inconsistent layer
 // information and thus should be treated read-only. Instead, SetDstAddr should be used to update
 // the destination address.
-// @ requires  acc(&s.DstAddrType, R15) && acc(&s.RawDstAddr, R15)
-// @ requires  s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
-// @ requires  acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R15)
-// @ ensures   acc(&s.DstAddrType, R15) && acc(&s.RawDstAddr, R15)
-// @ ensures   err == nil ==> acc(res.Mem(), R15)
-// @ ensures   err == nil ==>
+// @ requires acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
+// @ requires s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
+// @ requires acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R15)
+// @ ensures  acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
+// @ ensures  err == nil ==> acc(res.Mem(), R15)
+// @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
+// @ ensures  err == nil ==>
 // @ 	let rawDstAddr := s.RawDstAddr in
 // @ 	(acc(res.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawDstAddr, 0, len(rawDstAddr)), R15))
-// @ ensures   err != nil ==>
+// @ ensures  err != nil ==>
 // @ 	acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R15)
-// @ ensures   err != nil ==> err.ErrorMem()
+// @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCION) DstAddr() (res net.Addr, err error) {
-	tmpAddr, tmpErr := parseAddr(s.DstAddrType, s.RawDstAddr)
-	return tmpAddr, tmpErr
+	return parseAddr(s.DstAddrType, s.RawDstAddr)
 }
 
 // SrcAddr parses the source address into a net.Addr. The returned net.Addr references data from the
 // underlaying layer data. Changing the net.Addr object might lead to inconsistent layer information
 // and thus should be treated read-only. Instead, SetDstAddr should be used to update the source
 // address.
-// @ requires  acc(&s.SrcAddrType, R15) && acc(&s.RawSrcAddr, R15)
+// @ requires  acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
 // @ requires  s.SrcAddrType == T4Svc ==> len(s.RawSrcAddr) >= addr.HostLenSVC
 // @ requires  acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R15)
-// @ ensures   acc(&s.SrcAddrType, R15) && acc(&s.RawSrcAddr, R15)
+// @ ensures   acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
 // @ ensures   err == nil ==> acc(res.Mem(), R15)
+// @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
 // @ ensures   err == nil ==>
 // @ 	let rawSrcAddr := s.RawSrcAddr in
 // @ 	(acc(res.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawSrcAddr, 0, len(rawSrcAddr)), R15))
@@ -689,6 +690,7 @@ func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error
 // @ requires addrType == T4Svc ==> len(raw) >= addr.HostLenSVC
 // @ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)
 // @ ensures  err == nil ==> acc(res.Mem(), R15)
+// @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
 // @ ensures  err == nil ==>
 // @ 	(acc(res.Mem(), R15) --* acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15))
 // @ ensures  err != nil ==> acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)

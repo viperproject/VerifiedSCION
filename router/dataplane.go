@@ -2764,9 +2764,9 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 	// @ sl.SplitRange_Bytes(ub, start, end, R15)
 	// @ assert acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R15)
 	dst, err := s.DstAddr()
-	// @ sl.CombineRange_Bytes(ub, start, end, R15)
 	// @ apply acc(s, R16) --* acc(s.Mem(ub), R15)
 	if err != nil {
+		// @ sl.CombineRange_Bytes(ub, start, end, R15)
 		// TODO parameter problem.
 		return nil, err /*@ , false @*/
 	}
@@ -2777,15 +2777,22 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 		// @ d.getSvcMem()
 		a, ok := d.svc.Any(v.Base())
 		if !ok {
+			// @ apply acc(dst.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R15)
+			// @ sl.CombineRange_Bytes(ub, start, end, R15)
 			// @ establishNoSVCBackend()
 			return nil, noSVCBackend /*@ , false @*/
 		}
+		// @ apply acc(dst.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R15)
+		// @ sl.CombineRange_Bytes(ub, start, end, R15)
 		return a, nil /*@ , false @*/
 	case *net.IPAddr:
+		// @ unfold acc(v.Mem(), R20)
 		tmp := addEndhostPort(v)
-		// @ fold acc(tmp.Mem(), R15)
+		// @ fold acc(tmp.Mem(), R20)
 		// @ package acc(resaddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15) {
-		// @
+		// @ 	unfold acc(tmp.Mem(), R15)
+		// @ 	apply acc(dst.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R15)
+		// @ 	sl.CombineRange_Bytes(ub, start, end, R15)
 		// @ }
 		return tmp, nil /*@ , true @*/
 	default:
