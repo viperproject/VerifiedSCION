@@ -1130,10 +1130,11 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires acc(srcAddr.Mem(), _)
 // @ requires let d := p.sInitD() in
 // @ 	acc(MutexInvariant(d), _) &&
+// @ 	d.WellConfigured()
 // @ 	d.getValSvc() != nil      &&
 // @ 	d.getValForwardingMetrics() != nil
 // @ ensures  p.sInit()
-// @ ensures  acc(MutexInvariant(p.sInitD()), _) && p.sInitD().WellConfigured()
+// @ ensures  acc(MutexInvariant(p.sInitD()), _)
 // @ ensures  p.sInitD() == old(p.sInitD())
 // @ ensures  p.sInitD().validResult(respr, addrAliasesPkt)
 // @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
