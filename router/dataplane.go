@@ -2544,7 +2544,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 // @ requires  acc(&p.rawPkt, R15)
 // @ requires  p.scionLayer.Mem(p.rawPkt)
 // @ requires  acc(&p.ingressID,  R15)
-// @ requires  acc(&p.d, 15) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
+// @ requires  acc(&p.d, R15) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // @ requires  sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.mac, R10)
@@ -2556,10 +2556,9 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 // @ ensures   p.scionLayer.Mem(p.rawPkt)
 // @ ensures   acc(&p.ingressID,  R15)
 // @ ensures   acc(&p.d,          R15)
-// New spec: // TODO: drop comment
-// @ ensures  p.d.validResult(respr, addrAliasesPkt)
-// @ ensures  acc(sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt)), 1 - R15)
-// @ ensures  addrAliasesPkt ==> (
+// @ ensures   p.d.validResult(respr, addrAliasesPkt)
+// @ ensures   acc(sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt)), 1 - R15)
+// @ ensures   addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
 // @ 	let rawPkt := p.rawPkt in
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), R15)))
@@ -2786,16 +2785,9 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 		// @ sl.CombineRange_Bytes(ub, start, end, R15)
 		return a, nil /*@ , false @*/
 	case *net.IPAddr:
-		// @ unfold acc(v.Mem(), R15)
 		tmp := addEndhostPort(v)
-		// @ fold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R15)
-		// @ fold acc(tmp.Mem(), R15)
 		// @ package acc(tmp.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15) {
-		// @ 	unfold acc(tmp.Mem(), R15)
-		// @ 	unfold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R15)
-		// @ 	assert forall i, j int :: { &tmp.IP[i], &tmp.IP[j] } 0 <= i && i < len(tmp.IP) && 0 <= j && j < len(tmp.IP) && i != j ==> &tmp.IP[i] != &tmp.IP[j]
-		// @ 	assert forall i int :: { &tmp.IP[i] } 0 <= i && i < len(tmp.IP) ==> acc(&tmp.IP[i], R15)
-		// @ 	fold acc(v.Mem(), R15)
+		// @ 	apply acc(tmp.Mem(), R15) --* acc(v.Mem(), R15)
 		// @ 	assert acc(dst.Mem(), R15)
 		// @ 	apply acc(dst.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R15)
 		// @ 	sl.CombineRange_Bytes(ub, start, end, R15)
@@ -2806,6 +2798,9 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 	}
 }
 
+// (VerifiedSCION) marked as trusted due to an incompletness in silicon,
+// where it is failing to prove the body of a predicate right after unfolding it.
+// @ trusted
 // @ requires acc(dst.Mem(), R20)
 // @ ensures  acc(res.Mem(), R20)
 // @ ensures  acc(res.Mem(), R20) --* acc(dst.Mem(), R20)
@@ -2822,6 +2817,10 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 	// @ 	assert dst.IP === tmp.IP
 	// @ 	unfold acc(tmp.Mem(), R20)
 	// @ 	unfold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R20)
+	// (VerifiedSCION) this is the failling assertion;
+	//                 TODO: report it!
+	// @ 	assert forall i int :: { &tmp.IP[i] } 0 <= i && i < len(tmp.IP) ==> acc(&tmp.IP[i], R20)
+	// @ 	assert forall i int :: { &dst.IP[i] } 0 <= i && i < len(dst.IP) ==> acc(&dst.IP[i], R20)
 	// @ 	fold acc(dst.Mem(), R20)
 	// @ }
 	return tmp
