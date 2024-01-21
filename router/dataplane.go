@@ -2786,11 +2786,17 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 		// @ sl.CombineRange_Bytes(ub, start, end, R15)
 		return a, nil /*@ , false @*/
 	case *net.IPAddr:
-		// @ unfold acc(v.Mem(), R20)
+		// @ unfold acc(v.Mem(), R15)
 		tmp := addEndhostPort(v)
-		// @ fold acc(tmp.Mem(), R20)
-		// @ package acc(resaddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15) {
+		// @ fold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R15)
+		// @ fold acc(tmp.Mem(), R15)
+		// @ package acc(tmp.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15) {
 		// @ 	unfold acc(tmp.Mem(), R15)
+		// @ 	unfold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R15)
+		// @ 	assert forall i, j int :: { &tmp.IP[i], &tmp.IP[j] } 0 <= i && i < len(tmp.IP) && 0 <= j && j < len(tmp.IP) && i != j ==> &tmp.IP[i] != &tmp.IP[j]
+		// @ 	assert forall i int :: { &tmp.IP[i] } 0 <= i && i < len(tmp.IP) ==> acc(&tmp.IP[i], R15)
+		// @ 	fold acc(v.Mem(), R15)
+		// @ 	assert acc(dst.Mem(), R15)
 		// @ 	apply acc(dst.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R15)
 		// @ 	sl.CombineRange_Bytes(ub, start, end, R15)
 		// @ }
@@ -2800,13 +2806,25 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 	}
 }
 
-// @ preserves acc(&dst.IP, R20)
-// @ ensures   acc(res)
-// @ ensures   res.IP  === dst.IP
-// @ ensures   res.Port == topology.EndhostPort
+// @ requires acc(dst.Mem(), R20)
+// @ ensures  acc(res.Mem(), R20)
+// @ ensures  acc(res.Mem(), R20) --* acc(dst.Mem(), R20)
 // @ decreases
 func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
-	return &net.UDPAddr{IP: dst.IP, Port: topology.EndhostPort}
+	// @ unfold acc(dst.Mem(), R20)
+	tmp := &net.UDPAddr{IP: dst.IP, Port: topology.EndhostPort}
+	// @ assert forall i int :: { &tmp.IP[i] } 0 <= i && i < len(tmp.IP) ==> acc(&tmp.IP[i], R20)
+	// @ fold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R20)
+	// @ fold acc(tmp.Mem(), R20)
+	// @ package (acc(tmp.Mem(), R20) --* acc(dst.Mem(), R20)) {
+	// @ 	assert acc(dst, R20)
+	// @ 	assert acc(tmp, R50)
+	// @ 	assert dst.IP === tmp.IP
+	// @ 	unfold acc(tmp.Mem(), R20)
+	// @ 	unfold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R20)
+	// @ 	fold acc(dst.Mem(), R20)
+	// @ }
+	return tmp
 }
 
 // TODO(matzf) this function is now only used to update the OneHop-path.
