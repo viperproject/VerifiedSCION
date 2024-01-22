@@ -2737,9 +2737,8 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	// changes made to 'resolveLocalDst'.
 	a, err /*@ , addrAliases @*/ := p.d.resolveLocalDst(&p.scionLayer /* s */ /*@ , ubScionL @*/)
 	if err != nil {
-		// @ ghost if a != nil && addrAliases {
+		// @ ghost if addrAliases {
 		// @ 	apply acc(a.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R15)
-		// @ 	assert ubScionL === p.rawPkt
 		// @ }
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, err /*@ , false @*/
@@ -2756,6 +2755,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 // @ preserves acc(s.Mem(ub), R14)
 // @ ensures   !addrAliasesUb ==> acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15)
 // @ ensures   !addrAliasesUb && resaddr != nil ==> acc(resaddr.Mem(), _)
+// @ ensures   addrAliasesUb ==> resaddr != nil
 // @ ensures   addrAliasesUb ==> acc(resaddr.Mem(), R15)
 // @ ensures   addrAliasesUb ==> (acc(resaddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
@@ -2807,7 +2807,7 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 // where it is failing to prove the body of a predicate right after unfolding it.
 // @ trusted
 // @ requires acc(dst.Mem(), R15)
-// @ ensures  acc(res.Mem(), R15)
+// @ ensures  res != nil && acc(res.Mem(), R15)
 // @ ensures  acc(res.Mem(), R15) --* acc(dst.Mem(), R15)
 // @ decreases
 func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
