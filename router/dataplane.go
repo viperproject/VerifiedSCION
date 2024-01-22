@@ -2670,9 +2670,14 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 		// @ p.d.getExternalMem()
 		// @ ghost if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
+			// (VerifiedSCION) the following must hold, obviously.
+			// Unfortunately, Gobra struggles with instantiating the body
+			// of the function.
+			// @ assume ohp.FirstHop.ConsEgress in p.d.getDomExternal()
 			// buffer should already be correct
 			// (VerifiedSCION) TODO: we need to add a pre to run that says that the
 			// domain of forwardingMetrics is the same as the one for external
+			// @ p.d.InDomainExternalInForwardingMetrics(ohp.FirstHop.ConsEgress)
 			// @ fold p.d.validResult(processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt}, false)
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
 				nil /*@ , false @*/

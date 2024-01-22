@@ -602,3 +602,13 @@ pred (d *DataPlane) validResult(result processResult, addrAliasesPkt bool) {
 	(!addrAliasesPkt && result.OutAddr != nil ==> acc(result.OutAddr.Mem(), _))
 	// OutPkt moved out
 }
+
+ghost
+requires acc(MutexInvariant(d), _) && d.WellConfigured()
+requires id in d.getDomExternal()
+ensures  acc(MutexInvariant(d), _)
+ensures  id in d.getDomForwardingMetrics()
+decreases
+func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
+
+}
