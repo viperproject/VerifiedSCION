@@ -2202,6 +2202,9 @@ func (p *scionPacketProcessor) egressInterface() uint16 {
 // @ preserves acc(&p.hopField, R20)
 // @ preserves acc(&p.ingressID, R20)
 // @ ensures   acc(&p.d, R20)
+// @ ensures   p.d.validResult(respr, false)
+// @ ensures   respr.OutPkt != nil ==>
+// @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr error) {
 	egressID := p.egressInterface()
@@ -2229,6 +2232,7 @@ func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr e
 			return p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down"))
 		}
 	}
+	// @ fold p.d.validResult(processResult{}, false)
 	return processResult{}, nil
 }
 
@@ -2601,19 +2605,20 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false @*/
 	}
-	// @ assume false
 	if r, err := p.validateEgressUp(); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false @*/
 	}
-
+	// @ assume false
 	egressID := p.egressInterface()
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
 		if err := p.processEgress( /*@ ub @*/ ); err != nil {
+			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@, false @*/
 		}
+		// @ fold p.d.validResult(processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, false)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil /*@, false @*/
 	}
 
