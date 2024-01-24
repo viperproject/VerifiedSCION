@@ -1628,7 +1628,8 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 // @ preserves acc(&p.hopField, R20)
 // @ preserves acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   respr.OutPkt != nil ==> reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
+// @ ensures   respr.OutPkt != nil ==>
+// @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr error) {
@@ -1836,6 +1837,9 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
 // @ ensures   acc(&p.d, R20)
+// @ ensures   p.d.validResult(respr, false)
+// @ ensures   reserr == nil ==> respr === processResult{}
+// @ ensures   reserr != nil ==> sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr error) {
@@ -1867,12 +1871,16 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 		// No check required if the packet is received from an internal interface.
 		switch {
 		case p.ingressID == 0:
+			// @ fold p.d.validResult(respr, false)
 			return processResult{}, nil
 		case ingress == topology.Core && egress == topology.Core:
+			// @ fold p.d.validResult(respr, false)
 			return processResult{}, nil
 		case ingress == topology.Child && egress == topology.Parent:
+			// @ fold p.d.validResult(respr, false)
 			return processResult{}, nil
 		case ingress == topology.Parent && egress == topology.Child:
+			// @ fold p.d.validResult(respr, false)
 			return processResult{}, nil
 		default: // malicious
 			// @ TODO()
@@ -1888,10 +1896,13 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 	// Having a segment change received from the internal interface is never valid.
 	switch {
 	case ingress == topology.Core && egress == topology.Child:
+		// @ fold p.d.validResult(respr, false)
 		return processResult{}, nil
 	case ingress == topology.Child && egress == topology.Core:
+		// @ fold p.d.validResult(respr, false)
 		return processResult{}, nil
 	case ingress == topology.Child && egress == topology.Child:
+		// @ fold p.d.validResult(respr, false)
 		return processResult{}, nil
 	default:
 		// @ TODO()
@@ -2110,6 +2121,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ ensures   reserr == nil ==> (p.scionLayer.Mem(ub) && p.scionLayer.UBPath(ub) === old(p.scionLayer.UBPath(ub)) && p.scionLayer.GetPath(ub) === old(p.scionLayer.GetPath(ub)))
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   p.segmentChange
+// @ ensures   respr === processResult{}
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
@@ -2313,6 +2325,9 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(p.scionLayer.Mem(ub), R14)
 // @ ensures   acc(&p.d, R20)
+// @ ensures   p.d.validResult(respr, false)
+// @ ensures   respr.OutPkt != nil ==>
+// @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
@@ -2323,12 +2338,14 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 
 	alert := p.egressRouterAlertFlag()
 	if !*alert {
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, nil
 	}
 	egressID := p.egressInterface()
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if _, ok := p.d.external[egressID]; !ok {
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, nil
 	}
 	*alert = false
@@ -2340,6 +2357,7 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
 	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
 	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
@@ -2539,8 +2557,6 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	if /*@ unfolding acc(p.scionLayer.Mem(ub), R50) in (unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in @*/ p.scionLayer.DstIA /*@ ) @*/ == p.d.localIA {
 		a, r, err /*@, aliasesUb @*/ := p.resolveInbound( /*@ ub @*/ )
 		if err != nil {
-			//  assume aliasesUb ==> r.OutAddr != nil // TODO: Change spec to not need this
-			//  assert aliasesUb ==> (acc(r.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15))
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, err /*@, aliasesUb @*/
 		}
@@ -2550,7 +2566,6 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ assert ub === p.rawPkt
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, aliasesUb @*/
 	}
-	// @ assume false
 
 	// Outbound: pkts leaving the local IA.
 	// BRTransit: pkts leaving from the same BR different interface.
@@ -2560,6 +2575,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	if p.path.IsXover( /*@ ubPath @*/ ) {
 		// @ fold acc(p.scionLayer.Mem(ub), R3)
 		if r, err := p.doXover( /*@ ub @*/ ); err != nil {
+			// @ fold p.d.validResult(r, false)
 			return r, err /*@, false @*/
 		}
 		if r, err := p.validateHopExpiry(); err != nil {
@@ -2585,6 +2601,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false @*/
 	}
+	// @ assume false
 	if r, err := p.validateEgressUp(); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false @*/
