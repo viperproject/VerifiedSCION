@@ -622,4 +622,5 @@ ensures  id in d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics2(id uint16) {
 	unfold acc(MutexInvariant(d), _)
+	unfold acc(accBatchConn(d.external), _)
 }
