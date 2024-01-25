@@ -612,3 +612,14 @@ decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
 
 }
+
+ghost
+requires acc(MutexInvariant(d), _) && d.WellConfigured()
+requires acc(&d.external, _) && acc(d.external, _)
+requires id in domain(d.external)
+ensures  acc(MutexInvariant(d), _)
+ensures  id in d.getDomForwardingMetrics()
+decreases
+func (d *DataPlane) InDomainExternalInForwardingMetrics2(id uint16) {
+	unfold acc(MutexInvariant(d), _)
+}

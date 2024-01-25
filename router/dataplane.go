@@ -1397,7 +1397,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 }
 
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires  acc(&p.d, R5) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R5) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
@@ -2480,7 +2480,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 }
 
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires  acc(&p.d, R5) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R5) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
@@ -2609,7 +2609,6 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false @*/
 	}
-	// @ assume false
 	egressID := p.egressInterface()
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
@@ -2618,6 +2617,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@, false @*/
 		}
+		// @ p.d.InDomainExternalInForwardingMetrics2(egressID)
 		// @ fold p.d.validResult(processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, false)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil /*@, false @*/
 	}
@@ -2627,6 +2627,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	if a, ok := p.d.internalNextHops[egressID]; ok {
 		// @ p.d.getInternal()
+		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, false)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, false @*/
 	}
 	errCode := slayers.SCMPCodeUnknownHopFieldEgress
