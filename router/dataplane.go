@@ -1552,18 +1552,37 @@ type macBuffersT struct {
 	epicInput  []byte
 }
 
-// @ requires false
+// @ requires   acc(&p.d, _) && acc(MutexInvariant(p.d), _)
+// @ requires   acc(p.scionLayer.Mem(ub), R4)
+// @ requires   p.scionLayer.ValidPathMetaData(ub)
+// @ requires   sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ requires   acc(&p.ingressID,  R15)
+// @ requires   acc(&p.buffer, R50) && p.buffer.Mem()
+// @ ensures    acc(&p.d, _)
+// @ ensures    acc(p.scionLayer.Mem(ub), R4)
+// @ ensures    sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures    acc(&p.ingressID,  R15)
+// @ ensures    p.d.validResult(respr, false)
+// @ ensures    acc(&p.buffer, R50)
+// @ ensures    respr === processResult{} ==>
+// @ 	p.buffer.Mem()
+// @ ensures    respr !== processResult{} ==>
+// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
+// @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
+// @ ensures    reserr != nil ==> reserr.ErrorMem()
+// @ decreases
 func (p *scionPacketProcessor) packSCMP(
 	typ slayers.SCMPType,
 	code slayers.SCMPCode,
 	scmpP gopacket.SerializableLayer,
 	cause error,
-) (processResult, error) {
-
+	// @ ghost ub []byte,
+) (respr processResult, reserr error) {
 	// check invoking packet was an SCMP error:
-	if p.lastLayer.NextLayerType() == slayers.LayerTypeSCMP {
-		var scmpLayer slayers.SCMP
-		err := scmpLayer.DecodeFromBytes(p.lastLayer.LayerPayload(), gopacket.NilDecodeFeedback)
+	if p.lastLayer.NextLayerType( /*@ nil @*/ ) == slayers.LayerTypeSCMP {
+		var scmpLayer /*@@@*/ slayers.SCMP
+		pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ nil @*/ )
+		err := scmpLayer.DecodeFromBytes(pld, gopacket.NilDecodeFeedback)
 		if err != nil {
 			return processResult{}, serrors.WrapStr("decoding SCMP layer", err)
 		}
@@ -1572,7 +1591,7 @@ func (p *scionPacketProcessor) packSCMP(
 		}
 	}
 
-	rawSCMP, err := p.prepareSCMP(typ, code, scmpP, cause /*@ , nil @*/) // (VerifiedSCION) replace nil by sth else
+	rawSCMP, err := p.prepareSCMP(typ, code, scmpP, cause /*@ , nil @*/)
 	return processResult{OutPkt: rawSCMP}, err
 }
 
@@ -1656,6 +1675,7 @@ func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr 
 		&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 		serrors.New("expired hop", "cons_dir", p.infoField.ConsDir, "if_id", p.ingressID,
 			"curr_inf", p.path.PathMeta.CurrINF, "curr_hf", p.path.PathMeta.CurrHF),
+		/*@ nil , @*/
 	)
 }
 
@@ -1686,6 +1706,7 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 			serrors.New("ingress interface invalid",
 				"pkt_ingress", pktIngressID, "router_ingress", p.ingressID),
+			/*@ nil , @*/
 		)
 	}
 	// @ fold p.d.validResult(respr, false)
@@ -1751,6 +1772,7 @@ func (p *scionPacketProcessor) invalidSrcIA() (processResult, error) {
 		slayers.SCMPCodeInvalidSourceAddress,
 		&slayers.SCMPParameterProblem{Pointer: uint16(slayers.CmnHdrLen + addr.IABytes)},
 		invalidSrcIA,
+		/*@ nil , @*/
 	)
 }
 
@@ -1763,6 +1785,7 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 		slayers.SCMPCodeInvalidDestinationAddress,
 		&slayers.SCMPParameterProblem{Pointer: uint16(slayers.CmnHdrLen)},
 		invalidDstIA,
+		/*@ nil , @*/
 	)
 }
 
@@ -1860,6 +1883,7 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 			errCode,
 			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 			cannotRoute,
+			/*@ nil , @*/
 		)
 	}
 
@@ -1888,7 +1912,8 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 				slayers.SCMPCodeInvalidPath, // XXX(matzf) new code InvalidHop?
 				&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 				serrors.WithCtx(cannotRoute, "ingress_id", p.ingressID, "ingress_type", ingress,
-					"egress_id", pktEgressID, "egress_type", egress))
+					"egress_id", pktEgressID, "egress_type", egress),
+				/*@ nil , @*/)
 		}
 	}
 	// Check that the interface pair is valid on a segment switch.
@@ -1910,7 +1935,8 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 			slayers.SCMPCodeInvalidSegmentChange,
 			&slayers.SCMPParameterProblem{Pointer: p.currentInfoPointer( /*@ nil @*/ )},
 			serrors.WithCtx(cannotRoute, "ingress_id", p.ingressID, "ingress_type", ingress,
-				"egress_id", pktEgressID, "egress_type", egress))
+				"egress_id", pktEgressID, "egress_type", egress),
+			/*@ nil , @*/)
 	}
 }
 
@@ -2020,6 +2046,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 				"cons_dir", p.infoField.ConsDir,
 				"if_id", p.ingressID, "curr_inf", p.path.PathMeta.CurrINF,
 				"curr_hf", p.path.PathMeta.CurrHF, "seg_id", p.infoField.SegID),
+			/*@ nil , @*/
 		)
 	}
 	// Add the full MAC to the SCION packet processor,
@@ -2060,7 +2087,9 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (
 		r, err := p.packSCMP(
 			slayers.SCMPTypeDestinationUnreachable,
 			slayers.SCMPCodeNoRoute,
-			&slayers.SCMPDestinationUnreachable{}, err)
+			&slayers.SCMPDestinationUnreachable{},
+			err,
+			/*@ nil , @*/)
 		return nil, r, err /*@ , false @*/
 	default:
 		// @ fold p.d.validResult(respr, addrAliases)
@@ -2230,7 +2259,7 @@ func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr e
 				}
 			}
 			// @ TODO()
-			return p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down"))
+			return p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down") /*@,  nil , @*/)
 		}
 	}
 	// @ fold p.d.validResult(processResult{}, false)
@@ -2453,7 +2482,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 		Interface:  uint64(interfaceID),
 	}
 	// @ TODO()
-	return p.packSCMP(slayers.SCMPTypeTracerouteReply, 0, &scmpP, nil)
+	return p.packSCMP(slayers.SCMPTypeTracerouteReply, 0, &scmpP, nil /*@ , nil @*/)
 }
 
 // @ preserves acc(p.scionLayer.Mem(ubScionL), R20)
@@ -2477,6 +2506,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 		&slayers.SCMPParameterProblem{Pointer: 0},
 		serrors.New("bad packet size",
 			"header", p.scionLayer.PayloadLen, "actual", len(p.scionLayer.Payload)),
+		/*@ nil , @*/
 	)
 }
 
@@ -2642,6 +2672,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		errCode,
 		&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 		cannotRoute,
+		/*@ nil , @*/
 	)
 	return tmp, err /*@, false @*/
 }
