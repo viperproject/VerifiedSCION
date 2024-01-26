@@ -1554,6 +1554,9 @@ type macBuffersT struct {
 
 // @ requires   acc(&p.d, _) && acc(MutexInvariant(p.d), _)
 // @ requires   acc(p.scionLayer.Mem(ub), R4)
+// @ requires   acc(&p.lastLayer, R55) && p.lastLayer != nil
+// @ requires   (p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(nil), R15) // TODO: what is the buf here? we also need perms for the buffer
 // @ requires   p.scionLayer.ValidPathMetaData(ub)
 // @ requires   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires   acc(&p.ingressID,  R15)
@@ -2482,7 +2485,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 		Interface:  uint64(interfaceID),
 	}
 	// @ TODO()
-	return p.packSCMP(slayers.SCMPTypeTracerouteReply, 0, &scmpP, nil /*@ , nil @*/)
+	return p.packSCMP(slayers.SCMPTypeTracerouteReply, 0, &scmpP, (error)(nil) /*@ , nil @*/)
 }
 
 // @ preserves acc(p.scionLayer.Mem(ubScionL), R20)
