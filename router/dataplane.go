@@ -1552,7 +1552,6 @@ type macBuffersT struct {
 	epicInput  []byte
 }
 
-// @ trusted
 // @ requires false
 func (p *scionPacketProcessor) packSCMP(
 	typ slayers.SCMPType,
