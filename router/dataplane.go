@@ -955,8 +955,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			}
 		}
 
-	// (VerifiedSCION) Continue from here after adapting processPkt and processOHP
-	// @ TODO()
 	for k, v := range d.bfdSessions {
 		// @ TODO()
 		go func(ifID uint16, c bfdSession) {
