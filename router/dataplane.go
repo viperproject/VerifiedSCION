@@ -2951,7 +2951,7 @@ func (p *scionPacketProcessor) prepareSCMPtemp(
 	// @ ghost ub []byte,
 	// @ ghost rawPath []byte,
 ) ([]byte, error) {
-		// create new SCION header for reply.
+	// create new SCION header for reply.
 	var scionL /*@@@*/ slayers.SCION
 	// (VerifiedSCION) TODO: adapt *SCION.Mem(...)
 	// @ preserves acc(p.scionLayer.Mem(ub), R4)
@@ -2980,32 +2980,42 @@ func (p *scionPacketProcessor) prepareSCMPtemp(
 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
 	scionL.SrcIA = p.d.localIA
 	// @ )
+	
 	// @ preserves acc(p.scionLayer.Mem(ub), R4)
 	// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
+	//  preserves acc(&p.d, _) && acc(MutexInvariant!<p.d!>(), _)
+	// @ ensures   err != nil ==> err.ErrorMem()
+	// @ ensures   err == nil ==> srcA.Mem()
 	// @ decreases
+	// TODO: Not all postconditions of srcaddr are here. Do we need them?
 	// @ outline (
+	//  unfold acc(MutexInvariant!<p.d!>(), _)
 	// @ unfold acc(p.scionLayer.Mem(ub), R4)
 	// @ unfold acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4)
-	// @ sl.SplitRange_Bytes(ub, 2*addr.IABytes+p.scionLayer.DstAddrType.Length(), 2*addr.IABytes+p.scionLayer.DstAddrType.Length()+p.scionLayer.SrcAddrType.Length(), writePerm)
-	// @ assert let start := 2*addr.IABytes+p.scionLayer.DstAddrType.Length() in let end := 2*addr.IABytes+p.scionLayer.DstAddrType.Length()+p.scionLayer.SrcAddrType.Length() in forall i int :: { &ub[i] } 0 <= i && i < end - start ==> &ub[start:end][i] == &ub[start+i]
-	// @ sl.AssertSubslicingEq_bytes(ub, 2*addr.IABytes+p.scionLayer.DstAddrType.Length(), 2*addr.IABytes+p.scionLayer.DstAddrType.Length()+p.scionLayer.SrcAddrType.Length())
-	// @ sl.ResliceBytes
+	// @ sl.SplitRange_Bytes(ub, slayers.CmnHdrLen + 2*addr.IABytes+p.scionLayer.DstAddrType.Length(), slayers.CmnHdrLen + 2*addr.IABytes+p.scionLayer.DstAddrType.Length()+p.scionLayer.SrcAddrType.Length(), writePerm)
+	// @ assert p.scionLayer.RawSrcAddr === ub[slayers.CmnHdrLen:][2*addr.IABytes+p.scionLayer.DstAddrType.Length():2*addr.IABytes+p.scionLayer.DstAddrType.Length()+p.scionLayer.SrcAddrType.Length()]
 	srcA, err := p.scionLayer.SrcAddr()
-	// @ sl.CombineRange_Bytes(ub, 2*addr.IABytes+p.scionLayer.DstAddrType.Length(), 2*addr.IABytes+p.scionLayer.DstAddrType.Length()+p.scionLayer.SrcAddrType.Length(), writePerm)
+	// @ ghost if err != nil {
+	// @   fold srcA.Mem()
+	// @ }
+	// @ sl.CombineRange_Bytes(ub, slayers.CmnHdrLen + 2*addr.IABytes+p.scionLayer.DstAddrType.Length(), slayers.CmnHdrLen + 2*addr.IABytes+p.scionLayer.DstAddrType.Length()+p.scionLayer.SrcAddrType.Length(), writePerm)
 	// @ fold acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4)
 	// @ fold acc(p.scionLayer.Mem(ub), R4)
 	// @ )
-	// @ TODO()
-	
+
+	// @ establishCannotRoute()
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "extracting src addr")
 	}
 	if err := scionL.SetDstAddr(srcA /*@ , false @*/); err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "setting dest addr")
 	}
+ 	// @ unfold acc(MutexInvariant!<p.d!>(), _)
 	if err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP} /*@ , false @*/); err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "setting src addr")
 	}
+
+	// TODO()
 	scionL.NextHdr = slayers.L4SCMP
 
 	typeCode := slayers.CreateSCMPTypeCode(typ, code)
