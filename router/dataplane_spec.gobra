@@ -17,6 +17,7 @@
 package router
 
 import (
+	"context"
 	"errors"
 	"hash"
 	"net"
@@ -426,12 +427,22 @@ func (d *DataPlane) getNewPacketProcessorFootprint() {
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
 
+ghost
+requires bfdSessions != nil ==> acc(bfdSessions, R50)
+requires v in range(bfdSessions)
+requires acc(accBfdSession(bfdSessions), R50)
+ensures  bfdSessions != nil ==> acc(bfdSessions, R50)
+ensures  acc(accBfdSession(bfdSessions), R50)
+ensures  acc(v.Mem(), _)
+decreases
+func getBfdSessionMem(v bfdSession, bfdSessions map[uint16]bfdSession) {
+	unfold acc(accBfdSession(bfdSessions), R55)
+	fold acc(accBfdSession(bfdSessions), R55)
+}
+
 /** Start of closure specs for the Run method **/
 requires true
 func readClosureSpec(ingressID uint16, rd BatchConn)
-
-requires true
-func closureSpec1(ifID uint16, c bfdSession)
 
 requires true
 func closureSpec2(i uint16, c BatchConn)

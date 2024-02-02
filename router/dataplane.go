@@ -685,6 +685,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  0 in domain(d.forwardingMetrics)
 // @ requires  d.mtx.LockP()
 // @ requires  d.mtx.LockInv() == MutexInvariant!<d!>;
+// @ requires  acc(ctx.Mem(), _)
 // TODO: put well configured here
 func (d *DataPlane) Run(ctx context.Context) error {
 	// @ share d, ctx
@@ -954,17 +955,30 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				}
 			}
 		}
+	// @ ghost if d.bfdSessions != nil { unfold acc(accBfdSession(d.bfdSessions), R2) }
 
-	for k, v := range d.bfdSessions {
-		// @ TODO()
-		go func(ifID uint16, c bfdSession) {
-			// @ TODO()
-			defer log.HandlePanic()
-			if err := c.Run(ctx); err != nil && err != bfd.AlreadyRunning {
-				log.Error("BFD session failed to start", "ifID", ifID, "err", err)
+	// (VerifiedSCION) TODO explain why we introduce this
+	bfds := d.bfdSessions
+
+	// @ invariant bfds != nil ==> acc(bfds, R4)
+	// @ invariant bfds != nil ==> acc(accBfdSession(bfds), R4)
+	// @ invariant acc(&ctx, _) && acc(ctx.Mem(), _)
+	// @ decreases len(bfds) - len(visited)
+	for k, v := range bfds /*@ with visited @*/ {
+		cl :=
+			// @ requires acc(c.Mem(), _)
+			// @ requires acc(&ctx, _) && acc(ctx.Mem(), _)
+			// decreases
+			func /*@ closure1 @*/ (ifID uint16, c bfdSession) {
+				defer log.HandlePanic()
+				if err := c.Run(ctx); err != nil && err != bfd.AlreadyRunning {
+					log.Error("BFD session failed to start", "ifID", ifID, "err", err)
+				}
 			}
-		}(k, v) // @ as closureSpec1
+		// @ getBfdSessionMem(v, bfds)
+		go cl(k, v) // @ as closure1
 	}
+	// @ TODO()
 	for ifID, v := range d.external {
 		go func(i uint16, c BatchConn) {
 			// @ TODO()
