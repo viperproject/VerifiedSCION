@@ -1005,8 +1005,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// @ invariant acc(&read, 1/2) && read implements rc
 	// @ invariant acc(&d, _)
 	// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
-	// @ invariant externals != nil ==> acc(externals, _)
-	// @ invariant externals != nil ==> acc(accBatchConn(externals), _)
+	// @ invariant externals != nil ==> acc(externals, R4)
+	// @ invariant externals != nil ==> acc(accBatchConn(externals), R4)
 	// @ invariant acc(&d, _)
 	// @ invariant acc(d,  _)
 	// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
