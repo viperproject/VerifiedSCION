@@ -432,23 +432,12 @@ requires v in range(bfdSessions)
 requires acc(accBfdSession(bfdSessions), R50)
 ensures  bfdSessions != nil ==> acc(bfdSessions, R50)
 ensures  acc(accBfdSession(bfdSessions), R50)
-ensures  acc(v.Mem(), _)
+ensures  v != nil && acc(v.Mem(), _)
 decreases
 func getBfdSessionMem(v bfdSession, bfdSessions map[uint16]bfdSession) {
 	unfold acc(accBfdSession(bfdSessions), R55)
 	fold acc(accBfdSession(bfdSessions), R55)
 }
-
-/** Start of closure specs for the Run method **/
-requires true
-func readClosureSpec(ingressID uint16, rd BatchConn)
-
-requires true
-func closureSpec2(i uint16, c BatchConn)
-
-requires true
-func closureSpec3(c BatchConn)
-/** End of closure specs for the Run method **/
 
 /** definitions used internally for the proof of Run **/
 // TODO: maybe drop and use the invariant of Messages instead now that we have IsActive?
