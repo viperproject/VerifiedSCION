@@ -623,3 +623,12 @@ func (d *DataPlane) InDomainExternalInForwardingMetrics2(id uint16) {
 	unfold acc(MutexInvariant(d), _)
 	unfold acc(accBatchConn(d.external), _)
 }
+
+ghost
+requires acc(&d.forwardingMetrics, _)
+requires acc(accForwardingMetrics(d.forwardingMetrics), _)
+decreases
+pure func (d *DataPlane) DomainForwardingMetrics() set[uint16] {
+	return unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
+		domain(d.forwardingMetrics)
+}
