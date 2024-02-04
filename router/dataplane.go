@@ -680,6 +680,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // after calling this method.
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
+// @ requires  acc(&d.svc, 1/2) && d.svc != nil
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
 // @ requires  acc(&d.forwardingMetrics, 1/2) && acc(d.forwardingMetrics, 1/2)
 // @ requires  d.mtx.LockP()
@@ -984,6 +985,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// decreases
 			func /*@ closure1 @*/ (ifID uint16, c bfdSession) {
 				defer log.HandlePanic()
+				// @ bfd.EstablishAlreadyRunning()
 				if err := c.Run(ctx); err != nil && err != bfd.AlreadyRunning {
 					log.Error("BFD session failed to start", "ifID", ifID, "err", err)
 				}
@@ -1002,8 +1004,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// the issue with the encoding.
 	externals := d.external
 
-	// @ invariant acc(&read, 1/2) && read implements rc
+	// @ invariant acc(&read, _) && read implements rc
 	// @ invariant acc(&d, _)
+	// @ invariant acc(&d.external, _) && d.external === externals
 	// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
 	// @ invariant externals != nil ==> acc(externals, R4)
 	// @ invariant externals != nil ==> acc(accBatchConn(externals), R4)
@@ -1017,7 +1020,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// @ decreases len(externals) - len(visited)
 	for ifID, v := range externals /*@ with visited @*/ {
 		cl :=
-			// @ requires acc(&read, 1/4) && read implements rc
+			// @ requires acc(&read, _) && read implements rc
 			// @ requires acc(&d, _)
 			// @ requires acc(d,  _)
 			// @ requires acc(MutexInvariant(d), _) && d.WellConfigured()
@@ -1030,8 +1033,27 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			func /*@ closure2 @*/ (i uint16, c BatchConn) {
 				defer log.HandlePanic()
 				// @ assert read implements rc
+				// (VerifiedSCION) check preconditions of call to read(i, c) manually.
+				// @ assert acc(&d, _)
+				// @ assert acc(d,  _)
+				// @ assert acc(MutexInvariant(d), _) && d.WellConfigured()
+				// @ assert d.getValSvc() != nil
+				// @ assert d.getValForwardingMetrics() != nil
+				// @ assert 0 in d.getDomForwardingMetrics()
+				// @ assert i in d.getDomForwardingMetrics()
+				// @ assert d.macFactory != nil
+				// @ assert c != nil && acc(c.Mem(), _)
+
+				// (VerifiedSCION) Skip automated verification of the call due to a
+				// bug in Gobra. (https://github.com/viperproject/gobra/issues/723)
+				// @ TODO()
 				read(i, c) //@ as rc
 			}
+		// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R50) }
+		// @ assert v in range(d.external)
+		// @ assert acc(v.Mem(), _)
+		// @ d.InDomainExternalInForwardingMetrics3(ifID)
+		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), R50) }
 		go cl(ifID, v) //@ as closure2
 	}
 	// @ TODO()
