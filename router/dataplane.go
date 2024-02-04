@@ -681,6 +681,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
 // @ requires  acc(&d.svc, 1/2) && d.svc != nil
+// @ requires  acc(&d.internal, 1/2) && d.internal != nil
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
 // @ requires  acc(&d.forwardingMetrics, 1/2) && acc(d.forwardingMetrics, 1/2)
 // @ requires  d.mtx.LockP()
@@ -1056,12 +1057,38 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), R50) }
 		go cl(ifID, v) //@ as closure2
 	}
-	// @ TODO()
-	go func /*@ closure3 @*/ (c BatchConn) {
-		// @ TODO()
-		defer log.HandlePanic()
-		read(0, c) //@ as rc
-	}(d.internal) //@ as closure3
+	cl :=
+		// @ requires acc(&read, _) && read implements rc
+		// @ requires acc(&d, _)
+		// @ requires acc(d,  _)
+		// @ requires acc(MutexInvariant(d), _) && d.WellConfigured()
+		// @ requires d.getValSvc() != nil
+		// @ requires d.getValForwardingMetrics() != nil
+		// @ requires 0 in d.getDomForwardingMetrics()
+		// @ requires d.macFactory != nil
+		// @ requires c != nil && acc(c.Mem(), _)
+		func /*@ closure3 @*/ (c BatchConn) {
+			defer log.HandlePanic()
+			// @ assert read implements rc
+
+			// (VerifiedSCION) once again, check preconditions of call to read(0, c)
+			// manually, due to a completness issue with closures:
+			// https://github.com/viperproject/gobra/issues/723.
+			// @ assert acc(&d, _)
+			// @ assert acc(d,  _)
+			// @ assert acc(MutexInvariant(d), _) && d.WellConfigured()
+			// @ assert d.getValSvc() != nil
+			// @ assert d.getValForwardingMetrics() != nil
+			// @ assert 0 in d.getDomForwardingMetrics()
+			// @ assert d.macFactory != nil
+			// @ assert c != nil && acc(c.Mem(), _)
+
+			// (VerifiedSCION) Skip automated verification and rely on manual
+			// checks above.
+			// @ TODO()
+			read(0, c) //@ as rc
+		}
+	go cl(d.internal) //@ as closure3
 
 	// (VerifiedSCION) we ignore verification from this point onward because of the
 	// call to Unlock. Supporting it is conceptually easy, but it requires changing
@@ -1118,6 +1145,7 @@ func (d *DataPlane) initMetrics() {
 	// @ invariant d.external != nil ==> acc(d.external, R20)
 	// @ invariant d.external === old(d.external)
 	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
+	// @ invariant 0 in domain(d.forwardingMetrics)
 	// @ invariant acc(&d.internalNextHops, R15)
 	// @ invariant d.internalNextHops === old(d.internalNextHops)
 	// @ invariant d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
