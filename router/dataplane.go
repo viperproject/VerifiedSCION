@@ -963,6 +963,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// @ assert 0 in d.getDomForwardingMetrics()
 	// (VerifiedSCION) the following cannot be expressed as a pre-condition:
 	// there is really no way of specifying that the dataplane protected by the lock
+	// satisfies this condition.
 	// @ assume d.WellConfigured()
 
 	// @ ghost if d.bfdSessions != nil { unfold acc(accBfdSession(d.bfdSessions), R2) }
