@@ -984,7 +984,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		cl :=
 			// @ requires c != nil && acc(c.Mem(), _)
 			// @ requires acc(&ctx, _) && acc(ctx.Mem(), _)
-			// decreases
 			func /*@ closure1 @*/ (ifID uint16, c bfdSession) {
 				defer log.HandlePanic()
 				// @ bfd.EstablishAlreadyRunning()
