@@ -77,7 +77,7 @@ pred accAddr(addrs map[uint16]*net.UDPAddr) {
 pred accBatchConn(batchConns map[uint16]BatchConn) {
 	acc(batchConns, 1/2) &&
 	forall b BatchConn :: { b in range(batchConns) }{ b.Mem() } b in range(batchConns) ==>
-		b.Mem()
+		b!= nil && acc(b.Mem(), _)
 }
 
 pred accBfdSession(bfdSessions map[uint16]bfdSession) {
@@ -426,19 +426,18 @@ func (d *DataPlane) getNewPacketProcessorFootprint() {
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
 
-/** Start of closure specs for the Run method **/
-requires true
-func readClosureSpec(ingressID uint16, rd BatchConn)
-
-requires true
-func closureSpec1(ifID uint16, c bfdSession)
-
-requires true
-func closureSpec2(i uint16, c BatchConn)
-
-requires true
-func closureSpec3(c BatchConn)
-/** End of closure specs for the Run method **/
+ghost
+requires bfdSessions != nil ==> acc(bfdSessions, R50)
+requires v in range(bfdSessions)
+requires acc(accBfdSession(bfdSessions), R50)
+ensures  bfdSessions != nil ==> acc(bfdSessions, R50)
+ensures  acc(accBfdSession(bfdSessions), R50)
+ensures  v != nil && acc(v.Mem(), _)
+decreases
+func getBfdSessionMem(v bfdSession, bfdSessions map[uint16]bfdSession) {
+	unfold acc(accBfdSession(bfdSessions), R55)
+	fold acc(accBfdSession(bfdSessions), R55)
+}
 
 /** definitions used internally for the proof of Run **/
 // TODO: maybe drop and use the invariant of Messages instead now that we have IsActive?
@@ -623,4 +622,26 @@ decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics2(id uint16) {
 	unfold acc(MutexInvariant(d), _)
 	unfold acc(accBatchConn(d.external), _)
+}
+
+// This lemma has the same exact spec as before, except for a fixed permission to d.
+// external. Although simple, this requires some work to prove to avoid incompletnesses
+// with MCE.
+ghost
+requires acc(MutexInvariant(d), _) && d.WellConfigured()
+requires acc(&d.external, _) && acc(d.external, R55)
+requires id in domain(d.external)
+ensures  acc(MutexInvariant(d), _)
+ensures  acc(&d.external, _) && acc(d.external, R55)
+ensures  id in d.getDomForwardingMetrics()
+decreases
+func (d *DataPlane) InDomainExternalInForwardingMetrics3(id uint16)
+
+ghost
+requires acc(&d.forwardingMetrics, _)
+requires acc(accForwardingMetrics(d.forwardingMetrics), _)
+decreases
+pure func (d *DataPlane) DomainForwardingMetrics() set[uint16] {
+	return unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
+		domain(d.forwardingMetrics)
 }
