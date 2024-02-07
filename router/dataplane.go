@@ -695,8 +695,8 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  acc(&d.internal, 1/2) && d.internal != nil
 // @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
 // @ requires  acc(&d.forwardingMetrics, 1/2) && acc(d.forwardingMetrics, 1/2)
-// @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>
+// @ requires  d.mtx.LockP()
+// @ requires  d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ requires  acc(ctx.Mem(), _)
 // @ requires  acc(&d.mtx, _)
 // contracts for IO-spec
