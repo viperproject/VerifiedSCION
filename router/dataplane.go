@@ -1664,8 +1664,9 @@ type macBuffersT struct {
 // @ requires   acc(&p.d, _) && acc(MutexInvariant(p.d), _)
 // @ requires   acc(p.scionLayer.Mem(ub), R4)
 // @ requires   acc(&p.lastLayer, R55) && p.lastLayer != nil
-// @ requires   (p.scionLayer !== p.lastLayer ==>
-// @ 	acc(p.lastLayer.Mem(nil), R15) // TODO: what is the buf here? we also need perms for the buffer
+// TODO: what is the buf here? we also need perms for the buffer
+// @ requires   &p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(nil), R15)
 // @ requires   p.scionLayer.ValidPathMetaData(ub)
 // @ requires   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires   acc(&p.ingressID,  R15)
