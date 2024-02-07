@@ -575,18 +575,18 @@ func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 // from the underlaying layer data. Changing the net.Addr object might lead to inconsistent layer
 // information and thus should be treated read-only. Instead, SetDstAddr should be used to update
 // the destination address.
-// @ requires  acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
-// @ requires  s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
-// @ requires  acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
-// @ ensures   acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
-// @ ensures   acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
-// @ ensures   err == nil ==> (s.DstAddrType == T16Ip ==> typeOf(res) == *net.IPAddr)
-// @ ensures   err == nil ==> (s.DstAddrType == T16Ip ==> (acc(res.(*net.IPAddr)) && s.RawDstAddr === []byte(res.(*net.IPAddr).IP)))
-// @ ensures   err == nil ==> (s.DstAddrType == T4Ip ==>  typeOf(res) == *net.IPAddr)
-// @ ensures   err == nil ==> (s.DstAddrType == T4Ip ==> (acc(res.(*net.IPAddr)) && s.RawDstAddr === []byte(res.(*net.IPAddr).IP)))
-// @ ensures   err == nil ==> (s.DstAddrType == T4Svc ==> typeOf(res) == addr.HostSVC)
-// @ ensures   err == nil == (s.DstAddrType == T4Ip || s.DstAddrType == T4Svc || s.DstAddrType == T16Ip)
-// @ ensures   err != nil ==> err.ErrorMem()
+// @ requires acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
+// @ requires s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
+// @ requires acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R15)
+// @ ensures  acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
+// @ ensures  err == nil ==> acc(res.Mem(), R15)
+// @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
+// @ ensures  err == nil ==>
+// @ 	let rawDstAddr := s.RawDstAddr in
+// @ 	(acc(res.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawDstAddr, 0, len(rawDstAddr)), R15))
+// @ ensures  err != nil ==>
+// @ 	acc(sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R15)
+// @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCION) DstAddr() (res net.Addr, err error) {
 	return parseAddr(s.DstAddrType, s.RawDstAddr)
@@ -598,15 +598,15 @@ func (s *SCION) DstAddr() (res net.Addr, err error) {
 // address.
 // @ requires  acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
 // @ requires  s.SrcAddrType == T4Svc ==> len(s.RawSrcAddr) >= addr.HostLenSVC
-// @ requires  acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+// @ requires  acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R15)
 // @ ensures   acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
-// @ ensures   acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
-// @ ensures   err == nil ==> (s.SrcAddrType == T16Ip ==> typeOf(res) == *net.IPAddr)
-// @ ensures   err == nil ==> (s.SrcAddrType == T16Ip ==> (acc(res.(*net.IPAddr)) && s.RawSrcAddr === []byte(res.(*net.IPAddr).IP)))
-// @ ensures   err == nil ==> (s.SrcAddrType == T4Ip ==>  typeOf(res) == *net.IPAddr)
-// @ ensures   err == nil ==> (s.SrcAddrType == T4Ip ==> (acc(res.(*net.IPAddr)) && s.RawSrcAddr === []byte(res.(*net.IPAddr).IP)))
-// @ ensures   err == nil ==> (s.SrcAddrType == T4Svc ==> typeOf(res) == addr.HostSVC)
-// @ ensures   err == nil == (s.SrcAddrType == T4Ip || s.SrcAddrType == T4Svc || s.SrcAddrType == T16Ip)
+// @ ensures   err == nil ==> acc(res.Mem(), R15)
+// @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
+// @ ensures   err == nil ==>
+// @ 	let rawSrcAddr := s.RawSrcAddr in
+// @ 	(acc(res.Mem(), R15) --* acc(sl.AbsSlice_Bytes(rawSrcAddr, 0, len(rawSrcAddr)), R15))
+// @ ensures   err != nil ==>
+// @ 	acc(sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R15)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCION) SrcAddr() (res net.Addr, err error) {
@@ -687,28 +687,43 @@ func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error
 	return err
 }
 
-// @ requires  addrType == T4Svc ==> len(raw) >= addr.HostLenSVC
-// @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R20)
-// @ ensures   err == nil ==> (addrType == T16Ip ==> typeOf(res) == *net.IPAddr)
-// @ ensures   err == nil ==> (addrType == T16Ip ==> (acc(res.(*net.IPAddr)) && raw === []byte(res.(*net.IPAddr).IP)))
-// @ ensures   err == nil ==> (addrType == T4Ip ==> typeOf(res) == *net.IPAddr)
-// @ ensures   err == nil ==> (addrType == T4Ip ==> (acc(res.(*net.IPAddr)) && raw === []byte(res.(*net.IPAddr).IP)))
-// @ ensures   err == nil ==> (addrType == T4Svc ==> typeOf(res) == addr.HostSVC)
-// @ ensures   err == nil == (addrType == T4Ip || addrType == T4Svc || addrType == T16Ip)
-// @ ensures   err != nil ==> err.ErrorMem()
+// @ requires addrType == T4Svc ==> len(raw) >= addr.HostLenSVC
+// @ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)
+// @ ensures  err == nil ==> acc(res.Mem(), R15)
+// @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
+// @ ensures  err == nil ==>
+// @ 	(acc(res.Mem(), R15) --* acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15))
+// @ ensures  err != nil ==> acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)
+// @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
 func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 	switch addrType {
 	case T4Ip:
 		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
+		// @ unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)
+		// @ fold acc(verScionTmp.Mem(), R15)
+		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)) {
+		// @ 	assert acc(&verScionTmp.IP, R50) && verScionTmp.IP === raw
+		// @ 	unfold acc(verScionTmp.Mem(), R15)
+		// @ 	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)
+		// @ }
 		return verScionTmp, nil
 	case T4Svc:
-		// @ unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R20)
+		// @ unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)
 		verScionTmp := addr.HostSVC(binary.BigEndian.Uint16(raw[:addr.HostLenSVC]))
-		// @ fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R20)
+		// @ fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)
+		// @ fold acc(verScionTmp.Mem(), R15)
+		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)) { }
 		return verScionTmp, nil
 	case T16Ip:
 		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
+		// @ unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)
+		// @ fold acc(verScionTmp.Mem(), R15)
+		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)) {
+		// @ 	assert acc(&verScionTmp.IP, R50) && verScionTmp.IP === raw
+		// @ 	unfold acc(verScionTmp.Mem(), R15)
+		// @ 	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R15)
+		// @ }
 		return verScionTmp, nil
 	}
 	return nil, serrors.New("unsupported address type/length combination",

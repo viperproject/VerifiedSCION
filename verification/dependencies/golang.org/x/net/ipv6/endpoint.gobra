@@ -139,6 +139,7 @@ func NewPacketConn(c net.PacketConn) (p *PacketConn) {
 
 ghost
 requires acc(p.Mem(), _)
+decreases _
 pure func (p *PacketConn) GetUnderlyingConn() (c net.PacketConn)
 
 ghost
@@ -162,12 +163,12 @@ func (p *PacketConn) ExchangeWildcardPerm() (c net.PacketConn)
 // to len(ms).
 trusted
 preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==>
-	(&ms[i]).Mem(lenBuffers)
+	(&ms[i]).Mem()
 preserves acc(c.Mem(), _)
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> (0 <= n && n <= len(ms))
 ensures   err != nil ==> err.ErrorMem()
-func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers int) (n int, err error) {
+func (c *PacketConn) ReadBatch(ms []socket.Message, flags int) (n int, err error) {
 	return c.payloadHandler.ReadBatch(ms, flags)
 }
 
@@ -175,11 +176,11 @@ func (c *PacketConn) ReadBatch(ms []socket.Message, flags int, ghost lenBuffers 
 // WriteBatch writes a batch of messages.
 // It returns the number of messages written on a successful write.
 trusted
-preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(lenBuffers), R10)
+preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==> acc((&ms[i]).Mem(), R10)
 preserves acc(c.Mem(), _)
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> 0 <= n && n <= len(ms)
 ensures   err != nil ==> err.ErrorMem()
-func (c *PacketConn) WriteBatch(ms []socket.Message, flags int, ghost lenBuffers int) (n int, err error) {
+func (c *PacketConn) WriteBatch(ms []socket.Message, flags int) (n int, err error) {
 	return c.payloadHandler.WriteBatch(ms, flags)
 }

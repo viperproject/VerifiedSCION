@@ -1,6 +1,13 @@
 // Specification for package "golang.org/x/net/internal/socket"
 // Based on file https://github.com/golang/net/blob/master/internal/socket/socket.go
 
+// This file is specialized for the case where all instances m of message
+// satisfy the property len(m.Buffers) == 1, which is the case in the router.
+// The old file (socket.gobra.old) contains more general definitions,
+// but this is unnecessary for the SCION router and requires us proving
+// many additional lemmas, e.g., that the following is injective:
+// 	forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==> acc(&m.Buffers[i])
+
 // +gobra
 
 package socket
@@ -8,7 +15,7 @@ package socket
 import (
 	"net"
 
-	"github.com/scionproto/scion/verification/utils/slices"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 
@@ -34,102 +41,73 @@ type Message struct {
 	N     int // # of bytes read or written from/to Buffers
 	NN    int // # of bytes read or written from/to OOB
 	Flags int // protocol-specific information on the received message
+
+	// (VerifiedSCION) the following are, morally, ghost fields:
+	// is it still ok to read the Addr of the Message?
+	IsActive bool
+	// do we have a fixed amount of perms to the Addr or a wildcard amount?
+	WildcardPerm bool
 }
 
-pred (m *Message) Mem(lenBuffers int) {
+pred (m *Message) Mem() {
 	acc(m) &&
-	len(m.Buffers) == lenBuffers &&
-	(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==> (acc(&m.Buffers[i]) && slices.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))) &&
-	slices.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
+	len(m.Buffers) == 1 &&
+	acc(&m.Buffers[0]) &&
+	sl.AbsSlice_Bytes(m.Buffers[0], 0, len(m.Buffers[0])) &&
+	sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
 	// typeOf(m.Addr) == type[*net.UDPAddr] &&
-	(m.Addr != nil ==> acc(m.Addr.Mem(), _)) &&
-	0 <= m.N
-}
-
-pred (m *Message) MemWithoutHalf(lenBuffers int) {
-	acc(m, 1/2) &&
-	len(m.Buffers) == lenBuffers &&
-	(forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==> (acc(&m.Buffers[i]) && slices.AbsSlice_Bytes(m.Buffers[i], 0, len(m.Buffers[i])))) &&
-	slices.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
-	// typeOf(m.Addr) == type[*net.UDPAddr] &&
-	(m.Addr != nil ==> acc(m.Addr.Mem(), _)) &&
+	((m.Addr != nil && m.IsActive && !m.WildcardPerm) ==> m.Addr.Mem()) &&
+	((m.Addr != nil && m.IsActive && m.WildcardPerm) ==> acc(m.Addr.Mem(), _)) &&
 	0 <= m.N
 }
 
 ghost
-requires acc(m.Mem(lenBuffers), _)
-pure func (m *Message) GetAddr(lenBuffers int) net.Addr {
-	return unfolding acc(m.Mem(lenBuffers), _) in m.Addr
-}
-
-ghost
-requires acc(m.MemWithoutHalf(lenBuffers), _)
-pure func (m *Message) GetAddrWithoutHalf(lenBuffers int) net.Addr {
-	return unfolding acc(m.MemWithoutHalf(lenBuffers), _) in m.Addr
-}
-
-ghost
-requires acc(m.Mem(lenBuffers), _)
-requires 0 <= i && i < lenBuffers
+requires acc(m.Mem(), _)
 decreases
-pure func (m *Message) GetBuffer(lenBuffers int, i int) []byte {
-	return unfolding acc(m.Mem(lenBuffers), _) in m.Buffers[i]
+pure func (m *Message) HasWildcardPermAddr() bool {
+	return unfolding acc(m.Mem(), _) in m.WildcardPerm
 }
 
-// Only defined for the case where lenBuffers == 1
 ghost
-requires acc(m.Mem(1), _)
+requires acc(m.Mem(), _)
+decreases
+pure func (m *Message) HasActiveAddr() bool {
+	return unfolding acc(m.Mem(), _) in m.IsActive
+}
+
+ghost
+requires acc(m.Mem(), _)
+decreases
+pure func (m *Message) GetAddr() net.Addr {
+	return unfolding acc(m.Mem(), _) in m.Addr
+}
+
+ghost
+requires acc(m.Mem(), _)
+decreases
+pure func (m *Message) GetMessage() Message {
+	return unfolding acc(m.Mem(), _) in *m
+}
+
+
+ghost
+requires acc(m.Mem(), _)
+decreases
+pure func (m *Message) GetBuffer() []byte {
+	return unfolding acc(m.Mem(), _) in m.Buffers[0]
+}
+
+ghost
+requires acc(m.Mem(), _)
 decreases
 pure func (m *Message) GetFstBuffer() []byte {
-	return unfolding acc(m.Mem(1), _) in m.Buffers[0]
-}
-
-// Only defined for the case where lenBuffers == 1
-ghost
-requires acc(m.Mem(1), _)
-decreases
-pure func (m *Message) GetN() int {
-	return unfolding acc(m.Mem(1), _) in m.N
+	return unfolding acc(m.Mem(), _) in m.Buffers[0]
 }
 
 ghost
-requires m.Mem(1)
-ensures  acc(m, 1/2) && m.MemWithoutHalf(1)
-ensures  old(m.GetAddr(1)) === m.GetAddrWithoutHalf(1)
-ensures  m.N == old(unfolding m.Mem(1) in m.N)
-ensures  m.Buffers === old(unfolding m.Mem(1) in m.Buffers)
-ensures  old(m.GetFstBuffer()) === unfolding m.MemWithoutHalf(1) in m.Buffers[0]
-ensures  old(m.GetN()) == m.N
+requires acc(m.Mem(), _)
+ensures  0 <= res
 decreases
-func (m *Message) SplitPerm() {
-	unfold m.Mem(1)
-	fold m.MemWithoutHalf(1)
-}
-
-ghost
-requires acc(m, 1/2) && m.MemWithoutHalf(1)
-ensures  m.Mem(1)
-ensures  m.GetAddr(1) === old(m.GetAddrWithoutHalf(1))
-ensures  old(m.N) == unfolding m.Mem(1) in m.N
-ensures  m.GetFstBuffer() === old(unfolding m.MemWithoutHalf(1) in m.Buffers[0])
-ensures  unfolding m.Mem(1) in m.Buffers === old(m.Buffers)
-ensures  m.GetN() == old(m.N)
-decreases
-func (m *Message) CombinePerm() {
-	unfold m.MemWithoutHalf(1)
-	fold m.Mem(1)
-}
-
-ghost
-requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> msgs[j].Mem(1)
-ensures  forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
-decreases
-func SplitPermMsgs(msgs []Message) {
-	invariant 0 <= i && i <= len(msgs)
-	invariant forall j int :: { &msgs[j] } i <= j && j < len(msgs) ==> msgs[j].Mem(1)
-	invariant forall j int :: { &msgs[j] } 0 <= j && j < i ==> acc(&msgs[j], 1/2) && msgs[j].MemWithoutHalf(1)
-	decreases len(msgs) - i
-	for i := 0; i < len(msgs); i++ {
-		msgs[i].SplitPerm()
-	}
+pure func (m *Message) GetN() (res int) {
+	return unfolding acc(m.Mem(), _) in m.N
 }

@@ -44,7 +44,7 @@ type Counter interface {
 
 	// Add adds the given value to the counter. It panics if the value is <
 	// 0.
-	requires float64(0) <= v
+	requires  float64(0) <= v
 	preserves acc(Mem(), _)
 	decreases
 	Add(v float64)

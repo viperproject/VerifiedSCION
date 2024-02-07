@@ -37,6 +37,7 @@ pred SharedInv(ghost dp io.DataPlaneSpec, ghost y SharedArg) {
 ghost 
 requires io.token(p) && dp.dp3s_iospec_ordered(s, p)
 ensures  m.LockP() && m.LockInv() == SharedInv!< dp, y !>;
+decreases
 func InitSharedInv(
   ghost dp io.DataPlaneSpec, 
   ghost p io.Place, 
