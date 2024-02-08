@@ -60,6 +60,7 @@ ghost
 requires 0 <= t && t < maxPathType
 requires acc(PathPackageMem(), _)
 ensures  res == unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
+decreases
 pure func Registered(t Type) (res bool) {
 	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
 }
@@ -67,6 +68,7 @@ pure func Registered(t Type) (res bool) {
 ghost
 requires 0 <= t && t < maxPathType
 requires acc(PathPackageMem(), _)
+decreases
 pure func GetType(t Type) (res Metadata) {
 	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].Metadata
 }
@@ -74,6 +76,7 @@ pure func GetType(t Type) (res Metadata) {
 ghost
 requires acc(PathPackageMem(), _)
 ensures  b == unfolding acc(PathPackageMem(), _) in strictDecoding
+decreases
 pure func IsStrictDecoding() (b bool) {
 	return unfolding acc(PathPackageMem(), _) in strictDecoding
 }

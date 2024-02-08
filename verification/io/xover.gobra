@@ -35,6 +35,8 @@ package io
 // remaining hop field into the Past path, and nextseg, which is
 // the new segment that we are xovering over to.
 ghost
+requires dp.Valid()
+requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) dp2_xover_common_guard(m IO_pkt2,
 	currseg IO_seg2,
@@ -54,28 +56,34 @@ pure func (dp DataPlaneSpec) dp2_xover_common_guard(m IO_pkt2,
 			nextseg.Future[0] == hf2 &&
 			dp.dp2_check_interface(currseg.ConsDir, asid, hf1, recvif) &&
 			dp.dp2_check_recvif(currseg.ConsDir, asid, recvif) &&
-			dp.update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
-			dp.inc_seg2(currseg, traversedseg, hf1, seq[IO_HF]{}) &&
+			update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
+			inc_seg2(currseg, traversedseg, hf1, seq[IO_HF]{}) &&
 			dp.hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1) &&
 			dp.hf_valid(nextseg.ConsDir, nextseg.AInfo, nextseg.UInfo, hf2) &&
 			hf1.extr_asid() == asid &&
 			hf2.extr_asid() == asid &&
-			dp.same_other2(currseg, traversedseg)
+			same_other2(currseg, traversedseg)
 }
 
 ghost
+requires dp.Valid()
+requires a == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) egif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
 	return dp.if_type(a, hf.EgIF2, link)
 }
 
 ghost
+requires dp.Valid()
+requires a == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) inif2_type(hf IO_HF, a IO_as, link IO_Link) bool {
 	return dp.if_type(a, hf.InIF2, link)
 }
 
 ghost
+requires dp.Valid()
+requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
 	return (dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_ProvCust{})) ||
@@ -84,6 +92,8 @@ pure func (dp DataPlaneSpec) xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2
 }
 
 ghost
+requires dp.Valid()
+requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) xover_core2_link_type(hf1 IO_HF, hf2 IO_HF, asid IO_as, d bool) bool {
 	return (!d && dp.egif2_type(hf1, asid, IO_ProvCust{}) && dp.inif2_type(hf2, asid, IO_PeerOrCore{})) ||

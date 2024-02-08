@@ -18,6 +18,7 @@ package scion
 
 import (
 	"encoding/binary"
+	"github.com/scionproto/scion/pkg/slayers/path"
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
