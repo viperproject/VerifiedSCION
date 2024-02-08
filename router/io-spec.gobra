@@ -571,6 +571,7 @@ pure func validPktMetaHdr(raw []byte) bool {
 		len(raw) >= pktLen(seg1, seg2, seg3)
 }
 
+// TODO: add body
 ghost 
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 ensures val.isIO_val_Unsupported
