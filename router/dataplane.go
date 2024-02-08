@@ -120,9 +120,10 @@ type BatchConn interface {
 	// @ 	msgs[i].Mem()
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr())
+	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> (
-	// @ 		msgs[i].Mem() && typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr] &&
+	// @ 		typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr] &&
 	// @ 		!msgs[i].HasWildcardPermAddr())
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
@@ -131,7 +132,6 @@ type BatchConn interface {
 	// @ requires Prophecy(prophecyM)
 	// @ requires io.token(place) && MultiReadBio(place, prophecyM)
 	// @ preserves dp.Valid()
-	// @ ensures  err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures  err == nil ==> prophecyM == n
 	// @ ensures  err == nil ==> io.token(old(MutliReadBioNext(place, n))) && old(MutliReadBioCorrectIfs(place, n, ifsToIO_ifs(IngressID)))
 	// @ ensures  err == nil ==>
