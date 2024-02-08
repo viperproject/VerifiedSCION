@@ -133,12 +133,12 @@ type BatchConn interface {
 	// @ requires io.token(place) && MultiReadBio(place, prophecyM)
 	// @ preserves dp.Valid()
 	// @ ensures  err == nil ==> prophecyM == n
-	// @ ensures  err == nil ==> io.token(old(MutliReadBioNext(place, n))) && old(MutliReadBioCorrectIfs(place, n, ifsToIO_ifs(IngressID)))
+	// @ ensures  err == nil ==> io.token(old(MultiReadBioNext(place, n))) && old(MultiReadBioCorrectIfs(place, n, ifsToIO_ifs(ingressID)))
 	// @ ensures  err == nil ==>
-	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==> unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], IngressID) ==
-	// @    old(MutliReadBioIO_val(place, n)[i])
+	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==> unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
+	// @    old(MultiReadBioIO_val(place, n)[i])
 	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
-	ReadBatch(msgs underlayconn.Messages /*@, ghost IngressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
+	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
 	// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R10)
@@ -797,10 +797,10 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ ghost numberOfReceivedPacketsProphecy := AllocProphecy()
 				// @ ExtractMultiReadBio(dp, t, numberOfReceivedPacketsProphecy, s)
 				// @ MultiUpdateElemWitness(t, numberOfReceivedPacketsProphecy, ioIngressID, s, ioSharedArg)
-				// @ ghost ioValSeq := MutliReadBioIO_val(t,numberOfReceivedPacketsProphecy)
+				// @ ghost ioValSeq := MultiReadBioIO_val(t,numberOfReceivedPacketsProphecy)
 
 				// @ ghost sN := MultiReadBioUpd(t, numberOfReceivedPacketsProphecy, s)
-				// @ ghost tN := MutliReadBioNext(t, numberOfReceivedPacketsProphecy)
+				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
 				// @ assert dp.dp3s_iospec_ordered(sN, tN)
 				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
