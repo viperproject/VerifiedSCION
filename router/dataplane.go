@@ -70,7 +70,7 @@ import (
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 	// @ "github.com/scionproto/scion/verification/utils/seqs"
 	// @ socketspec "golang.org/x/net/internal/socket/"
-	// @ io "github.com/scionproto/scion/verification/io"
+	// @ io "verification/io"
 )
 
 const (
