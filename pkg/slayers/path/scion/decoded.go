@@ -128,6 +128,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	}
 	//@ sl.CombineAtIndex_Bytes(data, 0, len(data), offset, R41)
 	//@ fold s.Mem()
+	//@ reveal s.Valid(data)
 	return nil
 }
 
@@ -143,21 +144,29 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 		return serrors.New("buffer too small to serialize path.", "expected", s.Len( /*@ ubuf @*/ ),
 			"actual", len(b))
 	}
+	//@ preserves acc(s.Mem(), R1) && s.Valid(ubuf)
+	//@ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+	//@ ensures   err == nil
+	//@ decreases
+	//@ outline(
+	//@ reveal s.Valid(ubuf)
 	//@ unfold acc(s.Mem(), R1)
 	//@ assert sl.AbsSlice_Bytes(b, 0, len(b))
 	//@ sl.SplitByIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
 	//@ sl.Reslice_Bytes(b, 0, MetaLen, writePerm)
 	//@ unfold acc(s.Base.Mem(), R1)
-	if err := s.PathMeta.SerializeTo(b[:MetaLen]); err != nil {
-		// @ Unreachable()
-		return err
-	}
+	err := s.PathMeta.SerializeTo(b[:MetaLen])
 	//@ fold acc(s.Base.Mem(), R1)
 	//@ sl.Unslice_Bytes(b, 0, MetaLen, writePerm)
 	//@ sl.CombineAtIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
 	//@ fold acc(s.Mem(), R1)
+	//@ )
+	if err != nil {
+		// @ Unreachable()
+		return err
+	}
 	offset := MetaLen
-
+	//@ reveal s.Valid(ubuf)
 	//@ invariant acc(s.Mem(), R1) && s.Valid(ubuf)
 	//@ invariant sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 	//@ invariant b !== ubuf ==> sl.AbsSlice_Bytes(b, 0, len(b))

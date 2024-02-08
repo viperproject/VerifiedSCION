@@ -45,6 +45,7 @@ pred (d *Decoded) Mem() {
 }
 
 ghost
+opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *Decoded) Valid(ghost ub []byte) bool {
@@ -117,10 +118,12 @@ ensures  e == nil ==> (
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
+	reveal d.Valid(ubuf)
 	unfold d.Mem()
 	e = d.Base.IncPath()
 	if e == nil {
 		fold d.Mem()
+		reveal d.Valid(ubuf)
 	} else {
 		fold d.NonInitMem()
 	}
@@ -222,8 +225,10 @@ requires ubuf1 === ubuf2[:len(ubuf1)]
 ensures  d.Mem() && d.Valid(ubuf2)
 decreases
 func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
+	reveal d.Valid(ubuf1)
 	unfold d.Mem()
 	fold d.Mem()
+	reveal d.Valid(ubuf2)
 }
 
 /**** End of Lemmas ****/
