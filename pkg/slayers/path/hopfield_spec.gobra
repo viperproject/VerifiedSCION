@@ -16,6 +16,8 @@
 
 package path
 
+ghost const MetaLen = 4
+
 ghost
 requires acc(h, _)
 decreases
