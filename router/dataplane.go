@@ -1695,6 +1695,7 @@ func (p *scionPacketProcessor) packSCMP(
 	if p.lastLayer.NextLayerType( /*@ nil @*/ ) == slayers.LayerTypeSCMP {
 		var scmpLayer /*@@@*/ slayers.SCMP
 		pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ nil @*/ )
+		// @ gopacket.AssertInvariantNilDecodeFeedback()
 		err := scmpLayer.DecodeFromBytes(pld, gopacket.NilDecodeFeedback)
 		if err != nil {
 			return processResult{}, serrors.WrapStr("decoding SCMP layer", err)
