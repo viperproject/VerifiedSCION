@@ -501,6 +501,7 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	return control.InterfaceUp
 }
 
+// TODO: update spec
 // (VerifiedSCION) marked as trusted because we currently do not support bfd.Session
 // @ trusted
 // @ requires  acc(metrics.PacketsSent.Mem(), _) && acc(metrics.PacketsReceived.Mem(), _)
