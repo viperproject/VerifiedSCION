@@ -44,7 +44,7 @@ func foldScionPacketProcessorInitMem_test() {
 ensures 0 < runningPerm
 func runningPermIsPositive() {}
 
-ensures d.MutexInvariant() && acc(d.Mem(), OutMutexPerm)
+ensures MutexInvariant(d) && acc(d.Mem(), OutMutexPerm)
 decreases
 func foldDataPlaneMem() (d *DataPlane) {
 	d = &DataPlane{}
@@ -63,7 +63,7 @@ func foldDataPlaneMem() (d *DataPlane) {
 	fold MutexInvariant(d)
 }
 
-requires d.MutexInvariant() && acc(d.Mem(), OutMutexPerm)
+requires MutexInvariant(d) && acc(d.Mem(), OutMutexPerm)
 requires !d.IsRunning()
 ensures  acc(&d.running)
 decreases
