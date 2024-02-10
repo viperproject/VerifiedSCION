@@ -34,61 +34,71 @@ import (
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
+ghost const MutexPerm perm = 1/4
+ghost const OutMutexPerm perm = 3/4
+ghost const runningPerm = 1/8
+
 pred MutexInvariant(d *DataPlane) {
+	acc(&d.running, runningPerm) &&
+	(!d.running ==> acc(d.Mem(), MutexPerm))
+}
+
+pred (d *DataPlane) Mem() {
 	// access to the field 'mtx' ommited
-	acc(&d.external,          1/2) &&
-	acc(&d.linkTypes,         1/2) &&
-	acc(&d.neighborIAs,       1/2) &&
-	acc(&d.internal,          1/2) &&
-	acc(&d.internalIP,        1/2) &&
-	acc(&d.internalNextHops,  1/2) &&
-	acc(&d.svc,               1/2) &&
-	acc(&d.macFactory,        1/2) &&
-	acc(&d.bfdSessions,       1/2) &&
-	acc(&d.localIA,           1/2) &&
-	acc(&d.running,           1/2) &&
-	acc(&d.Metrics,           1/2) &&
-	acc(&d.forwardingMetrics, 1/2) &&
-	acc(&d.key,               1/2) &&
-	(d.external    != nil       ==> accBatchConn(d.external))                      &&
-	(d.linkTypes   != nil       ==> acc(d.linkTypes, 1/2))                         &&
-	(d.neighborIAs != nil       ==> acc(d.neighborIAs, 1/2))                       &&
-	(d.internal != nil          ==> d.internal.Mem())                              &&
-	(d.internalIP != nil        ==> d.internalIP.Mem())                            &&
-	(d.internalNextHops != nil  ==> accAddr(d.internalNextHops))                   &&
-	(d.svc != nil               ==> d.svc.Mem())                                   &&
+	acc(&d.external)                                              &&
+	acc(&d.linkTypes)                                             &&
+	acc(&d.neighborIAs)                                           &&
+	acc(&d.internal)                                              &&
+	acc(&d.internalIP)                                            &&
+	acc(&d.internalNextHops)                                      &&
+	acc(&d.svc)                                                   &&
+	acc(&d.macFactory)                                            &&
+	acc(&d.bfdSessions)                                           &&
+	acc(&d.localIA)                                               &&
+	acc(&d.running, 1/2)                                          &&
+	acc(&d.Metrics)                                               &&
+	acc(&d.forwardingMetrics)                                     &&
+	acc(&d.key)                                                   &&
+	(d.external    != nil       ==> accBatchConn(d.external))     &&
+	(d.linkTypes   != nil       ==> acc(d.linkTypes))             &&
+	(d.neighborIAs != nil       ==> acc(d.neighborIAs))           &&
+	(d.internal != nil          ==> d.internal.Mem())             &&
+	(d.internalIP != nil        ==> d.internalIP.Mem())           &&
+	(d.internalNextHops != nil  ==> accAddr(d.internalNextHops))  &&
+	(d.svc != nil               ==> d.svc.Mem())                  &&
 	(d.macFactory != nil        ==> (
-		acc(d.key, 1/2)                                   &&
+		acc(d.key)                                        &&
 		acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
 		scrypto.ValidKeyForHash(*d.key)                   &&
-		d.macFactory implements MacFactorySpec{d.key}))                            &&
-	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions))                  &&
-	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))                       &&
+		d.macFactory implements MacFactorySpec{d.key}))           &&
+	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions)) &&
+	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))      &&
 	// The following permissions are enough to call all methods needed in fields
 	// of forwardingMetrics
 	(d.forwardingMetrics != nil ==> accForwardingMetrics(d.forwardingMetrics))
 }
 
 pred accAddr(addrs map[uint16]*net.UDPAddr) {
-	acc(addrs, 1/2) &&
+	acc(addrs) &&
 	forall a *net.UDPAddr :: { a in range(addrs) } a in range(addrs) ==> acc(a.Mem(), _)
 }
 
 pred accBatchConn(batchConns map[uint16]BatchConn) {
-	acc(batchConns, 1/2) &&
+	acc(batchConns) &&
 	forall b BatchConn :: { b in range(batchConns) }{ b.Mem() } b in range(batchConns) ==>
 		b!= nil && acc(b.Mem(), _)
 }
 
 pred accBfdSession(bfdSessions map[uint16]bfdSession) {
-	acc(bfdSessions, 1/2) &&
+	acc(bfdSessions) &&
 	(forall bfd bfdSession :: { bfd in range(bfdSessions) }{ bfd.Mem() } bfd in range(bfdSessions) ==>
 		(bfd != nil && acc(bfd.Mem(), _)))
 }
 
 pred accForwardingMetrics(metrics map[uint16]forwardingMetrics) {
-	acc(metrics, 1/2) &&
-	forall id uint16 :: { metrics[id] } id in domain(metrics) ==> acc(forwardingMetricsMem(metrics[id], id), _)
+	acc(metrics) &&
+	forall id uint16 :: { metrics[id] } id in domain(metrics) ==>
+		acc(forwardingMetricsMem(metrics[id], id), _)
 }
 
 pred forwardingMetricsMem(v forwardingMetrics, ignoredForInjectivity uint16) {
@@ -247,25 +257,27 @@ func (d *DataPlane) ElaboratePermInv() {
 
 /**** Acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
 ghost
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 ensures  acc(&d.internalNextHops, _)
 ensures  d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), _)
 decreases
 func (d *DataPlane) getInternalNextHops() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 ensures  acc(&d.forwardingMetrics, _)
-ensures  d.forwardingMetrics != nil ==> acc(accForwardingMetrics(d.forwardingMetrics), _)
+ensures  d.forwardingMetrics != nil ==>
+	acc(accForwardingMetrics(d.forwardingMetrics), _)
 decreases
 func (d *DataPlane) getForwardingMetrics() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
+// TODO: can we now prove termination?
+requires acc(d.Mem(), _)
 // The termination of this method is assumed. The reason is that the termination
 // proof generated by this method is, essentially, an unfold acc(MutexInvariant(d), _)
 // followed by a fold of the same invariant with the same permission amount.
@@ -273,11 +285,11 @@ requires acc(MutexInvariant(d), _)
 // assertions to make this verify, which is not easy to add here.
 decreases _
 pure func (d *DataPlane) getValForwardingMetrics() map[uint16]forwardingMetrics {
-	return unfolding acc(MutexInvariant(d), _) in d.forwardingMetrics
+	return unfolding acc(d.Mem(), _) in d.forwardingMetrics
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 // The termination of this method is assumed. The reason is that the termination
 // proof generated by this method is, essentially, an unfold acc(MutexInvariant(d), _)
 // followed by a fold of the same invariant with the same permission amount.
@@ -285,7 +297,7 @@ requires acc(MutexInvariant(d), _)
 // assertions to make this verify, which is not easy to add here.
 decreases _
 pure func (d *DataPlane) getDomForwardingMetrics() set[uint16] {
-	return unfolding acc(MutexInvariant(d), _) in
+	return unfolding acc(d.Mem(), _) in
 		d.forwardingMetrics == nil ?
 			set[uint16]{} :
 			(unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
@@ -293,7 +305,7 @@ pure func (d *DataPlane) getDomForwardingMetrics() set[uint16] {
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 // The termination of this method is assumed. The reason is that the termination
 // proof generated by this method is, essentially, an unfold acc(MutexInvariant(d), _)
 // followed by a fold of the same invariant with the same permission amount.
@@ -301,7 +313,7 @@ requires acc(MutexInvariant(d), _)
 // assertions to make this verify, which is not easy to add here.
 decreases _
 pure func (d *DataPlane) getDomExternal() set[uint16] {
-	return unfolding acc(MutexInvariant(d), _) in
+	return unfolding acc(d.Mem(), _) in
 		d.external == nil ?
 			set[uint16]{} :
 			(unfolding acc(accBatchConn(d.external), _) in
@@ -309,21 +321,21 @@ pure func (d *DataPlane) getDomExternal() set[uint16] {
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
 	return d.getDomExternal() == d.getDomForwardingMetrics()
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 requires id in d.getDomForwardingMetrics()
 ensures  acc(&d.forwardingMetrics, _)
 ensures  acc(d.forwardingMetrics, _)
 ensures  acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 decreases
 func (d *DataPlane) getForwardingMetricsMem(id uint16) {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 	assert id in d.getDomForwardingMetrics()
 	assert d.getDomForwardingMetrics() == (d.forwardingMetrics == nil ?
 		set[uint16]{} :
@@ -338,47 +350,51 @@ func (d *DataPlane) getForwardingMetricsMem(id uint16) {
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
-ensures  acc(&d.external, _) && (d.external != nil ==> acc(accBatchConn(d.external), _))
+requires acc(d.Mem(), _)
+ensures  acc(&d.external, _)
+ensures  d.external != nil ==> acc(accBatchConn(d.external), _)
 decreases
 func (d *DataPlane) getExternalMem() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
-ensures  acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
+requires acc(d.Mem(), _)
+ensures  acc(&d.linkTypes, _)
+ensures  d.linkTypes != nil ==> acc(d.linkTypes, _)
 decreases
 func (d *DataPlane) getLinkTypesMem() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 ensures  acc(&d.localIA, _)
 decreases
 func (d *DataPlane) getLocalIA() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
-ensures  acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
+requires acc(d.Mem(), _)
+ensures  acc(&d.neighborIAs, _)
+ensures  d.neighborIAs != nil ==> acc(d.neighborIAs, _)
 decreases
 func (d *DataPlane) getNeighborIAs() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
-requires acc(MutexInvariant(d), _) && d.getValSvc() != nil
-ensures  acc(&d.svc, _) && d.svc != nil && acc(d.svc.Mem(), _)
+requires acc(d.Mem(), _) && d.getValSvc() != nil
+ensures  acc(&d.svc, _)
+ensures  d.svc != nil && acc(d.svc.Mem(), _)
 decreases
 func (d *DataPlane) getSvcMem() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 // The termination of this method is assumed. The reason is that the termination
 // proof generated by this method is, essentially, an unfold acc(MutexInvariant(d), _)
 // followed by a fold of the same invariant with the same permission amount.
@@ -386,34 +402,36 @@ requires acc(MutexInvariant(d), _)
 // assertions to make this verify, which is not easy to add here.
 decreases _
 pure func (d *DataPlane) getValSvc() *services {
-	return unfolding acc(MutexInvariant(d), _) in d.svc
+	return unfolding acc(d.Mem(), _) in d.svc
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
-ensures  acc(&d.bfdSessions, _) && (d.bfdSessions != nil ==> acc(accBfdSession(d.bfdSessions), _))
+requires acc(d.Mem(), _)
+ensures  acc(&d.bfdSessions, _)
+ensures  d.bfdSessions != nil ==> acc(accBfdSession(d.bfdSessions), _)
 decreases
 func (d *DataPlane) getBfdSessionsMem() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
-ensures  acc(&d.internal, _) && (d.internal != nil ==> acc(d.internal.Mem(), _))
+requires acc(d.Mem(), _)
+ensures  acc(&d.internal, _)
+ensures  d.internal != nil ==> acc(d.internal.Mem(), _)
 decreases
 func (d *DataPlane) getInternal() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 ensures  acc(&d.macFactory, _)
 decreases
 func (d *DataPlane) getMacFactoryMem() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
-requires acc(MutexInvariant(d), _)
+requires acc(d.Mem(), _)
 requires acc(&d.macFactory, _) && d.macFactory != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
 ensures  acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
@@ -421,7 +439,15 @@ ensures  scrypto.ValidKeyForHash(*d.key)
 ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
 func (d *DataPlane) getNewPacketProcessorFootprint() {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
+}
+
+ghost
+pure
+requires acc(d.Mem(), _)
+decreases
+func (d *DataPlane) IsRunning() bool {
+	return unfolding acc(d.Mem(), _) in d.running
 }
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
@@ -591,7 +617,7 @@ func ResetDecodingLayers(
 
 /** **/
 pred (d *DataPlane) validResult(result processResult, addrAliasesPkt bool) {
-	acc(MutexInvariant(d), _)    &&
+	acc(d.Mem(), _)    &&
 	// EgressID
 	(result.EgressID != 0 ==> result.EgressID in d.getDomForwardingMetrics()) &&
 	// OutConn
@@ -603,9 +629,9 @@ pred (d *DataPlane) validResult(result processResult, addrAliasesPkt bool) {
 }
 
 ghost
-requires acc(MutexInvariant(d), _) && d.WellConfigured()
+requires acc(d.Mem(), _) && d.WellConfigured()
 requires id in d.getDomExternal()
-ensures  acc(MutexInvariant(d), _)
+ensures  acc(d.Mem(), _)
 ensures  id in d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
@@ -613,25 +639,26 @@ func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
 }
 
 ghost
-requires acc(MutexInvariant(d), _) && d.WellConfigured()
+requires acc(d.Mem(), _) && d.WellConfigured()
 requires acc(&d.external, _) && acc(d.external, _)
 requires id in domain(d.external)
-ensures  acc(MutexInvariant(d), _)
+ensures  acc(d.Mem(), _)
 ensures  id in d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics2(id uint16) {
-	unfold acc(MutexInvariant(d), _)
+	unfold acc(d.Mem(), _)
 	unfold acc(accBatchConn(d.external), _)
 }
 
 // This lemma has the same exact spec as before, except for a fixed permission to d.
 // external. Although simple, this requires some work to prove to avoid incompletnesses
 // with MCE.
+// TODO: use unfolding isntead of unfold
 ghost
-requires acc(MutexInvariant(d), _) && d.WellConfigured()
+requires acc(d.Mem(), _) && d.WellConfigured()
 requires acc(&d.external, _) && acc(d.external, R55)
 requires id in domain(d.external)
-ensures  acc(MutexInvariant(d), _)
+ensures  acc(d.Mem(), _)
 ensures  acc(&d.external, _) && acc(d.external, R55)
 ensures  id in d.getDomForwardingMetrics()
 decreases
