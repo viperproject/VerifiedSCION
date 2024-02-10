@@ -223,7 +223,8 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
-	// @ assert !d.running
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
 	// @ unfold d.Mem()
 	// @ defer fold MutexInvariant!<d!>()
 	// @ defer fold d.Mem()
@@ -245,23 +246,28 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// @ requires  acc(&d.key,        1/2)
-// @ requires  acc(d.key,         1/2)
-// @ requires  acc(&d.running,    1/2) && !d.running
-// @ requires  acc(&d.macFactory, 1/2) && d.macFactory == nil
+// @ requires  acc(d.Mem(), OutMutexPerm)
+// @ requires  !d.IsRunning()
+// @ requires  !d.KeyIsSet()
 // @ requires  len(key) > 0
 // @ requires  sl.AbsSlice_Bytes(key, 0, len(key))
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running, 1/2) && !d.running
-// @ ensures   acc(&d.macFactory, 1/2)
-// @ ensures   res == nil ==> d.macFactory != nil
+// @ ensures   acc(d.Mem(), OutMutexPerm)
+// @ ensures   !d.IsRunning()
+// @ ensures   res == nil ==> d.KeyIsSet()
 func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ share key
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
+	// @ unfold acc(d.Mem(), 1/2)
+	// @ d.keyIsSetEq()
+	// @ unfold acc(d.Mem(), 1/2)
 	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold d.Mem()
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting

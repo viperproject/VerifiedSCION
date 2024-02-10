@@ -450,6 +450,38 @@ func (d *DataPlane) IsRunning() bool {
 	return unfolding acc(d.Mem(), _) in d.running
 }
 
+type Unit struct{}
+
+ghost
+opaque
+pure
+requires acc(d.Mem(), _)
+requires acc(&d.running, _)
+ensures  d.IsRunning() == d.running
+decreases
+func (d *DataPlane) isRunningEq() Unit {
+	return unfolding acc(d.Mem(), _) in Unit{}
+}
+
+ghost
+pure
+requires acc(d.Mem(), _)
+decreases
+func (d *DataPlane) KeyIsSet() bool {
+	return unfolding acc(d.Mem(), _) in d.macFactory != nil
+}
+
+ghost
+opaque
+pure
+requires acc(d.Mem(), _)
+requires acc(&d.macFactory, _)
+ensures  d.KeyIsSet() == (d.macFactory != nil)
+decreases
+func (d *DataPlane) keyIsSetEq() Unit {
+	return unfolding acc(d.Mem(), _) in Unit{}
+}
+
 ghost
 pure
 requires acc(d.Mem(), _)
