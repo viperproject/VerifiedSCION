@@ -21,6 +21,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/slayers"
+	"github.com/scionproto/scion/private/topology"
 )
 
 func foldMem_test() {

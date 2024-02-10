@@ -36,7 +36,7 @@ import (
 
 ghost const MutexPerm perm = 1/4
 ghost const OutMutexPerm perm = 3/4
-ghost const runningPerm = 1/8
+ghost const runningPerm perm = 1/8
 
 pred MutexInvariant(d *DataPlane) {
 	acc(&d.running, runningPerm) &&
@@ -448,6 +448,14 @@ requires acc(d.Mem(), _)
 decreases
 func (d *DataPlane) IsRunning() bool {
 	return unfolding acc(d.Mem(), _) in d.running
+}
+
+ghost
+pure
+requires acc(d.Mem(), _)
+decreases
+func (d *DataPlane) LocalIA() addr.IA {
+	return unfolding acc(d.Mem(), _) in d.localIA
 }
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
