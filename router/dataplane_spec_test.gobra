@@ -67,7 +67,7 @@ requires MutexInvariant(d) && acc(d.Mem(), OutMutexPerm)
 requires !d.IsRunning()
 ensures  acc(&d.running)
 decreases
-func canModifyRunning() (d *DataPlane) {
+func canModifyRunning(d *DataPlane) {
 	unfold MutexInvariant(d)
 	unfold acc(d.Mem(), MutexPerm)
 	unfold acc(d.Mem(), OutMutexPerm)
