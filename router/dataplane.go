@@ -309,20 +309,24 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
 // dataplane.
-// @ requires  acc(&d.running,    1/2) && !d.running
-// @ requires  acc(&d.internal,   1/2) && d.internal == nil
-// @ requires  acc(&d.internalIP, 1/2)
+// @ requires  acc(d.Mem(), OutMutexPerm)
+// @ requires  !d.IsRunning()
+// @ requires  !d.InternalConnIsSet()
 // @ requires  conn != nil && conn.Mem()
 // @ requires  ip.Mem()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.internal,   1/2)
-// @ ensures   acc(&d.internalIP, 1/2)
+// @ ensures   acc(d.Mem(), OutMutexPerm)
+// @ ensures   !d.IsRunning()
 func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
+	// @ unfold acc(d.Mem(), 1/2)
+	// @ d.internalIsSetEq()
+	// @ unfold acc(d.Mem(), 1/2)
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -337,6 +341,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	}
 	d.internal = conn
 	d.internalIP = ip
+	// @ fold d.Mem()
 	// @ fold MutexInvariant!<d!>()
 	return nil
 }
@@ -344,19 +349,18 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // AddExternalInterface adds the inter AS connection for the given interface ID.
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
-// @ requires  acc(&d.running,    1/2) && !d.running
-// @ requires  acc(&d.external,   1/2)
-// @ requires  d.external != nil ==> acc(d.external, 1/2)
-// @ requires  !(ifID in domain(d.external))
 // @ requires  conn != nil && conn.Mem()
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.external,   1/2) && acc(d.external, 1/2)
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -365,10 +369,15 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 		// @ Unreachable()
 		return emptyValue
 	}
+	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), 1/2) }
 	if _, existsB := d.external[ifID]; existsB {
-		// @ Unreachable()
+		// @ establishAlreadySet()
+		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
+		// @ fold d.Mem()
+		// @ fold MutexInvariant!<d!>()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
+	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
 	if d.external == nil {
 		d.external = make(map[uint16]BatchConn)
 		// @ fold accBatchConn(d.external)
@@ -376,6 +385,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	// @ unfold accBatchConn(d.external)
 	d.external[ifID] = conn
 	// @ fold accBatchConn(d.external)
+	// @ fold d.Mem()
 	// @ fold MutexInvariant!<d!>()
 	return nil
 }
@@ -383,20 +393,17 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 // AddNeighborIA adds the neighboring IA for a given interface ID. If an IA for
 // the given ID is already set, this method will return an error. This can only
 // be called on a yet running dataplane.
-// @ requires  acc(&d.running,     1/2) && !d.running
-// @ requires  acc(&d.neighborIAs, 1/2)
-// @ requires  d.neighborIAs != nil ==> acc(d.neighborIAs, 1/2)
 // @ requires  !remote.IsZero()
-// @ requires  !(ifID in domain(d.neighborIAs))
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.neighborIAs,1/2) && acc(d.neighborIAs, 1/2)
-// @ ensures   domain(d.neighborIAs) == old(domain(d.neighborIAs)) union set[uint16]{ifID}
 func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -406,13 +413,16 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 		return emptyValue
 	}
 	if _, existsB := d.neighborIAs[ifID]; existsB {
-		// @ Unreachable()
+		// @ establishAlreadySet()
+		// @ fold d.Mem()
+		// @ fold MutexInvariant!<d!>()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	if d.neighborIAs == nil {
 		d.neighborIAs = make(map[uint16]addr.IA)
 	}
 	d.neighborIAs[ifID] = remote
+	// @ fold d.Mem()
 	// @ fold MutexInvariant!<d!>()
 	return nil
 }

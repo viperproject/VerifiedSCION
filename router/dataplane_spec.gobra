@@ -223,6 +223,7 @@ decreases
 func (d *DataPlane) ElaboratePermInv() {
 	unfold acc(MutexInvariant(d), _)
 	// This big assertion seems to be necessary for the fold to succeed :(
+		/*
 	assert acc(&d.external,       _) &&
 		acc(&d.linkTypes,         _) &&
 		acc(&d.neighborIAs,       _) &&
@@ -252,6 +253,7 @@ func (d *DataPlane) ElaboratePermInv() {
 		(d.bfdSessions != nil       ==> acc(accBfdSession(d.bfdSessions), _)) &&
 		(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))              &&
 		(d.forwardingMetrics != nil ==> acc(accForwardingMetrics(d.forwardingMetrics), _))
+		*/
 	fold acc(MutexInvariant!<d!>(), _)
 }
 
@@ -442,6 +444,8 @@ func (d *DataPlane) getNewPacketProcessorFootprint() {
 	unfold acc(d.Mem(), _)
 }
 
+type Unit struct{}
+
 ghost
 pure
 requires acc(d.Mem(), _)
@@ -449,8 +453,6 @@ decreases
 func (d *DataPlane) IsRunning() bool {
 	return unfolding acc(d.Mem(), _) in d.running
 }
-
-type Unit struct{}
 
 ghost
 // opaque
@@ -460,6 +462,25 @@ requires acc(&d.running, _)
 ensures  d.IsRunning() == d.running
 decreases
 func (d *DataPlane) isRunningEq() Unit {
+	return unfolding acc(d.Mem(), _) in Unit{}
+}
+
+ghost
+pure
+requires acc(d.Mem(), _)
+decreases
+func (d *DataPlane) InternalConnIsSet() bool {
+	return unfolding acc(d.Mem(), _) in d.internal != nil
+}
+
+ghost
+// opaque
+pure
+requires acc(d.Mem(), _)
+requires acc(&d.internal, _)
+ensures  d.InternalConnIsSet() == (d.internal != nil)
+decreases
+func (d *DataPlane) internalIsSetEq() Unit {
 	return unfolding acc(d.Mem(), _) in Unit{}
 }
 
