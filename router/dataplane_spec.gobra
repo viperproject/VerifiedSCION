@@ -177,6 +177,7 @@ ensures  forall i int :: {res[i]} 0 <= i && i < len(res) ==> res[i] == offsetPai
 decreases
 func newOffsetPair(n int) (res seq[offsetPair])
 
+// TODO: drop
 ghost
 requires acc(MutexInvariant!<d!>(), _)
 ensures  acc(MutexInvariant(d), _)
@@ -216,6 +217,7 @@ func (d *DataPlane) SimplifyPermInv() {
 	fold acc(MutexInvariant(d), _)
 }
 
+// TODO: drop
 ghost
 requires acc(MutexInvariant(d), _)
 ensures  acc(MutexInvariant!<d!>(), _)
