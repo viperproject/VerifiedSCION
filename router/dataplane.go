@@ -628,34 +628,34 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // AddNextHop sets the next hop address for the given interface ID. If the
 // interface ID already has an address associated this operation fails. This can
 // only be called on a not yet running dataplane.
-// @ requires  acc(&d.running,          1/2) && !d.running
-// @ requires  acc(&d.internalNextHops, 1/2)
-// @ requires  d.internalNextHops != nil ==> acc(d.internalNextHops, 1/2)
-// @ requires  !(ifID in domain(d.internalNextHops))
 // @ requires  a != nil && a.Mem()
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,          1/2) && !d.running
-// @ ensures   acc(&d.internalNextHops, 1/2) && acc(d.internalNextHops, 1/2)
 func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold d.Mem()
 	if d.running {
 		return modifyExisting
 	}
 	if a == nil {
 		return emptyValue
 	}
+	// @ ghost if d.internalNextHops != nil { unfold accAddr(d.internalNextHops) }
 	if _, existsB := d.internalNextHops[ifID]; existsB {
+		// @ fold accAddr(d.internalNextHops)
+		// @ establishAlreadySet()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	if d.internalNextHops == nil {
 		d.internalNextHops = make(map[uint16]*net.UDPAddr)
-		// @ fold accAddr(d.internalNextHops)
 	}
-	// @ unfold accAddr(d.internalNextHops)
 	// @ defer fold accAddr(d.internalNextHops)
 	d.internalNextHops[ifID] = a
 	return nil
