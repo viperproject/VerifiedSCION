@@ -430,23 +430,24 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // AddLinkType adds the link type for a given interface ID. If a link type for
 // the given ID is already set, this method will return an error. This can only
 // be called on a not yet running dataplane.
-// @ requires  acc(&d.running,   1/2) && !d.running
-// @ requires  acc(&d.linkTypes, 1/2)
-// @ requires  d.linkTypes != nil ==> acc(d.linkTypes, 1/2)
-// @ requires  !(ifID in domain(d.linkTypes))
-// (VerifiedSCION) unlike all other setter methods, this does not lock
-// d.mtx. Did the devs forget about it?
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
+// (VerifiedSCION) unlike all other setter methods, this does not lock d.mtx.
+// This was reported in https://github.com/scionproto/scion/issues/4282.
 // @ preserves MutexInvariant!<d!>()
-// @ ensures   acc(&d.running,   1/2) && !d.running
-// @ ensures   acc(&d.linkTypes, 1/2) && acc(d.linkTypes, 1/2)
-// @ ensures   domain(d.linkTypes) == old(domain(d.linkTypes)) union set[uint16]{ifID}
 func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
+	// @ unfold acc(d.Mem(), OutMutexPerm)
 	if _, existsB := d.linkTypes[ifID]; existsB {
-		// @ Unreachable()
+		// @ establishAlreadySet()
+		// @ fold acc(d.Mem(), OutMutexPerm)
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
+	// @ fold acc(d.Mem(), OutMutexPerm)
 	// @ unfold MutexInvariant!<d!>()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold d.Mem()
 	if d.linkTypes == nil {
 		d.linkTypes = make(map[uint16]topology.LinkType)
 	}
@@ -489,10 +490,10 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 // getInterfaceState checks if there is a bfd session for the input interfaceID and
 // returns InterfaceUp if the relevant bfdsession state is up, or if there is no BFD
 // session. Otherwise, it returns InterfaceDown.
-// @ preserves acc(MutexInvariant!<d!>(), R5)
+// @ preserves acc(d.Mem(), R5)
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
-	// @ unfold acc(MutexInvariant!<d!>(), R5)
-	// @ defer fold acc(MutexInvariant!<d!>(), R5)
+	// @ unfold acc(d.Mem(), R5)
+	// @ defer fold acc(d.Mem(), R5)
 	bfdSessions := d.bfdSessions
 	// @ ghost if bfdSessions != nil {
 	// @		unfold acc(accBfdSession(d.bfdSessions), R20)
@@ -511,14 +512,9 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	return control.InterfaceUp
 }
 
-// TODO: update spec
 // (VerifiedSCION) marked as trusted because we currently do not support bfd.Session
 // @ trusted
-// @ requires  acc(metrics.PacketsSent.Mem(), _) && acc(metrics.PacketsReceived.Mem(), _)
-// @ requires  acc(metrics.Up.Mem(), _) && acc(metrics.StateChanges.Mem(), _)
-// @ preserves MutexInvariant!<d!>()
-// @ requires  s.Mem()
-// @ decreases
+// @ requires  false
 func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 	metrics bfd.Metrics) error {
 
@@ -551,27 +547,29 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // times for the same service, with the address added to the list of addresses
 // that provide the service.
 // @ requires  a != nil && acc(a.Mem(), R10)
-// @ preserves acc(&d.svc, 1/2)
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
+	// @ unfold MutexInvariant!<d!>()
+	// @ d.isRunningEq()
 	defer d.mtx.Unlock()
 	if a == nil {
 		return emptyValue
 	}
-	// @ preserves MutexInvariant!<d!>()
-	// @ preserves acc(&d.svc, 1/2)
-	// @ ensures   d.svc != nil
+	// @ preserves d.Mem()
+	// @ ensures   unfolding d.Mem() in d.svc != nil
 	// @ decreases
 	// @ outline(
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold d.Mem()
 	if d.svc == nil {
 		d.svc = newServices()
 	}
-	// @ fold MutexInvariant!<d!>()
+	// @ fold d.Mem()
 	// @ )
-	// @ unfold acc(MutexInvariant!<d!>(), R15)
+	// @ unfold acc(d.Mem(), R15)
 	// @ assert acc(d.svc.Mem(), _)
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
@@ -590,22 +588,29 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(1))
 		// @ )
 	}
-	// @ fold acc(MutexInvariant!<d!>(), R15)
+	// @ fold acc(d.Mem(), R15)
+	// @ fold MutexInvariant!<d!>()
 	return nil
 }
 
 // DelSvc deletes the address for the given service.
+// (VerifiedSCION) the spec here is definitely weird. Even though
+// the lock is acquired here, there is no check that the router is
+// not yet running, thus acquiring the lock is not enough to guarantee
+// absence of race conditions. To specify that the router is not running,
+// we need to pass perms to d.Mem(), but if we do this, then we don't need
+// the lock invariant to perform the operations in this function.
 // @ requires  a != nil && acc(a.Mem(), R10)
+// @ preserves acc(d.Mem(), OutMutexPerm/2)
 // @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	if a == nil {
 		return emptyValue
 	}
-	// @ unfold acc(MutexInvariant!<d!>(), R15)
-	// @ ghost defer fold acc(MutexInvariant!<d!>(), R15)
+	// @ unfold acc(d.Mem(), R40)
+	// @ ghost defer fold acc(d.Mem(), R40)
 	if d.svc == nil {
 		return nil
 	}
