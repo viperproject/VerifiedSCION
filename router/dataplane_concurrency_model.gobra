@@ -74,16 +74,16 @@ pred MultiReadBio(ghost t io.Place, ghost expectedPkts int) {
 ghost
 requires MultiReadBio(t, expectedPkts)
 decreases expectedPkts
-pure func MutliReadBioNext(ghost t io.Place, ghost expectedPkts int) (ghost tn io.Place) {
+pure func MultiReadBioNext(ghost t io.Place, ghost expectedPkts int) (ghost tn io.Place) {
   return expectedPkts <= 0 ? t : unfolding MultiReadBio(t, expectedPkts) in 
-    MutliReadBioNext(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1)
+    MultiReadBioNext(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1)
 }
 
 // Checks that all packets are received from the same interface (key).
 ghost 
 requires MultiReadBio(t, expectedPkts)
 decreases expectedPkts
-pure func MutliReadBioCorrectIfs(
+pure func MultiReadBioCorrectIfs(
   ghost t io.Place, 
   ghost expectedPkts int, 
   ghost k Key) bool {
@@ -95,7 +95,7 @@ pure func MutliReadBioCorrectIfs(
         k == ifs
       default:
         false
-    } && MutliReadBioCorrectIfs(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1, k)
+    } && MultiReadBioCorrectIfs(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1, k)
 }
 
 
@@ -103,10 +103,10 @@ ghost
 requires 0 <= expectedPkts && MultiReadBio(t, expectedPkts)
 ensures len(res) == expectedPkts
 decreases expectedPkts
-pure func MutliReadBioIO_val(ghost t io.Place, ghost expectedPkts int) (ghost res seq[io.IO_val]) {
+pure func MultiReadBioIO_val(ghost t io.Place, ghost expectedPkts int) (ghost res seq[io.IO_val]) {
   return expectedPkts <= 0 ? seq[io.IO_val]{} : 
     unfolding MultiReadBio(t, expectedPkts) in 
-    seq[io.IO_val]{io.dp3s_iospec_bio3s_recv_R(t)} ++ MutliReadBioIO_val(
+    seq[io.IO_val]{io.dp3s_iospec_bio3s_recv_R(t)} ++ MultiReadBioIO_val(
       io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1)
 }
 
@@ -140,7 +140,7 @@ ghost
 decreases n
 requires dp.dp3s_iospec_ordered(s, t)
 ensures MultiReadBio(t, n) 
-ensures dp.dp3s_iospec_ordered(MultiReadBioUpd(t, n, s), MutliReadBioNext(t, n))
+ensures dp.dp3s_iospec_ordered(MultiReadBioUpd(t, n, s), MultiReadBioNext(t, n))
 func ExtractMultiReadBio(
   ghost dp io.DataPlaneSpec, 
   ghost t io.Place, 
@@ -159,9 +159,9 @@ requires MultiReadBio(t, n)
 requires ElemAuth(s.ibuf, y.IBufY) && ElemAuth(s.obuf, y.OBufY)
 ensures  MultiReadBio(t, n)
 ensures  MultiReadBioUpd(t, n, s) == old(MultiReadBioUpd(t, n, s))
-ensures  MutliReadBioNext(t, n) == old(MutliReadBioNext(t, n))
+ensures  MultiReadBioNext(t, n) == old(MultiReadBioNext(t, n))
 ensures  ElemAuth(MultiReadBioUpd(t, n, s).ibuf, y.IBufY) && ElemAuth(MultiReadBioUpd(t, n, s).obuf, y.OBufY)
-ensures  0 <= n && MutliReadBioCorrectIfs(t, n, k) ==> MultiElemWitness(y.IBufY, k, MutliReadBioIO_val(t, n))
+ensures  0 <= n && MultiReadBioCorrectIfs(t, n, k) ==> MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
 decreases n
 func MultiUpdateElemWitness(
   ghost t io.Place, 
@@ -180,8 +180,8 @@ func MultiUpdateElemWitness(
     fold MultiReadBio(t, n)
   } 
   
-  if 0 <= n && MutliReadBioCorrectIfs(t, n, k) {
-    fold MultiElemWitness(y.IBufY, k, MutliReadBioIO_val(t, n))
+  if 0 <= n && MultiReadBioCorrectIfs(t, n, k) {
+    fold MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
   }
 }
 

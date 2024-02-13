@@ -70,6 +70,7 @@ import (
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 	// @ "github.com/scionproto/scion/verification/utils/seqs"
 	// @ socketspec "golang.org/x/net/internal/socket/"
+	// @ io "verification/io"
 )
 
 const (
@@ -127,7 +128,17 @@ type BatchConn interface {
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 	// @ ensures   err != nil ==> err.ErrorMem()
-	ReadBatch(msgs underlayconn.Messages) (n int, err error)
+	// contracts for IO-spec
+	// @ requires Prophecy(prophecyM)
+	// @ requires io.token(place) && MultiReadBio(place, prophecyM)
+	// @ preserves dp.Valid()
+	// @ ensures  err == nil ==> prophecyM == n
+	// @ ensures  err == nil ==> io.token(old(MultiReadBioNext(place, n))) && old(MultiReadBioCorrectIfs(place, n, ifsToIO_ifs(ingressID)))
+	// @ ensures  err == nil ==>
+	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==> unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
+	// @    old(MultiReadBioIO_val(place, n)[i])
+	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
+	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
 	// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R10)
@@ -688,13 +699,17 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ requires  acc(ctx.Mem(), _)
 // @ requires  acc(&d.mtx, _)
-func (d *DataPlane) Run(ctx context.Context) error {
+// contracts for IO-spec
+// @ requires dp.Valid()
+// @ requires io.token(place) && dp.dp3s_iospec_ordered(state, place)
+func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost state io.IO_dp3s_state_local, ghost dp io.DataPlaneSpec @*/) error {
 	// @ share d, ctx
 	d.mtx.Lock()
 	// @ unfold MutexInvariant!<d!>()
 	// @ assert d.forwardingMetrics != nil
 	// @ assert acc(&d.forwardingMetrics, _) && acc(d.forwardingMetrics, _)
 	d.running = true
+	// @ ghost ioLockRun, ioSharedArgRun := InitSharedInv(dp, place, state)
 
 	d.initMetrics()
 
@@ -708,7 +723,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires ingressID in d.getDomForwardingMetrics()
 		// @ requires d.macFactory != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
-		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
+		// contracts for IO-spec
+		// @ requires dp.Valid()
+		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
+		func /*@ rc @*/ (ingressID uint16, rd BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
+			// @ ghost ioIngressID := ifsToIO_ifs(ingressID)
+
 			msgs := conn.NewReadMessages(inputBatchCnt)
 			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
@@ -768,8 +788,21 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant ingressID in d.getDomForwardingMetrics()
 			// @ invariant acc(rd.Mem(), _)
 			// @ invariant processor.sInit() && processor.sInitD() === d
+			// @ invariant acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 			for d.running {
-				pkts, err := rd.ReadBatch(msgs)
+				// Multi recv event
+				// @ ghost ioLock.Lock()
+				// @ unfold SharedInv!< dp, ioSharedArg !>()
+				// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
+				// @ ghost numberOfReceivedPacketsProphecy := AllocProphecy()
+				// @ ExtractMultiReadBio(dp, t, numberOfReceivedPacketsProphecy, s)
+				// @ MultiUpdateElemWitness(t, numberOfReceivedPacketsProphecy, ioIngressID, s, ioSharedArg)
+				// @ ghost ioValSeq := MultiReadBioIO_val(t,numberOfReceivedPacketsProphecy)
+
+				// @ ghost sN := MultiReadBioUpd(t, numberOfReceivedPacketsProphecy, s)
+				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
+				// @ assert dp.dp3s_iospec_ordered(sN, tN)
+				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ assert err == nil ==>
 				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
@@ -1031,7 +1064,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ requires i in d.getDomForwardingMetrics()
 			// @ requires d.macFactory != nil
 			// @ requires c != nil && acc(c.Mem(), _)
-			func /*@ closure2 @*/ (i uint16, c BatchConn) {
+			func /*@ closure2 @*/ (i uint16, c BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 				defer log.HandlePanic()
 				// @ assert read implements rc
 				// (VerifiedSCION) check preconditions of call to read(i, c) manually.
@@ -1048,14 +1081,14 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// (VerifiedSCION) Skip automated verification of the call due to a
 				// bug in Gobra. (https://github.com/viperproject/gobra/issues/723)
 				// @ TODO()
-				read(i, c) //@ as rc
+				read(i, c /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
 			}
 		// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R50) }
 		// @ assert v in range(d.external)
 		// @ assert acc(v.Mem(), _)
 		// @ d.InDomainExternalInForwardingMetrics3(ifID)
 		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), R50) }
-		go cl(ifID, v) //@ as closure2
+		go cl(ifID, v /*@, ioLockRun, ioSharedArgRun, dp @*/) //@ as closure2
 	}
 	cl :=
 		// @ requires acc(&read, _) && read implements rc
@@ -1067,7 +1100,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires 0 in d.getDomForwardingMetrics()
 		// @ requires d.macFactory != nil
 		// @ requires c != nil && acc(c.Mem(), _)
-		func /*@ closure3 @*/ (c BatchConn) {
+		func /*@ closure3 @*/ (c BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			defer log.HandlePanic()
 			// @ assert read implements rc
 
@@ -1086,9 +1119,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// (VerifiedSCION) Skip automated verification and rely on manual
 			// checks above.
 			// @ TODO()
-			read(0, c) //@ as rc
+			read(0, c /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
 		}
-	go cl(d.internal) //@ as closure3
+	go cl(d.internal /*@, ioLockRun, ioSharedArgRun, dp @*/) //@ as closure3
 
 	// (VerifiedSCION) we ignore verification from this point onward because of the
 	// call to Unlock. Supporting it is conceptually easy, but it requires changing
