@@ -36,7 +36,7 @@ import (
 
 ghost const MutexPerm perm = 1/4
 ghost const OutMutexPerm perm = 3/4
-ghost const runningPerm perm = 1/8
+ghost const runningPerm perm = 1/2
 
 pred MutexInvariant(d *DataPlane) {
 	acc(&d.running, runningPerm) &&

@@ -69,6 +69,6 @@ ensures  acc(&d.running)
 decreases
 func canModifyRunning(d *DataPlane) {
 	unfold MutexInvariant(d)
-	unfold acc(d.Mem(), MutexPerm)
-	unfold acc(d.Mem(), OutMutexPerm)
+	d.isRunningEq()
+	unfold d.Mem()
 }
