@@ -704,6 +704,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
+// @ trusted // TODO: drop this
 // @ requires  acc(&d.running, 1/2) && !d.running
 // @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
 // @ requires  acc(&d.svc, 1/2) && d.svc != nil
@@ -1213,7 +1214,7 @@ type processResult struct {
 }
 
 // @ requires acc(&d.macFactory, _) && d.macFactory != nil
-// @ requires acc(MutexInvariant(d), _)
+// @ requires acc(d.Mem(), _)
 // @ ensures  res.sInit() && res.sInitD() == d
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
@@ -1271,12 +1272,12 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(srcAddr.Mem(), _)
 // @ requires let d := p.sInitD() in
-// @ 	acc(MutexInvariant(d), _) &&
+// @ 	acc(d.Mem(), _) &&
 // @ 	d.WellConfigured()        &&
 // @ 	d.getValSvc() != nil      &&
 // @ 	d.getValForwardingMetrics() != nil
 // @ ensures  p.sInit()
-// @ ensures  acc(MutexInvariant(p.sInitD()), _)
+// @ ensures  acc(p.sInitD().Mem(), _)
 // @ ensures  p.sInitD() == old(p.sInitD())
 // @ ensures  p.sInitD().validResult(respr, addrAliasesPkt)
 // @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
@@ -1395,7 +1396,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ 	}
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
-		// @ unfold acc(MutexInvariant(p.d), _)
+		// @ unfold acc(p.d.Mem(), _)
 		v1, v2 /*@, aliasesPkt @*/ := p.processOHP()
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
@@ -1432,7 +1433,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 
 // @ requires  acc(&p.d, R20)
 // @ requires  acc(&p.ingressID, R20)
-// @ requires  acc(MutexInvariant(p.d), _)
+// @ requires  acc(p.d.Mem(), _)
 // @ requires  p.bfdLayer.NonInitMem()
 // @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   acc(&p.d, R20)
@@ -1440,7 +1441,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 // @ ensures   p.bfdLayer.NonInitMem()
 // @ ensures   err != nil ==> err.ErrorMem()
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (err error) {
-	// @ unfold acc(MutexInvariant(p.d), _)
+	// @ unfold acc(p.d.Mem(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		// @ establishMemNoBFDSessionConfigured()
@@ -1467,7 +1468,7 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 // @ requires  acc(&p.d, R20)
 // @ requires  acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 // @ requires  p.bfdLayer.NonInitMem()
-// @ requires  acc(MutexInvariant(p.d), _)
+// @ requires  acc(p.d.Mem(), _)
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   acc(&p.d, R20)
 // @ ensures   acc(&p.srcAddr, R20)
@@ -1475,7 +1476,7 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 // @ ensures   sl.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   res != nil ==> res.ErrorMem()
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
-	// @ unfold acc(MutexInvariant(p.d), _)
+	// @ unfold acc(p.d.Mem(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		// @ establishMemNoBFDSessionConfigured()
@@ -1532,7 +1533,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 }
 
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires  acc(&p.d, R5) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
+// @ requires  acc(&p.d, R5) && acc(p.d.Mem(), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
@@ -1712,7 +1713,7 @@ func (p *scionPacketProcessor) packSCMP(
 	return processResult{OutPkt: rawSCMP}, err
 }
 
-// @ requires  acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R5)
 // @ requires  acc(&p.path, R20)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
@@ -1761,7 +1762,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
-// @ preserves acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
@@ -1798,7 +1799,7 @@ func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr 
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
 // @ preserves acc(&p.ingressID, R20)
-// @ preserves acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==> reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
@@ -1828,7 +1829,7 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 	return processResult{}, nil
 }
 
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ubScionL), R19)
 // @ requires  acc(&p.path, R20)
 // @ requires  p.path === p.scionLayer.GetPath(ubScionL)
@@ -1918,7 +1919,7 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
 // @	unfolding acc(p.scionLayer.Mem(ub), R10) in
 // @	p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires  acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R4)
 // @ ensures   acc(&p.path, R15)
@@ -1966,7 +1967,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	return processResult{}, nil
 }
 
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.ingressID, R20)
 // @ preserves acc(&p.segmentChange, R20)
 // @ preserves acc(&p.infoField, R20)
@@ -2130,7 +2131,7 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ preserves acc(&p.macBuffers.scionInput, R20)
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
-// @ preserves acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
@@ -2167,7 +2168,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 }
 
 // @ requires  acc(&p.d, R15)
-// @ requires  acc(MutexInvariant(p.d), _)
+// @ requires  acc(p.d.Mem(), _)
 // @ requires  p.d.getValSvc() != nil
 // @ requires  acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R15)
 // @ preserves acc(p.scionLayer.Mem(ubScionL), R10)
@@ -2334,7 +2335,7 @@ func (p *scionPacketProcessor) egressInterface() uint16 {
 	return p.hopField.ConsIngress
 }
 
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
 // @ preserves acc(&p.ingressID, R20)
@@ -2377,7 +2378,7 @@ func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr e
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.scionLayer.Mem(ub), R10)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.lastLayer, R19)
 // @ preserves p.lastLayer != nil
@@ -2452,7 +2453,7 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.scionLayer.Mem(ub), R14)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.lastLayer, R19)
 // @ preserves p.lastLayer != nil
@@ -2530,7 +2531,7 @@ func (p *scionPacketProcessor) egressRouterAlertFlag() (res *bool) {
 
 // @ requires  acc(&p.lastLayer, R20)
 // @ requires  p.lastLayer != nil && acc(p.lastLayer.Mem(ubLastLayer), R15)
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves sl.AbsSlice_Bytes(ubLastLayer, 0, len(ubLastLayer))
 // @ ensures   acc(&p.lastLayer, R20)
 // @ ensures   acc(p.lastLayer.Mem(ubLastLayer), R15)
@@ -2593,7 +2594,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 }
 
 // @ preserves acc(p.scionLayer.Mem(ubScionL), R20)
-// @ preserves acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==> reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr == nil ==> int(p.scionLayer.GetPayloadLen(ubScionL)) == len(p.scionLayer.GetPayload(ubScionL))
@@ -2617,7 +2618,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 }
 
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires  acc(&p.d, R5) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
+// @ requires  acc(&p.d, R5) && acc(p.d.Mem(), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
@@ -2785,7 +2786,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 // @ requires  acc(&p.rawPkt, R15)
 // @ requires  p.scionLayer.Mem(p.rawPkt)
 // @ requires  acc(&p.ingressID,  R15)
-// @ requires  acc(&p.d, R15) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
+// @ requires  acc(&p.d, R15) && acc(p.d.Mem(), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // @ requires  sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.mac, R10)
@@ -2990,7 +2991,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@ , addrAliases @*/
 }
 
-// @ requires  acc(MutexInvariant(d), _)
+// @ requires  acc(d.Mem(), _)
 // @ requires  d.getValSvc() != nil
 // @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15)
 // @ preserves acc(s.Mem(ub), R14)
@@ -3206,7 +3207,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-// @ requires  acc(&p.d, _) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, _) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R4)
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
