@@ -1030,7 +1030,24 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// the issue with the encoding.
 	externals := d.external
 
-	//  assume false // Currently verified until here
+	///// TODO: drop
+	//////// invariants to test:
+
+	// @ assert acc(&read, _) && read implements rc
+	// @ assert acc(&d, _)
+	// @ assert acc(&d.external, _) && d.external === externals
+	// @ assert acc(d.Mem(), _) && d.WellConfigured()
+	// @ assert externals != nil ==> acc(externals, R4)
+	// @ assert externals != nil ==> acc(accBatchConn(externals), R4)
+	// @ assert acc(&d, _)
+	// @ assert acc(d,  _)
+	// @ assert acc(d.Mem(), _) && d.WellConfigured()
+	// @ assume false // HEERE
+
+	// @ assert d.getValSvc() != nil
+	// @ assert d.getValForwardingMetrics() != nil
+	// @ assert 0 in d.getDomForwardingMetrics()
+	// @ assert d.macFactory != nil
 
 	// @ invariant acc(&read, _) && read implements rc
 	// @ invariant acc(&d, _)
