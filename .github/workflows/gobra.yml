@@ -59,6 +59,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: 1,
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
@@ -74,6 +75,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: 1,
       - name: Verify package 'pkg/experimental/epic'
         uses: viperproject/gobra-action@main
         with:
@@ -88,6 +90,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: 1,
       - name: Verify package 'pkg/log'
         uses: viperproject/gobra-action@main
         with:
@@ -102,6 +105,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: 1,
       - name: Verify package 'pkg/private/serrors'
         uses: viperproject/gobra-action@main
         with:
@@ -116,6 +120,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: 1,
       - name: Verify package 'pkg/scrypto'
         uses: viperproject/gobra-action@main
         with:
