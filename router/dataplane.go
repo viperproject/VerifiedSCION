@@ -704,31 +704,32 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
-// @ trusted // TODO: drop this
-// @ requires  acc(&d.running, 1/2) && !d.running
-// @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
-// @ requires  acc(&d.svc, 1/2) && d.svc != nil
-// @ requires  acc(&d.internal, 1/2) && d.internal != nil
-// @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
-// @ requires  acc(&d.forwardingMetrics, 1/2) && acc(d.forwardingMetrics, 1/2)
+// @ requires  acc(d.Mem(), OutMutexPerm)
+// @ requires  !d.IsRunning()
+// @ requires  d.InternalConnIsSet()
+// @ requires  d.KeyIsSet()
+// @ requires  d.SvcsAreSet()
+// @ requires  d.MetricsAreSet()
+// (VerifiedSCION) here, the spec still uses a private field.
 // @ requires  d.mtx.LockP()
 // @ requires  d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ requires  acc(ctx.Mem(), _)
-// @ requires  acc(&d.mtx, _)
 func (d *DataPlane) Run(ctx context.Context) error {
 	// @ share d, ctx
 	d.mtx.Lock()
 	// @ unfold MutexInvariant!<d!>()
-	// @ assert d.forwardingMetrics != nil
-	// @ assert acc(&d.forwardingMetrics, _) && acc(d.forwardingMetrics, _)
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	d.running = true
-
+	// @ fold MutexInvariant!<d!>()
+	// @ fold d.Mem()
 	d.initMetrics()
 
 	read /*@@@*/ :=
 		// @ requires acc(&d, _)
 		// @ requires acc(d,  _)
-		// @ requires acc(MutexInvariant(d), _) && d.WellConfigured()
+		// @ requires acc(d.Mem(), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
 		// @ requires 0 in d.getDomForwardingMetrics()
@@ -788,7 +789,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant writeMsgInv(writeMsgs)
 			// @ invariant acc(&d, _)
 			// @ invariant acc(d, _)
-			// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
+			// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 			// @ invariant d.getValSvc() != nil
 			// @ invariant d.getValForwardingMetrics() != nil
 			// @ invariant 0 in d.getDomForwardingMetrics()
@@ -821,7 +822,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(&d, _)
 				// @ invariant acc(d, _)
-				// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
+				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 				// @ invariant d.getValSvc() != nil
 				// @ invariant d.getValForwardingMetrics() != nil
 				// @ invariant 0 in d.getDomForwardingMetrics()
@@ -966,7 +967,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						continue
 					}
 					// @ requires acc(&d, _)
-					// @ requires acc(MutexInvariant(d), _)
+					// @ requires acc(d.Mem(), _)
 					// @ requires result.EgressID in d.getDomForwardingMetrics()
 					// @ decreases
 					// @ outline(
@@ -986,12 +987,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			}
 		}
 
-	// @ fold acc(MutexInvariant(d), R55)
+	// @ unfold acc(d.Mem(), R1)
+	// @ assert d.WellConfigured()
 	// @ assert 0 in d.getDomForwardingMetrics()
-	// (VerifiedSCION) the following cannot be expressed as a pre-condition:
-	// there is really no way of specifying that the dataplane protected by the lock
-	// satisfies this condition.
-	// @ assume d.WellConfigured()
 
 	// @ ghost if d.bfdSessions != nil { unfold acc(accBfdSession(d.bfdSessions), R2) }
 
@@ -1032,15 +1030,17 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// the issue with the encoding.
 	externals := d.external
 
+	//  assume false // Currently verified until here
+
 	// @ invariant acc(&read, _) && read implements rc
 	// @ invariant acc(&d, _)
 	// @ invariant acc(&d.external, _) && d.external === externals
-	// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
+	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant externals != nil ==> acc(externals, R4)
 	// @ invariant externals != nil ==> acc(accBatchConn(externals), R4)
 	// @ invariant acc(&d, _)
 	// @ invariant acc(d,  _)
-	// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
+	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant d.getValSvc() != nil
 	// @ invariant d.getValForwardingMetrics() != nil
 	// @ invariant 0 in d.getDomForwardingMetrics()
@@ -1051,7 +1051,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ requires acc(&read, _) && read implements rc
 			// @ requires acc(&d, _)
 			// @ requires acc(d,  _)
-			// @ requires acc(MutexInvariant(d), _) && d.WellConfigured()
+			// @ requires acc(d.Mem(), _) && d.WellConfigured()
 			// @ requires d.getValSvc() != nil
 			// @ requires d.getValForwardingMetrics() != nil
 			// @ requires 0 in d.getDomForwardingMetrics()
@@ -1064,7 +1064,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// (VerifiedSCION) check preconditions of call to read(i, c) manually.
 				// @ assert acc(&d, _)
 				// @ assert acc(d,  _)
-				// @ assert acc(MutexInvariant(d), _) && d.WellConfigured()
+				// @ assert acc(d.Mem(), _) && d.WellConfigured()
 				// @ assert d.getValSvc() != nil
 				// @ assert d.getValForwardingMetrics() != nil
 				// @ assert 0 in d.getDomForwardingMetrics()
@@ -1088,7 +1088,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires acc(&read, _) && read implements rc
 		// @ requires acc(&d, _)
 		// @ requires acc(d,  _)
-		// @ requires acc(MutexInvariant(d), _) && d.WellConfigured()
+		// @ requires acc(d.Mem(), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
 		// @ requires 0 in d.getDomForwardingMetrics()
@@ -1103,7 +1103,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// https://github.com/viperproject/gobra/issues/723.
 			// @ assert acc(&d, _)
 			// @ assert acc(d,  _)
-			// @ assert acc(MutexInvariant(d), _) && d.WellConfigured()
+			// @ assert acc(d.Mem(), _) && d.WellConfigured()
 			// @ assert d.getValSvc() != nil
 			// @ assert d.getValForwardingMetrics() != nil
 			// @ assert 0 in d.getDomForwardingMetrics()
@@ -1117,15 +1117,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		}
 	go cl(d.internal) //@ as closure3
 
-	// (VerifiedSCION) we ignore verification from this point onward because of the
-	// call to Unlock. Supporting it is conceptually easy, but it requires changing
-	// the DataPlane invariant to distinguish between not running and not running.
-	// When not running, we get the same exact invariant as we have now. When running,
-	// we get a wildcard permission amount to the same exact invariant as we have now.
-	// This is easy, but cumbersome and slow to change everywhere.
-	// @ IgnoreFromHere()
 	d.mtx.Unlock()
-
 	r1 /*@ , r2 @*/ := ctx.Done()
 	<-r1
 	return nil
@@ -1134,17 +1126,33 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-// @ preserves acc(&d.forwardingMetrics)
-// @ preserves acc(&d.localIA, R15)
-// @ preserves acc(&d.neighborIAs, R15)
-// @ preserves d.neighborIAs != nil ==> acc(d.neighborIAs, R15) // required for call
-// @ preserves acc(&d.Metrics, R15) && acc(d.Metrics.Mem(), _)
-// @ preserves acc(&d.external, R15)
-// @ preserves d.external != nil ==> acc(accBatchConn(d.external), R15) // required for call
-// @ preserves acc(&d.internalNextHops, R15)
-// @ preserves d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
-// @ ensures   accForwardingMetrics(d.forwardingMetrics)
+//
+//	TODO: the spec needs to change completely. It should take a dataplane and ensure that
+//	it is well configured
+//
+// new spec:
+// @ preserves d.Mem()
+// @ preserves d.MetricsAreSet()
+// @ ensures   d.WellConfigured()
 // @ ensures   0 in d.DomainForwardingMetrics()
+// @ ensures   d.InternalConnIsSet() == old(d.InternalConnIsSet())
+// @ ensures   d.KeyIsSet() == old(d.KeyIsSet())
+// @ ensures   d.SvcsAreSet() == old(d.SvcsAreSet())
+// @ ensures   d.getValForwardingMetrics() != nil
+//
+//	preserves acc(&d.forwardingMetrics)
+//	preserves acc(&d.localIA, R15)
+//	preserves acc(&d.neighborIAs, R15)
+//	preserves d.neighborIAs != nil ==> acc(d.neighborIAs, R15) // required for call
+//	preserves acc(&d.Metrics, R15) && acc(d.Metrics.Mem(), _)
+//	preserves acc(&d.external, R15)
+//	preserves d.external != nil ==> acc(accBatchConn(d.external), R15) // required for call
+//	preserves acc(&d.internalNextHops, R15)
+//	preserves d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
+//	ensures   accForwardingMetrics(d.forwardingMetrics)
+//	ensures   0 in d.DomainForwardingMetrics()
+//
+// TODO: domain external is a subset of domainForwardingMetrics
 // @ decreases
 func (d *DataPlane) initMetrics() {
 	// @ preserves acc(&d.forwardingMetrics)
