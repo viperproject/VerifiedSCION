@@ -135,6 +135,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: 1,
       - name: Verify package 'pkg/slayers'
         uses: viperproject/gobra-action@main
         with:
