@@ -70,6 +70,11 @@ pred MultiReadBio(ghost t io.Place, ghost expectedPkts int) {
   (expectedPkts > 0 ==> io.CBioIO_bio3s_recv(t) && 
   MultiReadBio(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1))
 }
+/*
+pred MultiSendBio(ghost t io.Place, ghost v seq[io.IO_val]) {
+  (len(v) > 0 ==> io.CBioIO_bio3s_send(t, v[0]) && 
+  MultiSendBio(io.dp3s_iospec_bio3s_send_T(t, v[0]), v[1:]))
+}*/
 
 ghost
 requires MultiReadBio(t, expectedPkts)
@@ -78,6 +83,14 @@ pure func MultiReadBioNext(ghost t io.Place, ghost expectedPkts int) (ghost tn i
   return expectedPkts <= 0 ? t : unfolding MultiReadBio(t, expectedPkts) in 
     MultiReadBioNext(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1)
 }
+/*
+ghost
+requires MultiSendBio(t, v)
+decreases len(v)
+pure func MultiSendBioNext(ghost t io.Place, ghost v seq[io.IO_val]) (ghost tn io.Place) {
+  return len(v) == 0 ? t : unfolding MultiSendBio(t, v) in 
+    MultiSendBioNext(io.dp3s_iospec_bio3s_send_T(t, v[0]), v[1:])
+}*/
 
 // Checks that all packets are received from the same interface (key).
 ghost 

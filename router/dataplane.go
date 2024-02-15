@@ -135,7 +135,7 @@ type BatchConn interface {
 	// @ ensures  err == nil ==> prophecyM == n
 	// @ ensures  err == nil ==> io.token(old(MultiReadBioNext(place, n))) && old(MultiReadBioCorrectIfs(place, n, ifsToIO_ifs(ingressID)))
 	// @ ensures  err == nil ==>
-	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==> unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
+	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==> unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID, msgs[i].N) ==
 	// @    old(MultiReadBioIO_val(place, n)[i])
 	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
@@ -150,7 +150,17 @@ type BatchConn interface {
 	// @ 	(acc(msgs[i].Mem(), R50) && msgs[i].HasActiveAddr())
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
-	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
+	// contracts for IO-spec
+	// @ requires len(msgs) == 1 ==> io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
+	// @ requires len(msgs) == 1 ==> unfolding acc(msgs[0].Mem(), _) in absIO_val(dp, msgs[0].Buffers[0], egressID, msgs[0].N) == ioAbsPkts
+	// @ preserves dp.Valid()
+	// @ ensures (err == nil && len(msgs) == 1) ==> io.token(old(io.dp3s_iospec_bio3s_send_T(place, ioAbsPkts)))
+	// TODO: If we want to prove multiple messages send, we would need additional predicates and contracts similar to the following:
+	// requires len(ioAbsPkts) <= len(msgs)
+	// requires forall i int :: { &msgs[i] } 0 <= i && i < len(ioAbsPkts) ==>
+	// 	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], egressID, msgs[i].N) == ioAbsPkts[i]
+	// ensures  err == nil ==> io.token(old(MultiSendBioNext(place, ioAbsPkts)))
+	WriteBatch(msgs underlayconn.Messages, flags int /*@, ghost egressID uint16, ghost place io.Place, ghost ioAbsPkts io.IO_val, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires Mem()
 	// @ ensures  err != nil ==> err.ErrorMem()
 	// @ decreases
@@ -806,6 +816,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ assert err == nil ==>
 				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
+				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
+
+				// @ ghost *ioSharedArg.State = sN
+				// @ ghost *ioSharedArg.Place = tN
+				// @ fold SharedInv!< dp, ioSharedArg !>()
+				// @ ioLock.Unlock()
 				if err != nil {
 					log.Debug("Failed to read batch", "err", err)
 					// error metric
@@ -842,6 +858,9 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant processor.sInit() && processor.sInitD() === d
+				//  invariant acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+				//  invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==> unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID, msgs[i].N) == ioValSeq[i]
+				//  invariant MultiElemWitnessWithIndex(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ preserves 0 <= i0 && i0 < pkts && pkts <= len(msgs)
@@ -875,9 +894,14 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert p.N <= len(p.Buffers[0])
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					tmpBuf := p.Buffers[0][:p.N]
+					// @ unfold acc(sl.AbsSlice_Bytes(tmpBuf, 0, p.N), HalfPerm)
+					// @ assert forall i int :: { &tmpBuf[i] } 0 <= i && i < p.N ==> tmpBuf[i] == (unfolding acc(sl.AbsSlice_Bytes(p.Buffers[0], 0, len(p.Buffers[0])), HalfPerm) in p.Buffers[0][i])
+					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
+					// @ assert forall i int :: { &tmpBuf[i] } 0 <= i && i < p.N ==> tmpBuf[i] == old(unfolding sl.AbsSlice_Bytes(p.Buffers[0], 0, len(p.Buffers[0])) in p.Buffers[0][i])
+					// @ fold acc(sl.AbsSlice_Bytes(tmpBuf, 0, p.N), HalfPerm)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
-					result, err /*@ , addrAliasesPkt @*/ := processor.processPkt(tmpBuf, srcAddr)
+					result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := processor.processPkt(tmpBuf, srcAddr /*@, ioLock, ioSharedArg, dp@*/)
 					// @ fold scmpErr.Mem()
 					switch {
 					case err == nil:
@@ -942,7 +966,16 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ fold acc(writeMsgs[0].Mem(), R50)
 					// @ assert forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
 					// @ 	acc(writeMsgs[i].Mem(), R50)
-					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
+					// @ ghost ioLock.Lock()
+					// @ unfold SharedInv!< dp, ioSharedArg !>()
+					// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
+					// @ ApplyElemWitness(s.obuf, ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
+					// @ assert newAbsPkt.IO_val_Pkt2_2 in AsSet(s.obuf[newAbsPkt.IO_val_Pkt2_1])
+					// @ assert dp.dp3s_iospec_bio3s_send_guard(s, t, newAbsPkt)
+					// @ unfold dp.dp3s_iospec_ordered(s, t)
+					// @ unfold dp.dp3s_iospec_bio3s_send(s, t)
+					// @ ghost tN := io.dp3s_iospec_bio3s_send_T(t, newAbsPkt)
+					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@, result.EgressID, t, newAbsPkt, dp @*/)
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
 					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
 					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
@@ -950,7 +983,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					// @ msgs[:pkts][i0].IsActive = false
 					// @ fold msgs[:pkts][i0].Mem()
-					// @ fold writeMsgInv(writeMsgs)
+
 					if err != nil {
 						// @ requires err != nil && err.ErrorMem()
 						// @ decreases
@@ -968,9 +1001,18 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 						// @ )
 						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
 						// @ prometheus.CounterMemImpliesNonNil(inputCounters.DroppedPacketsTotal)
+						// @ fold dp.dp3s_iospec_bio3s_send(s, t)
+						// @ fold dp.dp3s_iospec_ordered(s, t)
+						// @ unfold SharedInv!< dp, ioSharedArg !>()
+						// @ ghost ioLock.Unlock()
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
+					// @ ghost *ioSharedArg.Place = tN
+					// @ unfold SharedInv!< dp, ioSharedArg !>()
+					// @ ghost ioLock.Unlock()
+					// @ fold writeMsgInv(writeMsgs)
+
 					// @ requires acc(&d, _)
 					// @ requires acc(MutexInvariant(d), _)
 					// @ requires result.EgressID in d.getDomForwardingMetrics()
@@ -1294,12 +1336,14 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  respr.OutPkt !== rawPkt && respr.OutPkt != nil ==>
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
+// @ ensures (reserr != nil && newAbsPkt.isIO_val_Pkt2) ==> ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
+// @ ensures (reserr != nil && newAbsPkt.isIO_val_Pkt2) ==> newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID, len(respr.OutPkt))
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
-	srcAddr *net.UDPAddr) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
+	srcAddr *net.UDPAddr /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
 
 	if err := p.reset(); err != nil {
 		// @ fold p.sInitD().validResult(processResult{}, false)
-		return processResult{}, err /*@, false @*/
+		return processResult{}, err /*@, false, absIO_valDummy() @*/
 	}
 	// @ assert p.sInitD().getValForwardingMetrics() != nil
 	// @ unfold p.sInit()
@@ -1316,7 +1360,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	if err != nil {
 		// @ fold p.sInit()
 		// @ fold p.sInitD().validResult(processResult{}, false)
-		return processResult{}, err /*@, false @*/
+		return processResult{}, err /*@, false, absIO_valDummy() @*/
 	}
 	/*@
 	ghost var ub []byte
@@ -1365,7 +1409,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			// @ defer fold p.sInit()
 			// @ defer fold p.d.validResult(processResult{}, false)
 			// @ ghost defer sl.CombineRange_Bytes(ub, start, end, writePerm)
-			return processResult{}, p.processIntraBFD(pld) /*@, false @*/
+			return processResult{}, p.processIntraBFD(pld) /*@, false, absIO_valDummy() @*/
 		}
 		// @ establishMemUnsupportedPathTypeNextHeader()
 		// @ defer fold p.sInit()
@@ -1373,7 +1417,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ ghost defer ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 		// @ ghost defer sl.CombineRange_Bytes(ub, start, end, writePerm)
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
-			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/)) /*@, false @*/
+			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/)) /*@, false, absIO_valDummy() @*/
 	case onehop.PathType:
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
 			// @ ghost if mustCombineRanges { ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm) }
@@ -1386,12 +1430,12 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 				// @ defer fold p.sInit()
 				// @ defer fold p.d.validResult(processResult{}, false)
 				// @ ghost defer ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
-				return processResult{}, malformedPath /*@, false @*/
+				return processResult{}, malformedPath /*@, false, absIO_valDummy() @*/
 			}
 			// @ defer fold p.sInit()
 			// @ defer fold p.d.validResult(processResult{}, false)
 			// @ ghost defer ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
-			return processResult{}, p.processInterBFD(ohp, pld) /*@, false @*/
+			return processResult{}, p.processInterBFD(ohp, pld) /*@, false, absIO_valDummy() @*/
 		}
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
@@ -1406,7 +1450,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		v1, v2 /*@, aliasesPkt @*/ := p.processOHP()
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
-		return v1, v2 /*@, aliasesPkt @*/
+		return v1, v2 /*@, aliasesPkt, absIO_valDummy() @*/
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
@@ -1420,12 +1464,12 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		v1, v2 /*@ , addrAliasesPkt @*/ := p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd @*/ )
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, v2 == nil, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
-		return v1, v2 /*@, addrAliasesPkt @*/
+		return v1, v2 /*@, addrAliasesPkt, absIO_valDummy() @*/
 	case epic.PathType:
 		// @ TODO()
 		v1, v2 := p.processEPIC()
 		// @ fold p.sInit()
-		return v1, v2 /*@, false @*/
+		return v1, v2 /*@, false, absIO_valDummy() @*/
 	default:
 		// @ ghost if mustCombineRanges { ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm) }
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
@@ -1433,7 +1477,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ fold p.d.validResult(processResult{}, false)
 		// @ fold p.sInit()
 		// @ establishMemUnsupportedPathType()
-		return processResult{}, serrors.WithCtx(unsupportedPathType, "type", pathType) /*@, false @*/
+		return processResult{}, serrors.WithCtx(unsupportedPathType, "type", pathType) /*@, false, absIO_valDummy() @*/
 	}
 }
 
