@@ -713,22 +713,45 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // (VerifiedSCION) here, the spec still uses a private field.
 // @ requires  d.mtx.LockP()
 // @ requires  d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ requires  acc(ctx.Mem(), _)
+// @ requires  ctx != nil && ctx.Mem()
 func (d *DataPlane) Run(ctx context.Context) error {
 	// @ share d, ctx
 	d.mtx.Lock()
 	// @ unfold MutexInvariant!<d!>()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
+
+	// @ requires  acc(&d, R50)
+	// @ requires  acc(&d.running, runningPerm)
+	// @ requires  d.Mem() && !d.IsRunning()
+	// @ requires  d.InternalConnIsSet()
+	// @ requires  d.KeyIsSet()
+	// @ requires  d.SvcsAreSet()
+	// @ requires  d.MetricsAreSet()
+	// @ ensures   acc(&d, R50)
+	// @ ensures   MutexInvariant!<d!>()
+	// @ ensures   d.Mem() && d.IsRunning()
+	// @ ensures   d.InternalConnIsSet()
+	// @ ensures   d.KeyIsSet()
+	// @ ensures   d.SvcsAreSet()
+	// @ ensures   d.MetricsAreSet()
+	// @ decreases
+	// @ outline (
 	// @ unfold d.Mem()
 	d.running = true
 	// @ fold MutexInvariant!<d!>()
 	// @ fold d.Mem()
+	// @ )
 	d.initMetrics()
 
 	read /*@@@*/ :=
 		// @ requires acc(&d, _)
-		// @ requires acc(d,  _)
+		// @ requires acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
+		// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
+		// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
+		// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
+		// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
+		// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 		// @ requires acc(d.Mem(), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
@@ -1030,44 +1053,35 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// the issue with the encoding.
 	externals := d.external
 
-	///// TODO: drop
-	//////// invariants to test:
-
-	// @ assert acc(&read, _) && read implements rc
-	// @ assert acc(&d, _)
-	// @ assert acc(&d.external, _) && d.external === externals
-	// @ assert acc(d.Mem(), _) && d.WellConfigured()
-	// @ assert externals != nil ==> acc(externals, R4)
-	// @ assert externals != nil ==> acc(accBatchConn(externals), R4)
-	// @ assert acc(&d, _)
-	// @ assert acc(d,  _)
-	// @ assert acc(d.Mem(), _) && d.WellConfigured()
-	// @ assume false // HEERE
-
-	// @ assert d.getValSvc() != nil
-	// @ assert d.getValForwardingMetrics() != nil
-	// @ assert 0 in d.getDomForwardingMetrics()
-	// @ assert d.macFactory != nil
-
 	// @ invariant acc(&read, _) && read implements rc
 	// @ invariant acc(&d, _)
 	// @ invariant acc(&d.external, _) && d.external === externals
 	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant externals != nil ==> acc(externals, R4)
 	// @ invariant externals != nil ==> acc(accBatchConn(externals), R4)
-	// @ invariant acc(&d, _)
-	// @ invariant acc(d,  _)
+	// (VerifiedSCION) can we drop a few of these perms?
+	// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
+	// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
+	// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
+	// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
+	// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
+	// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant d.getValSvc() != nil
 	// @ invariant d.getValForwardingMetrics() != nil
 	// @ invariant 0 in d.getDomForwardingMetrics()
-	// @ invariant d.macFactory != nil
+	// @ invariant acc(&d.macFactory, _) && d.macFactory != nil
 	// @ decreases len(externals) - len(visited)
 	for ifID, v := range externals /*@ with visited @*/ {
 		cl :=
 			// @ requires acc(&read, _) && read implements rc
 			// @ requires acc(&d, _)
-			// @ requires acc(d,  _)
+			// @ requires acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
+			// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
+			// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
+			// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
+			// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
+			// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 			// @ requires acc(d.Mem(), _) && d.WellConfigured()
 			// @ requires d.getValSvc() != nil
 			// @ requires d.getValForwardingMetrics() != nil
@@ -1077,10 +1091,16 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ requires c != nil && acc(c.Mem(), _)
 			func /*@ closure2 @*/ (i uint16, c BatchConn) {
 				defer log.HandlePanic()
+				// (VerifiedSCION) drop all of these checks
 				// @ assert read implements rc
 				// (VerifiedSCION) check preconditions of call to read(i, c) manually.
 				// @ assert acc(&d, _)
-				// @ assert acc(d,  _)
+				// @ assert acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
+				// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
+				// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
+				// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
+				// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
+				// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 				// @ assert acc(d.Mem(), _) && d.WellConfigured()
 				// @ assert d.getValSvc() != nil
 				// @ assert d.getValForwardingMetrics() != nil
@@ -1104,7 +1124,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	cl :=
 		// @ requires acc(&read, _) && read implements rc
 		// @ requires acc(&d, _)
-		// @ requires acc(d,  _)
+		// @ requires acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
+		// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
+		// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
+		// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
+		// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
+		// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 		// @ requires acc(d.Mem(), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
@@ -1113,8 +1138,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires c != nil && acc(c.Mem(), _)
 		func /*@ closure3 @*/ (c BatchConn) {
 			defer log.HandlePanic()
+			// (VerifiedSCION) drop all of these checks
 			// @ assert read implements rc
-
 			// (VerifiedSCION) once again, check preconditions of call to read(0, c)
 			// manually, due to a completness issue with closures:
 			// https://github.com/viperproject/gobra/issues/723.
@@ -1143,11 +1168,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-//
-//	TODO: the spec needs to change completely. It should take a dataplane and ensure that
-//	it is well configured
-//
-// new spec:
 // @ preserves d.Mem()
 // @ preserves d.MetricsAreSet()
 // @ ensures   d.WellConfigured()
@@ -1156,20 +1176,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // @ ensures   d.KeyIsSet() == old(d.KeyIsSet())
 // @ ensures   d.SvcsAreSet() == old(d.SvcsAreSet())
 // @ ensures   d.getValForwardingMetrics() != nil
-//
-//	preserves acc(&d.forwardingMetrics)
-//	preserves acc(&d.localIA, R15)
-//	preserves acc(&d.neighborIAs, R15)
-//	preserves d.neighborIAs != nil ==> acc(d.neighborIAs, R15) // required for call
-//	preserves acc(&d.Metrics, R15) && acc(d.Metrics.Mem(), _)
-//	preserves acc(&d.external, R15)
-//	preserves d.external != nil ==> acc(accBatchConn(d.external), R15) // required for call
-//	preserves acc(&d.internalNextHops, R15)
-//	preserves d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
-//	ensures   accForwardingMetrics(d.forwardingMetrics)
-//	ensures   0 in d.DomainForwardingMetrics()
-//
-// TODO: domain external is a subset of domainForwardingMetrics
 // @ decreases
 func (d *DataPlane) initMetrics() {
 	// @ preserves acc(&d.forwardingMetrics)

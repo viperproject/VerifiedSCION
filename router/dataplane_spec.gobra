@@ -242,6 +242,7 @@ pure func (d *DataPlane) getDomExternal() set[uint16] {
 }
 
 ghost
+opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
