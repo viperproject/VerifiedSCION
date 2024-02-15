@@ -1160,8 +1160,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	go cl(d.internal) //@ as closure3
 
 	d.mtx.Unlock()
-	r1 /*@ , r2 @*/ := ctx.Done()
-	<-r1
+	// @ assert acc(ctx.Mem(), _)
+	c := ctx.Done()
+	// @ fold PredTrue!<!>()
+	// @ assert c.RecvGivenPerm() == PredTrue!<!>
+	<-c
 	return nil
 }
 
