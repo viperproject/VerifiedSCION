@@ -42,6 +42,7 @@ type AsIfsPair struct {
 	ifs		IO_ifs
 }
 
+//TODO: Is `domain(dp.linkTypes) == domain(dp.neighborIAs)` necessary? 
 ghost
 decreases
 pure func (dp DataPlaneSpec) Valid() bool {
@@ -55,6 +56,12 @@ pure func (dp DataPlaneSpec) Valid() bool {
 			let next_pair := dp.Lookup(pairs) in
 			(next_pair in domain(dp.topology.links)) &&
 			dp.Lookup(next_pair) == pairs)
+}
+
+ghost
+decreases
+pure func (dp DataPlaneSpec) GetLinkTypes() dict[IO_ifs]IO_Link {
+	return dp.linkTypes
 }
 
 ghost

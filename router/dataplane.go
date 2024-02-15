@@ -725,6 +725,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// contracts for IO-spec
 		// @ requires dp.Valid()
+		// @ requires d.dpSpecWellConfigured(dp)
 		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			// @ ghost ioIngressID := ifsToIO_ifs(ingressID)
@@ -998,7 +999,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// there is really no way of specifying that the dataplane protected by the lock
 	// satisfies this condition.
 	// @ assume d.WellConfigured()
-
+	// TODO: Remove once https://github.com/viperproject/VerifiedSCION/pull/246 is merged.
+	// @ assume d.dpSpecWellConfigured(dp)
 	// @ ghost if d.bfdSessions != nil { unfold acc(accBfdSession(d.bfdSessions), R2) }
 
 	// (VerifiedSCION) we introduce this to avoid problems with the invariants that
