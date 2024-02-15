@@ -32,8 +32,8 @@ type Context interface {
 	decreases
 	Deadline() (deadline time.Time, ok bool)
 
-	preserves acc(Mem(), R20)
-	ensures   c != nil ==> acc(c.RecvChannel(), _)
+	preserves acc(Mem(), _)
+	ensures   acc(c.RecvChannel(), _)
 	decreases
 	Done() (c <-chan struct{}, ghost isClosed bool)
 
