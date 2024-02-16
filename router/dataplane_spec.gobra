@@ -680,6 +680,7 @@ ensures  id in d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics2(id uint16) {
 	unfold acc(d.Mem(), _)
+	reveal d.WellConfigured()
 	unfold acc(accBatchConn(d.external), _)
 }
 
@@ -692,6 +693,7 @@ ensures  acc(&d.external, _) && acc(d.external, R55)
 ensures  id in d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics3(id uint16) {
+	reveal d.WellConfigured()
 	assert unfolding acc(d.Mem(), _) in
 		(unfolding acc(accBatchConn(d.external), _) in true)
 }

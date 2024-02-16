@@ -135,8 +135,12 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
-	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	(acc(msgs[i].Mem(), R50) && msgs[i].HasActiveAddr())
+	// @ requires  len(msgs) == 1
+	// (VerifiedSCION) opted for less reusable spec for WriteBatch for
+	// performance reasons.
+	//  	preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	//  	    (acc(msgs[i].Mem(), R50) && msgs[i].HasActiveAddr())
+	// @ preserves acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
@@ -811,7 +815,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ 	msgs[i].Mem()
 			// @ invariant writeMsgInv(writeMsgs)
 			// @ invariant acc(&d, _)
-			// @ invariant acc(d, _)
+			// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
+			// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
+			// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
+			// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
+			// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
+			// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 			// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 			// @ invariant d.getValSvc() != nil
 			// @ invariant d.getValForwardingMetrics() != nil
@@ -844,7 +853,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(&d, _)
-				// @ invariant acc(d, _)
+				// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
+				// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
+				// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
+				// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
+				// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
+				// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 				// @ invariant d.getValSvc() != nil
 				// @ invariant d.getValForwardingMetrics() != nil
@@ -958,8 +972,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					}
 					// @ sl.NilAcc_Bytes()
 					// @ fold acc(writeMsgs[0].Mem(), R50)
-					// @ assert forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
-					// @ 	acc(writeMsgs[i].Mem(), R50)
+					// (VerifiedSCION) old annotation:
+					// assert forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
+					// 	acc(writeMsgs[i].Mem(), R50)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
 					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
@@ -1144,7 +1159,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// manually, due to a completness issue with closures:
 			// https://github.com/viperproject/gobra/issues/723.
 			// @ assert acc(&d, _)
-			// @ assert acc(d,  _)
+			// @ assert acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
+			// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
+			// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
+			// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
+			// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
+			// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 			// @ assert acc(d.Mem(), _) && d.WellConfigured()
 			// @ assert d.getValSvc() != nil
 			// @ assert d.getValForwardingMetrics() != nil
