@@ -246,6 +246,7 @@ opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
+	// TODO: do not use subset, use union {0}
 	return d.getDomExternal() subset d.getDomForwardingMetrics()
 }
 
