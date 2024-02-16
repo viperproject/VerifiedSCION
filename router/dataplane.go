@@ -749,21 +749,28 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	d.initMetrics()
 
 	read /*@@@*/ :=
-		// @ requires acc(&d, _)
-		// @ requires acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
+		// (VerifiedSCION) Due to issue https://github.com/viperproject/gobra/issues/723,
+		// there is currently an incompletness when calling closures that capture variables
+		// from (Viper) methods where they were not allocated. To address that, we introduce
+		// dPtr as an helper parameter. It always receives the value &d.
+		// @ requires acc(dPtr, _)
+		// @ requires let d := *dPtr in
+		// @ 	acc(&d.external, _) && acc(&d.linkTypes, _)                       &&
 		// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
 		// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
 		// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
 		// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
 		// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
-		// @ requires acc(d.Mem(), _) && d.WellConfigured()
-		// @ requires d.getValSvc() != nil
-		// @ requires d.getValForwardingMetrics() != nil
-		// @ requires 0 in d.getDomForwardingMetrics()
-		// @ requires ingressID in d.getDomForwardingMetrics()
-		// @ requires d.macFactory != nil
+		// @ requires let d := *dPtr in
+		// @ 	acc(d.Mem(), _) && d.WellConfigured()
+		// @ requires let d := *dPtr in d.getValSvc() != nil
+		// @ requires let d := *dPtr in d.getValForwardingMetrics() != nil
+		// @ requires let d := *dPtr in (0 in d.getDomForwardingMetrics())
+		// @ requires let d := *dPtr in (ingressID in d.getDomForwardingMetrics())
+		// @ requires let d := *dPtr in d.macFactory != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
-		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
+		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane) {
+			d := *dPtr
 			msgs := conn.NewReadMessages(inputBatchCnt)
 			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
@@ -814,7 +821,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem()
 			// @ invariant writeMsgInv(writeMsgs)
-			// @ invariant acc(&d, _)
+			// @ invariant acc(dPtr, _) && *dPtr === d
 			// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
 			// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
 			// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
@@ -852,7 +859,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&scmpErr)
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ invariant writeMsgInv(writeMsgs)
-				// @ invariant acc(&d, _)
+				// @ invariant acc(dPtr, _) && *dPtr === d
 				// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
 				// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
 				// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
@@ -1004,7 +1011,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
-					// @ requires acc(&d, _)
+					// @ requires acc(dPtr, _) && *dPtr === d
 					// @ requires acc(d.Mem(), _)
 					// @ requires result.EgressID in d.getDomForwardingMetrics()
 					// @ decreases
@@ -1106,28 +1113,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			// @ requires c != nil && acc(c.Mem(), _)
 			func /*@ closure2 @*/ (i uint16, c BatchConn) {
 				defer log.HandlePanic()
-				// (VerifiedSCION) drop all of these checks
-				// @ assert read implements rc
-				// (VerifiedSCION) check preconditions of call to read(i, c) manually.
-				// @ assert acc(&d, _)
-				// @ assert acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
-				// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-				// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-				// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-				// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-				// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
-				// @ assert acc(d.Mem(), _) && d.WellConfigured()
-				// @ assert d.getValSvc() != nil
-				// @ assert d.getValForwardingMetrics() != nil
-				// @ assert 0 in d.getDomForwardingMetrics()
-				// @ assert i in d.getDomForwardingMetrics()
-				// @ assert d.macFactory != nil
-				// @ assert c != nil && acc(c.Mem(), _)
-
-				// (VerifiedSCION) Skip automated verification of the call due to a
-				// bug in Gobra. (https://github.com/viperproject/gobra/issues/723)
-				// @ TODO()
-				read(i, c) //@ as rc
+				read(i, c, &d) //@ as rc
 			}
 		// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R50) }
 		// @ assert v in range(d.external)
@@ -1153,29 +1139,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 		// @ requires c != nil && acc(c.Mem(), _)
 		func /*@ closure3 @*/ (c BatchConn) {
 			defer log.HandlePanic()
-			// (VerifiedSCION) drop all of these checks
-			// @ assert read implements rc
-			// (VerifiedSCION) once again, check preconditions of call to read(0, c)
-			// manually, due to a completness issue with closures:
-			// https://github.com/viperproject/gobra/issues/723.
-			// @ assert acc(&d, _)
-			// @ assert acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
-			// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-			// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-			// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-			// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-			// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
-			// @ assert acc(d.Mem(), _) && d.WellConfigured()
-			// @ assert d.getValSvc() != nil
-			// @ assert d.getValForwardingMetrics() != nil
-			// @ assert 0 in d.getDomForwardingMetrics()
-			// @ assert d.macFactory != nil
-			// @ assert c != nil && acc(c.Mem(), _)
-
-			// (VerifiedSCION) Skip automated verification and rely on manual
-			// checks above.
-			// @ TODO()
-			read(0, c) //@ as rc
+			read(0, c, &d) //@ as rc
 		}
 	go cl(d.internal) //@ as closure3
 
