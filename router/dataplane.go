@@ -1204,7 +1204,6 @@ func (d *DataPlane) initMetrics() {
 	// @ invariant acc(&d.internalNextHops, R15)
 	// @ invariant d.internalNextHops === dInternalNextHops
 	// @ invariant d.internalNextHops != nil ==> acc(d.internalNextHops, R20)
-	// @ invariant d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
 	// @ invariant domain(d.internalNextHops) intersection domain(d.external) == set[uint16]{}
 	// @ invariant acc(&d.neighborIAs, R15)
 	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, R15)
@@ -1214,18 +1213,10 @@ func (d *DataPlane) initMetrics() {
 	// @ invariant acc(d.Metrics.Mem(), _)
 	// @ decreases len(d.external) - len(visitedSet)
 	for id := range d.external /*@ with visitedSet @*/ {
-		// @ ghost if d.internalNextHops != nil {
-		// @	unfold acc(accAddr(d.internalNextHops), R20)
-		// @ }
 		if _, notOwned := d.internalNextHops[id]; notOwned {
-			// @ ghost if d.internalNextHops != nil {
-			// @ 	fold acc(accAddr(d.internalNextHops), R20)
-			// @ }
+			// @ Unreachable()
 			continue
 		}
-		// @ ghost if d.internalNextHops != nil {
-		// @ 	fold acc(accAddr(d.internalNextHops), R20)
-		// @ }
 		labels = interfaceToMetricLabels(id, ( /*@ unfolding acc(hideLocalIA(&d.localIA), R20) in @*/ d.localIA), d.neighborIAs)
 		d.forwardingMetrics[id] = initForwardingMetrics(d.Metrics, labels)
 		// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[id], id)
