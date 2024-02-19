@@ -135,11 +135,9 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
-	// @ requires  len(msgs) == 1
 	// (VerifiedSCION) opted for less reusable spec for WriteBatch for
 	// performance reasons.
-	//  	preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	//  	    (acc(msgs[i].Mem(), R50) && msgs[i].HasActiveAddr())
+	// @ requires  len(msgs) == 1
 	// @ preserves acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
