@@ -35,7 +35,7 @@ type IO_val adt {
 	// Unsupported
 	IO_val_Unsupported {
 		IO_val_Unsupported_1 option[IO_ifs]
-		IO_val_Unsupported_2 Unit // <-- (TODO) yet to replace by the concrete type used
+		IO_val_Unsupported_2 Unit
 	}
 
 	// Internal_val1
