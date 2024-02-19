@@ -979,9 +979,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					}
 					// @ sl.NilAcc_Bytes()
 					// @ fold acc(writeMsgs[0].Mem(), R50)
-					// (VerifiedSCION) old annotation:
-					// assert forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
-					// 	acc(writeMsgs[i].Mem(), R50)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
 					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
@@ -1092,7 +1089,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// @ invariant d.getValSvc() != nil
 	// @ invariant d.getValForwardingMetrics() != nil
 	// @ invariant 0 in d.getDomForwardingMetrics()
-	// @ invariant acc(&d.macFactory, _) && d.macFactory != nil
+	// @ invariant d.macFactory != nil
 	// @ decreases len(externals) - len(visited)
 	for ifID, v := range externals /*@ with visited @*/ {
 		cl :=
@@ -1155,8 +1152,11 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-// @ preserves d.Mem()
-// @ preserves d.MetricsAreSet()
+// @ requires  d.Mem()
+// @ requires  d.MetricsAreSet()
+// @ requires  d.PreWellConfigured()
+// @ ensures   d.Mem()
+// @ ensures   d.MetricsAreSet()
 // @ ensures   d.WellConfigured()
 // @ ensures   0 in d.DomainForwardingMetrics()
 // @ ensures   d.InternalConnIsSet() == old(d.InternalConnIsSet())
@@ -1165,6 +1165,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
 func (d *DataPlane) initMetrics() {
+	// @ reveal d.PreWellConfigured()
+	// @ unfold d.Mem()
 	// @ preserves acc(&d.forwardingMetrics)
 	// @ preserves acc(&d.localIA, R20)
 	// @ preserves acc(&d.neighborIAs, R20)
@@ -1182,18 +1184,27 @@ func (d *DataPlane) initMetrics() {
 	// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[0], 0)
 	// @ )
 	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R15) }
+	// @ ghost if d.internalNextHops != nil { unfold acc(accAddr(d.internalNextHops), R15) }
 
+	// (VerifiedSCION) avoids incompletnes
+	// when folding acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	// @ fold acc(hideLocalIA(&d.localIA), R15)
 
-	// @ invariant acc(hideLocalIA(&d.localIA), R15) // avoids incompletnes when folding acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
+	// @ ghost dExternal := d.external
+	// @ ghost dInternalNextHops := d.internalNextHops
+
+	// @ invariant acc(hideLocalIA(&d.localIA), R15)
 	// @ invariant acc(&d.external, R15)
 	// @ invariant d.external != nil ==> acc(d.external, R20)
-	// @ invariant d.external === old(d.external)
+	// @ invariant d.external === dExternal
 	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
+	// @ invariant domain(d.forwardingMetrics) == set[uint16]{0} union visitedSet
 	// @ invariant 0 in domain(d.forwardingMetrics)
 	// @ invariant acc(&d.internalNextHops, R15)
-	// @ invariant d.internalNextHops === old(d.internalNextHops)
+	// @ invariant d.internalNextHops === dInternalNextHops
+	// @ invariant d.internalNextHops != nil ==> acc(d.internalNextHops, R20)
 	// @ invariant d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
+	// @ invariant domain(d.internalNextHops) intersection domain(d.external) == set[uint16]{}
 	// @ invariant acc(&d.neighborIAs, R15)
 	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, R15)
 	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i in domain(d.forwardingMetrics) ==>
@@ -1220,8 +1231,11 @@ func (d *DataPlane) initMetrics() {
 		// @ assert acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	}
 	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), R15) }
+	// @ ghost if d.internalNextHops != nil { fold acc(accAddr(d.internalNextHops), R15) }
 	// @ fold accForwardingMetrics(d.forwardingMetrics)
 	// @ unfold acc(hideLocalIA(&d.localIA), R15)
+	// @ fold d.Mem()
+	// @ reveal d.WellConfigured()
 }
 
 type processResult struct {
