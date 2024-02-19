@@ -877,11 +877,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
 				// @ assert dp.dp3s_iospec_ordered(sN, tN)
 				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
-				// @ ghost *ioSharedArg.State = sN
-				// @ ghost *ioSharedArg.Place = tN
-				// @ fold SharedInv!< dp, ioSharedArg !>()
-				// @ ioLock.Unlock()
-				// End of multi recv event
 
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ assert err == nil ==>
@@ -891,6 +886,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// error metric
 					continue
 				}
+				// @ ghost *ioSharedArg.State = sN
+				// @ ghost *ioSharedArg.Place = tN
+				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
+				// @ fold SharedInv!< dp, ioSharedArg !>()
+				// @ ioLock.Unlock()
+				// End of multi recv event
 				if pkts == 0 {
 					continue
 				}
@@ -1154,6 +1155,10 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ requires i in d.getDomForwardingMetrics()
 			// @ requires d.macFactory != nil
 			// @ requires c != nil && acc(c.Mem(), _)
+			// contracts for IO-spec
+			// @ requires dp.Valid()
+			// @ requires d.dpSpecWellConfigured(dp)
+			// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 			func /*@ closure2 @*/ (i uint16, c BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 				defer log.HandlePanic()
 				read(i, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
@@ -1180,6 +1185,10 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// @ requires 0 in d.getDomForwardingMetrics()
 		// @ requires d.macFactory != nil
 		// @ requires c != nil && acc(c.Mem(), _)
+		// contracts for IO-spec
+		// @ requires dp.Valid()
+		// @ requires d.dpSpecWellConfigured(dp)
+		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 		func /*@ closure3 @*/ (c BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			defer log.HandlePanic()
 			read(0, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
