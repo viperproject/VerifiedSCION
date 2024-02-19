@@ -121,7 +121,7 @@ pure func insert(buf dict[option[IO_ifs]](set[IO_pkt3]), k option[IO_ifs], v IO_
 
 ghost
 requires len(m.CurrSeg.Future) > 0
-requires dp.Valid()
+requires reveal dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
 	return let currseg := m.CurrSeg in
