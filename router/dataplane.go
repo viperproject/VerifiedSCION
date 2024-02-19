@@ -714,6 +714,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  d.KeyIsSet()
 // @ requires  d.SvcsAreSet()
 // @ requires  d.MetricsAreSet()
+// @ requires  d.PreWellConfigured()
 // (VerifiedSCION) here, the spec still uses a private field.
 // @ requires  d.mtx.LockP()
 // @ requires  d.mtx.LockInv() == MutexInvariant!<d!>;
@@ -732,6 +733,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// @ requires  d.KeyIsSet()
 	// @ requires  d.SvcsAreSet()
 	// @ requires  d.MetricsAreSet()
+	// @ requires  d.PreWellConfigured()
 	// @ ensures   acc(&d, R50)
 	// @ ensures   MutexInvariant!<d!>()
 	// @ ensures   d.Mem() && d.IsRunning()
@@ -739,6 +741,7 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// @ ensures   d.KeyIsSet()
 	// @ ensures   d.SvcsAreSet()
 	// @ ensures   d.MetricsAreSet()
+	// @ ensures   d.PreWellConfigured()
 	// @ decreases
 	// @ outline (
 	// @ unfold d.Mem()
