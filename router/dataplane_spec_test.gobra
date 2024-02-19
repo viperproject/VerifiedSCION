@@ -21,10 +21,12 @@ import (
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/slayers"
+	"github.com/scionproto/scion/private/topology"
 )
 
 func foldMem_test() {
 	d@ := DataPlane{}
+	fold d.Mem()
 	fold MutexInvariant!<&d!>()
 	// testing initialization with the operations from dataplane
 	d.mtx.SetInv(MutexInvariant!<&d!>)
@@ -38,4 +40,36 @@ func foldScionPacketProcessorInitMem_test() {
 	d.scionLayer.RecyclePaths()
 	fold d.scionLayer.NonInitMem()
 	fold d.initMem()
+}
+
+ensures 0 < runningPerm
+func runningPermIsPositive() {}
+
+ensures MutexInvariant(d) && acc(d.Mem(), OutMutexPerm)
+decreases
+func foldDataPlaneMem() (d *DataPlane) {
+	d = &DataPlane{}
+	d.external = make(map[uint16]BatchConn)
+	fold accBatchConn(d.external)
+	d.linkTypes = make(map[uint16]topology.LinkType)
+	d.neighborIAs = make(map[uint16]addr.IA)
+	d.internalNextHops = make(map[uint16]*net.UDPAddr)
+	fold accAddr(d.internalNextHops)
+	d.svc = newServices()
+	d.bfdSessions = make(map[uint16]bfdSession)
+	fold accBfdSession(d.bfdSessions)
+	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
+	fold accForwardingMetrics(d.forwardingMetrics)
+	fold d.Mem()
+	fold MutexInvariant(d)
+}
+
+requires MutexInvariant(d) && acc(d.Mem(), OutMutexPerm)
+requires !d.IsRunning()
+ensures  acc(&d.running)
+decreases
+func canModifyRunning(d *DataPlane) {
+	unfold MutexInvariant(d)
+	d.isRunningEq()
+	unfold d.Mem()
 }
