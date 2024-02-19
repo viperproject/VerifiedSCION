@@ -742,10 +742,12 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// @ ensures   d.PreWellConfigured()
 	// @ decreases
 	// @ outline (
+	// @ reveal d.PreWellConfigured()
 	// @ unfold d.Mem()
 	d.running = true
 	// @ fold MutexInvariant!<d!>()
 	// @ fold d.Mem()
+	// @ reveal d.PreWellConfigured()
 	// @ )
 	d.initMetrics()
 
