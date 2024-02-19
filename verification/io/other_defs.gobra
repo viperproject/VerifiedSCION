@@ -18,12 +18,6 @@
 
 package io
 
-// used everywhere where the Isabel spec has a type-parameter
-type TypeParameter = interface{}
-type TypeParameter1 = interface{}
-type TypeParameter2 = interface{}
-type TypeParameter3 = interface{}
-
 type Unit adt {
 	Unit_{}
 }

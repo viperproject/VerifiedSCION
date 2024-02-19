@@ -133,9 +133,12 @@ type BatchConn interface {
 	// @ requires io.token(place) && MultiReadBio(place, prophecyM)
 	// @ preserves dp.Valid()
 	// @ ensures  err == nil ==> prophecyM == n
-	// @ ensures  err == nil ==> io.token(old(MultiReadBioNext(place, n))) && old(MultiReadBioCorrectIfs(place, n, ifsToIO_ifs(ingressID)))
 	// @ ensures  err == nil ==>
-	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==> unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
+	// @	io.token(old(MultiReadBioNext(place, n))) &&
+	// @	old(MultiReadBioCorrectIfs(place, n, ifsToIO_ifs(ingressID)))
+	// @ ensures  err == nil ==>
+	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
+	// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
 	// @    old(MultiReadBioIO_val(place, n)[i])
 	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
@@ -763,6 +766,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ fold d.Mem()
 	// @ reveal d.PreWellConfigured()
 	// @ )
+	// @ ghost ioLockRun, ioSharedArgRun := InitSharedInv(dp, place, state)
 	d.initMetrics()
 
 	read /*@@@*/ :=
@@ -872,6 +876,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
 				// @ assert dp.dp3s_iospec_ordered(sN, tN)
 				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
+				// @ ghost *ioSharedArg.State = sN
+				// @ ghost *ioSharedArg.Place = tN
+				// @ fold SharedInv!< dp, ioSharedArg !>()
+				// @ ioLock.Unlock()
+				// End of multi recv event
+
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ assert err == nil ==>
 				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())

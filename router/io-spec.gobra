@@ -552,6 +552,7 @@ pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs]{
 }
 
 ghost 
+opaque
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 decreases
 pure func validPktMetaHdr(raw []byte) bool {
@@ -572,21 +573,25 @@ pure func validPktMetaHdr(raw []byte) bool {
 		len(raw) >= pktLen(seg1, seg2, seg3)
 }
 
-// TODO: add body
 ghost 
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 ensures val.isIO_val_Unsupported
 ensures val.IO_val_Unsupported_1 == ifsToIO_ifs(ingressID)
 decreases
-pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (ghost val io.IO_val)
+pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val){
+	return io.IO_val(io.IO_val_Unsupported{
+		ifsToIO_ifs(ingressID),
+		io.Unit(io.Unit_{}),
+	})
+}
 
 ghost
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
-pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (ghost val io.IO_val) {
-	return (validPktMetaHdr(raw) && absPkt(dp, raw, dp.asid()) != none[io.IO_pkt2]) ? 
+pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
+	return (reveal validPktMetaHdr(raw) && absPkt(dp, raw, dp.asid()) != none[io.IO_pkt2]) ? 
 		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), get(absPkt(dp, raw, dp.asid()))}) : 
 		absIO_val_Unsupported(raw, ingressID)
 }
@@ -598,8 +603,6 @@ pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool{
 	return io.IO_as(d.localIA) == dp.Asid()
 }
 
-//TODO: Do we want both implications? 
-// One should be sufficient to prove the guards.
 ghost
 requires acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
 decreases
@@ -619,9 +622,6 @@ pure func absLinktype(link topology.LinkType) io.IO_Link {
 		io.IO_Link(io.IO_NoLink{})
 }
 
-
-//TODO: Do we want both implications? 
-// One should be sufficient to prove the guards.
 ghost 
 requires acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
 decreases
@@ -630,7 +630,6 @@ pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool
 		io.IO_ifs(ifs) in domain(dp.GetLinkTypes()) && 
 		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.IO_ifs(ifs))
 }
-
 
 ghost 
 requires acc(MutexInvariant(d), _)
