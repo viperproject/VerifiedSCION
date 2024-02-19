@@ -28,3 +28,9 @@ import (
 )
 
 var AlreadyRunning = serrors.New("is running")
+
+ghost
+ensures AlreadyRunning != nil && AlreadyRunning.ErrorMem()
+ensures isComparable(AlreadyRunning)
+decreases
+func EstablishAlreadyRunning()

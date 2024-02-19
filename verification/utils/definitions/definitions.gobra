@@ -81,10 +81,12 @@ const (
 // from the router.
 ghost
 requires false
-func Unreachable()
+decreases
+func Unreachable() {}
 
 ghost
 ensures !res
+decreases
 pure func Uncallable() (res bool) {
 	return false
 }
@@ -93,6 +95,11 @@ ghost
 ensures false
 decreases _
 func IgnoreBranch()
+
+ghost
+ensures false
+decreases _
+func IgnoreFromHere()
 
 ghost
 ensures false

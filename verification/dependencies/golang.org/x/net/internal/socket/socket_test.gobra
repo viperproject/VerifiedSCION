@@ -21,5 +21,7 @@ import "github.com/scionproto/scion/verification/utils/slices"
 func foldMem_test() {
 	var m@ Message
 	fold slices.AbsSlice_Bytes(m.OOB, 0, len(m.OOB))
-	fold m.Mem(0)
+	m.Buffers = make([][]byte, 1)
+	fold slices.AbsSlice_Bytes(m.Buffers[0], 0, len(m.Buffers[0]))
+	fold m.Mem()
 }
