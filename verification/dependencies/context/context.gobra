@@ -32,12 +32,11 @@ type Context interface {
 	decreases
 	Deadline() (deadline time.Time, ok bool)
 
-	preserves acc(Mem(), R20)
-	ensures isClosed ==> c.Closed()
-	ensures (!isClosed && c != nil) ==>
-		acc(c.RecvChannel(), _)
+	preserves acc(Mem(), _)
+	ensures   acc(c.RecvChannel(), _)
+	ensures   c.RecvGivenPerm() == PredTrue!<!>
 	decreases
-	Done() (c <-chan struct{}, ghost isClosed bool)
+	Done() (c <-chan struct{})
 
 	preserves acc(Mem(), R20)
 	ensures isClosed ==> (e != nil && e.ErrorMem())
