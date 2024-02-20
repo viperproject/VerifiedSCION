@@ -40,6 +40,12 @@ decreases _
 func establishMemMalformedPath()
 
 ghost
+ensures alreadySet != nil
+ensures alreadySet.ErrorMem()
+decreases _
+func establishAlreadySet()
+
+ghost
 ensures unsupportedPathTypeNextHeader.ErrorMem()
 decreases _
 func establishMemUnsupportedPathTypeNextHeader()

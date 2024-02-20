@@ -18,12 +18,6 @@
 
 package io
 
-// used everywhere where the Isabel spec has a type-parameter
-type TypeParameter = interface{}
-type TypeParameter1 = interface{}
-type TypeParameter2 = interface{}
-type TypeParameter3 = interface{}
-
 type Unit adt {
 	Unit_{}
 }
@@ -126,7 +120,7 @@ requires dp.Valid()
 requires p1 == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link{
-	return p2 in domain(dp.linkTypes) ? dp.linkTypes[p2] : IO_NoLink{}
+	return p2 in domain(dp.GetLinkTypes()) ? dp.GetLinkType(p2) : IO_NoLink{}
 }
 
 ghost
