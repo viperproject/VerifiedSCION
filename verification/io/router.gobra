@@ -121,10 +121,11 @@ pure func insert(buf dict[option[IO_ifs]](set[IO_pkt3]), k option[IO_ifs], v IO_
 
 ghost
 requires len(m.CurrSeg.Future) > 0
-requires reveal dp.Valid()
+requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
-	return let currseg := m.CurrSeg in
+	return let _ := reveal dp.Valid() in
+		let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in
 		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) && 
