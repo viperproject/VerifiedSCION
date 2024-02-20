@@ -750,6 +750,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ requires  d.SvcsAreSet()
 	// @ requires  d.MetricsAreSet()
 	// @ requires  d.PreWellConfigured()
+	// @ requires  d.DpAgreesWithSpec(dp)
 	// @ ensures   acc(&d, R50)
 	// @ ensures   MutexInvariant!<d!>()
 	// @ ensures   d.Mem() && d.IsRunning()
@@ -758,17 +759,20 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ ensures   d.SvcsAreSet()
 	// @ ensures   d.MetricsAreSet()
 	// @ ensures   d.PreWellConfigured()
+	// @ ensures   d.DpAgreesWithSpec(dp)
 	// @ decreases
 	// @ outline (
 	// @ reveal d.PreWellConfigured()
+	// @ reveal d.DpAgreesWithSpec(dp)
 	// @ unfold d.Mem()
 	d.running = true
 	// @ fold MutexInvariant!<d!>()
 	// @ fold d.Mem()
 	// @ reveal d.PreWellConfigured()
+	// @ reveal d.DpAgreesWithSpec(dp)
 	// @ )
 	// @ ghost ioLockRun, ioSharedArgRun := InitSharedInv(dp, place, state)
-	d.initMetrics()
+	d.initMetrics( /*@ dp @*/ )
 
 	read /*@@@*/ :=
 		// (VerifiedSCION) Due to issue https://github.com/viperproject/gobra/issues/723,
@@ -1219,9 +1223,10 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // @ ensures   d.InternalConnIsSet() == old(d.InternalConnIsSet())
 // @ ensures   d.KeyIsSet() == old(d.KeyIsSet())
 // @ ensures   d.SvcsAreSet() == old(d.SvcsAreSet())
+// @ ensures   d.DpAgreesWithSpec(dp) == old(d.DpAgreesWithSpec(dp))
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
-func (d *DataPlane) initMetrics() {
+func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ reveal d.PreWellConfigured()
 	// @ unfold d.Mem()
 	// @ preserves acc(&d.forwardingMetrics)
