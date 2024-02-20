@@ -399,10 +399,10 @@ pure func leftSeg(
 	asid seq[io.IO_as]) option[io.IO_seg3] {
 	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
 		(currINFIdx == 1 && seg2Len > 0) ?
-		some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, asid)) :
-		(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
-			some(currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, asid)) :
-			none[io.IO_seg3]
+			some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, asid)) :
+			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
+				some(currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, asid)) :
+				none[io.IO_seg3])
 }
 
 ghost
@@ -423,11 +423,11 @@ pure func rightSeg(
 	seg3Len int,
 	asid seq[io.IO_as]) option[io.IO_seg3] {
 	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
-	(currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ?
-		some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, asid)) :
-		(currINFIdx == 0 && seg2Len > 0) ?
-			some(currSeg(raw, offset, currINFIdx, seg1Len, asid)) :
-			none[io.IO_seg3]
+		(currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ?
+			some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, asid)) :
+			(currINFIdx == 0 && seg2Len > 0) ?
+				some(currSeg(raw, offset, currINFIdx, seg1Len, asid)) :
+				none[io.IO_seg3]
 }
 
 ghost
@@ -449,10 +449,10 @@ pure func midSeg(
 	asid seq[io.IO_as]) option[io.IO_seg3] {
 	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
 		(currINFIdx == 4 && seg2Len > 0) ?
-		some(currSeg(raw, offset, 0, seg1Len, asid)) :
-		(currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
-			some(currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, asid)) :
-			none[io.IO_seg3]
+			some(currSeg(raw, offset, 0, seg1Len, asid)) :
+			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
+				some(currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, asid)) :
+				none[io.IO_seg3])
 }
 
 ghost
