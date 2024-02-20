@@ -124,10 +124,12 @@ requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
-	return let currseg := m.CurrSeg in
+	return let _ := reveal dp.Valid() in
+		let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
-		let traversedseg := establishGuardTraversedsegInc(currseg) in
-		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		let traversedseg := newpkt.CurrSeg in
+		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) && 
+		(nextif in domain(dp.GetNeighborIAs())) &&
 		let a2 := dp.GetNeighborIA(nextif) in
 		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
 		dp.is_target(dp.Asid(), nextif, a2, i2)
