@@ -733,6 +733,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  ctx != nil && ctx.Mem()
 // contracts for IO-spec
 // @ requires dp.Valid()
+// @ requires d.DpAgreesWithSpec(dp)
 // @ requires io.token(place) && dp.dp3s_iospec_ordered(state, place)
 func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost state io.IO_dp3s_state_local, ghost dp io.DataPlaneSpec @*/) error {
 	// @ share d, ctx
@@ -793,7 +794,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// contracts for IO-spec
 		// @ requires dp.Valid()
 		// @ requires let d := *dPtr in
-		// @ 	acc(d.Mem(), _) && d.dpSpecWellConfigured(dp)
+		// @ 	acc(d.Mem(), _) && d.DpAgreesWithSpec(dp)
 		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			// @ ghost ioIngressID := ifsToIO_ifs(ingressID)
@@ -1075,8 +1076,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				}
 			}
 		}
-	// TODO: Remove
-	// @ assume d.dpSpecWellConfigured(dp)
 	// @ unfold acc(d.Mem(), R1)
 	// @ assert d.WellConfigured()
 	// @ assert 0 in d.getDomForwardingMetrics()
@@ -1138,7 +1137,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ invariant 0 in d.getDomForwardingMetrics()
 	// @ invariant d.macFactory != nil
 	// @ invariant dp.Valid()
-	// @ invariant d.dpSpecWellConfigured(dp)
+	// @ invariant d.DpAgreesWithSpec(dp)
 	// @ invariant acc(ioLockRun.LockP(), _) && ioLockRun.LockInv() == SharedInv!< dp, ioSharedArgRun !>;
 	// @ decreases len(externals) - len(visited)
 	for ifID, v := range externals /*@ with visited @*/ {
@@ -1160,7 +1159,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ requires c != nil && acc(c.Mem(), _)
 			// contracts for IO-spec
 			// @ requires dp.Valid()
-			// @ requires d.dpSpecWellConfigured(dp)
+			// @ requires d.DpAgreesWithSpec(dp)
 			// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 			func /*@ closure2 @*/ (i uint16, c BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 				defer log.HandlePanic()
@@ -1190,7 +1189,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// @ requires c != nil && acc(c.Mem(), _)
 		// contracts for IO-spec
 		// @ requires dp.Valid()
-		// @ requires d.dpSpecWellConfigured(dp)
+		// @ requires d.DpAgreesWithSpec(dp)
 		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 		func /*@ closure3 @*/ (c BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			defer log.HandlePanic()
