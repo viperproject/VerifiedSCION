@@ -456,7 +456,6 @@ pure func midSeg(
 }
 
 ghost
-opaque
 requires dp.Valid()
 requires len(raw) > 4
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
@@ -586,7 +585,6 @@ pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val){
 }
 
 ghost
-opaque
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported

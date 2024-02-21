@@ -72,7 +72,6 @@ pred MultiReadBio(ghost t io.Place, ghost expectedPkts int) {
 }
 
 ghost
-opaque
 requires MultiReadBio(t, expectedPkts)
 decreases expectedPkts
 pure func MultiReadBioNext(t io.Place, expectedPkts int) (tn io.Place) {
@@ -101,7 +100,6 @@ pure func MultiReadBioCorrectIfs(
 
 
 ghost
-opaque
 requires 0 <= expectedPkts && MultiReadBio(t, expectedPkts)
 ensures len(res) == expectedPkts
 decreases expectedPkts
@@ -113,7 +111,6 @@ pure func MultiReadBioIO_val(t io.Place, expectedPkts int) (res seq[io.IO_val]) 
 }
 
 ghost
-opaque
 requires MultiReadBio(t, expectedPkts)
 decreases expectedPkts
 pure func MultiReadBioUpd(
