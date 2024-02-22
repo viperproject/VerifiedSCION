@@ -603,6 +603,7 @@ pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool{
 }
 
 ghost
+opaque
 requires acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredNeighborIAs(dp io.DataPlaneSpec) bool {
@@ -622,6 +623,7 @@ pure func absLinktype(link topology.LinkType) io.IO_Link {
 }
 
 ghost
+opaque
 requires acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool {

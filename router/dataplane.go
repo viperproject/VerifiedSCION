@@ -1213,23 +1213,35 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-// @ trusted
 // @ requires  d.Mem()
 // @ requires  d.MetricsAreSet()
+// @ requires  d.KeyIsSet()
+// @ requires  d.InternalConnIsSet()
+// @ requires  d.SvcsAreSet()
 // @ requires  d.PreWellConfigured()
+// @ requires  d.DpAgreesWithSpec(dp)
 // @ ensures   d.Mem()
 // @ ensures   d.MetricsAreSet()
 // @ ensures   d.WellConfigured()
 // @ ensures   0 in d.DomainForwardingMetrics()
-// @ ensures   d.InternalConnIsSet() == old(d.InternalConnIsSet())
-// @ ensures   d.KeyIsSet() == old(d.KeyIsSet())
-// @ ensures   d.SvcsAreSet() == old(d.SvcsAreSet())
-// @ ensures   d.DpAgreesWithSpec(dp) == old(d.DpAgreesWithSpec(dp))
+// @ ensures   d.InternalConnIsSet()
+// @ ensures   d.KeyIsSet()
+// @ ensures   d.SvcsAreSet()
+// @ ensures   d.DpAgreesWithSpec(dp)
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
 func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ reveal d.PreWellConfigured()
+	// @ reveal d.DpAgreesWithSpec(dp)
+	// @ assert unfolding acc(d.Mem(), _) in
+	// @ 	d.dpSpecWellConfiguredLocalIA(dp)     &&
+	// @ 	d.dpSpecWellConfiguredNeighborIAs(dp) &&
+	// @ 	d.dpSpecWellConfiguredLinkTypes(dp)
 	// @ unfold d.Mem()
+	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
+	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
+
 	// @ preserves acc(&d.forwardingMetrics)
 	// @ preserves acc(&d.localIA, R20)
 	// @ preserves acc(&d.neighborIAs, R20)
@@ -1288,6 +1300,9 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ ghost if d.internalNextHops != nil { fold acc(accAddr(d.internalNextHops), R15) }
 	// @ fold accForwardingMetrics(d.forwardingMetrics)
 	// @ unfold acc(hideLocalIA(&d.localIA), R15)
+	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
+	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
 	// @ fold d.Mem()
 	// @ reveal d.WellConfigured()
 }
