@@ -1213,6 +1213,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
+// @ trusted
 // @ requires  d.Mem()
 // @ requires  d.MetricsAreSet()
 // @ requires  d.PreWellConfigured()
