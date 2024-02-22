@@ -132,10 +132,10 @@ type BatchConn interface {
 	// @ requires Prophecy(prophecyM)
 	// @ requires io.token(place) && MultiReadBio(place, prophecyM)
 	// @ preserves dp.Valid()
+	// @ ensures  err != nil ==> prophecyM == 0
 	// @ ensures  err == nil ==> prophecyM == n
-	// @ ensures  err == nil ==>
-	// @	io.token(old(MultiReadBioNext(place, n))) &&
-	// @	old(MultiReadBioCorrectIfs(place, n, ifsToIO_ifs(ingressID)))
+	// @ ensures  io.token(old(MultiReadBioNext(place, prophecyM)))
+	// @ ensures  old(MultiReadBioCorrectIfs(place, prophecyM, ifsToIO_ifs(ingressID)))
 	// @ ensures  err == nil ==>
 	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
 	// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
@@ -750,6 +750,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ requires  d.SvcsAreSet()
 	// @ requires  d.MetricsAreSet()
 	// @ requires  d.PreWellConfigured()
+	// @ requires  d.DpAgreesWithSpec(dp)
 	// @ ensures   acc(&d, R50)
 	// @ ensures   MutexInvariant!<d!>()
 	// @ ensures   d.Mem() && d.IsRunning()
@@ -758,17 +759,20 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ ensures   d.SvcsAreSet()
 	// @ ensures   d.MetricsAreSet()
 	// @ ensures   d.PreWellConfigured()
+	// @ ensures   d.DpAgreesWithSpec(dp)
 	// @ decreases
 	// @ outline (
 	// @ reveal d.PreWellConfigured()
+	// @ reveal d.DpAgreesWithSpec(dp)
 	// @ unfold d.Mem()
 	d.running = true
 	// @ fold MutexInvariant!<d!>()
 	// @ fold d.Mem()
 	// @ reveal d.PreWellConfigured()
+	// @ reveal d.DpAgreesWithSpec(dp)
 	// @ )
 	// @ ghost ioLockRun, ioSharedArgRun := InitSharedInv(dp, place, state)
-	d.initMetrics()
+	d.initMetrics( /*@ dp @*/ )
 
 	read /*@@@*/ :=
 		// (VerifiedSCION) Due to issue https://github.com/viperproject/gobra/issues/723,
@@ -878,6 +882,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
 				// @ assert dp.dp3s_iospec_ordered(sN, tN)
 				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
+				// @ ghost *ioSharedArg.State = sN
+				// @ ghost *ioSharedArg.Place = tN
+				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
+				// @ fold SharedInv!< dp, ioSharedArg !>()
+				// @ ioLock.Unlock()
+				// End of multi recv event
 
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ assert err == nil ==>
@@ -887,12 +897,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// error metric
 					continue
 				}
-				// @ ghost *ioSharedArg.State = sN
-				// @ ghost *ioSharedArg.Place = tN
-				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
-				// @ fold SharedInv!< dp, ioSharedArg !>()
-				// @ ioLock.Unlock()
-				// End of multi recv event
 				if pkts == 0 {
 					continue
 				}
@@ -1209,6 +1213,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
+// @ trusted
 // @ requires  d.Mem()
 // @ requires  d.MetricsAreSet()
 // @ requires  d.PreWellConfigured()
@@ -1219,9 +1224,10 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // @ ensures   d.InternalConnIsSet() == old(d.InternalConnIsSet())
 // @ ensures   d.KeyIsSet() == old(d.KeyIsSet())
 // @ ensures   d.SvcsAreSet() == old(d.SvcsAreSet())
+// @ ensures   d.DpAgreesWithSpec(dp) == old(d.DpAgreesWithSpec(dp))
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
-func (d *DataPlane) initMetrics() {
+func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ reveal d.PreWellConfigured()
 	// @ unfold d.Mem()
 	// @ preserves acc(&d.forwardingMetrics)
