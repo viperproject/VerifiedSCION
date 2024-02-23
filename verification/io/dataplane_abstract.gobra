@@ -43,10 +43,10 @@ type AsIfsPair struct {
 }
 
 ghost
+opaque
 decreases
 pure func (dp DataPlaneSpec) Valid() bool {
-	return domain(dp.linkTypes) == domain(dp.neighborIAs) &&
-		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==> 
+	return (forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==> 
 			(AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) && 
 			dp.Lookup(AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])) &&
 		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==>
@@ -54,7 +54,14 @@ pure func (dp DataPlaneSpec) Valid() bool {
 		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.topology.links) ==>  
 			let next_pair := dp.Lookup(pairs) in
 			(next_pair in domain(dp.topology.links)) &&
-			dp.Lookup(next_pair) == pairs)
+			dp.Lookup(next_pair) == pairs) 
+			// && domain(dp.linkTypes) == domain(dp.neighborIAs)
+}
+
+ghost
+decreases
+pure func (dp DataPlaneSpec) GetLinkTypes() dict[IO_ifs]IO_Link {
+	return dp.linkTypes
 }
 
 ghost
