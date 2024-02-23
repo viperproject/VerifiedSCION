@@ -897,12 +897,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// error metric
 					continue
 				}
-				// @ ghost *ioSharedArg.State = sN
-				// @ ghost *ioSharedArg.Place = tN
-				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
-				// @ fold SharedInv!< dp, ioSharedArg !>()
-				// @ ioLock.Unlock()
-				// End of multi recv event
 				if pkts == 0 {
 					continue
 				}
