@@ -1231,8 +1231,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
 func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
-	// @ reveal d.PreWellConfigured()
-	// @ reveal d.DpAgreesWithSpec(dp)
+	// @ assert reveal d.PreWellConfigured()
+	// @ assert reveal d.DpAgreesWithSpec(dp)
 	// @ assert unfolding acc(d.Mem(), _) in
 	// @ 	d.dpSpecWellConfiguredLocalIA(dp)     &&
 	// @ 	d.dpSpecWellConfiguredNeighborIAs(dp) &&
@@ -1305,6 +1305,7 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
 	// @ fold d.Mem()
 	// @ reveal d.WellConfigured()
+	// @ assert reveal d.DpAgreesWithSpec(dp)
 }
 
 type processResult struct {
