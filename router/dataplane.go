@@ -132,10 +132,10 @@ type BatchConn interface {
 	// @ requires Prophecy(prophecyM)
 	// @ requires io.token(place) && MultiReadBio(place, prophecyM)
 	// @ preserves dp.Valid()
+	// @ ensures  err != nil ==> prophecyM == 0
 	// @ ensures  err == nil ==> prophecyM == n
-	// @ ensures  err == nil ==>
-	// @	io.token(old(MultiReadBioNext(place, n))) &&
-	// @	old(MultiReadBioCorrectIfs(place, n, ifsToIO_ifs(ingressID)))
+	// @ ensures  io.token(old(MultiReadBioNext(place, prophecyM)))
+	// @ ensures  old(MultiReadBioCorrectIfs(place, prophecyM, ifsToIO_ifs(ingressID)))
 	// @ ensures  err == nil ==>
 	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
 	// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
@@ -750,6 +750,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ requires  d.SvcsAreSet()
 	// @ requires  d.MetricsAreSet()
 	// @ requires  d.PreWellConfigured()
+	// @ requires  d.DpAgreesWithSpec(dp)
 	// @ ensures   acc(&d, R50)
 	// @ ensures   MutexInvariant!<d!>()
 	// @ ensures   d.Mem() && d.IsRunning()
@@ -758,17 +759,20 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ ensures   d.SvcsAreSet()
 	// @ ensures   d.MetricsAreSet()
 	// @ ensures   d.PreWellConfigured()
+	// @ ensures   d.DpAgreesWithSpec(dp)
 	// @ decreases
 	// @ outline (
 	// @ reveal d.PreWellConfigured()
+	// @ reveal d.DpAgreesWithSpec(dp)
 	// @ unfold d.Mem()
 	d.running = true
 	// @ fold MutexInvariant!<d!>()
 	// @ fold d.Mem()
 	// @ reveal d.PreWellConfigured()
+	// @ reveal d.DpAgreesWithSpec(dp)
 	// @ )
 	// @ ghost ioLockRun, ioSharedArgRun := InitSharedInv(dp, place, state)
-	d.initMetrics()
+	d.initMetrics( /*@ dp @*/ )
 
 	read /*@@@*/ :=
 		// (VerifiedSCION) Due to issue https://github.com/viperproject/gobra/issues/723,
@@ -878,6 +882,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
 				// @ assert dp.dp3s_iospec_ordered(sN, tN)
 				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
+				// @ ghost *ioSharedArg.State = sN
+				// @ ghost *ioSharedArg.Place = tN
+				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
+				// @ fold SharedInv!< dp, ioSharedArg !>()
+				// @ ioLock.Unlock()
+				// End of multi recv event
 
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ assert err == nil ==>
@@ -1211,19 +1221,33 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // will not have to be repeated during packet forwarding.
 // @ requires  d.Mem()
 // @ requires  d.MetricsAreSet()
+// @ requires  d.KeyIsSet()
+// @ requires  d.InternalConnIsSet()
+// @ requires  d.SvcsAreSet()
 // @ requires  d.PreWellConfigured()
+// @ requires  d.DpAgreesWithSpec(dp)
 // @ ensures   d.Mem()
 // @ ensures   d.MetricsAreSet()
 // @ ensures   d.WellConfigured()
 // @ ensures   0 in d.DomainForwardingMetrics()
-// @ ensures   d.InternalConnIsSet() == old(d.InternalConnIsSet())
-// @ ensures   d.KeyIsSet() == old(d.KeyIsSet())
-// @ ensures   d.SvcsAreSet() == old(d.SvcsAreSet())
+// @ ensures   d.InternalConnIsSet()
+// @ ensures   d.KeyIsSet()
+// @ ensures   d.SvcsAreSet()
+// @ ensures   d.DpAgreesWithSpec(dp)
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
-func (d *DataPlane) initMetrics() {
-	// @ reveal d.PreWellConfigured()
+func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
+	// @ assert reveal d.PreWellConfigured()
+	// @ assert reveal d.DpAgreesWithSpec(dp)
+	// @ assert unfolding acc(d.Mem(), _) in
+	// @ 	d.dpSpecWellConfiguredLocalIA(dp)     &&
+	// @ 	d.dpSpecWellConfiguredNeighborIAs(dp) &&
+	// @ 	d.dpSpecWellConfiguredLinkTypes(dp)
 	// @ unfold d.Mem()
+	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
+	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
+
 	// @ preserves acc(&d.forwardingMetrics)
 	// @ preserves acc(&d.localIA, R20)
 	// @ preserves acc(&d.neighborIAs, R20)
@@ -1282,8 +1306,12 @@ func (d *DataPlane) initMetrics() {
 	// @ ghost if d.internalNextHops != nil { fold acc(accAddr(d.internalNextHops), R15) }
 	// @ fold accForwardingMetrics(d.forwardingMetrics)
 	// @ unfold acc(hideLocalIA(&d.localIA), R15)
+	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
+	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
 	// @ fold d.Mem()
 	// @ reveal d.WellConfigured()
+	// @ assert reveal d.DpAgreesWithSpec(dp)
 }
 
 type processResult struct {
@@ -3144,9 +3172,6 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 	}
 }
 
-// (VerifiedSCION) marked as trusted due to an incompletness in silicon,
-// where it is failing to prove the body of a predicate right after unfolding it.
-// @ trusted
 // @ requires acc(dst.Mem(), R15)
 // @ ensures  res != nil && acc(res.Mem(), R15)
 // @ ensures  acc(res.Mem(), R15) --* acc(dst.Mem(), R15)
@@ -3163,8 +3188,6 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 	// @ 	assert dst.IP === tmp.IP
 	// @ 	unfold acc(tmp.Mem(), R15)
 	// @ 	unfold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R15)
-	// (VerifiedSCION) this is the failling assertion;
-	//                 TODO: report it!
 	// @ 	assert forall i int :: { &tmp.IP[i] } 0 <= i && i < len(tmp.IP) ==> acc(&tmp.IP[i], R15)
 	// @ 	assert forall i int :: { &dst.IP[i] } 0 <= i && i < len(dst.IP) ==> acc(&dst.IP[i], R15)
 	// @ 	fold acc(dst.Mem(), R15)
