@@ -342,7 +342,7 @@ jobs:
           parallelizeBranches: '1'
           # The following flag has a significant influence on the number of branches verified.
           # Without it, verification would take a lot longer.
-          conditionalizePermissions: '1'
+          conditionalizePermissions: '0'
           imageVersion: ${{ env.imageVersion }}
           mceMode: 'on'
           requireTriggers: ${{ env.requireTriggers }}
