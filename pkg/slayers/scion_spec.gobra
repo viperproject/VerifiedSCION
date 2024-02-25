@@ -314,7 +314,12 @@ pure
 requires acc(s.Mem(ub), _)
 decreases
 func (s *SCION) GetPath(ub []byte) path.Path {
-	return unfolding acc(s.Mem(ub), _) in s.Path
+	return unfolding acc(s.Mem(ub), _) in (
+		typeOf(s.Path) == *epic.Path ?
+			(let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
+				unfolding acc(s.Path.Mem(ubPath), _) in
+				(path.Path)(s.Path.(*epic.Path).ScionPath)) :
+			s.Path)
 }
 
 ghost
