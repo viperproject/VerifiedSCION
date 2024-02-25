@@ -94,7 +94,6 @@ func testRun(
 	ctx context.Context,
 	place io.Place,
 	state io.IO_dp3s_state_local) (d *DataPlane) {
-	assume false // TODO: drop
 	// body similar to foldDataPlaneMem
 	d = &DataPlane{}
 
@@ -125,21 +124,7 @@ func testRun(
 	fold accBfdSession(d.bfdSessions)
 	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
 	fold accForwardingMetrics(d.forwardingMetrics)
-	fold d.Mem()
-	assert reveal d.PreWellConfigured()
-	fold MutexInvariant!< d !>()
-	// end of foldDataPlaneMem
-	assert !d.IsRunning()
-	assert d.InternalConnIsSet()
-	assert d.KeyIsSet()
-	assert d.SvcsAreSet()
-	assert d.MetricsAreSet()
-	d.mtx.SetInv(MutexInvariant!<d!>)
-	assert d.mtx.LockP()
-	assert d.mtx.LockInv() == MutexInvariant!<d!>;
 
-	// TODO: an ensures with the value that is returned is still
-	// missing here
 	ensures dp.Valid()
 	ensures dp === io.DataPlaneSpec_{
 		linkTypes: dict[io.IO_ifs]io.IO_Link{
@@ -207,7 +192,26 @@ func testRun(
 			dp.Lookup(next_pair) == pair
 	assert reveal dp.Valid()
 	)
-	// @ requires d.DpAgreesWithSpec(dp)
+
+	assert dp.Asid() == 1000
+	assert d.localIA == 1000
+	assert d.dpSpecWellConfiguredLocalIA(dp)
+	assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	assert d.dpSpecWellConfiguredLinkTypes(dp)
+
+	fold d.Mem()
+	assert reveal d.DpAgreesWithSpec(dp)
+	assert reveal d.PreWellConfigured()
+	fold MutexInvariant!< d !>()
+	// end of foldDataPlaneMem
+	assert !d.IsRunning()
+	assert d.InternalConnIsSet()
+	assert d.KeyIsSet()
+	assert d.SvcsAreSet()
+	assert d.MetricsAreSet()
+	d.mtx.SetInv(MutexInvariant!<d!>)
+	assert d.mtx.LockP()
+	assert d.mtx.LockInv() == MutexInvariant!<d!>;
 
 	// io-spec needs to be inhaled
 	inhale io.token(place)
