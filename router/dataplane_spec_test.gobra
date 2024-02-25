@@ -163,10 +163,10 @@ func testRun(
 				io.AsIfsPair{io.IO_as(localIA), 2}: io.AsIfsPair{1002, 8},
 				io.AsIfsPair{1001, 7}: io.AsIfsPair{io.IO_as(localIA), 1},
 				io.AsIfsPair{1002, 8}: io.AsIfsPair{io.IO_as(localIA), 2}}}}
-	assert forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==>
-		(AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) && dp.Lookup(AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])
-	assert forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==> ifs in domain(dp.neighborIAs)
-	assert forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.topology.links) ==>
+	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==>
+		(io.AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) && dp.Lookup(io.AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])
+	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==> ifs in domain(dp.neighborIAs)
+	assert forall pairs io.AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.topology.links) ==>
 			let next_pair := dp.Lookup(pairs) in
 			(next_pair in domain(dp.topology.links)) &&
 			dp.Lookup(next_pair) == pairs
