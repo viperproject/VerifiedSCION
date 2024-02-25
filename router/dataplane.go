@@ -1762,7 +1762,7 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 
 	// @ assume false
 	if isPenultimate || isLast {
-		firstInfo, err := p.path.GetInfoField(0 /*@ , nil @*/)
+		firstInfo, err := p.path.GetInfoField(0 /*@ , ubPath[epic.MetadataLen:] @*/)
 		if err != nil {
 			return processResult{}, err /*@ , false @*/
 		}
