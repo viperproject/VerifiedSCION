@@ -1869,13 +1869,13 @@ func (p *scionPacketProcessor) packSCMP(
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R5)
 // @ requires  acc(&p.path, R20)
-// @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires  p.path === p.scionLayer.GetScionPath(ub)
 // @ requires  acc(&p.hopField) && acc(&p.infoField)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
 // @ ensures   acc(&p.d, R50)
 // @ ensures   acc(p.scionLayer.Mem(ub), R6)
 // @ ensures   acc(&p.path, R20)
-// @ ensures   p.path === p.scionLayer.GetPath(ub)
+// @ ensures   p.path === p.scionLayer.GetScionPath(ub)
 // @ ensures   acc(&p.hopField) && acc(&p.infoField)
 // @ ensures   respr === processResult{}
 // @ ensures   reserr == nil ==> (
@@ -2063,7 +2063,7 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // SrcIA checks by disguising packets as transit traffic.
 // @ requires  acc(&p.path, R15)
 // @ requires  acc(p.scionLayer.Mem(ub), R4)
-// @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires  p.path === p.scionLayer.GetScionPath(ub)
 // @ requires  acc(&p.ingressID, R20)
 // @ requires  acc(&p.infoField, R4) && acc(&p.hopField, R4)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
@@ -2207,7 +2207,7 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 // @ preserves acc(&p.infoField)
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.scionLayer.Mem(ub), R19)
-// @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires  p.path === p.scionLayer.GetScionPath(ub)
 // @ preserves acc(&p.ingressID, R20)
 // @ preserves acc(&p.hopField,  R20)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
@@ -2360,7 +2360,7 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (
 
 // @ requires  acc(&p.path, R20)
 // @ requires  p.scionLayer.Mem(ub)
-// @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires  p.path === p.scionLayer.GetScionPath(ub)
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField, R20)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
@@ -2405,11 +2405,11 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 
 // @ requires  acc(&p.path, R20)
 // @ requires  p.scionLayer.Mem(ub)
-// @ requires  p.path == p.scionLayer.GetPath(ub)
+// @ requires  p.path == p.scionLayer.GetScionPath(ub)
 // @ preserves acc(&p.segmentChange) && acc(&p.hopField) && acc(&p.infoField)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.path, R20)
-// @ ensures   reserr == nil ==> (p.scionLayer.Mem(ub) && p.scionLayer.UBPath(ub) === old(p.scionLayer.UBPath(ub)) && p.scionLayer.GetPath(ub) === old(p.scionLayer.GetPath(ub)))
+// @ ensures   reserr == nil ==> (p.scionLayer.Mem(ub) && p.scionLayer.UBPath(ub) === old(p.scionLayer.UBPath(ub)) && p.scionLayer.GetScionPath(ub) === old(p.scionLayer.GetScionPath(ub)))
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   p.segmentChange
 // @ ensures   respr === processResult{}
@@ -2530,7 +2530,7 @@ func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr e
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.scionLayer.Mem(ub), R10)
-// @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires  p.path === p.scionLayer.GetScionPath(ub)
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.lastLayer, R19)
@@ -2605,7 +2605,7 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.scionLayer.Mem(ub), R14)
-// @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires  p.path === p.scionLayer.GetScionPath(ub)
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.lastLayer, R19)
@@ -2778,7 +2778,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  acc(&p.rawPkt, R1) && ub === p.rawPkt
 // @ requires  acc(&p.path, R10)
 // @ requires  p.scionLayer.Mem(ub)
-// @ requires  p.path == p.scionLayer.GetPath(ub)
+// @ requires  p.path == p.scionLayer.GetScionPath(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.srcAddr, R10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, R10)
