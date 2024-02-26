@@ -1213,23 +1213,35 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-// @ trusted
 // @ requires  d.Mem()
 // @ requires  d.MetricsAreSet()
+// @ requires  d.KeyIsSet()
+// @ requires  d.InternalConnIsSet()
+// @ requires  d.SvcsAreSet()
 // @ requires  d.PreWellConfigured()
+// @ requires  d.DpAgreesWithSpec(dp)
 // @ ensures   d.Mem()
 // @ ensures   d.MetricsAreSet()
 // @ ensures   d.WellConfigured()
 // @ ensures   0 in d.DomainForwardingMetrics()
-// @ ensures   d.InternalConnIsSet() == old(d.InternalConnIsSet())
-// @ ensures   d.KeyIsSet() == old(d.KeyIsSet())
-// @ ensures   d.SvcsAreSet() == old(d.SvcsAreSet())
-// @ ensures   d.DpAgreesWithSpec(dp) == old(d.DpAgreesWithSpec(dp))
+// @ ensures   d.InternalConnIsSet()
+// @ ensures   d.KeyIsSet()
+// @ ensures   d.SvcsAreSet()
+// @ ensures   d.DpAgreesWithSpec(dp)
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
 func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
-	// @ reveal d.PreWellConfigured()
+	// @ assert reveal d.PreWellConfigured()
+	// @ assert reveal d.DpAgreesWithSpec(dp)
+	// @ assert unfolding acc(d.Mem(), _) in
+	// @ 	d.dpSpecWellConfiguredLocalIA(dp)     &&
+	// @ 	d.dpSpecWellConfiguredNeighborIAs(dp) &&
+	// @ 	d.dpSpecWellConfiguredLinkTypes(dp)
 	// @ unfold d.Mem()
+	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
+	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
+
 	// @ preserves acc(&d.forwardingMetrics)
 	// @ preserves acc(&d.localIA, R20)
 	// @ preserves acc(&d.neighborIAs, R20)
@@ -1288,8 +1300,12 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ ghost if d.internalNextHops != nil { fold acc(accAddr(d.internalNextHops), R15) }
 	// @ fold accForwardingMetrics(d.forwardingMetrics)
 	// @ unfold acc(hideLocalIA(&d.localIA), R15)
+	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
+	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
 	// @ fold d.Mem()
 	// @ reveal d.WellConfigured()
+	// @ assert reveal d.DpAgreesWithSpec(dp)
 }
 
 type processResult struct {
@@ -3150,9 +3166,6 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 	}
 }
 
-// (VerifiedSCION) marked as trusted due to an incompletness in silicon,
-// where it is failing to prove the body of a predicate right after unfolding it.
-// @ trusted
 // @ requires acc(dst.Mem(), R15)
 // @ ensures  res != nil && acc(res.Mem(), R15)
 // @ ensures  acc(res.Mem(), R15) --* acc(dst.Mem(), R15)
@@ -3169,8 +3182,6 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 	// @ 	assert dst.IP === tmp.IP
 	// @ 	unfold acc(tmp.Mem(), R15)
 	// @ 	unfold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R15)
-	// (VerifiedSCION) this is the failling assertion;
-	//                 TODO: report it!
 	// @ 	assert forall i int :: { &tmp.IP[i] } 0 <= i && i < len(tmp.IP) ==> acc(&tmp.IP[i], R15)
 	// @ 	assert forall i int :: { &dst.IP[i] } 0 <= i && i < len(dst.IP) ==> acc(&dst.IP[i], R15)
 	// @ 	fold acc(dst.Mem(), R15)
