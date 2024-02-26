@@ -1880,14 +1880,18 @@ func (p *scionPacketProcessor) packSCMP(
 // @ ensures   respr === processResult{}
 // @ ensures   reserr == nil ==> (
 // @	let ubPath := p.scionLayer.UBPath(ub) in
+// @	let ubScionPath := p.scionLayer.UBScionPath(ub) in
 // @	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @	p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath))
+// @	unfolding acc(p.scionLayer.Path.Mem(ubPath), R50) in
+// @	p.path.GetCurrHF(ubScionPath) < p.path.GetNumHops(ubScionPath))
 // @ ensures   acc(p.scionLayer.Mem(ub), R6)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   reserr == nil ==> (
 // @	let ubPath := p.scionLayer.UBPath(ub) in
+// @	let ubScionPath := p.scionLayer.UBScionPath(ub) in
 // @	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @ 	p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath))
+// @	unfolding acc(p.scionLayer.Path.Mem(ubPath), R50) in
+// @ 	p.path.GetCurrINF(ubScionPath) < p.path.GetNumINF(ubScionPath))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
@@ -1897,15 +1901,22 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
 	// @ ghost ubPath := ub[startP:endP]
-	// @ sl.SplitRange_Bytes(ub, startP, endP, R1)
-	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R1)
-	p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
+
+	// @ unfold acc(p.scionLayer.Path.Mem(ubPath), R7)
+	// @ defer fold acc(p.scionLayer.Path.Mem(ubPath), R7)
+	// @ ghost startScionP := p.scionLayer.PathScionStartIdx(ub)
+	// @ ghost endScionP := p.scionLayer.PathScionEndIdx(ub)
+	// @ ghost ubScionPath := ub[startScionP:endScionP]
+
+	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, R1)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startScionP, endScionP, R1)
+	p.hopField, err = p.path.GetCurrentHopField( /*@ ubScionPath @*/ )
 	// @ fold p.d.validResult(processResult{}, false)
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
-	p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ )
+	p.infoField, err = p.path.GetCurrentInfoField( /*@ ubScionPath @*/ )
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
