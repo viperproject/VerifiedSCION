@@ -2440,33 +2440,50 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ decreases
 func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
 	p.segmentChange = true
+	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
+	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
+	// @ ghost startScionP := p.scionLayer.PathScionStartIdx(ub)
+	// @ ghost endScionP := p.scionLayer.PathScionEndIdx(ub)
 	// @ unfold p.scionLayer.Mem(ub)
-	// @ ghost  startP := int(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen(nil, true))
-	// @ ghost  endP   := int(p.scionLayer.HdrLen * slayers.LineLen)
-	// @ ghost  ubPath := ub[startP:endP]
-	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
-	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
+	// @ ghost ubPath := ub[startP:endP]
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	unfold p.scionLayer.Path.Mem(ubPath)
+	// @ }
+	// @ ghost ubScionPath := ub[startScionP:endScionP]
+	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, writePerm)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startScionP, endScionP, writePerm)
+	if err := p.path.IncPath( /*@ ubScionPath @*/ ); err != nil {
 		// TODO parameter problem invalid path
-		// TODO(joao): we currently expose a lot of internal information from slayers here. Can we avoid it?
+		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+		// @ 	fold p.scionLayer.Path.NonInitMem()
+		// @ }
 		// @ unfold p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:])
 		// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
 		// @ fold p.scionLayer.NonInitMem()
 		return processResult{}, serrors.WrapStr("incrementing path", err)
 	}
 	var err error
-	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
+	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubScionPath @*/ ); err != nil {
+		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+		// @ 	fold p.scionLayer.Path.Mem(ubPath)
+		// @ }
 		// @ fold p.scionLayer.Mem(ub)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
-	if p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ ); err != nil {
+	if p.infoField, err = p.path.GetCurrentInfoField( /*@ ubScionPath @*/ ); err != nil {
+		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+		// @ 	fold p.scionLayer.Path.Mem(ubPath)
+		// @ }
 		// @ fold p.scionLayer.Mem(ub)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	fold p.scionLayer.Path.Mem(ubPath)
+	// @ }
 	// @ fold p.scionLayer.Mem(ub)
 	return processResult{}, nil
 }
