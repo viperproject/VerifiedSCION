@@ -2614,6 +2614,9 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP   := p.scionLayer.PathEndIdx(ub)
+	// @ ghost ubScionPath := p.scionLayer.UBScionPath(ub)
+	// @ ghost startScionP := p.scionLayer.PathScionStartIdx(ub)
+	// @ ghost endScionP   := p.scionLayer.PathScionEndIdx(ub)
 	// @ assert ub[startP:endP] === ubPath
 	if p.ingressID == 0 {
 		// @ fold p.d.validResult(processResult{}, false)
@@ -2627,15 +2630,19 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	*alert = false
 	// @ unfold acc(p.scionLayer.Mem(ub), R20)
 	// @ defer fold acc(p.scionLayer.Mem(ub), R20)
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), R20)
+	// @ 	defer fold acc(p.scionLayer.Path.Mem(ubPath), R20)
+	// @ }
 	// (VerifiedSCION) the following is guaranteed by the type system, but Gobra cannot prove it yet
-	// @ assume 0 <= p.path.GetCurrHF(ubPath)
-	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
-	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	// @ assume 0 <= p.path.GetCurrHF(ubScionPath)
+	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, writePerm)
+	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubScionPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubScionPath @*/); err != nil {
+		// @ sl.CombineRange_Bytes(ub, startScionP, endScionP, writePerm)
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
-	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	// @ sl.CombineRange_Bytes(ub, startScionP, endScionP, writePerm)
 	/*@
 	ghost var ubLL []byte
 	ghost if &p.scionLayer === p.lastLayer {
