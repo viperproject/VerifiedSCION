@@ -2241,12 +2241,16 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 // @ decreases
 func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte @*/ ) (err error) {
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
-	// @ ghost start := p.scionLayer.PathStartIdx(ub)
-	// @ ghost end   := p.scionLayer.PathEndIdx(ub)
-	// @ assert ub[start:end] === ubPath
+	// @ ghost ubScionPath := p.scionLayer.UBScionPath(ub)
+	// @ ghost startScion := p.scionLayer.PathScionStartIdx(ub)
+	// @ ghost endScion   := p.scionLayer.PathScionEndIdx(ub)
 
 	// @ unfold acc(p.scionLayer.Mem(ub), R20)
 	// @ defer fold acc(p.scionLayer.Mem(ub), R20)
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), R20)
+	// @ 	defer fold acc(p.scionLayer.Path.Mem(ubPath), R20)
+	// @ }
 	// against construction dir the ingress router updates the SegID, ifID == 0
 	// means this comes from this AS itself, so nothing has to be done.
 	// TODO(lukedirtwalker): For packets destined to peer links this shouldn't
@@ -2254,10 +2258,10 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 	if !p.infoField.ConsDir && p.ingressID != 0 {
 		p.infoField.UpdateSegID(p.hopField.Mac)
 		// (VerifiedSCION) the following property is guaranteed by the type system, but Gobra cannot infer it yet
-		// @ assume 0 <= p.path.GetCurrINF(ubPath)
-		// @ sl.SplitRange_Bytes(ub, start, end, writePerm)
-		// @ ghost defer sl.CombineRange_Bytes(ub, start, end, writePerm)
-		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF) /*@ ) , ubPath @*/); err != nil {
+		// @ assume 0 <= p.path.GetCurrINF(ubScionPath)
+		// @ sl.SplitRange_Bytes(ub, startScion, endScion, writePerm)
+		// @ ghost defer sl.CombineRange_Bytes(ub, startScion, endScion, writePerm)
+		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubScionPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF) /*@ ) , ubScionPath @*/); err != nil {
 			return serrors.WrapStr("update info field", err)
 		}
 	}
