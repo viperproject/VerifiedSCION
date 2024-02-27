@@ -59,7 +59,7 @@ pure func lengthOfPrevSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) (re
 	return seg1Len > currHF ? 0 : ((seg1Len + seg2Len) > currHF ? seg1Len : seg1Len + seg2Len)
 }
 
-// returns the ASid of a hopfield
+// returns the ASid of the next hopfield
 ghost
 requires 1 <= numINF
 requires 0 <= currHFIdx
@@ -99,18 +99,18 @@ pure func asidsBefore(
 	prevSegLen int,
 	consDir bool,
 	asid io.IO_as) (res option[seq[io.IO_as]]) {
-	return let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, !consDir, asid)) in
+	return currHFIdx == prevSegLen ? some(seq[io.IO_as]{asid}) :
+		let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, !consDir, asid)) in
 		match next_asid{
 			case none[io.IO_as]:
 				none[seq[io.IO_as]]
 			default:
-				currHFIdx == prevSegLen ? some(seq[io.IO_as]{get(next_asid)}) :
 				let next_asid_seq := asidsBefore(dp, raw, numINF, currHFIdx-1, prevSegLen, consDir, get(next_asid)) in
 				match next_asid_seq{
 					case none[seq[io.IO_as]]:
 						none[seq[io.IO_as]]
 					default:
-						some(get(next_asid_seq) ++ seq[io.IO_as]{get(next_asid)})
+						some(get(next_asid_seq) ++ seq[io.IO_as]{asid})
 				}
 		}
 }
@@ -132,18 +132,18 @@ pure func asidsAfter(
 	segLen int,
 	consDir bool,
 	asid io.IO_as) (res option[seq[io.IO_as]]) {
-	return let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, consDir, asid)) in
-		match next_asid{
-			case none[io.IO_as]:
-				none[seq[io.IO_as]]
-			default:
-				currHFIdx == segLen - 1 ? some(seq[io.IO_as]{get(next_asid)}) :
-				let next_asid_seq := asidsAfter(dp, raw, numINF, currHFIdx+1, segLen, consDir, get(next_asid)) in
-				match next_asid_seq{
-					case none[seq[io.IO_as]]:
-						none[seq[io.IO_as]]
-					default:
-						some(seq[io.IO_as]{get(next_asid)} ++ get(next_asid_seq))
+	return  currHFIdx == segLen - 1 ? some(seq[io.IO_as]{asid}) :
+		let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, consDir, asid)) in
+			match next_asid{
+				case none[io.IO_as]:
+					none[seq[io.IO_as]]
+				default:
+					let next_asid_seq := asidsAfter(dp, raw, numINF, currHFIdx+1, segLen, consDir, get(next_asid)) in
+					match next_asid_seq{
+						case none[seq[io.IO_as]]:
+							none[seq[io.IO_as]]
+						default:
+							some(seq[io.IO_as]{asid} ++ get(next_asid_seq))
 				}
 		}
 }
@@ -274,6 +274,8 @@ requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 ensures   len(res) == len(asid) - currHFIdx
 ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
 	len(res[k].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
+	res[k].extr_asid() == asid[k + currHFIdx]
 decreases len(asid) - currHFIdx
 pure func hopFieldsConsDir(
 	raw []byte,
@@ -296,6 +298,8 @@ requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 ensures   len(res) == currHFIdx + 1
 ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
 	len(res[k].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
+	res[k].extr_asid() == asid[k]
 decreases currHFIdx + 1
 pure func hopFieldsNotConsDir(
 	raw []byte,
@@ -307,7 +311,7 @@ pure func hopFieldsNotConsDir(
 	return currHFIdx == -1 ? seq[io.IO_HF]{} :
 		let hf := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in
 			hopField(raw, offset + path.HopLen * currHFIdx, beta, asid[currHFIdx], ainfo)) in
-		hopFieldsNotConsDir(raw, offset, currHFIdx -1, (beta union set[io.IO_msgterm]{hf.HVF}), asid, ainfo) ++ seq[io.IO_HF]{hf}
+		hopFieldsNotConsDir(raw, offset, currHFIdx - 1, (beta union set[io.IO_msgterm]{hf.HVF}), asid, ainfo) ++ seq[io.IO_HF]{hf}
 }
 
 ghost
