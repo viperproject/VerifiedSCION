@@ -641,27 +641,27 @@ pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 		d.dpSpecWellConfiguredLinkTypes(dp)
 }
 
-//TODO add body
+// TODO add body
 ghost 
 requires  0 <= length && length <= len(raw)
 preserves dp.Valid()
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 preserves acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), _)
-ensures validPktMetaHdr(raw[:length]) ==> 
-	absIO_val(dp, raw[:length], ingressID) == absIO_val(dp, raw, ingressID)
-ensures !validPktMetaHdr(raw[:length]) ==> 
+ensures absIO_val(dp, raw[:length], ingressID).isIO_val_Pkt2 ==> 
 	absIO_val(dp, raw[:length], ingressID) == absIO_val(dp, raw, ingressID)
 decreases
 func absIO_valWidenLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16, length int)
 
-
+// TODO remove
 ghost 
 requires dp.Valid()
 requires 0 <= length && length <= len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), 1/1)
+requires absIO_val(dp, raw, ingressID).isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, absIO_val(dp, raw, ingressID).IO_val_Pkt2_1, absIO_val(dp, raw, ingressID).IO_val_Pkt2_2)
 decreases
-func absIO_valWidenLemmaTest(dp io.DataPlaneSpec, raw []byte, ingressID uint16, length int){
+func absIO_valWidenLemmaTest(dp io.DataPlaneSpec, ioSharedArg SharedArg, raw []byte, ingressID uint16, length int){
 	sl.SplitRange_Bytes(raw, 0, length, 1/2)
 	absIO_valWidenLemma(dp, raw, ingressID, length)
-	assert absIO_val(dp, raw[:length], ingressID) == absIO_val(dp, raw, ingressID)
+	sl.SplitRange_Bytes(raw, 0, length, 1/2)
+	assert absIO_val(dp, raw[:length], ingressID).isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, absIO_val(dp, raw[:length], ingressID).IO_val_Pkt2_1, absIO_val(dp, raw[:length], ingressID).IO_val_Pkt2_2)
 }
