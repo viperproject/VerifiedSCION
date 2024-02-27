@@ -1390,8 +1390,8 @@ func (p *scionPacketProcessor) reset() (err error) {
 // contracts for IO-spec
 // @ requires dp.Valid()
 // @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
-// @ requires let absPkt := absIO_val(dp, rawPkt, p.getIngressID) in
-// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.getIngressID), absPkt.IO_val_Pkt2_2)
+// @ requires let absPkt := absIO_val(dp, rawPkt, p.getIngressID()) in
+// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.getIngressID()), absPkt.IO_val_Pkt2_2)
 // @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
 // @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 // @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
