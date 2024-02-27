@@ -100,17 +100,17 @@ pure func asidsBefore(
 	consDir bool,
 	asid io.IO_as) (res option[seq[io.IO_as]]) {
 	return currHFIdx == prevSegLen ? some(seq[io.IO_as]{asid}) :
-		let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, !consDir, asid)) in
-		match next_asid{
+		let nextAsid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, !consDir, asid)) in
+		match nextAsid{
 			case none[io.IO_as]:
 				none[seq[io.IO_as]]
 			default:
-				let next_asid_seq := asidsBefore(dp, raw, numINF, currHFIdx-1, prevSegLen, consDir, get(next_asid)) in
-				match next_asid_seq{
+				let nextAsidSeq := asidsBefore(dp, raw, numINF, currHFIdx-1, prevSegLen, consDir, get(nextAsid)) in
+				match nextAsidSeq{
 					case none[seq[io.IO_as]]:
 						none[seq[io.IO_as]]
 					default:
-						some(get(next_asid_seq) ++ seq[io.IO_as]{asid})
+						some(get(nextAsidSeq) ++ seq[io.IO_as]{asid})
 				}
 		}
 }
@@ -133,17 +133,17 @@ pure func asidsAfter(
 	consDir bool,
 	asid io.IO_as) (res option[seq[io.IO_as]]) {
 	return  currHFIdx == segLen - 1 ? some(seq[io.IO_as]{asid}) :
-		let next_asid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, consDir, asid)) in
-		match next_asid{
+		let nextAsid := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in asidFromIfs(dp, raw, numINF, currHFIdx, consDir, asid)) in
+		match nextAsid{
 			case none[io.IO_as]:
 				none[seq[io.IO_as]]
 			default:
-				let next_asid_seq := asidsAfter(dp, raw, numINF, currHFIdx+1, segLen, consDir, get(next_asid)) in
-				match next_asid_seq{
+				let nextAsidSeq := asidsAfter(dp, raw, numINF, currHFIdx+1, segLen, consDir, get(nextAsid)) in
+				match nextAsidSeq{
 					case none[seq[io.IO_as]]:
 						none[seq[io.IO_as]]
 					default:
-						some(seq[io.IO_as]{asid} ++ get(next_asid_seq))
+						some(seq[io.IO_as]{asid} ++ get(nextAsidSeq))
 				}
 		}
 }
