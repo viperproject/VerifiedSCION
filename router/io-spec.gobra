@@ -17,13 +17,13 @@
 package router
 
 import (
-	sl "github.com/scionproto/scion/verification/utils/slices"
-	"github.com/scionproto/scion/verification/io"
-	"github.com/scionproto/scion/verification/dependencies/encoding/binary"
+	sl "verification/utils/slices"
+	"verification/io"
+	"verification/dependencies/encoding/binary"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	"github.com/scionproto/scion/private/topology"
-	. "github.com/scionproto/scion/verification/utils/definitions"
+	. "verification/utils/definitions"
 )
 
 ghost
