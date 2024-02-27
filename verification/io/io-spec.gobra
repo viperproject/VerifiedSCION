@@ -380,10 +380,4 @@ requires token(t) && CBio_IN_bio3s_exit(t, v)
 ensures  token(old(dp3s_iospec_bio3s_exit_T(t, v))) 
 func Exit(ghost t Place, ghost v IO_val)
 
-ghost
-decreases
-requires token(t) && CBioIO_bio3s_send(t, v)
-ensures  token(old(dp3s_iospec_bio3s_send_T(t, v))) 
-func Send(ghost t Place, ghost v IO_val)
-
 /** End of helper functions to perfrom BIO operations **/
