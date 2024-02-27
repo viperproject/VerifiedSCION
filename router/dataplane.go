@@ -2106,14 +2106,15 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
 	// @ ghost startScionP := p.scionLayer.PathScionStartIdx(ub)
 	// @ ghost endScionP := p.scionLayer.PathScionEndIdx(ub)
-	// @ unfold acc(p.scionLayer.Mem(ub), R4)
-	// @ defer fold acc(p.scionLayer.Mem(ub), R4)
+	// @ unfold acc(p.scionLayer.Mem(ub), R5)
+	// @ defer fold acc(p.scionLayer.Mem(ub), R5)
 	// @ ghost ubPath := ub[startP:endP]
 	// @ ghost ubScionPath := ub[startScionP:endScionP]
 
-	// @ unfold acc(p.scionLayer.Path.Mem(ubPath), R7)
-	// @ defer fold acc(p.scionLayer.Path.Mem(ubPath), R7)
-
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), R5)
+	// @ 	defer fold acc(p.scionLayer.Path.Mem(ubPath), R5)
+	// @ }
 	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, R5)
 	// @ ghost defer sl.CombineRange_Bytes(ub, startScionP, endScionP, R5)
 	// (VerifiedSCION) Gobra cannot prove this property yet, even though it follows
