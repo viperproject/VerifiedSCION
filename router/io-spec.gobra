@@ -538,10 +538,10 @@ pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_
 	return currHFIdx == len(hopfields) ?
 		hvfSet(hopfields[currHFIdx-1]) :
 		(currHFIdx == 0 ?
+			hvfSet(hopfields[currHFIdx]) :
+			(consDir ?
 				hvfSet(hopfields[currHFIdx]) :
-				(consDir ?
-						hvfSet(hopfields[currHFIdx]) :
-						hvfSet(hopfields[currHFIdx-1])))
+				hvfSet(hopfields[currHFIdx-1])))
 }
 
 ghost
@@ -577,7 +577,7 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 ensures val.isIO_val_Unsupported
 ensures val.IO_val_Unsupported_1 == ifsToIO_ifs(ingressID)
 decreases
-pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val){
+pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val) {
 	return io.IO_val(io.IO_val_Unsupported{
 		ifsToIO_ifs(ingressID),
 		io.Unit(io.Unit_{}),
@@ -598,7 +598,7 @@ pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.I
 ghost
 requires acc(&d.localIA, _)
 decreases
-pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool{
+pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool {
 	return io.IO_as(d.localIA) == dp.Asid()
 }
 

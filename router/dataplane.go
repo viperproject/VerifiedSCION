@@ -311,9 +311,6 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 			mac, _ := scrypto.InitMac(key)
 			return mac
 		}
-	// (VerifiedSCION) Gobra cannot currently prove the following assertion, even though it must
-	// follow from the structure of the declaration of `verScionTemp` (https://github.com/viperproject/gobra/issues/713).
-	// @ assume verScionTemp != nil
 	// @ proof verScionTemp implements MacFactorySpec{d.key} {
 	// @   return verScionTemp() as f
 	// @ }
@@ -1393,45 +1390,38 @@ func (p *scionPacketProcessor) reset() (err error) {
 // contracts for IO-spec
 // @ requires dp.Valid()
 // @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
-// @ requires let absPkt := absIO_val(dp, rawPkt, p.ingressID) in
-// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==> acc(sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt)))
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==> newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
-// TODO: We need to prove that whenever we have a valid scion packet we call processSCION
+// @ requires let absPkt := absIO_val(dp, rawPkt, p.getIngressID) in
+// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.getIngressID), absPkt.IO_val_Pkt2_2)
+// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
+// @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
+// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
+// @	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
+// TODO: On a first step, we will prove that whenever we have a valid scion packet in processSCION,
+// the correct "next packet" is computed
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
 
 	if err := p.reset(); err != nil {
-		// @ TODO()
 		// @ fold p.sInitD().validResult(processResult{}, false)
 		return processResult{}, err /*@, false, io.IO_val_Unit{} @*/
 	}
 	// @ assert p.sInitD().getValForwardingMetrics() != nil
-	// @ assert false
 	// @ unfold p.sInit()
-	// @ assert false
 	// @ ghost d := p.d
-	// @ assert false
 	p.rawPkt = rawPkt
 	p.srcAddr = srcAddr
 
 	// parse SCION header and skip extensions;
 	var err error
-	// @ assert false
 	// @ ghost var processed seq[bool]
 	// @ ghost var offsets   seq[offsetPair]
 	// @ ghost var lastLayerIdx int
-	// @ assert false
 	p.lastLayer, err /*@ , processed, offsets, lastLayerIdx @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
-	// @ assert false
 	if err != nil {
-		// @ TODO()
 		// @ fold p.sInit()
 		// @ fold p.sInitD().validResult(processResult{}, false)
 		return processResult{}, err /*@, false, io.IO_val_Unit{} @*/
 	}
-	// @ assert false
 	/*@
 	ghost var ub []byte
 	ghost var ubScionLayer []byte = p.rawPkt
@@ -1473,7 +1463,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	pathType := /*@ unfolding p.scionLayer.Mem(rawPkt) in @*/ p.scionLayer.PathType
 	switch pathType {
 	case empty.PathType:
-		// @ TODO()
 		// @ ghost if mustCombineRanges { ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm) }
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
 			// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
@@ -1490,7 +1479,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		return processResult{}, serrors.WithCtx(unsupportedPathTypeNextHeader,
 			"type", pathType, "header", nextHdr(p.lastLayer /*@, ub @*/)) /*@, false, io.IO_val_Unit{} @*/
 	case onehop.PathType:
-		// @ TODO()
 		if p.lastLayer.NextLayerType( /*@ ub @*/ ) == layers.LayerTypeBFD {
 			// @ ghost if mustCombineRanges { ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm) }
 			// @ ghost defer sl.CombineRange_Bytes(ub, start, end, writePerm)
@@ -1524,7 +1512,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ fold p.sInit()
 		return v1, v2 /*@, aliasesPkt, io.IO_val_Unit{} @*/
 	case scion.PathType:
-		// @ TODO()
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
 		// (VerifiedSCION) Nested if because short-circuiting && is not working
 		// @ ghost if lastLayerIdx >= 0 {
@@ -1700,8 +1687,10 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ requires let absPkt := absIO_val(dp, p.rawPkt, p.ingressID) in
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
 // @ ensures acc(&p.ingressID)
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==> newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
+// @ ensures reserr == nil ==> newAbsPkt.isIO_val_Pkt2 &&
+// @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
+// @ ensures reserr == nil ==> newAbsPkt.isIO_val_Pkt2 &&
+// @	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
 func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
 
 	var ok bool
