@@ -2402,31 +2402,46 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP   := p.scionLayer.PathEndIdx(ub)
 	// @ assert ub[startP:endP] === ubPath
+	// @ ghost ubScionPath := p.scionLayer.UBScionPath(ub)
+	// @ ghost startScionP := p.scionLayer.PathScionStartIdx(ub)
+	// @ ghost endScionP := p.scionLayer.PathScionEndIdx(ub)
 
 	// @ unfold p.scionLayer.Mem(ub)
-	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
-	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	unfold p.scionLayer.Path.Mem(ubPath)
+	// @ }
+	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, writePerm)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startScionP, endScionP, writePerm)
 	// we are the egress router and if we go in construction direction we
 	// need to update the SegID.
 	if p.infoField.ConsDir {
 		p.infoField.UpdateSegID(p.hopField.Mac)
-		// @ assume 0 <= p.path.GetCurrINF(ubPath)
-		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
+		// @ assume 0 <= p.path.GetCurrINF(ubScionPath)
+		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubScionPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF /*@ ) @*/) /*@ , ubScionPath @*/); err != nil {
 			// TODO parameter problem invalid path
-			// @ p.path.DowngradePerm(ubPath)
+			// @ p.path.DowngradePerm(ubScionPath)
+			// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+			// @ 	fold p.scionLayer.Path.NonInitMem()
+			// @ }
 			// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
 			// @ unfold p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:])
 			// @ fold p.scionLayer.NonInitMem()
 			return serrors.WrapStr("update info field", err)
 		}
 	}
-	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
+	if err := p.path.IncPath( /*@ ubScionPath @*/ ); err != nil {
+		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+		// @ 	fold p.scionLayer.Path.NonInitMem()
+		// @ }
 		// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
 		// @ unfold p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:])
 		// @ fold p.scionLayer.NonInitMem()
 		// TODO parameter problem invalid path
 		return serrors.WrapStr("incrementing path", err)
 	}
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	fold p.scionLayer.Path.Mem(ubPath)
+	// @ }
 	// @ fold p.scionLayer.Mem(ub)
 	return nil
 }
