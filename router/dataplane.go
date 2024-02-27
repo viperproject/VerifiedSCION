@@ -1691,6 +1691,7 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 	return p.process( /*@ ub, llIsNil, startLL, endLL @*/ )
 }
 
+// @ trusted // TODO: drop
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires  acc(&p.d, R5) && acc(p.d.Mem(), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
@@ -2078,11 +2079,15 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ requires  acc(&p.ingressID, R20)
 // @ requires  acc(&p.infoField, R4) && acc(&p.hopField, R4)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
+// @	let ubScionPath := p.scionLayer.UBScionPath(ub) in
 // @	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @	p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @	unfolding acc(p.scionLayer.Path.Mem(ubPath), R50) in
+// @	p.path.GetCurrHF(ubScionPath) <= p.path.GetNumHops(ubScionPath)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
+// @	let ubScionPath := p.scionLayer.UBScionPath(ub) in
 // @	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @	p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
+// @	unfolding acc(p.scionLayer.Path.Mem(ubPath), R50) in
+// @	p.path.GetCurrINF(ubScionPath) <= p.path.GetNumINF(ubScionPath)
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires  acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R4)
@@ -2099,20 +2104,27 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
+	// @ ghost startScionP := p.scionLayer.PathScionStartIdx(ub)
+	// @ ghost endScionP := p.scionLayer.PathScionEndIdx(ub)
 	// @ unfold acc(p.scionLayer.Mem(ub), R4)
 	// @ defer fold acc(p.scionLayer.Mem(ub), R4)
 	// @ ghost ubPath := ub[startP:endP]
-	// @ sl.SplitRange_Bytes(ub, startP, endP, R5)
-	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R5)
+	// @ ghost ubScionPath := ub[startScionP:endScionP]
+
+	// @ unfold acc(p.scionLayer.Path.Mem(ubPath), R7)
+	// @ defer fold acc(p.scionLayer.Path.Mem(ubPath), R7)
+
+	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, R5)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startScionP, endScionP, R5)
 	// (VerifiedSCION) Gobra cannot prove this property yet, even though it follows
 	// from the type system
-	// @ assume 0 <= p.path.GetCurrHF(ubPath) // TODO: drop assumptions like this
-	if p.path.IsFirstHop( /*@ ubPath @*/ ) || p.ingressID != 0 {
+	// @ assume 0 <= p.path.GetCurrHF(ubScionPath) // TODO: drop assumptions like this
+	if p.path.IsFirstHop( /*@ ubScionPath @*/ ) || p.ingressID != 0 {
 		// not a transit packet, nothing to check
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, nil
 	}
-	pktIngressID := p.ingressInterface( /*@ ubPath @*/ )
+	pktIngressID := p.ingressInterface( /*@ ubScionPath @*/ )
 	// @ p.d.getInternalNextHops()
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	expectedSrc, ok := p.d.internalNextHops[pktIngressID]
