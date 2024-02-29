@@ -107,13 +107,19 @@ func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) (err err
 // If the same buffer is provided in subsequent calls to this function, the previously returned
 // EPIC MAC may get overwritten. Only the most recently returned EPIC MAC is guaranteed to be
 // valid.
-// @ trusted
-// @ requires Uncallable()
+// @ requires  len(auth) == 16
+// @ preserves acc(s.Mem(ub), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(auth, 0, len(auth)), R30)
+// @ preserves sl.AbsSlice_Bytes(buffer, 0, len(buffer))
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ decreases
 func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
-	timestamp uint32, buffer []byte) ([]byte, error) {
+	timestamp uint32, buffer []byte /*@ , ghost ub []byte @*/) (res []byte, reserr error) {
 
 	if len(buffer) < MACBufferSize {
 		buffer = make([]byte, MACBufferSize)
+		// @ fold sl.AbsSlice_Bytes(buffer, 0, len(buffer))
 	}
 
 	// Initialize cryptographic MAC function
@@ -122,10 +128,11 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 		return nil, err
 	}
 	// Prepare the input for the MAC function
-	inputLength, err := prepareMacInput(pktID, s, timestamp, buffer)
+	inputLength, err := prepareMacInput(pktID, s, timestamp, buffer /*@, ub @*/)
 	if err != nil {
 		return nil, err
 	}
+	// (VerifiedSCION) continues here
 	// Calculate Epic MAC = first 4 bytes of the last CBC block
 	input := buffer[:inputLength]
 	f.CryptBlocks(input, input)
@@ -174,7 +181,7 @@ func CoreFromPktCounter(counter uint32) (uint8, uint32) {
 
 // @ requires  len(key) == 16
 // @ preserves acc(sl.AbsSlice_Bytes(key, 0, len(key)), R50)
-// @ ensures   reserr == nil ==> res.Mem()
+// @ ensures   reserr == nil ==> res != nil && res.Mem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
@@ -194,6 +201,7 @@ func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 // @ preserves acc(s.Mem(ub), R20)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
 // @ preserves sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
+// @ ensures   reserr == nil ==> 0 <= res && res <= len(inputBuffer)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
