@@ -1523,6 +1523,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		v1, v2 /*@ , addrAliasesPkt @*/ := p.processEPIC( /*@ p.rawPkt, ub == nil, llStart, llEnd @*/ )
+		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, v2 == nil, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
 		return v1, v2 /*@, addrAliasesPkt @*/
 	default:
@@ -1763,8 +1764,8 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 	if err != nil {
 		return result, err /*@ , addrAliases @*/
 	}
-
 	// @ assume false
+
 	if isPenultimate || isLast {
 		firstInfo, err := p.path.GetInfoField(0 /*@ , ubPath[epic.MetadataLen:] @*/)
 		if err != nil {
