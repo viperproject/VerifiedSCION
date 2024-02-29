@@ -201,7 +201,7 @@ func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 // @ preserves acc(s.Mem(ub), R20)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
 // @ preserves sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
-// @ ensures   reserr == nil ==> 0 <= res && res <= len(inputBuffer)
+// @ ensures   reserr == nil ==> 16 <= res && res <= len(inputBuffer)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
