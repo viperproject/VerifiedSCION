@@ -1734,7 +1734,9 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 	epicPath, ok := p.scionLayer.Path.(*epic.Path)
 	if !ok {
 		// @ fold acc(p.scionLayer.Mem(ub), R10)
+		// @ p.scionLayer.DowngradePerm(ub)
 		// @ establishMemMalformedPath()
+		// @ fold p.d.validResult(respr, false)
 		return processResult{}, malformedPath /*@ , false @*/
 	}
 
@@ -1746,7 +1748,9 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 	if p.path == nil {
 		// @ fold acc(epicPath.Mem(ubPath), R10)
 		// @ fold acc(p.scionLayer.Mem(ub), R10)
+		// @ p.scionLayer.DowngradePerm(ub)
 		// @ establishMemMalformedPath()
+		// @ fold p.d.validResult(respr, false)
 		return processResult{}, malformedPath /*@ , false @*/
 	}
 
@@ -1764,12 +1768,15 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 	if isPenultimate || isLast {
 		firstInfo, err := p.path.GetInfoField(0 /*@ , ubPath[epic.MetadataLen:] @*/)
 		if err != nil {
+			// @ p.scionLayer.DowngradePerm(ub)
+			// @ fold p.d.validResult(respr, false)
 			return processResult{}, err /*@ , false @*/
 		}
 
 		timestamp := time.Unix(int64(firstInfo.Timestamp), 0)
 		err = libepic.VerifyTimestamp(timestamp, epicPath.PktID.Timestamp, time.Now())
 		if err != nil {
+			// @ p.scionLayer.DowngradePerm(ub)
 			// TODO(mawyss): Send back SCMP packet
 			return processResult{}, err /*@ , false @*/
 		}
@@ -1781,6 +1788,7 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 		err = libepic.VerifyHVF(p.cachedMac, epicPath.PktID,
 			&p.scionLayer, firstInfo.Timestamp, HVF, p.macBuffers.epicInput)
 		if err != nil {
+			// @ p.scionLayer.DowngradePerm(ub)
 			// TODO(mawyss): Send back SCMP packet
 			return processResult{}, err /*@ , false @*/
 		}
