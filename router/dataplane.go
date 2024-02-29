@@ -137,7 +137,7 @@ type BatchConn interface {
 	// @ ensures  io.token(old(MultiReadBioNext(place, prophecyM)))
 	// @ ensures  old(MultiReadBioCorrectIfs(place, prophecyM, ifsToIO_ifs(ingressID)))
 	// @ ensures  err == nil ==>
-	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
+	// @	forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < n ==>
 	// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
 	// @    old(MultiReadBioIO_val(place, n)[i])
 	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
@@ -892,6 +892,9 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
 				// @ ghost *ioSharedArg.State = sN
 				// @ ghost *ioSharedArg.Place = tN
+				// @ assert err == nil ==>
+				// @	forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < pkts ==>
+				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
 				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
 				// @ fold SharedInv!< dp, ioSharedArg !>()
 				// @ ioLock.Unlock()
@@ -913,6 +916,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ 	!msgs[i].HasWildcardPermAddr()
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
+				// @ assert forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < pkts ==>
+				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
 
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
@@ -945,18 +950,18 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
 				// @ invariant ioIngressID == ifsToIO_ifs(ingressID)
 				// @ invariant acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
-				// @ invariant forall i int :: { msgs[i].Buffers[0] } { ioValSeq[i] } i0 <= i && i < pkts ==>
+				// @ invariant forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } i0 <= i && i < pkts ==>
 				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
 				// @ invariant MultiElemWitnessWithIndex(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ preserves 0 <= i0 && i0 < pkts && pkts <= len(msgs)
-					// @ preserves acc(msgs[i0].Mem(), R2)
+					// @ preserves acc(msgs[i0].Mem(), R1)
 					// @ ensures   p === msgs[:pkts][i0].GetMessage()
 					// @ outline(
-					// @ unfold acc(msgs[i0].Mem(), R2)
+					// @ unfold acc(msgs[i0].Mem(), R1)
 					p := msgs[:pkts][i0]
-					// @ fold acc(msgs[i0].Mem(), R2)
+					// @ fold acc(msgs[i0].Mem(), R1)
 					// @ )
 					// @ assert msgs[i0].GetN() <= len(msgs[i0].GetFstBuffer())
 					// @ d.getForwardingMetricsMem(ingressID)
@@ -1443,6 +1448,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires let absPkt := absIO_val(dp, rawPkt, p.getIngressID()) in
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.getIngressID()), absPkt.IO_val_Pkt2_2)
 // @ ensures dp.Valid()
+// @ ensures reserr == nil ==> respr.OutPkt != nil
 // @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
 // @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 // @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
