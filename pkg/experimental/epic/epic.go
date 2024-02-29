@@ -172,11 +172,8 @@ func CoreFromPktCounter(counter uint32) (uint8, uint32) {
 	return coreID, coreCounter
 }
 
-// (VerifiedSCION) The following verifies if we remove `Uncallable()“
-// from the precondition, but it seems to suffer from perf. problems.
-// @ requires  Uncallable()
 // @ requires  len(key) == 16
-// @ requires  sl.AbsSlice_Bytes(key, 0, len(key))
+// @ preserves acc(sl.AbsSlice_Bytes(key, 0, len(key)), R50)
 // @ ensures   reserr == nil ==> res.Mem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
@@ -193,9 +190,6 @@ func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 	return mode, nil
 }
 
-// (VerifiedSCION) This function is mostly verified, but needs to be revisited before
-// dropping the precondition `Uncallable()`.
-// @ requires  Uncallable()
 // @ requires  MACBufferSize <= len(inputBuffer)
 // @ preserves acc(s.Mem(ub), R20)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
@@ -230,6 +224,10 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 
 	// Calculate a multiple of 16 such that the input fits in
 	nrBlocks := int(math.Ceil((float64(23) + float64(l)) / float64(16)))
+	// (VerifiedSCION) The following assumptions cannot be currently proven due to Gobra's incomplete
+	// support for floats.
+	// @ assume 23 + l <= nrBlocks * 16
+	// @ assume nrBlocks * 16 <= 23 + l + 16
 	inputLength := 16 * nrBlocks
 
 	// Fill input
@@ -263,9 +261,24 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
 	binary.BigEndian.PutUint16(inputBuffer[offset:], s.PayloadLen)
 	offset += 2
+	// @ assert offset == 23 + l
+	// @ assert offset <= inputLength
+	// @ assert inputLength <= len(inputBuffer)
 	// @ assert forall i int :: { &inputBuffer[offset:inputLength][i] } 0 <= i && i < len(inputBuffer[offset:inputLength]) ==>
 	// @ 	&inputBuffer[offset:inputLength][i] == &inputBuffer[offset+i]
-	copy(inputBuffer[offset:inputLength], zeroInitVector[:] /*@ , R20 @*/)
+	// @ assert forall i int :: { &inputBuffer[offset:inputLength][i] } 0 <= i && i < len(inputBuffer[offset:inputLength]) ==>
+	// @ 	acc(&inputBuffer[offset:inputLength][i])
+	// @ establishPostInitInvariant()
+	// @ unfold acc(postInitInvariant(), _)
+	// @ assert acc(sl.AbsSlice_Bytes(zeroInitVector[:], 0, 16), _)
+	// (VerifiedSCION) From the package invariant, we learn that we have a wildcard access to zeroInitVector.
+	// Unfortunately, it is not possible to call `copy` with a wildcard amount, even though
+	// that would be perfectly fine. The spec of `copy` would need to be adapted to allow for that case.
+	// @ inhale acc(sl.AbsSlice_Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), R55)
+	// @ unfold acc(sl.AbsSlice_Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), R55)
+	// @ assert forall i int :: { &zeroInitVector[:][i] } 0 <= i && i < len(zeroInitVector[:]) ==>
+	// @ 	&zeroInitVector[:][i] == &zeroInitVector[i]
+	copy(inputBuffer[offset:inputLength], zeroInitVector[:] /*@ , R55 @*/)
 	// @ fold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
 	return inputLength, nil
 }

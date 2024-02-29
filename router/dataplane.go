@@ -1691,7 +1691,6 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 	return p.process( /*@ ub, llIsNil, startLL, endLL @*/ )
 }
 
-// @ trusted // TODO: drop
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires  acc(&p.d, R5) && acc(p.d.Mem(), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
@@ -2009,11 +2008,16 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 // @ decreases
 func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ ) (respr processResult, reserr error) {
 	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
+	// @ ghost ubScionPath := p.scionLayer.UBScionPath(ubScionL)
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), R20)
 	// @ defer fold acc(p.scionLayer.Mem(ubScionL), R20)
 	// @ unfold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), R20)
 	// @ defer fold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), R20)
 	// @ p.d.getLocalIA()
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), R20)
+	// @ 	defer fold acc(p.scionLayer.Path.Mem(ubPath), R20)
+	// @ }
 	srcIsLocal := (p.scionLayer.SrcIA == p.d.localIA)
 	dstIsLocal := (p.scionLayer.DstIA == p.d.localIA)
 	if p.ingressID == 0 {
@@ -2021,7 +2025,7 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 		// Only check SrcIA if first hop, for transit this already checked by ingress router.
 		// Note: SCMP error messages triggered by the sibling router may use paths that
 		// don't start with the first hop.
-		if p.path.IsFirstHop( /*@ ubPath @*/ ) && !srcIsLocal {
+		if p.path.IsFirstHop( /*@ ubScionPath @*/ ) && !srcIsLocal {
 			// @ TODO() // depends on packSCMP
 			return p.invalidSrcIA()
 		}
@@ -2035,7 +2039,7 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 			// @ TODO() // depends on packSCMP
 			return p.invalidSrcIA()
 		}
-		if p.path.IsLastHop( /*@ ubPath @*/ ) != dstIsLocal {
+		if p.path.IsLastHop( /*@ ubScionPath @*/ ) != dstIsLocal {
 			// @ TODO() // depends on packSCMP
 			return p.invalidDstIA()
 		}

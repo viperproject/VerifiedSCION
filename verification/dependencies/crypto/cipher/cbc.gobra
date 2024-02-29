@@ -21,10 +21,10 @@ import "github.com/scionproto/scion/verification/utils/slices"
 // mode, using the given Block. The length of iv must be the same as the
 // Block's block size.
 trusted
-requires b != nil && b.Mem()
-requires len(iv) == b.BlockSize()
-requires slices.AbsSlice_Bytes(iv, 0, len(iv))
-ensures  result.Mem()
+requires  b != nil && b.Mem()
+requires  len(iv) == b.BlockSize()
+preserves acc(slices.AbsSlice_Bytes(iv, 0, len(iv)), _)
+ensures   result.Mem()
 decreases _
 func NewCBCEncrypter(b Block, iv []byte) (result BlockMode) {
 	if len(iv) != b.BlockSize() {

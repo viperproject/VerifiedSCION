@@ -10,6 +10,7 @@ package aes
 
 import "crypto/cipher"
 import "github.com/scionproto/scion/verification/utils/slices"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 
 // The AES block size in bytes.
 const BlockSize = 16
@@ -20,7 +21,7 @@ const BlockSize = 16
 // AES-128, AES-192, or AES-256.
 trusted
 requires  len(key) == 16 || len(key) == 24 || len(key) == 32
-preserves slices.AbsSlice_Bytes(key, 0, len(key))
+preserves acc(slices.AbsSlice_Bytes(key, 0, len(key)), R50)
 ensures   err == nil ==>
 	(result != nil && result.Mem() && result.BlockSize() == len(key))
 ensures   err != nil ==> err.ErrorMem()
