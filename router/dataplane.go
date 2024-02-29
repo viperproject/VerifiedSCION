@@ -1764,7 +1764,7 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 	if err != nil {
 		return result, err /*@ , addrAliases @*/
 	}
-	// @ assume false
+	// @ TODO()
 
 	if isPenultimate || isLast {
 		firstInfo, err := p.path.GetInfoField(0 /*@ , ubPath[epic.MetadataLen:] @*/)
@@ -2883,7 +2883,6 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures   acc(&p.path, R10)
 // @ ensures   acc(&p.rawPkt, R1)
 // @ ensures   acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), 1 - R15)
-// @ ensures   p.path == p.scionLayer.GetScionPath(ub)
 // @ ensures   p.d.validResult(respr, addrAliasesPkt)
 // @ ensures   addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
@@ -2892,6 +2891,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures   respr.OutPkt !== ub && respr.OutPkt != nil ==>
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
+// @ ensures   reserr == nil ==> p.path == p.scionLayer.GetScionPath(ub)
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error /*@, addrAliasesPkt bool @*/) {
