@@ -128,12 +128,30 @@ pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif 
 		let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in
-		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) && 
+		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), hf1) &&
 		(nextif in domain(dp.GetNeighborIAs())) &&
 		let a2 := dp.GetNeighborIA(nextif) in
 		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
 		dp.is_target(dp.Asid(), nextif, a2, i2)
 }
+
+ghost
+requires len(m.CurrSeg.Future) > 0
+requires dp.Valid()
+decreases
+pure func (dp DataPlaneSpec) dp3s_forward_ext_xover(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
+	return let _ := reveal dp.Valid() in
+		let currseg := m.CurrSeg in
+		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
+		let traversedseg := newpkt.CurrSeg in
+		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		(nextif in domain(dp.GetNeighborIAs())) &&
+		let a2 := dp.GetNeighborIA(nextif) in
+		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
+		dp.is_target(dp.Asid(), nextif, a2, i2)
+}
+
 
 // TODO: should we change IO_ifs to being implemented as an option type?
 ghost
@@ -146,6 +164,19 @@ pure func (dp DataPlaneSpec) dp3s_forward(m IO_pkt3, newpkt IO_pkt3, nextif opti
 			newpkt == m
 		default: 
 			dp.dp3s_forward_ext(m, newpkt, get(nextif))
+	}
+}
+
+ghost
+requires len(m.CurrSeg.Future) > 0
+requires dp.Valid()
+decreases
+pure func (dp DataPlaneSpec) dp3s_forward_xover(m IO_pkt3, newpkt IO_pkt3, nextif option[IO_ifs]) bool {
+	return match nextif {
+		case none[IO_ifs]: 
+			newpkt == m
+		default: 
+			dp.dp3s_forward_ext_xover(m, newpkt, get(nextif))
 	}
 }
 
@@ -171,5 +202,5 @@ pure func (dp DataPlaneSpec) dp3s_xover_common(
 		return some(recvif) in domain(s.ibuf) &&
 			(let lookupRes := s.ibuf[some(recvif)] in (m in lookupRes)) &&
 			dp.dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, dp.Asid(), recvif) &&
-			dp.dp3s_forward(intermediatepkt, newpkt, nextif)
+			dp.dp3s_forward_xover(intermediatepkt, newpkt, nextif)
 }
