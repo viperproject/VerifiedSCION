@@ -25,6 +25,7 @@ requires  b != nil && b.Mem()
 requires  len(iv) == b.BlockSize()
 preserves acc(slices.AbsSlice_Bytes(iv, 0, len(iv)), _)
 ensures   result != nil && result.Mem()
+ensures   result.BlockSize() == old(b.BlockSize())
 decreases _
 func NewCBCEncrypter(b Block, iv []byte) (result BlockMode) {
 	if len(iv) != b.BlockSize() {

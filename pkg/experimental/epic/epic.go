@@ -108,11 +108,15 @@ func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) (err err
 // EPIC MAC may get overwritten. Only the most recently returned EPIC MAC is guaranteed to be
 // valid.
 // @ requires  len(auth) == 16
+// @ requires  sl.AbsSlice_Bytes(buffer, 0, len(buffer))
 // @ preserves acc(s.Mem(ub), R20)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
 // @ preserves acc(sl.AbsSlice_Bytes(auth, 0, len(auth)), R30)
-// @ preserves sl.AbsSlice_Bytes(buffer, 0, len(buffer))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ ensures   reserr != nil ==> sl.AbsSlice_Bytes(buffer, 0, len(buffer))
+// @ ensures   reserr == nil ==>
+// @ 	sl.AbsSlice_Bytes(res, 0, len(res)) &&
+// @ 	(sl.AbsSlice_Bytes(res, 0, len(res)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer)))
 // @ decreases
 func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	timestamp uint32, buffer []byte /*@ , ghost ub []byte @*/) (res []byte, reserr error) {
@@ -132,11 +136,22 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	if err != nil {
 		return nil, err
 	}
-	// (VerifiedSCION) continues here
+	// @ assert 16 <= inputLength
+	// @ assert f.BlockSize() == 16
 	// Calculate Epic MAC = first 4 bytes of the last CBC block
+	// @ sl.SplitRange_Bytes(buffer, 0, inputLength, writePerm)
 	input := buffer[:inputLength]
 	f.CryptBlocks(input, input)
-	return input[len(input)-f.BlockSize() : len(input)-f.BlockSize()+4], nil
+	// @ ghost start := len(input)-f.BlockSize()
+	// @ ghost end   := start + 4
+	result := input[len(input)-f.BlockSize() : len(input)-f.BlockSize()+4]
+	// @ sl.SplitRange_Bytes(input, start, end, writePerm)
+	// @ package (sl.AbsSlice_Bytes(result, 0, len(result)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer))) {
+	// @ 	sl.CombineRange_Bytes(input, start, end, writePerm)
+	// @ 	sl.CombineRange_Bytes(buffer, 0, inputLength, writePerm)
+	// @ }
+	// @ assert (sl.AbsSlice_Bytes(result, 0, len(result)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer)))
+	return result, nil
 }
 
 // VerifyHVF verifies the correctness of the HVF (PHVF or the LHVF) field in the EPIC packet by
@@ -181,7 +196,7 @@ func CoreFromPktCounter(counter uint32) (uint8, uint32) {
 
 // @ requires  len(key) == 16
 // @ preserves acc(sl.AbsSlice_Bytes(key, 0, len(key)), R50)
-// @ ensures   reserr == nil ==> res != nil && res.Mem()
+// @ ensures   reserr == nil ==> res != nil && res.Mem() && res.BlockSize() == 16
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
