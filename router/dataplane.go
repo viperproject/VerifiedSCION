@@ -1778,6 +1778,7 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 		err = libepic.VerifyTimestamp(timestamp, epicPath.PktID.Timestamp, time.Now())
 		if err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
+			// @ fold p.d.validResult(respr, false)
 			// TODO(mawyss): Send back SCMP packet
 			return processResult{}, err /*@ , false @*/
 		}
