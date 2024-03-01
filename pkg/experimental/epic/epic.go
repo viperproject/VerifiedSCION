@@ -107,16 +107,19 @@ func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) (err err
 // If the same buffer is provided in subsequent calls to this function, the previously returned
 // EPIC MAC may get overwritten. Only the most recently returned EPIC MAC is guaranteed to be
 // valid.
+// (VerifiedSCION) the following function is marked as trusted, even though it is verified,
+// due to an incompletness of Gobra that keeps it from being able to prove that we have
+// the magic wand at the end of a successful run.
+// @ trusted
 // @ requires  len(auth) == 16
 // @ requires  sl.AbsSlice_Bytes(buffer, 0, len(buffer))
 // @ preserves acc(s.Mem(ub), R20)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
 // @ preserves acc(sl.AbsSlice_Bytes(auth, 0, len(auth)), R30)
+// @ ensures   reserr == nil ==> sl.AbsSlice_Bytes(res, 0, len(res))
+// @ ensures   reserr == nil ==> (sl.AbsSlice_Bytes(res, 0, len(res)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer)))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr != nil ==> sl.AbsSlice_Bytes(buffer, 0, len(buffer))
-// @ ensures   reserr == nil ==>
-// @ 	sl.AbsSlice_Bytes(res, 0, len(res)) &&
-// @ 	(sl.AbsSlice_Bytes(res, 0, len(res)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer)))
 // @ decreases
 func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	timestamp uint32, buffer []byte /*@ , ghost ub []byte @*/) (res []byte, reserr error) {
@@ -159,24 +162,31 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 // bytes of the SCION path type MAC, has invalid length, or if the MAC calculation gives an error,
 // also VerifyHVF returns an error. The verification was successful if and only if VerifyHVF
 // returns nil.
-// @ trusted
-// @ requires Uncallable()
+// @ preserves sl.AbsSlice_Bytes(buffer, 0, len(buffer))
+// @ preserves acc(s.Mem(ub), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(hvf, 0, len(hvf)), R50)
+// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(auth, 0, len(auth)), R30)
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ decreases
 func VerifyHVF(auth []byte, pktID epic.PktID, s *slayers.SCION,
-	timestamp uint32, hvf []byte, buffer []byte) error {
+	timestamp uint32, hvf []byte, buffer []byte /*@ , ghost ub []byte @*/) (reserr error) {
 
 	if s == nil || len(auth) != AuthLen {
 		return serrors.New("invalid input")
 	}
 
-	mac, err := CalcMac(auth, pktID, s, timestamp, buffer)
+	mac, err := CalcMac(auth, pktID, s, timestamp, buffer /*@ , ub @*/)
 	if err != nil {
 		return err
 	}
 
 	if subtle.ConstantTimeCompare(hvf, mac) == 0 {
+		// @ apply sl.AbsSlice_Bytes(mac, 0, len(mac)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer))
 		return serrors.New("epic hop validation field verification failed",
 			"hvf in packet", hvf, "calculated mac", mac, "auth", auth)
 	}
+	// @ apply sl.AbsSlice_Bytes(mac, 0, len(mac)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer))
 	return nil
 }
 

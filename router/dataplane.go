@@ -1787,7 +1787,7 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 			HVF = epicPath.LHVF
 		}
 		err = libepic.VerifyHVF(p.cachedMac, epicPath.PktID,
-			&p.scionLayer, firstInfo.Timestamp, HVF, p.macBuffers.epicInput)
+			&p.scionLayer, firstInfo.Timestamp, HVF, p.macBuffers.epicInput /*@ , ub @*/)
 		if err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			// TODO(mawyss): Send back SCMP packet
