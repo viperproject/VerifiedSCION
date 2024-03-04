@@ -100,6 +100,7 @@ pure func MultiReadBioCorrectIfs(
 
 
 ghost
+opaque
 requires 0 <= expectedPkts && MultiReadBio(t, expectedPkts)
 ensures len(res) == expectedPkts
 decreases expectedPkts

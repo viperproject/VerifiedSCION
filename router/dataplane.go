@@ -137,9 +137,9 @@ type BatchConn interface {
 	// @ ensures  io.token(old(MultiReadBioNext(place, prophecyM)))
 	// @ ensures  old(MultiReadBioCorrectIfs(place, prophecyM, ifsToIO_ifs(ingressID)))
 	// @ ensures  err == nil ==>
-	// @	forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < n ==>
-	// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
-	// @    old(MultiReadBioIO_val(place, n)[i])
+	// @ 	forall i int :: { &msgs[i].Buffers[0] }{ MultiReadBioIO_val(place, n)[i] } 0 <= i && i < n ==>
+	// @ 		unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
+	// @ 			old(MultiReadBioIO_val(place, n)[i])
 	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
@@ -884,17 +884,30 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ ghost numberOfReceivedPacketsProphecy := AllocProphecy()
 				// @ ExtractMultiReadBio(dp, t, numberOfReceivedPacketsProphecy, s)
 				// @ MultiUpdateElemWitness(t, numberOfReceivedPacketsProphecy, ioIngressID, s, ioSharedArg)
-				// @ ghost ioValSeq := MultiReadBioIO_val(t,numberOfReceivedPacketsProphecy)
+				// @ ghost ioValSeq := MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)
 
 				// @ ghost sN := MultiReadBioUpd(t, numberOfReceivedPacketsProphecy, s)
 				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
 				// @ assert dp.dp3s_iospec_ordered(sN, tN)
+				// @ BeforeReadBatch:
 				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
+				// @ assert err == nil ==>
+				// @	forall i int :: { &msgs[i].Buffers[0] } 0 <= i && i < pkts ==>
+				// @	ioValSeq[i] == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
+				// @ assert err == nil ==>
+				// @	forall i int :: { &msgs[i].Buffers[0] } 0 <= i && i < pkts ==>
+				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
+				//  assert err == nil ==>
+				// 	forall i int :: { &msgs[i].Buffers[0] } 0 <= i && i < pkts ==>
+				// 	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
 				// @ ghost *ioSharedArg.State = sN
 				// @ ghost *ioSharedArg.Place = tN
 				// @ assert err == nil ==>
-				// @	forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < pkts ==>
-				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
+				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> acc(msgs[i].Mem(), _)
+				// @ assert old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)) == ioValSeq
+				// @ assert err == nil ==>
+				// @	forall i int :: { &msgs[i].Buffers[0] } 0 <= i && i < pkts ==>
+				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
 				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
 				// @ fold SharedInv!< dp, ioSharedArg !>()
 				// @ ioLock.Unlock()
