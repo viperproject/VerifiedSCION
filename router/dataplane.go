@@ -1827,35 +1827,54 @@ func (p *scionPacketProcessor) packSCMP(
 	// @ ghost startLL int,
 	// @ ghost endLL int,
 ) (respr processResult, reserr error) {
+	// @ ghost llIsScmp := false
+	// @ ghost scmpPldIsNil := false
+	// @ ghost maybeStartPld := 0
+	// @ ghost maybeEndPld := 0
 	// check invoking packet was an SCMP error:
 	if p.lastLayer.NextLayerType( /*@ ubLL @*/ ) == slayers.LayerTypeSCMP {
+		// @ llIsScmp = true
 		var scmpLayer /*@@@*/ slayers.SCMP
 		// @ fold scmpLayer.NonInitMem()
 		pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ubLL @*/ )
 		/*@
 		sl.SplitRange_Bytes(ub, startLL, endLL, writePerm)
-		ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
+		maybeStartPld = start
+		maybeEndPld = end
 		if pld == nil {
+			scmpPldIsNil = true
 			fold sl.AbsSlice_Bytes(nil, 0, 0)
 		} else {
 			sl.SplitRange_Bytes(ubLL, start, end, writePerm)
-			ghost defer sl.CombineRange_Bytes(ubLL, start, end, writePerm)
 		}
 		@*/
 		// @ gopacket.AssertInvariantNilDecodeFeedback()
 		err := scmpLayer.DecodeFromBytes(pld, gopacket.NilDecodeFeedback)
 		if err != nil {
-			// @ fold p.d.validResult(respr, false)
+			// @ ghost if !scmpPldIsNil { sl.CombineRange_Bytes(ubLL, start, end, writePerm) }
+			// @ sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
+			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, serrors.WrapStr("decoding SCMP layer", err)
 		}
 		if /*@ unfolding scmpLayer.Mem(pld) in @*/ !scmpLayer.TypeCode.InfoMsg() {
-			// @ fold p.d.validResult(respr, false)
+			// @ ghost if !scmpPldIsNil { sl.CombineRange_Bytes(ubLL, start, end, writePerm) }
+			// @ sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
+			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, serrors.WrapStr("SCMP error for SCMP error pkt -> DROP", cause)
 		}
 	}
 
-	// @ assume false
-	rawSCMP, err := p.prepareSCMP(typ, code, scmpP, cause /*@ , nil @*/)
+	/*@
+	ghost if llIsScmp {
+		ghost if !scmpPldIsNil {
+			sl.CombineRange_Bytes(ubLL, maybeStartPld, maybeEndPld, writePerm)
+		}
+		sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
+	}
+	@*/
+	rawSCMP, err := p.prepareSCMP(typ, code, scmpP, cause /*@ , ub @*/)
+	// @ ghost result := processResult{OutPkt: rawSCMP}
+	// @ fold p.d.validResult(result, false)
 	return processResult{OutPkt: rawSCMP}, err
 }
 
@@ -1922,6 +1941,7 @@ func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr 
 		// @ fold p.d.validResult(respr, false)
 		return processResult{}, nil
 	}
+	// @ TODO()
 	// TODO: drop; note that packSCMP always returns an empty addr and conn and
 	// when the err is nil, it returns the bytes of p.buffer. This should be a magic wand
 	// that is consumed after sending the reply. For now, we are making this simplifying
@@ -1962,6 +1982,7 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 		errCode = slayers.SCMPCodeUnknownHopFieldEgress
 	}
 	if p.ingressID != 0 && p.ingressID != pktIngressID {
+		// @ TODO()
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			errCode,
@@ -2135,6 +2156,7 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 		if !p.infoField.ConsDir {
 			errCode = slayers.SCMPCodeUnknownHopFieldIngress
 		}
+		// @ TODO()
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			errCode,
@@ -2163,6 +2185,7 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 			// @ fold p.d.validResult(respr, false)
 			return processResult{}, nil
 		default: // malicious
+			// @ TODO()
 			return p.packSCMP(
 				slayers.SCMPTypeParameterProblem,
 				slayers.SCMPCodeInvalidPath, // XXX(matzf) new code InvalidHop?
@@ -2185,6 +2208,7 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 		// @ fold p.d.validResult(respr, false)
 		return processResult{}, nil
 	default:
+		// @ TODO()
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidSegmentChange,
@@ -2290,6 +2314,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 	// @ sl.SplitRange_Bytes(fullMac, 0, path.MacLen, R20)
 	// @ ghost defer sl.CombineRange_Bytes(fullMac, 0, path.MacLen, R20)
 	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen]) == 0 {
+		// @ TODO()
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidHopFieldMAC,
@@ -2337,6 +2362,7 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (
 		// @ ghost if addrAliases {
 		// @ 	apply acc(a.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R15)
 		// @ }
+		// @ TODO()
 		r, err := p.packSCMP(
 			slayers.SCMPTypeDestinationUnreachable,
 			slayers.SCMPCodeNoRoute,
@@ -2511,6 +2537,7 @@ func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr e
 					Egress:  uint64(egressID),
 				}
 			}
+			// @ TODO()
 			return p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down") /*@,  nil , nil, 0, 0, @*/)
 		}
 	}
@@ -2733,6 +2760,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 		IA:         p.d.localIA,
 		Interface:  uint64(interfaceID),
 	}
+	// @ TODO()
 	return p.packSCMP(slayers.SCMPTypeTracerouteReply, 0, &scmpP, (error)(nil) /*@ , nil, nil, 0, 0, @*/)
 }
 
@@ -2750,6 +2778,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, nil
 	}
+	// @ TODO()
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		slayers.SCMPCodeInvalidPacketSize,
@@ -2916,6 +2945,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		errCode = slayers.SCMPCodeUnknownHopFieldIngress
 	}
 	// @ p.scionLayer.DowngradePerm(ub)
+	// @ TODO()
 	tmp, err := p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		errCode,
@@ -3350,10 +3380,17 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires  acc(&p.ingressID,  R15)
+// @ requires  acc(&p.buffer, R55) && p.buffer.Mem()
 // @ ensures   acc(p.scionLayer.Mem(ub), R4)
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.ingressID,  R15)
-// TODO: ensures result and result --* p.Buffer.Mem()
+// @ ensures   acc(&p.buffer, R55)
+// @ ensures   result != nil ==>
+// @ 	sl.AbsSlice_Bytes(result, 0, len(result)) &&
+// @ 	p.buffer.MemWithoutUBuf(result)
+// @ ensures   result == nil ==>
+// @ 	p.buffer.Mem()
+// @ ensures   reserr != nil && reserr.ErrorMem()
 // @ decreases
 func (p *scionPacketProcessor) prepareSCMP(
 	typ slayers.SCMPType,
@@ -3361,7 +3398,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	scmpP gopacket.SerializableLayer,
 	cause error,
 	// @ ghost ub []byte,
-) ([]byte, error) {
+) (result []byte, reserr error) {
 
 	// *copy* and reverse path -- the original path should not be modified as this writes directly
 	// back to rawPkt (quote).
