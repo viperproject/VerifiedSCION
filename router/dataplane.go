@@ -2024,18 +2024,18 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 		// Note: SCMP error messages triggered by the sibling router may use paths that
 		// don't start with the first hop.
 		if p.path.IsFirstHop( /*@ ubPath @*/ ) && !srcIsLocal {
-			return p.invalidSrcIA()
+			return p.invalidSrcIA( /*@ nil, nil, 0, 0 @*/ )
 		}
 		if dstIsLocal {
-			return p.invalidDstIA()
+			return p.invalidDstIA( /*@ nil, nil, 0, 0 @*/ )
 		}
 	} else {
 		// Inbound
 		if srcIsLocal {
-			return p.invalidSrcIA()
+			return p.invalidSrcIA( /*@ nil, nil, 0, 0 @*/ )
 		}
 		if p.path.IsLastHop( /*@ ubPath @*/ ) != dstIsLocal {
-			return p.invalidDstIA()
+			return p.invalidDstIA( /*@ nil, nil, 0, 0 @*/ )
 		}
 	}
 	// @ fold p.d.validResult(processResult{}, false)
@@ -2043,28 +2043,84 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 }
 
 // invalidSrcIA is a helper to return an SCMP error for an invalid SrcIA.
-// @ trusted // TODO: start here
-// @ requires false
-func (p *scionPacketProcessor) invalidSrcIA() (processResult, error) {
+// @ requires   acc(&p.d, _) && acc(p.d.Mem(), _)
+// @ requires   acc(p.scionLayer.Mem(ub), R4)
+// @ requires   0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires   ubLL == nil || ubLL === ub[startLL:endLL]
+// @ requires   acc(&p.lastLayer, R55) && p.lastLayer != nil
+// @ requires   &p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(ubLL), R15)
+// @ requires   &p.scionLayer === p.lastLayer ==>
+// @ 	ub === ubLL
+// @ requires   p.scionLayer.ValidPathMetaData(ub)
+// @ requires   sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ requires   acc(&p.ingressID,  R15)
+// @ requires   acc(&p.buffer, R50) && p.buffer.Mem()
+// @ ensures    acc(&p.d, _)
+// @ ensures    acc(p.scionLayer.Mem(ub), R4)
+// @ ensures    acc(&p.lastLayer, R55) && p.lastLayer != nil
+// @ ensures    &p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(ubLL), R15)
+// @ ensures    sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures    acc(&p.ingressID,  R15)
+// @ ensures    p.d.validResult(respr, false)
+// @ ensures    acc(&p.buffer, R50)
+// @ ensures    respr === processResult{} ==>
+// @ 	p.buffer.Mem()
+// @ ensures    respr !== processResult{} ==>
+// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
+// @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
+// @ ensures    reserr != nil ==> reserr.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) invalidSrcIA( /*@ ghost ub []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
+	// @ establishInvalidSrcIA()
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		slayers.SCMPCodeInvalidSourceAddress,
 		&slayers.SCMPParameterProblem{Pointer: uint16(slayers.CmnHdrLen + addr.IABytes)},
 		invalidSrcIA,
-		/*@ nil , @*/
+		/*@ ub , ubLL, startLL, endLL, @*/
 	)
 }
 
 // invalidDstIA is a helper to return an SCMP error for an invalid DstIA.
-// @ trusted // TODO: start here
-// @ requires false
-func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
+// @ requires   acc(&p.d, _) && acc(p.d.Mem(), _)
+// @ requires   acc(p.scionLayer.Mem(ub), R4)
+// @ requires   0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires   ubLL == nil || ubLL === ub[startLL:endLL]
+// @ requires   acc(&p.lastLayer, R55) && p.lastLayer != nil
+// @ requires   &p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(ubLL), R15)
+// @ requires   &p.scionLayer === p.lastLayer ==>
+// @ 	ub === ubLL
+// @ requires   p.scionLayer.ValidPathMetaData(ub)
+// @ requires   sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ requires   acc(&p.ingressID,  R15)
+// @ requires   acc(&p.buffer, R50) && p.buffer.Mem()
+// @ ensures    acc(&p.d, _)
+// @ ensures    acc(p.scionLayer.Mem(ub), R4)
+// @ ensures    acc(&p.lastLayer, R55) && p.lastLayer != nil
+// @ ensures    &p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(ubLL), R15)
+// @ ensures    sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures    acc(&p.ingressID,  R15)
+// @ ensures    p.d.validResult(respr, false)
+// @ ensures    acc(&p.buffer, R50)
+// @ ensures    respr === processResult{} ==>
+// @ 	p.buffer.Mem()
+// @ ensures    respr !== processResult{} ==>
+// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
+// @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
+// @ ensures    reserr != nil ==> reserr.ErrorMem()
+// @ decreases
+func (p *scionPacketProcessor) invalidDstIA( /*@ ghost ub []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
+	// @ establishInvalidDstIA()
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		slayers.SCMPCodeInvalidDestinationAddress,
 		&slayers.SCMPParameterProblem{Pointer: uint16(slayers.CmnHdrLen)},
 		invalidDstIA,
-		/*@ nil , nil, 0, 0, @*/
+		/*@ ub , ubLL, startLL, endLL, @*/
 	)
 }
 

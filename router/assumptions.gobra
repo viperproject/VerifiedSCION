@@ -75,6 +75,16 @@ ensures cannotRoute.ErrorMem()
 decreases _
 func establishCannotRoute()
 
+ghost
+ensures invalidSrcIA.ErrorMem()
+decreases _
+func establishInvalidSrcIA()
+
+ghost
+ensures invalidDstIA.ErrorMem()
+decreases _
+func establishInvalidDstIA()
+
 /**** End of post-init invariants ****/
 
 /**** scmpError ghost members ****/
