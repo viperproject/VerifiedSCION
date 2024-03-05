@@ -22,7 +22,7 @@ env:
   imageVersion: 'latest'
   mceMode: 'od'
   requireTriggers: '1'
-  useZ3API: '1'
+  useZ3API: '0'
   disableNL: '1'
 
 jobs:
