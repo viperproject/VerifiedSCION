@@ -1794,6 +1794,8 @@ type macBuffersT struct {
 // @ requires   acc(&p.lastLayer, R55) && p.lastLayer != nil
 // @ requires   &p.scionLayer !== p.lastLayer ==>
 // @ 	acc(p.lastLayer.Mem(ubLL), R15)
+// @ requires   &p.scionLayer === p.lastLayer ==>
+// @ 	ub === ubLL
 // @ requires   p.scionLayer.ValidPathMetaData(ub)
 // @ requires   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires   acc(&p.ingressID,  R15)
@@ -1830,17 +1832,17 @@ func (p *scionPacketProcessor) packSCMP(
 		var scmpLayer /*@@@*/ slayers.SCMP
 		// @ fold scmpLayer.NonInitMem()
 		pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ubLL @*/ )
-		// @ gopacket.AssertInvariantNilDecodeFeedback()
 		/*@
 		sl.SplitRange_Bytes(ub, startLL, endLL, writePerm)
 		ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
 		if pld == nil {
 			fold sl.AbsSlice_Bytes(nil, 0, 0)
 		} else {
-			sl.SplitRange_Bytes(ubLL, start, endLL, writePerm)
-			ghost defer sl.CombineRange_Bytes(ubLL, start, endLL, writePerm)
+			sl.SplitRange_Bytes(ubLL, start, end, writePerm)
+			ghost defer sl.CombineRange_Bytes(ubLL, start, end, writePerm)
 		}
 		@*/
+		// @ gopacket.AssertInvariantNilDecodeFeedback()
 		err := scmpLayer.DecodeFromBytes(pld, gopacket.NilDecodeFeedback)
 		if err != nil {
 			// @ fold p.d.validResult(respr, false)
@@ -3351,6 +3353,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ ensures   acc(p.scionLayer.Mem(ub), R4)
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.ingressID,  R15)
+// TODO: ensures result and result --* p.Buffer.Mem()
 // @ decreases
 func (p *scionPacketProcessor) prepareSCMP(
 	typ slayers.SCMPType,
