@@ -1787,7 +1787,7 @@ type macBuffersT struct {
 	epicInput  []byte
 }
 
-// @ requires   acc(&p.d, _) && acc(p.d.Mem(), _)
+// @ requires   acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires   acc(p.scionLayer.Mem(ub), R4)
 // @ requires   0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires   ubLL == nil || ubLL === ub[startLL:endLL]
@@ -1801,7 +1801,7 @@ type macBuffersT struct {
 // @ requires   acc(&p.ingressID,  R15)
 // @ requires   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ requires   cause.ErrorMem()
-// @ ensures    acc(&p.d, _)
+// @ ensures    acc(&p.d, R20)
 // @ ensures    acc(p.scionLayer.Mem(ub), R4)
 // @ ensures    acc(&p.lastLayer, R55) && p.lastLayer != nil
 // @ ensures    &p.scionLayer !== p.lastLayer ==>
@@ -1925,6 +1925,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	return processResult{}, nil
 }
 
+// HERE
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
 // @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
@@ -2023,6 +2024,7 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 		// Only check SrcIA if first hop, for transit this already checked by ingress router.
 		// Note: SCMP error messages triggered by the sibling router may use paths that
 		// don't start with the first hop.
+		// @ TODO()
 		if p.path.IsFirstHop( /*@ ubPath @*/ ) && !srcIsLocal {
 			return p.invalidSrcIA( /*@ nil, nil, 0, 0 @*/ )
 		}
@@ -2043,7 +2045,7 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 }
 
 // invalidSrcIA is a helper to return an SCMP error for an invalid SrcIA.
-// @ requires   acc(&p.d, _) && acc(p.d.Mem(), _)
+// @ requires   acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires   acc(p.scionLayer.Mem(ub), R4)
 // @ requires   0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires   ubLL == nil || ubLL === ub[startLL:endLL]
@@ -2056,7 +2058,7 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 // @ requires   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires   acc(&p.ingressID,  R15)
 // @ requires   acc(&p.buffer, R50) && p.buffer.Mem()
-// @ ensures    acc(&p.d, _)
+// @ ensures    acc(&p.d, R20)
 // @ ensures    acc(p.scionLayer.Mem(ub), R4)
 // @ ensures    acc(&p.lastLayer, R55) && p.lastLayer != nil
 // @ ensures    &p.scionLayer !== p.lastLayer ==>
@@ -2084,7 +2086,7 @@ func (p *scionPacketProcessor) invalidSrcIA( /*@ ghost ub []byte, ghost ubLL []b
 }
 
 // invalidDstIA is a helper to return an SCMP error for an invalid DstIA.
-// @ requires   acc(&p.d, _) && acc(p.d.Mem(), _)
+// @ requires   acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires   acc(p.scionLayer.Mem(ub), R4)
 // @ requires   0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires   ubLL == nil || ubLL === ub[startLL:endLL]
@@ -2097,7 +2099,7 @@ func (p *scionPacketProcessor) invalidSrcIA( /*@ ghost ub []byte, ghost ubLL []b
 // @ requires   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires   acc(&p.ingressID,  R15)
 // @ requires   acc(&p.buffer, R50) && p.buffer.Mem()
-// @ ensures    acc(&p.d, _)
+// @ ensures    acc(&p.d, R20)
 // @ ensures    acc(p.scionLayer.Mem(ub), R4)
 // @ ensures    acc(&p.lastLayer, R55) && p.lastLayer != nil
 // @ ensures    &p.scionLayer !== p.lastLayer ==>
@@ -2563,15 +2565,34 @@ func (p *scionPacketProcessor) egressInterface() uint16 {
 }
 
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
+// @ requires  acc(p.scionLayer.Mem(ub), R4)
+// @ requires  p.scionLayer.ValidPathMetaData(ub)
+// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires  ubLL == nil || ubLL === ub[startLL:endLL]
+// @ requires  acc(&p.lastLayer, R55) && p.lastLayer != nil
+// @ requires  &p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(ubLL), R15)
+// @ requires  &p.scionLayer === p.lastLayer ==>
+// @ 	ub === ubLL
+// @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
-// @ preserves acc(&p.ingressID, R20)
+// @ preserves acc(&p.ingressID, R15)
+// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.d, R20)
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   respr.OutPkt != nil ==>
-// @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr error) {
+// @ ensures   acc(p.scionLayer.Mem(ub), R4)
+// @ ensures   acc(&p.lastLayer, R55) && p.lastLayer != nil
+// @ ensures   &p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(ubLL), R15)
+// @ ensures   acc(&p.buffer, R50)
+// @ ensures   respr === processResult{} ==>
+// @ 	p.buffer.Mem()
+// @ ensures   respr !== processResult{} ==>
+// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
+// @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
+func (p *scionPacketProcessor) validateEgressUp( /*@ ghost ub []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int, @*/ ) (respr processResult, reserr error) {
 	egressID := p.egressInterface()
 	// @ p.d.getBfdSessionsMem()
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
@@ -2593,8 +2614,7 @@ func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr e
 					Egress:  uint64(egressID),
 				}
 			}
-			// @ TODO()
-			return p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down") /*@,  nil , nil, 0, 0, @*/)
+			return p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down") /*@,  ub , ubLL, startLL, endLL, @*/)
 		}
 	}
 	// @ fold p.d.validResult(processResult{}, false)
@@ -2971,7 +2991,8 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false @*/
 	}
-	if r, err := p.validateEgressUp(); err != nil {
+	// @ ghost ubLL := llIsNil ? []byte(nil) : ub[startLL:endLL]
+	if r, err := p.validateEgressUp( /*@ ub, ubLL, startLL, endLL, @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false @*/
 	}

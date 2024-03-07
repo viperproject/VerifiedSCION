@@ -39,9 +39,7 @@ pred (b *Base) Mem() {
 	acc(&b.PathMeta.SegLen[1]) &&
 	acc(&b.PathMeta.SegLen[2]) &&
 	0 <= b.NumINF && b.NumINF <= MaxINFs &&
-	// the program defines 64 as the maximum number of hops,
-	// but this does not seem to be enforced anywhere.
-	0 <= b.NumHops && // b.NumHops <= MaxHops &&
+	0 <= b.NumHops &&
 	(0 < b.NumINF ==> 0 < b.NumHops)
 }
 
