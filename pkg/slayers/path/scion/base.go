@@ -263,7 +263,10 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	}
 	//@ unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 	line := binary.BigEndian.Uint32(raw)
+	// @ bit.ShiftedRightUintIsNonNegative(line, 30)
 	m.CurrINF = uint8(line >> 30)
+	// @ bit.ShiftedRightUintIsNonNegative(line, 24)
+	// @ bit.And3fAtMost64(uint8(line>>24))
 	m.CurrHF = uint8(line>>24) & 0x3F
 	//@ bit.Shift30LessThan4(line)
 	//@ bit.And3fAtMost64(uint8(line>>24))

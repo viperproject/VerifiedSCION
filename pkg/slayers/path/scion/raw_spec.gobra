@@ -312,15 +312,20 @@ pure func (r *Raw) GetNumHops(ghost ub []byte) int {
 ghost
 requires acc(r.Mem(ub), _)
 decreases
-pure func (r *Raw) GetCurrINF(ghost ub []byte) uint8 {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrINF)
+pure func (r *Raw) GetCurrINF(ghost ub []byte) (res uint8) {
+	return unfolding acc(r.Mem(ub), _) in
+		unfolding acc(r.Base.Mem(), _) in
+		r.PathMeta.CurrINF
 }
 
 ghost
 requires acc(r.Mem(ub), _)
+ensures  0 <= res
 decreases
-pure func (r *Raw) GetCurrHF(ghost ub []byte) uint8 {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrHF)
+pure func (r *Raw) GetCurrHF(ghost ub []byte) (res uint8) {
+	return unfolding acc(r.Mem(ub), _) in
+		unfolding acc(r.Base.Mem(), _) in
+		r.PathMeta.CurrHF
 }
 
 ghost

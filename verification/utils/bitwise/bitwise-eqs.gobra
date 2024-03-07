@@ -53,3 +53,10 @@ ensures res == b & 0x3F
 ensures 0 <= res && res < 64
 decreases
 pure func And3fAtMost64(b uint8) (res uint8)
+
+ghost
+requires 0 <= shift
+ensures  res == b >> shift
+ensures  0 <= res
+decreases
+pure func ShiftedRightUintIsNonNegative(b uint32, shift int) (res uint32)
