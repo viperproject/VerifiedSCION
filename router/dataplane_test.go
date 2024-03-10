@@ -1325,3 +1325,71 @@ func bfd() control.BFD {
 		RequiredMinRxInterval: 25 * time.Millisecond,
 	}
 }
+
+func prepBaseMsg2(t *testing.T, now time.Time) (*slayers.SCION, *scion.Decoded) {
+	spkt := &slayers.SCION{
+		Version:      0,
+		TrafficClass: 0xb8,
+		FlowID:       0xdead,
+		NextHdr:      slayers.L4UDP,
+		PathType:     scion.PathType,
+		DstIA:        xtest.MustParseIA("4-ff00:0:411"),
+		SrcIA:        xtest.MustParseIA("2-ff00:0:222"),
+		Path:         &scion.Raw{},
+		PayloadLen:   18,
+	}
+
+	res, err := net.ResolveIPAddr("ip", "10.0.200.200")
+	assert.NoError(t, err)
+	spkt.SetSrcAddr(res)
+
+	res2, err2 := net.ResolveIPAddr("ip", "10.0.200.201")
+	assert.NoError(t, err2)
+	spkt.SetDstAddr(res2)
+
+	dpath := &scion.Decoded{
+		Base: scion.Base{
+			PathMeta: scion.MetaHdr{
+				CurrHF: 1,
+				SegLen: [3]uint8{3, 67, 0},
+			},
+			NumINF:  2,
+			NumHops: 70,
+		},
+		InfoFields: []path.InfoField{
+			{SegID: 0x111, ConsDir: true, Timestamp: 0},
+		},
+
+		HopFields: make([]path.HopField, 70),
+	}
+	return spkt, dpath
+}
+
+func TestLargePath(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	key := []byte("testkey_xxxxxxxx")
+	dp := router.NewDP(
+		map[uint16]router.BatchConn{
+			uint16(51): mock_router.NewMockBatchConn(ctrl),
+		},
+		map[uint16]topology.LinkType{
+			51: topology.Child,
+			3:  topology.Core,
+		},
+		mock_router.NewMockBatchConn(ctrl),
+		map[uint16]*net.UDPAddr{
+			uint16(3): {IP: net.ParseIP("10.0.200.200").To4(), Port: 30043},
+		}, nil, xtest.MustParseIA("1-ff00:0:110"), nil, key)
+	spkt, dpath := prepBaseMsg2(t, time.Time{})
+	t.Log("original path:", dpath.Base)
+	ret := toMsg(t, spkt, dpath)
+	res, err := dp.ProcessPkt(0, ret)
+	assert.Error(t, err)
+	t.Log(err)
+
+	s := &slayers.SCION{}
+	assert.NoError(t, s.DecodeFromBytes(res.OutPkt, gopacket.NilDecodeFeedback))
+
+	// t.Log(res)
+
+}

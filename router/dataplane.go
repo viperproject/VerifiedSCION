@@ -1922,6 +1922,29 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
+	// @ assert p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath)
+	// @ assert p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath)
+	//  assert 0 <= p.path.Base.PathMeta.CurrINF
+	//  assert p.path.Base.PathMeta.CurrINF <= p.path.NumINF
+	//  assert p.path.NumINF <= scion.MaxINFs
+	//  assert 0 <= p.path.Base.PathMeta.CurrHF
+	//  assert p.path.Base.PathMeta.CurrHF <= p.path.NumHops
+	//  assert p.path.NumHops <= scion.MaxHops
+	// @ assert p.path.ValidCurrHfSpec() && p.path.ValidCurrInfSpec()
+	/*
+		0 <= b.PathMeta.SegLen[0] && b.PathMeta.SegLen[0] < MaxHops &&
+		0 <= b.PathMeta.SegLen[1] && b.PathMeta.SegLen[1] < MaxHops &&
+		0 <= b.PathMeta.SegLen[2] && b.PathMeta.SegLen[2] < MaxHops &&
+		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
+		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
+			b.PathMeta.SegLen[i] != 0) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
+			b.PathMeta.SegLen[i] == 0)
+	*/
+
+	// @ assert p.scionLayer.ValidPathMetaData(ub)
 	return processResult{}, nil
 }
 
@@ -2909,6 +2932,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false @*/
 	}
+	// @ assert p.scionLayer.ValidPathMetaData(ub)
 	if r, err := p.validateHopExpiry(); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false @*/
