@@ -509,18 +509,14 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	// @ defer fold acc(d.Mem(), R5)
 	bfdSessions := d.bfdSessions
 	// @ ghost if bfdSessions != nil {
-	// @		unfold acc(accBfdSession(d.bfdSessions), R20)
-	// @		defer fold acc(accBfdSession(d.bfdSessions), R20)
+	// @ 	unfold acc(accBfdSession(d.bfdSessions), R20)
+	// @ 	defer fold acc(accBfdSession(d.bfdSessions), R20)
 	// @ }
-	// (VerifiedSCION) had to rewrite this, as Gobra does not correctly
-	// implement short-circuiting.
-	if bfdSession, ok := bfdSessions[interfaceID]; ok {
+	if bfdSession, ok := bfdSessions[interfaceID]; ok && !bfdSession.IsUp() {
 		// @ assert interfaceID in domain(d.bfdSessions)
 		// @ assert bfdSession in range(d.bfdSessions)
 		// @ assert bfdSession != nil
-		if !bfdSession.IsUp() {
-			return control.InterfaceDown
-		}
+		return control.InterfaceDown
 	}
 	return control.InterfaceUp
 }
@@ -1487,12 +1483,9 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			return processResult{}, p.processInterBFD(ohp, pld) /*@, false @*/
 		}
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
-		// (VerifiedSCION) Nested if because short-circuiting && is not working
-		// @ ghost if lastLayerIdx >= 0 {
-		// @	if !offsets[lastLayerIdx].isNil {
-		// @		o := offsets[lastLayerIdx]
-		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
-		// @ 	}
+		// @ ghost if lastLayerIdx >= 0 && !offsets[lastLayerIdx].isNil {
+		// @ 	o := offsets[lastLayerIdx]
+		// @ 	sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		// @ unfold acc(p.d.Mem(), _)
@@ -1502,12 +1495,9 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		return v1, v2 /*@, aliasesPkt @*/
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
-		// (VerifiedSCION) Nested if because short-circuiting && is not working
-		// @ ghost if lastLayerIdx >= 0 {
-		// @	ghost if !offsets[lastLayerIdx].isNil {
-		// @		o := offsets[lastLayerIdx]
-		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
-		// @ 	}
+		// @ ghost if lastLayerIdx >= 0 && !offsets[lastLayerIdx].isNil {
+		// @ 	o := offsets[lastLayerIdx]
+		// @ 	sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		v1, v2 /*@ , addrAliasesPkt @*/ := p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd @*/ )
