@@ -1,0 +1,50 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package path
+
+import (
+    sl "verification/utils/slices"
+	. "verification/utils/definitions"
+)
+
+ghost const MetaLen = 4
+
+ghost
+decreases
+pure func InfoFieldOffset(currINF int) int {
+	return MetaLen + InfoLen * currINF
+}
+
+ghost
+requires 0 <= currINF
+requires InfoFieldOffset(currINF) < len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+decreases
+pure func ConsDir(raw []byte, currINF int) bool {
+	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55) in
+		raw[InfoFieldOffset(currINF)] & 0x1 == 0x1
+}
+
+ghost
+requires 0 <= currINF
+requires InfoFieldOffset(currINF) < len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+decreases
+pure func Peer(raw []byte, currINF int) bool {
+	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55) in
+		raw[InfoFieldOffset(currINF)] & 0x2 == 0x2
+}
