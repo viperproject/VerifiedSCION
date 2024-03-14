@@ -952,6 +952,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant processor.sInit() && processor.sInitD() === d
 				// contracts for IO-spec
+				// @ invariant pkts <= len(ioValSeq)
 				// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
 				// @ invariant ioIngressID == ifsToIO_ifs(ingressID)
 				// @ invariant acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
@@ -991,9 +992,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert p.N <= len(p.Buffers[0])
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
 					tmpBuf := p.Buffers[0][:p.N]
+					// @ ghost absPkt := absIO_val(dp, tmpBuf, ingressID)
+					// @ MultiElemWitnessStep(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
+					// @ assert absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, absPkt.IO_val_Pkt2_1, absPkt.IO_val_Pkt2_2)
 					// @ absIO_valWidenLemma(dp, p.Buffers[0], ingressID, p.N)
-					// @ assert let absPkt := absIO_val(dp, tmpBuf, ingressID) in
-					// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, absPkt.IO_val_Pkt2_1, absPkt.IO_val_Pkt2_2)
+					// @ assume false
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))

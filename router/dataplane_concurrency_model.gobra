@@ -218,6 +218,16 @@ func MultiElemWitnessConv(y ElemRA,k Key, es seq[io.IO_val]) {
 }
 
 ghost
+requires 0 <= currIdx && currIdx < len(es)
+requires MultiElemWitnessWithIndex(y, k, es, currIdx)
+ensures  es[currIdx].isIO_val_Pkt2 ==> ElemWitness(y, k, es[currIdx].IO_val_Pkt2_2)
+ensures  MultiElemWitnessWithIndex(y, k, es, currIdx + 1)
+decreases
+func MultiElemWitnessStep(y ElemRA, k Key, es seq[io.IO_val], currIdx int) {
+	unfold MultiElemWitnessWithIndex(y, k, es, currIdx)
+}
+
+ghost
 requires i >= 0
 requires MultiElemWitness(y,k,es[i:])
 ensures  MultiElemWitnessWithIndex(y,k,es,i)
