@@ -32,19 +32,19 @@ pure func InfoFieldOffset(currINF int) int {
 ghost
 requires 0 <= currINF
 requires InfoFieldOffset(currINF) < len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func ConsDir(raw []byte, currINF int) bool {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55) in
+	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
 		raw[InfoFieldOffset(currINF)] & 0x1 == 0x1
 }
 
 ghost
 requires 0 <= currINF
 requires InfoFieldOffset(currINF) < len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func Peer(raw []byte, currINF int) bool {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55) in
+	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
 		raw[InfoFieldOffset(currINF)] & 0x2 == 0x2
 }
