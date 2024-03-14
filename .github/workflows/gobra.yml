@@ -327,6 +327,8 @@ jobs:
   verify-router:
     runs-on: ubuntu-latest
     steps:
+      - name: Install the Z3 Java API
+        run:  sudo apt install libz3-java
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
       - name: Verify package 'router/'
@@ -346,5 +348,5 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: 'on'
           requireTriggers: ${{ env.requireTriggers }}
-          useZ3API: ${{ env.useZ3API }}
+          useZ3API: '1'
 
