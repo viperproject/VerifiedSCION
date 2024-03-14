@@ -648,7 +648,7 @@ pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool
 ghost
 opaque
 requires acc(d.Mem(), _)
-decreases 
+decreases
 pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 	return unfolding acc(d.Mem(), _) in
 		d.dpSpecWellConfiguredLocalIA(dp)     &&
