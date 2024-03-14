@@ -512,11 +512,15 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	// @ 	unfold acc(accBfdSession(d.bfdSessions), R20)
 	// @ 	defer fold acc(accBfdSession(d.bfdSessions), R20)
 	// @ }
-	if bfdSession, ok := bfdSessions[interfaceID]; ok && !bfdSession.IsUp() {
+	if bfdSession, ok := bfdSessions[interfaceID]; ok {
 		// @ assert interfaceID in domain(d.bfdSessions)
 		// @ assert bfdSession in range(d.bfdSessions)
 		// @ assert bfdSession != nil
-		return control.InterfaceDown
+		// (VerifiedSCION) This checked used to be conjoined with 'ok' in the condition
+		// of the if stmt above. We broke it down to perform intermediate asserts.
+		if !bfdSession.IsUp() {
+ 			return control.InterfaceDown
+ 		}
 	}
 	return control.InterfaceUp
 }
