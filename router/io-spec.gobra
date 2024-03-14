@@ -482,11 +482,9 @@ ghost
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 requires validPktMetaHdr(raw)
-//ensures res != none[io.IO_pkt2] ==> len(get(res).CurrSeg.Future) > 0
-//ensures res != none[io.IO_pkt2] ==> get(res).CurrSeg.Future[0].extr_asid() == dp.Asid()
 opaque
 decreases
-pure func absPkt(dp io.DataPlaneSpec, raw []byte, asid io.IO_as) (res option[io.IO_pkt2]) {
+pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res option[io.IO_pkt2]) {
 	return let _ := reveal validPktMetaHdr(raw) in
 		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55) in binary.BigEndian.Uint32(raw[0:4])) in
 		let metaHdr := scion.DecodedFrom(hdr) in
@@ -604,13 +602,13 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
-	return (reveal validPktMetaHdr(raw) && absPkt(dp, raw, dp.asid()) != none[io.IO_pkt2]) ?
-		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), get(absPkt(dp, raw, dp.asid()))}) :
+	return (reveal validPktMetaHdr(raw) && absPkt(dp, raw) != none[io.IO_pkt2]) ?
+		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), get(absPkt(dp, raw))}) :
 		absIO_val_Unsupported(raw, ingressID)
 }
 
 ghost
-requires acc(&d.localIA, R55)
+requires acc(&d.localIA, _)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool {
 	return io.IO_as(d.localIA) == dp.Asid()
