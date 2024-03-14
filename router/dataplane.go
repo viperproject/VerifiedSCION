@@ -519,8 +519,8 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 		// (VerifiedSCION) This checked used to be conjoined with 'ok' in the condition
 		// of the if stmt above. We broke it down to perform intermediate asserts.
 		if !bfdSession.IsUp() {
- 			return control.InterfaceDown
- 		}
+			return control.InterfaceDown
+		}
 	}
 	return control.InterfaceUp
 }
