@@ -921,8 +921,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ 	!msgs[i].HasWildcardPermAddr()
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
-				// @ assert forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < pkts ==>
-				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
+				// @ 	MsgToAbsVal(dp, &msgs[i], ingressID) == ioValSeq[i]
 
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
@@ -1453,7 +1453,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 // @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
 // @	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
-// TODO: On a first step, we will prove that whenever we have a valid scion packet in processSCION,
+// (VerifiedSCION) On a first step, we will prove that whenever we have a valid scion packet in processSCION,
 // the correct "next packet" is computed
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
