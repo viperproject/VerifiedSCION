@@ -311,9 +311,6 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 			mac, _ := scrypto.InitMac(key)
 			return mac
 		}
-	// (VerifiedSCION) Gobra cannot currently prove the following assertion, even though it must
-	// follow from the structure of the declaration of `verScionTemp` (https://github.com/viperproject/gobra/issues/713).
-	// @ assume verScionTemp != nil
 	// @ proof verScionTemp implements MacFactorySpec{d.key} {
 	// @   return verScionTemp() as f
 	// @ }
