@@ -162,8 +162,7 @@ type BatchConn interface {
 	// @	absIO_val(dp, msgs[0].Buffers[0], egressID) == ioAbsPkts
 	// @ requires  io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
 	// @ ensures   dp.Valid()
-	// @ ensures   (err == nil && len(msgs) == 1) ==>
-	// @	io.token(old(io.dp3s_iospec_bio3s_send_T(place, ioAbsPkts)))
+	// @ ensures   err == nil ==> io.token(old(io.dp3s_iospec_bio3s_send_T(place, ioAbsPkts)))
 	WriteBatch(msgs underlayconn.Messages, flags int /*@, ghost egressID uint16, ghost place io.Place, ghost ioAbsPkts io.IO_val, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires Mem()
 	// @ ensures  err != nil ==> err.ErrorMem()
@@ -890,23 +889,17 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ assert dp.dp3s_iospec_ordered(sN, tN)
 				// @ BeforeReadBatch:
 				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
+				// @ assert old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)) == ioValSeq
 				// @ assert err == nil ==>
 				// @	forall i int :: { &msgs[i].Buffers[0] } 0 <= i && i < pkts ==>
 				// @	ioValSeq[i] == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
 				// @ assert err == nil ==>
-				// @	forall i int :: { &msgs[i].Buffers[0] } 0 <= i && i < pkts ==>
-				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
-				//  assert err == nil ==>
-				// 	forall i int :: { &msgs[i].Buffers[0] } 0 <= i && i < pkts ==>
-				// 	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
+				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> MsgToAbsVal(dp, &msgs[i], ingressID) == ioValSeq[i]
 				// @ ghost *ioSharedArg.State = sN
 				// @ ghost *ioSharedArg.Place = tN
 				// @ assert err == nil ==>
-				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> acc(msgs[i].Mem(), _)
-				// @ assert old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)) == ioValSeq
-				// @ assert err == nil ==>
-				// @	forall i int :: { &msgs[i].Buffers[0] } 0 <= i && i < pkts ==>
-				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
+				// @ 	forall i int :: { &msgs[i].Buffers[0] } 0 <= i && i < pkts ==>
+				// @ 		MsgToAbsVal(dp, &msgs[i], ingressID) == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
 				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
 				// @ fold SharedInv!< dp, ioSharedArg !>()
 				// @ ioLock.Unlock()
@@ -998,14 +991,9 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert p.N <= len(p.Buffers[0])
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
 					tmpBuf := p.Buffers[0][:p.N]
-					//  assert forall i int :: { &tmpBuf[i] }{ &p.Buffers[0][i] } 0 <= i && i < p.N ==>
-					// 	unfolding acc(sl.AbsSlice_Bytes(tmpBuf, 0, p.N), HalfPerm) in
-					// 	unfolding acc(sl.AbsSlice_Bytes(p.Buffers[0], 0, len(p.Buffers[0])), HalfPerm) in
-					// 	tmpBuf[i] == p.Buffers[0][i]
 					// @ absIO_valWidenLemma(dp, p.Buffers[0], ingressID, p.N)
 					// @ assert let absPkt := absIO_val(dp, tmpBuf, ingressID) in
 					// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, absPkt.IO_val_Pkt2_1, absPkt.IO_val_Pkt2_2)
-					// assume absIO_val(dp, tmpBuf, ingressID) == absIO_val(dp, p.Buffers[0], ingressID)
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
@@ -2927,7 +2915,6 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		}
 		// verify the new block
 		if r, err := p.verifyCurrentMAC(); err != nil {
-			//  fold acc(p.scionLayer.Mem(ub), R3)
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover") /*@, false, io.IO_val_Unit{} @*/
 		}
