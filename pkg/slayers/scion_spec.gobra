@@ -285,6 +285,18 @@ ghost
 pure
 requires acc(s.Mem(ub), _)
 decreases
+func (s *SCION) UBScionPath(ub []byte) []byte {
+	return unfolding acc(s.Mem(ub), _) in
+		let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
+		typeOf(s.Path) == *epic.Path ?
+			unfolding acc(s.Path.Mem(ubPath), _) in ubPath[epic.MetadataLen:] :
+			ubPath
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
 func (s *SCION) PathStartIdx(ub []byte) int {
 	return unfolding acc(s.Mem(ub), _) in CmnHdrLen+s.AddrHdrLenSpecInternal()
 }
@@ -294,6 +306,26 @@ pure
 requires acc(s.Mem(ub), _)
 decreases
 func (s *SCION) PathEndIdx(ub []byte) int {
+	return unfolding acc(s.Mem(ub), _) in int(s.HdrLen*LineLen)
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) PathScionStartIdx(ub []byte) int {
+	return unfolding acc(s.Mem(ub), _) in
+		let offset := CmnHdrLen+s.AddrHdrLenSpecInternal() in
+		typeOf(s.Path) == *epic.Path ?
+			offset + epic.MetadataLen :
+			offset
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) PathScionEndIdx(ub []byte) int {
 	return unfolding acc(s.Mem(ub), _) in int(s.HdrLen*LineLen)
 }
 
@@ -315,6 +347,19 @@ requires acc(s.Mem(ub), _)
 decreases
 func (s *SCION) GetPath(ub []byte) path.Path {
 	return unfolding acc(s.Mem(ub), _) in s.Path
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) GetScionPath(ub []byte) path.Path {
+	return unfolding acc(s.Mem(ub), _) in (
+	typeOf(s.Path) == *epic.Path ?
+		(let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
+			unfolding acc(s.Path.Mem(ubPath), _) in
+			(path.Path)(s.Path.(*epic.Path).ScionPath)) :
+		s.Path)
 }
 
 ghost
