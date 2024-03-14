@@ -163,7 +163,7 @@ requires currHFIdx < segLen
 requires hopFieldOffset(numINF, segLen) <= len(raw)
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
-ensures res != none[seq[io.IO_as]] ==> len(get(res)) == segLen - prevSegLen
+ensures  res != none[seq[io.IO_as]] ==> len(get(res)) == segLen - prevSegLen
 decreases
 pure func asidForCurrSeg(
 	dp io.DataPlaneSpec,
@@ -184,6 +184,7 @@ pure func asidForCurrSeg(
 
 // returns a list of ASids of hopfields for LeftSeg in the abstract packet
 ghost
+opaque
 requires dp.Valid()
 requires 1 <= numINF
 requires 0 < seg1Len
@@ -193,6 +194,8 @@ requires hopFieldOffset(numINF, seg1Len + seg2Len + seg3Len) <= len(raw)
 requires currINFIdx <= numINF + 1
 requires 1 <= currINFIdx && currINFIdx < 4
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
+ensures  (currINFIdx == 1 && seg2Len > 0 && res != none[seq[io.IO_as]]) ==> len(get(res)) == seg2Len
+ensures  (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0 && res != none[seq[io.IO_as]]) ==> len(get(res)) == seg3Len
 decreases
 pure func asidsForLeftSeg(dp io.DataPlaneSpec, raw []byte, numINF int, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, asid io.IO_as) (res option[seq[io.IO_as]]) {
 	return let consDir := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in path.ConsDir(raw, currINFIdx) in
@@ -205,6 +208,7 @@ pure func asidsForLeftSeg(dp io.DataPlaneSpec, raw []byte, numINF int, currINFId
 
 // returns a list of ASids of hopfields for RightSeg in the abstract packet
 ghost
+opaque
 requires dp.Valid()
 requires 1 <= numINF
 requires 0 < seg1Len
@@ -229,6 +233,7 @@ pure func asidsForRightSeg(dp io.DataPlaneSpec, raw []byte, numINF int, currINFI
 
 // returns a list of ASids of hopfields for MidSeg in the abstract packet
 ghost
+opaque
 requires dp.Valid()
 requires 1 <= numINF
 requires 0 < seg1Len
@@ -240,6 +245,8 @@ requires 2 <= currINFIdx && currINFIdx < 5
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 requires (currINFIdx == 4 && seg2Len > 0) ==> asid != none[io.IO_as]
 requires (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ==> asid != none[io.IO_as]
+ensures  (currINFIdx == 4 && seg2Len > 0 && res != none[seq[io.IO_as]]) ==> len(get(res)) == seg1Len
+ensures  (currINFIdx == 2 && seg2Len > 0 && seg3Len > 0 && res != none[seq[io.IO_as]]) ==> len(get(res)) == seg3Len
 decreases
 pure func asidsForMidSeg(dp io.DataPlaneSpec, raw []byte, numINF int, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, asid option[io.IO_as]) (res option[seq[io.IO_as]]) {
 	return (currINFIdx == 4 && seg2Len > 0) ?
