@@ -17,12 +17,14 @@
 package router
 
 import (
-	sl "verification/utils/slices"
-	"verification/io"
-	"verification/dependencies/encoding/binary"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	"github.com/scionproto/scion/private/topology"
+	"golang.org/x/net/ipv4"
+
+	"verification/dependencies/encoding/binary"
+	"verification/io"
+	sl "verification/utils/slices"
 	. "verification/utils/definitions"
 )
 
@@ -654,8 +656,17 @@ pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 		d.dpSpecWellConfiguredLinkTypes(dp)
 }
 
+ghost
+requires dp.Valid()
+requires acc(msg.Mem(), R50)
+decreases
+pure func MsgToAbsVal(dp io.DataPlaneSpec, msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
+	return unfolding acc(msg.Mem(), 50) in
+		absIO_val(dp, msg.Buffers[0], ingressID)
+}
+
 // TODO add body
-ghost 
+ghost
 requires  0 <= length && length <= len(raw)
 preserves dp.Valid()
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
