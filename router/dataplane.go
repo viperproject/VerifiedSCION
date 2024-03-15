@@ -994,14 +994,15 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					tmpBuf := p.Buffers[0][:p.N]
 					// @ ghost absPkt := absIO_val(dp, tmpBuf, ingressID)
 					// @ MultiElemWitnessStep(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
-					// @ assert absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, absPkt.IO_val_Pkt2_1, absPkt.IO_val_Pkt2_2)
-					// @ absIO_valWidenLemma(dp, p.Buffers[0], ingressID, p.N)
-					// @ assume false
+					// @ assert ioValSeq[i0].isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ioIngressID, ioValSeq[i0].IO_val_Pkt2_2)
+					// @ absIO_valWidenLemma(dp, p.Buffers[0], ingressID, p.N) // TODO: drop
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
-					result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := processor.processPkt(tmpBuf, srcAddr /*@, ioLock, ioSharedArg, dp@*/)
+					result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := processor.processPkt(tmpBuf, srcAddr /*@, ioLock, ioSharedArg, dp @*/)
 					// @ fold scmpErr.Mem()
+
+					// @ assume false // HERE
 					switch {
 					case err == nil:
 						// @ unfold scmpErr.Mem()
