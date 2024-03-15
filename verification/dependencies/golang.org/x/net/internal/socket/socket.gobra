@@ -52,8 +52,8 @@ type Message struct {
 pred (m *Message) Mem() {
 	acc(m)                                                              &&
 	len(m.Buffers) == 1                                                 &&
-	0 <= m.N && m.N <= len(m.Buffers[0])                                &&
 	acc(&m.Buffers[0])                                                  &&
+	0 <= m.N && m.N <= len(m.Buffers[0])                                &&
 	sl.AbsSlice_Bytes(m.Buffers[0][:m.N], 0, m.N)                       &&
 	sl.AbsSlice_Bytes(m.Buffers[0][m.N:], 0, len(m.Buffers[0][m.N:]))   &&
 	sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB))                             &&

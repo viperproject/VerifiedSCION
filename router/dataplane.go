@@ -157,9 +157,8 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	// contracts for IO-spec
 	// @ requires  dp.Valid()
-	// @ requires  len(msgs) == 1 ==>
-	// @	unfolding acc(msgs[0].Mem(), R50) in
-	// @	absIO_val(dp, msgs[0].Buffers[0], egressID) == ioAbsPkts
+	// @ requires  len(msgs) == 1
+	// @ requires  MsgToAbsVal(dp, &msgs[0], egressID) == ioAbsPkts
 	// @ requires  io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
 	// @ ensures   dp.Valid()
 	// @ ensures   err == nil ==> io.token(old(io.dp3s_iospec_bio3s_send_T(place, ioAbsPkts)))
@@ -990,16 +989,13 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert p.Buffers === m.Buffers
 					// @ assert acc(&p.Buffers[0])
 					// @ assert p.N <= len(p.Buffers[0])
-					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
 					tmpBuf := p.Buffers[0][:p.N]
 					// @ ghost absPkt := absIO_val(dp, tmpBuf, ingressID)
 					// @ MultiElemWitnessStep(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
 					// @ assert ioValSeq[i0].isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ioIngressID, ioValSeq[i0].IO_val_Pkt2_2)
-					// @ absIO_valWidenLemma(dp, p.Buffers[0], ingressID, p.N) // TODO: drop
+					// absIO_valWidenLemma(dp, p.Buffers[0], ingressID, p.N) // TODO: drop
 					// @ assert ioValSeq[i0] == absPkt
-					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
-					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
 					result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := processor.processPkt(tmpBuf, srcAddr /*@, ioLock, ioSharedArg, dp @*/)
 					// @ fold scmpErr.Mem()
 
@@ -1026,7 +1022,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 						// @ ghost if addrAliasesPkt {
 						// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 						// @ }
-						// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 						// @ assert acc(m)
 						// @ assert sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB))
 						// @ assert (m.Addr != nil ==> acc(m.Addr.Mem(), _))
@@ -1045,7 +1040,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 						// @ ghost if addrAliasesPkt {
 						// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 						// @ }
-						// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 						// @ msgs[:pkts][i0].IsActive = false
 						// @ fold msgs[:pkts][i0].Mem()
 						continue
@@ -1092,7 +1086,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
 					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 					// @ }
-					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					// @ msgs[:pkts][i0].IsActive = false
 					// @ fold msgs[:pkts][i0].Mem()
 					// @ fold writeMsgInv(writeMsgs)

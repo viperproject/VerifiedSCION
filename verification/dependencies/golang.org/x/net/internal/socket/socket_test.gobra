@@ -23,5 +23,6 @@ func foldMem_test() {
 	fold slices.AbsSlice_Bytes(m.OOB, 0, len(m.OOB))
 	m.Buffers = make([][]byte, 1)
 	fold slices.AbsSlice_Bytes(m.Buffers[0], 0, len(m.Buffers[0]))
+	fold slices.AbsSlice_Bytes(m.Buffers[0], 0, len(m.Buffers[0]))
 	fold m.Mem()
 }

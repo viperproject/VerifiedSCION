@@ -662,7 +662,7 @@ requires acc(msg.Mem(), R50)
 decreases
 pure func MsgToAbsVal(dp io.DataPlaneSpec, msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
 	return unfolding acc(msg.Mem(), R50) in
-		absIO_val(dp, msg.Buffers[0][msg.N], ingressID)
+		absIO_val(dp, msg.Buffers[0][:msg.N], ingressID)
 }
 
 // TODO add body
