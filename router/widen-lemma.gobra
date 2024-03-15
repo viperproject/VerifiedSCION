@@ -894,9 +894,9 @@ requires currAsidSeq == none[seq[io.IO_as]]
 requires ret == none[io.IO_pkt2]
 ensures  ret == absPkt(dp, raw, asid)
 decreases
-pure func equalRetsLemma1(dp io.DataPlaneSpec, raw []byte, asid io.IO_as, hdr uint32, metaHdr scion.MetaHdr, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int, segLen int, prevSegLen int, numINF int, offset int, consDir bool, currAsidSeq option[seq[io.IO_as]], ret option[io.IO_pkt2]) bool /*{
+pure func equalRetsLemma1(dp io.DataPlaneSpec, raw []byte, asid io.IO_as, hdr uint32, metaHdr scion.MetaHdr, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int, segLen int, prevSegLen int, numINF int, offset int, consDir bool, currAsidSeq option[seq[io.IO_as]], ret option[io.IO_pkt2]) bool {
 	return ret == reveal absPkt(dp, raw, asid)
-}*/
+}
 
 
 ghost
@@ -950,9 +950,9 @@ requires leftAsidSeq == asidsForLeftSeg(dp, raw, numINF, currINFIdx + 1, seg1Len
 requires rightAsidSeq == asidsForRightSeg(dp, raw, numINF, currINFIdx - 1, seg1Len, seg2Len, seg3Len, first)
 ensures  ret == absPkt(dp, raw, asid)
 decreases
-pure func equalRetsLemma2(dp io.DataPlaneSpec, raw []byte, asid io.IO_as, hdr uint32, metaHdr scion.MetaHdr, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int, segLen int, prevSegLen int, numINF int, offset int, consDir bool, currAsidSeq option[seq[io.IO_as]], last io.IO_as, first io.IO_as, leftAsidSeq option[seq[io.IO_as]], rightAsidSeq option[seq[io.IO_as]], ret option[io.IO_pkt2]) bool /*{
+pure func equalRetsLemma2(dp io.DataPlaneSpec, raw []byte, asid io.IO_as, hdr uint32, metaHdr scion.MetaHdr, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int, segLen int, prevSegLen int, numINF int, offset int, consDir bool, currAsidSeq option[seq[io.IO_as]], last io.IO_as, first io.IO_as, leftAsidSeq option[seq[io.IO_as]], rightAsidSeq option[seq[io.IO_as]], ret option[io.IO_pkt2]) bool {
 	return ret == reveal absPkt(dp, raw, asid)
-}*/
+}
 
 ghost
 opaque
@@ -1012,9 +1012,9 @@ requires midAsidSeq == none[seq[io.IO_as]]
 requires ret == none[io.IO_pkt2]
 ensures  ret == absPkt(dp, raw, asid)
 decreases
-pure func equalRetsLemma3(dp io.DataPlaneSpec, raw []byte, asid io.IO_as, hdr uint32, metaHdr scion.MetaHdr, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int, segLen int, prevSegLen int, numINF int, offset int, consDir bool, currAsidSeq option[seq[io.IO_as]], last io.IO_as, first io.IO_as, leftAsidSeq option[seq[io.IO_as]], rightAsidSeq option[seq[io.IO_as]], midAsid option[io.IO_as], midAsidSeq option[seq[io.IO_as]], ret option[io.IO_pkt2]) bool /*{
+pure func equalRetsLemma3(dp io.DataPlaneSpec, raw []byte, asid io.IO_as, hdr uint32, metaHdr scion.MetaHdr, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int, segLen int, prevSegLen int, numINF int, offset int, consDir bool, currAsidSeq option[seq[io.IO_as]], last io.IO_as, first io.IO_as, leftAsidSeq option[seq[io.IO_as]], rightAsidSeq option[seq[io.IO_as]], midAsid option[io.IO_as], midAsidSeq option[seq[io.IO_as]], ret option[io.IO_pkt2]) bool {
 	return ret == reveal absPkt(dp, raw, asid)
-}*/
+}
 
 
 ghost
@@ -1080,6 +1080,7 @@ requires ret == some(io.IO_pkt2(io.IO_Packet2{
 				}))
 ensures  ret == absPkt(dp, raw, asid)
 decreases
+// TODO: proven but takes a long time. Body abstracted away for now
 pure func equalRetsLemma4(dp io.DataPlaneSpec, raw []byte, asid io.IO_as, hdr uint32, metaHdr scion.MetaHdr, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int, segLen int, prevSegLen int, numINF int, offset int, consDir bool, currAsidSeq option[seq[io.IO_as]], last io.IO_as, first io.IO_as, leftAsidSeq option[seq[io.IO_as]], rightAsidSeq option[seq[io.IO_as]], midAsid option[io.IO_as], midAsidSeq option[seq[io.IO_as]], ret option[io.IO_pkt2]) bool /*{
 	return ret == reveal absPkt(dp, raw, asid)
 }*/
