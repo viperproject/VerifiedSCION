@@ -26,10 +26,24 @@ import (
 )
 
 ghost 
-requires  0 <= length && length <= len(raw)
+requires 0 <= length && length <= len(raw)
 requires length > 4
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 requires acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R50)
+requires unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50) in
+	let hdr := binary.BigEndian.Uint32(raw[0:4]) in
+	let metaHdr := scion.DecodedFrom(hdr) in
+	let seg1 := int(metaHdr.SegLen[0]) in
+	let seg2 := int(metaHdr.SegLen[1]) in
+	let seg3 := int(metaHdr.SegLen[2]) in
+	let base := scion.Base{metaHdr,
+		numInfoFields(seg1, seg2, seg3),
+		seg1 + seg2 + seg3} in
+	metaHdr.InBounds() &&
+	0 < metaHdr.SegLen[0] &&
+	base.ValidCurrInfSpec() &&
+	base.ValidCurrHfSpec() &&
+	len(raw) >= pktLen(seg1, seg2, seg3)
 requires unfolding acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R50) in
 	let hdr := binary.BigEndian.Uint32(raw[:length][0:4]) in
 	let metaHdr := scion.DecodedFrom(hdr) in
@@ -43,14 +57,36 @@ requires unfolding acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R5
 	0 < metaHdr.SegLen[0] &&
 	base.ValidCurrInfSpec() &&
 	base.ValidCurrHfSpec() &&
-	length >= pktLen(seg1, seg2, seg3)
+	len(raw[:length]) >= pktLen(seg1, seg2, seg3)
 preserves dp.Valid()
 ensures acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 ensures acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R50)
 ensures absIO_val(dp, raw[:length], ingressID).isIO_val_Pkt2 ==> 
 	absIO_val(dp, raw[:length], ingressID) == absIO_val(dp, raw, ingressID)
 decreases
-func absIO_valWidenLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16, length int) 
+func absIO_valWidenLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16, length int) {
+	var ret1 io.IO_val
+	var ret2 io.IO_val
+
+	absPktWidenLemma(dp, raw, dp.asid(), length)
+	if (reveal validPktMetaHdr(raw) && absPkt(dp, raw, dp.asid()) != none[io.IO_pkt2]) {
+		assert (reveal validPktMetaHdr(raw) && absPkt(dp, raw[:length], dp.asid()) != none[io.IO_pkt2])
+		
+		//absPktWidenLemma(dp, raw, dp.asid(), length)
+		ret1 = io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), get(absPkt(dp, raw, dp.asid()))})
+		ret2 = io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), get(absPkt(dp, raw[:length], dp.asid()))})
+		assert ret1 == reveal absIO_val(dp, raw, ingressID)
+		assert ret2 == reveal absIO_val(dp, raw[:length], ingressID)
+		assert ret1 == ret2
+	} else {
+		
+		ret1 = absIO_val_Unsupported(raw, ingressID)
+		ret2 = absIO_val_Unsupported(raw, ingressID)
+		assert ret1 == reveal absIO_val(dp, raw, ingressID)
+		assert ret2 == reveal absIO_val(dp, raw[:length], ingressID)
+		assert ret1 == ret2
+	}
+}
 
 // absPkt lemma
 
