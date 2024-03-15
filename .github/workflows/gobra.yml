@@ -22,7 +22,7 @@ env:
   imageVersion: 'latest'
   mceMode: 'od'
   requireTriggers: '1'
-  useZ3API: '1'
+  useZ3API: '0'
 
 jobs:
   verify-deps:
@@ -327,6 +327,9 @@ jobs:
   verify-router:
     runs-on: ubuntu-latest
     steps:
+      - name: Install Z3 api
+        run: |
+            apt get install libz3-java=4.8.7-4build1
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
       - name: Verify package 'router/'
@@ -346,5 +349,5 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: 'on'
           requireTriggers: ${{ env.requireTriggers }}
-          useZ3API: ${{ env.useZ3API }}
+          useZ3API: '1'
 
