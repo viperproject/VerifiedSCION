@@ -22,7 +22,7 @@ env:
   imageVersion: 'latest'
   mceMode: 'od'
   requireTriggers: '1'
-  useZ3API: '0'
+  useZ3API: '1'
 
 jobs:
   verify-deps:
