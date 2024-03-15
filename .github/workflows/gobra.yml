@@ -23,7 +23,9 @@ env:
   mceMode: 'od'
   requireTriggers: '1'
   useZ3API: '0'
+  backend: 'SILICON'
   disableNL: '1'
+  unsafeWildcardOptimization: '1'
 
 jobs:
   verify-deps:
@@ -63,6 +65,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
@@ -80,6 +84,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/experimental/epic'
         uses: viperproject/gobra-action@main
         with:
@@ -96,6 +102,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/log'
         uses: viperproject/gobra-action@main
         with:
@@ -112,6 +120,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/private/serrors'
         uses: viperproject/gobra-action@main
         with:
@@ -128,6 +138,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/scrypto'
         uses: viperproject/gobra-action@main
         with:
@@ -144,6 +156,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/slayers'
         uses: viperproject/gobra-action@main
         with:
@@ -160,6 +174,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
@@ -176,6 +192,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/slayers/path/empty'
         uses: viperproject/gobra-action@main
         with:
@@ -192,6 +210,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/slayers/path/epic'
         uses: viperproject/gobra-action@main
         with:
@@ -209,6 +229,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/slayers/path/onehop'
         uses: viperproject/gobra-action@main
         with:
@@ -225,6 +247,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:
@@ -241,6 +265,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'private/topology'
         uses: viperproject/gobra-action@main
         with:
@@ -257,6 +283,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'private/topology/underlay'
         uses: viperproject/gobra-action@main
         with:
@@ -273,6 +301,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'private/underlay/conn'
         uses: viperproject/gobra-action@main
         with:
@@ -289,6 +319,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'private/underlay/sockctrl'
         uses: viperproject/gobra-action@main
         with:
@@ -305,6 +337,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'router/bfd'
         uses: viperproject/gobra-action@main
         with:
@@ -321,6 +355,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Verify package 'router/control'
         uses: viperproject/gobra-action@main
         with:
@@ -337,6 +373,8 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Upload the verification report
         uses: actions/upload-artifact@v2
         with:
@@ -367,4 +405,6 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
+          backend: ${{ env.backend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
 
