@@ -47,18 +47,23 @@ type Message struct {
 	IsActive bool
 	// do we have a fixed amount of perms to the Addr or a wildcard amount?
 	WildcardPerm bool
+	// is N in bounds?
+	NinBounds bool
 }
 
 pred (m *Message) Mem() {
-	acc(m)                                                              &&
-	len(m.Buffers) == 1                                                 &&
-	acc(&m.Buffers[0])                                                  &&
-	0 <= m.N && m.N <= len(m.Buffers[0])                                &&
-	sl.AbsSlice_Bytes(m.Buffers[0][:m.N], 0, m.N)                       &&
-	sl.AbsSlice_Bytes(m.Buffers[0][m.N:], 0, len(m.Buffers[0][m.N:]))   &&
-	sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB))                             &&
-	// typeOf(m.Addr) == type[*net.UDPAddr]                             &&
-	((m.Addr != nil && m.IsActive && !m.WildcardPerm) ==> m.Addr.Mem()) &&
+	acc(m)                                                                   &&
+	len(m.Buffers) == 1                                                      &&
+	acc(&m.Buffers[0])                                                       &&
+	0 <= m.N                                                                 &&
+	(m.NinBounds ==> m.N <= len(m.Buffers[0]))                               &&
+	(m.NinBounds ==>
+		sl.AbsSlice_Bytes(m.Buffers[0][:m.N], 0, m.N)          &&
+		sl.AbsSlice_Bytes(m.Buffers[0][m.N:], 0, len(m.Buffers[0][m.N:])))   &&
+	(!m.NinBounds ==> sl.AbsSlice_Bytes(m.Buffers[0], 0, len(m.Buffers[0]))) &&
+	sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB))                                  &&
+	// typeOf(m.Addr) == type[*net.UDPAddr]                                  &&
+	((m.Addr != nil && m.IsActive && !m.WildcardPerm) ==> m.Addr.Mem())      &&
 	((m.Addr != nil && m.IsActive && m.WildcardPerm) ==> acc(m.Addr.Mem(), _))
 }
 
@@ -74,6 +79,13 @@ requires acc(m.Mem(), _)
 decreases
 pure func (m *Message) HasActiveAddr() bool {
 	return unfolding acc(m.Mem(), _) in m.IsActive
+}
+
+ghost
+requires acc(m.Mem(), _)
+decreases
+pure func (m *Message) IsNInBounds() bool {
+	return unfolding acc(m.Mem(), _) in m.NinBounds
 }
 
 ghost

@@ -124,7 +124,8 @@ type BatchConn interface {
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> (
 	// @ 		typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr] &&
-	// @ 		!msgs[i].HasWildcardPermAddr())
+	// @ 		!msgs[i].HasWildcardPermAddr() &&
+	// @ 		msgs[i].IsNInBounds())
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 	// @ ensures   err != nil ==> err.ErrorMem()
@@ -151,7 +152,7 @@ type BatchConn interface {
 	// (VerifiedSCION) opted for less reusable spec for WriteBatch for
 	// performance reasons.
 	// @ requires  len(msgs) == 1
-	// @ requires  acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
+	// @ requires  acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr() && !msgs[0].IsNInBounds()
 	// @ ensures   acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
@@ -944,7 +945,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
 				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
-				// @ 	msgs[i].HasActiveAddr()
+				// @ 	msgs[i].HasActiveAddr() && msgs[i].IsNInBounds()
 				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
 				// @ 	typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr]
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
@@ -961,7 +962,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
 					// @ preserves 0 <= i0 && i0 < pkts && pkts <= len(msgs)
-					// @ preserves acc(msgs[i0].Mem(), R1)
+					// @ preserves acc(msgs[i0].Mem(), R1) && msgs[i0].IsNInBounds()
 					// @ ensures   p === msgs[:pkts][i0].GetMessage()
 					// @ outline(
 					// @ unfold acc(msgs[i0].Mem(), R1)

@@ -658,7 +658,7 @@ pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 
 ghost
 requires dp.Valid()
-requires acc(msg.Mem(), R50)
+requires acc(msg.Mem(), R50) && msg.IsNInBounds()
 decreases
 pure func MsgToAbsVal(dp io.DataPlaneSpec, msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
 	return unfolding acc(msg.Mem(), R50) in
