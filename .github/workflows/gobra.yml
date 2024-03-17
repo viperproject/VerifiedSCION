@@ -332,7 +332,7 @@ jobs:
 #          curl http://launchpadlibrarian.net/460508738/libz3-jni_4.8.7-4_amd64.deb --output libz3-jni.deb && sudo dpkg -i libz3-jni.deb
       - name: Install libz3-java
         run: |
-          sudo apt update && apt install z3 libz3-dev libz3-jni libz3-java
+          sudo apt update && sudo apt install z3 libz3-dev libz3-jni libz3-java
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
       - name: Verify package 'router/'
