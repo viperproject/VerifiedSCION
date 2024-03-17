@@ -207,6 +207,13 @@ pure func (d *DataPlane) getValForwardingMetrics() map[uint16]forwardingMetrics 
 ghost
 requires acc(d.Mem(), _)
 decreases
+pure func (d *DataPlane) getMacFactory() func() hash.Hash {
+	return unfolding acc(d.Mem(), _) in d.macFactory
+}
+
+ghost
+requires acc(d.Mem(), _)
+decreases
 pure func (d *DataPlane) getDomForwardingMetrics() set[uint16] {
 	return unfolding acc(d.Mem(), _) in
 		d.forwardingMetrics == nil ?
@@ -318,6 +325,15 @@ decreases
 func (d *DataPlane) getSvcMem() {
 	unfold acc(d.Mem(), _)
 }
+
+ghost
+requires acc(d.Mem(), _)
+ensures  acc(&d.running, _)
+decreases
+func (d *DataPlane) getRunningMem() {
+	unfold acc(d.Mem(), _)
+}
+
 
 ghost
 requires acc(d.Mem(), _)
