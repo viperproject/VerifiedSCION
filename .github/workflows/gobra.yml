@@ -329,7 +329,7 @@ jobs:
     steps:
       - name: Install Z3 api
         run: |
-            sudo apt update && apt install libz3-java=4.8.7-4build1
+            sudo apt update && sudo apt install libz3-java=4.8.7-4build1
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
       - name: Verify package 'router/'
