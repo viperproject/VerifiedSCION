@@ -375,8 +375,7 @@ func (d *DataPlane) getMacFactoryMem() {
 }
 
 ghost
-requires acc(d.Mem(), _)
-requires acc(&d.macFactory, _) && d.macFactory != nil
+requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
 ensures  acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
 ensures  scrypto.ValidKeyForHash(*d.key)
