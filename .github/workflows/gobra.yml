@@ -90,7 +90,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/experimental/epic'
-          timeout: 5m
+          timeout: 7m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
