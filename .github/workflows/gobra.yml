@@ -24,7 +24,7 @@ env:
   requireTriggers: '1'
   useZ3API: '0'
   backend: 'SILICON'
-  disableNL: '1'
+  disableNL: '0'
   unsafeWildcardOptimization: '1'
 
 jobs:
@@ -404,7 +404,7 @@ jobs:
           mceMode: 'on'
           requireTriggers: ${{ env.requireTriggers }}
           useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
+          disableNL: '1'
           backend: ${{ env.backend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
 
