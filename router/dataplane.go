@@ -871,6 +871,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant ingressID in d.getDomForwardingMetrics()
 			// @ invariant acc(rd.Mem(), _)
 			// @ invariant processor.sInit() && processor.sInitD() === d
+			// @ invariant processor.getIngressID() == ingressID
 			// @ invariant acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 			// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
 			for d.running {
@@ -951,6 +952,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant processor.sInit() && processor.sInitD() === d
+				// @ invariant processor.getIngressID() == ingressID
 				// contracts for IO-spec
 				// @ invariant pkts <= len(ioValSeq)
 				// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
@@ -991,7 +993,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert acc(&p.Buffers[0])
 					// @ assert p.N <= len(p.Buffers[0])
 					tmpBuf := p.Buffers[0][:p.N]
-					// @ ghost absPkt := absIO_val(dp, tmpBuf, ingressID)
+					// @ ghost absPktTmpBuf := absIO_val(dp, tmpBuf, ingressID)
+					// @ ghost absPktBuf0   := absIO_val(dp, msgs[i0].Buffers[0], ingressID)
+					// @ assert msgs[i0] === p
+					// @ absIO_valWidenLemma(dp, p.Buffers[0], ingressID, p.N)
+					// @ assert absPktTmpBuf.isIO_val_Pkt2 ==> absPktTmpBuf === absPktBuf0
 					// @ MultiElemWitnessStep(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
 					// @ assert ioValSeq[i0].isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ioIngressID, ioValSeq[i0].IO_val_Pkt2_2)
 					// absIO_valWidenLemma(dp, p.Buffers[0], ingressID, p.N) // TODO: drop
@@ -1367,7 +1373,7 @@ type processResult struct {
 
 // @ requires acc(&d.macFactory, _) && d.macFactory != nil
 // @ requires acc(d.Mem(), _)
-// @ ensures  res.sInit() && res.sInitD() == d
+// @ ensures  res.sInit() && res.sInitD() == d && res.getIngressID() == ingressID
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
