@@ -158,7 +158,6 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	// contracts for IO-spec
 	// @ requires  dp.Valid()
-	// @ requires  len(msgs) == 1
 	// @ requires  MsgToAbsVal(dp, &msgs[0], egressID) == ioAbsPkts
 	// @ requires  io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
 	// @ ensures   dp.Valid()
@@ -1006,7 +1005,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := processor.processPkt(tmpBuf, srcAddr /*@, ioLock, ioSharedArg, dp @*/)
 					// @ fold scmpErr.Mem()
 
-					// @ assume false // HERE
 					switch {
 					case err == nil:
 						// @ unfold scmpErr.Mem()
@@ -1066,7 +1064,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					}
 					// @ sl.NilAcc_Bytes()
 					// @ assert absIO_val(dp, result.OutPkt, result.EgressID) == absIO_val(dp, writeMsgs[0].Buffers[0], result.EgressID)
-					// @ assert newAbsPkt == absIO_val(dp, writeMsgs[0].Buffers[0], result.EgressID)
+					// @ assert result.OutPkt != nil ==> newAbsPkt == absIO_val(dp, writeMsgs[0].Buffers[0], result.EgressID)
 					// @ fold acc(writeMsgs[0].Mem(), R50)
 
 					// @ ghost ioLock.Lock()
@@ -1454,10 +1452,9 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.getIngressID()), absPkt.IO_val_Pkt2_2)
 // @ ensures dp.Valid()
 // @ ensures reserr == nil ==> respr.OutPkt != nil
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
+// @ ensures respr.OutPkt != nil ==>
 // @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
-// @	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
+// @ ensures respr.OutPkt != nil ==> newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
 // (VerifiedSCION) On a first step, we will prove that whenever we have a valid scion packet in processSCION,
 // the correct "next packet" is computed
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
