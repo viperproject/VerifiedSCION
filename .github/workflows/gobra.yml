@@ -327,7 +327,10 @@ jobs:
   verify-router:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Z3 api
+      - name: Install libz3-jni
+         run: |
+            curl http://launchpadlibrarian.net/460508738/libz3-jni_4.8.7-4_amd64.deb --output libz3-jni.deb && sudo dpkg -i libz3-jni.deb
+      - name: Install libz3-java
         run: |
             curl http://launchpadlibrarian.net/470284354/libz3-java_4.8.7-4build1_amd64.deb --output libz3-java.deb && sudo dpkg -i libz3-java.deb
       - name: Checkout the VerifiedSCION repository
