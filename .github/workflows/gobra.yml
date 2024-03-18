@@ -25,7 +25,8 @@ env:
   useZ3API: '0'
   backend: 'SILICON'
   disableNL: '0'
-  unsafeWildcardOptimization: '1'
+  unsafeWildcardOptimization: '0'
+  overflow: '0'
 
 jobs:
   verify-deps:
@@ -63,7 +64,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
-          overflow: 0
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -83,7 +84,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
-          overflow: 1
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -102,7 +103,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
-          overflow: 1
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -121,7 +122,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
-          overflow: 1
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -140,7 +141,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
-          overflow: 1
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -159,7 +160,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
-          overflow: 1
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -178,6 +179,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -196,6 +198,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -214,6 +217,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -233,6 +237,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -251,6 +256,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -269,6 +275,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -287,6 +294,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -305,6 +313,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -323,6 +332,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -341,6 +351,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -359,6 +370,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -377,6 +389,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           backend: ${{ env.backend }}
@@ -409,6 +422,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: 'on'
           requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
           disableNL: '1'
           backend: ${{ env.backend }}
