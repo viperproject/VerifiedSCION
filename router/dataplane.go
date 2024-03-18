@@ -788,24 +788,18 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// dPtr as an helper parameter. It always receives the value &d.
 		// @ requires acc(dPtr, _)
 		// @ requires let d := *dPtr in
-		// @ 	acc(&d.external, _) && acc(&d.linkTypes, _)                       &&
-		// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-		// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-		// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-		// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-		// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
-		// @ requires let d := *dPtr in
-		// @ 	acc(d.Mem(), _) && d.WellConfigured()
-		// @ requires let d := *dPtr in d.getValSvc() != nil
-		// @ requires let d := *dPtr in d.getValForwardingMetrics() != nil
-		// @ requires let d := *dPtr in (0 in d.getDomForwardingMetrics())
-		// @ requires let d := *dPtr in (ingressID in d.getDomForwardingMetrics())
-		// @ requires let d := *dPtr in d.macFactory != nil
+		// @ 	acc(d.Mem(), _)                            &&
+		// @ 	d.WellConfigured()                         &&
+		// @ 	d.getValSvc() != nil                       &&
+		// @ 	d.getValForwardingMetrics() != nil         &&
+		// @ 	(0 in d.getDomForwardingMetrics())         &&
+		// @ 	(ingressID in d.getDomForwardingMetrics()) &&
+		// @ 	d.getMacFactory() != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// contracts for IO-spec
 		// @ requires dp.Valid()
 		// @ requires let d := *dPtr in
-		// @ 	acc(d.Mem(), _) && d.DpAgreesWithSpec(dp)
+		// @ 	d.DpAgreesWithSpec(dp)
 		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			d := *dPtr
@@ -855,17 +849,14 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
 
+			// @ d.getRunningMem()
+
 			// @ invariant acc(&scmpErr)
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem()
 			// @ invariant writeMsgInv(writeMsgs)
 			// @ invariant acc(dPtr, _) && *dPtr === d
-			// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
-			// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-			// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-			// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-			// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-			// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
+			// @ invariant acc(&d.running, _) // necessary for loop condition
 			// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 			// @ invariant d.getValSvc() != nil
 			// @ invariant d.getValForwardingMetrics() != nil
@@ -925,12 +916,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(dPtr, _) && *dPtr === d
-				// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
-				// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-				// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-				// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-				// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-				// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 				// @ invariant d.getValSvc() != nil
 				// @ invariant d.getValForwardingMetrics() != nil
@@ -1179,18 +1164,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant externals != nil ==> acc(externals, R4)
 	// @ invariant externals != nil ==> acc(accBatchConn(externals), R4)
-	// (VerifiedSCION) can we drop a few of these perms?
-	// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
-	// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-	// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-	// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-	// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-	// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant d.getValSvc() != nil
 	// @ invariant d.getValForwardingMetrics() != nil
 	// @ invariant 0 in d.getDomForwardingMetrics()
-	// @ invariant d.macFactory != nil
+	// @ invariant d.getMacFactory() != nil
 	// @ invariant dp.Valid()
 	// @ invariant d.DpAgreesWithSpec(dp)
 	// @ invariant acc(ioLockRun.LockP(), _) && ioLockRun.LockInv() == SharedInv!< dp, ioSharedArgRun !>;
@@ -1199,18 +1177,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		cl :=
 			// @ requires acc(&read, _) && read implements rc
 			// @ requires acc(&d, _)
-			// @ requires acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
-			// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-			// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-			// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-			// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-			// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 			// @ requires acc(d.Mem(), _) && d.WellConfigured()
 			// @ requires d.getValSvc() != nil
 			// @ requires d.getValForwardingMetrics() != nil
 			// @ requires 0 in d.getDomForwardingMetrics()
 			// @ requires i in d.getDomForwardingMetrics()
-			// @ requires d.macFactory != nil
+			// @ requires d.getMacFactory() != nil
 			// @ requires c != nil && acc(c.Mem(), _)
 			// contracts for IO-spec
 			// @ requires dp.Valid()
@@ -1230,17 +1202,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	cl :=
 		// @ requires acc(&read, _) && read implements rc
 		// @ requires acc(&d, _)
-		// @ requires acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
-		// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-		// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-		// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-		// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-		// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 		// @ requires acc(d.Mem(), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
 		// @ requires 0 in d.getDomForwardingMetrics()
-		// @ requires d.macFactory != nil
+		// @ requires d.getMacFactory() != nil
 		// @ requires c != nil && acc(c.Mem(), _)
 		// contracts for IO-spec
 		// @ requires dp.Valid()
@@ -1250,6 +1216,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			defer log.HandlePanic()
 			read(0, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
 		}
+	// @ d.getInternalMem()
 	go cl(d.internal /*@, ioLockRun, ioSharedArgRun, dp @*/) //@ as closure3
 
 	d.mtx.Unlock()
@@ -1366,8 +1333,7 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ requires acc(&d.macFactory, _) && d.macFactory != nil
-// @ requires acc(d.Mem(), _)
+// @ requires acc(d.Mem(), _) && d.getMacFactory() != nil
 // @ ensures  res.sInit() && res.sInitD() == d
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
