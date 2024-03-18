@@ -98,7 +98,6 @@ pure func MultiReadBioCorrectIfs(
 		} && MultiReadBioCorrectIfs(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1, k)
 }
 
-
 ghost
 opaque
 requires 0 <= expectedPkts && MultiReadBio(t, expectedPkts)
