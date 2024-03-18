@@ -20,13 +20,13 @@ package io
 
 // TODO: make individual_router an interface type with the following methods
 
-ghost 
+ghost
 decreases
 pure func if2term(ifs option[IO_ifs]) IO_msgterm {
 	return match ifs {
-		case none[IO_ifs]: 
+		case none[IO_ifs]:
 			MsgTerm_Empty{}
-		default: 
+		default:
 			IO_msgterm(MsgTerm_AS{IO_as(get(ifs))})
 	}
 }
@@ -39,10 +39,10 @@ pure func (dp DataPlaneSpec) hf_valid(d bool, ts uint, uinfo set[IO_msgterm], hf
 		let x := hf.HVF in
 		let l := IO_msgterm(MsgTerm_L{
 			seq[IO_msgterm]{
-				IO_msgterm(MsgTerm_Num{ts}), 
-				if2term(inif), 
-				if2term(egif), 
-				IO_msgterm(MsgTerm_FS{uinfo})}}) in 
+				IO_msgterm(MsgTerm_Num{ts}),
+				if2term(inif),
+				if2term(egif),
+				IO_msgterm(MsgTerm_FS{uinfo})}}) in
 		x == mac(macKey(asidToKey(dp.Asid())), l)
 }
 
@@ -52,13 +52,13 @@ pure func macKey(key IO_key) IO_msgterm {
 	return IO_msgterm(MsgTerm_Key{key})
 }
 
-ghost 
+ghost
 decreases
 pure func mac(fst IO_msgterm, snd IO_msgterm) IO_msgterm {
-	return IO_msgterm( MsgTerm_Hash { 
+	return IO_msgterm( MsgTerm_Hash {
 		MsgTerm_Hash_ : IO_msgterm( MsgTerm_MPair{
 			MsgTerm_MPair_1 : fst,
-			MsgTerm_MPair_2 : snd, 
+			MsgTerm_MPair_2 : snd,
 		}),
 	})
 }
@@ -89,8 +89,8 @@ ghost
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) is_target(asid IO_as, nextif IO_ifs, a2 IO_as, i2 IO_ifs) bool {
-	return AsIfsPair{asid, nextif} in domain(dp.GetLinks()) && 
-		dp.Lookup(AsIfsPair{asid, nextif}) == AsIfsPair{a2, i2}		
+	return AsIfsPair{asid, nextif} in domain(dp.GetLinks()) &&
+		dp.Lookup(AsIfsPair{asid, nextif}) == AsIfsPair{a2, i2}
 }
 
 ghost
@@ -124,14 +124,34 @@ requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
-	return let currseg := m.CurrSeg in
+	return let _ := reveal dp.Valid() in
+		let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
-		let traversedseg := establishGuardTraversedsegInc(currseg) in
+		let traversedseg := newpkt.CurrSeg in
 		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), hf1) &&
+		(nextif in domain(dp.GetNeighborIAs())) &&
 		let a2 := dp.GetNeighborIA(nextif) in
 		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
 		dp.is_target(dp.Asid(), nextif, a2, i2)
 }
+
+ghost
+requires len(m.CurrSeg.Future) > 0
+requires dp.Valid()
+decreases
+pure func (dp DataPlaneSpec) dp3s_forward_ext_xover(m IO_pkt3, newpkt IO_pkt3, nextif IO_ifs) bool {
+	return let _ := reveal dp.Valid() in
+		let currseg := m.CurrSeg in
+		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
+		let traversedseg := newpkt.CurrSeg in
+		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		(nextif in domain(dp.GetNeighborIAs())) &&
+		let a2 := dp.GetNeighborIA(nextif) in
+		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
+		dp.is_target(dp.Asid(), nextif, a2, i2)
+}
+
 
 // TODO: should we change IO_ifs to being implemented as an option type?
 ghost
@@ -140,10 +160,23 @@ requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward(m IO_pkt3, newpkt IO_pkt3, nextif option[IO_ifs]) bool {
 	return match nextif {
-		case none[IO_ifs]: 
+		case none[IO_ifs]:
 			newpkt == m
-		default: 
+		default:
 			dp.dp3s_forward_ext(m, newpkt, get(nextif))
+	}
+}
+
+ghost
+requires len(m.CurrSeg.Future) > 0
+requires dp.Valid()
+decreases
+pure func (dp DataPlaneSpec) dp3s_forward_xover(m IO_pkt3, newpkt IO_pkt3, nextif option[IO_ifs]) bool {
+	return match nextif {
+		case none[IO_ifs]:
+			newpkt == m
+		default:
+			dp.dp3s_forward_ext_xover(m, newpkt, get(nextif))
 	}
 }
 
@@ -169,5 +202,5 @@ pure func (dp DataPlaneSpec) dp3s_xover_common(
 		return some(recvif) in domain(s.ibuf) &&
 			(let lookupRes := s.ibuf[some(recvif)] in (m in lookupRes)) &&
 			dp.dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, dp.Asid(), recvif) &&
-			dp.dp3s_forward(intermediatepkt, newpkt, nextif)
+			dp.dp3s_forward_xover(intermediatepkt, newpkt, nextif)
 }

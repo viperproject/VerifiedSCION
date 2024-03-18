@@ -17,14 +17,22 @@
 package router
 
 import (
+	"context"
+	"hash"
 	"net"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/slayers"
+	"github.com/scionproto/scion/pkg/scrypto"
+	"github.com/scionproto/scion/private/topology"
+
+	sl "github.com/scionproto/scion/verification/utils/slices"
+	io "verification/io"
 )
 
 func foldMem_test() {
 	d@ := DataPlane{}
+	fold d.Mem()
 	fold MutexInvariant!<&d!>()
 	// testing initialization with the operations from dataplane
 	d.mtx.SetInv(MutexInvariant!<&d!>)
@@ -39,3 +47,181 @@ func foldScionPacketProcessorInitMem_test() {
 	fold d.scionLayer.NonInitMem()
 	fold d.initMem()
 }
+
+ensures 0 < runningPerm
+func runningPermIsPositive() {}
+
+ensures MutexInvariant(d) && acc(d.Mem(), OutMutexPerm)
+decreases
+func foldDataPlaneMem() (d *DataPlane) {
+	d = &DataPlane{}
+	d.external = make(map[uint16]BatchConn)
+	fold accBatchConn(d.external)
+	d.linkTypes = make(map[uint16]topology.LinkType)
+	d.neighborIAs = make(map[uint16]addr.IA)
+	d.internalNextHops = make(map[uint16]*net.UDPAddr)
+	fold accAddr(d.internalNextHops)
+	d.svc = newServices()
+	d.bfdSessions = make(map[uint16]bfdSession)
+	fold accBfdSession(d.bfdSessions)
+	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
+	fold accForwardingMetrics(d.forwardingMetrics)
+	fold d.Mem()
+	fold MutexInvariant(d)
+}
+
+requires MutexInvariant(d) && acc(d.Mem(), OutMutexPerm)
+requires !d.IsRunning()
+ensures  acc(&d.running)
+decreases
+func canModifyRunning(d *DataPlane) {
+	unfold MutexInvariant(d)
+	d.isRunningEq()
+	unfold d.Mem()
+}
+
+requires macFactory != nil                        &&
+	acc(key)                                      &&
+	acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _) &&
+	scrypto.ValidKeyForHash(*key)                 &&
+	macFactory implements MacFactorySpec{key}
+requires metrics != nil && metrics.Mem()
+requires ctx != nil && ctx.Mem()
+func testRun(
+	macFactory func() hash.Hash,
+	key *[]byte,
+	metrics *Metrics,
+	ctx context.Context,
+	place io.Place,
+	state io.IO_dp3s_state_local) (d *DataPlane) {
+	// body similar to foldDataPlaneMem
+	d = &DataPlane{}
+
+	b1 := allocateBatchConn()
+	b2 := allocateBatchConn()
+	d.external = map[uint16]BatchConn{
+		uint16(1): b1,
+		uint16(2): b2,
+	}
+	fold accBatchConn(d.external)
+
+	d.linkTypes = make(map[uint16]topology.LinkType)
+	d.neighborIAs = make(map[uint16]addr.IA)
+
+	a1 := allocateUDPAddr()
+	d.internalNextHops = map[uint16]*net.UDPAddr{
+		uint16(3): a1,
+	}
+
+	d.internal = allocateBatchConn()
+	fold accAddr(d.internalNextHops)
+	d.svc = newServices()
+	d.macFactory = macFactory
+	d.key = key
+	d.localIA = 1000
+	d.Metrics = metrics
+	d.bfdSessions = make(map[uint16]bfdSession)
+	fold accBfdSession(d.bfdSessions)
+	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
+	fold accForwardingMetrics(d.forwardingMetrics)
+
+	ensures dp.Valid()
+	ensures dp === io.DataPlaneSpec_{
+		linkTypes: dict[io.IO_ifs]io.IO_Link{
+			1: io.IO_ProvCust{},
+			2: io.IO_ProvCust{},
+			3: io.IO_ProvCust{},
+		},
+		neighborIAs: dict[io.IO_ifs]io.IO_as{
+			1: 1001,
+			2: 1002,
+			3: 1000,
+		},
+		localIA: 1000,
+		topology: io.TopologySpec_{
+			coreAS: set[io.IO_as]{1000},
+			links:  dict[io.AsIfsPair]io.AsIfsPair {
+				io.AsIfsPair{1000, 1}: io.AsIfsPair{1001, 7},
+				io.AsIfsPair{1000, 2}: io.AsIfsPair{1002, 8},
+				io.AsIfsPair{1000, 3}: io.AsIfsPair{1000, 3},
+				io.AsIfsPair{1001, 7}: io.AsIfsPair{1000, 1},
+				io.AsIfsPair{1002, 8}: io.AsIfsPair{1000, 2}}}}
+	outline(
+	pair1 := io.AsIfsPair{1000, 1}
+	pair2 := io.AsIfsPair{1000, 2}
+	pair3 := io.AsIfsPair{1000, 3}
+	pair4 := io.AsIfsPair{1001, 7}
+	pair5 := io.AsIfsPair{1002, 8}
+
+	dp := io.DataPlaneSpec_{
+		linkTypes: dict[io.IO_ifs]io.IO_Link{
+			1: io.IO_ProvCust{},
+			2: io.IO_ProvCust{},
+			3: io.IO_ProvCust{},
+		},
+		neighborIAs: dict[io.IO_ifs]io.IO_as{
+			1: 1001,
+			2: 1002,
+			3: 1000,
+		},
+		localIA: 1000,
+		topology: io.TopologySpec_{
+			coreAS: set[io.IO_as]{1000},
+			links:  dict[io.AsIfsPair]io.AsIfsPair {
+				pair1: pair4,
+				pair2: pair5,
+				pair3: pair3,
+				pair4: pair1,
+				pair5: pair2}}}
+
+	assert dp.Lookup(dp.Lookup(pair1)) == pair1
+	assert dp.Lookup(dp.Lookup(pair2)) == pair2
+	assert dp.Lookup(dp.Lookup(pair3)) == pair3
+	assert dp.Lookup(dp.Lookup(pair4)) == pair4
+	assert dp.Lookup(dp.Lookup(pair5)) == pair5
+
+	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
+		io.AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links)
+	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
+		dp.Lookup(io.AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs]
+	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==>
+		ifs in domain(dp.neighborIAs)
+	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair in domain(dp.topology.links) ==>
+			let next_pair := dp.Lookup(pair) in
+			(next_pair in domain(dp.topology.links)) &&
+			dp.Lookup(next_pair) == pair
+	assert reveal dp.Valid()
+	)
+
+	assert dp.Asid() == 1000
+	assert d.localIA == 1000
+	assert d.dpSpecWellConfiguredLocalIA(dp)
+	assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	assert d.dpSpecWellConfiguredLinkTypes(dp)
+
+	fold d.Mem()
+	assert reveal d.DpAgreesWithSpec(dp)
+	assert reveal d.PreWellConfigured()
+	fold MutexInvariant!< d !>()
+	// end of foldDataPlaneMem
+	assert !d.IsRunning()
+	assert d.InternalConnIsSet()
+	assert d.KeyIsSet()
+	assert d.SvcsAreSet()
+	assert d.MetricsAreSet()
+	d.mtx.SetInv(MutexInvariant!<d!>)
+	assert d.mtx.LockP()
+	assert d.mtx.LockInv() == MutexInvariant!<d!>;
+
+	// io-spec needs to be inhaled
+	inhale io.token(place)
+	inhale dp.dp3s_iospec_ordered(state, place)
+
+	d.Run(ctx, place, state, dp)
+}
+
+ensures b != nil && b.Mem()
+func allocateBatchConn() (b BatchConn)
+
+ensures u != nil && u.Mem()
+func allocateUDPAddr() (u *net.UDPAddr)

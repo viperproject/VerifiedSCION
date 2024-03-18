@@ -33,7 +33,7 @@ type DataPlaneSpec adt {
 type TopologySpec adt {
 	TopologySpec_{
 		coreAS		set[IO_as]
-		links	 	dict[AsIfsPair]AsIfsPair
+		links		dict[AsIfsPair]AsIfsPair
 	}
 }
 
@@ -43,18 +43,25 @@ type AsIfsPair struct {
 }
 
 ghost
+opaque
 decreases
 pure func (dp DataPlaneSpec) Valid() bool {
-	return domain(dp.linkTypes) == domain(dp.neighborIAs) &&
-		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==> 
-			(AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) && 
+	return (forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==>
+			(AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) &&
 			dp.Lookup(AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])) &&
 		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==>
 			ifs in domain(dp.neighborIAs)) &&
-		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.topology.links) ==>  
+		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.topology.links) ==>
 			let next_pair := dp.Lookup(pairs) in
 			(next_pair in domain(dp.topology.links)) &&
 			dp.Lookup(next_pair) == pairs)
+			// && domain(dp.linkTypes) == domain(dp.neighborIAs)
+}
+
+ghost
+decreases
+pure func (dp DataPlaneSpec) GetLinkTypes() dict[IO_ifs]IO_Link {
+	return dp.linkTypes
 }
 
 ghost

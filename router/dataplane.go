@@ -70,6 +70,7 @@ import (
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 	// @ "github.com/scionproto/scion/verification/utils/seqs"
 	// @ socketspec "golang.org/x/net/internal/socket/"
+	// @ io "verification/io"
 )
 
 const (
@@ -127,7 +128,20 @@ type BatchConn interface {
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 	// @ ensures   err != nil ==> err.ErrorMem()
-	ReadBatch(msgs underlayconn.Messages) (n int, err error)
+	// contracts for IO-spec
+	// @ requires Prophecy(prophecyM)
+	// @ requires io.token(place) && MultiReadBio(place, prophecyM)
+	// @ preserves dp.Valid()
+	// @ ensures  err != nil ==> prophecyM == 0
+	// @ ensures  err == nil ==> prophecyM == n
+	// @ ensures  io.token(old(MultiReadBioNext(place, prophecyM)))
+	// @ ensures  old(MultiReadBioCorrectIfs(place, prophecyM, ifsToIO_ifs(ingressID)))
+	// @ ensures  err == nil ==>
+	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
+	// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
+	// @    old(MultiReadBioIO_val(place, n)[i])
+	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
+	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
 	// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R10)
@@ -135,8 +149,10 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
-	// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	(acc(msgs[i].Mem(), R50) && msgs[i].HasActiveAddr())
+	// (VerifiedSCION) opted for less reusable spec for WriteBatch for
+	// performance reasons.
+	// @ requires  len(msgs) == 1
+	// @ preserves acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteBatch(msgs underlayconn.Messages, flags int) (n int, err error)
@@ -210,19 +226,24 @@ func (e scmpError) Error() string {
 }
 
 // SetIA sets the local IA for the dataplane.
-// @ requires  acc(&d.running, 1/2) && !d.running
-// @ requires  acc(&d.localIA, 1/2) && d.localIA.IsZero()
+// @ requires  acc(d.Mem(), OutMutexPerm)
+// @ requires  !d.IsRunning()
+// @ requires  d.LocalIA().IsZero()
 // @ requires  !ia.IsZero()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running, 1/2) && !d.running
-// @ ensures   acc(&d.localIA, 1/2)
+// @ ensures   acc(d.Mem(), OutMutexPerm)
+// @ ensures   !d.IsRunning()
 // @ ensures   e == nil
 func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold d.Mem()
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -241,23 +262,28 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// @ requires  acc(&d.key,        1/2)
-// @ requires  acc(d.key,         1/2)
-// @ requires  acc(&d.running,    1/2) && !d.running
-// @ requires  acc(&d.macFactory, 1/2) && d.macFactory == nil
+// @ requires  acc(d.Mem(), OutMutexPerm)
+// @ requires  !d.IsRunning()
+// @ requires  !d.KeyIsSet()
 // @ requires  len(key) > 0
 // @ requires  sl.AbsSlice_Bytes(key, 0, len(key))
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running, 1/2) && !d.running
-// @ ensures   acc(&d.macFactory, 1/2)
-// @ ensures   res == nil ==> d.macFactory != nil
+// @ ensures   acc(d.Mem(), OutMutexPerm)
+// @ ensures   !d.IsRunning()
+// @ ensures   res == nil ==> d.KeyIsSet()
 func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ share key
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
+	// @ unfold acc(d.Mem(), 1/2)
+	// @ d.keyIsSetEq()
+	// @ unfold acc(d.Mem(), 1/2)
 	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold d.Mem()
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -285,9 +311,6 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 			mac, _ := scrypto.InitMac(key)
 			return mac
 		}
-	// (VerifiedSCION) Gobra cannot currently prove the following assertion, even though it must
-	// follow from the structure of the declaration of `verScionTemp` (https://github.com/viperproject/gobra/issues/713).
-	// @ assume verScionTemp != nil
 	// @ proof verScionTemp implements MacFactorySpec{d.key} {
 	// @   return verScionTemp() as f
 	// @ }
@@ -299,20 +322,24 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
 // dataplane.
-// @ requires  acc(&d.running,    1/2) && !d.running
-// @ requires  acc(&d.internal,   1/2) && d.internal == nil
-// @ requires  acc(&d.internalIP, 1/2)
+// @ requires  acc(d.Mem(), OutMutexPerm)
+// @ requires  !d.IsRunning()
+// @ requires  !d.InternalConnIsSet()
 // @ requires  conn != nil && conn.Mem()
 // @ requires  ip.Mem()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.internal,   1/2)
-// @ ensures   acc(&d.internalIP, 1/2)
+// @ ensures   acc(d.Mem(), OutMutexPerm)
+// @ ensures   !d.IsRunning()
 func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
+	// @ unfold acc(d.Mem(), 1/2)
+	// @ d.internalIsSetEq()
+	// @ unfold acc(d.Mem(), 1/2)
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -327,6 +354,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	}
 	d.internal = conn
 	d.internalIP = ip
+	// @ fold d.Mem()
 	// @ fold MutexInvariant!<d!>()
 	return nil
 }
@@ -334,19 +362,18 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // AddExternalInterface adds the inter AS connection for the given interface ID.
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
-// @ requires  acc(&d.running,    1/2) && !d.running
-// @ requires  acc(&d.external,   1/2)
-// @ requires  d.external != nil ==> acc(d.external, 1/2)
-// @ requires  !(ifID in domain(d.external))
 // @ requires  conn != nil && conn.Mem()
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.external,   1/2) && acc(d.external, 1/2)
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -355,10 +382,15 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 		// @ Unreachable()
 		return emptyValue
 	}
+	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), 1/2) }
 	if _, existsB := d.external[ifID]; existsB {
-		// @ Unreachable()
+		// @ establishAlreadySet()
+		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
+		// @ fold d.Mem()
+		// @ fold MutexInvariant!<d!>()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
+	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
 	if d.external == nil {
 		d.external = make(map[uint16]BatchConn)
 		// @ fold accBatchConn(d.external)
@@ -366,6 +398,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	// @ unfold accBatchConn(d.external)
 	d.external[ifID] = conn
 	// @ fold accBatchConn(d.external)
+	// @ fold d.Mem()
 	// @ fold MutexInvariant!<d!>()
 	return nil
 }
@@ -373,20 +406,17 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 // AddNeighborIA adds the neighboring IA for a given interface ID. If an IA for
 // the given ID is already set, this method will return an error. This can only
 // be called on a yet running dataplane.
-// @ requires  acc(&d.running,     1/2) && !d.running
-// @ requires  acc(&d.neighborIAs, 1/2)
-// @ requires  d.neighborIAs != nil ==> acc(d.neighborIAs, 1/2)
 // @ requires  !remote.IsZero()
-// @ requires  !(ifID in domain(d.neighborIAs))
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,    1/2) && !d.running
-// @ ensures   acc(&d.neighborIAs,1/2) && acc(d.neighborIAs, 1/2)
-// @ ensures   domain(d.neighborIAs) == old(domain(d.neighborIAs)) union set[uint16]{ifID}
 func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -396,13 +426,16 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 		return emptyValue
 	}
 	if _, existsB := d.neighborIAs[ifID]; existsB {
-		// @ Unreachable()
+		// @ establishAlreadySet()
+		// @ fold d.Mem()
+		// @ fold MutexInvariant!<d!>()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	if d.neighborIAs == nil {
 		d.neighborIAs = make(map[uint16]addr.IA)
 	}
 	d.neighborIAs[ifID] = remote
+	// @ fold d.Mem()
 	// @ fold MutexInvariant!<d!>()
 	return nil
 }
@@ -410,23 +443,24 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // AddLinkType adds the link type for a given interface ID. If a link type for
 // the given ID is already set, this method will return an error. This can only
 // be called on a not yet running dataplane.
-// @ requires  acc(&d.running,   1/2) && !d.running
-// @ requires  acc(&d.linkTypes, 1/2)
-// @ requires  d.linkTypes != nil ==> acc(d.linkTypes, 1/2)
-// @ requires  !(ifID in domain(d.linkTypes))
-// (VerifiedSCION) unlike all other setter methods, this does not lock
-// d.mtx. Did the devs forget about it?
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
+// (VerifiedSCION) unlike all other setter methods, this does not lock d.mtx.
+// This was reported in https://github.com/scionproto/scion/issues/4282.
 // @ preserves MutexInvariant!<d!>()
-// @ ensures   acc(&d.running,   1/2) && !d.running
-// @ ensures   acc(&d.linkTypes, 1/2) && acc(d.linkTypes, 1/2)
-// @ ensures   domain(d.linkTypes) == old(domain(d.linkTypes)) union set[uint16]{ifID}
 func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
+	// @ unfold acc(d.Mem(), OutMutexPerm)
 	if _, existsB := d.linkTypes[ifID]; existsB {
-		// @ Unreachable()
+		// @ establishAlreadySet()
+		// @ fold acc(d.Mem(), OutMutexPerm)
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
+	// @ fold acc(d.Mem(), OutMutexPerm)
 	// @ unfold MutexInvariant!<d!>()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold d.Mem()
 	if d.linkTypes == nil {
 		d.linkTypes = make(map[uint16]topology.LinkType)
 	}
@@ -469,21 +503,21 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 // getInterfaceState checks if there is a bfd session for the input interfaceID and
 // returns InterfaceUp if the relevant bfdsession state is up, or if there is no BFD
 // session. Otherwise, it returns InterfaceDown.
-// @ preserves acc(MutexInvariant!<d!>(), R5)
+// @ preserves acc(d.Mem(), R5)
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
-	// @ unfold acc(MutexInvariant!<d!>(), R5)
-	// @ defer fold acc(MutexInvariant!<d!>(), R5)
+	// @ unfold acc(d.Mem(), R5)
+	// @ defer fold acc(d.Mem(), R5)
 	bfdSessions := d.bfdSessions
 	// @ ghost if bfdSessions != nil {
-	// @		unfold acc(accBfdSession(d.bfdSessions), R20)
-	// @		defer fold acc(accBfdSession(d.bfdSessions), R20)
+	// @ 	unfold acc(accBfdSession(d.bfdSessions), R20)
+	// @ 	defer fold acc(accBfdSession(d.bfdSessions), R20)
 	// @ }
-	// (VerifiedSCION) had to rewrite this, as Gobra does not correctly
-	// implement short-circuiting.
 	if bfdSession, ok := bfdSessions[interfaceID]; ok {
 		// @ assert interfaceID in domain(d.bfdSessions)
 		// @ assert bfdSession in range(d.bfdSessions)
 		// @ assert bfdSession != nil
+		// (VerifiedSCION) This checked used to be conjoined with 'ok' in the condition
+		// of the if stmt above. We broke it down to perform intermediate asserts.
 		if !bfdSession.IsUp() {
 			return control.InterfaceDown
 		}
@@ -493,11 +527,7 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 
 // (VerifiedSCION) marked as trusted because we currently do not support bfd.Session
 // @ trusted
-// @ requires  acc(metrics.PacketsSent.Mem(), _) && acc(metrics.PacketsReceived.Mem(), _)
-// @ requires  acc(metrics.Up.Mem(), _) && acc(metrics.StateChanges.Mem(), _)
-// @ preserves MutexInvariant!<d!>()
-// @ requires  s.Mem()
-// @ decreases
+// @ requires  false
 func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 	metrics bfd.Metrics) error {
 
@@ -530,27 +560,29 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // times for the same service, with the address added to the list of addresses
 // that provide the service.
 // @ requires  a != nil && acc(a.Mem(), R10)
-// @ preserves acc(&d.svc, 1/2)
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
+	// @ unfold MutexInvariant!<d!>()
+	// @ d.isRunningEq()
 	defer d.mtx.Unlock()
 	if a == nil {
 		return emptyValue
 	}
-	// @ preserves MutexInvariant!<d!>()
-	// @ preserves acc(&d.svc, 1/2)
-	// @ ensures   d.svc != nil
+	// @ preserves d.Mem()
+	// @ ensures   unfolding d.Mem() in d.svc != nil
 	// @ decreases
 	// @ outline(
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold d.Mem()
 	if d.svc == nil {
 		d.svc = newServices()
 	}
-	// @ fold MutexInvariant!<d!>()
+	// @ fold d.Mem()
 	// @ )
-	// @ unfold acc(MutexInvariant!<d!>(), R15)
+	// @ unfold acc(d.Mem(), R15)
 	// @ assert acc(d.svc.Mem(), _)
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
@@ -569,22 +601,29 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(1))
 		// @ )
 	}
-	// @ fold acc(MutexInvariant!<d!>(), R15)
+	// @ fold acc(d.Mem(), R15)
+	// @ fold MutexInvariant!<d!>()
 	return nil
 }
 
 // DelSvc deletes the address for the given service.
+// (VerifiedSCION) the spec here is definitely weird. Even though
+// the lock is acquired here, there is no check that the router is
+// not yet running, thus acquiring the lock is not enough to guarantee
+// absence of race conditions. To specify that the router is not running,
+// we need to pass perms to d.Mem(), but if we do this, then we don't need
+// the lock invariant to perform the operations in this function.
 // @ requires  a != nil && acc(a.Mem(), R10)
+// @ preserves acc(d.Mem(), OutMutexPerm/2)
 // @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	if a == nil {
 		return emptyValue
 	}
-	// @ unfold acc(MutexInvariant!<d!>(), R15)
-	// @ ghost defer fold acc(MutexInvariant!<d!>(), R15)
+	// @ unfold acc(d.Mem(), R40)
+	// @ ghost defer fold acc(d.Mem(), R40)
 	if d.svc == nil {
 		return nil
 	}
@@ -602,34 +641,34 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // AddNextHop sets the next hop address for the given interface ID. If the
 // interface ID already has an address associated this operation fails. This can
 // only be called on a not yet running dataplane.
-// @ requires  acc(&d.running,          1/2) && !d.running
-// @ requires  acc(&d.internalNextHops, 1/2)
-// @ requires  d.internalNextHops != nil ==> acc(d.internalNextHops, 1/2)
-// @ requires  !(ifID in domain(d.internalNextHops))
 // @ requires  a != nil && a.Mem()
+// @ preserves acc(d.Mem(), OutMutexPerm)
+// @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ ensures   acc(&d.running,          1/2) && !d.running
-// @ ensures   acc(&d.internalNextHops, 1/2) && acc(d.internalNextHops, 1/2)
 func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
 	// @ unfold MutexInvariant!<d!>()
+	// @ d.isRunningEq()
+	// @ unfold d.Mem()
 	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold d.Mem()
 	if d.running {
 		return modifyExisting
 	}
 	if a == nil {
 		return emptyValue
 	}
+	// @ ghost if d.internalNextHops != nil { unfold accAddr(d.internalNextHops) }
 	if _, existsB := d.internalNextHops[ifID]; existsB {
+		// @ fold accAddr(d.internalNextHops)
+		// @ establishAlreadySet()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	if d.internalNextHops == nil {
 		d.internalNextHops = make(map[uint16]*net.UDPAddr)
-		// @ fold accAddr(d.internalNextHops)
 	}
-	// @ unfold accAddr(d.internalNextHops)
 	// @ defer fold accAddr(d.internalNextHops)
 	d.internalNextHops[ifID] = a
 	return nil
@@ -678,37 +717,83 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
-// @ requires  acc(&d.running, 1/2) && !d.running
-// @ requires  acc(&d.Metrics, 1/2) && d.Metrics != nil
-// @ requires  acc(&d.svc, 1/2) && d.svc != nil
-// @ requires  acc(&d.internal, 1/2) && d.internal != nil
-// @ requires  acc(&d.macFactory, 1/2) && d.macFactory != nil
-// @ requires  acc(&d.forwardingMetrics, 1/2) && acc(d.forwardingMetrics, 1/2)
+// @ requires  acc(d.Mem(), OutMutexPerm)
+// @ requires  !d.IsRunning()
+// @ requires  d.InternalConnIsSet()
+// @ requires  d.KeyIsSet()
+// @ requires  d.SvcsAreSet()
+// @ requires  d.MetricsAreSet()
+// @ requires  d.PreWellConfigured()
+// (VerifiedSCION) here, the spec still uses a private field.
 // @ requires  d.mtx.LockP()
 // @ requires  d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ requires  acc(ctx.Mem(), _)
-// @ requires  acc(&d.mtx, _)
-func (d *DataPlane) Run(ctx context.Context) error {
+// @ requires  ctx != nil && ctx.Mem()
+// contracts for IO-spec
+// @ requires dp.Valid()
+// @ requires d.DpAgreesWithSpec(dp)
+// @ requires io.token(place) && dp.dp3s_iospec_ordered(state, place)
+func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost state io.IO_dp3s_state_local, ghost dp io.DataPlaneSpec @*/) error {
 	// @ share d, ctx
 	d.mtx.Lock()
 	// @ unfold MutexInvariant!<d!>()
-	// @ assert d.forwardingMetrics != nil
-	// @ assert acc(&d.forwardingMetrics, _) && acc(d.forwardingMetrics, _)
-	d.running = true
+	// @ assert !d.IsRunning()
+	// @ d.isRunningEq()
 
-	d.initMetrics()
+	// @ requires  acc(&d, R50)
+	// @ requires  acc(&d.running, runningPerm)
+	// @ requires  d.Mem() && !d.IsRunning()
+	// @ requires  d.InternalConnIsSet()
+	// @ requires  d.KeyIsSet()
+	// @ requires  d.SvcsAreSet()
+	// @ requires  d.MetricsAreSet()
+	// @ requires  d.PreWellConfigured()
+	// @ requires  d.DpAgreesWithSpec(dp)
+	// @ ensures   acc(&d, R50)
+	// @ ensures   MutexInvariant!<d!>()
+	// @ ensures   d.Mem() && d.IsRunning()
+	// @ ensures   d.InternalConnIsSet()
+	// @ ensures   d.KeyIsSet()
+	// @ ensures   d.SvcsAreSet()
+	// @ ensures   d.MetricsAreSet()
+	// @ ensures   d.PreWellConfigured()
+	// @ ensures   d.DpAgreesWithSpec(dp)
+	// @ decreases
+	// @ outline (
+	// @ reveal d.PreWellConfigured()
+	// @ reveal d.DpAgreesWithSpec(dp)
+	// @ unfold d.Mem()
+	d.running = true
+	// @ fold MutexInvariant!<d!>()
+	// @ fold d.Mem()
+	// @ reveal d.PreWellConfigured()
+	// @ reveal d.DpAgreesWithSpec(dp)
+	// @ )
+	// @ ghost ioLockRun, ioSharedArgRun := InitSharedInv(dp, place, state)
+	d.initMetrics( /*@ dp @*/ )
 
 	read /*@@@*/ :=
-		// @ requires acc(&d, _)
-		// @ requires acc(d,  _)
-		// @ requires acc(MutexInvariant(d), _) && d.WellConfigured()
-		// @ requires d.getValSvc() != nil
-		// @ requires d.getValForwardingMetrics() != nil
-		// @ requires 0 in d.getDomForwardingMetrics()
-		// @ requires ingressID in d.getDomForwardingMetrics()
-		// @ requires d.macFactory != nil
+		// (VerifiedSCION) Due to issue https://github.com/viperproject/gobra/issues/723,
+		// there is currently an incompletness when calling closures that capture variables
+		// from (Viper) methods where they were not allocated. To address that, we introduce
+		// dPtr as an helper parameter. It always receives the value &d.
+		// @ requires acc(dPtr, _)
+		// @ requires let d := *dPtr in
+		// @ 	acc(d.Mem(), _)                            &&
+		// @ 	d.WellConfigured()                         &&
+		// @ 	d.getValSvc() != nil                       &&
+		// @ 	d.getValForwardingMetrics() != nil         &&
+		// @ 	(0 in d.getDomForwardingMetrics())         &&
+		// @ 	(ingressID in d.getDomForwardingMetrics()) &&
+		// @ 	d.getMacFactory() != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
-		func /*@ rc @*/ (ingressID uint16, rd BatchConn) {
+		// contracts for IO-spec
+		// @ requires dp.Valid()
+		// @ requires let d := *dPtr in
+		// @ 	d.DpAgreesWithSpec(dp)
+		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
+		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
+			// @ ghost ioIngressID := ifsToIO_ifs(ingressID)
+			d := *dPtr
 			msgs := conn.NewReadMessages(inputBatchCnt)
 			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
@@ -755,21 +840,43 @@ func (d *DataPlane) Run(ctx context.Context) error {
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
 
+			// @ d.getRunningMem()
+
 			// @ invariant acc(&scmpErr)
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem()
 			// @ invariant writeMsgInv(writeMsgs)
-			// @ invariant acc(&d, _)
-			// @ invariant acc(d, _)
-			// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
+			// @ invariant acc(dPtr, _) && *dPtr === d
+			// @ invariant acc(&d.running, _) // necessary for loop condition
+			// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 			// @ invariant d.getValSvc() != nil
 			// @ invariant d.getValForwardingMetrics() != nil
 			// @ invariant 0 in d.getDomForwardingMetrics()
 			// @ invariant ingressID in d.getDomForwardingMetrics()
 			// @ invariant acc(rd.Mem(), _)
 			// @ invariant processor.sInit() && processor.sInitD() === d
+			// @ invariant acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 			for d.running {
-				pkts, err := rd.ReadBatch(msgs)
+				// Multi recv event
+				// @ ghost ioLock.Lock()
+				// @ unfold SharedInv!< dp, ioSharedArg !>()
+				// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
+				// @ ghost numberOfReceivedPacketsProphecy := AllocProphecy()
+				// @ ExtractMultiReadBio(dp, t, numberOfReceivedPacketsProphecy, s)
+				// @ MultiUpdateElemWitness(t, numberOfReceivedPacketsProphecy, ioIngressID, s, ioSharedArg)
+				// @ ghost ioValSeq := MultiReadBioIO_val(t,numberOfReceivedPacketsProphecy)
+
+				// @ ghost sN := MultiReadBioUpd(t, numberOfReceivedPacketsProphecy, s)
+				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
+				// @ assert dp.dp3s_iospec_ordered(sN, tN)
+				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
+				// @ ghost *ioSharedArg.State = sN
+				// @ ghost *ioSharedArg.Place = tN
+				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
+				// @ fold SharedInv!< dp, ioSharedArg !>()
+				// @ ioLock.Unlock()
+				// End of multi recv event
+
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ assert err == nil ==>
 				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
@@ -792,9 +899,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				// @ invariant acc(&scmpErr)
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ invariant writeMsgInv(writeMsgs)
-				// @ invariant acc(&d, _)
-				// @ invariant acc(d, _)
-				// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
+				// @ invariant acc(dPtr, _) && *dPtr === d
+				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 				// @ invariant d.getValSvc() != nil
 				// @ invariant d.getValForwardingMetrics() != nil
 				// @ invariant 0 in d.getDomForwardingMetrics()
@@ -907,8 +1013,6 @@ func (d *DataPlane) Run(ctx context.Context) error {
 					}
 					// @ sl.NilAcc_Bytes()
 					// @ fold acc(writeMsgs[0].Mem(), R50)
-					// @ assert forall i int :: { &writeMsgs[i] } 0 <= i && i < len(writeMsgs) ==>
-					// @ 	acc(writeMsgs[i].Mem(), R50)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
 					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
@@ -938,8 +1042,8 @@ func (d *DataPlane) Run(ctx context.Context) error {
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
-					// @ requires acc(&d, _)
-					// @ requires acc(MutexInvariant(d), _)
+					// @ requires acc(dPtr, _) && *dPtr === d
+					// @ requires acc(d.Mem(), _)
 					// @ requires result.EgressID in d.getDomForwardingMetrics()
 					// @ decreases
 					// @ outline(
@@ -958,14 +1062,9 @@ func (d *DataPlane) Run(ctx context.Context) error {
 				}
 			}
 		}
-
-	// @ fold acc(MutexInvariant(d), R55)
+	// @ unfold acc(d.Mem(), R1)
+	// @ assert d.WellConfigured()
 	// @ assert 0 in d.getDomForwardingMetrics()
-	// (VerifiedSCION) the following cannot be expressed as a pre-condition:
-	// there is really no way of specifying that the dataplane protected by the lock
-	// satisfies this condition.
-	// @ assume d.WellConfigured()
-
 	// @ ghost if d.bfdSessions != nil { unfold acc(accBfdSession(d.bfdSessions), R2) }
 
 	// (VerifiedSCION) we introduce this to avoid problems with the invariants that
@@ -1008,118 +1107,105 @@ func (d *DataPlane) Run(ctx context.Context) error {
 	// @ invariant acc(&read, _) && read implements rc
 	// @ invariant acc(&d, _)
 	// @ invariant acc(&d.external, _) && d.external === externals
-	// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
+	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant externals != nil ==> acc(externals, R4)
 	// @ invariant externals != nil ==> acc(accBatchConn(externals), R4)
-	// @ invariant acc(&d, _)
-	// @ invariant acc(d,  _)
-	// @ invariant acc(MutexInvariant(d), _) && d.WellConfigured()
+	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant d.getValSvc() != nil
 	// @ invariant d.getValForwardingMetrics() != nil
 	// @ invariant 0 in d.getDomForwardingMetrics()
-	// @ invariant d.macFactory != nil
+	// @ invariant d.getMacFactory() != nil
+	// @ invariant dp.Valid()
+	// @ invariant d.DpAgreesWithSpec(dp)
+	// @ invariant acc(ioLockRun.LockP(), _) && ioLockRun.LockInv() == SharedInv!< dp, ioSharedArgRun !>;
 	// @ decreases len(externals) - len(visited)
 	for ifID, v := range externals /*@ with visited @*/ {
 		cl :=
 			// @ requires acc(&read, _) && read implements rc
 			// @ requires acc(&d, _)
-			// @ requires acc(d,  _)
-			// @ requires acc(MutexInvariant(d), _) && d.WellConfigured()
+			// @ requires acc(d.Mem(), _) && d.WellConfigured()
 			// @ requires d.getValSvc() != nil
 			// @ requires d.getValForwardingMetrics() != nil
 			// @ requires 0 in d.getDomForwardingMetrics()
 			// @ requires i in d.getDomForwardingMetrics()
-			// @ requires d.macFactory != nil
+			// @ requires d.getMacFactory() != nil
 			// @ requires c != nil && acc(c.Mem(), _)
-			func /*@ closure2 @*/ (i uint16, c BatchConn) {
+			// contracts for IO-spec
+			// @ requires dp.Valid()
+			// @ requires d.DpAgreesWithSpec(dp)
+			// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
+			func /*@ closure2 @*/ (i uint16, c BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 				defer log.HandlePanic()
-				// @ assert read implements rc
-				// (VerifiedSCION) check preconditions of call to read(i, c) manually.
-				// @ assert acc(&d, _)
-				// @ assert acc(d,  _)
-				// @ assert acc(MutexInvariant(d), _) && d.WellConfigured()
-				// @ assert d.getValSvc() != nil
-				// @ assert d.getValForwardingMetrics() != nil
-				// @ assert 0 in d.getDomForwardingMetrics()
-				// @ assert i in d.getDomForwardingMetrics()
-				// @ assert d.macFactory != nil
-				// @ assert c != nil && acc(c.Mem(), _)
-
-				// (VerifiedSCION) Skip automated verification of the call due to a
-				// bug in Gobra. (https://github.com/viperproject/gobra/issues/723)
-				// @ TODO()
-				read(i, c) //@ as rc
+				read(i, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
 			}
 		// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R50) }
 		// @ assert v in range(d.external)
 		// @ assert acc(v.Mem(), _)
 		// @ d.InDomainExternalInForwardingMetrics3(ifID)
 		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), R50) }
-		go cl(ifID, v) //@ as closure2
+		go cl(ifID, v /*@, ioLockRun, ioSharedArgRun, dp @*/) //@ as closure2
 	}
 	cl :=
 		// @ requires acc(&read, _) && read implements rc
 		// @ requires acc(&d, _)
-		// @ requires acc(d,  _)
-		// @ requires acc(MutexInvariant(d), _) && d.WellConfigured()
+		// @ requires acc(d.Mem(), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
 		// @ requires 0 in d.getDomForwardingMetrics()
-		// @ requires d.macFactory != nil
+		// @ requires d.getMacFactory() != nil
 		// @ requires c != nil && acc(c.Mem(), _)
-		func /*@ closure3 @*/ (c BatchConn) {
+		// contracts for IO-spec
+		// @ requires dp.Valid()
+		// @ requires d.DpAgreesWithSpec(dp)
+		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
+		func /*@ closure3 @*/ (c BatchConn /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			defer log.HandlePanic()
-			// @ assert read implements rc
-
-			// (VerifiedSCION) once again, check preconditions of call to read(0, c)
-			// manually, due to a completness issue with closures:
-			// https://github.com/viperproject/gobra/issues/723.
-			// @ assert acc(&d, _)
-			// @ assert acc(d,  _)
-			// @ assert acc(MutexInvariant(d), _) && d.WellConfigured()
-			// @ assert d.getValSvc() != nil
-			// @ assert d.getValForwardingMetrics() != nil
-			// @ assert 0 in d.getDomForwardingMetrics()
-			// @ assert d.macFactory != nil
-			// @ assert c != nil && acc(c.Mem(), _)
-
-			// (VerifiedSCION) Skip automated verification and rely on manual
-			// checks above.
-			// @ TODO()
-			read(0, c) //@ as rc
+			read(0, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
 		}
-	go cl(d.internal) //@ as closure3
+	// @ d.getInternalMem()
+	go cl(d.internal /*@, ioLockRun, ioSharedArgRun, dp @*/) //@ as closure3
 
-	// (VerifiedSCION) we ignore verification from this point onward because of the
-	// call to Unlock. Supporting it is conceptually easy, but it requires changing
-	// the DataPlane invariant to distinguish between not running and not running.
-	// When not running, we get the same exact invariant as we have now. When running,
-	// we get a wildcard permission amount to the same exact invariant as we have now.
-	// This is easy, but cumbersome and slow to change everywhere.
-	// @ IgnoreFromHere()
 	d.mtx.Unlock()
-
-	r1 /*@ , r2 @*/ := ctx.Done()
-	<-r1
+	// @ assert acc(ctx.Mem(), _)
+	c := ctx.Done()
+	// @ fold PredTrue!<!>()
+	// @ assert c.RecvGivenPerm() == PredTrue!<!>
+	<-c
 	return nil
 }
 
 // initMetrics initializes the metrics related to packet forwarding. The
 // counters are already instantiated for all the relevant interfaces so this
 // will not have to be repeated during packet forwarding.
-// @ preserves acc(&d.forwardingMetrics)
-// @ preserves acc(&d.localIA, R15)
-// @ preserves acc(&d.neighborIAs, R15)
-// @ preserves d.neighborIAs != nil ==> acc(d.neighborIAs, R15) // required for call
-// @ preserves acc(&d.Metrics, R15) && acc(d.Metrics.Mem(), _)
-// @ preserves acc(&d.external, R15)
-// @ preserves d.external != nil ==> acc(accBatchConn(d.external), R15) // required for call
-// @ preserves acc(&d.internalNextHops, R15)
-// @ preserves d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
-// @ ensures   accForwardingMetrics(d.forwardingMetrics)
+// @ requires  d.Mem()
+// @ requires  d.MetricsAreSet()
+// @ requires  d.KeyIsSet()
+// @ requires  d.InternalConnIsSet()
+// @ requires  d.SvcsAreSet()
+// @ requires  d.PreWellConfigured()
+// @ requires  d.DpAgreesWithSpec(dp)
+// @ ensures   d.Mem()
+// @ ensures   d.MetricsAreSet()
+// @ ensures   d.WellConfigured()
 // @ ensures   0 in d.DomainForwardingMetrics()
+// @ ensures   d.InternalConnIsSet()
+// @ ensures   d.KeyIsSet()
+// @ ensures   d.SvcsAreSet()
+// @ ensures   d.DpAgreesWithSpec(dp)
+// @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
-func (d *DataPlane) initMetrics() {
+func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
+	// @ assert reveal d.PreWellConfigured()
+	// @ assert reveal d.DpAgreesWithSpec(dp)
+	// @ assert unfolding acc(d.Mem(), _) in
+	// @ 	d.dpSpecWellConfiguredLocalIA(dp)     &&
+	// @ 	d.dpSpecWellConfiguredNeighborIAs(dp) &&
+	// @ 	d.dpSpecWellConfiguredLinkTypes(dp)
+	// @ unfold d.Mem()
+	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
+	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
+
 	// @ preserves acc(&d.forwardingMetrics)
 	// @ preserves acc(&d.localIA, R20)
 	// @ preserves acc(&d.neighborIAs, R20)
@@ -1137,18 +1223,26 @@ func (d *DataPlane) initMetrics() {
 	// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[0], 0)
 	// @ )
 	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R15) }
+	// @ ghost if d.internalNextHops != nil { unfold acc(accAddr(d.internalNextHops), R15) }
 
+	// (VerifiedSCION) avoids incompletnes
+	// when folding acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	// @ fold acc(hideLocalIA(&d.localIA), R15)
 
-	// @ invariant acc(hideLocalIA(&d.localIA), R15) // avoids incompletnes when folding acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
+	// @ ghost dExternal := d.external
+	// @ ghost dInternalNextHops := d.internalNextHops
+
+	// @ invariant acc(hideLocalIA(&d.localIA), R15)
 	// @ invariant acc(&d.external, R15)
 	// @ invariant d.external != nil ==> acc(d.external, R20)
-	// @ invariant d.external === old(d.external)
+	// @ invariant d.external === dExternal
 	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
+	// @ invariant domain(d.forwardingMetrics) == set[uint16]{0} union visitedSet
 	// @ invariant 0 in domain(d.forwardingMetrics)
 	// @ invariant acc(&d.internalNextHops, R15)
-	// @ invariant d.internalNextHops === old(d.internalNextHops)
-	// @ invariant d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), R15)
+	// @ invariant d.internalNextHops === dInternalNextHops
+	// @ invariant d.internalNextHops != nil ==> acc(d.internalNextHops, R20)
+	// @ invariant domain(d.internalNextHops) intersection domain(d.external) == set[uint16]{}
 	// @ invariant acc(&d.neighborIAs, R15)
 	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, R15)
 	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i in domain(d.forwardingMetrics) ==>
@@ -1157,26 +1251,25 @@ func (d *DataPlane) initMetrics() {
 	// @ invariant acc(d.Metrics.Mem(), _)
 	// @ decreases len(d.external) - len(visitedSet)
 	for id := range d.external /*@ with visitedSet @*/ {
-		// @ ghost if d.internalNextHops != nil {
-		// @	unfold acc(accAddr(d.internalNextHops), R20)
-		// @ }
 		if _, notOwned := d.internalNextHops[id]; notOwned {
-			// @ ghost if d.internalNextHops != nil {
-			// @ 	fold acc(accAddr(d.internalNextHops), R20)
-			// @ }
+			// @ Unreachable()
 			continue
 		}
-		// @ ghost if d.internalNextHops != nil {
-		// @ 	fold acc(accAddr(d.internalNextHops), R20)
-		// @ }
 		labels = interfaceToMetricLabels(id, ( /*@ unfolding acc(hideLocalIA(&d.localIA), R20) in @*/ d.localIA), d.neighborIAs)
 		d.forwardingMetrics[id] = initForwardingMetrics(d.Metrics, labels)
 		// @ liftForwardingMetricsNonInjectiveMem(d.forwardingMetrics[id], id)
 		// @ assert acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 	}
 	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), R15) }
+	// @ ghost if d.internalNextHops != nil { fold acc(accAddr(d.internalNextHops), R15) }
 	// @ fold accForwardingMetrics(d.forwardingMetrics)
 	// @ unfold acc(hideLocalIA(&d.localIA), R15)
+	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
+	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
+	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
+	// @ fold d.Mem()
+	// @ reveal d.WellConfigured()
+	// @ assert reveal d.DpAgreesWithSpec(dp)
 }
 
 type processResult struct {
@@ -1186,8 +1279,7 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ requires acc(&d.macFactory, _) && d.macFactory != nil
-// @ requires acc(MutexInvariant(d), _)
+// @ requires acc(d.Mem(), _) && d.getMacFactory() != nil
 // @ ensures  res.sInit() && res.sInitD() == d
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
@@ -1245,12 +1337,12 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(srcAddr.Mem(), _)
 // @ requires let d := p.sInitD() in
-// @ 	acc(MutexInvariant(d), _) &&
+// @ 	acc(d.Mem(), _) &&
 // @ 	d.WellConfigured()        &&
 // @ 	d.getValSvc() != nil      &&
 // @ 	d.getValForwardingMetrics() != nil
 // @ ensures  p.sInit()
-// @ ensures  acc(MutexInvariant(p.sInitD()), _)
+// @ ensures  acc(p.sInitD().Mem(), _)
 // @ ensures  p.sInitD() == old(p.sInitD())
 // @ ensures  p.sInitD().validResult(respr, addrAliasesPkt)
 // @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
@@ -1361,27 +1453,21 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			return processResult{}, p.processInterBFD(ohp, pld) /*@, false @*/
 		}
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
-		// (VerifiedSCION) Nested if because short-circuiting && is not working
-		// @ ghost if lastLayerIdx >= 0 {
-		// @	if !offsets[lastLayerIdx].isNil {
-		// @		o := offsets[lastLayerIdx]
-		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
-		// @ 	}
+		// @ ghost if lastLayerIdx >= 0 && !offsets[lastLayerIdx].isNil {
+		// @ 	o := offsets[lastLayerIdx]
+		// @ 	sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
-		// @ unfold acc(MutexInvariant(p.d), _)
+		// @ unfold acc(p.d.Mem(), _)
 		v1, v2 /*@, aliasesPkt @*/ := p.processOHP()
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
 		return v1, v2 /*@, aliasesPkt @*/
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
-		// (VerifiedSCION) Nested if because short-circuiting && is not working
-		// @ ghost if lastLayerIdx >= 0 {
-		// @	ghost if !offsets[lastLayerIdx].isNil {
-		// @		o := offsets[lastLayerIdx]
-		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
-		// @ 	}
+		// @ ghost if lastLayerIdx >= 0 && !offsets[lastLayerIdx].isNil {
+		// @ 	o := offsets[lastLayerIdx]
+		// @ 	sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		v1, v2 /*@ , addrAliasesPkt @*/ := p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd @*/ )
@@ -1406,7 +1492,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 
 // @ requires  acc(&p.d, R20)
 // @ requires  acc(&p.ingressID, R20)
-// @ requires  acc(MutexInvariant(p.d), _)
+// @ requires  acc(p.d.Mem(), _)
 // @ requires  p.bfdLayer.NonInitMem()
 // @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   acc(&p.d, R20)
@@ -1414,7 +1500,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 // @ ensures   p.bfdLayer.NonInitMem()
 // @ ensures   err != nil ==> err.ErrorMem()
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (err error) {
-	// @ unfold acc(MutexInvariant(p.d), _)
+	// @ unfold acc(p.d.Mem(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		// @ establishMemNoBFDSessionConfigured()
@@ -1441,7 +1527,7 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 // @ requires  acc(&p.d, R20)
 // @ requires  acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 // @ requires  p.bfdLayer.NonInitMem()
-// @ requires  acc(MutexInvariant(p.d), _)
+// @ requires  acc(p.d.Mem(), _)
 // @ requires  sl.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   acc(&p.d, R20)
 // @ ensures   acc(&p.srcAddr, R20)
@@ -1449,7 +1535,7 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 // @ ensures   sl.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   res != nil ==> res.ErrorMem()
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
-	// @ unfold acc(MutexInvariant(p.d), _)
+	// @ unfold acc(p.d.Mem(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		// @ establishMemNoBFDSessionConfigured()
@@ -1506,7 +1592,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 }
 
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires  acc(&p.d, R5) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
+// @ requires  acc(&p.d, R5) && acc(p.d.Mem(), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
@@ -1686,7 +1772,7 @@ func (p *scionPacketProcessor) packSCMP(
 	return processResult{OutPkt: rawSCMP}, err
 }
 
-// @ requires  acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R5)
 // @ requires  acc(&p.path, R20)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
@@ -1735,7 +1821,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
-// @ preserves acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
@@ -1772,7 +1858,7 @@ func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr 
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
 // @ preserves acc(&p.ingressID, R20)
-// @ preserves acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==> reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
@@ -1802,7 +1888,7 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 	return processResult{}, nil
 }
 
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ubScionL), R19)
 // @ requires  acc(&p.path, R20)
 // @ requires  p.path === p.scionLayer.GetPath(ubScionL)
@@ -1892,7 +1978,7 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
 // @	unfolding acc(p.scionLayer.Mem(ub), R10) in
 // @	p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires  acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R4)
 // @ ensures   acc(&p.path, R15)
@@ -1940,7 +2026,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	return processResult{}, nil
 }
 
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.ingressID, R20)
 // @ preserves acc(&p.segmentChange, R20)
 // @ preserves acc(&p.infoField, R20)
@@ -2104,7 +2190,7 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ preserves acc(&p.macBuffers.scionInput, R20)
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
-// @ preserves acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
@@ -2141,7 +2227,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 }
 
 // @ requires  acc(&p.d, R15)
-// @ requires  acc(MutexInvariant(p.d), _)
+// @ requires  acc(p.d.Mem(), _)
 // @ requires  p.d.getValSvc() != nil
 // @ requires  acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R15)
 // @ preserves acc(p.scionLayer.Mem(ubScionL), R10)
@@ -2308,7 +2394,7 @@ func (p *scionPacketProcessor) egressInterface() uint16 {
 	return p.hopField.ConsIngress
 }
 
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
 // @ preserves acc(&p.ingressID, R20)
@@ -2351,7 +2437,7 @@ func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr e
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.scionLayer.Mem(ub), R10)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.lastLayer, R19)
 // @ preserves p.lastLayer != nil
@@ -2426,7 +2512,7 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.scionLayer.Mem(ub), R14)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.lastLayer, R19)
 // @ preserves p.lastLayer != nil
@@ -2504,7 +2590,7 @@ func (p *scionPacketProcessor) egressRouterAlertFlag() (res *bool) {
 
 // @ requires  acc(&p.lastLayer, R20)
 // @ requires  p.lastLayer != nil && acc(p.lastLayer.Mem(ubLastLayer), R15)
-// @ requires  acc(&p.d, R20) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ preserves sl.AbsSlice_Bytes(ubLastLayer, 0, len(ubLastLayer))
 // @ ensures   acc(&p.lastLayer, R20)
 // @ ensures   acc(p.lastLayer.Mem(ubLastLayer), R15)
@@ -2567,7 +2653,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 }
 
 // @ preserves acc(p.scionLayer.Mem(ubScionL), R20)
-// @ preserves acc(&p.d, R50) && acc(MutexInvariant(p.d), _)
+// @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==> reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr == nil ==> int(p.scionLayer.GetPayloadLen(ubScionL)) == len(p.scionLayer.GetPayload(ubScionL))
@@ -2591,7 +2677,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 }
 
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires  acc(&p.d, R5) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
+// @ requires  acc(&p.d, R5) && acc(p.d.Mem(), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
 // which slightly simplifies the spec
@@ -2759,7 +2845,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 // @ requires  acc(&p.rawPkt, R15)
 // @ requires  p.scionLayer.Mem(p.rawPkt)
 // @ requires  acc(&p.ingressID,  R15)
-// @ requires  acc(&p.d, R15) && acc(MutexInvariant(p.d), _) && p.d.WellConfigured()
+// @ requires  acc(&p.d, R15) && acc(p.d.Mem(), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
 // @ requires  sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.mac, R10)
@@ -2964,7 +3050,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@ , addrAliases @*/
 }
 
-// @ requires  acc(MutexInvariant(d), _)
+// @ requires  acc(d.Mem(), _)
 // @ requires  d.getValSvc() != nil
 // @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R15)
 // @ preserves acc(s.Mem(ub), R14)
@@ -3018,9 +3104,6 @@ func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (
 	}
 }
 
-// (VerifiedSCION) marked as trusted due to an incompletness in silicon,
-// where it is failing to prove the body of a predicate right after unfolding it.
-// @ trusted
 // @ requires acc(dst.Mem(), R15)
 // @ ensures  res != nil && acc(res.Mem(), R15)
 // @ ensures  acc(res.Mem(), R15) --* acc(dst.Mem(), R15)
@@ -3037,8 +3120,6 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 	// @ 	assert dst.IP === tmp.IP
 	// @ 	unfold acc(tmp.Mem(), R15)
 	// @ 	unfold acc(sl.AbsSlice_Bytes(tmp.IP, 0, len(tmp.IP)), R15)
-	// (VerifiedSCION) this is the failling assertion;
-	//                 TODO: report it!
 	// @ 	assert forall i int :: { &tmp.IP[i] } 0 <= i && i < len(tmp.IP) ==> acc(&tmp.IP[i], R15)
 	// @ 	assert forall i int :: { &dst.IP[i] } 0 <= i && i < len(dst.IP) ==> acc(&dst.IP[i], R15)
 	// @ 	fold acc(dst.Mem(), R15)
@@ -3180,7 +3261,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-// @ requires  acc(&p.d, _) && acc(MutexInvariant(p.d), _)
+// @ requires  acc(&p.d, _) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R4)
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))

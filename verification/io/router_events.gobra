@@ -51,12 +51,17 @@ pure func (dp DataPlaneSpec) valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
 /* End of Abbreviations */
 
 ghost
+decreases
+pure func (dp DataPlaneSpec) dp2_check_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
+	return (d && hf1.InIF2 === some(recvif)) || (!d && hf1.EgIF2 === some(recvif))
+}
+
+ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) dp2_check_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
-	return (d && hf1.InIF2 === some(recvif) && dp.valid_link_types_in2(hf1, asid)) ||
-		(!d && hf1.EgIF2 === some(recvif) && dp.valid_link_types2(hf1, asid))
+pure func (dp DataPlaneSpec) dp2_check_interface_top(d bool, asid IO_as, hf1 IO_HF) bool {
+	return (d && dp.valid_link_types_in2(hf1, asid)) || (!d && dp.valid_link_types2(hf1, asid))
 }
 
 ghost
@@ -68,6 +73,7 @@ pure func dp2_exit_interface(d bool, asid IO_as, hf1 IO_HF, outif IO_ifs) bool {
 // Takes a packet and forwards it externally, incrementing the segment before doing so.
 ghost
 requires dp.Valid()
+requires dp.Asid() == asid
 decreases
 pure func (dp DataPlaneSpec) dp2_forward_ext_guard(asid IO_as, m IO_pkt2, nextif IO_ifs, currseg, traversedseg IO_seg2, newpkt IO_pkt2, fut seq[IO_HF], hf1 IO_HF) bool {
 	return m.CurrSeg == currseg &&
