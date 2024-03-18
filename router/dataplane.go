@@ -778,12 +778,13 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// dPtr as an helper parameter. It always receives the value &d.
 		// @ requires acc(dPtr, _)
 		// @ requires let d := *dPtr in
-		// @ 	acc(d.Mem(), _) && d.WellConfigured()
-		// @ requires let d := *dPtr in d.getValSvc() != nil
-		// @ requires let d := *dPtr in d.getValForwardingMetrics() != nil
-		// @ requires let d := *dPtr in (0 in d.getDomForwardingMetrics())
-		// @ requires let d := *dPtr in (ingressID in d.getDomForwardingMetrics())
-		// @ requires let d := *dPtr in d.getMacFactory() != nil
+		// @ 	acc(d.Mem(), _)                            &&
+		// @ 	d.WellConfigured()                         &&
+		// @ 	d.getValSvc() != nil                       &&
+		// @ 	d.getValForwardingMetrics() != nil         &&
+		// @ 	(0 in d.getDomForwardingMetrics())         &&
+		// @ 	(ingressID in d.getDomForwardingMetrics()) &&
+		// @ 	d.getMacFactory() != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// contracts for IO-spec
 		// @ requires dp.Valid()
