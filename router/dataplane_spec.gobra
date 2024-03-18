@@ -207,6 +207,13 @@ pure func (d *DataPlane) getValForwardingMetrics() map[uint16]forwardingMetrics 
 ghost
 requires acc(d.Mem(), _)
 decreases
+pure func (d *DataPlane) getMacFactory() func() hash.Hash {
+	return unfolding acc(d.Mem(), _) in d.macFactory
+}
+
+ghost
+requires acc(d.Mem(), _)
+decreases
 pure func (d *DataPlane) getDomForwardingMetrics() set[uint16] {
 	return unfolding acc(d.Mem(), _) in
 		d.forwardingMetrics == nil ?
@@ -320,6 +327,22 @@ func (d *DataPlane) getSvcMem() {
 }
 
 ghost
+requires acc(d.Mem(), _) && d.InternalConnIsSet()
+ensures  acc(&d.internal, _) && acc(d.internal.Mem(), _)
+decreases
+func (d *DataPlane) getInternalMem() {
+	unfold acc(d.Mem(), _)
+}
+
+ghost
+requires acc(d.Mem(), _)
+ensures  acc(&d.running, _)
+decreases
+func (d *DataPlane) getRunningMem() {
+	unfold acc(d.Mem(), _)
+}
+
+ghost
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) getValSvc() *services {
@@ -359,8 +382,7 @@ func (d *DataPlane) getMacFactoryMem() {
 }
 
 ghost
-requires acc(d.Mem(), _)
-requires acc(&d.macFactory, _) && d.macFactory != nil
+requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
 ensures  acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
 ensures  scrypto.ValidKeyForHash(*d.key)
