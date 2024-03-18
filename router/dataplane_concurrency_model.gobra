@@ -160,8 +160,10 @@ requires ElemAuth(s.ibuf, y.IBufY) && ElemAuth(s.obuf, y.OBufY)
 ensures  MultiReadBio(t, n)
 ensures  MultiReadBioUpd(t, n, s) == old(MultiReadBioUpd(t, n, s))
 ensures  MultiReadBioNext(t, n) == old(MultiReadBioNext(t, n))
-ensures  ElemAuth(MultiReadBioUpd(t, n, s).ibuf, y.IBufY) && ElemAuth(MultiReadBioUpd(t, n, s).obuf, y.OBufY)
-ensures  0 <= n && MultiReadBioCorrectIfs(t, n, k) ==> MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
+ensures  ElemAuth(MultiReadBioUpd(t, n, s).ibuf, y.IBufY) 
+ensures  ElemAuth(MultiReadBioUpd(t, n, s).obuf, y.OBufY)
+ensures  0 <= n && MultiReadBioCorrectIfs(t, n, k) ==>
+	MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
 decreases n
 func MultiUpdateElemWitness(
 	t io.Place,
@@ -181,6 +183,7 @@ func MultiUpdateElemWitness(
 	}
 
 	if 0 <= n && MultiReadBioCorrectIfs(t, n, k) {
+		reveal MultiReadBioIO_val(t, n)
 		fold MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
 	}
 }
