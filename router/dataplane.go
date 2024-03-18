@@ -788,7 +788,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// contracts for IO-spec
 		// @ requires dp.Valid()
 		// @ requires let d := *dPtr in
-		// @ 	acc(d.Mem(), _) && d.DpAgreesWithSpec(dp)
+		// @ 	d.DpAgreesWithSpec(dp)
 		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			// @ ghost ioIngressID := ifsToIO_ifs(ingressID)
@@ -1161,6 +1161,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			defer log.HandlePanic()
 			read(0, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
 		}
+	// @ d.getInternalMem()
 	go cl(d.internal /*@, ioLockRun, ioSharedArgRun, dp @*/) //@ as closure3
 
 	d.mtx.Unlock()

@@ -327,13 +327,20 @@ func (d *DataPlane) getSvcMem() {
 }
 
 ghost
+requires acc(d.Mem(), _) && d.InternalConnIsSet()
+ensures  acc(&d.internal, _) && d.internal.Mem()
+decreases
+func (d *DataPlane) getInternalMem() {
+	unfold acc(d.Mem(), _)
+}
+
+ghost
 requires acc(d.Mem(), _)
 ensures  acc(&d.running, _)
 decreases
 func (d *DataPlane) getRunningMem() {
 	unfold acc(d.Mem(), _)
 }
-
 
 ghost
 requires acc(d.Mem(), _)
