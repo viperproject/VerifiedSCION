@@ -25,7 +25,7 @@ env:
   useZ3API: '0'
   backend: 'SILICON'
   disableNL: '0'
-  unsafeWildcardOptimization: '0'
+  unsafeWildcardOptimization: '1'
   overflow: '0'
 
 jobs:
