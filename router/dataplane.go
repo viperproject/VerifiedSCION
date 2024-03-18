@@ -137,9 +137,8 @@ type BatchConn interface {
 	// @ ensures  io.token(old(MultiReadBioNext(place, prophecyM)))
 	// @ ensures  old(MultiReadBioCorrectIfs(place, prophecyM, ifsToIO_ifs(ingressID)))
 	// @ ensures  err == nil ==>
-	// @	forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < n ==>
-	// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
-	// @    old(MultiReadBioIO_val(place, n)[i])
+	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
+	// @ 		MsgToAbsVal(dp, &msgs[i], ingressID) == old(MultiReadBioIO_val(place, n)[i])
 	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
@@ -158,13 +157,12 @@ type BatchConn interface {
 	// @ ensures   err != nil ==> err.ErrorMem()
 	// contracts for IO-spec
 	// @ requires  dp.Valid()
-	// @ requires  len(msgs) == 1 ==>
-	// @	unfolding acc(msgs[0].Mem(), R50) in
-	// @	absIO_val(dp, msgs[0].Buffers[0], egressID) == ioAbsPkts
+	// @ requires  MsgToAbsVal(dp, &msgs[0], egressID) == ioAbsPkts
 	// @ requires  io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
 	// @ ensures   dp.Valid()
-	// @ ensures   (err == nil && len(msgs) == 1) ==>
-	// @	io.token(old(io.dp3s_iospec_bio3s_send_T(place, ioAbsPkts)))
+	// (VerifiedSCION) the permission to the protocol must always be returned, otherwise the router could not continue
+	// after failing to send a packet.
+	// @ ensures   io.token(old(io.dp3s_iospec_bio3s_send_T(place, ioAbsPkts)))
 	WriteBatch(msgs underlayconn.Messages, flags int /*@, ghost egressID uint16, ghost place io.Place, ghost ioAbsPkts io.IO_val, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires Mem()
 	// @ ensures  err != nil ==> err.ErrorMem()
@@ -864,6 +862,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant ingressID in d.getDomForwardingMetrics()
 			// @ invariant acc(rd.Mem(), _)
 			// @ invariant processor.sInit() && processor.sInitD() === d
+			// @ invariant processor.getIngressID() == ingressID
 			// @ invariant acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 			// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
 			for d.running {
@@ -875,17 +874,24 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ ghost numberOfReceivedPacketsProphecy := AllocProphecy()
 				// @ ExtractMultiReadBio(dp, t, numberOfReceivedPacketsProphecy, s)
 				// @ MultiUpdateElemWitness(t, numberOfReceivedPacketsProphecy, ioIngressID, s, ioSharedArg)
-				// @ ghost ioValSeq := MultiReadBioIO_val(t,numberOfReceivedPacketsProphecy)
+				// @ ghost ioValSeq := MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)
 
 				// @ ghost sN := MultiReadBioUpd(t, numberOfReceivedPacketsProphecy, s)
 				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
 				// @ assert dp.dp3s_iospec_ordered(sN, tN)
+				// @ BeforeReadBatch:
 				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t , dp @*/)
+				// @ assert old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)) == ioValSeq
+				// @ assert err == nil ==>
+				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
+				// @ 		ioValSeq[i] == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
+				// @ assert err == nil ==>
+				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> MsgToAbsVal(dp, &msgs[i], ingressID) == ioValSeq[i]
 				// @ ghost *ioSharedArg.State = sN
 				// @ ghost *ioSharedArg.Place = tN
 				// @ assert err == nil ==>
-				// @	forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < pkts ==>
-				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
+				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
+				// @ 		MsgToAbsVal(dp, &msgs[i], ingressID) == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
 				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
 				// @ fold SharedInv!< dp, ioSharedArg !>()
 				// @ ioLock.Unlock()
@@ -907,8 +913,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ 	!msgs[i].HasWildcardPermAddr()
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
-				// @ assert forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < pkts ==>
-				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
+				// @ 	MsgToAbsVal(dp, &msgs[i], ingressID) == ioValSeq[i]
 
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
@@ -931,12 +937,14 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant processor.sInit() && processor.sInitD() === d
+				// @ invariant processor.getIngressID() == ingressID
 				// contracts for IO-spec
+				// @ invariant pkts <= len(ioValSeq)
 				// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
 				// @ invariant ioIngressID == ifsToIO_ifs(ingressID)
 				// @ invariant acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
-				// @ invariant forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } i0 <= i && i < pkts ==>
-				// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) == ioValSeq[i]
+				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
+				// @ 	MsgToAbsVal(dp, &msgs[i], ingressID) == ioValSeq[i]
 				// @ invariant MultiElemWitnessWithIndex(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
@@ -971,19 +979,22 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert p.N <= len(p.Buffers[0])
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
 					tmpBuf := p.Buffers[0][:p.N]
-					//  assert forall i int :: { &tmpBuf[i] }{ &p.Buffers[0][i] } 0 <= i && i < p.N ==>
-					// 	unfolding acc(sl.AbsSlice_Bytes(tmpBuf, 0, p.N), HalfPerm) in
-					// 	unfolding acc(sl.AbsSlice_Bytes(p.Buffers[0], 0, len(p.Buffers[0])), HalfPerm) in
-					// 	tmpBuf[i] == p.Buffers[0][i]
+					// @ ghost absPktTmpBuf := absIO_val(dp, tmpBuf, ingressID)
+					// @ ghost absPktBuf0   := absIO_val(dp, msgs[i0].Buffers[0], ingressID)
+					// @ assert msgs[i0] === p
 					// @ absIO_valWidenLemma(dp, p.Buffers[0], ingressID, p.N)
-					// @ assert let absPkt := absIO_val(dp, tmpBuf, ingressID) in
-					// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, absPkt.IO_val_Pkt2_1, absPkt.IO_val_Pkt2_2)
-					// assume absIO_val(dp, tmpBuf, ingressID) == absIO_val(dp, p.Buffers[0], ingressID)
+					// @ assert absPktTmpBuf.isIO_val_Pkt2 ==> absPktTmpBuf === absPktBuf0
+					// @ MultiElemWitnessStep(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
+					// @ assert ioValSeq[i0].isIO_val_Pkt2 ==>
+					// @ 	ElemWitness(ioSharedArg.IBufY, ioIngressID, ioValSeq[i0].IO_val_Pkt2_2)
+					// @ assert absPktTmpBuf.isIO_val_Pkt2 ==> absPktTmpBuf == ioValSeq[i0]
+					// @ assert ifsToIO_ifs(processor.getIngressID()) == ioIngressID
 					// @ sl.SplitRange_Bytes(p.Buffers[0], 0, p.N, HalfPerm)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.AbsSlice_Bytes(tmpBuf, 0, len(tmpBuf))
-					result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := processor.processPkt(tmpBuf, srcAddr /*@, ioLock, ioSharedArg, dp@*/)
+					result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := processor.processPkt(tmpBuf, srcAddr /*@, ioLock, ioSharedArg, dp @*/)
 					// @ fold scmpErr.Mem()
+
 					switch {
 					case err == nil:
 						// @ unfold scmpErr.Mem()
@@ -1031,6 +1042,13 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 						continue
 					}
 
+					// (VerifiedSCION) we currently have this assumption because we cannot think of a sound way to capture
+					// the behaviour of errors.As(...) in our specifications. Nonetheless, we checked extensively that, when
+					// processPkt does not return an error or returns an scmpError (and thus errors.As(err, &scmpErr) succeeds),
+					// result.OutPkt is always non-nil. For the other kinds of errors, the result is nil, but that branch is killed
+					// before this point.
+					// @ assume result.OutPkt != nil
+
 					// Write to OutConn; drop the packet if this would block.
 					// Use WriteBatch because it's the only available function that
 					// supports MSG_DONTWAIT.
@@ -1045,7 +1063,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					}
 					// @ sl.NilAcc_Bytes()
 					// @ assert absIO_val(dp, result.OutPkt, result.EgressID) == absIO_val(dp, writeMsgs[0].Buffers[0], result.EgressID)
-					// @ assert newAbsPkt == absIO_val(dp, writeMsgs[0].Buffers[0], result.EgressID)
+					// @ assert result.OutPkt != nil ==> newAbsPkt == absIO_val(dp, writeMsgs[0].Buffers[0], result.EgressID)
 					// @ fold acc(writeMsgs[0].Mem(), R50)
 
 					// @ ghost ioLock.Lock()
@@ -1060,12 +1078,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ unfold dp.dp3s_iospec_bio3s_send(s, t)
 					// @ ghost tN := io.dp3s_iospec_bio3s_send_T(t, newAbsPkt)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@, result.EgressID, t, newAbsPkt, dp @*/)
-					// @ ghost if(err != nil) {
-					// @ 	fold dp.dp3s_iospec_bio3s_send(s, t)
-					// @ 	fold dp.dp3s_iospec_ordered(s, t)
-					// @ } else {
-					// @ 	*ioSharedArg.Place = tN
-					// @ }
+					// @ ghost *ioSharedArg.Place = tN
 					// @ fold SharedInv!< dp, ioSharedArg !>()
 					// @ ghost ioLock.Unlock()
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
@@ -1334,7 +1347,7 @@ type processResult struct {
 }
 
 // @ requires acc(d.Mem(), _) && d.getMacFactory() != nil
-// @ ensures  res.sInit() && res.sInitD() == d
+// @ ensures  res.sInit() && res.sInitD() == d && res.getIngressID() == ingressID
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
@@ -1399,6 +1412,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  p.sInit()
 // @ ensures  acc(p.sInitD().Mem(), _)
 // @ ensures  p.sInitD() == old(p.sInitD())
+// @ ensures  p.getIngressID() == old(p.getIngressID())
 // @ ensures  p.sInitD().validResult(respr, addrAliasesPkt)
 // @ ensures  acc(sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
 // @ ensures  addrAliasesPkt ==> (
@@ -1415,11 +1429,10 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.getIngressID()), absPkt.IO_val_Pkt2_2)
 // @ ensures dp.Valid()
 // @ ensures reserr == nil ==> respr.OutPkt != nil
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
+// @ ensures respr.OutPkt != nil ==>
 // @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
-// @	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
-// TODO: On a first step, we will prove that whenever we have a valid scion packet in processSCION,
+// @ ensures respr.OutPkt != nil ==> newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
+// (VerifiedSCION) On a first step, we will prove that whenever we have a valid scion packet in processSCION,
 // the correct "next packet" is computed
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
@@ -2875,7 +2888,6 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		}
 		// verify the new block
 		if r, err := p.verifyCurrentMAC(); err != nil {
-			//  fold acc(p.scionLayer.Mem(ub), R3)
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover") /*@, false, io.IO_val_Unit{} @*/
 		}
