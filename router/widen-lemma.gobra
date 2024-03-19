@@ -1056,8 +1056,8 @@ ensures  acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R51)
 ensures  currSeg(raw, offset1, currINFIdx1, currHFIdx1, asid1) == currSeg(raw[:length], offset2, currINFIdx2, currHFIdx2, asid2)
 decreases
 func currSegWidenLemma(raw []byte, offset1 int, offset2 int, currINFIdx1 int, currINFIdx2 int, currHFIdx1 int, currHFIdx2 int, asid1 seq[io.IO_as], asid2 seq[io.IO_as], length int) {
-	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R52)
-	unfold acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R52)
+	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R53)
+	unfold acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R53)
 	
 	ainfo1 := timestamp(raw, currINFIdx1)
 	ainfo2 := timestamp(raw[:length], currINFIdx2)
@@ -1078,8 +1078,8 @@ func currSegWidenLemma(raw []byte, offset1 int, offset2 int, currINFIdx1 int, cu
 	assert ret2 == reveal currSeg(raw[:length], offset2, currINFIdx2, currHFIdx2, asid2)
 	assert ret1 == ret2
 	
-	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R52)
-	fold acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R52)
+	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R53)
+	fold acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R53)
 }
 
 
