@@ -1034,10 +1034,9 @@ requires ret == some(io.IO_pkt2(io.IO_Packet2{
 				}))
 ensures  ret == absPkt(dp, raw)
 decreases
-// TODO: proven but takes a long time. Body abstracted away for now
-pure func equalRetsLemma4(dp io.DataPlaneSpec, raw []byte, hdr uint32, metaHdr scion.MetaHdr, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int, segLen int, prevSegLen int, numINF int, offset int, consDir bool, currAsidSeq option[seq[io.IO_as]], last io.IO_as, first io.IO_as, leftAsidSeq option[seq[io.IO_as]], rightAsidSeq option[seq[io.IO_as]], midAsid option[io.IO_as], midAsidSeq option[seq[io.IO_as]], ret option[io.IO_pkt2]) bool /*{
+pure func equalRetsLemma4(dp io.DataPlaneSpec, raw []byte, hdr uint32, metaHdr scion.MetaHdr, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int, segLen int, prevSegLen int, numINF int, offset int, consDir bool, currAsidSeq option[seq[io.IO_as]], last io.IO_as, first io.IO_as, leftAsidSeq option[seq[io.IO_as]], rightAsidSeq option[seq[io.IO_as]], midAsid option[io.IO_as], midAsidSeq option[seq[io.IO_as]], ret option[io.IO_pkt2]) bool {
 	return ret == reveal absPkt(dp, raw)
-}*/
+}
 
 ghost
 requires path.InfoFieldOffset(currINFIdx1) + path.InfoLen <= offset1
