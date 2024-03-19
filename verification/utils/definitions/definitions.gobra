@@ -75,6 +75,7 @@ const (
 	R53
 	R54
 	R55
+	R56
 )
 
 // To be used as a precondition of functions and methods that can never be called

@@ -137,8 +137,8 @@ type BatchConn interface {
 	// @ ensures  io.token(old(MultiReadBioNext(place, prophecyM)))
 	// @ ensures  old(MultiReadBioCorrectIfs(place, prophecyM, ifsToIO_ifs(ingressID)))
 	// @ ensures  err == nil ==>
-	// @	forall i int :: { absIO_val(dp, msgs[i].Buffers[0], ingressID) } 0 <= i && i < n ==>
-	// @	unfolding acc(msgs[i].Mem(), _) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
+	// @	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
+	// @	unfolding acc(msgs[i].Mem(), R56) in absIO_val(dp, msgs[i].Buffers[0], ingressID) ==
 	// @    old(MultiReadBioIO_val(place, n)[i])
 	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
@@ -519,15 +519,15 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	// @ defer fold acc(d.Mem(), R5)
 	bfdSessions := d.bfdSessions
 	// @ ghost if bfdSessions != nil {
-	// @		unfold acc(accBfdSession(d.bfdSessions), R20)
-	// @		defer fold acc(accBfdSession(d.bfdSessions), R20)
+	// @ 	unfold acc(accBfdSession(d.bfdSessions), R20)
+	// @ 	defer fold acc(accBfdSession(d.bfdSessions), R20)
 	// @ }
-	// (VerifiedSCION) had to rewrite this, as Gobra does not correctly
-	// implement short-circuiting.
 	if bfdSession, ok := bfdSessions[interfaceID]; ok {
 		// @ assert interfaceID in domain(d.bfdSessions)
 		// @ assert bfdSession in range(d.bfdSessions)
 		// @ assert bfdSession != nil
+		// (VerifiedSCION) This checked used to be conjoined with 'ok' in the condition
+		// of the if stmt above. We broke it down to perform intermediate asserts.
 		if !bfdSession.IsUp() {
 			return control.InterfaceDown
 		}
@@ -788,24 +788,18 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// dPtr as an helper parameter. It always receives the value &d.
 		// @ requires acc(dPtr, _)
 		// @ requires let d := *dPtr in
-		// @ 	acc(&d.external, _) && acc(&d.linkTypes, _)                       &&
-		// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-		// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-		// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-		// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-		// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
-		// @ requires let d := *dPtr in
-		// @ 	acc(d.Mem(), _) && d.WellConfigured()
-		// @ requires let d := *dPtr in d.getValSvc() != nil
-		// @ requires let d := *dPtr in d.getValForwardingMetrics() != nil
-		// @ requires let d := *dPtr in (0 in d.getDomForwardingMetrics())
-		// @ requires let d := *dPtr in (ingressID in d.getDomForwardingMetrics())
-		// @ requires let d := *dPtr in d.macFactory != nil
+		// @ 	acc(d.Mem(), _)                            &&
+		// @ 	d.WellConfigured()                         &&
+		// @ 	d.getValSvc() != nil                       &&
+		// @ 	d.getValForwardingMetrics() != nil         &&
+		// @ 	(0 in d.getDomForwardingMetrics())         &&
+		// @ 	(ingressID in d.getDomForwardingMetrics()) &&
+		// @ 	d.getMacFactory() != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// contracts for IO-spec
 		// @ requires dp.Valid()
 		// @ requires let d := *dPtr in
-		// @ 	acc(d.Mem(), _) && d.DpAgreesWithSpec(dp)
+		// @ 	d.DpAgreesWithSpec(dp)
 		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			d := *dPtr
@@ -855,17 +849,14 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
 
+			// @ d.getRunningMem()
+
 			// @ invariant acc(&scmpErr)
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem()
 			// @ invariant writeMsgInv(writeMsgs)
 			// @ invariant acc(dPtr, _) && *dPtr === d
-			// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
-			// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-			// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-			// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-			// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-			// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
+			// @ invariant acc(&d.running, _) // necessary for loop condition
 			// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 			// @ invariant d.getValSvc() != nil
 			// @ invariant d.getValForwardingMetrics() != nil
@@ -925,12 +916,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(dPtr, _) && *dPtr === d
-				// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
-				// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-				// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-				// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-				// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-				// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 				// @ invariant d.getValSvc() != nil
 				// @ invariant d.getValForwardingMetrics() != nil
@@ -1179,18 +1164,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant externals != nil ==> acc(externals, R4)
 	// @ invariant externals != nil ==> acc(accBatchConn(externals), R4)
-	// (VerifiedSCION) can we drop a few of these perms?
-	// @ invariant acc(&d.external, _) && acc(&d.linkTypes, _)                &&
-	// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-	// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-	// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-	// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-	// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant d.getValSvc() != nil
 	// @ invariant d.getValForwardingMetrics() != nil
 	// @ invariant 0 in d.getDomForwardingMetrics()
-	// @ invariant d.macFactory != nil
+	// @ invariant d.getMacFactory() != nil
 	// @ invariant dp.Valid()
 	// @ invariant d.DpAgreesWithSpec(dp)
 	// @ invariant acc(ioLockRun.LockP(), _) && ioLockRun.LockInv() == SharedInv!< dp, ioSharedArgRun !>;
@@ -1199,18 +1177,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		cl :=
 			// @ requires acc(&read, _) && read implements rc
 			// @ requires acc(&d, _)
-			// @ requires acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
-			// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-			// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-			// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-			// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-			// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 			// @ requires acc(d.Mem(), _) && d.WellConfigured()
 			// @ requires d.getValSvc() != nil
 			// @ requires d.getValForwardingMetrics() != nil
 			// @ requires 0 in d.getDomForwardingMetrics()
 			// @ requires i in d.getDomForwardingMetrics()
-			// @ requires d.macFactory != nil
+			// @ requires d.getMacFactory() != nil
 			// @ requires c != nil && acc(c.Mem(), _)
 			// contracts for IO-spec
 			// @ requires dp.Valid()
@@ -1230,17 +1202,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	cl :=
 		// @ requires acc(&read, _) && read implements rc
 		// @ requires acc(&d, _)
-		// @ requires acc(&d.external, _) && acc(&d.linkTypes, _)                 &&
-		// @ 	acc(&d.neighborIAs, _) && acc(&d.internal, _)                     &&
-		// @ 	acc(&d.internalIP, _) && acc(&d.internalNextHops, _)              &&
-		// @ 	acc(&d.svc, _) && acc(&d.macFactory, _) && acc(&d.bfdSessions, _) &&
-		// @ 	acc(&d.localIA, _) && acc(&d.running, _) && acc(&d.Metrics, _)    &&
-		// @ 	acc(&d.forwardingMetrics, _) && acc(&d.key, _)
 		// @ requires acc(d.Mem(), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
 		// @ requires 0 in d.getDomForwardingMetrics()
-		// @ requires d.macFactory != nil
+		// @ requires d.getMacFactory() != nil
 		// @ requires c != nil && acc(c.Mem(), _)
 		// contracts for IO-spec
 		// @ requires dp.Valid()
@@ -1250,6 +1216,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			defer log.HandlePanic()
 			read(0, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
 		}
+	// @ d.getInternalMem()
 	go cl(d.internal /*@, ioLockRun, ioSharedArgRun, dp @*/) //@ as closure3
 
 	d.mtx.Unlock()
@@ -1366,8 +1333,7 @@ type processResult struct {
 	OutPkt   []byte
 }
 
-// @ requires acc(&d.macFactory, _) && d.macFactory != nil
-// @ requires acc(d.Mem(), _)
+// @ requires acc(d.Mem(), _) && d.getMacFactory() != nil
 // @ ensures  res.sInit() && res.sInitD() == d
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
@@ -1451,7 +1417,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures reserr == nil ==> respr.OutPkt != nil
 // @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
 // @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
+// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==> respr.OutPkt != nil &&
 // @	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
 // TODO: On a first step, we will prove that whenever we have a valid scion packet in processSCION,
 // the correct "next packet" is computed
@@ -1555,12 +1521,9 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 			return processResult{}, p.processInterBFD(ohp, pld) /*@, false, io.IO_val_Unit{} @*/
 		}
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
-		// (VerifiedSCION) Nested if because short-circuiting && is not working
-		// @ ghost if lastLayerIdx >= 0 {
-		// @	if !offsets[lastLayerIdx].isNil {
-		// @		o := offsets[lastLayerIdx]
-		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
-		// @ 	}
+		// @ ghost if lastLayerIdx >= 0 && !offsets[lastLayerIdx].isNil {
+		// @ 	o := offsets[lastLayerIdx]
+		// @ 	sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		// @ unfold acc(p.d.Mem(), _)
@@ -1570,12 +1533,9 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		return v1, v2 /*@, aliasesPkt, io.IO_val_Unit{} @*/
 	case scion.PathType:
 		// @ sl.CombineRange_Bytes(ub, start, end, writePerm)
-		// (VerifiedSCION) Nested if because short-circuiting && is not working
-		// @ ghost if lastLayerIdx >= 0 {
-		// @	ghost if !offsets[lastLayerIdx].isNil {
-		// @		o := offsets[lastLayerIdx]
-		// @		sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
-		// @ 	}
+		// @ ghost if lastLayerIdx >= 0 && !offsets[lastLayerIdx].isNil {
+		// @ 	o := offsets[lastLayerIdx]
+		// @ 	sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, writePerm)
 		// @ }
 		// @ assert sl.AbsSlice_Bytes(p.rawPkt, 0, len(p.rawPkt))
 		v1, v2 /*@ , addrAliasesPkt, newAbsPkt @*/ := p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd, ioLock, ioSharedArg, dp @*/ )
@@ -1746,7 +1706,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
 // @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
 // @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
+// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==> respr.OutPkt != nil &&
 // @	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
 func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
 
@@ -2843,7 +2803,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
 // @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
 // @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
-// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
+// @ ensures reserr == nil && newAbsPkt.isIO_val_Pkt2 ==> respr.OutPkt != nil &&
 // @	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
 	if r, err := p.parsePath( /*@ ub @*/ ); err != nil {
