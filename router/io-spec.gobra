@@ -90,7 +90,6 @@ pure func asidFromIfs(
 }
 
 // returns a list of ASids of hopfields that are before the current hopfield in a segment
-
 ghost
 requires 1 <= numINF
 requires 0 <= prevSegLen && prevSegLen <= currHFIdx
