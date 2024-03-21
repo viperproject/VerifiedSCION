@@ -1379,6 +1379,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 
 // @ preserves p.sInit()
 // @ ensures   p.sInitD()         == old(p.sInitD())
+// @ ensures   p.getIngressID()   == old(p.getIngressID())
 // @ ensures   p.sInitRawPkt()    == nil
 // @ ensures   p.sInitPath()      == nil
 // @ ensures   p.sInitHopField()  == path.HopField{}
