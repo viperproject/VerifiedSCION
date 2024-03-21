@@ -24,6 +24,7 @@ import (
 	"github.com/scionproto/scion/pkg/private/util"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
+	//@ "verification/io"
 )
 
 // InfoLen is the size of an InfoField in bytes.
@@ -113,10 +114,15 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 // first bytes of the MAC. It is the beta calculation according to
 // https://docs.scion.org/en/latest/protocols/scion-header.html#hop-field-mac-computation
 // @ preserves acc(&inf.SegID)
+// requires hf.HVF == absMac(hfMac[:])
+// @ensures absUinfo(inf.SegID) == old(io.upd_uinfo(absUinfo(inf.SegID), hf))
 // @ decreases
-func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte) {
+func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte /* @, ghost hf io.IO_HF @ */) {
 	//@ share hfMac
 	inf.SegID = inf.SegID ^ binary.BigEndian.Uint16(hfMac[:2])
+	// TODO: (Markus) How to argue that we need to assume this
+	// upd_uinfo equivalent to xor in the protocol
+	// @ assume absUinfo(inf.SegID) == old(io.upd_uinfo(absUinfo(inf.SegID), hf))
 }
 
 // @ decreases

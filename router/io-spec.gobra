@@ -162,7 +162,6 @@ requires hopFieldOffset(numINF, segLen) <= len(raw)
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 ensures res != none[seq[io.IO_as]] ==> len(get(res)) == segLen - prevSegLen
-opaque
 decreases
 pure func asidForCurrSeg(
 	dp io.DataPlaneSpec,
@@ -258,10 +257,26 @@ pure func asidsForMidSeg(dp io.DataPlaneSpec, raw []byte, numINF int, currINFIdx
 }
 
 ghost
+decreases
+pure func hf_validHelper(ts io.IO_ainfo, uinfo set[io.IO_msgterm], hf io.IO_HF, asid io.IO_as) bool {
+	return let inif := hf.InIF2 in
+		let egif := hf.EgIF2 in
+		let x := hf.HVF in
+		let l := io.IO_msgterm(io.MsgTerm_L{
+			seq[io.IO_msgterm]{
+				io.IO_msgterm(io.MsgTerm_Num{ts}),
+				io.if2term(inif),
+				io.if2term(egif),
+				io.IO_msgterm(io.MsgTerm_FS{uinfo})}}) in
+		x == io.mac(io.macKey(io.asidToKey(asid)), l)
+}
+
+ghost
 requires idx + path.HopLen <= len(raw)
 requires 0 <= idx
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 ensures  len(res.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
+ensures  hf_validHelper(ainfo, beta, res, asid)
 decreases
 pure func hopField(raw []byte, idx int, beta set[io.IO_msgterm], asid io.IO_as, ainfo io.IO_ainfo) (res io.IO_HF) {
 	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55) in
@@ -292,8 +307,14 @@ requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 ensures   len(res) == len(asid) - currHFIdx
 ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
 	len(res[k].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
-ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
-	res[k].extr_asid() == asid[k + currHFIdx]
+// prove separately
+// ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
+//  	res[k].extr_asid() == asid[k + currHFIdx]
+// ensures len(res) > 0 ==> hvfSet(res[0]) == beta
+// ensures	  forall k int :: {res[k]} 0 < k && k < len(res) ==>
+// 	hvfSet(res[k]) == io.upd_uinfo(hvfSet(res[k-1]), res[k-1])
+// ensures	  forall k int :: {res[k]} 0 <= k && k < len(res) ==>
+//  	hf_validHelper(ainfo, hvfSet(res[k]), res[k], asid[k + currHFIdx])
 decreases len(asid) - currHFIdx
 pure func hopFieldsConsDir(
 	raw []byte,
@@ -304,7 +325,7 @@ pure func hopFieldsConsDir(
 	ainfo io.IO_ainfo) (res seq[io.IO_HF]) {
 	return currHFIdx == len(asid) ? seq[io.IO_HF]{} :
 		let hf := hopField(raw, offset + path.HopLen * currHFIdx, beta, asid[currHFIdx], ainfo) in
-		seq[io.IO_HF]{hf} ++ hopFieldsConsDir(raw, offset, currHFIdx + 1, (beta union set[io.IO_msgterm]{hf.HVF}), asid, ainfo)
+		seq[io.IO_HF]{hf} ++ hopFieldsConsDir(raw, offset, currHFIdx + 1, io.upd_uinfo(beta, hf), asid, ainfo)
 }
 
 ghost
@@ -315,8 +336,14 @@ requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 ensures   len(res) == currHFIdx + 1
 ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
 	len(res[k].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
-ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
-	res[k].extr_asid() == asid[k]
+// prove separately
+// ensures   forall k int :: {res[k]} 0 <= k && k < len(res) ==>
+// 	res[k].extr_asid() == asid[k]
+// ensures   len(res) > 0 ==> hvfSet(res[len(res)-1]) == beta
+// ensures	  forall k int :: {res[k]} 0 <= k && k+1 < len(res) ==>
+// 	hvfSet(res[k]) == io.upd_uinfo(hvfSet(res[k+1]), res[k+1])
+// ensures	  forall k int :: {res[k]} 0 <= k && k < len(res) ==>
+//  	hf_validHelper(ainfo, hvfSet(res[k]), res[k], asid[k])
 decreases currHFIdx + 1
 pure func hopFieldsNotConsDir(
 	raw []byte,
@@ -327,7 +354,7 @@ pure func hopFieldsNotConsDir(
 	ainfo io.IO_ainfo) (res seq[io.IO_HF]) {
 	return currHFIdx == -1 ? seq[io.IO_HF]{} :
 		let hf := hopField(raw, offset + path.HopLen * currHFIdx, beta, asid[currHFIdx], ainfo) in
-		hopFieldsNotConsDir(raw, offset, currHFIdx - 1, (beta union set[io.IO_msgterm]{hf.HVF}), asid, ainfo) ++ seq[io.IO_HF]{hf}
+		hopFieldsNotConsDir(raw, offset, currHFIdx - 1, io.upd_uinfo(beta, hf), asid, ainfo) ++ seq[io.IO_HF]{hf}
 }
 
 ghost
@@ -373,6 +400,8 @@ pure func segment(raw []byte,
 		hopFieldsConsDir(raw, offset, 0, set[io.IO_msgterm]{}, asid, ainfo) :
 		hopFieldsNotConsDir(raw, offset, len(asid) - 1, set[io.IO_msgterm]{}, asid, ainfo) in
 		let uinfo := uInfo(hopfields, currHFIdx, consDir) in
+		//let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle+2 + k]) in
+		//let uinfo := absUinfo(binary.BigEndian.Uint16(raw[middle+2:middle+4])) in
 		io.IO_seg2(io.IO_seg3_{
 			AInfo :ainfo,
 			UInfo : uinfo,
@@ -391,7 +420,6 @@ requires offset + path.HopLen * len(asid) <= len(raw)
 requires 0 <= currHFIdx && currHFIdx <= len(asid)
 requires 0 <= currINFIdx && currINFIdx < 3
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
-opaque
 decreases
 pure func currSeg(raw []byte, offset int, currINFIdx int, currHFIdx int, asid seq[io.IO_as]) io.IO_seg3 {
 	return let ainfo := timestamp(raw, currINFIdx) in
@@ -479,14 +507,16 @@ pure func midSeg(
 }
 
 ghost
+opaque
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 requires validPktMetaHdr(raw)
-//ensures res != none[io.IO_pkt2] ==> len(get(res).CurrSeg.Future) > 0
-//ensures res != none[io.IO_pkt2] ==> get(res).CurrSeg.Future[0].extr_asid() == dp.Asid()
+// ensures res != none[io.IO_pkt2] ==> len(get(res).CurrSeg.Future) > 0
+// ensures res != none[io.IO_pkt2] ==> get(res).CurrSeg.Future[0].extr_asid() == dp.Asid()
+//ensures res != none[io.IO_pkt2] ==> dp.hf_valid(get(res))
 opaque
 decreases
-pure func absPkt(dp io.DataPlaneSpec, raw []byte, asid io.IO_as) (res option[io.IO_pkt2]) {
+pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res option[io.IO_pkt2]) {
 	return let _ := reveal validPktMetaHdr(raw) in
 		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55) in binary.BigEndian.Uint32(raw[0:4])) in
 		let metaHdr := scion.DecodedFrom(hdr) in
@@ -548,13 +578,13 @@ requires forall idx int :: {hopfields[idx]} 0 <= idx && idx < len(hopfields) ==>
 	len(hopfields[idx].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
 decreases
 pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_msgterm] {
-	return currHFIdx == len(hopfields) ?
-		hvfSet(hopfields[currHFIdx-1]) :
+	return currHFIdx + 1 >= len(hopfields) ?
+		hvfSet(hopfields[len(hopfields)-1]) :
 		(currHFIdx == 0 ?
 			hvfSet(hopfields[currHFIdx]) :
 			(consDir ?
 				hvfSet(hopfields[currHFIdx]) :
-				hvfSet(hopfields[currHFIdx-1])))
+				hvfSet(hopfields[currHFIdx+1])))
 }
 
 ghost
@@ -604,13 +634,13 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
-	return (reveal validPktMetaHdr(raw) && absPkt(dp, raw, dp.asid()) != none[io.IO_pkt2]) ?
-		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), get(absPkt(dp, raw, dp.asid()))}) :
+	return (validPktMetaHdr(raw) && absPkt(dp, raw) != none[io.IO_pkt2]) ?
+		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), get(absPkt(dp, raw))}) :
 		absIO_val_Unsupported(raw, ingressID)
 }
 
 ghost
-requires acc(&d.localIA, R55)
+requires acc(&d.localIA, _)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool {
 	return io.IO_as(d.localIA) == dp.Asid()
