@@ -725,6 +725,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
+// @ #backend[moreJoins()]
 // @ requires  acc(d.Mem(), OutMutexPerm)
 // @ requires  !d.IsRunning()
 // @ requires  d.InternalConnIsSet()
@@ -784,6 +785,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// there is currently an incompletness when calling closures that capture variables
 		// from (Viper) methods where they were not allocated. To address that, we introduce
 		// dPtr as an helper parameter. It always receives the value &d.
+		// @ #backend[moreJoins()]
 		// @ requires acc(dPtr, _)
 		// @ requires let d := *dPtr in
 		// @ 	acc(d.Mem(), _)                            &&
@@ -1073,9 +1075,10 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ 	ApplyElemWitness(s.obuf, ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 					// @ 	assert newAbsPkt.IO_val_Pkt2_2 in AsSet(s.obuf[newAbsPkt.IO_val_Pkt2_1])
 					// @ 	assert dp.dp3s_iospec_bio3s_send_guard(s, t, newAbsPkt)
-					// @ }
+					// @ } else { assert newAbsPkt.isIO_val_Unsupported }
 					// @ unfold dp.dp3s_iospec_ordered(s, t)
 					// @ unfold dp.dp3s_iospec_bio3s_send(s, t)
+					// @ io.TriggerBodyIoSend(newAbsPkt)
 					// @ ghost tN := io.dp3s_iospec_bio3s_send_T(t, newAbsPkt)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@, result.EgressID, t, newAbsPkt, dp @*/)
 					// @ ghost *ioSharedArg.Place = tN
@@ -1408,7 +1411,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	d.WellConfigured()        &&
 // @ 	d.getValSvc() != nil      &&
 // @ 	d.getValForwardingMetrics() != nil &&
-// @	d.DpAgreesWithSpec(dp)
+// @ 	d.DpAgreesWithSpec(dp)
 // @ ensures  p.sInit()
 // @ ensures  acc(p.sInitD().Mem(), _)
 // @ ensures  p.sInitD() == old(p.sInitD())
@@ -1426,16 +1429,15 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires dp.Valid()
 // @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 // @ requires let absPkt := absIO_val(dp, rawPkt, p.getIngressID()) in
-// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.getIngressID()), absPkt.IO_val_Pkt2_2)
+// @ 	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.getIngressID()), absPkt.IO_val_Pkt2_2)
 // @ ensures dp.Valid()
 // @ ensures reserr == nil ==>
 // @ 	respr.OutPkt != nil                                      &&
 // @ 	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID) &&
 // @ 	newAbsPkt.isIO_val_Pkt2                                  &&
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
+// @ ensures reserr != nil && respr.OutPkt != nil ==> newAbsPkt.isIO_val_Unsupported
 // @ ensures respr.OutPkt != nil ==> newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
-// (VerifiedSCION) On a first step, we will prove that whenever we have a valid scion packet in processSCION,
-// the correct "next packet" is computed
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
 
