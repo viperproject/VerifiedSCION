@@ -99,7 +99,7 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 }
 
 // @ requires  1 <= len(data)
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
 // @ ensures   err == nil ==> acc(res)
 // @ ensures   (err == nil && res.OptType != OptTypePad1) ==> (
 // @ 	2 <= res.ActualLength && res.ActualLength <= len(data) && res.OptData === data[2:res.ActualLength])
@@ -107,8 +107,8 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeTLVOption(data []byte) (res *tlvOption, err error) {
-	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
-	// @ defer fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
+	// @ defer fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
 	o := &tlvOption{OptType: OptionType(data[0])}
 	if OptionType(data[0]) == OptTypePad1 {
 		o.ActualLength = 1
@@ -241,7 +241,7 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 
 // @ requires  df != nil
 // @ preserves df.Mem()
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ ensures   resErr != nil ==> resErr.ErrorMem()
 // The following poscondition is more a lot more complicated than it would be if the return type
 // was *extnBase instead of extnBase
@@ -259,10 +259,10 @@ func decodeExtnBase(data []byte, df gopacket.DecodeFeedback) (res extnBase, resE
 			len(data)))
 	}
 
-	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 	e.NextHdr = L4ProtocolType(data[0])
 	e.ExtLen = data[1]
-	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 	e.ActualLen = (int(e.ExtLen) + 1) * LineLen
 	if len(data) < e.ActualLen {
 		return extnBase{}, serrors.New(fmt.Sprintf("invalid extension header. "+
@@ -346,7 +346,7 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 // @ requires  h.NonInitMem()
 // @ requires  df != nil
 // @ preserves df.Mem()
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ ensures   res == nil ==> h.Mem(data)
 // @ ensures   res != nil ==> (h.NonInitMem() && res.ErrorMem())
 // @ decreases
@@ -373,14 +373,14 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	// @ invariant len(h.Options) == lenOptions
 	// @ invariant forall i int :: { &h.Options[i] } 0 <= i && i < lenOptions ==>
 	// @ 	(acc(&h.Options[i]) && h.Options[i].Mem(i))
-	// @ invariant acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+	// @ invariant acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 	// @ invariant h.BaseLayer.Contents === data[:h.ActualLen]
 	// @ invariant h.BaseLayer.Payload === data[h.ActualLen:]
 	// @ decreases h.ActualLen - offset
 	for offset < h.ActualLen {
-		// @ sl.SplitRange_Bytes(data, offset, h.ActualLen, R20)
+		// @ sl.SplitRange_Bytes(data, offset, h.ActualLen, R40)
 		opt, err := decodeTLVOption(data[offset:h.ActualLen])
-		// @ sl.CombineRange_Bytes(data, offset, h.ActualLen, R20)
+		// @ sl.CombineRange_Bytes(data, offset, h.ActualLen, R40)
 		if err != nil {
 			// @ fold h.NonInitMem()
 			return err
@@ -478,7 +478,7 @@ func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ ,
 // @ requires  e.NonInitMem()
 // @ requires  df != nil
 // @ preserves df.Mem()
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ ensures   res == nil ==> e.Mem(data)
 // @ ensures   res != nil ==> (e.NonInitMem() && res.ErrorMem())
 // @ decreases
@@ -505,14 +505,14 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	// @ invariant len(e.Options) == lenOptions
 	// @ invariant forall i int :: { &e.Options[i] } 0 <= i && i < lenOptions ==>
 	// @ 	(acc(&e.Options[i]) && e.Options[i].Mem(i))
-	// @ invariant acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+	// @ invariant acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 	// @ invariant e.BaseLayer.Contents === data[:e.ActualLen]
 	// @ invariant e.BaseLayer.Payload === data[e.ActualLen:]
 	// @ decreases e.ActualLen - offset
 	for offset < e.ActualLen {
-		// @ sl.SplitRange_Bytes(data, offset, e.ActualLen, R20)
+		// @ sl.SplitRange_Bytes(data, offset, e.ActualLen, R40)
 		opt, err := decodeTLVOption(data[offset:e.ActualLen])
-		// @ sl.CombineRange_Bytes(data, offset, e.ActualLen, R20)
+		// @ sl.CombineRange_Bytes(data, offset, e.ActualLen, R40)
 		if err != nil {
 			// @ fold e.NonInitMem()
 			return err
@@ -600,7 +600,7 @@ type HopByHopExtnSkipper struct {
 // DecodeFromBytes implementation according to gopacket.DecodingLayer
 // @ requires  s.NonInitMem()
 // @ requires  df != nil
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
@@ -656,7 +656,7 @@ type EndToEndExtnSkipper struct {
 // @ requires  s.NonInitMem()
 // @ requires  df != nil
 // @ preserves df.Mem()
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R20)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
 // @ decreases
