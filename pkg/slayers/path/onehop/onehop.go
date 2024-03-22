@@ -66,7 +66,7 @@ type Path struct {
 }
 
 // @ requires  o.NonInitMem()
-// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ ensures   (len(data) >= PathLen) == (r == nil)
 // @ ensures   r == nil ==> o.Mem(data)
 // @ ensures   r != nil ==> o.NonInitMem()

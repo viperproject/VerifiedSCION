@@ -138,7 +138,7 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
 // otherwise SerializeTo will return nil.
 // @ requires  p.NonInitMem()
-// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R40)
 // @ ensures   len(b) < MetadataLen ==> r != nil
 // @ ensures   r == nil ==> p.Mem(b)
 // @ ensures   r != nil ==> p.NonInitMem() && r.ErrorMem()
