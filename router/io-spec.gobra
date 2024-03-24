@@ -398,13 +398,12 @@ pure func segment(raw []byte,
 	asid seq[io.IO_as],
 	ainfo io.IO_ainfo,
 	consDir bool,
-	peer bool) io.IO_seg2 {
+	peer bool,
+	uinfo set[io.IO_msgterm]) io.IO_seg2 {
 	return let hopfields := consDir ?
 		hopFieldsConsDir(raw, offset, 0, set[io.IO_msgterm]{}, asid, ainfo) :
 		hopFieldsNotConsDir(raw, offset, len(asid) - 1, set[io.IO_msgterm]{}, asid, ainfo) in
-		let uinfo := uInfo(hopfields, currHFIdx, consDir) in
-		//let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle+2 + k]) in
-		//let uinfo := absUinfo(binary.BigEndian.Uint16(raw[middle+2:middle+4])) in
+		//let uinfo := uInfo(hopfields, currHFIdx, consDir) in
 		io.IO_seg2(io.IO_seg3_{
 			AInfo :ainfo,
 			UInfo : uinfo,
@@ -426,10 +425,11 @@ requires 0 <= currINFIdx && currINFIdx < 3
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func currSeg(raw []byte, offset int, currINFIdx int, currHFIdx int, asid seq[io.IO_as]) io.IO_seg3 {
-	return let ainfo := timestamp(raw, currINFIdx) in
+	return let ainfo := path.Timestamp(raw, currINFIdx) in
 		let consDir := path.ConsDir(raw, currINFIdx) in
 		let peer := path.Peer(raw, currINFIdx) in
-		segment(raw, offset, currHFIdx, asid, ainfo, consDir, peer)
+		let uinfo := path.AbsUinfo(raw, currINFIdx) in
+		segment(raw, offset, currHFIdx, asid, ainfo, consDir, peer, uinfo)
 }
 
 ghost
@@ -522,7 +522,7 @@ opaque
 decreases
 pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res option[io.IO_pkt2]) {
 	return let _ := reveal validPktMetaHdr(raw) in
-		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55) in binary.BigEndian.Uint32(raw[0:4])) in
+		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[0:4])) in
 		let metaHdr := scion.DecodedFrom(hdr) in
 		let currINFIdx := int(metaHdr.CurrINF) in
 		let currHFIdx := int(metaHdr.CurrHF) in
@@ -553,20 +553,6 @@ pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res option[io.IO_pkt2]) {
 					}))
 }
 
-
-ghost
-requires 0 <= offset
-requires path.InfoFieldOffset(offset) + 8 < len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-decreases
-pure func timestamp(raw []byte, offset int) io.IO_ainfo {
-	return let idx := path.InfoFieldOffset(offset) + 4 in
-		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
-		let _ := Asserting(forall i int :: { &raw[idx+i] } { &raw[idx:idx+4][i] } 0 <= i && i < 4 ==>
-		&raw[idx+i] == &raw[idx:idx+4][i]) in
-		io.IO_ainfo(binary.BigEndian.Uint32(raw[idx : idx + 4]))
-}
-
 ghost
 requires len(hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
 decreases
@@ -584,11 +570,9 @@ decreases
 pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_msgterm] {
 	return currHFIdx + 1 >= len(hopfields) ?
 		hvfSet(hopfields[len(hopfields)-1]) :
-		(currHFIdx == 0 ?
+		(consDir ?
 			hvfSet(hopfields[currHFIdx]) :
-			(consDir ?
-				hvfSet(hopfields[currHFIdx]) :
-				hvfSet(hopfields[currHFIdx+1])))
+			hvfSet(hopfields[currHFIdx+1]))
 }
 
 ghost

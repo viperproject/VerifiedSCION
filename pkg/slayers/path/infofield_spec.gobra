@@ -44,12 +44,42 @@ pure func ConsDir(raw []byte, currINF int) bool {
 ghost
 requires 0 <= currINF
 requires InfoFieldOffset(currINF) < len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func Peer(raw []byte, currINF int) bool {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55) in
+	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
 		raw[InfoFieldOffset(currINF)] & 0x2 == 0x2
 }
+
+ghost
+requires 0 <= currINF
+requires InfoFieldOffset(currINF) + InfoLen < len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func Timestamp(raw []byte, currINF int) io.IO_ainfo {
+	return let idx := InfoFieldOffset(currINF) + 4 in
+		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		let _ := Asserting(forall i int :: { &raw[idx+i] } { &raw[idx:idx+4][i] } 0 <= i && i < 4 ==>
+			&raw[idx+i] == &raw[idx:idx+4][i]) in
+		io.IO_ainfo(binary.BigEndian.Uint32(raw[idx : idx + 4]))
+}
+
+ghost
+requires 0 <= currINF
+requires InfoFieldOffset(currINF) + InfoLen < len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func AbsUinfo(raw []byte, currINF int) set[io.IO_msgterm] {
+	return 	let idx := InfoFieldOffset(currINF) + 2 in
+		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		let _ := Asserting(forall k int :: {&raw[idx:idx+2][k]} 0 <= k && k < 2 ==>
+			&raw[idx:idx+4][k] == &raw[idx + k]) in
+		absUinfo_(binary.BigEndian.Uint16(raw[idx:idx+2]))
+}
+
+ghost
+decreases
+pure func absUinfo_(SegID uint16) set[io.IO_msgterm]
 
 // intermediate type, not in IO-spec
 type IO_intermediate_InfoField adt {
@@ -63,10 +93,6 @@ type IO_intermediate_InfoField adt {
 }
 
 ghost
-decreases
-pure func absUinfo(SegID uint16) set[io.IO_msgterm]
-
-ghost
 requires 0 <= start && start <= middle
 requires middle+InfoLen <= end && end <= len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, start, end), _)
@@ -77,7 +103,7 @@ pure func BytesToIO_intermediate_InfoField(raw [] byte, start int, middle int, e
 		let _ := Asserting(forall k int :: {&raw[middle+4:middle+8][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+8][k] == &raw[middle+4 + k]) in
 		IO_intermediate_InfoField(IO_intermediate_InfoField_{
 			AInfo : io.IO_ainfo(binary.BigEndian.Uint32(raw[middle+4:middle+8])),
-			UInfo : absUinfo(binary.BigEndian.Uint16(raw[middle+2:middle+4])),
+			UInfo : absUinfo_(binary.BigEndian.Uint16(raw[middle+2:middle+4])),
 			ConsDir : raw[middle] & 0x1 == 0x1,
 			Peer : raw[middle] & 0x2  == 0x2,
 		})
@@ -89,7 +115,7 @@ decreases
 pure func (inf *InfoField) ToIO_intermediate_InfoField() (IO_intermediate_InfoField) {
 	return IO_intermediate_InfoField(IO_intermediate_InfoField_{
 		AInfo : io.IO_ainfo(inf.Timestamp),
-		UInfo : absUinfo(inf.SegID),
+		UInfo : absUinfo_(inf.SegID),
 		ConsDir : inf.ConsDir,
 		Peer : inf.Peer,
 	})
