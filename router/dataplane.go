@@ -1975,7 +1975,10 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 		}
 	}
 	// @ fold p.d.validResult(processResult{}, false)
-	// @ reveal p.DstIsLocalIngressID(ubScionL)
+	// @ assert  (unfolding acc(p.scionLayer.Mem(ubScionL), R55) in
+	// @	(unfolding acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), R55) in
+	// @	p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.ingressID != 0
+	// @ assert reveal p.DstIsLocalIngressID(ubScionL)
 	return processResult{}, nil
 }
 

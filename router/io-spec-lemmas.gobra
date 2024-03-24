@@ -97,6 +97,7 @@ pure func (p *scionPacketProcessor) DstIsLocalIngressID(ub []byte) bool {
 		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), _) in
 		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.ingressID != 0
 }
+
 //TODO: Does not work with --disableNL --unsafeWildcardoptimization
 ghost
 requires acc(s.scionLayer.Mem(ub), R50)
