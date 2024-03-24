@@ -725,7 +725,6 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 
 // Run starts running the dataplane. Note that configuration is not possible
 // after calling this method.
-// @ #backend[moreJoins()]
 // @ requires  acc(d.Mem(), OutMutexPerm)
 // @ requires  !d.IsRunning()
 // @ requires  d.InternalConnIsSet()
@@ -741,6 +740,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires dp.Valid()
 // @ requires d.DpAgreesWithSpec(dp)
 // @ requires io.token(place) && dp.dp3s_iospec_ordered(state, place)
+// @ #backend[moreJoins()]
 func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost state io.IO_dp3s_state_local, ghost dp io.DataPlaneSpec @*/) error {
 	// @ share d, ctx
 	d.mtx.Lock()
@@ -785,7 +785,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// there is currently an incompletness when calling closures that capture variables
 		// from (Viper) methods where they were not allocated. To address that, we introduce
 		// dPtr as an helper parameter. It always receives the value &d.
-		// @ #backend[moreJoins()]
 		// @ requires acc(dPtr, _)
 		// @ requires let d := *dPtr in
 		// @ 	acc(d.Mem(), _)                            &&
@@ -801,6 +800,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// @ requires let d := *dPtr in
 		// @ 	d.DpAgreesWithSpec(dp)
 		// @ requires acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
+		// @ #backend[moreJoins()]
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			d := *dPtr
 			msgs := conn.NewReadMessages(inputBatchCnt)
