@@ -86,9 +86,8 @@ ensures absIO_val(dp, raw, ingressID).isIO_val_Pkt2 ==>
 decreases
 func absIO_valLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16)
 
-//TOOD: How to make this function opaque?
 ghost
-// opaque
+opaque
 requires acc(p.scionLayer.Mem(ub), _)
 requires acc(&p.d, _) && acc(p.d.Mem(), _)
 requires acc(&p.ingressID, _)
@@ -97,6 +96,23 @@ pure func (p *scionPacketProcessor) DstIsLocalIngressID(ub []byte) bool {
 	return (unfolding acc(p.scionLayer.Mem(ub), _) in
 		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), _) in
 		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.ingressID != 0
+}
+//TODO: Does not work with --disableNL --unsafeWildcardoptimization
+ghost
+requires acc(s.scionLayer.Mem(ub), R50)
+requires acc(&s.d, R55) && acc(s.d.Mem(), R55)
+requires acc(&s.ingressID, R55)
+requires s.DstIsLocalIngressID(ub)
+requires (unfolding acc(s.scionLayer.Mem(ub), R50) in
+		(unfolding acc(s.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
+		s.scionLayer.DstIA) == (unfolding acc(s.d.Mem(), R55) in s.d.localIA))
+ensures acc(s.scionLayer.Mem(ub), R50)
+ensures acc(&s.d, R55) && acc(s.d.Mem(), R55)
+ensures acc(&s.ingressID, R55)
+ensures s.ingressID != 0
+decreases
+func (s* scionPacketProcessor) GetIngressIDNotZero(ub []byte) {
+	reveal s.DstIsLocalIngressID(ub)
 }
 
 ghost
@@ -136,10 +152,6 @@ pure func AbsVerifyCurrentMACConstraint(pkt io.IO_pkt2, dp io.DataPlaneSpec) boo
 		let uinfo := currseg.UInfo in
 		dp.hf_valid(d, ts, uinfo, hf)
 }
-
-// assume absUinfo(p.infofield.UInfo) == oldPkt.CurrSeg.Uinfo
-// assume absHVF(p.hopfield.HVF) == oldPkt.CurrSeg.Future[0].HVF
-// in verfiyCurrentMac I prove dp.hf_valid(p.infofield.ConsDir, p.infofield.AInfo, p.infofield.UInfo, p.hopfield)
 
 // TODO: add comment why terminations is assumed
 ghost

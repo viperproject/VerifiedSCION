@@ -604,15 +604,6 @@ decreases
 pure func (s* scionPacketProcessor) sInitSegmentChange() (res bool) {
 	return unfolding acc(s.sInit(), _) in s.segmentChange
 }
-/*
-ghost
-requires acc(s.scionLayer.Mem(ub), _)
-ensures acc(&s.scionLayer.DstIA, _)
-decreases
-func (s *scionPacketProcessor) getDstIA(ub []byte) {
-	unfold acc(s.scionLayer.Mem(ub), _)
-	unfold acc(s.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), _)
-}*/
 
 /** end spec for newPacketProcessor **/
 

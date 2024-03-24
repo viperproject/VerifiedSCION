@@ -1975,6 +1975,7 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 		}
 	}
 	// @ fold p.d.validResult(processResult{}, false)
+	// @ reveal p.DstIsLocalIngressID(ubScionL)
 	return processResult{}, nil
 }
 
@@ -2844,8 +2845,8 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	if /*@ unfolding acc(p.scionLayer.Mem(ub), R50) in (unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in @*/ p.scionLayer.DstIA /*@ ) @*/ == p.d.localIA {
 		// @ assert p.DstIsLocalIngressID(ub)
 		// @ assert unfolding acc(p.scionLayer.Mem(ub), R50) in (unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in p.scionLayer.DstIA) == p.d.localIA
-		// Why does the proof fail?
-		// @ assume p.ingressID != 0 // TODO: How to prove with opaque DstIsLocalIngressID()
+		// @ p.GetIngressIDNotZero(ub)
+		// @ assert p.ingressID != 0
 		a, r, err /*@, aliasesUb @*/ := p.resolveInbound( /*@ ub @*/ )
 		if err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
