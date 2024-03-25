@@ -205,6 +205,14 @@ pure func (d *DataPlane) getValForwardingMetrics() map[uint16]forwardingMetrics 
 }
 
 ghost
+pure
+requires acc(p.sInit(), _)
+decreases
+func (p *scionPacketProcessor) getIngressID() uint16 {
+	return unfolding acc(p.sInit(), _) in p.ingressID
+}
+
+ghost
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) getMacFactory() func() hash.Hash {
