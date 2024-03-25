@@ -1835,8 +1835,8 @@ func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr 
 		// @ fold p.d.validResult(respr, false)
 		return processResult{}, nil
 	}
-	// @ TODO()
-	// TODO: adapt; note that packSCMP always returns an empty addr and conn and
+	// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
+	// (VerifiedSCION): adapt; note that packSCMP always returns an empty addr and conn and
 	// when the err is nil, it returns the bytes of p.buffer. This should be a magic wand
 	// that is consumed after sending the reply. For now, we are making this simplifying
 	// assumption, but in the future, we should elaborate the proof for this to not be
@@ -1875,7 +1875,7 @@ func (p *scionPacketProcessor) validateIngressID() (respr processResult, reserr 
 		errCode = slayers.SCMPCodeUnknownHopFieldEgress
 	}
 	if p.ingressID != 0 && p.ingressID != pktIngressID {
-		// @ TODO()
+		// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482")
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			errCode,
@@ -1916,21 +1916,21 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 		// Note: SCMP error messages triggered by the sibling router may use paths that
 		// don't start with the first hop.
 		if p.path.IsFirstHop( /*@ ubPath @*/ ) && !srcIsLocal {
-			// @ TODO() // depends on packSCMP
+			// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 			return p.invalidSrcIA()
 		}
 		if dstIsLocal {
-			// @ TODO() // depends on packSCMP
+			// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 			return p.invalidDstIA()
 		}
 	} else {
 		// Inbound
 		if srcIsLocal {
-			// @ TODO() // depends on packSCMP
+			// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 			return p.invalidSrcIA()
 		}
 		if p.path.IsLastHop( /*@ ubPath @*/ ) != dstIsLocal {
-			// @ TODO() // depends on packSCMP
+			// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 			return p.invalidDstIA()
 		}
 	}
@@ -2050,7 +2050,7 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 		if !p.infoField.ConsDir {
 			errCode = slayers.SCMPCodeUnknownHopFieldIngress
 		}
-		// @ TODO()
+		// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			errCode,
@@ -2078,7 +2078,7 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 			// @ fold p.d.validResult(respr, false)
 			return processResult{}, nil
 		default: // malicious
-			// @ TODO()
+			// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 			return p.packSCMP(
 				slayers.SCMPTypeParameterProblem,
 				slayers.SCMPCodeInvalidPath, // XXX(matzf) new code InvalidHop?
@@ -2100,7 +2100,7 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 		// @ fold p.d.validResult(respr, false)
 		return processResult{}, nil
 	default:
-		// @ TODO()
+		// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidSegmentChange,
@@ -2205,7 +2205,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 	// @ sl.SplitRange_Bytes(fullMac, 0, path.MacLen, R20)
 	// @ ghost defer sl.CombineRange_Bytes(fullMac, 0, path.MacLen, R20)
 	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen]) == 0 {
-		// @ TODO()
+		// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482")
 		return p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidHopFieldMAC,
@@ -2252,7 +2252,7 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (
 		// @ ghost if addrAliases {
 		// @ 	apply acc(a.Mem(), R15) --* acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R15)
 		// @ }
-		// @ TODO()
+		// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482")
 		r, err := p.packSCMP(
 			slayers.SCMPTypeDestinationUnreachable,
 			slayers.SCMPCodeNoRoute,
@@ -2425,7 +2425,7 @@ func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr e
 					Egress:  uint64(egressID),
 				}
 			}
-			// @ TODO()
+			// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 			return p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down"))
 		}
 	}
@@ -2648,7 +2648,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 		IA:         p.d.localIA,
 		Interface:  uint64(interfaceID),
 	}
-	// @ TODO()
+	// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 	return p.packSCMP(slayers.SCMPTypeTracerouteReply, 0, &scmpP, nil)
 }
 
@@ -2666,7 +2666,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, nil
 	}
-	// @ TODO()
+	// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		slayers.SCMPCodeInvalidPacketSize,
@@ -2831,8 +2831,8 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	if !p.infoField.ConsDir {
 		errCode = slayers.SCMPCodeUnknownHopFieldIngress
 	}
-	// @ TODO()
 	// @ p.scionLayer.DowngradePerm(ub)
+	// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 	tmp, err := p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		errCode,
