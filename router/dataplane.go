@@ -2312,6 +2312,7 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ 	(reserr == nil && p.infoField.ConsDir  ==> true) && // ???
 // @ 	(reserr == nil && !p.infoField.ConsDir ==> true)    // ???
 // @ decreases
+// TODO: pass idx as a param instead of differentiating on whether sth is the fst call or not
 func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, ghost ub []byte @*/ ) (respr processResult, reserr error) {
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput)
 	// @ fold acc(sl.AbsSlice_Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R20)
