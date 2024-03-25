@@ -3498,7 +3498,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 // Due to Viper's very strict injectivity constraints:
 // @ requires  forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==>
 // @     opts[i] !== opts[j]
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R39)
 // @ ensures   forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
 // @     (acc(&opts[i], R10) && opts[i] != nil)
 // @ ensures   -1 <= idx && idx < len(opts)
