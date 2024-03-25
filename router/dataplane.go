@@ -1432,10 +1432,10 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires let absPkt := absIO_val(dp, rawPkt, p.getIngressID()) in
 // @ 	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, ifsToIO_ifs(p.getIngressID()), absPkt.IO_val_Pkt2_2)
 // @ ensures dp.Valid()
-// @ ensures reserr == nil ==>
-// @ 	respr.OutPkt != nil                                      &&
-// @ 	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID) &&
-// @ 	newAbsPkt.isIO_val_Pkt2                                  &&
+// @ ensures respr.OutPkt != nil ==>
+// @ 	newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
+// @ ensures (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
+// @ ensures newAbsPkt.isIO_val_Pkt2 ==>
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 // @ ensures reserr != nil && respr.OutPkt != nil ==> newAbsPkt.isIO_val_Unsupported
 // @ ensures respr.OutPkt != nil ==> newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
