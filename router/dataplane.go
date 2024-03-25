@@ -3498,7 +3498,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 // Due to Viper's very strict injectivity constraints:
 // @ requires  forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==>
 // @     opts[i] !== opts[j]
-// @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R39)
 // @ ensures   forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
 // @     (acc(&opts[i], R10) && opts[i] != nil)
 // @ ensures   -1 <= idx && idx < len(opts)
@@ -3538,7 +3538,7 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	// @ ghost oldStart := 0
 	// @ ghost oldEnd := len(data)
 
-	// @ invariant sl.AbsSlice_Bytes(oldData, 0, len(oldData))
+	// @ invariant acc(sl.AbsSlice_Bytes(oldData, 0, len(oldData)), R40)
 	// @ invariant base.Mem(oldData)
 	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)
 	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], R10)
@@ -3582,10 +3582,10 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 			// @ ghost if data == nil {
 			// @ 	sl.NilAcc_Bytes()
 			// @ } else {
-			// @	sl.SplitRange_Bytes(oldData, oldStart, oldEnd, writePerm)
+			// @	sl.SplitRange_Bytes(oldData, oldStart, oldEnd, R40)
 			// @ }
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
-				// @ ghost if data != nil { sl.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
+				// @ ghost if data != nil { sl.CombineRange_Bytes(oldData, oldStart, oldEnd, R40) }
 				// @ base.DowngradePerm(oldData)
 
 				// ghost clean-up:
@@ -3624,7 +3624,7 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 			// @ processed[i0] = true
 			// @ ghost offsets[i0] = offsetPair{oldStart, oldEnd, data == nil}
 			// @ idx = i0
-			// @ ghost if data != nil { sl.CombineRange_Bytes(oldData, oldStart, oldEnd, writePerm) }
+			// @ ghost if data != nil { sl.CombineRange_Bytes(oldData, oldStart, oldEnd, R40) }
 			last = opt
 		}
 	}
