@@ -81,7 +81,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
-	//@ preserves sl.AbsSlice_Bytes(b, 0, len(b))
+	//@ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R40)
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> NonInitMem()
@@ -219,7 +219,7 @@ func (p *rawPath) SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e e
 }
 
 // @ requires  p.NonInitMem()
-// @ preserves sl.AbsSlice_Bytes(b, 0, len(b))
+// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R40)
 // @ ensures   p.Mem(b)
 // @ ensures   e == nil
 // @ decreases

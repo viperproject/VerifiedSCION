@@ -28,7 +28,7 @@ type DecodingLayer interface {
 
 	requires  NonInitMem()
 	requires  df != nil
-	preserves slices.AbsSlice_Bytes(data, 0, len(data))
+	preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R40)
 	preserves df.Mem()
 	ensures   res == nil ==> Mem(data)
 	ensures   res != nil ==> (NonInitMem() && res.ErrorMem())

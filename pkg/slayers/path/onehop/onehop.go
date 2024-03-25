@@ -66,7 +66,7 @@ type Path struct {
 }
 
 // @ requires  o.NonInitMem()
-// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ ensures   (len(data) >= PathLen) == (r == nil)
 // @ ensures   r == nil ==> o.Mem(data)
 // @ ensures   r != nil ==> o.NonInitMem()
@@ -79,29 +79,29 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	}
 	offset := 0
 	//@ unfold o.NonInitMem()
-	//@ slices.SplitByIndex_Bytes(data, 0, len(data), path.InfoLen, R1)
-	//@ slices.Reslice_Bytes(data, 0, path.InfoLen, R1)
+	//@ slices.SplitByIndex_Bytes(data, 0, len(data), path.InfoLen, R41)
+	//@ slices.Reslice_Bytes(data, 0, path.InfoLen, R41)
 	if err := o.Info.DecodeFromBytes(data[:path.InfoLen]); err != nil {
 		// @ Unreachable()
 		return err
 	}
-	//@ slices.Unslice_Bytes(data, 0, path.InfoLen, R1)
+	//@ slices.Unslice_Bytes(data, 0, path.InfoLen, R41)
 	offset += path.InfoLen
-	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, R1)
-	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, R1)
+	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, R41)
+	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, R41)
 	if err := o.FirstHop.DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 		// @ Unreachable()
 		return err
 	}
-	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, R1)
-	//@ slices.CombineAtIndex_Bytes(data, 0, offset+path.HopLen, offset, R1)
+	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, R41)
+	//@ slices.CombineAtIndex_Bytes(data, 0, offset+path.HopLen, offset, R41)
 	offset += path.HopLen
-	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, R1)
-	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, R1)
+	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, R41)
+	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, R41)
 	r = o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen])
-	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, R1)
-	//@ slices.CombineAtIndex_Bytes(data, offset, len(data), offset+path.HopLen, R1)
-	//@ slices.CombineAtIndex_Bytes(data, 0, len(data), offset, R1)
+	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, R41)
+	//@ slices.CombineAtIndex_Bytes(data, offset, len(data), offset+path.HopLen, R41)
+	//@ slices.CombineAtIndex_Bytes(data, 0, len(data), offset, R41)
 	//@ ghost if r == nil { fold o.Mem(data) } else { fold o.NonInitMem() }
 	return r
 }
