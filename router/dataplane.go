@@ -2283,6 +2283,13 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 		scion.MetaLen + path.InfoLen*p.path.NumINF + path.HopLen*int(p.path.PathMeta.CurrHF))
 }
 
+// @ requires  dp.Valid()
+// @ requires  acc(&p.rawPkt, R50)
+// @ requires  acc(p.scionLayer.Mem(ub), R50)
+// @ requires  acc(&p.path, R50)
+// @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
+// @ requires  acc(&p.ingressID, R50)
 // @ preserves acc(&p.mac, R20) && p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField,  R20)
@@ -2290,14 +2297,22 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
 // @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
+// @ ensures   acc(&p.rawPkt, R50)
+// @ ensures   acc(&p.path, R50)
+// @ ensures   acc(p.scionLayer.Mem(ub), R50)
+// @ ensures   acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
+// @ ensures   acc(&p.ingressID, R50)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   len(p.cachedMac) == path.MACBufferSize
 // @ ensures   sl.AbsSlice_Bytes(p.cachedMac, 0, len(p.cachedMac))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
+// @ ensures   let absPkt := absIO_val(dp, p.rawPkt, p.ingressID) in
+// @ 	(reserr == nil && p.infoField.ConsDir  ==> true) && // ???
+// @ 	(reserr == nil && !p.infoField.ConsDir ==> true)    // ???
 // @ decreases
-func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr error) {
+func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, ghost ub []byte @*/ ) (respr processResult, reserr error) {
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput)
 	// @ fold acc(sl.AbsSlice_Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R20)
 	// @ defer unfold acc(sl.AbsSlice_Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R20)
@@ -2854,7 +2869,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.scionLayer.DowngradePerm(ub)
 		return processResult{}, err /*@, false, io.IO_val_Unit{} @*/
 	}
-	if r, err := p.verifyCurrentMAC(); err != nil {
+	if r, err := p.verifyCurrentMAC( /*@ dp, ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, io.IO_val_Unit{} @*/
 	}
@@ -2894,7 +2909,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 			return r, serrors.WithCtx(err, "info", "after xover") /*@, false, io.IO_val_Unit{} @*/
 		}
 		// verify the new block
-		if r, err := p.verifyCurrentMAC(); err != nil {
+		if r, err := p.verifyCurrentMAC( /*@ dp, ub @*/ ); err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover") /*@, false, io.IO_val_Unit{} @*/
 		}

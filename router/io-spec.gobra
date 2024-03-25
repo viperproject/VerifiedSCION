@@ -558,6 +558,13 @@ pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_
 }
 
 ghost
+requires absPkt.isIO_val_Pkt2
+decreases
+pure func GetCurrentUInfo(absPkt io.IO_val) set[io.IO_msgterm] {
+	return absPkt.IO_val_Pkt2_2.CurrSeg.UInfo
+}
+
+ghost
 decreases
 pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs]{
 	return ifs == 0 ? none[io.IO_ifs] : some(io.IO_ifs(ifs))
