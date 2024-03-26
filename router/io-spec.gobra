@@ -560,10 +560,11 @@ pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_
 ghost
 requires absPkt.isIO_val_Pkt2
 decreases
-pure func ComputeNextUInfo(absPkt io.IO_val) set[io.IO_msgterm] {
-	return let currseg := bsPkt.IO_val_Pkt2_2.CurrSeg in
-		let nextHF := currseg.Future[0] in
-		upd_uinfo(currseg.UInfo, nextHF)
+pure func GetUInfoOnEntry(absPkt io.IO_val) set[io.IO_msgterm] {
+	return let currseg := absPkt.IO_val_Pkt2_2.CurrSeg in
+		currseg.ConsDir ? currseg.UInfo : currseg.UInfo
+			//let nextHF := currseg.Future[0] in
+			//	io.upd_uinfo(currseg.UInfo, nextHF)
 }
 
 ghost
