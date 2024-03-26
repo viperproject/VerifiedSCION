@@ -91,8 +91,9 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
   * introduced this wrapper method which acts as a wrapper.
   */
 preserves acc(s.Mem(ub), R9)
+//ensures res == unfolding acc(s.Mem(ub), R9) in s.Base.IsXoverSpec()
 decreases
-func (s *Raw) IsXover(ghost ub []byte) bool {
+func (s *Raw) IsXover(ghost ub []byte) (res bool) {
 	unfold acc(s.Mem(ub), R9)
 	defer fold acc(s.Mem(ub), R9)
 	return s.Base.IsXover()

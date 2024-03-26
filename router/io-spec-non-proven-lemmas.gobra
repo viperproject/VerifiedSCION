@@ -1,0 +1,127 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package router
+
+import (
+	"sync"
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers"
+	io "verification/io"
+	sl "github.com/scionproto/scion/verification/utils/slices"
+	. "verification/utils/definitions"
+)
+
+//TODO: prove
+ghost
+preserves dp.Valid()
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+ensures absIO_val(dp, raw, ingressID).isIO_val_Pkt2 ==>
+	validPktMetaHdr(raw) && absPkt(dp, raw) != none[io.IO_pkt2] &&
+	absIO_val(dp, raw, ingressID).IO_val_Pkt2_2 == get(absPkt(dp, raw)) &&
+	len(get(absPkt(dp, raw)).CurrSeg.Future) > 0
+decreases
+func absIO_valLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16)
+
+//TODO: prove
+ghost
+preserves dp.Valid()
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+preserves validPktMetaHdr(raw) && absPkt(dp, raw) != none[io.IO_pkt2]
+ensures let leftseg := get(absPkt(dp, raw)).LeftSeg in
+	leftseg != none[io.IO_seg2] ==>
+		get(leftseg).History == seq[io.IO_ahi]{} &&	len(get(leftseg).Future) > 0
+decreases
+func absPktNextSegmentHistory(dp io.DataPlaneSpec, raw []byte)
+
+//TODO: Does not work with --disableNL --unsafeWildcardoptimization
+ghost
+requires acc(p.scionLayer.Mem(ub), R50)
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+requires p.DstIsLocalIngressID(ub)
+requires (unfolding acc(p.scionLayer.Mem(ub), R50) in
+		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
+		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA))
+ensures acc(p.scionLayer.Mem(ub), R50)
+ensures acc(&p.d, R55) && acc(p.d.Mem(), _)
+ensures acc(&p.ingressID, R55)
+ensures p.ingressID != 0
+decreases
+func (p* scionPacketProcessor) GetIngressIDNotZero(ub []byte) {
+	reveal p.DstIsLocalIngressID(ub)
+}
+/*
+ghost
+opaque
+requires acc(p.scionLayer.Mem(ub), R50)
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires validPktMetaHdr(ub)
+requires absPkt(dp, ub) != none[io.IO_pkt2]
+decreases
+pure func (p *scionPacketProcessor) DstNotLocalEQLastHop(ub []byte, dp io.DataPlaneSpec) bool {
+	return !(unfolding acc(p.scionLayer.Mem(ub), R50) in
+		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
+		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> len(get(absPkt(dp, ub)).CurrSeg.Future) > 1
+}
+
+// TODO: prove
+ghost
+requires acc(p.scionLayer.Mem(ub), R50)
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires !(unfolding acc(p.scionLayer.Mem(ub), R50) in
+		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
+		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA))
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires validPktMetaHdr(ub)
+requires absPkt(dp, ub) != none[io.IO_pkt2]
+ensures acc(p.scionLayer.Mem(ub), R50)
+ensures acc(&p.d, R55) && acc(p.d.Mem(), R55)
+ensures dp.Valid()
+ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures validPktMetaHdr(ub)
+ensures absPkt(dp, ub) != none[io.IO_pkt2]
+ensures len(get(absPkt(dp, ub)).CurrSeg.Future) > 1
+decreases
+func (p *scionPacketProcessor) OutgoingPkts(ub []byte, dp io.DataPlaneSpec) bool {
+	reveal p.DstNotLocalEQLastHop(ub, dp)
+}
+*/
+
+// TODO: prove
+ghost
+requires acc(&p.path, R55) && acc(p.path.Mem(ubPath), R55)
+requires unfolding acc(p.path.Mem(ubPath), R55) in p.path.Base.IsXoverSpec()
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires validPktMetaHdr(ub)
+requires absPkt(dp, ub) != none[io.IO_pkt2]
+requires 0 <= start && start <= end && end <= len(ubPath) && len(ubPath) <= len(ub)
+preserves ub[start:end] === ubPath
+ensures acc(&p.path, R55) && acc(p.path.Mem(ub), R55)
+ensures dp.Valid()
+ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures validPktMetaHdr(ub)
+ensures absPkt(dp, ub) != none[io.IO_pkt2]
+ensures get(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2]
+ensures len(get(absPkt(dp, ub)).CurrSeg.Future) == 1
+ensures len(get(get(absPkt(dp, ub)).LeftSeg).Future) > 0
+decreases
+func (p* scionPacketProcessor) XoverLemma(ub []byte, ubPath []byte, start int, end int, dp io.DataPlaneSpec)
+

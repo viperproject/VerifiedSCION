@@ -1939,9 +1939,15 @@ func (p *scionPacketProcessor) validateIngressID( /*@ ghost oldPkt io.IO_pkt2 @*
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
+// @ requires acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R20)
+// @ requires dp.Valid() && validPktMetaHdr(ubScionL) && absPkt(dp, ubScionL) != none[io.IO_pkt2]
+// @ ensures acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R20)
+// @ ensures reserr == nil ==> dp.Valid() && validPktMetaHdr(ubScionL) &&
+// @ 	absPkt(dp, ubScionL) != none[io.IO_pkt2]
 // @ ensures reserr == nil ==> p.DstIsLocalIngressID(ubScionL)
+// ensures reserr == nil ==> p.DstNotLocalEQLastHop(ubScionL, dp)
 // @ decreases
-func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), R20)
 	// @ defer fold acc(p.scionLayer.Mem(ubScionL), R20)
@@ -2080,9 +2086,14 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // @ ensures   reserr == nil ==> respr === processResult{}
 // @ ensures   reserr != nil ==> sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
+// contracts for IO-spec
+// @ requires dp.Valid()
+// @ requires len(oldPkt.CurrSeg.Future) > 0
+// @ ensures !p.segmentChange ==> AbsValidateEgressIDConstraint(oldPkt, (p.ingressID != 0), dp)
+// ensures !p.segmentChange ==> AbsValidateEgressIDConstraintXover(oldPkt, (p.ingressID != 0), dp)
 // @ decreases
-func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr error) {
-	pktEgressID := p.egressInterface()
+func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
+	pktEgressID := p.egressInterface( /*@ oldPkt @*/ )
 	// @ p.d.getInternalNextHops()
 	// @ if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	_, ih := p.d.internalNextHops[pktEgressID]
@@ -2152,6 +2163,8 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 			serrors.WithCtx(cannotRoute, "ingress_id", p.ingressID, "ingress_type", ingress,
 				"egress_id", pktEgressID, "egress_type", egress))
 	}
+	//if !oldPkt.CurrSeg.ConsDir && get(oldPkt.LeftSeg).ConsDir
+
 }
 
 // @ requires acc(&p.infoField)
@@ -2167,15 +2180,12 @@ func (p *scionPacketProcessor) validateEgressID() (respr processResult, reserr e
 // @ ensures   acc(p.scionLayer.Mem(ub), R19)
 // @ ensures   err != nil ==> err.ErrorMem()
 // contracts for IO-spec
-// requires p.EqInfofieldNotUinfo(ub, dp)
-// requires p.EqHopfieldNotHVF(ub, dp)
-// ensures dp.Valid()
 // @ requires dp.Valid() && validPktMetaHdr(ub) && absPkt(dp, ub) != none[io.IO_pkt2]
-// @ requires len(get(absPkt(dp, ub)).CurrSeg.Future) > 0 //remove later
+// @ requires len(get(absPkt(dp, ub)).CurrSeg.Future) > 0
 // @ ensures err == nil ==> dp.Valid() && validPktMetaHdr(ub) &&
 // @ 	absPkt(dp, ub) != none[io.IO_pkt2]
 // @ ensures err == nil ==> len(get(absPkt(dp, ub)).CurrSeg.Future) > 0
-// @ ensures err == nil ==> get(absPkt(dp, ub)) == AbsUpdateNonConsDirIngressSegID(old(get(absPkt(dp, ub))))
+// @ ensures err == nil ==> get(absPkt(dp, ub)) == AbsUpdateNonConsDirIngressSegID(old(get(absPkt(dp, ub))), ifsToIO_ifs(p.ingressID))
 // @ decreases
 func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte, ghost dp io.DataPlaneSpec @*/ ) (err error) {
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
@@ -2328,15 +2338,23 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  acc(&p.path, R20)
 // @ requires  p.scionLayer.Mem(ub)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField, R20)
-// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.path, R20)
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
+// contracts for IO-spec
+// @ requires dp.Valid() && validPktMetaHdr(ub) && absPkt(dp, ub) != none[io.IO_pkt2]
+// @ requires len(get(absPkt(dp, ub)).CurrSeg.Future) > 0
+// @ ensures reserr == nil ==> dp.Valid() && validPktMetaHdr(ub) &&
+// @ 	absPkt(dp, ub) != none[io.IO_pkt2]
+// @ ensures reserr == nil ==> len(get(absPkt(dp, ub)).CurrSeg.Future) >= 0
+// @ ensures reserr == nil ==> get(absPkt(dp, ub)) == AbsProcessEgress(old(get(absPkt(dp, ub))))
 // @ decreases
-func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr error) {
+func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.DataPlaneSpec @*/ ) (reserr error) {
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP   := p.scionLayer.PathEndIdx(ub)
@@ -2373,16 +2391,25 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ requires  acc(&p.path, R20)
 // @ requires  p.scionLayer.Mem(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
+// @ requires sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.segmentChange) && acc(&p.hopField) && acc(&p.infoField)
-// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.path, R20)
 // @ ensures   reserr == nil ==> (p.scionLayer.Mem(ub) && p.scionLayer.UBPath(ub) === old(p.scionLayer.UBPath(ub)) && p.scionLayer.GetPath(ub) === old(p.scionLayer.GetPath(ub)))
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   p.segmentChange
 // @ ensures   respr === processResult{}
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
+// contract for IO-spec
+// @ requires dp.Valid() && validPktMetaHdr(ub) && absPkt(dp, ub) != none[io.IO_pkt2]
+// @ requires len(get(absPkt(dp, ub)).CurrSeg.Future) == 1
+// @ requires get(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2]
+// @ requires len(get(get(absPkt(dp, ub)).LeftSeg).Future) > 0
+// @ ensures reserr == nil ==> dp.Valid() && validPktMetaHdr(ub) &&
+// @	absPkt(dp, ub) != none[io.IO_pkt2]
+// @ ensures reserr == nil ==> get(absPkt(dp, ub)) == AbsDoXover(old(get(absPkt(dp, ub))))
 // @ decreases
-func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	p.segmentChange = true
 	// @ unfold p.scionLayer.Mem(ub)
 	// @ ghost  startP := int(slayers.CmnHdrLen + p.scionLayer.AddrHdrLen(nil, true))
@@ -2447,8 +2474,11 @@ func (p *scionPacketProcessor) ingressInterface( /*@ ghost ubPath []byte @*/ ) u
 
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
+// contracts for IO-spec
+// @ requires len(oldPkt.CurrSeg.Future) > 0
+// @ ensures AbsEgressInterfaceConstraint(oldPkt, ifsToIO_ifs(egress))
 // @ decreases
-func (p *scionPacketProcessor) egressInterface() uint16 {
+func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ ) /*@ (egress @*/ uint16 /*@ ) @*/ {
 	if p.infoField.ConsDir {
 		return p.hopField.ConsEgress
 	}
@@ -2464,8 +2494,8 @@ func (p *scionPacketProcessor) egressInterface() uint16 {
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr error) {
-	egressID := p.egressInterface()
+func (p *scionPacketProcessor) validateEgressUp( /*@ ghost oldPkt io.IO_pkt2 @*/ ) (respr processResult, reserr error) {
+	egressID := p.egressInterface( /*@ oldPkt @ */ )
 	// @ p.d.getBfdSessionsMem()
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if v, ok := p.d.bfdSessions[egressID]; ok {
@@ -2583,7 +2613,7 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ requires  acc(p.scionLayer.Mem(ub), R14)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
-// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ requires sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ preserves acc(&p.lastLayer, R19)
 // @ preserves p.lastLayer != nil
 // @ preserves (&p.scionLayer !== p.lastLayer && llIsNil) ==>
@@ -2593,6 +2623,7 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ preserves acc(&p.ingressID, R21)
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField)
+// @ ensures sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(p.scionLayer.Mem(ub), R14)
 // @ ensures   acc(&p.d, R20)
@@ -2600,8 +2631,13 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
+// constracts for IO-spec
+// @ requires dp.Valid() && validPktMetaHdr(ub) && absPkt(dp, ub) != none[io.IO_pkt2]
+// @ ensures reserr == nil ==> dp.Valid() && validPktMetaHdr(ub) &&
+// @ 	absPkt(dp, ub) != none[io.IO_pkt2]
+// @ ensures reserr == nil ==> get(absPkt(dp, ub)) == old(get(absPkt(dp, ub)))
 // @ decreases
-func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int , ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP   := p.scionLayer.PathEndIdx(ub)
@@ -2612,7 +2648,7 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, nil
 	}
-	egressID := p.egressInterface()
+	egressID := p.egressInterface( /*@ get(absPkt(dp, ub)) @*/ )
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if _, ok := p.d.external[egressID]; !ok {
@@ -2822,7 +2858,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, io.IO_val_Unit{} @*/
 	}
-	if r, err := p.validateSrcDstIA( /*@ ub @*/ ); err != nil {
+	if r, err := p.validateSrcDstIA( /*@ ub, dp @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, io.IO_val_Unit{} @*/
 	}
@@ -2831,7 +2867,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		return processResult{}, err /*@, false, io.IO_val_Unit{} @*/
 	}
 	// @ assert absPkt(dp, ub) != none[io.IO_pkt2]
-	// @ assert get(absPkt(dp, ub)) == AbsUpdateNonConsDirIngressSegID(oldPkt)
+	// @ assert get(absPkt(dp, ub)) == AbsUpdateNonConsDirIngressSegID(oldPkt, ifsToIO_ifs(p.ingressID))
 	// @ nextPkt = get(absPkt(dp, ub))
 	if r, err := p.verifyCurrentMAC( /*@ nextPkt, dp @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
@@ -2860,22 +2896,36 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, aliasesUb)
 		// @ assert ub === p.rawPkt
 		// @ assert absPkt(dp, p.rawPkt) == some(nextPkt)
-		// @ LocalEnterBytes(oldPkt, ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ InternalEnterEvent(oldPkt, ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
 		// @ newAbsPkt := reveal absIO_val(dp, p.rawPkt, 0)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, aliasesUb, newAbsPkt @*/
 	}
-	// @ TODO()
 	// Outbound: pkts leaving the local IA.
 	// BRTransit: pkts leaving from the same BR different interface.
-
 	// @ unfold acc(p.scionLayer.Mem(ub), R3)
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
+	//  ghost ubStart := p.scionLayer.PathStartIdx(ub)
+	//  ghost ubEnd   := p.scionLayer.PathEndIdx(ub)
+	//  assert ub[ubStart:ubEnd] === ubPath
+	//  assert 0 <= ubStart
+	//  assume ubEnd <= len(ubPath)
 	if p.path.IsXover( /*@ ubPath @*/ ) {
+		// @ TODO()
+		// p.XoverLemma(ub, ubPath, ubStart, ubEnd, dp)
 		// @ fold acc(p.scionLayer.Mem(ub), R3)
-		if r, err := p.doXover( /*@ ub @*/ ); err != nil {
+		// @ assume len(get(absPkt(dp, ub)).CurrSeg.Future) == 1
+		// @ assume len(get(get(absPkt(dp, ub)).LeftSeg).Future) > 0
+		// @ assert nextPkt == get(absPkt(dp, ub))
+		// @ assert nextPkt.CurrSeg.Future == seq[io.IO_HF]{nextPkt.CurrSeg.Future[0]}
+		// @ absPktNextSegmentHistory(dp, ub)
+		// @ assert get(nextPkt.LeftSeg).History == seq[io.IO_ahi]{}
+		if r, err := p.doXover( /*@ ub, dp @*/ ); err != nil {
 			// @ fold p.d.validResult(r, false)
 			return r, err /*@, false, io.IO_val_Unit{} @*/
 		}
+		// @ assert get(absPkt(dp, ub)) == AbsDoXover(nextPkt)
+		// @ nextPkt = get(absPkt(dp, ub))
+		// @ TODO()
 		if r, err := p.validateHopExpiry(); err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover") /*@, false, io.IO_val_Unit{} @*/
@@ -2886,41 +2936,71 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover") /*@, false, io.IO_val_Unit{} @*/
 		}
+		// @ assert AbsVerifyCurrentMACConstraint(nextPkt, dp)
 	}
 	// @ fold acc(p.scionLayer.Mem(ub), R3)
-	if r, err := p.validateEgressID(); err != nil {
+	if r, err := p.validateEgressID( /*@ nextPkt, dp @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, io.IO_val_Unit{} @*/
 	}
+	// @ assert !p.segmentChange ==> AbsValidateEgressIDConstraint(nextPkt, (p.ingressID != 0), dp)
 	// handle egress router alert before we check if it's up because we want to
 	// send the reply anyway, so that trace route can pinpoint the exact link
 	// that failed.
-	if r, err := p.handleEgressRouterAlert( /*@ ub, llIsNil, startLL, endLL @*/ ); err != nil {
+	if r, err := p.handleEgressRouterAlert( /*@ ub, llIsNil, startLL, endLL , dp @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, io.IO_val_Unit{} @*/
 	}
-	if r, err := p.validateEgressUp(); err != nil {
+	// @ assert nextPkt == get(absPkt(dp, ub))
+	if r, err := p.validateEgressUp( /*@ nextPkt @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, io.IO_val_Unit{} @*/
 	}
-	egressID := p.egressInterface()
+	// @ assert nextPkt == get(absPkt(dp, ub))
+	egressID := p.egressInterface( /*@ nextPkt @*/ )
+	// @ assert AbsEgressInterfaceConstraint(nextPkt, ifsToIO_ifs(egressID))
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
-		if err := p.processEgress( /*@ ub @*/ ); err != nil {
+		if err := p.processEgress( /*@ ub, dp @*/ ); err != nil {
 			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@, false, io.IO_val_Unit{} @*/
 		}
 		// @ p.d.InDomainExternalInForwardingMetrics2(egressID)
+		// @ assert get(absPkt(dp, ub)) == AbsProcessEgress(nextPkt)
+		// @ nextPkt = get(absPkt(dp, ub))
+		// @ assert absPkt(dp, p.rawPkt) == some(nextPkt)
+		// @ ghost if(!p.segmentChange) {
+		// @	ExternalEvent(oldPkt, ifsToIO_ifs(p.ingressID), nextPkt, ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
+		// @ } else {
+		// @ 	TODO()
+		// @	XoverEvent(oldPkt, ifsToIO_ifs(p.ingressID), nextPkt, ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
+		// @ }
+		// @ newAbsPkt := reveal absIO_val(dp, p.rawPkt, egressID)
 		// @ fold p.d.validResult(processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, false)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil /*@, false, io.IO_val_Unit{} @*/
 	}
-
 	// ASTransit: pkts leaving from another AS BR.
 	// @ p.d.getInternalNextHops()
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	if a, ok := p.d.internalNextHops[egressID]; ok {
 		// @ p.d.getInternal()
+		// TODO: double check that this is correct!
+		// @ ghost if(ifsToIO_ifs(p.ingressID) != none[io.IO_ifs]) {
+		//	 	case of incomming packets
+		// @ 	assert absPkt(dp, p.rawPkt) == some(nextPkt)
+		// @ 	if(!p.segmentChange) {
+		// 			enter event
+		// @		InternalEnterEvent(oldPkt, ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @		newAbsPkt := reveal absIO_val(dp, p.rawPkt, 0)
+		// @ 	} else {
+		// 			xover event
+		// @		TODO()
+		// @ 	}
+		// @ } else {
+		//	 		transit packets withhin the AS are not covered by the IO-spec
+		// @ 		newAbsPkt := absIO_val_Unsupported(p.rawPkt, 0)
+		// @ }
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, false)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, false, io.IO_val_Unit{} @*/
 	}
