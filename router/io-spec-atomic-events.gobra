@@ -199,7 +199,6 @@ func AtomicXoverCore(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.I
 // TODO: add comment why terminations is assumed
 ghost
 requires dp.Valid()
-requires dp.Asid() in dp.Core()
 requires oldPkt.LeftSeg != none[io.IO_seg2]
 requires !oldPkt.CurrSeg.ConsDir
 requires get(oldPkt.LeftSeg).ConsDir

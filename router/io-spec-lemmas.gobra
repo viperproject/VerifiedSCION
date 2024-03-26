@@ -103,6 +103,7 @@ opaque
 requires oldPkt.LeftSeg != none[io.IO_seg2]
 requires len(oldPkt.CurrSeg.Future) == 1
 requires len(get(oldPkt.LeftSeg).Future) > 0
+requires len(get(oldPkt.LeftSeg).History) == 0
 ensures  len(newPkt.CurrSeg.Future) > 0
 ensures  newPkt.RightSeg != none[io.IO_seg2]
 ensures  len(get(newPkt.RightSeg).Past) > 0
@@ -193,8 +194,8 @@ requires len(oldPkt.CurrSeg.Future) > 0
 requires ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires AbsValidateIngressIDConstraint(oldPkt, ingressID)
 requires AbsVerifyCurrentMACConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID), dp)
-requires AbsEgressInterfaceConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID), egressID)
 requires AbsValidateEgressIDConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID), (ingressID != none[io.IO_ifs]), dp)
+requires AbsEgressInterfaceConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID), egressID)
 requires newPkt == AbsProcessEgress(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
 preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 ensures dp.Valid()
@@ -218,13 +219,19 @@ func ExternalEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_
 
 ghost
 requires dp.Valid()
+requires ingressID != none[io.IO_ifs]
 requires len(oldPkt.CurrSeg.Future) > 0
 requires ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires AbsValidateIngressIDConstraint(oldPkt, ingressID)
 requires AbsVerifyCurrentMACConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID), dp)
-requires AbsEgressInterfaceConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID), egressID)
-requires AbsValidateEgressIDConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID), (ingressID != none[io.IO_ifs]), dp)
-requires newPkt == AbsProcessEgress(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
+requires len(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).CurrSeg.Future) == 1
+requires AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg != none[io.IO_seg2]
+requires len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).Future) > 0
+requires len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).History) == 0
+requires AbsVerifyCurrentMACConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
+requires AbsValidateEgressIDConstraintXover(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
+requires AbsEgressInterfaceConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), egressID)
+requires newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
 preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 ensures dp.Valid()
 ensures ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
@@ -232,17 +239,58 @@ decreases
 func XoverEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock *sync.Mutex, ioSharedArg SharedArg, dp io.DataPlaneSpec) {
 	assume (!oldPkt.CurrSeg.ConsDir && newPkt.CurrSeg.ConsDir) || (oldPkt.CurrSeg.ConsDir == newPkt.CurrSeg.ConsDir)
 	reveal dp.Valid()
-	nextPkt := reveal AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
+	intermediatePkt1 := reveal AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
+	intermediatePkt2 := reveal AbsDoXover(intermediatePkt1)
 	reveal AbsValidateIngressIDConstraint(oldPkt, ingressID)
-	reveal AbsVerifyCurrentMACConstraint(nextPkt, dp)
-	reveal AbsEgressInterfaceConstraint(nextPkt, egressID)
-	reveal AbsValidateEgressIDConstraint(nextPkt, (ingressID != none[io.IO_ifs]), dp)
-	reveal AbsProcessEgress(nextPkt)
-	if(!oldPkt.CurrSeg.ConsDir && nextPkt.CurrSeg.ConsDir) {
+	reveal AbsVerifyCurrentMACConstraint(intermediatePkt1, dp)
+	reveal AbsVerifyCurrentMACConstraint(intermediatePkt2, dp)
+	reveal AbsValidateEgressIDConstraintXover(intermediatePkt2, dp)
+	reveal AbsEgressInterfaceConstraint(intermediatePkt2, egressID)
+
+
+
+	/*m := oldPkt
+	currseg := oldPkt.CurrSeg
+	nextseg := get(oldPkt.LeftSeg)
+	traversedseg := io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir)
+	newpkt := io.IO_pkt2(io.IO_Packet2{
+		get(oldPkt.LeftSeg),
+		oldPkt.MidSeg,
+		oldPkt.RightSeg,
+		some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir))})
+	hf1 := oldPkt.CurrSeg.Future[0]
+	hf2 := get(oldPkt.LeftSeg).Future[0]
+	asid := dp.Asid()
+	recvif := get(ingressID)
+	assert m.CurrSeg == currseg
+	assert m.LeftSeg == some(nextseg)
+	assert nextseg.History == seq[io.IO_ahi]{}
+	assert newpkt == io.IO_pkt2(io.IO_Packet2{nextseg, m.MidSeg, m.RightSeg, some(traversedseg)})
+	assert currseg.Future == seq[io.IO_HF]{hf1}
+	assert len(nextseg.Future) > 0
+	assert nextseg.Future[0] == hf2
+	assert dp.dp2_check_interface(currseg.ConsDir, asid, hf1, recvif)
+	assert dp.dp2_check_recvif(currseg.ConsDir, asid, recvif)
+	assert io.update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1)
+	assert io.inc_seg2(currseg, traversedseg, hf1, seq[io.IO_HF]{})
+	assert dp.hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1)
+	assert dp.hf_valid(nextseg.ConsDir, nextseg.AInfo, nextseg.UInfo, hf2)
+	assert hf1.extr_asid() == asid
+	assert hf2.extr_asid() == asid
+	assert io.same_other2(currseg, traversedseg)*/
+
+
+
+
+
+
+
+	if(!oldPkt.CurrSeg.ConsDir && newPkt.CurrSeg.ConsDir) {
 		AtomicXoverUp2Down(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 	} else {
 		// TODO: How to deal with core?
 		assume dp.Asid() in dp.Core()
 		AtomicXoverCore(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 	}
+	TODO()
 }

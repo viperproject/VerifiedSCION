@@ -2089,8 +2089,8 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // contracts for IO-spec
 // @ requires dp.Valid()
 // @ requires len(oldPkt.CurrSeg.Future) > 0
-// @ ensures !p.segmentChange ==> AbsValidateEgressIDConstraint(oldPkt, (p.ingressID != 0), dp)
-// ensures !p.segmentChange ==> AbsValidateEgressIDConstraintXover(oldPkt, (p.ingressID != 0), dp)
+// @ ensures reserr == nil && !p.segmentChange ==> AbsValidateEgressIDConstraint(oldPkt, (p.ingressID != 0), dp)
+// @ ensures reserr == nil && p.segmentChange ==> p.ingressID != 0 && AbsValidateEgressIDConstraintXover(oldPkt, dp)
 // @ decreases
 func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	pktEgressID := p.egressInterface( /*@ oldPkt @*/ )
