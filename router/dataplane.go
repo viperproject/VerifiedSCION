@@ -1448,6 +1448,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	}
 	// @ assert p.sInitD().getValForwardingMetrics() != nil
 	// @ unfold p.sInit()
+	// @ assert !p.segmentChange
 	// @ ghost d := p.d
 	p.rawPkt = rawPkt
 	p.srcAddr = srcAddr
@@ -1686,6 +1687,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ requires  acc(&p.path)
 // @ requires  p.scionLayer.Mem(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ requires  acc(&p.segmentChange) && !p.segmentChange
 // @ preserves acc(&p.srcAddr, R10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, R10)
 // @ preserves p.lastLayer != nil
@@ -1696,11 +1698,11 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ requires  acc(&p.ingressID, R20)
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField)
-// @ preserves acc(&p.segmentChange)
 // @ preserves acc(&p.mac, R10) && p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
+// @ ensures   acc(&p.segmentChange)
 // @ ensures   acc(&p.ingressID, R20)
 // @ ensures   acc(&p.d, R5)
 // @ ensures   acc(&p.path)
@@ -2884,6 +2886,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires   acc(&p.ingressID, R20)
+// @ requires  acc(&p.segmentChange) && !p.segmentChange
 // @ preserves acc(&p.srcAddr, R10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, R10)
 // @ preserves p.lastLayer != nil
@@ -2893,11 +2896,11 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ 	acc(p.lastLayer.Mem(ub[startLL:endLL]), R10)
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField)
-// @ preserves acc(&p.segmentChange)
 // @ preserves acc(&p.mac, R10) && p.mac != nil && p.mac.Mem()
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.AbsSlice_Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
+// @ ensures   acc(&p.segmentChange)
 // @ ensures   acc(&p.ingressID, R20)
 // @ ensures   acc(&p.d, R5)
 // @ ensures   acc(&p.path, R10)
@@ -3012,9 +3015,9 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 			// @ fold p.d.validResult(r, false)
 			return r, err /*@, false, io.IO_val_Unit{} @*/
 		}
-		// @ assert p.segmentChange
 		// @ assert get(absPkt(dp, ub)) == AbsDoXover(nextPkt)
 		// @ nextPkt = get(absPkt(dp, ub))
+		// @ assert p.segmentChange
 		// @ assert nextPkt.RightSeg != none[io.IO_seg2]
 		if r, err := p.validateHopExpiry(); err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
