@@ -27,18 +27,6 @@ import (
 
 ghost
 opaque
-requires acc(p.scionLayer.Mem(ub), R50)
-requires acc(&p.d, R55) && acc(p.d.Mem(), _)
-requires acc(&p.ingressID, R55)
-decreases
-pure func (p *scionPacketProcessor) DstIsLocalIngressID(ub []byte) bool {
-	return (unfolding acc(p.scionLayer.Mem(ub), R50) in
-		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
-		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.ingressID != 0
-}
-
-ghost
-opaque
 requires len(oldPkt.CurrSeg.Future) > 0
 ensures len(newPkt.CurrSeg.Future) > 0
 ensures  len(newPkt.CurrSeg.Future) == len(oldPkt.CurrSeg.Future)
@@ -216,7 +204,6 @@ func ExternalEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_
 	}
 }
 
-
 ghost
 requires dp.Valid()
 requires ingressID != none[io.IO_ifs]
@@ -231,7 +218,8 @@ requires len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).His
 requires AbsVerifyCurrentMACConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
 requires AbsValidateEgressIDConstraintXover(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
 requires AbsEgressInterfaceConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), egressID)
-requires newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
+requires egressID == none[io.IO_ifs] ==> newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
+requires egressID != none[io.IO_ifs] ==> newPkt == AbsProcessEgress(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)))
 preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 ensures dp.Valid()
 ensures ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
@@ -246,45 +234,9 @@ func XoverEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt
 	reveal AbsVerifyCurrentMACConstraint(intermediatePkt2, dp)
 	reveal AbsValidateEgressIDConstraintXover(intermediatePkt2, dp)
 	reveal AbsEgressInterfaceConstraint(intermediatePkt2, egressID)
-
-
-
-	/*m := oldPkt
-	currseg := oldPkt.CurrSeg
-	nextseg := get(oldPkt.LeftSeg)
-	traversedseg := io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir)
-	newpkt := io.IO_pkt2(io.IO_Packet2{
-		get(oldPkt.LeftSeg),
-		oldPkt.MidSeg,
-		oldPkt.RightSeg,
-		some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir))})
-	hf1 := oldPkt.CurrSeg.Future[0]
-	hf2 := get(oldPkt.LeftSeg).Future[0]
-	asid := dp.Asid()
-	recvif := get(ingressID)
-	assert m.CurrSeg == currseg
-	assert m.LeftSeg == some(nextseg)
-	assert nextseg.History == seq[io.IO_ahi]{}
-	assert newpkt == io.IO_pkt2(io.IO_Packet2{nextseg, m.MidSeg, m.RightSeg, some(traversedseg)})
-	assert currseg.Future == seq[io.IO_HF]{hf1}
-	assert len(nextseg.Future) > 0
-	assert nextseg.Future[0] == hf2
-	assert dp.dp2_check_interface(currseg.ConsDir, asid, hf1, recvif)
-	assert dp.dp2_check_recvif(currseg.ConsDir, asid, recvif)
-	assert io.update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1)
-	assert io.inc_seg2(currseg, traversedseg, hf1, seq[io.IO_HF]{})
-	assert dp.hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1)
-	assert dp.hf_valid(nextseg.ConsDir, nextseg.AInfo, nextseg.UInfo, hf2)
-	assert hf1.extr_asid() == asid
-	assert hf2.extr_asid() == asid
-	assert io.same_other2(currseg, traversedseg)*/
-
-
-
-
-
-
-
+	if(egressID != none[io.IO_ifs]){
+		reveal AbsProcessEgress(intermediatePkt2)
+	}
 	if(!oldPkt.CurrSeg.ConsDir && newPkt.CurrSeg.ConsDir) {
 		AtomicXoverUp2Down(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 	} else {
@@ -292,5 +244,4 @@ func XoverEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt
 		assume dp.Asid() in dp.Core()
 		AtomicXoverCore(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 	}
-	TODO()
 }

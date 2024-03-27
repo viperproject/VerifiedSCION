@@ -132,7 +132,6 @@ requires oldPkt.LeftSeg != none[io.IO_seg2]
 requires oldPkt.CurrSeg.ConsDir == get(oldPkt.LeftSeg).ConsDir
 requires len(oldPkt.CurrSeg.Future) > 0
 requires len(get(oldPkt.LeftSeg).Future) > 0
-requires len(newPkt.CurrSeg.Future) > 0
 requires ingressID != none[io.IO_ifs]
 requires ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires dp.xover_core2_link_type(
@@ -204,7 +203,6 @@ requires !oldPkt.CurrSeg.ConsDir
 requires get(oldPkt.LeftSeg).ConsDir
 requires len(oldPkt.CurrSeg.Future) > 0
 requires len(get(oldPkt.LeftSeg).Future) > 0
-requires len(newPkt.CurrSeg.Future) > 0
 requires ingressID != none[io.IO_ifs]
 requires ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires dp.xover_up2down2_link_type(

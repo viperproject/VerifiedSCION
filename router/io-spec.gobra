@@ -400,12 +400,11 @@ pure func segment(raw []byte,
 	asid seq[io.IO_as],
 	ainfo io.IO_ainfo,
 	consDir bool,
-	peer bool,
-	uinfo set[io.IO_msgterm]) io.IO_seg2 {
+	peer bool) io.IO_seg2 { //uinfo set[io.IO_msgterm]
 	return let hopfields := consDir ?
 		hopFieldsConsDir(raw, offset, 0, set[io.IO_msgterm]{}, asid, ainfo) :
 		hopFieldsNotConsDir(raw, offset, len(asid) - 1, set[io.IO_msgterm]{}, asid, ainfo) in
-		//let uinfo := uInfo(hopfields, currHFIdx, consDir) in
+		let uinfo := uInfo(hopfields, currHFIdx, consDir) in
 		io.IO_seg2(io.IO_seg3_{
 			AInfo :ainfo,
 			UInfo : uinfo,
@@ -430,8 +429,8 @@ pure func currSeg(raw []byte, offset int, currINFIdx int, currHFIdx int, asid se
 	return let ainfo := path.Timestamp(raw, currINFIdx) in
 		let consDir := path.ConsDir(raw, currINFIdx) in
 		let peer := path.Peer(raw, currINFIdx) in
-		let uinfo := path.AbsUinfo(raw, currINFIdx) in
-		segment(raw, offset, currHFIdx, asid, ainfo, consDir, peer, uinfo)
+		//let uinfo := path.AbsUinfo(raw, currINFIdx) in
+		segment(raw, offset, currHFIdx, asid, ainfo, consDir, peer)
 }
 
 ghost

@@ -47,6 +47,19 @@ ensures let leftseg := get(absPkt(dp, raw)).LeftSeg in
 decreases
 func absPktNextSegmentHistory(dp io.DataPlaneSpec, raw []byte)
 
+
+ghost
+opaque
+requires acc(p.scionLayer.Mem(ub), R50)
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+decreases
+pure func (p *scionPacketProcessor) DstIsLocalIngressID(ub []byte) bool {
+	return (unfolding acc(p.scionLayer.Mem(ub), R50) in
+		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
+		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.ingressID != 0
+}
+
 //TODO: Does not work with --disableNL --unsafeWildcardoptimization
 ghost
 requires acc(p.scionLayer.Mem(ub), R50)
@@ -106,22 +119,21 @@ func (p *scionPacketProcessor) OutgoingPkts(ub []byte, dp io.DataPlaneSpec) bool
 
 // TODO: prove
 ghost
-requires acc(&p.path, R55) && acc(p.path.Mem(ubPath), R55)
-requires unfolding acc(p.path.Mem(ubPath), R55) in p.path.Base.IsXoverSpec()
+requires 0 <= start && start <= end && end <= len(ub)
+requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+requires unfolding acc(p.path.Mem(ub[start:end]), R55) in p.path.Base.IsXoverSpec()
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 requires validPktMetaHdr(ub)
 requires absPkt(dp, ub) != none[io.IO_pkt2]
-requires 0 <= start && start <= end && end <= len(ubPath) && len(ubPath) <= len(ub)
-preserves ub[start:end] === ubPath
-ensures acc(&p.path, R55) && acc(p.path.Mem(ub), R55)
+ensures acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 ensures dp.Valid()
 ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 ensures validPktMetaHdr(ub)
 ensures absPkt(dp, ub) != none[io.IO_pkt2]
 ensures get(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2]
 ensures len(get(absPkt(dp, ub)).CurrSeg.Future) == 1
-ensures len(get(get(absPkt(dp, ub)).LeftSeg).Future) > 0
+ensures get(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2]
 decreases
-func (p* scionPacketProcessor) XoverLemma(ub []byte, ubPath []byte, start int, end int, dp io.DataPlaneSpec)
+func (p* scionPacketProcessor) XoverLemma(ub []byte, start int, end int, dp io.DataPlaneSpec)
 
