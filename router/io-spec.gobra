@@ -244,10 +244,10 @@ opaque
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 requires validPktMetaHdr(raw)
-// ensures res != none[io.IO_pkt2] ==> len(get(res).CurrSeg.Future) > 0
+// ensures len(get(res).CurrSeg.Future) > 0
 opaque
 decreases
-pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res option[io.IO_pkt2]) {
+pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
 		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[0:4])) in
 		let metaHdr := scion.DecodedFrom(hdr) in
@@ -260,12 +260,12 @@ pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res option[io.IO_pkt2]) {
 		let prevSegLen := lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
 		let offset := hopFieldOffset(numINF, 0) in
-		some(io.IO_pkt2(io.IO_Packet2{
+		io.IO_pkt2(io.IO_Packet2{
 			CurrSeg : currSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen),
 			LeftSeg : leftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len),
 			MidSeg : midSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len),
 			RightSeg : rightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len),
-		}))
+		})
 }
 
 ghost
@@ -337,8 +337,8 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
-	return (reveal validPktMetaHdr(raw) && absPkt(dp, raw) != none[io.IO_pkt2]) ?
-		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), get(absPkt(dp, raw))}) :
+	return reveal validPktMetaHdr(raw) ?
+		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), absPkt(dp, raw)}) :
 		absIO_val_Unsupported(raw, ingressID)
 }
 

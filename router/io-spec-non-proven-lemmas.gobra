@@ -29,10 +29,10 @@ import (
 ghost
 preserves dp.Valid()
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
-ensures absIO_val(dp, raw, ingressID).isIO_val_Pkt2 ==>
-	validPktMetaHdr(raw) && absPkt(dp, raw) != none[io.IO_pkt2] &&
-	absIO_val(dp, raw, ingressID).IO_val_Pkt2_2 == get(absPkt(dp, raw)) &&
-	len(get(absPkt(dp, raw)).CurrSeg.Future) > 0
+ensures validPktMetaHdr(raw) ==>
+	absIO_val(dp, raw, ingressID).isIO_val_Pkt2 &&
+	absIO_val(dp, raw, ingressID).IO_val_Pkt2_2 == absPkt(dp, raw) &&
+	len(absPkt(dp, raw).CurrSeg.Future) > 0
 decreases
 func absIO_valLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16)
 
@@ -40,8 +40,8 @@ func absIO_valLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16)
 ghost
 preserves dp.Valid()
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
-preserves validPktMetaHdr(raw) && absPkt(dp, raw) != none[io.IO_pkt2]
-ensures let leftseg := get(absPkt(dp, raw)).LeftSeg in
+preserves validPktMetaHdr(raw)
+ensures let leftseg := absPkt(dp, raw).LeftSeg in
 	leftseg != none[io.IO_seg2] ==>
 		get(leftseg).History == seq[io.IO_ahi]{} &&	len(get(leftseg).Future) > 0
 decreases
@@ -125,15 +125,12 @@ requires unfolding acc(p.path.Mem(ub[start:end]), R55) in p.path.Base.IsXoverSpe
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 requires validPktMetaHdr(ub)
-requires absPkt(dp, ub) != none[io.IO_pkt2]
 ensures acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 ensures dp.Valid()
 ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 ensures validPktMetaHdr(ub)
-ensures absPkt(dp, ub) != none[io.IO_pkt2]
-ensures get(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2]
-ensures len(get(absPkt(dp, ub)).CurrSeg.Future) == 1
-ensures get(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2]
+ensures absPkt(dp, ub).LeftSeg != none[io.IO_seg2]
+ensures len(absPkt(dp, ub).CurrSeg.Future) == 1
 decreases
 func (p* scionPacketProcessor) XoverLemma(ub []byte, start int, end int, dp io.DataPlaneSpec)
 
