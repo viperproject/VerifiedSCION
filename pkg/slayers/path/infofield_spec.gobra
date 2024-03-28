@@ -119,13 +119,3 @@ pure func (inf *InfoField) ToIntermediateAbsInfoField() (IntermediateAbsInfoFiel
 		Peer : inf.Peer,
 	})
 }
-/*
-ghost
-decreases
-pure func EqIntermediateAbsInfoFieldIO_Seg2(absInf IntermediateAbsInfoField, absSeg io.IO_seg2) bool {
-	return absInf.AInfo == absSeg.AInfo &&
-		absInf.UInfo == absSeg.UInfo &&
-		absInf.ConsDir == absSeg.ConsDir &&
-		absInf.Peer == absSeg.Peer
-}
-*/

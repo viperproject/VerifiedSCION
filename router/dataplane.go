@@ -2209,7 +2209,6 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 	if !p.segmentChange {
 		// Check that the interface pair is valid within a single segment.
 		// No check required if the packet is received from an internal interface.
-		// @ assert !p.segmentChange
 		switch {
 		case p.ingressID == 0:
 			// @ assume AbsValidateEgressIDConstraint(oldPkt, (p.ingressID != 0), dp)
@@ -2237,7 +2236,6 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 					"egress_id", pktEgressID, "egress_type", egress))
 		}
 	}
-	// @ assert p.segmentChange
 	// Check that the interface pair is valid on a segment switch.
 	// Having a segment change received from the internal interface is never valid.
 	switch {
