@@ -1879,7 +1879,8 @@ func (p *scionPacketProcessor) packSCMP(
 // @ requires  acc(&p.path, R20)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.hopField) && acc(&p.infoField)
-// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
+// @ requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
+// @ ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
 // @ ensures   acc(&p.d, R50)
 // @ ensures   acc(p.scionLayer.Mem(ub), R6)
 // @ ensures   acc(&p.path, R20)
@@ -1898,8 +1899,14 @@ func (p *scionPacketProcessor) packSCMP(
 // @ 	p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
-// ensures reserr == nil ==> p.EqHopfieldNotHVF(ub, dp)
-// ensures reserr == nil ==> p.EqInfofieldNotUinfo(ub, dp)
+// @ requires dp.Valid()
+// @ requires validPktMetaHdr(ub)
+// @ requires len(absPkt(dp, ub).CurrSeg.Future) > 0
+// @ ensures dp.Valid()
+// @ ensures reserr == nil ==> validPktMetaHdr(ub)
+// @ ensures reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
+// @ ensures reserr == nil ==> p.EQAbsHopField(absPkt(dp, ub))
+// @ ensures reserr == nil ==> p.EQAbsInfoField(absPkt(dp, ub))
 // @ decreases
 func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	var err error
@@ -1908,8 +1915,8 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataP
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
 	// @ ghost ubPath := ub[startP:endP]
-	// @ sl.SplitRange_Bytes(ub, startP, endP, R1)
-	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R1)
+	// @ sl.SplitRange_Bytes(ub, startP, endP, R2)
+	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R2)
 	p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
 	// @ fold p.d.validResult(processResult{}, false)
 	if err != nil {
@@ -1921,6 +1928,10 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataP
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
+	// @ assume validPktMetaHdr(ub)
+	// @ assume len(absPkt(dp, ub).CurrSeg.Future) > 0
+	// @ assume p.EQAbsHopField(absPkt(dp, ub))
+	// @ assume p.EQAbsInfoField(absPkt(dp, ub))
 	return processResult{}, nil
 }
 
@@ -1962,8 +1973,9 @@ func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr 
 
 // @ requires acc(&p.ingressID, R21)
 // @ requires acc(&p.hopField, R20)
-// @ preserves acc(&p.infoField, R20)
+// @ requires acc(&p.infoField, R20)
 // @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
+// @ ensures acc(&p.infoField, R20)
 // @ ensures acc(&p.hopField, R20)
 // @ ensures   acc(&p.ingressID, R21)
 // @ ensures   p.d.validResult(respr, false)
@@ -1974,14 +1986,9 @@ func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr 
 // @ ensures   reserr == nil && !p.infoField.ConsDir ==> (
 // @ 	p.ingressID == 0 || p.hopField.ConsEgress == p.ingressID)
 // contracts for IO-spec
-// requires dp.Valid()
-// requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R54)
-// requires absIO_val(dp, ub, p.ingressID).isIO_val_Pkt2
-// requires p.EqHopfieldNotHVF(ub, dp)
-// ensures dp.Valid()
-// ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R54)
-// ensures p.EqHopfieldNotHVF(ub, dp)
 // @ requires len(oldPkt.CurrSeg.Future) > 0
+// @ requires p.EQAbsHopField(oldPkt)
+// @ requires p.EQAbsInfoField(oldPkt)
 // @ ensures reserr == nil ==> AbsValidateIngressIDConstraint(oldPkt, ifsToIO_ifs(p.ingressID))
 // @ decreases
 func (p *scionPacketProcessor) validateIngressID( /*@ ghost oldPkt io.IO_pkt2 @*/ ) (respr processResult, reserr error) {
@@ -2001,7 +2008,9 @@ func (p *scionPacketProcessor) validateIngressID( /*@ ghost oldPkt io.IO_pkt2 @*
 				"pkt_ingress", pktIngressID, "router_ingress", p.ingressID),
 		)
 	}
-	// @ assume AbsValidateIngressIDConstraint(oldPkt, ifsToIO_ifs(p.ingressID))
+	// @ reveal p.EQAbsHopField(oldPkt)
+	// @ reveal p.EQAbsInfoField(oldPkt)
+	// @ assert reveal AbsValidateIngressIDConstraint(oldPkt, ifsToIO_ifs(p.ingressID))
 	// @ fold p.d.validResult(respr, false)
 	return processResult{}, nil
 }
@@ -2270,9 +2279,13 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 // contracts for IO-spec
 // @ requires dp.Valid() && validPktMetaHdr(ub)
 // @ requires len(absPkt(dp, ub).CurrSeg.Future) > 0
+// @ requires p.EQAbsHopField(absPkt(dp, ub))
+// @ requires p.EQAbsInfoField(absPkt(dp, ub))
 // @ ensures err == nil ==> dp.Valid() && validPktMetaHdr(ub)
 // @ ensures err == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures err == nil ==> absPkt(dp, ub) == AbsUpdateNonConsDirIngressSegID(old(absPkt(dp, ub)), ifsToIO_ifs(p.ingressID))
+// @ ensures err == nil ==> p.EQAbsHopField(absPkt(dp, ub))
+// @ ensures err == nil ==> p.EQAbsInfoField(absPkt(dp, ub))
 // @ decreases
 func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte, ghost dp io.DataPlaneSpec @*/ ) (err error) {
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
@@ -2288,6 +2301,9 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 	// be updated.
 	if !p.infoField.ConsDir && p.ingressID != 0 {
 		p.infoField.UpdateSegID(p.hopField.Mac /*@, p.hopField.ToIO_HF() @*/)
+		// @ reveal p.EQAbsInfoField(absPkt(dp, ub))
+		//  assert path.absUinfo_(p.infoField.SegID) == old(io.upd_uinfo(path.absUinfo_(p.infoField.SegID), p.hopField.ToIO_HF()))
+		// assert p.infoField.ToIntermediateAbsInfoField().Uinfo == io.upd_uinfo(, p.hopField.ToIO_HF()))
 		// (VerifiedSCION) the following property is guaranteed by the type system, but Gobra cannot infer it yet
 		// @ assume 0 <= p.path.GetCurrINF(ubPath)
 		// @ sl.SplitRange_Bytes(ub, start, end, writePerm)
@@ -3083,9 +3099,9 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ 	}
 		// @	newAbsPkt := reveal absIO_val(dp, p.rawPkt, 0)
 		// @ } else {
-		//	 		transit packets withhin the AS are not covered by the IO-spec
+		//	 		(VerifiedSCION): transit packets bug
+		//			https://github.com/scionproto/scion/issues/4497
 		// @ 		TODO()
-		// 			newAbsPkt := absIO_val_Unsupported(p.rawPkt, 0)
 		// @ }
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, false)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, false, io.IO_val_Unit{} @*/

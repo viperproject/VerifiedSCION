@@ -82,10 +82,9 @@ decreases
 pure func absUinfo_(SegID uint16) set[io.IO_msgterm]
 
 // intermediate type, not in IO-spec
-type IO_intermediate_InfoField adt {
-	// Here, we already instantiated the type params
-	IO_intermediate_InfoField_ {
-		AInfo io.IO_ainfo // nat in Isabelle
+type IntermediateAbsInfoField adt {
+	IntermediateAbsInfoField_ {
+		AInfo io.IO_ainfo
 		UInfo set[io.IO_msgterm]
 		ConsDir bool
 		Peer bool
@@ -97,11 +96,11 @@ requires 0 <= start && start <= middle
 requires middle+InfoLen <= end && end <= len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, start, end), _)
 decreases
-pure func BytesToIO_intermediate_InfoField(raw [] byte, start int, middle int, end int) (IO_intermediate_InfoField) {
+pure func BytesToIntermediateAbsInfoField(raw [] byte, start int, middle int, end int) (IntermediateAbsInfoField) {
 	return unfolding acc(sl.AbsSlice_Bytes(raw, start, end), _) in
 		let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle+2 + k]) in
 		let _ := Asserting(forall k int :: {&raw[middle+4:middle+8][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+8][k] == &raw[middle+4 + k]) in
-		IO_intermediate_InfoField(IO_intermediate_InfoField_{
+		IntermediateAbsInfoField(IntermediateAbsInfoField_{
 			AInfo : io.IO_ainfo(binary.BigEndian.Uint32(raw[middle+4:middle+8])),
 			UInfo : absUinfo_(binary.BigEndian.Uint16(raw[middle+2:middle+4])),
 			ConsDir : raw[middle] & 0x1 == 0x1,
@@ -112,8 +111,8 @@ pure func BytesToIO_intermediate_InfoField(raw [] byte, start int, middle int, e
 ghost
 requires acc(inf, _)
 decreases
-pure func (inf *InfoField) ToIO_intermediate_InfoField() (IO_intermediate_InfoField) {
-	return IO_intermediate_InfoField(IO_intermediate_InfoField_{
+pure func (inf *InfoField) ToIntermediateAbsInfoField() (IntermediateAbsInfoField) {
+	return IntermediateAbsInfoField(IntermediateAbsInfoField_{
 		AInfo : io.IO_ainfo(inf.Timestamp),
 		UInfo : absUinfo_(inf.SegID),
 		ConsDir : inf.ConsDir,
@@ -123,7 +122,7 @@ pure func (inf *InfoField) ToIO_intermediate_InfoField() (IO_intermediate_InfoFi
 /*
 ghost
 decreases
-pure func EqIO_intermediate_InfoFieldIO_Seg2(absInf IO_intermediate_InfoField, absSeg io.IO_seg2) bool {
+pure func EqIntermediateAbsInfoFieldIO_Seg2(absInf IntermediateAbsInfoField, absSeg io.IO_seg2) bool {
 	return absInf.AInfo == absSeg.AInfo &&
 		absInf.UInfo == absSeg.UInfo &&
 		absInf.ConsDir == absSeg.ConsDir &&

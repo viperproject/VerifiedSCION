@@ -64,7 +64,7 @@ pure func lengthOfPrevSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) (re
 
 ghost
 requires  0 <= offset
-requires  0 <= currHFIdx && currHFIdx < segLen
+requires  0 <= currHFIdx && currHFIdx <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
 requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures   len(res) == segLen - currHFIdx
@@ -75,7 +75,7 @@ pure func hopFieldsConsDir(
 	currHFIdx int,
 	segLen int) (res seq[io.IO_HF]) {
 	return currHFIdx == segLen ? seq[io.IO_HF]{} :
-		let hf := path.BytesToIO_HF(raw, offset + path.HopLen * currHFIdx, len(raw)) in
+		let hf := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw)) in
 		seq[io.IO_HF]{hf} ++ hopFieldsConsDir(raw, offset, currHFIdx + 1, segLen)
 }
 
@@ -91,14 +91,15 @@ pure func hopFieldsNotConsDir(
 	offset int,
 	currHFIdx int) (res seq[io.IO_HF]) {
 	return currHFIdx == -1 ? seq[io.IO_HF]{} :
-		let hf :=  path.BytesToIO_HF(raw, offset + path.HopLen * currHFIdx, len(raw)) in
+		let hf :=  path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw)) in
 		hopFieldsNotConsDir(raw, offset, currHFIdx - 1) ++ seq[io.IO_HF]{hf}
 }
 
 ghost
 requires -1 <= currHFIdx && currHFIdx < len(hopfields)
+ensures len(res) == currHFIdx + 1
 decreases currHFIdx + 1
-pure func segPast(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_HF] {
+pure func segPast(hopfields seq[io.IO_HF], currHFIdx int) (res seq[io.IO_HF]) {
 	return currHFIdx == -1  ?
 		seq[io.IO_HF]{} :
 		seq[io.IO_HF]{hopfields[currHFIdx]} ++ segPast(hopfields, currHFIdx - 1)
@@ -106,16 +107,18 @@ pure func segPast(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_HF] {
 
 ghost
 requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
+ensures len(res) == len(hopfields) - currHFIdx
 decreases len(hopfields) - currHFIdx
-pure func segFuture(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_HF] {
+pure func segFuture(hopfields seq[io.IO_HF], currHFIdx int) (res seq[io.IO_HF]) {
 	return currHFIdx == len(hopfields) ? seq[io.IO_HF]{} :
 		seq[io.IO_HF]{hopfields[currHFIdx]} ++ segFuture(hopfields, currHFIdx + 1)
 }
 
 ghost
 requires -1 <= currHFIdx && currHFIdx < len(hopfields)
+ensures len(res) == currHFIdx + 1
 decreases currHFIdx + 1
-pure func segHistory(hopfields seq[io.IO_HF], currHFIdx int) seq[io.IO_ahi] {
+pure func segHistory(hopfields seq[io.IO_HF], currHFIdx int) (res seq[io.IO_ahi]) {
 	return currHFIdx == -1 ? seq[io.IO_ahi]{} :
 		seq[io.IO_ahi]{hopfields[currHFIdx].Toab()} ++ segHistory(hopfields, currHFIdx - 1)
 }
@@ -126,6 +129,9 @@ requires 0 < segLen
 requires 0 <= currHFIdx && currHFIdx <= segLen
 requires offset + path.HopLen * segLen <= len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures len(res.Future) == segLen - currHFIdx
+ensures len(res.History) == currHFIdx
+ensures len(res.Past) == currHFIdx
 decreases
 pure func segment(raw []byte,
 	offset int,
@@ -134,7 +140,7 @@ pure func segment(raw []byte,
 	uinfo set[io.IO_msgterm],
 	consDir bool,
 	peer bool,
-	segLen int) io.IO_seg2 {
+	segLen int) (res io.IO_seg2) {
 	return let hopfields := consDir ?
 		hopFieldsConsDir(raw, offset, 0, segLen) :
 		hopFieldsNotConsDir(raw, offset, segLen - 1) in
@@ -187,9 +193,9 @@ pure func leftSeg(
 	seg3Len int) option[io.IO_seg3] {
 	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
 		(currINFIdx == 1 && seg2Len > 0) ?
-			some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len)) :
+			some(reveal currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len)) :
 			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
-				some(currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len)) :
+				some(reveal currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len)) :
 				none[io.IO_seg3])
 }
 
@@ -244,7 +250,6 @@ opaque
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 requires validPktMetaHdr(raw)
-// ensures len(get(res).CurrSeg.Future) > 0
 opaque
 decreases
 pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {

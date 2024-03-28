@@ -28,16 +28,16 @@ pred (h *HopField) Mem() {
 }
 
 ghost
-requires 0 <= start
-requires start+HopLen <= end && end <= len(raw)
+requires 0 <= start && start <= middle
+requires middle + HopLen <= end && end <= len(raw)
 requires acc(slices.AbsSlice_Bytes(raw, start, end), _)
 decreases
-pure func BytesToIO_HF(raw [] byte, start int, end int) (io.IO_HF) {
-	return let _ := Asserting(forall k int :: {&raw[start+2:start+4][k]} 0 <= k && k < 2 ==> &raw[start+2:start+4][k] == &raw[start + 2 + k]) in
-		let _ := Asserting(forall k int :: {&raw[start+4:start+6][k]} 0 <= k && k < 4 ==> &raw[start+4:start+6][k] == &raw[start + 4 + k]) in
+pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
+	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle + 2 + k]) in
+		let _ := Asserting(forall k int :: {&raw[middle+4:middle+6][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+6][k] == &raw[middle + 4 + k]) in
 		unfolding acc(slices.AbsSlice_Bytes(raw, start, end), _) in
-		let inif2 := binary.BigEndian.Uint16(raw[start+2:start+4]) in
-		let egif2 := binary.BigEndian.Uint16(raw[start+4:start+6]) in
+		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4]) in
+		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6]) in
 		let op_inif2 := inif2 == 0 ? none[io.IO_ifs] : some(io.IO_ifs(inif2)) in
 		let op_egif2 := egif2 == 0 ? none[io.IO_ifs] : some(io.IO_ifs(egif2)) in
 		io.IO_HF(io.IO_HF_{
