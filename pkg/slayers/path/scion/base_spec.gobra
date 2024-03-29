@@ -73,9 +73,10 @@ pure func (b Base) ValidCurrIdxsSpec() bool {
 		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
-			b.PathMeta.SegLen[i] == 0)
+			b.PathMeta.SegLen[i] == 0) &&
 		// Surprisingly, the following does not seem to be needed
-		// b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+		// needed for IO-spec
+		b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
 }
 
 ghost
@@ -225,6 +226,16 @@ pure func (m MetaHdr) InBounds() bool {
 		0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&
 		0 <= m.SegLen[1] && m.SegLen[1] <= 63 &&
 		0 <= m.SegLen[2] && m.SegLen[2] <= 63
+}
+
+ghost
+requires acc(s.Mem(), _)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+decreases
+pure func (s *Base) EQAbsHeader(ub []byte) bool {
+	return MetaLen <= len(ub) &&
+		unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+		s.GetMetaHdr() == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen]))
 }
 
 /** Lemma proven in /VerifiedSCION/verification/utils/bitwise/proofs.dfy **/

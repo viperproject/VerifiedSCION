@@ -17,9 +17,11 @@
 package router
 
 import (
+	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	"github.com/scionproto/scion/private/topology"
+	"github.com/scionproto/scion/pkg/addr"
 	"golang.org/x/net/ipv4"
 
 	"verification/dependencies/encoding/binary"
@@ -36,14 +38,14 @@ pure func numInfoFields(seg1Len int, seg2Len int, seg3Len int) int {
 
 ghost
 decreases
-pure func hopFieldOffset(numINF int, currHF int) int {
-	return path.InfoFieldOffset(numINF) + path.HopLen * currHF
+pure func hopFieldOffset(numINF int, currHF int, addressOffset int) int {
+	return addressOffset + path.InfoFieldOffset(numINF) + path.HopLen * currHF
 }
 
 ghost
 decreases
-pure func pktLen(seg1Len int, seg2Len int, seg3Len int) int {
-	return hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) +
+pure func pktLen(seg1Len int, seg2Len int, seg3Len int, addressOffset int) int {
+	return hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0, addressOffset) +
 		path.HopLen * (seg1Len + seg2Len + seg3Len)
 }
 
@@ -181,7 +183,7 @@ opaque
 requires 0 < seg1Len
 requires 0 <= seg2Len
 requires 0 <= seg3Len
-requires pktLen(seg1Len, seg2Len, seg3Len) <= len(raw)
+requires pktLen(seg1Len, seg2Len, seg3Len, addressOffset) <= len(raw)
 requires 1 <= currINFIdx && currINFIdx < 4
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
@@ -190,8 +192,9 @@ pure func leftSeg(
 	currINFIdx int,
 	seg1Len int,
 	seg2Len int,
-	seg3Len int) option[io.IO_seg3] {
-	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
+	seg3Len int,
+	addressOffset int) option[io.IO_seg3] {
+	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0, addressOffset) in
 		(currINFIdx == 1 && seg2Len > 0) ?
 			some(reveal currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len)) :
 			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
@@ -204,7 +207,7 @@ opaque
 requires 0 < seg1Len
 requires 0 <= seg2Len
 requires 0 <= seg3Len
-requires pktLen(seg1Len, seg2Len, seg3Len) <= len(raw)
+requires pktLen(seg1Len, seg2Len, seg3Len, addressOffset) <= len(raw)
 requires -1 <= currINFIdx && currINFIdx < 2
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
@@ -213,8 +216,9 @@ pure func rightSeg(
 	currINFIdx int,
 	seg1Len int,
 	seg2Len int,
-	seg3Len int) option[io.IO_seg3] {
-	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
+	seg3Len int,
+	addressOffset int) option[io.IO_seg3] {
+	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0, addressOffset) in
 		(currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ?
 			some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len)) :
 			(currINFIdx == 0 && seg2Len > 0) ?
@@ -227,7 +231,7 @@ opaque
 requires 0 < seg1Len
 requires 0 <= seg2Len
 requires 0 <= seg3Len
-requires pktLen(seg1Len, seg2Len, seg3Len) <= len(raw)
+requires pktLen(seg1Len, seg2Len, seg3Len, addressOffset) <= len(raw)
 requires 2 <= currINFIdx && currINFIdx < 5
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
@@ -236,8 +240,9 @@ pure func midSeg(
 	currINFIdx int,
 	seg1Len int,
 	seg2Len int,
-	seg3Len int) option[io.IO_seg3] {
-	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
+	seg3Len int,
+	addressOffset int) option[io.IO_seg3] {
+	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0, addressOffset) in
 		(currINFIdx == 4 && seg2Len > 0) ?
 			some(currSeg(raw, offset, 0, seg1Len, seg1Len)) :
 			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
@@ -250,11 +255,13 @@ opaque
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 requires validPktMetaHdr(raw)
-opaque
 decreases
 pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
-		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[0:4])) in
+		let headerOffset := slayers.GetAddressOffset(raw) in
+		let _ := Asserting(forall k int :: {&raw[headerOffset:headerOffset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==> &raw[headerOffset:headerOffset+scion.MetaLen][k] == &raw[headerOffset + k]) in
+		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+			binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen])) in
 		let metaHdr := scion.DecodedFrom(hdr) in
 		let currINFIdx := int(metaHdr.CurrINF) in
 		let currHFIdx := int(metaHdr.CurrHF) in
@@ -264,12 +271,12 @@ pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 		let segLen := lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let prevSegLen := lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
-		let offset := hopFieldOffset(numINF, 0) in
+		let offset := hopFieldOffset(numINF, 0, headerOffset) in
 		io.IO_pkt2(io.IO_Packet2{
 			CurrSeg : currSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen),
-			LeftSeg : leftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len),
-			MidSeg : midSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len),
-			RightSeg : rightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len),
+			LeftSeg : leftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffset),
+			MidSeg : midSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, headerOffset),
+			RightSeg : rightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, headerOffset),
 		})
 }
 
@@ -306,9 +313,12 @@ opaque
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func validPktMetaHdr(raw []byte) bool {
-	return len(raw) > 4 &&
+	return slayers.CmnHdrLen <= len(raw) &&
+		let offset := slayers.GetAddressOffset(raw) in
 		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
-		let hdr := binary.BigEndian.Uint32(raw[0:4]) in
+		offset+scion.MetaLen <= len(raw) &&
+		let _ := Asserting(forall k int :: {&raw[offset:offset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==> &raw[offset:offset+scion.MetaLen][k] == &raw[offset + k]) in
+		let hdr := binary.BigEndian.Uint32(raw[offset:offset+scion.MetaLen]) in
 		let metaHdr := scion.DecodedFrom(hdr) in
 		let seg1 := int(metaHdr.SegLen[0]) in
 		let seg2 := int(metaHdr.SegLen[1]) in
@@ -318,9 +328,8 @@ pure func validPktMetaHdr(raw []byte) bool {
 			seg1 + seg2 + seg3} in
 		metaHdr.InBounds() &&
 		0 < metaHdr.SegLen[0] &&
-		base.ValidCurrInfSpec() &&
-		base.ValidCurrHfSpec() &&
-		pktLen(seg1, seg2, seg3) <= len(raw)
+		base.ValidCurrIdxsSpec() &&
+		pktLen(seg1, seg2, seg3, offset) <= len(raw)
 }
 
 ghost
@@ -343,7 +352,7 @@ ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
 	return reveal validPktMetaHdr(raw) ?
-		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), absPkt(dp, raw)}) :
+		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), absPkt(dp, raw)}) : //TODO discuss
 		absIO_val_Unsupported(raw, ingressID)
 }
 

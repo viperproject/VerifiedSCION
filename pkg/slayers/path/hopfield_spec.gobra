@@ -43,7 +43,7 @@ pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 		io.IO_HF(io.IO_HF_{
 			InIF2 : op_inif2,
 			EgIF2 : op_egif2,
-			HVF : absMac(raw[6:6+MacLen]),
+			HVF : AbsMac(raw[6:6+MacLen]),
 		})
 }
 
@@ -54,10 +54,10 @@ pure func (h *HopField) ToIO_HF() (io.IO_HF) {
 	return io.IO_HF(io.IO_HF_{
 			InIF2 : h.ConsIngress == 0 ? none[io.IO_ifs] : some(io.IO_ifs(h.ConsIngress)),
 			EgIF2 : h.ConsEgress == 0 ? none[io.IO_ifs] : some(io.IO_ifs(h.ConsEgress)),
-			HVF : absMac(h.Mac[:]),
+			HVF : AbsMac(h.Mac[:]),
 		})
 }
 
 ghost
 decreases
-pure func absMac(mac []byte) (io.IO_msgterm)
+pure func AbsMac(mac []byte) (io.IO_msgterm)

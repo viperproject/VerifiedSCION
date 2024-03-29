@@ -114,7 +114,7 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 // first bytes of the MAC. It is the beta calculation according to
 // https://docs.scion.org/en/latest/protocols/scion-header.html#hop-field-mac-computation
 // @ preserves acc(&inf.SegID)
-// requires hf.HVF == absMac(hfMac[:])
+// requires hf.HVF == AbsMac(hfMac[:])
 // @ ensures absUinfo_(inf.SegID) == old(io.upd_uinfo(absUinfo_(inf.SegID), hf))
 // @ decreases
 func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte /* @, ghost hf io.IO_HF @ */) {

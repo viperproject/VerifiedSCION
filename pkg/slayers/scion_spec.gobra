@@ -350,6 +350,29 @@ func (s *SCION) GetPath(ub []byte) path.Path {
 }
 
 ghost
+opaque
+pure
+requires acc(s.Mem(ub), _)
+requires acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _)
+decreases
+func (s *SCION) EQAbsHeader(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		GetAddressOffset(ub) == CmnHdrLen+s.AddrHdrLenSpecInternal() &&
+		s.Path.(*scion.Raw).EQAbsHeader(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])
+}
+
+ghost
+requires acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires CmnHdrLen <= len(ub)
+decreases
+pure func GetAddressOffset(ub []byte) int {
+	return unfolding acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+		let dstAddrLen := AddrType(ub[9] >> 4 & 0x7).Length() in
+		let srcAddrLen := AddrType(ub[9] & 0x7).Length() in
+		CmnHdrLen + 2*addr.IABytes + dstAddrLen + srcAddrLen
+}
+
+ghost
 pure
 requires acc(s.Mem(ub), _)
 decreases

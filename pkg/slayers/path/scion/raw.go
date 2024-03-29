@@ -22,6 +22,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ sl "github.com/scionproto/scion/verification/utils/slices"
+	//@ io "verification/io"
 )
 
 // Raw is a raw representation of the SCION (data-plane) path type. It is designed to parse as
@@ -217,10 +218,12 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 
 // IncPath increments the path and writes it to the buffer.
 // @ requires s.Mem(ubuf)
+// @ requires s.EQAbsHeader(ubuf)
 // @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
 // @   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
 // @ ensures  r == nil ==> s.Mem(ubuf)
+// @ ensures  r == nil ==> s.EQAbsHeader(ubuf)
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
 // @ decreases
@@ -236,6 +239,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
 	//@ fold acc(s.Base.Mem(), 1/2)
 	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
+	//@ assume s.EQAbsHeader(ubuf)
 	return err
 }
 
@@ -290,11 +294,17 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 
 // SetInfoField updates the InfoField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), R20)
-// @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ requires sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ requires acc(s.Mem(ubuf), R20)
+// @ ensures  acc(s.Mem(ubuf), R20)
+// @ ensures sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
+// contracts for IO-spec
+// @ requires dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
+// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
+// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField2())
 // @ decreases
-func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) {
+func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, ghost dp io.DataPlaneSpec@*/) (r error) {
 	//@ share info
 	//@ unfold acc(s.Mem(ubuf), R20)
 	//@ unfold acc(s.Base.Mem(), R20)
@@ -313,6 +323,8 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ fold acc(s.Base.Mem(), R20)
 	//@ fold acc(s.Mem(ubuf), R20)
+	// @ assume idx == int(old(s.GetCurrINF(ubuf))) ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
+	// @ assume idx == int(old(s.GetCurrINF(ubuf))) ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField())
 	return ret
 }
 

@@ -18,8 +18,10 @@ package scion
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-	. "github.com/scionproto/scion/verification/utils/definitions"
-	sl "github.com/scionproto/scion/verification/utils/slices"
+	. "verification/utils/definitions"
+	sl "verification/utils/slices"
+	"verification/dependencies/encoding/binary"
+	"verification/io"
 )
 
 /**** Predicates ****/
@@ -91,7 +93,7 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
   * introduced this wrapper method which acts as a wrapper.
   */
 preserves acc(s.Mem(ub), R9)
-ensures res == unfolding acc(s.Mem(ub), R9) in s.Base.IsXoverSpec()
+ensures res == s.GetIsXoverSpec(ub)
 decreases
 func (s *Raw) IsXover(ghost ub []byte) (res bool) {
 	unfold acc(s.Mem(ub), R9)
@@ -121,6 +123,22 @@ decreases
 pure func (s *Raw) ValidCurrIdxs(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		s.Base.ValidCurrIdxs()
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+decreases
+pure func (s *Raw) EQAbsHeader(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		s.Base.EQAbsHeader(ub)
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) GetIsXoverSpec(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in s.Base.IsXoverSpec()
 }
 
 /**** End of Stubs ****/
@@ -340,3 +358,288 @@ func (s *Raw) RawBufferNonInitMem() []byte {
 	return unfolding acc(s.NonInitMem(), _) in s.Raw
 }
 /**** End of helpful pure functions ****/
+
+ghost
+decreases
+pure func numInfoFields(seg1Len int, seg2Len int, seg3Len int) int {
+	return seg3Len > 0 ? 3 : (seg2Len > 0 ? 2 : 1)
+}
+
+ghost
+decreases
+pure func hopFieldOffset(numINF int, currHF int) int {
+	return path.InfoFieldOffset(numINF) + path.HopLen * currHF
+}
+
+ghost
+decreases
+pure func pktLen(seg1Len int, seg2Len int, seg3Len int) int {
+	return hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) +
+		path.HopLen * (seg1Len + seg2Len + seg3Len)
+}
+
+
+ghost
+decreases
+pure func lengthOfCurrSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) int {
+	return seg1Len > currHF ? seg1Len : ((seg1Len + seg2Len) > currHF ? seg2Len : seg3Len)
+}
+
+ghost
+requires 0 <= currHF
+ensures  res <= currHF
+decreases
+pure func lengthOfPrevSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) (res int) {
+	return seg1Len > currHF ? 0 : ((seg1Len + seg2Len) > currHF ? seg1Len : seg1Len + seg2Len)
+}
+
+ghost
+requires  0 <= offset
+requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  offset + path.HopLen * segLen <= len(raw)
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures   len(res) == segLen - currHFIdx
+decreases segLen - currHFIdx
+pure func hopFieldsConsDir(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	segLen int) (res seq[io.IO_HF]) {
+	return currHFIdx == segLen ? seq[io.IO_HF]{} :
+		let hf := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw)) in
+		seq[io.IO_HF]{hf} ++ hopFieldsConsDir(raw, offset, currHFIdx + 1, segLen)
+}
+
+ghost
+requires  0 <= offset
+requires  -1 <= currHFIdx
+requires  offset + path.HopLen * currHFIdx + path.HopLen <= len(raw)
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures   len(res) == currHFIdx + 1
+decreases currHFIdx + 1
+pure func hopFieldsNotConsDir(
+	raw []byte,
+	offset int,
+	currHFIdx int) (res seq[io.IO_HF]) {
+	return currHFIdx == -1 ? seq[io.IO_HF]{} :
+		let hf :=  path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw)) in
+		hopFieldsNotConsDir(raw, offset, currHFIdx - 1) ++ seq[io.IO_HF]{hf}
+}
+
+ghost
+requires -1 <= currHFIdx && currHFIdx < len(hopfields)
+ensures len(res) == currHFIdx + 1
+decreases currHFIdx + 1
+pure func segPast(hopfields seq[io.IO_HF], currHFIdx int) (res seq[io.IO_HF]) {
+	return currHFIdx == -1  ?
+		seq[io.IO_HF]{} :
+		seq[io.IO_HF]{hopfields[currHFIdx]} ++ segPast(hopfields, currHFIdx - 1)
+}
+
+ghost
+requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
+ensures len(res) == len(hopfields) - currHFIdx
+decreases len(hopfields) - currHFIdx
+pure func segFuture(hopfields seq[io.IO_HF], currHFIdx int) (res seq[io.IO_HF]) {
+	return currHFIdx == len(hopfields) ? seq[io.IO_HF]{} :
+		seq[io.IO_HF]{hopfields[currHFIdx]} ++ segFuture(hopfields, currHFIdx + 1)
+}
+
+ghost
+requires -1 <= currHFIdx && currHFIdx < len(hopfields)
+ensures len(res) == currHFIdx + 1
+decreases currHFIdx + 1
+pure func segHistory(hopfields seq[io.IO_HF], currHFIdx int) (res seq[io.IO_ahi]) {
+	return currHFIdx == -1 ? seq[io.IO_ahi]{} :
+		seq[io.IO_ahi]{hopfields[currHFIdx].Toab()} ++ segHistory(hopfields, currHFIdx - 1)
+}
+
+ghost
+requires 0 <= offset
+requires 0 < segLen
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires offset + path.HopLen * segLen <= len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures len(res.Future) == segLen - currHFIdx
+ensures len(res.History) == currHFIdx
+ensures len(res.Past) == currHFIdx
+decreases
+pure func segment(raw []byte,
+	offset int,
+	currHFIdx int,
+	ainfo io.IO_ainfo,
+	uinfo set[io.IO_msgterm],
+	consDir bool,
+	peer bool,
+	segLen int) (res io.IO_seg2) {
+	return let hopfields := consDir ?
+		hopFieldsConsDir(raw, offset, 0, segLen) :
+		hopFieldsNotConsDir(raw, offset, segLen - 1) in
+		io.IO_seg2(io.IO_seg3_{
+			AInfo :ainfo,
+			UInfo : uinfo,
+			ConsDir : consDir,
+			Peer : peer,
+			Past : segPast(hopfields, currHFIdx - 1),
+			Future : segFuture(hopfields, currHFIdx),
+			History : segHistory(hopfields, currHFIdx - 1),
+		})
+}
+
+ghost
+opaque
+requires path.InfoFieldOffset(currINFIdx) + path.InfoLen <= offset
+requires 0 < segLen
+requires offset + path.HopLen * segLen <= len(raw)
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires 0 <= currINFIdx && currINFIdx < 3
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func currSeg(raw []byte,
+	offset int,
+	currINFIdx int,
+	currHFIdx int,
+	segLen int) io.IO_seg3 {
+	return let ainfo := path.Timestamp(raw, currINFIdx) in
+		let consDir := path.ConsDir(raw, currINFIdx) in
+		let peer := path.Peer(raw, currINFIdx) in
+		let uinfo := path.AbsUinfo(raw, currINFIdx) in
+		segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+}
+
+ghost
+opaque
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires pktLen(seg1Len, seg2Len, seg3Len) <= len(raw)
+requires 1 <= currINFIdx && currINFIdx < 4
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func leftSeg(
+	raw []byte,
+	currINFIdx int,
+	seg1Len int,
+	seg2Len int,
+	seg3Len int) option[io.IO_seg3] {
+	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
+		(currINFIdx == 1 && seg2Len > 0) ?
+			some(reveal currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len)) :
+			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
+				some(reveal currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len)) :
+				none[io.IO_seg3])
+}
+
+ghost
+opaque
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires pktLen(seg1Len, seg2Len, seg3Len) <= len(raw)
+requires -1 <= currINFIdx && currINFIdx < 2
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func rightSeg(
+	raw []byte,
+	currINFIdx int,
+	seg1Len int,
+	seg2Len int,
+	seg3Len int) option[io.IO_seg3] {
+	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
+		(currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ?
+			some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len)) :
+			(currINFIdx == 0 && seg2Len > 0) ?
+				some(currSeg(raw, offset, currINFIdx, seg1Len, seg1Len)) :
+				none[io.IO_seg3]
+}
+
+ghost
+opaque
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires pktLen(seg1Len, seg2Len, seg3Len) <= len(raw)
+requires 2 <= currINFIdx && currINFIdx < 5
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func midSeg(
+	raw []byte,
+	currINFIdx int,
+	seg1Len int,
+	seg2Len int,
+	seg3Len int) option[io.IO_seg3] {
+	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0) in
+		(currINFIdx == 4 && seg2Len > 0) ?
+			some(currSeg(raw, offset, 0, seg1Len, seg1Len)) :
+			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
+				some(currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len)) :
+				none[io.IO_seg3])
+}
+
+ghost
+opaque
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires validPktMetaHdr(raw)
+opaque
+decreases
+pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
+	return let _ := reveal validPktMetaHdr(raw) in
+		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[:MetaLen])) in
+		let metaHdr := DecodedFrom(hdr) in
+		let currINFIdx := int(metaHdr.CurrINF) in
+		let currHFIdx := int(metaHdr.CurrHF) in
+		let seg1Len := int(metaHdr.SegLen[0]) in
+		let seg2Len := int(metaHdr.SegLen[1]) in
+		let seg3Len := int(metaHdr.SegLen[2]) in
+		let segLen := lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let prevSegLen := lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
+		let offset := hopFieldOffset(numINF, 0) in
+		io.IO_pkt2(io.IO_Packet2{
+			CurrSeg : currSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen),
+			LeftSeg : leftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len),
+			MidSeg : midSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len),
+			RightSeg : rightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len),
+		})
+}
+
+ghost
+opaque
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func validPktMetaHdr(raw []byte) bool {
+	return MetaLen <= len(raw)  &&
+		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		let hdr := binary.BigEndian.Uint32(raw[:MetaLen]) in
+		let metaHdr := DecodedFrom(hdr) in
+		let seg1 := int(metaHdr.SegLen[0]) in
+		let seg2 := int(metaHdr.SegLen[1]) in
+		let seg3 := int(metaHdr.SegLen[2]) in
+		let base := Base{metaHdr,
+			numInfoFields(seg1, seg2, seg3),
+			seg1 + seg2 + seg3} in
+		metaHdr.InBounds() &&
+		0 < metaHdr.SegLen[0] &&
+		base.ValidCurrIdxsSpec() &&
+		pktLen(seg1, seg2, seg3) <= len(raw)
+}
+
+ghost
+decreases
+pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField) (newPkt io.IO_pkt2) {
+	return io.IO_pkt2(
+		io.IO_Packet2{
+			io.IO_seg3(
+				io.IO_seg3_{
+					info.AInfo,
+					info.UInfo,
+					info.ConsDir,
+					info.Peer,
+					oldPkt.CurrSeg.Past,
+					oldPkt.CurrSeg.Future,
+					oldPkt.CurrSeg.History}),
+			oldPkt.LeftSeg,
+			oldPkt.MidSeg,
+			oldPkt.RightSeg})
+}

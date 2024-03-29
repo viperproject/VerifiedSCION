@@ -119,3 +119,14 @@ pure func (inf *InfoField) ToIntermediateAbsInfoField() (IntermediateAbsInfoFiel
 		Peer : inf.Peer,
 	})
 }
+
+ghost
+decreases
+pure func (inf InfoField) ToIntermediateAbsInfoField2() (IntermediateAbsInfoField) {
+	return IntermediateAbsInfoField(IntermediateAbsInfoField_{
+		AInfo : io.IO_ainfo(inf.Timestamp),
+		UInfo : absUinfo_(inf.SegID),
+		ConsDir : inf.ConsDir,
+		Peer : inf.Peer,
+	})
+}
