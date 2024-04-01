@@ -20,6 +20,8 @@ import (
 	"encoding/binary"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	sl "github.com/scionproto/scion/verification/utils/slices"
+
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (b *Base) NonInitMem() {
@@ -280,6 +282,21 @@ pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
 	return MetaLen <= len(ub) &&
 		unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in
 		s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen]))
+}
+
+ghost
+opaque
+requires MetaLen <= idx && idx <= len(ub)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires acc(sl.AbsSlice_Bytes(ub[:idx], 0, idx), _)
+ensures  s.EqAbsHeader(ub) == s.EqAbsHeader(ub[:idx])
+decreases
+pure func (s MetaHdr) EqAbsHeaderForSublice(ub []byte, idx int) Lemma {
+	return let _ := Asserting(ub[:MetaLen] === ub[:idx][:MetaLen]) in
+		unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+		unfolding acc(sl.AbsSlice_Bytes(ub[:idx], 0, idx), _) in
+		let _ := Asserting(s.EqAbsHeader(ub) == (s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen])))) in
+		Lemma{}
 }
 
 /** Lemma proven in /VerifiedSCION/verification/utils/bitwise/proofs.dfy **/

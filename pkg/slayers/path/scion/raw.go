@@ -221,7 +221,6 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ requires sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ requires s.EQAbsHeader(ubuf)
 // @ ensures  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// TODO: redo this post
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
 // @   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
 // @ ensures  r == nil ==> s.Mem(ubuf)
@@ -256,11 +255,10 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ sl.Unslice_Bytes(ubuf, 0, MetaLen, R2)
 	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, R2)
 	//@ fold acc(s.Mem(ubuf), R2)
-	//@ assert s.InBounds(ubuf) ==
-	//@ 	unfolding acc(s.Base.Mem(), _) in s.PathMeta.InBounds()
-	//@ assert s.EQAbsHeader(ubuf) ==
-	//@ 	unfolding acc(s.Base.Mem(), _) in s.PathMeta.EqAbsHeader(ubuf)
-	//@ assert s.PathMeta.InBounds() ==> s.PathMeta.EqAbsHeader(s.Raw[:MetaLen])
+	//@ assert s.InBounds(ubuf) == s.PathMeta.InBounds()
+	//@ assert s.EQAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(ubuf)
+	//@ s.PathMeta.EqAbsHeaderForSublice(ubuf, MetaLen)
+	//@ assert s.EQAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(s.Raw[:MetaLen])
 	//@ assert s.InBounds(ubuf) ==> s.EQAbsHeader(ubuf)
 
 	//@ sl.Unslice_Bytes(ubuf, 0, MetaLen, 1-R2)
