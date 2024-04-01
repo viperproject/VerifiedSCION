@@ -123,3 +123,14 @@ func Asserting(ghost b bool) bool {
 }
 
 type Lemma struct{}
+
+// Assumption for IO-Specification
+ghost
+ensures b
+decreases
+func AssumeForIO(b bool)
+
+ghost
+ensures b
+decreases
+func TemporaryAssumeForIO(b bool)
