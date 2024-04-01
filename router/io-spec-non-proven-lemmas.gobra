@@ -74,7 +74,7 @@ func absPktLemma(dp io.DataPlaneSpec, raw []byte) {
 	assert len(pkt.CurrSeg.Future) > 0
 }
 
-
+/*
 ghost
 preserves dp.Valid()
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
@@ -106,7 +106,7 @@ func absPktNextSegmentHistory(dp io.DataPlaneSpec, raw []byte) {
 		assert len(get(pkt.LeftSeg).History) == 0
 	}
 }
-
+*/
 ghost
 opaque
 requires acc(p.scionLayer.Mem(ub), R50)

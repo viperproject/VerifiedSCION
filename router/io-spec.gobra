@@ -96,8 +96,9 @@ decreases
 pure func validPktMetaHdr(raw []byte) bool {
 	return slayers.CmnHdrLen <= len(raw) &&
 		let offset := slayers.GetAddressOffset(raw) in
+		0 <= offset &&
 		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
-		offset+scion.MetaLen <= len(raw) &&
+	 	offset+scion.MetaLen <= len(raw) &&
 		let _ := Asserting(forall k int :: {&raw[offset:offset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==> &raw[offset:offset+scion.MetaLen][k] == &raw[offset + k]) in
 		let hdr := binary.BigEndian.Uint32(raw[offset:offset+scion.MetaLen]) in
 		let metaHdr := scion.DecodedFrom(hdr) in
