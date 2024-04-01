@@ -349,8 +349,8 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, 
 	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ fold acc(s.Base.Mem(), R20)
 	//@ fold acc(s.Mem(ubuf), R20)
-	// @ assume idx == int(old(s.GetCurrINF(ubuf))) ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
-	// @ assume idx == int(old(s.GetCurrINF(ubuf))) ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField())
+	// @ TemporaryAssumeForIO(idx == int(old(s.GetCurrINF(ubuf))) ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf))
+	// @ TemporaryAssumeForIO(idx == int(old(s.GetCurrINF(ubuf))) ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
 	return ret
 }
 

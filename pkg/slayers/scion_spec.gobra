@@ -360,6 +360,7 @@ decreases
 func (s *SCION) EQAbsHeader(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		GetAddressOffset(ub) == CmnHdrLen+s.AddrHdrLenSpecInternal() &&
+		GetLength(ub) == int(s.HdrLen*LineLen) &&
 		// Might be worth introducing EQAbsHeader as an interface method on Path
 		// to avoid doing these casts, especially when we add support for EPIC.
 		typeOf(s.Path) == (*scion.Raw)                               &&
@@ -375,6 +376,14 @@ pure func GetAddressOffset(ub []byte) int {
 		let dstAddrLen := AddrType(ub[9] >> 4 & 0x7).Length() in
 		let srcAddrLen := AddrType(ub[9] & 0x7).Length() in
 		CmnHdrLen + 2*addr.IABytes + dstAddrLen + srcAddrLen
+}
+
+ghost
+requires acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires CmnHdrLen <= len(ub)
+decreases
+pure func GetLength(ub []byte) int {
+	return unfolding acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _) in int(ub[5])*LineLen
 }
 
 ghost

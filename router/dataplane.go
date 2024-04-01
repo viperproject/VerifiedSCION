@@ -2310,21 +2310,16 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		// (VerifiedSCION) the following property is guaranteed by the type system, but Gobra cannot infer it yet
 		// @ assume 0 <= p.path.GetCurrINF(ubPath)
 		// @ sl.SplitRange_Bytes(ub, start, end, HalfPerm)
-		// @ reveal p.scionLayer.EQAbsHeader(ub)
-		// @ reveal validPktMetaHdr(ub)
-		// @ assume reveal scion.validPktMetaHdr(ubPath)
-		// @ assume absPkt(dp, ub) == p.path.absPkt(dp, ubPath) // separate lemma
+		// @ p.AbsPktToSubSliceAbsPkt(ub, start, end, dp)
 		// @ sl.SplitRange_Bytes(ub, start, end, HalfPerm)
 		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF) /*@ ) , ubPath , dp@*/); err != nil {
 			// @ ghost sl.CombineRange_Bytes(ub, start, end, writePerm)
 			return serrors.WrapStr("update info field", err)
 		}
 		// @ ghost sl.CombineRange_Bytes(ub, start, end, HalfPerm)
-		// @ reveal scion.validPktMetaHdr(ubPath)
-		// @ assert reveal validPktMetaHdr(ub)
-		// @ assume absPkt(dp, ub) == p.path.absPkt(dp, ubPath) // separate lemma
+		// @ p.SubSliceAbsPktToAbsPkt(ub, start, end, dp)
 		// @ ghost sl.CombineRange_Bytes(ub, start, end, HalfPerm)
-		// @ absPktLemma(dp, ub)
+		// @ absPktFutureLemma(dp, ub)
 		// @ assert  absPkt(dp, ub).CurrSeg.UInfo == old(io.upd_uinfo(path.absUinfo_(p.infoField.SegID), p.hopField.ToIO_HF()))
 		// @ assert reveal p.EQAbsInfoField(absPkt(dp, ub))
 		// @ assert reveal p.EQAbsHopField(absPkt(dp, ub))
@@ -2642,14 +2637,20 @@ func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ 
 }
 
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
-// @ preserves acc(&p.infoField, R20)
-// @ preserves acc(&p.hopField, R20)
+// @ requires acc(&p.infoField, R20)
+// @ requires acc(&p.hopField, R20)
 // @ preserves acc(&p.ingressID, R21)
+// @ ensures acc(&p.infoField, R20)
+// @ ensures acc(&p.hopField, R20)
 // @ ensures   acc(&p.d, R20)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
+// contracts for IO-spec
+// @ requires len(oldPkt.CurrSeg.Future) > 0
+// @ requires p.EQAbsInfoField(oldPkt)
+// @ requires p.EQAbsHopField(oldPkt)
 func (p *scionPacketProcessor) validateEgressUp( /*@ ghost oldPkt io.IO_pkt2 @*/ ) (respr processResult, reserr error) {
 	egressID := p.egressInterface( /*@ oldPkt @ */ )
 	// @ p.d.getBfdSessionsMem()
