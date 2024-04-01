@@ -60,4 +60,20 @@ pure func (h *HopField) ToIO_HF() (io.IO_HF) {
 
 ghost
 decreases
+pure func (h HopField) ToIO_HF2() (io.IO_HF) {
+	return io.IO_HF(io.IO_HF_{
+			InIF2 : h.ConsIngress == 0 ? none[io.IO_ifs] : some(io.IO_ifs(h.ConsIngress)),
+			EgIF2 : h.ConsEgress == 0 ? none[io.IO_ifs] : some(io.IO_ifs(h.ConsEgress)),
+			HVF : AbsMac2(h.Mac),
+		})
+}
+
+ghost
+decreases
 pure func AbsMac(mac []byte) (io.IO_msgterm)
+
+
+ghost
+decreases
+pure func AbsMac2(mac [MacLen]byte) (io.IO_msgterm)
+

@@ -2291,7 +2291,6 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 // @ ensures err == nil ==> p.EQAbsInfoField(absPkt(dp, ub))
 // @ decreases
 func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte, ghost dp io.DataPlaneSpec @*/ ) (err error) {
-	// @ TODO() // Markus: after merge of https://github.com/viperproject/VerifiedSCION/pull/290
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
 	// @ ghost start := p.scionLayer.PathStartIdx(ub)
 	// @ ghost end   := p.scionLayer.PathEndIdx(ub)
@@ -3745,9 +3744,9 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// @ unfold revPath.Base.Mem()
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
 		if infoField.ConsDir {
-			hopField /*@@@*/ := /*@ unfolding acc(revPath.HopFields[revPath.PathMeta.CurrHF].Mem(), _) in @*/
+			hopField := /*@ unfolding acc(revPath.HopFields[revPath.PathMeta.CurrHF].Mem(), _) in @*/
 				revPath.HopFields[revPath.PathMeta.CurrHF]
-			infoField.UpdateSegID(hopField.Mac /*@, hopField.ToIO_HF() @*/)
+			infoField.UpdateSegID(hopField.Mac /*@, hopField.ToIO_HF2() @*/)
 		}
 		// @ fold revPath.Base.Mem()
 		// @ fold revPath.Mem(rawPath)
