@@ -218,8 +218,10 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 
 // IncPath increments the path and writes it to the buffer.
 // @ requires s.Mem(ubuf)
+// @ requires sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ requires s.EQAbsHeader(ubuf)
-// @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ ensures  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// TODO: redo this post
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
 // @   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
 // @ ensures  r == nil ==> s.Mem(ubuf)
@@ -233,13 +235,39 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 		//@ fold s.NonInitMem()
 		return err
 	}
-	//@ fold s.Mem(ubuf)
-	//@ s.RawIdxPerm(ubuf, MetaLen, writePerm)
-	//@ unfold acc(s.Base.Mem(), 1/2)
+	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, HalfPerm)
+	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, HalfPerm)
+	//@ sl.Reslice_Bytes(ubuf, 0, MetaLen, HalfPerm)
+	//@ sl.Reslice_Bytes(ubuf, 0, MetaLen, HalfPerm)
+
+	//@ unfold acc(s.Base.Mem(), R2)
 	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
-	//@ fold acc(s.Base.Mem(), 1/2)
-	//@ s.UndoRawIdxPerm(ubuf, MetaLen, writePerm)
-	//@ assume s.EQAbsHeader(ubuf)
+	//@ ghost if s.PathMeta.InBounds() {
+	//@ 	v := s.Raw[:MetaLen]
+	//@ 	b0 := sl.GetByte(v, 0, MetaLen, 0)
+	//@ 	b1 := sl.GetByte(v, 0, MetaLen, 1)
+	//@ 	b2 := sl.GetByte(v, 0, MetaLen, 2)
+	//@ 	b3 := sl.GetByte(v, 0, MetaLen, 3)
+	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
+	//@ }
+	//@ assert s.PathMeta.InBounds() ==> s.PathMeta.EqAbsHeader(s.Raw[:MetaLen])
+	//@ fold acc(s.Base.Mem(), R3)
+
+	//@ sl.Unslice_Bytes(ubuf, 0, MetaLen, R2)
+	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, R2)
+	//@ fold acc(s.Mem(ubuf), R2)
+	//@ assert s.InBounds(ubuf) ==
+	//@ 	unfolding acc(s.Base.Mem(), _) in s.PathMeta.InBounds()
+	//@ assert s.EQAbsHeader(ubuf) ==
+	//@ 	unfolding acc(s.Base.Mem(), _) in s.PathMeta.EqAbsHeader(ubuf)
+	//@ assert s.PathMeta.InBounds() ==> s.PathMeta.EqAbsHeader(s.Raw[:MetaLen])
+	//@ assert s.InBounds(ubuf) ==> s.EQAbsHeader(ubuf)
+
+	//@ sl.Unslice_Bytes(ubuf, 0, MetaLen, 1-R2)
+	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, 1-R2)
+	//@ fold acc(s.Base.Mem(), R3)
+	//@ fold acc(s.Mem(ubuf), 1-R2)
+	//@ assert s.InBounds(ubuf) ==> s.EQAbsHeader(ubuf)
 	return err
 }
 

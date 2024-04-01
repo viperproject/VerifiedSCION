@@ -121,3 +121,5 @@ decreases
 func Asserting(ghost b bool) bool {
 	return true
 }
+
+type Lemma struct{}
