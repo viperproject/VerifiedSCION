@@ -65,12 +65,12 @@ func absPktLemma(dp io.DataPlaneSpec, raw []byte) {
 	seg1Len := int(metaHdr.SegLen[0])
 	seg2Len := int(metaHdr.SegLen[1])
 	seg3Len := int(metaHdr.SegLen[2])
-	segLen := lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
-	prevSegLen := lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
-	numINF := numInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := hopFieldOffset(numINF, 0, headerOffset)
+	segLen := scion.lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := scion.lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := scion.numInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := scion.hopFieldOffset(numINF, 0, headerOffset)
 	pkt := reveal absPkt(dp, raw)
-	assert pkt.CurrSeg == reveal currSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen)
+	assert pkt.CurrSeg == reveal scion.currSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffset)
 	assert len(pkt.CurrSeg.Future) > 0
 }
 
@@ -96,11 +96,11 @@ func absPktNextSegmentHistory(dp io.DataPlaneSpec, raw []byte) {
 	seg1Len := int(metaHdr.SegLen[0])
 	seg2Len := int(metaHdr.SegLen[1])
 	seg3Len := int(metaHdr.SegLen[2])
-	segLen := lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
-	prevSegLen := lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
-	numINF := numInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := hopFieldOffset(numINF, 0, headerOffset)
-	assert pkt.LeftSeg == reveal leftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffset)
+	segLen := scion.lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := scion.lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := scion.numInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := scion.hopFieldOffset(numINF, 0, headerOffset)
+	assert pkt.LeftSeg == reveal scion.leftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffset)
 	if(pkt.LeftSeg != none[io.IO_seg2]) {
 		assert len(get(pkt.LeftSeg).Future) > 0
 		assert len(get(pkt.LeftSeg).History) == 0

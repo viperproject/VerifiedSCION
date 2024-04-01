@@ -3108,9 +3108,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ 	}
 		// @	newAbsPkt := reveal absIO_val(dp, p.rawPkt, 0)
 		// @ } else {
-		//	 		(VerifiedSCION): transit packets bug
-		//			https://github.com/scionproto/scion/issues/4497
-		// @ 		TODO()
+		// @ 	ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4497")
 		// @ }
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, false)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, false, io.IO_val_Unit{} @*/
