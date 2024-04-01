@@ -141,6 +141,15 @@ pure func (s *Raw) GetIsXoverSpec(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in s.Base.IsXoverSpec()
 }
 
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) InBounds(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		unfolding acc(s.Base.Mem(), _) in
+		s.PathMeta.InBounds()
+}
+
 /**** End of Stubs ****/
 
 /**** Lemmas ****/
@@ -199,52 +208,6 @@ func (r *Raw) RawPerm(ubuf []byte, p perm) {
 	fold r.RawPermRemainder(ubuf, p)
 }
 /******** End of Lemma: RawPerm ********/
-
-/******** Lemma: RawIdxPerm ********/
-pred (r *Raw) RawIdxPermRemainder(ubuf []byte, idx int, p perm) {
-	0 < p &&
-	acc(r.Base.Mem(), p/2) &&
-	acc(&r.Raw, p/2) &&
-	len(r.Raw) <= len(ubuf) &&
-	r.Raw === ubuf[:len(r.Raw)] &&
-	acc(sl.AbsSlice_Bytes(ubuf, idx, len(ubuf)), p) &&
-	len(r.Raw) == r.Base.Len() &&
-	idx <= len(r.Raw)
-}
-
-ghost
-requires 0 < p
-requires acc(&r.Raw, p/2)
-requires 0 <= idx && idx <= len(r.Raw)
-requires acc(sl.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
-requires r.RawIdxPermRemainder(ubuf, idx, p)
-ensures  acc(r.Mem(ubuf), p)
-ensures  acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-decreases
-func (r *Raw) UndoRawIdxPerm(ubuf []byte, idx int, p perm) {
-	unfold r.RawIdxPermRemainder(ubuf, idx, p)
-	sl.Unslice_Bytes(ubuf, 0, idx, p)
-	sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
-	fold acc(r.Mem(ubuf), p)
-}
-
-ghost
-requires 0 < p
-requires acc(r.Mem(ubuf), p)
-requires acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-requires 0 <= idx && idx <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
-ensures  acc(&r.Raw, p/2)
-ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
-ensures  acc(sl.AbsSlice_Bytes(r.Raw[:idx], 0, idx), p) && acc(r.Base.Mem(), p/2)
-ensures  r.RawIdxPermRemainder(ubuf, idx, p)
-decreases
-func (r *Raw) RawIdxPerm(ubuf []byte, idx int, p perm) {
-	unfold acc(r.Mem(ubuf), p)
-	sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), idx, p)
-	sl.Reslice_Bytes(ubuf, 0, idx, p)
-	fold r.RawIdxPermRemainder(ubuf, idx, p)
-}
-/******** End of Lemma: RawIdxPerm ********/
 
 /******** Lemma: RawRangePerm ********/
 pred (r *Raw) RawRangePermRemainder(ubuf []byte, start, end int, p perm) {

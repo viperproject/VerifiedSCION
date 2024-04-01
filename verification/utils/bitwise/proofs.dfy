@@ -101,3 +101,8 @@ lemma SerializeAndDeserializeLemma(m: MetaHdr, b0: bv8, b1: bv8, b2: bv8, b3: bv
 	ensures var line := SerializedToLine(m);
 		PutUint32Spec(b0, b1, b2, b3, line) ==> (DecodedFrom(Uint32Spec(b0, b1, b2, b3)) == m)
 {}
+
+lemma SerializeAndDeserializeMetaHdrLemma(m: MetaHdr)
+	requires InBounds(m)
+	ensures  DecodedFrom(SerializedToLine(m)) == m
+{}
