@@ -225,7 +225,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
 // @   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
 // @ ensures  r == nil ==> s.Mem(ubuf)
-// @ ensures  r == nil ==> s.EQAbsHeader(ubuf)
+// @ ensures  r == nil && s.InBounds(ubuf) ==> s.EQAbsHeader(ubuf)
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
 // @ decreases
