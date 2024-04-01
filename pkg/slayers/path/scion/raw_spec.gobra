@@ -451,6 +451,7 @@ pure func segment(raw []byte,
 
 ghost
 opaque
+requires 0 <= headerOffset
 requires path.InfoFieldOffset(currINFIdx, headerOffset) + path.InfoLen <= offset
 requires 0 < segLen
 requires offset + path.HopLen * segLen <= len(raw)
@@ -473,6 +474,7 @@ pure func currSeg(raw []byte,
 
 ghost
 opaque
+requires 0 <= headerOffset
 requires 0 < seg1Len
 requires 0 <= seg2Len
 requires 0 <= seg3Len
@@ -497,6 +499,7 @@ pure func leftSeg(
 
 ghost
 opaque
+requires 0 <= headerOffset
 requires 0 < seg1Len
 requires 0 <= seg2Len
 requires 0 <= seg3Len
@@ -521,6 +524,7 @@ pure func rightSeg(
 
 ghost
 opaque
+requires 0 <= headerOffset
 requires 0 < seg1Len
 requires 0 <= seg2Len
 requires 0 <= seg3Len
