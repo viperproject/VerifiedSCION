@@ -154,7 +154,7 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// the length of a scion header. Yet a path of more than 64 hops cannot be followed to
 	// the end because CurrHF is only 6 bits long.
 	if s.NumHops > MaxHops {
-		//@ fold s.NonInitMem()
+		//@ defer fold s.NonInitMem()
 		return serrors.New("NumHops too large", "NumHops", s.NumHops, "Maximum", MaxHops)
 	}
 	//@ fold s.Mem()
