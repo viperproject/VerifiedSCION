@@ -146,6 +146,13 @@ pure func (s *Base) GetMetaHdr() MetaHdr {
 ghost
 requires acc(s.Mem(), _)
 decreases
+pure func (s *Base) GetBase() Base {
+	return unfolding acc(s.Mem(), _) in *s
+}
+
+ghost
+requires acc(s.Mem(), _)
+decreases
 pure func (s *Base) GetCurrHF() uint8 {
 	return s.GetMetaHdr().CurrHF
 }
