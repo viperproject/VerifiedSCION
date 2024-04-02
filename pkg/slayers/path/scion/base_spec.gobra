@@ -188,6 +188,13 @@ pure func (s Base) IncPathSpec() (res Base) {
 	}
 }
 
+/*************** AbsBase ***************/
+
+// There is a good deal of repition in this section of the file and the similarly
+// named functions for the type `Base`. While for now this is not too big of a problem,
+// we should find ways to streamline the definitions, ideally by having these defs only
+// for the abstraction type only.
+
 type AbsBase adt {
 	AbsBase_ {
 		PathMeta AbsMetaHdr
@@ -318,6 +325,8 @@ decreases
 pure func (b Base) ValidBaseHasValidAbs() Lemma {
 	return Lemma{}
 }
+
+/*************** End of AbsBase ***************/
 
 ghost
 requires b.Mem()
