@@ -215,7 +215,9 @@ func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
 
 /**** End of Lemmas ****/
 
+/*
 // currently an ADT because structs cannot have ghost fields
+
 type AbsDecoded adt {
 	AbsDecoded_ {
 		PathBase Base
@@ -257,7 +259,7 @@ ensures  forall i int :: { res[i] } 0 <= i && i < len(res) ==>
 decreases _
 pure func ToListOfHopFields(hops []path.HopField) (res seq[path.HopField])
 
-/*
+
 ghost
 requires acc(d.Mem(ub), _)
 decreases
@@ -295,8 +297,4 @@ pure func IsTheReverseInfoFields(hs seq[path.InfoField], other seq[path.InfoFiel
 	return true // TODO
 }
 
-// TODO
-// 1. prove isValidIdxSpec(abs) <==> isValidIdxSpec(decoded)
-// 2. isthereverse(abs1, abs2) && isValidIdxSpec(abs1) ==> isValidIdxSpec(abs2)
-// 3. prove that, if err == nil, then isthereverse(old(abs(d)), abs(d))
 */

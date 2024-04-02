@@ -190,7 +190,7 @@ type AbsBase adt {
 }
 
 type AbsMetaHdr adt {
-	AbsMetaHdr {
+	AbsMetaHdr_ {
 		// we should change the types of CurrINF and CurrHF to wider types, 
 		// otherwise we might start getting overflow errors here when they
 		// are fully enabled.
@@ -202,35 +202,120 @@ type AbsMetaHdr adt {
 
 ghost
 decreases
-pure func (b Base) ReverseSpec() Base {
-	return Base {
+pure func (b Base) Abs() AbsBase {
+	return AbsBase_{
+		PathMeta: b.PathMeta.Abs(),
+		NumINF: b.NumINF,
+		NumHops: b.NumHops,
+	}
+}
+
+ghost
+decreases
+pure func (b MetaHdr) Abs() AbsMetaHdr {
+	return AbsMetaHdr_{
+		CurrINF: b.CurrINF,
+		CurrHF: b.CurrHF,
+		SegLen: seq[uint8]{ b.SegLen[0], b.SegLen[1], b.SegLen[2] },
+	}
+}
+
+ghost
+requires len(b.PathMeta.SegLen) == 3
+decreases
+pure func (b AbsBase) ReverseSpec() AbsBase {
+	return AbsBase_ {
 		PathMeta: b.ReverseMetaHdrSpec(),
 		NumINF: b.NumINF,
 		NumHops: b.NumHops,
 	}
 }
 
-// we may need a new type 'AbsMetaHdr` where all bounded int types are replaced by
-// ubounded integers, 
 ghost
+requires len(b.PathMeta.SegLen) == 3
 decreases
-pure func (b Base) ReverseMetaHdrSpec() MetaHdr {
-	return MetaHdr {
+pure func (b AbsBase) ReverseMetaHdrSpec() AbsMetaHdr {
+	return AbsMetaHdr_ {
 		CurrINF: uint8(b.NumINF) - b.PathMeta.CurrINF - 1,
 		CurrHF: uint8(b.NumHops) - b.PathMeta.CurrHF - 1,
-		SegLen: [3]uint8{},
+		SegLen: b.ReverseSegLen(),
 	}
 }
 
 ghost
+requires len(b.PathMeta.SegLen) == 3
 decreases
-pure func (b Base) ReverseSegLen() [3]uint8 {
+pure func (b AbsBase) ReverseSegLen() seq[uint8] {
 	return (match b.NumINF {
-		case 2: [3]uint8{b.PathMeta.SegLen[1], b.PathMeta.SegLen[0], b.PathMeta.SegLen[2]}
-		case 3: [3]uint8{b.PathMeta.SegLen[2], b.PathMeta.SegLen[1], b.PathMeta.SegLen[0]}
+		case 2: seq[uint8]{ b.PathMeta.SegLen[1], b.PathMeta.SegLen[0], b.PathMeta.SegLen[2]}
+		case 3: seq[uint8]{ b.PathMeta.SegLen[2], b.PathMeta.SegLen[1], b.PathMeta.SegLen[0] }
 		default: b.PathMeta.SegLen
 	})
 }
+
+// TODO: address replication, or at least mention it exists
+ghost
+decreases
+pure func (b AbsBase) ValidCurrIdxsSpec() bool {
+	return 0 <= b.NumINF && b.NumINF <= MaxINFs &&
+		len(b.PathMeta.SegLen) == 3             &&
+		0 <= b.NumHops && b.NumHops <= MaxHops  &&
+		b.ValidCurrHfSpec()  &&
+		b.ValidCurrInfSpec() &&
+		0 <= b.PathMeta.SegLen[0] && b.PathMeta.SegLen[0] < MaxHops &&
+		0 <= b.PathMeta.SegLen[1] && b.PathMeta.SegLen[1] < MaxHops &&
+		0 <= b.PathMeta.SegLen[2] && b.PathMeta.SegLen[2] < MaxHops &&
+		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
+		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
+			b.PathMeta.SegLen[i] != 0) &&
+		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
+			b.PathMeta.SegLen[i] == 0) &&
+		b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+}
+
+ghost
+decreases
+pure func (b AbsBase) ValidCurrInfSpec() bool {
+	return 0 <= b.PathMeta.CurrINF && b.PathMeta.CurrINF < b.NumINF
+}
+
+ghost
+decreases
+pure func (b AbsBase) ValidCurrHfSpec() bool {
+	return 0 <= b.PathMeta.CurrHF && b.PathMeta.CurrHF < b.NumHops
+}
+
+ghost
+requires len(s.PathMeta.SegLen) == 3
+ensures  0 <= r && r < 3
+decreases
+pure func (s AbsBase) InfForHfSpec(hf uint8) (r uint8) {
+	return hf < s.PathMeta.SegLen[0] ?
+		0 :
+		(hf < s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1] ? 1 : 2)
+}
+
+ghost
+requires b.ValidCurrIdxsSpec()
+ensures  b.ReverseSpec().ValidCurrIdxsSpec()
+decreases
+pure func (b AbsBase) ReversingValidBaseIsValidBase() Lemma {
+	return Lemma{}
+}
+
+ghost
+ensures b.ValidCurrIdxsSpec() == b.Abs().ValidCurrIdxsSpec()  
+decreases
+pure func (b Base) ValidBaseHasValidAbs() Lemma {
+	return Lemma{}
+}
+
+// TODO
+// 1. prove isValidIdxSpec(abs) <==> isValidIdxSpec(decoded)
+// 2. isthereverse(abs1, abs2) && isValidIdxSpec(abs1) ==> isValidIdxSpec(abs2)
+// 3. prove that, if err == nil, then isthereverse(old(abs(d)), abs(d))
 
 ghost
 requires b.Mem()

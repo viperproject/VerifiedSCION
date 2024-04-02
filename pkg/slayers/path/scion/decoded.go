@@ -234,13 +234,30 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	}
 	//@ fold s.Base.Mem()
 	//@ fold s.Mem(ubuf)
-	//@ ghost base := s.GetBase(ubuf)
+	/*@
+	ghost base := s.GetBase(ubuf)
+	ghost absBase := base.Abs()
+	ghost absMetaHdrAferReversingSegLen := AbsMetaHdr_ {
+		CurrINF: absBase.PathMeta.CurrINF,
+		CurrHF: absBase.PathMeta.CurrHF,
+		SegLen: absBase.ReverseSegLen(),
+	}
+	ghost absBaseAfterReversingSegLen := AbsBase_ {
+		PathMeta: absMetaHdrAferReversingSegLen,
+		NumINF: absBase.NumINF,
+		NumHops: absBase.NumHops,
+	}
+	@*/
+
+	//@ assert isValid ==> base.ValidCurrIdxsSpec()
 
 	// Reverse order of InfoFields and SegLens
 	//@ invariant s.Mem(ubuf)
-	//@ invariant isValid ==> s.ValidCurrIdxs(ubuf)
+	// invariant isValid ==> s.ValidCurrIdxs(ubuf)
 	//@ invariant 0 <= i && i < s.GetNumINF(ubuf)
 	//@ invariant 0 <= j && j < s.GetNumINF(ubuf)
+	//@ invariant i == 0 ==> s.GetBase(ubuf).Abs() == absBase
+	//@ invariant i != 0 ==> s.GetBase(ubuf).Abs() == absBaseAfterReversingSegLen
 	//@ decreases j-i
 	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumINF - 1 /*@) @*/); i < j; i, j = i+1, j-1 {
 		//@ unfold s.Mem(ubuf)
