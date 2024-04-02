@@ -254,7 +254,6 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		s.PathMeta.SegLen[0], s.PathMeta.SegLen[lastIdx] = s.PathMeta.SegLen[lastIdx], s.PathMeta.SegLen[0]
 	}
 	//@ fold s.Base.Mem()
-
 	//@ invariant acc(s.Base.Mem(), R10)
 	//@ invariant 0 <= i && i <= s.Base.GetNumINF()
 	//@ invariant acc(&s.InfoFields, R10)
