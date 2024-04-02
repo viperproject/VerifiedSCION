@@ -312,11 +312,6 @@ pure func (b Base) ValidBaseHasValidAbs() Lemma {
 	return Lemma{}
 }
 
-// TODO
-// 1. prove isValidIdxSpec(abs) <==> isValidIdxSpec(decoded)
-// 2. isthereverse(abs1, abs2) && isValidIdxSpec(abs1) ==> isValidIdxSpec(abs2)
-// 3. prove that, if err == nil, then isthereverse(old(abs(d)), abs(d))
-
 ghost
 requires b.Mem()
 ensures  b.NonInitMem()
