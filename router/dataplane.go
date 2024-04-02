@@ -2718,7 +2718,6 @@ func (p *scionPacketProcessor) validateEgressUp( /*@ ghost oldPkt io.IO_pkt2 @*/
 // @ ensures reserr == nil ==> absPkt(dp, ub) == old(absPkt(dp, ub))
 // @ decreases
 func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
-	// @ TODO()
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP   := p.scionLayer.PathEndIdx(ub)
@@ -2737,13 +2736,22 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ defer fold acc(p.scionLayer.Mem(ub), R20)
 	// (VerifiedSCION) the following is guaranteed by the type system, but Gobra cannot prove it yet
 	// @ assume 0 <= p.path.GetCurrHF(ubPath)
-	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP, dp)
+	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
-	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ assert p.DstIsLocalIngressID(ub)
+	// @ TemporaryAssumeForIO(dp.Valid() && scion.validPktMetaHdr(ubPath) && p.path.EQAbsHeader(ubPath)) // postcondition of SetHopfield
+	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP, dp)
+	// @ absPktFutureLemma(dp, ub)
+	// @ TemporaryAssumeForIO(p.EQAbsHopField(absPkt(dp, ub))) // postcondition of SetHopfield
+	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ TODO()
 	/*@
 	ghost var ubLL []byte
 	ghost if &p.scionLayer === p.lastLayer {
@@ -2757,9 +2765,6 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 		ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
 	}
 	@*/
-	//  defer TemporaryAssumeForIO(p.DstIsLocalIngressID(ub))
-	//  defer TemporaryAssumeForIO(dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EQAbsHeader(ub))
-	//  defer TemporaryAssumeForIO(absPkt(dp, ub) == old(absPkt(dp, ub)))
 	return p.handleSCMPTraceRouteRequest(p.ingressID /*@ , ubLL @*/)
 }
 
@@ -2801,12 +2806,12 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // constracts for IO-spec
 // @ requires dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EQAbsHeader(ub)
 // @ requires len(absPkt(dp, ub).CurrSeg.Future) > 0
-// @ requires p.EQAbsInfoField(absPkt(dp, ub))
 // @ requires p.EQAbsHopField(absPkt(dp, ub))
+// @ requires p.EQAbsInfoField(absPkt(dp, ub))
 // @ ensures reserr == nil ==> dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EQAbsHeader(ub)
 // @ ensures reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
-// @ ensures reserr == nil ==> p.EQAbsInfoField(absPkt(dp, ub))
 // @ ensures reserr == nil ==> p.EQAbsHopField(absPkt(dp, ub))
+// @ ensures reserr == nil ==> p.EQAbsInfoField(absPkt(dp, ub))
 // @ ensures reserr == nil ==> absPkt(dp, ub) == old(absPkt(dp, ub))
 // @ decreases
 func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int , ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
@@ -2828,18 +2833,28 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 		return processResult{}, nil
 	}
 	*alert = false
+	// @ assert reveal p.EQAbsHopField(absPkt(dp, ub))
 	// @ unfold acc(p.scionLayer.Mem(ub), R20)
 	// @ defer fold acc(p.scionLayer.Mem(ub), R20)
 	// (VerifiedSCION) the following is guaranteed by the type system,
 	// but Gobra cannot prove it yet
 	// @ assume 0 <= p.path.GetCurrHF(ubPath)
-	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
+	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP, dp)
+	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
-	// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ TemporaryAssumeForIO(dp.Valid() && scion.validPktMetaHdr(ubPath) && p.path.EQAbsHeader(ubPath)) // postcondition of SetHopfield
+	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP, dp)
+	// @ absPktFutureLemma(dp, ub)
+	// @ TemporaryAssumeForIO(p.EQAbsHopField(absPkt(dp, ub))) // postcondition of SetHopfield
+	// @ TemporaryAssumeForIO(p.EQAbsInfoField(absPkt(dp, ub)))
+	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ TODO()
 	/*@
 	ghost var ubLL []byte
 	ghost if &p.scionLayer === p.lastLayer {
@@ -2853,16 +2868,10 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 		ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
 	}
 	@*/
-	// wrong
-	//  ghost defer TemporaryAssumeForIO(dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EQAbsHeader(ub))
-	//  ghost defer TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) > 0)
-	//  ghost defer TemporaryAssumeForIO(p.EQAbsInfoField(absPkt(dp, ub)))
-	//  ghost defer TemporaryAssumeForIO(p.EQAbsHopField(absPkt(dp, ub)))
-	//  ghost defer TemporaryAssumeForIO(absPkt(dp, ub) == old(absPkt(dp, ub)))
 	return p.handleSCMPTraceRouteRequest(egressID /*@ , ubLL @*/)
 }
 
-// @ preserves acc(&p.infoField, R20)
+// @ preserves acc(&p.infoField, R21)
 // @ ensures   res == &p.hopField.IngressRouterAlert || res == &p.hopField.EgressRouterAlert
 // @ decreases
 func (p *scionPacketProcessor) egressRouterAlertFlag() (res *bool) {
