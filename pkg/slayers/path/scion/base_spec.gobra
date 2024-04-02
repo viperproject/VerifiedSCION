@@ -267,7 +267,6 @@ pure func (b AbsBase) ReverseSegLen() seq[uint8] {
 	})
 }
 
-// TODO: address replication, or at least mention it exists
 ghost
 decreases
 pure func (b AbsBase) ValidCurrIdxsSpec() bool {
