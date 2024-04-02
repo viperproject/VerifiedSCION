@@ -27,8 +27,9 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path/onehop"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 
-	. "github.com/scionproto/scion/verification/utils/definitions"
-	"github.com/scionproto/scion/verification/utils/slices"
+	. "verification/utils/definitions"
+	"verification/utils/slices"
+	"encoding/binary"
 )
 
 pred PathPoolMem(pathPool []path.Path, pathPoolRaw path.Path) {
@@ -354,17 +355,24 @@ opaque
 pure
 requires acc(s.Mem(ub), _)
 requires acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _)
-requires let ubPath := s.UBPath(ub) in
-	acc(slices.AbsSlice_Bytes(ubPath, 0, len(ubPath)), _)
 decreases
 func (s *SCION) EQAbsHeader(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
-		GetAddressOffset(ub) == CmnHdrLen+s.AddrHdrLenSpecInternal() &&
-		GetLength(ub) == int(s.HdrLen*LineLen) &&
+		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
+		let high := s.HdrLen*LineLen in
+		GetAddressOffset(ub) == low &&
+		GetLength(ub) == int(high) &&
 		// Might be worth introducing EQAbsHeader as an interface method on Path
 		// to avoid doing these casts, especially when we add support for EPIC.
 		typeOf(s.Path) == (*scion.Raw)                               &&
-		s.Path.(*scion.Raw).EQAbsHeader(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])
+		unfolding acc(s.Path.Mem(ub[low:high]), _) in
+		unfolding acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+		let _ := Asserting(forall k int :: {&ub[low:high][k]} 0 <= k && k < high ==>
+			&ub[low:high][k] == &ub[low + k]) in
+		let _ := Asserting(forall k int :: {&ub[low:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+			&ub[low:high][:scion.MetaLen][k] == &ub[low:high][k]) in
+		s.Path.(*scion.Raw).Base.GetMetaHdr() ==
+		scion.DecodedFrom(binary.BigEndian.Uint32(ub[low:high][:scion.MetaLen]))
 }
 
 ghost
