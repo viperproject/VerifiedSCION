@@ -76,8 +76,6 @@ pure func (b Base) ValidCurrIdxsSpec() bool {
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
 			b.PathMeta.SegLen[i] == 0) &&
-		// Surprisingly, the following does not seem to be needed
-		// needed for IO-spec
 		b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
 }
 

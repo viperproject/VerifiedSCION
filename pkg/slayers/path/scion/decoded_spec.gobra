@@ -214,3 +214,50 @@ func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
 }
 
 /**** End of Lemmas ****/
+
+// currently an ADT because structs cannot have ghost fields
+type AbsDecoded adt {
+	AbsDecoded_ {
+		PathBase Base
+		InfoFields seq[path.InfoField]
+		HopFields seq[path.HopField]
+	}
+}
+
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d *Decoded) ToAbsDecoded(ub []byte) AbsDecoded {
+	return unfolding acc(d.Mem(ub), _) in
+		AbsDecoded_{
+			PathBase: unfolding acc(d.Base.Mem(), _) in d.Base,
+			InfoFields: ToListOfInfoFields(d.InfoFields),
+			HopFields: ToListOfHopFields(d.HopFields),
+		}
+}
+
+// TODO: doc assumption
+ghost
+requires forall i int :: { &infos[i] } 0 <= i && i < len(infos) ==>
+	acc(&infos[i], _)
+ensures  len(infos) == len(res)
+ensures  forall i int :: { res[i] } 0 <= i && i < len(res) ==>
+	infos[i] == res[i]
+decreases _
+pure func ToListOfInfoFields(infos []path.InfoField) (res seq[path.InfoField])
+
+// TODO: doc assumption
+ghost
+requires forall i int :: { &hops[i] } 0 <= i && i < len(hops) ==>
+	acc(hops[i].Mem(), _)
+ensures  len(hops) == len(res)
+ensures  forall i int :: { res[i] } 0 <= i && i < len(res) ==>
+	unfolding acc(hops[i].Mem(), _) in
+	hops[i] == res[i]
+decreases _
+pure func ToListOfHopFields(hops []path.HopField) (res seq[path.HopField])
+
+// ghost
+// requires acc(d.Mem(ub), _)
+// decreases
+// pure func (d *Decoded) ReverseSpec(ub []byte)
