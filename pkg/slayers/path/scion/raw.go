@@ -327,8 +327,10 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // @ ensures   r != nil ==> r.ErrorMem()
 // contracts for IO-spec
 // @ requires dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
-// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
-// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField2())
+// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
+// @ 	dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
+// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
+// @ 	s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField2())
 // @ decreases
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, ghost dp io.DataPlaneSpec@*/) (r error) {
 	//@ share info

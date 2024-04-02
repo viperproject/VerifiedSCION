@@ -257,7 +257,46 @@ ensures  forall i int :: { res[i] } 0 <= i && i < len(res) ==>
 decreases _
 pure func ToListOfHopFields(hops []path.HopField) (res seq[path.HopField])
 
-// ghost
-// requires acc(d.Mem(ub), _)
-// decreases
-// pure func (d *Decoded) ReverseSpec(ub []byte)
+/*
+ghost
+requires acc(d.Mem(ub), _)
+decreases
+pure func (d AbsDecoded) IsTheReverse(other AbsDecoded) bool {
+	return d.Base.IsTheReverseBase(other.Base)              &&
+		IsTheReverseHopFields(d.HopFields, other.HopFields) &&
+		IsTheReverseInfoFields(d.InfoFields, other.InfoFields)
+}
+
+// todo: move to base_spec.gobra
+ghost
+decreases
+pure func (b Base) IsTheReverseBase(other Base) bool {
+	return other.PathMeta.CurrINF == uint8(b.NumINF) - b.PathMeta.CurrINF - 1 &&
+		other.PathMeta.CurrHF == uint8(b.NumHops) - b.PathMeta.CurrHF - 1
+}
+
+// todo: drop all lemmas about reverse except this one
+ValidCurrIdxs
+ghost
+decreases
+pure func (b Base) ReverseOfValidBaseIsValid(other Base) bool {
+	return true // TODO
+}
+
+ghost
+decreases
+pure func IsTheReverseHopFields(hs seq[path.HopField], other seq[path.HopField]) bool {
+	return true // TODO
+}
+
+ghost
+decreases
+pure func IsTheReverseInfoFields(hs seq[path.InfoField], other seq[path.InfoField]) bool {
+	return true // TODO
+}
+
+// TODO
+// 1. prove isValidIdxSpec(abs) <==> isValidIdxSpec(decoded)
+// 2. isthereverse(abs1, abs2) && isValidIdxSpec(abs1) ==> isValidIdxSpec(abs2)
+// 3. prove that, if err == nil, then isthereverse(old(abs(d)), abs(d))
+*/

@@ -181,6 +181,57 @@ pure func (s Base) IncPathSpec() (res Base) {
 	}
 }
 
+type AbsBase adt {
+	AbsBase_ {
+		PathMeta AbsMetaHdr
+		NumINF int
+		NumHops int
+	}
+}
+
+type AbsMetaHdr adt {
+	AbsMetaHdr {
+		// we should change the types of CurrINF and CurrHF to wider types, 
+		// otherwise we might start getting overflow errors here when they
+		// are fully enabled.
+		CurrINF uint8
+		CurrHF  uint8
+		SegLen  seq[uint8]
+	}
+}
+
+ghost
+decreases
+pure func (b Base) ReverseSpec() Base {
+	return Base {
+		PathMeta: b.ReverseMetaHdrSpec(),
+		NumINF: b.NumINF,
+		NumHops: b.NumHops,
+	}
+}
+
+// we may need a new type 'AbsMetaHdr` where all bounded int types are replaced by
+// ubounded integers, 
+ghost
+decreases
+pure func (b Base) ReverseMetaHdrSpec() MetaHdr {
+	return MetaHdr {
+		CurrINF: uint8(b.NumINF) - b.PathMeta.CurrINF - 1,
+		CurrHF: uint8(b.NumHops) - b.PathMeta.CurrHF - 1,
+		SegLen: [3]uint8{},
+	}
+}
+
+ghost
+decreases
+pure func (b Base) ReverseSegLen() [3]uint8 {
+	return (match b.NumINF {
+		case 2: [3]uint8{b.PathMeta.SegLen[1], b.PathMeta.SegLen[0], b.PathMeta.SegLen[2]}
+		case 3: [3]uint8{b.PathMeta.SegLen[2], b.PathMeta.SegLen[1], b.PathMeta.SegLen[0]}
+		default: b.PathMeta.SegLen
+	})
+}
+
 ghost
 requires b.Mem()
 ensures  b.NonInitMem()
