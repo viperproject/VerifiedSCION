@@ -424,7 +424,7 @@ jobs:
           requireTriggers: ${{ env.requireTriggers }}
           overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
+          disableNL: '1' # ${{ env.disableNL }}
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
 
