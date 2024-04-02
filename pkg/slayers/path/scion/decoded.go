@@ -218,6 +218,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ ghost isValid := s.ValidCurrIdxs(ubuf)
+	//@ ghost base := s.GetBase(ubuf)
 	//@ unfold s.Mem(ubuf)
 	//@ unfold s.Base.Mem()
 	if s.NumINF == 0 {
@@ -225,24 +226,16 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ fold s.Mem(ubuf)
 		return nil, serrors.New("empty decoded path is invalid and cannot be reversed")
 	}
-	//@ fold s.Base.Mem()
-	//@ fold s.Mem(ubuf)
-	//@ ghost base := s.GetBase(ubuf)
 
 	// Reverse order of InfoFields and SegLens
-	//@ invariant s.Mem(ubuf)
-	//@ invariant isValid ==> s.ValidCurrIdxs(ubuf)
-	//@ invariant 0 <= i && i < s.GetNumINF(ubuf)
-	//@ invariant 0 <= j && j < s.GetNumINF(ubuf)
-	//@ decreases j-i
-	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumINF - 1 /*@) @*/); i < j; i, j = i+1, j-1 {
-		//@ unfold s.Mem(ubuf)
-		s.InfoFields[i], s.InfoFields[j] = s.InfoFields[j], s.InfoFields[i]
-		//@ unfold s.Base.Mem()
-		s.PathMeta.SegLen[i], s.PathMeta.SegLen[j] = s.PathMeta.SegLen[j], s.PathMeta.SegLen[i]
-		//@ fold s.Base.Mem()
-		//@ fold s.Mem(ubuf)
+	if s.NumINF > 1 {
+		lastIdx := s.NumINF - 1
+		s.InfoFields[0], s.InfoFields[lastIdx] = s.InfoFields[lastIdx], s.InfoFields[0]
+		s.PathMeta.SegLen[0], s.PathMeta.SegLen[lastIdx] = s.PathMeta.SegLen[lastIdx], s.PathMeta.SegLen[0]
 	}
+	//@ fold s.Base.Mem()
+	//@ fold s.Mem(ubuf)
+
 	//@ preserves s.Mem(ubuf)
 	//@ preserves isValid ==> s.ValidCurrIdxs(ubuf)
 	//@ decreases
