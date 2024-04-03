@@ -672,7 +672,7 @@ func (*SCMPTraceroute) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
 // @ ensures   res != nil ==> i.NonInitMem()
@@ -690,66 +690,66 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ requires offset == 0
 	// @ preserves acc(&i.Identifier)
 	// @ requires len(data) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires sl.AbsSlice_Bytes(data, 0, len(data))
-	// @ ensures sl.AbsSlice_Bytes(data, 0, 2)
-	// @ ensures sl.AbsSlice_Bytes(data, 2, len(data))
+	// @ requires  acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
+	// @ ensures   acc(sl.AbsSlice_Bytes(data, 0, 2), R40)
+	// @ ensures   acc(sl.AbsSlice_Bytes(data, 2, len(data)), R40)
 	// @ decreases
 	// @ outline (
-	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
-	// @ unfold sl.AbsSlice_Bytes(data, 0, 2)
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, R40)
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, 2), R40)
 	i.Identifier = binary.BigEndian.Uint16(data[offset : offset+2])
-	// @ fold sl.AbsSlice_Bytes(data, 0, 2)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, 2), R40)
 	// @ )
 	offset += 2
 	// @ requires offset == 2
 	// @ preserves acc(&i.Sequence)
 	// @ requires len(data) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires sl.AbsSlice_Bytes(data, 2, len(data))
-	// @ ensures sl.AbsSlice_Bytes(data, 2, 2+2)
-	// @ ensures sl.AbsSlice_Bytes(data, 2+2, len(data))
+	// @ requires acc(sl.AbsSlice_Bytes(data, 2, len(data)), R40)
+	// @ ensures acc(sl.AbsSlice_Bytes(data, 2, 2+2), R40)
+	// @ ensures acc(sl.AbsSlice_Bytes(data, 2+2, len(data)), R40)
 	// @ decreases
 	// @ outline (
-	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 2+2, writePerm)
-	// @ unfold sl.AbsSlice_Bytes(data, 2, 2+2)
+	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 2+2, R40)
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 2, 2+2), R40)
 	// @ assert forall i int :: { &data[offset:offset+2][i] } 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
 	i.Sequence = binary.BigEndian.Uint16(data[offset : offset+2])
-	// @ fold sl.AbsSlice_Bytes(data, 2, 2+2)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 2, 2+2), R40)
 	// @ )
 	offset += 2
 	// @ requires offset == 2 + 2
 	// @ preserves acc(&i.IA)
 	// @ requires len(data) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires sl.AbsSlice_Bytes(data, 2+2, len(data))
-	// @ ensures sl.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes)
-	// @ ensures sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, len(data))
+	// @ requires acc(sl.AbsSlice_Bytes(data, 2+2, len(data)), R40)
+	// @ ensures acc(sl.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes), R40)
+	// @ ensures acc(sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, len(data)), R40)
 	// @ decreases
 	// @ outline (
-	// @ sl.SplitByIndex_Bytes(data, 2+2, len(data), 2+2+addr.IABytes, writePerm)
-	// @ unfold sl.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes)
+	// @ sl.SplitByIndex_Bytes(data, 2+2, len(data), 2+2+addr.IABytes, R40)
+	// @ unfold  acc(sl.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes), R40)
 	// @ assert forall i int :: { &data[offset:offset+addr.IABytes][i] } 0 <= i && i < addr.IABytes ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
 	i.IA = addr.IA(binary.BigEndian.Uint64(data[offset : offset+addr.IABytes]))
-	// @ fold sl.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 2+2, 2+2+addr.IABytes), R40)
 	// @ )
 	offset += addr.IABytes
 	// @ requires offset == 2 + 2 + addr.IABytes
 	// @ preserves acc(&i.Interface)
 	// @ requires len(data) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, len(data))
-	// @ ensures sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
-	// @ ensures sl.AbsSlice_Bytes(data, 2+2+addr.IABytes+scmpRawInterfaceLen, len(data))
+	// @ requires  acc(sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, len(data)), R40)
+	// @ ensures  acc(sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen), R40)
+	// @ ensures  acc(sl.AbsSlice_Bytes(data, 2+2+addr.IABytes+scmpRawInterfaceLen, len(data)), R40)
 	// @ decreases
 	// @ outline (
-	// @ sl.SplitByIndex_Bytes(data, 2+2+addr.IABytes, len(data), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
-	// @ unfold sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
+	// @ sl.SplitByIndex_Bytes(data, 2+2+addr.IABytes, len(data), 2+2+addr.IABytes+scmpRawInterfaceLen, R40)
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen), R40)
 	// @ assert forall i int :: { &data[offset:offset+scmpRawInterfaceLen][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
 	i.Interface = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
-	// @ fold sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen), R40)
 	// @ )
 	offset += scmpRawInterfaceLen
-	// @ sl.CombineAtIndex_Bytes(data, 0, 2+2, 2, writePerm)
-	// @ sl.CombineAtIndex_Bytes(data, 0, 2+2+addr.IABytes, 2+2, writePerm)
-	// @ sl.CombineAtIndex_Bytes(data, 0, 2+2+addr.IABytes+scmpRawInterfaceLen, 2+2+addr.IABytes, writePerm)
-	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
+	// @ sl.CombineAtIndex_Bytes(data, 0, 2+2, 2, R40)
+	// @ sl.CombineAtIndex_Bytes(data, 0, 2+2+addr.IABytes, 2+2, R40)
+	// @ sl.CombineAtIndex_Bytes(data, 0, 2+2+addr.IABytes+scmpRawInterfaceLen, 2+2+addr.IABytes, R40)
+	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), 2+2+addr.IABytes+scmpRawInterfaceLen, R40)
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
