@@ -319,40 +319,63 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 }
 
 // SetInfoField updates the InfoField at a given index.
-// @ requires  0 <= idx
+// @ requires 0 <= idx
 // @ requires sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ requires acc(s.Mem(ubuf), R20)
-// @ ensures  acc(s.Mem(ubuf), R20)
-// @ ensures sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ ensures   r != nil ==> r.ErrorMem()
-// contracts for IO-spec
+// pres for IO:
 // @ requires dp.Valid() && validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
-// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
-// @ 	dp.Valid() && validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
-// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
-// @ 	s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField())
+// @ ensures  acc(s.Mem(ubuf), R20)
+// @ ensures  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ ensures  r != nil ==> r.ErrorMem()
+// posts for IO:
+// @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
+// @ 	validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
+// @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
+// @ 	let oldPkt := old(s.absPkt(dp, ubuf)) in
+// @ 	let newPkt := AbsSetInfoField(oldPkt, info.ToIntermediateAbsInfoField()) in
+// @ 	s.absPkt(dp, ubuf) == newPkt
 // @ decreases
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, ghost dp io.DataPlaneSpec@*/) (r error) {
 	//@ share info
-	//@ unfold acc(s.Mem(ubuf), R20)
-	//@ unfold acc(s.Base.Mem(), R20)
+	//@ ghost oldCurrINF := int(old(s.GetCurrINF(ubuf)))
+	//@ unfold acc(s.Mem(ubuf), R50)
+	//@ unfold acc(s.Base.Mem(), R50)
 	if idx >= s.NumINF {
 		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R20)
-		//@ fold acc(s.Mem(ubuf), R20)
+		//@ fold acc(s.Base.Mem(), R50)
+		//@ fold acc(s.Mem(ubuf), R50)
 		return err
 	}
 	infOffset := MetaLen + idx*path.InfoLen
-	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ assert idx == oldCurrINF ==> reveal validPktMetaHdr(ubuf)
+	//@ assert idx == oldCurrINF ==> s.EqAbsHeader(ubuf)
+
+	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ ValidPktMetaHdrSublice(ubuf, len(s.Raw))
+	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf[:len(s.Raw)]).ValidCurrIdxsSpec()
+
 	//@ assert sl.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
+	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
+	//@ assert acc(sl.AbsSlice_Bytes(s.Raw, 0, infOffset), HalfPerm)
+	//@ sl.Reslice_Bytes(s.Raw, 0, infOffset, HalfPerm/2)
+	//@ ValidPktMetaHdrSublice(s.Raw, infOffset)
+	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
+	//@ assert idx == oldCurrINF ==> RawBytesToBase(s.Raw[:infOffset]).ValidCurrIdxsSpec()
+
 	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
-	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
-	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ fold acc(s.Base.Mem(), R20)
-	//@ fold acc(s.Mem(ubuf), R20)
-	// @ TemporaryAssumeForIO(idx == int(old(s.GetCurrINF(ubuf))) ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf))
-	// @ TemporaryAssumeForIO(idx == int(old(s.GetCurrINF(ubuf))) ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
+	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
+	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ ValidPktMetaHdrSublice(ubuf, infOffset)
+
+	//@ sl.Unslice_Bytes(s.Raw, 0, infOffset, HalfPerm/2)
+	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
+	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf).ValidCurrIdxsSpec()
+	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ fold acc(s.Base.Mem(), R50)
+	//@ fold acc(s.Mem(ubuf), R50)
+	//@ assert idx == oldCurrINF ==> reveal validPktMetaHdr(ubuf)
+	//@ TemporaryAssumeForIO(idx == oldCurrINF ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
 	return ret
 }
 
