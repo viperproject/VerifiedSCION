@@ -638,18 +638,13 @@ func ValidPktMetaHdrSublice(raw []byte, idx int) {
 ghost
 decreases
 pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField) (newPkt io.IO_pkt2) {
-	return io.IO_pkt2(
-		io.IO_Packet2{
-			io.IO_seg3(
-				io.IO_seg3_{
-					info.AInfo,
-					info.UInfo,
-					info.ConsDir,
-					info.Peer,
-					oldPkt.CurrSeg.Past,
-					oldPkt.CurrSeg.Future,
-					oldPkt.CurrSeg.History}),
-			oldPkt.LeftSeg,
-			oldPkt.MidSeg,
-			oldPkt.RightSeg})
+	return let newCurrSeg := io.IO_seg3(io.IO_seg3_{
+		info.AInfo,
+		info.UInfo,
+		info.ConsDir,
+		info.Peer,
+		oldPkt.CurrSeg.Past,
+		oldPkt.CurrSeg.Future,
+		oldPkt.CurrSeg.History}) in
+	io.IO_pkt2(io.IO_Packet2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg})
 }
