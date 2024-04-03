@@ -575,42 +575,76 @@ pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 		})
 }
 
+// In the future, this should probably use AbsMetaHdr as
+// the return type.
+ghost
+requires MetaLen <= len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) 
+decreases
+pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
+	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		let hdr := binary.BigEndian.Uint32(raw[:MetaLen])          in
+		DecodedFrom(hdr)
+}
+
+// In the future, this should probably use AbsBase as
+// the return type.
+ghost
+requires MetaLen <= len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func RawBytesToBase(raw []byte) Base {
+	return let metaHdr := RawBytesToMetaHdr(raw) in
+		let seg1 := int(metaHdr.SegLen[0])       in
+		let seg2 := int(metaHdr.SegLen[1])       in
+		let seg3 := int(metaHdr.SegLen[2])       in
+		Base{metaHdr, NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
+}
+
 ghost
 opaque
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func validPktMetaHdr(raw []byte) bool {
 	return MetaLen <= len(raw)  &&
-		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
-		let hdr := binary.BigEndian.Uint32(raw[:MetaLen]) in
-		let metaHdr := DecodedFrom(hdr) in
-		let seg1 := int(metaHdr.SegLen[0]) in
-		let seg2 := int(metaHdr.SegLen[1]) in
-		let seg3 := int(metaHdr.SegLen[2]) in
-		let base := Base{metaHdr,
-			NumInfoFields(seg1, seg2, seg3),
-			seg1 + seg2 + seg3} in
-		metaHdr.InBounds() &&
-		0 < metaHdr.SegLen[0] &&
-		base.ValidCurrIdxsSpec() &&
+		let metaHdr := RawBytesToMetaHdr(raw) in
+		let seg1 := int(metaHdr.SegLen[0])    in
+		let seg2 := int(metaHdr.SegLen[1])    in
+		let seg3 := int(metaHdr.SegLen[2])    in
+		let base := RawBytesToBase(raw)       in
+		0 < metaHdr.SegLen[0]           &&
+		base.ValidCurrIdxsSpec()        &&
 		pktLen(seg1, seg2, seg3, 0) <= len(raw)
+}
+
+ghost
+requires  MetaLen <= idx && idx <= len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+preserves acc(sl.AbsSlice_Bytes(raw[:idx], 0, idx), R56)
+ensures   RawBytesToMetaHdr(raw) == RawBytesToMetaHdr(raw[:idx])
+ensures   RawBytesToBase(raw) == RawBytesToBase(raw[:idx])
+decreases
+func ValidPktMetaHdrSublice(raw []byte, idx int) {
+	reveal validPktMetaHdr(raw)
+	reveal validPktMetaHdr(raw[:idx])
+	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+	unfold acc(sl.AbsSlice_Bytes(raw[:idx], 0, idx), R56)
+	assert forall i int :: { &raw[:MetaLen][i] } 0 <= i && i < MetaLen ==>
+		&raw[:MetaLen][i] == &raw[:idx][:MetaLen][i]
+	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+	fold acc(sl.AbsSlice_Bytes(raw[:idx], 0, idx), R56)
 }
 
 ghost
 decreases
 pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField) (newPkt io.IO_pkt2) {
-	return io.IO_pkt2(
-		io.IO_Packet2{
-			io.IO_seg3(
-				io.IO_seg3_{
-					info.AInfo,
-					info.UInfo,
-					info.ConsDir,
-					info.Peer,
-					oldPkt.CurrSeg.Past,
-					oldPkt.CurrSeg.Future,
-					oldPkt.CurrSeg.History}),
-			oldPkt.LeftSeg,
-			oldPkt.MidSeg,
-			oldPkt.RightSeg})
+	return let newCurrSeg := io.IO_seg3(io.IO_seg3_{
+		info.AInfo,
+		info.UInfo,
+		info.ConsDir,
+		info.Peer,
+		oldPkt.CurrSeg.Past,
+		oldPkt.CurrSeg.Future,
+		oldPkt.CurrSeg.History}) in
+	io.IO_pkt2(io.IO_Packet2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg})
 }
