@@ -336,23 +336,35 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, ghost dp io.DataPlaneSpec@*/) (r error) {
 	//@ share info
 	//@ ghost oldCurrINF := int(old(s.GetCurrINF(ubuf)))
-	//@ unfold acc(s.Mem(ubuf), R20)
-	//@ unfold acc(s.Base.Mem(), R20)
+	// assert idx == oldCurrINF ==> validPktMetaHdr(ubuf)
+	// assert idx == oldCurrINF ==> s.EQAbsHeader(ubuf)
+	//@ unfold acc(s.Mem(ubuf), R50)
+	//@ unfold acc(s.Base.Mem(), R50)
 	if idx >= s.NumINF {
 		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R20)
-		//@ fold acc(s.Mem(ubuf), R20)
+		//@ fold acc(s.Base.Mem(), R50)
+		//@ fold acc(s.Mem(ubuf), R50)
 		return err
 	}
 	infOffset := MetaLen + idx*path.InfoLen
-	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ assert idx == oldCurrINF ==> reveal validPktMetaHdr(ubuf)
+	//@ assert idx == oldCurrINF ==> s.EQAbsHeader(ubuf)
+
+	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ ValidPktMetaHdrSublice(ubuf, len(s.Raw))
+	//@ assert idx == oldCurrINF ==>
+	//@ 	RawBytesToBase(ubuf[:len(s.Raw)]).ValidCurrIdxsSpec()
+	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ assert idx == oldCurrINF ==>
+	//@ 	RawBytesToBase(ubuf[:len(s.Raw)]).ValidCurrIdxsSpec()
+
 	//@ assert sl.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
 	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
 	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
 	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
 	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ fold acc(s.Base.Mem(), R20)
-	//@ fold acc(s.Mem(ubuf), R20)
+	//@ fold acc(s.Base.Mem(), R50)
+	//@ fold acc(s.Mem(ubuf), R50)
 	//@ assert idx == oldCurrINF ==> validPktMetaHdr(ubuf)
 	//@ assert idx == oldCurrINF ==> s.EQAbsHeader(ubuf)
 	// TemporaryAssumeForIO(idx == oldCurrINF ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf))
