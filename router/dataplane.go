@@ -3147,7 +3147,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, aliasesUb)
 		// @ assert ub === p.rawPkt
 		// @ InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
-		// @ newAbsPkt := reveal absIO_val(dp, p.rawPkt, 0)
+		// @ newAbsPkt = reveal absIO_val(dp, p.rawPkt, 0)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, aliasesUb, newAbsPkt @*/
 	}
 	// Outbound: pkts leaving the local IA.
@@ -3216,7 +3216,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// 		xover event
 		// @	XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
 		// @ }
-		// @ newAbsPkt := reveal absIO_val(dp, p.rawPkt, egressID)
+		// @ newAbsPkt = reveal absIO_val(dp, p.rawPkt, egressID)
 		// @ fold p.d.validResult(processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, false)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil /*@, false, newAbsPkt @*/
 	}
@@ -3225,9 +3225,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	if a, ok := p.d.internalNextHops[egressID]; ok {
 		// @ p.d.getInternal()
-		// TODO: double check that this is correct!
 		// @ ghost if(path.ifsToIO_ifs(p.ingressID) != none[io.IO_ifs]) {
-		//	 	case of incomming packets
 		// @ 	if(!p.segmentChange) {
 		// 			enter event
 		// @		InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
@@ -3235,7 +3233,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// 			xover event
 		// @		XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
 		// @ 	}
-		// @	newAbsPkt := reveal absIO_val(dp, p.rawPkt, 0)
+		// @ 	newAbsPkt = reveal absIO_val(dp, p.rawPkt, 0)
 		// @ } else {
 		// @ 	ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4497")
 		// @ }
