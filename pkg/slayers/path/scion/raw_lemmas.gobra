@@ -1,0 +1,146 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package scion
+
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	. "verification/utils/definitions"
+	sl "verification/utils/slices"
+	"verification/io"
+)
+
+// =============================================
+// Lemma for hopfields in construction direction
+// =============================================
+
+ghost
+opaque
+requires  0 <= offset
+requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  len(hopFields) == segLen - currHFIdx
+requires  offset + path.HopLen * segLen <= len(raw)
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func HopFieldsConsDirBytePositions(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	segLen int,
+	hopFields seq[io.IO_HF]) bool {
+	return forall i int :: { hopFields[i] } 0 <= i && i < len(hopFields) ==> hopFields[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * (currHFIdx + i), len(raw)) 
+}
+
+ghost
+requires  0 <= offset
+requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures  forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> old(unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in raw[i]) == (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in raw[i])
+ensures   HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, hopFieldsConsDir(raw, offset, currHFIdx, segLen))
+decreases segLen - currHFIdx
+func hopFieldsConsDirBytePositionsLemma_Rec(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	segLen int) {
+	
+	if (currHFIdx == segLen) {
+		assert reveal HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, hopFieldsConsDir(raw, offset, currHFIdx, segLen))
+	} else {
+		hopFieldsConsDirBytePositionsLemma_Rec(raw, offset, currHFIdx + 1, segLen)
+		assert reveal HopFieldsConsDirBytePositions(raw, offset, currHFIdx + 1, segLen, hopFieldsConsDir(raw, offset, currHFIdx + 1, segLen))
+		assert reveal HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, hopFieldsConsDir(raw, offset, currHFIdx, segLen))
+	}
+}
+
+// Wrapper lemma to get rid of ugly postcondition that preserves the contents of raw
+ghost
+requires  0 <= offset
+requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures   HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, hopFieldsConsDir(raw, offset, currHFIdx, segLen))
+decreases segLen - currHFIdx
+func HopFieldsConsDirBytePositionsLemma(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	segLen int) {
+	hopFieldsConsDirBytePositionsLemma_Rec(raw, offset, currHFIdx, segLen)
+}
+
+// =================================================
+// Lemma for hopfields not in construction direction
+// =================================================
+
+ghost
+opaque
+requires  0 <= offset
+requires  -1 <= currHFIdx
+requires  len(hopFields) == currHFIdx + 1
+requires  offset + path.HopLen * currHFIdx + path.HopLen <= len(raw)
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func HopFieldsNotConsDirBytePositions(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	hopFields seq[io.IO_HF]) bool {
+	return forall i int :: { hopFields[i] } 0 <= i && i < len(hopFields) ==> hopFields[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * (currHFIdx - len(hopFields) + i + 1), len(raw)) 
+}
+
+ghost
+requires  0 <= offset
+requires  -1 <= currHFIdx
+requires  offset + path.HopLen * currHFIdx + path.HopLen <= len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures  forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> old(unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in raw[i]) == (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in raw[i])
+ensures   HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, hopFieldsNotConsDir(raw, offset, currHFIdx))
+decreases currHFIdx + 1
+func hopFieldsNotConsDirBytePositionsLemma_Rec(
+	raw []byte,
+	offset int,
+	currHFIdx int) {
+	
+	if (currHFIdx == -1) {
+		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, hopFieldsNotConsDir(raw, offset, currHFIdx))
+	} else {
+		hopFieldsNotConsDirBytePositionsLemma_Rec(raw, offset, currHFIdx - 1)
+		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx - 1, hopFieldsNotConsDir(raw, offset, currHFIdx - 1))
+		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, hopFieldsNotConsDir(raw, offset, currHFIdx))
+	}
+}
+
+// Wrapper lemma to get rid of ugly postcondition that preserves the contents of raw
+ghost
+requires  0 <= offset
+requires  -1 <= currHFIdx
+requires  offset + path.HopLen * currHFIdx + path.HopLen <= len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures   HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, hopFieldsNotConsDir(raw, offset, currHFIdx))
+decreases currHFIdx + 1
+func HopFieldsNotConsDirBytePositionsLemma(
+	raw []byte,
+	offset int,
+	currHFIdx int) {
+	hopFieldsNotConsDirBytePositionsLemma_Rec(raw, offset, currHFIdx)
+}
+
+
+// ====================
+// Segment future lemma
+// ====================
