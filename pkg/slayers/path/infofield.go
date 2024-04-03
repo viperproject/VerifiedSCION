@@ -22,6 +22,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/private/util"
+	// @ bits "github.com/scionproto/scion/verification/utils/bitwise"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 	//@ "verification/io"
@@ -86,20 +87,31 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // @ preserves acc(inf, R10)
 // @ preserves slices.AbsSlice_Bytes(b, 0, InfoLen)
 // @ ensures   err == nil
+// @ ensures   inf.ToIntermediateAbsInfoField() ==
+// @ 	BytesToIntermediateAbsInfoField(b, 0, 0, InfoLen)
 // @ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	if len(b) < InfoLen {
 		return serrors.New("buffer for InfoField too short", "expected", InfoLen,
 			"actual", len(b))
 	}
+	//@ ghost targetAbsInfo := inf.ToIntermediateAbsInfoField()
 	//@ unfold slices.AbsSlice_Bytes(b, 0, InfoLen)
 	b[0] = 0
 	if inf.ConsDir {
 		b[0] |= 0x1
 	}
+	//@ ghost tmpInfo := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ bits.EnableLastBit(0)
+	//@ assert tmpInfo.ConsDir == targetAbsInfo.ConsDir
+	//@ ghost firstByte := b[0]
 	if inf.Peer {
 		b[0] |= 0x2
 	}
+	//@ bits.EnableSecondToLastBit(firstByte)
+	//@ tmpInfo = BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ assert tmpInfo.Peer == targetAbsInfo.Peer
+	//@ assert tmpInfo.ConsDir == targetAbsInfo.ConsDir
 	b[1] = 0 // reserved
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]
 	binary.BigEndian.PutUint16(b[2:4], inf.SegID)

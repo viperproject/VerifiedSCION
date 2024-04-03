@@ -53,3 +53,16 @@ ensures res == b & 0x3F
 ensures 0 <= res && res < 64
 decreases
 pure func And3fAtMost64(b uint8) (res uint8)
+
+ghost
+ensures res == (b | 0x1) & 0x1
+ensures res == 0x1
+ensures (b | 0x1) & 0x2 == b & 0x2
+decreases
+pure func EnableLastBit(b byte) (res byte)
+
+ghost
+ensures res == (b | 0x2) & 0x2
+ensures res == 0x2
+decreases
+pure func EnableSecondToLastBit(b byte) (res byte)
