@@ -368,7 +368,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, 
 	//@ assert idx == oldCurrINF ==> validPktMetaHdr(ubuf)
 	//@ assert idx == oldCurrINF ==> s.EQAbsHeader(ubuf)
 	// TemporaryAssumeForIO(idx == oldCurrINF ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf))
-	// TemporaryAssumeForIO(idx == oldCurrINF ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
+	//@ TemporaryAssumeForIO(idx == oldCurrINF ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
 	return ret
 }
 
