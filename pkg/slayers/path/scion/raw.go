@@ -336,8 +336,6 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, ghost dp io.DataPlaneSpec@*/) (r error) {
 	//@ share info
 	//@ ghost oldCurrINF := int(old(s.GetCurrINF(ubuf)))
-	// assert idx == oldCurrINF ==> validPktMetaHdr(ubuf)
-	// assert idx == oldCurrINF ==> s.EQAbsHeader(ubuf)
 	//@ unfold acc(s.Mem(ubuf), R50)
 	//@ unfold acc(s.Base.Mem(), R50)
 	if idx >= s.NumINF {
@@ -352,22 +350,29 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, 
 
 	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, len(s.Raw))
-	//@ assert idx == oldCurrINF ==>
-	//@ 	RawBytesToBase(ubuf[:len(s.Raw)]).ValidCurrIdxsSpec()
 	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
-	//@ assert idx == oldCurrINF ==>
-	//@ 	RawBytesToBase(ubuf[:len(s.Raw)]).ValidCurrIdxsSpec()
+	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf[:len(s.Raw)]).ValidCurrIdxsSpec()
 
 	//@ assert sl.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
+	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
+	//@ assert acc(sl.AbsSlice_Bytes(s.Raw, 0, infOffset), HalfPerm)
+	//@ sl.Reslice_Bytes(s.Raw, 0, infOffset, HalfPerm/2)
+	//@ ValidPktMetaHdrSublice(s.Raw, infOffset)
+	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
+	//@ assert idx == oldCurrINF ==> RawBytesToBase(s.Raw[:infOffset]).ValidCurrIdxsSpec()
+
 	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
-	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, writePerm)
-	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
+	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
+	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ ValidPktMetaHdrSublice(ubuf, infOffset)
+
+	//@ sl.Unslice_Bytes(s.Raw, 0, infOffset, HalfPerm/2)
+	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
+	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf).ValidCurrIdxsSpec()
+	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ fold acc(s.Base.Mem(), R50)
 	//@ fold acc(s.Mem(ubuf), R50)
-	//@ assert idx == oldCurrINF ==> validPktMetaHdr(ubuf)
-	//@ assert idx == oldCurrINF ==> s.EqAbsHeader(ubuf)
-	// TemporaryAssumeForIO(idx == oldCurrINF ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf))
+	//@ assert idx == oldCurrINF ==> reveal validPktMetaHdr(ubuf)
 	//@ TemporaryAssumeForIO(idx == oldCurrINF ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
 	return ret
 }
