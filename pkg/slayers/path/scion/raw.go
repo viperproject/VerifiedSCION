@@ -319,21 +319,23 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 }
 
 // SetInfoField updates the InfoField at a given index.
-// @ requires  0 <= idx
+// @ requires 0 <= idx
 // @ requires sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ requires acc(s.Mem(ubuf), R20)
-// @ ensures  acc(s.Mem(ubuf), R20)
-// @ ensures sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ ensures   r != nil ==> r.ErrorMem()
-// contracts for IO-spec
+// pres for IO:
 // @ requires dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
-// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
-// @ 	dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
-// @ ensures r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
+// @ ensures  acc(s.Mem(ubuf), R20)
+// @ ensures  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ ensures  r != nil ==> r.ErrorMem()
+// posts for IO:
+// @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
+// @ 	validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf)
+// @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
 // @ 	s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField2())
 // @ decreases
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, ghost dp io.DataPlaneSpec@*/) (r error) {
 	//@ share info
+	//@ ghost oldCurrINF := int(old(s.GetCurrINF(ubuf)))
 	//@ unfold acc(s.Mem(ubuf), R20)
 	//@ unfold acc(s.Base.Mem(), R20)
 	if idx >= s.NumINF {
@@ -351,8 +353,10 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, 
 	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ fold acc(s.Base.Mem(), R20)
 	//@ fold acc(s.Mem(ubuf), R20)
-	// @ TemporaryAssumeForIO(idx == int(old(s.GetCurrINF(ubuf))) ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf))
-	// @ TemporaryAssumeForIO(idx == int(old(s.GetCurrINF(ubuf))) ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
+	//@ assert idx == oldCurrINF ==> validPktMetaHdr(ubuf)
+	//@ assert idx == oldCurrINF ==> s.EQAbsHeader(ubuf)
+	// TemporaryAssumeForIO(idx == oldCurrINF ==> dp.Valid() && validPktMetaHdr(ubuf) && s.EQAbsHeader(ubuf))
+	// TemporaryAssumeForIO(idx == oldCurrINF ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
 	return ret
 }
 
