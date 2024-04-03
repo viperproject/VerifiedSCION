@@ -107,15 +107,6 @@ lemma SerializeAndDeserializeMetaHdrLemma(m: MetaHdr)
 	ensures  DecodedFrom(SerializedToLine(m)) == m
 {}
 
-lemma EnableLastBit(b: bv8)
-	ensures (b | 0x1) & 0x1 == 0x1
-	ensures (b | 0x1) & 0x2 == b & 0x2
-{}
-
-lemma EnableSecondToLastBit(b: bv8)
-	ensures (b | 0x2) & 0x2 == 0x2
-{}
-
 lemma InfoFieldSerializationConsDir()
 	ensures ((0 as bv8) | 0x1) & 0x1 == 0x1
 	ensures (0 as bv8) & 0x1 == 0
