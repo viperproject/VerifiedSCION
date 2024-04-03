@@ -55,14 +55,20 @@ decreases
 pure func And3fAtMost64(b uint8) (res uint8)
 
 ghost
-ensures res == (b | 0x1) & 0x1
-ensures res == 0x1
-ensures (b | 0x1) & 0x2 == b & 0x2
+ensures res == 0 | 1
+ensures res == 1
 decreases
-pure func EnableLastBit(b byte) (res byte)
+pure func ZeroOrOneIsOne() (res uint8)
 
 ghost
-ensures res == (b | 0x2) & 0x2
-ensures res == 0x2
+ensures (0 | 0x1) & 0x1 == 0x1
+ensures 0 & 0x1 == 0
 decreases
-pure func EnableSecondToLastBit(b byte) (res byte)
+pure func InfoFieldSerializationConsDir() (res byte)
+
+ghost
+requires firstByte == 0 || firstByte == 0x1
+ensures  (firstByte | 0x2) & 0x2 == 0x2
+ensures  firstByte & 0x2 == 0
+decreases
+pure func InfoFieldSerializationPeer(firstByte byte) (res byte)

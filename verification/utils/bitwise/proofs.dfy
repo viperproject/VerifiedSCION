@@ -115,3 +115,18 @@ lemma EnableLastBit(b: bv8)
 lemma EnableSecondToLastBit(b: bv8)
 	ensures (b | 0x2) & 0x2 == 0x2
 {}
+
+lemma InfoFieldSerializationConsDir()
+	ensures ((0 as bv8) | 0x1) & 0x1 == 0x1
+	ensures (0 as bv8) & 0x1 == 0
+{}
+
+lemma InfoFieldSerializationPeer(firstByte: bv8)
+	requires firstByte == 0 || firstByte == 0x1
+	ensures  (firstByte | 0x2) & 0x2 == 0x2
+	ensures  firstByte & 0x2 == 0
+{}
+
+lemma ZeroOrOneIsOne()
+	ensures 0x0 as bv8 | 0x1 == 0x1
+{}

@@ -101,17 +101,20 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	if inf.ConsDir {
 		b[0] |= 0x1
 	}
-	//@ ghost tmpInfo := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
-	//@ bits.EnableLastBit(0)
-	//@ assert tmpInfo.ConsDir == targetAbsInfo.ConsDir
+	//@ ghost tmpInfo1 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ bits.InfoFieldSerializationConsDir()
+	//@ assert tmpInfo1.ConsDir == targetAbsInfo.ConsDir
 	//@ ghost firstByte := b[0]
 	if inf.Peer {
 		b[0] |= 0x2
 	}
-	//@ bits.EnableSecondToLastBit(firstByte)
-	//@ tmpInfo = BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
-	//@ assert tmpInfo.Peer == targetAbsInfo.Peer
-	//@ assert tmpInfo.ConsDir == targetAbsInfo.ConsDir
+	//@ bits.ZeroOrOneIsOne()
+	//@ bits.InfoFieldSerializationPeer(firstByte)
+	//@ tmpInfo2 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ assert tmpInfo2.Peer == (b[0] & 0x2 == 0x2)
+	//@ assert tmpInfo2.ConsDir == (b[0] & 0x1 == 0x1)
+	//@ assert tmpInfo2.Peer == targetAbsInfo.Peer
+	//@ assert tmpInfo2.ConsDir == targetAbsInfo.ConsDir
 	b[1] = 0 // reserved
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]
 	binary.BigEndian.PutUint16(b[2:4], inf.SegID)
