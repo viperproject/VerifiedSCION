@@ -27,8 +27,9 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path/onehop"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 
-	. "github.com/scionproto/scion/verification/utils/definitions"
-	"github.com/scionproto/scion/verification/utils/slices"
+	. "verification/utils/definitions"
+	"verification/utils/slices"
+	"encoding/binary"
 )
 
 pred PathPoolMem(pathPool []path.Path, pathPoolRaw path.Path) {
@@ -347,6 +348,50 @@ requires acc(s.Mem(ub), _)
 decreases
 func (s *SCION) GetPath(ub []byte) path.Path {
 	return unfolding acc(s.Mem(ub), _) in s.Path
+}
+
+ghost
+opaque
+pure
+requires acc(s.Mem(ub), _)
+requires acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _)
+decreases
+func (s *SCION) EqAbsHeader(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
+		let high := s.HdrLen*LineLen in
+		GetAddressOffset(ub) == low &&
+		GetLength(ub) == int(high) &&
+		// Might be worth introducing EqAbsHeader as an interface method on Path
+		// to avoid doing these casts, especially when we add support for EPIC.
+		typeOf(s.Path) == (*scion.Raw)                               &&
+		unfolding acc(s.Path.Mem(ub[low:high]), _) in
+		unfolding acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+		let _ := Asserting(forall k int :: {&ub[low:high][k]} 0 <= k && k < high ==>
+			&ub[low:high][k] == &ub[low + k]) in
+		let _ := Asserting(forall k int :: {&ub[low:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+			&ub[low:high][:scion.MetaLen][k] == &ub[low:high][k]) in
+		s.Path.(*scion.Raw).Base.GetMetaHdr() ==
+		scion.DecodedFrom(binary.BigEndian.Uint32(ub[low:high][:scion.MetaLen]))
+}
+
+ghost
+requires acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires CmnHdrLen <= len(ub)
+decreases
+pure func GetAddressOffset(ub []byte) int {
+	return unfolding acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+		let dstAddrLen := AddrType(ub[9] >> 4 & 0x7).Length() in
+		let srcAddrLen := AddrType(ub[9] & 0x7).Length() in
+		CmnHdrLen + 2*addr.IABytes + dstAddrLen + srcAddrLen
+}
+
+ghost
+requires acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires CmnHdrLen <= len(ub)
+decreases
+pure func GetLength(ub []byte) int {
+	return unfolding acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), _) in int(ub[5])*LineLen
 }
 
 ghost

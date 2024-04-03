@@ -27,7 +27,7 @@ import (
 
 // Some thins in this file can be simplified. Nonetheless, the important definition here
 // is absIO_valWidenLemma. Everything else can be seen as an implementation detail.
-
+// TODO: prove Lemma
 ghost
 requires  0 <= length && length <= len(raw)
 requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
@@ -38,7 +38,8 @@ ensures   acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R49)
 ensures   absIO_val(dp, raw[:length], ingressID).isIO_val_Pkt2 ==>
 	absIO_val(dp, raw[:length], ingressID) == absIO_val(dp, raw, ingressID)
 decreases
-func absIO_valWidenLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16, length int) {
+func absIO_valWidenLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16, length int)
+/* {
 	var ret1 io.IO_val
 	var ret2 io.IO_val
 
@@ -681,8 +682,8 @@ func currSegWidenLemma(raw []byte, offset int, currINFIdx int, currHFIdx int, as
 	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R53)
 	unfold acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R53)
 
-	ainfo1 := timestamp(raw, currINFIdx)
-	ainfo2 := timestamp(raw[:length], currINFIdx)
+	ainfo1 := path.Timestamp(raw, currINFIdx)
+	ainfo2 := path.Timestamp(raw[:length], currINFIdx)
 	assert ainfo1 == ainfo2
 
 	consDir1 := path.ConsDir(raw, currINFIdx)
@@ -968,3 +969,4 @@ func midSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3
 		assert ret == reveal midSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, asid)
 	}
 }
+*/

@@ -1,0 +1,438 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package router
+
+import (
+	"sync"
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
+	"github.com/scionproto/scion/pkg/slayers"
+	"verification/dependencies/encoding/binary"
+	io "verification/io"
+	sl "github.com/scionproto/scion/verification/utils/slices"
+	. "verification/utils/definitions"
+)
+
+ghost
+preserves dp.Valid()
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+ensures   validPktMetaHdr(raw) ==>
+	absIO_val(dp, raw, ingressID).isIO_val_Pkt2 &&
+	absIO_val(dp, raw, ingressID).IO_val_Pkt2_2 == absPkt(dp, raw) &&
+	len(absPkt(dp, raw).CurrSeg.Future) > 0
+decreases
+func absIO_valLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16) {
+	if(validPktMetaHdr(raw)){
+		absIO := reveal absIO_val(dp, raw, ingressID)
+		assert absIO.isIO_val_Pkt2
+		assert absIO_val(dp, raw, ingressID).IO_val_Pkt2_2 == absPkt(dp, raw)
+		absPktFutureLemma(dp, raw)
+	}
+}
+
+ghost
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires validPktMetaHdr(raw)
+ensures  dp.Valid()
+ensures  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures  validPktMetaHdr(raw)
+ensures  len(absPkt(dp, raw).CurrSeg.Future) > 0
+decreases
+func absPktFutureLemma(dp io.DataPlaneSpec, raw []byte) {
+	reveal validPktMetaHdr(raw)
+	headerOffset := slayers.GetAddressOffset(raw)
+	assert forall k int :: {&raw[headerOffset:headerOffset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==> &raw[headerOffset:headerOffset+scion.MetaLen][k] == &raw[headerOffset + k]
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+			binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen]))
+	metaHdr := scion.DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := scion.LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := scion.HopFieldOffset(numINF, 0, headerOffset)
+	pkt := reveal absPkt(dp, raw)
+	assert pkt.CurrSeg == reveal scion.CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffset)
+	assert len(pkt.CurrSeg.Future) > 0
+}
+
+/*
+ghost
+preserves dp.Valid()
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+preserves validPktMetaHdr(raw)
+ensures let LeftSeg := absPkt(dp, raw).LeftSeg in
+	LeftSeg != none[io.IO_seg2] ==>
+		len(get(LeftSeg).History) == 0 && len(get(LeftSeg).Future) > 0
+decreases
+func absPktNextSegmentHistory(dp io.DataPlaneSpec, raw []byte) {
+	pkt := reveal absPkt(dp, raw)
+	reveal validPktMetaHdr(raw)
+	headerOffset := slayers.GetAddressOffset(raw)
+	assert forall k int :: {&raw[headerOffset:headerOffset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==> &raw[headerOffset:headerOffset+scion.MetaLen][k] == &raw[headerOffset + k]
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+			binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen]))
+	metaHdr := scion.DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := scion.LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := scion.HopFieldOffset(numINF, 0, headerOffset)
+	assert pkt.LeftSeg == reveal scion.LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffset)
+	if(pkt.LeftSeg != none[io.IO_seg2]) {
+		assert len(get(pkt.LeftSeg).Future) > 0
+		assert len(get(pkt.LeftSeg).History) == 0
+	}
+}
+*/
+ghost
+opaque
+requires acc(p.scionLayer.Mem(ub), R50)
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+decreases
+pure func (p *scionPacketProcessor) DstIsLocalIngressID(ub []byte) bool {
+	return (unfolding acc(p.scionLayer.Mem(ub), R50) in
+		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
+		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.ingressID != 0
+}
+
+//TODO: Does not work with --disableNL --unsafeWildcardoptimization
+ghost
+requires acc(p.scionLayer.Mem(ub), R50)
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+requires p.DstIsLocalIngressID(ub)
+requires (unfolding acc(p.scionLayer.Mem(ub), R50) in
+	(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
+	p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA))
+ensures  acc(p.scionLayer.Mem(ub), R50)
+ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
+ensures  acc(&p.ingressID, R55)
+ensures  p.ingressID != 0
+decreases
+func (p* scionPacketProcessor) GetIngressIDNotZero(ub []byte) {
+	reveal p.DstIsLocalIngressID(ub)
+}
+
+ghost
+requires acc(p.scionLayer.Mem(ub), R55)
+requires acc(&p.path, R55) && p.path == p.scionLayer.GetPath(ub)
+decreases
+pure func (p* scionPacketProcessor) GetIsXoverSpec(ub []byte) bool {
+	return let ubPath := p.scionLayer.UBPath(ub) in
+		unfolding acc(p.scionLayer.Mem(ub), R55) in
+		p.path.GetIsXoverSpec(ubPath)
+}
+
+// TODO prove
+ghost
+requires 0 <= start && start <= end && end <= len(ub)
+requires acc(p.scionLayer.Mem(ub), R55)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R55)
+requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+requires p.path === p.scionLayer.GetPath(ub)
+requires dp.Valid()
+requires validPktMetaHdr(ub)
+requires start == p.scionLayer.PathStartIdx(ub)
+requires end == p.scionLayer.PathEndIdx(ub)
+requires p.scionLayer.EqAbsHeader(ub)
+ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures  acc(p.scionLayer.Mem(ub), R55)
+ensures  acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R55)
+ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+ensures  dp.Valid()
+ensures  validPktMetaHdr(ub)
+ensures  start == p.scionLayer.PathStartIdx(ub)
+ensures  end == p.scionLayer.PathEndIdx(ub)
+ensures  scion.validPktMetaHdr(ub[start:end])
+ensures  p.path.EqAbsHeader(ub[start:end])
+ensures  absPkt(dp, ub) == p.path.absPkt(dp, ub[start:end])
+decreases
+func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end int, dp io.DataPlaneSpec)
+/* {
+	reveal validPktMetaHdr(ub)
+	reveal p.scionLayer.EqAbsHeader(ub)
+	unfold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+	unfold acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R56)
+	assert reveal scion.validPktMetaHdr(ub[start:end])
+	unfold acc(p.scionLayer.Mem(ub), R56)
+	assert p.scionLayer.Path.(*scion.Raw).EqAbsHeader(ub[start:end])
+	assert p.path.EqAbsHeader(ub[start:end])
+	fold acc(p.scionLayer.Mem(ub), R56)
+	assert reveal absPkt(dp, ub) == reveal p.path.absPkt(dp, ub[start:end])
+	fold acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R56)
+	fold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+}*/
+
+// TODO prove
+ghost
+requires 0 <= start && start <= end && end <= len(ub)
+requires acc(p.scionLayer.Mem(ub), R55)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R55)
+requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+requires p.path === p.scionLayer.GetPath(ub)
+requires dp.Valid()
+requires scion.validPktMetaHdr(ub[start:end])
+requires start == p.scionLayer.PathStartIdx(ub)
+requires end == p.scionLayer.PathEndIdx(ub)
+requires p.path.EqAbsHeader(ub[start:end])
+ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures  acc(p.scionLayer.Mem(ub), R55)
+ensures  acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R55)
+ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+ensures  dp.Valid()
+ensures  validPktMetaHdr(ub)
+ensures  start == p.scionLayer.PathStartIdx(ub)
+ensures  end == p.scionLayer.PathEndIdx(ub)
+ensures  scion.validPktMetaHdr(ub[start:end])
+ensures  p.scionLayer.EqAbsHeader(ub)
+ensures  absPkt(dp, ub) == p.path.absPkt(dp, ub[start:end])
+decreases
+func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end int, dp io.DataPlaneSpec)
+
+ghost
+opaque
+requires acc(&p.hopField, R55)
+requires len(pkt.CurrSeg.Future) > 0
+decreases
+pure func (p* scionPacketProcessor) EqAbsHopField(pkt io.IO_pkt2) bool {
+	return let absHop := p.hopField.ToIO_HF() in
+		let currHF := pkt.CurrSeg.Future[0] in
+		absHop.InIF2 == currHF.InIF2 &&
+		absHop.EgIF2 == currHF.EgIF2 &&
+		absHop.HVF == currHF.HVF
+}
+
+
+ghost
+opaque
+requires acc(&p.infoField, R55)
+decreases
+pure func (p* scionPacketProcessor) EqAbsInfoField(pkt io.IO_pkt2) bool {
+	return let absInf := p.infoField.ToIntermediateAbsInfoField() in
+		let currseg := pkt.CurrSeg in
+		absInf.AInfo == currseg.AInfo &&
+		absInf.UInfo == currseg.UInfo &&
+		absInf.ConsDir == currseg.ConsDir &&
+		absInf.Peer == currseg.Peer
+}
+
+
+/*
+ghost
+requires acc(p.scionLayer.Mem(ub), R55)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(&p.path, R55) && p.path == p.scionLayer.GetPath(ub)
+requires GetIsXoverSpec(ub)
+requires dp.Valid()
+requires validPktMetaHdr(ub)
+ensures acc(p.scionLayer.Mem(ub), R55)
+ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures acc(&p.path, R55) && p.path == p.scionLayer.GetPath(ub)
+ensures dp.Valid()
+ensures validPktMetaHdr(ub)
+ensures len(absPkt(dp, ub).CurrSeg.Future) == 1
+decreases
+func (p* scionPacketProcessor) SegementChangeLemma(ub []byte, dp io.DataPlaneSpec) {
+	reveal validPktMetaHdr(ub)
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56) in binary.BigEndian.Uint32(ub[scion.MetaLen]))
+	metaHdr := scion.DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := HopFieldOffset(numINF, 0)
+	unfold acc(p.path.Mem(ub[start:end]), R55)
+	assert metaHdr == p.path.Base.GetMetaHdr()
+	pkt := reveal absPkt(dp, ub)
+	assert pkt.CurrSeg == reveal CurrSeg(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen)
+	fold acc(p.path.Mem(ub[start:end]), R55)
+}
+*/
+/*
+ghost
+requires acc(p.scionLayer.Mem(ub), R55)
+requires acc(&p.path, R55) && p.path == p.scionLayer.GetPath(ub)
+requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+requires unfolding acc(p.path.Mem(ub[start:end]), R55) in p.path.GetIsXoverSpec(ub[start:end])
+requires
+ensures
+func (p* scionPacketProcessor) IsXoverLemma(ub []byte, start int, end int) {
+
+}*/
+/*
+ghost
+requires 0 <= start && start <= end && end <= len(ub)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+requires unfolding acc(p.path.Mem(ub[start:end]), R55) in p.path.Base.IsXoverSpec() && p.path.Base.EqAbsHeader(ub)
+requires dp.Valid()
+requires validPktMetaHdr(ub)
+ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+ensures unfolding acc(p.path.Mem(ub[start:end]), R55) in p.path.Base.IsXoverSpec() && p.path.Base.EqAbsHeader(ub)
+ensures dp.Valid()
+ensures validPktMetaHdr(ub)
+ensures absPkt(dp, ub).LeftSeg != none[io.IO_seg2]
+ensures len(absPkt(dp, ub).CurrSeg.Future) == 1
+decreases
+func (p* scionPacketProcessor) XoverLemma(ub []byte, start int, end int, dp io.DataPlaneSpec) {
+	reveal validPktMetaHdr(ub)
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56) in binary.BigEndian.Uint32(ub[0:4]))
+	metaHdr := scion.DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := HopFieldOffset(numINF, 0)
+	unfold acc(p.path.Mem(ub[start:end]), R55)
+	assert metaHdr == p.path.Base.GetMetaHdr()
+	pkt := reveal absPkt(dp, ub)
+	assert pkt.CurrSeg == reveal CurrSeg(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen)
+	fold acc(p.path.Mem(ub[start:end]), R55)
+}*/
+/*
+ghost
+requires 0 <= start && start <= end && end <= len(ub)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+requires unfolding acc(p.path.Mem(ub[start:end]), R55) in p.path.Base.IsXoverSpec() && p.path.Base.EqAbsHeader(ub)
+requires dp.Valid()
+requires validPktMetaHdr(ub)
+ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+ensures unfolding acc(p.path.Mem(ub[start:end]), R55) in p.path.Base.IsXoverSpec() && p.path.Base.EqAbsHeader(ub)
+ensures dp.Valid()
+ensures validPktMetaHdr(ub)
+//ensures absPkt(dp, ub).LeftSeg != none[io.IO_seg2]
+ensures len(absPkt(dp, ub).CurrSeg.Future) == 1
+decreases
+
+func (p* scionPacketProcessor) IncPathLemma(ub []byte, start int, end int, dp io.DataPlaneSpec) {
+	reveal validPktMetaHdr(ub)
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56) in binary.BigEndian.Uint32(ub[0:4]))
+	metaHdr := scion.DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := HopFieldOffset(numINF, 0)
+	unfold acc(p.path.Mem(ub[start:end]), R55)
+	reveal p.path.Base.EqAbsHeader(ub)
+	assert metaHdr == p.path.Base.GetMetaHdr()
+	pkt := reveal absPkt(dp, ub)
+	assert pkt.CurrSeg == reveal CurrSeg(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen)
+	fold acc(p.path.Mem(ub[start:end]), R55)
+}
+*/
+
+/* {
+	reveal validPktMetaHdr(ub)
+	// hdr := (unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56) in binary.BigEndian.Uint32(ub[0:4]))
+	// metaHdr := scion.DecodedFrom(hdr)
+	// currINFIdx := int(metaHdr.CurrINF)
+	// currHFIdx := int(metaHdr.CurrHF)
+	// seg1Len := int(metaHdr.SegLen[0])
+	// seg2Len := int(metaHdr.SegLen[1])
+	// seg3Len := int(metaHdr.SegLen[2])
+	// segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	// prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	// numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
+	// offset := HopFieldOffset(numINF, 0)
+	unfold acc(p.path.Mem(ub[start:end]), R55)
+	reveal p.path.Base.EqAbsHeader(ub)
+	unfold acc(p.path.Base.Mem(), _)
+	hdr := p.path.Base
+	//assert metaHdr == p.path.Base.GetMetaHdr()
+	//pkt := reveal absPkt(dp, ub)
+	//assert pkt.CurrSeg == reveal CurrSeg(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen)
+	assert hdr.PathMeta.CurrINF == hdr.InfForHfSpec(hdr.PathMeta.CurrHF)
+	assert hdr.PathMeta.CurrINF != hdr.InfForHfSpec(hdr.PathMeta.CurrHF+1)
+	assert hdr.PathMeta.CurrINF < hdr.InfForHfSpec(hdr.PathMeta.CurrHF+1)
+	assert hdr.InfForHfSpec(hdr.PathMeta.CurrHF+1) < hdr.NumINF
+	assert 0 < hdr.PathMeta.SegLen[hdr.PathMeta.CurrINF]
+	assert 0 < hdr.PathMeta.SegLen[hdr.PathMeta.CurrINF + 1]
+	//assert hdr.InfForHfSpec(hdr.PathMeta.CurrINF) == uint8(currINFIdx)
+	//assert currINFIdx + 1 < unfolding acc(p.path.Base.Mem(), _) in p.path.Base.NumINF
+	//assert currINFIdx == 0 ==> seg2Len > 0
+	//assert currINFIdx == 2 ==> seg2Len > 0 && seg3Len > 0
+	//assert p.path.Base.IsXoverSpec() ==> numINF > 1
+	//assert pkt.LeftSeg == reveal LeftSeg(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len)
+	//fold acc(p.path.Mem(ub[start:end]), R55)
+}*/
+
+/*
+ghost
+requires 0 <= start && start <= end && end <= len(ub)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+requires unfolding acc(p.path.Mem(ub[start:end]), R55) in p.path.Base.EqAbsHeader(ub)
+requires dp.Valid()
+requires validPktMetaHdr(ub)
+// ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+// ensures acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+// ensures unfolding acc(p.path.Mem(ub[start:end]), R55) in p.path.Base.IsXoverSpec() && p.path.Base.EqAbsHeader(ub)
+// ensures dp.Valid()
+// ensures validPktMetaHdr(ub)
+decreases
+func (p* scionPacketProcessor) AbsSetInfoField(ub []byte, start int, end int, dp io.DataPlaneSpec) {
+	reveal validPktMetaHdr(ub)
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56) in binary.BigEndian.Uint32(ub[:scion.MetaLen]))
+	metaHdr := scion.DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := HopFieldOffset(numINF, 0)
+	unfold acc(p.path.Mem(ub[start:end]), R55)
+	reveal p.path.Base.EqAbsHeader(ub)
+	assert metaHdr == p.path.Base.GetMetaHdr()
+	pkt := reveal absPkt(dp, ub)
+	assert pkt.CurrSeg == reveal CurrSeg(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen)
+	assert pkt.CurrSeg.Peer == path.BytesToIntermediateAbsInfoField(ub, 0, scion.MetaLen + currINFIdx*path.InfoLen, len(ub)).Peer
+
+	fold acc(p.path.Mem(ub[start:end]), R55)
+
+
+}*/
