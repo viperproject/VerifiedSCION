@@ -129,9 +129,9 @@ ghost
 requires acc(s.Mem(ub), _)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
 decreases
-pure func (s *Raw) EQAbsHeader(ub []byte) bool {
+pure func (s *Raw) EqAbsHeader(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
-		s.Base.EQAbsHeader(ub)
+		s.Base.EqAbsHeader(ub)
 }
 
 ghost
@@ -324,27 +324,27 @@ func (s *Raw) RawBufferNonInitMem() []byte {
 
 ghost
 decreases
-pure func numInfoFields(seg1Len int, seg2Len int, seg3Len int) int {
+pure func NumInfoFields(seg1Len int, seg2Len int, seg3Len int) int {
 	return seg3Len > 0 ? 3 : (seg2Len > 0 ? 2 : 1)
 }
 
 ghost
 decreases
-pure func hopFieldOffset(numINF int, currHF int, headerOffset int) int {
+pure func HopFieldOffset(numINF int, currHF int, headerOffset int) int {
 	return path.InfoFieldOffset(numINF, headerOffset) + path.HopLen * currHF
 }
 
 ghost
 decreases
 pure func pktLen(seg1Len int, seg2Len int, seg3Len int, headerOffset int) int {
-	return hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) +
+	return HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) +
 		path.HopLen * (seg1Len + seg2Len + seg3Len)
 }
 
 
 ghost
 decreases
-pure func lengthOfCurrSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) int {
+pure func LengthOfCurrSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) int {
 	return seg1Len > currHF ? seg1Len : ((seg1Len + seg2Len) > currHF ? seg2Len : seg3Len)
 }
 
@@ -352,7 +352,7 @@ ghost
 requires 0 <= currHF
 ensures  res <= currHF
 decreases
-pure func lengthOfPrevSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) (res int) {
+pure func LengthOfPrevSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) (res int) {
 	return seg1Len > currHF ? 0 : ((seg1Len + seg2Len) > currHF ? seg1Len : seg1Len + seg2Len)
 }
 
@@ -459,7 +459,7 @@ requires 0 <= currHFIdx && currHFIdx <= segLen
 requires 0 <= currINFIdx && currINFIdx < 3
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
-pure func currSeg(raw []byte,
+pure func CurrSeg(raw []byte,
 	offset int,
 	currINFIdx int,
 	currHFIdx int,
@@ -482,18 +482,18 @@ requires pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= len(raw)
 requires 1 <= currINFIdx && currINFIdx < 4
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
-pure func leftSeg(
+pure func LeftSeg(
 	raw []byte,
 	currINFIdx int,
 	seg1Len int,
 	seg2Len int,
 	seg3Len int,
 	headerOffset int) option[io.IO_seg3] {
-	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
+	return let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
 		(currINFIdx == 1 && seg2Len > 0) ?
-			some(reveal currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len, headerOffset)) :
+			some(reveal CurrSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len, headerOffset)) :
 			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
-				some(reveal currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset)) :
+				some(reveal CurrSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset)) :
 				none[io.IO_seg3])
 }
 
@@ -507,18 +507,18 @@ requires pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= len(raw)
 requires -1 <= currINFIdx && currINFIdx < 2
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
-pure func rightSeg(
+pure func RightSeg(
 	raw []byte,
 	currINFIdx int,
 	seg1Len int,
 	seg2Len int,
 	seg3Len int,
 	headerOffset int) option[io.IO_seg3] {
-	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
+	return let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
 		(currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ?
-			some(currSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset)) :
+			some(CurrSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset)) :
 			(currINFIdx == 0 && seg2Len > 0) ?
-				some(currSeg(raw, offset, currINFIdx, seg1Len, seg1Len, headerOffset)) :
+				some(CurrSeg(raw, offset, currINFIdx, seg1Len, seg1Len, headerOffset)) :
 				none[io.IO_seg3]
 }
 
@@ -532,18 +532,18 @@ requires pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= len(raw)
 requires 2 <= currINFIdx && currINFIdx < 5
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
-pure func midSeg(
+pure func MidSeg(
 	raw []byte,
 	currINFIdx int,
 	seg1Len int,
 	seg2Len int,
 	seg3Len int,
 	headerOffset int) option[io.IO_seg3] {
-	return let offset := hopFieldOffset(numInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
+	return let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
 		(currINFIdx == 4 && seg2Len > 0) ?
-			some(currSeg(raw, offset, 0, seg1Len, seg1Len, headerOffset)) :
+			some(CurrSeg(raw, offset, 0, seg1Len, seg1Len, headerOffset)) :
 			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
-				some(currSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset)) :
+				some(CurrSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset)) :
 				none[io.IO_seg3])
 }
 
@@ -563,15 +563,15 @@ pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 		let seg1Len := int(metaHdr.SegLen[0]) in
 		let seg2Len := int(metaHdr.SegLen[1]) in
 		let seg3Len := int(metaHdr.SegLen[2]) in
-		let segLen := lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
-		let prevSegLen := lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
-		let numINF := numInfoFields(seg1Len, seg2Len, seg3Len) in
-		let offset := hopFieldOffset(numINF, 0, 0) in
+		let segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let numINF := NumInfoFields(seg1Len, seg2Len, seg3Len) in
+		let offset := HopFieldOffset(numINF, 0, 0) in
 		io.IO_pkt2(io.IO_Packet2{
-			CurrSeg : currSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0),
-			LeftSeg : leftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, 0),
-			MidSeg : midSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, 0),
-			RightSeg : rightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, 0),
+			CurrSeg : CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0),
+			LeftSeg : LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, 0),
+			MidSeg : MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, 0),
+			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, 0),
 		})
 }
 
@@ -598,7 +598,7 @@ pure func RawBytesToBase(raw []byte) Base {
 		let seg1 := int(metaHdr.SegLen[0])       in
 		let seg2 := int(metaHdr.SegLen[1])       in
 		let seg3 := int(metaHdr.SegLen[2])       in
-		Base{metaHdr, numInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
+		Base{metaHdr, NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
 }
 
 ghost

@@ -27,6 +27,13 @@ pred (h *HopField) Mem() {
 	acc(h) && h.ConsIngress >= 0 && h.ConsEgress >= 0
 }
 
+
+ghost
+decreases
+pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs]{
+	return ifs == 0 ? none[io.IO_ifs] : some(io.IO_ifs(ifs))
+}
+
 ghost
 requires 0 <= start && start <= middle
 requires middle + HopLen <= end && end <= len(raw)
@@ -38,8 +45,8 @@ pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 		unfolding acc(slices.AbsSlice_Bytes(raw, start, end), _) in
 		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4]) in
 		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6]) in
-		let op_inif2 := inif2 == 0 ? none[io.IO_ifs] : some(io.IO_ifs(inif2)) in
-		let op_egif2 := egif2 == 0 ? none[io.IO_ifs] : some(io.IO_ifs(egif2)) in
+		let op_inif2 := ifsToIO_ifs(inif2) in
+		let op_egif2 := ifsToIO_ifs(egif2) in
 		io.IO_HF(io.IO_HF_{
 			InIF2 : op_inif2,
 			EgIF2 : op_egif2,
@@ -48,22 +55,11 @@ pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 }
 
 ghost
-requires acc(h, _)
 decreases
-pure func (h *HopField) ToIO_HF() (io.IO_HF) {
+pure func (h HopField) ToIO_HF() (io.IO_HF) {
 	return io.IO_HF(io.IO_HF_{
-			InIF2 : h.ConsIngress == 0 ? none[io.IO_ifs] : some(io.IO_ifs(h.ConsIngress)),
-			EgIF2 : h.ConsEgress == 0 ? none[io.IO_ifs] : some(io.IO_ifs(h.ConsEgress)),
-			HVF : AbsMac(h.Mac[:]),
-		})
-}
-
-ghost
-decreases
-pure func (h HopField) ToIO_HF2() (io.IO_HF) {
-	return io.IO_HF(io.IO_HF_{
-			InIF2 : h.ConsIngress == 0 ? none[io.IO_ifs] : some(io.IO_ifs(h.ConsIngress)),
-			EgIF2 : h.ConsEgress == 0 ? none[io.IO_ifs] : some(io.IO_ifs(h.ConsEgress)),
+			InIF2 : ifsToIO_ifs(h.ConsIngress),
+			EgIF2 : ifsToIO_ifs(h.ConsEgress),
 			HVF : AbsMac2(h.Mac),
 		})
 }

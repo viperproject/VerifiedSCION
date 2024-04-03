@@ -49,15 +49,15 @@ pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 		let seg1Len := int(metaHdr.SegLen[0]) in
 		let seg2Len := int(metaHdr.SegLen[1]) in
 		let seg3Len := int(metaHdr.SegLen[2]) in
-		let segLen := scion.lengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
-		let prevSegLen := scion.lengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
-		let numINF := scion.numInfoFields(seg1Len, seg2Len, seg3Len) in
-		let offset := scion.hopFieldOffset(numINF, 0, headerOffset) in
+		let segLen := scion.LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len) in
+		let offset := scion.HopFieldOffset(numINF, 0, headerOffset) in
 		io.IO_pkt2(io.IO_Packet2{
-			CurrSeg : scion.currSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffset),
-			LeftSeg : scion.leftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffset),
-			MidSeg : scion.midSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, headerOffset),
-			RightSeg : scion.rightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, headerOffset),
+			CurrSeg : scion.CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffset),
+			LeftSeg : scion.LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffset),
+			MidSeg : scion.MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, headerOffset),
+			RightSeg : scion.RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, headerOffset),
 		})
 }
 
@@ -84,12 +84,6 @@ pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_
 }
 
 ghost
-decreases
-pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs]{
-	return ifs == 0 ? none[io.IO_ifs] : some(io.IO_ifs(ifs))
-}
-
-ghost
 opaque
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
@@ -108,7 +102,7 @@ pure func validPktMetaHdr(raw []byte) bool {
 		let seg2 := int(metaHdr.SegLen[1]) in
 		let seg3 := int(metaHdr.SegLen[2]) in
 		let base := scion.Base{metaHdr,
-			scion.numInfoFields(seg1, seg2, seg3),
+			scion.NumInfoFields(seg1, seg2, seg3),
 			seg1 + seg2 + seg3} in
 		metaHdr.InBounds() &&
 		0 < metaHdr.SegLen[0] &&
@@ -119,11 +113,11 @@ pure func validPktMetaHdr(raw []byte) bool {
 ghost
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Unsupported
-ensures val.IO_val_Unsupported_1 == ifsToIO_ifs(ingressID)
+ensures val.IO_val_Unsupported_1 == path.ifsToIO_ifs(ingressID)
 decreases
 pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val) {
 	return io.IO_val(io.IO_val_Unsupported{
-		ifsToIO_ifs(ingressID),
+		path.ifsToIO_ifs(ingressID),
 		io.Unit(io.Unit_{}),
 	})
 }
@@ -136,7 +130,7 @@ ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
 	return reveal validPktMetaHdr(raw) ?
-		io.IO_val(io.IO_val_Pkt2{ifsToIO_ifs(ingressID), absPkt(dp, raw)}) :
+		io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(dp, raw)}) :
 		absIO_val_Unsupported(raw, ingressID)
 }
 

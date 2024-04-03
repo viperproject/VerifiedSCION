@@ -205,7 +205,7 @@ type AbsBase adt {
 
 type AbsMetaHdr adt {
 	AbsMetaHdr_ {
-		// we should change the types of CurrINF and CurrHF to wider types, 
+		// we should change the types of CurrINF and CurrHF to wider types,
 		// otherwise we might start getting overflow errors here when they
 		// are fully enabled.
 		CurrINF uint8
@@ -319,7 +319,7 @@ pure func (b AbsBase) ReversingValidBaseIsValidBase() Lemma {
 }
 
 ghost
-ensures b.ValidCurrIdxsSpec() == b.Abs().ValidCurrIdxsSpec()  
+ensures b.ValidCurrIdxsSpec() == b.Abs().ValidCurrIdxsSpec()
 decreases
 pure func (b Base) ValidBaseHasValidAbs() Lemma {
 	return Lemma{}
@@ -409,10 +409,10 @@ ghost
 requires acc(s.Mem(), _)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
 decreases
-pure func (s *Base) EQAbsHeader(ub []byte) bool {
+pure func (s *Base) EqAbsHeader(ub []byte) bool {
 	// we compute the sublice ub[:MetaLen] inside this function instead
 	// of expecting the correct subslice to be passed, otherwise this function
-	// becomes too cumbersome to use in calls from (*Raw).EQAbsHeader due to the
+	// becomes too cumbersome to use in calls from (*Raw).EqAbsHeader due to the
 	// lack of a folding expression. Same goes for MetaHdr.EqAbsHeader.
 	return MetaLen <= len(ub) &&
 		unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in

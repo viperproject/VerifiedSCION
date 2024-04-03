@@ -81,7 +81,8 @@ ghost
 decreases
 pure func absUinfo_(SegID uint16) set[io.IO_msgterm]
 
-// intermediate type, not in IO-spec
+// This type simplifies the infoField, making it easier
+// to use than the IO_seg3 from the IO-spec.
 type IntermediateAbsInfoField adt {
 	IntermediateAbsInfoField_ {
 		AInfo io.IO_ainfo
@@ -109,20 +110,8 @@ pure func BytesToIntermediateAbsInfoField(raw [] byte, start int, middle int, en
 }
 
 ghost
-requires acc(inf, _)
 decreases
-pure func (inf *InfoField) ToIntermediateAbsInfoField() (IntermediateAbsInfoField) {
-	return IntermediateAbsInfoField(IntermediateAbsInfoField_{
-		AInfo : io.IO_ainfo(inf.Timestamp),
-		UInfo : absUinfo_(inf.SegID),
-		ConsDir : inf.ConsDir,
-		Peer : inf.Peer,
-	})
-}
-
-ghost
-decreases
-pure func (inf InfoField) ToIntermediateAbsInfoField2() (IntermediateAbsInfoField) {
+pure func (inf InfoField) ToIntermediateAbsInfoField() (IntermediateAbsInfoField) {
 	return IntermediateAbsInfoField(IntermediateAbsInfoField_{
 		AInfo : io.IO_ainfo(inf.Timestamp),
 		UInfo : absUinfo_(inf.SegID),
