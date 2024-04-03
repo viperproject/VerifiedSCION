@@ -3123,7 +3123,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ assert p.GetIsXoverSpec(ub)
 		// @ fold acc(p.scionLayer.Mem(ub), R3)
 		if r, err := p.doXover( /*@ ub, dp @*/ ); err != nil {
-			// @ p.scionLayer.DowngradePerm(ub)
+			// @ fold p.d.validResult(processResult{}, false)
 			return r, err /*@, false, io.IO_val_Unit{} @*/
 		}
 		// @ assert absPkt(dp, ub) == AbsDoXover(nextPkt)
