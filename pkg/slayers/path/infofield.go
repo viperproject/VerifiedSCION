@@ -22,7 +22,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/private/util"
-	// @ bits "github.com/scionproto/scion/verification/utils/bitwise"
+	//@ bits "github.com/scionproto/scion/verification/utils/bitwise"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 	//@ "verification/io"
@@ -102,18 +102,17 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 		b[0] |= 0x1
 	}
 	//@ ghost tmpInfo1 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
-	//@ bits.InfoFieldSerializationConsDir()
+	//@ bits.InfoFieldFirstByteSerializationLemmas()
 	//@ assert tmpInfo1.ConsDir == targetAbsInfo.ConsDir
 	//@ ghost firstByte := b[0]
 	if inf.Peer {
 		b[0] |= 0x2
 	}
-	//@ bits.ZeroOrOneIsOne()
-	//@ bits.InfoFieldSerializationPeer(firstByte)
 	//@ tmpInfo2 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
 	//@ assert tmpInfo2.Peer == (b[0] & 0x2 == 0x2)
 	//@ assert tmpInfo2.ConsDir == (b[0] & 0x1 == 0x1)
 	//@ assert tmpInfo2.Peer == targetAbsInfo.Peer
+	//@ assert tmpInfo2.ConsDir == tmpInfo1.ConsDir
 	//@ assert tmpInfo2.ConsDir == targetAbsInfo.ConsDir
 	b[1] = 0 // reserved
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]

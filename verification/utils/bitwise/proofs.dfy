@@ -107,17 +107,18 @@ lemma SerializeAndDeserializeMetaHdrLemma(m: MetaHdr)
 	ensures  DecodedFrom(SerializedToLine(m)) == m
 {}
 
-lemma InfoFieldSerializationConsDir()
-	ensures ((0 as bv8) | 0x1) & 0x1 == 0x1
-	ensures (0 as bv8) & 0x1 == 0
-{}
-
-lemma InfoFieldSerializationPeer(firstByte: bv8)
-	requires firstByte == 0 || firstByte == 0x1
-	ensures  (firstByte | 0x2) & 0x2 == 0x2
-	ensures  firstByte & 0x2 == 0
-{}
-
-lemma ZeroOrOneIsOne()
-	ensures 0x0 as bv8 | 0x1 == 0x1
+lemma InfoFieldFirstByteSerializationLemmas()
+	//
+	ensures 0 as bv8 | 1 == 1
+	ensures 0 as bv8 | 2 == 2
+	ensures 1 as bv8 | 2 == 3
+	//
+	ensures 0 as bv8 & 1 == 0
+	ensures 0 as bv8 & 2 == 0
+	ensures 1 as bv8 & 1 == 1
+	ensures 1 as bv8 & 2 == 0
+	ensures 2 as bv8 & 1 == 0
+	ensures 2 as bv8 & 2 == 2
+	ensures 3 as bv8 & 1 == 1
+	ensures 3 as bv8 & 2 == 2
 {}

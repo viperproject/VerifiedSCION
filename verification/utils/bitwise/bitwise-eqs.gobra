@@ -55,20 +55,16 @@ decreases
 pure func And3fAtMost64(b uint8) (res uint8)
 
 ghost
-ensures res == 0 | 1
-ensures res == 1
+ensures 0 | 1 == 1
+ensures 0 | 2 == 2
+ensures 1 | 2 == 3
+ensures 0 & 1 == 0
+ensures 0 & 2 == 0
+ensures 1 & 1 == 1
+ensures 1 & 2 == 0
+ensures 2 & 1 == 0
+ensures 2 & 2 == 2
+ensures 3 & 1 == 1
+ensures 3 & 2 == 2
 decreases
-pure func ZeroOrOneIsOne() (res uint8)
-
-ghost
-ensures (0 | 0x1) & 0x1 == 0x1
-ensures 0 & 0x1 == 0
-decreases
-pure func InfoFieldSerializationConsDir() (res byte)
-
-ghost
-requires firstByte == 0 || firstByte == 0x1
-ensures  (firstByte | 0x2) & 0x2 == 0x2
-ensures  firstByte & 0x2 == 0
-decreases
-pure func InfoFieldSerializationPeer(firstByte byte) (res byte)
+pure func InfoFieldFirstByteSerializationLemmas() bool
