@@ -23,9 +23,9 @@ import (
 	"verification/io"
 )
 
-// =============================================
-// Lemma for hopfields in construction direction
-// =============================================
+// ===============
+// Hopfields lemma
+// ===============
 
 ghost
 opaque
@@ -83,64 +83,6 @@ func HopFieldsConsDirBytePositionsLemma(
 	hopFieldsConsDirBytePositionsLemma_Rec(raw, offset, currHFIdx, segLen)
 }
 
-// =================================================
-// Lemma for hopfields not in construction direction
-// =================================================
-
-ghost
-opaque
-requires  0 <= offset
-requires  -1 <= currHFIdx
-requires  len(hopFields) == currHFIdx + 1
-requires  offset + path.HopLen * currHFIdx + path.HopLen <= len(raw)
-requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-decreases
-pure func HopFieldsNotConsDirBytePositions(
-	raw []byte,
-	offset int,
-	currHFIdx int,
-	hopFields seq[io.IO_HF]) bool {
-	return forall i int :: { hopFields[i] } 0 <= i && i < len(hopFields) ==> hopFields[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * i, len(raw)) 
-}
-
-ghost
-requires  0 <= offset
-requires  -1 <= currHFIdx
-requires  offset + path.HopLen * currHFIdx + path.HopLen <= len(raw)
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-ensures  forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> old(unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in raw[i]) == (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in raw[i])
-ensures   HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, hopFieldsNotConsDir(raw, offset, currHFIdx))
-decreases currHFIdx + 1
-func hopFieldsNotConsDirBytePositionsLemma_Rec(
-	raw []byte,
-	offset int,
-	currHFIdx int) {
-	
-	if (currHFIdx == -1) {
-		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, hopFieldsNotConsDir(raw, offset, currHFIdx))
-	} else {
-		hopFieldsNotConsDirBytePositionsLemma_Rec(raw, offset, currHFIdx - 1)
-		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx - 1, hopFieldsNotConsDir(raw, offset, currHFIdx - 1))
-		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, hopFieldsNotConsDir(raw, offset, currHFIdx))
-	}
-}
-
-// Wrapper lemma to get rid of ugly postcondition that preserves the contents of raw
-ghost
-requires  0 <= offset
-requires  -1 <= currHFIdx
-requires  offset + path.HopLen * currHFIdx + path.HopLen <= len(raw)
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-ensures   HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, hopFieldsNotConsDir(raw, offset, currHFIdx))
-decreases currHFIdx + 1
-func HopFieldsNotConsDirBytePositionsLemma(
-	raw []byte,
-	offset int,
-	currHFIdx int) {
-	hopFieldsNotConsDirBytePositionsLemma_Rec(raw, offset, currHFIdx)
-}
-
-
 // ====================
 // Segment future lemma
 // ====================
@@ -162,9 +104,7 @@ requires 0 < segLen
 requires 0 <= currHFIdx && currHFIdx <= segLen
 requires offset + path.HopLen * segLen <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
-ensures let seg := segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen) in consDir ?
-        HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, seg.Future) :
-true//HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, seg.Future)
+ensures let seg := segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen) in HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, seg.Future)
 decreases
 func segmentFutureBytePosition(
 	raw []byte,
@@ -176,36 +116,19 @@ func segmentFutureBytePosition(
 	peer bool,
 	segLen int) {
 	
-	var hopfields seq[io.IO_HF]
-	if consDir {
-		hopfields = hopFieldsConsDir(raw, offset, 0, segLen)
-		HopFieldsConsDirBytePositionsLemma(raw, offset, 0, segLen)
-		assert reveal HopFieldsConsDirBytePositions(raw, offset, 0, segLen, hopfields)
-		seg := io.IO_seg2(io.IO_seg3_{
-			AInfo :ainfo,
-			UInfo : uinfo,
-			ConsDir : consDir,
-			Peer : peer,
-			Past : segPast(hopfields, currHFIdx - 1),
-			Future : segFuture(hopfields, currHFIdx),
-			History : segHistory(hopfields, currHFIdx - 1),
-		})
-		segFutureSubSequenceLemma(hopfields, currHFIdx)
-		assert reveal HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, seg.Future)
-	} else {
-		hopfields = hopFieldsNotConsDir(raw, offset, segLen-1)
-		HopFieldsNotConsDirBytePositionsLemma(raw, offset, segLen-1)
-		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, segLen-1, hopfields)
-		seg := io.IO_seg2(io.IO_seg3_{
-			AInfo :ainfo,
-			UInfo : uinfo,
-			ConsDir : consDir,
-			Peer : peer,
-			Past : segPast(hopfields, currHFIdx - 1),
-			Future : segFuture(hopfields, currHFIdx),
-			History : segHistory(hopfields, currHFIdx - 1),
-		})
-		segFutureSubSequenceLemma(hopfields, currHFIdx)
-		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, seg.Future)
-	}
+	hopfields := hopFieldsConsDir(raw, offset, 0, segLen)
+	HopFieldsConsDirBytePositionsLemma(raw, offset, 0, segLen)
+	assert reveal HopFieldsConsDirBytePositions(raw, offset, 0, segLen, hopfields)
+	seg := io.IO_seg2(io.IO_seg3_{
+		AInfo :ainfo,
+		UInfo : uinfo,
+		ConsDir : consDir,
+		Peer : peer,
+		Past : segPast(hopfields, currHFIdx - 1),
+		Future : segFuture(hopfields, currHFIdx),
+		History : segHistory(hopfields, currHFIdx - 1),
+	})
+	segFutureSubSequenceLemma(hopfields, currHFIdx)
+	assert reveal HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, seg.Future)
+
 }
