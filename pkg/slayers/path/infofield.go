@@ -22,6 +22,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/private/util"
+	//@ bits "github.com/scionproto/scion/verification/utils/bitwise"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 	//@ "verification/io"
@@ -86,26 +87,43 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // @ preserves acc(inf, R10)
 // @ preserves slices.AbsSlice_Bytes(b, 0, InfoLen)
 // @ ensures   err == nil
+// @ ensures   inf.ToIntermediateAbsInfoField() ==
+// @ 	BytesToIntermediateAbsInfoField(b, 0, 0, InfoLen)
 // @ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	if len(b) < InfoLen {
 		return serrors.New("buffer for InfoField too short", "expected", InfoLen,
 			"actual", len(b))
 	}
+	//@ ghost targetAbsInfo := inf.ToIntermediateAbsInfoField()
 	//@ unfold slices.AbsSlice_Bytes(b, 0, InfoLen)
 	b[0] = 0
 	if inf.ConsDir {
 		b[0] |= 0x1
 	}
+	//@ ghost tmpInfo1 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ bits.InfoFieldFirstByteSerializationLemmas()
+	//@ assert tmpInfo1.ConsDir == targetAbsInfo.ConsDir
+	//@ ghost firstByte := b[0]
 	if inf.Peer {
 		b[0] |= 0x2
 	}
+	//@ tmpInfo2 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ assert tmpInfo2.Peer == (b[0] & 0x2 == 0x2)
+	//@ assert tmpInfo2.ConsDir == (b[0] & 0x1 == 0x1)
+	//@ assert tmpInfo2.Peer == targetAbsInfo.Peer
+	//@ assert tmpInfo2.ConsDir == tmpInfo1.ConsDir
+	//@ assert tmpInfo2.ConsDir == targetAbsInfo.ConsDir
 	b[1] = 0 // reserved
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]
 	binary.BigEndian.PutUint16(b[2:4], inf.SegID)
+	//@ ghost tmpInfo3 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ assert tmpInfo3.UInfo == targetAbsInfo.UInfo
 	//@ assert &b[4:8][0] == &b[4] && &b[4:8][1] == &b[5]
 	//@ assert &b[4:8][2] == &b[6] && &b[4:8][3] == &b[7]
 	binary.BigEndian.PutUint32(b[4:8], inf.Timestamp)
+	//@ ghost tmpInfo4 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ assert tmpInfo4.AInfo == targetAbsInfo.AInfo
 	//@ fold slices.AbsSlice_Bytes(b, 0, InfoLen)
 	return nil
 }
