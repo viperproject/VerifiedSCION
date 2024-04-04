@@ -135,6 +135,16 @@ pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.I
 }
 
 ghost
+requires dp.Valid()
+requires respr.OutPkt != nil ==>
+	acc(sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt)), R56)
+decreases
+pure func absReturnErr(dp io.DataPlaneSpec, respr processResult) (val io.IO_val) {
+	return respr.OutPkt == nil ? io.IO_val_Unit{} :
+		absIO_val(dp, respr.OutPkt, respr.EgressID)
+}
+
+ghost
 requires acc(&d.localIA, _)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool {

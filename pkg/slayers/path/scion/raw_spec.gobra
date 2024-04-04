@@ -561,7 +561,7 @@ pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 // the return type.
 ghost
 requires MetaLen <= len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) 
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
 	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
