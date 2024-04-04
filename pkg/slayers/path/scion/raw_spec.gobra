@@ -386,7 +386,7 @@ pure func hopFieldsNotConsDir(
 	currHFIdx int) (res seq[io.IO_HF]) {
 	return currHFIdx == -1 ? seq[io.IO_HF]{} :
 		let hf :=  path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw)) in
-		hopFieldsNotConsDir(raw, offset, currHFIdx - 1) ++ seq[io.IO_HF]{hf}
+		seq[io.IO_HF]{hf} ++ hopFieldsNotConsDir(raw, offset, currHFIdx - 1)
 }
 
 ghost
