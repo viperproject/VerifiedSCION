@@ -117,9 +117,13 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	b[1] = 0 // reserved
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]
 	binary.BigEndian.PutUint16(b[2:4], inf.SegID)
+	//@ ghost tmpInfo3 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ assert tmpInfo3.UInfo == targetAbsInfo.UInfo
 	//@ assert &b[4:8][0] == &b[4] && &b[4:8][1] == &b[5]
 	//@ assert &b[4:8][2] == &b[6] && &b[4:8][3] == &b[7]
 	binary.BigEndian.PutUint32(b[4:8], inf.Timestamp)
+	//@ ghost tmpInfo4 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ assert tmpInfo4.AInfo == targetAbsInfo.AInfo
 	//@ fold slices.AbsSlice_Bytes(b, 0, InfoLen)
 	return nil
 }
