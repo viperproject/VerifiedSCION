@@ -552,7 +552,6 @@ opaque
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 requires validPktMetaHdr(raw)
-opaque
 decreases
 pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
@@ -574,6 +573,18 @@ pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, 0),
 		})
 }
+
+/*
+ghost
+requires dp.Valid()
+requires forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==>
+	acc(&raw[i], R56)
+requires validPktMetaHdr(raw)
+decreases
+pure func (s *Raw) absPktHelper(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
+
+}
+*/
 
 // In the future, this should probably use AbsMetaHdr as
 // the return type.
