@@ -21,6 +21,7 @@ import (
 	. "verification/utils/definitions"
 	sl "verification/utils/slices"
 	"verification/io"
+	"verification/dependencies/encoding/binary"
 )
 
 // ===============
@@ -106,7 +107,7 @@ requires offset + path.HopLen * segLen <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 ensures let seg := segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen) in HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, seg.Future)
 decreases
-func segmentFutureBytePosition(
+func segmentFutureBytePositionLemma(
 	raw []byte,
 	offset int,
 	currHFIdx int,
@@ -130,5 +131,82 @@ func segmentFutureBytePosition(
 	})
 	segFutureSubSequenceLemma(hopfields, currHFIdx)
 	assert reveal HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, seg.Future)
+}
 
+ghost
+requires 0 <= headerOffset
+requires path.InfoFieldOffset(currINFIdx, headerOffset) + path.InfoLen <= offset
+requires 0 < segLen
+requires offset + path.HopLen * segLen <= len(raw)
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires 0 <= currINFIdx && currINFIdx < 3
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R54)
+ensures let seg := CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset) in (len(seg.Future) == segLen - currHFIdx && HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, seg.Future))
+decreases
+func currSegFutureBytePositionLemma(
+	raw []byte,
+	offset int,
+	currINFIdx int,
+	currHFIdx int,
+	segLen int,
+	headerOffset int) {
+	ainfo := path.Timestamp(raw, currINFIdx, headerOffset)
+	consDir := path.ConsDir(raw, currINFIdx, headerOffset)
+	peer := path.Peer(raw, currINFIdx, headerOffset)
+	uinfo := path.AbsUinfo(raw, currINFIdx, headerOffset)
+	ret := segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+	assert ret == reveal CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset)
+	segmentFutureBytePositionLemma(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+}
+
+
+ghost
+opaque
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires validPktMetaHdr(raw)
+decreases
+pure func (s *Raw) AbsPktFutureBytePosition(dp io.DataPlaneSpec, raw []byte) bool {
+	return let _ := reveal validPktMetaHdr(raw) in
+		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[:MetaLen])) in
+		let metaHdr := DecodedFrom(hdr) in
+		let currHFIdx := int(metaHdr.CurrHF) in
+		let seg1Len := int(metaHdr.SegLen[0]) in
+		let seg2Len := int(metaHdr.SegLen[1]) in
+		let seg3Len := int(metaHdr.SegLen[2]) in
+		let segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let numINF := NumInfoFields(seg1Len, seg2Len, seg3Len) in
+		let offset := HopFieldOffset(numINF, 0, 0) in
+		let pkt := reveal s.absPkt(dp, raw) in (currHFIdx-prevSegLen <= segLen && len(pkt.CurrSeg.Future) == segLen - (currHFIdx - prevSegLen) && HopFieldsConsDirBytePositions(raw, offset+prevSegLen, currHFIdx-prevSegLen, segLen, pkt.CurrSeg.Future))
+}
+
+ghost
+requires  dp.Valid()
+preserves   acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R53)
+preserves   validPktMetaHdr(raw)
+ensures     s.AbsPktFutureBytePosition(dp, raw)
+decreases
+func (s *Raw) AbsPktFutureBytePositionLemma(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
+	_ := reveal validPktMetaHdr(raw)
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[:MetaLen]))
+	metaHdr := DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := HopFieldOffset(numINF, 0, 0)
+	pkt := io.IO_pkt2(io.IO_Packet2{
+			CurrSeg : CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0),
+			LeftSeg : LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, 0),
+			MidSeg : MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, 0),
+			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, 0),
+	})
+	assert pkt == reveal s.absPkt(dp, raw)
+	currSegFutureBytePositionLemma(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0)
+	assert reveal s.AbsPktFutureBytePosition(dp, raw)
 }
