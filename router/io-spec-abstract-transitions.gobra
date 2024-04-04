@@ -116,8 +116,8 @@ pure func AbsValidateEgressIDConstraintXover(pkt io.IO_pkt2, dp io.DataPlaneSpec
 	return let currseg := pkt.CurrSeg in
 		let rightseg := get(pkt.RightSeg) in
 		let nextIf := (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2) in
-		(dp.xover_up2down2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
-			currseg.ConsDir, currseg.Future[0])) &&
+		dp.xover_up2down2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
+			currseg.ConsDir, currseg.Future[0]) &&
 		nextIf != none[io.IO_ifs] &&
 		(get(nextIf) in domain(dp.GetNeighborIAs()))
 }
