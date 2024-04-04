@@ -41,7 +41,7 @@ pure func HopFieldsConsDirBytePositions(
 	currHFIdx int,
 	segLen int,
 	hopFields seq[io.IO_HF]) bool {
-	return forall i int :: { hopFields[i] } 0 <= i && i < len(hopFields) ==> hopFields[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * (currHFIdx + i), len(raw)) 
+	return forall i int :: { hopFields[i] } 0 <= i && i < len(hopFields) ==> hopFields[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * (currHFIdx + i), len(raw))
 }
 
 ghost
@@ -100,7 +100,7 @@ pure func HopFieldsNotConsDirBytePositions(
 	offset int,
 	currHFIdx int,
 	hopFields seq[io.IO_HF]) bool {
-	return forall i int :: { hopFields[i] } 0 <= i && i < len(hopFields) ==> hopFields[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * (currHFIdx - len(hopFields) + i + 1), len(raw)) 
+	return forall i int :: { hopFields[i] } 0 <= i && i < len(hopFields) ==> hopFields[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * i, len(raw)) 
 }
 
 ghost
@@ -144,3 +144,68 @@ func HopFieldsNotConsDirBytePositionsLemma(
 // ====================
 // Segment future lemma
 // ====================
+
+
+ghost
+requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
+ensures  segFuture(hopfields, currHFIdx) == hopfields[currHFIdx:]
+decreases len(hopfields) - currHFIdx
+func segFutureSubSequenceLemma(hopfields seq[io.IO_HF], currHFIdx int) {
+	if (currHFIdx != len(hopfields)) {
+		segFutureSubSequenceLemma(hopfields, currHFIdx + 1)
+	}
+}
+
+ghost
+requires 0 <= offset
+requires 0 < segLen
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+ensures let seg := segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen) in consDir ?
+        HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, seg.Future) :
+true//HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, seg.Future)
+decreases
+func segmentFutureBytePosition(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	ainfo io.IO_ainfo,
+	uinfo set[io.IO_msgterm],
+	consDir bool,
+	peer bool,
+	segLen int) {
+	
+	var hopfields seq[io.IO_HF]
+	if consDir {
+		hopfields = hopFieldsConsDir(raw, offset, 0, segLen)
+		HopFieldsConsDirBytePositionsLemma(raw, offset, 0, segLen)
+		assert reveal HopFieldsConsDirBytePositions(raw, offset, 0, segLen, hopfields)
+		seg := io.IO_seg2(io.IO_seg3_{
+			AInfo :ainfo,
+			UInfo : uinfo,
+			ConsDir : consDir,
+			Peer : peer,
+			Past : segPast(hopfields, currHFIdx - 1),
+			Future : segFuture(hopfields, currHFIdx),
+			History : segHistory(hopfields, currHFIdx - 1),
+		})
+		segFutureSubSequenceLemma(hopfields, currHFIdx)
+		assert reveal HopFieldsConsDirBytePositions(raw, offset, currHFIdx, segLen, seg.Future)
+	} else {
+		hopfields = hopFieldsNotConsDir(raw, offset, segLen-1)
+		HopFieldsNotConsDirBytePositionsLemma(raw, offset, segLen-1)
+		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, segLen-1, hopfields)
+		seg := io.IO_seg2(io.IO_seg3_{
+			AInfo :ainfo,
+			UInfo : uinfo,
+			ConsDir : consDir,
+			Peer : peer,
+			Past : segPast(hopfields, currHFIdx - 1),
+			Future : segFuture(hopfields, currHFIdx),
+			History : segHistory(hopfields, currHFIdx - 1),
+		})
+		segFutureSubSequenceLemma(hopfields, currHFIdx)
+		assert reveal HopFieldsNotConsDirBytePositions(raw, offset, currHFIdx, seg.Future)
+	}
+}
