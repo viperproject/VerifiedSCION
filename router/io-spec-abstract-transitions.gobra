@@ -114,9 +114,10 @@ requires  len(get(pkt.RightSeg).Past) > 0
 decreases
 pure func AbsValidateEgressIDConstraintXover(pkt io.IO_pkt2, dp io.DataPlaneSpec) bool {
 	return let currseg := pkt.CurrSeg in
+		let rightseg := get(pkt.RightSeg) in
 		let nextIf := (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2) in
-		((!get(pkt.RightSeg).ConsDir && pkt.CurrSeg.ConsDir) ==> dp.xover_up2down2_link_type(dp.Asid(), get(pkt.RightSeg).Past[0], pkt.CurrSeg.Future[0])) &&
-		((get(pkt.RightSeg).ConsDir == pkt.CurrSeg.ConsDir) ==> dp.xover_core2_link_type(get(pkt.RightSeg).Past[0], pkt.CurrSeg.Future[0], dp.Asid(), get(pkt.RightSeg).ConsDir)) &&
+		(dp.xover_up2down2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
+			currseg.ConsDir, currseg.Future[0])) &&
 		nextIf != none[io.IO_ifs] &&
 		(get(nextIf) in domain(dp.GetNeighborIAs()))
 }
@@ -204,7 +205,6 @@ ensures   dp.Valid()
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func XoverEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock *sync.Mutex, ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-	assume (!oldPkt.CurrSeg.ConsDir && newPkt.CurrSeg.ConsDir) || (oldPkt.CurrSeg.ConsDir == newPkt.CurrSeg.ConsDir)
 	reveal dp.Valid()
 	intermediatePkt1 := reveal AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
 	intermediatePkt2 := reveal AbsDoXover(intermediatePkt1)
@@ -216,11 +216,5 @@ func XoverEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt
 	if(egressID != none[io.IO_ifs]){
 		reveal AbsProcessEgress(intermediatePkt2)
 	}
-	if(!oldPkt.CurrSeg.ConsDir && newPkt.CurrSeg.ConsDir) {
-		AtomicXoverUp2Down(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
-	} else {
-		// TODO: How to deal with core?
-		assume dp.Asid() in dp.Core()
-		AtomicXoverCore(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
-	}
+	AtomicXoverUp2Down(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 }
