@@ -363,14 +363,14 @@ requires  offset + path.HopLen * segLen <= len(raw)
 requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures   len(res) == segLen - currHFIdx
 decreases segLen - currHFIdx
-pure func hopFieldsConsDir(
+pure func hopFields(
 	raw []byte,
 	offset int,
 	currHFIdx int,
 	segLen int) (res seq[io.IO_HF]) {
 	return currHFIdx == segLen ? seq[io.IO_HF]{} :
 		let hf := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw)) in
-		seq[io.IO_HF]{hf} ++ hopFieldsConsDir(raw, offset, currHFIdx + 1, segLen)
+		seq[io.IO_HF]{hf} ++ hopFields(raw, offset, currHFIdx + 1, segLen)
 }
 
 ghost
@@ -419,7 +419,7 @@ pure func segment(raw []byte,
 	consDir bool,
 	peer bool,
 	segLen int) (res io.IO_seg2) {
-	return let hopfields := hopFieldsConsDir(raw, offset, 0, segLen) in
+	return let hopfields := hopFields(raw, offset, 0, segLen) in
 		io.IO_seg2(io.IO_seg3_{
 			AInfo :ainfo,
 			UInfo : uinfo,
