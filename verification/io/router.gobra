@@ -193,6 +193,7 @@ pure func (dp DataPlaneSpec) dp3s_xover_common(
 	intermediatepkt IO_pkt3,
 	hf1 IO_HF,
 	hf2 IO_HF,
+	nextfut seq[IO_HF],
 	recvif IO_ifs,
 	newpkt IO_pkt3,
 	nextif option[IO_ifs],
@@ -201,6 +202,6 @@ pure func (dp DataPlaneSpec) dp3s_xover_common(
 		// this is because of the way math. maps are implemented, we can only obtain a key that is in the map before.
 		return some(recvif) in domain(s.ibuf) &&
 			(let lookupRes := s.ibuf[some(recvif)] in (m in lookupRes)) &&
-			dp.dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, dp.Asid(), recvif) &&
+			dp.dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, nextfut, dp.Asid(), recvif) &&
 			dp.dp3s_forward_xover(intermediatepkt, newpkt, nextif)
 }

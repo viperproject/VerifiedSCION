@@ -98,8 +98,8 @@ pure func MultiReadBioCorrectIfs(
 		} && MultiReadBioCorrectIfs(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1, k)
 }
 
-
 ghost
+opaque
 requires 0 <= expectedPkts && MultiReadBio(t, expectedPkts)
 ensures len(res) == expectedPkts
 decreases expectedPkts
@@ -160,8 +160,10 @@ requires ElemAuth(s.ibuf, y.IBufY) && ElemAuth(s.obuf, y.OBufY)
 ensures  MultiReadBio(t, n)
 ensures  MultiReadBioUpd(t, n, s) == old(MultiReadBioUpd(t, n, s))
 ensures  MultiReadBioNext(t, n) == old(MultiReadBioNext(t, n))
-ensures  ElemAuth(MultiReadBioUpd(t, n, s).ibuf, y.IBufY) && ElemAuth(MultiReadBioUpd(t, n, s).obuf, y.OBufY)
-ensures  0 <= n && MultiReadBioCorrectIfs(t, n, k) ==> MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
+ensures  ElemAuth(MultiReadBioUpd(t, n, s).ibuf, y.IBufY)
+ensures  ElemAuth(MultiReadBioUpd(t, n, s).obuf, y.OBufY)
+ensures  0 <= n && MultiReadBioCorrectIfs(t, n, k) ==>
+	MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
 decreases n
 func MultiUpdateElemWitness(
 	t io.Place,
@@ -181,6 +183,7 @@ func MultiUpdateElemWitness(
 	}
 
 	if 0 <= n && MultiReadBioCorrectIfs(t, n, k) {
+		reveal MultiReadBioIO_val(t, n)
 		fold MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
 	}
 }
@@ -214,6 +217,16 @@ requires MultiElemWitness(y,k,es)
 ensures  MultiElemWitnessWithIndex(y,k,es,0)
 func MultiElemWitnessConv(y ElemRA,k Key, es seq[io.IO_val]) {
 	multiElemWitnessConvAux(y,k,es,0)
+}
+
+ghost
+requires 0 <= currIdx && currIdx < len(es)
+requires MultiElemWitnessWithIndex(y, k, es, currIdx)
+ensures  es[currIdx].isIO_val_Pkt2 ==> ElemWitness(y, k, es[currIdx].IO_val_Pkt2_2)
+ensures  MultiElemWitnessWithIndex(y, k, es, currIdx + 1)
+decreases
+func MultiElemWitnessStep(y ElemRA, k Key, es seq[io.IO_val], currIdx int) {
+	unfold MultiElemWitnessWithIndex(y, k, es, currIdx)
 }
 
 ghost
