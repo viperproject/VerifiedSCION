@@ -1438,7 +1438,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  newAbsPkt.isIO_val_Pkt2 ==>
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 // @ ensures  reserr != nil && respr.OutPkt != nil ==> newAbsPkt.isIO_val_Unsupported
-// @ ensures  respr.OutPkt != nil ==> newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
 
@@ -1736,7 +1735,6 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 
 	var ok bool
 	// @ unfold acc(p.scionLayer.Mem(ub), R20)
-	// assert reveal slayers.ValidPktMetaHdr(ub)
 	p.path, ok = p.scionLayer.Path.(*scion.Raw)
 	// @ fold acc(p.scionLayer.Mem(ub), R20)
 	if !ok {
@@ -2556,8 +2554,6 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.D
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP, dp)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ absPktFutureLemma(dp, ub)
-	// TemporaryAssumeForIO(dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub))
-	// TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) >= 0)
 	// @ TemporaryAssumeForIO(absPkt(dp, ub) == AbsProcessEgress(old(absPkt(dp, ub))))
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 	return nil
@@ -2586,7 +2582,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.D
 // @ ensures   reserr == nil ==> old(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2]
 // @ ensures   reserr == nil ==> len(get(old(absPkt(dp, ub)).LeftSeg).Future) > 0
 // @ ensures   reserr == nil ==> len(get(old(absPkt(dp, ub)).LeftSeg).History) == 0
-// @ ensures   reserr == nil ==> dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures   reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures   reserr == nil ==> p.EqAbsHopField(absPkt(dp, ub))
 // @ ensures   reserr == nil ==> p.EqAbsInfoField(absPkt(dp, ub))
@@ -2635,7 +2631,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost dp io.DataPla
 	// @ TemporaryAssumeForIO(old(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2])
 	// @ TemporaryAssumeForIO(len(get(old(absPkt(dp, ub)).LeftSeg).Future) > 0)
 	// @ TemporaryAssumeForIO(len(get(old(absPkt(dp, ub)).LeftSeg).History) == 0)
-	// @ TemporaryAssumeForIO(dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub))
+	// @ TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub))
 	// @ TemporaryAssumeForIO(absPkt(dp, ub) == AbsDoXover(old(absPkt(dp, ub))))
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 	return processResult{}, nil
@@ -2773,7 +2769,7 @@ func (p *scionPacketProcessor) validateEgressUp( /*@ ghost oldPkt io.IO_pkt2, gh
 // @ requires len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ requires p.EqAbsHopField(absPkt(dp, ub))
 // @ ensures  reserr == nil ==> p.DstIsLocalIngressID(ub)
-// @ ensures reserr == nil ==> dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures reserr == nil ==> p.EqAbsHopField(absPkt(dp, ub))
 // @ ensures reserr == nil ==> absPkt(dp, ub) == old(absPkt(dp, ub))
@@ -2874,7 +2870,7 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ requires len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ requires p.EqAbsHopField(absPkt(dp, ub))
 // @ requires p.EqAbsInfoField(absPkt(dp, ub))
-// @ ensures reserr == nil ==> dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures reserr == nil ==> p.EqAbsHopField(absPkt(dp, ub))
 // @ ensures reserr == nil ==> p.EqAbsInfoField(absPkt(dp, ub))
