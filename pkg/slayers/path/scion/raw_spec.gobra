@@ -488,6 +488,9 @@ ensures  CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset) ==
 decreases
 func CurrSegEqualsCurrSegQPs(raw []byte, offset int, currINFIdx int, currHFIdx int, segLen int, headerOffset int) {
 	reveal CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset)
+
+	// TODO: continue from here! requires introucing more "Helper" functions with precise
+	// footprints.
 }
 
 // TODO
