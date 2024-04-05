@@ -320,6 +320,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
+//
+//	ensures   res == nil ==> validPktMetaHdr(data)
+//	ensures   res == nil ==> s.GetBase().EqAbsHeader(data)
+//
 // @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
 // @ decreases
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {

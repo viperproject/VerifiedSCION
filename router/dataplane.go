@@ -1721,6 +1721,8 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
+// @ requires  validPktMetaHdr(ub)
+// @ requires  p.scionLayer.EqAbsHeader(ub)
 // @ requires  acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 // @ requires  let absPkt := absIO_val(dp, p.rawPkt, p.ingressID) in
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
@@ -3936,6 +3938,8 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   reterr == nil && 0   <= idx ==> retl === opts[idx]
 // @ ensures   reterr == nil ==> retl != nil
 // @ ensures   reterr == nil ==> base.Mem(data)
+// @ ensures   reterr == nil ==> validPktMetaHdr(data)
+// @ ensures   reterr == nil ==> base.EqAbsHeader(data)
 // @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
 // @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
@@ -3948,7 +3952,9 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   reterr != nil ==> (forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==> opts[i].NonInitMem())
 // @ ensures   reterr != nil ==> reterr.ErrorMem()
 // @ decreases
-func decodeLayers(data []byte, base gopacket.DecodingLayer,
+// (VerifiedSCION) originally, `base` was declared with type `gopacket.DecodingLayer`. This is unnecessarily complicated for a private function
+// that is only called once with a parameter of type `*SCION`, and leads to more annyoing post-conditions.
+func decodeLayers(data []byte, base *slayers.SCION,
 	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error /*@ , ghost processed seq[bool], ghost offsets seq[offsetPair], ghost idx int @*/) {
 
 	// @ processed = seqs.NewSeqBool(len(opts))
@@ -3958,7 +3964,7 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return nil, err /*@ , processed, offsets, idx @*/
 	}
-	last := base
+	var last gopacket.DecodingLayer = base
 	optsSlice := ([](gopacket.DecodingLayer))(opts)
 
 	// @ ghost oldData := data
