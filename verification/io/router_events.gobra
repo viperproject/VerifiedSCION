@@ -18,16 +18,6 @@
 
 package io
 
-ghost
-requires dp.Valid()
-requires asid == dp.Asid()
-decreases
-pure func (dp DataPlaneSpec) dp2_check_recvif(d bool, asid IO_as, recvif IO_ifs) bool {
-	return d?
-		(dp.link_type(asid, recvif) == IO_CustProv{} || dp.link_type(asid, recvif) == IO_PeerOrCore{}) :
-		(dp.link_type(asid, recvif) == IO_ProvCust{} || dp.link_type(asid, recvif) == IO_PeerOrCore{})
-}
-
 /* Abbreviations */
 ghost
 requires dp.Valid()
