@@ -441,7 +441,8 @@ requires 0 <= currHFIdx && currHFIdx <= segLen
 requires 0 <= currINFIdx && currINFIdx < 3
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
-pure func CurrSeg(raw []byte,
+pure func CurrSeg(
+	raw []byte,
 	offset int,
 	currINFIdx int,
 	currHFIdx int,
@@ -452,6 +453,41 @@ pure func CurrSeg(raw []byte,
 		let peer := path.Peer(raw, currINFIdx, headerOffset) in
 		let uinfo := path.AbsUinfo(raw, currINFIdx, headerOffset) in
 		segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+}
+
+ghost
+requires 0 <= headerOffset
+requires path.InfoFieldOffset(currINFIdx, headerOffset) + path.InfoLen <= offset
+requires 0 < segLen
+requires offset + path.HopLen * segLen <= len(raw)
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires 0 <= currINFIdx && currINFIdx < 3
+requires let idx := path.InfoFieldOffset(currINFIdx, headerOffset) in
+	forall i int :: { &raw[i] } idx <= i && i < idx+path.InfoLen ==> acc(&raw[i], R56)
+decreases
+pure func CurrSegQPs(raw []byte, offset int, currINFIdx int, currHFIdx int, segLen int, headerOffset int) io.IO_seg3 {
+	return let ainfo := path.TimestampHelper(raw, currINFIdx, headerOffset) in
+		let consDir := path.ConsDirHelper(raw, currINFIdx, headerOffset)    in
+		let peer := path.PeerHelper(raw, currINFIdx, headerOffset)          in
+		let uinfo := path.AbsUinfoHelper(raw, currINFIdx, headerOffset)     in
+		segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+}
+
+ghost
+requires 0 <= headerOffset
+requires path.InfoFieldOffset(currINFIdx, headerOffset) + path.InfoLen <= offset
+requires 0 < segLen
+requires offset + path.HopLen * segLen <= len(raw)
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires 0 <= currINFIdx && currINFIdx < 3
+requires let idx := path.InfoFieldOffset(currINFIdx, headerOffset) in
+	forall i int :: { &raw[i] } idx <= i && i < idx+path.InfoLen ==> acc(&raw[i], R56)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures  CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset) ==
+	CurrSegQPs(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset)
+decreases
+func CurrSegEqualsCurrSegQPs(raw []byte, offset int, currINFIdx int, currHFIdx int, segLen int, headerOffset int) {
+	reveal CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset)
 }
 
 // TODO
@@ -562,18 +598,6 @@ pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, 0),
 		})
 }
-
-/*
-ghost
-requires dp.Valid()
-requires forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==>
-	acc(&raw[i], R56)
-requires validPktMetaHdr(raw)
-decreases
-pure func (s *Raw) absPktHelper(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
-
-}
-*/
 
 // In the future, this should probably use AbsMetaHdr as
 // the return type.
