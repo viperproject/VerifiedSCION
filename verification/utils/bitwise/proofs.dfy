@@ -106,3 +106,60 @@ lemma SerializeAndDeserializeMetaHdrLemma(m: MetaHdr)
 	requires InBounds(m)
 	ensures  DecodedFrom(SerializedToLine(m)) == m
 {}
+
+lemma InfoFieldFirstByteSerializationLemmas()
+	// or
+	ensures 0 as bv8 | 1 == 1
+	ensures 0 as bv8 | 2 == 2
+	ensures 1 as bv8 | 2 == 3
+	// and
+	ensures 0 as bv8 & 1 == 0
+	ensures 0 as bv8 & 2 == 0
+	ensures 1 as bv8 & 1 == 1
+	ensures 1 as bv8 & 2 == 0
+	ensures 2 as bv8 & 1 == 0
+	ensures 2 as bv8 & 2 == 2
+	ensures 3 as bv8 & 1 == 1
+	ensures 3 as bv8 & 2 == 2
+{}
+
+
+// Functional specs for encoding/binary (BigEndian)
+function FUint16Spec(b0: bv8, b1: bv8): bv16 {
+	(b1 as bv16) | ((b0 as bv16) << 8)
+}
+
+function FPutUint16Spec(v: bv16): (bv8, bv8) {
+	((v >> 8) as bv8, (v & 0xFF) as bv8)
+}
+
+lemma FUint16AfterFPutUint16(v: bv16)
+	ensures var (b0, b1) := FPutUint16Spec(v);
+		FUint16Spec(b0, b1) == v
+{}
+
+lemma FPutUint16AfterFUint16(b0: bv8, b1: bv8)
+	ensures var v := FUint16Spec(b0, b1);
+		FPutUint16Spec(v) == (b0, b1)
+{}
+
+function FUint32Spec(b0: bv8, b1: bv8, b2: bv8, b3: bv8): bv32 {
+	(b3 as bv32) | ((b2 as bv32) << 8) | ((b1 as bv32) << 16) | ((b0 as bv32) << 24)
+}
+
+function FPutUint32Spec(v: bv32): (bv8, bv8, bv8, bv8) {
+	(((v >> 24) & 0xFF) as bv8,
+	((v >> 16) & 0xFF) as bv8,
+	((v >> 8) & 0xFF) as bv8,
+	(v & 0xFF) as bv8)
+}
+
+lemma FUint32AfterFPutUint32(v: bv32)
+	ensures var (b0, b1, b2, b3) := FPutUint32Spec(v);
+		FUint32Spec(b0, b1, b2, b3) == v
+{}
+
+lemma FPutUint32AfterFUint32(b0: bv8, b1: bv8, b2: bv8, b3: bv8)
+	ensures var v := FUint32Spec(b0, b1, b2, b3);
+		FPutUint32Spec(v) == (b0, b1, b2, b3)
+{}
