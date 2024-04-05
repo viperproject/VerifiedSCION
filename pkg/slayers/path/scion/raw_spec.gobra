@@ -472,6 +472,13 @@ pure func CurrSeg(raw []byte,
 		segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
 }
 
+// TODO
+// - prove EqualBytesImplyEqualCurrSeg
+// - prove EqualBytesImplyEqualRightSeg
+// - make sure I can establish that the right segs are equal between old bytes and new bytes in SetInfoField
+// - Prove that the currseg is the desired in SetInfoField
+// - repeat what I did for right seg for the left and mid
+
 ghost
 opaque
 requires 0 <= headerOffset

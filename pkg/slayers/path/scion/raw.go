@@ -338,8 +338,25 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, ghost dp io.DataPlaneSpec@*/) (r error) {
 	//@ share info
 	//@ ghost oldCurrINF := int(old(s.GetCurrINF(ubuf)))
-	//@ ghost oldAbsPkt := reveal s.absPkt(dp, ubuf)
+	//@ ghost oldAbsPkt  := reveal s.absPkt(dp, ubuf)
 	//@ ghost oldMetaHdr := RawBytesToMetaHdr(ubuf)
+	//@ ghost newAbsInfoField := info.ToIntermediateAbsInfoField()
+	//@ ghost newCurrSeg := io.IO_seg3(io.IO_seg3_{
+	//@ 	newAbsInfoField.AInfo,
+	//@ 	newAbsInfoField.UInfo,
+	//@ 	newAbsInfoField.ConsDir,
+	//@ 	newAbsInfoField.Peer,
+	//@ 	oldAbsPkt.CurrSeg.Past,
+	//@ 	oldAbsPkt.CurrSeg.Future,
+	//@ 	oldAbsPkt.CurrSeg.History})
+	//@ ghost targetAbsPkt := AbsSetInfoField(oldAbsPkt, info.ToIntermediateAbsInfoField())
+	//@ ghost if idx == oldCurrINF {
+	//@ 	assert oldAbsPkt.RightSeg == targetAbsPkt.RightSeg
+	//@ 	assert oldAbsPkt.MidSeg   == targetAbsPkt.MidSeg
+	//@ 	assert oldAbsPkt.LeftSeg  == targetAbsPkt.LeftSeg
+	//@ 	assert newCurrSeg         == targetAbsPkt.CurrSeg
+	//@ }
+
 	// reveal validPktMetaHdr(ubuf)
 	// reveal RightSeg(ubuf, int(oldMetaHdr.CurrINF - 1), int(oldMetaHdr.SegLen[0]), int(oldMetaHdr.SegLen[1]), int(oldMetaHdr.SegLen[2]), 0)
 
