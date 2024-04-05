@@ -382,11 +382,11 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func ValidPktMetaHdr(raw []byte) bool {
 	return CmnHdrLen <= len(raw) &&
-		let start  := GetAddressOffset(raw)          in
-		let end    := start+scion.MetaLen            in
-		0 <= start && end <= len(raw)      &&
+		let start  := GetAddressOffset(raw) in
+		let end    := start+scion.MetaLen   in
+		0 <= start && end <= len(raw) &&
 		let rawHdr := raw[start:end] in
-		let length := GetLength(raw)                 in
+		let length := GetLength(raw) in
 		length <= len(raw) &&
 		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
 	 	let _ := Asserting(forall k int :: {&rawHdr[k]} 0 <= k && k < scion.MetaLen ==> &rawHdr[k] == &raw[start + k]) in
