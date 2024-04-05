@@ -363,30 +363,14 @@ requires  offset + path.HopLen * segLen <= len(raw)
 requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures   len(res) == segLen - currHFIdx
 decreases segLen - currHFIdx
-pure func hopFieldsConsDir(
+pure func hopFields(
 	raw []byte,
 	offset int,
 	currHFIdx int,
 	segLen int) (res seq[io.IO_HF]) {
 	return currHFIdx == segLen ? seq[io.IO_HF]{} :
 		let hf := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw)) in
-		seq[io.IO_HF]{hf} ++ hopFieldsConsDir(raw, offset, currHFIdx + 1, segLen)
-}
-
-ghost
-requires  0 <= offset
-requires  -1 <= currHFIdx
-requires  offset + path.HopLen * currHFIdx + path.HopLen <= len(raw)
-requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-ensures   len(res) == currHFIdx + 1
-decreases currHFIdx + 1
-pure func hopFieldsNotConsDir(
-	raw []byte,
-	offset int,
-	currHFIdx int) (res seq[io.IO_HF]) {
-	return currHFIdx == -1 ? seq[io.IO_HF]{} :
-		let hf :=  path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw)) in
-		hopFieldsNotConsDir(raw, offset, currHFIdx - 1) ++ seq[io.IO_HF]{hf}
+		seq[io.IO_HF]{hf} ++ hopFields(raw, offset, currHFIdx + 1, segLen)
 }
 
 ghost
@@ -435,9 +419,7 @@ pure func segment(raw []byte,
 	consDir bool,
 	peer bool,
 	segLen int) (res io.IO_seg2) {
-	return let hopfields := consDir ?
-		hopFieldsConsDir(raw, offset, 0, segLen) :
-		hopFieldsNotConsDir(raw, offset, segLen - 1) in
+	return let hopfields := hopFields(raw, offset, 0, segLen) in
 		io.IO_seg2(io.IO_seg3_{
 			AInfo :ainfo,
 			UInfo : uinfo,
