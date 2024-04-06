@@ -2328,7 +2328,7 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 	// @ reveal p.EqAbsHopField(absPkt(dp, ub))
 	if !p.infoField.ConsDir && p.ingressID != 0 {
 		p.infoField.UpdateSegID(p.hopField.Mac /*@, p.hopField.ToIO_HF() @*/)
-		// @ assert path.absUinfo_(p.infoField.SegID) == old(io.upd_uinfo(path.absUinfo_(p.infoField.SegID), p.hopField.ToIO_HF()))
+		// @ assert path.AbsUInfoFromUint16(p.infoField.SegID) == old(io.upd_uinfo(path.AbsUInfoFromUint16(p.infoField.SegID), p.hopField.ToIO_HF()))
 		// (VerifiedSCION) the following property is guaranteed by the type system, but Gobra cannot infer it yet
 		// @ assume 0 <= p.path.GetCurrINF(ubPath)
 		// @ sl.SplitRange_Bytes(ub, start, end, HalfPerm)
@@ -2342,7 +2342,7 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		// @ p.SubSliceAbsPktToAbsPkt(ub, start, end, dp)
 		// @ ghost sl.CombineRange_Bytes(ub, start, end, HalfPerm)
 		// @ absPktFutureLemma(dp, ub)
-		// @ assert  absPkt(dp, ub).CurrSeg.UInfo == old(io.upd_uinfo(path.absUinfo_(p.infoField.SegID), p.hopField.ToIO_HF()))
+		// @ assert  absPkt(dp, ub).CurrSeg.UInfo == old(io.upd_uinfo(path.AbsUInfoFromUint16(p.infoField.SegID), p.hopField.ToIO_HF()))
 		// @ assert reveal p.EqAbsInfoField(absPkt(dp, ub))
 		// @ assert reveal p.EqAbsHopField(absPkt(dp, ub))
 	}
@@ -2528,7 +2528,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.D
 	// need to update the SegID.
 	if p.infoField.ConsDir {
 		p.infoField.UpdateSegID(p.hopField.Mac /*@, p.hopField.ToIO_HF() @*/)
-		// @ assert path.absUinfo_(p.infoField.SegID) == old(io.upd_uinfo(path.absUinfo_(p.infoField.SegID), p.hopField.ToIO_HF()))
+		// @ assert path.AbsUInfoFromUint16(p.infoField.SegID) == old(io.upd_uinfo(path.AbsUInfoFromUint16(p.infoField.SegID), p.hopField.ToIO_HF()))
 		// @ assume 0 <= p.path.GetCurrINF(ubPath)
 		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF /*@ ) @*/) /*@ , ubPath, dp @*/); err != nil {
 			// TODO parameter problem invalid path
