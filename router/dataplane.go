@@ -1438,7 +1438,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  newAbsPkt.isIO_val_Pkt2 ==>
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 // @ ensures  reserr != nil && respr.OutPkt != nil ==> newAbsPkt.isIO_val_Unsupported
-// @ ensures  respr.OutPkt != nil ==> newAbsPkt == absIO_val(dp, respr.OutPkt, respr.EgressID)
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
 
@@ -1721,6 +1720,8 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
+// @ requires  slayers.ValidPktMetaHdr(ub)
+// @ requires  p.scionLayer.EqAbsHeader(ub)
 // @ requires  acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 // @ requires  let absPkt := absIO_val(dp, p.rawPkt, p.ingressID) in
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
@@ -1734,7 +1735,6 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 
 	var ok bool
 	// @ unfold acc(p.scionLayer.Mem(ub), R20)
-	// assert reveal validPktMetaHdr(ub)
 	p.path, ok = p.scionLayer.Path.(*scion.Raw)
 	// @ fold acc(p.scionLayer.Mem(ub), R20)
 	if !ok {
@@ -1904,10 +1904,10 @@ func (p *scionPacketProcessor) packSCMP(
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires  dp.Valid()
-// @ requires  validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ requires  slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ requires  len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures   dp.Valid()
-// @ ensures   reserr == nil ==> validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures   reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures   reserr == nil ==> p.EqAbsHopField(absPkt(dp, ub))
 // @ ensures   reserr == nil ==> p.EqAbsInfoField(absPkt(dp, ub))
@@ -1933,7 +1933,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataP
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
-	// @ TemporaryAssumeForIO(validPktMetaHdr(ub))
+	// @ TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub))
 	// @ TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) > 0)
 	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(dp, ub)))
 	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(dp, ub)))
@@ -2043,9 +2043,9 @@ func (p *scionPacketProcessor) validateIngressID( /*@ ghost oldPkt io.IO_pkt2, g
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires  acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R20)
-// @ requires  dp.Valid() && validPktMetaHdr(ubScionL)
+// @ requires  dp.Valid() && slayers.ValidPktMetaHdr(ubScionL)
 // @ ensures   acc(sl.AbsSlice_Bytes(ubScionL, 0, len(ubScionL)), R20)
-// @ ensures   reserr == nil ==> dp.Valid() && validPktMetaHdr(ubScionL)
+// @ ensures   reserr == nil ==> dp.Valid() && slayers.ValidPktMetaHdr(ubScionL)
 // @ ensures   reserr == nil ==> p.DstIsLocalIngressID(ubScionL)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(dp, respr.OutPkt, respr.EgressID).isIO_val_Unsupported
@@ -2302,11 +2302,11 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 // @ ensures   acc(p.scionLayer.Mem(ub), R19)
 // @ ensures   err != nil ==> err.ErrorMem()
 // contracts for IO-spec
-// @ requires  dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ requires  dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ requires  len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ requires  p.EqAbsHopField(absPkt(dp, ub))
 // @ requires  p.EqAbsInfoField(absPkt(dp, ub))
-// @ ensures   err == nil ==> dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures   err == nil ==> dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   err == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures   err == nil ==> absPkt(dp, ub) == AbsUpdateNonConsDirIngressSegID(old(absPkt(dp, ub)), path.ifsToIO_ifs(p.ingressID))
 // @ ensures   err == nil ==> p.EqAbsHopField(absPkt(dp, ub))
@@ -2503,11 +2503,11 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte, ghost 
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
-// @ requires  dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ requires  dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ requires  len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ requires  p.EqAbsHopField(absPkt(dp, ub))
 // @ requires  p.EqAbsInfoField(absPkt(dp, ub))
-// @ ensures   reserr == nil ==> dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures   reserr == nil ==> dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) >= 0
 // @ ensures   reserr == nil ==> absPkt(dp, ub) == AbsProcessEgress(old(absPkt(dp, ub)))
 // @ decreases
@@ -2554,8 +2554,6 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.D
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP, dp)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ absPktFutureLemma(dp, ub)
-	// TemporaryAssumeForIO(dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub))
-	// TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) >= 0)
 	// @ TemporaryAssumeForIO(absPkt(dp, ub) == AbsProcessEgress(old(absPkt(dp, ub))))
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 	return nil
@@ -2578,13 +2576,13 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.D
 // @ ensures   respr === processResult{}
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contract for IO-spec
-// @ requires  dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ requires  dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ requires  p.GetIsXoverSpec(ub)
 // @ ensures   reserr == nil ==> len(old(absPkt(dp, ub)).CurrSeg.Future) == 1
 // @ ensures   reserr == nil ==> old(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2]
 // @ ensures   reserr == nil ==> len(get(old(absPkt(dp, ub)).LeftSeg).Future) > 0
 // @ ensures   reserr == nil ==> len(get(old(absPkt(dp, ub)).LeftSeg).History) == 0
-// @ ensures   reserr == nil ==> dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures   reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures   reserr == nil ==> p.EqAbsHopField(absPkt(dp, ub))
 // @ ensures   reserr == nil ==> p.EqAbsInfoField(absPkt(dp, ub))
@@ -2633,7 +2631,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost dp io.DataPla
 	// @ TemporaryAssumeForIO(old(absPkt(dp, ub)).LeftSeg != none[io.IO_seg2])
 	// @ TemporaryAssumeForIO(len(get(old(absPkt(dp, ub)).LeftSeg).Future) > 0)
 	// @ TemporaryAssumeForIO(len(get(old(absPkt(dp, ub)).LeftSeg).History) == 0)
-	// @ TemporaryAssumeForIO(dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub))
+	// @ TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub))
 	// @ TemporaryAssumeForIO(absPkt(dp, ub) == AbsDoXover(old(absPkt(dp, ub))))
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 	return processResult{}, nil
@@ -2766,12 +2764,12 @@ func (p *scionPacketProcessor) validateEgressUp( /*@ ghost oldPkt io.IO_pkt2, gh
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // constracts for IO-spec
-// @ requires dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ requires dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ requires p.DstIsLocalIngressID(ub)
 // @ requires len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ requires p.EqAbsHopField(absPkt(dp, ub))
 // @ ensures  reserr == nil ==> p.DstIsLocalIngressID(ub)
-// @ ensures reserr == nil ==> dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures reserr == nil ==> p.EqAbsHopField(absPkt(dp, ub))
 // @ ensures reserr == nil ==> absPkt(dp, ub) == old(absPkt(dp, ub))
@@ -2814,7 +2812,7 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ TemporaryAssumeForIO(absPkt(dp, ub) == old(absPkt(dp, ub)))
 	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ assert dp.Valid()
-	// @ assert validPktMetaHdr(ub)
+	// @ assert slayers.ValidPktMetaHdr(ub)
 	// @ assert p.scionLayer.EqAbsHeader(ub)
 	/*@
 	ghost var ubLL []byte
@@ -2868,11 +2866,11 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // constracts for IO-spec
-// @ requires dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ requires dp.Valid() && slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ requires len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ requires p.EqAbsHopField(absPkt(dp, ub))
 // @ requires p.EqAbsInfoField(absPkt(dp, ub))
-// @ ensures reserr == nil ==> dp.Valid() && validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures reserr == nil ==> p.EqAbsHopField(absPkt(dp, ub))
 // @ ensures reserr == nil ==> p.EqAbsInfoField(absPkt(dp, ub))
@@ -3087,7 +3085,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
-// @ requires  validPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ requires  slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ requires  acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 // @ requires  let absPkt := absIO_val(dp, ub, p.ingressID) in
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
@@ -3936,6 +3934,10 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   reterr == nil && 0   <= idx ==> retl === opts[idx]
 // @ ensures   reterr == nil ==> retl != nil
 // @ ensures   reterr == nil ==> base.Mem(data)
+// @ ensures   reterr == nil && typeOf(base.GetPath(data)) == *scion.Raw ==>
+// @ 	slayers.ValidPktMetaHdr(data)
+// @ ensures   reterr == nil && typeOf(base.GetPath(data)) == *scion.Raw ==>
+// @ 	base.EqAbsHeader(data)
 // @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
 // @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
@@ -3948,7 +3950,9 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   reterr != nil ==> (forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==> opts[i].NonInitMem())
 // @ ensures   reterr != nil ==> reterr.ErrorMem()
 // @ decreases
-func decodeLayers(data []byte, base gopacket.DecodingLayer,
+// (VerifiedSCION) originally, `base` was declared with type `gopacket.DecodingLayer`. This is unnecessarily complicated for a private function
+// that is only called once with a parameter of type `*SCION`, and leads to more annyoing post-conditions.
+func decodeLayers(data []byte, base *slayers.SCION,
 	opts ...gopacket.DecodingLayer) (retl gopacket.DecodingLayer, reterr error /*@ , ghost processed seq[bool], ghost offsets seq[offsetPair], ghost idx int @*/) {
 
 	// @ processed = seqs.NewSeqBool(len(opts))
@@ -3958,15 +3962,19 @@ func decodeLayers(data []byte, base gopacket.DecodingLayer,
 	if err := base.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return nil, err /*@ , processed, offsets, idx @*/
 	}
-	last := base
+	var last gopacket.DecodingLayer = base
 	optsSlice := ([](gopacket.DecodingLayer))(opts)
 
 	// @ ghost oldData := data
 	// @ ghost oldStart := 0
 	// @ ghost oldEnd := len(data)
 
-	// @ invariant acc(sl.AbsSlice_Bytes(oldData, 0, len(oldData)), R40)
+	// @ invariant acc(sl.AbsSlice_Bytes(oldData, 0, len(oldData)), R39)
 	// @ invariant base.Mem(oldData)
+	// @ invariant typeOf(base.GetPath(oldData)) == *scion.Raw ==>
+	// @ 	slayers.ValidPktMetaHdr(oldData)
+	// @ invariant typeOf(base.GetPath(oldData)) == *scion.Raw ==>
+	// @ 	base.EqAbsHeader(oldData)
 	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)
 	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], R10)
 	// @ invariant forall i, j int :: {&opts[i], &opts[j]} 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
