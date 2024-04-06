@@ -338,6 +338,30 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, ghost dp io.DataPlaneSpec@*/) (r error) {
 	//@ share info
 	//@ ghost oldCurrINF := int(old(s.GetCurrINF(ubuf)))
+	//@ ghost oldAbsPkt  := reveal s.absPkt(dp, ubuf)
+	//@ ghost oldMetaHdr := RawBytesToMetaHdr(ubuf)
+	//@ ghost newAbsInfoField := info.ToIntermediateAbsInfoField()
+	//@ ghost newCurrSeg := io.IO_seg3(io.IO_seg3_{
+	//@ 	newAbsInfoField.AInfo,
+	//@ 	newAbsInfoField.UInfo,
+	//@ 	newAbsInfoField.ConsDir,
+	//@ 	newAbsInfoField.Peer,
+	//@ 	oldAbsPkt.CurrSeg.Past,
+	//@ 	oldAbsPkt.CurrSeg.Future,
+	//@ 	oldAbsPkt.CurrSeg.History})
+	//@ ghost targetAbsPkt := AbsSetInfoField(oldAbsPkt, info.ToIntermediateAbsInfoField())
+	//@ ghost if idx == oldCurrINF {
+	//@ 	assert oldAbsPkt.RightSeg == targetAbsPkt.RightSeg
+	//@ 	assert oldAbsPkt.MidSeg   == targetAbsPkt.MidSeg
+	//@ 	assert oldAbsPkt.LeftSeg  == targetAbsPkt.LeftSeg
+	//@ 	assert newCurrSeg         == targetAbsPkt.CurrSeg
+	//@ }
+
+	// reveal validPktMetaHdr(ubuf)
+	// reveal RightSeg(ubuf, int(oldMetaHdr.CurrINF - 1), int(oldMetaHdr.SegLen[0]), int(oldMetaHdr.SegLen[1]), int(oldMetaHdr.SegLen[2]), 0)
+
+	//@ ghost oldSegLen := LengthOfCurrSeg(int(oldMetaHdr.CurrHF), int(oldMetaHdr.SegLen[0]), int(oldMetaHdr.SegLen[1]), int(oldMetaHdr.SegLen[2])) // TODO drop
+
 	//@ unfold acc(s.Mem(ubuf), R50)
 	//@ unfold acc(s.Base.Mem(), R50)
 	if idx >= s.NumINF {
@@ -375,7 +399,31 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, 
 	//@ fold acc(s.Base.Mem(), R50)
 	//@ fold acc(s.Mem(ubuf), R50)
 	//@ assert idx == oldCurrINF ==> reveal validPktMetaHdr(ubuf)
-	//@ TemporaryAssumeForIO(idx == oldCurrINF ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
+
+	// TODO: prove these assumptions
+	// assume forall i int :: { &ubuf[i] } 0 <= i && i < infOffset ==>
+	// 	(unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), _) in ubuf[i]) ==
+	// 	old(unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), _) in ubuf[i])
+
+	// assume forall i int :: { &ubuf[i] } infOffset+path.InfoLen <= i && i < len(ubuf) ==>
+	// 	(unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), _) in ubuf[i]) ==
+	// 	old(unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), _) in ubuf[i])
+
+	/*@
+	ghost if idx == oldCurrINF {
+		newMetaHdr := RawBytesToMetaHdr(ubuf)
+		assert oldMetaHdr == newMetaHdr
+		newSegLen := LengthOfCurrSeg(int(newMetaHdr.CurrHF), int(newMetaHdr.SegLen[0]), int(newMetaHdr.SegLen[1]), int(newMetaHdr.SegLen[2])) // TODO: drop and related symbols
+		assert oldSegLen == newSegLen
+		newAbsPkt := reveal s.absPkt(dp, ubuf)
+		reveal RightSeg(ubuf, int(newMetaHdr.CurrINF - 1), int(newMetaHdr.SegLen[0]), int(newMetaHdr.SegLen[1]), int(newMetaHdr.SegLen[2]), 0)
+		assert newAbsPkt.RightSeg == oldAbsPkt.RightSeg
+		assert newAbsPkt.LeftSeg == oldAbsPkt.LeftSeg
+		assert newAbsPkt.MidSeg == oldAbsPkt.MidSeg
+
+		assert newAbsPkt == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField())
+	}
+	@*/
 	return ret
 }
 

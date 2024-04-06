@@ -630,3 +630,5 @@ pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField)
 		oldPkt.CurrSeg.History}) in
 	io.IO_pkt2(io.IO_Packet2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg})
 }
+
+// if the abstraction of the slice is the same, the abs packets are the same

@@ -16,6 +16,8 @@
 
 package slices
 
+import . "github.com/scionproto/scion/verification/utils/definitions"
+
 // How to extend this file:
 // - if we need to support slices of non-supported types, we must repeat all definitions
 //   for that type. For this, we should be careful to avoid introducing cylical dependencies.
@@ -38,6 +40,22 @@ requires start <= i && i < end
 decreases
 func GetByte(s []byte, start int, end int, i int) byte {
 	return unfolding acc(AbsSlice_Bytes(s, start, end), _) in s[i]
+}
+
+ghost
+opaque
+requires acc(AbsSlice_Bytes(s, start1, end1), _)
+requires acc(AbsSlice_Bytes(s, start2, end2), _)
+requires start1 <= i && i < end1
+requires start2 <= i && i < end2
+ensures  GetByte(s, start1, end1, i) == GetByte(s, start2, end2, i)
+decreases
+pure func GetByteDiffBoundsYieldsSameVal(s []byte, start1, end1, start2, end2, i int) Lemma {
+	return unfolding acc(AbsSlice_Bytes(s, start1, end1), _)    in
+		unfolding acc(AbsSlice_Bytes(s, start2, end2), _)       in
+		let _ := Asserting(GetByte(s, start1, end1, i) == s[i]) in
+		let _ := Asserting(GetByte(s, start2, end2, i) == s[i]) in
+		Lemma{}
 }
 
 ghost
@@ -149,6 +167,36 @@ ensures AbsSlice_Bytes(nil, 0, 0)
 decreases
 func NilAcc_Bytes() {
 	fold AbsSlice_Bytes(nil, 0, 0)
+}
+
+ghost
+opaque
+requires 0 <= startPerm && startPerm <= start && start <= end && end <= endPerm
+requires acc(AbsSlice_Bytes(s, startPerm, endPerm), _)
+ensures  len(res) == end-start
+ensures  forall i int :: { GetByte(s, startPerm, endPerm, i) }{ res[i-start] } start <= i && i < end ==>
+	GetByte(s, startPerm, endPerm, i) == res[i-start]
+decreases end - start
+pure func AsSeq(s []byte, startPerm, endPerm, start, end int) (res seq[byte]) {
+	return start >= end ? seq[byte]{} : (seq[byte]{ GetByte(s, startPerm, endPerm, start) } ++ AsSeq(s, startPerm, endPerm, start+1, end))
+}
+
+ghost
+opaque
+requires 0 <= startPerm1 && startPerm1 <= start && start <= end && end <= endPerm1
+requires 0 <= startPerm2 && startPerm2 <= start && start <= end && end <= endPerm2
+requires acc(AbsSlice_Bytes(s, startPerm1, endPerm1), _)
+requires acc(AbsSlice_Bytes(s, startPerm2, endPerm2), _)
+ensures AsSeq(s, startPerm1, endPerm1, start, end) ==
+	AsSeq(s, startPerm2, endPerm2, start, end)
+decreases end - start
+pure func ResizeBoundsYieldsSameSeq(s []byte, startPerm1, endPerm1, startPerm2, endPerm2,  start, end int) Lemma {
+	return let _ := reveal AsSeq(s, startPerm1, endPerm1, start, end) in
+		let _ := reveal AsSeq(s, startPerm2, endPerm2, start, end)    in
+		start >= end ?
+			Lemma{} :
+			let _ := GetByteDiffBoundsYieldsSameVal(s, startPerm1, endPerm1, startPerm2, endPerm2, start) in
+				ResizeBoundsYieldsSameSeq(s, startPerm1, endPerm1, startPerm2, endPerm2, start+1, end)
 }
 
 /** Auxiliar definitions Any **/
