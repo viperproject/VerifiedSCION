@@ -42,6 +42,7 @@ func newServices() (s *services) {
 
 // @ preserves acc(s.Mem(), R50)
 // @ requires  acc(a.Mem(), R10)
+// @ decreases 0 if sync.IgnoreLockingForTermination()
 func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold acc(s.Mem(), R50)
 	s.mtx.Lock()
@@ -69,6 +70,7 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 
 // @ preserves acc(s.Mem(), R50)
 // @ preserves acc(a.Mem(), R10)
+// @ decreases 0 if sync.IgnoreLockingForTermination()
 func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold acc(s.Mem(), R50)
 	s.mtx.Lock()
@@ -102,6 +104,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 // @ requires acc(s.Mem(), _)
 // @ ensures  !b ==> r == nil
 // @ ensures  b  ==> acc(r.Mem(), _)
+// @ decreases 0 if sync.IgnoreLockingForTermination()
 func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()
@@ -130,8 +133,6 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 // @ ensures   b ==> 0 < len(addrs)
 // @ ensures   b ==> 0 <= res && res < len(addrs)
 // @ ensures   !b ==> res == -1
-// We could ensure stronger postconditions for this method,
-// but it is unclear right now if we need them.
 // @ decreases
 func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr /*@ , ghost k addr.HostSVC @*/) (res int, b bool) {
 	// @ unfold acc(validMapValue(k, addrs), R11)

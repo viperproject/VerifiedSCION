@@ -1512,6 +1512,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 // @ ensures   acc(&p.ingressID, R20)
 // @ ensures   p.bfdLayer.NonInitMem()
 // @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases 0 if sync.IgnoreLockingForTermination()
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (err error) {
 	// @ unfold acc(p.d.Mem(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
@@ -3082,6 +3083,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 // (VerifiedSCION) the type of 's' was changed from slayers.SCION to *slayers.SCION. This makes
 // specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
 // by value. We should consider porting merging this in upstream SCION.
+// @ decreases 0 if sync.IgnoreLockingForTermination()
 func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (resaddr *net.UDPAddr, reserr error /*@ , addrAliasesUb bool @*/) {
 	// @ ghost start, end := s.ExtractAcc(ub)
 	// @ assert s.RawDstAddr === ub[start:end]
