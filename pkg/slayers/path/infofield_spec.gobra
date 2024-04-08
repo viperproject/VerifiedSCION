@@ -36,8 +36,19 @@ requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) < len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
-pure func ConsDir(raw []byte, currINF int, headerOffset int) bool {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+pure func ConsDir(raw []byte, currINF, headerOffset int) bool {
+	return ConsDirBoundedPerm(raw, 0, len(raw), currINF, headerOffset)
+}
+
+ghost
+requires 0 <= start && start <= end && end <= len(raw)
+requires let currInfOffset := InfoFieldOffset(currINF, headerOffset) in
+	start <= currInfOffset && currInfOffset < end
+requires 0 <= currINF && 0 <= headerOffset
+requires acc(sl.AbsSlice_Bytes(raw, start, end), R56)
+decreases
+pure func ConsDirBoundedPerm(raw []byte, start, end, currINF, headerOffset int) bool {
+	return unfolding acc(sl.AbsSlice_Bytes(raw, start, end), R56) in
 		raw[InfoFieldOffset(currINF, headerOffset)] & 0x1 == 0x1
 }
 
@@ -46,8 +57,19 @@ requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) < len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
-pure func Peer(raw []byte, currINF int, headerOffset int) bool {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+pure func Peer(raw []byte, currINF, headerOffset int) bool {
+	return PeerBoundedPerm(raw, 0, len(raw), currINF, headerOffset)
+}
+
+ghost
+requires 0 <= start && start <= end && end <= len(raw)
+requires let currInfOffset := InfoFieldOffset(currINF, headerOffset) in
+	start <= currInfOffset && currInfOffset < end
+requires 0 <= currINF && 0 <= headerOffset
+requires acc(sl.AbsSlice_Bytes(raw, start, end), R56)
+decreases
+pure func PeerBoundedPerm(raw []byte, start, end, currINF, headerOffset int) bool {
+	return unfolding acc(sl.AbsSlice_Bytes(raw, start, end), R56) in
 		raw[InfoFieldOffset(currINF, headerOffset)] & 0x2 == 0x2
 }
 
@@ -56,9 +78,21 @@ requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) + InfoLen < len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
-pure func Timestamp(raw []byte, currINF int, headerOffset int) io.IO_ainfo {
+pure func Timestamp(raw []byte, currINF, headerOffset int) io.IO_ainfo {
+	return TimestampBoundedPerm(raw, 0, len(raw), currINF, headerOffset)
+}
+
+ghost
+requires 0 <= start && start <= end && end <= len(raw)
+requires let timeStampOffset := InfoFieldOffset(currINF, headerOffset) + 4 in
+	start <= timeStampOffset && timeStampOffset+4 <= end
+requires 0 <= currINF && 0 <= headerOffset
+requires InfoFieldOffset(currINF, headerOffset) + InfoLen < len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, start, end), R56)
+decreases
+pure func TimestampBoundedPerm(raw []byte, start, end, currINF, headerOffset int) io.IO_ainfo {
 	return let idx := InfoFieldOffset(currINF, headerOffset) + 4 in
-		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		unfolding acc(sl.AbsSlice_Bytes(raw, start, end), R56) in
 		let _ := Asserting(forall i int :: { &raw[idx+i] } { &raw[idx:idx+4][i] } 0 <= i && i < 4 ==>
 			&raw[idx+i] == &raw[idx:idx+4][i]) in
 		io.IO_ainfo(binary.BigEndian.Uint32(raw[idx : idx + 4]))
