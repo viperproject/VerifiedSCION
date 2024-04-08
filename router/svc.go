@@ -42,7 +42,7 @@ func newServices() (s *services) {
 
 // @ preserves acc(s.Mem(), R50)
 // @ requires  acc(a.Mem(), R10)
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold acc(s.Mem(), R50)
 	s.mtx.Lock()
@@ -70,7 +70,7 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 
 // @ preserves acc(s.Mem(), R50)
 // @ preserves acc(a.Mem(), R10)
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ unfold acc(s.Mem(), R50)
 	s.mtx.Lock()
@@ -104,7 +104,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 // @ requires acc(s.Mem(), _)
 // @ ensures  !b ==> r == nil
 // @ ensures  b  ==> acc(r.Mem(), _)
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()

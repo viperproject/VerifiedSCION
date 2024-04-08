@@ -27,11 +27,11 @@ func (m *Mutex) SetInv(ghost inv pred())
 
 ghost
 decreases _
-pure func IgnoreLockingForTermination() bool
+pure func IgnoreBlockingForTermination() bool
 
 requires acc(m.LockP(), _)
 ensures  m.LockP() && m.UnlockP() && m.LockInv()()
-decreases _ if IgnoreLockingForTermination()
+decreases _ if IgnoreBlockingForTermination()
 func (m *Mutex) Lock()
 
 requires acc(m.LockP(), _) && m.UnlockP() && m.LockInv()()

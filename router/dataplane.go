@@ -236,7 +236,7 @@ func (e scmpError) Error() string {
 // @ ensures   acc(d.Mem(), OutMutexPerm)
 // @ ensures   !d.IsRunning()
 // @ ensures   e == nil
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -274,7 +274,7 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // @ ensures   acc(d.Mem(), OutMutexPerm)
 // @ ensures   !d.IsRunning()
 // @ ensures   res == nil ==> d.KeyIsSet()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ share key
 	d.mtx.Lock()
@@ -334,7 +334,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
 // @ ensures   acc(d.Mem(), OutMutexPerm)
 // @ ensures   !d.IsRunning()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -371,7 +371,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -416,7 +416,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 // @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -454,7 +454,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // (VerifiedSCION) unlike all other setter methods, this does not lock d.mtx.
 // This was reported in https://github.com/scionproto/scion/issues/4282.
 // @ preserves MutexInvariant!<d!>()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	// @ unfold acc(d.Mem(), OutMutexPerm)
 	if _, existsB := d.linkTypes[ifID]; existsB {
@@ -511,7 +511,7 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 // returns InterfaceUp if the relevant bfdsession state is up, or if there is no BFD
 // session. Otherwise, it returns InterfaceDown.
 // @ preserves acc(d.Mem(), R5)
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState {
 	// @ unfold acc(d.Mem(), R5)
 	// @ defer fold acc(d.Mem(), R5)
@@ -572,7 +572,7 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	// @ unfold MutexInvariant!<d!>()
@@ -625,7 +625,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // @ requires  a != nil && acc(a.Mem(), R10)
 // @ preserves acc(d.Mem(), OutMutexPerm/2)
 // @ preserves d.mtx.LockP()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -656,7 +656,7 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
 // @ preserves d.mtx.LockInv() == MutexInvariant!<d!>;
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -1365,7 +1365,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  respr.OutPkt !== rawPkt && respr.OutPkt != nil ==>
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 
@@ -1512,7 +1512,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 // @ ensures   acc(&p.ingressID, R20)
 // @ ensures   p.bfdLayer.NonInitMem()
 // @ ensures   err != nil ==> err.ErrorMem()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (err error) {
 	// @ unfold acc(p.d.Mem(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
@@ -1548,7 +1548,7 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 // @ ensures   p.bfdLayer.NonInitMem()
 // @ ensures   sl.AbsSlice_Bytes(data, 0, len(data))
 // @ ensures   res != nil ==> res.ErrorMem()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ unfold acc(p.d.Mem(), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
@@ -1644,7 +1644,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ ensures   respr.OutPkt !== ub && respr.OutPkt != nil ==>
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 
 	var ok bool
@@ -2258,7 +2258,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC() (respr processResult, reserr e
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> !addrAliasesUb
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (resaddr *net.UDPAddr, respr processResult, reserr error /*@ , addrAliasesUb bool @*/) {
 	// (VerifiedSCION) the parameter used to be p.scionLayer,
 	// instead of &p.scionLayer.
@@ -2420,7 +2420,7 @@ func (p *scionPacketProcessor) egressInterface() uint16 {
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) validateEgressUp() (respr processResult, reserr error) {
 	egressID := p.egressInterface()
 	// @ p.d.getBfdSessionsMem()
@@ -2733,7 +2733,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error /*@, addrAliasesPkt bool @*/) {
 	if r, err := p.parsePath( /*@ ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
@@ -2886,7 +2886,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 // @ ensures  respr.OutPkt !== p.rawPkt && respr.OutPkt != nil ==>
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /*@ , addrAliasesPkt bool @*/) {
 	// @ ghost ubScionL := p.rawPkt
 	// @ p.scionLayer.ExtractAcc(ubScionL)
@@ -3083,7 +3083,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 // (VerifiedSCION) the type of 's' was changed from slayers.SCION to *slayers.SCION. This makes
 // specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
 // by value. We should consider porting merging this in upstream SCION.
-// @ decreases 0 if sync.IgnoreLockingForTermination()
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (resaddr *net.UDPAddr, reserr error /*@ , addrAliasesUb bool @*/) {
 	// @ ghost start, end := s.ExtractAcc(ub)
 	// @ assert s.RawDstAddr === ub[start:end]
