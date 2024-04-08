@@ -106,7 +106,7 @@ type bfdSession interface {
 	// @ ensures   msg.NonInitMem()
 	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
 	// @ requires acc(Mem(), _)
-	// @ decreases
+	// @ decreases 0 if sync.IgnoreBlockingForTermination()
 	IsUp() bool
 }
 
