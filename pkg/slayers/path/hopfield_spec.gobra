@@ -40,19 +40,10 @@ requires middle + HopLen <= end && end <= len(raw)
 requires acc(slices.AbsSlice_Bytes(raw, start, end), _)
 decreases
 pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
-	return unfolding acc(slices.AbsSlice_Bytes(raw, start, end), _) in
-		BytesToIO_HFHelper(raw, middle, end)
-}
-
-ghost
-requires 0 <= middle
-requires middle + HopLen <= end && end <= len(raw)
-requires forall i int :: { &raw[i] } middle <= i && i < middle+HopLen ==>
-	acc(&raw[i], _)
-decreases
-pure func BytesToIO_HFHelper(raw [] byte, middle int, end int) (io.IO_HF) {
-	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle+2+k]) in
-		let _ := Asserting(forall k int :: {&raw[middle+4:middle+6][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+6][k] == &raw[middle+4+k]) in
+	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle + 2 + k]) in
+		let _ := Asserting(forall k int :: {&raw[middle+4:middle+6][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+6][k] == &raw[middle + 4 + k]) in
+		let _ := Asserting(forall k int :: {&raw[middle+6:middle+6+MacLen][k]} 0 <= k && k < MacLen ==> &raw[middle+6:middle+6+MacLen][k] == &raw[middle + 6 + k]) in
+		unfolding acc(slices.AbsSlice_Bytes(raw, start, end), _) in
 		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4]) in
 		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6]) in
 		let op_inif2 := ifsToIO_ifs(inif2) in
@@ -60,7 +51,7 @@ pure func BytesToIO_HFHelper(raw [] byte, middle int, end int) (io.IO_HF) {
 		io.IO_HF(io.IO_HF_{
 			InIF2: op_inif2,
 			EgIF2: op_egif2,
-			HVF: AbsMac(raw[middle+6:middle+6+MacLen]),
+			HVF: AbsMac(FromSliceToMacArray(raw[middle+6:middle+6+MacLen])),
 		})
 }
 
@@ -70,16 +61,6 @@ pure func (h HopField) ToIO_HF() (io.IO_HF) {
 	return io.IO_HF(io.IO_HF_{
 			InIF2: ifsToIO_ifs(h.ConsIngress),
 			EgIF2: ifsToIO_ifs(h.ConsEgress),
-			HVF: AbsMac2(h.Mac),
+			HVF: AbsMac(h.Mac),
 		})
 }
-
-ghost
-decreases
-pure func AbsMac(mac []byte) (io.IO_msgterm)
-
-
-ghost
-decreases
-pure func AbsMac2(mac [MacLen]byte) (io.IO_msgterm)
-

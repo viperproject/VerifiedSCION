@@ -72,7 +72,7 @@ pure func asidToKey(asid IO_as) IO_key{
 
 ghost
 decreases
-pure func upd_uinfo(segid set[IO_msgterm], hf IO_HF) set[IO_msgterm]{
+pure func upd_uinfo(segid set[IO_msgterm], hf IO_HF) set[IO_msgterm] {
 	return let setHVF := set[IO_msgterm]{hf.HVF} in
 		(segid union setHVF) setminus (segid intersection setHVF)
 }
