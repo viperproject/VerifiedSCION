@@ -104,6 +104,7 @@ type bfdSession interface {
 	// (VerifiedSCION) an implementation must copy the fields it needs from msg
 	// @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 	// @ ensures   msg.NonInitMem()
+	// @ decreases 0 if sync.IgnoreBlockingForTermination()
 	ReceiveMessage(msg *layers.BFD /*@ , ghost ub []byte @*/)
 	// @ requires acc(Mem(), _)
 	// @ decreases 0 if sync.IgnoreBlockingForTermination()
