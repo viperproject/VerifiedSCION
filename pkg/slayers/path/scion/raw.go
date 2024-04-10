@@ -481,12 +481,13 @@ func (s *Raw) IsPenultimateHop( /*@ ghost ubuf []byte @*/ ) bool {
 }
 
 // IsLastHop returns whether the current hop is the last hop on the path.
-// @ preserves acc(s.Mem(ubuf), R20)
+// @ preserves acc(s.Mem(ubuf), R40)
+// @ ensures res == s.IsLastHopSpec(ubuf)
 // @ decreases
-func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) bool {
-	//@ unfold acc(s.Mem(ubuf), R20)
-	//@ defer  fold acc(s.Mem(ubuf), R20)
-	//@ unfold acc(s.Base.Mem(), R20)
-	//@ defer  fold acc(s.Base.Mem(), R20)
+func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) /*@ (res @*/ bool /* @ ) @*/ {
+	//@ unfold acc(s.Mem(ubuf), R40)
+	//@ defer  fold acc(s.Mem(ubuf), R40)
+	//@ unfold acc(s.Base.Mem(), R40)
+	//@ defer  fold acc(s.Base.Mem(), R40)
 	return int(s.PathMeta.CurrHF) == (s.NumHops - 1)
 }

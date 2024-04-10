@@ -123,8 +123,7 @@ requires slayers.ValidPktMetaHdr(ub)
 requires dp.Valid()
 decreases
 pure func (p *scionPacketProcessor) LastHopLen(ub []byte, dp io.DataPlaneSpec) bool {
-	return p.ingressID != 0 &&
-	(unfolding acc(p.scionLayer.Mem(ub), R50) in
+	return (unfolding acc(p.scionLayer.Mem(ub), R50) in
 		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
 		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==>
 			len(absPkt(dp, ub).CurrSeg.Future) == 1
