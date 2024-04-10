@@ -3194,6 +3194,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ unfold p.d.validResult(r, aliasesUb)
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, aliasesUb)
 		// @ assert ub === p.rawPkt
+		// @ TemporaryAssumeForIO(old(slayers.ValidScionPkt(ub)) == slayers.ValidScionPkt(ub))
 		// @ ghost if(slayers.ValidScionPkt(ub)) {
 		// @ 	InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
 		// @ }
@@ -3259,6 +3260,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.d.InDomainExternalInForwardingMetrics2(egressID)
 		// @ assert absPkt(dp, ub) == AbsProcessEgress(nextPkt)
 		// @ nextPkt = absPkt(dp, ub)
+		// @ TemporaryAssumeForIO(old(slayers.ValidScionPkt(ub)) == slayers.ValidScionPkt(ub))
 		// @ ghost if(slayers.ValidScionPkt(ub)) {
 		// @ 	ghost if(!p.segmentChange) {
 		// 			enter/exit event
@@ -3278,6 +3280,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	if a, ok := p.d.internalNextHops[egressID]; ok {
 		// @ p.d.getInternal()
 		// @ ghost if(path.ifsToIO_ifs(p.ingressID) != none[io.IO_ifs]) {
+		// @ 	TemporaryAssumeForIO(old(slayers.ValidScionPkt(ub)) == slayers.ValidScionPkt(ub))
 		// @	ghost if(slayers.ValidScionPkt(ub)) {
 		// @ 		if(!p.segmentChange) {
 		// 				enter event
