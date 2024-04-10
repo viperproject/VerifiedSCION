@@ -3128,8 +3128,14 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 // @ #backend[stateConsolidationMode(6)]
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
-	// @ absIO_valLemma(dp, ub, p.ingressID)
-	// @ oldPkt := absIO_val(dp, ub, p.ingressID).IO_val_Pkt2_2
+	// @ ghost var oldPkt io.IO_pkt2
+	// @ ghost if(slayers.ValidScionPkt(ub)) {
+	// @ 	absIO_valLemma(dp, ub, p.ingressID)
+	// @ 	oldPkt = absIO_val(dp, ub, p.ingressID).IO_val_Pkt2_2
+	// @ } else {
+	// @ 	absPktFutureLemma(dp, ub)
+	// @ 	oldPkt = absPkt(dp, ub)
+	// @ }
 	// @ nextPkt := oldPkt
 	if r, err := p.parsePath( /*@ ub , dp @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
@@ -3188,7 +3194,10 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ unfold p.d.validResult(r, aliasesUb)
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, aliasesUb)
 		// @ assert ub === p.rawPkt
-		// @ InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ ghost if(slayers.ValidScionPkt(ub)) {
+		// @ 	InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ }
+		// TemporaryAssumeForIO(old(slayers.ValidScionPkt(ub)) == slayers.ValidScionPkt(ub))
 		// @ newAbsPkt = reveal absIO_val(dp, p.rawPkt, 0)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, aliasesUb, newAbsPkt @*/
 	}
@@ -3251,13 +3260,16 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.d.InDomainExternalInForwardingMetrics2(egressID)
 		// @ assert absPkt(dp, ub) == AbsProcessEgress(nextPkt)
 		// @ nextPkt = absPkt(dp, ub)
-		// @ ghost if(!p.segmentChange) {
-		// 		enter/exit event
-		// @	ExternalEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
-		// @ } else {
-		// 		xover event
-		// @	XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
+		// @ ghost if(slayers.ValidScionPkt(ub)) {
+		// @ 	ghost if(!p.segmentChange) {
+		// 			enter/exit event
+		// @		ExternalEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
+		// @ 	} else {
+		// 			xover event
+		// @		XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
+		// @ 	}
 		// @ }
+		// TemporaryAssumeForIO(old(slayers.ValidScionPkt(ub)) == slayers.ValidScionPkt(ub))
 		// @ newAbsPkt = reveal absIO_val(dp, p.rawPkt, egressID)
 		// @ fold p.d.validResult(processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, false)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil /*@, false, newAbsPkt @*/
@@ -3267,17 +3279,20 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	if a, ok := p.d.internalNextHops[egressID]; ok {
 		// @ p.d.getInternal()
-		// @ ghost if(path.ifsToIO_ifs(p.ingressID) != none[io.IO_ifs]) {
-		// @ 	if(!p.segmentChange) {
-		// 			enter event
-		// @		InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ ghost if(slayers.ValidScionPkt(ub)) {
+		// @ 	ghost if(path.ifsToIO_ifs(p.ingressID) != none[io.IO_ifs]) {
+		// @ 		if(!p.segmentChange) {
+		// 				enter event
+		// @			InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ 		} else {
+		// 				xover event
+		// @			XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ 		}
+		//		TemporaryAssumeForIO(old(slayers.ValidScionPkt(ub)) == slayers.ValidScionPkt(ub))
+		// @ 		newAbsPkt = reveal absIO_val(dp, p.rawPkt, 0)
 		// @ 	} else {
-		// 			xover event
-		// @		XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ 		ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4497")
 		// @ 	}
-		// @ 	newAbsPkt = reveal absIO_val(dp, p.rawPkt, 0)
-		// @ } else {
-		// @ 	ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4497")
 		// @ }
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, false)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, false, newAbsPkt @*/

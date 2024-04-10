@@ -102,7 +102,7 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
-	return (reveal slayers.ValidPktMetaHdr(raw) && reveal slayers.ValidScionPkt(raw)) ?
+	return (reveal slayers.ValidPktMetaHdr(raw) && slayers.ValidScionPkt(raw)) ?
 		io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(dp, raw)}) :
 		absIO_val_Unsupported(raw, ingressID)
 }
