@@ -429,8 +429,8 @@ pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
 ghost
 opaque
 requires MetaLen <= idx && idx <= len(ub)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
-requires acc(sl.AbsSlice_Bytes(ub[:idx], 0, idx), R56)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(sl.AbsSlice_Bytes(ub[:idx], 0, idx), R55)
 ensures  s.EqAbsHeader(ub) == s.EqAbsHeader(ub[:idx])
 decreases
 pure func (s MetaHdr) EqAbsHeaderForSublice(ub []byte, idx int) Lemma {
