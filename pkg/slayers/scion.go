@@ -324,6 +324,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // @ 	ValidPktMetaHdr(data)
 // @ ensures   res == nil && typeOf(s.GetPath(data)) == *scion.Raw ==>
 // @ 	s.EqAbsHeader(data)
+// @ ensures   res == nil ==> s.EqPathType(data)
 // @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
 // @ decreases
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
@@ -430,6 +431,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 
 	// @ TemporaryAssumeForIO(typeOf(s.GetPath(data)) == *scion.Raw ==> ValidPktMetaHdr(data))
 	// @ TemporaryAssumeForIO(typeOf(s.GetPath(data)) == *scion.Raw ==> s.EqAbsHeader(data))
+	// @ TemporaryAssumeForIO(s.EqPathType(data))
 	return nil
 }
 

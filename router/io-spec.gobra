@@ -102,7 +102,7 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
-	return reveal slayers.ValidPktMetaHdr(raw) ?
+	return (reveal slayers.ValidPktMetaHdr(raw) && reveal slayers.ValidScionPkt(raw)) ?
 		io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(dp, raw)}) :
 		absIO_val_Unsupported(raw, ingressID)
 }
@@ -171,3 +171,9 @@ pure func MsgToAbsVal(dp io.DataPlaneSpec, msg *ipv4.Message, ingressID uint16) 
 	return unfolding acc(msg.Mem(), R50) in
 		absIO_val(dp, msg.Buffers[0], ingressID)
 }
+
+ghost
+ensures absPkt.isIO_val_Pkt2 ==>
+	ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(ingressID), absPkt.IO_val_Pkt2_2)
+decreases
+func TemporaryAssumeForIOWitness(absPkt io.IO_val, ingressID uint16, ioSharedArg SharedArg)
