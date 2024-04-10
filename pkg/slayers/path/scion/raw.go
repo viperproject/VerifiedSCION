@@ -400,7 +400,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, 
 	//@ fold acc(s.Mem(ubuf), R50)
 	//@ assert idx == oldCurrINF ==> reveal validPktMetaHdr(ubuf)
 
-	// TODO: prove these assumptions
+	// TODO: drop these assumptions
 	// assume forall i int :: { &ubuf[i] } 0 <= i && i < infOffset ==>
 	// 	(unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), _) in ubuf[i]) ==
 	// 	old(unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), _) in ubuf[i])

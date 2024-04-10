@@ -111,6 +111,21 @@ pure func AbsUinfo(raw []byte, currINF int, headerOffset int) set[io.IO_msgterm]
 		AbsUInfoFromUint16(binary.BigEndian.Uint16(raw[idx:idx+2]))
 }
 
+ghost
+requires 0 <= currINF && 0 <= headerOffset
+requires let absUinfoOffset := InfoFieldOffset(currINF, headerOffset) + InfoLen in
+	0 <= start && start <= absUinfoOffset && absUinfoOffset+2 <= end && end <= len(raw)
+requires 
+requires acc(sl.AbsSlice_Bytes(raw, start, end), R56)
+decreases
+pure func AbsUinfoHelper(raw []byte, start, end, currINF, headerOffset int) set[io.IO_msgterm] {
+	return 	let idx := InfoFieldOffset(currINF, headerOffset) + 2 in
+		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		let _ := Asserting(forall k int :: {&raw[idx:idx+2][k]} 0 <= k && k < 2 ==>
+			&raw[idx:idx+4][k] == &raw[idx + k]) in
+		AbsUInfoFromUint16(binary.BigEndian.Uint16(raw[idx:idx+2]))
+}
+
 // This type simplifies the infoField, making it easier
 // to use than the IO_seg3 from the IO-spec.
 type IntermediateAbsInfoField adt {
