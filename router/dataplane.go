@@ -1452,6 +1452,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 // @ ensures  reserr != nil && respr.OutPkt != nil ==> newAbsPkt.isIO_val_Unsupported
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
+// @ #backend[moreJoins(1)]
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
 
