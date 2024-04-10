@@ -25,11 +25,16 @@ ensures m.LockP() && m.LockInv() == inv
 decreases
 func (m *Mutex) SetInv(ghost inv pred())
 
+ghost
+decreases _
+pure func IgnoreBlockingForTermination() bool
+
 requires acc(m.LockP(), _)
-ensures m.LockP() && m.UnlockP() && m.LockInv()()
+ensures  m.LockP() && m.UnlockP() && m.LockInv()()
+decreases _ if IgnoreBlockingForTermination()
 func (m *Mutex) Lock()
 
 requires acc(m.LockP(), _) && m.UnlockP() && m.LockInv()()
 ensures m.LockP()
-decreases
+decreases _
 func (m *Mutex) Unlock()
