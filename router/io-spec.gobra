@@ -34,10 +34,10 @@ ghost
 opaque
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-requires validPktMetaHdr(raw)
+requires slayers.ValidPktMetaHdr(raw)
 decreases
 pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
-	return let _ := reveal validPktMetaHdr(raw) in
+	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetAddressOffset(raw) in
 		let _ := Asserting(forall k int :: {&raw[headerOffset:headerOffset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
 			&raw[headerOffset:headerOffset+scion.MetaLen][k] == &raw[headerOffset + k]) in
@@ -84,33 +84,6 @@ pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_
 }
 
 ghost
-opaque
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-decreases
-pure func validPktMetaHdr(raw []byte) bool {
-	return slayers.CmnHdrLen <= len(raw) &&
-		let offset := slayers.GetAddressOffset(raw) in
-		0 <= offset &&
-		let length := slayers.GetLength(raw) in
-		length <= len(raw) &&
-		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
-	 	offset+scion.MetaLen <= len(raw) &&
-		let _ := Asserting(forall k int :: {&raw[offset:offset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==> &raw[offset:offset+scion.MetaLen][k] == &raw[offset + k]) in
-		let hdr := binary.BigEndian.Uint32(raw[offset:offset+scion.MetaLen]) in
-		let metaHdr := scion.DecodedFrom(hdr) in
-		let seg1 := int(metaHdr.SegLen[0]) in
-		let seg2 := int(metaHdr.SegLen[1]) in
-		let seg3 := int(metaHdr.SegLen[2]) in
-		let base := scion.Base{metaHdr,
-			scion.NumInfoFields(seg1, seg2, seg3),
-			seg1 + seg2 + seg3} in
-		metaHdr.InBounds() &&
-		0 < metaHdr.SegLen[0] &&
-		base.ValidCurrIdxsSpec() &&
-		scion.pktLen(seg1, seg2, seg3, offset) <= length
-}
-
-ghost
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Unsupported
 ensures val.IO_val_Unsupported_1 == path.ifsToIO_ifs(ingressID)
@@ -129,7 +102,7 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
-	return reveal validPktMetaHdr(raw) ?
+	return reveal slayers.ValidPktMetaHdr(raw) ?
 		io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(dp, raw)}) :
 		absIO_val_Unsupported(raw, ingressID)
 }
@@ -174,7 +147,8 @@ ghost
 requires acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool {
-	return forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
+	return !(0 in domain(d.linkTypes)) &&
+		forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
 		io.IO_ifs(ifs) in domain(dp.GetLinkTypes()) &&
 		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.IO_ifs(ifs))
 }
@@ -188,6 +162,17 @@ pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 		d.dpSpecWellConfiguredLocalIA(dp)     &&
 		d.dpSpecWellConfiguredNeighborIAs(dp) &&
 		d.dpSpecWellConfiguredLinkTypes(dp)
+}
+
+ghost
+requires acc(d.Mem(), _)
+requires d.DpAgreesWithSpec(dp)
+ensures acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
+ensures d.dpSpecWellConfiguredLinkTypes(dp)
+decreases
+func (d *DataPlane) LinkTypesLemma(dp io.DataPlaneSpec) {
+	reveal d.DpAgreesWithSpec(dp)
+	unfold acc(d.Mem(), _)
 }
 
 ghost

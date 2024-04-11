@@ -42,6 +42,7 @@ decreases
 pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle + 2 + k]) in
 		let _ := Asserting(forall k int :: {&raw[middle+4:middle+6][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+6][k] == &raw[middle + 4 + k]) in
+		let _ := Asserting(forall k int :: {&raw[middle+6:middle+6+MacLen][k]} 0 <= k && k < MacLen ==> &raw[middle+6:middle+6+MacLen][k] == &raw[middle + 6 + k]) in
 		unfolding acc(slices.AbsSlice_Bytes(raw, start, end), _) in
 		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4]) in
 		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6]) in
@@ -50,7 +51,7 @@ pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 		io.IO_HF(io.IO_HF_{
 			InIF2 : op_inif2,
 			EgIF2 : op_egif2,
-			HVF : AbsMac(raw[6:6+MacLen]),
+			HVF : AbsMac(FromSliceToMacArray(raw[middle+6:middle+6+MacLen])),
 		})
 }
 
@@ -60,28 +61,9 @@ pure func (h HopField) ToIO_HF() (io.IO_HF) {
 	return io.IO_HF(io.IO_HF_{
 			InIF2 : ifsToIO_ifs(h.ConsIngress),
 			EgIF2 : ifsToIO_ifs(h.ConsEgress),
-			HVF : AbsMac2(h.Mac),
+			HVF : AbsMac(h.Mac),
 		})
 }
-
-ghost
-decreases
-pure func AbsMac(mac []byte) (io.IO_msgterm)
-
-
-ghost
-decreases
-pure func AbsMac2(mac [MacLen]byte) (io.IO_msgterm)
-
-
-// Express that AbsMac and AbsMac2 return the same abstract mac with buffers of the same contents
-ghost
-requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R47)
-requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> mac1[i] == mac2[i]
-ensures  forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R47)
-ensures  AbsMac(mac1) == AbsMac2(mac2)
-decreases
-func AbsMac_Lemma(mac1 []byte, mac2 [MacLen]byte)
 
 ghost
 opaque

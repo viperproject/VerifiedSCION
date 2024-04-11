@@ -131,16 +131,15 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 // UpdateSegID updates the SegID field by XORing the SegID field with the 2
 // first bytes of the MAC. It is the beta calculation according to
 // https://docs.scion.org/en/latest/protocols/scion-header.html#hop-field-mac-computation
+// @ requires hf.HVF == AbsMac(hfMac)
 // @ preserves acc(&inf.SegID)
-// requires hf.HVF == AbsMac(hfMac[:])
-// @ ensures absUinfo_(inf.SegID) == old(io.upd_uinfo(absUinfo_(inf.SegID), hf))
+// @ ensures AbsUInfoFromUint16(inf.SegID) ==
+// @ 	old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf))
 // @ decreases
 func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte /* @, ghost hf io.IO_HF @ */) {
 	//@ share hfMac
 	inf.SegID = inf.SegID ^ binary.BigEndian.Uint16(hfMac[:2])
-	// TODO: (Markus) How to argue that we need to assume this
-	// upd_uinfo equivalent to xor in the protocol
-	// @ assume absUinfo_(inf.SegID) == old(io.upd_uinfo(absUinfo_(inf.SegID), hf))
+	// @ AssumeForIO(AbsUInfoFromUint16(inf.SegID) == old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf)))
 }
 
 // @ decreases

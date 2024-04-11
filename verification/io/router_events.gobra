@@ -18,16 +18,6 @@
 
 package io
 
-ghost
-requires dp.Valid()
-requires asid == dp.Asid()
-decreases
-pure func (dp DataPlaneSpec) dp2_check_recvif(d bool, asid IO_as, recvif IO_ifs) bool {
-	return d?
-		(dp.link_type(asid, recvif) == IO_CustProv{} || dp.link_type(asid, recvif) == IO_PeerOrCore{}) :
-		(dp.link_type(asid, recvif) == IO_ProvCust{} || dp.link_type(asid, recvif) == IO_PeerOrCore{})
-}
-
 /* Abbreviations */
 ghost
 requires dp.Valid()
@@ -101,6 +91,7 @@ pure func (dp DataPlaneSpec) dp2_enter_guard(m IO_pkt2, currseg IO_seg2, travers
 	return m.CurrSeg == currseg &&
 		currseg.Future == seq[IO_HF]{hf1} ++ fut &&
 		dp.dp2_check_interface(currseg.ConsDir, asid, hf1, recvif) &&
+		(dp.dp2_check_interface_top(currseg.ConsDir, asid, hf1) || fut == seq[IO_HF]{}) &&
 		update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
 		same_segment2(currseg, traversedseg) &&
 		same_other2(currseg, traversedseg) &&
