@@ -127,10 +127,11 @@ pure func (s *Raw) ValidCurrIdxs(ghost ub []byte) bool {
 
 ghost
 requires acc(s.Mem(ub), _)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) EqAbsHeader(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
+		unfolding acc(s.Base.Mem(), _) in
 		s.Base.EqAbsHeader(ub)
 }
 
@@ -629,4 +630,41 @@ pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField)
 		oldPkt.CurrSeg.Future,
 		oldPkt.CurrSeg.History}) in
 	io.IO_pkt2(io.IO_Packet2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg})
+}
+
+ghost
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) IsLastHopSpec(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		unfolding acc(s.Base.Mem(), _) in
+		int(s.PathMeta.CurrHF) == (s.NumHops - 1)
+}
+
+ghost
+preserves acc(s.Mem(ubuf), R55)
+preserves s.IsLastHopSpec(ubuf)
+preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+preserves dp.Valid()
+preserves validPktMetaHdr(ubuf)
+preserves s.EqAbsHeader(ubuf)
+ensures len(s.absPkt(dp, ubuf).CurrSeg.Future) == 1
+decreases
+func (s *Raw) LastHopLemma(ubuf []byte, dp io.DataPlaneSpec) {
+	reveal validPktMetaHdr(ubuf)
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56) in
+			binary.BigEndian.Uint32(ubuf[:MetaLen]))
+	metaHdr := DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := HopFieldOffset(numINF, 0, 0)
+	pkt := reveal s.absPkt(dp, ubuf)
+	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0)
+	assert len(pkt.CurrSeg.Future) == 1
 }

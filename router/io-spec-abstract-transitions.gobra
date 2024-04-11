@@ -52,6 +52,17 @@ pure func AbsValidateIngressIDConstraint(pkt io.IO_pkt2, ingressID option[io.IO_
 
 ghost
 opaque
+requires pkt.RightSeg != none[io.IO_seg2]
+requires len(get(pkt.RightSeg).Past) > 0
+decreases
+pure func AbsValidateIngressIDConstraintXover(pkt io.IO_pkt2, ingressID option[io.IO_ifs]) bool {
+	return let rightseg := get(pkt.RightSeg) in
+		ingressID != none[io.IO_ifs] ==>
+			ingressID == (rightseg.ConsDir ? rightseg.Past[0].InIF2 : rightseg.Past[0].EgIF2)
+}
+
+ghost
+opaque
 requires len(pkt.CurrSeg.Future) > 0
 decreases
 pure func AbsEgressInterfaceConstraint(pkt io.IO_pkt2, egressID option[io.IO_ifs]) bool {
@@ -67,7 +78,7 @@ decreases
 pure func AbsValidateEgressIDConstraint(pkt io.IO_pkt2, enter bool, dp io.DataPlaneSpec) bool {
 	return let currseg := pkt.CurrSeg in
 		let nextIf := (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2) in
-		dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), currseg.Future[0]) &&
+		(enter ==> dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), currseg.Future[0])) &&
 		nextIf != none[io.IO_ifs] &&
 		(get(nextIf) in domain(dp.GetNeighborIAs()))
 }
@@ -145,6 +156,7 @@ requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires  newPkt == AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
 requires  AbsValidateIngressIDConstraint(oldPkt, ingressID)
 requires  AbsVerifyCurrentMACConstraint(newPkt, dp)
+requires  len(newPkt.CurrSeg.Future) == 1 || AbsValidateEgressIDConstraint(newPkt, true, dp)
 preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 ensures   dp.Valid()
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
@@ -153,6 +165,9 @@ func InternalEnterEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt i
 	reveal AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
 	reveal AbsValidateIngressIDConstraint(oldPkt, ingressID)
 	reveal AbsVerifyCurrentMACConstraint(newPkt, dp)
+	if(len(newPkt.CurrSeg.Future) != 1) {
+		reveal AbsValidateEgressIDConstraint(newPkt, true, dp)
+	}
 	AtomicEnter(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 }
 
