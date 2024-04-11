@@ -1933,8 +1933,8 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataP
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
-	// @ TemporaryAssumeForIO(validPktMetaHdr(ub))
-	// @ TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) > 0)
+	// TemporaryAssumeForIO(validPktMetaHdr(ub))
+	// TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) > 0)
 	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(dp, ub)))
 	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(dp, ub)))
 	return processResult{}, nil

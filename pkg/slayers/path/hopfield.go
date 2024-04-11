@@ -79,18 +79,24 @@ type HopField struct {
 // @ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R45)
 // @ ensures   h.Mem()
 // @ ensures   err == nil
+// @ ensures   h.CorrectlyDecodedHF(raw, 0, 0, HopLen)
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < HopLen {
 		return serrors.New("HopField raw too short", "expected", HopLen, "actual", len(raw))
 	}
-	//@ preserves acc(h)
-	//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
-	//@ ensures h.ConsIngress >= 0
-	//@ ensures h.ConsEgress >= 0
-	//@ decreases
-	//@ outline(
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
+	// @ requires  len(raw) >= HopLen
+	// @ preserves acc(h)
+	// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
+	// @ ensures   h.ConsIngress >= 0
+	// @ ensures   h.ConsEgress >= 0
+	// @ ensures   let h1 := BytesToIO_HF(raw, 0, 0, HopLen) in
+	// @           let h2 := h.ToIO_HF() in
+	// @           h1.InIF2 == h2.InIF2 &&
+	// @           h1.EgIF2 == h2.EgIF2
+	// @ decreases
+	// @ outline(
+	// @ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
 	h.EgressRouterAlert = raw[0]&0x1 == 0x1
 	h.IngressRouterAlert = raw[0]&0x2 == 0x2
 	h.ExpTime = raw[1]
@@ -98,21 +104,35 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	h.ConsIngress = binary.BigEndian.Uint16(raw[2:4])
 	//@ assert &raw[4:6][0] == &raw[4] && &raw[4:6][1] == &raw[5]
 	h.ConsEgress = binary.BigEndian.Uint16(raw[4:6])
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
-	//@ )
-	//@ preserves acc(&h.Mac)
-	//@ preserves acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
-	//@ decreases
-	//@ outline(
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
-	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac[:]) ==>
-	//@     &h.Mac[i] == &h.Mac[:][i]
-	//@ assert forall i int :: { &raw[6:6+MacLen][i] } 0 <= i && i < len(raw[6:6+MacLen]) ==>
-	//@     &raw[6:6+MacLen][i] == &raw[i+6]
-	copy(h.Mac[:], raw[6:6+MacLen] /*@ , R47 @*/)
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
-	//@ )
-	//@ fold h.Mem()
+	// @ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
+	// @ )
+	// @ requires  len(raw) >= HopLen
+	// @ requires  acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
+	// @ requires  acc(h)
+	// (VerifiedSCION) The following precondition can be removed when https://github.com/viperproject/gobra/issues/760 is resolved
+	// @ requires  len(h.Mac) == MacLen
+	// @ requires  let h1 := BytesToIO_HF(raw, 0, 0, HopLen) in
+	// @           let h2 := (*h).ToIO_HF() in
+	// @           h1.InIF2 == h2.InIF2 &&
+	// @           h1.EgIF2 == h2.EgIF2
+	// @ ensures   acc(h)
+	// @ ensures   acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
+	// @ ensures   BytesToIO_HF(raw, 0, 0, HopLen) == h.ToIO_HF()
+	// @ decreases
+	// @ outline(
+	// @ unfold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R47)
+	// @ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac[:]) ==>
+	// @     &h.Mac[i] == &h.Mac[:][i]
+	// @ assert forall i int :: { &raw[6:6+MacLen][i] } 0 <= i && i < len(raw[6:6+MacLen]) ==>
+	// @     &raw[6:6+MacLen][i] == &raw[i+6]
+	copy(h.Mac[:], raw[6:6+MacLen] /*@ , R48 @*/)
+	// @ assert forall i int :: 0 <= i && i < MacLen ==> h.Mac[:][i] == raw[6:6+MacLen][i]
+	// @ assert forall i int :: 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
+	// @ AbsMac_Lemma(raw[6:6+MacLen], h.Mac)
+	// @ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R47)
+	// @ )
+	// @ fold h.Mem()
+	// @ assert reveal h.CorrectlyDecodedHF(raw, 0, 0, HopLen)
 	return nil
 }
 

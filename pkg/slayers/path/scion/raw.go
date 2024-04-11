@@ -404,7 +404,9 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 		//@ Unreachable()
 		return path.HopField{}, err
 	}
+	// @ assert reveal hop.CorrectlyDecodedHF(s.Raw[hopOffset : hopOffset+path.HopLen], 0, 0, path.HopLen)
 	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
+	// @ assert reveal hop.CorrectlyDecodedHF(s.Raw, hopOffset, hopOffset, hopOffset+path.HopLen)
 	//@ unfold hop.Mem()
 	return hop, nil
 }

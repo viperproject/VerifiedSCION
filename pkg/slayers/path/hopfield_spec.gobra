@@ -73,3 +73,23 @@ ghost
 decreases
 pure func AbsMac2(mac [MacLen]byte) (io.IO_msgterm)
 
+
+// Express that AbsMac and AbsMac2 return the same abstract mac with buffers of the same contents
+ghost
+requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R47)
+requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> mac1[i] == mac2[i]
+ensures  forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R47)
+ensures  AbsMac(mac1) == AbsMac2(mac2)
+decreases
+func AbsMac_Lemma(mac1 []byte, mac2 [MacLen]byte)
+
+ghost
+opaque
+requires 0 <= start && start <= middle
+requires middle + HopLen <= end && end <= len(raw)
+requires acc(slices.AbsSlice_Bytes(raw, start, end), R50)
+requires h.Mem()
+decreases
+pure func (h *HopField) CorrectlyDecodedHF(raw []byte, start int, middle int, end int) bool {
+	return unfolding h.Mem() in unfolding acc(slices.AbsSlice_Bytes(raw, start, end), R51) in BytesToIO_HF(raw, start, middle, end) == h.ToIO_HF()
+}
