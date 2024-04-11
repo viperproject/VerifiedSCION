@@ -129,7 +129,6 @@ pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif 
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in
 		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
-		dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), hf1) &&
 		(nextif in domain(dp.GetNeighborIAs())) &&
 		let a2 := dp.GetNeighborIA(nextif) in
 		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in

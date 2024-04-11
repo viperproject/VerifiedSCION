@@ -147,7 +147,8 @@ ghost
 requires acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool {
-	return forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
+	return !(0 in domain(d.linkTypes)) &&
+		forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
 		io.IO_ifs(ifs) in domain(dp.GetLinkTypes()) &&
 		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.IO_ifs(ifs))
 }
@@ -161,6 +162,17 @@ pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 		d.dpSpecWellConfiguredLocalIA(dp)     &&
 		d.dpSpecWellConfiguredNeighborIAs(dp) &&
 		d.dpSpecWellConfiguredLinkTypes(dp)
+}
+
+ghost
+requires acc(d.Mem(), _)
+requires d.DpAgreesWithSpec(dp)
+ensures acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
+ensures d.dpSpecWellConfiguredLinkTypes(dp)
+decreases
+func (d *DataPlane) LinkTypesLemma(dp io.DataPlaneSpec) {
+	reveal d.DpAgreesWithSpec(dp)
+	unfold acc(d.Mem(), _)
 }
 
 ghost
