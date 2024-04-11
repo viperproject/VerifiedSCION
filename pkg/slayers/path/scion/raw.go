@@ -484,7 +484,7 @@ func (s *Raw) IsPenultimateHop( /*@ ghost ubuf []byte @*/ ) bool {
 // @ preserves acc(s.Mem(ubuf), R40)
 // @ ensures res == s.IsLastHopSpec(ubuf)
 // @ decreases
-func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) /*@ (res @*/ bool /* @ ) @*/ {
+func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) (res bool) {
 	//@ unfold acc(s.Mem(ubuf), R40)
 	//@ defer  fold acc(s.Mem(ubuf), R40)
 	//@ unfold acc(s.Base.Mem(), R40)
