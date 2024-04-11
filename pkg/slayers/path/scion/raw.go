@@ -385,29 +385,31 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, 
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
 // @ ensures   (idx < old(s.GetNumHops(ubuf))) == (r == nil)
 // @ ensures   r != nil ==> r.ErrorMem()
+// @ ensures   hop.CorrectlyDecodedHF(s.Raw, hopOffset, hopOffset, hopOffset+path.HopLen)
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), R10)
-	//@ unfold acc(s.Base.Mem(), R11)
+	// @ unfold acc(s.Mem(ubuf), R10)
+	// @ unfold acc(s.Base.Mem(), R11)
 	if idx >= s.NumHops {
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R11)
-		//@ fold acc(s.Mem(ubuf), R10)
+		// @ fold acc(s.Base.Mem(), R11)
+		// @ fold acc(s.Mem(ubuf), R10)
 		return path.HopField{}, err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-	//@ fold acc(s.Base.Mem(), R11)
-	//@ fold acc(s.Mem(ubuf), R10)
+	// @ fold acc(s.Base.Mem(), R11)
+	// @ fold acc(s.Mem(ubuf), R10)
 	hop /*@@@*/ := path.HopField{}
-	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
+	// @ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
-		//@ Unreachable()
+		// @ Unreachable()
 		return path.HopField{}, err
 	}
-	// @ assert reveal hop.CorrectlyDecodedHF(s.Raw[hopOffset : hopOffset+path.HopLen], 0, 0, path.HopLen)
-	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
-	// @ assert reveal hop.CorrectlyDecodedHF(s.Raw, hopOffset, hopOffset, hopOffset+path.HopLen)
-	//@ unfold hop.Mem()
+	// @ assert hop.CorrectlyDecodedHF(s.Raw[hopOffset : hopOffset+path.HopLen], 0, 0, path.HopLen)
+	// @ CorrectlDecodedHF_Lemma(s.Raw, hopOffset, hopOffset+path.HopLen, 0, 0, path.HopLen)
+	// @ assert hop.CorrectlyDecodedHF(s.Raw, hopOffset, hopOffset, hopOffset+path.HopLen)
+	// @ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
+	// @ unfold hop.Mem()
 	return hop, nil
 }
 

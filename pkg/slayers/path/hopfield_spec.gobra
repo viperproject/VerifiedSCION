@@ -75,3 +75,20 @@ decreases
 pure func (h *HopField) CorrectlyDecodedHF(raw []byte, start int, middle int, end int) bool {
 	return unfolding h.Mem() in unfolding acc(slices.AbsSlice_Bytes(raw, start, end), R51) in BytesToIO_HF(raw, start, middle, end) == h.ToIO_HF()
 }
+
+ghost
+requires  0 <= start && start <= middle
+requires  middle + HopLen <= end && end <= slice_end-slice_start
+requires  0 <= slice_start && slice_start < slice_end && slice_end <= len(raw)
+requires  slice_start + HopLen <= slice_end
+requires  acc(slices.AbsSlice_Bytes(raw[slice_start : slice_end], start, end), R50)
+requires  h.Mem()
+requires  h.CorrectlyDecodedHF(raw[slice_start : slice_end], start, middle, end)
+ensures   acc(slices.AbsSlice_Bytes(raw[slice_start : slice_end], start, end), R50)
+ensures   h.Mem()
+ensures   h.CorrectlyDecodedHF(raw, start+slice_start, middle+slice_start, end+slice_start)
+decreases
+func (h *HopField) CorrectlyDecodedHF_Lemma(raw []byte, slice_start int, slice_end int, start int, middle int, end int) bool {
+	assert reveal h.CorrectlyDecodedHF(raw[slice_start : slice_end], start, middle, end)
+	assert reveal h.CorrectlyDecodedHF(raw, start+slice_start, middle+slice_start, end+slice_start)
+}
