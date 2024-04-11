@@ -403,6 +403,18 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 }
 
 ghost
+opaque
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func IsSupportedPkt(raw []byte) bool {
+	return CmnHdrLen <= len(raw) &&
+		let pathType  := path.Type(GetPathType(raw))   in
+		let nextHdr := L4ProtocolType(GetNextHdr(raw)) in
+		pathType == scion.PathType &&
+		nextHdr != L4SCMP
+}
+
+ghost
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
 requires CmnHdrLen <= len(ub)
 decreases
@@ -419,6 +431,33 @@ requires CmnHdrLen <= len(ub)
 decreases
 pure func GetLength(ub []byte) int {
 	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in int(ub[5])*LineLen
+}
+
+ghost
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires CmnHdrLen <= len(ub)
+decreases
+pure func GetPathType(ub []byte) int {
+	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in int(ub[8])
+}
+
+ghost
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires CmnHdrLen <= len(ub)
+decreases
+pure func GetNextHdr(ub []byte) int {
+	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in int(ub[4])
+}
+
+ghost
+opaque
+requires acc(s.Mem(ub), _)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+decreases
+pure func (s *SCION) EqPathType(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		path.Type(GetPathType(ub)) == s.PathType &&
+		L4ProtocolType(GetNextHdr(ub)) == s.NextHdr
 }
 
 ghost

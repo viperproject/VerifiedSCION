@@ -535,7 +535,6 @@ opaque
 requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 requires validPktMetaHdr(raw)
-opaque
 decreases
 pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
