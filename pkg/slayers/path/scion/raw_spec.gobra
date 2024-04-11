@@ -668,3 +668,14 @@ func (s *Raw) LastHopLemma(ubuf []byte, dp io.DataPlaneSpec) {
 	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0)
 	assert len(pkt.CurrSeg.Future) == 1
 }
+
+ghost
+opaque
+requires 0 <= start && start <= middle
+requires acc(raw.Mem(ubuf), R50)
+requires acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R50)
+requires unfolding acc(raw.Mem(ubuf), R50) in middle + path.HopLen <= end && end <= len(raw.Raw)
+decreases
+pure func (raw *Raw) CorrectlyDecodedHF_Raw(h path.HopField, start int, middle int, end int, ubuf []byte) bool {
+	return unfolding acc(raw.Mem(ubuf), R50) in path.CorrectlyDecodedHF_FullBuf(h, ubuf, start, middle, end)
+}
