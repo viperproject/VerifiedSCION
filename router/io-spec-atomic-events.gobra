@@ -14,6 +14,13 @@
 
 // +gobra
 
+// This file contains the definition of operations that perform the atomic transitions of state
+// in the IO spec. They all take a *sync.Mutex, which acts as a logical invariant, because Gobra
+// does not support invariants natively. As such, we can only get access to the invariants if we
+// first lock the mutex, which is a blocking operation. Even though all these operations are
+// terminating, Gobra cannot currently prove this and thus, we assume termination for all methods
+// in this file.
+
 package router
 
 import (
@@ -21,8 +28,6 @@ import (
 	io "verification/io"
 )
 
-
-// TODO: add comment why terminations is assumed
 ghost
 requires  dp.Valid()
 requires  ingressID != none[io.IO_ifs]
@@ -49,81 +54,53 @@ preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioShared
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases _
 func AtomicEnter(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock *sync.Mutex, ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-    ghost ioLock.Lock()
+	ghost ioLock.Lock()
 	unfold SharedInv!< dp, ioSharedArg !>()
-
 	t, s := *ioSharedArg.Place, *ioSharedArg.State
-
 	ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
-    ghost pkt_internal := io.IO_val(io.IO_Internal_val1{
-                oldPkt,
-                get(ingressID),
-                newPkt,
-                egressID})
-
-
+	ghost pkt_internal := io.IO_val(io.IO_Internal_val1{oldPkt, get(ingressID), newPkt, egressID})
 	assert dp.dp3s_iospec_bio3s_enter_guard(s, t, pkt_internal)
 	unfold dp.dp3s_iospec_ordered(s, t)
 	unfold dp.dp3s_iospec_bio3s_enter(s, t)
 	io.TriggerBodyIoEnter(pkt_internal)
-
 	tN := io.CBio_IN_bio3s_enter_T(t, pkt_internal)
 	io.Enter(t, pkt_internal) //Event
-
 	UpdateElemWitness(s.obuf, ioSharedArg.OBufY, egressID, newPkt)
-
 	ghost *ioSharedArg.State = io.dp3s_add_obuf(s, egressID, newPkt)
 	ghost *ioSharedArg.Place = tN
-
 	fold SharedInv!< dp, ioSharedArg !>()
 	ghost ioLock.Unlock()
 }
 
-// TODO: add comment why terminations is assumed
 ghost
 requires  dp.Valid()
 requires  ingressID == none[io.IO_ifs]
 requires  egressID != none[io.IO_ifs]
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
-requires  dp.dp3s_forward_ext(
-				oldPkt,
-				newPkt,
-				get(egressID))
+requires  dp.dp3s_forward_ext(oldPkt, newPkt, get(egressID))
 preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases _
 func AtomicExit(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock *sync.Mutex, ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-    ghost ioLock.Lock()
+	ghost ioLock.Lock()
 	unfold SharedInv!< dp, ioSharedArg !>()
-
 	t, s := *ioSharedArg.Place, *ioSharedArg.State
-
 	ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
-    ghost pkt_internal := io.IO_val(io.IO_Internal_val2{
-                oldPkt,
-                newPkt,
-                get(egressID)})
-
-
+	ghost pkt_internal := io.IO_val(io.IO_Internal_val2{oldPkt, newPkt, get(egressID)})
 	assert dp.dp3s_iospec_bio3s_exit_guard(s, t, pkt_internal)
 	unfold dp.dp3s_iospec_ordered(s, t)
 	unfold dp.dp3s_iospec_bio3s_exit(s, t)
 	io.TriggerBodyIoExit(pkt_internal)
-
 	tN := io.dp3s_iospec_bio3s_exit_T(t, pkt_internal)
 	io.Exit(t, pkt_internal) //Event
-
 	UpdateElemWitness(s.obuf, ioSharedArg.OBufY, egressID, newPkt)
-
 	ghost *ioSharedArg.State = io.dp3s_add_obuf(s, egressID, newPkt)
 	ghost *ioSharedArg.Place = tN
-
 	fold SharedInv!< dp, ioSharedArg !>()
 	ghost ioLock.Unlock()
 }
 
-// TODO: add comment why terminations is assumed
 ghost
 requires  dp.Valid()
 requires  oldPkt.LeftSeg != none[io.IO_seg2]
@@ -164,32 +141,20 @@ preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioShared
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases _
 func AtomicXoverUp2Down(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock *sync.Mutex, ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-    ghost ioLock.Lock()
+	ghost ioLock.Lock()
 	unfold SharedInv!< dp, ioSharedArg !>()
-
 	t, s := *ioSharedArg.Place, *ioSharedArg.State
-
 	ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
-    ghost pkt_internal := io.IO_val(io.IO_Internal_val1{
-                oldPkt,
-                get(ingressID),
-                newPkt,
-                egressID})
-
-
+	ghost pkt_internal := io.IO_val(io.IO_Internal_val1{oldPkt, get(ingressID), newPkt, egressID})
 	assert dp.dp3s_iospec_bio3s_xover_up2down_guard(s, t, pkt_internal)
 	unfold dp.dp3s_iospec_ordered(s, t)
 	unfold dp.dp3s_iospec_bio3s_xover_up2down(s, t)
 	io.TriggerBodyIoXoverUp2Down(pkt_internal)
-
 	tN := io.dp3s_iospec_bio3s_xover_up2down_T(t, pkt_internal)
 	io.Xover_up2down(t, pkt_internal) //Event
-
 	UpdateElemWitness(s.obuf, ioSharedArg.OBufY, egressID, newPkt)
-
 	ghost *ioSharedArg.State = io.dp3s_add_obuf(s, egressID, newPkt)
 	ghost *ioSharedArg.Place = tN
-
 	fold SharedInv!< dp, ioSharedArg !>()
 	ghost ioLock.Unlock()
 }
