@@ -1879,10 +1879,12 @@ type macBuffersT struct {
 	epicInput  []byte
 }
 
+// (VerifiedSCION) we have a PR for this function (https://github.com/viperproject/VerifiedSCION/pull/243)
+// which can be continued now that issue #4482 was addressed in SCION.
 // @ trusted
-// @ requires 	false
-// @ requires	dp.Valid()
-// @ ensures	reserr != nil && respr.OutPkt != nil ==>
+// @ requires false
+// @ requires dp.Valid()
+// @ ensures  reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(dp, respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 func (p *scionPacketProcessor) packSCMP(
 	typ slayers.SCMPType,
@@ -2137,6 +2139,8 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghos
 }
 
 // invalidSrcIA is a helper to return an SCMP error for an invalid SrcIA.
+// (VerifiedSCION) we have a PR for this function (https://github.com/viperproject/VerifiedSCION/pull/243)
+// which can be continued now that issue #4482 was addressed in SCION.
 // @ trusted
 // @ requires dp.Valid()
 // @ requires false
@@ -2151,6 +2155,8 @@ func (p *scionPacketProcessor) invalidSrcIA( /*@ ghost dp io.DataPlaneSpec @*/ )
 }
 
 // invalidDstIA is a helper to return an SCMP error for an invalid DstIA.
+// (VerifiedSCION) we have a PR for this function (https://github.com/viperproject/VerifiedSCION/pull/243)
+// which can be continued now that issue #4482 was addressed in SCION.
 // @ trusted
 // @ requires dp.Valid()
 // @ requires false
