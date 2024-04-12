@@ -136,10 +136,10 @@ pure func (d *DataPlane) dpSpecWellConfiguredNeighborIAs(dp io.DataPlaneSpec) bo
 ghost
 decreases
 pure func absLinktype(link topology.LinkType) io.IO_Link {
-	 return link == topology.Core ? io.IO_Link(io.IO_PeerOrCore{}) :
+	 return link == topology.Core ? io.IO_Link(io.IO_Core{}) :
 		link == topology.Parent ? io.IO_Link(io.IO_CustProv{}) :
 		link == topology.Child ? io.IO_Link(io.IO_ProvCust{}) :
-		link == topology.Peer ? io.IO_Link(io.IO_PeerOrCore{}) :
+		link == topology.Peer ? io.IO_Link(io.IO_Core{}) :
 		io.IO_Link(io.IO_NoLink{})
 }
 

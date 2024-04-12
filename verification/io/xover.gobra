@@ -83,8 +83,8 @@ requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) xover2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
 	return (dp.inif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_ProvCust{})) ||
-		(dp.inif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_PeerOrCore{})) ||
-		(dp.inif2_type(hf1, asid, IO_PeerOrCore{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
+		(dp.inif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_Core{})) ||
+		(dp.inif2_type(hf1, asid, IO_Core{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
 }
 
 ghost
