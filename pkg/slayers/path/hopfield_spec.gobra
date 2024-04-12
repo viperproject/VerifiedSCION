@@ -16,32 +16,51 @@
 
 package path
 
-ghost const MetaLen = 4
+import (
+	"verification/io"
+	"verification/utils/slices"
+	"verification/dependencies/encoding/binary"
+	. "verification/utils/definitions"
+)
 
 pred (h *HopField) Mem() {
 	acc(h) && h.ConsIngress >= 0 && h.ConsEgress >= 0
 }
 
-ghost 
+
+ghost
 decreases
-pure func InfoFieldOffset(currINF int) int {
-	return MetaLen + InfoLen * currINF
+pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs]{
+	return ifs == 0 ? none[io.IO_ifs] : some(io.IO_ifs(ifs))
 }
 
-ghost 
-requires 0 <= currINF
-requires InfoFieldOffset(currINF) < len(raw)
-requires acc(&raw[InfoFieldOffset(currINF)], _)
+ghost
+requires 0 <= start && start <= middle
+requires middle + HopLen <= end && end <= len(raw)
+requires acc(slices.AbsSlice_Bytes(raw, start, end), _)
 decreases
-pure func ConsDir(raw []byte, currINF int) bool {
-	return raw[InfoFieldOffset(currINF)] & 0x1 == 0x1
+pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
+	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle + 2 + k]) in
+		let _ := Asserting(forall k int :: {&raw[middle+4:middle+6][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+6][k] == &raw[middle + 4 + k]) in
+		let _ := Asserting(forall k int :: {&raw[middle+6:middle+6+MacLen][k]} 0 <= k && k < MacLen ==> &raw[middle+6:middle+6+MacLen][k] == &raw[middle + 6 + k]) in
+		unfolding acc(slices.AbsSlice_Bytes(raw, start, end), _) in
+		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4]) in
+		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6]) in
+		let op_inif2 := ifsToIO_ifs(inif2) in
+		let op_egif2 := ifsToIO_ifs(egif2) in
+		io.IO_HF(io.IO_HF_{
+			InIF2 : op_inif2,
+			EgIF2 : op_egif2,
+			HVF : AbsMac(FromSliceToMacArray(raw[middle+6:middle+6+MacLen])),
+		})
 }
 
-ghost 
-requires 0 <= currINF
-requires InfoFieldOffset(currINF) < len(raw)
-requires acc(&raw[InfoFieldOffset(currINF)], _)
+ghost
 decreases
-pure func Peer(raw []byte, currINF int) bool {
-	return raw[InfoFieldOffset(currINF)] & 0x2 == 0x2
+pure func (h HopField) ToIO_HF() (io.IO_HF) {
+	return io.IO_HF(io.IO_HF_{
+			InIF2 : ifsToIO_ifs(h.ConsIngress),
+			EgIF2 : ifsToIO_ifs(h.ConsEgress),
+			HVF : AbsMac(h.Mac),
+		})
 }

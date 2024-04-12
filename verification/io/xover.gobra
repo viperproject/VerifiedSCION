@@ -103,3 +103,5 @@ decreases
 pure func (dp DataPlaneSpec) xover_up2down2_link_type_dir(asid IO_as, d1 bool, hf1 IO_HF, d2 bool, hf2 IO_HF) bool {
 	return dp.xover_up2down2_link_type(asid, swap_if_dir2(hf1, d1), swap_if_dir2(hf2, d2))
 }
+
+

@@ -259,18 +259,7 @@ type MetaHdr struct {
 // @ preserves acc(m)
 // @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
-// @ ensures   e == nil ==> (
-// @ 	MetaLen <= len(raw)              &&
-// @ 	0 <= m.CurrINF && m.CurrINF <= 3 &&
-// @ 	0 <= m.CurrHF  && m.CurrHF < 64  &&
-// @ 	m.SegsInBounds() &&
-// @ 	let lenR := len(raw) in
-// @ 	let b0 := sl.GetByte(raw, 0, lenR, 0) in
-// @ 	let b1 := sl.GetByte(raw, 0, lenR, 1) in
-// @ 	let b2 := sl.GetByte(raw, 0, lenR, 2) in
-// @ 	let b3 := sl.GetByte(raw, 0, lenR, 3) in
-// @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
-// @ 	DecodedFrom(line) == *m)
+// @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
@@ -300,16 +289,11 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 // @ preserves acc(m, R50)
 // @ preserves sl.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   e == nil
-// @ ensures   let lenR := len(b)           in
-// @ 	let b0 := sl.GetByte(b, 0, lenR, 0) in
-// @ 	let b1 := sl.GetByte(b, 0, lenR, 1) in
-// @ 	let b2 := sl.GetByte(b, 0, lenR, 2) in
-// @ 	let b3 := sl.GetByte(b, 0, lenR, 3) in
-// @ 	let v  := m.SerializedToLine()      in
-// @ 	binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, v)
+// @ ensures   m.SerializeToSpec(b)
 // @ decreases
 func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	if len(b) < MetaLen {
+		// @ Unreachable()
 		return serrors.New("buffer for MetaHdr too short", "expected", MetaLen, "actual", len(b))
 	}
 	line := uint32(m.CurrINF)<<30 | uint32(m.CurrHF&0x3F)<<24
