@@ -34,7 +34,7 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) dp2_xover_common_guard(m IO_pkt2,
+pure func (dp DataPlaneSpec) dp2_xover_guard(m IO_pkt2,
 	currseg IO_seg2,
 	nextseg IO_seg2,
 	traversedseg IO_seg2,
@@ -50,7 +50,8 @@ pure func (dp DataPlaneSpec) dp2_xover_common_guard(m IO_pkt2,
 			newpkt == IO_pkt2(IO_Packet2{nextseg, m.MidSeg, m.RightSeg, some(traversedseg)}) &&
 			currseg.Future == seq[IO_HF]{hf1} &&
 			nextseg.Future == seq[IO_HF]{hf2} ++ nextfut &&
-			dp.dp2_check_interface(currseg.ConsDir, asid, hf1, recvif) &&
+			dp.dp2_enter_interface(currseg.ConsDir, asid, hf1, recvif) &&
+			dp.xover2_link_type_dir(dp.Asid(), currseg.ConsDir, hf1, nextseg.ConsDir, hf2) &&
 			update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
 			inc_seg2(currseg, traversedseg, hf1, seq[IO_HF]{}) &&
 			dp.hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1) &&
@@ -80,10 +81,10 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) xover_up2down2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
+pure func (dp DataPlaneSpec) xover2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) bool {
 	return (dp.inif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_ProvCust{})) ||
-		(dp.inif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_PeerOrCore{})) ||
-		(dp.inif2_type(hf1, asid, IO_PeerOrCore{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
+		(dp.inif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_Core{})) ||
+		(dp.inif2_type(hf1, asid, IO_Core{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
 }
 
 ghost
@@ -100,8 +101,8 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) xover_up2down2_link_type_dir(asid IO_as, d1 bool, hf1 IO_HF, d2 bool, hf2 IO_HF) bool {
-	return dp.xover_up2down2_link_type(asid, swap_if_dir2(hf1, d1), swap_if_dir2(hf2, d2))
+pure func (dp DataPlaneSpec) xover2_link_type_dir(asid IO_as, d1 bool, hf1 IO_HF, d2 bool, hf2 IO_HF) bool {
+	return dp.xover2_link_type(asid, swap_if_dir2(hf1, d1), swap_if_dir2(hf2, d2))
 }
 
 

@@ -42,7 +42,7 @@ pure func (dp DataPlaneSpec) valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) dp2_check_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
+pure func (dp DataPlaneSpec) dp2_enter_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
 	return (d && hf1.InIF2 === some(recvif)) || (!d && hf1.EgIF2 === some(recvif))
 }
 
@@ -90,7 +90,7 @@ decreases
 pure func (dp DataPlaneSpec) dp2_enter_guard(m IO_pkt2, currseg IO_seg2, traversedseg IO_seg2, asid IO_as, hf1 IO_HF, recvif IO_ifs, fut seq[IO_HF]) bool {
 	return m.CurrSeg == currseg &&
 		currseg.Future == seq[IO_HF]{hf1} ++ fut &&
-		dp.dp2_check_interface(currseg.ConsDir, asid, hf1, recvif) &&
+		dp.dp2_enter_interface(currseg.ConsDir, asid, hf1, recvif) &&
 		(dp.dp2_check_interface_top(currseg.ConsDir, asid, hf1) || fut == seq[IO_HF]{}) &&
 		update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
 		same_segment2(currseg, traversedseg) &&
