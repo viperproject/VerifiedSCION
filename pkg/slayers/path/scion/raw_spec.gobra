@@ -679,3 +679,51 @@ decreases
 pure func (raw *Raw) CorrectlyDecodedHF_Raw(h path.HopField, start int, middle int, end int, ubuf []byte) bool {
 	return unfolding acc(raw.Mem(ubuf), R50) in path.CorrectlyDecodedHF_FullBuf(h, ubuf, start, middle, end)
 }
+
+ghost
+opaque
+requires  0 <= idx
+requires  acc(s.Mem(ubuf), R30)
+requires  acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R30)
+requires  idx < s.GetNumHops(ubuf)
+decreases
+pure func (s *Raw) CorrectlyDecodedHF_RawOffset(h path.HopField, idx int, ubuf []byte) bool {
+	return unfolding acc(s.Mem(ubuf), R31) in unfolding acc(s.Base.Mem(), R31) in
+	let hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen in
+	hopOffset+path.HopLen <= len(s.Raw) &&
+	s.CorrectlyDecodedHF_Raw(h, hopOffset, hopOffset, hopOffset + path.HopLen, ubuf)
+}
+
+ghost
+opaque
+requires  acc(s.Mem(ubuf), R30)
+requires  acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R30)
+decreases
+pure func (s *Raw) CorrectlyDecodedHF_RawOffsetIndex(h path.HopField, ubuf []byte) bool {
+	return unfolding acc(s.Mem(ubuf), R31) in unfolding acc(s.Base.Mem(), R31) in
+	let idx := int(s.PathMeta.CurrHF) in
+	let hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen in
+	let _ := Assuming(idx >= 0) in // Gobra can't figure this out from the type system at the moment
+	hopOffset+path.HopLen <= len(s.Raw) &&
+	s.CorrectlyDecodedHF_Raw(h, hopOffset, hopOffset, hopOffset + path.HopLen, ubuf)
+}
+
+ghost
+requires 0 <= idx
+requires acc(s.Mem(ubuf), R30)
+requires acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R30)
+requires unfolding acc(s.Mem(ubuf), R30) in unfolding acc(s.Base.Mem(), R30) in idx == int(s.PathMeta.CurrHF)
+requires idx < s.GetNumHops(ubuf) ==> s.CorrectlyDecodedHF_RawOffset(h, idx, ubuf)
+ensures  acc(s.Mem(ubuf), R30)
+ensures  acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R30)
+ensures  idx < s.GetNumHops(ubuf) ==> s.CorrectlyDecodedHF_RawOffsetIndex(h, ubuf)
+decreases
+func (s *Raw) CorrectlyDecodedHF_OffsetToIndex_Lemma(h path.HopField, idx int, ubuf []byte) {
+	assert idx < s.GetNumHops(ubuf) ==> reveal s.CorrectlyDecodedHF_RawOffset(h, idx, ubuf)
+	assert idx < s.GetNumHops(ubuf) ==> (unfolding acc(s.Mem(ubuf), R31) in unfolding acc(s.Base.Mem(), R31) in
+	let idx := int(s.PathMeta.CurrHF) in
+	let hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen in
+		hopOffset >= 0 &&
+		hopOffset+path.HopLen <= len(s.Raw))
+	assert idx < s.GetNumHops(ubuf) ==> reveal s.CorrectlyDecodedHF_RawOffsetIndex(h, ubuf)
+}

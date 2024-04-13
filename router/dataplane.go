@@ -1954,6 +1954,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataP
 	}
 	// TemporaryAssumeForIO(validPktMetaHdr(ub))
 	// TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) > 0)
+	// @ p.CurrentHopFieldBytesLemma(dp, ub)
 	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(dp, ub)))
 	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(dp, ub)))
 	return processResult{}, nil
