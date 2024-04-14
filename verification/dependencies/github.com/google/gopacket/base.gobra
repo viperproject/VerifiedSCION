@@ -78,17 +78,21 @@ Payload implements SerializableLayer
 type LinkLayer interface {
 	Layer
 
+	// ::INTERFACE::
 	requires false
 	decreases
 	LinkFlow() Flow
+	// ::ENDOFINTERFACE::
 }
 
 type NetworkLayer interface {
 	Layer
 
+	// ::INTERFACE::
 	requires false
 	decreases
 	NetworkFlow() Flow
+	// ::ENDOFINTERFACE::
 }
 
 type TransportLayer interface {

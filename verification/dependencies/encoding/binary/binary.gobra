@@ -148,7 +148,7 @@ pure func (e bigEndian) PutUint16Spec(b0, b1 byte, v uint16) bool {
 		b1 == byte(v)
 }
 
-// Proven in verification/utils/bitwise/proofs.dfy
+// ::OVERRIDE:: Proven in verification/utils/bitwise/proofs.dfy
 trusted
 preserves acc(&b[0]) && acc(&b[1])
 ensures   BigEndian.PutUint16Spec(b[0], b[1], v)
@@ -183,7 +183,7 @@ pure func (e bigEndian) PutUint32Spec(b0, b1, b2, b3 byte, v uint32) bool {
 		b3 == byte(v)
 }
 
-// Proven in verification/utils/bitwise/proofs.dfy
+// ::OVERRIDE:: Proven in verification/utils/bitwise/proofs.dfy
 trusted
 preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
 ensures   BigEndian.PutUint32Spec(b[0], b[1], b[2], b[3], v)

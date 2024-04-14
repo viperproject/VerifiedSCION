@@ -39,7 +39,7 @@ ensures   absIO_val(dp, raw[:length], ingressID).isIO_val_Pkt2 ==>
 	absIO_val(dp, raw[:length], ingressID) == absIO_val(dp, raw, ingressID)
 decreases
 func absIO_valWidenLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16, length int)
-/* {
+{
 	var ret1 io.IO_val
 	var ret2 io.IO_val
 
@@ -969,4 +969,3 @@ func midSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3
 		assert ret == reveal midSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, asid)
 	}
 }
-*/
