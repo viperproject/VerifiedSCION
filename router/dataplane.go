@@ -4079,6 +4079,7 @@ func decodeLayers(data []byte, base *slayers.SCION,
 	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], R10)
 	// @ invariant forall i, j int :: {&opts[i], &opts[j]} 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
 	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> opts[i] != nil
+	// @ invariant forall i int :: {&optsSlice[i]} 0 <= i && i < len(opts) ==> optsSlice[i] != nil
 	// @ invariant len(processed) == len(opts)
 	// @ invariant len(offsets) == len(opts)
 	// @ invariant -1 <= idx && idx < len(opts)
