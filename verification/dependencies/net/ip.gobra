@@ -71,18 +71,7 @@ ensures   (len(ip) == IPv6len && res != nil) ==>
 	(forall i int :: { &ip[12+i] }{ &res[i] } 0 <= i && i < IPv4len ==> &ip[12+i] == &res[i])
 ensures   len(ip) != IPv4len && len(ip) != IPv6len ==> res == nil
 decreases
-func (ip IP) To4(ghost wildcard bool) (res IP) {
-	if len(ip) == IPv4len {
-		return ip
-	}
-	if len(ip) == IPv6len &&
-		isZeros(ip[0:10]) &&
-		ip[10] == 255 &&
-		ip[11] == 255 {
-		return ip[12:16]
-	}
-	return nil
-}
+func (ip IP) To4(ghost wildcard bool) (res IP)
 
 pure
 preserves forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], R55)
@@ -97,15 +86,7 @@ ensures len(ip) == IPv4len ==>
 ensures len(ip) == IPv6len ==>
 	(len(res) == IPv6len &&
 	forall i int :: { &res[i] } 0 <= i && i < len(res) ==> &ip[i] == &res[i])
-func (ip IP) To16() (res IP) {
-	if len(ip) == IPv4len {
-		return IPv4(ip[0], ip[1], ip[2], ip[3])
-	}
-	if len(ip) == IPv6len {
-		return ip
-	}
-	return nil
-}
+func (ip IP) To16() (res IP)
 
 preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
 decreases _

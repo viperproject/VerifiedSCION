@@ -31,30 +31,7 @@ const (
 )
 
 decreases
-func (bd BFDDiagnostic) String() string {
-	switch bd {
-	default:
-		return "Unknown"
-	case BFDDiagnosticNone:
-		return "None"
-	case BFDDiagnosticTimeExpired:
-		return "Control Detection Time Expired"
-	case BFDDiagnosticEchoFailed:
-		return "Echo Function Failed"
-	case BFDDiagnosticNeighborSignalDown:
-		return "Neighbor Signaled Session Down"
-	case BFDDiagnosticForwardPlaneReset:
-		return "Forwarding Plane Reset"
-	case BFDDiagnosticPathDown:
-		return "Path Down"
-	case BFDDiagnosticConcatPathDown:
-		return "Concatenated Path Down"
-	case BFDDiagnosticAdminDown:
-		return "Administratively Down"
-	case BFDDiagnosticRevConcatPathDown:
-		return "Reverse Concatenated Path Down"
-	}
-}
+func (bd BFDDiagnostic) String() string
 
 type BFDState uint8
 
@@ -66,20 +43,7 @@ const (
 )
 
 decreases
-func (s BFDState) String() string {
-	switch s {
-	default:
-		return "Unknown"
-	case BFDStateAdminDown:
-		return "Admin Down"
-	case BFDStateDown:
-		return "Down"
-	case BFDStateInit:
-		return "Init"
-	case BFDStateUp:
-		return "Up"
-	}
-}
+func (s BFDState) String() string
 
 type BFDDetectMultiplier uint8
 
@@ -99,24 +63,7 @@ const (
 )
 
 decreases
-func (at BFDAuthType) String() string {
-	switch at {
-	default:
-		return "Unknown"
-	case BFDAuthTypeNone:
-		return "No Authentication"
-	case BFDAuthTypePassword:
-		return "Simple Password"
-	case BFDAuthTypeKeyedMD5:
-		return "Keyed MD5"
-	case BFDAuthTypeMeticulousKeyedMD5:
-		return "Meticulous Keyed MD5"
-	case BFDAuthTypeKeyedSHA1:
-		return "Keyed SHA1"
-	case BFDAuthTypeMeticulousKeyedSHA1:
-		return "Meticulous Keyed SHA1"
-	}
-}
+func (at BFDAuthType) String() string
 
 type BFDAuthKeyID uint8
 
@@ -137,18 +84,7 @@ pred (b *BFDAuthHeader) Mem() {
 
 preserves acc(h, 1/10000)
 decreases
-func (h *BFDAuthHeader) Length() int {
-	switch h.AuthType {
-	case BFDAuthTypePassword:
-		return 3 + len(h.Data)
-	case BFDAuthTypeKeyedMD5, BFDAuthTypeMeticulousKeyedMD5:
-		return 8 + len(h.Data)
-	case BFDAuthTypeKeyedSHA1, BFDAuthTypeMeticulousKeyedSHA1:
-		return 8 + len(h.Data)
-	default:
-		return 0
-	}
-}
+func (h *BFDAuthHeader) Length() int
 
 type BFD struct {
 	BaseLayer
@@ -205,9 +141,7 @@ pure func (d *BFD) NextLayerType() gopacket.LayerType
 
 ensures res == nil
 decreases
-func (d *BFD) Payload() (res []byte) {
-	return nil
-}
+func (d *BFD) Payload() (res []byte)
 
 ghost
 requires d.Mem(ub)

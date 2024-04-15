@@ -31,26 +31,10 @@ requires b.LayerMem()
 ensures slices.AbsSlice_Bytes(res, 0, len(res))
 ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
 decreases
-func (b *BaseLayer) LayerContents() (res []byte) {
-	unfold b.LayerMem()
-	res = b.Contents
-	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
-		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold b.LayerMem()
-	}
-}
+func (b *BaseLayer) LayerContents() (res []byte)
 
 requires b.PayloadMem()
 ensures slices.AbsSlice_Bytes(res, 0, len(res))
 ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
 decreases
-func (b *BaseLayer) LayerPayload() (res []byte) {
-	unfold b.PayloadMem()
-	res = b.Payload
-	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
-		unfold slices.AbsSlice_Bytes(res, 0, len(res))
-		fold b.PayloadMem()
-	}
-}
+func (b *BaseLayer) LayerPayload() (res []byte)

@@ -41,9 +41,7 @@ func (l LayerType) Contains(a LayerType) (res bool) {
 ensures acc(res) && len(res) == 1
 ensures res[0] == l
 decreases
-func (l LayerType) LayerTypes() (res []LayerType) {
-	return []LayerType{l}
-}
+func (l LayerType) LayerTypes() (res []LayerType)
 
 preserves acc(types, R20)
 // NewLayerClass creates a LayerClass, attempting to be smart about which type
