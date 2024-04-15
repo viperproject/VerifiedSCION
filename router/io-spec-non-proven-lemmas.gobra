@@ -30,13 +30,13 @@ import (
 ghost
 preserves dp.Valid()
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
-ensures   slayers.ValidPktMetaHdr(raw) ==>
+ensures   slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw) ==>
 	absIO_val(dp, raw, ingressID).isIO_val_Pkt2 &&
 	absIO_val(dp, raw, ingressID).IO_val_Pkt2_2 == absPkt(dp, raw) &&
 	len(absPkt(dp, raw).CurrSeg.Future) > 0
 decreases
 func absIO_valLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16) {
-	if(slayers.ValidPktMetaHdr(raw)){
+	if(slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)){
 		absIO := reveal absIO_val(dp, raw, ingressID)
 		assert absIO.isIO_val_Pkt2
 		assert absIO_val(dp, raw, ingressID).IO_val_Pkt2_2 == absPkt(dp, raw)

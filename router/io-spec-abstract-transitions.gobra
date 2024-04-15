@@ -33,11 +33,11 @@ ensures  len(newPkt.CurrSeg.Future) == len(oldPkt.CurrSeg.Future)
 decreases
 pure func AbsUpdateNonConsDirIngressSegID(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs]) (newPkt io.IO_pkt2) {
 	return ingressID == none[io.IO_ifs] ? oldPkt : io.IO_pkt2(
-			io.IO_Packet2{
-				io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
-				oldPkt.LeftSeg,
-				oldPkt.MidSeg,
-				oldPkt.RightSeg})
+		io.IO_Packet2{
+			io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
+			oldPkt.LeftSeg,
+			oldPkt.MidSeg,
+			oldPkt.RightSeg})
 }
 
 ghost
@@ -67,7 +67,7 @@ requires len(pkt.CurrSeg.Future) > 0
 decreases
 pure func AbsEgressInterfaceConstraint(pkt io.IO_pkt2, egressID option[io.IO_ifs]) bool {
 	return let currseg := pkt.CurrSeg in
-			egressID == (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2)
+		egressID == (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2)
 }
 
 ghost
@@ -90,11 +90,11 @@ ensures  len(newPkt.CurrSeg.Future) >= 0
 decreases
 pure func AbsProcessEgress(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
 	return io.IO_pkt2(
-			io.IO_Packet2{
-				io.establishGuardTraversedsegInc(oldPkt.CurrSeg, oldPkt.CurrSeg.ConsDir),
-				oldPkt.LeftSeg,
-				oldPkt.MidSeg,
-				oldPkt.RightSeg})
+		io.IO_Packet2{
+			io.establishGuardTraversedsegInc(oldPkt.CurrSeg, oldPkt.CurrSeg.ConsDir),
+			oldPkt.LeftSeg,
+			oldPkt.MidSeg,
+			oldPkt.RightSeg})
 }
 
 ghost
@@ -109,11 +109,11 @@ ensures  len(get(newPkt.RightSeg).Past) > 0
 decreases
 pure func AbsDoXover(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
 	return io.IO_pkt2(
-			io.IO_Packet2{
-				get(oldPkt.LeftSeg),
-				oldPkt.MidSeg,
-				oldPkt.RightSeg,
-				some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, false))})
+		io.IO_Packet2{
+			get(oldPkt.LeftSeg),
+			oldPkt.MidSeg,
+			oldPkt.RightSeg,
+			some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, false))})
 }
 
 ghost
@@ -127,7 +127,7 @@ pure func AbsValidateEgressIDConstraintXover(pkt io.IO_pkt2, dp io.DataPlaneSpec
 	return let currseg := pkt.CurrSeg in
 		let rightseg := get(pkt.RightSeg) in
 		let nextIf := (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2) in
-		dp.xover_up2down2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
+		dp.xover2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
 			currseg.ConsDir, currseg.Future[0]) &&
 		nextIf != none[io.IO_ifs] &&
 		(get(nextIf) in domain(dp.GetNeighborIAs()))
@@ -231,5 +231,5 @@ func XoverEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt
 	if(egressID != none[io.IO_ifs]){
 		reveal AbsProcessEgress(intermediatePkt2)
 	}
-	AtomicXoverUp2Down(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
+	AtomicXover(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 }
