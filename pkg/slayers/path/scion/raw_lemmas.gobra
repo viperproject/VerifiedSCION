@@ -1,0 +1,264 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package scion
+
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	. "verification/utils/definitions"
+	sl "verification/utils/slices"
+	"verification/io"
+	"verification/dependencies/encoding/binary"
+)
+
+// ===============
+// Hopfields lemma
+// ===============
+
+ghost
+opaque
+requires  0 <= offset
+requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  len(hopFields) == segLen - currHFIdx
+requires  offset + path.HopLen * segLen <= len(raw)
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+decreases
+pure func hopFieldsBytePositions(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	segLen int,
+	hopFields seq[io.IO_HF]) bool {
+	return forall i int :: { hopFields[i] } 0 <= i && i < len(hopFields) ==> hopFields[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * (currHFIdx + i), len(raw))
+}
+
+ghost
+requires  0 <= offset
+requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures  forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> old(unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in raw[i]) == (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in raw[i])
+ensures   hopFieldsBytePositions(raw, offset, currHFIdx, segLen, hopFields(raw, offset, currHFIdx, segLen))
+decreases segLen - currHFIdx
+func hopFieldsBytePositionsLemma_Rec(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	segLen int) {
+	
+	if (currHFIdx == segLen) {
+		assert reveal hopFieldsBytePositions(raw, offset, currHFIdx, segLen, hopFields(raw, offset, currHFIdx, segLen))
+	} else {
+		hopFieldsBytePositionsLemma_Rec(raw, offset, currHFIdx + 1, segLen)
+		assert reveal hopFieldsBytePositions(raw, offset, currHFIdx + 1, segLen, hopFields(raw, offset, currHFIdx + 1, segLen))
+		assert reveal hopFieldsBytePositions(raw, offset, currHFIdx, segLen, hopFields(raw, offset, currHFIdx, segLen))
+	}
+}
+
+// Wrapper lemma to get rid of ugly postcondition that preserves the contents of raw
+ghost
+requires  0 <= offset
+requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures   hopFieldsBytePositions(raw, offset, currHFIdx, segLen, hopFields(raw, offset, currHFIdx, segLen))
+decreases segLen - currHFIdx
+func hopFieldsBytePositionsLemma(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	segLen int) {
+	hopFieldsBytePositionsLemma_Rec(raw, offset, currHFIdx, segLen)
+}
+
+// ====================
+// Segment future lemma
+// ====================
+
+
+ghost
+requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
+ensures  segFuture(hopfields, currHFIdx) == hopfields[currHFIdx:]
+decreases len(hopfields) - currHFIdx
+func segFutureSubSequenceLemma(hopfields seq[io.IO_HF], currHFIdx int) {
+	if (currHFIdx != len(hopfields)) {
+		segFutureSubSequenceLemma(hopfields, currHFIdx + 1)
+	}
+}
+
+ghost
+requires 0 <= offset
+requires 0 < segLen
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
+ensures let seg := segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen) in hopFieldsBytePositions(raw, offset, currHFIdx, segLen, seg.Future)
+decreases
+func segmentFutureBytePositionLemma(
+	raw []byte,
+	offset int,
+	currHFIdx int,
+	ainfo io.IO_ainfo,
+	uinfo set[io.IO_msgterm],
+	consDir bool,
+	peer bool,
+	segLen int) {
+	
+	hopfields := hopFields(raw, offset, 0, segLen)
+	hopFieldsBytePositionsLemma(raw, offset, 0, segLen)
+	assert reveal hopFieldsBytePositions(raw, offset, 0, segLen, hopfields)
+	seg := io.IO_seg2(io.IO_seg3_{
+		AInfo :ainfo,
+		UInfo : uinfo,
+		ConsDir : consDir,
+		Peer : peer,
+		Past : segPast(hopfields, currHFIdx - 1),
+		Future : segFuture(hopfields, currHFIdx),
+		History : segHistory(hopfields, currHFIdx - 1),
+	})
+	segFutureSubSequenceLemma(hopfields, currHFIdx)
+	assert reveal hopFieldsBytePositions(raw, offset, currHFIdx, segLen, seg.Future)
+}
+
+ghost
+requires 0 <= headerOffset
+requires path.InfoFieldOffset(currINFIdx, headerOffset) + path.InfoLen <= offset
+requires 0 < segLen
+requires offset + path.HopLen * segLen <= len(raw)
+requires 0 <= currHFIdx && currHFIdx <= segLen
+requires 0 <= currINFIdx && currINFIdx < 3
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R54)
+ensures let seg := CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset) in (len(seg.Future) == segLen - currHFIdx && hopFieldsBytePositions(raw, offset, currHFIdx, segLen, seg.Future))
+decreases
+func currSegFutureBytePositionLemma(
+	raw []byte,
+	offset int,
+	currINFIdx int,
+	currHFIdx int,
+	segLen int,
+	headerOffset int) {
+	ainfo := path.Timestamp(raw, currINFIdx, headerOffset)
+	consDir := path.ConsDir(raw, currINFIdx, headerOffset)
+	peer := path.Peer(raw, currINFIdx, headerOffset)
+	uinfo := path.AbsUinfo(raw, currINFIdx, headerOffset)
+	ret := segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+	assert ret == reveal CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset)
+	segmentFutureBytePositionLemma(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+}
+
+
+ghost
+opaque
+requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires validPktMetaHdr(raw)
+decreases
+pure func (s *Raw) absPktFutureBytePosition(dp io.DataPlaneSpec, raw []byte) bool {
+	return let _ := reveal validPktMetaHdr(raw) in
+		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[:MetaLen])) in
+		let metaHdr := DecodedFrom(hdr) in
+		let currHFIdx := int(metaHdr.CurrHF) in
+		let seg1Len := int(metaHdr.SegLen[0]) in
+		let seg2Len := int(metaHdr.SegLen[1]) in
+		let seg3Len := int(metaHdr.SegLen[2]) in
+		let segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let numINF := NumInfoFields(seg1Len, seg2Len, seg3Len) in
+		let offset := HopFieldOffset(numINF, 0, 0) in
+		let pkt := reveal s.absPkt(dp, raw) in (currHFIdx-prevSegLen <= segLen && len(pkt.CurrSeg.Future) == segLen - (currHFIdx - prevSegLen) && hopFieldsBytePositions(raw, offset+prevSegLen, currHFIdx-prevSegLen, segLen, pkt.CurrSeg.Future))
+}
+
+ghost
+requires   dp.Valid()
+preserves  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R53)
+preserves  validPktMetaHdr(raw)
+ensures    s.absPktFutureBytePosition(dp, raw)
+decreases
+func (s *Raw) absPktFutureBytePositionLemma(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
+	_ := reveal validPktMetaHdr(raw)
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[:MetaLen]))
+	metaHdr := DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := HopFieldOffset(numINF, 0, 0)
+	pkt := io.IO_pkt2(io.IO_Packet2{
+			CurrSeg : CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0),
+			LeftSeg : LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, 0),
+			MidSeg : MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, 0),
+			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, 0),
+	})
+	assert pkt == reveal s.absPkt(dp, raw)
+	currSegFutureBytePositionLemma(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0)
+	assert reveal s.absPktFutureBytePosition(dp, raw)
+}
+
+ghost
+opaque
+requires  dp.Valid()
+requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires  validPktMetaHdr(raw)
+decreases
+pure func (s *Raw) absPktCurrentHopfieldPosition(dp io.DataPlaneSpec, raw []byte) bool {
+	return let _ := reveal validPktMetaHdr(raw) in
+		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[:MetaLen])) in
+		let metaHdr := DecodedFrom(hdr) in
+		let currHFIdx := int(metaHdr.CurrHF) in
+		let seg1Len := int(metaHdr.SegLen[0]) in
+		let seg2Len := int(metaHdr.SegLen[1]) in
+		let seg3Len := int(metaHdr.SegLen[2]) in
+		let segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let numINF := NumInfoFields(seg1Len, seg2Len, seg3Len) in
+		let offset := HopFieldOffset(numINF, 0, 0) in
+		let pkt := s.absPkt(dp, raw) in len(pkt.CurrSeg.Future) > 0 ==> pkt.CurrSeg.Future[0] == path.BytesToIO_HF(raw, 0, (offset+prevSegLen) + path.HopLen * (currHFIdx-prevSegLen), len(raw))
+}
+
+ghost
+requires  dp.Valid()
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R52)
+preserves validPktMetaHdr(raw)
+ensures   s.absPktCurrentHopfieldPosition(dp, raw)
+decreases
+func (s *Raw) absPktCurrentHopFieldPositionLemma(dp io.DataPlaneSpec, raw []byte) {
+	_ := reveal validPktMetaHdr(raw)
+	hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[:MetaLen]))
+	metaHdr := DecodedFrom(hdr)
+	currINFIdx := int(metaHdr.CurrINF)
+	currHFIdx := int(metaHdr.CurrHF)
+	seg1Len := int(metaHdr.SegLen[0])
+	seg2Len := int(metaHdr.SegLen[1])
+	seg3Len := int(metaHdr.SegLen[2])
+	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
+	offset := HopFieldOffset(numINF, 0, 0)
+	pkt := io.IO_pkt2(io.IO_Packet2{
+			CurrSeg : CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0),
+			LeftSeg : LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, 0),
+			MidSeg : MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, 0),
+			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, 0),
+	})
+	s.absPktFutureBytePositionLemma(dp, raw)
+	assert reveal s.absPktFutureBytePosition(dp, raw)
+	assert reveal hopFieldsBytePositions(raw, offset+prevSegLen, currHFIdx-prevSegLen, segLen, pkt.CurrSeg.Future)
+	assert reveal s.absPktCurrentHopfieldPosition(dp, raw)
+}

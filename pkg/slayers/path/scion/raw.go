@@ -384,28 +384,41 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, 
 // @ preserves acc(s.Mem(ubuf), R10)
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
 // @ ensures   (idx < old(s.GetNumHops(ubuf))) == (r == nil)
+// @ ensures   r == nil ==> old(s.GetNumHops(ubuf)) == s.GetNumHops(ubuf)
 // @ ensures   r != nil ==> r.ErrorMem()
+// @ ensures   idx < s.GetNumHops(ubuf) ==> s.CorrectlyDecodedHF_RawOffset(res, idx, ubuf)
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), R10)
-	//@ unfold acc(s.Base.Mem(), R11)
+	// @ unfold acc(s.Mem(ubuf), R10)
+	// @ unfold acc(s.Base.Mem(), R11)
 	if idx >= s.NumHops {
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R11)
-		//@ fold acc(s.Mem(ubuf), R10)
+		// @ fold acc(s.Base.Mem(), R11)
+		// @ fold acc(s.Mem(ubuf), R10)
 		return path.HopField{}, err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-	//@ fold acc(s.Base.Mem(), R11)
-	//@ fold acc(s.Mem(ubuf), R10)
+	// @ fold acc(s.Base.Mem(), R11)
+	// @ fold acc(s.Mem(ubuf), R10)
 	hop /*@@@*/ := path.HopField{}
-	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
+	// @ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R11)
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
-		//@ Unreachable()
+		// @ Unreachable()
 		return path.HopField{}, err
 	}
-	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
-	//@ unfold hop.Mem()
+	// @ sl.Unslice_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, R30)
+	// @ assert hop.CorrectlyDecodedHF(s.Raw[hopOffset : hopOffset+path.HopLen], 0, 0, path.HopLen)
+	// @ hop.CorrectlyDecodedHF_Lemma(s.Raw, hopOffset, hopOffset+path.HopLen, 0, 0, path.HopLen)
+	// @ assert hop.CorrectlyDecodedHF(s.Raw, hopOffset, hopOffset, hopOffset+path.HopLen)
+	// @ unfold acc(s.Mem(ubuf), R30)
+	// @ hop.CorrectlyDecodedHF_WidenLemma(s.Raw, hopOffset, hopOffset, hopOffset+path.HopLen, ubuf)
+	// @ sl.Reslice_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, R30)
+	// @ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R11)
+	// @ unfold hop.Mem()
+	// @ assert path.CorrectlyDecodedHF_FullBuf(hop, ubuf, hopOffset, hopOffset, hopOffset+path.HopLen)
+	// @ fold acc(s.Mem(ubuf), R30)
+	// @ assert reveal s.CorrectlyDecodedHF_Raw(hop, hopOffset, hopOffset, hopOffset+path.HopLen, ubuf)
+	// @ assert reveal s.CorrectlyDecodedHF_RawOffset(hop, idx, ubuf)
 	return hop, nil
 }
 
@@ -415,17 +428,21 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
 // @ ensures   (r == nil) == (s.GetCurrHF(ubuf) < s.GetNumHops(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
+// @ ensures   r == nil ==> s.CorrectlyDecodedHF_RawOffsetIndex(res, ubuf)
 // @ decreases
 func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), R9)
-	//@ unfold acc(s.Base.Mem(), R10)
+	// @ unfold acc(s.Mem(ubuf), R9)
+	// @ unfold acc(s.Base.Mem(), R10)
 	idx := int(s.PathMeta.CurrHF)
 	// (VerifiedSCION) Cannot assert bounds of uint:
 	// https://github.com/viperproject/gobra/issues/192
-	//@ assume 0 <= idx
-	//@ fold acc(s.Base.Mem(), R10)
-	//@ fold acc(s.Mem(ubuf), R9)
-	return s.GetHopField(idx /*@, ubuf @*/)
+	// @ assume 0 <= idx
+	// @ fold acc(s.Base.Mem(), R10)
+	// @ fold acc(s.Mem(ubuf), R9)
+	// (VeifiedSCION) This return is substituted with an assignment so that we can call a lemma afterwards and satisfy a postcondition.
+	res, r = s.GetHopField(idx /*@, ubuf @*/)
+	// @ s.CorrectlyDecodedHF_OffsetToIndex_Lemma(res, idx, ubuf)
+	return res, r
 }
 
 // SetHopField updates the HopField at a given index.

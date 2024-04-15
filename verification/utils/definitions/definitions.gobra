@@ -134,3 +134,8 @@ ghost
 ensures b
 decreases
 func TemporaryAssumeForIO(b bool)
+
+ghost
+ensures b
+decreases
+pure func Assuming(b bool) bool
