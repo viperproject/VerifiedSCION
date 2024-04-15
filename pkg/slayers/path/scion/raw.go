@@ -443,7 +443,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ unfold acc(s.Mem(ubuf), R20)
 	//@ unfold acc(s.Base.Mem(), R20)
 	if idx >= s.NumHops {
-		// (gavin) introduced `err`
+		// (VerifiedSCION) introduced `err`
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
 		//@ fold acc(s.Base.Mem(), R20)
 		//@ fold acc(s.Mem(ubuf), R20)

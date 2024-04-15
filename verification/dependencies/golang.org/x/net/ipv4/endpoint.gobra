@@ -46,74 +46,41 @@ type PacketConn struct {
 
 // SetDeadline sets the read and write deadlines associated with the
 // endpoint.
-trusted
 preserves c.Mem()
 ensures   e != nil ==> e.ErrorMem()
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 decreases _
-func (c *PacketConn) SetDeadline(t time.Time) (e error) {
-	if !c.payloadHandler.ok() {
- 		return errInvalidConn
- 	}
- 	return c.payloadHandler.PacketConn.SetDeadline(t)
-}
+func (c *PacketConn) SetDeadline(t time.Time) (e error)
 
 // SetReadDeadline sets the read deadline associated with the
 // endpoint.
-trusted
 preserves c.Mem()
 ensures   e != nil ==> e.ErrorMem()
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 decreases _
-func (c *PacketConn) SetReadDeadline(t time.Time) (e error) {
-	if !c.payloadHandler.ok() {
-		return errInvalidConn
-	}
-	return c.payloadHandler.PacketConn.SetReadDeadline(t)
-}
+func (c *PacketConn) SetReadDeadline(t time.Time) (e error)
 
 // SetWriteDeadline sets the write deadline associated with the
 // endpoint.
-trusted
 preserves c.Mem()
 ensures   e != nil ==> e.ErrorMem()
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 decreases _
-func (c *PacketConn) SetWriteDeadline(t time.Time) (e error) {
-	if !c.payloadHandler.ok() {
-		return errInvalidConn
-	}
-	return c.payloadHandler.PacketConn.SetWriteDeadline(t)
-}
+func (c *PacketConn) SetWriteDeadline(t time.Time) (e error)
 
 // Close closes the endpoint.
-trusted
 requires c.Mem()
 ensures  e != nil ==> e.ErrorMem()
 decreases _
-func (c *PacketConn) Close() (e error) {
-	if !c.payloadHandler.ok() {
-		return errInvalidConn
-	}
-	return c.payloadHandler.PacketConn.Close()
-}
+func (c *PacketConn) Close() (e error)
 
 // NewPacketConn returns a new PacketConn using c as its underlying
 // transport.
-trusted
 requires c != nil && c.Mem()
 ensures  p != nil && p.Mem()
 ensures  p.GetUnderlyingConn() === c
 decreases _
-func NewPacketConn(c net.PacketConn) (p *PacketConn) {
-	cc, _ := socket.NewConn(c.(net.Conn))
-	p := &PacketConn{
-		genericOpt:     genericOpt{Conn: cc},
-		dgramOpt:       dgramOpt{Conn: cc},
-		payloadHandler: payloadHandler{PacketConn: c, Conn: cc},
-	}
-	return p
-}
+func NewPacketConn(c net.PacketConn) (p *PacketConn)
 
 ghost
 requires acc(p.Mem(), _)
@@ -146,107 +113,58 @@ type RawConn struct {
 
 // SetDeadline sets the read and write deadlines associated with the
 // endpoint.
-trusted
 preserves c.Mem()
 ensures   e != nil ==> e.ErrorMem()
 decreases _
-func (c *RawConn) SetDeadline(t time.Time) (e error) {
-	if !c.packetHandler.ok() {
-		return errInvalidConn
-	}
-	return c.packetHandler.IPConn.SetDeadline(t)
-}
+func (c *RawConn) SetDeadline(t time.Time) (e error)
 
 // SetReadDeadline sets the read deadline associated with the
 // endpoint.
-trusted
 preserves c.Mem()
 ensures   e != nil ==> e.ErrorMem()
 decreases _
-func (c *RawConn) SetReadDeadline(t time.Time) (e error) {
-	if !c.packetHandler.ok() {
-		return errInvalidConn
-	}
-	return c.packetHandler.IPConn.SetReadDeadline(t)
-}
+func (c *RawConn) SetReadDeadline(t time.Time) (e error)
 
 // SetWriteDeadline sets the write deadline associated with the
 // endpoint.
-trusted
 preserves c.Mem()
 ensures   e != nil ==> e.ErrorMem()
 decreases _
-func (c *RawConn) SetWriteDeadline(t time.Time) (e error) {
-	if !c.packetHandler.ok() {
-		return errInvalidConn
-	}
-	return c.packetHandler.IPConn.SetWriteDeadline(t)
-}
+func (c *RawConn) SetWriteDeadline(t time.Time) (e error)
 
 // Close closes the endpoint.
-trusted
 requires c.Mem()
 ensures  e != nil ==> e.ErrorMem()
 decreases _
-func (c *RawConn) Close() (e error) {
-	if !c.packetHandler.ok() {
-		return errInvalidConn
-	}
-	return c.packetHandler.IPConn.Close()
-}
+func (c *RawConn) Close() (e error)
 
 // NewRawConn returns a new RawConn using c as its underlying
 // transport.
-trusted
 requires c.Mem()
 ensures err == nil ==> r.Mem()
 ensures err != nil ==> err.ErrorMem()
 decreases _
-func NewRawConn(c net.PacketConn) (r *RawConn, err error) {
-	cc, err := socket.NewConn(c.(net.Conn))
-	if err != nil {
-	 	return nil, err
-	}
-	r := &RawConn{
-		genericOpt:    genericOpt{Conn: cc},
-		dgramOpt:      dgramOpt{Conn: cc},
-		packetHandler: packetHandler{IPConn: c.(*net.IPConn), Conn: cc},
-	}
- 	so, ok := sockOpts[ssoHeaderPrepend]
- 	if !ok {
-		return nil, errNotImplemented
-	}
-	if err := so.SetInt(r.dgramOpt.Conn, boolint(true)); err != nil {
-		return nil, err
-	}
-	return r, nil
-}
+func NewRawConn(c net.PacketConn) (r *RawConn, err error)
 
 // (VerifiedSCION) Promote method from payloadHandler to PacketConn.
 // ReadBatch reads a batch of messages.
 // On a successful read it returns the number of messages received, up
 // to len(ms).
-trusted
 preserves acc(c.Mem(), _)
 preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==>
 	(&ms[i]).Mem()
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> (0 <= n && n <= len(ms))
 ensures   err != nil ==> err.ErrorMem()
-func (c *PacketConn) ReadBatch(ms []socket.Message, flags int) (n int, err error) {
-	return c.payloadHandler.ReadBatch(ms, flags)
-}
+func (c *PacketConn) ReadBatch(ms []socket.Message, flags int) (n int, err error)
 
 // (VerifiedSCION) Promote method from payloadHandler to PacketConn.
 // WriteBatch writes a batch of messages.
 // It returns the number of messages written on a successful write.
-trusted
 preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==>
 	acc((&ms[i]).Mem(), R10)
 preserves acc(c.Mem(), _)
 ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
 ensures   err == nil ==> 0 <= n && n <= len(ms)
 ensures   err != nil ==> err.ErrorMem()
-func (c *PacketConn) WriteBatch(ms []socket.Message, flags int) (n int, err error) {
-	return c.payloadHandler.WriteBatch(ms, flags)
-}
+func (c *PacketConn) WriteBatch(ms []socket.Message, flags int) (n int, err error)
