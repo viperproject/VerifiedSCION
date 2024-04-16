@@ -139,5 +139,7 @@ ensures   CorrectlyDecodedHF_FullBuf(unfolding h.Mem() in *h, ubuf, start, middl
 decreases
 func (h *HopField) CorrectlyDecodedHF_WidenLemma(raw []byte, start int, middle int, end int, ubuf []byte) bool {
 	assert reveal h.CorrectlyDecodedHF(raw, start, middle, end)
+	assert (unfolding h.Mem() in h.ToIO_HF()) == (unfolding h.Mem() in *h).ToIO_HF()
+	assert forall i int :: { &ubuf[i] } 0 <= i && i < len(raw) ==> raw[i] == ubuf[i]
 	assert reveal CorrectlyDecodedHF_FullBuf(unfolding h.Mem() in *h, ubuf, start, middle, end)
 }
