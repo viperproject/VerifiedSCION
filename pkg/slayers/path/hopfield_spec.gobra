@@ -83,7 +83,7 @@ requires middle + HopLen <= end && end <= len(raw)
 requires acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 decreases
 pure func CorrectlyDecodedHF_FullBuf(h HopField, raw []byte, start int, middle int, end int) bool {
-	return unfolding acc(slices.AbsSlice_Bytes(raw, start, end), R51) in BytesToIO_HF(raw, start, middle, end) == h.ToIO_HF()
+	return unfolding acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R51) in BytesToIO_HF(raw, start, middle, end) == h.ToIO_HF()
 }
 
 ghost
