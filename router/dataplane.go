@@ -3296,6 +3296,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
+		// @ TemporaryAssumeForIO(egressID != 0)
 		if err := p.processEgress( /*@ ub, dp @*/ ); err != nil {
 			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@, false, absReturnErr(dp, processResult{}) @*/
