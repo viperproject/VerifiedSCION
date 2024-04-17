@@ -213,8 +213,8 @@ requires  len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).Hi
 requires  AbsVerifyCurrentMACConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
 requires  AbsValidateEgressIDConstraintXover(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
 requires  egressID != none[io.IO_ifs] ==> AbsEgressInterfaceConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), egressID)
-requires  (egressID == none[io.IO_ifs] ==> newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))) ||
-	  (egressID != none[io.IO_ifs] ==> newPkt == AbsProcessEgress(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))))
+requires  egressID == none[io.IO_ifs] ==> newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
+requires  egressID != none[io.IO_ifs] ==> newPkt == AbsProcessEgress(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)))
 preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 ensures   dp.Valid()
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
