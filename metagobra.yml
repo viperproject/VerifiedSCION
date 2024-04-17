@@ -400,31 +400,3 @@ jobs:
           name: stats_addr.json
           path: /stats/stats_addr.json
           if-no-files-found: error # could also be 'warn' or 'ignore'
-  verify-router:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the VerifiedSCION repository
-        uses: actions/checkout@v3
-      - name: Verify package 'router/'
-        uses: viperproject/gobra-action@main
-        with:
-          packages: 'router/'
-          timeout: 6h
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: '1'
-          # The following flag has a significant influence on the number of branches verified.
-          # Without it, verification would take a lot longer.
-          conditionalizePermissions: '1'
-          imageVersion: ${{ env.imageVersion }}
-          mceMode: 'on'
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: '0'
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: '0'
-
