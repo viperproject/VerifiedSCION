@@ -44,7 +44,9 @@ def format_files(files, f, l):
 
 def make_job_template(files, f, l):
     if type(l) == list:
-        return job_template.replace("{file}", f).replace("{filename}", f.split(".")[0]).replace("{line}", "everywhere").replace("{files}", format_files(files, f, l))
+        if len(l) > 0:
+            return job_template.replace("{file}", f).replace("{filename}", f.split(".")[0]).replace("{line}", "everywhere").replace("{files}", format_files(files, f, l))
+        return ""
     return job_template.replace("{file}", f).replace("{filename}", f.split(".")[0]).replace("{line}", l).replace("{files}", format_files(files, f, l))
 
 def multi_split(l, stuff):

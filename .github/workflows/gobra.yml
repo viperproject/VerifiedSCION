@@ -478,32 +478,6 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-metrics_spec-everywhere:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the VerifiedSCION repository
-        uses: actions/checkout@v3
-      - name: Verify package 'router/' at metrics_spec.gobra:everywhere
-        uses: viperproject/gobra-action@main
-        with:
-          files: router/metrics.go router/svc_spec_test.gobra router/assumptions.gobra router/metrics_spec.gobra@ router/io-spec-atomic-events.gobra router/bfd_spec.gobra router/io-spec.gobra router/dataplane.go router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/dataplane_spec.gobra router/svc.go router/dataplane_concurrency_model.gobra router/io-spec-abstract-transitions.gobra router/svc_spec.gobra router/widen-lemma.gobra
-          timeout: 6h
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: '1'
-          # The following flag has a significant influence on the number of branches verified.
-          # Without it, verification would take a lot longer.
-          imageVersion: ${{ env.imageVersion }}
-          mceMode: 'on'
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: '0'
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: '0'
   verify-router-io-spec-atomic-events-everywhere:
     runs-on: ubuntu-latest
     steps:
@@ -513,32 +487,6 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           files: router/metrics.go router/svc_spec_test.gobra router/assumptions.gobra router/metrics_spec.gobra router/io-spec-atomic-events.gobra@56,85,137 router/bfd_spec.gobra router/io-spec.gobra router/dataplane.go router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/dataplane_spec.gobra router/svc.go router/dataplane_concurrency_model.gobra router/io-spec-abstract-transitions.gobra router/svc_spec.gobra router/widen-lemma.gobra
-          timeout: 6h
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: '1'
-          # The following flag has a significant influence on the number of branches verified.
-          # Without it, verification would take a lot longer.
-          imageVersion: ${{ env.imageVersion }}
-          mceMode: 'on'
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: '0'
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: '0'
-  verify-router-bfd_spec-everywhere:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the VerifiedSCION repository
-        uses: actions/checkout@v3
-      - name: Verify package 'router/' at bfd_spec.gobra:everywhere
-        uses: viperproject/gobra-action@main
-        with:
-          files: router/metrics.go router/svc_spec_test.gobra router/assumptions.gobra router/metrics_spec.gobra router/io-spec-atomic-events.gobra router/bfd_spec.gobra@ router/io-spec.gobra router/dataplane.go router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/dataplane_spec.gobra router/svc.go router/dataplane_concurrency_model.gobra router/io-spec-abstract-transitions.gobra router/svc_spec.gobra router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2558,32 +2506,6 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-metrics_spec_test-everywhere:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the VerifiedSCION repository
-        uses: actions/checkout@v3
-      - name: Verify package 'router/' at metrics_spec_test.gobra:everywhere
-        uses: viperproject/gobra-action@main
-        with:
-          files: router/metrics.go router/svc_spec_test.gobra router/assumptions.gobra router/metrics_spec.gobra router/io-spec-atomic-events.gobra router/bfd_spec.gobra router/io-spec.gobra router/dataplane.go router/metrics_spec_test.gobra@ router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/dataplane_spec.gobra router/svc.go router/dataplane_concurrency_model.gobra router/io-spec-abstract-transitions.gobra router/svc_spec.gobra router/widen-lemma.gobra
-          timeout: 6h
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: '1'
-          # The following flag has a significant influence on the number of branches verified.
-          # Without it, verification would take a lot longer.
-          imageVersion: ${{ env.imageVersion }}
-          mceMode: 'on'
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: '0'
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: '0'
   verify-router-dataplane_spec_test-everywhere:
     runs-on: ubuntu-latest
     steps:
@@ -2723,32 +2645,6 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           files: router/metrics.go router/svc_spec_test.gobra router/assumptions.gobra router/metrics_spec.gobra router/io-spec-atomic-events.gobra router/bfd_spec.gobra router/io-spec.gobra router/dataplane.go router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/dataplane_spec.gobra router/svc.go router/dataplane_concurrency_model.gobra router/io-spec-abstract-transitions.gobra@34,47,58,68,78,91,110,126,141,164,187,222 router/svc_spec.gobra router/widen-lemma.gobra
-          timeout: 6h
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: '1'
-          # The following flag has a significant influence on the number of branches verified.
-          # Without it, verification would take a lot longer.
-          imageVersion: ${{ env.imageVersion }}
-          mceMode: 'on'
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: '0'
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: '0'
-  verify-router-svc_spec-everywhere:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the VerifiedSCION repository
-        uses: actions/checkout@v3
-      - name: Verify package 'router/' at svc_spec.gobra:everywhere
-        uses: viperproject/gobra-action@main
-        with:
-          files: router/metrics.go router/svc_spec_test.gobra router/assumptions.gobra router/metrics_spec.gobra router/io-spec-atomic-events.gobra router/bfd_spec.gobra router/io-spec.gobra router/dataplane.go router/metrics_spec_test.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/dataplane_spec.gobra router/svc.go router/dataplane_concurrency_model.gobra router/io-spec-abstract-transitions.gobra router/svc_spec.gobra@ router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
