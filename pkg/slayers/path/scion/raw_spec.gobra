@@ -677,7 +677,9 @@ requires acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R50)
 requires unfolding acc(raw.Mem(ubuf), R50) in middle + path.HopLen <= end && end <= len(raw.Raw)
 decreases
 pure func (raw *Raw) CorrectlyDecodedHF_Raw(h path.HopField, start int, middle int, end int, ubuf []byte) bool {
-	return unfolding acc(raw.Mem(ubuf), R50) in path.BytesToIO_HF(ubuf, start, middle, end) == h.ToIO_HF()
+	return unfolding acc(raw.Mem(ubuf), R50) in unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R51) in
+	let hop := path.BytesToIO_HF_Helper(ubuf, start, middle, end) in
+	hop == h.ToIO_HF()
 }
 
 ghost

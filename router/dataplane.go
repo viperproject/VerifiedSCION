@@ -1946,26 +1946,37 @@ func (p *scionPacketProcessor) packSCMP(
 func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	var err error
 	// @ unfold acc(p.scionLayer.Mem(ub), R6)
-	// @ defer fold acc(p.scionLayer.Mem(ub), R6)
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
 	// @ ghost ubPath := ub[startP:endP]
 	// @ sl.SplitRange_Bytes(ub, startP, endP, R2)
-	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R2)
+	// @ assert acc(p.path.Mem(ubPath), R20)
 	p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
+	// @ assert err == nil ==> p.path.CorrectlyDecodedHF_RawOffsetIndex(p.hopField, ubPath)
 	// @ fold p.d.validResult(processResult{}, false)
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
+		// @ fold acc(p.scionLayer.Mem(ub), R6)
+		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, R2)
 		return processResult{}, err
 	}
+	// @ assert acc(p.path.Mem(ubPath), R20)
 	p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ )
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
+		// @ fold acc(p.scionLayer.Mem(ub), R6)
+		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, R2)
 		return processResult{}, err
 	}
-	// @ TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub))
-	// @ TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) > 0)
-	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(dp, ub)))
+	// @ assert acc(p.path.Mem(ubPath), R20)
+	// @ fold acc(p.scionLayer.Mem(ub), R7)
+	// @ assert acc(p.path.Mem(ubPath), R20)
+	// TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub))
+	// TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) > 0)
+	// TemporaryAssumeForIO(p.EqAbsHopField(absPkt(dp, ub)))
+	// @ p.CurrentHopFieldBytesLemma(dp, ub, ubPath)
+	// @ fold acc(p.scionLayer.Mem(ub), R7)
+	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, R2)
 	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(dp, ub)))
 	return processResult{}, nil
 }

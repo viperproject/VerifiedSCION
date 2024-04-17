@@ -37,13 +37,12 @@ pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs]{
 ghost
 requires 0 <= start && start <= middle
 requires middle + HopLen <= end && end <= len(raw)
-requires acc(slices.AbsSlice_Bytes(raw, start, end), _)
+requires forall i int :: { &raw[i] } start <= i && i < end ==> acc(&raw[i], _)
 decreases
-pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
+pure func BytesToIO_HF_Helper(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle + 2 + k]) in
 		let _ := Asserting(forall k int :: {&raw[middle+4:middle+6][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+6][k] == &raw[middle + 4 + k]) in
 		let _ := Asserting(forall k int :: {&raw[middle+6:middle+6+MacLen][k]} 0 <= k && k < MacLen ==> &raw[middle+6:middle+6+MacLen][k] == &raw[middle + 6 + k]) in
-		unfolding acc(slices.AbsSlice_Bytes(raw, start, end), _) in
 		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4]) in
 		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6]) in
 		let op_inif2 := ifsToIO_ifs(inif2) in
@@ -53,6 +52,15 @@ pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 			EgIF2 : op_egif2,
 			HVF : AbsMac(FromSliceToMacArray(raw[middle+6:middle+6+MacLen])),
 		})
+}
+
+ghost
+requires 0 <= start && start <= middle
+requires middle + HopLen <= end && end <= len(raw)
+requires acc(slices.AbsSlice_Bytes(raw, start, end), _)
+decreases
+pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
+	return unfolding acc(slices.AbsSlice_Bytes(raw, start, end), _) in BytesToIO_HF_Helper(raw, start, middle, end)
 }
 
 ghost
@@ -84,18 +92,7 @@ requires acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 decreases
 pure func CorrectlyDecodedHF_FullBuf(h HopField, raw []byte, start int, middle int, end int) bool {
 	return unfolding acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R51) in
-	let hop := (let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle + 2 + k]) in
-		let _ := Asserting(forall k int :: {&raw[middle+4:middle+6][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+6][k] == &raw[middle + 4 + k]) in
-		let _ := Asserting(forall k int :: {&raw[middle+6:middle+6+MacLen][k]} 0 <= k && k < MacLen ==> &raw[middle+6:middle+6+MacLen][k] == &raw[middle + 6 + k]) in
-		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4]) in
-		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6]) in
-		let op_inif2 := ifsToIO_ifs(inif2) in
-		let op_egif2 := ifsToIO_ifs(egif2) in
-		io.IO_HF(io.IO_HF_{
-			InIF2 : op_inif2,
-			EgIF2 : op_egif2,
-			HVF : AbsMac(FromSliceToMacArray(raw[middle+6:middle+6+MacLen])),
-		})) in
+	let hop := BytesToIO_HF_Helper(raw, start, middle, end) in
 	hop == h.ToIO_HF()
 }
 
@@ -140,6 +137,6 @@ decreases
 func (h *HopField) CorrectlyDecodedHF_WidenLemma(raw []byte, start int, middle int, end int, ubuf []byte) bool {
 	assert reveal h.CorrectlyDecodedHF(raw, start, middle, end)
 	assert (unfolding h.Mem() in h.ToIO_HF()) == (unfolding h.Mem() in *h).ToIO_HF()
-	assert forall i int :: { &ubuf[i] } 0 <= i && i < len(raw) ==> raw[i] == ubuf[i]
+	assert unfolding acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R46) in unfolding acc(slices.AbsSlice_Bytes(raw, start, end), R46) in forall i int :: { &ubuf[i] } 0 <= i && i < len(raw) ==> raw[i] == ubuf[i]
 	assert reveal CorrectlyDecodedHF_FullBuf(unfolding h.Mem() in *h, ubuf, start, middle, end)
 }
