@@ -15,8 +15,8 @@ initEnsures Registered(LayerTypeZero)
 initEnsures Registered(LayerTypeDecodeFailure)
 initEnsures Registered(LayerTypePayload)
 initEnsures Registered(LayerTypeFragment)
-initEnsures forall t LayerType :: t < 0 ==> !Registered(t)
-initEnsures forall t LayerType :: 3 < t ==> !Registered(t)
+initEnsures forall t LayerType :: { Registered(t) } t < 0 ==> !Registered(t)
+initEnsures forall t LayerType :: { Registered(t) } 3 < t ==> !Registered(t)
 package gopacket
 
 import "github.com/scionproto/scion/verification/utils/slices"
@@ -66,15 +66,15 @@ pure func registeredDuringInit(t LayerType) (res bool) {
 
 // cannot be made ghost, even though it is morally so
 requires acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
-requires forall t LayerType :: !registeredDuringInit(t)
+requires forall t LayerType :: { registeredDuringInit(t) } !registeredDuringInit(t)
 ensures  LayerTypesMem()
-ensures  forall t LayerType :: !Registered(t)
+ensures  forall t LayerType :: { Registered(t) } !Registered(t)
 decreases
 func satisfyGlobalVarInitPre() int {
 	fold LayerTypesMem()
-	assert forall t LayerType :: old(!registeredDuringInit(t)) ==> !Registered(t)
-	assert unfolding LayerTypesMem() in (forall t LayerType :: !registeredDuringInit(t))
-	assert forall t LayerType :: !Registered(t)
+	assert forall t LayerType :: { Registered(t) } old(!registeredDuringInit(t)) ==> !Registered(t)
+	assert unfolding LayerTypesMem() in forall t LayerType :: { registeredDuringInit(t) } !registeredDuringInit(t)
+	assert forall t LayerType :: { Registered(t) } !Registered(t)
 	return 1
 }
 /** End of predicates and ghost helper members **/
@@ -128,9 +128,10 @@ var LayerTypeFragment = RegisterLayerType(3, LayerTypeMetadata{Name: "Fragment",
 
 /** Ghost init operations **/
 func init() {
-	assert forall t LayerType :: (t != 0 && t != 1 && t != 2 && t != 3) ==> !Registered(t)
-	assert forall t LayerType :: t < 0 ==> !Registered(t)
-	assert forall t LayerType :: 3 < t ==> !Registered(t)
+	assert forall t LayerType :: { Registered(t) } (t != 0 && t != 1 && t != 2 && t != 3) ==>
+		!Registered(t)
+	assert forall t LayerType :: { Registered(t) } t < 0 ==> !Registered(t)
+	assert forall t LayerType :: { Registered(t) } 3 < t ==> !Registered(t)
 }
 /** End of ghost init operations **/
 
@@ -139,7 +140,7 @@ requires LayerTypesMem()
 requires !Registered(LayerType(num))
 requires meta.Decoder != nil ==> meta.Decoder.Mem()
 ensures  LayerTypesMem()
-ensures  forall t LayerType :: t != LayerType(num) ==> old(Registered(t)) == Registered(t)
+ensures  forall t LayerType :: { Registered(t) } t != LayerType(num) ==> old(Registered(t)) == Registered(t)
 ensures  Registered(LayerType(num))
 ensures  res == LayerType(num)
 decreases
@@ -161,7 +162,7 @@ func RegisterLayerType(num int, meta LayerTypeMetadata) (res LayerType) {
 requires LayerTypesMem()
 requires meta.Decoder != nil ==> meta.Decoder.Mem()
 ensures  LayerTypesMem()
-ensures  forall t LayerType :: t != LayerType(num) ==> old(Registered(t)) == Registered(t)
+ensures  forall t LayerType :: { Registered(t) } t != LayerType(num) ==> old(Registered(t)) == Registered(t)
 ensures  Registered(LayerType(num))
 ensures  res == LayerType(num)
 decreases

@@ -26,16 +26,15 @@ pred (o *Path) NonInitMem() {
 }
 
 pred (o *Path) Mem(ubuf []byte) {
-	slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)) &&
 	acc(&o.Info) &&
 	o.FirstHop.Mem() &&
-	o.SecondHop.Mem()
+	o.SecondHop.Mem() &&
+	PathLen <= len(ubuf)
 }
 
 ghost
 requires p.Mem(buf)
 ensures  p.NonInitMem()
-ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
 decreases
 func (p *Path) DowngradePerm(buf []byte) {
 	unfold p.Mem(buf)
@@ -45,16 +44,11 @@ func (p *Path) DowngradePerm(buf []byte) {
 }
 
 ghost
-requires 0 < pm
-requires acc(p.Mem(ub), pm)
-ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm)
-ensures  acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm) --* acc(p.Mem(ub), pm)
+requires acc(o.Mem(ub), _)
+ensures  b
 decreases
-func (p *Path) AccUnderlyingBuf(ghost ub []byte, ghost pm perm) {
-	unfold acc(p.Mem(ub), pm)
-	package acc(slices.AbsSlice_Bytes(ub, 0, len(ub)), pm) --* acc(p.Mem(ub), pm) {
-		fold acc(p.Mem(ub), pm)
-	}
+pure func (o *Path) InferSizeUb(ghost ub []byte) (b bool) {
+	return unfolding acc(o.Mem(ub), _) in o.Len(ub) <= len(ub)
 }
 
 (*Path) implements path.Path

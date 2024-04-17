@@ -96,3 +96,8 @@ tmp/
 *.vpr
 *.debugType
 target
+*.unparsed
+*.gobrafied
+*.internal
+.devcontainer
+.metals

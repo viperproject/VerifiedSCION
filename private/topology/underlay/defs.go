@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package underlay
 
 import (
@@ -21,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 type Type int
@@ -70,6 +73,8 @@ func TypeFromString(s string) (Type, error) {
 	}
 }
 
+// @ trusted
+// @ requires Uncallable()
 func (ot *Type) UnmarshalJSON(data []byte) error {
 	var strVal string
 	if err := json.Unmarshal(data, &strVal); err != nil {
@@ -83,6 +88,8 @@ func (ot *Type) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// @ trusted
+// @ requires Uncallable()
 func (ot Type) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ot.String())
 }

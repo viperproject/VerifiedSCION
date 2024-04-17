@@ -22,19 +22,27 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
+	//@ bit "github.com/scionproto/scion/verification/utils/bitwise"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
+	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
-// MetaLen is the length of the PathMetaHeader.
-const MetaLen = 4
+const (
+	// MaxINFs is the maximum number of info fields in a SCION path.
+	MaxINFs = 3
+	// MaxHops is the maximum number of hop fields in a SCION path.
+	MaxHops = 64
 
-const PathType path.Type = 1
+	// MetaLen is the length of the PathMetaHeader.
+	MetaLen = 4
+
+	PathType path.Type = 1
+)
 
 // @ requires path.PathPackageMem()
 // @ requires !path.Registered(PathType)
 // @ ensures  path.PathPackageMem()
-// @ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+// @ ensures  forall t path.Type :: { old(path.Registered(t)) }{ path.Registered(t) } 0 <= t && t < path.MaxPathType ==>
 // @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
 // @ ensures  path.Registered(PathType)
 // @ decreases
@@ -71,9 +79,20 @@ type Base struct {
 }
 
 // @ requires  s.NonInitMem()
-// @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), definitions.ReadL1)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R50)
 // @ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
-// @ ensures   r == nil ==> s.Mem() && (s.Mem() --* s.NonInitMem())
+// @ ensures   r == nil ==> (
+// @ 	s.Mem() &&
+// @ 	let lenD := len(data) in
+// @ 	MetaLen <= lenD &&
+// @ 	let b0 := sl.GetByte(data, 0, lenD, 0) in
+// @ 	let b1 := sl.GetByte(data, 0, lenD, 1) in
+// @ 	let b2 := sl.GetByte(data, 0, lenD, 2) in
+// @ 	let b3 := sl.GetByte(data, 0, lenD, 3) in
+// @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
+// @ 	let metaHdr := DecodedFrom(line) in
+// @ 	metaHdr == s.GetMetaHdr() &&
+// @ 	s.InfsMatchHfs())
 // @ ensures   len(data) < MetaLen ==> r != nil
 // @ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
@@ -86,10 +105,34 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	}
 	s.NumINF = 0
 	s.NumHops = 0
+
+	//@ ghost var metaHdrCpy MetaHdr = s.PathMeta
+
 	//@ invariant -1 <= i && i <= 2
 	//@ invariant acc(s)
-	//@ invariant 0 <= s.NumHops && 0 <= s.NumINF && s.NumINF <= 3
+	//@ invariant metaHdrCpy == s.PathMeta
+	//@ invariant 0 <= s.NumHops
+	//@ invariant 0 <= s.NumINF && s.NumINF <= 3
 	//@ invariant 0 < s.NumINF ==> 0 < s.NumHops
+	// Invariant provided as a list of all four possible iterations:
+	//@ invariant i == 2 ==> (s.NumINF == 0 && s.NumHops == 0)
+	//@ invariant (i == 1 && s.NumINF == 0) ==> s.NumHops == 0
+	//@ invariant (i == 1 && s.NumINF != 0) ==>
+	//@ 	(s.NumINF == 3 && s.NumHops == int(s.PathMeta.SegLen[2]))
+	//@ invariant (i == 0 && s.NumINF == 0) ==> s.NumHops == 0
+	//@ invariant (i == 0 && s.NumINF != 0) ==> (
+	//@ 	2 <= s.NumINF && s.NumINF <= 3 &&
+	//@ 	(s.NumINF == 2 ==> s.NumHops == int(s.PathMeta.SegLen[1])) &&
+	//@ 	(s.NumINF == 3 ==> s.NumHops == int(s.PathMeta.SegLen[1] + s.PathMeta.SegLen[2])))
+	//@ invariant (i == -1 && s.NumINF == 0) ==> s.NumHops == 0
+	//@ invariant (i == -1 && s.NumINF != 0) ==> (
+	//@ 	(s.NumINF == 1 ==> s.NumHops == int(s.PathMeta.SegLen[0])) &&
+	//@ 	(s.NumINF == 2 ==> s.NumHops == int(s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1])) &&
+	//@ 	(s.NumINF == 3 ==> s.NumHops == int(s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1] +  s.PathMeta.SegLen[2])))
+	//@ invariant forall j int :: { s.PathMeta.SegLen[j] } i < j && j < s.NumINF ==>
+	//@ 	s.PathMeta.SegLen[j] != 0
+	//@ invariant forall j int :: { s.PathMeta.SegLen[j] } (s.NumINF <= j && i < j && j < MaxINFs) ==>
+	//@ 	s.PathMeta.SegLen[j] == 0
 	//@ decreases i
 	for i := 2; i >= 0; i-- {
 		if s.PathMeta.SegLen[i] == 0 && s.NumINF > 0 {
@@ -106,23 +149,29 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		//@ assume int(s.PathMeta.SegLen[i]) >= 0
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
+
+	// We must check the validity of NumHops. It is possible to fit more than 64 hops in
+	// the length of a scion header. Yet a path of more than 64 hops cannot be followed to
+	// the end because CurrHF is only 6 bits long.
+	if s.NumHops > MaxHops {
+		//@ defer fold s.NonInitMem()
+		return serrors.New("NumHops too large", "NumHops", s.NumHops, "Maximum", MaxHops)
+	}
 	//@ fold s.Mem()
-	//@ package s.Mem() --* s.NonInitMem() {
-	//@   unfold s.Mem()
-	//@   fold   s.NonInitMem()
-	//@ }
 	return nil
 }
 
 // IncPath increases the currHF index and currINF index if appropriate.
 // @ requires s.Mem()
-// @ ensures  old(unfolding s.Mem() in s.NumINF == 0) ==> e != nil
-// @ ensures  old(unfolding s.Mem() in int(s.PathMeta.CurrHF) >= s.NumHops-1) ==> e != nil
-// @ ensures  e == nil ==> s.Mem()
-// @ ensures  e == nil ==> s.Len() == old(s.Len())
-// @ ensures  e == nil ==> s.getNumINF() == old(s.getNumINF())
-// @ ensures  e != nil ==> s.NonInitMem()
-// @ ensures  e != nil ==> e.ErrorMem()
+// @ ensures  (e != nil) == (
+// @ 	old(s.GetNumINF()) == 0 ||
+// @ 	old(int(s.GetCurrHF()) >= s.GetNumHops()-1))
+// @ ensures  e == nil ==> (
+// @ 	s.Mem() &&
+// @ 	let oldBase := old(unfolding s.Mem() in *s) in
+// @ 	let newBase := (unfolding s.Mem() in *s) in
+// @ 	newBase == oldBase.IncPathSpec())
+// @ ensures  e != nil ==> (s.NonInitMem() && e.ErrorMem())
 // @ decreases
 func (s *Base) IncPath() (e error) {
 	//@ unfold s.Mem()
@@ -143,33 +192,31 @@ func (s *Base) IncPath() (e error) {
 }
 
 // IsXover returns whether we are at a crossover point.
-// @ preserves acc(s.Mem(), definitions.ReadL10)
+// @ preserves acc(s.Mem(), R45)
+// @ ensures   r == s.IsXoverSpec()
 // @ decreases
-func (s *Base) IsXover() bool {
-	//@ unfold acc(s.Mem(), definitions.ReadL10)
-	//@ defer fold acc(s.Mem(), definitions.ReadL10)
+func (s *Base) IsXover() (r bool) {
+	//@ unfold acc(s.Mem(), R45)
+	//@ defer fold acc(s.Mem(), R45)
 	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
 		s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1)
 }
 
 // IsFirstHopAfterXover returns whether this is the first hop field after a crossover point.
-// @ preserves acc(s.Mem(), definitions.ReadL10)
+// @ preserves acc(s.Mem(), R19)
+// @ ensures   res ==> unfolding acc(s.Mem(), _) in s.PathMeta.CurrINF > 0 && s.PathMeta.CurrHF > 0
 // @ decreases
-func (s *Base) IsFirstHopAfterXover() bool {
-	//@ unfold acc(s.Mem(), definitions.ReadL10)
-	//@ defer fold acc(s.Mem(), definitions.ReadL10)
+func (s *Base) IsFirstHopAfterXover() (res bool) {
+	//@ unfold acc(s.Mem(), R19)
+	//@ defer fold acc(s.Mem(), R19)
 	return s.PathMeta.CurrINF > 0 && s.PathMeta.CurrHF > 0 &&
 		s.PathMeta.CurrINF-1 == s.infIndexForHF(s.PathMeta.CurrHF-1)
 }
 
-// @ preserves acc(s, definitions.ReadL11)
-// @ preserves 0 <= s.NumINF && s.NumINF <= 3 && 0 <= s.NumHops
-// @ ensures   (0 <= r && r < 3)
+// @ preserves acc(s, R50)
+// @ ensures   r == s.InfForHfSpec(hf)
 // @ decreases
 func (s *Base) infIndexForHF(hf uint8) (r uint8) {
-	// (VerifiedSCION) Gobra cannot prove the following propertie, even though it
-	// is ensured by the type system.
-	// @ assume 0 <= hf
 	switch {
 	case hf < s.PathMeta.SegLen[0]:
 		return 0
@@ -180,7 +227,9 @@ func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 	}
 }
 
-// Len returns the length of the path in bytes.
+// Len returns the length of the path in bytes. That is, the number of byte required to
+// store it, based on the metadata. The actual number of bytes available to contain it
+// can be inferred from the common header field HdrLen. It may or may not be consistent.
 // @ pure
 // @ requires acc(s.Mem(), _)
 // @ ensures  r >= MetaLen
@@ -208,9 +257,9 @@ type MetaHdr struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
 // @ preserves acc(m)
-// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+// @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
-// @ ensures   e == nil ==> (m.CurrINF >= 0 && m.CurrHF >= 0)
+// @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
@@ -218,37 +267,42 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
 		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+	//@ unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
-	// (VerifiedSCION) The following assumption is guaranteed by Go but still not modeled in Gobra.
-	//@ assume m.CurrINF >= 0 && m.CurrHF >= 0
+	//@ bit.Shift30LessThan4(line)
+	//@ bit.And3fAtMost64(uint8(line>>24))
 	m.SegLen[0] = uint8(line>>12) & 0x3F
 	m.SegLen[1] = uint8(line>>6) & 0x3F
 	m.SegLen[2] = uint8(line) & 0x3F
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), definitions.ReadL1)
+	//@ bit.And3fAtMost64(uint8(line>>12))
+	//@ bit.And3fAtMost64(uint8(line>>6))
+	//@ bit.And3fAtMost64(uint8(line))
+	//@ fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 	return nil
 }
 
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // scion.MetaLen.
 // @ requires  len(b) >= MetaLen
-// @ preserves acc(m, definitions.ReadL10)
-// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ preserves acc(m, R50)
+// @ preserves sl.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   e == nil
+// @ ensures   m.SerializeToSpec(b)
 // @ decreases
 func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	if len(b) < MetaLen {
+		// @ Unreachable()
 		return serrors.New("buffer for MetaHdr too short", "expected", MetaLen, "actual", len(b))
 	}
 	line := uint32(m.CurrINF)<<30 | uint32(m.CurrHF&0x3F)<<24
 	line |= uint32(m.SegLen[0]&0x3F) << 12
 	line |= uint32(m.SegLen[1]&0x3F) << 6
 	line |= uint32(m.SegLen[2] & 0x3F)
-	//@ unfold acc(slices.AbsSlice_Bytes(b, 0, len(b)))
+	//@ unfold acc(sl.AbsSlice_Bytes(b, 0, len(b)))
 	binary.BigEndian.PutUint32(b, line)
-	//@ fold acc(slices.AbsSlice_Bytes(b, 0, len(b)))
+	//@ fold acc(sl.AbsSlice_Bytes(b, 0, len(b)))
 	return nil
 }
 

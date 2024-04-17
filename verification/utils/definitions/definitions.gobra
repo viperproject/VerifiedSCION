@@ -16,40 +16,121 @@
 
 package definitions
 
+const HalfPerm perm = 1/2
 const (
-	ReadL1 perm = 1/(2 << iota)
-	ReadL2
-	ReadL3
-	ReadL4
-	ReadL5
-	ReadL6
-	ReadL7
-	ReadL8
-	ReadL9
-	ReadL10
-	ReadL11
-	ReadL12
-	ReadL13
-	ReadL14
-	ReadL15
-	ReadL16
-	ReadL17
-	ReadL18
-	ReadL19
-	ReadL20
+	R00 perm = 1/(2 << iota)
+	R0
+	R1
+	R2
+	R3
+	R4
+	R5
+	R6
+	R7
+	R8
+	R9
+	R10
+	R11
+	R12
+	R13
+	R14
+	R15
+	R16
+	R17
+	R18
+	R19
+	R20
+	R21
+	R22
+	R23
+	R24
+	R25
+	R26
+	R27
+	R28
+	R29
+	R30
+	R31
+	R32
+	R33
+	R34
+	R35
+	R36
+	R37
+	R38
+	R39
+	R40
+	R41
+	R42
+	R43
+	R44
+	R45
+	R46
+	R47
+	R48
+	R49
+	R50
+	R51
+	R52
+	R53
+	R54
+	R55
+	R56
 )
 
+// To be used as a precondition of functions and methods that can never be called
+// from the router.
 ghost
 requires false
-func Unreachable()
+decreases
+func Unreachable() {}
 
 ghost
 ensures !res
+decreases
 pure func Uncallable() (res bool) {
 	return false
 }
 
-ensures res == x+y
+/**** Functions to introduce temporary assumptions **/
+
+// Kills the branches that reach this point.
+ghost
+ensures false
 decreases _
+func TODO()
+
+// Does the same as TODO, but should be used when it kills a branch
+// that cannot be verified until an issue in SCION is fixed and ported
+// to our branch of SCION.
+ghost
+ensures false
+decreases _
+func ToDoAfterScionFix(url string)
+
+/**** End of functions to introduce temporary assumptions **/
+
+// type to be used as a stub for sets of private fields in formalizations of
+// third party libs
+type PrivateField *int
+
+// ghost
 pure
-func add(x, y int) (res int)
+requires b
+decreases
+func Asserting(ghost b bool) bool {
+	return true
+}
+
+type Lemma struct{}
+
+// Assumption for IO-Specification
+ghost
+ensures b
+decreases
+func AssumeForIO(b bool)
+
+ghost
+ensures b
+decreases
+func TemporaryAssumeForIO(b bool)

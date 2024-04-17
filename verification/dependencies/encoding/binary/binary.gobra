@@ -14,21 +14,18 @@ package binary
 type ByteOrder interface {
 	requires acc(&b[0], _) && acc(&b[1], _)
 	ensures res >= 0
-	// Uncommenting the following line causes an exception currently
-	// decreases
+	decreases
 	pure Uint16(b []byte) (res uint16)
 
 	requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
 	ensures res >= 0
-	// Uncommenting the following line causes an exception currently
-	// decreases
+	decreases
 	pure Uint32(b []byte) (res uint32)
 
 	requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
 	requires acc(&b[4], _) && acc(&b[5], _) && acc(&b[6], _) && acc(&b[7], _)
 	ensures res >= 0
-	// Uncommenting the following line causes an exception currently
-	// decreases
+	decreases
 	pure Uint64(b []byte) (res uint64)
 
 	preserves acc(&b[0]) && acc(&b[1])
@@ -62,7 +59,7 @@ type bigEndian int
 
 (littleEndian) implements ByteOrder
 
-(bigEndian) implements ByteOrder 
+(bigEndian) implements ByteOrder
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
 requires acc(&b[0], _) && acc(&b[1], _)
@@ -81,7 +78,8 @@ func (e littleEndian) PutUint16(b []byte, v uint16) {
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
 requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
-ensures res >= 0
+ensures  0 <= res
+ensures  res == uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 decreases
 pure func (e littleEndian) Uint32(b []byte) (res uint32) {
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
@@ -128,30 +126,68 @@ ensures res == "binary.LittleEndian"
 decreases
 pure func (l littleEndian) GoString() (res string) { return "binary.LittleEndian" }
 
+// The specs here could be simpler now that we have FUint16Spec and FPutUint16Spec.
+
+decreases
+pure func (e bigEndian) Uint16Spec(b0, b1 byte) (res uint16) {
+	return uint16(b1) | uint16(b0)<<8
+}
+
 trusted // related to https://github.com/viperproject/gobra/issues/192
 requires acc(&b[0], _) && acc(&b[1], _)
 ensures  res >= 0
+ensures  res == BigEndian.Uint16Spec(b[0], b[1])
 decreases
 pure func (e bigEndian) Uint16(b []byte) (res uint16) {
 	return uint16(b[1]) | uint16(b[0])<<8
 }
 
+decreases
+pure func (e bigEndian) PutUint16Spec(b0, b1 byte, v uint16) bool {
+	return b0 == byte(v >> 8) &&
+		b1 == byte(v)
+}
+
+// Proven in verification/utils/bitwise/proofs.dfy
+trusted
 preserves acc(&b[0]) && acc(&b[1])
+ensures   BigEndian.PutUint16Spec(b[0], b[1], v)
+ensures   BigEndian.Uint16Spec(b[0], b[1]) == v
 decreases
 func (e bigEndian) PutUint16(b []byte, v uint16) {
 	b[0] = byte(v >> 8)
 	b[1] = byte(v)
 }
 
+// The specs here could be simpler now that we have FUint32Spec and FPutUint32Spec.
+
+decreases
+pure func (e bigEndian) Uint32Spec(b0, b1, b2, b3 byte) (res uint32) {
+	return uint32(b3) | uint32(b2)<<8 | uint32(b1)<<16 | uint32(b0)<<24
+}
+
 trusted // related to https://github.com/viperproject/gobra/issues/192
 requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
-ensures  res >= 0
+ensures  0 <= res
+ensures  res == BigEndian.Uint32Spec(b[0], b[1], b[2], b[3])
 decreases
 pure func (e bigEndian) Uint32(b []byte) (res uint32) {
 	return uint32(b[3]) | uint32(b[2])<<8 | uint32(b[1])<<16 | uint32(b[0])<<24
 }
 
+decreases
+pure func (e bigEndian) PutUint32Spec(b0, b1, b2, b3 byte, v uint32) bool {
+	return b0 == byte(v >> 24) &&
+		b1 == byte(v >> 16)    &&
+		b2 == byte(v >> 8)     &&
+		b3 == byte(v)
+}
+
+// Proven in verification/utils/bitwise/proofs.dfy
+trusted
 preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
+ensures   BigEndian.PutUint32Spec(b[0], b[1], b[2], b[3], v)
+ensures   BigEndian.Uint32Spec(b[0], b[1], b[2], b[3]) == v
 decreases
 func (e bigEndian) PutUint32(b []byte, v uint32) {
 	b[0] = byte(v >> 24)
@@ -191,10 +227,3 @@ pure func (b bigEndian) String() (res string) { return "BigEndian" }
 ensures res == "binary.BigEndian"
 decreases
 pure func (b bigEndian) GoString() (res string) { return "binary.BigEndian" }
-
-// Size returns how many bytes Write would generate to encode the value v, which
-// must be a fixed-size value or a slice of fixed-size values, or a pointer to such data.
-// If v is neither of these, Size returns -1.
-// (joao) requires support for the reflect package
-decreases
-func Size(v interface{}) int

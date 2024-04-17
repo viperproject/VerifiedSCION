@@ -15,3 +15,8 @@
 // +gobra
 
 package definitions
+
+func test() {
+	assert R00 < writePerm
+	assert R0 < R00
+}

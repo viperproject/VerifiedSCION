@@ -8,7 +8,7 @@
 
 package gopacket
 
-import "github.com/scionproto/scion/verification/utils/definitions"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 
 type LayerClass interface {
 	pred Mem()
@@ -17,7 +17,7 @@ type LayerClass interface {
 	decreases
 	pure Contains(LayerType) bool
 
-	preserves acc(Mem(), definitions.ReadL10)
+	preserves acc(Mem(), R10)
 	ensures acc(res)
 	// TODO: we can also ensure that the elements in res are exactly
 	// those for which 'Contains' returns true.
@@ -45,81 +45,7 @@ func (l LayerType) LayerTypes() (res []LayerType) {
 	return []LayerType{l}
 }
 
-/*
-// (verifiedSCION) The following commented methods could be easily verified
-// after we introduce support for range:
-
-// LayerClassSlice implements a LayerClass with a slice.
-type LayerClassSlice []bool
-
-// Contains returns true if the given layer type should be considered part
-// of this layer class.
-func (s LayerClassSlice) Contains(t LayerType) bool {
-	return int(t) < len(s) && s[t]
-}
-
-// LayerTypes returns all layer types in this LayerClassSlice.
-// Because of LayerClassSlice's implementation, this could be quite slow.
-func (s LayerClassSlice) LayerTypes() (all []LayerType) {
-	for i := 0; i < len(s); i++ {
-		if s[i] {
-			all = append(all, LayerType(i))
-		}
-	}
-	return
-}
-
-// NewLayerClassSlice creates a new LayerClassSlice by creating a slice of
-// size max(types) and setting slice[t] to true for each type t.  Note, if
-// you implement your own LayerType and give it a high value, this WILL create
-// a very large slice.
-func NewLayerClassSlice(types []LayerType) LayerClassSlice {
-	var max LayerType
-	for _, typ := range types {
-		if typ > max {
-			max = typ
-		}
-	}
-	t := make([]bool, int(max+1))
-	for _, typ := range types {
-		t[typ] = true
-	}
-	return t
-}
-
-// LayerClassMap implements a LayerClass with a map.
-type LayerClassMap map[LayerType]bool
-
-// Contains returns true if the given layer type should be considered part
-// of this layer class.
-func (m LayerClassMap) Contains(t LayerType) bool {
-	return m[t]
-}
-
-// LayerTypes returns all layer types in this LayerClassMap.
-func (m LayerClassMap) LayerTypes() (all []LayerType) {
-	for t := range m {
-		all = append(all, t)
-	}
-	return
-}
-
-// NewLayerClassMap creates a LayerClassMap and sets map[t] to true for each
-// type in types.
-func NewLayerClassMap(types []LayerType) LayerClassMap {
-	m := LayerClassMap{}
-	for _, typ := range types {
-		m[typ] = true
-	}
-	return m
-}
-*/
-
-// TODO: add explicit implementation proofs
-
-// TODO: verify after verifying the remainder of the file
-trusted
-preserves acc(types, definitions.ReadL20)
+preserves acc(types, R20)
 // NewLayerClass creates a LayerClass, attempting to be smart about which type
 // it creates based on which types are passed in.
 ensures res.Mem()
@@ -127,13 +53,4 @@ ensures res.Mem()
 // ensures   forall i LayerType :: i in types ==> res.Contains(i)
 // ensures   forall i LayerType :: !i in types ==> !res.Contains(i)
 decreases
-func NewLayerClass(types []LayerType) (res LayerClass) {
-	for _, typ := range types {
-		if typ > maxLayerType {
-			// NewLayerClassSlice could create a very large object, so instead create
-			// a map.
-			return NewLayerClassMap(types)
-		}
-	}
-	return NewLayerClassSlice(types)
-}
+func NewLayerClass(types []LayerType) (res LayerClass)

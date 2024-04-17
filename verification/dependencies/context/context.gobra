@@ -21,30 +21,29 @@ package context
 
 import (
 	"time"
-	"github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 type Context interface {
 
 	pred Mem()
 
-	preserves acc(Mem(), definitions.ReadL20)
+	preserves acc(Mem(), R20)
 	decreases
 	Deadline() (deadline time.Time, ok bool)
 
-	preserves acc(Mem(), definitions.ReadL20)
-	ensures isClosed ==> c.Closed()
-	ensures (!isClosed && c != nil) ==>
-		acc(c.RecvChannel(), _)
+	preserves acc(Mem(), _)
+	ensures   acc(c.RecvChannel(), _)
+	ensures   c.RecvGivenPerm() == PredTrue!<!>
 	decreases
-	Done() (c <-chan struct{}, ghost isClosed bool)
+	Done() (c <-chan struct{})
 
-	preserves acc(Mem(), definitions.ReadL20)
+	preserves acc(Mem(), R20)
 	ensures isClosed ==> (e != nil && e.ErrorMem())
 	decreases
 	Err() (e error, ghost isClosed bool)
 
-	preserves acc(Mem(), definitions.ReadL20)
+	preserves acc(Mem(), R20)
 	requires acc(key.Mem(), _)
 	requires isComparable(key)
 	ensures acc(val.Mem(), _)
@@ -52,7 +51,7 @@ type Context interface {
 	Value(key interface{ pred Mem() }) (val interface{ pred Mem() })
 }
 
-preserves acc(key.Mem(), definitions.ReadL20)
+preserves acc(key.Mem(), R20)
 requires parent.Mem()
 requires isComparable(key)
 requires acc(val.Mem(), _)
@@ -60,27 +59,3 @@ ensures child.Mem()
 ensures child.Mem() --* parent.Mem()
 decreases _
 func WithValue(parent Context, key, val interface{ pred Mem() }) (child Context)
-
-/* Below functions are closure-dependent and currently unsupported.
-
-type CancelFunc func()
-
-requires parent.Mem()
-ensures child.Mem()
-ensures child.Mem() --* parent.Mem()
-decreases _
-func WithCancel(parent Context) (child Context, cancel CancelFunc)
-
-requires parent.Mem()
-ensures child.Mem()
-ensures child.Mem() --* parent.Mem()
-decreases _
-func WithDeadline(parent Context, d time.Time) (child Context, cancel CancelFunc)
-
-requires parent.Mem()
-ensures child.Mem()
-ensures child.Mem() --* parent.Mem()
-decreases _
-func WithTimeout(parent Context, timeout time.Duration) (child Context, cancel CancelFunc)
-
-*/

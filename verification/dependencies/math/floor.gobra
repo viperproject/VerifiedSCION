@@ -13,15 +13,9 @@ package math
 //	Floor(±0) = ±0
 //	Floor(±Inf) = ±Inf
 //	Floor(NaN) = NaN
-trusted
 ensures res <= x
 decreases
-func Floor(x float64) (res float64) {
-	if haveArchFloor {
-		return archFloor(x)
-	}
-	return floor(x)
-}
+func Floor(x float64) (res float64)
 
 // Ceil returns the least integer value greater than or equal to x.
 //
@@ -30,12 +24,6 @@ func Floor(x float64) (res float64) {
 //	Ceil(±0) = ±0
 //	Ceil(±Inf) = ±Inf
 //	Ceil(NaN) = NaN
-trusted
 ensures x <= res
 decreases
-func Ceil(x float64) (res float64) {
-	if haveArchCeil {
-		return archCeil(x)
-	}
-	return ceil(x)
-}
+func Ceil(x float64) (res float64)

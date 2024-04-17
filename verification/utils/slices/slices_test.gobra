@@ -16,10 +16,12 @@
 
 package slices
 
+import "github.com/scionproto/scion/verification/utils/seqs"
+
 /** Bytes **/
 func AbsSliceC_Bytes_test() {
 	s := make([]byte, 10)
-	ghost contents := NewSeq_Bytes(10)
+	ghost contents := seqs.NewSeqByte(10)
 	fold AbsSliceC_Bytes(s, 0, 10, contents)
 	// assert false // fails
 }

@@ -9,6 +9,8 @@
 
 package syscall
 
+import "errors"
+
 // An Errno is an unsigned number describing an error condition.
 // It implements the error interface. The zero Errno is by convention
 // a non-error, so code to convert from Errno to error should use:
@@ -17,18 +19,63 @@ package syscall
 //	if errno != 0 {
 //		err = errno
 //	}
-//
-// Errno values can be tested against error values from the os package
-// using errors.Is. For example:
-//
-//	_, _, err := syscall.Syscall(...)
-//	if errors.Is(err, fs.ErrNotExist) ...
+
 type Errno uintptr
+
+Errno implements error
+*Errno implements errors.ErrorCell
 
 pred (e Errno) ErrorMem() { e != 0 }
 
 preserves e.ErrorMem()
+ensures   old(e.IsDuplicableMem()) == e.IsDuplicableMem()
 decreases
 func (e Errno) Error() string
 
-Errno implements error
+ghost
+decreases
+pure
+func (e Errno) IsDuplicableMem() (res bool) {
+	return true
+}
+
+ghost
+preserves e.ErrorMem()
+ensures   e.ErrorMem()
+ensures   old(e.IsDuplicableMem()) == e.IsDuplicableMem()
+decreases
+func (e Errno) Duplicate() {
+	assert unfolding e.ErrorMem() in true
+	fold e.ErrorMem()
+}
+
+/** ErrorCell **/
+pred (s *Errno) Mem() {
+	acc(s)
+}
+
+ghost
+preserves s.Mem() && s.CanSet(e)
+ensures   s.Get() === e
+decreases
+func (s *Errno) Set(e error) {
+	unfold s.Mem()
+	defer fold s.Mem()
+	newErr := e.(Errno)
+	*s = newErr
+}
+
+ghost
+pure
+requires acc(s.Mem(), _)
+decreases
+func (s *Errno) Get() error {
+	return unfolding acc(s.Mem(), _) in *s
+}
+
+ghost
+pure
+decreases
+func (s *Errno) CanSet(e error) bool {
+	return typeOf(e) == type[Errno]
+}

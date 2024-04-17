@@ -1,0 +1,241 @@
+// Copyright 2020 Anapaya Systems
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slayers
+
+import (
+	"github.com/google/gopacket"
+
+	. "github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+/** start of extnBase **/
+
+pred (e *extnBase) NonInitMem() {
+	acc(e)
+}
+
+pred (e *extnBase) Mem(ubuf []byte) {
+	acc(&e.NextHdr)   &&
+	acc(&e.ExtLen)    &&
+	acc(&e.ActualLen) &&
+	e.BaseLayer.Mem(ubuf, e.ActualLen)
+}
+
+/** end of extnBase **/
+
+/** start of HopByHopExtn **/
+pred (h *HopByHopExtn) NonInitMem() {
+	acc(h)
+}
+
+pred (h *HopByHopExtn) Mem(ubuf []byte) {
+	h.extnBase.Mem(ubuf) &&
+	acc(&h.Options) &&
+	forall i int :: { &h.Options[i] } 0 <= i && i < len(h.Options) ==>
+		(acc(&h.Options[i]) && h.Options[i].Mem(i))
+}
+
+// Gobra is not able to infer that HopByHopExtn is "inheriting"
+// the implementation of LayerContents from extnBase.
+requires Uncallable()
+func (h *HopByHopExtn) LayerContents() (res []byte) {
+	res = h.BaseLayer.LayerContents()
+	return res
+}
+
+ghost
+requires s.Mem(ub)
+ensures  s.NonInitMem()
+decreases
+func (s *HopByHopExtn) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.extnBase.Mem(ub)
+	unfold s.BaseLayer.Mem(ub, s.ActualLen)
+	fold   s.NonInitMem()
+}
+
+(*HopByHopExtn) implements gopacket.Layer
+(*HopByHopExtn) implements gopacket.DecodingLayer
+
+/** end of HopByHopExtn **/
+
+/** start of HopByHopExtnSkipper **/
+pred (h *HopByHopExtnSkipper) NonInitMem() {
+	acc(h)
+}
+
+pred (h *HopByHopExtnSkipper) Mem(ubuf []byte) {
+	h.extnBase.Mem(ubuf)
+}
+
+// Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
+// the implementation of LayerContents from extnBase.
+requires Uncallable()
+func (h *HopByHopExtnSkipper) LayerContents() (res []byte) {
+	res = h.BaseLayer.LayerContents()
+	return res
+}
+
+// Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
+// the implementation of LayerPayload from extnBase.
+preserves acc(h.Mem(ub), R20)
+ensures   0 <= start && start <= end && end <= len(ub)
+ensures   len(res) == end - start
+ensures   res === ub[start:end]
+decreases
+func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
+	unfold acc(h.Mem(ub), R20)
+	unfold acc(h.extnBase.Mem(ub), R20)
+	ghost base := &h.extnBase.BaseLayer
+	res = base.LayerPayload(ub, h.ActualLen)
+	start = h.ActualLen
+	end = len(ub)
+	fold acc(h.extnBase.Mem(ub), R20)
+	fold acc(h.Mem(ub), R20)
+	return res, start, end
+}
+
+ghost
+requires s.Mem(ub)
+ensures  s.NonInitMem()
+decreases
+func (s *HopByHopExtnSkipper) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.extnBase.Mem(ub)
+	unfold s.BaseLayer.Mem(ub, s.ActualLen)
+	fold   s.NonInitMem()
+}
+
+(*HopByHopExtnSkipper) implements gopacket.Layer
+(*HopByHopExtnSkipper) implements gopacket.DecodingLayer
+
+/** end of HopByHopExtnSkipper **/
+
+/** Currently Axiomatized - EndToEndExtn **/
+pred (e *EndToEndExtn) NonInitMem() {
+	acc(e)
+}
+
+pred (e *EndToEndExtn) Mem(ubuf []byte) {
+	e.extnBase.Mem(ubuf) &&
+	acc(&e.Options) &&
+	forall i int :: { &e.Options[i] } 0 <= i && i < len(e.Options) ==>
+		(acc(&e.Options[i]) && e.Options[i].Mem(i))
+}
+
+// Gobra is not able to infer that EndToEndExtn is "inheriting"
+// the implementation of LayerContents from extnBase.
+requires Uncallable()
+func (e *EndToEndExtn) LayerContents() (res []byte) {
+	res = e.BaseLayer.LayerContents()
+	return res
+}
+
+ghost
+requires s.Mem(ub)
+ensures  s.NonInitMem()
+decreases
+func (s *EndToEndExtn) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.extnBase.Mem(ub)
+	unfold s.BaseLayer.Mem(ub, s.ActualLen)
+	fold   s.NonInitMem()
+}
+
+(*EndToEndExtn) implements gopacket.Layer
+(*EndToEndExtn) implements gopacket.DecodingLayer
+// May not be necessary, but helpful
+// (*EndToEndExtn) implements gopacket.SerializableLayer
+
+/** End of EndToEndExtn (Axiomatization) **/
+
+/** start of EndToEndExtnSkipper **/
+pred (e *EndToEndExtnSkipper) NonInitMem() {
+	acc(e)
+}
+
+pred (e *EndToEndExtnSkipper) Mem(ubuf []byte)  {
+	e.extnBase.Mem(ubuf)
+}
+
+// Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
+// the implementation of LayerContents from extnBase.
+requires Uncallable()
+func (e *EndToEndExtnSkipper) LayerContents() (res []byte) {
+	res = e.BaseLayer.LayerContents()
+	return res
+}
+
+// Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
+// the implementation of LayerPayload from extnBase.
+preserves acc(e.Mem(ub), R20)
+ensures   0 <= start && start <= end && end <= len(ub)
+ensures   len(res) == end - start
+ensures   res === ub[start:end]
+decreases
+func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
+	unfold acc(e.Mem(ub), R20)
+	unfold acc(e.extnBase.Mem(ub), R20)
+	ghost base := &e.extnBase.BaseLayer
+	res = base.LayerPayload(ub, e.ActualLen)
+	start = e.ActualLen
+	end = len(ub)
+	fold acc(e.extnBase.Mem(ub), R20)
+	fold acc(e.Mem(ub), R20)
+	return res, start, end
+}
+
+ghost
+requires s.Mem(ub)
+ensures  s.NonInitMem()
+decreases
+func (s *EndToEndExtnSkipper) DowngradePerm(ghost ub []byte) {
+	unfold s.Mem(ub)
+	unfold s.extnBase.Mem(ub)
+	unfold s.BaseLayer.Mem(ub, s.ActualLen)
+	fold   s.NonInitMem()
+}
+
+(*EndToEndExtnSkipper) implements gopacket.Layer
+(*EndToEndExtnSkipper) implements gopacket.DecodingLayer
+
+/** end of EndToEndExtnSkipper **/
+
+/** Definitions required for serializeTLVOptions **/
+/** End of definitions required for serializeTLVOptions **/
+
+/** start of options **/
+
+// TODO: maybe add the underlying slice as a parameter to be able to
+// establish that OptData aliases with it.
+pred (o *HopByHopOption) Mem(_ int) {
+	// permissions to the elements of OptData will be stored
+	// together with the underlying, not in the option itself
+	acc(o) // && slices.AbsSlice_Bytes(o.OptData, 0, len(o.OptData))
+}
+
+// TODO: maybe add the underlying slice as a parameter to be able to
+// establish that OptData aliases with it.
+pred (e *EndToEndOption) Mem(_ int) {
+	// permissions to the elements of OptData will be stored
+	// together with the underlying, not in the option itself
+	acc(e) // && slices.AbsSlice_Bytes(e.OptData, 0, len(e.OptData))
+}
+
+
+/** end of options **/

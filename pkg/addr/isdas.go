@@ -117,6 +117,17 @@ func asParseBGP(s string) (retAs AS, retErr error) {
 	if err != nil {
 		return 0, serrors.WrapStr("parsing BGP AS", err)
 	}
+	// (VerifiedSCION)
+	// The following assertions are needed to prove retAs.inRange().
+	// Gobra is not able to infer this automatically from the definition
+	// of strconv.Exp, unless we put a postcondition saying that the
+	// result is equal to the body.
+	// @ assert strconv.Exp(2, BGPASBits) == 2 * strconv.Exp(2, 31)
+	// @ assert strconv.Exp(2, BGPASBits) == 4 * strconv.Exp(2, 30)
+	// @ strconv.Exp2to10(30)
+	// @ strconv.Exp2to10(20)
+	// @ strconv.Exp2to10(10)
+	// @ assert _as < strconv.Exp(2, BGPASBits)
 	return AS(_as), nil
 }
 
@@ -142,7 +153,7 @@ func (_as AS) MarshalText() ([]byte, error) {
 }
 
 // @ preserves acc(_as)
-// @ preserves forall i int :: 0 <= i && i < len(text) ==> acc(&text[i])
+// @ preserves forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
 // @ decreases
 func (_as *AS) UnmarshalText(text []byte) error {
 	parsed, err := ParseAS(string(text))
@@ -219,7 +230,7 @@ func (ia IA) MarshalText() ([]byte, error) {
 }
 
 // @ preserves acc(ia)
-// @ preserves forall i int :: 0 <= i && i < len(b) ==> acc(&b[i])
+// @ preserves forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ decreases
 func (ia *IA) UnmarshalText(b []byte) error {
 	parsed, err := ParseIA(string(b))

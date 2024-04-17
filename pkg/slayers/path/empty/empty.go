@@ -29,7 +29,7 @@ const PathType path.Type = 0
 // @ requires path.PathPackageMem()
 // @ requires !path.Registered(PathType)
 // @ ensures  path.PathPackageMem()
-// @ ensures  forall t path.Type :: 0 <= t && t < path.MaxPathType ==>
+// @ ensures  forall t path.Type :: { old(path.Registered(t)) }{ path.Registered(t) } 0 <= t && t < path.MaxPathType ==>
 // @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
 // @ ensures  path.Registered(PathType)
 // @ decreases
@@ -42,7 +42,7 @@ func RegisterPath() {
 		//@ ensures p != nil
 		//@ decreases
 		func /*@ newPath @*/ () (p path.Path) {
-			emptyTmp /*@@@*/ := Path{}
+			emptyTmp := Path{}
 			//@ fold emptyTmp.NonInitMem()
 			return emptyTmp
 		},

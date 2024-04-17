@@ -1,0 +1,208 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+/**** Symbols that are not explicitly defined in any section of the IO spec document ****/
+
+package io
+
+type Unit adt {
+	Unit_{}
+}
+
+// interface IDs
+type IO_ifs uint16
+
+// type of AS identifiers
+type IO_as uint
+
+// msgTerms consist of terms from our term algebra.
+type IO_msgterm adt {
+	MsgTerm_Empty{}
+
+	MsgTerm_AS {
+		MsgTerm_AS_ IO_as
+	}
+
+	MsgTerm_Num {
+		MsgTerm_Num_ uint // formallized as nat in Isabelle
+	}
+
+	MsgTerm_Key {
+		MsgTerm_Key_ IO_key
+	}
+
+	MsgTerm_L {
+		MsgTerm_L_ seq[IO_msgterm]
+	}
+
+	MsgTerm_FS {
+		MsgTerm_FS_ set[IO_msgterm]
+	}
+
+	MsgTerm_MPair {
+		MsgTerm_MPair_1 IO_msgterm
+		MsgTerm_MPair_2 IO_msgterm
+	}
+
+	MsgTerm_Hash {
+		MsgTerm_Hash_ IO_msgterm
+	}
+
+	MsgTerm_Crypt {
+		MsgTerm_Crypt_1 IO_key
+		MsgTerm_Crypt_2 IO_msgterm
+	}
+}
+
+type IO_key adt {
+	Key_macK {
+		Key_macK_ IO_as
+	}
+
+	Key_pubK {
+		Key_pubK_ IO_as
+	}
+
+	Key_priK {
+		Key_priK_ IO_as
+	}
+}
+
+// "authenticated hop information"
+type IO_ahi adt {
+	IO_ahi_ {
+		InIF option[IO_ifs]
+		EgIF option[IO_ifs]
+		ASID IO_as
+	}
+}
+
+ghost
+decreases
+pure func (hf IO_HF) extr_asid() IO_as {
+	return hf.HVF.extract_asid()
+}
+
+// function 'toab' in Isabelle, originally of type HF_scheme -> aahi_scheme
+ghost
+pure
+decreases
+func (h IO_HF) Toab() IO_ahi {
+	return IO_ahi_{h.InIF2, h.EgIF2, h.HVF.extract_asid()}
+}
+
+/* Link Types */
+type IO_Link adt {
+	IO_CustProv{}
+	IO_ProvCust{}
+	IO_Core{}
+	IO_NoLink{}
+}
+
+// This function is provided as locale in the Isabelle formalization.
+// This function is only ever called with p1 == dp.Asid(). As a future optimization
+// this parameter and precondition can be dropped.
+ghost
+requires dp.Valid()
+requires p1 == dp.Asid()
+decreases
+pure func (dp DataPlaneSpec) link_type(p1 IO_as, p2 IO_ifs) IO_Link{
+	return p2 in domain(dp.GetLinkTypes()) ? dp.GetLinkType(p2) : IO_NoLink{}
+}
+
+ghost
+requires dp.Valid()
+requires asid == dp.Asid()
+decreases
+pure func (dp DataPlaneSpec) egif_prov2(hf1 IO_HF, asid IO_as) bool{
+	return dp.egif2_type(hf1, asid, IO_Link(IO_CustProv{}))
+}
+
+
+ghost
+requires dp.Valid()
+requires asid == dp.Asid()
+decreases
+pure func (dp DataPlaneSpec) egif_core2(hf1 IO_HF, asid IO_as) bool{
+	return dp.egif2_type(hf1, asid, IO_Link(IO_Core{}))
+}
+
+ghost
+requires dp.Valid()
+requires asid == dp.Asid()
+decreases
+pure func (dp DataPlaneSpec) egif_cust2(hf1 IO_HF, asid IO_as) bool{
+	return dp.egif2_type(hf1, asid, IO_Link(IO_ProvCust{}))
+}
+
+ghost
+requires dp.Valid()
+requires asid == dp.Asid()
+decreases
+pure func (dp DataPlaneSpec) inif_cust2(hf1 IO_HF, asid IO_as) bool{
+	return dp.inif2_type(hf1, asid, IO_Link(IO_ProvCust{}))
+}
+
+ghost
+requires dp.Valid()
+requires asid == dp.Asid()
+decreases
+pure func (dp DataPlaneSpec) inif_core2(hf1 IO_HF, asid IO_as) bool{
+	return dp.inif2_type(hf1, asid, IO_Link(IO_Core{}))
+}
+
+ghost
+requires dp.Valid()
+requires asid == dp.Asid()
+decreases
+pure func (dp DataPlaneSpec) inif_prov2(hf1 IO_HF, asid IO_as) bool{
+	return dp.inif2_type(hf1, asid, IO_Link(IO_CustProv{}))
+}
+
+ghost
+requires dp.Valid()
+requires ifs != none[IO_ifs] ==> asid == dp.Asid()
+decreases
+pure func (dp DataPlaneSpec) if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool{
+	return match ifs {
+		case none[IO_ifs]:
+			false
+		default:
+			dp.link_type(asid, get(ifs)) == link
+	}
+}
+
+type ext2_rec struct {
+	op1 IO_as
+	op2 IO_ifs
+	op3 IO_as
+	op4 IO_as
+}
+
+type IO_dp2_state adt {
+	IO_dp2_state_ {
+		// In the Isabelle spec, the following are functions
+		// instead of mathematical maps
+		ext2 dict[ext2_rec](set[IO_pkt2])
+		int2 dict[IO_as](set[IO_pkt2])
+	}
+}
+
+ghost
+decreases
+pure func (m IO_msgterm) extract_asid() IO_as {
+	return m.MsgTerm_Hash_.MsgTerm_MPair_1.MsgTerm_Key_.Key_macK_
+}

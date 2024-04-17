@@ -8,20 +8,20 @@
 
 package gopacket
 
-import def "github.com/scionproto/scion/verification/utils/definitions"
+import . "github.com/scionproto/scion/verification/utils/definitions"
 import "github.com/scionproto/scion/verification/utils/slices"
 
 type SerializableLayer interface {
 	pred Mem(ubuf []byte)
 
-	requires !opts.FixLengths
-	requires b != nil && b.Mem(buf)
-	requires Mem(ubuf)
-	ensures  err == nil ==> (Mem(ubuf) && b.Mem(bufRes))
-	ensures  err != nil ==> err.ErrorMem()
+	requires  !opts.FixLengths
+	requires  b != nil && b.Mem()
+	requires  Mem(ubuf)
+	preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+	ensures   err == nil ==> (Mem(ubuf) && b.Mem())
+	ensures   err != nil ==> err.ErrorMem()
 	decreases
-	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte, ghost buf []byte) (err error, ghost bufRes []byte)
-
+	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)
 
 	pure
 	decreases
@@ -34,65 +34,83 @@ type SerializeOptions struct {
 }
 
 type SerializeBuffer interface {
-	pred Mem(ghost buf []byte)
+	pred Mem()
+	// morally, corresponds to slices.AbsSlice_Bytes(ub, 0, len(ub)) --* (Mem() && UBuf() === ub)
+	pred MemWithoutUBuf(ub []byte)
 
 	ghost
-	requires Mem(buf)
-	ensures  slices.AbsSlice_Bytes(buf, 0, len(buf))
-	ensures  slices.AbsSlice_Bytes(buf, 0, len(buf)) --* Mem(buf)
+	pure
+	requires acc(Mem(), _)
 	decreases
-	ExchangePred(buf []byte)
+	UBuf() []byte
 
-	requires Mem(buf)
-	ensures res === buf
-	ensures slices.AbsSlice_Bytes(res, 0, len(res))
-	ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem(res)
+	ghost
+	requires Mem()
+	ensures  res === old(UBuf())
+	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures  MemWithoutUBuf(res)
 	decreases
-	Bytes(ghost buf []byte) (res []byte)
+	ExchangePred() (res []byte)
 
-	requires Mem(s)
-	requires num >= 0
-	ensures  err == nil ==> len(buf) == len(s) + num
-	ensures  err == nil ==> len(res) == num
-	ensures  err == nil ==> res === buf[:num]
-	ensures  err == nil ==> Mem(buf)
-	ensures  err != nil ==> Mem(s)
-	ensures  err != nil ==> err.ErrorMem()
+	ghost
+	requires MemWithoutUBuf(ub)
+	requires slices.AbsSlice_Bytes(ub, 0, len(ub))
+	ensures  Mem() && UBuf() === ub
 	decreases
-	PrependBytes(num int, ghost s []byte) (res []byte, err error, ghost buf []byte)
+	RestoreMem(ghost ub []byte)
 
-	requires Mem(s)
-	requires num >= 0
-	ensures err == nil ==> len(buf) == len(s) + num
-	ensures err == nil ==> len(res) == num
-	ensures err == nil ==> res === buf[len(buf) - num:]
-	ensures err == nil ==> Mem(buf)
-	ensures err != nil ==> Mem(s)
-	ensures err != nil ==> err.ErrorMem()
+	requires Mem()
+	ensures  res === old(UBuf())
+	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures  MemWithoutUBuf(res)
 	decreases
-	AppendBytes(num int, ghost s []byte) (res []byte, err error, ghost buf []byte)
+	Bytes() (res []byte)
 
-	preserves Mem(buf)
+	preserves Mem()
+	requires  num >= 0
+	ensures   err == nil ==> len(UBuf()) == len(old(UBuf())) + num
+	ensures   err == nil ==> len(res) == num
+	ensures   err == nil ==> res === (UBuf())[:num]
+	ensures   err != nil ==> UBuf() === old(UBuf())
+	ensures   err != nil ==> err.ErrorMem()
 	decreases
-	Clear(ghost buf []byte) error
+	PrependBytes(num int) (res []byte, err error)
 
-	preserves Mem(buf)
-	ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
+	preserves Mem()
+	requires  num >= 0
+	ensures   err == nil ==> len(UBuf()) == len(old(UBuf())) + num
+	ensures   err == nil ==> len(res) == num
+	ensures   err == nil ==> res === (UBuf())[len(UBuf()) - num:]
+	ensures   err != nil ==> UBuf() === old(UBuf())
+	ensures   err != nil ==> err.ErrorMem()
 	decreases
-	Layers(ghost buf []byte) (res []LayerType)
+	AppendBytes(num int) (res []byte, err error)
 
-	preserves Mem(buf)
+	preserves Mem()
+	ensures   err != nil ==> err.ErrorMem()
+	ensures   err == nil ==> len(UBuf()) == 0
 	decreases
-	PushLayer(LayerType, ghost buf []byte)
+	Clear() (err error)
+
+	preserves Mem()
+	ensures forall i int :: {&res[i]} 0 <= i && i < len(res) ==> acc(&res[i])
+	decreases
+	Layers() (res []LayerType)
+
+	preserves Mem()
+	decreases
+	PushLayer(LayerType)
 }
 
-ensures res.Mem(buf)
+ensures res != nil && res.Mem()
 decreases
-func NewSerializeBuffer() (res SerializeBuffer, ghost buf []byte)
+func NewSerializeBuffer() (res SerializeBuffer)
 
+// TODO: requires changes to provide access to the underlying layers
+requires  false
 requires  len(layerBufs) == len(layers)
-preserves w.Mem(buf)
-preserves acc(layerBufs, def.ReadL20)
-preserves forall i int :: 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem(layerBufs[i])
+preserves w.Mem()
+preserves acc(layerBufs, R20)
+preserves forall i int :: {&layers[i]} 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem(layerBufs[i])
 decreases
-func SerializeLayers(ghost buf []byte, w SerializeBuffer, opts SerializeOptions, ghost layerBufs []([]byte), layers ...SerializableLayer) error
+func SerializeLayers(w SerializeBuffer, opts SerializeOptions, ghost layerBufs []([]byte), layers ...SerializableLayer) error

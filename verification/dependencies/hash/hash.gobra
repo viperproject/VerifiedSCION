@@ -39,7 +39,7 @@ type Hash interface {
 	ensures   0 <= n && n <= len(p)
 	// the last conjunct comes from the spec of io.Writer
 	ensures   err == nil && n == len(p)
-	ensures   Size() >= old(Size())
+	ensures   Size() == old(Size()) + len(p)
 	decreases
 	Write(p []byte) (n int, err error)
 
@@ -53,7 +53,6 @@ type Hash interface {
 
 	// Reset resets the Hash to its initial state.
 	preserves Mem()
-	ensures   Size() >= old(Size())
 	decreases
 	Reset()
 

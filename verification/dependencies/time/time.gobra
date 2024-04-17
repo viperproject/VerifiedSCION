@@ -9,10 +9,10 @@
 
 package time
 
+import def "github.com/scionproto/scion/verification/utils/definitions"
+
 type Time struct {
-	wall uint64
-	ext  int64
-	loc *Location
+    privateFields def.PrivateField
 }
 
 // After reports whether the time instant t is after u.
@@ -65,7 +65,7 @@ func (m Month) String() (res string)
 type Weekday int
 
 const (
-	// (joao) this used to be defined in terms of iota
+	// (VerifiedSCION) this used to be defined in terms of iota
 	Sunday Weekday = 0
 	Monday Weekday = 1
 	Tuesday Weekday = 2
@@ -176,17 +176,6 @@ func (d Duration) Microseconds() int64 { return int64(d) / 1000 }
 decreases
 func (d Duration) Milliseconds() int64 { return int64(d) / 1000000 }
 
-// Seconds returns the duration as a floating point number of seconds.
-/* (joao) no support for float
-func (d Duration) Seconds() float64
-
-// Minutes returns the duration as a floating point number of minutes.
-func (d Duration) Minutes() float64
-
-// Hours returns the duration as a floating point number of hours.
-func (d Duration) Hours() float64
-*/
-
 // Truncate returns the result of rounding d toward zero to a multiple of m.
 // If m <= 0, Truncate returns d unchanged.
 ensures m <= 0 ==> res == d
@@ -246,7 +235,6 @@ func (t Time) In(loc *Location) Time
 
 // Location returns the time zone information associated with t.
 // ensures t.loc == nil ==> res == UTC // UTC is currently commented because it is a global var
-ensures t.loc != nil ==> res == t.loc
 decreases
 func (t Time) Location() (res *Location)
 
@@ -272,51 +260,51 @@ func (t Time) MarshalBinary() ([]byte, error)
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
 requires acc(t)
 requires p > 0
-requires forall i int :: 0 <= i && i < len(data) ==> acc(&data[i], p)
+requires forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], p)
 ensures acc(t)
-ensures forall i int :: 0 <= i && i < len(data) ==> acc(&data[i], p)
+ensures forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], p)
 decreases
 func (t *Time) UnmarshalBinary(data []byte, ghost p perm) error
 
 // GobEncode implements the gob.GobEncoder interface.
-ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
+ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])
 decreases
 func (t Time) GobEncode() (res []byte, error)
 
 // GobDecode implements the gob.GobDecoder interface.
 requires acc(t)
 requires p > 0
-requires forall i int :: 0 <= i && i < len(data) ==> acc(&data[i], p)
+requires forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], p)
 ensures acc(t)
-ensures forall i int :: 0 <= i && i < len(data) ==> acc(&data[i], p)
+ensures forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], p)
 decreases
 func (t *Time) GobDecode(data []byte, ghost p perm) error
 
 // MarshalJSON implements the json.Marshaler interface.
-ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
+ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])
 decreases
 func (t Time) MarshalJSON() (res []byte, error)
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
 requires acc(t)
 requires p > 0
-requires forall i int :: 0 <= i && i < len(data) ==> acc(&data[i], p)
+requires forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], p)
 ensures acc(t)
-ensures forall i int :: 0 <= i && i < len(data) ==> acc(&data[i], p)
+ensures forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], p)
 decreases
 func (t *Time) UnmarshalJSON(data []byte, ghost p perm) error
 
 // MarshalText implements the encoding.TextMarshaler interface.
-ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i])
+ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])
 decreases
 func (t Time) MarshalText() (res []byte, error)
 
 // UnmarshalText implements the encoding.TextUnmarshaler interface.
 requires acc(t)
 requires p > 0
-requires forall i int :: 0 <= i && i < len(data) ==> acc(&data[i], p)
+requires forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], p)
 ensures acc(t)
-ensures forall i int :: 0 <= i && i < len(data) ==> acc(&data[i], p)
+ensures forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], p)
 decreases
 func (t *Time) UnmarshalText(data []byte, ghost p perm) error
 

@@ -15,9 +15,9 @@
 
 // +gobra
 
-// @ initEnsures ErrBadHostAddrType.ErrorMem() && isComparable(ErrBadHostAddrType)
-// @ initEnsures ErrMalformedHostAddrType.ErrorMem() && isComparable(ErrMalformedHostAddrType)
-// @ initEnsures ErrUnsupportedSVCAddress.ErrorMem() && isComparable(ErrUnsupportedSVCAddress)
+// @ initEnsures ErrBadHostAddrType.ErrorMem()
+// @ initEnsures ErrMalformedHostAddrType.ErrorMem()
+// @ initEnsures ErrUnsupportedSVCAddress.ErrorMem()
 package addr
 
 import (
@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
-	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -84,30 +84,30 @@ const (
 type HostAddr interface {
 	//@ pred Mem()
 
-	//@ preserves acc(Mem(), definitions.ReadL13)
+	//@ preserves acc(Mem(), R13)
 	//@ decreases
 	Size() int
 
-	//@ preserves acc(Mem(), definitions.ReadL13)
+	//@ preserves acc(Mem(), R13)
 	//@ decreases
 	Type() HostAddrType
 
-	//@ requires acc(Mem(), definitions.ReadL13)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
+	//@ requires acc(Mem(), R13)
+	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 	//@ decreases
 	Pack() (res []byte)
 
-	//@ requires acc(Mem(), definitions.ReadL13)
-	//@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
+	//@ requires acc(Mem(), R13)
+	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 	//@ decreases
 	IP() (res net.IP)
 
-	//@ preserves acc(Mem(), definitions.ReadL13)
+	//@ preserves acc(Mem(), R13)
 	//@ ensures res.Mem()
 	//@ decreases
 	Copy() (res HostAddr)
 
-	//@ preserves acc(Mem(), definitions.ReadL13) && acc(o.Mem(), definitions.ReadL13)
+	//@ preserves acc(Mem(), R13) && acc(o.Mem(), R13)
 	//@ decreases
 	Equal(o HostAddr) bool
 
@@ -116,7 +116,7 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
-	//@ preserves acc(Mem(), definitions.ReadL13)
+	//@ preserves acc(Mem(), R13)
 	//@ decreases
 	String() string
 }
@@ -182,56 +182,56 @@ func (h HostIPv4) Type() HostAddrType {
 	return HostTypeIPv4
 }
 
-// @ requires acc(h.Mem(), definitions.ReadL13)
-// @ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
+// @ requires acc(h.Mem(), R13)
+// @ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 // @ decreases
 func (h HostIPv4) Pack() (res []byte) {
 	return []byte(h.IP())
 }
 
-// @ requires acc(h.Mem(), definitions.ReadL13)
-// @ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13) && &res[i] == &h[i]
+// @ requires acc(h.Mem(), R13)
+// @ ensures forall i int :: { &res[i] }{ &h[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13) && &res[i] == &h[i]
 // @ ensures len(res) == HostLenIPv4
 // @ decreases
 func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
-	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ unfold acc(h.Mem(), R13)
+	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
 	return net.IP(h).To4( /*@ false @*/ )
 }
 
-// @ preserves acc(h.Mem(), definitions.ReadL13)
+// @ preserves acc(h.Mem(), R13)
 // @ ensures acc(res.Mem())
 // @ decreases
 func (h HostIPv4) Copy() (res HostAddr) {
-	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
-	var tmp HostIPv4 = HostIPv4(append( /*@ definitions.ReadL13, @*/ net.IP(nil), h...))
-	//@ fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ unfold acc(h.Mem(), R13)
+	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
+	var tmp HostIPv4 = HostIPv4(append( /*@ R13, @*/ net.IP(nil), h...))
+	//@ fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
 	//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
-	//@ fold acc(h.Mem(), definitions.ReadL13)
+	//@ fold acc(h.Mem(), R13)
 	//@ fold tmp.Mem()
 	return tmp
 }
 
-// @ preserves acc(h.Mem(), definitions.ReadL13)
-// @ preserves acc(o.Mem(), definitions.ReadL13)
+// @ preserves acc(h.Mem(), R13)
+// @ preserves acc(o.Mem(), R13)
 // @ decreases
 func (h HostIPv4) Equal(o HostAddr) bool {
-	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	//@ unfold acc(o.Mem(), definitions.ReadL13)
+	//@ unfold acc(h.Mem(), R13)
+	//@ unfold acc(o.Mem(), R13)
 	ha, ok := o.(HostIPv4)
-	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
-	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(o.Mem(), R13)
+	//@ ghost defer fold acc(h.Mem(), R13)
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ preserves acc(h.Mem(), definitions.ReadL13)
+// @ preserves acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv4) String() string {
-	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv4
-	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
-	//@ ghost defer fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
+	//@ ghost defer fold acc(h.Mem(), R13)
+	//@ ghost defer fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
 	return h.IP().String()
 }
 
@@ -249,57 +249,57 @@ func (h HostIPv6) Type() HostAddrType {
 	return HostTypeIPv6
 }
 
-// @ requires acc(h.Mem(), definitions.ReadL13)
-// @ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
+// @ requires acc(h.Mem(), R13)
+// @ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 // @ decreases
 func (h HostIPv6) Pack() (res []byte) {
-	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ unfold acc(h.Mem(), R13)
+	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
 	return []byte(h)[:HostLenIPv6]
 }
 
-// @ requires acc(h.Mem(), definitions.ReadL13)
-// @ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13) && &res[i] == &h[i]
+// @ requires acc(h.Mem(), R13)
+// @ ensures forall i int :: { &res[i] }{ &h[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13) && &res[i] == &h[i]
 // @ ensures len(res) == HostLenIPv6
 // @ decreases
 func (h HostIPv6) IP() (res net.IP) {
-	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ unfold acc(h.Mem(), R13)
+	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
 	return net.IP(h)
 }
 
-// @ preserves acc(h.Mem(), definitions.ReadL13)
+// @ preserves acc(h.Mem(), R13)
 // @ ensures acc(res.Mem())
 // @ decreases
 func (h HostIPv6) Copy() (res HostAddr) {
-	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
-	var tmp HostIPv6 = HostIPv6(append( /*@ definitions.ReadL13, @*/ net.IP(nil), h...))
-	//@ fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ unfold acc(h.Mem(), R13)
+	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
+	var tmp HostIPv6 = HostIPv6(append( /*@ R13, @*/ net.IP(nil), h...))
+	//@ fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
 	//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
-	//@ fold acc(h.Mem(), definitions.ReadL13)
+	//@ fold acc(h.Mem(), R13)
 	//@ fold tmp.Mem()
 	return tmp
 }
 
-// @ preserves acc(h.Mem(), definitions.ReadL13)
-// @ preserves acc(o.Mem(), definitions.ReadL13)
+// @ preserves acc(h.Mem(), R13)
+// @ preserves acc(o.Mem(), R13)
 // @ decreases
 func (h HostIPv6) Equal(o HostAddr) bool {
-	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	//@ unfold acc(o.Mem(), definitions.ReadL13)
+	//@ unfold acc(h.Mem(), R13)
+	//@ unfold acc(o.Mem(), R13)
 	ha, ok := o.(HostIPv6)
-	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
-	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(o.Mem(), R13)
+	//@ ghost defer fold acc(h.Mem(), R13)
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ preserves acc(h.Mem(), definitions.ReadL13)
+// @ preserves acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv6) String() string {
-	//@ assert unfolding acc(h.Mem(), definitions.ReadL13) in len(h) == HostLenIPv6
-	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
-	//@ ghost defer fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv6
+	//@ ghost defer fold acc(h.Mem(), R13)
+	//@ ghost defer fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
 	return h.IP().String()
 }
 
@@ -440,7 +440,7 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		if len(b) < HostLenIPv4 {
 			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
-		//@ assert forall i int :: 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
+		//@ assert forall i int :: { &b[:HostLenIPv4][i] } 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
 		tmp := HostIPv4(b[:HostLenIPv4])
 		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
 		//@ fold tmp.Mem()
@@ -449,7 +449,7 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		if len(b) < HostLenIPv6 {
 			return nil, serrors.WithCtx(ErrMalformedHostAddrType, "type", htype)
 		}
-		//@ assert forall i int :: 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
+		//@ assert forall i int :: { &b[:HostLenIPv4][i] } 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
 		tmp := HostIPv6(b[:HostLenIPv6])
 		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
 		//@ fold tmp.Mem()

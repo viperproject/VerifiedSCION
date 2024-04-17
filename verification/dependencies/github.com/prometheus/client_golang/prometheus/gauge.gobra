@@ -92,7 +92,8 @@ pred (c *GaugeVec) Mem() {
 // NewGaugeVec creates a new GaugeVec based on the provided GaugeOpts and
 // partitioned by the given label names.
 requires opts.ConstLabels != nil ==> acc(opts.ConstLabels)
-requires forall i int :: 0 <= i && i < len(labelNames) ==> acc(&labelNames[i])
+requires forall i int :: { &labelNames[i] } 0 <= i && i < len(labelNames) ==>
+	acc(&labelNames[i])
 ensures  g != nil
 ensures  g.Mem()
 decreases _

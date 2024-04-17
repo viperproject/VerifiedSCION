@@ -12,7 +12,7 @@ package net
 import (
 	"time"
 
-	"github.com/scionproto/scion/verification/utils/definitions"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -35,15 +35,15 @@ type Conn interface {
 	pred Mem()
 
 	// Read reads data from the connection.
-	preserves Mem()
+	requires  acc(Mem(), _)
 	preserves slices.AbsSlice_Bytes(b, 0, len(b))
 	ensures   err == nil ==> 0 <= n && n <= len(b)
 	ensures   err != nil ==> err.ErrorMem()
 	Read(b []byte) (n int, err error)
 
 	// Write writes data to the connection.
-	preserves Mem()
-	preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), definitions.ReadL15)
+	preserves acc(Mem(), _)
+	preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
 	ensures   err == nil ==> 0 <= n && n <= len(b)
 	ensures   err != nil ==> err.ErrorMem()
 	Write(b []byte) (n int, err error)
@@ -54,13 +54,13 @@ type Conn interface {
 	Close() error
 
 	// LocalAddr returns the local network address.
-	preserves acc(Mem(), definitions.ReadL15)
+	preserves acc(Mem(), R15)
 	ensures   acc(a.Mem(), _)
 	decreases
 	LocalAddr() (a Addr)
 
 	// RemoteAddr returns the remote network address.
-	preserves acc(Mem(), definitions.ReadL15)
+	preserves acc(Mem(), R15)
 	ensures   acc(a.Mem(), _)
 	decreases
 	RemoteAddr() (a Addr)
@@ -92,7 +92,7 @@ type Conn interface {
 type PacketConn interface {
 	pred Mem()
 
-	preserves Mem()
+	preserves acc(Mem(), _)
 	preserves slices.AbsSlice_Bytes(p, 0, len(p))
 	ensures   err == nil ==> 0 <= n && n <= len(p)
 	ensures   err == nil ==> acc(addr.Mem(), _)
@@ -100,8 +100,8 @@ type PacketConn interface {
 	ReadFrom(p []byte) (n int, addr Addr, err error)
 
 	requires  acc(addr.Mem(), _)
-	preserves Mem()
-	preserves acc(slices.AbsSlice_Bytes(p, 0, len(p)), definitions.ReadL15)
+	preserves acc(Mem(), _)
+	preserves acc(slices.AbsSlice_Bytes(p, 0, len(p)), R15)
 	ensures   err == nil ==> 0 <= n && n <= len(p)
 	ensures   err != nil ==> err.ErrorMem()
 	WriteTo(p []byte, addr Addr) (n int, err error)
@@ -109,7 +109,7 @@ type PacketConn interface {
 	requires Mem()
 	Close() error
 
-	preserves acc(Mem(), definitions.ReadL15)
+	preserves acc(Mem(), R15)
 	ensures   acc(a.Mem(), _)
 	decreases
 	LocalAddr() (a Addr)
@@ -147,198 +147,8 @@ type Listener interface {
 	Close() error
 
 	// Addr returns the listener's network address.
-	preserves acc(Mem(), definitions.ReadL15)
+	preserves acc(Mem(), R15)
 	ensures   acc(a.Mem(), _)
 	decreases
 	Addr() (a Addr)
 }
-
-// An Error represents a network error.
-type Error interface {
-	pred Mem()
-
-	// Causes NodeNotInTreeException
-	// error
-
-	requires acc(Mem(), 1/1000)
-	ensures acc(Mem(), 1/1000)
-	Timeout() bool   // Is the error a timeout?
-
-	requires acc(Mem(), 1/1000)
-	ensures acc(Mem(), 1/1000)
-	Temporary() bool // Is the error temporary?
-}
-
-// OpError is the error type usually returned by functions in the net
-// package. It describes the operation, network type, and address of
-// an error.
-type OpError struct {
-	Op string
-	Net string
-	Source Addr
-	Addr Addr
-	Err error
-}
-
-pred (op *OpError) Mem() {
-	acc(op)
-}
-
-requires acc(e.Mem(), _)
-pure func (e *OpError) Unwrap() error { return unfolding acc(e.Mem(), _) in e.Err }
-
-requires acc(e.Mem())
-ensures acc(e.Mem())
-func (e *OpError) Error() string
-
-requires acc(e.Mem(), 1/1000)
-ensures acc(e.Mem(), 1/1000)
-func (e *OpError) Timeout() bool /*{
-	if ne, ok := e.Err.(*os.SyscallError); ok {
-		t, ok := ne.Err.(timeout)
-		return ok && t.Timeout()
-	}
-	t, ok := e.Err.(timeout)
-	return ok && t.Timeout()
-}*/
-
-requires acc(e.Mem(), 1/1000)
-ensures acc(e.Mem(), 1/1000)
-func (e *OpError) Temporary() bool /*{
-	if e.Op == "accept" && isConnError(e.Err) {
-		return true
-	}
-
-	if ne, ok := e.Err.(*os.SyscallError); ok {
-		t, ok := ne.Err.(temporary)
-		return ok && t.Temporary()
-	}
-	t, ok := e.Err.(temporary)
-	return ok && t.Temporary()
-}*/
-
-(*OpError) implements Error {
-	(e *OpError) Timeout() bool {
-		return e.Timeout()
-	}
-
-	(e *OpError) Temporary() bool {
-		return e.Temporary()
-	}
-}
-
-// A ParseError is the error type of literal network address parsers.
-type ParseError struct {
-	Type string
-	Text string
-}
-
-requires acc(e)
-ensures acc(e)
-func (e *ParseError) Error() string
-
-type AddrError struct {
-	Err  string
-	Addr string
-}
-
-pred (e *AddrError) Mem() { acc(e) }
-
-requires e != nil ==> acc(e, 1/1000)
-ensures e == nil ==> ret == "<nil>"
-ensures e != nil ==> acc(e, 1/1000)
-ensures (e != nil && e.Addr != "") ==> ret == "address " + e.Addr + ": " + e.Err
-ensures (e != nil && e.Addr == "") ==> ret == e.Err
-func (e *AddrError) Error() (ret string) {
-	if e == nil {
-		return "<nil>"
-	}
-	s := e.Err
-	if e.Addr != "" {
-		s = "address " + e.Addr + ": " + s
-	}
-	return s
-}
-
-// (joao) if the method is annotated with pure, then the implementation proof fails
-// because the "pure" annotation of the interface and implementation do not match
-preserves acc(e.Mem(), 1/1000)
-ensures !res
-/* pure */ func (e *AddrError) Timeout() (res bool)   { return false }
-
-requires acc(e.Mem(), 1/1000)
-ensures acc(e.Mem(), 1/1000)
-ensures !res
-/* pure */ func (e *AddrError) Temporary() (res bool) { return false }
-
-(*AddrError) implements Error {
-	(e *AddrError) Timeout() bool {
-		return e.Timeout()
-	}
-
-	(e *AddrError) Temporary() bool {
-		return e.Temporary()
-	}
-}
-
-type UnknownNetworkError string
-
-func (e UnknownNetworkError) Error() string   // { return "unknown network " + string(e) }
-ensures !res
-pure func (e UnknownNetworkError) Timeout() (res bool)   { return false }
-ensures !res
-pure func (e UnknownNetworkError) Temporary() (res bool) { return false }
-
-type InvalidAddrError string
-
-// func (e InvalidAddrError) Error() string   { return string(e) }
-func (e InvalidAddrError) Timeout() (res bool)   { return false }
-func (e InvalidAddrError) Temporary() (res bool) { return false }
-
-// DNSError represents a DNS lookup error.
-type DNSError struct {
-	Err         string
-	Name        string
-	Server      string
-	IsTimeout   bool
-	IsTemporary bool
-	IsNotFound  bool
-}
-
-pred (e *DNSError) Mem() { acc(e) }
-
-preserves e != nil ==> acc(e, 1/1000)
-func (e *DNSError) Error() string {
-	if e == nil {
-		return "<nil>"
-	}
-	s := "lookup " + e.Name
-	if e.Server != "" {
-		s += " on " + e.Server
-	}
-	s += ": " + e.Err
-	return s
-}
-
-// Timeout reports whether the DNS lookup is known to have timed out.
-preserves acc(e.Mem(), 1/1000)
-ensures unfolding acc(e.Mem(), _) in res == e.IsTimeout
-/* pure */ func (e *DNSError) Timeout() (res bool) { return unfolding acc(e.Mem(), _) in e.IsTimeout }
-
-// Temporary reports whether the DNS error is known to be temporary.
-preserves acc(e.Mem(), 1/1000)
-ensures unfolding acc(e.Mem(), _) in res == e.IsTimeout || e.IsTemporary
-/* pure */ func (e *DNSError) Temporary() (res bool) { return unfolding acc(e.Mem(), _) in e.IsTimeout || e.IsTemporary }
-
-(*DNSError) implements Error {
-	(e *DNSError) Timeout() bool {
-		return e.Timeout()
-	}
-
-	(e *DNSError) Temporary() bool {
-		return e.Temporary()
-	}
-}
-
-// Buffers contains zero or more runs of bytes to write.
-type Buffers [][]byte

@@ -14,14 +14,17 @@
 
 // +gobra
 
-package prometheus
+// This package contains some lemmas that are useful to deal with floats.
 
-func foldGaugeVecMem_test() {
-	m@ := GaugeVec{}
-	fold (&m).Mem()
-}
+package floats
 
-func foldCounterVecMem_test() {
-	m@ := CounterVec{}
-	fold (&m).Mem()
-}
+ghost
+requires  l <= h
+ensures   float64(l) <= float64(h)
+decreases _
+func CastPreservesOrder64(l, h int)
+
+ghost
+ensures float64(0) < float64(1)
+decreases _
+func ZeroLessOne64()
