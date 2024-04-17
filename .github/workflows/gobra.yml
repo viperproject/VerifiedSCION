@@ -408,7 +408,6 @@ jobs:
       - name: Verify package 'router/' at metrics.go:everywhere
         uses: viperproject/gobra-action@main
         with:
-          packages: 'router/'
           files: metrics.go@47 svc_spec_test.gobra assumptions.gobra metrics_spec.gobra io-spec-atomic-events.gobra bfd_spec.gobra io-spec.gobra dataplane.go metrics_spec_test.gobra dataplane_spec_test.gobra io-spec-non-proven-lemmas.gobra dataplane_spec.gobra svc.go dataplane_concurrency_model.gobra io-spec-abstract-transitions.gobra svc_spec.gobra widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
