@@ -7,7 +7,7 @@ from copy import deepcopy
 import re
 from functools import reduce
 
-job_template = """verify-router-{file}-{line}:
+job_template = """  verify-router-{file}-{line}:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository

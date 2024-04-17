@@ -400,7 +400,7 @@ jobs:
           name: stats_addr.json
           path: /stats/stats_addr.json
           if-no-files-found: error # could also be 'warn' or 'ignore'
-verify-router-metrics.go-everywhere:
+  verify-router-metrics.go-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -427,7 +427,7 @@ verify-router-metrics.go-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-svc_spec_test.gobra-everywhere:
+  verify-router-svc_spec_test.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -454,7 +454,7 @@ verify-router-svc_spec_test.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-assumptions.gobra-everywhere:
+  verify-router-assumptions.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -481,7 +481,7 @@ verify-router-assumptions.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-metrics_spec.gobra-everywhere:
+  verify-router-metrics_spec.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -508,7 +508,7 @@ verify-router-metrics_spec.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-io-spec-atomic-events.gobra-everywhere:
+  verify-router-io-spec-atomic-events.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -535,7 +535,7 @@ verify-router-io-spec-atomic-events.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-bfd_spec.gobra-everywhere:
+  verify-router-bfd_spec.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -562,7 +562,7 @@ verify-router-bfd_spec.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-io-spec.gobra-everywhere:
+  verify-router-io-spec.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -589,7 +589,7 @@ verify-router-io-spec.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-194:
+  verify-router-dataplane.go-194:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -616,7 +616,7 @@ verify-router-dataplane.go-194:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-232:
+  verify-router-dataplane.go-232:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -643,7 +643,7 @@ verify-router-dataplane.go-232:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-249:
+  verify-router-dataplane.go-249:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -670,7 +670,7 @@ verify-router-dataplane.go-249:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-287:
+  verify-router-dataplane.go-287:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -697,7 +697,7 @@ verify-router-dataplane.go-287:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-347:
+  verify-router-dataplane.go-347:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -724,7 +724,7 @@ verify-router-dataplane.go-347:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-384:
+  verify-router-dataplane.go-384:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -751,7 +751,7 @@ verify-router-dataplane.go-384:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-429:
+  verify-router-dataplane.go-429:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -778,7 +778,7 @@ verify-router-dataplane.go-429:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-467:
+  verify-router-dataplane.go-467:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -805,7 +805,7 @@ verify-router-dataplane.go-467:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-490:
+  verify-router-dataplane.go-490:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -832,7 +832,7 @@ verify-router-dataplane.go-490:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-524:
+  verify-router-dataplane.go-524:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -859,7 +859,7 @@ verify-router-dataplane.go-524:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-548:
+  verify-router-dataplane.go-548:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -886,7 +886,7 @@ verify-router-dataplane.go-548:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-585:
+  verify-router-dataplane.go-585:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -913,7 +913,7 @@ verify-router-dataplane.go-585:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-596:
+  verify-router-dataplane.go-596:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -940,7 +940,7 @@ verify-router-dataplane.go-596:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-613:
+  verify-router-dataplane.go-613:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -967,7 +967,7 @@ verify-router-dataplane.go-613:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-638:
+  verify-router-dataplane.go-638:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -994,7 +994,7 @@ verify-router-dataplane.go-638:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-669:
+  verify-router-dataplane.go-669:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1021,7 +1021,7 @@ verify-router-dataplane.go-669:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-702:
+  verify-router-dataplane.go-702:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1048,7 +1048,7 @@ verify-router-dataplane.go-702:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-756:
+  verify-router-dataplane.go-756:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1075,7 +1075,7 @@ verify-router-dataplane.go-756:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-782:
+  verify-router-dataplane.go-782:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1102,7 +1102,7 @@ verify-router-dataplane.go-782:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-826:
+  verify-router-dataplane.go-826:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1129,7 +1129,7 @@ verify-router-dataplane.go-826:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-840:
+  verify-router-dataplane.go-840:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1156,7 +1156,7 @@ verify-router-dataplane.go-840:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-853:
+  verify-router-dataplane.go-853:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1183,7 +1183,7 @@ verify-router-dataplane.go-853:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-970:
+  verify-router-dataplane.go-970:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1210,7 +1210,7 @@ verify-router-dataplane.go-970:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1111:
+  verify-router-dataplane.go-1111:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1237,7 +1237,7 @@ verify-router-dataplane.go-1111:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1132:
+  verify-router-dataplane.go-1132:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1264,7 +1264,7 @@ verify-router-dataplane.go-1132:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1280:
+  verify-router-dataplane.go-1280:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1291,7 +1291,7 @@ verify-router-dataplane.go-1280:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1302:
+  verify-router-dataplane.go-1302:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1318,7 +1318,7 @@ verify-router-dataplane.go-1302:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1368:
+  verify-router-dataplane.go-1368:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1345,7 +1345,7 @@ verify-router-dataplane.go-1368:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1403:
+  verify-router-dataplane.go-1403:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1372,7 +1372,7 @@ verify-router-dataplane.go-1403:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1456:
+  verify-router-dataplane.go-1456:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1399,7 +1399,7 @@ verify-router-dataplane.go-1456:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1613:
+  verify-router-dataplane.go-1613:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1426,7 +1426,7 @@ verify-router-dataplane.go-1613:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1649:
+  verify-router-dataplane.go-1649:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1453,7 +1453,7 @@ verify-router-dataplane.go-1649:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1764:
+  verify-router-dataplane.go-1764:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1480,7 +1480,7 @@ verify-router-dataplane.go-1764:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1782:
+  verify-router-dataplane.go-1782:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1507,7 +1507,7 @@ verify-router-dataplane.go-1782:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1887:
+  verify-router-dataplane.go-1887:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1534,7 +1534,7 @@ verify-router-dataplane.go-1887:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1946:
+  verify-router-dataplane.go-1946:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1561,7 +1561,7 @@ verify-router-dataplane.go-1946:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-1985:
+  verify-router-dataplane.go-1985:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1588,7 +1588,7 @@ verify-router-dataplane.go-1985:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2037:
+  verify-router-dataplane.go-2037:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1615,7 +1615,7 @@ verify-router-dataplane.go-2037:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2084:
+  verify-router-dataplane.go-2084:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1642,7 +1642,7 @@ verify-router-dataplane.go-2084:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2143:
+  verify-router-dataplane.go-2143:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1669,7 +1669,7 @@ verify-router-dataplane.go-2143:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2157:
+  verify-router-dataplane.go-2157:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1696,7 +1696,7 @@ verify-router-dataplane.go-2157:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2196:
+  verify-router-dataplane.go-2196:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1723,7 +1723,7 @@ verify-router-dataplane.go-2196:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2260:
+  verify-router-dataplane.go-2260:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1750,7 +1750,7 @@ verify-router-dataplane.go-2260:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2375:
+  verify-router-dataplane.go-2375:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1777,7 +1777,7 @@ verify-router-dataplane.go-2375:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2421:
+  verify-router-dataplane.go-2421:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1804,7 +1804,7 @@ verify-router-dataplane.go-2421:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2441:
+  verify-router-dataplane.go-2441:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1831,7 +1831,7 @@ verify-router-dataplane.go-2441:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2477:
+  verify-router-dataplane.go-2477:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1858,7 +1858,7 @@ verify-router-dataplane.go-2477:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2533:
+  verify-router-dataplane.go-2533:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1885,7 +1885,7 @@ verify-router-dataplane.go-2533:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2577:
+  verify-router-dataplane.go-2577:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1912,7 +1912,7 @@ verify-router-dataplane.go-2577:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2654:
+  verify-router-dataplane.go-2654:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1939,7 +1939,7 @@ verify-router-dataplane.go-2654:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2713:
+  verify-router-dataplane.go-2713:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1966,7 +1966,7 @@ verify-router-dataplane.go-2713:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2745:
+  verify-router-dataplane.go-2745:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -1993,7 +1993,7 @@ verify-router-dataplane.go-2745:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2775:
+  verify-router-dataplane.go-2775:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2020,7 +2020,7 @@ verify-router-dataplane.go-2775:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2845:
+  verify-router-dataplane.go-2845:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2047,7 +2047,7 @@ verify-router-dataplane.go-2845:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2904:
+  verify-router-dataplane.go-2904:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2074,7 +2074,7 @@ verify-router-dataplane.go-2904:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-2949:
+  verify-router-dataplane.go-2949:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2101,7 +2101,7 @@ verify-router-dataplane.go-2949:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3008:
+  verify-router-dataplane.go-3008:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2128,7 +2128,7 @@ verify-router-dataplane.go-3008:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3031:
+  verify-router-dataplane.go-3031:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2155,7 +2155,7 @@ verify-router-dataplane.go-3031:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3094:
+  verify-router-dataplane.go-3094:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2182,7 +2182,7 @@ verify-router-dataplane.go-3094:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3169:
+  verify-router-dataplane.go-3169:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2209,7 +2209,7 @@ verify-router-dataplane.go-3169:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3390:
+  verify-router-dataplane.go-3390:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2236,7 +2236,7 @@ verify-router-dataplane.go-3390:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3455:
+  verify-router-dataplane.go-3455:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2263,7 +2263,7 @@ verify-router-dataplane.go-3455:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3457:
+  verify-router-dataplane.go-3457:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2290,7 +2290,7 @@ verify-router-dataplane.go-3457:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3589:
+  verify-router-dataplane.go-3589:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2317,7 +2317,7 @@ verify-router-dataplane.go-3589:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3634:
+  verify-router-dataplane.go-3634:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2344,7 +2344,7 @@ verify-router-dataplane.go-3634:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3666:
+  verify-router-dataplane.go-3666:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2371,7 +2371,7 @@ verify-router-dataplane.go-3666:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3707:
+  verify-router-dataplane.go-3707:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2398,7 +2398,7 @@ verify-router-dataplane.go-3707:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3759:
+  verify-router-dataplane.go-3759:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2425,7 +2425,7 @@ verify-router-dataplane.go-3759:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3770:
+  verify-router-dataplane.go-3770:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2452,7 +2452,7 @@ verify-router-dataplane.go-3770:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3796:
+  verify-router-dataplane.go-3796:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2479,7 +2479,7 @@ verify-router-dataplane.go-3796:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-3923:
+  verify-router-dataplane.go-3923:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2506,7 +2506,7 @@ verify-router-dataplane.go-3923:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-4054:
+  verify-router-dataplane.go-4054:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2533,7 +2533,7 @@ verify-router-dataplane.go-4054:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-4171:
+  verify-router-dataplane.go-4171:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2560,7 +2560,7 @@ verify-router-dataplane.go-4171:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-4198:
+  verify-router-dataplane.go-4198:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2587,7 +2587,7 @@ verify-router-dataplane.go-4198:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-4219:
+  verify-router-dataplane.go-4219:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2614,7 +2614,7 @@ verify-router-dataplane.go-4219:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane.go-4241:
+  verify-router-dataplane.go-4241:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2641,7 +2641,7 @@ verify-router-dataplane.go-4241:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-metrics_spec_test.gobra-everywhere:
+  verify-router-metrics_spec_test.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2668,7 +2668,7 @@ verify-router-metrics_spec_test.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane_spec_test.gobra-everywhere:
+  verify-router-dataplane_spec_test.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2695,7 +2695,7 @@ verify-router-dataplane_spec_test.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-io-spec-non-proven-lemmas.gobra-everywhere:
+  verify-router-io-spec-non-proven-lemmas.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2722,7 +2722,7 @@ verify-router-io-spec-non-proven-lemmas.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane_spec.gobra-everywhere:
+  verify-router-dataplane_spec.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2749,7 +2749,7 @@ verify-router-dataplane_spec.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-svc.go-everywhere:
+  verify-router-svc.go-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2776,7 +2776,7 @@ verify-router-svc.go-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-dataplane_concurrency_model.gobra-everywhere:
+  verify-router-dataplane_concurrency_model.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2803,7 +2803,7 @@ verify-router-dataplane_concurrency_model.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-io-spec-abstract-transitions.gobra-everywhere:
+  verify-router-io-spec-abstract-transitions.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2830,7 +2830,7 @@ verify-router-io-spec-abstract-transitions.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-svc_spec.gobra-everywhere:
+  verify-router-svc_spec.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -2857,7 +2857,7 @@ verify-router-svc_spec.gobra-everywhere:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-verify-router-widen-lemma.gobra-everywhere:
+  verify-router-widen-lemma.gobra-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
