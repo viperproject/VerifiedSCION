@@ -23,6 +23,7 @@ job_template = """  verify-router-{filename}-{line}:
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: '1'
+          moreJoins: 'impure'
           # The following flag has a significant influence on the number of branches verified.
           # Without it, verification would take a lot longer.
           imageVersion: ${{ env.imageVersion }}
