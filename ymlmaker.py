@@ -7,7 +7,7 @@ from copy import deepcopy
 import re
 from functools import reduce
 
-job_template = """  verify-router-{file}-{line}:
+job_template = """  verify-router-{filename}-{line}:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -15,7 +15,6 @@ job_template = """  verify-router-{file}-{line}:
       - name: Verify package 'router/' at {file}:{line}
         uses: viperproject/gobra-action@main
         with:
-          packages: 'router/'
           files: {files}
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
@@ -41,12 +40,12 @@ def format_files(files, f, l):
         lines = ",".join(l)
     else:
         lines = l
-    return " ".join([i, i+f"@{lines}"][f==i] for i in files)
+    return " ".join([f"router/{i}", f"router/{i}@{lines}"][f==i] for i in files)
 
 def make_job_template(files, f, l):
     if type(l) == list:
-        return job_template.replace("{file}", f).replace("{line}", "everywhere").replace("{files}", format_files(files, f, l))
-    return job_template.replace("{file}", f).replace("{line}", l).replace("{files}", format_files(files, f, l))
+        return job_template.replace("{file}", f).replace("{filename}", f.split(".")[0]).replace("{line}", "everywhere").replace("{files}", format_files(files, f, l))
+    return job_template.replace("{file}", f).replace("{filename}", f.split(".")[0]).replace("{line}", l).replace("{files}", format_files(files, f, l))
 
 def multi_split(l, stuff):
     if len(stuff) == 1: return l.split(stuff[0])
