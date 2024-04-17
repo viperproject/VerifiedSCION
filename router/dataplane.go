@@ -1953,7 +1953,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataP
 	// @ assert acc(p.path.Mem(ubPath), R20)
 	p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
 	// (VerifiedSCION) TODO: This is directly the postcondition of the call above and should be true but due to an incompleteness we have to assume it for now
-	// @ assume err == nil ==> p.path.CorrectlyDecodedHF_RawOffsetIndex(p.hopField, ubPath)
+	// assume err == nil ==> p.path.CorrectlyDecodedHF_RawOffsetIndex(p.hopField, ubPath)
 	// @ fold p.d.validResult(processResult{}, false)
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
