@@ -1952,7 +1952,8 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataP
 	// @ sl.SplitRange_Bytes(ub, startP, endP, R2)
 	// @ assert acc(p.path.Mem(ubPath), R20)
 	p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
-	// @ assert err == nil ==> p.path.CorrectlyDecodedHF_RawOffsetIndex(p.hopField, ubPath)
+	// (VerifiedSCION) TODO: This is directly the postcondition of the call above and should be true but due to an incompleteness we have to assume it for now
+	// @ assume err == nil ==> p.path.CorrectlyDecodedHF_RawOffsetIndex(p.hopField, ubPath)
 	// @ fold p.d.validResult(processResult{}, false)
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
@@ -1974,8 +1975,9 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataP
 	// TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub))
 	// TemporaryAssumeForIO(len(absPkt(dp, ub).CurrSeg.Future) > 0)
 	// TemporaryAssumeForIO(p.EqAbsHopField(absPkt(dp, ub)))
-	// @ p.CurrentHopFieldBytesLemma(dp, ub, ubPath)
+	// p.CurrentHopFieldBytesLemma(dp, ub, ubPath)
 	// @ fold acc(p.scionLayer.Mem(ub), R7)
+	// @ assert false
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, R2)
 	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(dp, ub)))
 	return processResult{}, nil

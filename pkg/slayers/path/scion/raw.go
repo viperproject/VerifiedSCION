@@ -302,7 +302,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
-// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
+// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R3)
 // @ ensures   (r == nil) == (s.GetCurrINF(ubuf) < s.GetNumINF(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -425,7 +425,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
-// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
+// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R3)
 // @ ensures   (r == nil) == (s.GetCurrHF(ubuf) < s.GetNumHops(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ ensures   r == nil ==> s.CorrectlyDecodedHF_RawOffsetIndex(res, ubuf)
