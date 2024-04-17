@@ -400,7 +400,7 @@ jobs:
           name: stats_addr.json
           path: /stats/stats_addr.json
           if-no-files-found: error # could also be 'warn' or 'ignore'
-  verify-router-metrics.go-everywhere:
+  verify-router-metrics-everywhere:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
