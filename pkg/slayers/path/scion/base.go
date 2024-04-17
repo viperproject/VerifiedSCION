@@ -27,10 +27,17 @@ import (
 	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
-// MetaLen is the length of the PathMetaHeader.
-const MetaLen = 4
+const (
+	// MaxINFs is the maximum number of info fields in a SCION path.
+	MaxINFs = 3
+	// MaxHops is the maximum number of hop fields in a SCION path.
+	MaxHops = 64
 
-const PathType path.Type = 1
+	// MetaLen is the length of the PathMetaHeader.
+	MetaLen = 4
+
+	PathType path.Type = 1
+)
 
 // @ requires path.PathPackageMem()
 // @ requires !path.Registered(PathType)
@@ -142,6 +149,14 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		//@ assume int(s.PathMeta.SegLen[i]) >= 0
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
+
+	// We must check the validity of NumHops. It is possible to fit more than 64 hops in
+	// the length of a scion header. Yet a path of more than 64 hops cannot be followed to
+	// the end because CurrHF is only 6 bits long.
+	if s.NumHops > MaxHops {
+		//@ defer fold s.NonInitMem()
+		return serrors.New("NumHops too large", "NumHops", s.NumHops, "Maximum", MaxHops)
+	}
 	//@ fold s.Mem()
 	return nil
 }
@@ -212,7 +227,9 @@ func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 	}
 }
 
-// Len returns the length of the path in bytes.
+// Len returns the length of the path in bytes. That is, the number of byte required to
+// store it, based on the metadata. The actual number of bytes available to contain it
+// can be inferred from the common header field HdrLen. It may or may not be consistent.
 // @ pure
 // @ requires acc(s.Mem(), _)
 // @ ensures  r >= MetaLen
@@ -242,18 +259,7 @@ type MetaHdr struct {
 // @ preserves acc(m)
 // @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
-// @ ensures   e == nil ==> (
-// @ 	MetaLen <= len(raw)              &&
-// @ 	0 <= m.CurrINF && m.CurrINF <= 3 &&
-// @ 	0 <= m.CurrHF  && m.CurrHF < 64  &&
-// @ 	m.SegsInBounds() &&
-// @ 	let lenR := len(raw) in
-// @ 	let b0 := sl.GetByte(raw, 0, lenR, 0) in
-// @ 	let b1 := sl.GetByte(raw, 0, lenR, 1) in
-// @ 	let b2 := sl.GetByte(raw, 0, lenR, 2) in
-// @ 	let b3 := sl.GetByte(raw, 0, lenR, 3) in
-// @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
-// @ 	DecodedFrom(line) == *m)
+// @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
@@ -283,16 +289,11 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 // @ preserves acc(m, R50)
 // @ preserves sl.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   e == nil
-// @ ensures   let lenR := len(b)           in
-// @ 	let b0 := sl.GetByte(b, 0, lenR, 0) in
-// @ 	let b1 := sl.GetByte(b, 0, lenR, 1) in
-// @ 	let b2 := sl.GetByte(b, 0, lenR, 2) in
-// @ 	let b3 := sl.GetByte(b, 0, lenR, 3) in
-// @ 	let v  := m.SerializedToLine()      in
-// @ 	binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, v)
+// @ ensures   m.SerializeToSpec(b)
 // @ decreases
 func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	if len(b) < MetaLen {
+		// @ Unreachable()
 		return serrors.New("buffer for MetaHdr too short", "expected", MetaLen, "actual", len(b))
 	}
 	line := uint32(m.CurrINF)<<30 | uint32(m.CurrHF&0x3F)<<24

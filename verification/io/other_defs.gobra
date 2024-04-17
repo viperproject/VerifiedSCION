@@ -108,7 +108,7 @@ func (h IO_HF) Toab() IO_ahi {
 type IO_Link adt {
 	IO_CustProv{}
 	IO_ProvCust{}
-	IO_PeerOrCore{}
+	IO_Core{}
 	IO_NoLink{}
 }
 
@@ -137,7 +137,7 @@ requires dp.Valid()
 requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) egif_core2(hf1 IO_HF, asid IO_as) bool{
-	return dp.egif2_type(hf1, asid, IO_Link(IO_PeerOrCore{}))
+	return dp.egif2_type(hf1, asid, IO_Link(IO_Core{}))
 }
 
 ghost
@@ -161,7 +161,7 @@ requires dp.Valid()
 requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) inif_core2(hf1 IO_HF, asid IO_as) bool{
-	return dp.inif2_type(hf1, asid, IO_Link(IO_PeerOrCore{}))
+	return dp.inif2_type(hf1, asid, IO_Link(IO_Core{}))
 }
 
 ghost
@@ -178,9 +178,9 @@ requires ifs != none[IO_ifs] ==> asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) if_type(asid IO_as, ifs option[IO_ifs], link IO_Link) bool{
 	return match ifs {
-		case none[IO_ifs]: 
+		case none[IO_ifs]:
 			false
-		default: 
+		default:
 			dp.link_type(asid, get(ifs)) == link
 	}
 }

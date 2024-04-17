@@ -197,7 +197,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
-// @ preserves slices.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ requires  s.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
@@ -210,31 +210,31 @@ func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res err
 	}
 	// @ unfold s.NonInitMem()
 	// @ requires len(data) >= 4
-	// @ requires slices.AbsSlice_Bytes(data, 0, len(data))
+	// @ requires acc(slices.AbsSlice_Bytes(data, 0, len(data)), R40)
 	// @ preserves acc(&s.TypeCode)
-	// @ ensures slices.AbsSlice_Bytes(data, 2, len(data))
-	// @ ensures slices.AbsSlice_Bytes(data, 0, 2)
+	// @ ensures acc(slices.AbsSlice_Bytes(data, 2, len(data)), R40)
+	// @ ensures acc(slices.AbsSlice_Bytes(data, 0, 2), R40)
 	// @ decreases
 	// @ outline (
-	// @ slices.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
-	// @ unfold slices.AbsSlice_Bytes(data, 0, 2)
+	// @ slices.SplitByIndex_Bytes(data, 0, len(data), 2, R40)
+	// @ unfold acc(slices.AbsSlice_Bytes(data, 0, 2), R40)
 	s.TypeCode = CreateSCMPTypeCode(SCMPType(data[0]), SCMPCode(data[1]))
-	// @ fold slices.AbsSlice_Bytes(data, 0, 2)
+	// @ fold acc(slices.AbsSlice_Bytes(data, 0, 2), R40)
 	// @ )
 	// @ requires len(data) >= 4
-	// @ requires slices.AbsSlice_Bytes(data, 0, 2)
-	// @ requires slices.AbsSlice_Bytes(data, 2, len(data))
+	// @ requires acc(slices.AbsSlice_Bytes(data, 0, 2), R40)
+	// @ requires acc(slices.AbsSlice_Bytes(data, 2, len(data)), R40)
 	// @ preserves acc(&s.Checksum)
-	// @ ensures slices.AbsSlice_Bytes(data, 0, len(data))
+	// @ ensures acc(slices.AbsSlice_Bytes(data, 0, len(data)), R40)
 	// @ decreases
 	// @ outline (
-	// @ slices.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
-	// @ unfold slices.AbsSlice_Bytes(data, 2, 4)
+	// @ slices.SplitByIndex_Bytes(data, 2, len(data), 4, R40)
+	// @ unfold acc(slices.AbsSlice_Bytes(data, 2, 4), R40)
 	// @ assert forall i int :: { &data[2:4][i] } 0 <= i && i < 2 ==> &data[2 + i] == &data[2:4][i]
 	s.Checksum = binary.BigEndian.Uint16(data[2:4])
-	// @ fold slices.AbsSlice_Bytes(data, 2, 4)
-	// @ slices.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
-	// @ slices.CombineAtIndex_Bytes(data, 0, len(data), 4, writePerm)
+	// @ fold acc(slices.AbsSlice_Bytes(data, 2, 4), R40)
+	// @ slices.CombineAtIndex_Bytes(data, 0, 4, 2, R40)
+	// @ slices.CombineAtIndex_Bytes(data, 0, len(data), 4, R40)
 	// @ )
 	s.BaseLayer = BaseLayer{Contents: data[:4], Payload: data[4:]}
 	// @ fold s.BaseLayer.Mem(data, 4)

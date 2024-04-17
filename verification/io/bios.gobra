@@ -20,8 +20,7 @@ package io
 
 type IO_bio3sIN adt {
 	IO_bio3s_enter{}
-	IO_bio3s_xover_up2down{}
-	IO_bio3s_xover_core{}
+	IO_bio3s_xover{}
 	IO_bio3s_exit{}
 }
 

@@ -42,7 +42,7 @@ type Desc struct {
 	help string
 	// constLabelPairs contains precalculated DTO label pairs based on
 	// the constant labels.
-	// (joao) Not needed for our purposes
+	// (VerifiedSCION) Not needed for our purposes
 	// constLabelPairs []*dto.LabelPair
 	// variableLabels contains names of labels for which the metric
 	// maintains variable values.

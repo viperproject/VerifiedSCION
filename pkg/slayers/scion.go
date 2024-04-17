@@ -317,9 +317,14 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
 // @ requires  s.NonInitMem()
-// @ preserves sl.AbsSlice_Bytes(data, 0, len(data))
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
+// @ ensures   res == nil && typeOf(s.GetPath(data)) == *scion.Raw ==>
+// @ 	ValidPktMetaHdr(data)
+// @ ensures   res == nil && typeOf(s.GetPath(data)) == *scion.Raw ==>
+// @ 	s.EqAbsHeader(data)
+// @ ensures   res == nil ==> s.EqPathType(data)
 // @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
 // @ decreases
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
@@ -329,27 +334,27 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("packet is shorter than the common header length",
 			"min", CmnHdrLen, "actual", len(data))
 	}
-	// @ sl.SplitRange_Bytes(data, 0, 4, R15)
-	// @ preserves 4 <= len(data) && acc(sl.AbsSlice_Bytes(data[:4], 0, 4), R15)
+	// @ sl.SplitRange_Bytes(data, 0, 4, R41)
+	// @ preserves 4 <= len(data) && acc(sl.AbsSlice_Bytes(data[:4], 0, 4), R41)
 	// @ decreases
 	// @ outline(
-	// @ unfold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), R15)
+	// @ unfold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), R41)
 	firstLine := binary.BigEndian.Uint32(data[:4])
-	// @ fold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), R15)
+	// @ fold acc(sl.AbsSlice_Bytes(data[:4], 0, 4), R41)
 	// @ )
-	// @ sl.CombineRange_Bytes(data, 0, 4, R15)
+	// @ sl.CombineRange_Bytes(data, 0, 4, R41)
 	// @ unfold s.NonInitMem()
 	s.Version = uint8(firstLine >> 28)
 	s.TrafficClass = uint8((firstLine >> 20) & 0xFF)
 	s.FlowID = firstLine & 0xFFFFF
 	// @ preserves acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) && acc(&s.PathType)
 	// @ preserves acc(&s.DstAddrType) && acc(&s.SrcAddrType)
-	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), R15)
+	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
 	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 	// @ ensures   0 <= s.PathType && s.PathType < 256
 	// @ decreases
 	// @ outline(
-	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R15)
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
 	s.NextHdr = L4ProtocolType(data[4])
 	s.HdrLen = data[5]
 	// @ assert &data[6:8][0] == &data[6] && &data[6:8][1] == &data[7]
@@ -361,20 +366,20 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ assert int(s.DstAddrType) == b.BitAnd7(int(data[9] >> 4))
 	s.SrcAddrType = AddrType(data[9] & 0x7)
 	// @ assert int(s.SrcAddrType) == b.BitAnd7(int(data[9]))
-	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R15)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
 	// @ )
 	// Decode address header.
-	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, R5)
-	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), R5)
+	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
+	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), R41)
 	if err := s.DecodeAddrHdr(data[CmnHdrLen:]); err != nil {
 		// @ fold s.NonInitMem()
-		// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), R5)
-		// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, R5)
+		// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), R41)
+		// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
 		df.SetTruncated()
 		return err
 	}
-	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), R5)
-	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, R5)
+	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), R41)
+	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
 	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
 	//                 is set to nil. As such, we pick the easiest possible value as a placeholder.
 	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
@@ -404,10 +409,10 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		// @ fold s.NonInitMem()
 		return err
 	}
-	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, writePerm)
+	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, R40)
 	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
 	if err != nil {
-		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
+		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R40)
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
 		// @ s.PathPoolMemExchange(s.PathType, s.Path)
 		// @ fold s.NonInitMem()
@@ -421,9 +426,12 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
 
-	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, writePerm)
+	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R40)
 	// @ fold s.Mem(data)
 
+	// @ TemporaryAssumeForIO(typeOf(s.GetPath(data)) == *scion.Raw ==> ValidPktMetaHdr(data))
+	// @ TemporaryAssumeForIO(typeOf(s.GetPath(data)) == *scion.Raw ==> s.EqAbsHeader(data))
+	// @ TemporaryAssumeForIO(s.EqPathType(data))
 	return nil
 }
 
@@ -898,7 +906,7 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err er
 // @ requires  acc(&s.SrcAddrType, HalfPerm) && s.SrcAddrType.Has3Bits()
 // @ requires  acc(&s.DstAddrType, HalfPerm) && s.DstAddrType.Has3Bits()
 // @ requires  acc(&s.RawSrcAddr) && acc(&s.RawDstAddr)
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R10)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
 // @ ensures   res == nil ==> s.HeaderMem(data)
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res != nil ==> (
@@ -913,13 +921,13 @@ func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 			"actual", len(data))
 	}
 	offset := 0
-	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R10)
+	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
 	// @ assert forall i int :: { &data[offset:][i] }{ &data[i] } 0 <= i && i < l ==> &data[offset:][i] == &data[i]
 	s.DstIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
 	offset += addr.IABytes
 	// @ assert forall i int :: { &data[offset:][i] } 0 <= i && i < l ==> &data[offset:][i] == &data[offset+i]
 	s.SrcIA = addr.IA(binary.BigEndian.Uint64(data[offset:]))
-	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R10)
+	// @ fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
 	offset += addr.IABytes
 	dstAddrBytes := s.DstAddrType.Length()
 	srcAddrBytes := s.SrcAddrType.Length()

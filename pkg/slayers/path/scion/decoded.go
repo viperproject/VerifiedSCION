@@ -24,13 +24,6 @@ import (
 	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
-const (
-	// MaxINFs is the maximum number of info fields in a SCION path.
-	MaxINFs = 3
-	// MaxHops is the maximum number of hop fields in a SCION path.
-	MaxHops = 64
-)
-
 // Decoded implements the SCION (data-plane) path type. Decoded is intended to be used in
 // non-performance critical code paths, where the convenience of having a fully parsed path trumps
 // the loss of performance.
@@ -225,6 +218,20 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ ghost isValid := s.ValidCurrIdxs(ubuf)
+	/*@
+	ghost base := s.GetBase(ubuf)
+	ghost absBase := base.Abs()
+	ghost absMetaHdrAferReversingSegLen := AbsMetaHdr_ {
+		CurrINF: absBase.PathMeta.CurrINF,
+		CurrHF: absBase.PathMeta.CurrHF,
+		SegLen: absBase.ReverseSegLen(),
+	}
+	ghost absBaseAfterReversingSegLen := AbsBase_ {
+		PathMeta: absMetaHdrAferReversingSegLen,
+		NumINF: absBase.NumINF,
+		NumHops: absBase.NumHops,
+	}
+	@*/
 	//@ unfold s.Mem(ubuf)
 	//@ unfold s.Base.Mem()
 	if s.NumINF == 0 {
@@ -232,35 +239,20 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ fold s.Mem(ubuf)
 		return nil, serrors.New("empty decoded path is invalid and cannot be reversed")
 	}
-	//@ fold s.Base.Mem()
-	//@ fold s.Mem(ubuf)
-	//@ ghost base := s.GetBase(ubuf)
 
 	// Reverse order of InfoFields and SegLens
-	//@ invariant s.Mem(ubuf)
-	//@ invariant isValid ==> s.ValidCurrIdxs(ubuf)
-	//@ invariant 0 <= i && i < s.GetNumINF(ubuf)
-	//@ invariant 0 <= j && j < s.GetNumINF(ubuf)
-	//@ decreases j-i
-	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumINF - 1 /*@) @*/); i < j; i, j = i+1, j-1 {
-		//@ unfold s.Mem(ubuf)
-		s.InfoFields[i], s.InfoFields[j] = s.InfoFields[j], s.InfoFields[i]
-		//@ unfold s.Base.Mem()
-		s.PathMeta.SegLen[i], s.PathMeta.SegLen[j] = s.PathMeta.SegLen[j], s.PathMeta.SegLen[i]
-		//@ fold s.Base.Mem()
-		//@ fold s.Mem(ubuf)
+	if s.NumINF > 1 {
+		lastIdx := s.NumINF - 1
+		s.InfoFields[0], s.InfoFields[lastIdx] = s.InfoFields[lastIdx], s.InfoFields[0]
+		s.PathMeta.SegLen[0], s.PathMeta.SegLen[lastIdx] = s.PathMeta.SegLen[lastIdx], s.PathMeta.SegLen[0]
 	}
-	//@ preserves s.Mem(ubuf)
-	//@ preserves isValid ==> s.ValidCurrIdxs(ubuf)
-	//@ decreases
-	//@ outline(
-	//@ unfold s.Mem(ubuf)
+	//@ fold s.Base.Mem()
 	//@ invariant acc(s.Base.Mem(), R10)
 	//@ invariant 0 <= i && i <= s.Base.GetNumINF()
 	//@ invariant acc(&s.InfoFields, R10)
 	//@ invariant len(s.InfoFields) == s.Base.GetNumINF()
-	//@ invariant forall i int :: { &s.InfoFields[i] } 0 <= i && i < len(s.InfoFields) ==> (acc(&s.InfoFields[i].ConsDir))
-	//@ invariant isValid ==> s.Base.ValidCurrIdxs()
+	//@ invariant forall i int :: { &s.InfoFields[i] } 0 <= i && i < len(s.InfoFields) ==>
+	//@ 	(acc(&s.InfoFields[i].ConsDir))
 	//@ decreases MaxINFs-i
 	// Reverse cons dir flags
 	for i := 0; i < ( /*@ unfolding acc(s.Base.Mem(), R11) in @*/ s.NumINF); i++ {
@@ -268,13 +260,12 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		info.ConsDir = !info.ConsDir
 	}
 	//@ fold s.Mem(ubuf)
-	//@ )
 
 	// Reverse order of hop fields
 	//@ invariant s.Mem(ubuf)
 	//@ invariant 0 <= i && i <= s.GetNumHops(ubuf)
 	//@ invariant -1 <= j && j < s.GetNumHops(ubuf)
-	//@ invariant isValid ==> s.ValidCurrIdxs(ubuf)
+	//@ invariant s.GetBase(ubuf).Abs() == absBaseAfterReversingSegLen
 	//@ decreases j-i
 	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumHops - 1 /*@ ) @*/); i < j; i, j = i+1, j-1 {
 		//@ unfold s.Mem(ubuf)
@@ -289,17 +280,15 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ fold s.Mem(ubuf)
 	}
 	// Update CurrINF and CurrHF and SegLens
-	//@ preserves s.Mem(ubuf)
-	//@ preserves isValid ==> s.ValidCurrIdxs(ubuf)
-	//@ decreases
-	//@ outline(
 	//@ unfold s.Mem(ubuf)
 	//@ unfold s.Base.Mem()
 	s.PathMeta.CurrINF = uint8(s.NumINF) - s.PathMeta.CurrINF - 1
 	s.PathMeta.CurrHF = uint8(s.NumHops) - s.PathMeta.CurrHF - 1
+	//@ assert s.Base.Abs() == absBase.ReverseSpec()
+	//@ ghost if isValid { absBase.ReversingValidBaseIsValidBase() }
+	//@ assert isValid ==> s.Base.Abs().ValidCurrIdxsSpec()
 	//@ fold s.Base.Mem()
 	//@ fold s.Mem(ubuf)
-	//@ )
 	return s, nil
 }
 
