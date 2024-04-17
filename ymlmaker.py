@@ -80,6 +80,7 @@ def get_files(fname, line):
     files = os.listdir("router/")
 
 files = [f for f in os.listdir("router/") if (f.endswith(".go") or f.endswith(".gobra")) and has_header(f"router/{f}")]
+files_to_split = ["dataplane.go", "dataplane_spec.gobra"]
 
 with open("metagobra.yml", 'r') as fhandle:
     prefix = fhandle.read()
@@ -87,7 +88,7 @@ with open("metagobra.yml", 'r') as fhandle:
 with open(".github/workflows/gobra.yml", 'w') as fhandle:
     fhandle.write(prefix)
     for f in files:
-        if f != "dataplane.go":
+        if f not in files_to_split:
             fhandle.write(make_job_template(files, f, [i for i in get_func_lines(f)]))
         else:
             for l in get_func_lines(f):
