@@ -212,9 +212,9 @@ requires  len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).Fu
 requires  len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).History) == 0
 requires  AbsVerifyCurrentMACConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
 requires  AbsValidateEgressIDConstraintXover(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
-requires  AbsEgressInterfaceConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), egressID)
-requires  egressID == none[io.IO_ifs] ==> newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
-requires  egressID != none[io.IO_ifs] ==> newPkt == AbsProcessEgress(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)))
+requires  egressID != none[io.IO_ifs] ==> AbsEgressInterfaceConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), egressID)
+requires  (egressID == none[io.IO_ifs] ==> newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))) ||
+	  (egressID != none[io.IO_ifs] ==> newPkt == AbsProcessEgress(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))))
 preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 ensures   dp.Valid()
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
@@ -227,8 +227,8 @@ func XoverEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt
 	reveal AbsVerifyCurrentMACConstraint(intermediatePkt1, dp)
 	reveal AbsVerifyCurrentMACConstraint(intermediatePkt2, dp)
 	reveal AbsValidateEgressIDConstraintXover(intermediatePkt2, dp)
-	reveal AbsEgressInterfaceConstraint(intermediatePkt2, egressID)
 	if(egressID != none[io.IO_ifs]){
+		reveal AbsEgressInterfaceConstraint(intermediatePkt2, egressID)
 		reveal AbsProcessEgress(intermediatePkt2)
 	}
 	AtomicXover(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
