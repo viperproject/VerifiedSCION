@@ -2291,12 +2291,6 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 			// @ fold p.d.validResult(respr, false)
 			return processResult{}, nil
 		case ingress == topology.Core && egress == topology.Core:
-			//  assume oldPkt.CurrSeg.ConsDir
-			//  assert path.ifsToIO_ifs(p.ingressID) == oldPkt.CurrSeg.Future[0].InIF2
-			//  assert path.ifsToIO_ifs(pktEgressID) == oldPkt.CurrSeg.Future[0].EgIF2
-			//  assert absLinktype(p.d.linkTypes[p.ingressID]) == io.IO_Link(io.IO_Core{})
-			//dp.inif2_type(hf1, asid, IO_Link(IO_Core{}))
-			//  assert absLinktype(p.d.linkTypes[pktEgressID]) == io.IO_Link(io.IO_Core{})
 			// @ assert reveal AbsValidateEgressIDConstraint(oldPkt, (p.ingressID != 0), dp)
 			// @ fold p.d.validResult(respr, false)
 			return processResult{}, nil
