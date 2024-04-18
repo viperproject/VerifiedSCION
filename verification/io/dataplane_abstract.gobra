@@ -26,13 +26,11 @@ type DataPlaneSpec adt {
 }
 
 // TopologySpec describes the entire network topology.
-// coreAS: IDs of the core Autonomous Systems
 // links: representation of the network topology as a graph.
 //     `links[(a1,x)] == (a2,y)` means that the interface x of AS a1 is connected
 //     to the interface y of AS a2.
 type TopologySpec adt {
 	TopologySpec_{
-		coreAS		set[IO_as]
 		links		dict[AsIfsPair]AsIfsPair
 	}
 }
@@ -88,12 +86,6 @@ ghost
 decreases
 pure func (dp DataPlaneSpec) Asid() IO_as {
 	return dp.localIA
-}
-
-ghost
-decreases
-pure func (dp DataPlaneSpec) Core() set[IO_as] {
-	return dp.topology.coreAS
 }
 
 ghost

@@ -62,28 +62,6 @@ pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 }
 
 ghost
-requires len(hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
-decreases
-pure func hvfSet(hopfield io.IO_HF) set[io.IO_msgterm] {
-	return let l := hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_ in
-		l[len(l) - 1].MsgTerm_FS_
-}
-
-ghost
-requires 0 < len(hopfields)
-requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
-requires forall idx int :: {hopfields[idx]} 0 <= idx && idx < len(hopfields) ==>
-	len(hopfields[idx].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
-decreases
-pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_msgterm] {
-	return currHFIdx + 1 >= len(hopfields) ?
-		hvfSet(hopfields[len(hopfields)-1]) :
-		(consDir ?
-			hvfSet(hopfields[currHFIdx]) :
-			hvfSet(hopfields[currHFIdx+1]))
-}
-
-ghost
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Unsupported
 ensures val.IO_val_Unsupported_1 == path.ifsToIO_ifs(ingressID)
