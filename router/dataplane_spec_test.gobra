@@ -107,12 +107,20 @@ func testRun(
 	}
 	fold accBatchConn(d.external)
 
-	d.linkTypes = make(map[uint16]topology.LinkType)
-	d.neighborIAs = make(map[uint16]addr.IA)
+	d.linkTypes = map[uint16]topology.LinkType{
+		uint16(1): topology.Child,
+		uint16(2): topology.Child,
+		uint16(3): topology.Child,
+	}
+	d.neighborIAs = map[uint16]addr.IA{
+		uint16(1): 1001,
+		uint16(2): 1002,
+		uint16(3): 1000,
+	}
 
 	a1 := allocateUDPAddr()
 	d.internalNextHops = map[uint16]*net.UDPAddr{
-		uint16(3): a1,
+		uint16(4): a1,
 	}
 
 	d.internal = allocateBatchConn()
@@ -199,7 +207,12 @@ func testRun(
 	assert d.dpSpecWellConfiguredLinkTypes(dp)
 
 	fold d.Mem()
+	assert d.getDomNeighborIAs() == d.getDomExternal()
+	assert d.getDomExternal() == d.getDomLinkTypes()
+	assert !(0 in d.getDomNeighborIAs())
+	assert d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 	assert reveal d.DpAgreesWithSpec(dp)
+
 	assert reveal d.PreWellConfigured()
 	fold MutexInvariant!< d !>()
 	// end of foldDataPlaneMem

@@ -144,12 +144,17 @@ pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 ghost
 requires acc(d.Mem(), _)
 requires d.DpAgreesWithSpec(dp)
-ensures  acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
+requires d.WellConfigured()
+ensures  acc(&d.linkTypes, _)
+ensures  d.linkTypes != nil ==> acc(d.linkTypes, _) && !(0 in domain(d.linkTypes))
 ensures  d.dpSpecWellConfiguredLinkTypes(dp)
 decreases
 func (d *DataPlane) LinkTypesLemma(dp io.DataPlaneSpec) {
+	reveal d.WellConfigured()
 	reveal d.DpAgreesWithSpec(dp)
+	assert !(0 in d.getDomLinkTypes())
 	unfold acc(d.Mem(), _)
+	assert !(0 in domain(d.linkTypes))
 }
 
 ghost

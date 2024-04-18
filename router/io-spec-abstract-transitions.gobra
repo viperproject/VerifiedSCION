@@ -77,7 +77,6 @@ requires len(pkt.CurrSeg.Future) > 0
 decreases
 pure func AbsValidateEgressIDConstraint(pkt io.IO_pkt2, enter bool, dp io.DataPlaneSpec) bool {
 	return let currseg := pkt.CurrSeg in
-		let nextIf := (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2) in
 		(enter ==> dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), currseg.Future[0]))
 }
 
@@ -124,7 +123,6 @@ decreases
 pure func AbsValidateEgressIDConstraintXover(pkt io.IO_pkt2, dp io.DataPlaneSpec) bool {
 	return let currseg := pkt.CurrSeg in
 		let rightseg := get(pkt.RightSeg) in
-		let nextIf := (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2) in
 		dp.xover2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
 			currseg.ConsDir, currseg.Future[0])
 }
