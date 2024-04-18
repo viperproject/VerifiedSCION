@@ -337,9 +337,9 @@ func hopFieldsWidenLemma(raw []byte, offset int, currHFIdx int, segLen int, leng
 
 		newP := (p + R53)/2
 		assert R53 < newP && newP < p
-		hopFieldsWidenLemma(raw, offset, currHFIdx - 1, segLen, length, newP)
-		ret1 := scion.hopFields(raw, offset, currHFIdx - 1, segLen)
-		ret2 := scion.hopFields(raw[:length], offset, currHFIdx - 1, segLen)
+		hopFieldsWidenLemma(raw, offset, currHFIdx + 1, segLen, length, newP)
+		ret1 := scion.hopFields(raw, offset, currHFIdx + 1, segLen)
+		ret2 := scion.hopFields(raw[:length], offset, currHFIdx + 1, segLen)
 		assert ret1 == scion.hopFields(raw, offset, currHFIdx, segLen)
 		assert ret2 == scion.hopFields(raw[:length], offset, currHFIdx, segLen)
 		assert ret1 == ret2
