@@ -475,9 +475,9 @@ decreases
 func rightSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, headerOffset int, length int) {
 	offset := scion.HopFieldOffset(scion.NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset)
 	if currINFIdx == 1 && seg2Len > 0 && seg3Len > 0 {
-		currSegWidenLemma(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg3Len, headerOffset, length)
-		ret1 := some(scion.CurrSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len,seg3Len, headerOffset))
-		ret2 := some(scion.CurrSeg(raw[:length], offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg3Len, headerOffset))
+		currSegWidenLemma(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset, length)
+		ret1 := some(scion.CurrSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset))
+		ret2 := some(scion.CurrSeg(raw[:length], offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset))
 		assert ret1 == reveal scion.RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
 		assert ret2 == reveal scion.RightSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
 		assert ret1 == ret2
