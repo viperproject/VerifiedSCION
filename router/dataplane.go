@@ -3504,7 +3504,7 @@ func (p *scionPacketProcessor) processOHP( /* @ ghost dp io.DataPlaneSpec @ */ )
 			// domain of forwardingMetrics is the same as the one for external
 			// @ p.d.InDomainExternalInForwardingMetrics(ohp.FirstHop.ConsEgress)
 			// @ fold p.d.validResult(processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt}, false)
-			// @ TemporaryAssumeForIO(!slayers.IsSupportedPkt(p.rawPkt))
+			// @ assert !(slayers.IsSupportedPkt(p.rawPkt))
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
 				nil /*@ , false, reveal absIO_val(dp, respr.OutPkt, respr.EgressID) @*/
 		}
@@ -3514,7 +3514,6 @@ func (p *scionPacketProcessor) processOHP( /* @ ghost dp io.DataPlaneSpec @ */ )
 		return processResult{}, serrors.WithCtx(cannotRoute, "type", "ohp",
 			"egress", ohp.FirstHop.ConsEgress, "consDir", ohp.Info.ConsDir) /*@ , false, absReturnErr(dp, processResult{}) @*/
 	}
-
 	// OHP entering our IA
 	// @ p.d.getLocalIA()
 	if !p.d.localIA.Equal(s.DstIA) {
@@ -3572,7 +3571,7 @@ func (p *scionPacketProcessor) processOHP( /* @ ghost dp io.DataPlaneSpec @ */ )
 	// @ p.d.getInternal()
 	// @ assert p.d.internal != nil ==> acc(p.d.internal.Mem(), _)
 	// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, addrAliases)
-	// @ TemporaryAssumeForIO(!slayers.IsSupportedPkt(p.rawPkt))
+	// @ assert !(slayers.IsSupportedPkt(p.rawPkt))
 	return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@ , addrAliases, reveal absIO_val(dp, respr.OutPkt, 0) @*/
 }
 
@@ -3659,11 +3658,15 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 // the scion.Raw path.
 // @ requires  acc(s.Mem(rawPkt), R00)
 // @ requires  s.HasOneHopPath(rawPkt)
+// @ requires  sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ preserves buffer != nil && buffer.Mem()
-// @ preserves sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
+// @ ensures   sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 // @ ensures   acc(s.Mem(rawPkt), R00)
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
+// Contracts for IO-sepc
+// @ requires !slayers.IsSupportedPkt(rawPkt)
+// @ ensures res == nil ==> !slayers.IsSupportedPkt(rawPkt)
 // (VerifiedSCION) the type of 's' was changed from slayers.SCION to *slayers.SCION. This makes
 // specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
 // by value. We should consider porting merging this in upstream SCION.
@@ -3691,6 +3694,7 @@ func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.Serialize
 	// @ fold sl.AbsSlice_Bytes(rawPkt, 0, len(rawPkt))
 	// @ fold acc(sl.AbsSlice_Bytes(rawContents, 0, len(rawContents)), R20)
 	// @ buffer.RestoreMem(rawContents)
+	// @ TemporaryAssumeForIO(!slayers.IsSupportedPkt(rawPkt))
 	return nil
 }
 
