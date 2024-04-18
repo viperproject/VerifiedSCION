@@ -1283,13 +1283,11 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ assert unfolding acc(d.Mem(), _) in
 	// @ 	d.dpSpecWellConfiguredLocalIA(dp)     &&
 	// @ 	d.dpSpecWellConfiguredNeighborIAs(dp) &&
-	// @ 	d.dpSpecWellConfiguredLinkTypes(dp)	  &&
-	// @	d.dpSpecWellConfiguredExternals(dp)
+	// @ 	d.dpSpecWellConfiguredLinkTypes(dp)
 	// @ unfold d.Mem()
 	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
 	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
 	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
-	// @ assert d.dpSpecWellConfiguredExternals(dp)
 
 	// @ preserves acc(&d.forwardingMetrics)
 	// @ preserves acc(&d.localIA, R20)
@@ -1352,7 +1350,6 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
 	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
 	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
-	// @ assert d.dpSpecWellConfiguredExternals(dp)
 	// @ fold d.Mem()
 	// @ reveal d.WellConfigured()
 	// @ assert reveal d.DpAgreesWithSpec(dp)

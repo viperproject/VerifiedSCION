@@ -253,11 +253,31 @@ pure func (d *DataPlane) getDomExternal() set[uint16] {
 }
 
 ghost
+requires acc(d.Mem(), _)
+decreases
+pure func (d *DataPlane) getDomNeighborIAs() set[uint16] {
+	return unfolding acc(d.Mem(), _) in
+		d.neighborIAs == nil ?
+			set[uint16]{} : domain(d.neighborIAs)
+}
+
+ghost
+requires acc(d.Mem(), _)
+decreases
+pure func (d *DataPlane) getDomLinkTypes() set[uint16] {
+	return unfolding acc(d.Mem(), _) in
+		d.linkTypes == nil ?
+			set[uint16]{} : domain(d.linkTypes)
+}
+
+ghost
 opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
-	return d.getDomExternal() subset d.getDomForwardingMetrics()
+	return d.getDomExternal() == d.getDomNeighborIAs() &&
+		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
+		d.getDomExternal() subset d.getDomForwardingMetrics()
 }
 
 ghost
@@ -265,7 +285,9 @@ opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) PreWellConfigured() bool {
-	return d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
+	return d.getDomExternal() == d.getDomNeighborIAs() &&
+		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
+		d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 }
 
 ghost

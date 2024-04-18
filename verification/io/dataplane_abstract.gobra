@@ -52,8 +52,8 @@ pure func (dp DataPlaneSpec) Valid() bool {
 		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.topology.links) ==>
 			let next_pair := dp.Lookup(pairs) in
 			(next_pair in domain(dp.topology.links)) &&
-			dp.Lookup(next_pair) == pairs)
-			// && domain(dp.linkTypes) == domain(dp.neighborIAs)
+			dp.Lookup(next_pair) == pairs) &&
+			domain(dp.linkTypes) == domain(dp.neighborIAs)
 }
 
 ghost

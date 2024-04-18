@@ -104,17 +104,6 @@ pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool {
 
 ghost
 requires acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
-requires acc(&d.external, _) && (d.external != nil  ==> acc(accBatchConn(d.external), _))
-decreases
-pure func (d *DataPlane) dpSpecWellConfiguredExternals(dp io.DataPlaneSpec) bool {
-	return d.external != nil ? unfolding acc(accBatchConn(d.external), _) in
-		!(0 in domain(d.external)) &&
-		forall ifs uint16 :: {ifs in domain(d.external)} ifs in domain(d.external) ==>
-			io.IO_ifs(ifs) in domain(dp.GetNeighborIAs()) : true
-}
-
-ghost
-requires acc(&d.neighborIAs, _) && (d.neighborIAs != nil ==> acc(d.neighborIAs, _))
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredNeighborIAs(dp io.DataPlaneSpec) bool {
 	return forall ifs uint16 :: {ifs in domain(d.neighborIAs)} ifs in domain(d.neighborIAs) ==>
@@ -136,8 +125,7 @@ ghost
 requires acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool {
-	return !(0 in domain(d.linkTypes)) &&
-		forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
+	return forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
 		io.IO_ifs(ifs) in domain(dp.GetLinkTypes()) &&
 		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.IO_ifs(ifs))
 }
@@ -150,8 +138,7 @@ pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 	return unfolding acc(d.Mem(), _) in
 		d.dpSpecWellConfiguredLocalIA(dp)     &&
 		d.dpSpecWellConfiguredNeighborIAs(dp) &&
-		d.dpSpecWellConfiguredLinkTypes(dp) &&
-		d.dpSpecWellConfiguredExternals(dp)
+		d.dpSpecWellConfiguredLinkTypes(dp)
 }
 
 ghost
@@ -168,6 +155,7 @@ func (d *DataPlane) LinkTypesLemma(dp io.DataPlaneSpec) {
 ghost
 requires acc(d.Mem(), _)
 requires d.DpAgreesWithSpec(dp)
+requires d.WellConfigured(dp)
 requires acc(&d.external, _)
 requires acc(d.external, _)
 requires egressID in domain(d.external)

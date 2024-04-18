@@ -99,9 +99,11 @@ func testRun(
 
 	b1 := allocateBatchConn()
 	b2 := allocateBatchConn()
+	b3 := allocateBatchConn()
 	d.external = map[uint16]BatchConn{
 		uint16(1): b1,
 		uint16(2): b2,
+		uint16(3): b3,
 	}
 	fold accBatchConn(d.external)
 
@@ -139,7 +141,6 @@ func testRun(
 		},
 		localIA: 1000,
 		topology: io.TopologySpec_{
-			coreAS: set[io.IO_as]{1000},
 			links:  dict[io.AsIfsPair]io.AsIfsPair {
 				io.AsIfsPair{1000, 1}: io.AsIfsPair{1001, 7},
 				io.AsIfsPair{1000, 2}: io.AsIfsPair{1002, 8},
@@ -166,7 +167,6 @@ func testRun(
 		},
 		localIA: 1000,
 		topology: io.TopologySpec_{
-			coreAS: set[io.IO_as]{1000},
 			links:  dict[io.AsIfsPair]io.AsIfsPair {
 				pair1: pair4,
 				pair2: pair5,
@@ -190,6 +190,7 @@ func testRun(
 			let next_pair := dp.Lookup(pair) in
 			(next_pair in domain(dp.topology.links)) &&
 			dp.Lookup(next_pair) == pair
+	assert domain(dp.linkTypes) == domain(dp.neighborIAs)
 	assert reveal dp.Valid()
 	)
 
