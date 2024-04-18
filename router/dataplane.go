@@ -4129,8 +4129,7 @@ func decodeLayers(data []byte, base *slayers.SCION,
 
 				// ghost clean-up:
 				// @ ghost
-				// @ invariant 0 <= i0 && i0 <= len(opts)
-				// @ invariant -1 <= c && c <= i0
+				// @ invariant -1 <= c && c < i0
 				// @ invariant len(processed) == len(opts)
 				// @ invariant len(offsets) == len(opts)
 				// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], R10)
