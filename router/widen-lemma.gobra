@@ -28,7 +28,6 @@ import (
 
 // Some things in this file can be simplified. Nonetheless, the important definition here
 // is absIO_valWidenLemma. Everything else can be seen as an implementation detail.
-// TODO: prove Lemma
 ghost
 requires  0 <= length && length <= len(raw)
 requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
