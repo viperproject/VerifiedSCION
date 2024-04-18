@@ -275,8 +275,9 @@ opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
-	return d.getDomExternal() == d.getDomNeighborIAs() &&
-		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
+	return d.getDomNeighborIAs() == d.getDomExternal() &&
+		d.getDomExternal() == d.getDomLinkTypes() &&
+		!(0 in d.getDomNeighborIAs()) &&
 		d.getDomExternal() subset d.getDomForwardingMetrics()
 }
 
@@ -285,8 +286,9 @@ opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) PreWellConfigured() bool {
-	return d.getDomExternal() == d.getDomNeighborIAs() &&
-		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
+	return d.getDomNeighborIAs() == d.getDomExternal() &&
+		d.getDomExternal() == d.getDomLinkTypes() &&
+		!(0 in d.getDomNeighborIAs()) &&
 		d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 }
 
