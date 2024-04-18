@@ -417,6 +417,7 @@ jobs:
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: '1'
           conditionalizePermissions: '0'
+          moreJoins: 'impure'
           imageVersion: ${{ env.imageVersion }}
           mceMode: 'on'
           requireTriggers: ${{ env.requireTriggers }}
