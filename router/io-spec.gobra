@@ -175,11 +175,11 @@ func (d *DataPlane) EgressIDNotZeroLemma(egressID uint16, dp io.DataPlaneSpec) {
 
 ghost
 requires acc(d.Mem(), _)
-requires acc(&d.external , _)
-requires acc(d.external , _)
+requires acc(&d.external, _)
+requires acc(d.external, _)
 ensures  acc(d.Mem(), _)
-ensures  acc(&d.external , _)
-ensures  acc(d.external , _)
+ensures  acc(&d.external, _)
+ensures  acc(d.external, _)
 ensures  d.getDomExternal() == domain(d.external)
 decreases
 func (d *DataPlane) getDomExternalLemma() {
