@@ -156,8 +156,8 @@ ghost
 requires acc(d.Mem(), _)
 requires d.DpAgreesWithSpec(dp)
 requires d.WellConfigured()
-requires acc(&d.external , _)
-requires acc(d.external , _)
+requires acc(&d.external, _)
+requires acc(d.external, _)
 requires egressID in domain(d.external)
 ensures  egressID != 0
 ensures  io.IO_ifs(egressID) in domain(dp.GetNeighborIAs())
@@ -188,10 +188,6 @@ func (d *DataPlane) getDomExternalLemma() {
 		(unfolding acc(accBatchConn(d.external), _) in
 				domain(d.external))
 }
-
-
-
-
 
 ghost
 requires dp.Valid()
