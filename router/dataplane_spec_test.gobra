@@ -140,13 +140,12 @@ func testRun(
 			3: 1000,
 		},
 		localIA: 1000,
-		topology: io.TopologySpec_{
-			links:  dict[io.AsIfsPair]io.AsIfsPair {
-				io.AsIfsPair{1000, 1}: io.AsIfsPair{1001, 7},
-				io.AsIfsPair{1000, 2}: io.AsIfsPair{1002, 8},
-				io.AsIfsPair{1000, 3}: io.AsIfsPair{1000, 3},
-				io.AsIfsPair{1001, 7}: io.AsIfsPair{1000, 1},
-				io.AsIfsPair{1002, 8}: io.AsIfsPair{1000, 2}}}}
+		links:  dict[io.AsIfsPair]io.AsIfsPair {
+			io.AsIfsPair{1000, 1}: io.AsIfsPair{1001, 7},
+			io.AsIfsPair{1000, 2}: io.AsIfsPair{1002, 8},
+			io.AsIfsPair{1000, 3}: io.AsIfsPair{1000, 3},
+			io.AsIfsPair{1001, 7}: io.AsIfsPair{1000, 1},
+			io.AsIfsPair{1002, 8}: io.AsIfsPair{1000, 2}}}
 	outline(
 	pair1 := io.AsIfsPair{1000, 1}
 	pair2 := io.AsIfsPair{1000, 2}
@@ -166,13 +165,12 @@ func testRun(
 			3: 1000,
 		},
 		localIA: 1000,
-		topology: io.TopologySpec_{
-			links:  dict[io.AsIfsPair]io.AsIfsPair {
-				pair1: pair4,
-				pair2: pair5,
-				pair3: pair3,
-				pair4: pair1,
-				pair5: pair2}}}
+		links:  dict[io.AsIfsPair]io.AsIfsPair {
+			pair1: pair4,
+			pair2: pair5,
+			pair3: pair3,
+			pair4: pair1,
+			pair5: pair2}}
 
 	assert dp.Lookup(dp.Lookup(pair1)) == pair1
 	assert dp.Lookup(dp.Lookup(pair2)) == pair2
@@ -181,14 +179,14 @@ func testRun(
 	assert dp.Lookup(dp.Lookup(pair5)) == pair5
 
 	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
-		io.AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links)
+		io.AsIfsPair{dp.localIA, ifs} in domain(dp.links)
 	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
 		dp.Lookup(io.AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs]
-	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==>
+	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
 		ifs in domain(dp.neighborIAs)
-	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair in domain(dp.topology.links) ==>
+	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair in domain(dp.links) ==>
 			let next_pair := dp.Lookup(pair) in
-			(next_pair in domain(dp.topology.links)) &&
+			(next_pair in domain(dp.links)) &&
 			dp.Lookup(next_pair) == pair
 	assert domain(dp.linkTypes) == domain(dp.neighborIAs)
 	assert reveal dp.Valid()

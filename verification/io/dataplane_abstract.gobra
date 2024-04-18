@@ -16,22 +16,15 @@
 
 package io
 
+// links: representation of the network topology as a graph.
+//     `links[(a1,x)] == (a2,y)` means that the interface x of AS a1 is connected
+//     to the interface y of AS a2.
 type DataPlaneSpec adt {
 	DataPlaneSpec_{
 		linkTypes		dict[IO_ifs]IO_Link
 		neighborIAs		dict[IO_ifs]IO_as
 		localIA			IO_as
-		topology 		TopologySpec
-	}
-}
-
-// TopologySpec describes the entire network topology.
-// links: representation of the network topology as a graph.
-//     `links[(a1,x)] == (a2,y)` means that the interface x of AS a1 is connected
-//     to the interface y of AS a2.
-type TopologySpec adt {
-	TopologySpec_{
-		links		dict[AsIfsPair]AsIfsPair
+		links			dict[AsIfsPair]AsIfsPair
 	}
 }
 
@@ -45,13 +38,13 @@ opaque
 decreases
 pure func (dp DataPlaneSpec) Valid() bool {
 	return (forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==>
-			(AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) &&
+			(AsIfsPair{dp.localIA, ifs} in domain(dp.links) &&
 			dp.Lookup(AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])) &&
-		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==>
+		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
 			ifs in domain(dp.neighborIAs)) &&
-		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.topology.links) ==>
+		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.links) ==>
 			let next_pair := dp.Lookup(pairs) in
-			(next_pair in domain(dp.topology.links)) &&
+			(next_pair in domain(dp.links)) &&
 			dp.Lookup(next_pair) == pairs) &&
 			domain(dp.linkTypes) == domain(dp.neighborIAs)
 }
@@ -91,12 +84,12 @@ pure func (dp DataPlaneSpec) Asid() IO_as {
 ghost
 decreases
 pure func (dp DataPlaneSpec) GetLinks() dict[AsIfsPair]AsIfsPair {
-	return dp.topology.links
+	return dp.links
 }
 
 ghost
-requires pair in domain(dp.topology.links)
+requires pair in domain(dp.links)
 decreases
 pure func(dp DataPlaneSpec) Lookup(pair AsIfsPair) AsIfsPair {
-	return dp.topology.links[pair]
+	return dp.links[pair]
 }
