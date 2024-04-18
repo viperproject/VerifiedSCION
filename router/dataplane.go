@@ -141,7 +141,7 @@ type BatchConn interface {
 	// @ ensures  err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
 	// @ 		MsgToAbsVal(dp, &msgs[i], ingressID) == old(MultiReadBioIO_val(place, n)[i])
-	// TODO (Markus): uint16 or option[io.IO_ifs] for ingress
+	// TODO (VerifiedSCION): uint16 or option[io.IO_ifs] for ingress
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
@@ -2663,7 +2663,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost dp io.DataPla
 	// @ unfold acc(p.scionLayer.Mem(ub), R55)
 	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// TODO parameter problem invalid path
-		// TODO(joao): we currently expose a lot of internal information from slayers here. Can we avoid it?
+		// (VerifiedSCION) we currently expose a lot of internal information from slayers here. Can we avoid it?
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ unfold p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:])
 		// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
@@ -2674,14 +2674,14 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost dp io.DataPla
 	var err error
 	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		// @ fold p.scionLayer.Mem(ub)
+		// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
 	if p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		// @ fold p.scionLayer.Mem(ub)
+		// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
@@ -2692,6 +2692,8 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost dp io.DataPla
 	// @ TemporaryAssumeForIO(len(get(old(absPkt(dp, ub)).LeftSeg).History) == 0)
 	// @ TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub))
 	// @ TemporaryAssumeForIO(absPkt(dp, ub) == AbsDoXover(old(absPkt(dp, ub))))
+	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(dp, ub)))
+	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(dp, ub)))
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 	return processResult{}, nil
 }
@@ -3262,6 +3264,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 			return r, serrors.WithCtx(err, "info", "after xover") /*@, false, absReturnErr(dp, r) @*/
 		}
 		// @ assert AbsVerifyCurrentMACConstraint(nextPkt, dp)
+		// @ unfold acc(p.scionLayer.Mem(ub), R3)
 	}
 	// @ fold acc(p.scionLayer.Mem(ub), R3)
 	// @ assert p.segmentChange ==> nextPkt.RightSeg != none[io.IO_seg2]
@@ -3289,6 +3292,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
+		// @ TemporaryAssumeForIO(egressID != 0)
 		if err := p.processEgress( /*@ ub, dp @*/ ); err != nil {
 			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@, false, absReturnErr(dp, processResult{}) @*/
@@ -4121,8 +4125,7 @@ func decodeLayers(data []byte, base *slayers.SCION,
 
 				// ghost clean-up:
 				// @ ghost
-				// @ invariant 0 <= i0 && i0 <= len(opts)
-				// @ invariant -1 <= c && c <= i0
+				// @ invariant -1 <= c && c < i0
 				// @ invariant len(processed) == len(opts)
 				// @ invariant len(offsets) == len(opts)
 				// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], R10)
