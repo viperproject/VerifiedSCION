@@ -2667,7 +2667,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost dp io.DataPla
 	// @ unfold acc(p.scionLayer.Mem(ub), R55)
 	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// TODO parameter problem invalid path
-		// TODO(joao): we currently expose a lot of internal information from slayers here. Can we avoid it?
+		// (VerifiedSCION) we currently expose a lot of internal information from slayers here. Can we avoid it?
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ unfold p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:])
 		// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
