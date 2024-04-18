@@ -116,8 +116,8 @@ ensures  absPkt(dp, raw) == absPkt(dp, raw[:length])
 decreases
 func absPktWidenLemma(dp io.DataPlaneSpec, raw []byte, length int) {
 
-	_ := reveal slayers.ValidPktMetaHdr(raw)
-	_ := reveal slayers.ValidPktMetaHdr(raw[:length])
+	reveal slayers.ValidPktMetaHdr(raw)
+	reveal slayers.ValidPktMetaHdr(raw[:length])
 	headerOffset1 := slayers.GetAddressOffset(raw)
 	headerOffset2 := slayers.GetAddressOffset(raw[:length])
 
