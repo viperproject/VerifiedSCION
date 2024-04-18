@@ -1283,11 +1283,13 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ assert unfolding acc(d.Mem(), _) in
 	// @ 	d.dpSpecWellConfiguredLocalIA(dp)     &&
 	// @ 	d.dpSpecWellConfiguredNeighborIAs(dp) &&
-	// @ 	d.dpSpecWellConfiguredLinkTypes(dp)
+	// @ 	d.dpSpecWellConfiguredLinkTypes(dp)	  &&
+	// @	d.dpSpecWellConfiguredExternals(dp)
 	// @ unfold d.Mem()
 	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
 	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
 	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
+	// @ assert d.dpSpecWellConfiguredExternals(dp)
 
 	// @ preserves acc(&d.forwardingMetrics)
 	// @ preserves acc(&d.localIA, R20)
@@ -1350,6 +1352,7 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
 	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
 	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
+	// @ assert d.dpSpecWellConfiguredExternals(dp)
 	// @ fold d.Mem()
 	// @ reveal d.WellConfigured()
 	// @ assert reveal d.DpAgreesWithSpec(dp)
@@ -2281,8 +2284,6 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 		)
 	}
 
-	// @ TemporaryAssumeForIO(pktEgressID != 0 &&
-	// @	(io.IO_ifs(pktEgressID) in domain(dp.GetNeighborIAs())))
 	// @ p.d.getLinkTypesMem()
 	ingress, egress := p.d.linkTypes[p.ingressID], p.d.linkTypes[pktEgressID]
 	// @ p.d.LinkTypesLemma(dp)
@@ -3296,7 +3297,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
-		// @ TemporaryAssumeForIO(egressID != 0)
+		// @ p.d.EgressIDNotZeroLemma(egressID, dp)
 		if err := p.processEgress( /*@ ub, dp @*/ ); err != nil {
 			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@, false, absReturnErr(dp, processResult{}) @*/
