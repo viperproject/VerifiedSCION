@@ -3167,7 +3167,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ 	newAbsPkt.isIO_val_Unsupported
 // @ ensures (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-// @ #backend[moreJoins(1)]
+// @ #backend[stateConsolidationMode(6)]
 func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock *sync.Mutex, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
 	// @ ghost var oldPkt io.IO_pkt2
 	// @ ghost if(slayers.IsSupportedPkt(ub)) {
