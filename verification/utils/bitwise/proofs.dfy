@@ -163,3 +163,9 @@ lemma FPutUint32AfterFUint32(b0: bv8, b1: bv8, b2: bv8, b3: bv8)
 	ensures var v := FUint32Spec(b0, b1, b2, b3);
 		FPutUint32Spec(v) == (b0, b1, b2, b3)
 {}
+
+lemma FoldChecksumLemma(csum: bv32)
+	ensures csum > 0xffff ==>
+		var newCsum := (csum >> 16) + (csum & 0xffff);
+		newCsum < csum
+{}
