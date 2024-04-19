@@ -1078,9 +1078,11 @@ func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 
 // (VerifiedSCION) The following function terminates but Gobra can't
 // deduce that because of limited support of bitwise operations.
-// @ decreases _
+// @ decreases
 func (s *SCION) foldChecksum(csum uint32) (res uint16) {
+	// @ decreases csum
 	for csum > 0xffff {
+		// @ b.FoldChecksumLemma(csum)
 		csum = (csum >> 16) + (csum & 0xffff)
 	}
 	return ^uint16(csum)
