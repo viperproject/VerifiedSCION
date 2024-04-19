@@ -408,14 +408,13 @@ jobs:
       - name: Verify package 'router/' at io-spec.gobra:everywhere
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra@39,67,78,91,104,115,123,130,138,149,160,173,182,194 router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra@39,69,82,93,101,108,116,127,137,152,170,190,201 router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
-          chop: 10
           parallelizeBranches: '1'
           moreJoins: 'impure'
           # The following flag has a significant influence on the number of branches verified.
@@ -463,7 +462,7 @@ jobs:
       - name: Verify package 'router/' at io-spec-abstract-transitions.gobra:everywhere
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra@34,47,58,68,78,91,110,126,141,164,187,222 router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra@34,47,58,68,78,88,107,123,135,158,183,219 router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1292,15 +1291,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-1613:
+  verify-router-dataplane-1609:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:1613
+      - name: Verify package 'router/' at dataplane.go:1609
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1613 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1609 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1319,15 +1318,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-1649:
+  verify-router-dataplane-1645:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:1649
+      - name: Verify package 'router/' at dataplane.go:1645
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1649 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1645 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1346,15 +1345,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-1764:
+  verify-router-dataplane-1760:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:1764
+      - name: Verify package 'router/' at dataplane.go:1760
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1764 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1760 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1373,15 +1372,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-1782:
+  verify-router-dataplane-1778:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:1782
+      - name: Verify package 'router/' at dataplane.go:1778
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1782 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1778 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1400,15 +1399,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-1887:
+  verify-router-dataplane-1883:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:1887
+      - name: Verify package 'router/' at dataplane.go:1883
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1887 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1883 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1427,15 +1426,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-1946:
+  verify-router-dataplane-1942:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:1946
+      - name: Verify package 'router/' at dataplane.go:1942
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1946 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1942 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1454,15 +1453,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-1985:
+  verify-router-dataplane-1981:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:1985
+      - name: Verify package 'router/' at dataplane.go:1981
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1985 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@1981 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1481,15 +1480,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2037:
+  verify-router-dataplane-2033:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2037
+      - name: Verify package 'router/' at dataplane.go:2033
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2037 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2033 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1508,15 +1507,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2084:
+  verify-router-dataplane-2080:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2084
+      - name: Verify package 'router/' at dataplane.go:2080
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2084 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2080 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1535,15 +1534,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2143:
+  verify-router-dataplane-2139:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2143
+      - name: Verify package 'router/' at dataplane.go:2139
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2143 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2139 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1562,15 +1561,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2157:
+  verify-router-dataplane-2153:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2157
+      - name: Verify package 'router/' at dataplane.go:2153
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2157 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2153 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1589,15 +1588,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2196:
+  verify-router-dataplane-2192:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2196
+      - name: Verify package 'router/' at dataplane.go:2192
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2196 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2192 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1616,15 +1615,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2260:
+  verify-router-dataplane-2257:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2260
+      - name: Verify package 'router/' at dataplane.go:2257
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2260 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2257 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1643,15 +1642,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2375:
+  verify-router-dataplane-2370:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2375
+      - name: Verify package 'router/' at dataplane.go:2370
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2375 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2370 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1670,15 +1669,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2421:
+  verify-router-dataplane-2416:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2421
+      - name: Verify package 'router/' at dataplane.go:2416
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2421 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2416 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1697,15 +1696,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2441:
+  verify-router-dataplane-2436:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2441
+      - name: Verify package 'router/' at dataplane.go:2436
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2441 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2436 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1724,15 +1723,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2477:
+  verify-router-dataplane-2472:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2477
+      - name: Verify package 'router/' at dataplane.go:2472
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2477 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2472 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1751,15 +1750,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2533:
+  verify-router-dataplane-2528:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2533
+      - name: Verify package 'router/' at dataplane.go:2528
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2533 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2528 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1778,15 +1777,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2577:
+  verify-router-dataplane-2572:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2577
+      - name: Verify package 'router/' at dataplane.go:2572
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2577 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2572 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1805,15 +1804,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2654:
+  verify-router-dataplane-2649:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2654
+      - name: Verify package 'router/' at dataplane.go:2649
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2654 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2649 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1832,15 +1831,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2715:
+  verify-router-dataplane-2710:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2715
+      - name: Verify package 'router/' at dataplane.go:2710
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2715 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2710 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1859,15 +1858,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2747:
+  verify-router-dataplane-2742:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2747
+      - name: Verify package 'router/' at dataplane.go:2742
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2747 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2742 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1886,15 +1885,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2777:
+  verify-router-dataplane-2772:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2777
+      - name: Verify package 'router/' at dataplane.go:2772
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2777 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2772 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1913,15 +1912,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2847:
+  verify-router-dataplane-2842:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2847
+      - name: Verify package 'router/' at dataplane.go:2842
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2847 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2842 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1940,15 +1939,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2906:
+  verify-router-dataplane-2901:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2906
+      - name: Verify package 'router/' at dataplane.go:2901
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2906 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2901 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1967,15 +1966,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-2951:
+  verify-router-dataplane-2946:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:2951
+      - name: Verify package 'router/' at dataplane.go:2946
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2951 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@2946 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -1994,15 +1993,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3010:
+  verify-router-dataplane-3005:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3010
+      - name: Verify package 'router/' at dataplane.go:3005
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3010 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3005 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2021,15 +2020,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3033:
+  verify-router-dataplane-3028:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3033
+      - name: Verify package 'router/' at dataplane.go:3028
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3033 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3028 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2048,15 +2047,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3096:
+  verify-router-dataplane-3091:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3096
+      - name: Verify package 'router/' at dataplane.go:3091
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3096 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3091 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2075,15 +2074,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3171:
+  verify-router-dataplane-3166:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3171
+      - name: Verify package 'router/' at dataplane.go:3166
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3171 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3166 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2102,15 +2101,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3394:
+  verify-router-dataplane-3389:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3394
+      - name: Verify package 'router/' at dataplane.go:3389
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3394 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3389 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2129,15 +2128,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3459:
+  verify-router-dataplane-3454:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3459
+      - name: Verify package 'router/' at dataplane.go:3454
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3459 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3454 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2156,15 +2155,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3461:
+  verify-router-dataplane-3456:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3461
+      - name: Verify package 'router/' at dataplane.go:3456
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3461 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3456 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2183,15 +2182,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3593:
+  verify-router-dataplane-3588:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3593
+      - name: Verify package 'router/' at dataplane.go:3588
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3593 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3588 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2210,15 +2209,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3638:
+  verify-router-dataplane-3633:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3638
+      - name: Verify package 'router/' at dataplane.go:3633
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3638 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3633 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2237,15 +2236,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3670:
+  verify-router-dataplane-3665:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3670
+      - name: Verify package 'router/' at dataplane.go:3665
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3670 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3665 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2264,15 +2263,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3711:
+  verify-router-dataplane-3706:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3711
+      - name: Verify package 'router/' at dataplane.go:3706
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3711 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3706 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2291,15 +2290,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3763:
+  verify-router-dataplane-3758:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3763
+      - name: Verify package 'router/' at dataplane.go:3758
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3763 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3758 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2318,15 +2317,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3774:
+  verify-router-dataplane-3769:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3774
+      - name: Verify package 'router/' at dataplane.go:3769
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3774 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3769 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2345,15 +2344,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3800:
+  verify-router-dataplane-3795:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3800
+      - name: Verify package 'router/' at dataplane.go:3795
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3800 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3795 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2372,15 +2371,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-3927:
+  verify-router-dataplane-3922:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:3927
+      - name: Verify package 'router/' at dataplane.go:3922
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3927 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@3922 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2399,15 +2398,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-4058:
+  verify-router-dataplane-4053:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:4058
+      - name: Verify package 'router/' at dataplane.go:4053
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4058 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4053 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2426,15 +2425,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-4174:
+  verify-router-dataplane-4169:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:4174
+      - name: Verify package 'router/' at dataplane.go:4169
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4174 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4169 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2453,15 +2452,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-4201:
+  verify-router-dataplane-4196:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:4201
+      - name: Verify package 'router/' at dataplane.go:4196
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4201 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4196 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2480,15 +2479,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-4222:
+  verify-router-dataplane-4217:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:4222
+      - name: Verify package 'router/' at dataplane.go:4217
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4222 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4217 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2507,15 +2506,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane-4244:
+  verify-router-dataplane-4239:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane.go:4244
+      - name: Verify package 'router/' at dataplane.go:4239
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4244 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go@4239 router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2885,15 +2884,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-259:
+  verify-router-dataplane_spec-258:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:259
+      - name: Verify package 'router/' at dataplane_spec.gobra:258
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@259 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@258 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2939,15 +2938,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-278:
+  verify-router-dataplane_spec-277:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:278
+      - name: Verify package 'router/' at dataplane_spec.gobra:277
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@278 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@277 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2966,15 +2965,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-298:
+  verify-router-dataplane_spec-288:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:298
+      - name: Verify package 'router/' at dataplane_spec.gobra:288
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@298 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@288 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -2993,15 +2992,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-307:
+  verify-router-dataplane_spec-302:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:307
+      - name: Verify package 'router/' at dataplane_spec.gobra:302
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@307 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@302 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3020,15 +3019,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-315:
+  verify-router-dataplane_spec-322:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:315
+      - name: Verify package 'router/' at dataplane_spec.gobra:322
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@315 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@322 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3047,15 +3046,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-324:
+  verify-router-dataplane_spec-331:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:324
+      - name: Verify package 'router/' at dataplane_spec.gobra:331
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@324 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@331 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3074,15 +3073,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-333:
+  verify-router-dataplane_spec-339:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:333
+      - name: Verify package 'router/' at dataplane_spec.gobra:339
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@333 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@339 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3101,15 +3100,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-341:
+  verify-router-dataplane_spec-348:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:341
+      - name: Verify package 'router/' at dataplane_spec.gobra:348
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@341 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@348 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3128,15 +3127,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-349:
+  verify-router-dataplane_spec-357:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:349
+      - name: Verify package 'router/' at dataplane_spec.gobra:357
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@349 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@357 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3155,15 +3154,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-356:
+  verify-router-dataplane_spec-365:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:356
+      - name: Verify package 'router/' at dataplane_spec.gobra:365
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@356 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@365 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3182,15 +3181,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-363:
+  verify-router-dataplane_spec-373:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:363
+      - name: Verify package 'router/' at dataplane_spec.gobra:373
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@363 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@373 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3209,15 +3208,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-372:
+  verify-router-dataplane_spec-380:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:372
+      - name: Verify package 'router/' at dataplane_spec.gobra:380
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@372 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@380 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3236,15 +3235,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-381:
+  verify-router-dataplane_spec-387:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:381
+      - name: Verify package 'router/' at dataplane_spec.gobra:387
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@381 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@387 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3263,15 +3262,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-388:
+  verify-router-dataplane_spec-396:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:388
+      - name: Verify package 'router/' at dataplane_spec.gobra:396
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@388 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@396 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3290,15 +3289,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-399:
+  verify-router-dataplane_spec-405:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:399
+      - name: Verify package 'router/' at dataplane_spec.gobra:405
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@399 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@405 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3317,15 +3316,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-409:
+  verify-router-dataplane_spec-412:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:409
+      - name: Verify package 'router/' at dataplane_spec.gobra:412
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@409 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@412 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3344,15 +3343,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-420:
+  verify-router-dataplane_spec-423:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:420
+      - name: Verify package 'router/' at dataplane_spec.gobra:423
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@420 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@423 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3371,15 +3370,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-428:
+  verify-router-dataplane_spec-433:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:428
+      - name: Verify package 'router/' at dataplane_spec.gobra:433
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@428 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@433 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3398,15 +3397,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-436:
+  verify-router-dataplane_spec-444:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:436
+      - name: Verify package 'router/' at dataplane_spec.gobra:444
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@436 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@444 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3425,15 +3424,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-447:
+  verify-router-dataplane_spec-452:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:447
+      - name: Verify package 'router/' at dataplane_spec.gobra:452
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@447 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@452 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3452,15 +3451,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-455:
+  verify-router-dataplane_spec-460:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:455
+      - name: Verify package 'router/' at dataplane_spec.gobra:460
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@455 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@460 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3479,15 +3478,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-466:
+  verify-router-dataplane_spec-471:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:466
+      - name: Verify package 'router/' at dataplane_spec.gobra:471
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@466 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@471 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3506,15 +3505,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-474:
+  verify-router-dataplane_spec-479:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:474
+      - name: Verify package 'router/' at dataplane_spec.gobra:479
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@474 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@479 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3533,15 +3532,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-488:
+  verify-router-dataplane_spec-490:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:488
+      - name: Verify package 'router/' at dataplane_spec.gobra:490
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@488 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@490 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3560,15 +3559,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-515:
+  verify-router-dataplane_spec-498:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:515
+      - name: Verify package 'router/' at dataplane_spec.gobra:498
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@515 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@498 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3587,15 +3586,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-526:
+  verify-router-dataplane_spec-512:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:526
+      - name: Verify package 'router/' at dataplane_spec.gobra:512
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@526 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@512 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3614,15 +3613,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-533:
+  verify-router-dataplane_spec-539:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:533
+      - name: Verify package 'router/' at dataplane_spec.gobra:539
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@533 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@539 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3641,15 +3640,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-569:
+  verify-router-dataplane_spec-550:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:569
+      - name: Verify package 'router/' at dataplane_spec.gobra:550
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@569 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@550 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3668,15 +3667,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-576:
+  verify-router-dataplane_spec-557:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:576
+      - name: Verify package 'router/' at dataplane_spec.gobra:557
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@576 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@557 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3695,15 +3694,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-583:
+  verify-router-dataplane_spec-593:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:583
+      - name: Verify package 'router/' at dataplane_spec.gobra:593
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@583 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@593 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3722,15 +3721,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-590:
+  verify-router-dataplane_spec-600:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:590
+      - name: Verify package 'router/' at dataplane_spec.gobra:600
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@590 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@600 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3749,15 +3748,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-597:
+  verify-router-dataplane_spec-607:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:597
+      - name: Verify package 'router/' at dataplane_spec.gobra:607
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@597 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@607 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3776,15 +3775,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-604:
+  verify-router-dataplane_spec-614:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:604
+      - name: Verify package 'router/' at dataplane_spec.gobra:614
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@604 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@614 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3803,15 +3802,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-618:
+  verify-router-dataplane_spec-621:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:618
+      - name: Verify package 'router/' at dataplane_spec.gobra:621
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@618 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@621 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3830,15 +3829,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-658:
+  verify-router-dataplane_spec-628:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:658
+      - name: Verify package 'router/' at dataplane_spec.gobra:628
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@658 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@628 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3857,15 +3856,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-669:
+  verify-router-dataplane_spec-642:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:669
+      - name: Verify package 'router/' at dataplane_spec.gobra:642
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@669 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@642 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3884,15 +3883,15 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-683:
+  verify-router-dataplane_spec-682:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:683
+      - name: Verify package 'router/' at dataplane_spec.gobra:682
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@683 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@682 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3938,15 +3937,69 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-dataplane_spec-701:
+  verify-router-dataplane_spec-707:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at dataplane_spec.gobra:701
+      - name: Verify package 'router/' at dataplane_spec.gobra:707
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@701 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@707 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          moreJoins: 'impure'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-dataplane_spec-717:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at dataplane_spec.gobra:717
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@717 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          moreJoins: 'impure'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-dataplane_spec-725:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at dataplane_spec.gobra:725
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra@725 router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -3973,7 +4026,7 @@ jobs:
       - name: Verify package 'router/' at dataplane_spec_test.gobra:everywhere
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra@33,43,52,56,77,90,91,224,227 router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra@33,43,52,56,77,90,91,236,239 router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
