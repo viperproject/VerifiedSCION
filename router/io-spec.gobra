@@ -39,8 +39,6 @@ decreases
 pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetAddressOffset(raw) in
-		let _ := Asserting(forall k int :: {&raw[headerOffset:headerOffset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
-			&raw[headerOffset:headerOffset+scion.MetaLen][k] == &raw[headerOffset + k]) in
 		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
 			binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen])) in
 		let metaHdr := scion.DecodedFrom(hdr) in
