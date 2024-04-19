@@ -415,6 +415,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          chop: 10
           parallelizeBranches: '1'
           moreJoins: 'impure'
           # The following flag has a significant influence on the number of branches verified.

@@ -77,10 +77,7 @@ requires len(pkt.CurrSeg.Future) > 0
 decreases
 pure func AbsValidateEgressIDConstraint(pkt io.IO_pkt2, enter bool, dp io.DataPlaneSpec) bool {
 	return let currseg := pkt.CurrSeg in
-		let nextIf := (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2) in
-		(enter ==> dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), currseg.Future[0])) &&
-		nextIf != none[io.IO_ifs] &&
-		(get(nextIf) in domain(dp.GetNeighborIAs()))
+		(enter ==> dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), currseg.Future[0]))
 }
 
 ghost
@@ -126,11 +123,8 @@ decreases
 pure func AbsValidateEgressIDConstraintXover(pkt io.IO_pkt2, dp io.DataPlaneSpec) bool {
 	return let currseg := pkt.CurrSeg in
 		let rightseg := get(pkt.RightSeg) in
-		let nextIf := (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2) in
 		dp.xover2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
-			currseg.ConsDir, currseg.Future[0]) &&
-		nextIf != none[io.IO_ifs] &&
-		(get(nextIf) in domain(dp.GetNeighborIAs()))
+			currseg.ConsDir, currseg.Future[0])
 }
 
 ghost
@@ -173,6 +167,8 @@ func InternalEnterEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt i
 
 ghost
 requires  dp.Valid()
+requires  egressID != none[io.IO_ifs]
+requires  get(egressID) in domain(dp.GetNeighborIAs())
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires  AbsValidateIngressIDConstraint(oldPkt, ingressID)
@@ -212,6 +208,7 @@ requires  len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).Fu
 requires  len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).History) == 0
 requires  AbsVerifyCurrentMACConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
 requires  AbsValidateEgressIDConstraintXover(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
+requires  egressID != none[io.IO_ifs] ==> get(egressID) in domain(dp.GetNeighborIAs())
 requires  egressID != none[io.IO_ifs] ==> AbsEgressInterfaceConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), egressID)
 requires  egressID == none[io.IO_ifs] ==> newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
 requires  egressID != none[io.IO_ifs] ==> newPkt == AbsProcessEgress(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)))

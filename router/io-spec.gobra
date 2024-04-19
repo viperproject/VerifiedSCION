@@ -62,28 +62,6 @@ pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 }
 
 ghost
-requires len(hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
-decreases
-pure func hvfSet(hopfield io.IO_HF) set[io.IO_msgterm] {
-	return let l := hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_ in
-		l[len(l) - 1].MsgTerm_FS_
-}
-
-ghost
-requires 0 < len(hopfields)
-requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
-requires forall idx int :: {hopfields[idx]} 0 <= idx && idx < len(hopfields) ==>
-	len(hopfields[idx].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
-decreases
-pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_msgterm] {
-	return currHFIdx + 1 >= len(hopfields) ?
-		hvfSet(hopfields[len(hopfields)-1]) :
-		(consDir ?
-			hvfSet(hopfields[currHFIdx]) :
-			hvfSet(hopfields[currHFIdx+1]))
-}
-
-ghost
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Unsupported
 ensures val.IO_val_Unsupported_1 == path.ifsToIO_ifs(ingressID)
@@ -147,8 +125,7 @@ ghost
 requires acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool {
-	return !(0 in domain(d.linkTypes)) &&
-		forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
+	return forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
 		io.IO_ifs(ifs) in domain(dp.GetLinkTypes()) &&
 		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.IO_ifs(ifs))
 }
@@ -167,12 +144,54 @@ pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 ghost
 requires acc(d.Mem(), _)
 requires d.DpAgreesWithSpec(dp)
-ensures acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
-ensures d.dpSpecWellConfiguredLinkTypes(dp)
+requires d.WellConfigured()
+ensures  acc(&d.linkTypes, _)
+ensures  d.linkTypes != nil ==> acc(d.linkTypes, _) && !(0 in domain(d.linkTypes))
+ensures  d.dpSpecWellConfiguredLinkTypes(dp)
 decreases
 func (d *DataPlane) LinkTypesLemma(dp io.DataPlaneSpec) {
+	reveal d.WellConfigured()
 	reveal d.DpAgreesWithSpec(dp)
+	assert !(0 in d.getDomLinkTypes())
 	unfold acc(d.Mem(), _)
+	assert !(0 in domain(d.linkTypes))
+}
+
+ghost
+requires acc(d.Mem(), _)
+requires d.DpAgreesWithSpec(dp)
+requires d.WellConfigured()
+requires acc(&d.external, _)
+requires acc(d.external, _)
+requires egressID in domain(d.external)
+ensures  egressID != 0
+ensures  io.IO_ifs(egressID) in domain(dp.GetNeighborIAs())
+decreases
+func (d *DataPlane) EgressIDNotZeroLemma(egressID uint16, dp io.DataPlaneSpec) {
+	reveal d.WellConfigured()
+	reveal d.DpAgreesWithSpec(dp)
+	d.getDomExternalLemma()
+	assert d.getDomExternal() == domain(d.external)
+	assert egressID in d.getDomExternal()
+	assert d.getDomNeighborIAs() == d.getDomExternal()
+	assert io.IO_ifs(egressID) in domain(dp.GetNeighborIAs())
+	assert egressID != 0
+}
+
+ghost
+requires acc(d.Mem(), _)
+requires acc(&d.external, _)
+requires acc(d.external, _)
+ensures  acc(d.Mem(), _)
+ensures  acc(&d.external, _)
+ensures  acc(d.external, _)
+ensures  d.getDomExternal() == domain(d.external)
+decreases
+func (d *DataPlane) getDomExternalLemma() {
+	assert d.external != nil
+	assert d.getDomExternal() == unfolding acc(d.Mem(), _) in
+		(unfolding acc(accBatchConn(d.external), _) in
+				domain(d.external))
 }
 
 ghost
@@ -183,12 +202,3 @@ pure func MsgToAbsVal(dp io.DataPlaneSpec, msg *ipv4.Message, ingressID uint16) 
 	return unfolding acc(msg.Mem(), R50) in
 		absIO_val(dp, msg.Buffers[0], ingressID)
 }
-
-// This assumption will be dropped as soon as we can establish that the contents
-// of the underlying buffer did not change between the call to `decodeLayers` and
-// `p.processSCION` in the function `processPkt` in the router.
-ghost
-ensures absPkt.isIO_val_Pkt2 ==>
-	ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(ingressID), absPkt.IO_val_Pkt2_2)
-decreases
-func TemporaryAssumeForIOWitness(absPkt io.IO_val, ingressID uint16, ioSharedArg SharedArg)
