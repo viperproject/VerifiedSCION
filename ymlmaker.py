@@ -80,7 +80,7 @@ def get_files(fname, line):
     files = os.listdir("router/")
 
 files = [f for f in os.listdir("router/") if (f.endswith(".go") or f.endswith(".gobra")) and has_header(f"router/{f}")]
-files_to_split = ["dataplane.go", "dataplane_spec.gobra"]
+files_to_split = ["dataplane.go", "dataplane_spec.gobra", "widen-lemma.gobra"]
 
 with open("metagobra.yml", 'r') as fhandle:
     prefix = fhandle.read()

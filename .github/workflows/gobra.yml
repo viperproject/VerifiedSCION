@@ -4014,15 +4014,275 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-  verify-router-widen-lemma-everywhere:
+  verify-router-widen-lemma-41:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify package 'router/' at widen-lemma.gobra:everywhere
+      - name: Verify package 'router/' at widen-lemma.gobra:41
         uses: viperproject/gobra-action@main
         with:
-          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@41,73,93,117,222,265,305,328,363,399,436
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@41
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-73:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:73
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@73
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-93:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:93
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@93
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-117:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:117
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@117
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-222:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:222
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@222
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-265:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:265
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@265
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-305:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:305
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@305
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-328:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:328
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@328
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-363:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:363
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@363
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-399:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:399
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@399
+          timeout: 6h
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: ${{ env.includePaths }}
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: '1'
+          # The following flag has a significant influence on the number of branches verified.
+          # Without it, verification would take a lot longer.
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: 'on'
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: '0'
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: '0'
+  verify-router-widen-lemma-436:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify package 'router/' at widen-lemma.gobra:436
+        uses: viperproject/gobra-action@main
+        with:
+          files: router/io-spec.gobra router/svc_spec_test.gobra router/io-spec-abstract-transitions.gobra router/dataplane.go router/svc_spec.gobra router/svc.go router/io-spec-atomic-events.gobra router/dataplane_spec.gobra router/dataplane_spec_test.gobra router/io-spec-non-proven-lemmas.gobra router/bfd_spec.gobra router/metrics_spec_test.gobra router/dataplane_concurrency_model.gobra router/metrics_spec.gobra router/assumptions.gobra router/metrics.go router/widen-lemma.gobra@436
           timeout: 6h
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
