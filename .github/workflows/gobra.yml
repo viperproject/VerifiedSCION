@@ -20,7 +20,7 @@ env:
   parallelizeBranches: '0'
   checkConsistency: '1'
   imageVersion: 'latest'
-  mceMode: 'od'
+  mceMode: 'off'
   requireTriggers: '1'
   useZ3API: '0'
   viperBackend: 'SILICON'
@@ -420,7 +420,7 @@ jobs:
           conditionalizePermissions: '0'
           moreJoins: 'impure'
           imageVersion: ${{ env.imageVersion }}
-          mceMode: 'on'
+          mceMode: 'off'
           requireTriggers: ${{ env.requireTriggers }}
           overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
