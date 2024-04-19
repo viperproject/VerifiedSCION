@@ -2240,6 +2240,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires  dp.Valid()
+// @ requires  p.d.WellConfigured()
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  len(oldPkt.CurrSeg.Future) > 0
 // @ requires  p.EqAbsHopField(oldPkt)
@@ -2277,8 +2278,6 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 		)
 	}
 
-	// @ TemporaryAssumeForIO(pktEgressID != 0 &&
-	// @	(io.IO_ifs(pktEgressID) in domain(dp.GetNeighborIAs())))
 	// @ p.d.getLinkTypesMem()
 	ingress, egress := p.d.linkTypes[p.ingressID], p.d.linkTypes[pktEgressID]
 	// @ p.d.LinkTypesLemma(dp)
@@ -3292,7 +3291,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
-		// @ TemporaryAssumeForIO(egressID != 0)
+		// @ p.d.EgressIDNotZeroLemma(egressID, dp)
 		if err := p.processEgress( /*@ ub, dp @*/ ); err != nil {
 			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@, false, absReturnErr(dp, processResult{}) @*/
