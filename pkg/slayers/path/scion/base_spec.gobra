@@ -40,8 +40,8 @@ pred (b *Base) Mem() {
 	acc(&b.PathMeta.SegLen[0]) &&
 	acc(&b.PathMeta.SegLen[1]) &&
 	acc(&b.PathMeta.SegLen[2]) &&
-	0 <= b.NumINF && b.NumINF <= MaxINFs &&
-	0 <= b.NumHops &&
+	0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
+	0 <= b.NumHops && b.NumHops <= MaxHops &&
 	(0 < b.NumINF ==> 0 < b.NumHops)
 }
 

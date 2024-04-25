@@ -2112,7 +2112,7 @@ func (p *scionPacketProcessor) validateIngressID( /*@ ghost oldPkt io.IO_pkt2, g
 			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 			serrors.New("ingress interface invalid",
 				"pkt_ingress", pktIngressID, "router_ingress", p.ingressID),
-			/*@ nil , nil, 0, 0, dp @*/
+			/*@ nil , nil, 0, 0, dp, @*/
 		)
 	}
 	// @ reveal p.EqAbsHopField(oldPkt)
@@ -2227,7 +2227,7 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghos
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures    reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) invalidSrcIA( /*@ ghost ub, ghost ubLL []byte, ghost startLL, ghost endLL int, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) invalidSrcIA( /*@ ghost ub []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	// @ establishInvalidSrcIA()
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
@@ -2269,7 +2269,7 @@ func (p *scionPacketProcessor) invalidSrcIA( /*@ ghost ub, ghost ubLL []byte, gh
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures    reserr != nil ==> reserr.ErrorMem()
 // @ decreases
-func (p *scionPacketProcessor) invalidDstIA( /*@ ghost ub, ghost ubLL []byte, ghost startLL, ghost endLL int, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) invalidDstIA( /*@ ghost ub []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	// @ establishInvalidDstIA()
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
@@ -2394,7 +2394,7 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 			errCode,
 			&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
 			cannotRoute,
-			/*@ nil, nil, 0, 0, dp @*/
+			/*@ nil, nil, 0, 0, dp, @*/
 		)
 	}
 
