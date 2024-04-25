@@ -1906,7 +1906,7 @@ type macBuffersT struct {
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures    reserr != nil ==> reserr.ErrorMem()
 // @ ensures    reserr != nil && respr.OutPkt != nil ==>
-// @ 	absIO_val(dp, respr.OutPkt, respr.EgressID).isIO_val_Unsupported
+// @ 	!slayers.IsSupportedPkt(respr.OutPkt)
 // @ decreases
 func (p *scionPacketProcessor) packSCMP(
 	typ slayers.SCMPType,
@@ -1929,17 +1929,15 @@ func (p *scionPacketProcessor) packSCMP(
 		var scmpLayer /*@@@*/ slayers.SCMP
 		// @ fold scmpLayer.NonInitMem()
 		pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ubLL @*/ )
-		/*@
-		sl.SplitRange_Bytes(ub, startLL, endLL, writePerm)
-		maybeStartPld = start
-		maybeEndPld = end
-		if pld == nil {
-			scmpPldIsNil = true
-			fold sl.AbsSlice_Bytes(nil, 0, 0)
-		} else {
-			sl.SplitRange_Bytes(ubLL, start, end, writePerm)
-		}
-		@*/
+		// @ sl.SplitRange_Bytes(ub, startLL, endLL, writePerm)
+		// @ maybeStartPld = start
+		// @ maybeEndPld = end
+		// @ if pld == nil {
+		// @ 	scmpPldIsNil = true
+		// @ 	fold sl.AbsSlice_Bytes(nil, 0, 0)
+		// @ } else {
+		// @ 	sl.SplitRange_Bytes(ubLL, start, end, writePerm)
+		// @ }
 		// @ gopacket.AssertInvariantNilDecodeFeedback()
 		err := scmpLayer.DecodeFromBytes(pld, gopacket.NilDecodeFeedback)
 		if err != nil {
@@ -1956,14 +1954,12 @@ func (p *scionPacketProcessor) packSCMP(
 		}
 	}
 
-	/*@
-	ghost if llIsScmp {
-		ghost if !scmpPldIsNil {
-			sl.CombineRange_Bytes(ubLL, maybeStartPld, maybeEndPld, writePerm)
-		}
-		sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
-	}
-	@*/
+	// @ ghost if llIsScmp {
+	// @ 	ghost if !scmpPldIsNil {
+	// @ 		sl.CombineRange_Bytes(ubLL, maybeStartPld, maybeEndPld, writePerm)
+	// @ 	}
+	// @ 	sl.CombineRange_Bytes(ub, startLL, endLL, writePerm)
+	// @ }
 	rawSCMP, err := p.prepareSCMP(typ, code, scmpP, cause /*@ , ub @*/)
 	// @ ghost result := processResult{OutPkt: rawSCMP}
 	// @ fold p.d.validResult(result, false)
@@ -3924,12 +3920,13 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 	return err
 }
 
-// @ requires  acc(&p.d, _) && acc(p.d.Mem(), _)
+// @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R4)
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires  acc(&p.ingressID,  R15)
 // @ requires  acc(&p.buffer, R55) && p.buffer.Mem()
+// @ ensures   acc(&p.d, R50)
 // @ ensures   acc(p.scionLayer.Mem(ub), R4)
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.ingressID,  R15)
@@ -3940,6 +3937,8 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ ensures   result == nil ==>
 // @ 	p.buffer.Mem()
 // @ ensures   reserr != nil && reserr.ErrorMem()
+// @ ensures   reserr != nil && result != nil ==>
+// @ 	!slayers.IsSupportedPkt(result)
 // @ decreases
 func (p *scionPacketProcessor) prepareSCMP(
 	typ slayers.SCMPType,
