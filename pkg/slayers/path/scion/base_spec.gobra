@@ -362,6 +362,15 @@ pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
 }
 
 ghost
+requires acc(s.Mem(), _)
+requires acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
+decreases
+pure func (s *Base) DecodeFromBytesSpec(b []byte) bool {
+	return unfolding acc(s.Mem(), _) in
+		s.PathMeta.DecodeFromBytesSpec(b)
+}
+
+ghost
 decreases
 pure func (m MetaHdr) SegsInBounds() bool {
 	return 0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&

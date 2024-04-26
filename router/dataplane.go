@@ -1972,6 +1972,10 @@ func (p *scionPacketProcessor) packSCMP(
 // @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.hopField) && acc(&p.infoField)
 // @ requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
+// pres for IO-spec
+// @ requires  dp.Valid()
+// @ requires  slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ requires  len(absPkt(dp, ub).CurrSeg.Future) > 0
 // @ ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
 // @ ensures   acc(&p.d, R50)
 // @ ensures   acc(p.scionLayer.Mem(ub), R6)
@@ -1980,20 +1984,17 @@ func (p *scionPacketProcessor) packSCMP(
 // @ ensures   acc(&p.hopField) && acc(&p.infoField)
 // @ ensures   respr === processResult{}
 // @ ensures   reserr == nil ==> (
-// @	let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @	p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath))
+// @ 	let ubPath := p.scionLayer.UBPath(ub) in
+// @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
+// @ 	p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath))
 // @ ensures   acc(p.scionLayer.Mem(ub), R6)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   reserr == nil ==> (
-// @	let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), R10) in
+// @ 	let ubPath := p.scionLayer.UBPath(ub) in
+// @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
 // @ 	p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// contracts for IO-spec
-// @ requires  dp.Valid()
-// @ requires  slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ requires  len(absPkt(dp, ub).CurrSeg.Future) > 0
+// posts for IO-spec
 // @ ensures   dp.Valid()
 // @ ensures   reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   reserr == nil ==> len(absPkt(dp, ub).CurrSeg.Future) > 0
@@ -4232,15 +4233,15 @@ func decodeLayers(data []byte, base *slayers.SCION,
 	// @ invariant idx == -1 ==> (last === base && oldStart == 0 && oldEnd == len(oldData))
 	// @ invariant 0 <= idx ==> (processed[idx] && last === opts[idx])
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-	// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+	// @ 	(processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-	// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
+	// @ 	((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-	// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+	// @ 	((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && i0 <= i && i < len(opts) ==>
-	// @     !processed[i]
+	// @ 	!processed[i]
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-	// @     (!processed[i] ==> opts[i].NonInitMem())
+	// @ 	(!processed[i] ==> opts[i].NonInitMem())
 	// @ invariant gopacket.NilDecodeFeedback.Mem()
 	// @ invariant 0 <= oldStart && oldStart <= oldEnd && oldEnd <= len(oldData)
 	// @ decreases len(opts) - i0
@@ -4250,11 +4251,11 @@ func decodeLayers(data []byte, base *slayers.SCION,
 		// @ ghost var pos offsetPair
 		// @ ghost var ub []byte
 		// @ ghost if idx == -1 {
-		// @     pos = offsetPair{0, len(oldData), false}
-		// @     ub = oldData
+		// @ 	pos = offsetPair{0, len(oldData), false}
+		// @ 	ub = oldData
 		// @ } else {
-		// @     pos = offsets[idx]
-		// @     if pos.isNil { ub = nil } else { ub  = oldData[pos.start:pos.end] }
+		// @ 	pos = offsets[idx]
+		// @ 	if pos.isNil { ub = nil } else { ub  = oldData[pos.start:pos.end] }
 		// @ }
 		if layerClassTmp.Contains(last.NextLayerType( /*@ ub @*/ )) {
 			data /*@ , start, end @*/ := last.LayerPayload( /*@ ub @*/ )
@@ -4264,7 +4265,7 @@ func decodeLayers(data []byte, base *slayers.SCION,
 			// @ ghost if data == nil {
 			// @ 	sl.NilAcc_Bytes()
 			// @ } else {
-			// @	sl.SplitRange_Bytes(oldData, oldStart, oldEnd, R40)
+			// @ 	sl.SplitRange_Bytes(oldData, oldStart, oldEnd, R40)
 			// @ }
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 				// @ ghost if data != nil { sl.CombineRange_Bytes(oldData, oldStart, oldEnd, R40) }
@@ -4279,22 +4280,22 @@ func decodeLayers(data []byte, base *slayers.SCION,
 				// @ invariant forall i, j int :: {&opts[i], &opts[j]} 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
 				// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> opts[i] != nil
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-				// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(oldData)))
+				// @ 	(processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(oldData)))
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-				// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
+				// @ 	((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-				// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+				// @ 	((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-				// @     (!processed[i] ==> opts[i].NonInitMem())
+				// @ 	(!processed[i] ==> opts[i].NonInitMem())
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && c < i && i < len(opts) ==>
-				// @     !processed[i]
+				// @ 	!processed[i]
 				// @ decreases c
 				// @ for c := i0-1; 0 <= c; c=c-1 {
-				// @	if processed[c] {
-				// @		off := offsets[c]
-				// @        if off.isNil {
+				// @ 	if processed[c] {
+				// @ 		off := offsets[c]
+				// @ 		if off.isNil {
 				// @ 			opts[c].DowngradePerm(nil)
-				// @		} else {
+				// @ 		} else {
 				// @ 			opts[c].DowngradePerm(oldData[off.start:off.end])
 				// @ 		}
 				// @ 	}

@@ -418,11 +418,11 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		// @ fold s.NonInitMem()
 		return err
 	}
-	/*@ ghost if typeOf(s.Path) == type[*onehop.Path] {
-		s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
-		assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
-		assert CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(data[offset : offset+pathLen]) <= len(data)
-	} @*/
+	// @ ghost if typeOf(s.Path) == type[*onehop.Path] {
+	// @ 	s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
+	// @ 	assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
+	// @ 	assert CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(data[offset : offset+pathLen]) <= len(data)
+	// @ }
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
 
