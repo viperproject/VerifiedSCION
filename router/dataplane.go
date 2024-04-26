@@ -2030,19 +2030,23 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte, ghost dp io.DataP
 }
 
 // HERE
+// @ requires  dp.Valid()
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
+// @ preserves acc(&p.path, R20)
+// @ preserves acc(&p.ingressID, R20)
 // @ preserves acc(&p.d, R50) && acc(p.d.Mem(), _)
+// @ preserves acc(p.scionLayer.Mem(ubScionL), R3)
+// @ preserves p.path == p.scionLayer.GetPath(ubScionL)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   respr.OutPkt != nil ==>
 // @ 	reserr != nil && sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// contracts for IO-spec
-// @ requires  dp.Valid()
+// posts for IO
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(dp, respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases
-func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost dp io.DataPlaneSpec, ghost ubScionL []byte @*/ ) (respr processResult, reserr error) {
 	expiration := util.SecsToTime(p.infoField.Timestamp).
 		Add(path.ExpTimeToDuration(p.hopField.ExpTime))
 	expired := expiration.Before(time.Now())
@@ -2050,7 +2054,7 @@ func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost dp io.DataPlaneSpec 
 		// @ fold p.d.validResult(respr, false)
 		return processResult{}, nil
 	}
-	// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
+	// ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 	// (VerifiedSCION): adapt; note that packSCMP always returns an empty addr and conn and
 	// when the err is nil, it returns the bytes of p.buffer. This should be a magic wand
 	// that is consumed after sending the reply. For now, we are making this simplifying
@@ -2064,9 +2068,17 @@ func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost dp io.DataPlaneSpec 
 	return p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
 		slayers.SCMPCodePathExpired,
-		&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ nil @*/ )},
-		serrors.New("expired hop", "cons_dir", p.infoField.ConsDir, "if_id", p.ingressID,
-			"curr_inf", p.path.PathMeta.CurrINF, "curr_hf", p.path.PathMeta.CurrHF),
+		&slayers.SCMPParameterProblem{Pointer: p.currentHopPointer( /*@ ubScionL @*/ )},
+		serrors.New(
+			"expired hop",
+			"cons_dir",
+			/*@ unfolding acc(p.scionLayer.Mem(ubScionL), R20) in @*/ p.infoField.ConsDir,
+			"if_id",
+			p.ingressID,
+			"curr_inf",
+			/*@ unfolding acc(p.scionLayer.Mem(ubScionL), R20) in @*/ p.path.PathMeta.CurrINF,
+			"curr_hf",
+			/*@ unfolding acc(p.scionLayer.Mem(ubScionL), R20) in @*/ p.path.PathMeta.CurrHF),
 		/*@ nil , nil, 0, 0, dp, @*/
 	)
 }
@@ -3314,7 +3326,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, absReturnErr(dp, r) @*/
 	}
-	if r, err := p.validateHopExpiry( /*@ dp @*/ ); err != nil {
+	if r, err := p.validateHopExpiry( /*@ dp, ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, absReturnErr(dp, r) @*/
 	}
@@ -3390,7 +3402,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ assert absPkt(dp, ub) == AbsDoXover(nextPkt)
 		// @ AbsValidateIngressIDXoverLemma(nextPkt, AbsDoXover(nextPkt), path.ifsToIO_ifs(p.ingressID))
 		// @ nextPkt = absPkt(dp, ub)
-		if r, err := p.validateHopExpiry( /*@ dp @*/ ); err != nil {
+		if r, err := p.validateHopExpiry( /*@ dp, ub @*/ ); err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover") /*@, false, absReturnErr(dp, r) @*/
 		}

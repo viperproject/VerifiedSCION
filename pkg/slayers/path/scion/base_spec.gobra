@@ -73,8 +73,7 @@ pure func (b Base) ValidCurrIdxsSpec() bool {
 		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
-			b.PathMeta.SegLen[i] == 0) &&
-		b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+			b.PathMeta.SegLen[i] == 0)
 }
 
 ghost
@@ -282,8 +281,7 @@ pure func (b AbsBase) ValidCurrIdxsSpec() bool {
 		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
-			b.PathMeta.SegLen[i] == 0) &&
-		b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+			b.PathMeta.SegLen[i] == 0)
 }
 
 ghost
