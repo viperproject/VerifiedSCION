@@ -137,10 +137,11 @@ pure func addIbuf(s io.IO_dp3s_state_local, val io.IO_val) io.IO_dp3s_state_loca
 }
 
 ghost
-decreases n
 requires dp.dp3s_iospec_ordered(s, t)
 ensures MultiReadBio(t, n)
 ensures dp.dp3s_iospec_ordered(MultiReadBioUpd(t, n, s), MultiReadBioNext(t, n))
+decreases n
+#backend[exhaleMode(1)]
 func ExtractMultiReadBio(
 	dp io.DataPlaneSpec,
 	t io.Place,

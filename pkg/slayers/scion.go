@@ -229,6 +229,7 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @	(unfolding acc(s.Mem(ubuf), R55) in CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])) <= len(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
+// @ #backend[exhaleMode(1)]
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
 	// @ unfold acc(s.Mem(ubuf), R0)
 	// @ defer  fold acc(s.Mem(ubuf), R0)
@@ -472,9 +473,10 @@ func (s *SCION) RecyclePaths() {
 // @ ensures   (err == nil && !s.pathPoolInitialized()) ==> PathPoolMem(s.pathPool, s.pathPoolRaw)
 // @ ensures   (err == nil && s.pathPoolInitialized())  ==> (
 // @ 	PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
-// @    res === s.getPathPure(pathType))
+// @ 	res === s.getPathPure(pathType))
 // @ ensures   err != nil ==> (PathPoolMem(s.pathPool, s.pathPoolRaw) && err.ErrorMem())
 // @ decreases
+// @ #backend[exhaleMode(1)]
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 	// @ unfold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	if s.pathPool == nil {
