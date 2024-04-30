@@ -2080,8 +2080,8 @@ func (p *scionPacketProcessor) validateIngressID( /*@ ghost oldPkt io.IO_pkt2, g
 // @ ensures   reserr == nil ==> p.LastHopLen(ubScionL, dp)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(dp, respr.OutPkt, respr.EgressID).isIO_val_Unsupported
-// @ #backend[exhaleMode(1)]
 // @ decreases
+// @ #backend[exhaleMode(1)]
 func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), R20)
 	// @ defer fold acc(p.scionLayer.Mem(ubScionL), R20)
@@ -2947,8 +2947,8 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ ensures reserr == nil ==> absPkt(dp, ub) == old(absPkt(dp, ub))
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(dp, respr.OutPkt, respr.EgressID).isIO_val_Unsupported
-// @ #backend[exhaleMode(1)]
 // @ decreases
+// @ #backend[exhaleMode(1)]
 func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int , ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error) {
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
