@@ -166,6 +166,68 @@ pure func (p* scionPacketProcessor) GetIsXoverSpec(ub []byte) bool {
 		p.path.GetIsXoverSpec(ubPath)
 }
 
+ghost
+opaque
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+requires len(pkt.CurrSeg.Future) > 0
+decreases
+pure func (p *scionPacketProcessor) NoBouncingPkt(pkt io.IO_pkt2) bool {
+	return let currseg := pkt.CurrSeg in
+		let OptEgressID := (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2) in
+		let egressID := OptEgressID != none[io.IO_ifs] ? uint16(get(OptEgressID)) : 0 in
+		((egressID in p.d.getDomExternal()) || p.ingressID != 0)
+}
+
+ghost
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+requires len(pkt.CurrSeg.Future) > 0
+requires AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+requires acc(&p.d.external, _)
+requires p.d.external == nil ==> p.ingressID != 0
+requires p.d.external != nil ==> acc(p.d.external, _)
+requires p.d.external != nil ==>
+	(egressID in domain(p.d.external)) || p.ingressID != 0
+ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
+ensures  acc(&p.ingressID, R55)
+ensures  p.NoBouncingPkt(pkt)
+decreases
+func (p *scionPacketProcessor) EstablishNoBouncingPkt(pkt io.IO_pkt2, egressID uint16) {
+	if(p.d.external != nil) {
+		p.d.getDomExternalLemma()
+		assert p.d.getDomExternal() == domain(p.d.external)
+	}
+	reveal AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+	reveal p.NoBouncingPkt(pkt)
+}
+
+ghost
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+requires len(pkt.CurrSeg.Future) > 0
+requires AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+requires p.NoBouncingPkt(pkt)
+requires acc(&p.d.external, _)
+requires p.d.external != nil ==> acc(p.d.external, _)
+requires p.d.external != nil ==> !(egressID in domain(p.d.external))
+ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
+ensures  acc(&p.ingressID, R55)
+ensures  p.ingressID != 0
+decreases
+func (p *scionPacketProcessor) IngressIDNotZeroLemma(pkt io.IO_pkt2, egressID uint16) {
+	if(p.d.external != nil) {
+		p.d.getDomExternalLemma()
+		assert p.d.getDomExternal() == domain(p.d.external)
+	} else {
+		assert p.d.getDomExternal() == unfolding acc(p.d.Mem(), _) in
+			set[uint16]{}
+	}
+	assert !(egressID in  p.d.getDomExternal())
+	reveal AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+	reveal p.NoBouncingPkt(pkt)
+}
+
 // TODO prove
 ghost
 requires 0 <= start && start <= end && end <= len(ub)

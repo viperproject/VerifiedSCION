@@ -2233,7 +2233,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // @ ensures   acc(&p.hopField, R20)
 // @ ensures   acc(&p.ingressID, R21)
 // @ ensures   acc(&p.segmentChange, R20)
-// @ ensures   acc(&p.d, R20)
+// @ ensures   acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   reserr == nil ==> respr === processResult{}
 // @ ensures   reserr != nil ==> sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
@@ -2248,6 +2248,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // @ requires  p.segmentChange ==> oldPkt.RightSeg != none[io.IO_seg2] && len(get(oldPkt.RightSeg).Past) > 0
 // @ requires  !p.segmentChange ==> AbsValidateIngressIDConstraint(oldPkt, path.ifsToIO_ifs(p.ingressID))
 // @ requires  p.segmentChange ==> AbsValidateIngressIDConstraintXover(oldPkt, path.ifsToIO_ifs(p.ingressID))
+// @ ensures   reserr == nil ==> p.NoBouncingPkt(oldPkt)
 // @ ensures   reserr == nil && !p.segmentChange ==> AbsValidateEgressIDConstraint(oldPkt, (p.ingressID != 0), dp)
 // @ ensures   reserr == nil &&  p.segmentChange ==> oldPkt.RightSeg != none[io.IO_seg2] && len(get(oldPkt.RightSeg).Past) > 0
 // @ ensures   reserr == nil &&  p.segmentChange ==> p.ingressID != 0 && AbsValidateEgressIDConstraintXover(oldPkt, dp)
@@ -2280,7 +2281,7 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 			/*@ dp, @*/
 		)
 	}
-
+	// @ p.EstablishNoBouncingPkt(oldPkt, pktEgressID)
 	// @ p.d.getLinkTypesMem()
 	ingress, egress := p.d.linkTypes[p.ingressID], p.d.linkTypes[pktEgressID]
 	// @ p.d.LinkTypesLemma(dp)
@@ -3316,26 +3317,23 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ fold p.d.validResult(processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, false)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil /*@, false, newAbsPkt @*/
 	}
+	// @ p.IngressIDNotZeroLemma(nextPkt, egressID)
 	// ASTransit: pkts leaving from another AS BR.
 	// @ p.d.getInternalNextHops()
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	if a, ok := p.d.internalNextHops[egressID]; ok {
 		// @ p.d.getInternal()
-		// @ ghost if(path.ifsToIO_ifs(p.ingressID) != none[io.IO_ifs]) {
-		// @ 	TemporaryAssumeForIO(old(slayers.IsSupportedPkt(ub)) == slayers.IsSupportedPkt(ub))
-		// @	ghost if(slayers.IsSupportedPkt(ub)) {
-		// @ 		if(!p.segmentChange) {
-		// 				enter event
-		// @			InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
-		// @ 		} else {
-		// 				xover event
-		// @			XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
-		// @ 		}
+		// @ TemporaryAssumeForIO(old(slayers.IsSupportedPkt(ub)) == slayers.IsSupportedPkt(ub))
+		// @ ghost if(slayers.IsSupportedPkt(ub)) {
+		// @ 	if(!p.segmentChange) {
+		// 			enter event
+		// @		InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ 	} else {
+		// 			xover event
+		// @		XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
 		// @ 	}
-		// @ 	newAbsPkt = reveal absIO_val(dp, p.rawPkt, 0)
-		// @ } else {
-		// @ 	ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4497")
 		// @ }
+		// @ newAbsPkt = reveal absIO_val(dp, p.rawPkt, 0)
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, false)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, false, newAbsPkt @*/
 	}
