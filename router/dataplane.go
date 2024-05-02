@@ -3302,7 +3302,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@, false, absReturnErr(dp, processResult{}) @*/
 		}
-		// @ p.d.InDomainExternalInForwardingMetrics2(egressID)
+		// @ p.d.InDomainExternalInForwardingMetrics(egressID)
 		// @ assert absPkt(dp, ub) == AbsProcessEgress(nextPkt)
 		// @ nextPkt = absPkt(dp, ub)
 		// @ TemporaryAssumeForIO(old(slayers.IsSupportedPkt(ub)) == slayers.IsSupportedPkt(ub))

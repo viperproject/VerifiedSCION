@@ -686,19 +686,6 @@ func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
 
 ghost
 requires acc(d.Mem(), _) && d.WellConfigured()
-requires acc(&d.external, _) && acc(d.external, _)
-requires id in domain(d.external)
-ensures  acc(d.Mem(), _)
-ensures  id in d.getDomForwardingMetrics()
-decreases
-func (d *DataPlane) InDomainExternalInForwardingMetrics2(id uint16) {
-	unfold acc(d.Mem(), _)
-	reveal d.WellConfigured()
-	unfold acc(accBatchConn(d.external), _)
-}
-
-ghost
-requires acc(d.Mem(), _) && d.WellConfigured()
 requires acc(&d.external, _) && acc(d.external, R55)
 requires id in domain(d.external)
 ensures  acc(d.Mem(), _)
@@ -707,6 +694,7 @@ ensures  id in d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics3(id uint16) {
 	reveal d.WellConfigured()
+	reveal d.getDomExternal()
 	assert unfolding acc(d.Mem(), _) in
 		(unfolding acc(accBatchConn(d.external), _) in true)
 }
