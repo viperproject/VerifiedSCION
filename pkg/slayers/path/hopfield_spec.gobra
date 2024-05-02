@@ -36,7 +36,7 @@ pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs]{
 
 ghost
 decreases
-pure func ifsToIO_ifsInv(ifs option[io.IO_ifs]) uint16{
+pure func IO_ifsToIfs(ifs option[io.IO_ifs]) uint16{
 	return ifs == none[io.IO_ifs] ? 0 : uint16(get(ifs))
 }
 

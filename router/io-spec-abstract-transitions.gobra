@@ -26,6 +26,14 @@ import (
 )
 
 ghost
+requires len(pkt.CurrSeg.Future) > 0
+decreases
+pure func CurrSegIO_ifs(pkt io.IO_pkt2, dir bool) option[io.IO_ifs] {
+	return let currseg := pkt.CurrSeg in
+		(currseg.ConsDir == dir ? currseg.Future[0].InIF2 : currseg.Future[0].EgIF2)
+}
+
+ghost
 opaque
 requires len(oldPkt.CurrSeg.Future) > 0
 ensures  len(newPkt.CurrSeg.Future) > 0
@@ -47,7 +55,7 @@ decreases
 pure func AbsValidateIngressIDConstraint(pkt io.IO_pkt2, ingressID option[io.IO_ifs]) bool {
 	return let currseg := pkt.CurrSeg in
 		ingressID != none[io.IO_ifs] ==>
-			ingressID == (currseg.ConsDir ? currseg.Future[0].InIF2 : currseg.Future[0].EgIF2)
+			ingressID == CurrSegIO_ifs(pkt, true)
 }
 
 ghost
@@ -67,7 +75,7 @@ requires len(pkt.CurrSeg.Future) > 0
 decreases
 pure func AbsEgressInterfaceConstraint(pkt io.IO_pkt2, egressID option[io.IO_ifs]) bool {
 	return let currseg := pkt.CurrSeg in
-		egressID == (currseg.ConsDir ? currseg.Future[0].EgIF2 : currseg.Future[0].InIF2)
+		egressID == CurrSegIO_ifs(pkt, false)
 }
 
 ghost
@@ -140,7 +148,9 @@ pure func AbsVerifyCurrentMACConstraint(pkt io.IO_pkt2, dp io.DataPlaneSpec) boo
 		let uinfo := currseg.UInfo in
 		dp.hf_valid(d, ts, uinfo, hf)
 }
-
+// This executes the IO enter event whenever a pkt was received
+// from a different AS (ingressID != none[io.IO_ifs])
+// and will be forwarded to another border router within the AS (egressID == none[io.IO_ifs])
 ghost
 requires  dp.Valid()
 requires  ingressID != none[io.IO_ifs]
@@ -165,6 +175,12 @@ func InternalEnterEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt i
 	AtomicEnter(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 }
 
+// Either this executes the IO enter event whenever a pkt was received
+// from a different AS (ingressID != none[io.IO_ifs])
+// and will leave the AS (egressID != none[io.IO_ifs]) or
+// it executes the IO exit event whenever a pkt was received from
+// withhin the AS (ingressID == none[io.IO_ifs])
+// and will leave the AS (egressID == none[io.IO_ifs])
 ghost
 requires  dp.Valid()
 requires  egressID != none[io.IO_ifs]
@@ -180,7 +196,7 @@ preserves acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioShared
 ensures   dp.Valid()
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
-func ExternalEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock *sync.Mutex, ioSharedArg SharedArg, dp io.DataPlaneSpec) {
+func ExternalEnterOrExitEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock *sync.Mutex, ioSharedArg SharedArg, dp io.DataPlaneSpec) {
 	reveal dp.Valid()
 	nextPkt := reveal AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
 	reveal AbsValidateIngressIDConstraint(oldPkt, ingressID)
@@ -195,6 +211,9 @@ func ExternalEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_
 	}
 }
 
+// This executes the IO xover event whenever a pkt was received
+// from a different AS (ingressID != none[io.IO_ifs])
+// and a segment switch was performed.
 ghost
 requires  dp.Valid()
 requires  ingressID != none[io.IO_ifs]

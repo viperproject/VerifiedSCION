@@ -2281,6 +2281,7 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 			/*@ dp, @*/
 		)
 	}
+	// @ p.d.getDomExternalLemma()
 	// @ p.EstablishNoBouncingPkt(oldPkt, pktEgressID)
 	// @ p.d.getLinkTypesMem()
 	ingress, egress := p.d.linkTypes[p.ingressID], p.d.linkTypes[pktEgressID]
@@ -3295,6 +3296,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	if c, ok := p.d.external[egressID]; ok {
+		// @ p.d.getDomExternalLemma()
 		// @ p.d.EgressIDNotZeroLemma(egressID, dp)
 		if err := p.processEgress( /*@ ub, dp @*/ ); err != nil {
 			// @ fold p.d.validResult(processResult{}, false)
@@ -3307,7 +3309,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ ghost if(slayers.IsSupportedPkt(ub)) {
 		// @ 	ghost if(!p.segmentChange) {
 		// 			enter/exit event
-		// @		ExternalEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
+		// @		ExternalEnterOrExitEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
 		// @ 	} else {
 		// 			xover event
 		// @		XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
@@ -3317,6 +3319,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ fold p.d.validResult(processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, false)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil /*@, false, newAbsPkt @*/
 	}
+	// @ p.d.getDomExternalLemma()
 	// @ p.IngressIDNotZeroLemma(nextPkt, egressID)
 	// ASTransit: pkts leaving from another AS BR.
 	// @ p.d.getInternalNextHops()
@@ -3489,14 +3492,8 @@ func (p *scionPacketProcessor) processOHP( /* @ ghost dp io.DataPlaneSpec @ */ )
 		// @ p.d.getExternalMem()
 		// @ ghost if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
-			// (VerifiedSCION) the following must hold, obviously.
-			// Unfortunately, Gobra struggles with instantiating the body
-			// of the function.
 			// @ p.d.getDomExternalLemma()
 			// @ assert ohp.FirstHop.ConsEgress in p.d.getDomExternal()
-			// buffer should already be correct
-			// (VerifiedSCION) TODO: we need to add a pre to run that says that the
-			// domain of forwardingMetrics is the same as the one for external
 			// @ p.d.InDomainExternalInForwardingMetrics(ohp.FirstHop.ConsEgress)
 			// @ fold p.d.validResult(processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt}, false)
 			// @ TemporaryAssumeForIO(!slayers.IsSupportedPkt(p.rawPkt))

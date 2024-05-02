@@ -242,6 +242,7 @@ pure func (d *DataPlane) GetDomInternalNextHops() set[uint16] {
 }
 
 ghost
+opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) getDomExternal() set[uint16] {
@@ -276,7 +277,7 @@ requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
 	return d.getDomNeighborIAs() == d.getDomExternal() &&
-		d.getDomExternal() == d.getDomLinkTypes() &&
+		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
 		!(0 in d.getDomNeighborIAs()) &&
 		d.getDomExternal() subset d.getDomForwardingMetrics()
 }
