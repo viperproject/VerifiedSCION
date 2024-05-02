@@ -179,8 +179,8 @@ func InternalEnterEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt i
 // from a different AS (ingressID != none[io.IO_ifs])
 // and will leave the AS (egressID != none[io.IO_ifs]) or
 // it executes the IO exit event whenever a pkt was received from
-// withhin the AS (ingressID == none[io.IO_ifs])
-// and will leave the AS (egressID == none[io.IO_ifs])
+// within the AS (ingressID == none[io.IO_ifs])
+// and will leave the AS (egressID != none[io.IO_ifs])
 ghost
 requires  dp.Valid()
 requires  egressID != none[io.IO_ifs]
