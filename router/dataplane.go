@@ -3492,7 +3492,8 @@ func (p *scionPacketProcessor) processOHP( /* @ ghost dp io.DataPlaneSpec @ */ )
 			// (VerifiedSCION) the following must hold, obviously.
 			// Unfortunately, Gobra struggles with instantiating the body
 			// of the function.
-			// @ assume ohp.FirstHop.ConsEgress in p.d.getDomExternal()
+			// @ p.d.getDomExternalLemma()
+			// @ assert ohp.FirstHop.ConsEgress in p.d.getDomExternal()
 			// buffer should already be correct
 			// (VerifiedSCION) TODO: we need to add a pre to run that says that the
 			// domain of forwardingMetrics is the same as the one for external
