@@ -2392,7 +2392,10 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 	// @ p.d.getExternalMem()
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	_, eh := p.d.external[pktEgressID]
-	if !ih && !eh {
+	// egress interface must be a known interface
+	// packet coming from internal interface, must go to an external interface
+	// packet coming from external interface can go to either internal or external interface
+	if !ih && !eh || (p.ingressID == 0) && !eh {
 		errCode := slayers.SCMPCodeUnknownHopFieldEgress
 		if !p.infoField.ConsDir {
 			errCode = slayers.SCMPCodeUnknownHopFieldIngress
