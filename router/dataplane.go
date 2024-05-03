@@ -2054,7 +2054,7 @@ func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost dp io.DataPlaneSpec,
 		// @ fold p.d.validResult(respr, false)
 		return processResult{}, nil
 	}
-	// ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
+	// @ ToDoAfterScionFix("https://github.com/scionproto/scion/issues/4482") // depends on packSCMP
 	// (VerifiedSCION): adapt; note that packSCMP always returns an empty addr and conn and
 	// when the err is nil, it returns the bytes of p.buffer. This should be a magic wand
 	// that is consumed after sending the reply. For now, we are making this simplifying
@@ -2172,19 +2172,22 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghos
 		// Only check SrcIA if first hop, for transit this already checked by ingress router.
 		// Note: SCMP error messages triggered by the sibling router may use paths that
 		// don't start with the first hop.
-		// @ TODO()
 		if p.path.IsFirstHop( /*@ ubPath @*/ ) && !srcIsLocal {
+			// @ TODO()
 			return p.invalidSrcIA( /*@ nil, nil, 0, 0, dp @*/ )
 		}
 		if dstIsLocal {
+			// @ TODO()
 			return p.invalidDstIA( /*@ nil, nil, 0, 0, dp @*/ )
 		}
 	} else {
 		// Inbound
 		if srcIsLocal {
+			// @ TODO()
 			return p.invalidSrcIA( /*@ nil, nil, 0, 0, dp @*/ )
 		}
 		if p.path.IsLastHop( /*@ ubPath @*/ ) != dstIsLocal {
+			// @ TODO()
 			return p.invalidDstIA( /*@ nil, nil, 0, 0, dp @*/ )
 		}
 		// @ ghost if(p.path.IsLastHopSpec(ubPath)) {
