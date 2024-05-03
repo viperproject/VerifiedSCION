@@ -174,10 +174,8 @@ requires acc(&d.external, _)
 requires d.external != nil ==> acc(d.external, _)
 ensures  acc(d.Mem(), _)
 ensures  acc(&d.external, _)
-ensures  d.external != nil ==> acc(d.external, _) &&
-	d.getDomExternal() == domain(d.external)
-ensures  d.external == nil ==>
-	d.getDomExternal() == set[uint16]{}
+ensures  d.external != nil ==> acc(d.external, _)
+ensures  d.getDomExternal() == domain(d.external)
 decreases
 func (d *DataPlane) getDomExternalLemma() {
 	if (d.external != nil) {
