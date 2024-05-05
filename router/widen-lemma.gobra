@@ -119,7 +119,7 @@ func absPktWidenLemma(dp io.DataPlaneSpec, raw []byte, length int) {
 	reveal slayers.ValidPktMetaHdr(raw)
 	reveal slayers.ValidPktMetaHdr(raw[:length])
 	headerOffset1 := slayers.GetAddressOffset(raw, len(raw))
-	headerOffset2 := slayers.GetAddressOffset(raw[:length], len(raw))
+	headerOffset2 := slayers.GetAddressOffset(raw[:length], length)
 
 	hdr1 := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51) in binary.BigEndian.Uint32(raw[headerOffset1:headerOffset1+scion.MetaLen])
 	hdr2 := unfolding acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R51) in binary.BigEndian.Uint32(raw[:length][headerOffset2:headerOffset2+scion.MetaLen])
@@ -254,7 +254,7 @@ requires 0 <= start && start <= offset
 requires 0 < segLen
 requires 0 <= currHFIdx && currHFIdx <= segLen
 requires length <= len(raw)
-requires offset + path.HopLen * segLen <= length - start
+requires offset + path.HopLen * segLen <= length
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R52)
 requires acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R52)
 ensures  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R52)
@@ -318,7 +318,7 @@ ghost
 requires  R53 < p
 requires  0 <= start && start <= offset
 requires  0 <= currHFIdx && currHFIdx <= segLen
-requires  offset + path.HopLen * segLen <= length - start
+requires  offset + path.HopLen * segLen <= length
 requires  length <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), p)
 preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), p)
@@ -329,7 +329,7 @@ func hopFieldsWidenLemma(raw []byte, offset int, currHFIdx int, segLen int, star
 	if currHFIdx == segLen {
 		ret := seq[io.IO_HF]{}
 		assert ret == scion.hopFields(raw, offset, currHFIdx, segLen)
-		assert ret == scion.hopFields(raw[start:length], offset, currHFIdx, segLen)
+		assert ret == scion.hopFields(raw[start:length], offset - start, currHFIdx, segLen)
 	} else {
 		BytesToIO_HFWidenLemma(raw, offset + path.HopLen * currHFIdx, start, length)
 		hf1 := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw))

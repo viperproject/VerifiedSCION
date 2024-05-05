@@ -363,12 +363,12 @@ func (s *SCION) ValidHeaderOffset(ub []byte, length int) bool{
 }
 
 ghost
-requires acc(s.Mem(ub), R55)
+requires acc(s.Mem(ub), R56)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 requires acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
 requires CmnHdrLen <= length && length <= len(ub)
 requires s.ValidHeaderOffset(ub, len(ub))
-ensures  acc(s.Mem(ub), R55)
+ensures  acc(s.Mem(ub), R56)
 ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 ensures  acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
 ensures  s.ValidHeaderOffset(ub, length)
@@ -383,12 +383,12 @@ func (s *SCION) ValidHeaderOffsetToSubSliceLemma(ub []byte, length int) {
 }
 
 ghost
-requires acc(s.Mem(ub), R55)
+requires acc(s.Mem(ub), R56)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 requires acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
 requires CmnHdrLen <= length && length <= len(ub)
 requires s.ValidHeaderOffset(ub, length)
-ensures  acc(s.Mem(ub), R55)
+ensures  acc(s.Mem(ub), R56)
 ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 ensures  acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
 ensures  s.ValidHeaderOffset(ub, len(ub))

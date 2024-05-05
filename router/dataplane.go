@@ -2589,6 +2589,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.D
 	// @ reveal p.EqAbsInfoField(absPkt(dp, ub))
 	// @ reveal p.EqAbsHopField(absPkt(dp, ub))
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ reveal p.scionLayer.ValidHeaderOffset(ub, startP)
 	// @ unfold acc(p.scionLayer.Mem(ub), R55)
 	// we are the egress router and if we go in construction direction we
 	// need to update the SegID.
@@ -2615,6 +2616,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.D
 		return serrors.WrapStr("incrementing path", err)
 	}
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
+	// @ assert reveal p.scionLayer.ValidHeaderOffset(ub, startP)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ TemporaryAssumeForIO(dp.Valid() && scion.validPktMetaHdr(ubPath) && p.path.EqAbsHeader(ubPath))
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
