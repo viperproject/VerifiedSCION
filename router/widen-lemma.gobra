@@ -118,8 +118,8 @@ func absPktWidenLemma(dp io.DataPlaneSpec, raw []byte, length int) {
 
 	reveal slayers.ValidPktMetaHdr(raw)
 	reveal slayers.ValidPktMetaHdr(raw[:length])
-	headerOffset1 := slayers.GetAddressOffset(raw)
-	headerOffset2 := slayers.GetAddressOffset(raw[:length])
+	headerOffset1 := slayers.GetAddressOffset(raw, len(raw))
+	headerOffset2 := slayers.GetAddressOffset(raw[:length], len(raw))
 
 	hdr1 := unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51) in binary.BigEndian.Uint32(raw[headerOffset1:headerOffset1+scion.MetaLen])
 	hdr2 := unfolding acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R51) in binary.BigEndian.Uint32(raw[:length][headerOffset2:headerOffset2+scion.MetaLen])
@@ -166,26 +166,26 @@ func absPktWidenLemma(dp io.DataPlaneSpec, raw []byte, length int) {
 	offset2 := scion.HopFieldOffset(numINF2, 0, headerOffset2)
 	assert offset1 == offset2
 
-	currSegWidenLemma(raw, offset1+prevSegLen1, currINFIdx1, currHFIdx1-prevSegLen1, segLen1, headerOffset1, length)
+	currSegWidenLemma(raw, offset1+prevSegLen1, currINFIdx1, currHFIdx1-prevSegLen1, segLen1, headerOffset1, 0, length)
 	currSeg1 := scion.CurrSeg(raw, offset1+prevSegLen1, currINFIdx1, currHFIdx1-prevSegLen1, segLen1, headerOffset1)
 	currSeg2 := scion.CurrSeg(raw[:length], offset2+prevSegLen2, currINFIdx2, currHFIdx2-prevSegLen2, segLen2, headerOffset2)
 	assert currSeg1 == currSeg2
-	
-	leftSegWidenLemma(raw, currINFIdx1 + 1, seg1Len1, seg2Len1 , seg3Len1, headerOffset1, length)
+
+	leftSegWidenLemma(raw, currINFIdx1 + 1, seg1Len1, seg2Len1 , seg3Len1, headerOffset1, 0, length)
 	leftSeg1 := scion.LeftSeg(raw, currINFIdx1 + 1, seg1Len1, seg2Len1 , seg3Len1, headerOffset1)
 	leftSeg2 := scion.LeftSeg(raw[:length], currINFIdx2 + 1, seg1Len2, seg2Len2 , seg3Len2, headerOffset2)
 	assert leftSeg1 == leftSeg2
-	
-	midSegWidenLemma(raw, currINFIdx1 + 2, seg1Len1, seg2Len1 , seg3Len1, headerOffset1, length)
+
+	midSegWidenLemma(raw, currINFIdx1 + 2, seg1Len1, seg2Len1 , seg3Len1, headerOffset1, 0, length)
 	midSeg1 := scion.MidSeg(raw, currINFIdx1 + 2, seg1Len1, seg2Len1 , seg3Len1, headerOffset1)
 	midSeg2 := scion.MidSeg(raw[:length], currINFIdx2 + 2, seg1Len2, seg2Len2 , seg3Len2, headerOffset2)
 	assert midSeg1 == midSeg2
-	
-	rightSegWidenLemma(raw, currINFIdx1 - 1, seg1Len1, seg2Len1 , seg3Len1, headerOffset1, length)
+
+	rightSegWidenLemma(raw, currINFIdx1 - 1, seg1Len1, seg2Len1 , seg3Len1, headerOffset1, 0, length)
 	rightSeg1 := scion.RightSeg(raw, currINFIdx1 - 1, seg1Len1, seg2Len1 , seg3Len1, headerOffset1)
 	rightSeg2 := scion.RightSeg(raw[:length], currINFIdx2 - 1, seg1Len2, seg2Len2 , seg3Len2, headerOffset2)
 	assert rightSeg1 == rightSeg2
-	
+
 	ret1 := io.IO_pkt2(io.IO_Packet2{
 		CurrSeg : currSeg1,
 		LeftSeg : leftSeg1,
@@ -198,7 +198,7 @@ func absPktWidenLemma(dp io.DataPlaneSpec, raw []byte, length int) {
 		MidSeg : midSeg2,
 		RightSeg : rightSeg2,
 	})
-	
+
 	reveal absPkt(dp, raw)
 	reveal absPkt(dp, raw[:length])
 	assert ret1 == absPkt(dp, raw)
@@ -207,67 +207,67 @@ func absPktWidenLemma(dp io.DataPlaneSpec, raw []byte, length int) {
 }
 
 ghost
-requires  0 <= headerOffset
+requires  0 <= start && start <= headerOffset
 requires  path.InfoFieldOffset(currINFIdx, headerOffset) + path.InfoLen <= offset
 requires  0 < segLen
 requires  offset + path.HopLen * segLen <= length
-requires length <= len(raw)
+requires  length <= len(raw)
 requires  0 <= currHFIdx && currHFIdx <= segLen
 requires  0 <= currINFIdx && currINFIdx < 3
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R51)
+preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
 ensures   scion.CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset) ==
-	scion.CurrSeg(raw[:length], offset, currINFIdx, currHFIdx, segLen, headerOffset)
+	scion.CurrSeg(raw[start:length], offset-start, currINFIdx, currHFIdx, segLen, headerOffset-start)
 decreases
-func currSegWidenLemma(raw []byte, offset int, currINFIdx int, currHFIdx int, segLen int, headerOffset int, length int) {
+func currSegWidenLemma(raw []byte, offset int, currINFIdx int, currHFIdx int, segLen int, headerOffset int, start int, length int) {
 	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R53)
-	unfold acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R53)
+	unfold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R53)
 
 	ainfo1 := path.Timestamp(raw, currINFIdx, headerOffset)
-	ainfo2 := path.Timestamp(raw[:length], currINFIdx, headerOffset)
+	ainfo2 := path.Timestamp(raw[start:length], currINFIdx, headerOffset-start)
 	assert ainfo1 == ainfo2
 
 	uinfo1 := path.AbsUinfo(raw, currINFIdx, headerOffset)
-	uinfo2 := path.AbsUinfo(raw[:length], currINFIdx, headerOffset)
+	uinfo2 := path.AbsUinfo(raw[start:length], currINFIdx, headerOffset-start)
 	assert uinfo1 == uinfo2
 
 	consDir1 := path.ConsDir(raw, currINFIdx, headerOffset)
-	consDir2 := path.ConsDir(raw[:length], currINFIdx, headerOffset)
+	consDir2 := path.ConsDir(raw[start:length], currINFIdx, headerOffset-start)
 	assert consDir1 == consDir2
 
 	peer1 := path.Peer(raw, currINFIdx, headerOffset)
-	peer2 := path.Peer(raw[:length], currINFIdx, headerOffset)
+	peer2 := path.Peer(raw[start:length], currINFIdx, headerOffset-start)
 	assert peer1 == peer2
 
-	segmentWidenLemma(raw, offset, currHFIdx, ainfo1, uinfo1, consDir1, peer1, segLen, length)
+	segmentWidenLemma(raw, offset, currHFIdx, ainfo1, uinfo1, consDir1, peer1, segLen, start, length)
 	ret1 := scion.segment(raw, offset, currHFIdx, ainfo1, uinfo1, consDir1, peer1, segLen)
-	ret2 := scion.segment(raw[:length], offset, currHFIdx, ainfo2, uinfo2, consDir2, peer2, segLen)
+	ret2 := scion.segment(raw[start:length], offset-start, currHFIdx, ainfo2, uinfo2, consDir2, peer2, segLen)
 	assert ret1 == reveal scion.CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, headerOffset)
-	assert ret2 == reveal scion.CurrSeg(raw[:length], offset, currINFIdx, currHFIdx, segLen, headerOffset)
+	assert ret2 == reveal scion.CurrSeg(raw[start:length], offset-start, currINFIdx, currHFIdx, segLen, headerOffset-start)
 	assert ret1 == ret2
 	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R53)
-	fold acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R53)
+	fold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R53)
 }
 
 ghost
-requires 0 <= offset
+requires 0 <= start && start <= offset
 requires 0 < segLen
 requires 0 <= currHFIdx && currHFIdx <= segLen
 requires length <= len(raw)
-requires offset + path.HopLen * segLen <= length
+requires offset + path.HopLen * segLen <= length - start
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R52)
-requires acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R52)
+requires acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R52)
 ensures  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R52)
-ensures  acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R52)
+ensures  acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R52)
 ensures  scion.segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen) ==
-	scion.segment(raw[:length], offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+	scion.segment(raw[start:length], offset-start, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
 decreases
-func segmentWidenLemma(raw []byte, offset int, currHFIdx int, ainfo io.IO_ainfo, uinfo set[io.IO_msgterm], consDir bool, peer bool, segLen int, length int) {
+func segmentWidenLemma(raw []byte, offset int, currHFIdx int, ainfo io.IO_ainfo, uinfo set[io.IO_msgterm], consDir bool, peer bool, segLen int, start int, length int) {
 	newP := (R52 + R53)/2
 	assert R53 < newP && newP < R52
-	hopFieldsWidenLemma(raw, offset, 0, segLen, length, newP)
+	hopFieldsWidenLemma(raw, offset, 0, segLen, start, length, newP)
 	hopfields1 := scion.hopFields(raw, offset, 0, segLen)
-	hopfields2 := scion.hopFields(raw[:length], offset, 0, segLen)
+	hopfields2 := scion.hopFields(raw[start:length], offset-start, 0, segLen)
 	assert hopfields1 == hopfields2
 
 	ret1 := io.IO_seg2(io.IO_seg3_{
@@ -289,102 +289,102 @@ func segmentWidenLemma(raw []byte, offset int, currHFIdx int, ainfo io.IO_ainfo,
 		History : scion.segHistory(hopfields2, currHFIdx - 1),
 	})
 	assert ret1 == scion.segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
-	assert ret2 == scion.segment(raw[:length], offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+	assert ret2 == scion.segment(raw[start:length], offset-start, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
 	assert ret1 == ret2
 }
 
 ghost
-requires  0 <= middle
+requires  0 <= start && start <= middle
 requires  middle + path.HopLen <= length
 requires  length <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R54)
-preserves acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R54)
+preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R54)
 ensures   path.BytesToIO_HF(raw, 0, middle, len(raw)) ==
-	path.BytesToIO_HF(raw[:length], 0, middle, length)
+	path.BytesToIO_HF(raw[start:length], 0, middle-start, length-start)
 decreases
-func BytesToIO_HFWidenLemma(raw []byte, middle int, length int) {
+func BytesToIO_HFWidenLemma(raw []byte, middle int, start int, length int) {
 	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
-	unfold acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R55)
+	unfold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R55)
 	hfBytes1 := path.BytesToIO_HF(raw, 0, middle, len(raw))
-	hfBytes2 := path.BytesToIO_HF(raw[:length], 0, middle, length)
+	hfBytes2 := path.BytesToIO_HF(raw[start:length], 0, middle-start, length-start)
 	assert hfBytes1.EgIF2 == hfBytes2.EgIF2
 	assert hfBytes1.InIF2 == hfBytes2.InIF2
 	assert hfBytes1.HVF == hfBytes2.HVF
 	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
-	fold acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R55)
+	fold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R55)
 }
 
 ghost
 requires  R53 < p
-requires  0 <= offset
+requires  0 <= start && start <= offset
 requires  0 <= currHFIdx && currHFIdx <= segLen
-requires  offset + path.HopLen * segLen <= length
+requires  offset + path.HopLen * segLen <= length - start
 requires  length <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), p)
-preserves acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), p)
+preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), p)
 ensures   scion.hopFields(raw, offset, currHFIdx, segLen) ==
-	scion.hopFields(raw[:length], offset, currHFIdx, segLen)
+	scion.hopFields(raw[start:length], offset-start, currHFIdx, segLen)
 decreases segLen - currHFIdx
-func hopFieldsWidenLemma(raw []byte, offset int, currHFIdx int, segLen int, length int, p perm) {
+func hopFieldsWidenLemma(raw []byte, offset int, currHFIdx int, segLen int, start int, length int, p perm) {
 	if currHFIdx == segLen {
 		ret := seq[io.IO_HF]{}
 		assert ret == scion.hopFields(raw, offset, currHFIdx, segLen)
-		assert ret == scion.hopFields(raw[:length], offset, currHFIdx, segLen)
+		assert ret == scion.hopFields(raw[start:length], offset, currHFIdx, segLen)
 	} else {
-		BytesToIO_HFWidenLemma(raw, offset + path.HopLen * currHFIdx, length)
+		BytesToIO_HFWidenLemma(raw, offset + path.HopLen * currHFIdx, start, length)
 		hf1 := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw))
-		hf2 := path.BytesToIO_HF(raw[:length], 0, offset + path.HopLen * currHFIdx, length)
+		hf2 := path.BytesToIO_HF(raw[start:length], 0, offset + path.HopLen * currHFIdx - start, length - start)
 		assert hf1 == hf2
 
 		newP := (p + R53)/2
 		assert R53 < newP && newP < p
-		hopFieldsWidenLemma(raw, offset, currHFIdx + 1, segLen, length, newP)
+		hopFieldsWidenLemma(raw, offset, currHFIdx + 1, segLen, start, length, newP)
 		ret1 := seq[io.IO_HF]{hf1} ++ scion.hopFields(raw, offset, currHFIdx + 1, segLen)
-		ret2 := seq[io.IO_HF]{hf2} ++ scion.hopFields(raw[:length], offset, currHFIdx + 1, segLen)
+		ret2 := seq[io.IO_HF]{hf2} ++ scion.hopFields(raw[start:length], offset-start, currHFIdx + 1, segLen)
 		assert ret1 == scion.hopFields(raw, offset, currHFIdx, segLen)
-		assert ret2 == scion.hopFields(raw[:length], offset, currHFIdx, segLen)
+		assert ret2 == scion.hopFields(raw[start:length], offset-start, currHFIdx, segLen)
 		assert ret1 == ret2
 	}
 }
 
 ghost
-requires  0 <= headerOffset
+requires  0 <= start && start <= headerOffset
 requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  0 <= length && length <= len(raw)
 requires  scion.pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= length
-requires 1 <= currINFIdx && currINFIdx < 4
+requires  1 <= currINFIdx && currINFIdx < 4
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R51)
+preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
 ensures   scion.LeftSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset) ==
-	scion.LeftSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+	scion.LeftSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset-start)
 decreases
-func leftSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, headerOffset int, length int) {
+func leftSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, headerOffset int, start int, length int) {
 	offset := scion.HopFieldOffset(scion.NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset)
 	if currINFIdx == 1 && seg2Len > 0 {
-		currSegWidenLemma(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len, headerOffset, length)
+		currSegWidenLemma(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len, headerOffset, start, length)
 		ret1 := some(scion.CurrSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len, headerOffset))
-		ret2 := some(scion.CurrSeg(raw[:length], offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len, headerOffset))
+		ret2 := some(scion.CurrSeg(raw[start:length], offset + path.HopLen * seg1Len - start, currINFIdx, 0, seg2Len, headerOffset - start))
 		assert ret1 == reveal scion.LeftSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-		assert ret2 == reveal scion.LeftSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+		assert ret2 == reveal scion.LeftSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset-start)
 		assert ret1 == ret2
 	} else if currINFIdx == 2 && seg2Len > 0 && seg3Len > 0 {
-		currSegWidenLemma(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset, length)
+		currSegWidenLemma(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset, start, length)
 		ret1 := some(scion.CurrSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset))
-		ret2 := some(scion.CurrSeg(raw[:length], offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset))
+		ret2 := some(scion.CurrSeg(raw[start:length], offset + path.HopLen * (seg1Len + seg2Len) - start, currINFIdx, 0, seg3Len, headerOffset - start))
 		assert ret1 == reveal scion.LeftSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-		assert ret2 == reveal scion.LeftSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+		assert ret2 == reveal scion.LeftSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
 		assert ret1 == ret2
 	} else {
 		ret := none[io.IO_seg3]
 		assert ret == reveal scion.LeftSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-		assert ret == reveal scion.LeftSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+		assert ret == reveal scion.LeftSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset- start)
 	}
 }
 
 ghost
-requires  0 <= headerOffset
+requires  0 <= start && start <= headerOffset
 requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
@@ -392,36 +392,35 @@ requires  0 <= length && length <= len(raw)
 requires  scion.pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= length
 requires  -1 <= currINFIdx && currINFIdx < 2
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R51)
+preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
 ensures   scion.RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset) ==
-	scion.RightSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+	scion.RightSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset-start)
 decreases
-func rightSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, headerOffset int, length int) {
+func rightSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, headerOffset int, start int, length int) {
 	offset := scion.HopFieldOffset(scion.NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset)
 	if currINFIdx == 1 && seg2Len > 0 && seg3Len > 0 {
-		currSegWidenLemma(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset, length)
+		currSegWidenLemma(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset, start, length)
 		ret1 := some(scion.CurrSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset))
-		ret2 := some(scion.CurrSeg(raw[:length], offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset))
+		ret2 := some(scion.CurrSeg(raw[start:length], offset + path.HopLen * seg1Len - start, currINFIdx, seg2Len, seg2Len, headerOffset - start))
 		assert ret1 == reveal scion.RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-		assert ret2 == reveal scion.RightSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+		assert ret2 == reveal scion.RightSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
 		assert ret1 == ret2
 	} else if currINFIdx == 0 && seg2Len > 0 {
-		currSegWidenLemma(raw, offset, currINFIdx, seg1Len, seg1Len, headerOffset, length)
+		currSegWidenLemma(raw, offset, currINFIdx, seg1Len, seg1Len, headerOffset, start, length)
 		ret1 := some(scion.CurrSeg(raw, offset, currINFIdx, seg1Len, seg1Len, headerOffset))
-		ret2 := some(scion.CurrSeg(raw[:length], offset, currINFIdx, seg1Len, seg1Len, headerOffset))
+		ret2 := some(scion.CurrSeg(raw[start:length], offset - start, currINFIdx, seg1Len, seg1Len, headerOffset - start))
 		assert ret1 == reveal scion.RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-		assert ret2 == reveal scion.RightSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+		assert ret2 == reveal scion.RightSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
 		assert ret1 == ret2
 	} else {
 		ret := none[io.IO_seg3]
 		assert ret == reveal scion.RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-		assert ret == reveal scion.RightSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+		assert ret == reveal scion.RightSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
 	}
 }
 
-
 ghost
-requires  0 <= headerOffset
+requires  0 <= start && start <= headerOffset
 requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
@@ -429,29 +428,29 @@ requires  2 <= currINFIdx && currINFIdx < 5
 requires  0 <= length && length <= len(raw)
 requires  scion.pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= length
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R51)
+preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
 ensures   scion.MidSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset) ==
-	scion.MidSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+	scion.MidSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
 decreases
-func midSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, headerOffset int, length int) {
+func midSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int, headerOffset int, start int, length int) {
 	offset := scion.HopFieldOffset(scion.NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset)
 	if currINFIdx == 4 && seg2Len > 0 {
-		currSegWidenLemma(raw, offset, 0, seg1Len, seg1Len, headerOffset, length)
+		currSegWidenLemma(raw, offset, 0, seg1Len, seg1Len, headerOffset, start, length)
 		ret1 := some(scion.CurrSeg(raw, offset, 0, seg1Len, seg1Len, headerOffset))
-		ret2 := some(scion.CurrSeg(raw[:length], offset, 0, seg1Len, seg1Len, headerOffset))
+		ret2 := some(scion.CurrSeg(raw[start:length], offset - start, 0, seg1Len, seg1Len, headerOffset - start))
 		assert ret1 == reveal scion.MidSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-		assert ret2 == reveal scion.MidSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+		assert ret2 == reveal scion.MidSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
 		assert ret1 == ret2
 	} else if currINFIdx == 2 && seg2Len > 0 && seg3Len > 0 {
-		currSegWidenLemma(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset, length)
+		currSegWidenLemma(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset, start, length)
 		ret1 := some(scion.CurrSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset))
-		ret2 := some(scion.CurrSeg(raw[:length], offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset))
+		ret2 := some(scion.CurrSeg(raw[start:length], offset + path.HopLen * (seg1Len + seg2Len) - start, currINFIdx, 0, seg3Len, headerOffset - start))
 		assert ret1 == reveal scion.MidSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-		assert ret2 == reveal scion.MidSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+		assert ret2 == reveal scion.MidSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
 		assert ret1 == ret2
 	} else {
 		ret := none[io.IO_seg3]
 		assert ret == reveal scion.MidSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-		assert ret == reveal scion.MidSeg(raw[:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset)
+		assert ret == reveal scion.MidSeg(raw[start:length], currINFIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
 	}
 }

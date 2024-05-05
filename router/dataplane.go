@@ -2083,9 +2083,10 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghos
 	// @ ghost startP := p.scionLayer.PathStartIdx(ubScionL)
 	// @ ghost endP := p.scionLayer.PathEndIdx(ubScionL)
 	// @ ghost ubPath := ubScionL[startP:endP]
-	// @ sl.SplitRange_Bytes(ubScionL, startP, endP, R55)
+	// @ sl.SplitRange_Bytes(ubScionL, startP, endP, R50)
 	// @ p.AbsPktToSubSliceAbsPkt(ubScionL, startP, endP, dp)
-	// @ ghost defer sl.CombineRange_Bytes(ubScionL, startP, endP, R55)
+	// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ubScionL, startP)
+	// @ ghost defer sl.CombineRange_Bytes(ubScionL, startP, endP, R50)
 	// @ unfold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), R20)
 	// @ defer fold acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), R20)
 	// @ p.d.getLocalIA()
@@ -2116,6 +2117,7 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghos
 		}
 		// @ ghost if(p.path.IsLastHopSpec(ubPath)) {
 		// @ 	p.path.LastHopLemma(ubPath, dp)
+		// @ 	p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ubScionL, startP)
 		// @	p.SubSliceAbsPktToAbsPkt(ubScionL, startP, endP, dp)
 		// @ }
 	}
@@ -2392,12 +2394,14 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		// @ assume 0 <= p.path.GetCurrINF(ubPath)
 		// @ sl.SplitRange_Bytes(ub, start, end, HalfPerm)
 		// @ p.AbsPktToSubSliceAbsPkt(ub, start, end, dp)
+		// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, start)
 		// @ sl.SplitRange_Bytes(ub, start, end, HalfPerm)
 		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF) /*@ ) , ubPath , dp@*/); err != nil {
 			// @ ghost sl.CombineRange_Bytes(ub, start, end, writePerm)
 			return serrors.WrapStr("update info field", err)
 		}
 		// @ ghost sl.CombineRange_Bytes(ub, start, end, HalfPerm)
+		// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, start)
 		// @ p.SubSliceAbsPktToAbsPkt(ub, start, end, dp)
 		// @ ghost sl.CombineRange_Bytes(ub, start, end, HalfPerm)
 		// @ absPktFutureLemma(dp, ub)
@@ -2581,6 +2585,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.D
 	// @ unfold acc(p.scionLayer.Mem(ub), 1-R55)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP, dp)
+	// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, startP)
 	// @ reveal p.EqAbsInfoField(absPkt(dp, ub))
 	// @ reveal p.EqAbsHopField(absPkt(dp, ub))
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
@@ -2612,6 +2617,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte, ghost dp io.D
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ TemporaryAssumeForIO(dp.Valid() && scion.validPktMetaHdr(ubPath) && p.path.EqAbsHeader(ubPath))
+	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP, dp)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ absPktFutureLemma(dp, ub)
@@ -2658,6 +2664,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost dp io.DataPla
 	// @ unfold acc(p.scionLayer.Mem(ub), 1-R55)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP, dp)
+	// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, startP)
 	// @ TemporaryAssumeForIO(len(old(absPkt(dp, ub)).CurrSeg.Future) == 1)
 	// @ reveal p.EqAbsInfoField(absPkt(dp, ub))
 	// @ reveal p.EqAbsHopField(absPkt(dp, ub))
@@ -2864,6 +2871,7 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ reveal p.LastHopLen(ub, dp)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP, dp)
+	// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, startP)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
@@ -2873,6 +2881,7 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ assert p.DstIsLocalIngressID(ub)
 	// @ TemporaryAssumeForIO(dp.Valid() && scion.validPktMetaHdr(ubPath) && p.path.EqAbsHeader(ubPath)) // postcondition of SetHopfield
+	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP, dp)
 	// @ absPktFutureLemma(dp, ub)
 	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(dp, ub))) // postcondition of SetHopfield
@@ -2972,6 +2981,7 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	// @ assume 0 <= p.path.GetCurrHF(ubPath)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP, dp)
+	// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, startP)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
 		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
@@ -2980,6 +2990,7 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	}
 	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ TemporaryAssumeForIO(dp.Valid() && scion.validPktMetaHdr(ubPath) && p.path.EqAbsHeader(ubPath)) // postcondition of SetHopfield
+	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP, dp)
 	// @ absPktFutureLemma(dp, ub)
 	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(dp, ub))) // postcondition of SetHopfield
