@@ -19,13 +19,11 @@ package io
 // links: representation of the network topology as a graph.
 //     `links[(a1,x)] == (a2,y)` means that the interface x of AS a1 is connected
 //     to the interface y of AS a2.
-type DataPlaneSpec adt {
-	DataPlaneSpec_{
-		linkTypes		dict[IO_ifs]IO_Link
-		neighborIAs		dict[IO_ifs]IO_as
-		localIA			IO_as
-		links			dict[AsIfsPair]AsIfsPair
-	}
+type DataPlaneSpec struct {
+	ghost linkTypes   dict[IO_ifs]IO_Link
+	ghost neighborIAs dict[IO_ifs]IO_as
+	ghost localIA     IO_as
+	ghost links       dict[AsIfsPair]AsIfsPair
 }
 
 type AsIfsPair struct {

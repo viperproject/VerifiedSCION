@@ -54,19 +54,19 @@ pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6]) in
 		let op_inif2 := ifsToIO_ifs(inif2) in
 		let op_egif2 := ifsToIO_ifs(egif2) in
-		io.IO_HF(io.IO_HF_{
-			InIF2 : op_inif2,
-			EgIF2 : op_egif2,
-			HVF : AbsMac(FromSliceToMacArray(raw[middle+6:middle+6+MacLen])),
-		})
+		io.IO_HF {
+			InIF2: op_inif2,
+			EgIF2: op_egif2,
+			HVF: AbsMac(FromSliceToMacArray(raw[middle+6:middle+6+MacLen])),
+		}
 }
 
 ghost
 decreases
 pure func (h HopField) ToIO_HF() (io.IO_HF) {
-	return io.IO_HF(io.IO_HF_{
-			InIF2 : ifsToIO_ifs(h.ConsIngress),
-			EgIF2 : ifsToIO_ifs(h.ConsEgress),
-			HVF : AbsMac(h.Mac),
-		})
+	return io.IO_HF {
+		InIF2: ifsToIO_ifs(h.ConsIngress),
+		EgIF2: ifsToIO_ifs(h.ConsEgress),
+		HVF: AbsMac(h.Mac),
+	}
 }

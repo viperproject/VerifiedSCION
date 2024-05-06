@@ -549,12 +549,12 @@ pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 		let prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let numINF := NumInfoFields(seg1Len, seg2Len, seg3Len) in
 		let offset := HopFieldOffset(numINF, 0, 0) in
-		io.IO_pkt2(io.IO_Packet2{
+		io.IO_pkt2 {
 			CurrSeg : CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0),
 			LeftSeg : LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, 0),
 			MidSeg : MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, 0),
 			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, 0),
-		})
+		}
 }
 
 // In the future, this should probably use AbsMetaHdr as
@@ -628,7 +628,7 @@ pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField)
 		oldPkt.CurrSeg.Past,
 		oldPkt.CurrSeg.Future,
 		oldPkt.CurrSeg.History}) in
-	io.IO_pkt2(io.IO_Packet2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg})
+	io.IO_pkt2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg}
 }
 
 ghost

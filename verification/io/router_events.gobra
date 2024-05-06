@@ -67,7 +67,7 @@ requires dp.Asid() == asid
 decreases
 pure func (dp DataPlaneSpec) dp2_forward_ext_guard(asid IO_as, m IO_pkt2, nextif IO_ifs, currseg, traversedseg IO_seg2, newpkt IO_pkt2, fut seq[IO_HF], hf1 IO_HF) bool {
 	return m.CurrSeg == currseg &&
-		newpkt == IO_pkt2(IO_Packet2{traversedseg, m.LeftSeg, m.MidSeg, m.RightSeg}) &&
+		newpkt == IO_pkt2{traversedseg, m.LeftSeg, m.MidSeg, m.RightSeg} &&
 		// The outgoing interface is correct:
 		dp2_exit_interface(currseg.ConsDir, asid, hf1, nextif) &&
 		// Next validate the current hop field with the *original* UInfo field):

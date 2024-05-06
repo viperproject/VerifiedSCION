@@ -51,12 +51,12 @@ pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
 		let prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len) in
 		let offset := scion.HopFieldOffset(numINF, 0, headerOffset) in
-		io.IO_pkt2(io.IO_Packet2{
+		io.IO_pkt2 {
 			CurrSeg : scion.CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffset),
 			LeftSeg : scion.LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffset),
 			MidSeg : scion.MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, headerOffset),
 			RightSeg : scion.RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, headerOffset),
-		})
+		}
 }
 
 ghost

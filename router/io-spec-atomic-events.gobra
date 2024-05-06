@@ -43,12 +43,12 @@ requires  dp.dp2_enter_guard(
 	get(ingressID),
 	oldPkt.CurrSeg.Future[1:])
 requires  dp.dp3s_forward(
-	io.IO_pkt2(
-		io.IO_Packet2{
-			io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
-			oldPkt.LeftSeg,
-			oldPkt.MidSeg,
-			oldPkt.RightSeg}),
+	io.IO_pkt2 {
+		io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
+		oldPkt.LeftSeg,
+		oldPkt.MidSeg,
+		oldPkt.RightSeg,
+	},
 	newPkt,
 	egressID)
 preserves acc(gsync.LockP(ioLock), _)
@@ -116,22 +116,24 @@ requires  dp.dp2_xover_guard(
 	oldPkt.CurrSeg,
 	get(oldPkt.LeftSeg),
 	io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
-	io.IO_pkt2(io.IO_Packet2{
+	io.IO_pkt2 {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
-		some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir))}),
+		some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir)),
+	},
 	oldPkt.CurrSeg.Future[0],
 	get(oldPkt.LeftSeg).Future[0],
 	get(oldPkt.LeftSeg).Future[1:],
 	dp.Asid(),
 	get(ingressID))
 requires  dp.dp3s_forward_xover(
-	io.IO_pkt2(io.IO_Packet2{
+	io.IO_pkt2 {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
-		some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir))}),
+		some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir)),
+	},
 	newPkt,
 	egressID)
 preserves acc(gsync.LockP(ioLock), _)

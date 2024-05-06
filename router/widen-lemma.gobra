@@ -186,18 +186,18 @@ func absPktWidenLemma(dp io.DataPlaneSpec, raw []byte, length int) {
 	rightSeg2 := scion.RightSeg(raw[:length], currINFIdx2 - 1, seg1Len2, seg2Len2 , seg3Len2, headerOffset2)
 	assert rightSeg1 == rightSeg2
 	
-	ret1 := io.IO_pkt2(io.IO_Packet2{
+	ret1 := io.IO_pkt2 {
 		CurrSeg : currSeg1,
 		LeftSeg : leftSeg1,
 		MidSeg : midSeg1,
 		RightSeg : rightSeg1,
-	})
-	ret2 := io.IO_pkt2(io.IO_Packet2{
+	}
+	ret2 := io.IO_pkt2 {
 		CurrSeg : currSeg2,
 		LeftSeg : leftSeg2,
 		MidSeg : midSeg2,
 		RightSeg : rightSeg2,
-	})
+	}
 	
 	reveal absPkt(dp, raw)
 	reveal absPkt(dp, raw[:length])
