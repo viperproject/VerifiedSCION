@@ -366,7 +366,7 @@ ghost
 requires acc(s.Mem(ub), R56)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 requires acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
-requires CmnHdrLen <= length
+requires CmnHdrLen <= length && length <= len(ub)
 requires s.ValidHeaderOffset(ub, len(ub))
 ensures  acc(s.Mem(ub), R56)
 ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
@@ -386,7 +386,7 @@ ghost
 requires acc(s.Mem(ub), R56)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 requires acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
-requires CmnHdrLen <= length
+requires CmnHdrLen <= length && length <= len(ub)
 requires s.ValidHeaderOffset(ub, length)
 ensures  acc(s.Mem(ub), R56)
 ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
