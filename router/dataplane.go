@@ -142,7 +142,6 @@ type BatchConn interface {
 	// @ ensures  err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
 	// @ 		MsgToAbsVal(dp, &msgs[i], ingressID) == old(MultiReadBioIO_val(place, n)[i])
-	// TODO (VerifiedSCION): uint16 or option[io.IO_ifs] for ingress
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
@@ -181,10 +180,9 @@ type BatchConn interface {
 // Currently, only the following features are supported:
 //   - initializing connections; MUST be done prior to calling Run
 type DataPlane struct {
-	// (VerifiedSCION) this is morally ghost
-	// It is stored in the dataplane in order to retain
-	// knowledge that macFactory will not fail
-	// @ key *[]byte
+	// (VerifiedSCION) This is stored in the dataplane in order to retain
+	// knowledge that macFactory will not fail.
+	// @ ghost key *[]byte
 	external          map[uint16]BatchConn
 	linkTypes         map[uint16]topology.LinkType
 	neighborIAs       map[uint16]addr.IA
