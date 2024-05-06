@@ -1890,7 +1890,7 @@ type macBuffersT struct {
 // @ 	ub === ubLL
 // @ requires   p.scionLayer.ValidPathMetaData(ub)
 // @ requires   sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ requires   acc(&p.ingressID,  R15)
+// @ requires   acc(&p.ingressID,  R45)
 // @ requires   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ requires   cause.ErrorMem()
 // @ requires   dp.Valid()
@@ -1900,7 +1900,7 @@ type macBuffersT struct {
 // @ ensures    &p.scionLayer !== p.lastLayer ==>
 // @ 	acc(p.lastLayer.Mem(ubLL), R15)
 // @ ensures    sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ ensures    acc(&p.ingressID,  R15)
+// @ ensures    acc(&p.ingressID,  R45)
 // @ ensures    p.d.validResult(respr, false)
 // @ ensures    acc(&p.buffer, R50)
 // @ ensures    respr === processResult{} ==>
@@ -2874,12 +2874,13 @@ func (p *scionPacketProcessor) ingressInterface( /*@ ghost ubPath []byte @*/ ) u
 
 // @ requires acc(&p.infoField, R21)
 // @ requires acc(&p.hopField, R21)
-// @ ensures  acc(&p.infoField, R21)
-// @ ensures  acc(&p.hopField, R21)
-// contracts for IO-spec
+// pres for IO:
 // @ requires len(oldPkt.CurrSeg.Future) > 0
 // @ requires p.EqAbsInfoField(oldPkt)
 // @ requires p.EqAbsHopField(oldPkt)
+// @ ensures  acc(&p.infoField, R21)
+// @ ensures  acc(&p.hopField, R21)
+// posts for IO:
 // @ ensures  p.EqAbsInfoField(oldPkt)
 // @ ensures  p.EqAbsHopField(oldPkt)
 // @ ensures  AbsEgressInterfaceConstraint(oldPkt, path.ifsToIO_ifs(egress))
@@ -2906,9 +2907,17 @@ func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ 
 // @ requires  &p.scionLayer === p.lastLayer ==>
 // @ 	ub === ubLL
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ preserves acc(&p.infoField, R20)
-// @ preserves acc(&p.hopField, R20)
-// @ preserves acc(&p.ingressID, R21)
+// @ requires  acc(&p.infoField, R20)
+// @ requires  acc(&p.hopField, R20)
+// @ requires  acc(&p.ingressID, R21)
+// pres for IO:
+// @ requires  dp.Valid()
+// @ requires  len(oldPkt.CurrSeg.Future) > 0
+// @ requires  p.EqAbsInfoField(oldPkt)
+// @ requires  p.EqAbsHopField(oldPkt)
+// @ ensures   acc(&p.infoField, R20)
+// @ ensures   acc(&p.hopField, R20)
+// @ ensures   acc(&p.ingressID, R21)
 // @ preserves sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.d, R20)
 // @ ensures   p.d.validResult(respr, false)
@@ -2923,11 +2932,7 @@ func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ 
 // @ ensures   respr !== processResult{} ==>
 // @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
 // @ 	sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt))
-// contracts for IO-spec
-// @ requires  dp.Valid()
-// @ requires  len(oldPkt.CurrSeg.Future) > 0
-// @ requires  p.EqAbsInfoField(oldPkt)
-// @ requires  p.EqAbsHopField(oldPkt)
+// posts for IO:
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(dp, respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
@@ -2953,7 +2958,11 @@ func (p *scionPacketProcessor) validateEgressUp( /*@ ghost ub []byte, ghost ubLL
 					Egress:  uint64(egressID),
 				}
 			}
-			return p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down") /*@,  ub , ubLL, startLL, endLL, dp, @*/)
+			tmpRes, tmpErr := p.packSCMP(typ, 0, scmpP, serrors.New("bfd session down") /*@,  ub , ubLL, startLL, endLL, dp, @*/)
+			// @ ghost if tmpErr != nil && tmpRes.OutPkt != nil {
+			// @ 	AbsUnsupportedPktIsUnsupportedVal(dp, tmpRes.OutPkt, tmpRes.EgressID)
+			// @ }
+			return tmpRes, tmpErr
 		}
 	}
 	// @ fold p.d.validResult(processResult{}, false)
@@ -3071,9 +3080,9 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ requires  acc(p.scionLayer.Mem(ub), R13)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
-// @ requires sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ requires acc(&p.infoField, R20)
-// @ requires acc(&p.hopField)
+// @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ requires  acc(&p.infoField, R20)
+// @ requires  acc(&p.hopField)
 // @ preserves acc(&p.lastLayer, R19)
 // @ preserves p.lastLayer != nil
 // @ preserves (&p.scionLayer !== p.lastLayer && llIsNil) ==>
@@ -3081,9 +3090,9 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ preserves (&p.scionLayer !== p.lastLayer && !llIsNil) ==>
 // @ 	acc(p.lastLayer.Mem(ub[startLL:endLL]), R15)
 // @ preserves acc(&p.ingressID, R21)
-// @ ensures acc(&p.infoField, R20)
-// @ ensures acc(&p.hopField)
-// @ ensures sl.AbsSlice_Bytes(ub, 0, len(ub))
+// @ ensures   acc(&p.infoField, R20)
+// @ ensures   acc(&p.hopField)
+// @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(p.scionLayer.Mem(ub), R13)
 // @ ensures   acc(&p.d, R20)
@@ -3277,7 +3286,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ requires  p.scionLayer.Mem(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ requires   acc(&p.ingressID, R20)
+// @ requires  acc(&p.ingressID, R20)
 // @ requires  acc(&p.segmentChange) && !p.segmentChange
 // @ preserves acc(&p.srcAddr, R10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, R10)
@@ -3943,12 +3952,12 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ requires  acc(p.scionLayer.Mem(ub), R4)
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ requires  acc(&p.ingressID,  R15)
+// @ requires  acc(&p.ingressID,  R50)
 // @ requires  acc(&p.buffer, R55) && p.buffer.Mem()
 // @ ensures   acc(&p.d, R50)
 // @ ensures   acc(p.scionLayer.Mem(ub), R4)
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
-// @ ensures   acc(&p.ingressID,  R15)
+// @ ensures   acc(&p.ingressID,  R50)
 // @ ensures   acc(&p.buffer, R55)
 // @ ensures   result != nil ==>
 // @ 	sl.AbsSlice_Bytes(result, 0, len(result)) &&

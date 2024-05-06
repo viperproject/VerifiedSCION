@@ -85,6 +85,17 @@ pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.I
 
 ghost
 requires dp.Valid()
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires !slayers.IsSupportedPkt(raw)
+ensures  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures  absIO_val(dp, raw, ingressID).isIO_val_Unsupported
+decreases
+func AbsUnsupportedPktIsUnsupportedVal(dp io.DataPlaneSpec, raw []byte, ingressID uint16) {
+	reveal absIO_val(dp, raw, ingressID)
+}
+
+ghost
+requires dp.Valid()
 requires respr.OutPkt != nil ==>
 	acc(sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt)), R56)
 decreases
