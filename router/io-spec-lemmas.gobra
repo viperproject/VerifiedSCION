@@ -167,6 +167,50 @@ pure func (p* scionPacketProcessor) GetIsXoverSpec(ub []byte) bool {
 }
 
 ghost
+opaque
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+requires len(pkt.CurrSeg.Future) > 0
+decreases
+pure func (p *scionPacketProcessor) NoBouncingPkt(pkt io.IO_pkt2) bool {
+	return let currseg := pkt.CurrSeg in
+		let OptEgressID := CurrSegIO_ifs(pkt, false) in
+		let egressID := path.IO_ifsToIfs(OptEgressID) in
+		((egressID in p.d.getDomExternal()) || p.ingressID != 0)
+}
+
+ghost
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+requires len(pkt.CurrSeg.Future) > 0
+requires AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+requires (egressID in p.d.getDomExternal()) || p.ingressID != 0
+ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
+ensures  acc(&p.ingressID, R55)
+ensures  p.NoBouncingPkt(pkt)
+decreases
+func (p *scionPacketProcessor) EstablishNoBouncingPkt(pkt io.IO_pkt2, egressID uint16) {
+	reveal AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+	reveal p.NoBouncingPkt(pkt)
+}
+
+ghost
+requires acc(&p.d, R55) && acc(p.d.Mem(), _)
+requires acc(&p.ingressID, R55)
+requires len(pkt.CurrSeg.Future) > 0
+requires AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+requires p.NoBouncingPkt(pkt)
+requires !(egressID in p.d.getDomExternal())
+ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
+ensures  acc(&p.ingressID, R55)
+ensures  p.ingressID != 0
+decreases
+func (p *scionPacketProcessor) IngressIDNotZeroLemma(pkt io.IO_pkt2, egressID uint16) {
+	reveal AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+	reveal p.NoBouncingPkt(pkt)
+}
+
+ghost
 requires 0 <= start && start <= end && end <= len(ub)
 requires acc(p.scionLayer.Mem(ub), R55)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
