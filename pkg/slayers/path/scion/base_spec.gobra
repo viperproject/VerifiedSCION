@@ -40,10 +40,8 @@ pred (b *Base) Mem() {
 	acc(&b.PathMeta.SegLen[0]) &&
 	acc(&b.PathMeta.SegLen[1]) &&
 	acc(&b.PathMeta.SegLen[2]) &&
-	0 <= b.NumINF && b.NumINF <= MaxINFs &&
-	// the program defines 64 as the maximum number of hops,
-	// but this does not seem to be enforced anywhere.
-	0 <= b.NumHops && // b.NumHops <= MaxHops &&
+	0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
+	0 <= b.NumHops && b.NumHops <= MaxHops &&
 	(0 < b.NumINF ==> 0 < b.NumHops)
 }
 
@@ -75,8 +73,13 @@ pure func (b Base) ValidCurrIdxsSpec() bool {
 		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
-			b.PathMeta.SegLen[i] == 0) &&
-		b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+			b.PathMeta.SegLen[i] == 0)
+}
+
+ghost
+decreases
+pure func (b Base) CurrInfMatchesCurrHF() bool {
+	return b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
 }
 
 ghost
@@ -284,8 +287,15 @@ pure func (b AbsBase) ValidCurrIdxsSpec() bool {
 		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
-			b.PathMeta.SegLen[i] == 0) &&
-		b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+			b.PathMeta.SegLen[i] == 0)
+}
+
+ghost
+opaque
+requires b.ValidCurrIdxsSpec()
+decreases
+pure func (b AbsBase) CurrInfMatchesCurrHF() bool {
+	return b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
 }
 
 ghost
@@ -361,6 +371,15 @@ pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
 		let b3 := sl.GetByte(b, 0, lenR, 3) in
 		let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
 		DecodedFrom(line) == m
+}
+
+ghost
+requires acc(s.Mem(), _)
+requires acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
+decreases
+pure func (s *Base) DecodeFromBytesSpec(b []byte) bool {
+	return unfolding acc(s.Mem(), _) in
+		s.PathMeta.DecodeFromBytesSpec(b)
 }
 
 ghost

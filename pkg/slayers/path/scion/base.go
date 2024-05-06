@@ -80,19 +80,10 @@ type Base struct {
 
 // @ requires  s.NonInitMem()
 // @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R50)
-// @ ensures   r != nil ==> (s.NonInitMem() && r.ErrorMem())
-// @ ensures   r == nil ==> (
-// @ 	s.Mem() &&
-// @ 	let lenD := len(data) in
-// @ 	MetaLen <= lenD &&
-// @ 	let b0 := sl.GetByte(data, 0, lenD, 0) in
-// @ 	let b1 := sl.GetByte(data, 0, lenD, 1) in
-// @ 	let b2 := sl.GetByte(data, 0, lenD, 2) in
-// @ 	let b3 := sl.GetByte(data, 0, lenD, 3) in
-// @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
-// @ 	let metaHdr := DecodedFrom(line) in
-// @ 	metaHdr == s.GetMetaHdr() &&
-// @ 	s.InfsMatchHfs())
+// @ ensures   r != nil ==>
+// @ 	s.NonInitMem() && r.ErrorMem()
+// @ ensures   r == nil ==>
+// @ 	s.Mem() && s.DecodeFromBytesSpec(data) && s.InfsMatchHfs()
 // @ ensures   len(data) < MetaLen ==> r != nil
 // @ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {

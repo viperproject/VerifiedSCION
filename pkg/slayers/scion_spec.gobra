@@ -408,8 +408,8 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func IsSupportedPkt(raw []byte) bool {
 	return CmnHdrLen <= len(raw) &&
-		let pathType  := path.Type(GetPathType(raw))   in
-		let nextHdr := L4ProtocolType(GetNextHdr(raw)) in
+		let pathType := path.Type(GetPathType(raw))     in
+		let nextHdr  := L4ProtocolType(GetNextHdr(raw)) in
 		pathType == scion.PathType &&
 		nextHdr != L4SCMP
 }
