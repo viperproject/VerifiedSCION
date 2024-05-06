@@ -17,14 +17,14 @@
 package router
 
 import (
-	"sync"
+	gsync "github.com/scionproto/scion/verification/utils/ghost_sync"
 	io "github.com/scionproto/scion/verification/io"
 )
 
 type SharedArg struct {
-	Place *io.Place // Existential for the current place
-	State *io.IO_dp3s_state_local // Existential for the current model state
-	IBufY, OBufY ElemRA // Parameters of the algebra
+	ghost Place gpointer[io.Place] // Existential for the current place
+	ghost State gpointer[io.IO_dp3s_state_local] // Existential for the current model state
+	ghost IBufY, OBufY ElemRA // Parameters of the algebra
 }
 
 pred SharedInv(ghost dp io.DataPlaneSpec, ghost y SharedArg) {
@@ -36,13 +36,13 @@ pred SharedInv(ghost dp io.DataPlaneSpec, ghost y SharedArg) {
 // initialize the shared invariant:
 ghost
 requires io.token(p) && dp.dp3s_iospec_ordered(s, p)
-ensures  m.LockP() && m.LockInv() == SharedInv!< dp, y !>;
+ensures  gsync.LockP(m) && gsync.LockInv(m) == SharedInv!< dp, y !>;
 decreases
 func InitSharedInv(
 	dp io.DataPlaneSpec,
 	p io.Place,
-	s io.IO_dp3s_state_local) (m *sync.Mutex, y SharedArg) {
-	mV@ := sync.Mutex{}
+	s io.IO_dp3s_state_local) (m gpointer[gsync.GhostMutex], y SharedArg) {
+	mV@ := gsync.GhostMutex{}
 	m = &mV
 	pE@ := p
 	sE@ := s
@@ -50,7 +50,7 @@ func InitSharedInv(
 	yO := InitElemAuth(s.obuf)
 	y := SharedArg{&pE, &sE, yI, yO}
 	fold SharedInv!< dp, y !>()
-	m.SetInv(SharedInv!< dp, y !>)
+	gsync.SetInv(m, SharedInv!< dp, y !>)
 }
 
 /////////////////////////////////////// Prophecies ///////////////////////////////////////

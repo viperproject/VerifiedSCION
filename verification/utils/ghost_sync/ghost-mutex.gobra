@@ -1,0 +1,60 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package ghost_sync
+
+import "sync"
+import . "verification/utils/definitions"
+
+// This package contains the definition of a Ghost Mutex (a.k.a. Ghost Lock), as described
+// in https://arxiv.org/pdf/2311.14452. These Mutexes are used to provide a ghost-like
+// interface to an invariant, for the duration of a an atomic operation. To use ghost
+// mutexes soundly, we must ensure two properties:
+// (1) All calls to Lock() must be acoompanied by a call to Unlock().
+// (2) All operations performed between a call to Lock() and the corresponding call to 
+// Unlock() must be atomic.
+// Currently, Gobra does not check any of these two properties. Property (1) could be done
+// by using obligations.
+
+type GhostMutex struct {
+	privateField PrivateField
+}
+
+pred LockP(m gpointer[GhostMutex])
+pred UnlockP(m gpointer[GhostMutex])
+
+ghost
+requires acc(LockP(m), _)
+decreases _
+pure func LockInv(m gpointer[GhostMutex]) pred()
+
+ghost
+requires inv() && acc(m) && *m == GhostMutex{}
+ensures  LockP(m) && LockInv(m) == inv
+decreases
+func SetInv(m gpointer[GhostMutex], inv pred())
+
+ghost
+requires acc(LockP(m), _)
+ensures  LockP(m) && UnlockP(m) && LockInv(m)()
+decreases _ if sync.IgnoreBlockingForTermination()
+func Lock(m gpointer[GhostMutex])
+
+ghost
+requires acc(LockP(m), _) && UnlockP(m) && LockInv(m)()
+ensures  LockP(m)
+decreases _
+func Unlock(m gpointer[GhostMutex])
