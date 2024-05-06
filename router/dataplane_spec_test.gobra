@@ -207,10 +207,10 @@ func testRun(
 	assert d.dpSpecWellConfiguredLinkTypes(dp)
 
 	fold d.Mem()
-	assert d.getDomNeighborIAs() == d.getDomExternal()
-	assert d.getDomExternal() == d.getDomLinkTypes()
+	assert d.getDomNeighborIAs() == reveal d.getDomExternal()
+	assert d.getDomNeighborIAs() == d.getDomLinkTypes()
 	assert !(0 in d.getDomNeighborIAs())
-	assert d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
+	assert reveal d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 	assert reveal d.DpAgreesWithSpec(dp)
 
 	assert reveal d.PreWellConfigured()

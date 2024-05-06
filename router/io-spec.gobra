@@ -159,37 +159,33 @@ ghost
 requires acc(d.Mem(), _)
 requires d.DpAgreesWithSpec(dp)
 requires d.WellConfigured()
-requires acc(&d.external, _)
-requires acc(d.external, _)
-requires egressID in domain(d.external)
+requires egressID in d.getDomExternal()
 ensures  egressID != 0
 ensures  io.IO_ifs(egressID) in domain(dp.GetNeighborIAs())
 decreases
 func (d *DataPlane) EgressIDNotZeroLemma(egressID uint16, dp io.DataPlaneSpec) {
 	reveal d.WellConfigured()
 	reveal d.DpAgreesWithSpec(dp)
-	d.getDomExternalLemma()
-	assert d.getDomExternal() == domain(d.external)
-	assert egressID in d.getDomExternal()
-	assert d.getDomNeighborIAs() == d.getDomExternal()
-	assert io.IO_ifs(egressID) in domain(dp.GetNeighborIAs())
-	assert egressID != 0
 }
 
 ghost
 requires acc(d.Mem(), _)
 requires acc(&d.external, _)
-requires acc(d.external, _)
+requires d.external != nil ==> acc(d.external, _)
 ensures  acc(d.Mem(), _)
 ensures  acc(&d.external, _)
-ensures  acc(d.external, _)
+ensures  d.external != nil ==> acc(d.external, _)
 ensures  d.getDomExternal() == domain(d.external)
 decreases
 func (d *DataPlane) getDomExternalLemma() {
-	assert d.external != nil
-	assert d.getDomExternal() == unfolding acc(d.Mem(), _) in
-		(unfolding acc(accBatchConn(d.external), _) in
-				domain(d.external))
+	if (d.external != nil) {
+		assert reveal d.getDomExternal() == unfolding acc(d.Mem(), _) in
+			(unfolding acc(accBatchConn(d.external), _) in
+					domain(d.external))
+	} else {
+		assert reveal d.getDomExternal() ==
+			unfolding acc(d.Mem(), _) in set[uint16]{}
+	}
 }
 
 ghost
