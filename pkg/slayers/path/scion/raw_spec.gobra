@@ -421,7 +421,7 @@ pure func segment(raw []byte,
 	peer bool,
 	segLen int) (res io.IO_seg2) {
 	return let hopfields := hopFields(raw, offset, 0, segLen) in
-		io.IO_seg2(io.IO_seg3_{
+		io.IO_seg2 {
 			AInfo :ainfo,
 			UInfo : uinfo,
 			ConsDir : consDir,
@@ -429,7 +429,7 @@ pure func segment(raw []byte,
 			Past : segPast(hopfields, currHFIdx - 1),
 			Future : segFuture(hopfields, currHFIdx),
 			History : segHistory(hopfields, currHFIdx - 1),
-		})
+		}
 }
 
 ghost
@@ -620,14 +620,14 @@ func ValidPktMetaHdrSublice(raw []byte, idx int) {
 ghost
 decreases
 pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField) (newPkt io.IO_pkt2) {
-	return let newCurrSeg := io.IO_seg3(io.IO_seg3_{
+	return let newCurrSeg := io.IO_seg3 {
 		info.AInfo,
 		info.UInfo,
 		info.ConsDir,
 		info.Peer,
 		oldPkt.CurrSeg.Past,
 		oldPkt.CurrSeg.Future,
-		oldPkt.CurrSeg.History}) in
+		oldPkt.CurrSeg.History} in
 	io.IO_pkt2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg}
 }
 

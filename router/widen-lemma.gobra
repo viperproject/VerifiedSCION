@@ -270,7 +270,7 @@ func segmentWidenLemma(raw []byte, offset int, currHFIdx int, ainfo io.IO_ainfo,
 	hopfields2 := scion.hopFields(raw[:length], offset, 0, segLen)
 	assert hopfields1 == hopfields2
 
-	ret1 := io.IO_seg2(io.IO_seg3_{
+	ret1 := io.IO_seg2 {
 		AInfo :ainfo,
 		UInfo : uinfo,
 		ConsDir : consDir,
@@ -278,8 +278,8 @@ func segmentWidenLemma(raw []byte, offset int, currHFIdx int, ainfo io.IO_ainfo,
 		Past : scion.segPast(hopfields1, currHFIdx - 1),
 		Future : scion.segFuture(hopfields1, currHFIdx),
 		History : scion.segHistory(hopfields1, currHFIdx - 1),
-	})
-	ret2 := io.IO_seg2(io.IO_seg3_{
+	}
+	ret2 := io.IO_seg2 {
 		AInfo :ainfo,
 		UInfo : uinfo,
 		ConsDir : consDir,
@@ -287,7 +287,7 @@ func segmentWidenLemma(raw []byte, offset int, currHFIdx int, ainfo io.IO_ainfo,
 		Past : scion.segPast(hopfields2, currHFIdx - 1),
 		Future : scion.segFuture(hopfields2, currHFIdx),
 		History : scion.segHistory(hopfields2, currHFIdx - 1),
-	})
+	}
 	assert ret1 == scion.segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
 	assert ret2 == scion.segment(raw[:length], offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
 	assert ret1 == ret2

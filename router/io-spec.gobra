@@ -67,7 +67,7 @@ decreases
 pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val) {
 	return io.IO_val(io.IO_val_Unsupported{
 		path.ifsToIO_ifs(ingressID),
-		io.Unit(io.Unit_{}),
+		io.Unit{},
 	})
 }
 

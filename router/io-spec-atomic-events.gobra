@@ -15,7 +15,7 @@
 // +gobra
 
 // This file contains the definition of operations that perform the atomic transitions of state
-// in the IO spec. They all take a *gsync.GhostMutex, which acts as a logical invariant, because Gobra
+// in the IO spec. They all take a gpointer[gsync.GhostMutex], which acts as a logical invariant, because Gobra
 // does not support invariants natively. As such, we can only get access to the invariants if we
 // first lock the mutex. Even though all these operations are
 // terminating, Gobra cannot currently prove this and thus, we assume termination for all methods
