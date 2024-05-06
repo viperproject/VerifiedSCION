@@ -3380,7 +3380,9 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	// @ p.d.getLocalIA()
 	if /*@ unfolding acc(p.scionLayer.Mem(ub), R50) in (unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in @*/ p.scionLayer.DstIA /*@ ) @*/ == p.d.localIA {
 		// @ assert p.DstIsLocalIngressID(ub)
-		// @ assert unfolding acc(p.scionLayer.Mem(ub), R50) in (unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in p.scionLayer.DstIA) == p.d.localIA
+		// @ assert unfolding acc(p.scionLayer.Mem(ub), R50) in
+		// @ 	(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
+		// @ 	p.scionLayer.DstIA) == p.d.localIA
 		// @ p.LocalDstLemma(ub, dp)
 		// @ assert p.ingressID != 0
 		// @ assert len(nextPkt.CurrSeg.Future) == 1
