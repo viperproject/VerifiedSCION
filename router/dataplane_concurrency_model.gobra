@@ -17,8 +17,8 @@
 package router
 
 import (
-	gsync "github.com/scionproto/scion/verification/utils/ghost_sync"
-	io "github.com/scionproto/scion/verification/io"
+	gsync "verification/utils/ghost_sync"
+	io "verification/io"
 )
 
 type SharedArg struct {
