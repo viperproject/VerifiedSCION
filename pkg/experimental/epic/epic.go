@@ -120,6 +120,8 @@ func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) (err err
 func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	timestamp uint32, buffer []byte /*@ , ghost ub []byte @*/) (res []byte, reserr error) {
 
+	// @ ghost oldBuffer := buffer
+	// @ ghost allocatesNewBuffer := len(buffer) < MACBufferSize
 	if len(buffer) < MACBufferSize {
 		buffer = make([]byte, MACBufferSize)
 		// @ fold sl.AbsSlice_Bytes(buffer, 0, len(buffer))
@@ -145,11 +147,14 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	// @ ghost end   := start + 4
 	result := input[len(input)-f.BlockSize() : len(input)-f.BlockSize()+4]
 	// @ sl.SplitRange_Bytes(input, start, end, writePerm)
-	// @ package (sl.AbsSlice_Bytes(result, 0, len(result)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer))) {
-	// @ 	sl.CombineRange_Bytes(input, start, end, writePerm)
-	// @ 	sl.CombineRange_Bytes(buffer, 0, inputLength, writePerm)
+	// @ package (sl.AbsSlice_Bytes(result, 0, len(result)) --* sl.AbsSlice_Bytes(oldBuffer, 0, len(oldBuffer))) {
+	// @ 	ghost if !allocatesNewBuffer {
+	// @ 		assert oldBuffer === buffer
+	// @ 		sl.CombineRange_Bytes(input, start, end, writePerm)
+	// @ 		sl.CombineRange_Bytes(oldBuffer, 0, inputLength, writePerm)
+	// @ 	}
 	// @ }
-	// @ assert (sl.AbsSlice_Bytes(result, 0, len(result)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer)))
+	// @ assert (sl.AbsSlice_Bytes(result, 0, len(result)) --* sl.AbsSlice_Bytes(oldBuffer, 0, len(oldBuffer)))
 	return result, nil
 }
 
