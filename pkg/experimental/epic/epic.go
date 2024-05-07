@@ -107,10 +107,6 @@ func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) (err err
 // If the same buffer is provided in subsequent calls to this function, the previously returned
 // EPIC MAC may get overwritten. Only the most recently returned EPIC MAC is guaranteed to be
 // valid.
-// (VerifiedSCION) the following function is marked as trusted, even though it is verified,
-// due to an incompletness of Gobra that keeps it from being able to prove that we have
-// the magic wand at the end of a successful run.
-// @ trusted
 // @ requires  len(auth) == 16
 // @ requires  sl.AbsSlice_Bytes(buffer, 0, len(buffer))
 // @ preserves acc(s.Mem(ub), R20)
