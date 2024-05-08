@@ -38,6 +38,7 @@ decreases
 pure func absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetAddressOffset(raw) in
+		let headerOffsetWithMetaLen := headerOffset + scion.MetaLen
 		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
 			binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen])) in
 		let metaHdr := scion.DecodedFrom(hdr) in
@@ -49,12 +50,12 @@ pure func absPkt(raw []byte) (res io.IO_pkt2) {
 		let segLen := scion.LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len) in
-		let offset := scion.HopFieldOffset(numINF, 0, headerOffset) in
+		let offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen) in
 		io.IO_pkt2(io.IO_Packet2{
-			CurrSeg : scion.CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffset),
-			LeftSeg : scion.LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffset),
-			MidSeg : scion.MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, headerOffset),
-			RightSeg : scion.RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, headerOffset),
+			CurrSeg : scion.CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen),
+			LeftSeg : scion.LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffsetWithMetaLen),
+			MidSeg : scion.MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, headerOffsetWithMetaLen),
+			RightSeg : scion.RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, headerOffsetWithMetaLen),
 		})
 }
 

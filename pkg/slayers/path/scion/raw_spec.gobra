@@ -537,8 +537,7 @@ requires validPktMetaHdr(raw)
 decreases
 pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
-		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[:MetaLen])) in
-		let metaHdr := DecodedFrom(hdr) in
+		let metaHdr := RawBytesToMetaHdr(raw) in
 		let currINFIdx := int(metaHdr.CurrINF) in
 		let currHFIdx := int(metaHdr.CurrHF) in
 		let seg1Len := int(metaHdr.SegLen[0]) in
@@ -549,10 +548,10 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 		let numINF := NumInfoFields(seg1Len, seg2Len, seg3Len) in
 		let offset := HopFieldOffset(numINF, 0, 0) in
 		io.IO_pkt2(io.IO_Packet2{
-			CurrSeg : CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0),
-			LeftSeg : LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, 0),
-			MidSeg : MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, 0),
-			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, 0),
+			CurrSeg : CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, MetaLen),
+			LeftSeg : LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, MetaLen),
+			MidSeg : MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, MetaLen),
+			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, MetaLen),
 		})
 }
 
@@ -649,9 +648,7 @@ ensures len(s.absPkt(ubuf).CurrSeg.Future) == 1
 decreases
 func (s *Raw) LastHopLemma(ubuf []byte) {
 	reveal validPktMetaHdr(ubuf)
-	hdr := (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56) in
-			binary.BigEndian.Uint32(ubuf[:MetaLen]))
-	metaHdr := DecodedFrom(hdr)
+	metaHdr := RawBytesToMetaHdr(ubuf)
 	currINFIdx := int(metaHdr.CurrINF)
 	currHFIdx := int(metaHdr.CurrHF)
 	seg1Len := int(metaHdr.SegLen[0])
