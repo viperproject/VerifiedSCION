@@ -657,8 +657,8 @@ func (s *Raw) LastHopLemma(ubuf []byte) {
 	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := HopFieldOffset(numINF, 0, 0)
+	offset := HopFieldOffset(numINF, 0, MetaLen)
 	pkt := reveal s.absPkt(ubuf)
-	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0)
+	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, MetaLen)
 	assert len(pkt.CurrSeg.Future) == 1
 }
