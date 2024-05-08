@@ -247,7 +247,7 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	hdr := hdr1
 	fold acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R56)
 	fold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
-
+	headerOffsetWithMetaLen := start + scion.MetaLen
 	metaHdr := scion.DecodedFrom(hdr)
 	currINFIdx := int(metaHdr.CurrINF)
 	currHFIdx := int(metaHdr.CurrHF)
@@ -257,12 +257,12 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	segLen := scion.LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := scion.HopFieldOffset(numINF, 0, start)
+	offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen)
 
-	currSegWidenLemma(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, start, start, end)
-	leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, start, start, end)
-	midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, start, start, end)
-	rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, start, start, end)
+	currSegWidenLemma(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
+	leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
 }
 
@@ -301,7 +301,7 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	reveal scion.validPktMetaHdr(ub[start:end])
 	assert reveal slayers.ValidPktMetaHdr(ub)
 	assert start == slayers.GetAddressOffset(ub)
-
+	headerOffsetWithMetaLen := start + scion.MetaLen
 	hdr1 := binary.BigEndian.Uint32(ub[start:start+scion.MetaLen])
 	hdr2 := binary.BigEndian.Uint32(ub[start:end][:scion.MetaLen])
 	assert hdr1 == hdr2
@@ -318,12 +318,12 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	segLen := scion.LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := scion.HopFieldOffset(numINF, 0, start)
+	offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen)
 
-	currSegWidenLemma(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, start, start, end)
-	leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, start, start, end)
-	midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, start, start, end)
-	rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, start, start, end)
+	currSegWidenLemma(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
+	leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
 }
 
