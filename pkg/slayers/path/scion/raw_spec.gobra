@@ -546,7 +546,7 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 		let segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
 		let numINF := NumInfoFields(seg1Len, seg2Len, seg3Len) in
-		let offset := HopFieldOffset(numINF, 0, 0) in
+		let offset := HopFieldOffset(numINF, 0, MetaLen) in
 		io.IO_pkt2(io.IO_Packet2{
 			CurrSeg : CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, MetaLen),
 			LeftSeg : LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, MetaLen),
@@ -594,7 +594,7 @@ pure func validPktMetaHdr(raw []byte) bool {
 		let base := RawBytesToBase(raw)       in
 		0 < metaHdr.SegLen[0]           &&
 		base.ValidCurrIdxsSpec()        &&
-		pktLen(seg1, seg2, seg3, 0) <= len(raw)
+		pktLen(seg1, seg2, seg3, MetaLen) <= len(raw)
 }
 
 ghost

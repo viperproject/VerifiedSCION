@@ -454,7 +454,7 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let base := scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1+seg2+seg3} in
 		0 < metaHdr.SegLen[0]    &&
 		base.ValidCurrIdxsSpec() &&
-		scion.pktLen(seg1, seg2, seg3, start) <= length
+		scion.pktLen(seg1, seg2, seg3, start + scion.MetaLen) <= length
 }
 
 ghost

@@ -122,6 +122,7 @@ func absPktWidenLemma(raw []byte, length int) {
 	headerOffset2 := slayers.GetAddressOffset(raw[:length])
 	assert headerOffset1 == headerOffset2
 	headerOffset := headerOffset1
+	headerOffsetWithMetaLen := headerOffset + scion.MetaLen
 	hdr1 := binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen])
 	hdr2 := binary.BigEndian.Uint32(raw[:length][headerOffset:headerOffset+scion.MetaLen])
 	assert hdr1 == hdr2
@@ -138,18 +139,18 @@ func absPktWidenLemma(raw []byte, length int) {
 	segLen := scion.LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := scion.HopFieldOffset(numINF, 0, headerOffset)
+	offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen)
 
-	currSegWidenLemma(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffset, 0, length)
-	leftSegWidenLemma(raw, currINFIdx + 1, seg1Len, seg2Len, seg3Len, headerOffset, 0, length)
-	midSegWidenLemma(raw, currINFIdx + 2, seg1Len, seg2Len, seg3Len, headerOffset, 0, length)
-	rightSegWidenLemma(raw, currINFIdx - 1, seg1Len, seg2Len, seg3Len, headerOffset, 0, length)
+	currSegWidenLemma(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen, 0, length)
+	leftSegWidenLemma(raw, currINFIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, 0, length)
+	midSegWidenLemma(raw, currINFIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, 0, length)
+	rightSegWidenLemma(raw, currINFIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, 0, length)
 
 	assert reveal absPkt(raw) == reveal absPkt(raw[:length])
 }
 
 ghost
-requires  0 <= start && start <= headerOffset + scion.MetaLen
+requires  0 <= start && start <= headerOffset
 requires  path.InfoFieldOffset(currINFIdx, headerOffset) + path.InfoLen <= offset
 requires  0 < segLen
 requires  offset + path.HopLen * segLen <= length
@@ -290,7 +291,7 @@ func hopFieldsWidenLemma(raw []byte, offset int, currHFIdx int, segLen int, star
 }
 
 ghost
-requires  0 <= start && start <= headerOffset + scion.MetaLen
+requires  0 <= start && start <= headerOffset
 requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
@@ -326,7 +327,7 @@ func leftSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg
 }
 
 ghost
-requires  0 <= start && start <= headerOffset + scion.MetaLen
+requires  0 <= start && start <= headerOffset
 requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
@@ -362,7 +363,7 @@ func rightSegWidenLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, se
 }
 
 ghost
-requires  0 <= start && start <= headerOffset + scion.MetaLen
+requires  0 <= start && start <= headerOffset
 requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
