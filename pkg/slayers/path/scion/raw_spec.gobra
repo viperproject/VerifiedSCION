@@ -532,11 +532,10 @@ pure func MidSeg(
 
 ghost
 opaque
-requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 requires validPktMetaHdr(raw)
 decreases
-pure func (s *Raw) absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
+pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
 		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in binary.BigEndian.Uint32(raw[:MetaLen])) in
 		let metaHdr := DecodedFrom(hdr) in
@@ -644,12 +643,11 @@ ghost
 preserves acc(s.Mem(ubuf), R55)
 preserves s.IsLastHopSpec(ubuf)
 preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
-preserves dp.Valid()
 preserves validPktMetaHdr(ubuf)
 preserves s.EqAbsHeader(ubuf)
-ensures len(s.absPkt(dp, ubuf).CurrSeg.Future) == 1
+ensures len(s.absPkt(ubuf).CurrSeg.Future) == 1
 decreases
-func (s *Raw) LastHopLemma(ubuf []byte, dp io.DataPlaneSpec) {
+func (s *Raw) LastHopLemma(ubuf []byte) {
 	reveal validPktMetaHdr(ubuf)
 	hdr := (unfolding acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56) in
 			binary.BigEndian.Uint32(ubuf[:MetaLen]))
@@ -663,7 +661,7 @@ func (s *Raw) LastHopLemma(ubuf []byte, dp io.DataPlaneSpec) {
 	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := HopFieldOffset(numINF, 0, 0)
-	pkt := reveal s.absPkt(dp, ubuf)
+	pkt := reveal s.absPkt(ubuf)
 	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0)
 	assert len(pkt.CurrSeg.Future) == 1
 }

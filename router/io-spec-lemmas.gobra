@@ -28,32 +28,29 @@ import (
 )
 
 ghost
-preserves dp.Valid()
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 ensures   slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw) ==>
-	absIO_val(dp, raw, ingressID).isIO_val_Pkt2 &&
-	absIO_val(dp, raw, ingressID).IO_val_Pkt2_2 == absPkt(dp, raw) &&
-	len(absPkt(dp, raw).CurrSeg.Future) > 0
+	absIO_val(raw, ingressID).isIO_val_Pkt2 &&
+	absIO_val(raw, ingressID).IO_val_Pkt2_2 == absPkt(raw) &&
+	len(absPkt(raw).CurrSeg.Future) > 0
 decreases
-func absIO_valLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16) {
+func absIO_valLemma(raw []byte, ingressID uint16) {
 	if(slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)){
-		absIO := reveal absIO_val(dp, raw, ingressID)
+		absIO := reveal absIO_val(raw, ingressID)
 		assert absIO.isIO_val_Pkt2
-		assert absIO_val(dp, raw, ingressID).IO_val_Pkt2_2 == absPkt(dp, raw)
-		absPktFutureLemma(dp, raw)
+		assert absIO_val(raw, ingressID).IO_val_Pkt2_2 == absPkt(raw)
+		absPktFutureLemma(raw)
 	}
 }
 
 ghost
-requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 requires slayers.ValidPktMetaHdr(raw)
-ensures  dp.Valid()
 ensures  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures  slayers.ValidPktMetaHdr(raw)
-ensures  len(absPkt(dp, raw).CurrSeg.Future) > 0
+ensures  len(absPkt(raw).CurrSeg.Future) > 0
 decreases
-func absPktFutureLemma(dp io.DataPlaneSpec, raw []byte) {
+func absPktFutureLemma(raw []byte) {
 	reveal slayers.ValidPktMetaHdr(raw)
 	headerOffset := slayers.GetAddressOffset(raw)
 	assert forall k int :: {&raw[headerOffset:headerOffset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==> &raw[headerOffset:headerOffset+scion.MetaLen][k] == &raw[headerOffset + k]
@@ -69,7 +66,7 @@ func absPktFutureLemma(dp io.DataPlaneSpec, raw []byte) {
 	prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := scion.HopFieldOffset(numINF, 0, headerOffset)
-	pkt := reveal absPkt(dp, raw)
+	pkt := reveal absPkt(raw)
 	assert pkt.CurrSeg == reveal scion.CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffset)
 	assert len(pkt.CurrSeg.Future) > 0
 }
@@ -120,13 +117,12 @@ requires acc(&p.d, R55) && acc(p.d.Mem(), _)
 requires acc(&p.ingressID, R55)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 requires slayers.ValidPktMetaHdr(ub)
-requires dp.Valid()
 decreases
-pure func (p *scionPacketProcessor) LastHopLen(ub []byte, dp io.DataPlaneSpec) bool {
+pure func (p *scionPacketProcessor) LastHopLen(ub []byte) bool {
 	return (unfolding acc(p.scionLayer.Mem(ub), R50) in
 		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
 		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==>
-			len(absPkt(dp, ub).CurrSeg.Future) == 1
+			len(absPkt(ub).CurrSeg.Future) == 1
 }
 
 //TODO: Does not work with --disableNL --unsafeWildcardoptimization
@@ -134,26 +130,24 @@ ghost
 requires acc(p.scionLayer.Mem(ub), R50)
 requires acc(&p.d, R55) && acc(p.d.Mem(), _)
 requires acc(&p.ingressID, R55)
-requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 requires slayers.ValidPktMetaHdr(ub)
 requires p.DstIsLocalIngressID(ub)
-requires p.LastHopLen(ub, dp)
+requires p.LastHopLen(ub)
 requires (unfolding acc(p.scionLayer.Mem(ub), R50) in
 	(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R55) in
 	p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA))
 ensures  acc(p.scionLayer.Mem(ub), R50)
 ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
 ensures  acc(&p.ingressID, R55)
-ensures  dp.Valid()
 ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 ensures  slayers.ValidPktMetaHdr(ub)
 ensures  p.ingressID != 0
-ensures  len(absPkt(dp, ub).CurrSeg.Future) == 1
+ensures  len(absPkt(ub).CurrSeg.Future) == 1
 decreases
-func (p* scionPacketProcessor) LocalDstLemma(ub []byte, dp io.DataPlaneSpec) {
+func (p* scionPacketProcessor) LocalDstLemma(ub []byte) {
 	reveal p.DstIsLocalIngressID(ub)
-	reveal p.LastHopLen(ub, dp)
+	reveal p.LastHopLen(ub)
 }
 
 ghost
@@ -217,7 +211,6 @@ requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
 requires acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R50)
 requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 requires p.path === p.scionLayer.GetPath(ub)
-requires dp.Valid()
 requires slayers.ValidPktMetaHdr(ub)
 requires start == p.scionLayer.PathStartIdx(ub)
 requires end == p.scionLayer.PathEndIdx(ub)
@@ -226,7 +219,6 @@ ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
 ensures  acc(p.scionLayer.Mem(ub), R55)
 ensures  acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R50)
 ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
-ensures  dp.Valid()
 ensures  slayers.ValidPktMetaHdr(ub)
 ensures  p.scionLayer.EqAbsHeader(ub)
 ensures  start == p.scionLayer.PathStartIdx(ub)
@@ -234,9 +226,9 @@ ensures  end == p.scionLayer.PathEndIdx(ub)
 ensures  scion.validPktMetaHdr(ub[start:end])
 ensures  p.path.EqAbsHeader(ub[start:end])
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
-ensures  absPkt(dp, ub) == p.path.absPkt(dp, ub[start:end])
+ensures  absPkt(ub) == p.path.absPkt(ub[start:end])
 decreases
-func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end int, dp io.DataPlaneSpec) {
+func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end int) {
 	unfold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 	unfold acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R56)
 	reveal slayers.ValidPktMetaHdr(ub)
@@ -270,7 +262,7 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, start, start, end)
 	midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, start, start, end)
 	rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, start, start, end)
-	assert reveal absPkt(dp, ub) == reveal p.path.absPkt(dp, ub[start:end])
+	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
 }
 
 ghost
@@ -280,7 +272,6 @@ requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
 requires acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R50)
 requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 requires p.path === p.scionLayer.GetPath(ub)
-requires dp.Valid()
 requires scion.validPktMetaHdr(ub[start:end])
 requires start == p.scionLayer.PathStartIdx(ub)
 requires end == p.scionLayer.PathEndIdx(ub)
@@ -290,15 +281,14 @@ ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
 ensures  acc(p.scionLayer.Mem(ub), R55)
 ensures  acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R50)
 ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
-ensures  dp.Valid()
 ensures  slayers.ValidPktMetaHdr(ub)
 ensures  start == p.scionLayer.PathStartIdx(ub)
 ensures  end == p.scionLayer.PathEndIdx(ub)
 ensures  scion.validPktMetaHdr(ub[start:end])
 ensures  p.scionLayer.EqAbsHeader(ub)
-ensures  absPkt(dp, ub) == p.path.absPkt(dp, ub[start:end])
+ensures  absPkt(ub) == p.path.absPkt(ub[start:end])
 decreases
-func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end int, dp io.DataPlaneSpec){
+func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end int){
 	unfold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 	unfold acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R56)
 	unfold acc(p.scionLayer.Mem(ub), R56)
@@ -333,7 +323,7 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, start, start, end)
 	midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, start, start, end)
 	rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, start, start, end)
-	assert reveal absPkt(dp, ub) == reveal p.path.absPkt(dp, ub[start:end])
+	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
 }
 
 ghost

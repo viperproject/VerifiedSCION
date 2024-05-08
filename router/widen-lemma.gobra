@@ -32,13 +32,12 @@ ghost
 requires  0 <= length && length <= len(raw)
 requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
 requires  acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R49)
-preserves dp.Valid()
 ensures   acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
 ensures   acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R49)
-ensures   absIO_val(dp, raw[:length], ingressID).isIO_val_Pkt2 ==>
-	absIO_val(dp, raw[:length], ingressID) == absIO_val(dp, raw, ingressID)
+ensures   absIO_val(raw[:length], ingressID).isIO_val_Pkt2 ==>
+	absIO_val(raw[:length], ingressID) == absIO_val(raw, ingressID)
 decreases
-func absIO_valWidenLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16, length int) {
+func absIO_valWidenLemma(raw []byte, ingressID uint16, length int) {
 	var ret1 io.IO_val
 	var ret2 io.IO_val
 
@@ -47,17 +46,17 @@ func absIO_valWidenLemma(dp io.DataPlaneSpec, raw []byte, ingressID uint16, leng
 		assert slayers.ValidPktMetaHdr(raw)
 		IsSupportedPktWidenLemma(raw, length)
 		assert slayers.IsSupportedPkt(raw)
-		absPktWidenLemma(dp, raw, length)
+		absPktWidenLemma(raw, length)
 
-		ret1 = io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(dp, raw)})
-		ret2 = io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(dp, raw[:length])})
-		assert ret1 == reveal absIO_val(dp, raw, ingressID)
-		assert ret2 == reveal absIO_val(dp, raw[:length], ingressID)
+		ret1 = io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(raw)})
+		ret2 = io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(raw[:length])})
+		assert ret1 == reveal absIO_val(raw, ingressID)
+		assert ret2 == reveal absIO_val(raw[:length], ingressID)
 		assert ret1 == ret2
-		assert absIO_val(dp, raw[:length], ingressID).isIO_val_Pkt2 ==>
-			absIO_val(dp, raw[:length], ingressID) == absIO_val(dp, raw, ingressID)
+		assert absIO_val(raw[:length], ingressID).isIO_val_Pkt2 ==>
+			absIO_val(raw[:length], ingressID) == absIO_val(raw, ingressID)
 	} else {
-		assert !(reveal absIO_val(dp, raw[:length], ingressID).isIO_val_Pkt2)
+		assert !(reveal absIO_val(raw[:length], ingressID).isIO_val_Pkt2)
 	}
 }
 
@@ -103,7 +102,6 @@ func IsSupportedPktWidenLemma(raw []byte, length int) {
 
 ghost
 requires  0 <= length && length <= len(raw)
-requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 requires acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R50)
 requires slayers.ValidPktMetaHdr(raw)
@@ -112,9 +110,9 @@ ensures  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 ensures  acc(sl.AbsSlice_Bytes(raw[:length], 0, len(raw[:length])), R50)
 ensures  slayers.ValidPktMetaHdr(raw)
 ensures  slayers.ValidPktMetaHdr(raw[:length])
-ensures  absPkt(dp, raw) == absPkt(dp, raw[:length])
+ensures  absPkt(raw) == absPkt(raw[:length])
 decreases
-func absPktWidenLemma(dp io.DataPlaneSpec, raw []byte, length int) {
+func absPktWidenLemma(raw []byte, length int) {
 
 	reveal slayers.ValidPktMetaHdr(raw)
 	reveal slayers.ValidPktMetaHdr(raw[:length])
@@ -147,7 +145,7 @@ func absPktWidenLemma(dp io.DataPlaneSpec, raw []byte, length int) {
 	midSegWidenLemma(raw, currINFIdx + 2, seg1Len, seg2Len, seg3Len, headerOffset, 0, length)
 	rightSegWidenLemma(raw, currINFIdx - 1, seg1Len, seg2Len, seg3Len, headerOffset, 0, length)
 
-	assert reveal absPkt(dp, raw) == reveal absPkt(dp, raw[:length])
+	assert reveal absPkt(raw) == reveal absPkt(raw[:length])
 }
 
 ghost

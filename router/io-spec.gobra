@@ -32,11 +32,10 @@ import (
 
 ghost
 opaque
-requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 requires slayers.ValidPktMetaHdr(raw)
 decreases
-pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
+pure func absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetAddressOffset(raw) in
 		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
@@ -73,24 +72,22 @@ pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val) {
 
 ghost
 opaque
-requires dp.Valid()
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
-pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
+pure func absIO_val(raw []byte, ingressID uint16) (val io.IO_val) {
 	return (reveal slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)) ?
-		io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(dp, raw)}) :
+		io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(raw)}) :
 		absIO_val_Unsupported(raw, ingressID)
 }
 
 ghost
-requires dp.Valid()
 requires respr.OutPkt != nil ==>
 	acc(sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt)), R56)
 decreases
-pure func absReturnErr(dp io.DataPlaneSpec, respr processResult) (val io.IO_val) {
+pure func absReturnErr(respr processResult) (val io.IO_val) {
 	return respr.OutPkt == nil ? io.IO_val_Unit{} :
-		absIO_val(dp, respr.OutPkt, respr.EgressID)
+		absIO_val(respr.OutPkt, respr.EgressID)
 }
 
 ghost
@@ -189,10 +186,9 @@ func (d *DataPlane) getDomExternalLemma() {
 }
 
 ghost
-requires dp.Valid()
 requires acc(msg.Mem(), R50)
 decreases
-pure func MsgToAbsVal(dp io.DataPlaneSpec, msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
+pure func MsgToAbsVal(msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
 	return unfolding acc(msg.Mem(), R50) in
-		absIO_val(dp, msg.Buffers[0], ingressID)
+		absIO_val(msg.Buffers[0], ingressID)
 }

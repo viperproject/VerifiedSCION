@@ -323,7 +323,7 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // @ requires sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ requires acc(s.Mem(ubuf), R20)
 // pres for IO:
-// @ requires dp.Valid() && validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
+// @ requires validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
 // @ ensures  acc(s.Mem(ubuf), R20)
 // @ ensures  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures  r != nil ==> r.ErrorMem()
@@ -331,11 +331,11 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
 // @ 	validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
 // @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
-// @ 	let oldPkt := old(s.absPkt(dp, ubuf)) in
+// @ 	let oldPkt := old(s.absPkt(ubuf)) in
 // @ 	let newPkt := AbsSetInfoField(oldPkt, info.ToIntermediateAbsInfoField()) in
-// @ 	s.absPkt(dp, ubuf) == newPkt
+// @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
-func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, ghost dp io.DataPlaneSpec@*/) (r error) {
+func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) {
 	//@ share info
 	//@ ghost oldCurrINF := int(old(s.GetCurrINF(ubuf)))
 	//@ unfold acc(s.Mem(ubuf), R50)
@@ -375,7 +375,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte, 
 	//@ fold acc(s.Base.Mem(), R50)
 	//@ fold acc(s.Mem(ubuf), R50)
 	//@ assert idx == oldCurrINF ==> reveal validPktMetaHdr(ubuf)
-	//@ TemporaryAssumeForIO(idx == oldCurrINF ==> s.absPkt(dp, ubuf) == AbsSetInfoField(old(s.absPkt(dp, ubuf)), info.ToIntermediateAbsInfoField()))
+	//@ TemporaryAssumeForIO(idx == oldCurrINF ==> s.absPkt(ubuf) == AbsSetInfoField(old(s.absPkt(ubuf)), info.ToIntermediateAbsInfoField()))
 	return ret
 }
 
