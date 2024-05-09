@@ -23,12 +23,10 @@ import (
 	. "verification/utils/definitions"
 )
 
-ghost const MetaLen = 4
-
 ghost
 decreases
 pure func InfoFieldOffset(currINF, headerOffset int) int {
-	return headerOffset + MetaLen + InfoLen * currINF
+	return headerOffset + InfoLen * currINF
 }
 
 ghost

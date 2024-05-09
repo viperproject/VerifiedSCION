@@ -1,0 +1,132 @@
+2024-05-07 12:12:57.136 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:12:57.143 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel mod show_repo
+2024-05-07 12:12:57.633 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:12:57.634 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:12:57.635 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:12:57.635 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:12:57.635 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:12:57.635 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:12:57.635 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:12:57.643 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:12:57.644 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel info
+2024-05-07 12:12:57.664 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:12:57.665 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:12:57.665 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:12:57.665 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:12:57.666 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:12:57.666 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:12:57.666 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:13:57.164 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:13:57.168 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel mod show_repo
+2024-05-07 12:13:57.189 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:13:57.190 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:13:57.190 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:13:57.190 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:13:57.190 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:13:57.191 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:13:57.191 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:13:57.194 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:13:57.195 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel info
+2024-05-07 12:13:57.208 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:13:57.208 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:13:57.208 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:13:57.208 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:13:57.209 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:13:57.209 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:13:57.210 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:14:57.190 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:14:57.193 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel mod show_repo
+2024-05-07 12:14:57.212 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:14:57.213 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:14:57.213 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:14:57.213 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:14:57.214 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:14:57.214 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:14:57.214 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:14:57.218 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:14:57.218 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel info
+2024-05-07 12:14:57.231 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:14:57.231 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:14:57.231 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:14:57.231 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:14:57.232 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:14:57.232 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:14:57.233 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:15:57.220 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:15:57.223 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel mod show_repo
+2024-05-07 12:15:57.244 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:15:57.245 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:15:57.245 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:15:57.245 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:15:57.246 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:15:57.246 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:15:57.246 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:15:57.250 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:15:57.251 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel info
+2024-05-07 12:15:57.264 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:15:57.264 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:15:57.264 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:15:57.264 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:15:57.265 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:15:57.265 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:15:57.266 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:16:57.235 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:16:57.238 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel mod show_repo
+2024-05-07 12:16:57.258 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:16:57.259 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:16:57.259 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:16:57.259 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:16:57.259 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:16:57.260 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:16:57.260 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:16:57.264 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:16:57.264 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel info
+2024-05-07 12:16:57.277 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:16:57.278 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:16:57.278 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:16:57.278 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:16:57.278 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:16:57.279 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:16:57.279 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:17:57.241 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:17:57.245 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel mod show_repo
+2024-05-07 12:17:57.266 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:17:57.267 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:17:57.267 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:17:57.267 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:17:57.268 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:17:57.268 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:17:57.268 [pool-3-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
+2024-05-07 12:17:57.272 [main] INFO    org.jetbrains.bsp.bazel.workspacecontext.WorkspaceContextConstructor - Constructing workspace context for: ProjectView(targets=ProjectViewTargetsSection(values=[BuildTargetIdentifier [
+  uri = "//..."
+]], excludedValues=[]), bazelBinary=null, buildFlags=null, buildManualTargets=ProjectViewBuildManualTargetsSection(value=false), directories=null, deriveTargetsFromDirectories=ProjectViewDeriveTargetsFromDirectoriesSection(value=false), importDepth=null, enabledRules=ProjectViewEnabledRulesSection(values=[io_bazel_rules_scala, rules_java, rules_jvm])).
+2024-05-07 12:17:57.273 [main] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelRunner - Invoking:  /opt/homebrew/bin/bazel info
+2024-05-07 12:17:57.287 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - [31mERROR: The project you're trying to build requires Bazel 5.1.0 (specified in /Users/joao/code/VerifiedSCION/.bazelversion), but it wasn't found in /opt/homebrew/Cellar/bazel/7.1.1/libexec/bin.[0m
+2024-05-07 12:17:57.288 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:17:57.288 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - Bazel binaries for all official releases can be downloaded from here:
+2024-05-07 12:17:57.288 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   https://github.com/bazelbuild/bazel/releases
+2024-05-07 12:17:57.289 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - 
+2024-05-07 12:17:57.289 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess - You can download the required version directly using this command:
+2024-05-07 12:17:57.289 [pool-4-thread-1] INFO    org.jetbrains.bsp.bazel.bazelrunner.BazelProcess -   (cd "/opt/homebrew/Cellar/bazel/7.1.1/libexec/bin" && curl -fLO https://releases.bazel.build/5.1.0/release/bazel-5.1.0-darwin-arm64 && chmod +x bazel-5.1.0-darwin-arm64)
