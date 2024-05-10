@@ -16,7 +16,7 @@ env:
   headerOnly: 1
   module: 'github.com/scionproto/scion'
   includePaths: '. verification/dependencies'
-  assumeInjectivityOnInhale: '1'
+  assumeInjectivityOnInhale: '0'
   parallelizeBranches: '0'
   checkConsistency: '1'
   imageVersion: 'latest'
