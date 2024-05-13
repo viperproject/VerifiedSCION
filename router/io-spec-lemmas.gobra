@@ -68,7 +68,7 @@ func absPktFutureLemma(raw []byte) {
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen)
 	pkt := reveal absPkt(raw)
-	assert pkt.CurrSeg == reveal scion.CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen)
+	assert pkt.CurrSeg == reveal scion.CurrSeg(raw, offset + path.HopLen * prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen)
 	assert len(pkt.CurrSeg.Future) > 0
 }
 
@@ -259,10 +259,10 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen)
 
-	currSegWidenLemma(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
-	leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
-	midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
-	rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	scion.currSegWidenLemma(ub, offset + path.HopLen * prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
+	scion.leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	scion.midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	scion.rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
 }
 
@@ -320,10 +320,10 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen)
 
-	currSegWidenLemma(ub, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
-	leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
-	midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
-	rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	scion.currSegWidenLemma(ub, offset + path.HopLen * prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
+	scion.leftSegWidenLemma(ub, currINFIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	scion.midSegWidenLemma(ub, currINFIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
+	scion.rightSegWidenLemma(ub, currINFIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
 }
 

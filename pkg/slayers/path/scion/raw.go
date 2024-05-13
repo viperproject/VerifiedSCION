@@ -219,53 +219,101 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // IncPath increments the path and writes it to the buffer.
 // @ requires s.Mem(ubuf)
 // @ requires sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ requires s.EqAbsHeader(ubuf)
 // @ ensures  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
 // @   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
 // @ ensures  r == nil ==> s.Mem(ubuf)
-// @ ensures  r == nil && s.InBounds(ubuf) ==> s.EqAbsHeader(ubuf)
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
+// pres for IO:
+// @ requires s.EqAbsHeader(ubuf)
+// @ requires validPktMetaHdr(ubuf)
+// @ requires len(s.absPkt(ubuf).CurrSeg.Future) > 0
+// @ requires s.GetIsXoverSpec(ubuf) ==>
+// @	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
+// post for IO:
+// @ ensures  r == nil ==> s.EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
+// @ ensures  r == nil && old(s.GetIsXoverSpec(ubuf)) ==>
+// @	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))
+// @ ensures  r == nil && !old(s.GetIsXoverSpec(ubuf)) ==>
+// @	s.absPkt(ubuf) == AbsIncPath(old(s.absPkt(ubuf)))
 // @ decreases
 func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ unfold s.Mem(ubuf)
+	//@ reveal validPktMetaHdr(ubuf)
+	//@ unfold acc(s.Base.Mem(), R56)
+	//@ oldCurrINFIdx := int(s.PathMeta.CurrINF)
+	//@ oldCurrHFIdx := int(s.PathMeta.CurrHF)
+	//@ oldSeg1Len := int(s.PathMeta.SegLen[0])
+	//@ oldSeg2Len := int(s.PathMeta.SegLen[1])
+	//@ oldSeg3Len := int(s.PathMeta.SegLen[2])
+	//@ oldSegLen := LengthOfCurrSeg(oldCurrHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ oldPrevSegLen := LengthOfPrevSeg(oldCurrHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ oldOffset := HopFieldOffset(s.Base.NumINF, 0, 0)
+	//@ fold acc(s.Base.Mem(), R56)
 	if err := s.Base.IncPath(); err != nil {
 		//@ fold s.NonInitMem()
 		return err
 	}
-	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, HalfPerm)
-	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, HalfPerm)
-	//@ sl.Reslice_Bytes(ubuf, 0, MetaLen, HalfPerm)
-	//@ sl.Reslice_Bytes(ubuf, 0, MetaLen, HalfPerm)
-
+	//@ fold acc(s.Mem(ubuf), HalfPerm)
+	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
+	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
+	//@ sl.Reslice_Bytes(ubuf, MetaLen, len(ubuf), HalfPerm)
+	//@ unfold acc(sl.AbsSlice_Bytes(ubuf[MetaLen:], 0, len(ubuf[MetaLen:])), R50)
+	//@	currSegWidenLemma(ubuf, oldOffset + path.HopLen * oldPrevSegLen + MetaLen, oldCurrINFIdx, oldCurrHFIdx-oldPrevSegLen, oldSegLen, MetaLen, MetaLen, len(ubuf))
+	//@	leftSegWidenLemma(ubuf, oldCurrINFIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@	midSegWidenLemma(ubuf, oldCurrINFIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@	rightSegWidenLemma(ubuf, oldCurrINFIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@	CurrSegFutureLenLemma(ubuf[MetaLen:], oldOffset + path.HopLen * oldPrevSegLen, oldCurrINFIdx, oldCurrHFIdx-oldPrevSegLen, oldSegLen)
+	//@ oldAbsPkt := reveal s.absPkt(ubuf)
+	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ unfold acc(s.Base.Mem(), R2)
 	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
-	//@ ghost if s.PathMeta.InBounds() {
-	//@ 	v := s.Raw[:MetaLen]
-	//@ 	b0 := sl.GetByte(v, 0, MetaLen, 0)
-	//@ 	b1 := sl.GetByte(v, 0, MetaLen, 1)
-	//@ 	b2 := sl.GetByte(v, 0, MetaLen, 2)
-	//@ 	b3 := sl.GetByte(v, 0, MetaLen, 3)
-	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
-	//@ }
-	//@ assert s.PathMeta.InBounds() ==> s.PathMeta.EqAbsHeader(s.Raw[:MetaLen])
-	//@ fold acc(s.Base.Mem(), R3)
-
-	//@ sl.Unslice_Bytes(ubuf, 0, MetaLen, R2)
-	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, R2)
-	//@ fold acc(s.Mem(ubuf), R2)
-	//@ assert s.InBounds(ubuf) == s.PathMeta.InBounds()
+	//@ assert s.Base.ValidCurrIdxs()
+	//@ assert s.PathMeta.InBounds()
+	//@ v := s.Raw[:MetaLen]
+	//@ b0 := sl.GetByte(v, 0, MetaLen, 0)
+	//@ b1 := sl.GetByte(v, 0, MetaLen, 1)
+	//@ b2 := sl.GetByte(v, 0, MetaLen, 2)
+	//@ b3 := sl.GetByte(v, 0, MetaLen, 3)
+	//@ s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
+	//@ assert s.PathMeta.EqAbsHeader(v)
+	//@ assert RawBytesToBase(v).ValidCurrIdxsSpec()
+	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
+	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ assert s.EqAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(ubuf)
-	//@ s.PathMeta.EqAbsHeaderForSublice(ubuf, MetaLen)
-	//@ assert s.EqAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(s.Raw[:MetaLen])
-	//@ assert s.InBounds(ubuf) ==> s.EqAbsHeader(ubuf)
+	//@ assert reveal validPktMetaHdr(ubuf)
+	//@ currINFIdx := int(s.PathMeta.CurrINF)
+	//@ currHFIdx := int(s.PathMeta.CurrHF)
+	//@ assert currHFIdx == oldCurrHFIdx + 1
 
-	//@ sl.Unslice_Bytes(ubuf, 0, MetaLen, 1-R2)
-	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), MetaLen, 1-R2)
-	//@ fold acc(s.Base.Mem(), R3)
-	//@ fold acc(s.Mem(ubuf), 1-R2)
-	//@ assert s.InBounds(ubuf) ==> s.EqAbsHeader(ubuf)
+	//@ ghost if(currINFIdx == oldCurrINFIdx) {
+	//@		CurrSegIncLemma(ubuf[MetaLen:], oldOffset + path.HopLen * oldPrevSegLen, oldCurrINFIdx, oldCurrHFIdx-oldPrevSegLen, oldSegLen)
+	//@		currSegWidenLemma(ubuf, oldOffset + path.HopLen * oldPrevSegLen + MetaLen, oldCurrINFIdx, currHFIdx-oldPrevSegLen, oldSegLen, MetaLen, MetaLen, len(ubuf))
+	//@		leftSegWidenLemma(ubuf, oldCurrINFIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@		midSegWidenLemma(ubuf, oldCurrINFIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@		rightSegWidenLemma(ubuf, oldCurrINFIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@		assert reveal s.absPkt(ubuf) == AbsIncPath(oldAbsPkt)
+	//@ } else {
+	//@		segLen := LengthOfCurrSeg(currHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		prevSegLen := LengthOfPrevSeg(currHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		SegNotNoneLemma(ubuf[MetaLen:], oldCurrINFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		CurrSegXoverLemma(ubuf[MetaLen:], oldCurrINFIdx + 1, oldCurrHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		LeftSegXoverLemma(ubuf[MetaLen:], oldCurrINFIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		MidSegXoverLemma(ubuf[MetaLen:], oldCurrINFIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		RightSegXoverLemma(ubuf[MetaLen:], oldCurrINFIdx, oldCurrHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		currSegWidenLemma(ubuf, oldOffset + path.HopLen * prevSegLen + MetaLen, currINFIdx, currHFIdx-prevSegLen, segLen, MetaLen, MetaLen, len(ubuf))
+	//@		leftSegWidenLemma(ubuf, currINFIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@		midSegWidenLemma(ubuf, currINFIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@		rightSegWidenLemma(ubuf, currINFIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@		assert reveal s.absPkt(ubuf) == AbsXover(oldAbsPkt)
+	//@ }
+
+	//@ fold acc(sl.AbsSlice_Bytes(ubuf[MetaLen:], 0, len(ubuf[MetaLen:])), R50)
+	//@ sl.Unslice_Bytes(ubuf, MetaLen, len(ubuf), HalfPerm)
+	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
+	//@ fold acc(s.Base.Mem(), R2)
+	//@ fold acc(s.Mem(ubuf), HalfPerm)
 	return err
 }
 

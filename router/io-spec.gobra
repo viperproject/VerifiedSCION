@@ -52,7 +52,7 @@ pure func absPkt(raw []byte) (res io.IO_pkt2) {
 		let numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len) in
 		let offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen) in
 		io.IO_pkt2(io.IO_Packet2{
-			CurrSeg : scion.CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen),
+			CurrSeg : scion.CurrSeg(raw, offset + path.HopLen * prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffsetWithMetaLen),
 			LeftSeg : scion.LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffsetWithMetaLen),
 			MidSeg : scion.MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, headerOffsetWithMetaLen),
 			RightSeg : scion.RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, headerOffsetWithMetaLen),
