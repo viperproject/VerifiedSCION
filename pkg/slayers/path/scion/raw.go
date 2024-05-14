@@ -243,12 +243,12 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ reveal validPktMetaHdr(ubuf)
 	//@ unfold acc(s.Base.Mem(), R56)
 	//@ oldCurrInfIdx := int(s.PathMeta.CurrINF)
-	//@ oldCurrHFIdx := int(s.PathMeta.CurrHF)
+	//@ oldCurrHfIdx := int(s.PathMeta.CurrHF)
 	//@ oldSeg1Len := int(s.PathMeta.SegLen[0])
 	//@ oldSeg2Len := int(s.PathMeta.SegLen[1])
 	//@ oldSeg3Len := int(s.PathMeta.SegLen[2])
-	//@ oldSegLen := LengthOfCurrSeg(oldCurrHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@ oldPrevSegLen := LengthOfPrevSeg(oldCurrHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ oldSegLen := LengthOfCurrSeg(oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ oldPrevSegLen := LengthOfPrevSeg(oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
 	//@ oldOffset := HopFieldOffset(s.Base.NumINF, 0, 0)
 	//@ fold acc(s.Base.Mem(), R56)
 	if err := s.Base.IncPath(); err != nil {
@@ -259,12 +259,16 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ sl.Reslice_Bytes(ubuf, MetaLen, len(ubuf), HalfPerm)
-	//@ unfold acc(sl.AbsSlice_Bytes(ubuf[MetaLen:], 0, len(ubuf[MetaLen:])), R50)
-	//@	WidenCurrSeg(ubuf, oldOffset + path.HopLen * oldPrevSegLen + MetaLen, oldCurrInfIdx, oldCurrHFIdx-oldPrevSegLen, oldSegLen, MetaLen, MetaLen, len(ubuf))
+	//@ tail := ubuf[MetaLen:]
+	//@ unfold acc(sl.AbsSlice_Bytes(tail, 0, len(tail)), R50)
+	//@ oldoffsetWithHops := oldOffset + path.HopLen * oldPrevSegLen
+	//@ oldHfIdxSeg := oldCurrHfIdx-oldPrevSegLen
+	//@	WidenCurrSeg(ubuf, oldoffsetWithHops + MetaLen, oldCurrInfIdx, oldHfIdxSeg,
+	//@		oldSegLen, MetaLen, MetaLen, len(ubuf))
 	//@	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@	WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@	CurrSegFutureLenLemma(ubuf[MetaLen:], oldOffset + path.HopLen * oldPrevSegLen, oldCurrInfIdx, oldCurrHFIdx-oldPrevSegLen, oldSegLen)
+	//@	LenCurrSeg(tail, oldoffsetWithHops, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
 	//@ oldAbsPkt := reveal s.absPkt(ubuf)
 	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ unfold acc(s.Base.Mem(), R2)
@@ -285,11 +289,12 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ assert reveal validPktMetaHdr(ubuf)
 	//@ currInfIdx := int(s.PathMeta.CurrINF)
 	//@ currHfIdx := int(s.PathMeta.CurrHF)
-	//@ assert currHfIdx == oldCurrHFIdx + 1
+	//@ assert currHfIdx == oldCurrHfIdx + 1
 
 	//@ ghost if(currInfIdx == oldCurrInfIdx) {
-	//@		CurrSegIncLemma(ubuf[MetaLen:], oldOffset + path.HopLen * oldPrevSegLen, oldCurrInfIdx, oldCurrHFIdx-oldPrevSegLen, oldSegLen)
-	//@		WidenCurrSeg(ubuf, oldOffset + path.HopLen * oldPrevSegLen + MetaLen, oldCurrInfIdx, currHfIdx-oldPrevSegLen, oldSegLen, MetaLen, MetaLen, len(ubuf))
+	//@		IncCurrSeg(tail, oldoffsetWithHops, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
+	//@		WidenCurrSeg(ubuf, oldoffsetWithHops + MetaLen, oldCurrInfIdx, oldHfIdxSeg + 1,
+	//@			oldSegLen, MetaLen, MetaLen, len(ubuf))
 	//@		WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@		WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@		WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
@@ -297,19 +302,21 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ } else {
 	//@		segLen := LengthOfCurrSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
 	//@		prevSegLen := LengthOfPrevSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		SegNotNoneLemma(ubuf[MetaLen:], oldCurrInfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		CurrSegXoverLemma(ubuf[MetaLen:], oldCurrInfIdx + 1, oldCurrHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		LeftSegXoverLemma(ubuf[MetaLen:], oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		MidSegXoverLemma(ubuf[MetaLen:], oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		RightSegXoverLemma(ubuf[MetaLen:], oldCurrInfIdx, oldCurrHFIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		WidenCurrSeg(ubuf, oldOffset + path.HopLen * prevSegLen + MetaLen, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen, MetaLen, len(ubuf))
+	//@ 	offsetWithHops := oldOffset + path.HopLen * prevSegLen + MetaLen
+	//@ 	hfIdxSeg := currHfIdx-prevSegLen
+	//@		XoverSegNotNone(tail, oldCurrInfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		XoverCurrSeg(tail, oldCurrInfIdx + 1, oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		XoverLeftSeg(tail, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		XoverMidSeg(tail, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		XoverRightSeg(tail, oldCurrInfIdx, oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@		WidenCurrSeg(ubuf, offsetWithHops, currInfIdx, hfIdxSeg, segLen, MetaLen, MetaLen, len(ubuf))
 	//@		WidenLeftSeg(ubuf, currInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@		WidenMidSeg(ubuf, currInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@		WidenRightSeg(ubuf, currInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@		assert reveal s.absPkt(ubuf) == AbsXover(oldAbsPkt)
 	//@ }
 
-	//@ fold acc(sl.AbsSlice_Bytes(ubuf[MetaLen:], 0, len(ubuf[MetaLen:])), R50)
+	//@ fold acc(sl.AbsSlice_Bytes(tail, 0, len(tail)), R50)
 	//@ sl.Unslice_Bytes(ubuf, MetaLen, len(ubuf), HalfPerm)
 	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ fold acc(s.Base.Mem(), R2)
