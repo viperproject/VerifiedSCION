@@ -359,62 +359,62 @@ pure func LengthOfPrevSeg(currHF int, seg1Len int, seg2Len int, seg3Len int) (re
 
 ghost
 requires  0 <= offset
-requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
 requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-ensures   len(res) == segLen - currHFIdx
-decreases segLen - currHFIdx
+ensures   len(res) == segLen - currHfIdx
+decreases segLen - currHfIdx
 pure func hopFields(
 	raw []byte,
 	offset int,
-	currHFIdx int,
+	currHfIdx int,
 	segLen int) (res seq[io.IO_HF]) {
-	return currHFIdx == segLen ? seq[io.IO_HF]{} :
-		let hf := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHFIdx, len(raw)) in
-		seq[io.IO_HF]{hf} ++ hopFields(raw, offset, currHFIdx + 1, segLen)
+	return currHfIdx == segLen ? seq[io.IO_HF]{} :
+		let hf := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHfIdx, len(raw)) in
+		seq[io.IO_HF]{hf} ++ hopFields(raw, offset, currHfIdx + 1, segLen)
 }
 
 ghost
-requires -1 <= currHFIdx && currHFIdx < len(hopfields)
-ensures len(res) == currHFIdx + 1
-decreases currHFIdx + 1
-pure func segPast(hopfields seq[io.IO_HF], currHFIdx int) (res seq[io.IO_HF]) {
-	return currHFIdx == -1  ?
+requires -1 <= currHfIdx && currHfIdx < len(hopfields)
+ensures len(res) == currHfIdx + 1
+decreases currHfIdx + 1
+pure func segPast(hopfields seq[io.IO_HF], currHfIdx int) (res seq[io.IO_HF]) {
+	return currHfIdx == -1  ?
 		seq[io.IO_HF]{} :
-		seq[io.IO_HF]{hopfields[currHFIdx]} ++ segPast(hopfields, currHFIdx - 1)
+		seq[io.IO_HF]{hopfields[currHfIdx]} ++ segPast(hopfields, currHfIdx - 1)
 }
 
 ghost
-requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
-ensures len(res) == len(hopfields) - currHFIdx
-decreases len(hopfields) - currHFIdx
-pure func segFuture(hopfields seq[io.IO_HF], currHFIdx int) (res seq[io.IO_HF]) {
-	return currHFIdx == len(hopfields) ? seq[io.IO_HF]{} :
-		seq[io.IO_HF]{hopfields[currHFIdx]} ++ segFuture(hopfields, currHFIdx + 1)
+requires 0 <= currHfIdx && currHfIdx <= len(hopfields)
+ensures len(res) == len(hopfields) - currHfIdx
+decreases len(hopfields) - currHfIdx
+pure func segFuture(hopfields seq[io.IO_HF], currHfIdx int) (res seq[io.IO_HF]) {
+	return currHfIdx == len(hopfields) ? seq[io.IO_HF]{} :
+		seq[io.IO_HF]{hopfields[currHfIdx]} ++ segFuture(hopfields, currHfIdx + 1)
 }
 
 ghost
-requires -1 <= currHFIdx && currHFIdx < len(hopfields)
-ensures len(res) == currHFIdx + 1
-decreases currHFIdx + 1
-pure func segHistory(hopfields seq[io.IO_HF], currHFIdx int) (res seq[io.IO_ahi]) {
-	return currHFIdx == -1 ? seq[io.IO_ahi]{} :
-		seq[io.IO_ahi]{hopfields[currHFIdx].Toab()} ++ segHistory(hopfields, currHFIdx - 1)
+requires -1 <= currHfIdx && currHfIdx < len(hopfields)
+ensures len(res) == currHfIdx + 1
+decreases currHfIdx + 1
+pure func segHistory(hopfields seq[io.IO_HF], currHfIdx int) (res seq[io.IO_ahi]) {
+	return currHfIdx == -1 ? seq[io.IO_ahi]{} :
+		seq[io.IO_ahi]{hopfields[currHfIdx].Toab()} ++ segHistory(hopfields, currHfIdx - 1)
 }
 
 ghost
 requires 0 <= offset
 requires 0 < segLen
-requires 0 <= currHFIdx && currHFIdx <= segLen
+requires 0 <= currHfIdx && currHfIdx <= segLen
 requires offset + path.HopLen * segLen <= len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-ensures len(res.Future) == segLen - currHFIdx
-ensures len(res.History) == currHFIdx
-ensures len(res.Past) == currHFIdx
+ensures len(res.Future) == segLen - currHfIdx
+ensures len(res.History) == currHfIdx
+ensures len(res.Past) == currHfIdx
 decreases
 pure func segment(raw []byte,
 	offset int,
-	currHFIdx int,
+	currHfIdx int,
 	ainfo io.IO_ainfo,
 	uinfo set[io.IO_msgterm],
 	consDir bool,
@@ -426,33 +426,33 @@ pure func segment(raw []byte,
 			UInfo : uinfo,
 			ConsDir : consDir,
 			Peer : peer,
-			Past : segPast(hopfields, currHFIdx - 1),
-			Future : segFuture(hopfields, currHFIdx),
-			History : segHistory(hopfields, currHFIdx - 1),
+			Past : segPast(hopfields, currHfIdx - 1),
+			Future : segFuture(hopfields, currHfIdx),
+			History : segHistory(hopfields, currHfIdx - 1),
 		})
 }
 
 ghost
 opaque
 requires 0 <= headerOffset
-requires path.InfoFieldOffset(currINFIdx, headerOffset) + path.InfoLen <= offset
+requires path.InfoFieldOffset(currInfIdx, headerOffset) + path.InfoLen <= offset
 requires 0 < segLen
 requires offset + path.HopLen * segLen <= len(raw)
-requires 0 <= currHFIdx && currHFIdx <= segLen
-requires 0 <= currINFIdx && currINFIdx < 3
+requires 0 <= currHfIdx && currHfIdx <= segLen
+requires 0 <= currInfIdx && currInfIdx < 3
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func CurrSeg(raw []byte,
 	offset int,
-	currINFIdx int,
-	currHFIdx int,
+	currInfIdx int,
+	currHfIdx int,
 	segLen int,
 	headerOffset int) io.IO_seg3 {
-	return let ainfo := path.Timestamp(raw, currINFIdx, headerOffset) in
-		let consDir := path.ConsDir(raw, currINFIdx, headerOffset) in
-		let peer := path.Peer(raw, currINFIdx, headerOffset) in
-		let uinfo := path.AbsUinfo(raw, currINFIdx, headerOffset) in
-		segment(raw, offset, currHFIdx, ainfo, uinfo, consDir, peer, segLen)
+	return let ainfo := path.Timestamp(raw, currInfIdx, headerOffset) in
+		let consDir := path.ConsDir(raw, currInfIdx, headerOffset) in
+		let peer := path.Peer(raw, currInfIdx, headerOffset) in
+		let uinfo := path.AbsUinfo(raw, currInfIdx, headerOffset) in
+		segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen)
 }
 
 ghost
@@ -462,21 +462,21 @@ requires 0 < seg1Len
 requires 0 <= seg2Len
 requires 0 <= seg3Len
 requires pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= len(raw)
-requires 1 <= currINFIdx && currINFIdx < 4
+requires 1 <= currInfIdx && currInfIdx < 4
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func LeftSeg(
 	raw []byte,
-	currINFIdx int,
+	currInfIdx int,
 	seg1Len int,
 	seg2Len int,
 	seg3Len int,
 	headerOffset int) option[io.IO_seg3] {
 	return let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
-		(currINFIdx == 1 && seg2Len > 0) ?
-			some(CurrSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, 0, seg2Len, headerOffset)) :
-			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
-				some(CurrSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset)) :
+		(currInfIdx == 1 && seg2Len > 0) ?
+			some(CurrSeg(raw, offset + path.HopLen * seg1Len, currInfIdx, 0, seg2Len, headerOffset)) :
+			((currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
+				some(CurrSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currInfIdx, 0, seg3Len, headerOffset)) :
 				none[io.IO_seg3])
 }
 
@@ -487,21 +487,21 @@ requires 0 < seg1Len
 requires 0 <= seg2Len
 requires 0 <= seg3Len
 requires pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= len(raw)
-requires -1 <= currINFIdx && currINFIdx < 2
+requires -1 <= currInfIdx && currInfIdx < 2
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func RightSeg(
 	raw []byte,
-	currINFIdx int,
+	currInfIdx int,
 	seg1Len int,
 	seg2Len int,
 	seg3Len int,
 	headerOffset int) option[io.IO_seg3] {
 	return let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
-		(currINFIdx == 1 && seg2Len > 0 && seg3Len > 0) ?
-			some(CurrSeg(raw, offset + path.HopLen * seg1Len, currINFIdx, seg2Len, seg2Len, headerOffset)) :
-			(currINFIdx == 0 && seg2Len > 0) ?
-				some(CurrSeg(raw, offset, currINFIdx, seg1Len, seg1Len, headerOffset)) :
+		(currInfIdx == 1 && seg2Len > 0 && seg3Len > 0) ?
+			some(CurrSeg(raw, offset + path.HopLen * seg1Len, currInfIdx, seg2Len, seg2Len, headerOffset)) :
+			(currInfIdx == 0 && seg2Len > 0) ?
+				some(CurrSeg(raw, offset, currInfIdx, seg1Len, seg1Len, headerOffset)) :
 				none[io.IO_seg3]
 }
 
@@ -512,21 +512,21 @@ requires 0 < seg1Len
 requires 0 <= seg2Len
 requires 0 <= seg3Len
 requires pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= len(raw)
-requires 2 <= currINFIdx && currINFIdx < 5
+requires 2 <= currInfIdx && currInfIdx < 5
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func MidSeg(
 	raw []byte,
-	currINFIdx int,
+	currInfIdx int,
 	seg1Len int,
 	seg2Len int,
 	seg3Len int,
 	headerOffset int) option[io.IO_seg3] {
 	return let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
-		(currINFIdx == 4 && seg2Len > 0) ?
+		(currInfIdx == 4 && seg2Len > 0) ?
 			some(CurrSeg(raw, offset, 0, seg1Len, seg1Len, headerOffset)) :
-			((currINFIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
-				some(CurrSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currINFIdx, 0, seg3Len, headerOffset)) :
+			((currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
+				some(CurrSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currInfIdx, 0, seg3Len, headerOffset)) :
 				none[io.IO_seg3])
 }
 
@@ -538,20 +538,20 @@ decreases
 pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
 		let metaHdr := RawBytesToMetaHdr(raw) in
-		let currINFIdx := int(metaHdr.CurrINF) in
-		let currHFIdx := int(metaHdr.CurrHF) in
+		let currInfIdx := int(metaHdr.CurrINF) in
+		let currHfIdx := int(metaHdr.CurrHF) in
 		let seg1Len := int(metaHdr.SegLen[0]) in
 		let seg2Len := int(metaHdr.SegLen[1]) in
 		let seg3Len := int(metaHdr.SegLen[2]) in
-		let segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
-		let prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+		let segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
+		let prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
 		let numINF := NumInfoFields(seg1Len, seg2Len, seg3Len) in
 		let offset := HopFieldOffset(numINF, 0, MetaLen) in
 		io.IO_pkt2(io.IO_Packet2{
-			CurrSeg : CurrSeg(raw, offset + path.HopLen * prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, MetaLen),
-			LeftSeg : LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, MetaLen),
-			MidSeg : MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, MetaLen),
-			RightSeg : RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, MetaLen),
+			CurrSeg : CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen),
+			LeftSeg : LeftSeg(raw, currInfIdx + 1, seg1Len, seg2Len , seg3Len, MetaLen),
+			MidSeg : MidSeg(raw, currInfIdx + 2, seg1Len, seg2Len , seg3Len, MetaLen),
+			RightSeg : RightSeg(raw, currInfIdx - 1, seg1Len, seg2Len , seg3Len, MetaLen),
 		})
 }
 
@@ -689,17 +689,17 @@ decreases
 func (s *Raw) LastHopLemma(ubuf []byte) {
 	reveal validPktMetaHdr(ubuf)
 	metaHdr := RawBytesToMetaHdr(ubuf)
-	currINFIdx := int(metaHdr.CurrINF)
-	currHFIdx := int(metaHdr.CurrHF)
+	currInfIdx := int(metaHdr.CurrINF)
+	currHfIdx := int(metaHdr.CurrHF)
 	seg1Len := int(metaHdr.SegLen[0])
 	seg2Len := int(metaHdr.SegLen[1])
 	seg3Len := int(metaHdr.SegLen[2])
-	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
-	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := HopFieldOffset(numINF, 0, MetaLen)
 	pkt := reveal s.absPkt(ubuf)
-	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset + path.HopLen * prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, MetaLen)
+	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen)
 	assert len(pkt.CurrSeg.Future) == 1
 }
 
@@ -715,33 +715,33 @@ decreases
 func (s *Raw) XoverLemma(ubuf []byte) {
 	reveal validPktMetaHdr(ubuf)
 	metaHdr := RawBytesToMetaHdr(ubuf)
-	currINFIdx := int(metaHdr.CurrINF)
-	currHFIdx := int(metaHdr.CurrHF)
+	currInfIdx := int(metaHdr.CurrINF)
+	currHfIdx := int(metaHdr.CurrHF)
 	seg1Len := int(metaHdr.SegLen[0])
 	seg2Len := int(metaHdr.SegLen[1])
 	seg3Len := int(metaHdr.SegLen[2])
-	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
-	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+	segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
+	prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := HopFieldOffset(numINF, 0, MetaLen)
 	pkt := reveal s.absPkt(ubuf)
-	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset + path.HopLen * prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, MetaLen)
-	assert pkt.LeftSeg == reveal LeftSeg(ubuf, currINFIdx + 1, seg1Len, seg2Len , seg3Len, MetaLen)
+	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen)
+	assert pkt.LeftSeg == reveal LeftSeg(ubuf, currInfIdx + 1, seg1Len, seg2Len , seg3Len, MetaLen)
 	assert len(pkt.CurrSeg.Future) == 1
 	assert pkt.LeftSeg != none[io.IO_seg2]
 }
 
 ghost
-requires  path.InfoFieldOffset(currINFIdx, 0) + path.InfoLen <= offset
+requires  path.InfoFieldOffset(currInfIdx, 0) + path.InfoLen <= offset
 requires  0 < segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-requires  0 <= currHFIdx && currHFIdx < segLen
-requires  0 <= currINFIdx && currINFIdx < 3
+requires  0 <= currHfIdx && currHfIdx < segLen
+requires  0 <= currInfIdx && currInfIdx < 3
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-ensures   len(CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, 0).Future) > 0
+ensures   len(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0).Future) > 0
 decreases
-func CurrSegFutureLenLemma(raw []byte, offset int, currINFIdx int, currHFIdx int, segLen int) {
-	reveal CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, 0)
+func CurrSegFutureLenLemma(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen int) {
+	reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0)
 }
 
 ghost
@@ -749,32 +749,32 @@ requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
-requires  0 <= currINFIdx && currINFIdx < 2
-requires  0 <= currINFIdx ==> 0 < seg2Len
-requires  1 <= currINFIdx ==> 0 < seg3Len
+requires  0 <= currInfIdx && currInfIdx < 2
+requires  0 <= currInfIdx ==> 0 < seg2Len
+requires  1 <= currInfIdx ==> 0 < seg3Len
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-ensures   LeftSeg(raw, currINFIdx+1, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
-ensures   RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
+ensures   LeftSeg(raw, currInfIdx+1, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
+ensures   RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
 decreases
-func SegNotNoneLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int) {
-	reveal LeftSeg(raw, currINFIdx+1, seg1Len, seg2Len, seg3Len, 0)
-	reveal RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0)
+func SegNotNoneLemma(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) {
+	reveal LeftSeg(raw, currInfIdx+1, seg1Len, seg2Len, seg3Len, 0)
+	reveal RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 }
 
 ghost
-requires  path.InfoFieldOffset(currINFIdx, 0) + path.InfoLen <= offset
+requires  path.InfoFieldOffset(currInfIdx, 0) + path.InfoLen <= offset
 requires  0 < segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-requires  0 <= currHFIdx && currHFIdx < segLen
-requires  0 <= currINFIdx && currINFIdx < 3
+requires  0 <= currHfIdx && currHfIdx < segLen
+requires  0 <= currInfIdx && currInfIdx < 3
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-preserves len(CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, 0).Future) > 0
-ensures CurrSeg(raw, offset, currINFIdx, currHFIdx+1, segLen, 0) ==
-	absIncPathSeg(CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, 0))
+preserves len(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0).Future) > 0
+ensures CurrSeg(raw, offset, currInfIdx, currHfIdx+1, segLen, 0) ==
+	absIncPathSeg(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0))
 decreases
-func CurrSegIncLemma(raw []byte, offset int, currINFIdx int, currHFIdx int, segLen int) {
-	currseg := reveal CurrSeg(raw, offset, currINFIdx, currHFIdx, segLen, 0)
-	incseg := reveal CurrSeg(raw, offset, currINFIdx, currHFIdx+1, segLen, 0)
+func CurrSegIncLemma(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen int) {
+	currseg := reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0)
+	incseg := reveal CurrSeg(raw, offset, currInfIdx, currHfIdx+1, segLen, 0)
 	assert currseg.AInfo == incseg.AInfo
 	assert currseg.UInfo == incseg.UInfo
 	assert currseg.ConsDir == incseg.ConsDir
@@ -790,29 +790,29 @@ requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
-requires  1 <= currINFIdx && currINFIdx < 3
+requires  1 <= currInfIdx && currInfIdx < 3
 requires  0 < seg2Len
-requires  1 == currINFIdx ==> currHFIdx+1 == seg1Len
-requires  2 == currINFIdx ==> 0 < seg3Len && currHFIdx+1 == seg1Len + seg2Len
-requires  0 <= currHFIdx
+requires  1 == currInfIdx ==> currHfIdx+1 == seg1Len
+requires  2 == currInfIdx ==> 0 < seg3Len && currHfIdx+1 == seg1Len + seg2Len
+requires  0 <= currHfIdx
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-preserves LeftSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
+preserves LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
 ensures
-	let prevSegLen := LengthOfPrevSeg(currHFIdx+1, seg1Len, seg2Len, seg3Len) in
-	let segLen := LengthOfCurrSeg(currHFIdx+1, seg1Len, seg2Len, seg3Len) in
+	let prevSegLen := LengthOfPrevSeg(currHfIdx+1, seg1Len, seg2Len, seg3Len) in
+	let segLen := LengthOfCurrSeg(currHfIdx+1, seg1Len, seg2Len, seg3Len) in
 	let numInf := NumInfoFields(seg1Len, seg2Len, seg3Len) in
 	let offset := HopFieldOffset(numInf, 0, 0) in
-	CurrSeg(raw, offset + path.HopLen * prevSegLen, currINFIdx, currHFIdx-prevSegLen+1, segLen, 0) ==
-		get(LeftSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0))
+	CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen+1, segLen, 0) ==
+		get(LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0))
 decreases
-func CurrSegXoverLemma(raw []byte, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int) {
-	prevSegLen := LengthOfPrevSeg(currHFIdx+1, seg1Len, seg2Len, seg3Len)
-	segLen := LengthOfCurrSeg(currHFIdx+1, seg1Len, seg2Len, seg3Len)
+func CurrSegXoverLemma(raw []byte, currInfIdx int, currHfIdx int, seg1Len int, seg2Len int, seg3Len int) {
+	prevSegLen := LengthOfPrevSeg(currHfIdx+1, seg1Len, seg2Len, seg3Len)
+	segLen := LengthOfCurrSeg(currHfIdx+1, seg1Len, seg2Len, seg3Len)
 	numInf := NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := HopFieldOffset(numInf, 0, 0)
-	currseg := reveal CurrSeg(raw, offset + path.HopLen * prevSegLen, currINFIdx, 0, segLen, 0)
-	leftseg := reveal LeftSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0)
+	currseg := reveal CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, 0, segLen, 0)
+	leftseg := reveal LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 	assert currseg == get(leftseg)
 }
 
@@ -821,14 +821,14 @@ requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
-requires  2 <= currINFIdx && currINFIdx < 4
+requires  2 <= currInfIdx && currInfIdx < 4
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-ensures   LeftSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0) ==
-	MidSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0)
+ensures   LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0) ==
+	MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 decreases
-func LeftSegXoverLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int) {
-	leftseg := reveal LeftSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0)
-	midseg := reveal MidSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0)
+func LeftSegXoverLemma(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) {
+	leftseg := reveal LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
+	midseg := reveal MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 	assert leftseg == midseg
 }
 
@@ -837,14 +837,14 @@ requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
-requires  -1 <= currINFIdx && currINFIdx < 1
+requires  -1 <= currInfIdx && currInfIdx < 1
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-ensures   MidSeg(raw, currINFIdx+4, seg1Len, seg2Len, seg3Len, 0) ==
-	RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0)
+ensures   MidSeg(raw, currInfIdx+4, seg1Len, seg2Len, seg3Len, 0) ==
+	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 decreases
-func MidSegXoverLemma(raw []byte, currINFIdx int, seg1Len int, seg2Len int, seg3Len int) {
-	midseg := reveal MidSeg(raw, currINFIdx+4, seg1Len, seg2Len, seg3Len, 0)
-	rightseg := reveal RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0)
+func MidSegXoverLemma(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) {
+	midseg := reveal MidSeg(raw, currInfIdx+4, seg1Len, seg2Len, seg3Len, 0)
+	rightseg := reveal RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 	assert midseg == rightseg
 }
 
@@ -853,34 +853,34 @@ requires  0 < seg1Len
 requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
-requires  0 <= currINFIdx && currINFIdx < 2
-requires  0 < seg2Len 
-requires  0 == currINFIdx ==> currHFIdx+1 == seg1Len
-requires  1 == currINFIdx ==> 0 < seg3Len && currHFIdx+1 == seg1Len + seg2Len
-requires  0 <= currHFIdx
+requires  0 <= currInfIdx && currInfIdx < 2
+requires  0 < seg2Len
+requires  0 == currInfIdx ==> currHfIdx+1 == seg1Len
+requires  1 == currInfIdx ==> 0 < seg3Len && currHfIdx+1 == seg1Len + seg2Len
+requires  0 <= currHfIdx
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-preserves RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
+preserves RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
 ensures
-	let prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
-	let segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
+	let prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
+	let segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
 	let numInf := NumInfoFields(seg1Len, seg2Len, seg3Len) in
 	let offset := HopFieldOffset(numInf, 0, 0) in
-	let currseg := CurrSeg(raw, offset + path.HopLen * prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, 0) in
+	let currseg := CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, 0) in
 	len(currseg.Future) > 0 &&
-	get(RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0)) ==
+	get(RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)) ==
 		absIncPathSeg(currseg)
 decreases
-func RightSegXoverLemma(raw []byte, currINFIdx int, currHFIdx int, seg1Len int, seg2Len int, seg3Len int) {
-	prevSegLen := LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
-	segLen := LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len)
+func RightSegXoverLemma(raw []byte, currInfIdx int, currHfIdx int, seg1Len int, seg2Len int, seg3Len int) {
+	prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
+	segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numInf := NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := HopFieldOffset(numInf, 0, 0)
-	CurrSegFutureLenLemma(raw, offset + path.HopLen * prevSegLen, currINFIdx, segLen - 1, segLen)
-	CurrSegIncLemma(raw, offset + path.HopLen * prevSegLen, currINFIdx, segLen - 1, segLen)
-	currseg := CurrSeg(raw, offset + path.HopLen * prevSegLen, currINFIdx, segLen - 1, segLen, 0)
-	nextseg := CurrSeg(raw, offset + path.HopLen * prevSegLen, currINFIdx, segLen, segLen, 0)
-	rightseg := reveal RightSeg(raw, currINFIdx, seg1Len, seg2Len, seg3Len, 0)
+	CurrSegFutureLenLemma(raw, offset + path.HopLen * prevSegLen, currInfIdx, segLen - 1, segLen)
+	CurrSegIncLemma(raw, offset + path.HopLen * prevSegLen, currInfIdx, segLen - 1, segLen)
+	currseg := CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, segLen - 1, segLen, 0)
+	nextseg := CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, segLen, segLen, 0)
+	rightseg := reveal RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 	assert absIncPathSeg(currseg) == nextseg
 	assert nextseg == get(rightseg)
 	assert absIncPathSeg(currseg) == get(rightseg)
