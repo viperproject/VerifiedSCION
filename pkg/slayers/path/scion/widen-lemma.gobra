@@ -125,9 +125,7 @@ func BytesToIO_HFWidenLemma(raw []byte, middle int, start int, length int) {
 	unfold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R55)
 	hfBytes1 := path.BytesToIO_HF(raw, 0, middle, len(raw))
 	hfBytes2 := path.BytesToIO_HF(raw[start:length], 0, middle-start, length-start)
-	assert hfBytes1.EgIF2 == hfBytes2.EgIF2
-	assert hfBytes1.InIF2 == hfBytes2.InIF2
-	assert hfBytes1.HVF == hfBytes2.HVF
+	assert hfBytes1 === hfBytes2
 	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 	fold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R55)
 }

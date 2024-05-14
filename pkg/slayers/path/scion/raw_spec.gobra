@@ -709,8 +709,8 @@ preserves s.GetIsXoverSpec(ubuf)
 preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
 preserves validPktMetaHdr(ubuf)
 preserves s.EqAbsHeader(ubuf)
-ensures  s.absPkt(ubuf).LeftSeg != none[io.IO_seg2]
-ensures len(s.absPkt(ubuf).CurrSeg.Future) == 1
+ensures   s.absPkt(ubuf).LeftSeg != none[io.IO_seg2]
+ensures   len(s.absPkt(ubuf).CurrSeg.Future) == 1
 decreases
 func (s *Raw) XoverLemma(ubuf []byte) {
 	reveal validPktMetaHdr(ubuf)
@@ -791,8 +791,9 @@ requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 requires  1 <= currINFIdx && currINFIdx < 3
-requires  1 == currINFIdx ==> 0 < seg2Len && currHFIdx+1 == seg1Len
-requires  2 == currINFIdx ==> 0 < seg2Len && 0 < seg3Len && currHFIdx+1 == seg1Len + seg2Len
+requires  0 < seg2Len
+requires  1 == currINFIdx ==> currHFIdx+1 == seg1Len
+requires  2 == currINFIdx ==> 0 < seg3Len && currHFIdx+1 == seg1Len + seg2Len
 requires  0 <= currHFIdx
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
@@ -853,8 +854,9 @@ requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 requires  0 <= currINFIdx && currINFIdx < 2
-requires  0 == currINFIdx ==> 0 < seg2Len && currHFIdx+1 == seg1Len
-requires  1 == currINFIdx ==> 0 < seg2Len && 0 < seg3Len && currHFIdx+1 == seg1Len + seg2Len
+requires  0 < seg2Len 
+requires  0 == currINFIdx ==> currHFIdx+1 == seg1Len
+requires  1 == currINFIdx ==> 0 < seg3Len && currHFIdx+1 == seg1Len + seg2Len
 requires  0 <= currHFIdx
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
