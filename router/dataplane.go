@@ -2593,6 +2593,8 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 			return serrors.WrapStr("update info field", err)
 		}
 	}
+	// (VerifiedSCION) This assumption depends on
+	// https://github.com/scionproto/scion/issues/4524.
 	//@ TemporaryAssumeForIO(!p.path.GetIsXoverSpec(ubPath))
 	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
