@@ -1956,7 +1956,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 		return processResult{}, err
 	}
 	// @ TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub))
-	// @ TemporaryAssumeForIO(len(absPkt(ub).CurrSeg.Future) > 0)
+	// @ absPktFutureLemma(ub)
 	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(ub)))
 	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(ub)))
 	return processResult{}, nil
@@ -2593,6 +2593,9 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 			return serrors.WrapStr("update info field", err)
 		}
 	}
+	// (VerifiedSCION) This assumption will be dropped after clarifying
+	// https://github.com/scionproto/scion/issues/4524.
+	//@ TemporaryAssumeForIO(!p.path.GetIsXoverSpec(ubPath))
 	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
@@ -2604,12 +2607,11 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
 	// @ assert reveal p.scionLayer.ValidHeaderOffset(ub, startP)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
-	// @ TemporaryAssumeForIO(scion.validPktMetaHdr(ubPath) && p.path.EqAbsHeader(ubPath))
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ absPktFutureLemma(ub)
-	// @ TemporaryAssumeForIO(absPkt(ub) == AbsProcessEgress(old(absPkt(ub))))
+	// @ assert absPkt(ub) == reveal AbsProcessEgress(old(absPkt(ub)))
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 	return nil
 }
@@ -2653,10 +2655,11 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr process
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP)
 	// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, startP)
-	// @ TemporaryAssumeForIO(len(old(absPkt(ub)).CurrSeg.Future) == 1)
+	// @ p.path.XoverLemma(ubPath)
 	// @ reveal p.EqAbsInfoField(absPkt(ub))
 	// @ reveal p.EqAbsHopField(absPkt(ub))
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ reveal p.scionLayer.ValidHeaderOffset(ub, startP)
 	// @ unfold acc(p.scionLayer.Mem(ub), R55)
 	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// TODO parameter problem invalid path
@@ -2668,6 +2671,14 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr process
 		return processResult{}, serrors.WrapStr("incrementing path", err)
 	}
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
+	// @ assert reveal p.scionLayer.ValidHeaderOffset(ub, startP)
+	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
+	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
+	// @ assert len(get(old(absPkt(ub)).LeftSeg).Future) > 0
+	// @ assert len(get(old(absPkt(ub)).LeftSeg).History) == 0
+	// @ assert slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+	// @ assert absPkt(ub) == reveal AbsDoXover(old(absPkt(ub)))
 	var err error
 	if p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
@@ -2683,12 +2694,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr process
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
-	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-	// @ TemporaryAssumeForIO(old(absPkt(ub)).LeftSeg != none[io.IO_seg2])
-	// @ TemporaryAssumeForIO(len(get(old(absPkt(ub)).LeftSeg).Future) > 0)
-	// @ TemporaryAssumeForIO(len(get(old(absPkt(ub)).LeftSeg).History) == 0)
-	// @ TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub))
-	// @ TemporaryAssumeForIO(absPkt(ub) == AbsDoXover(old(absPkt(ub))))
+	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(ub)))
 	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(ub)))
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
