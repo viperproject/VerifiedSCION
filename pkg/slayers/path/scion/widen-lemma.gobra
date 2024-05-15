@@ -93,7 +93,7 @@ func widenSegment(raw []byte,
 	start int,
 	length int) {
 	newP := (R52 + R53)/2
-	widenhopFields(raw, offset, 0, segLen, start, length, newP)
+	widenHopFields(raw, offset, 0, segLen, start, length, newP)
 }
 
 ghost
@@ -126,13 +126,13 @@ preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), p
 ensures   hopFields(raw, offset, currHfIdx, segLen) ==
 	hopFields(raw[start:length], offset-start, currHfIdx, segLen)
 decreases segLen - currHfIdx
-func widenhopFields(raw []byte, offset int, currHfIdx int, segLen int, start int, length int, p perm) {
+func widenHopFields(raw []byte, offset int, currHfIdx int, segLen int, start int, length int, p perm) {
 	if (currHfIdx != segLen) {
 		widenBytesToIO_HF(raw, offset + path.HopLen * currHfIdx, start, length)
 		hf1 := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHfIdx, len(raw))
 		hf2 := path.BytesToIO_HF(raw[start:length], 0, offset + path.HopLen * currHfIdx - start, length - start)
 		newP := (p + R53)/2
-		widenhopFields(raw, offset, currHfIdx + 1, segLen, start, length, newP)
+		widenHopFields(raw, offset, currHfIdx + 1, segLen, start, length, newP)
 	}
 }
 
