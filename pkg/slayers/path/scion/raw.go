@@ -39,7 +39,8 @@ type Raw struct {
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
 // posts for IO:
-// @ ensures   res == nil ==> s.EqAbsHeader(data) && s.InfsMatchHfs(data)
+// @ ensures   res == nil ==> s.EqAbsHeader(data) &&
+// @ 	s.InfsMatchHfs(data) && s.SegsInBounds(data)
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()
@@ -360,7 +361,8 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 // CurrINF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
-// @ ensures   (r == nil) == (s.GetCurrINF(ubuf) < s.GetNumINF(ubuf))
+// @ preserves s.EqAbsHeader(ubuf)
+// @ ensures   (r == nil) == s.ValidCurrINF(ubuf)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoField, r error) {
@@ -470,7 +472,8 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 // CurrHF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
-// @ ensures   (r == nil) == (s.GetCurrHF(ubuf) < s.GetNumHops(ubuf))
+// @ preserves s.EqAbsHeader(ubuf)
+// @ ensures   (r == nil) == s.ValidCurrHF(ubuf)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {

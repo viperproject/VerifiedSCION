@@ -1906,8 +1906,8 @@ func (p *scionPacketProcessor) packSCMP(
 // @ requires  acc(&p.path, R20)
 // @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.hopField) && acc(&p.infoField)
-// @ requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
-// @ ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
+// @ requires  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
+// @ ensures   acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
 // @ ensures   acc(&p.d, R50)
 // @ ensures   acc(p.scionLayer.Mem(ub), R6)
 // @ ensures   acc(&p.path, R20)
@@ -1927,7 +1927,6 @@ func (p *scionPacketProcessor) packSCMP(
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires  p.scionLayer.EqAbsHeader(ub)
-// @ requires  len(absPkt(ub).CurrSeg.Future) > 0
 // @ ensures   reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   reserr == nil ==> len(absPkt(ub).CurrSeg.Future) > 0
 // @ ensures   reserr == nil ==> p.EqAbsHopField(absPkt(ub))
@@ -1942,6 +1941,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
 	// @ ghost ubPath := ub[startP:endP]
 	// @ sl.SplitRange_Bytes(ub, startP, endP, R2)
+	// @ p.EstablishEqAbsHeader(ub, startP, endP)
 	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R2)
 	p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
 	// @ fold p.d.validResult(processResult{}, false)
@@ -1954,7 +1954,9 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
-	// @ TemporaryAssumeForIO(slayers.ValidPktMetaHdr(ub))
+	// @ TemporaryAssumeForIO(p.path.CurrInfMatchesCurrHF(ubPath))
+	// @ p.path.EstablishValidPktMetaHdr(ubPath)
+	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
 	// @ absPktFutureLemma(ub)
 	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(ub)))
 	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(ub)))

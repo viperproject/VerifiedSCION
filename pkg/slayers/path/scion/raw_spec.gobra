@@ -135,6 +135,14 @@ pure func (s *Raw) InfsMatchHfs(ghost ub []byte) bool {
 
 ghost
 requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) CurrInfMatchesCurrHF(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		s.Base.GetBase().CurrInfMatchesCurrHF()
+}
+
+ghost
+requires acc(s.Mem(ub), _)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) EqAbsHeader(ub []byte) bool {
@@ -153,10 +161,10 @@ pure func (s *Raw) GetIsXoverSpec(ub []byte) bool {
 ghost
 requires acc(s.Mem(ub), _)
 decreases
-pure func (s *Raw) InBounds(ub []byte) bool {
+pure func (s *Raw) SegsInBounds(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		unfolding acc(s.Base.Mem(), _) in
-		s.PathMeta.InBounds()
+		s.PathMeta.SegsInBounds()
 }
 
 /**** End of Stubs ****/
@@ -622,6 +630,36 @@ func ValidPktMetaHdrSublice(raw []byte, idx int) {
 		&raw[:MetaLen][i] == &raw[:idx][:MetaLen][i]
 	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 	fold acc(sl.AbsSlice_Bytes(raw[:idx], 0, idx), R56)
+}
+
+ghost
+requires acc(s.Mem(ub), R54)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires s.InfsMatchHfs(ub)
+requires s.ValidCurrINF(ub)
+requires s.ValidCurrHF(ub)
+requires s.SegsInBounds(ub)
+requires s.CurrInfMatchesCurrHF(ub)
+requires s.EqAbsHeader(ub)
+ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures acc(s.Mem(ub), R54)
+ensures validPktMetaHdr(ub)
+ensures s.EqAbsHeader(ub)
+decreases
+func (s *Raw) EstablishValidPktMetaHdr(ghost ub []byte) {
+	unfold acc(s.Mem(ub), R55)
+	unfold acc(s.Base.Mem(), R56)
+	assert  MetaLen <= len(ub)
+	assert s.Base.GetBase() == RawBytesToBase(ub)
+	seg1 := int(s.Base.PathMeta.SegLen[0])
+	seg2 := int(s.Base.PathMeta.SegLen[1])
+	seg3 := int(s.Base.PathMeta.SegLen[2])
+	assert 0 < seg1
+	assert s.ValidCurrIdxs(ub)
+	assert pktLen(seg1, seg2, seg3, MetaLen) <= len(ub)
+	assert reveal validPktMetaHdr(ub)
+	fold acc(s.Base.Mem(), R56)
+	fold acc(s.Mem(ub), R55)
 }
 
 ghost

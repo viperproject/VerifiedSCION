@@ -321,8 +321,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res == nil && typeOf(s.GetPath(data)) == *scion.Raw ==>
-// @ 	ValidPktMetaHdr(data)
-// @ ensures   res == nil && typeOf(s.GetPath(data)) == *scion.Raw ==>
 // @ 	s.EqAbsHeader(data)
 // @ ensures   res == nil ==> s.EqPathType(data)
 // @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
@@ -437,13 +435,13 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R56)
 	// @ 	unfold acc(sl.AbsSlice_Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(data[offset : offset+pathLen]), R55)
+	// @	assume s.Path.(*scion.Raw).EqAbsHeader(data[offset : offset+pathLen])
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
 	// @ 	fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R56)
 	// @ 	fold acc(sl.AbsSlice_Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ }
 	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R41)
-	// @ TemporaryAssumeForIO(typeOf(s.GetPath(data)) == *scion.Raw ==> ValidPktMetaHdr(data))
 	// @ assert typeOf(s.GetPath(data)) == *scion.Raw ==> s.EqAbsHeader(data)
 	// @ assert reveal s.EqPathType(data)
 	// @ fold acc(s.Mem(data), 1-R54)
