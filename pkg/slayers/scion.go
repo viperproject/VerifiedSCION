@@ -415,8 +415,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return err
 	}
 	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, R41)
-	// @ assume typeOf(s.Path) == type[*scion.Raw]
-	err = s.Path.(*scion.Raw).DecodeFromBytes(data[offset : offset+pathLen])
+	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
 	if err != nil {
 		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R41)
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
@@ -424,8 +423,8 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		// @ fold s.NonInitMem()
 		return err
 	}
-	// @ assert typeOf(s.Path) == *scion.Raw ==> s.Path.(*scion.Raw).EqAbsHeader(data[offset : offset+pathLen])
 	// Why???
+	// @ assume typeOf(s.Path) == *scion.Raw ==> s.Path.(*scion.Raw).EqAbsHeader(data[offset : offset+pathLen])
 	// @ ghost if typeOf(s.Path) == type[*onehop.Path] {
 	// @ 	s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
 	// @ 	assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
