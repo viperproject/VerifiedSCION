@@ -219,7 +219,7 @@ func (p *rawPath) SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e e
 }
 
 // @ requires  p.NonInitMem()
-// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R40)
+// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
 // @ ensures   p.Mem(b)
 // @ ensures   e == nil
 // @ decreases
