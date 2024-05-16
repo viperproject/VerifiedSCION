@@ -1743,7 +1743,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
-// @ requires  (typeOf(p.scionLayer.GetPath(ub)) == *scion.Raw) ==> p.scionLayer.EqAbsHeader(ub)
+// @ requires  (typeOf(p.scionLayer.GetPath(ub)) == *scion.Raw) ==> p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidSCIONInitSpec(ub)
 // @ requires  p.scionLayer.EqPathType(ub)
 // @ requires  acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 // @ requires  let absPkt := absIO_val(p.rawPkt, p.ingressID) in
@@ -1926,7 +1926,7 @@ func (p *scionPacketProcessor) packSCMP(
 // @ 	p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
-// @ requires  p.scionLayer.EqAbsHeader(ub)
+// @ requires  p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidSCIONInitSpec(ub)
 // @ ensures   reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   reserr == nil ==> len(absPkt(ub).CurrSeg.Future) > 0
 // @ ensures   reserr == nil ==> p.EqAbsHopField(absPkt(ub))
@@ -3154,7 +3154,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
-// @ requires  p.scionLayer.EqAbsHeader(ub) && p.scionLayer.EqPathType(ub)
+// @ requires  p.scionLayer.EqAbsHeader(ub) && p.scionLayer.EqPathType(ub) && p.scionLayer.ValidSCIONInitSpec(data)
 // @ requires  acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 // @ requires  let absPkt := absIO_val(ub, p.ingressID) in
 // @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
@@ -4026,7 +4026,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   reterr == nil ==> retl != nil
 // @ ensures   reterr == nil ==> base.Mem(data)
 // @ ensures   reterr == nil && typeOf(base.GetPath(data)) == *scion.Raw ==>
-// @ 	base.EqAbsHeader(data)
+// @ 	base.EqAbsHeader(data) && s.ValidSCIONInitSpec(data)
 // @ ensures   reterr == nil ==> base.EqPathType(data)
 // @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
 // @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
@@ -4062,7 +4062,7 @@ func decodeLayers(data []byte, base *slayers.SCION,
 	// @ invariant acc(sl.AbsSlice_Bytes(oldData, 0, len(oldData)), R39)
 	// @ invariant base.Mem(oldData)
 	// @ invariant typeOf(base.GetPath(oldData)) == *scion.Raw ==>
-	// @ 	base.EqAbsHeader(oldData)
+	// @ 	base.EqAbsHeader(oldData) && s.ValidSCIONInitSpec(oldData)
 	// @ invariant base.EqPathType(oldData)
 	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)
 	// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> acc(&opts[i], R10)

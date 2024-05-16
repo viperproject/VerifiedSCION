@@ -428,8 +428,21 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 		let seg2 := int(metaHdr.SegLen[1])       in
 		let seg3 := int(metaHdr.SegLen[2])       in
 		s.Path.(*scion.Raw).Base.GetBase() ==
-		scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3} &&
-		s.Path.(*scion.Raw).Base.InfsMatchHfs() &&
+		scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
+}
+
+ghost
+opaque
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) ValidSCIONInitSpec(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
+		let high := s.HdrLen*LineLen in
+		typeOf(s.Path) == (*scion.Raw)			&&
+		unfolding acc(s.Path.Mem(ub[low:high]), _) in
+		s.Path.(*scion.Raw).Base.InfsMatchHfs()	&&
 		s.Path.(*scion.Raw).Base.GetMetaHdr().SegsInBounds()
 }
 
