@@ -354,6 +354,58 @@ ghost
 opaque
 pure
 requires acc(s.Mem(ub), _)
+requires acc(sl.AbsSlice_Bytes(ub, 0, length), _)
+requires CmnHdrLen <= length
+decreases
+func (s *SCION) ValidHeaderOffset(ub []byte, length int) bool {
+	return GetAddressOffsetWithinLength(ub, length) == s.PathStartIdx(ub) &&
+		GetLengthWithinLength(ub,length) == s.PathEndIdx(ub)
+}
+
+ghost
+requires acc(s.Mem(ub), R56)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
+requires CmnHdrLen <= length && length <= len(ub)
+requires s.ValidHeaderOffset(ub, len(ub))
+ensures  acc(s.Mem(ub), R56)
+ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures  acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
+ensures  s.ValidHeaderOffset(ub, length)
+decreases
+func (s *SCION) ValidHeaderOffsetToSubSliceLemma(ub []byte, length int) {
+	reveal s.ValidHeaderOffset(ub, len(ub))
+	unfold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+	unfold acc(sl.AbsSlice_Bytes(ub, 0, length), R56)
+	assert reveal s.ValidHeaderOffset(ub, length)
+	fold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+	fold acc(sl.AbsSlice_Bytes(ub, 0, length), R56)
+}
+
+ghost
+requires acc(s.Mem(ub), R56)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
+requires CmnHdrLen <= length && length <= len(ub)
+requires s.ValidHeaderOffset(ub, length)
+ensures  acc(s.Mem(ub), R56)
+ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures  acc(sl.AbsSlice_Bytes(ub, 0, length), R55)
+ensures  s.ValidHeaderOffset(ub, len(ub))
+decreases
+func (s *SCION) ValidHeaderOffsetFromSubSliceLemma(ub []byte, length int) {
+	reveal s.ValidHeaderOffset(ub, len(ub))
+	unfold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+	unfold acc(sl.AbsSlice_Bytes(ub, 0, length), R56)
+	assert reveal s.ValidHeaderOffset(ub, length)
+	fold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+	fold acc(sl.AbsSlice_Bytes(ub, 0, length), R56)
+}
+
+ghost
+opaque
+pure
+requires acc(s.Mem(ub), _)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
 decreases
 func (s *SCION) EqAbsHeader(ub []byte) bool {
@@ -371,8 +423,12 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 			&ub[low:high][k] == &ub[low + k]) in
 		let _ := Asserting(forall k int :: {&ub[low:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
 			&ub[low:high][:scion.MetaLen][k] == &ub[low:high][k]) in
-		s.Path.(*scion.Raw).Base.GetMetaHdr() ==
-		scion.DecodedFrom(binary.BigEndian.Uint32(ub[low:high][:scion.MetaLen]))
+		let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(ub[low:high][:scion.MetaLen])) in
+		let seg1 := int(metaHdr.SegLen[0])       in
+		let seg2 := int(metaHdr.SegLen[1])       in
+		let seg3 := int(metaHdr.SegLen[2])       in
+		s.Path.(*scion.Raw).Base.GetBase() ==
+		scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
 }
 
 // Checks if the common path header is valid in the serialized scion packet.
@@ -396,10 +452,10 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let seg2 := int(metaHdr.SegLen[1])         in
 		let seg3 := int(metaHdr.SegLen[2])         in
 		let base := scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1+seg2+seg3} in
-		metaHdr.InBounds()       &&
-		0 < metaHdr.SegLen[0]    &&
-		base.ValidCurrIdxsSpec() &&
-		scion.pktLen(seg1, seg2, seg3, start) <= length
+		0 < metaHdr.SegLen[0]    	&&
+		base.ValidCurrIdxsSpec() 	&&
+		base.CurrInfMatchesCurrHF()	&&
+		scion.pktLen(seg1, seg2, seg3, start + scion.MetaLen) <= length
 }
 
 ghost
@@ -408,8 +464,8 @@ requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func IsSupportedPkt(raw []byte) bool {
 	return CmnHdrLen <= len(raw) &&
-		let pathType  := path.Type(GetPathType(raw))   in
-		let nextHdr := L4ProtocolType(GetNextHdr(raw)) in
+		let pathType := path.Type(GetPathType(raw))     in
+		let nextHdr  := L4ProtocolType(GetNextHdr(raw)) in
 		pathType == scion.PathType &&
 		nextHdr != L4SCMP
 }
@@ -419,7 +475,15 @@ requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
 requires CmnHdrLen <= len(ub)
 decreases
 pure func GetAddressOffset(ub []byte) int {
-	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+	return GetAddressOffsetWithinLength(ub, len(ub))
+}
+
+ghost
+requires acc(sl.AbsSlice_Bytes(ub, 0, length), _)
+requires CmnHdrLen <= length
+decreases
+pure func GetAddressOffsetWithinLength(ub []byte, length int) int {
+	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, length), _) in
 		let dstAddrLen := AddrType(ub[9] >> 4 & 0x7).Length() in
 		let srcAddrLen := AddrType(ub[9] & 0x7).Length() in
 		CmnHdrLen + 2*addr.IABytes + dstAddrLen + srcAddrLen
@@ -430,7 +494,15 @@ requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
 requires CmnHdrLen <= len(ub)
 decreases
 pure func GetLength(ub []byte) int {
-	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in int(ub[5])*LineLen
+	return GetLengthWithinLength(ub, len(ub))
+}
+
+ghost
+requires acc(sl.AbsSlice_Bytes(ub, 0, length), _)
+requires CmnHdrLen <= length
+decreases
+pure func GetLengthWithinLength(ub []byte, length int) int {
+	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, length), _) in int(ub[5])*LineLen
 }
 
 ghost

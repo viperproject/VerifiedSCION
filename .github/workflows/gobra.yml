@@ -415,10 +415,10 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          chop: 10
           parallelizeBranches: '1'
-          # The following flag has a significant influence on the number of branches verified.
-          # Without it, verification would take a lot longer.
           conditionalizePermissions: '1'
+          moreJoins: 'impure'
           imageVersion: ${{ env.imageVersion }}
           mceMode: 'on'
           requireTriggers: ${{ env.requireTriggers }}

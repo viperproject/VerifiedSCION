@@ -99,18 +99,28 @@ func testRun(
 
 	b1 := allocateBatchConn()
 	b2 := allocateBatchConn()
+	b3 := allocateBatchConn()
 	d.external = map[uint16]BatchConn{
 		uint16(1): b1,
 		uint16(2): b2,
+		uint16(3): b3,
 	}
 	fold accBatchConn(d.external)
 
-	d.linkTypes = make(map[uint16]topology.LinkType)
-	d.neighborIAs = make(map[uint16]addr.IA)
+	d.linkTypes = map[uint16]topology.LinkType{
+		uint16(1): topology.Child,
+		uint16(2): topology.Child,
+		uint16(3): topology.Child,
+	}
+	d.neighborIAs = map[uint16]addr.IA{
+		uint16(1): 1001,
+		uint16(2): 1002,
+		uint16(3): 1000,
+	}
 
 	a1 := allocateUDPAddr()
 	d.internalNextHops = map[uint16]*net.UDPAddr{
-		uint16(3): a1,
+		uint16(4): a1,
 	}
 
 	d.internal = allocateBatchConn()
@@ -138,14 +148,12 @@ func testRun(
 			3: 1000,
 		},
 		localIA: 1000,
-		topology: io.TopologySpec_{
-			coreAS: set[io.IO_as]{1000},
-			links:  dict[io.AsIfsPair]io.AsIfsPair {
-				io.AsIfsPair{1000, 1}: io.AsIfsPair{1001, 7},
-				io.AsIfsPair{1000, 2}: io.AsIfsPair{1002, 8},
-				io.AsIfsPair{1000, 3}: io.AsIfsPair{1000, 3},
-				io.AsIfsPair{1001, 7}: io.AsIfsPair{1000, 1},
-				io.AsIfsPair{1002, 8}: io.AsIfsPair{1000, 2}}}}
+		links:  dict[io.AsIfsPair]io.AsIfsPair {
+			io.AsIfsPair{1000, 1}: io.AsIfsPair{1001, 7},
+			io.AsIfsPair{1000, 2}: io.AsIfsPair{1002, 8},
+			io.AsIfsPair{1000, 3}: io.AsIfsPair{1000, 3},
+			io.AsIfsPair{1001, 7}: io.AsIfsPair{1000, 1},
+			io.AsIfsPair{1002, 8}: io.AsIfsPair{1000, 2}}}
 	outline(
 	pair1 := io.AsIfsPair{1000, 1}
 	pair2 := io.AsIfsPair{1000, 2}
@@ -165,14 +173,12 @@ func testRun(
 			3: 1000,
 		},
 		localIA: 1000,
-		topology: io.TopologySpec_{
-			coreAS: set[io.IO_as]{1000},
-			links:  dict[io.AsIfsPair]io.AsIfsPair {
-				pair1: pair4,
-				pair2: pair5,
-				pair3: pair3,
-				pair4: pair1,
-				pair5: pair2}}}
+		links:  dict[io.AsIfsPair]io.AsIfsPair {
+			pair1: pair4,
+			pair2: pair5,
+			pair3: pair3,
+			pair4: pair1,
+			pair5: pair2}}
 
 	assert dp.Lookup(dp.Lookup(pair1)) == pair1
 	assert dp.Lookup(dp.Lookup(pair2)) == pair2
@@ -181,15 +187,16 @@ func testRun(
 	assert dp.Lookup(dp.Lookup(pair5)) == pair5
 
 	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
-		io.AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links)
+		io.AsIfsPair{dp.localIA, ifs} in domain(dp.links)
 	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
 		dp.Lookup(io.AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs]
-	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} in domain(dp.topology.links) ==>
+	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
 		ifs in domain(dp.neighborIAs)
-	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair in domain(dp.topology.links) ==>
+	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair in domain(dp.links) ==>
 			let next_pair := dp.Lookup(pair) in
-			(next_pair in domain(dp.topology.links)) &&
+			(next_pair in domain(dp.links)) &&
 			dp.Lookup(next_pair) == pair
+	assert domain(dp.linkTypes) == domain(dp.neighborIAs)
 	assert reveal dp.Valid()
 	)
 
@@ -200,7 +207,12 @@ func testRun(
 	assert d.dpSpecWellConfiguredLinkTypes(dp)
 
 	fold d.Mem()
+	assert d.getDomNeighborIAs() == reveal d.getDomExternal()
+	assert d.getDomNeighborIAs() == d.getDomLinkTypes()
+	assert !(0 in d.getDomNeighborIAs())
+	assert reveal d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 	assert reveal d.DpAgreesWithSpec(dp)
+
 	assert reveal d.PreWellConfigured()
 	fold MutexInvariant!< d !>()
 	// end of foldDataPlaneMem

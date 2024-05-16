@@ -242,6 +242,7 @@ pure func (d *DataPlane) GetDomInternalNextHops() set[uint16] {
 }
 
 ghost
+opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) getDomExternal() set[uint16] {
@@ -253,11 +254,32 @@ pure func (d *DataPlane) getDomExternal() set[uint16] {
 }
 
 ghost
+requires acc(d.Mem(), _)
+decreases
+pure func (d *DataPlane) getDomNeighborIAs() set[uint16] {
+	return unfolding acc(d.Mem(), _) in
+		d.neighborIAs == nil ?
+			set[uint16]{} : domain(d.neighborIAs)
+}
+
+ghost
+requires acc(d.Mem(), _)
+decreases
+pure func (d *DataPlane) getDomLinkTypes() set[uint16] {
+	return unfolding acc(d.Mem(), _) in
+		d.linkTypes == nil ?
+			set[uint16]{} : domain(d.linkTypes)
+}
+
+ghost
 opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
-	return d.getDomExternal() subset d.getDomForwardingMetrics()
+	return d.getDomNeighborIAs() == d.getDomExternal() &&
+		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
+		!(0 in d.getDomNeighborIAs()) &&
+		d.getDomExternal() subset d.getDomForwardingMetrics()
 }
 
 ghost
@@ -265,7 +287,10 @@ opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) PreWellConfigured() bool {
-	return d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
+	return d.getDomNeighborIAs() == d.getDomExternal() &&
+		d.getDomExternal() == d.getDomLinkTypes() &&
+		!(0 in d.getDomNeighborIAs()) &&
+		d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 }
 
 ghost
@@ -661,19 +686,6 @@ func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
 
 ghost
 requires acc(d.Mem(), _) && d.WellConfigured()
-requires acc(&d.external, _) && acc(d.external, _)
-requires id in domain(d.external)
-ensures  acc(d.Mem(), _)
-ensures  id in d.getDomForwardingMetrics()
-decreases
-func (d *DataPlane) InDomainExternalInForwardingMetrics2(id uint16) {
-	unfold acc(d.Mem(), _)
-	reveal d.WellConfigured()
-	unfold acc(accBatchConn(d.external), _)
-}
-
-ghost
-requires acc(d.Mem(), _) && d.WellConfigured()
 requires acc(&d.external, _) && acc(d.external, R55)
 requires id in domain(d.external)
 ensures  acc(d.Mem(), _)
@@ -682,6 +694,7 @@ ensures  id in d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics3(id uint16) {
 	reveal d.WellConfigured()
+	reveal d.getDomExternal()
 	assert unfolding acc(d.Mem(), _) in
 		(unfolding acc(accBatchConn(d.external), _) in true)
 }
