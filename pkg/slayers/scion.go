@@ -422,7 +422,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return err
 	}
 	// Why???
-	// @ assume typeOf(s.Path) == *scion.Raw ==> s.Path.(*scion.Raw).EqAbsHeader(data[offset : offset+pathLen])
+	// @ assume typeOf(s.Path) == type[*scion.Raw] ==> s.Path.(*scion.Raw).EqAbsHeader(data[offset : offset+pathLen]) && s.Path.(*scion.Raw).InfsMatchHfs(data[offset : offset+pathLen]) && s.Path.(*scion.Raw).SegsInBounds(data[offset : offset+pathLen])
 	// @ ghost if typeOf(s.Path) == type[*onehop.Path] {
 	// @ 	s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
 	// @ 	assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
@@ -435,7 +435,6 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R56)
 	// @ 	unfold acc(sl.AbsSlice_Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(data[offset : offset+pathLen]), R55)
-	// @	assume s.Path.(*scion.Raw).EqAbsHeader(data[offset : offset+pathLen])
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
 	// @ 	fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R56)
