@@ -37,7 +37,7 @@ type Decoded struct {
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 // @ requires  s.NonInitMem()
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R42)
 // @ ensures   r == nil ==> (
 // @ 	s.Mem(data) &&
 // @ 	let lenD := len(data) in
