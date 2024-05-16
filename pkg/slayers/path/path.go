@@ -81,7 +81,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
-	//@ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R40)
+	//@ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> NonInitMem()

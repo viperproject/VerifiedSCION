@@ -352,6 +352,11 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ preserves CmnHdrLen <= len(data) && acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
 	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 	// @ ensures   0 <= s.PathType && s.PathType < 256
+	// @ ensures   path.Type(GetPathType(data)) == s.PathType
+	// @ ensures   L4ProtocolType(GetNextHdr(data)) == s.NextHdr
+	// @ ensures   GetLength(data) == int(s.HdrLen * LineLen)
+	// @ ensures   GetAddressOffset(data) ==
+	// @	CmnHdrLen + 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 	// @ decreases
 	// @ outline(
 	// @ unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R41)
@@ -409,15 +414,18 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		// @ fold s.NonInitMem()
 		return err
 	}
-	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, R40)
-	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
+	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, R41)
+	// @ assume typeOf(s.Path) == type[*scion.Raw]
+	err = s.Path.(*scion.Raw).DecodeFromBytes(data[offset : offset+pathLen])
 	if err != nil {
-		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R40)
+		// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R41)
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
 		// @ s.PathPoolMemExchange(s.PathType, s.Path)
 		// @ fold s.NonInitMem()
 		return err
 	}
+	// @ assert typeOf(s.Path) == *scion.Raw ==> s.Path.(*scion.Raw).EqAbsHeader(data[offset : offset+pathLen])
+	// Why???
 	// @ ghost if typeOf(s.Path) == type[*onehop.Path] {
 	// @ 	s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
 	// @ 	assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
@@ -425,13 +433,21 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ }
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
-
-	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R40)
-	// @ fold s.Mem(data)
-
+	// @ fold acc(s.Mem(data), R54)
+	// @ ghost if(typeOf(s.GetPath(data)) == (*scion.Raw)) {
+	// @ 	unfold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R56)
+	// @ 	unfold acc(sl.AbsSlice_Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
+	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(data[offset : offset+pathLen]), R55)
+	// @ 	assert reveal s.EqAbsHeader(data)
+	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
+	// @ 	fold acc(sl.AbsSlice_Bytes(data, 0, len(data)), R56)
+	// @ 	fold acc(sl.AbsSlice_Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
+	// @ }
+	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R41)
 	// @ TemporaryAssumeForIO(typeOf(s.GetPath(data)) == *scion.Raw ==> ValidPktMetaHdr(data))
-	// @ TemporaryAssumeForIO(typeOf(s.GetPath(data)) == *scion.Raw ==> s.EqAbsHeader(data))
-	// @ TemporaryAssumeForIO(s.EqPathType(data))
+	// @ assert typeOf(s.GetPath(data)) == *scion.Raw ==> s.EqAbsHeader(data)
+	// @ assert reveal s.EqPathType(data)
+	// @ fold acc(s.Mem(data), 1-R54)
 	return nil
 }
 

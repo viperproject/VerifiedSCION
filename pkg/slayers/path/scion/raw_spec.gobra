@@ -127,6 +127,14 @@ pure func (s *Raw) ValidCurrIdxs(ghost ub []byte) bool {
 
 ghost
 requires acc(s.Mem(ub), _)
+decreases
+pure func (s *Raw) InfsMatchHfs(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		s.Base.InfsMatchHfs()
+}
+
+ghost
+requires acc(s.Mem(ub), _)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) EqAbsHeader(ub []byte) bool {
@@ -326,7 +334,7 @@ func (s *Raw) RawBufferNonInitMem() []byte {
 ghost
 decreases
 pure func NumInfoFields(seg1Len int, seg2Len int, seg3Len int) int {
-	return seg3Len > 0 ? 3 : (seg2Len > 0 ? 2 : 1)
+	return seg3Len > 0 ? 3 : (seg2Len > 0 ? 2 : (seg1Len > 0 ? 1 : 0))
 }
 
 ghost

@@ -35,9 +35,11 @@ type Raw struct {
 // DecodeFromBytes only decodes the PathMetaHeader. Otherwise the nothing is decoded and simply kept
 // as raw bytes.
 // @ requires  s.NonInitMem()
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R42)
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
+// posts for IO:
+// @ ensures   res == nil ==> s.EqAbsHeader(data) && s.InfsMatchHfs(data)
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()

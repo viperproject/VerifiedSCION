@@ -428,7 +428,8 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 		let seg2 := int(metaHdr.SegLen[1])       in
 		let seg3 := int(metaHdr.SegLen[2])       in
 		s.Path.(*scion.Raw).Base.GetBase() ==
-		scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
+		scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3} &&
+		s.Path.(*scion.Raw).Base.InfsMatchHfs()
 }
 
 // Checks if the common path header is valid in the serialized scion packet.
