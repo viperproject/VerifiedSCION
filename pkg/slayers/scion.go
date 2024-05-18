@@ -421,8 +421,6 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		// @ fold s.NonInitMem()
 		return err
 	}
-	// Why???
-	// @ assume typeOf(s.Path) == type[*scion.Raw] ==> s.Path.(*scion.Raw).EqAbsHeader(data[offset : offset+pathLen]) && s.Path.(*scion.Raw).InfsMatchHfs(data[offset : offset+pathLen]) && s.Path.(*scion.Raw).SegsInBounds(data[offset : offset+pathLen])
 	// @ ghost if typeOf(s.Path) == type[*onehop.Path] {
 	// @ 	s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
 	// @ 	assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])

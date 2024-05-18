@@ -19,6 +19,7 @@ package epic
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/verification/utils/slices"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (p *Path) NonInitMem() {
@@ -103,6 +104,15 @@ requires acc(p.Mem(buf), _)
 decreases
 pure func (p *Path) GetUnderlyingScionPathBuf(buf []byte) []byte {
 	return unfolding acc(p.Mem(buf), _) in buf[MetadataLen:]
+}
+
+ghost
+pure
+requires  p.Mem(b)
+requires  acc(slices.AbsSlice_Bytes(b, 0, len(b)), R42)
+decreases
+func (p *Path) DecodeFromBytesSpec(b []byte, err error) (res bool) {
+	return true
 }
 
 (*Path) implements path.Path

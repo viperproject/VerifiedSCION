@@ -19,6 +19,7 @@ package onehop
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/verification/utils/slices"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (o *Path) NonInitMem() {
@@ -49,6 +50,15 @@ ensures  b
 decreases
 pure func (o *Path) InferSizeUb(ghost ub []byte) (b bool) {
 	return unfolding acc(o.Mem(ub), _) in o.Len(ub) <= len(ub)
+}
+
+ghost
+pure
+requires  p.Mem(b)
+requires  acc(slices.AbsSlice_Bytes(b, 0, len(b)), R42)
+decreases
+func (p *Path) DecodeFromBytesSpec(b []byte, err error) (res bool) {
+	return true
 }
 
 (*Path) implements path.Path

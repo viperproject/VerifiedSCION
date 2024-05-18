@@ -41,6 +41,16 @@ pred (s *Raw) Mem(buf []byte) {
 
 (*Raw) implements path.Path
 
+ghost
+pure
+requires  acc(s.Mem(buf), _)
+requires  acc(sl.AbsSlice_Bytes(buf, 0, len(buf)), R42)
+decreases
+func (s *Raw) DecodeFromBytesSpec(buf []byte, err error) (res bool) {
+	return s.EqAbsHeader(buf) &&
+		s.InfsMatchHfs(buf) && s.SegsInBounds(buf)
+}
+
 /**** Stubs ****/
 /**
   * This method is not part of the original SCION codebase.
