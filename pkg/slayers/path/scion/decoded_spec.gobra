@@ -24,8 +24,6 @@ import (
 
 ghost
 pure
-requires  p.Mem(b)
-requires  acc(slices.AbsSlice_Bytes(b, 0, len(b)), R42)
 decreases
 func (p *Decoded) DecodeFromBytesSpec(b []byte, err error) (res bool) {
 	return true

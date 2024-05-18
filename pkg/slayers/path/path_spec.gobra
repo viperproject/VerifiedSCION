@@ -16,10 +16,8 @@
 
 package path
 
-import (
-	"github.com/scionproto/scion/verification/utils/slices"
-	. "github.com/scionproto/scion/verification/utils/definitions"
-)
+import	"github.com/scionproto/scion/verification/utils/slices"
+
 
 
 /** rawPath spec **/
@@ -43,8 +41,6 @@ func (p *rawPath) DowngradePerm(ghost buf []byte) {
 
 ghost
 pure
-requires  p.Mem(b)
-requires  acc(slices.AbsSlice_Bytes(b, 0, len(b)), R42)
 decreases
 func (p *rawPath) DecodeFromBytesSpec(b []byte, err error) (res bool) {
 	return true

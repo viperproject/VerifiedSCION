@@ -19,7 +19,6 @@ package empty
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/verification/utils/slices"
-	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (e Path) Mem(buf []byte) { len(buf) == 0 }
@@ -37,8 +36,6 @@ func (e Path) DowngradePerm(buf []byte) {
 
 ghost
 pure
-requires  p.Mem(b)
-requires  acc(slices.AbsSlice_Bytes(b, 0, len(b)), R42)
 decreases
 func (p Path) DecodeFromBytesSpec(b []byte, err error) (res bool) {
 	return true
