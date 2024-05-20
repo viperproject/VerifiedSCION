@@ -3949,7 +3949,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R4)
-// @ requires  p.scionLayer.ValidPathMetaData(ub)
+// @ requires  p.scionLayer.ValidCurrFieldsIfPresent(ub)
 // @ requires  sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ requires  acc(&p.ingressID,  R50)
 // @ requires  acc(&p.buffer, R55) && p.buffer.Mem()
@@ -4080,13 +4080,15 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 	_, external := p.d.external[p.ingressID]
 	if external {
-		// @ requires revPath.Mem(rawPath)
-		// @ requires revPath.ValidCurrIdxs(rawPath)
-		// @ ensures  revPath.Mem(rawPath)
-		// @ decreases
-		// @ outline(
+		//  requires revPath.Mem(rawPath)
+		//  requires revPath.ValidCurrIdxs(rawPath)
+		//  ensures  revPath.Mem(rawPath)
+		//  decreases
+		//  outline(
 		// @ unfold revPath.Mem(rawPath)
 		// @ unfold revPath.Base.Mem()
+		// assume 0 <= revPath.PathMeta.CurrINF && revPath.PathMeta.CurrINF < len(revPath.InfoFields)
+		// assume 0 <= revPath.PathMeta.CurrHF && revPath.PathMeta.CurrHF < len(revPath.HopFields)
 		infoField := &revPath.InfoFields[revPath.PathMeta.CurrINF]
 		if infoField.ConsDir {
 			hopField := /*@ unfolding acc(revPath.HopFields[revPath.PathMeta.CurrHF].Mem(), _) in @*/
@@ -4095,7 +4097,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 		}
 		// @ fold revPath.Base.Mem()
 		// @ fold revPath.Mem(rawPath)
-		// @ )
+		//  )
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
 			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 			// @ ghost if pathFromEpic {

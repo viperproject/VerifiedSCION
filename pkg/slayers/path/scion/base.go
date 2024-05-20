@@ -83,7 +83,9 @@ type Base struct {
 // @ ensures   r != nil ==>
 // @ 	s.NonInitMem() && r.ErrorMem()
 // @ ensures   r == nil ==>
-// @ 	s.Mem() && s.DecodeFromBytesSpec(data) && s.InfsMatchHfs()
+// @ 	s.Mem() &&
+// @ 	s.GetBase().WeaklyValid() &&
+// @ 	s.DecodeFromBytesSpec(data)
 // @ ensures   len(data) < MetaLen ==> r != nil
 // @ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
@@ -250,6 +252,7 @@ type MetaHdr struct {
 // @ preserves acc(m)
 // @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
+// @ ensures   e == nil ==> m.ValidSegLen()
 // @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases

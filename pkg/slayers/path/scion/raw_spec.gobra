@@ -281,6 +281,14 @@ func (r *Raw) Widen(ubuf1, ubuf2 []byte) {
 ghost
 requires acc(r.Mem(ub), _)
 decreases
+pure func (r *Raw) GetBase(ub []byte) Base {
+	return unfolding acc(r.Mem(ub), _) in r.Base.GetBase()
+}
+
+// TODO: drop all of these unnecessary helper function?
+ghost
+requires acc(r.Mem(ub), _)
+decreases
 pure func (r *Raw) GetNumINF(ghost ub []byte) int {
 	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.NumINF)
 }

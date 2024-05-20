@@ -114,6 +114,7 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 	return e
 }
 
+// TODO: clean up all of these. Have a GetBase method instead
 ghost
 requires acc(d.Mem(ub), _)
 decreases
@@ -156,12 +157,15 @@ pure func (s *Decoded) GetMetaHdr(ub []byte) MetaHdr {
 	return unfolding acc(s.Mem(ub), _) in s.Base.GetMetaHdr()
 }
 
+// Replaced by d.GetBase().ValidSegLen()
+/*
 ghost
 requires acc(d.Mem(ub), _)
 decreases
 pure func (d *Decoded) InfsMatchHfs(ub []byte) bool {
 	return unfolding acc(d.Mem(ub), _) in d.Base.InfsMatchHfs()
 }
+*/
 
 /**** End of Stubs ****/
 
