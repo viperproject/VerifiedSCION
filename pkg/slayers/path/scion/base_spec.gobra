@@ -59,6 +59,15 @@ pure func (b Base) ValidCurrHfSpec() bool {
 
 ghost
 decreases
+pure func (b Base) ValidCurrFieldsSpec() bool {
+	return 0 <= b.NumINF && b.NumINF <= MaxINFs &&
+		0 <= b.NumHops && b.NumHops <= MaxHops  &&
+		b.ValidCurrInfSpec()                    &&
+		b.ValidCurrHfSpec()
+}
+
+ghost
+decreases
 pure func (b Base) ValidCurrIdxsSpec() bool {
 	return 0 <= b.NumINF && b.NumINF <= MaxINFs &&
 		0 <= b.NumHops && b.NumHops <= MaxHops  &&

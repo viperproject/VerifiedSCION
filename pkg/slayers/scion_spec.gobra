@@ -181,6 +181,7 @@ pred (s *SCION) Mem(ubuf []byte) {
 	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
 }
 
+// TODO: drop
 ghost
 requires acc(s.Mem(ub), _)
 decreases
@@ -191,6 +192,19 @@ pure func (s *SCION) ValidPathMetaData(ghost ub []byte) bool {
 			s.Path.(*scion.Raw).ValidCurrIdxs(ubPath)) &&
 		(typeOf(s.Path) == type[*epic.Path] ==>
 			s.Path.(*epic.Path).ValidCurrIdxs(ubPath))
+}
+
+ghost
+opaque
+requires acc(s.Mem(ub), _)
+decreases
+pure func (s *SCION) ValidCurrFieldsIfPresent(ghost ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) in
+		let ubPath := s.UBPath(ub) in
+		(typeOf(s.Path) == type[*scion.Raw] ==>
+			s.Path.(*scion.Raw).GetBase(ubPath).ValidCurrFieldsSpec()) &&
+		(typeOf(s.Path) == type[*epic.Path] ==>
+			s.Path.(*epic.Path).GetBase(ubPath).ValidCurrFieldsSpec())
 }
 
 // TODO: simplify the body of the predicate when let expressions

@@ -1975,7 +1975,7 @@ func (p *scionPacketProcessor) packSCMP(
 // @ requires  len(absPkt(ub).CurrSeg.Future) > 0
 // @ ensures   acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R1)
 // @ ensures   acc(&p.d, R50)
-// @ ensures   acc(p.scionLayer.Mem(ub), R6)
+// @ ensures   acc(p.scionLayer.Mem(ub), R5)
 // @ ensures   acc(&p.path, R20)
 // @ ensures   p.path === p.scionLayer.GetPath(ub)
 // @ ensures   acc(&p.hopField) && acc(&p.infoField)
@@ -1984,14 +1984,14 @@ func (p *scionPacketProcessor) packSCMP(
 // @ 	let ubPath := p.scionLayer.UBPath(ub) in
 // @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
 // @ 	p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath))
-// @ ensures   acc(p.scionLayer.Mem(ub), R6)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   reserr == nil ==> (
 // @ 	let ubPath := p.scionLayer.UBPath(ub) in
 // @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
 // @ 	p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// @ ensures   reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
+// @ ensures   reserr == nil ==>
+// @ 	slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   reserr == nil ==> len(absPkt(ub).CurrSeg.Future) > 0
 // @ ensures   reserr == nil ==> p.EqAbsHopField(absPkt(ub))
 // @ ensures   reserr == nil ==> p.EqAbsInfoField(absPkt(ub))
