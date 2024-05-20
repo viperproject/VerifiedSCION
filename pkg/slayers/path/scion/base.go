@@ -161,8 +161,8 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 // @ 	old(int(s.GetCurrHF()) >= s.GetNumHops()-1))
 // @ ensures  e == nil ==> (
 // @ 	s.Mem() &&
-// @ 	let oldBase := old(unfolding s.Mem() in *s) in
-// @ 	let newBase := (unfolding s.Mem() in *s) in
+// @ 	let oldBase := old(s.GetBase()) in
+// @ 	let newBase := s.GetBase() in
 // @ 	newBase == oldBase.IncPathSpec())
 // @ ensures  e != nil ==> (s.NonInitMem() && e.ErrorMem())
 // @ decreases
