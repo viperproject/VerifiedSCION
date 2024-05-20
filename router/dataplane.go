@@ -4003,15 +4003,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
-		/*@
-		scionBuf := epicPath.GetUnderlyingScionPathBuf(ubPath)
-		unfold acc(epicPath.Mem(ubPath), R4)
-		assert ubPath[epic.MetadataLen:] === scionBuf
-		epicPathUb = ubPath
-		ubPath = scionBuf
-		startP += epic.MetadataLen
-		assert ubPath === ub[startP:endP]
-		@*/
+		// @ scionBuf := epicPath.GetUnderlyingScionPathBuf(ubPath)
+		// @ unfold acc(epicPath.Mem(ubPath), R4)
+		// @ assert ubPath[epic.MetadataLen:] === scionBuf
+		// @ epicPathUb = ubPath
+		// @ ubPath = scionBuf
+		// @ startP += epic.MetadataLen
+		// @ assert ubPath === ub[startP:endP]
 		path = epicPath.ScionPath
 		// @ pathFromEpic = true
 	default:
@@ -4019,46 +4017,40 @@ func (p *scionPacketProcessor) prepareSCMP(
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
-	/*@
-	assert pathType == scion.PathType || pathType == epic.PathType
-	assert typeOf(p.scionLayer.Path) == type[*scion.Raw] || typeOf(p.scionLayer.Path) == type[*epic.Path]
-	assert !pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*scion.Raw]
-	assert pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*epic.Path]
-	sl.SplitRange_Bytes(ub, startP, endP, writePerm)
-	@*/
+	// @ assert pathType == scion.PathType || pathType == epic.PathType
+	// @ assert typeOf(p.scionLayer.Path) == type[*scion.Raw] || typeOf(p.scionLayer.Path) == type[*epic.Path]
+	// @ assert !pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*scion.Raw]
+	// @ assert pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*epic.Path]
+	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
 	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
-		/*@
-		sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		ghost if pathFromEpic {
-			epicPath := p.scionLayer.Path.(*epic.Path)
-			assert acc(path.Mem(ubPath), R4)
-			fold acc(epicPath.Mem(epicPathUb), R4)
-		} else {
-			rawPath := p.scionLayer.Path.(*scion.Raw)
-			assert acc(path.Mem(ubPath), R4)
-			assert acc(rawPath.Mem(ubPath), R4)
-		}
-		fold acc(p.scionLayer.Mem(ub), R4)
-		@*/
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ ghost if pathFromEpic {
+		// @ 	epicPath := p.scionLayer.Path.(*epic.Path)
+		// @ 	assert acc(path.Mem(ubPath), R4)
+		// @ 	fold acc(epicPath.Mem(epicPathUb), R4)
+		// @ } else {
+		// @ 	rawPath := p.scionLayer.Path.(*scion.Raw)
+		// @ 	assert acc(path.Mem(ubPath), R4)
+		// @ 	assert acc(rawPath.Mem(ubPath), R4)
+		// @ }
+		// @ fold acc(p.scionLayer.Mem(ub), R4)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
 	// @ ghost rawPath := path.RawBufferMem(ubPath)
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
-		/*@
-		sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		ghost if pathFromEpic {
-			epicPath := p.scionLayer.Path.(*epic.Path)
-			assert acc(path.Mem(ubPath), R4)
-			fold acc(epicPath.Mem(epicPathUb), R4)
-		} else {
-			rawPath := p.scionLayer.Path.(*scion.Raw)
-			assert acc(path.Mem(ubPath), R4)
-			assert acc(rawPath.Mem(ubPath), R4)
-		}
-		fold acc(p.scionLayer.Mem(ub), R4)
-		@*/
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ ghost if pathFromEpic {
+		// @ 	epicPath := p.scionLayer.Path.(*epic.Path)
+		// @ 	assert acc(path.Mem(ubPath), R4)
+		// @ 	fold acc(epicPath.Mem(epicPathUb), R4)
+		// @ } else {
+		// @ 	rawPath := p.scionLayer.Path.(*scion.Raw)
+		// @ 	assert acc(path.Mem(ubPath), R4)
+		// @ 	assert acc(rawPath.Mem(ubPath), R4)
+		// @ }
+		// @ fold acc(p.scionLayer.Mem(ub), R4)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	// @ assert revPathTmp.Mem(rawPath)
@@ -4068,19 +4060,17 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover( /*@ rawPath @*/ ) {
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
-			/*@
-			sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-			ghost if pathFromEpic {
-				epicPath := p.scionLayer.Path.(*epic.Path)
-				assert acc(path.Mem(ubPath), R4)
-				fold acc(epicPath.Mem(epicPathUb), R4)
-			} else {
-				rawPath := p.scionLayer.Path.(*scion.Raw)
-				assert acc(path.Mem(ubPath), R4)
-				assert acc(rawPath.Mem(ubPath), R4)
-			}
-			fold acc(p.scionLayer.Mem(ub), R4)
-			@*/
+			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+			// @ ghost if pathFromEpic {
+			// @ 	epicPath := p.scionLayer.Path.(*epic.Path)
+			// @ 	assert acc(path.Mem(ubPath), R4)
+			// @ 	fold acc(epicPath.Mem(epicPathUb), R4)
+			// @ } else {
+			// @ 	rawPath := p.scionLayer.Path.(*scion.Raw)
+			// @ 	assert acc(path.Mem(ubPath), R4)
+			// @ 	assert acc(rawPath.Mem(ubPath), R4)
+			// @ }
+			// @ fold acc(p.scionLayer.Mem(ub), R4)
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
@@ -4107,19 +4097,17 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// @ fold revPath.Mem(rawPath)
 		// @ )
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
-			/*@
-			sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-			ghost if pathFromEpic {
-				epicPath := p.scionLayer.Path.(*epic.Path)
-				assert acc(path.Mem(ubPath), R4)
-				fold acc(epicPath.Mem(epicPathUb), R4)
-			} else {
-				rawPath := p.scionLayer.Path.(*scion.Raw)
-				assert acc(path.Mem(ubPath), R4)
-				assert acc(rawPath.Mem(ubPath), R4)
-			}
-			fold acc(p.scionLayer.Mem(ub), R4)
-			@*/
+			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+			// @ ghost if pathFromEpic {
+			// @ 	epicPath := p.scionLayer.Path.(*epic.Path)
+			// @ 	assert acc(path.Mem(ubPath), R4)
+			// @ 	fold acc(epicPath.Mem(epicPathUb), R4)
+			// @ } else {
+			// @ 	rawPath := p.scionLayer.Path.(*scion.Raw)
+			// @ 	assert acc(path.Mem(ubPath), R4)
+			// @ 	assert acc(rawPath.Mem(ubPath), R4)
+			// @ }
+			// @ fold acc(p.scionLayer.Mem(ub), R4)
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
