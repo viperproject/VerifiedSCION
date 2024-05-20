@@ -356,7 +356,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 	//@ unfold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
 	//@ unfold acc(sl.AbsSlice_Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
 	//@ assert info.ToIntermediateAbsInfoField() ==
-	//@		path.BytesToIntermediateAbsInfoField(ubuf, 0, infOffset, len(ubuf))
+	//@ 	path.BytesToIntermediateAbsInfoField(ubuf, 0, infOffset, len(ubuf))
 	//@ fold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
 	//@ fold acc(sl.AbsSlice_Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
