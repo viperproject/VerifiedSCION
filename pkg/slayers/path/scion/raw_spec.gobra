@@ -46,7 +46,7 @@ pure
 requires  acc(s.Mem(buf), _)
 requires  acc(sl.AbsSlice_Bytes(buf, 0, len(buf)), R42)
 decreases
-func (s *Raw) DecodeFromBytesSpec(buf []byte, err error) (res bool) {
+func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
 	return s.EqAbsHeader(buf) &&
 		s.InfsMatchHfs(buf) && s.SegsInBounds(buf)
 }
@@ -651,10 +651,10 @@ requires s.ValidCurrHF(ub)
 requires s.SegsInBounds(ub)
 requires s.CurrInfMatchesCurrHF(ub)
 requires s.EqAbsHeader(ub)
-ensures acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
-ensures acc(s.Mem(ub), R54)
-ensures validPktMetaHdr(ub)
-ensures s.EqAbsHeader(ub)
+ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures  acc(s.Mem(ub), R54)
+ensures  validPktMetaHdr(ub)
+ensures  s.EqAbsHeader(ub)
 decreases
 func (s *Raw) EstablishValidPktMetaHdr(ghost ub []byte) {
 	unfold acc(s.Mem(ub), R55)
@@ -745,7 +745,7 @@ pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.Info
 		unfolding acc(s.Base.Mem(), _) in
 		let infOffset := MetaLen + idx*path.InfoLen in
 		info.ToIntermediateAbsInfoField() ==
-		path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
+			path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
 }
 
 ghost
@@ -759,7 +759,7 @@ pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
 		unfolding acc(s.Base.Mem(), _) in
 		let infOffset := MetaLen + int(s.Base.PathMeta.CurrINF)*path.InfoLen in
 		info.ToIntermediateAbsInfoField() ==
-		path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
+			path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
 }
 
 ghost
@@ -1056,26 +1056,17 @@ func XoverRightSeg(raw []byte, currInfIdx int, currHfIdx int, seg1Len int, seg2L
 	assert absIncPathSeg(currseg) == get(rightseg)
 }
 
-// ===============
-// Hopfields lemma
-// ===============
-
 ghost
 opaque
 requires  0 <= offset
 requires  0 <= currHFIdx && currHFIdx <= segLen
-requires  len(hopFields) == segLen - currHFIdx
+requires  len(hops) == segLen - currHFIdx
 requires  offset + path.HopLen * segLen <= len(raw)
 requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 decreases
-pure func hopFieldsBytePositions(
-	raw []byte,
-	offset int,
-	currHFIdx int,
-	segLen int,
-	hopFields seq[io.IO_HF]) bool {
-	return forall i int :: { hopFields[i] } 0 <= i && i < len(hopFields) ==>
-		hopFields[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * (currHFIdx + i), len(raw))
+pure func hopFieldsBytePositions(raw []byte, offset int, currHFIdx int, segLen int, hops seq[io.IO_HF]) bool {
+	return forall i int :: { hops[i] } 0 <= i && i < len(hops) ==>
+		hops[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * (currHFIdx + i), len(raw))
 }
 
 ghost

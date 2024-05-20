@@ -25,7 +25,7 @@ import (
 ghost
 pure
 decreases
-func (p *Decoded) DecodeFromBytesSpec(b []byte, err error) (res bool) {
+func (p *Decoded) IsValidResultOfDecoding(b []byte, err error) (res bool) {
 	return true
 }
 

@@ -85,15 +85,15 @@ type Path interface {
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> NonInitMem()
-	//@ ensures   err == nil ==> DecodeFromBytesSpec(b, err)
+	//@ ensures   err == nil ==> IsValidResultOfDecoding(b, err)
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
 	//@ ghost
 	//@ pure
-	//@ requires  Mem(b)
-	//@ requires  acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
+	//@ requires Mem(b)
+	//@ requires acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
 	//@ decreases
-	//@ DecodeFromBytesSpec(b []byte, err error) (res bool)
+	//@ IsValidResultOfDecoding(b []byte, err error) (res bool)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires  Mem(underlyingBuf)

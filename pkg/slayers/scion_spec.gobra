@@ -413,10 +413,10 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen in
 		GetAddressOffset(ub) == low &&
-		GetLength(ub) == int(high) &&
+		GetLength(ub) == int(high) 	&&
 		// Might be worth introducing EqAbsHeader as an interface method on Path
 		// to avoid doing these casts, especially when we add support for EPIC.
-		typeOf(s.Path) == (*scion.Raw)                               &&
+		typeOf(s.Path) == (*scion.Raw) &&
 		unfolding acc(s.Path.Mem(ub[low:high]), _) in
 		unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in
 		let _ := Asserting(forall k int :: {&ub[low:high][k]} 0 <= k && k < high ==>
@@ -424,24 +424,26 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 		let _ := Asserting(forall k int :: {&ub[low:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
 			&ub[low:high][:scion.MetaLen][k] == &ub[low:high][k]) in
 		let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(ub[low:high][:scion.MetaLen])) in
-		let seg1 := int(metaHdr.SegLen[0])       in
-		let seg2 := int(metaHdr.SegLen[1])       in
-		let seg3 := int(metaHdr.SegLen[2])       in
+		let seg1 := int(metaHdr.SegLen[0]) in
+		let seg2 := int(metaHdr.SegLen[1]) in
+		let seg3 := int(metaHdr.SegLen[2]) in
 		s.Path.(*scion.Raw).Base.GetBase() ==
 		scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
 }
 
+// Contains all specifications that hold
+// after a scion packet is decoded by DecodeFromBytes().
 ghost
 opaque
 pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) ValidSCIONInitSpec(ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
+func (s *SCION) ValidScionInitSpec(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _) 					in
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
-		let high := s.HdrLen*LineLen in
-		typeOf(s.Path) == (*scion.Raw)			&&
-		unfolding acc(s.Path.Mem(ub[low:high]), _) in
+		let high := s.HdrLen*LineLen 					in
+		typeOf(s.Path) == (*scion.Raw) &&
+		unfolding acc(s.Path.Mem(ub[low:high]), _) 		in
 		s.Path.(*scion.Raw).Base.InfsMatchHfs()	&&
 		s.Path.(*scion.Raw).Base.GetMetaHdr().SegsInBounds()
 }
