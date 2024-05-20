@@ -328,41 +328,49 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 }
 
 // GetInfoField returns the InfoField at a given index.
-// @ requires  acc(s.Mem(ubuf), R10)
 // @ requires  0 <= idx
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
-// @ ensures   acc(s.Mem(ubuf), R10)
-// @ ensures   (idx < old(s.GetNumINF(ubuf))) == (err == nil)
+// @ preserves acc(s.Mem(ubuf), R10)
+// @ ensures   (idx < s.GetNumINF(ubuf)) == (err == nil)
+// @ ensures   err == nil ==> s.CorrectlyDecodedInfWithIdx(ubuf, idx, ifield)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) {
-	//@ unfold acc(s.Mem(ubuf), R10)
-	//@ unfold acc(s.Base.Mem(), R11)
+	//@ unfold acc(s.Mem(ubuf), R11)
+	//@ unfold acc(s.Base.Mem(), R12)
 	if idx >= s.NumINF {
 		e := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R11)
-		//@ fold acc(s.Mem(ubuf), R10)
+		//@ fold acc(s.Base.Mem(), R12)
+		//@ fold acc(s.Mem(ubuf), R11)
 		return path.InfoField{}, e
 	}
-	//@ fold acc(s.Base.Mem(), R11)
-	//@ fold acc(s.Mem(ubuf), R10)
+	//@ fold acc(s.Base.Mem(), R12)
 	infOffset := MetaLen + idx*path.InfoLen
 	info /*@@@*/ := path.InfoField{}
-	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, R10)
+	//@ sl.SplitRange_Bytes(ubuf,  infOffset, infOffset+path.InfoLen, R20)
 	if err := info.DecodeFromBytes(s.Raw[infOffset : infOffset+path.InfoLen]); err != nil {
 		//@ Unreachable()
 		return path.InfoField{}, err
 	}
-	//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, R10)
+	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
+	//@ unfold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+	//@ unfold acc(sl.AbsSlice_Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	//@ assert info.ToIntermediateAbsInfoField() ==
+	//@		path.BytesToIntermediateAbsInfoField(ubuf, 0, infOffset, len(ubuf))
+	//@ fold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+	//@ fold acc(sl.AbsSlice_Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
+	//@ fold acc(s.Mem(ubuf), R11)
+	//@ assert reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, info)
 	return info, nil
 }
 
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
-// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
-// @ preserves s.EqAbsHeader(ubuf)
+// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R9)
 // @ ensures   (r == nil) == s.ValidCurrINF(ubuf)
+// @ ensures   r == nil ==> s.CorrectlyDecodedInf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoField, r error) {
@@ -374,7 +382,12 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
-	return s.GetInfoField(idx /*@, ubuf @*/)
+	// (VeifiedSCION) This return is substituted with an assignment so that
+	// we can call a lemma afterwards and satisfy a postcondition.
+	res, r = s.GetInfoField(idx /*@, ubuf @*/)
+	//@ assert r == nil ==> reveal s.CorrectlyDecodedInf(ubuf, res) ==
+	//@ 	reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, res)
+	return res, r
 }
 
 // SetInfoField updates the InfoField at a given index.
@@ -440,40 +453,49 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 
 // GetHopField returns the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), R10)
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
-// @ ensures   (idx < old(s.GetNumHops(ubuf))) == (r == nil)
+// @ preserves acc(s.Mem(ubuf), R10)
+// @ ensures   (idx < s.GetNumHops(ubuf)) == (r == nil)
+// @ ensures   r == nil ==> s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), R10)
-	//@ unfold acc(s.Base.Mem(), R11)
+	//@ unfold acc(s.Mem(ubuf), R11)
+	//@ unfold acc(s.Base.Mem(), R12)
 	if idx >= s.NumHops {
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R11)
-		//@ fold acc(s.Mem(ubuf), R10)
+		//@ fold acc(s.Base.Mem(), R12)
+		//@ fold acc(s.Mem(ubuf), R11)
 		return path.HopField{}, err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-	//@ fold acc(s.Base.Mem(), R11)
-	//@ fold acc(s.Mem(ubuf), R10)
+	//@ fold acc(s.Base.Mem(), R12)
 	hop /*@@@*/ := path.HopField{}
-	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
+	//@ sl.SplitRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R20)
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
 		//@ Unreachable()
 		return path.HopField{}, err
 	}
-	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
 	//@ unfold hop.Mem()
+	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
+	//@ unfold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+	//@ unfold acc(sl.AbsSlice_Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
+	//@ assert hop.ToIO_HF() ==
+	//@		path.BytesToIO_HF(ubuf, 0, hopOffset, len(ubuf))
+	//@ fold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+	//@ fold acc(sl.AbsSlice_Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
+	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
+	//@ fold acc(s.Mem(ubuf), R11)
+	//@ assert reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, hop)
 	return hop, nil
 }
 
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
-// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
-// @ preserves s.EqAbsHeader(ubuf)
+// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R9)
 // @ ensures   (r == nil) == s.ValidCurrHF(ubuf)
+// @ ensures   r == nil ==> s.CorrectlyDecodedHf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {
@@ -485,7 +507,12 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
-	return s.GetHopField(idx /*@, ubuf @*/)
+	// (VeifiedSCION) This return is substituted with an assignment so that
+	// we can call a lemma afterwards and satisfy a postcondition.
+	res, r = s.GetHopField(idx /*@, ubuf @*/)
+	//@ assert r == nil ==> reveal s.CorrectlyDecodedHf(ubuf, res) ==
+	//@ 	reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
+	return res, r
 }
 
 // SetHopField updates the HopField at a given index.

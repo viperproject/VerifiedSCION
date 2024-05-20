@@ -64,6 +64,8 @@ type InfoField struct {
 // @ preserves acc(inf)
 // @ preserves acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R45)
 // @ ensures   err == nil
+// @ ensures   BytesToIntermediateAbsInfoField(raw, 0, 0, InfoLen) ==
+// @	inf.ToIntermediateAbsInfoField()
 // @ decreases
 func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < InfoLen {

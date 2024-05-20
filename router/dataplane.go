@@ -1743,7 +1743,8 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
-// @ requires  (typeOf(p.scionLayer.GetPath(ub)) == *scion.Raw) ==> p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidSCIONInitSpec(ub)
+// @ requires  (typeOf(p.scionLayer.GetPath(ub)) == *scion.Raw) ==>
+// @	p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidSCIONInitSpec(ub)
 // @ requires  p.scionLayer.EqPathType(ub)
 // @ requires  acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 // @ requires  let absPkt := absIO_val(p.rawPkt, p.ingressID) in
@@ -1941,9 +1942,11 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	// @ ghost endP := p.scionLayer.PathEndIdx(ub)
 	// @ ghost ubPath := ub[startP:endP]
 	// @ sl.SplitRange_Bytes(ub, startP, endP, R2)
-	// @ p.EstablishEqAbsHeader(ub, startP, endP)
 	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R2)
 	p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
+	// (VerifiedSCION) TODO: This is directly the postcondition of the call above and
+	// should be true but due to an incompleteness we have to assume it for now
+	// @ TemporaryAssumeForIO(err == nil ==> p.path.CorrectlyDecodedHf(ubPath, p.hopField))
 	// @ fold p.d.validResult(processResult{}, false)
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
@@ -1954,12 +1957,20 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
+	// (VerifiedSCION) This assumption cannot be proven at this point.
+	// There might be a check is missing.
 	// @ TemporaryAssumeForIO(p.path.CurrInfMatchesCurrHF(ubPath))
+	// @ p.EstablishEqAbsHeader(ub, startP, endP)
 	// @ p.path.EstablishValidPktMetaHdr(ubPath)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
 	// @ absPktFutureLemma(ub)
-	// @ TemporaryAssumeForIO(p.EqAbsHopField(absPkt(ub)))
-	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(ub)))
+	// @ p.path.DecodingLemma(ubPath, p.infoField, p.hopField)
+	// @ assert reveal p.path.EqAbsInfoField(p.path.absPkt(ubPath),
+	// @	p.infoField.ToIntermediateAbsInfoField())
+	// @ assert reveal p.path.EqAbsHopField(p.path.absPkt(ubPath),
+	// @	p.hopField.ToIO_HF())
+	// @ assert reveal p.EqAbsHopField(absPkt(ub))
+	// @ assert reveal p.EqAbsInfoField(absPkt(ub))
 	return processResult{}, nil
 }
 
