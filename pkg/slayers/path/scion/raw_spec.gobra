@@ -117,6 +117,7 @@ pure func (s *Raw) ValidCurrHF(ghost ub []byte) bool {
 		s.Base.ValidCurrHF()
 }
 
+/*
 ghost
 requires acc(s.Mem(ub), _)
 decreases
@@ -124,6 +125,7 @@ pure func (s *Raw) ValidCurrIdxs(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		s.Base.ValidCurrIdxs()
 }
+*/
 
 ghost
 requires acc(s.Mem(ub), _)
@@ -601,7 +603,7 @@ pure func validPktMetaHdr(raw []byte) bool {
 		let seg3 := int(metaHdr.SegLen[2])    in
 		let base := RawBytesToBase(raw)       in
 		0 < metaHdr.SegLen[0]           &&
-		base.ValidCurrIdxsSpec()        &&
+		base.StronglyValid()            &&
 		base.CurrInfMatchesCurrHF()		&&
 		pktLen(seg1, seg2, seg3, MetaLen) <= len(raw)
 }

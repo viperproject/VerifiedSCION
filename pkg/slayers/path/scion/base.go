@@ -252,7 +252,7 @@ type MetaHdr struct {
 // @ preserves acc(m)
 // @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
-// @ ensures   e == nil ==> m.ValidSegLen()
+// @ ensures   e == nil ==> m.InBounds()
 // @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases

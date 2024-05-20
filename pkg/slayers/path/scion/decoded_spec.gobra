@@ -100,7 +100,7 @@ requires d.Mem(ubuf)
 ensures  e == nil ==> (
 	d.Mem(ubuf) &&
 	d.Len(ubuf) == old(d.Len(ubuf)) &&
-	(old(d.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(ubuf)))
+	(old(d.GetBase(ubuf).StronglyValid()) ==> d.GetBase(ubuf).StronglyValid()))
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
@@ -129,12 +129,14 @@ pure func (d *Decoded) ValidCurrHF(ub []byte) bool {
 	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrHF()
 }
 
+/*
 ghost
 requires acc(d.Mem(ub), _)
 decreases
 pure func (d *Decoded) ValidCurrIdxs(ub []byte) bool {
 	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrIdxs()
 }
+*/
 
 ghost
 requires acc(d.Mem(ub), _)

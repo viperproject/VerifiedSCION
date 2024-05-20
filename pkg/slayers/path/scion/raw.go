@@ -136,7 +136,7 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ ensures   err == nil ==> (
 // @ 	let newUb := s.RawBufferMem(ubuf) in
 // @ 	d.Mem(newUb) &&
-// @ 	(old(s.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(newUb)))
+// @ 	(old(s.GetBase(ubuf).StronglyValid()) ==> d.GetBase(newUb).StronglyValid()))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
@@ -144,9 +144,9 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ unfold acc(s.Base.Mem(), R6)
 	//@ ghost var base Base = s.Base
 	//@ ghost var pathMeta MetaHdr = s.Base.PathMeta
-	//@ ghost validIdxs := s.ValidCurrIdxs(ubuf)
+	//@ ghost validIdxs := s.GetBase(ubuf).StronglyValid()
 	//@ assert validIdxs ==> s.Base.PathMeta.InBounds()
-	//@ assert validIdxs ==> base.ValidCurrIdxsSpec()
+	//@ assert validIdxs ==> base.StronglyValid()
 	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
 
 	// (VerifiedSCION) In this method, many slice operations are done in two
@@ -204,8 +204,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ ghost if validIdxs {
 	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ 	assert pathMeta == decoded.GetMetaHdr(s.Raw)
-	//@ 	assert decoded.GetBase(s.Raw).ValidCurrIdxsSpec()
-	//@ 	assert decoded.ValidCurrIdxs(s.Raw)
+	//@ 	assert decoded.GetBase(s.Raw).StronglyValid()
 	//@ }
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
@@ -273,7 +272,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ unfold acc(s.Base.Mem(), R2)
 	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
-	//@ assert s.Base.ValidCurrIdxs()
+	//@ assert s.Base.StronglyValid()
 	//@ assert s.PathMeta.InBounds()
 	//@ v := s.Raw[:MetaLen]
 	//@ b0 := sl.GetByte(v, 0, MetaLen, 0)
@@ -282,7 +281,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ b3 := sl.GetByte(v, 0, MetaLen, 3)
 	//@ s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ assert s.PathMeta.EqAbsHeader(v)
-	//@ assert RawBytesToBase(v).ValidCurrIdxsSpec()
+	//@ assert RawBytesToBase(v).StronglyValid()
 	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ assert s.EqAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(ubuf)
@@ -408,7 +407,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, len(s.Raw))
 	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
-	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf[:len(s.Raw)]).ValidCurrIdxsSpec()
+	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf[:len(s.Raw)]).StronglyValid()
 
 	//@ assert sl.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
 	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
@@ -416,7 +415,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ sl.Reslice_Bytes(s.Raw, 0, infOffset, HalfPerm/2)
 	//@ ValidPktMetaHdrSublice(s.Raw, infOffset)
 	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
-	//@ assert idx == oldCurrINF ==> RawBytesToBase(s.Raw[:infOffset]).ValidCurrIdxsSpec()
+	//@ assert idx == oldCurrINF ==> RawBytesToBase(s.Raw[:infOffset]).StronglyValid()
 
 	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
 	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
@@ -425,7 +424,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 
 	//@ sl.Unslice_Bytes(s.Raw, 0, infOffset, HalfPerm/2)
 	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
-	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf).ValidCurrIdxsSpec()
+	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf).StronglyValid()
 	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ fold acc(s.Base.Mem(), R50)
 	//@ fold acc(s.Mem(ubuf), R50)
