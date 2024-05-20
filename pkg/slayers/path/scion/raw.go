@@ -382,12 +382,9 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
-	// (VeifiedSCION) This return is substituted with an assignment so that
-	// we can call a lemma afterwards and satisfy a postcondition.
-	res, r = s.GetInfoField(idx /*@, ubuf @*/)
-	//@ assert r == nil ==> reveal s.CorrectlyDecodedInf(ubuf, res) ==
-	//@ 	reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, res)
-	return res, r
+	//@ assert forall res path.InfoField :: {s.CorrectlyDecodedInf(ubuf, res)} s.ValidCurrINF(ubuf) ==>
+	//@ 	reveal s.CorrectlyDecodedInf(ubuf, res) == reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, res)
+	return s.GetInfoField(idx /*@, ubuf @*/)
 }
 
 // SetInfoField updates the InfoField at a given index.
@@ -481,7 +478,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 	//@ unfold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
 	//@ unfold acc(sl.AbsSlice_Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
 	//@ assert hop.ToIO_HF() ==
-	//@		path.BytesToIO_HF(ubuf, 0, hopOffset, len(ubuf))
+	//@ 	path.BytesToIO_HF(ubuf, 0, hopOffset, len(ubuf))
 	//@ fold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
 	//@ fold acc(sl.AbsSlice_Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
 	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
@@ -507,12 +504,9 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
-	// (VeifiedSCION) This return is substituted with an assignment so that
-	// we can call a lemma afterwards and satisfy a postcondition.
-	res, r = s.GetHopField(idx /*@, ubuf @*/)
-	//@ assert r == nil ==> reveal s.CorrectlyDecodedHf(ubuf, res) ==
-	//@ 	reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
-	return res, r
+	//@ assert forall res path.HopField :: {s.CorrectlyDecodedHf(ubuf, res)} s.ValidCurrHF(ubuf) ==>
+	//@ 	reveal s.CorrectlyDecodedHf(ubuf, res) == reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
+	return s.GetHopField(idx /*@, ubuf @*/)
 }
 
 // SetHopField updates the HopField at a given index.

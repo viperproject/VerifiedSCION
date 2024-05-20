@@ -744,6 +744,7 @@ pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.Info
 	return unfolding acc(s.Mem(ub), _) in
 		unfolding acc(s.Base.Mem(), _) in
 		let infOffset := MetaLen + idx*path.InfoLen in
+		infOffset+path.InfoLen <= len(ub) &&
 		info.ToIntermediateAbsInfoField() ==
 			path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
 }
@@ -758,6 +759,7 @@ pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		unfolding acc(s.Base.Mem(), _) in
 		let infOffset := MetaLen + int(s.Base.PathMeta.CurrINF)*path.InfoLen in
+		infOffset+path.InfoLen <= len(ub) &&
 		info.ToIntermediateAbsInfoField() ==
 			path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
 }
