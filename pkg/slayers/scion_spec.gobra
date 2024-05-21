@@ -413,7 +413,7 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen in
 		GetAddressOffset(ub) == low &&
-		GetLength(ub) == int(high) 	&&
+		GetLength(ub) == int(high)        &&
 		// Might be worth introducing EqAbsHeader as an interface method on Path
 		// to avoid doing these casts, especially when we add support for EPIC.
 		typeOf(s.Path) == (*scion.Raw) &&
@@ -431,8 +431,7 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 		scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
 }
 
-// Contains all specifications that hold
-// after a scion packet is decoded by DecodeFromBytes().
+// Describes a SCION packet that was successfully decoded by `DecodeFromBytes`.
 ghost
 opaque
 pure

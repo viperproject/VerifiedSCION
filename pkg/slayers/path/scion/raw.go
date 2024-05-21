@@ -347,7 +347,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 	//@ fold acc(s.Base.Mem(), R12)
 	infOffset := MetaLen + idx*path.InfoLen
 	info /*@@@*/ := path.InfoField{}
-	//@ sl.SplitRange_Bytes(ubuf,  infOffset, infOffset+path.InfoLen, R20)
+	//@ sl.SplitRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R20)
 	if err := info.DecodeFromBytes(s.Raw[infOffset : infOffset+path.InfoLen]); err != nil {
 		//@ Unreachable()
 		return path.InfoField{}, err
