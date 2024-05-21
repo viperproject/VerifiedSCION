@@ -18,7 +18,7 @@ package path
 
 import (
 	"verification/io"
-	. "github.com/scionproto/scion/verification/utils/definitions"
+	. "verification/utils/definitions"
 )
 
 // At the moment, we assume that all cryptographic operations performed at the code level
@@ -31,37 +31,21 @@ decreases
 pure func AbsUInfoFromUint16(SegID uint16) set[io.IO_msgterm]
 
 ghost
-ensures len(res) == MacLen
-ensures forall i int :: { mac[i] } 0 <= i && i < MacLen ==> res[i] == mac[i]
 decreases
-pure func macSequence(mac [MacLen]byte) (res seq[byte])
-
-ghost
-requires len(mac) == MacLen
-decreases
-pure func absMac_Internal(mac seq[byte]) (io.IO_msgterm)
-
-ghost
-opaque
-decreases
-pure func AbsMac(mac [MacLen]byte) (io.IO_msgterm) {
-	return absMac_Internal(macSequence(mac))
-}
+pure func AbsMac(mac [MacLen]byte) (io.IO_msgterm)
 
 // The following function converts a slice with at least `MacLen` elements into
 // an (exclusive) array containing the mac. Note that there are no permissions
-// involved for accessing exclusive arrays. This functions is abstract for now
-// because Gobra does not allow for array literals in pure functions, even though
-// they are no more side-effectful than creating an instance of a struct type.
-// This will soon be fixed in Gobra.
+// involved for accessing exclusive arrays.
 ghost
 requires MacLen <= len(mac)
 requires forall i int :: { &mac[i] } 0 <= i && i < MacLen ==> acc(&mac[i], _)
 ensures  len(res) == MacLen
 ensures  forall i int :: { res[i] } 0 <= i && i < MacLen ==> mac[i] == res[i]
 decreases
-pure func FromSliceToMacArray(mac []byte) (res [MacLen]byte)
-
+pure func FromSliceToMacArray(mac []byte) (res [MacLen]byte) {
+	return [MacLen]byte{ mac[0], mac[1], mac[2], mac[3], mac[4], mac[5] }
+}
 
 ghost
 requires len(mac1) == MacLen
@@ -70,15 +54,23 @@ requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> mac1[i] == mac2[i
 ensures  forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R50)
 ensures  AbsMac(FromSliceToMacArray(mac1)) == AbsMac(mac2)
 decreases
-func AbsMac_Lemma(mac1 []byte, mac2 [MacLen]byte) {
-	mac1a := FromSliceToMacArray(mac1)
-	assert forall i int :: { mac2[i] } 0 <= i && i < MacLen ==> mac1a[i] == mac2[i]
-	assert len(mac1a) == len(mac2)
-	assert len(mac1a) == 6
-	mac1s := macSequence(mac1a)
-	mac2s := macSequence(mac2)
-	assert forall i int :: { mac1s[i] } 0 <= i && i < MacLen ==> mac1s[i] == mac1a[i]
-	assert forall i int :: { mac1s[i] } 0 <= i && i < MacLen ==> mac2s[i] == mac2[i]
-	assert macSequence(FromSliceToMacArray(mac1)) == macSequence(mac2)
-	assert reveal AbsMac(FromSliceToMacArray(mac1)) == reveal AbsMac(mac2)
+func EqualBytesImplyEqualMac(mac1 []byte, mac2 [MacLen]byte) {
+	mac1Arr := FromSliceToMacArray(mac1)
+	assert mac1Arr == mac2
+	assert mac1Arr[0] == mac2[0] &&
+		mac1Arr[1] == mac2[1]    &&
+		mac1Arr[2] == mac2[2]    &&
+		mac1Arr[3] == mac2[3]    &&
+		mac1Arr[4] == mac2[4]    &&
+		mac1Arr[5] == mac2[5]
+	assert len(mac1Arr) == len(mac2)
+	arrayCongruence(mac1Arr, mac2)
 }
+
+// The following obviously holds. However, for the time being, it cannot be proven due to an
+// incompleteness in the array encoding (https://github.com/viperproject/gobra/issues/770).
+ghost
+requires mac1 == mac2
+ensures  AbsMac(mac1) == AbsMac(mac2)
+decreases
+func arrayCongruence(mac1 [MacLen]byte, mac2 [MacLen]byte)
