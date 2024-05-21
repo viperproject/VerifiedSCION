@@ -439,11 +439,11 @@ pure
 requires acc(s.Mem(ub), _)
 decreases
 func (s *SCION) ValidScionInitSpec(ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) 					in
+	return unfolding acc(s.Mem(ub), _)                  in
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
-		let high := s.HdrLen*LineLen 					in
+		let high := s.HdrLen*LineLen                    in
 		typeOf(s.Path) == (*scion.Raw) &&
-		unfolding acc(s.Path.Mem(ub[low:high]), _) 		in
+		unfolding acc(s.Path.Mem(ub[low:high]), _)      in
 		s.Path.(*scion.Raw).Base.InfsMatchHfs()	&&
 		s.Path.(*scion.Raw).Base.GetMetaHdr().SegsInBounds()
 }
