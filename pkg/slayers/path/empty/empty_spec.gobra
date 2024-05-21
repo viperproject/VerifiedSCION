@@ -34,6 +34,13 @@ func (e Path) DowngradePerm(buf []byte) {
 	fold e.NonInitMem()
 }
 
+ghost
+pure
+decreases
+func (p Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+	return true
+}
+
 Path implements path.Path
 
 // Definitions to allow *Path to be treated as a path.Path

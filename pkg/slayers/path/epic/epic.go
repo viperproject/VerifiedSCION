@@ -138,7 +138,7 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
 // otherwise SerializeTo will return nil.
 // @ requires  p.NonInitMem()
-// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R40)
+// @ preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R42)
 // @ ensures   len(b) < MetadataLen ==> r != nil
 // @ ensures   r == nil ==> p.Mem(b)
 // @ ensures   r != nil ==> p.NonInitMem() && r.ErrorMem()
@@ -148,67 +148,34 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 		return serrors.New("EPIC Path raw too short", "expected", int(MetadataLen), "actual", int(len(b)))
 	}
 	//@ unfold p.NonInitMem()
-	//@ slices.SplitByIndex_Bytes(b, 0, len(b), PktIDLen, R40)
-	//@ preserves acc(slices.AbsSlice_Bytes(b, 0, PktIDLen), R40)
-	//@ preserves acc(&p.PktID)
-	//@ preserves acc(&p.PHVF)
-	//@ preserves acc(&p.LHVF)
-	//@ ensures   p.PHVF != nil && len(p.PHVF) == HVFLen
-	//@ ensures   p.LHVF != nil && len(p.LHVF) == HVFLen
-	//@ ensures   slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
-	//@ ensures   slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
-	//@ decreases
-	//@ outline(
-	//@ ghost slices.Reslice_Bytes(b, 0, PktIDLen, R40)
+	//@ slices.SplitRange_Bytes(b, 0, PktIDLen, R42)
 	p.PktID.DecodeFromBytes(b[:PktIDLen])
+	//@ slices.CombineRange_Bytes(b, 0, PktIDLen, R42)
+	//@ unfold acc(slices.AbsSlice_Bytes(b, 0, len(b)), R42)
 	p.PHVF = make([]byte, HVFLen)
 	p.LHVF = make([]byte, HVFLen)
+	//@ assert forall i int :: { &b[PktIDLen:(PktIDLen+HVFLen)][i] } 0 <= i &&
+	//@		i < len(b[PktIDLen:(PktIDLen+HVFLen)]) ==>
+	//@     &b[PktIDLen:(PktIDLen+HVFLen)][i] == &b[PktIDLen+i]
+	copy(p.PHVF, b[PktIDLen:(PktIDLen+HVFLen)] /*@, R42 @*/)
 	//@ fold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
+	//@ assert forall i int :: { &b[(PktIDLen+HVFLen):MetadataLen][i] } 0 <= i &&
+	//@		i < len(b[(PktIDLen+HVFLen):MetadataLen]) ==>
+	//@     &b[(PktIDLen+HVFLen):MetadataLen][i] == &b[(PktIDLen+HVFLen)+i]
+	copy(p.LHVF, b[(PktIDLen+HVFLen):MetadataLen] /*@, R42 @*/)
 	//@ fold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
-	//@ slices.Unslice_Bytes(b, 0, PktIDLen, R40)
-	//@ )
-	//@ slices.SplitByIndex_Bytes(b, PktIDLen, len(b), PktIDLen+HVFLen, R40)
-	//@ preserves acc(&p.PHVF)
-	//@ preserves slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
-	//@ preserves acc(slices.AbsSlice_Bytes(b, PktIDLen, PktIDLen + HVFLen), R40)
-	//@ decreases
-	//@ outline(
-	//@ slices.Reslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, R40)
-	//@ unfold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
-	//@ unfold acc(slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen), R41)
-	copy(p.PHVF, b[PktIDLen:(PktIDLen+HVFLen)] /*@, R41 @*/)
-	//@ fold acc(slices.AbsSlice_Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen), R41)
-	//@ fold slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF))
-	//@ slices.Unslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, R40)
-	//@ )
-	//@ slices.CombineAtIndex_Bytes(b, 0, PktIDLen+HVFLen, PktIDLen, R40)
-	//@ slices.SplitByIndex_Bytes(b, PktIDLen+HVFLen, len(b), MetadataLen, R40)
-	//@ preserves acc(&p.LHVF)
-	//@ preserves slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
-	//@ preserves acc(slices.AbsSlice_Bytes(b, PktIDLen+HVFLen, MetadataLen), R40)
-	//@ decreases
-	//@ outline(
-	//@ slices.Reslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, R40)
-	//@ unfold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
-	//@ unfold acc(slices.AbsSlice_Bytes(b[PktIDLen+HVFLen:MetadataLen], 0, HVFLen), R41)
-	copy(p.LHVF, b[(PktIDLen+HVFLen):MetadataLen] /*@, R41 @*/)
-	//@ fold acc(slices.AbsSlice_Bytes(b[PktIDLen+HVFLen:MetadataLen], 0, HVFLen), R41)
-	//@ fold slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF))
-	//@ slices.Unslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, R40)
-	//@ )
-	//@ slices.CombineAtIndex_Bytes(b, 0, MetadataLen, PktIDLen+HVFLen, R40)
 	p.ScionPath = &scion.Raw{}
 	//@ fold p.ScionPath.Base.NonInitMem()
 	//@ fold p.ScionPath.NonInitMem()
-	//@ slices.Reslice_Bytes(b, MetadataLen, len(b), R40)
+	//@ fold acc(slices.AbsSlice_Bytes(b, 0, len(b)), R42)
+	//@ slices.SplitRange_Bytes(b, MetadataLen, len(b), R42)
 	ret := p.ScionPath.DecodeFromBytes(b[MetadataLen:])
 	//@ ghost if ret == nil {
 	//@ 	fold p.Mem(b)
 	//@ } else {
 	//@ 	fold p.NonInitMem()
 	//@ }
-	//@ slices.Unslice_Bytes(b, MetadataLen, len(b), R40)
-	//@ slices.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, R40)
+	//@ slices.CombineRange_Bytes(b, MetadataLen, len(b), R42)
 	return ret
 }
 
@@ -278,17 +245,17 @@ type PktID struct {
 // DecodeFromBytes deserializes the buffer (raw) into the PktID.
 // @ requires  len(raw) >= PktIDLen
 // @ preserves acc(i)
-// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R41)
+// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R42)
 // @ ensures   0 <= i.Timestamp
 // @ ensures   0 <= i.Counter
 // @ decreases
 func (i *PktID) DecodeFromBytes(raw []byte) {
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R41)
+	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R42)
 	//@ assert forall i int :: { &raw[:4][i] } 0 <= i && i < 4 ==> &raw[:4][i] == &raw[i]
 	i.Timestamp = binary.BigEndian.Uint32(raw[:4])
 	//@ assert forall i int :: { &raw[4:8][i] } 0 <= i && i < 4 ==> &raw[4:8][i] == &raw[4 + i]
 	i.Counter = binary.BigEndian.Uint32(raw[4:8])
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R41)
+	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, len(raw)), R42)
 }
 
 // SerializeTo serializes the PktID into the buffer (b).

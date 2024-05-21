@@ -37,6 +37,13 @@ func (p *rawPath) DowngradePerm(ghost buf []byte) {
 	fold p.NonInitMem()
 }
 
+ghost
+pure
+decreases
+func (p *rawPath) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+	return true
+}
+
 (*rawPath) implements Path
 
 /** End of rawPath spec **/

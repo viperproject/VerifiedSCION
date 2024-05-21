@@ -37,7 +37,7 @@ type Decoded struct {
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 // @ requires  s.NonInitMem()
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R42)
 // @ ensures   r == nil ==> (
 // @ 	s.Mem(data) &&
 // @ 	let lenD := len(data) in
@@ -68,7 +68,7 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	offset := MetaLen
 	s.InfoFields = make([]path.InfoField, ( /*@ unfolding s.Base.Mem() in @*/ s.NumINF))
 	//@ assert len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.GetNumHops() * path.HopLen
-	//@ sl.SplitByIndex_Bytes(data, 0, len(data), offset, R41)
+	//@ sl.SplitByIndex_Bytes(data, 0, len(data), offset, R43)
 
 	//@ invariant acc(&s.InfoFields)
 	//@ invariant acc(s.Base.Mem(), R1)
@@ -77,20 +77,20 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.GetNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + i * path.InfoLen
 	//@ invariant forall j int :: { &s.InfoFields[j] } 0 <= j && j < s.Base.GetNumINF() ==> acc(&s.InfoFields[j])
-	//@ invariant acc(sl.AbsSlice_Bytes(data, 0, offset), R41)
-	//@ invariant acc(sl.AbsSlice_Bytes(data, offset, len(data)), R41)
+	//@ invariant acc(sl.AbsSlice_Bytes(data, 0, offset), R43)
+	//@ invariant acc(sl.AbsSlice_Bytes(data, offset, len(data)), R43)
 	//@ decreases s.Base.GetNumINF() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), _) in @*/ s.NumINF; i++ {
-		//@ sl.SplitByIndex_Bytes(data, offset, len(data), offset + path.InfoLen, R41)
-		//@ sl.Reslice_Bytes(data, offset, offset + path.InfoLen, R41)
+		//@ sl.SplitByIndex_Bytes(data, offset, len(data), offset + path.InfoLen, R43)
+		//@ sl.Reslice_Bytes(data, offset, offset + path.InfoLen, R43)
 		if err := s.InfoFields[i].DecodeFromBytes(data[offset : offset+path.InfoLen]); err != nil {
 			// (VerifiedSCION) infofield.DecodeFromBytes guarantees that err == nil.
 			// Thus, this branch is not reachable.
 			return err
 		}
 		//@ assert len(data[offset:offset+path.InfoLen]) == path.InfoLen
-		//@ sl.Unslice_Bytes(data, offset, offset + path.InfoLen, R41)
-		//@ sl.CombineAtIndex_Bytes(data, 0, offset + path.InfoLen, offset, R41)
+		//@ sl.Unslice_Bytes(data, offset, offset + path.InfoLen, R43)
+		//@ sl.CombineAtIndex_Bytes(data, 0, offset + path.InfoLen, offset, R43)
 		offset += path.InfoLen
 	}
 	s.HopFields = make([]path.HopField, ( /*@ unfolding s.Base.Mem() in @*/ s.NumHops))
@@ -102,23 +102,23 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant forall j int :: { &s.HopFields[j] } 0 <= j && j < i ==> s.HopFields[j].Mem()
 	//@ invariant len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.GetNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + s.Base.GetNumINF() * path.InfoLen + i * path.HopLen
-	//@ invariant acc(sl.AbsSlice_Bytes(data, 0, offset), R41)
-	//@ invariant acc(sl.AbsSlice_Bytes(data, offset, len(data)), R41)
+	//@ invariant acc(sl.AbsSlice_Bytes(data, 0, offset), R43)
+	//@ invariant acc(sl.AbsSlice_Bytes(data, offset, len(data)), R43)
 	//@ decreases s.Base.GetNumHops() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), R2) in @*/ s.NumHops; i++ {
-		//@ sl.SplitByIndex_Bytes(data, offset, len(data), offset + path.HopLen, R41)
-		//@ sl.Reslice_Bytes(data, offset, offset + path.HopLen, R41)
+		//@ sl.SplitByIndex_Bytes(data, offset, len(data), offset + path.HopLen, R43)
+		//@ sl.Reslice_Bytes(data, offset, offset + path.HopLen, R43)
 		if err := s.HopFields[i].DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 			// (VerifiedSCION) infofield.DecodeFromBytes guarantees that err == nil.
 			// Thus, this branch should not be reachable.
 			return err
 		}
 		//@ assert len(data[offset:offset+path.HopLen]) == path.HopLen
-		//@ sl.Unslice_Bytes(data, offset, offset + path.HopLen, R41)
-		//@ sl.CombineAtIndex_Bytes(data, 0, offset + path.HopLen, offset, R41)
+		//@ sl.Unslice_Bytes(data, offset, offset + path.HopLen, R43)
+		//@ sl.CombineAtIndex_Bytes(data, 0, offset + path.HopLen, offset, R43)
 		offset += path.HopLen
 	}
-	//@ sl.CombineAtIndex_Bytes(data, 0, len(data), offset, R41)
+	//@ sl.CombineAtIndex_Bytes(data, 0, len(data), offset, R43)
 	//@ fold s.Mem(data)
 	return nil
 }

@@ -81,12 +81,19 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
-	//@ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R40)
+	//@ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> NonInitMem()
+	//@ ensures   err == nil ==> IsValidResultOfDecoding(b, err)
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
+	//@ ghost
+	//@ pure
+	//@ requires Mem(b)
+	//@ requires acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
+	//@ decreases
+	//@ IsValidResultOfDecoding(b []byte, err error) (res bool)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires  Mem(underlyingBuf)
@@ -219,7 +226,7 @@ func (p *rawPath) SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e e
 }
 
 // @ requires  p.NonInitMem()
-// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R40)
+// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
 // @ ensures   p.Mem(b)
 // @ ensures   e == nil
 // @ decreases

@@ -103,8 +103,10 @@ requires forall i int :: { &raw[i] } middle <= i && i < end ==>
 	acc(&raw[i], _)
 decreases
 pure func BytesToIntermediateAbsInfoFieldHelper(raw [] byte, middle int, end int) (IntermediateAbsInfoField) {
-	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle+2 + k]) in
-		let _ := Asserting(forall k int :: {&raw[middle+4:middle+8][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+8][k] == &raw[middle+4 + k]) in
+	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==>
+		&raw[middle+2:middle+4][k] == &raw[middle+2 + k]) in
+		let _ := Asserting(forall k int :: {&raw[middle+4:middle+8][k]} 0 <= k && k < 4 ==>
+			&raw[middle+4:middle+8][k] == &raw[middle+4 + k]) in
 		IntermediateAbsInfoField(IntermediateAbsInfoField_{
 			AInfo : io.IO_ainfo(binary.BigEndian.Uint32(raw[middle+4:middle+8])),
 			UInfo : AbsUInfoFromUint16(binary.BigEndian.Uint16(raw[middle+2:middle+4])),
