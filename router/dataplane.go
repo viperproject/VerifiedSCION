@@ -1948,7 +1948,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	var tmpHopField path.HopField
 	tmpHopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
 	p.hopField = tmpHopField
-	// @ path.arrayCongruence(p.hopField.Mac, tmpHopField.Mac)
+	// @ path.AbsMacArrayCongruence(p.hopField.Mac, tmpHopField.Mac)
 	// @ assert p.hopField.ToIO_HF() == tmpHopField.ToIO_HF()
 	// @ assert err == nil ==> reveal p.path.CorrectlyDecodedHf(ubPath, tmpHopField)
 	// @ assert err == nil ==> reveal p.path.CorrectlyDecodedHf(ubPath, p.hopField)
