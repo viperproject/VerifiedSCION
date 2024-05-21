@@ -1943,9 +1943,8 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	// @ ghost ubPath := ub[startP:endP]
 	// @ sl.SplitRange_Bytes(ub, startP, endP, R2)
 	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R2)
-	// (VerifiedSCION) Due to an incomplete array encoding
-	// (see issue: https://github.com/viperproject/gobra/issues/770),
-	// we are introducing a temporary variable to enable calling path.arrayCongruence().
+	// (VerifiedSCION) Due to an incompleteness (https://github.com/viperproject/gobra/issues/770),
+	// we introduce a temporary variable to be able to call `path.AbsMacArrayCongruence()`.
 	var tmpHopField path.HopField
 	tmpHopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
 	p.hopField = tmpHopField
