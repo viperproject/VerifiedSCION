@@ -218,20 +218,17 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ ghost isValid := s.ValidCurrIdxs(ubuf)
-	/*@
-	ghost base := s.GetBase(ubuf)
-	ghost absBase := base.Abs()
-	ghost absMetaHdrAferReversingSegLen := AbsMetaHdr_ {
-		CurrINF: absBase.PathMeta.CurrINF,
-		CurrHF: absBase.PathMeta.CurrHF,
-		SegLen: absBase.ReverseSegLen(),
-	}
-	ghost absBaseAfterReversingSegLen := AbsBase_ {
-		PathMeta: absMetaHdrAferReversingSegLen,
-		NumINF: absBase.NumINF,
-		NumHops: absBase.NumHops,
-	}
-	@*/
+	//@ ghost base := s.GetBase(ubuf)
+	//@ ghost metaHdrAferReversingSegLen := MetaHdr {
+	//@ 	CurrINF: base.PathMeta.CurrINF,
+	//@ 	CurrHF:  base.PathMeta.CurrHF,
+	//@ 	SegLen:  base.ReverseSegLen(),
+	//@ }
+	//@ ghost baseAfterReversingSegLen := Base {
+	//@ 	PathMeta: metaHdrAferReversingSegLen,
+	//@ 	NumINF:   base.NumINF,
+	//@ 	NumHops:  base.NumHops,
+	//@ }
 	//@ unfold s.Mem(ubuf)
 	//@ unfold s.Base.Mem()
 	if s.NumINF == 0 {
@@ -265,7 +262,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ invariant s.Mem(ubuf)
 	//@ invariant 0 <= i && i <= s.GetNumHops(ubuf)
 	//@ invariant -1 <= j && j < s.GetNumHops(ubuf)
-	//@ invariant s.GetBase(ubuf).Abs() == absBaseAfterReversingSegLen
+	//@ invariant s.GetBase(ubuf) == baseAfterReversingSegLen
 	//@ decreases j-i
 	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumHops - 1 /*@ ) @*/); i < j; i, j = i+1, j-1 {
 		//@ unfold s.Mem(ubuf)
@@ -284,9 +281,9 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ unfold s.Base.Mem()
 	s.PathMeta.CurrINF = uint8(s.NumINF) - s.PathMeta.CurrINF - 1
 	s.PathMeta.CurrHF = uint8(s.NumHops) - s.PathMeta.CurrHF - 1
-	//@ assert s.Base.Abs() == absBase.ReverseSpec()
-	//@ ghost if isValid { absBase.ReversingValidBaseIsValidBase() }
-	//@ assert isValid ==> s.Base.Abs().ValidCurrIdxsSpec()
+	//@ assert s.Base == base.ReverseSpec()
+	//@ ghost if isValid { base.ReversingValidBaseIsValidBase() }
+	//@ assert isValid ==> s.Base.ValidCurrIdxsSpec()
 	//@ fold s.Base.Mem()
 	//@ fold s.Mem(ubuf)
 	return s, nil
