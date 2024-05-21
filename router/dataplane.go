@@ -1744,7 +1744,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
 // @ requires  (typeOf(p.scionLayer.GetPath(ub)) == *scion.Raw) ==>
-// @	p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidScionInitSpec(ub)
+// @ 	p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidScionInitSpec(ub)
 // @ requires  p.scionLayer.EqPathType(ub)
 // @ requires  acc(ioLock.LockP(), _) && ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>;
 // @ requires  let absPkt := absIO_val(p.rawPkt, p.ingressID) in

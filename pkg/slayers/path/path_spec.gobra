@@ -16,7 +16,7 @@
 
 package path
 
-import	"github.com/scionproto/scion/verification/utils/slices"
+import "github.com/scionproto/scion/verification/utils/slices"
 
 /** rawPath spec **/
 pred (r *rawPath) Mem(underlyingBuf []byte) {
