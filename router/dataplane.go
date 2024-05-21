@@ -1943,10 +1943,16 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	// @ ghost ubPath := ub[startP:endP]
 	// @ sl.SplitRange_Bytes(ub, startP, endP, R2)
 	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R2)
-	p.hopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
-	// (VerifiedSCION) TODO: This is directly the postcondition of the call above and
-	// should be true but due to an incompleteness we have to assume it for now
-	// @ TemporaryAssumeForIO(err == nil ==> p.path.CorrectlyDecodedHf(ubPath, p.hopField))
+	// (VerifiedSCION) Due to an incomplete array encoding
+	// (see issue: https://github.com/viperproject/gobra/issues/770),
+	// we are introducing a temporary variable to enable calling path.arrayCongruence().
+	var tmpHopField path.HopField
+	tmpHopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ )
+	p.hopField = tmpHopField
+	// @ path.arrayCongruence(p.hopField.Mac, tmpHopField.Mac)
+	// @ assert p.hopField.ToIO_HF() == tmpHopField.ToIO_HF()
+	// @ assert err == nil ==> reveal p.path.CorrectlyDecodedHf(ubPath, tmpHopField)
+	// @ assert err == nil ==> reveal p.path.CorrectlyDecodedHf(ubPath, p.hopField)
 	// @ fold p.d.validResult(processResult{}, false)
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
