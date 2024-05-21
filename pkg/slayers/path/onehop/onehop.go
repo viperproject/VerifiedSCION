@@ -79,29 +79,23 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	}
 	offset := 0
 	//@ unfold o.NonInitMem()
-	//@ slices.SplitByIndex_Bytes(data, 0, len(data), path.InfoLen, R42)
-	//@ slices.Reslice_Bytes(data, 0, path.InfoLen, R42)
+	//@ slices.SplitRange_Bytes(data, 0, path.InfoLen, R42)
 	if err := o.Info.DecodeFromBytes(data[:path.InfoLen]); err != nil {
 		// @ Unreachable()
 		return err
 	}
-	//@ slices.Unslice_Bytes(data, 0, path.InfoLen, R42)
+	//@ slices.CombineRange_Bytes(data,0,  path.InfoLen, R42)
 	offset += path.InfoLen
-	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, R42)
-	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, R42)
+	//@ slices.SplitRange_Bytes(data, offset, offset+path.HopLen, R42)
 	if err := o.FirstHop.DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 		// @ Unreachable()
 		return err
 	}
-	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, R42)
-	//@ slices.CombineAtIndex_Bytes(data, 0, offset+path.HopLen, offset, R42)
+	//@ slices.CombineRange_Bytes(data, offset, offset+path.HopLen, R42)
 	offset += path.HopLen
-	//@ slices.SplitByIndex_Bytes(data, offset, len(data), offset+path.HopLen, R42)
-	//@ slices.Reslice_Bytes(data, offset, offset+path.HopLen, R42)
+	//@ slices.SplitRange_Bytes(data, offset, offset+path.HopLen, R42)
 	r = o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen])
-	//@ slices.Unslice_Bytes(data, offset, offset+path.HopLen, R42)
-	//@ slices.CombineAtIndex_Bytes(data, offset, len(data), offset+path.HopLen, R42)
-	//@ slices.CombineAtIndex_Bytes(data, 0, len(data), offset, R42)
+	//@ slices.CombineRange_Bytes(data, offset, offset+path.HopLen, R42)
 	//@ ghost if r == nil { fold o.Mem(data) } else { fold o.NonInitMem() }
 	return r
 }
@@ -120,32 +114,23 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	}
 	offset := 0
 	//@ unfold acc(o.Mem(ubuf), R1)
-	//@ slices.SplitByIndex_Bytes(b, 0, len(b), path.InfoLen, writePerm)
-	//@ slices.Reslice_Bytes(b, 0, path.InfoLen, writePerm)
+	//@ slices.SplitRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 	if err := o.Info.SerializeTo(b[:offset+path.InfoLen]); err != nil {
-		//@ slices.Unslice_Bytes(b, 0, path.InfoLen, writePerm)
-		//@ slices.CombineAtIndex_Bytes(b, 0, len(b), path.InfoLen, writePerm)
+		//@ slices.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 		return err
 	}
-	//@ slices.Unslice_Bytes(b, 0, path.InfoLen, writePerm)
+	//@ slices.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 	offset += path.InfoLen
-	//@ slices.SplitByIndex_Bytes(b, offset, len(b), offset+path.HopLen, writePerm)
-	//@ slices.Reslice_Bytes(b, offset, offset+path.HopLen, writePerm)
+	//@ slices.SplitRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	if err := o.FirstHop.SerializeTo(b[offset : offset+path.HopLen]); err != nil {
-		//@ slices.Unslice_Bytes(b, offset, offset+path.HopLen, writePerm)
-		//@ slices.CombineAtIndex_Bytes(b, offset, len(b), offset+path.HopLen, writePerm)
-		//@ slices.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
+		//@ slices.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 		return err
 	}
-	//@ slices.Unslice_Bytes(b, offset, offset+path.HopLen, writePerm)
-	//@ slices.CombineAtIndex_Bytes(b, 0, offset+path.HopLen, offset, writePerm)
+	//@ slices.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	offset += path.HopLen
-	//@ slices.SplitByIndex_Bytes(b, offset, len(b), offset+path.HopLen, writePerm)
-	//@ slices.Reslice_Bytes(b, offset, offset+path.HopLen, writePerm)
+	//@ slices.SplitRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	err = o.SecondHop.SerializeTo(b[offset : offset+path.HopLen])
-	//@ slices.Unslice_Bytes(b, offset, offset+path.HopLen, writePerm)
-	//@ slices.CombineAtIndex_Bytes(b, offset, len(b), offset+path.HopLen, writePerm)
-	//@ slices.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
+	//@ slices.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	//@ fold acc(o.Mem(ubuf), R1)
 	return err
 }
