@@ -64,7 +64,7 @@ func EqualBytesImplyEqualMac(mac1 []byte, mac2 [MacLen]byte) {
 		mac1Arr[4] == mac2[4]    &&
 		mac1Arr[5] == mac2[5]
 	assert len(mac1Arr) == len(mac2)
-	arrayCongruence(mac1Arr, mac2)
+	AbsMacArrayCongruence(mac1Arr, mac2)
 }
 
 // The following obviously holds. However, for the time being, it cannot be proven due to an
@@ -73,4 +73,4 @@ ghost
 requires mac1 == mac2
 ensures  AbsMac(mac1) == AbsMac(mac2)
 decreases
-func arrayCongruence(mac1 [MacLen]byte, mac2 [MacLen]byte)
+func AbsMacArrayCongruence(mac1 [MacLen]byte, mac2 [MacLen]byte)
