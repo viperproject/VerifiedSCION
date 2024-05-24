@@ -89,7 +89,7 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // @ preserves acc(inf, R10)
 // @ preserves slices.AbsSlice_Bytes(b, 0, InfoLen)
 // @ ensures   err == nil
-// @ ensures   inf.ToIntermediateAbsInfoField() ===
+// @ ensures   inf.ToIntermediateAbsInfoField() ==
 // @ 	BytesToIntermediateAbsInfoField(b, 0, 0, InfoLen)
 // @ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {
@@ -133,15 +133,15 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 // UpdateSegID updates the SegID field by XORing the SegID field with the 2
 // first bytes of the MAC. It is the beta calculation according to
 // https://docs.scion.org/en/latest/protocols/scion-header.html#hop-field-mac-computation
-// @ requires hf.HVF === AbsMac(hfMac)
+// @ requires hf.HVF == AbsMac(hfMac)
 // @ preserves acc(&inf.SegID)
-// @ ensures AbsUInfoFromUint16(inf.SegID) ===
+// @ ensures AbsUInfoFromUint16(inf.SegID) ==
 // @ 	old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf))
 // @ decreases
 func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte /* @, ghost hf io.IO_HF @ */) {
 	//@ share hfMac
 	inf.SegID = inf.SegID ^ binary.BigEndian.Uint16(hfMac[:2])
-	// @ AssumeForIO(AbsUInfoFromUint16(inf.SegID) === old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf)))
+	// @ AssumeForIO(AbsUInfoFromUint16(inf.SegID) == old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf)))
 }
 
 // @ decreases

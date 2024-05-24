@@ -1000,7 +1000,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ ghost absPktBuf0   := absIO_val(msgs[i0].Buffers[0], ingressID)
 					// @ assert msgs[i0] === p
 					// @ absIO_valWidenLemma(p.Buffers[0], ingressID, p.N)
-					// @ assert absPktTmpBuf.isIO_val_Pkt2 ==> absPktTmpBuf == absPktBuf0
+					// @ assert absPktTmpBuf.isIO_val_Pkt2 ==> absPktTmpBuf === absPktBuf0
 					// @ MultiElemWitnessStep(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
 					// @ assert ioValSeq[i0].isIO_val_Pkt2 ==>
 					// @ 	ElemWitness(ioSharedArg.IBufY, ioIngressID, ioValSeq[i0].IO_val_Pkt2_2)
@@ -2664,7 +2664,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ ensures   sl.AbsSlice_Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.path, R20)
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
-// @ ensures   reserr == nil ==> p.scionLayer.UBPath(ub) == old(p.scionLayer.UBPath(ub))
+// @ ensures   reserr == nil ==> p.scionLayer.UBPath(ub) === old(p.scionLayer.UBPath(ub))
 // @ ensures   reserr == nil ==> p.scionLayer.GetPath(ub) == old(p.scionLayer.GetPath(ub))
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   p.segmentChange

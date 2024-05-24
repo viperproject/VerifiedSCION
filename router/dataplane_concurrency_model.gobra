@@ -103,7 +103,7 @@ pure func MultiReadBioCorrectIfs(
 ghost
 opaque
 requires 0 <= expectedPkts && MultiReadBio(t, expectedPkts)
-ensures len(res) === expectedPkts
+ensures len(res) == expectedPkts
 decreases expectedPkts
 pure func MultiReadBioIO_val(t io.Place, expectedPkts int) (res seq[io.IO_val]) {
 	return expectedPkts <= 0 ? seq[io.IO_val]{} :
@@ -160,7 +160,7 @@ ghost
 requires MultiReadBio(t, n)
 requires ElemAuth(s.ibuf, y.IBufY) && ElemAuth(s.obuf, y.OBufY)
 ensures  MultiReadBio(t, n)
-ensures  MultiReadBioUpd(t, n, s) === old(MultiReadBioUpd(t, n, s))
+ensures  MultiReadBioUpd(t, n, s) == old(MultiReadBioUpd(t, n, s))
 ensures  MultiReadBioNext(t, n) == old(MultiReadBioNext(t, n))
 ensures  ElemAuth(MultiReadBioUpd(t, n, s).ibuf, y.IBufY)
 ensures  ElemAuth(MultiReadBioUpd(t, n, s).obuf, y.OBufY)
