@@ -31,14 +31,14 @@ ghost
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 ensures   slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw) ==>
 	absIO_val(raw, ingressID).isIO_val_Pkt2 &&
-	absIO_val(raw, ingressID).IO_val_Pkt2_2 == absPkt(raw) &&
+	absIO_val(raw, ingressID).IO_val_Pkt2_2 === absPkt(raw) &&
 	len(absPkt(raw).CurrSeg.Future) > 0
 decreases
 func absIO_valLemma(raw []byte, ingressID uint16) {
 	if(slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)){
 		absIO := reveal absIO_val(raw, ingressID)
 		assert absIO.isIO_val_Pkt2
-		assert absIO_val(raw, ingressID).IO_val_Pkt2_2 == absPkt(raw)
+		assert absIO_val(raw, ingressID).IO_val_Pkt2_2 === absPkt(raw)
 		absPktFutureLemma(raw)
 	}
 }
@@ -75,7 +75,7 @@ func absPktFutureLemma(raw []byte) {
 ghost
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  AbsValidateIngressIDConstraint(oldPkt, ingressID)
-requires  newPkt == AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
+requires  newPkt === AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
 ensures   AbsValidateIngressIDConstraint(newPkt, ingressID)
 decreases
 func AbsValidateIngressIDLemma(oldPkt io.IO_pkt2, newPkt io.IO_pkt2, ingressID option[io.IO_ifs]) {
@@ -90,7 +90,7 @@ requires  oldPkt.LeftSeg != none[io.IO_seg2]
 requires  len(get(oldPkt.LeftSeg).Future) > 0
 requires  len(get(oldPkt.LeftSeg).History) == 0
 requires  AbsValidateIngressIDConstraint(oldPkt, ingressID)
-requires  newPkt == AbsDoXover(oldPkt)
+requires  newPkt === AbsDoXover(oldPkt)
 ensures   AbsValidateIngressIDConstraintXover(newPkt, ingressID)
 decreases
 func AbsValidateIngressIDXoverLemma(oldPkt io.IO_pkt2, newPkt io.IO_pkt2, ingressID option[io.IO_ifs]) {
@@ -264,7 +264,7 @@ ensures  end == p.scionLayer.PathEndIdx(ub)
 ensures  scion.validPktMetaHdr(ub[start:end])
 ensures  p.path.EqAbsHeader(ub[start:end])
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
-ensures  absPkt(ub) == p.path.absPkt(ub[start:end])
+ensures  absPkt(ub) === p.path.absPkt(ub[start:end])
 decreases
 func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end int) {
 	unfold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
@@ -300,7 +300,7 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	scion.WidenLeftSeg(ub, currInfIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenMidSeg(ub, currInfIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenRightSeg(ub, currInfIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
-	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
+	assert reveal absPkt(ub) === reveal p.path.absPkt(ub[start:end])
 }
 
 ghost
@@ -324,7 +324,7 @@ ensures  start == p.scionLayer.PathStartIdx(ub)
 ensures  end == p.scionLayer.PathEndIdx(ub)
 ensures  scion.validPktMetaHdr(ub[start:end])
 ensures  p.scionLayer.EqAbsHeader(ub)
-ensures  absPkt(ub) == p.path.absPkt(ub[start:end])
+ensures  absPkt(ub) === p.path.absPkt(ub[start:end])
 decreases
 func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end int){
 	unfold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
@@ -361,7 +361,7 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	scion.WidenLeftSeg(ub, currInfIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenMidSeg(ub, currInfIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenRightSeg(ub, currInfIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
-	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
+	assert reveal absPkt(ub) === reveal p.path.absPkt(ub[start:end])
 }
 
 ghost
@@ -372,9 +372,7 @@ decreases
 pure func (p* scionPacketProcessor) EqAbsHopField(pkt io.IO_pkt2) bool {
 	return let absHop := p.hopField.ToIO_HF() in
 		let currHF := pkt.CurrSeg.Future[0] in
-		absHop.InIF2 == currHF.InIF2 &&
-		absHop.EgIF2 == currHF.EgIF2 &&
-		absHop.HVF == currHF.HVF
+		absHop === currHF
 }
 
 ghost
@@ -384,8 +382,8 @@ decreases
 pure func (p* scionPacketProcessor) EqAbsInfoField(pkt io.IO_pkt2) bool {
 	return let absInf := p.infoField.ToIntermediateAbsInfoField() in
 		let currseg := pkt.CurrSeg in
-		absInf.AInfo == currseg.AInfo &&
-		absInf.UInfo == currseg.UInfo &&
-		absInf.ConsDir == currseg.ConsDir &&
-		absInf.Peer == currseg.Peer
+		absInf.AInfo === currseg.AInfo &&
+		absInf.UInfo === currseg.UInfo &&
+		absInf.ConsDir === currseg.ConsDir &&
+		absInf.Peer === currseg.Peer
 }

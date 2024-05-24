@@ -62,7 +62,7 @@ pure func absPkt(raw []byte) (res io.IO_pkt2) {
 ghost
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Unsupported
-ensures val.IO_val_Unsupported_1 == path.ifsToIO_ifs(ingressID)
+ensures val.IO_val_Unsupported_1 === path.ifsToIO_ifs(ingressID)
 decreases
 pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val) {
 	return io.IO_val(io.IO_val_Unsupported{
