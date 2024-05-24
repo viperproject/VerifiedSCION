@@ -137,7 +137,6 @@ pure func AbsValidateEgressIDConstraintXover(pkt io.IO_pkt2, dp io.DataPlaneSpec
 
 ghost
 opaque
-requires dp.Valid()
 requires len(pkt.CurrSeg.Future) > 0
 decreases
 pure func AbsVerifyCurrentMACConstraint(pkt io.IO_pkt2, dp io.DataPlaneSpec) bool {
@@ -163,7 +162,6 @@ requires  AbsVerifyCurrentMACConstraint(newPkt, dp)
 requires  len(newPkt.CurrSeg.Future) == 1 || AbsValidateEgressIDConstraint(newPkt, true, dp)
 preserves acc(gsync.LockP(ioLock), _)
 preserves gsync.LockInv(ioLock) == SharedInv!< dp, ioSharedArg !>;
-ensures   dp.Valid()
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func InternalEnterEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
@@ -195,7 +193,6 @@ requires  AbsEgressInterfaceConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, i
 requires  newPkt == AbsProcessEgress(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
 preserves acc(gsync.LockP(ioLock), _)
 preserves gsync.LockInv(ioLock) == SharedInv!< dp, ioSharedArg !>;
-ensures   dp.Valid()
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func ExternalEnterOrExitEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
@@ -234,8 +231,7 @@ requires  egressID != none[io.IO_ifs] ==> AbsEgressInterfaceConstraint(AbsDoXove
 requires  egressID == none[io.IO_ifs] ==> newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
 requires  egressID != none[io.IO_ifs] ==> newPkt == AbsProcessEgress(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)))
 preserves acc(gsync.LockP(ioLock), _)
-preserves gsync.LockInv(ioLock) == SharedInv!< dp, ioSharedArg !>;
-ensures   dp.Valid()
+preserves gsync.LockInv(ioLock) == SharedInv!< dp, ioSharedArg !>
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func XoverEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
