@@ -223,7 +223,7 @@ func testRun(
 	assert d.MetricsAreSet()
 	d.mtx.SetInv(MutexInvariant!<d!>)
 	assert d.mtx.LockP()
-	assert d.mtx.LockInv() == MutexInvariant!<d!>;
+	assert d.mtx.LockInv() == MutexInvariant!<d!>
 
 	// io-spec needs to be inhaled
 	inhale io.token(place)

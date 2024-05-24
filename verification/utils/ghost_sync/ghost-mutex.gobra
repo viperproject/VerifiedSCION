@@ -33,28 +33,28 @@ type GhostMutex struct {
 	privateField PrivateField
 }
 
-pred LockP(m gpointer[GhostMutex])
-pred UnlockP(m gpointer[GhostMutex])
+pred (m gpointer[GhostMutex]) LockP()
+pred (m gpointer[GhostMutex]) UnlockP()
 
 ghost
-requires acc(LockP(m), _)
+requires acc(m.LockP(), _)
 decreases _
-pure func LockInv(m gpointer[GhostMutex]) pred()
+pure func (m gpointer[GhostMutex]) LockInv() pred()
 
 ghost
 requires inv() && acc(m) && *m == GhostMutex{}
-ensures  LockP(m) && LockInv(m) == inv
+ensures  m.LockP() && m.LockInv() == inv
 decreases
-func SetInv(m gpointer[GhostMutex], inv pred())
+func (m gpointer[GhostMutex]) SetInv(inv pred())
 
 ghost
-requires acc(LockP(m), _)
-ensures  LockP(m) && UnlockP(m) && LockInv(m)()
+requires acc(m.LockP(), _)
+ensures  m.LockP() && m.UnlockP() && m.LockInv()()
 decreases _ if sync.IgnoreBlockingForTermination()
-func Lock(m gpointer[GhostMutex])
+func (m gpointer[GhostMutex]) Lock()
 
 ghost
-requires acc(LockP(m), _) && UnlockP(m) && LockInv(m)()
-ensures  LockP(m)
+requires acc(m.LockP(), _) && m.UnlockP() && m.LockInv()()
+ensures  m.LockP()
 decreases _
-func Unlock(m gpointer[GhostMutex])
+func (m gpointer[GhostMutex]) Unlock()

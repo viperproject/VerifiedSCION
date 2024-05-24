@@ -36,7 +36,7 @@ pred SharedInv(ghost dp io.DataPlaneSpec, ghost y SharedArg) {
 // initialize the shared invariant:
 ghost
 requires io.token(p) && dp.dp3s_iospec_ordered(s, p)
-ensures  gsync.LockP(m) && gsync.LockInv(m) == SharedInv!< dp, y !>;
+ensures  m.LockP() && m.LockInv() == SharedInv!< dp, y !>
 decreases
 func InitSharedInv(
 	dp io.DataPlaneSpec,
@@ -50,7 +50,7 @@ func InitSharedInv(
 	yO := InitElemAuth(s.obuf)
 	y := SharedArg{&pE, &sE, yI, yO}
 	fold SharedInv!< dp, y !>()
-	gsync.SetInv(m, SharedInv!< dp, y !>)
+	m.SetInv(SharedInv!< dp, y !>)
 }
 
 /////////////////////////////////////// Prophecies ///////////////////////////////////////
