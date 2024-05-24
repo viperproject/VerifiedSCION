@@ -80,7 +80,7 @@ type HopField struct {
 // @ ensures   h.Mem()
 // @ ensures   err == nil
 // @ ensures   unfolding h.Mem() in
-// @	BytesToIO_HF(raw, 0, 0, HopLen) === h.ToIO_HF()
+// @	BytesToIO_HF(raw, 0, 0, HopLen) == h.ToIO_HF()
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < HopLen {
@@ -102,7 +102,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == raw[6:6+MacLen][i]
 	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
 	//@ EqualBytesImplyEqualMac(raw[6:6+MacLen], h.Mac)
-	//@ assert BytesToIO_HF(raw, 0, 0, HopLen) == h.ToIO_HF()
+	//@ assert BytesToIO_HF(raw, 0, 0, HopLen) === h.ToIO_HF()
 	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, HopLen), R46)
 	//@ fold h.Mem()
 	return nil

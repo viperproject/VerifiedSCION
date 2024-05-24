@@ -34,7 +34,7 @@ requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  0 <= currInfIdx && currInfIdx < 3
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset) ===
+ensures   CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset) ==
 	CurrSeg(raw[start:length], offset-start, currInfIdx, currHfIdx, segLen, headerOffset-start)
 decreases
 func WidenCurrSeg(raw []byte,
@@ -79,7 +79,7 @@ requires length <= len(raw)
 requires offset + path.HopLen * segLen <= length
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R52)
 preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R52)
-ensures  segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ===
+ensures  segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ==
 	segment(raw[start:length], offset-start, currHfIdx, ainfo, uinfo, consDir, peer, segLen)
 decreases
 func widenSegment(raw []byte,
@@ -102,7 +102,7 @@ requires  middle + path.HopLen <= length
 requires  length <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R54)
 preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R54)
-ensures   path.BytesToIO_HF(raw, 0, middle, len(raw)) ===
+ensures   path.BytesToIO_HF(raw, 0, middle, len(raw)) ==
 	path.BytesToIO_HF(raw[start:length], 0, middle-start, length-start)
 decreases
 func widenBytesToIO_HF(raw []byte, middle int, start int, length int) {
@@ -110,7 +110,7 @@ func widenBytesToIO_HF(raw []byte, middle int, start int, length int) {
 	unfold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R55)
 	hfBytes1 := path.BytesToIO_HF(raw, 0, middle, len(raw))
 	hfBytes2 := path.BytesToIO_HF(raw[start:length], 0, middle-start, length-start)
-	assert hfBytes1 === hfBytes2
+	assert hfBytes1 == hfBytes2
 	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
 	fold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R55)
 }
@@ -123,7 +123,7 @@ requires  offset + path.HopLen * segLen <= length
 requires  length <= len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), p)
 preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), p)
-ensures   hopFields(raw, offset, currHfIdx, segLen) ===
+ensures   hopFields(raw, offset, currHfIdx, segLen) ==
 	hopFields(raw[start:length], offset-start, currHfIdx, segLen)
 decreases segLen - currHfIdx
 func widenHopFields(raw []byte, offset int, currHfIdx int, segLen int, start int, length int, p perm) {
@@ -146,7 +146,7 @@ requires  pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= length
 requires  1 <= currInfIdx && currInfIdx < 4
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset) ===
+ensures   LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset) ==
 	LeftSeg(raw[start:length], currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset-start)
 decreases
 func WidenLeftSeg(raw []byte,
@@ -179,7 +179,7 @@ requires  pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= length
 requires  -1 <= currInfIdx && currInfIdx < 2
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset) ===
+ensures   RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset) ==
 	RightSeg(raw[start:length], currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset-start)
 decreases
 func WidenRightSeg(raw []byte,
@@ -211,7 +211,7 @@ requires  0 <= length && length <= len(raw)
 requires  pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= length
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset) ===
+ensures   MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset) ==
 	MidSeg(raw[start:length], currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
 decreases
 func WidenMidSeg(raw []byte,

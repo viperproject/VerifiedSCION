@@ -164,7 +164,7 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 // @ 	s.Mem() &&
 // @ 	let oldBase := old(unfolding s.Mem() in *s) in
 // @ 	let newBase := (unfolding s.Mem() in *s) in
-// @ 	newBase == oldBase.IncPathSpec())
+// @ 	newBase === oldBase.IncPathSpec())
 // @ ensures  e != nil ==> (s.NonInitMem() && e.ErrorMem())
 // @ decreases
 func (s *Base) IncPath() (e error) {

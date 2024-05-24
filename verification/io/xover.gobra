@@ -47,7 +47,7 @@ pure func (dp DataPlaneSpec) dp2_xover_guard(m IO_pkt2,
 		return m.CurrSeg == currseg &&
 			m.LeftSeg == some(nextseg) &&
 			nextseg.History == seq[IO_ahi]{} &&
-			newpkt == IO_pkt2{nextseg, m.MidSeg, m.RightSeg, some(traversedseg)} &&
+			newpkt == IO_Packet2{nextseg, m.MidSeg, m.RightSeg, some(traversedseg)} &&
 			currseg.Future == seq[IO_HF]{hf1} &&
 			nextseg.Future == seq[IO_HF]{hf2} ++ nextfut &&
 			dp.dp2_enter_interface(currseg.ConsDir, asid, hf1, recvif) &&
@@ -90,7 +90,7 @@ pure func (dp DataPlaneSpec) xover2_link_type(asid IO_as, hf1 IO_HF, hf2 IO_HF) 
 ghost
 decreases
 pure func swap_if_dir2(hf IO_HF, d bool) IO_HF {
-	return IO_HF {
+	return IO_HF_ {
 		InIF2: d ? hf.InIF2 : hf.EgIF2,
 		EgIF2: d ? hf.EgIF2 : hf.InIF2,
 		HVF: hf.HVF,
