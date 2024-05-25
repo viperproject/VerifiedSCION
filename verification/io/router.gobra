@@ -96,7 +96,7 @@ pure func (dp DataPlaneSpec) is_target(asid IO_as, nextif IO_ifs, a2 IO_as, i2 I
 ghost
 decreases
 pure func dp3s_add_ibuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
-	return IO_dp3s_state_local_{
+	return IO_dp3s_state_local_ {
 		ibuf: insert(s.ibuf, i, pkt),
 		obuf: s.obuf,
 	}
@@ -105,7 +105,7 @@ pure func dp3s_add_ibuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO
 ghost
 decreases
 pure func dp3s_add_obuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
-	return IO_dp3s_state_local_{
+	return IO_dp3s_state_local_ {
 		ibuf: s.ibuf,
 		obuf: insert(s.obuf, i, pkt),
 	}
@@ -151,8 +151,6 @@ pure func (dp DataPlaneSpec) dp3s_forward_ext_xover(m IO_pkt3, newpkt IO_pkt3, n
 		dp.is_target(dp.Asid(), nextif, a2, i2)
 }
 
-
-// TODO: should we change IO_ifs to being implemented as an option type?
 ghost
 requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()

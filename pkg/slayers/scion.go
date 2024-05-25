@@ -233,7 +233,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ unfold acc(s.Mem(ubuf), R0)
 	// @ defer  fold acc(s.Mem(ubuf), R0)
 	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
-	// @ ghost defer sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
+	// @ ghost defer sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLenSpecInternal()), int(s.HdrLen*LineLen), writePerm)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
@@ -284,8 +284,8 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ sl.CombineRange_Bytes(buf, 10, 12, writePerm)
 
 	// @ ghost sPath := s.Path
-	// @ ghost pathSlice := ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen]
-	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), R10)
+	// @ ghost pathSlice := ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]
+	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLenSpecInternal(), int(s.HdrLen*LineLen), R10)
 
 	// Serialize address header.
 	// @ sl.SplitRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
@@ -293,7 +293,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	if err := s.SerializeAddrHdr(buf[CmnHdrLen:] /*@ , ubuf[CmnHdrLen:] @*/); err != nil {
 		// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
 		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
-		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), R10)
+		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLenSpecInternal(), int(s.HdrLen*LineLen), R10)
 		// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
 		// @ b.RestoreMem(uSerBufN)
 		return err
@@ -302,7 +302,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 
 	// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
 	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
-	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLen(nil, true), int(s.HdrLen*LineLen), R10)
+	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLenSpecInternal(), int(s.HdrLen*LineLen), R10)
 	// Serialize path header.
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
@@ -926,7 +926,7 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err er
 // @ 	acc(&s.RawSrcAddr) && acc(&s.RawDstAddr))
 // @ decreases
 func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
-	// @ ghost l := s.AddrHdrLen(nil, true)
+	// @ ghost l := s.AddrHdrLenSpecInternal()
 	if len(data) < s.AddrHdrLen( /*@ nil, true @*/ ) {
 		return serrors.New("provided buffer is too small", "expected", s.AddrHdrLen( /*@ nil, true @*/ ),
 			"actual", len(data))

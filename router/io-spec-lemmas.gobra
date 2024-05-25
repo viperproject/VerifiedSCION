@@ -372,9 +372,7 @@ decreases
 pure func (p* scionPacketProcessor) EqAbsHopField(pkt io.IO_pkt2) bool {
 	return let absHop := p.hopField.ToIO_HF() in
 		let currHF := pkt.CurrSeg.Future[0] in
-		absHop.InIF2 == currHF.InIF2 &&
-		absHop.EgIF2 == currHF.EgIF2 &&
-		absHop.HVF == currHF.HVF
+		absHop == currHF
 }
 
 ghost
