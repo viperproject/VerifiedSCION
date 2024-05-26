@@ -1972,8 +1972,8 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
-	// (VerifiedSCION) This assumption cannot be proven at this point.
-	// There might be a check is missing.
+	// (VerifiedSCION) This assumption will be dropped after clarifying
+	// https://github.com/scionproto/scion/issues/4531
 	// @ TemporaryAssumeForIO(p.path.CurrInfMatchesCurrHF(ubPath))
 	// @ p.EstablishEqAbsHeader(ub, startP, endP)
 	// @ p.path.EstablishValidPktMetaHdr(ubPath)
