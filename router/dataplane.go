@@ -1463,7 +1463,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 // @ #backend[moreJoins(1)]
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
-	srcAddr *net.UDPAddr /*@, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
+	srcAddr *net.UDPAddr /*@, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , ghost addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
 
 	if err := p.reset(); err != nil {
 		// @ fold p.sInitD().validResult(processResult{}, false)
@@ -1767,7 +1767,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ 	newAbsPkt.isIO_val_Unsupported
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val  @*/) {
+func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@ , ghost addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
 
 	var ok bool
 	// @ unfold acc(p.scionLayer.Mem(ub), R20)
@@ -2555,7 +2555,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost oldPkt io.IO_pkt2, gh
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (resaddr *net.UDPAddr, respr processResult, reserr error /*@ , addrAliasesUb bool @*/) {
+func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (resaddr *net.UDPAddr, respr processResult, reserr error /*@ , ghost addrAliasesUb bool @*/) {
 	// (VerifiedSCION) the parameter used to be p.scionLayer,
 	// instead of &p.scionLayer.
 	a, err /*@ , addrAliases @*/ := p.d.resolveLocalDst(&p.scionLayer /*@, ubScionL @*/)
@@ -2781,7 +2781,7 @@ func (p *scionPacketProcessor) ingressInterface( /*@ ghost ubPath []byte @*/ ) u
 // @ ensures  p.EqAbsHopField(oldPkt)
 // @ ensures  AbsEgressInterfaceConstraint(oldPkt, path.ifsToIO_ifs(egress))
 // @ decreases
-func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ ) /*@ (egress @*/ uint16 /*@ ) @*/ {
+func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ ) (egress uint16) {
 	// @ reveal p.EqAbsInfoField(oldPkt)
 	// @ reveal p.EqAbsHopField(oldPkt)
 	if p.infoField.ConsDir {
@@ -3207,7 +3207,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 // @ #backend[stateConsolidationMode(6)]
-func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
+func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, ghost addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
 	if r, err := p.parsePath( /*@ ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, absReturnErr(r) @*/
@@ -3425,7 +3425,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 // @ 	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID) &&
 // @ 	newAbsPkt.isIO_val_Unsupported
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /*@ , addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
+func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /*@ , ghost addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
 	// @ ghost ubScionL := p.rawPkt
 	// @ p.scionLayer.ExtractAcc(ubScionL)
 	s := p.scionLayer
@@ -3619,7 +3619,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 // specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
 // by value. We should consider porting merging this in upstream SCION.
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (resaddr *net.UDPAddr, reserr error /*@ , addrAliasesUb bool @*/) {
+func (d *DataPlane) resolveLocalDst(s *slayers.SCION /*@, ghost ub []byte @*/) (resaddr *net.UDPAddr, reserr error /*@ , ghost addrAliasesUb bool @*/) {
 	// @ ghost start, end := s.ExtractAcc(ub)
 	// @ assert s.RawDstAddr === ub[start:end]
 	// @ sl.SplitRange_Bytes(ub, start, end, R15)
