@@ -121,6 +121,9 @@ type BatchConn interface {
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].Mem()
+	// Preconditions for IO spec:
+	// @ requires Prophecy(prophecyM)
+	// @ requires io.token(place) && MultiReadBio(place, prophecyM)
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr())
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
@@ -131,9 +134,7 @@ type BatchConn interface {
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 	// @ ensures   err != nil ==> err.ErrorMem()
-	// contracts for IO-spec
-	// @ requires Prophecy(prophecyM)
-	// @ requires io.token(place) && MultiReadBio(place, prophecyM)
+	// Postconditions for IO spec:
 	// @ ensures  err != nil ==> prophecyM == 0
 	// @ ensures  err == nil ==> prophecyM == n
 	// @ ensures  io.token(old(MultiReadBioNext(place, prophecyM)))
@@ -3734,8 +3735,11 @@ type bfdSend struct {
 }
 
 // newBFDSend creates and initializes a BFD Sender
-// @ trusted
-// @ requires false
+// @ requires acc(conn.Mem(), _)
+// @ requires srcAddr.Mem()
+// @ requires dstAddr.Mem()
+// @ requires mac.Mem()
+// @ ensures  res.Mem()
 // @ decreases
 func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPAddr,
 	ifID uint16, mac hash.Hash) (res *bfdSend) {
@@ -3748,11 +3752,15 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 		SrcIA:        srcIA,
 		DstIA:        dstIA,
 	}
-
-	if err := scn.SetSrcAddr(&net.IPAddr{IP: srcAddr.IP} /*@ , false @*/); err != nil {
+	// @ unfold srcAddr.Mem()
+	srcIpAddr := &net.IPAddr{IP: srcAddr.IP}
+	// @ fold srcIpAddr.Mem()
+	if err := scn.SetSrcAddr(srcIpAddr /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
-	if err := scn.SetDstAddr(&net.IPAddr{IP: dstAddr.IP} /*@ , false @*/); err != nil {
+	dstIpAddr := &net.IPAddr{IP: dstAddr.IP}
+	// @ fold dstIpAddr.Mem()
+	if err := scn.SetDstAddr(dstIpAddr /*@ , false @*/); err != nil {
 		panic(err) // Must work unless IPAddr is not supported
 	}
 
@@ -3774,6 +3782,7 @@ func newBFDSend(conn BatchConn, srcIA, dstIA addr.IA, srcAddr, dstAddr *net.UDPA
 		scn.PathType = onehop.PathType
 		scn.Path = ohp
 	}
+	// @ fold ohp.Mem(nil)
 
 	return &bfdSend{
 		conn:      conn,
