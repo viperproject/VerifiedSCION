@@ -67,7 +67,8 @@ pure func establishGuardTraversedseg(currseg IO_seg3, direction bool) IO_seg3 {
 			Peer: currseg.Peer,
 			Past: currseg.Past,
 			Future: currseg.Future,
-			History: currseg.History}
+			History: currseg.History,
+		}
 }
 
 // Establishes the traversed segment for packets that are incremented (external).
@@ -85,7 +86,8 @@ pure func establishGuardTraversedsegInc(currseg IO_seg3, direction bool) IO_seg3
 			Peer: currseg.Peer,
 			Past: seq[IO_HF]{currseg.Future[0]} ++ currseg.Past,
 			Future: currseg.Future[1:],
-			History: seq[IO_ahi]{currseg.Future[0].Toab()} ++ currseg.History}
+			History: seq[IO_ahi]{currseg.Future[0].Toab()} ++ currseg.History,
+		}
 }
 /*** End of helper functions, not in Isabelle ***/
 
@@ -110,12 +112,12 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local
 			v.IO_Internal_val1_2,
 			fut) &&
 			dp.dp3s_forward(
-				IO_pkt2(
-					IO_Packet2{
-						traversedseg,
-						v.IO_Internal_val1_1.LeftSeg,
-						v.IO_Internal_val1_1.MidSeg,
-						v.IO_Internal_val1_1.RightSeg}),
+				IO_Packet2 {
+					traversedseg,
+					v.IO_Internal_val1_1.LeftSeg,
+					v.IO_Internal_val1_1.MidSeg,
+					v.IO_Internal_val1_1.RightSeg,
+				},
 				v.IO_Internal_val1_3,
 				v.IO_Internal_val1_4)
 }
@@ -173,7 +175,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_guard(s IO_dp3s_state_local
 					currseg,
 					nextseg,
 					traversedseg,
-					IO_pkt2(IO_Packet2{nextseg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg, some(traversedseg)}),
+					IO_Packet2 { nextseg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg, some(traversedseg) },
 					hf1,
 					hf2,
 					nextfut,

@@ -136,7 +136,7 @@ func testRun(
 	fold accForwardingMetrics(d.forwardingMetrics)
 
 	ensures dp.Valid()
-	ensures dp === io.DataPlaneSpec_{
+	ensures dp === io.DataPlaneSpec_ {
 		linkTypes: dict[io.IO_ifs]io.IO_Link{
 			1: io.IO_ProvCust{},
 			2: io.IO_ProvCust{},
@@ -161,7 +161,7 @@ func testRun(
 	pair4 := io.AsIfsPair{1001, 7}
 	pair5 := io.AsIfsPair{1002, 8}
 
-	dp := io.DataPlaneSpec_{
+	dp := io.DataPlaneSpec_ {
 		linkTypes: dict[io.IO_ifs]io.IO_Link{
 			1: io.IO_ProvCust{},
 			2: io.IO_ProvCust{},
@@ -223,7 +223,7 @@ func testRun(
 	assert d.MetricsAreSet()
 	d.mtx.SetInv(MutexInvariant!<d!>)
 	assert d.mtx.LockP()
-	assert d.mtx.LockInv() == MutexInvariant!<d!>;
+	assert d.mtx.LockInv() == MutexInvariant!<d!>
 
 	// io-spec needs to be inhaled
 	inhale io.token(place)

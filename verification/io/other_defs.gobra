@@ -18,9 +18,7 @@
 
 package io
 
-type Unit adt {
-	Unit_{}
-}
+type Unit struct{}
 
 // interface IDs
 type IO_ifs uint16

@@ -87,6 +87,8 @@ type Base struct {
 // @ 	s.GetBase().WeaklyValid() &&
 // @ 	s.DecodeFromBytesSpec(data)
 // @ ensures   len(data) < MetaLen ==> r != nil
+// posts for IO:
+// @ ensures   r == nil ==> s.GetBase().EqAbsHeader(data)
 // @ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// PathMeta takes care of bounds check.
@@ -142,7 +144,6 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		//@ assume int(s.PathMeta.SegLen[i]) >= 0
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
-
 	// We must check the validity of NumHops. It is possible to fit more than 64 hops in
 	// the length of a scion header. Yet a path of more than 64 hops cannot be followed to
 	// the end because CurrHF is only 6 bits long.
@@ -150,6 +151,8 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		//@ defer fold s.NonInitMem()
 		return serrors.New("NumHops too large", "NumHops", s.NumHops, "Maximum", MaxHops)
 	}
+	//@ assert s.PathMeta.EqAbsHeader(data)
+	//@ assert s.EqAbsHeader(data)
 	//@ fold s.Mem()
 	return nil
 }
