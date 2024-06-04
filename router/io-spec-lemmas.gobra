@@ -357,7 +357,7 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
 	offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen)
 
-	scion.WidenCurfrSeg(ub, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
+	scion.WidenCurrSeg(ub, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
 	scion.WidenLeftSeg(ub, currInfIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenMidSeg(ub, currInfIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenRightSeg(ub, currInfIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
