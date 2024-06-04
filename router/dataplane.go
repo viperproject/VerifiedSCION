@@ -3862,15 +3862,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 			return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 				"path type", pathType)
 		}
-		/*@
-		scionBuf := epicPath.GetUnderlyingScionPathBuf(ubPath)
-		unfold acc(epicPath.Mem(ubPath), R4)
-		assert ubPath[epic.MetadataLen:] === scionBuf
-		epicPathUb = ubPath
-		ubPath = scionBuf
-		startP += epic.MetadataLen
-		assert ubPath === ub[startP:endP]
-		@*/
+		// @ scionBuf := epicPath.GetUnderlyingScionPathBuf(ubPath)
+		// @ unfold acc(epicPath.Mem(ubPath), R4)
+		// @ assert ubPath[epic.MetadataLen:] === scionBuf
+		// @ epicPathUb = ubPath
+		// @ ubPath = scionBuf
+		// @ startP += epic.MetadataLen
+		// @ assert ubPath === ub[startP:endP]
 		path = epicPath.ScionPath
 		// @ pathFromEpic = true
 	default:
@@ -3878,46 +3876,40 @@ func (p *scionPacketProcessor) prepareSCMP(
 		return nil, serrors.WithCtx(cannotRoute, "details", "unsupported path type",
 			"path type", pathType)
 	}
-	/*@
-	assert pathType == scion.PathType || pathType == epic.PathType
-	assert typeOf(p.scionLayer.Path) == type[*scion.Raw] || typeOf(p.scionLayer.Path) == type[*epic.Path]
-	assert !pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*scion.Raw]
-	assert pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*epic.Path]
-	sl.SplitRange_Bytes(ub, startP, endP, writePerm)
-	@*/
+	// @ assert pathType == scion.PathType || pathType == epic.PathType
+	// @ assert typeOf(p.scionLayer.Path) == type[*scion.Raw] || typeOf(p.scionLayer.Path) == type[*epic.Path]
+	// @ assert !pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*scion.Raw]
+	// @ assert pathFromEpic ==> typeOf(p.scionLayer.Path) == type[*epic.Path]
+	// @ sl.SplitRange_Bytes(ub, startP, endP, writePerm)
 	decPath, err := path.ToDecoded( /*@ ubPath @*/ )
 	if err != nil {
-		/*@
-		sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		ghost if pathFromEpic {
-			epicPath := p.scionLayer.Path.(*epic.Path)
-			assert acc(path.Mem(ubPath), R4)
-			fold acc(epicPath.Mem(epicPathUb), R4)
-		} else {
-			rawPath := p.scionLayer.Path.(*scion.Raw)
-			assert acc(path.Mem(ubPath), R4)
-			assert acc(rawPath.Mem(ubPath), R4)
-		}
-		fold acc(p.scionLayer.Mem(ub), R4)
-		@*/
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ ghost if pathFromEpic {
+		// @ 	epicPath := p.scionLayer.Path.(*epic.Path)
+		// @ 	assert acc(path.Mem(ubPath), R4)
+		// @ 	fold acc(epicPath.Mem(epicPathUb), R4)
+		// @ } else {
+		// @ 	rawPath := p.scionLayer.Path.(*scion.Raw)
+		// @ 	assert acc(path.Mem(ubPath), R4)
+		// @ 	assert acc(rawPath.Mem(ubPath), R4)
+		// @ }
+		// @ fold acc(p.scionLayer.Mem(ub), R4)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "decoding raw path")
 	}
 	// @ ghost rawPath := path.RawBufferMem(ubPath)
 	revPathTmp, err := decPath.Reverse( /*@ rawPath @*/ )
 	if err != nil {
-		/*@
-		sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-		ghost if pathFromEpic {
-			epicPath := p.scionLayer.Path.(*epic.Path)
-			assert acc(path.Mem(ubPath), R4)
-			fold acc(epicPath.Mem(epicPathUb), R4)
-		} else {
-			rawPath := p.scionLayer.Path.(*scion.Raw)
-			assert acc(path.Mem(ubPath), R4)
-			assert acc(rawPath.Mem(ubPath), R4)
-		}
-		fold acc(p.scionLayer.Mem(ub), R4)
-		@*/
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ ghost if pathFromEpic {
+		// @ 	epicPath := p.scionLayer.Path.(*epic.Path)
+		// @ 	assert acc(path.Mem(ubPath), R4)
+		// @ 	fold acc(epicPath.Mem(epicPathUb), R4)
+		// @ } else {
+		// @ 	rawPath := p.scionLayer.Path.(*scion.Raw)
+		// @ 	assert acc(path.Mem(ubPath), R4)
+		// @ 	assert acc(rawPath.Mem(ubPath), R4)
+		// @ }
+		// @ fold acc(p.scionLayer.Mem(ub), R4)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "reversing path for SCMP")
 	}
 	// @ assert revPathTmp.Mem(rawPath)
@@ -3927,19 +3919,17 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// Revert potential path segment switches that were done during processing.
 	if revPath.IsXover( /*@ rawPath @*/ ) {
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
-			/*@
-			sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-			ghost if pathFromEpic {
-				epicPath := p.scionLayer.Path.(*epic.Path)
-				assert acc(path.Mem(ubPath), R4)
-				fold acc(epicPath.Mem(epicPathUb), R4)
-			} else {
-				rawPath := p.scionLayer.Path.(*scion.Raw)
-				assert acc(path.Mem(ubPath), R4)
-				assert acc(rawPath.Mem(ubPath), R4)
-			}
-			fold acc(p.scionLayer.Mem(ub), R4)
-			@*/
+			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+			// @ ghost if pathFromEpic {
+			// @ 	epicPath := p.scionLayer.Path.(*epic.Path)
+			// @ 	assert acc(path.Mem(ubPath), R4)
+			// @ 	fold acc(epicPath.Mem(epicPathUb), R4)
+			// @ } else {
+			// @ 	rawPath := p.scionLayer.Path.(*scion.Raw)
+			// @ 	assert acc(path.Mem(ubPath), R4)
+			// @ 	assert acc(rawPath.Mem(ubPath), R4)
+			// @ }
+			// @ fold acc(p.scionLayer.Mem(ub), R4)
 			return nil, serrors.Wrap(cannotRoute, err, "details", "reverting cross over for SCMP")
 		}
 	}
@@ -3966,19 +3956,17 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// @ fold revPath.Mem(rawPath)
 		// @ )
 		if err := revPath.IncPath( /*@ rawPath @*/ ); err != nil {
-			/*@
-			sl.CombineRange_Bytes(ub, startP, endP, writePerm)
-			ghost if pathFromEpic {
-				epicPath := p.scionLayer.Path.(*epic.Path)
-				assert acc(path.Mem(ubPath), R4)
-				fold acc(epicPath.Mem(epicPathUb), R4)
-			} else {
-				rawPath := p.scionLayer.Path.(*scion.Raw)
-				assert acc(path.Mem(ubPath), R4)
-				assert acc(rawPath.Mem(ubPath), R4)
-			}
-			fold acc(p.scionLayer.Mem(ub), R4)
-			@*/
+			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+			// @ ghost if pathFromEpic {
+			// @ 	epicPath := p.scionLayer.Path.(*epic.Path)
+			// @ 	assert acc(path.Mem(ubPath), R4)
+			// @ 	fold acc(epicPath.Mem(epicPathUb), R4)
+			// @ } else {
+			// @ 	rawPath := p.scionLayer.Path.(*scion.Raw)
+			// @ 	assert acc(path.Mem(ubPath), R4)
+			// @ 	assert acc(rawPath.Mem(ubPath), R4)
+			// @ }
+			// @ fold acc(p.scionLayer.Mem(ub), R4)
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
@@ -4050,13 +4038,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 // Returns the last decoded layer.
 // @ requires  base != nil && base.NonInitMem()
 // @ requires  forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
-// @     (acc(&opts[i], R10) && opts[i] != nil && opts[i].NonInitMem())
+// @ 	(acc(&opts[i], R10) && opts[i] != nil && opts[i].NonInitMem())
 // Due to Viper's very strict injectivity constraints:
 // @ requires  forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==>
-// @     opts[i] !== opts[j]
+// @ 	opts[i] !== opts[j]
 // @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R39)
 // @ ensures   forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
-// @     (acc(&opts[i], R10) && opts[i] != nil)
+// @ 	(acc(&opts[i], R10) && opts[i] != nil)
 // @ ensures   -1 <= idx && idx < len(opts)
 // @ ensures   len(processed) == len(opts)
 // @ ensures   len(offsets) == len(opts)
@@ -4069,13 +4057,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ 	base.EqAbsHeader(data) && base.ValidScionInitSpec(data)
 // @ ensures   reterr == nil ==> base.EqPathType(data)
 // @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+// @ 	(processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(data[offsets[i].start:offsets[i].end]))
+// @ 	((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(data[offsets[i].start:offsets[i].end]))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+// @ 	((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @     (!processed[i] ==> opts[i].NonInitMem())
+// @ 	(!processed[i] ==> opts[i].NonInitMem())
 // @ ensures   reterr != nil ==> base.NonInitMem()
 // @ ensures   reterr != nil ==> (forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==> opts[i].NonInitMem())
 // @ ensures   reterr != nil ==> reterr.ErrorMem()
@@ -4114,15 +4102,15 @@ func decodeLayers(data []byte, base *slayers.SCION,
 	// @ invariant idx == -1 ==> (last === base && oldStart == 0 && oldEnd == len(oldData))
 	// @ invariant 0 <= idx ==> (processed[idx] && last === opts[idx])
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-	// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+	// @ 	(processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-	// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
+	// @ 	((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-	// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+	// @ 	((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && i0 <= i && i < len(opts) ==>
-	// @     !processed[i]
+	// @ 	!processed[i]
 	// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-	// @     (!processed[i] ==> opts[i].NonInitMem())
+	// @ 	(!processed[i] ==> opts[i].NonInitMem())
 	// @ invariant gopacket.NilDecodeFeedback.Mem()
 	// @ invariant 0 <= oldStart && oldStart <= oldEnd && oldEnd <= len(oldData)
 	// @ decreases len(opts) - i0
@@ -4132,11 +4120,11 @@ func decodeLayers(data []byte, base *slayers.SCION,
 		// @ ghost var pos offsetPair
 		// @ ghost var ub []byte
 		// @ ghost if idx == -1 {
-		// @     pos = offsetPair{0, len(oldData), false}
-		// @     ub = oldData
+		// @ 	pos = offsetPair{0, len(oldData), false}
+		// @ 	ub = oldData
 		// @ } else {
-		// @     pos = offsets[idx]
-		// @     if pos.isNil { ub = nil } else { ub  = oldData[pos.start:pos.end] }
+		// @ 	pos = offsets[idx]
+		// @ 	if pos.isNil { ub = nil } else { ub  = oldData[pos.start:pos.end] }
 		// @ }
 		if layerClassTmp.Contains(last.NextLayerType( /*@ ub @*/ )) {
 			data /*@ , start, end @*/ := last.LayerPayload( /*@ ub @*/ )
@@ -4146,7 +4134,7 @@ func decodeLayers(data []byte, base *slayers.SCION,
 			// @ ghost if data == nil {
 			// @ 	sl.NilAcc_Bytes()
 			// @ } else {
-			// @	sl.SplitRange_Bytes(oldData, oldStart, oldEnd, R40)
+			// @ 	sl.SplitRange_Bytes(oldData, oldStart, oldEnd, R40)
 			// @ }
 			if err := opt.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 				// @ ghost if data != nil { sl.CombineRange_Bytes(oldData, oldStart, oldEnd, R40) }
@@ -4161,22 +4149,22 @@ func decodeLayers(data []byte, base *slayers.SCION,
 				// @ invariant forall i, j int :: {&opts[i], &opts[j]} 0 <= i && i < j && j < len(opts) ==> opts[i] !== opts[j]
 				// @ invariant forall i int :: {&opts[i]} 0 <= i && i < len(opts) ==> opts[i] != nil
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-				// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(oldData)))
+				// @ 	(processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(oldData)))
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-				// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
+				// @ 	((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(oldData[offsets[i].start:offsets[i].end]))
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-				// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+				// @ 	((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-				// @     (!processed[i] ==> opts[i].NonInitMem())
+				// @ 	(!processed[i] ==> opts[i].NonInitMem())
 				// @ invariant forall i int :: {&opts[i]}{processed[i]} 0 < len(opts) && c < i && i < len(opts) ==>
-				// @     !processed[i]
+				// @ 	!processed[i]
 				// @ decreases c
 				// @ for c := i0-1; 0 <= c; c=c-1 {
-				// @	if processed[c] {
-				// @		off := offsets[c]
-				// @        if off.isNil {
+				// @ 	if processed[c] {
+				// @ 		off := offsets[c]
+				// @ 		if off.isNil {
 				// @ 			opts[c].DowngradePerm(nil)
-				// @		} else {
+				// @ 		} else {
 				// @ 			opts[c].DowngradePerm(oldData[off.start:off.end])
 				// @ 		}
 				// @ 	}
