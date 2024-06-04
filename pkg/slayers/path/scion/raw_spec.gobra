@@ -1290,7 +1290,7 @@ func XoverCurrSeg(raw []byte, currInfIdx int, currHfIdx int, seg1Len int, seg2Le
 
 ghost
 requires  0 < seg1Len
-requires  0 <= seg2Len
+requires  0 < seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 requires  2 <= currInfIdx && currInfIdx < 4
@@ -1306,10 +1306,11 @@ func XoverLeftSeg(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len 
 
 ghost
 requires  0 < seg1Len
-requires  0 <= seg2Len
+requires  0 < seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 requires  -1 <= currInfIdx && currInfIdx < 1
+requires  0 == currInfIdx ==> 0 < seg3Len
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 ensures   MidSeg(raw, currInfIdx+4, seg1Len, seg2Len, seg3Len, 0) ==
 	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)

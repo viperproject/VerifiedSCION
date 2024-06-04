@@ -304,7 +304,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ } else {
 	//@ 	segLen := LengthOfCurrSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
 	//@ 	prevSegLen := LengthOfPrevSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@ 	offsetWithHops := oldOffset + path.HopLen * prevSegLen + MetaLen
+	//@ 	offsetWithHops := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
 	//@ 	hfIdxSeg := currHfIdx-prevSegLen
 	//@ 	XoverSegNotNone(tail, oldCurrInfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
 	//@ 	XoverCurrSeg(tail, oldCurrInfIdx + 1, oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
