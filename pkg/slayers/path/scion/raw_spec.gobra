@@ -977,7 +977,6 @@ pure func AbsSetCurrSeg(seg io.IO_seg3, info path.IntermediateAbsInfoField) (io.
 }
 
 ghost
-opaque
 decreases
 pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField) (newPkt io.IO_pkt2) {
 	return let newCurrSeg := AbsSetCurrSeg(oldPkt.CurrSeg, info) in

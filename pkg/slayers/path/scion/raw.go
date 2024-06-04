@@ -442,12 +442,11 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@  	MidSegEqLemma(ubuf, currInfIdx+2, seg1Len, seg2Len, seg3Len)
 	//@ 	RightSegEqLemma(ubuf, currInfIdx-1, seg1Len, seg2Len, seg3Len)
 	//@ }
-	//@ oldPkt := reveal s.absPkt(ubuf)
+	//@ reveal s.absPkt(ubuf)
 	//@ sl.SplitRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm)
 	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
-	//@ assert old(RawBytesToMetaHdr(ubuf)) == RawBytesToMetaHdr(ubuf)
 	//@ assert reveal validPktMetaHdr(ubuf)
 	//@ ghost if(idx == currInfIdx) {
 	//@ 	CurrSegEqLemma(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
@@ -455,12 +454,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ 	LeftSegEqLemma(ubuf, currInfIdx+1, seg1Len, seg2Len, seg3Len)
 	//@ 	MidSegEqLemma(ubuf, currInfIdx+2, seg1Len, seg2Len, seg3Len)
 	//@ 	RightSegEqLemma(ubuf, currInfIdx-1, seg1Len, seg2Len, seg3Len)
-	//@ 	newPkt := reveal s.absPkt(ubuf)
-	//@ 	assert newPkt.CurrSeg == AbsSetCurrSeg(oldPkt.CurrSeg, newInfo)
-	//@ 	assert newPkt.LeftSeg == oldPkt.LeftSeg
-	//@ 	assert newPkt.MidSeg == oldPkt.MidSeg
-	//@ 	assert newPkt.RightSeg == oldPkt.RightSeg
-	//@		assert newPkt == reveal AbsSetInfoField(oldPkt, newInfo)
+	//@ 	reveal s.absPkt(ubuf)
 	//@ }
 	//@ CombineBytesbySegments(ubuf[hopfieldOffset:], 0, seg1Len, seg2Len, seg3Len, HalfPerm)
 	//@ CombineBytesbyInfoFields(ubuf, MetaLen, s.NumINF, HalfPerm)
