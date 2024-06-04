@@ -49,7 +49,7 @@ type Decoded struct {
 // @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
 // @ 	let metaHdr := DecodedFrom(line) in
 // @ 	metaHdr == s.GetMetaHdr(data) &&
-// @ 	s.InfsMatchHfs(data))
+// @ 	s.GetBase(data).NumsCompatibleWithSegLen())
 // @ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 // @ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
@@ -213,7 +213,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @	p.Mem(ubuf)                 &&
 // @	p == s                      &&
 // @	typeOf(p) == type[*Decoded] &&
-// @	(old(s.ValidCurrIdxs(ubuf)) ==> s.ValidCurrIdxs(ubuf)))
+// @	(old(s.GetBase(ubuf).StronglyValid()) ==> s.GetBase(ubuf).StronglyValid()))
 // @ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
 // @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {

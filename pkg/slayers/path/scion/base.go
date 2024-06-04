@@ -83,7 +83,9 @@ type Base struct {
 // @ ensures   r != nil ==>
 // @ 	s.NonInitMem() && r.ErrorMem()
 // @ ensures   r == nil ==>
-// @ 	s.Mem() && s.DecodeFromBytesSpec(data) && s.InfsMatchHfs()
+// @ 	s.Mem() &&
+// @ 	s.GetBase().WeaklyValid() &&
+// @ 	s.DecodeFromBytesSpec(data)
 // @ ensures   len(data) < MetaLen ==> r != nil
 // posts for IO:
 // @ ensures   r == nil ==> s.GetBase().EqAbsHeader(data)
@@ -162,8 +164,8 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 // @ 	old(int(s.GetCurrHF()) >= s.GetNumHops()-1))
 // @ ensures  e == nil ==> (
 // @ 	s.Mem() &&
-// @ 	let oldBase := old(unfolding s.Mem() in *s) in
-// @ 	let newBase := (unfolding s.Mem() in *s) in
+// @ 	let oldBase := old(s.GetBase()) in
+// @ 	let newBase := s.GetBase() in
 // @ 	newBase == oldBase.IncPathSpec())
 // @ ensures  e != nil ==> (s.NonInitMem() && e.ErrorMem())
 // @ decreases
@@ -253,6 +255,7 @@ type MetaHdr struct {
 // @ preserves acc(m)
 // @ preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
+// @ ensures   e == nil ==> m.InBounds()
 // @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases

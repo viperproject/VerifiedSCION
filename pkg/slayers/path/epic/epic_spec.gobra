@@ -18,6 +18,8 @@ package epic
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
+
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -45,6 +47,15 @@ func (p *Path) DowngradePerm(buf []byte) {
 }
 
 ghost
+requires acc(r.Mem(ub), _)
+decreases
+pure func (r *Path) GetBase(ub []byte) scion.Base {
+	return unfolding acc(r.Mem(ub), _) in
+		r.ScionPath.GetBase(ub[MetadataLen:])
+}
+
+// TODO: drop
+ghost
 requires acc(p.Mem(ub), _)
 decreases
 pure func (p *Path) ValidCurrINF(ghost ub []byte) bool {
@@ -62,6 +73,7 @@ pure func (p *Path) ValidCurrHF(ghost ub []byte) bool {
 		p.ScionPath.ValidCurrHF(ubPath)
 }
 
+// TODO: drop this
 ghost
 requires acc(p.Mem(ub), _)
 decreases
