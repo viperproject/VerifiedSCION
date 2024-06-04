@@ -87,6 +87,7 @@ type IntermediateAbsInfoField adt {
 }
 
 ghost
+opaque
 requires 0 <= start && start <= middle
 requires middle+InfoLen <= end && end <= len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, start, end), _)

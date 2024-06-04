@@ -252,7 +252,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ oldSeg3Len := int(s.PathMeta.SegLen[2])
 	//@ oldSegLen := LengthOfCurrSeg(oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
 	//@ oldPrevSegLen := LengthOfPrevSeg(oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@ oldOffset := HopFieldOffset(s.Base.NumINF, 0, 0)
+	//@ oldOffset := HopFieldOffset(s.Base.NumINF, oldPrevSegLen, 0)
 	//@ fold acc(s.Base.Mem(), R56)
 	if err := s.Base.IncPath(); err != nil {
 		//@ fold s.NonInitMem()
@@ -264,14 +264,13 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ sl.Reslice_Bytes(ubuf, MetaLen, len(ubuf), HalfPerm)
 	//@ tail := ubuf[MetaLen:]
 	//@ unfold acc(sl.AbsSlice_Bytes(tail, 0, len(tail)), R50)
-	//@ oldoffsetWithHops := oldOffset + path.HopLen * oldPrevSegLen
 	//@ oldHfIdxSeg := oldCurrHfIdx-oldPrevSegLen
-	//@	WidenCurrSeg(ubuf, oldoffsetWithHops + MetaLen, oldCurrInfIdx, oldHfIdxSeg,
+	//@	WidenCurrSeg(ubuf, oldOffset + MetaLen, oldCurrInfIdx, oldHfIdxSeg,
 	//@ 	oldSegLen, MetaLen, MetaLen, len(ubuf))
 	//@	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@	WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@	LenCurrSeg(tail, oldoffsetWithHops, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
+	//@	LenCurrSeg(tail, oldOffset, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
 	//@ oldAbsPkt := reveal s.absPkt(ubuf)
 	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ unfold acc(s.Base.Mem(), R2)
@@ -295,8 +294,8 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ assert currHfIdx == oldCurrHfIdx + 1
 
 	//@ ghost if(currInfIdx == oldCurrInfIdx) {
-	//@ 	IncCurrSeg(tail, oldoffsetWithHops, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
-	//@ 	WidenCurrSeg(ubuf, oldoffsetWithHops + MetaLen, oldCurrInfIdx, oldHfIdxSeg + 1,
+	//@ 	IncCurrSeg(tail, oldOffset, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
+	//@ 	WidenCurrSeg(ubuf, oldOffset + MetaLen, oldCurrInfIdx, oldHfIdxSeg + 1,
 	//@ 		oldSegLen, MetaLen, MetaLen, len(ubuf))
 	//@ 	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@ 	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
@@ -355,8 +354,10 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
 	//@ unfold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
 	//@ unfold acc(sl.AbsSlice_Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	//@ assert reveal path.BytesToIntermediateAbsInfoField(ubuf, 0, infOffset, len(ubuf)) ==
+	//@ 	reveal path.BytesToIntermediateAbsInfoField(ubuf[infOffset : infOffset+path.InfoLen], 0, 0, path.InfoLen)
 	//@ assert info.ToIntermediateAbsInfoField() ==
-	//@ 	path.BytesToIntermediateAbsInfoField(ubuf, 0, infOffset, len(ubuf))
+	//@ 	reveal path.BytesToIntermediateAbsInfoField(ubuf, 0, infOffset, len(ubuf))
 	//@ fold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
 	//@ fold acc(sl.AbsSlice_Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
@@ -397,18 +398,28 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // @ ensures  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures  r != nil ==> r.ErrorMem()
 // posts for IO:
-// @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
+// @ ensures  r == nil ==>
 // @ 	validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
 // @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
 // @ 	let oldPkt := old(s.absPkt(ubuf)) in
 // @ 	let newPkt := AbsSetInfoField(oldPkt, info.ToIntermediateAbsInfoField()) in
 // @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
+// @ #backend[exhaleMode(1)]
 func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) {
 	//@ share info
-	//@ ghost oldCurrINF := int(old(s.GetCurrINF(ubuf)))
+	//@ reveal validPktMetaHdr(ubuf)
 	//@ unfold acc(s.Mem(ubuf), R50)
 	//@ unfold acc(s.Base.Mem(), R50)
+	//@ currInfIdx := int(s.PathMeta.CurrINF)
+	//@ currHfIdx := int(s.PathMeta.CurrHF)
+	//@ seg1Len := int(s.PathMeta.SegLen[0])
+	//@ seg2Len := int(s.PathMeta.SegLen[1])
+	//@ seg3Len := int(s.PathMeta.SegLen[2])
+	//@ segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
+	//@ prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
+	//@ offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
+	//@ hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
 	if idx >= s.NumINF {
 		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
 		//@ fold acc(s.Base.Mem(), R50)
@@ -416,35 +427,45 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 		return err
 	}
 	infOffset := MetaLen + idx*path.InfoLen
-	//@ assert idx == oldCurrINF ==> reveal validPktMetaHdr(ubuf)
-	//@ assert idx == oldCurrINF ==> s.EqAbsHeader(ubuf)
 
-	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
-	//@ ValidPktMetaHdrSublice(ubuf, len(s.Raw))
-	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
-	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf[:len(s.Raw)]).ValidCurrIdxsSpec()
+	//@ SliceBytesbyInfoFields(ubuf, MetaLen, s.NumINF, HalfPerm)
+	//@ SliceBytesbySegments(ubuf[hopfieldOffset:], 0, seg1Len, seg2Len, seg3Len, HalfPerm)
 
-	//@ assert sl.AbsSlice_Bytes(s.Raw, 0, len(s.Raw))
-	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
-	//@ assert acc(sl.AbsSlice_Bytes(s.Raw, 0, infOffset), HalfPerm)
-	//@ sl.Reslice_Bytes(s.Raw, 0, infOffset, HalfPerm/2)
-	//@ ValidPktMetaHdrSublice(s.Raw, infOffset)
-	//@ sl.SplitRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
-	//@ assert idx == oldCurrINF ==> RawBytesToBase(s.Raw[:infOffset]).ValidCurrIdxsSpec()
-
+	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
+	//@ oldInfo := path.BytesToIntermediateAbsInfoField(ubuf[infOffset : infOffset+path.InfoLen], 0, 0, path.InfoLen)
+	//@ newInfo := info.ToIntermediateAbsInfoField()
+	//@ hfIdxSeg := currHfIdx-prevSegLen
+	//@ hopfields := ubuf[offset:offset + segLen*path.HopLen]
+	//@ ghost if(idx == currInfIdx) {
+	//@ 	CurrSegEqLemma(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	//@ 	LeftSegEqLemma(ubuf, currInfIdx+1, seg1Len, seg2Len, seg3Len)
+	//@  	MidSegEqLemma(ubuf, currInfIdx+2, seg1Len, seg2Len, seg3Len)
+	//@ 	RightSegEqLemma(ubuf, currInfIdx-1, seg1Len, seg2Len, seg3Len)
+	//@ }
+	//@ oldPkt := reveal s.absPkt(ubuf)
+	//@ sl.SplitRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm)
 	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
-	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
-	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
-	//@ ValidPktMetaHdrSublice(ubuf, infOffset)
-
-	//@ sl.Unslice_Bytes(s.Raw, 0, infOffset, HalfPerm/2)
-	//@ sl.CombineRange_Bytes(s.Raw, infOffset, infOffset+path.InfoLen, HalfPerm)
-	//@ assert idx == oldCurrINF ==> RawBytesToBase(ubuf).ValidCurrIdxsSpec()
-	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm)
+	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
+	//@ assert old(RawBytesToMetaHdr(ubuf)) == RawBytesToMetaHdr(ubuf)
+	//@ assert reveal validPktMetaHdr(ubuf)
+	//@ ghost if(idx == currInfIdx) {
+	//@ 	CurrSegEqLemma(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	//@		CurrSegEqLemma2(hopfields, hfIdxSeg, segLen, oldInfo, newInfo)
+	//@ 	LeftSegEqLemma(ubuf, currInfIdx+1, seg1Len, seg2Len, seg3Len)
+	//@ 	MidSegEqLemma(ubuf, currInfIdx+2, seg1Len, seg2Len, seg3Len)
+	//@ 	RightSegEqLemma(ubuf, currInfIdx-1, seg1Len, seg2Len, seg3Len)
+	//@ 	newPkt := reveal s.absPkt(ubuf)
+	//@ 	assert newPkt.CurrSeg == AbsSetCurrSeg(oldPkt.CurrSeg, newInfo)
+	//@ 	assert newPkt.LeftSeg == oldPkt.LeftSeg
+	//@ 	assert newPkt.MidSeg == oldPkt.MidSeg
+	//@ 	assert newPkt.RightSeg == oldPkt.RightSeg
+	//@		assert newPkt == reveal AbsSetInfoField(oldPkt, newInfo)
+	//@ }
+	//@ CombineBytesbySegments(ubuf[hopfieldOffset:], 0, seg1Len, seg2Len, seg3Len, HalfPerm)
+	//@ CombineBytesbyInfoFields(ubuf, MetaLen, s.NumINF, HalfPerm)
 	//@ fold acc(s.Base.Mem(), R50)
 	//@ fold acc(s.Mem(ubuf), R50)
-	//@ assert idx == oldCurrINF ==> reveal validPktMetaHdr(ubuf)
-	//@ TemporaryAssumeForIO(idx == oldCurrINF ==> s.absPkt(ubuf) == AbsSetInfoField(old(s.absPkt(ubuf)), info.ToIntermediateAbsInfoField()))
 	return ret
 }
 

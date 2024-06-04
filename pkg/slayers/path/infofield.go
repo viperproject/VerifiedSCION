@@ -80,6 +80,8 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert &raw[4:8][2] == &raw[6] && &raw[4:8][3] == &raw[7]
 	inf.Timestamp = binary.BigEndian.Uint32(raw[4:8])
 	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R50)
+	//@ assert reveal BytesToIntermediateAbsInfoField(raw, 0, 0, InfoLen) ==
+	//@ 	inf.ToIntermediateAbsInfoField()
 	return nil
 }
 
@@ -127,6 +129,8 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	//@ ghost tmpInfo4 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
 	//@ assert tmpInfo4.AInfo == targetAbsInfo.AInfo
 	//@ fold slices.AbsSlice_Bytes(b, 0, InfoLen)
+	//@ assert inf.ToIntermediateAbsInfoField() ==
+	//@ 	reveal BytesToIntermediateAbsInfoField(b, 0, 0, InfoLen)
 	return nil
 }
 
