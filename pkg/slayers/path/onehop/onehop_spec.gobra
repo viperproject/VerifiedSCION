@@ -51,4 +51,11 @@ pure func (o *Path) InferSizeUb(ghost ub []byte) (b bool) {
 	return unfolding acc(o.Mem(ub), _) in o.Len(ub) <= len(ub)
 }
 
+ghost
+pure
+decreases
+func (p *Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+	return true
+}
+
 (*Path) implements path.Path

@@ -35,9 +35,12 @@ type Raw struct {
 // DecodeFromBytes only decodes the PathMetaHeader. Otherwise the nothing is decoded and simply kept
 // as raw bytes.
 // @ requires  s.NonInitMem()
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R40)
+// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R42)
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
+// posts for IO:
+// @ ensures   res == nil ==> s.EqAbsHeader(data) &&
+// @ 	s.InfsMatchHfs(data) && s.SegsInBounds(data)
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()
@@ -224,19 +227,19 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ requires validPktMetaHdr(ubuf)
 // @ requires len(s.absPkt(ubuf).CurrSeg.Future) > 0
 // @ requires s.GetIsXoverSpec(ubuf) ==>
-// @	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
+// @ 	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
 // @ ensures  sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
-// @   s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
+// @ 	s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
 // @ ensures  r == nil ==> s.Mem(ubuf)
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
 // post for IO:
 // @ ensures  r == nil ==> s.EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
 // @ ensures  r == nil && old(s.GetIsXoverSpec(ubuf)) ==>
-// @	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))
+// @ 	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))
 // @ ensures  r == nil && !old(s.GetIsXoverSpec(ubuf)) ==>
-// @	s.absPkt(ubuf) == AbsIncPath(old(s.absPkt(ubuf)))
+// @ 	s.absPkt(ubuf) == AbsIncPath(old(s.absPkt(ubuf)))
 // @ decreases
 func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ unfold s.Mem(ubuf)
@@ -264,7 +267,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ oldoffsetWithHops := oldOffset + path.HopLen * oldPrevSegLen
 	//@ oldHfIdxSeg := oldCurrHfIdx-oldPrevSegLen
 	//@	WidenCurrSeg(ubuf, oldoffsetWithHops + MetaLen, oldCurrInfIdx, oldHfIdxSeg,
-	//@		oldSegLen, MetaLen, MetaLen, len(ubuf))
+	//@ 	oldSegLen, MetaLen, MetaLen, len(ubuf))
 	//@	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
 	//@	WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
@@ -292,28 +295,28 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ assert currHfIdx == oldCurrHfIdx + 1
 
 	//@ ghost if(currInfIdx == oldCurrInfIdx) {
-	//@		IncCurrSeg(tail, oldoffsetWithHops, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
-	//@		WidenCurrSeg(ubuf, oldoffsetWithHops + MetaLen, oldCurrInfIdx, oldHfIdxSeg + 1,
-	//@			oldSegLen, MetaLen, MetaLen, len(ubuf))
-	//@		WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@		WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@		WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@		assert reveal s.absPkt(ubuf) == AbsIncPath(oldAbsPkt)
+	//@ 	IncCurrSeg(tail, oldoffsetWithHops, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
+	//@ 	WidenCurrSeg(ubuf, oldoffsetWithHops + MetaLen, oldCurrInfIdx, oldHfIdxSeg + 1,
+	//@ 		oldSegLen, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@ 	assert reveal s.absPkt(ubuf) == AbsIncPath(oldAbsPkt)
 	//@ } else {
-	//@		segLen := LengthOfCurrSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		prevSegLen := LengthOfPrevSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ 	segLen := LengthOfCurrSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ 	prevSegLen := LengthOfPrevSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
 	//@ 	offsetWithHops := oldOffset + path.HopLen * prevSegLen + MetaLen
 	//@ 	hfIdxSeg := currHfIdx-prevSegLen
-	//@		XoverSegNotNone(tail, oldCurrInfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		XoverCurrSeg(tail, oldCurrInfIdx + 1, oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		XoverLeftSeg(tail, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		XoverMidSeg(tail, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		XoverRightSeg(tail, oldCurrInfIdx, oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@		WidenCurrSeg(ubuf, offsetWithHops, currInfIdx, hfIdxSeg, segLen, MetaLen, MetaLen, len(ubuf))
-	//@		WidenLeftSeg(ubuf, currInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@		WidenMidSeg(ubuf, currInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@		WidenRightSeg(ubuf, currInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@		assert reveal s.absPkt(ubuf) == AbsXover(oldAbsPkt)
+	//@ 	XoverSegNotNone(tail, oldCurrInfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ 	XoverCurrSeg(tail, oldCurrInfIdx + 1, oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ 	XoverLeftSeg(tail, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ 	XoverMidSeg(tail, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ 	XoverRightSeg(tail, oldCurrInfIdx, oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ 	WidenCurrSeg(ubuf, offsetWithHops, currInfIdx, hfIdxSeg, segLen, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenLeftSeg(ubuf, currInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenMidSeg(ubuf, currInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenRightSeg(ubuf, currInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@ 	assert reveal s.absPkt(ubuf) == AbsXover(oldAbsPkt)
 	//@ }
 
 	//@ fold acc(sl.AbsSlice_Bytes(tail, 0, len(tail)), R50)
@@ -325,40 +328,49 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 }
 
 // GetInfoField returns the InfoField at a given index.
-// @ requires  acc(s.Mem(ubuf), R10)
 // @ requires  0 <= idx
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
-// @ ensures   acc(s.Mem(ubuf), R10)
-// @ ensures   (idx < old(s.GetNumINF(ubuf))) == (err == nil)
+// @ preserves acc(s.Mem(ubuf), R10)
+// @ ensures   (idx < s.GetNumINF(ubuf)) == (err == nil)
+// @ ensures   err == nil ==> s.CorrectlyDecodedInfWithIdx(ubuf, idx, ifield)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) {
-	//@ unfold acc(s.Mem(ubuf), R10)
-	//@ unfold acc(s.Base.Mem(), R11)
+	//@ unfold acc(s.Mem(ubuf), R11)
+	//@ unfold acc(s.Base.Mem(), R12)
 	if idx >= s.NumINF {
 		e := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R11)
-		//@ fold acc(s.Mem(ubuf), R10)
+		//@ fold acc(s.Base.Mem(), R12)
+		//@ fold acc(s.Mem(ubuf), R11)
 		return path.InfoField{}, e
 	}
-	//@ fold acc(s.Base.Mem(), R11)
-	//@ fold acc(s.Mem(ubuf), R10)
+	//@ fold acc(s.Base.Mem(), R12)
 	infOffset := MetaLen + idx*path.InfoLen
 	info /*@@@*/ := path.InfoField{}
-	//@ s.RawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, R10)
+	//@ sl.SplitRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R20)
 	if err := info.DecodeFromBytes(s.Raw[infOffset : infOffset+path.InfoLen]); err != nil {
 		//@ Unreachable()
 		return path.InfoField{}, err
 	}
-	//@ s.UndoRawRangePerm(ubuf, infOffset, infOffset+path.InfoLen, R10)
+	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
+	//@ unfold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+	//@ unfold acc(sl.AbsSlice_Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	//@ assert info.ToIntermediateAbsInfoField() ==
+	//@ 	path.BytesToIntermediateAbsInfoField(ubuf, 0, infOffset, len(ubuf))
+	//@ fold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+	//@ fold acc(sl.AbsSlice_Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
+	//@ fold acc(s.Mem(ubuf), R11)
+	//@ assert reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, info)
 	return info, nil
 }
 
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
-// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
-// @ ensures   (r == nil) == (s.GetCurrINF(ubuf) < s.GetNumINF(ubuf))
+// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R9)
+// @ ensures   (r == nil) == s.ValidCurrINF(ubuf)
+// @ ensures   r == nil ==> s.CorrectlyDecodedInf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoField, r error) {
@@ -370,6 +382,8 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
+	//@ assert forall res path.InfoField :: {s.CorrectlyDecodedInf(ubuf, res)} s.ValidCurrINF(ubuf) ==>
+	//@ 	reveal s.CorrectlyDecodedInf(ubuf, res) == reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, res)
 	return s.GetInfoField(idx /*@, ubuf @*/)
 }
 
@@ -436,39 +450,49 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 
 // GetHopField returns the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), R10)
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R10)
-// @ ensures   (idx < old(s.GetNumHops(ubuf))) == (r == nil)
+// @ preserves acc(s.Mem(ubuf), R10)
+// @ ensures   (idx < s.GetNumHops(ubuf)) == (r == nil)
+// @ ensures   r == nil ==> s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), R10)
-	//@ unfold acc(s.Base.Mem(), R11)
+	//@ unfold acc(s.Mem(ubuf), R11)
+	//@ unfold acc(s.Base.Mem(), R12)
 	if idx >= s.NumHops {
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R11)
-		//@ fold acc(s.Mem(ubuf), R10)
+		//@ fold acc(s.Base.Mem(), R12)
+		//@ fold acc(s.Mem(ubuf), R11)
 		return path.HopField{}, err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-	//@ fold acc(s.Base.Mem(), R11)
-	//@ fold acc(s.Mem(ubuf), R10)
+	//@ fold acc(s.Base.Mem(), R12)
 	hop /*@@@*/ := path.HopField{}
-	//@ s.RawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
+	//@ sl.SplitRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R20)
 	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
 		//@ Unreachable()
 		return path.HopField{}, err
 	}
-	//@ s.UndoRawRangePerm(ubuf, hopOffset, hopOffset+path.HopLen, R10)
 	//@ unfold hop.Mem()
+	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
+	//@ unfold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+	//@ unfold acc(sl.AbsSlice_Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
+	//@ assert hop.ToIO_HF() ==
+	//@ 	path.BytesToIO_HF(ubuf, 0, hopOffset, len(ubuf))
+	//@ fold acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+	//@ fold acc(sl.AbsSlice_Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
+	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
+	//@ fold acc(s.Mem(ubuf), R11)
+	//@ assert reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, hop)
 	return hop, nil
 }
 
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
-// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
-// @ ensures   (r == nil) == (s.GetCurrHF(ubuf) < s.GetNumHops(ubuf))
+// @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R9)
+// @ ensures   (r == nil) == s.ValidCurrHF(ubuf)
+// @ ensures   r == nil ==> s.CorrectlyDecodedHf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {
@@ -480,6 +504,8 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
+	//@ assert forall res path.HopField :: {s.CorrectlyDecodedHf(ubuf, res)} s.ValidCurrHF(ubuf) ==>
+	//@ 	reveal s.CorrectlyDecodedHf(ubuf, res) == reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
 	return s.GetHopField(idx /*@, ubuf @*/)
 }
 

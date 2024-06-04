@@ -145,6 +145,7 @@ pred (p *scionPacketProcessor) initMem() {
 	acc(&p.bfdLayer)
 }
 
+// This is used as a signature, not as an assumed function.
 requires acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
 ensures  acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
@@ -533,7 +534,6 @@ pred (s *scmpError) Mem() {
 	acc(s)
 }
 
-ghost
 preserves s.Mem() && s.CanSet(e)
 ensures   s.Get() === e
 decreases

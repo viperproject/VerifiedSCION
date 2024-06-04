@@ -212,6 +212,43 @@ requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
 requires acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R50)
 requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 requires p.path === p.scionLayer.GetPath(ub)
+requires start == p.scionLayer.PathStartIdx(ub)
+requires end == p.scionLayer.PathEndIdx(ub)
+requires p.scionLayer.EqAbsHeader(ub)
+requires p.scionLayer.ValidScionInitSpec(ub)
+ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
+ensures  acc(p.scionLayer.Mem(ub), R55)
+ensures  acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R50)
+ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+ensures  start == p.scionLayer.PathStartIdx(ub)
+ensures  end == p.scionLayer.PathEndIdx(ub)
+ensures  p.path.EqAbsHeader(ub[start:end])
+ensures  p.path.InfsMatchHfs(ub[start:end])
+ensures  p.path.SegsInBounds(ub[start:end])
+ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
+decreases
+func (p* scionPacketProcessor) EstablishEqAbsHeader(ub []byte, start int, end int) {
+	unfold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+	unfold acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R56)
+	unfold acc(p.scionLayer.Mem(ub), R56)
+	unfold acc(p.path.Mem(ub[start:end]), R56)
+	reveal p.scionLayer.EqAbsHeader(ub)
+	reveal p.scionLayer.ValidScionInitSpec(ub)
+	assert reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
+	assert p.path.EqAbsHeader(ub[start:end])
+	fold acc(p.path.Mem(ub[start:end]), R56)
+	fold acc(p.scionLayer.Mem(ub), R56)
+	fold acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R56)
+	fold acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+}
+
+ghost
+requires 0 <= start && start <= end && end <= len(ub)
+requires acc(p.scionLayer.Mem(ub), R55)
+requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R50)
+requires acc(sl.AbsSlice_Bytes(ub[start:end], 0, len(ub[start:end])), R50)
+requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
+requires p.path === p.scionLayer.GetPath(ub)
 requires slayers.ValidPktMetaHdr(ub)
 requires start == p.scionLayer.PathStartIdx(ub)
 requires end == p.scionLayer.PathEndIdx(ub)
@@ -335,9 +372,7 @@ decreases
 pure func (p* scionPacketProcessor) EqAbsHopField(pkt io.IO_pkt2) bool {
 	return let absHop := p.hopField.ToIO_HF() in
 		let currHF := pkt.CurrSeg.Future[0] in
-		absHop.InIF2 == currHF.InIF2 &&
-		absHop.EgIF2 == currHF.EgIF2 &&
-		absHop.HVF == currHF.HVF
+		absHop == currHF
 }
 
 ghost

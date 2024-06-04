@@ -117,4 +117,11 @@ pure func (p *Path) GetUnderlyingScionPathBuf(buf []byte) []byte {
 	return unfolding acc(p.Mem(buf), _) in buf[MetadataLen:]
 }
 
+ghost
+pure
+decreases
+func (p *Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+	return true
+}
+
 (*Path) implements path.Path
