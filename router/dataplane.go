@@ -4222,13 +4222,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 // Returns the last decoded layer.
 // @ requires  base != nil && base.NonInitMem()
 // @ requires  forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
-// @     (acc(&opts[i], R10) && opts[i] != nil && opts[i].NonInitMem())
+// @ 	(acc(&opts[i], R10) && opts[i] != nil && opts[i].NonInitMem())
 // Due to Viper's very strict injectivity constraints:
 // @ requires  forall i, j int :: { &opts[i], &opts[j] } 0 <= i && i < j && j < len(opts) ==>
-// @     opts[i] !== opts[j]
+// @ 	opts[i] !== opts[j]
 // @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R39)
 // @ ensures   forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==>
-// @     (acc(&opts[i], R10) && opts[i] != nil)
+// @ 	(acc(&opts[i], R10) && opts[i] != nil)
 // @ ensures   -1 <= idx && idx < len(opts)
 // @ ensures   len(processed) == len(opts)
 // @ ensures   len(offsets) == len(opts)
@@ -4241,13 +4241,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ 	base.EqAbsHeader(data) && base.ValidScionInitSpec(data)
 // @ ensures   reterr == nil ==> base.EqPathType(data)
 // @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @     (processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
+// @ 	(processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @     ((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(data[offsets[i].start:offsets[i].end]))
+// @ 	((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(data[offsets[i].start:offsets[i].end]))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @     ((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
+// @ 	((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
 // @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @     (!processed[i] ==> opts[i].NonInitMem())
+// @ 	(!processed[i] ==> opts[i].NonInitMem())
 // @ ensures   reterr != nil ==> base.NonInitMem()
 // @ ensures   reterr != nil ==> (forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==> opts[i].NonInitMem())
 // @ ensures   reterr != nil ==> reterr.ErrorMem()
