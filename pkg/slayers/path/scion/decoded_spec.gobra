@@ -120,30 +120,6 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 	return e
 }
 
-// TODO: clean up all of these. Have a GetBase method instead
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) ValidCurrINF(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrINF()
-}
-
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) ValidCurrHF(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrHF()
-}
-
-/*
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) ValidCurrIdxs(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrIdxs()
-}
-*/
-
 ghost
 requires acc(d.Mem(ub), _)
 decreases

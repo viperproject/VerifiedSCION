@@ -47,8 +47,10 @@ requires  acc(s.Mem(buf), _)
 requires  acc(sl.AbsSlice_Bytes(buf, 0, len(buf)), R42)
 decreases
 func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
-	return s.EqAbsHeader(buf) &&
-		s.InfsMatchHfs(buf) && s.SegsInBounds(buf)
+	return let base := s.GetBase(buf) in
+		base.EqAbsHeader(buf)              &&
+		base.NumsCompatibleWithSegLen() &&
+		base.PathMeta.SegsInBounds()
 }
 
 /**** Stubs ****/
@@ -103,81 +105,12 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
   * introduced this wrapper method which acts as a wrapper.
   */
 preserves acc(s.Mem(ub), R9)
-ensures res == s.GetIsXoverSpec(ub)
+ensures res == s.GetBase(ub).IsXoverSpec()
 decreases
 func (s *Raw) IsXover(ghost ub []byte) (res bool) {
 	unfold acc(s.Mem(ub), R9)
 	defer fold acc(s.Mem(ub), R9)
 	return s.Base.IsXover()
-}
-
-ghost
-requires acc(s.Mem(ub), _)
-decreases
-pure func (s *Raw) ValidCurrINF(ghost ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		s.Base.ValidCurrINF()
-}
-
-ghost
-requires acc(s.Mem(ub), _)
-decreases
-pure func (s *Raw) ValidCurrHF(ghost ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		s.Base.ValidCurrHF()
-}
-
-/*
-ghost
-requires acc(s.Mem(ub), _)
-decreases
-pure func (s *Raw) ValidCurrIdxs(ghost ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		s.Base.ValidCurrIdxs()
-}
-
-
-ghost
-requires acc(s.Mem(ub), _)
-decreases
-pure func (s *Raw) InfsMatchHfs(ghost ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		s.Base.InfsMatchHfs()
-}
-*/
-
-ghost
-requires acc(s.Mem(ub), _)
-decreases
-pure func (s *Raw) CurrInfMatchesCurrHF(ghost ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		s.Base.GetBase().CurrInfMatchesCurrHF()
-}
-
-ghost
-requires acc(s.Mem(ub), _)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
-decreases
-pure func (s *Raw) EqAbsHeader(ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		unfolding acc(s.Base.Mem(), _) in
-		s.Base.EqAbsHeader(ub)
-}
-
-ghost
-requires acc(s.Mem(ub), _)
-decreases
-pure func (s *Raw) GetIsXoverSpec(ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in s.Base.IsXoverSpec()
-}
-
-ghost
-requires acc(s.Mem(ub), _)
-decreases
-pure func (s *Raw) SegsInBounds(ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		unfolding acc(s.Base.Mem(), _) in
-		s.PathMeta.SegsInBounds()
 }
 
 /**** End of Stubs ****/
@@ -239,6 +172,7 @@ func (r *Raw) RawPerm(ubuf []byte, p perm) {
 }
 /******** End of Lemma: RawPerm ********/
 
+// TODO: drop these lemmas
 /******** Lemma: RawRangePerm ********/
 pred (r *Raw) RawRangePermRemainder(ubuf []byte, start, end int, p perm) {
 	0 < p &&
@@ -314,7 +248,6 @@ pure func (r *Raw) GetBase(ub []byte) Base {
 	return unfolding acc(r.Mem(ub), _) in r.Base.GetBase()
 }
 
-// TODO: drop all of these unnecessary helper function?
 ghost
 requires acc(r.Mem(ub), _)
 decreases
@@ -592,8 +525,6 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 		}
 }
 
-// In the future, this should probably use AbsMetaHdr as
-// the return type.
 ghost
 requires MetaLen <= len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
@@ -604,8 +535,6 @@ pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
 		DecodedFrom(hdr)
 }
 
-// In the future, this should probably use AbsBase as
-// the return type.
 ghost
 requires MetaLen <= len(raw)
 requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
@@ -656,16 +585,16 @@ func ValidPktMetaHdrSublice(raw []byte, idx int) {
 ghost
 requires acc(s.Mem(ub), R54)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
-requires s.InfsMatchHfs(ub)
-requires s.ValidCurrINF(ub)
-requires s.ValidCurrHF(ub)
-requires s.SegsInBounds(ub)
-requires s.CurrInfMatchesCurrHF(ub)
-requires s.EqAbsHeader(ub)
+requires s.GetBase(ub).NumsCompatibleWithSegLen()
+requires s.GetBase(ub).ValidCurrInfSpec()
+requires s.GetBase(ub).ValidCurrHfSpec()
+requires s.GetBase(ub).PathMeta.SegsInBounds()
+requires s.GetBase(ub).CurrInfMatchesCurrHF()
+requires s.GetBase(ub).EqAbsHeader(ub)
 ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
 ensures  acc(s.Mem(ub), R54)
 ensures  validPktMetaHdr(ub)
-ensures  s.EqAbsHeader(ub)
+ensures  s.GetBase(ub).EqAbsHeader(ub)
 decreases
 func (s *Raw) EstablishValidPktMetaHdr(ghost ub []byte) {
 	unfold acc(s.Mem(ub), R55)
@@ -676,7 +605,7 @@ func (s *Raw) EstablishValidPktMetaHdr(ghost ub []byte) {
 	seg2 := int(s.Base.PathMeta.SegLen[1])
 	seg3 := int(s.Base.PathMeta.SegLen[2])
 	assert 0 < seg1
-	assert s.ValidCurrIdxs(ub)
+	assert s.GetBase(ub).NumsCompatibleWithSegLen()
 	assert pktLen(seg1, seg2, seg3, MetaLen) <= len(ub)
 	assert reveal validPktMetaHdr(ub)
 	fold acc(s.Base.Mem(), R56)
@@ -764,7 +693,7 @@ pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.Info
 ghost
 opaque
 requires acc(s.Mem(ub), _)
-requires s.ValidCurrINF(ub)
+requires s.GetBase(ub).ValidCurrInfSpec()
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
@@ -793,7 +722,7 @@ pure func (s *Raw) CorrectlyDecodedHfWithIdx(ub []byte, idx int, hop path.HopFie
 ghost
 opaque
 requires acc(s.Mem(ub), _)
-requires s.ValidCurrHF(ub)
+requires s.GetBase(ub).ValidCurrHfSpec()
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) CorrectlyDecodedHf(ub []byte, hop path.HopField) bool {
@@ -810,7 +739,7 @@ preserves acc(s.Mem(ubuf), R55)
 preserves s.IsLastHopSpec(ubuf)
 preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
 preserves validPktMetaHdr(ubuf)
-preserves s.EqAbsHeader(ubuf)
+preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
 ensures len(s.absPkt(ubuf).CurrSeg.Future) == 1
 decreases
 func (s *Raw) LastHopLemma(ubuf []byte) {
@@ -832,10 +761,10 @@ func (s *Raw) LastHopLemma(ubuf []byte) {
 
 ghost
 preserves acc(s.Mem(ubuf), R55)
-preserves s.GetIsXoverSpec(ubuf)
+preserves s.GetBase(ubuf).IsXoverSpec()
 preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
 preserves validPktMetaHdr(ubuf)
-preserves s.EqAbsHeader(ubuf)
+preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
 ensures   s.absPkt(ubuf).LeftSeg != none[io.IO_seg2]
 ensures   len(s.absPkt(ubuf).CurrSeg.Future) == 1
 decreases
@@ -882,10 +811,10 @@ ghost
 preserves acc(s.Mem(ubuf), R53)
 preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R53)
 preserves validPktMetaHdr(ubuf)
-preserves s.EqAbsHeader(ubuf)
+preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
 preserves len(s.absPkt(ubuf).CurrSeg.Future) > 0
-preserves s.ValidCurrINF(ubuf)
-preserves s.ValidCurrHF(ubuf)
+preserves s.GetBase(ubuf).ValidCurrInfSpec()
+preserves s.GetBase(ubuf).ValidCurrHfSpec()
 preserves s.CorrectlyDecodedInf(ubuf, info)
 preserves s.CorrectlyDecodedHf(ubuf, hop)
 ensures   s.EqAbsInfoField(s.absPkt(ubuf), info.ToIntermediateAbsInfoField())

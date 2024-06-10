@@ -224,7 +224,7 @@ ensures  start == p.scionLayer.PathStartIdx(ub)
 ensures  end == p.scionLayer.PathEndIdx(ub)
 ensures  p.path.EqAbsHeader(ub[start:end])
 ensures  p.path.InfsMatchHfs(ub[start:end])
-ensures  p.path.SegsInBounds(ub[start:end])
+ensures  p.path.GetBase(ub[start:end]).SegsInBounds()
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
 decreases
 func (p* scionPacketProcessor) EstablishEqAbsHeader(ub []byte, start int, end int) {

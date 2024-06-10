@@ -189,7 +189,7 @@ func (s *Base) IncPath() (e error) {
 
 // IsXover returns whether we are at a crossover point.
 // @ preserves acc(s.Mem(), R45)
-// @ ensures   r == s.IsXoverSpec()
+// @ ensures   r == s.GetBase().IsXoverSpec()
 // @ decreases
 func (s *Base) IsXover() (r bool) {
 	//@ unfold acc(s.Mem(), R45)

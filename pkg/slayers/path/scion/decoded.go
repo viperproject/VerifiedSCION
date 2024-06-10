@@ -217,7 +217,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
 // @ decreases
 func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
-	//@ ghost isValid := s.ValidCurrIdxs(ubuf)
+	//@ ghost isValid := s.GetBase(ubuf).StronglyValid()
 	//@ ghost base := s.GetBase(ubuf)
 	//@ ghost metaHdrAferReversingSegLen := MetaHdr {
 	//@ 	CurrINF: base.PathMeta.CurrINF,
@@ -282,8 +282,8 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	s.PathMeta.CurrINF = uint8(s.NumINF) - s.PathMeta.CurrINF - 1
 	s.PathMeta.CurrHF = uint8(s.NumHops) - s.PathMeta.CurrHF - 1
 	//@ assert s.Base == base.ReverseSpec()
-	//@ ghost if isValid { base.ReversingValidBaseIsValidBase() }
-	//@ assert isValid ==> s.Base.ValidCurrIdxsSpec()
+	//@ ghost if isValid { base.ReversingBaseValidSegLenHasValidSegLen() }
+	//@ assert isValid ==> s.Base.StronglyValid()
 	//@ fold s.Base.Mem()
 	//@ fold s.Mem(ubuf)
 	return s, nil

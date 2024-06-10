@@ -24,9 +24,6 @@ import (
 	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
-
-// TODO: DROP! A single memory predicate is enough here, use a validity function as postcondition of
-// DecodeFromBytes
 pred (b *Base) NonInitMem() {
 	acc(b)
 }
@@ -120,43 +117,6 @@ pure func (b Base) NumsCompatibleWithSegLen() bool {
 			b.PathMeta.SegLen[i] == 0)
 }
 
-// TODO: drop all functions like this, have only one getter from *Base to Base and
-// then use ValidCurrInfSpec() everywhere. Do it after https://github.com/viperproject/VerifiedSCION/pull/346.
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) ValidCurrINF() bool {
-	return unfolding acc(b.Mem(), _) in (*b).ValidCurrInfSpec()
-}
-
-// TODO: drop getters like these
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) ValidCurrHF() bool {
-	return unfolding acc(b.Mem(), _) in (*b).ValidCurrHfSpec()
-}
-
-/*
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) ValidCurrIdxs() bool {
-	return unfolding acc(b.Mem(), _) in (*b).ValidCurrIdxsSpec()
-}
-*/
-
-// Replaced by b.GetBase().ValidSegLen()
-/*
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) InfsMatchHfs() bool {
-	return unfolding acc(b.Mem(), _) in (*b).InfsMatchHfsSpec()
-}
-*/
-
-// TODO: keep
 ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res && res <= 3
@@ -165,7 +125,6 @@ pure func (b *Base) GetNumINF() (res int) {
 	return unfolding acc(b.Mem(), _) in b.NumINF
 }
 
-// TODO: keep
 ghost
 requires acc(b.Mem(), _)
 ensures  0 <= res
@@ -204,14 +163,11 @@ pure func (s Base) InfForHfSpec(hf uint8) (r uint8) {
 		(hf < s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1] ? 1 : 2)
 }
 
-// TODO: make it depend on Base only instead of *Base
 ghost
-requires acc(s.Mem(), _)
 decreases
-pure func (s *Base) IsXoverSpec() bool {
-	return unfolding acc(s.Mem(), _) in (
-		s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
-		s.PathMeta.CurrINF != s.InfForHfSpec(s.PathMeta.CurrHF+1))
+pure func (s Base) IsXoverSpec() bool {
+	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
+		s.PathMeta.CurrINF != s.InfForHfSpec(s.PathMeta.CurrHF+1)
 }
 
 ghost
@@ -220,7 +176,7 @@ requires int(s.PathMeta.CurrHF) < s.NumHops-1
 ensures  s.StronglyValid() ==> res.StronglyValid()
 decreases
 pure func (s Base) IncPathSpec() (res Base) {
-	return Base{
+	return Base {
 		PathMeta: MetaHdr{s.InfForHfSpec(s.PathMeta.CurrHF+1), s.PathMeta.CurrHF+1, s.PathMeta.SegLen},
 		NumINF: s.NumINF,
 		NumHops: s.NumHops,
@@ -258,17 +214,10 @@ pure func (b Base) ReverseSegLen() [3]uint8 {
 }
 
 ghost
-requires b.ValidCurrIdxsSpec()
-ensures  b.ReverseSpec().ValidCurrIdxsSpec()
+requires b.StronglyValid()
+ensures  b.ReverseSpec().StronglyValid()
 decreases
-pure func (b Base) ReversingValidBaseIsValidBase() Lemma {
-	return Lemma{}
-}
-
-ghost
-ensures b.StronglyValid() == b.Abs().ValidCurrIdxsSpec()
-decreases
-pure func (b Base) ValidBaseHasValidAbs() Lemma {
+pure func (b Base) ReversingBaseValidSegLenHasValidSegLen() Lemma {
 	return Lemma{}
 }
 
