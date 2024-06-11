@@ -428,8 +428,8 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	}
 	infOffset := MetaLen + idx*path.InfoLen
 
-	//@ SliceBytesbyInfoFields(ubuf, MetaLen, s.NumINF, HalfPerm)
-	//@ SliceBytesbySegments(ubuf[hopfieldOffset:], 0, seg1Len, seg2Len, seg3Len, HalfPerm)
+	//@ SliceBytesIntoInfoFields(ubuf, MetaLen, s.NumINF, HalfPerm)
+	//@ SliceBytesIntoSegments(ubuf[hopfieldOffset:], 0, seg1Len, seg2Len, seg3Len, HalfPerm)
 
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ oldInfo := path.BytesToIntermediateAbsInfoField(ubuf[infOffset : infOffset+path.InfoLen], 0, 0, path.InfoLen)
@@ -437,10 +437,10 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ hfIdxSeg := currHfIdx-prevSegLen
 	//@ hopfields := ubuf[offset:offset + segLen*path.HopLen]
 	//@ ghost if(idx == currInfIdx) {
-	//@ 	CurrSegEqLemma(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
-	//@ 	LeftSegEqLemma(ubuf, currInfIdx+1, seg1Len, seg2Len, seg3Len)
-	//@  	MidSegEqLemma(ubuf, currInfIdx+2, seg1Len, seg2Len, seg3Len)
-	//@ 	RightSegEqLemma(ubuf, currInfIdx-1, seg1Len, seg2Len, seg3Len)
+	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	//@ 	LeftSegEquality(ubuf, currInfIdx+1, seg1Len, seg2Len, seg3Len)
+	//@  	MidSegEquality(ubuf, currInfIdx+2, seg1Len, seg2Len, seg3Len)
+	//@ 	RightSegEquality(ubuf, currInfIdx-1, seg1Len, seg2Len, seg3Len)
 	//@ }
 	//@ reveal s.absPkt(ubuf)
 	//@ sl.SplitRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm)
@@ -449,15 +449,15 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ assert reveal validPktMetaHdr(ubuf)
 	//@ ghost if(idx == currInfIdx) {
-	//@ 	CurrSegEqLemma(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
-	//@		CurrSegEqLemma2(hopfields, hfIdxSeg, segLen, oldInfo, newInfo)
-	//@ 	LeftSegEqLemma(ubuf, currInfIdx+1, seg1Len, seg2Len, seg3Len)
-	//@ 	MidSegEqLemma(ubuf, currInfIdx+2, seg1Len, seg2Len, seg3Len)
-	//@ 	RightSegEqLemma(ubuf, currInfIdx-1, seg1Len, seg2Len, seg3Len)
+	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	//@		UpdateCurrSegInfo(hopfields, hfIdxSeg, segLen, oldInfo, newInfo)
+	//@ 	LeftSegEquality(ubuf, currInfIdx+1, seg1Len, seg2Len, seg3Len)
+	//@ 	MidSegEquality(ubuf, currInfIdx+2, seg1Len, seg2Len, seg3Len)
+	//@ 	RightSegEquality(ubuf, currInfIdx-1, seg1Len, seg2Len, seg3Len)
 	//@ 	reveal s.absPkt(ubuf)
 	//@ }
-	//@ CombineBytesbySegments(ubuf[hopfieldOffset:], 0, seg1Len, seg2Len, seg3Len, HalfPerm)
-	//@ CombineBytesbyInfoFields(ubuf, MetaLen, s.NumINF, HalfPerm)
+	//@ CombineBytesFromSegments(ubuf[hopfieldOffset:], 0, seg1Len, seg2Len, seg3Len, HalfPerm)
+	//@ CombineBytesFromInfoFields(ubuf, MetaLen, s.NumINF, HalfPerm)
 	//@ fold acc(s.Base.Mem(), R50)
 	//@ fold acc(s.Mem(ubuf), R50)
 	return ret

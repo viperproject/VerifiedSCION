@@ -1,0 +1,486 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package scion
+
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	. "verification/utils/definitions"
+	sl "verification/utils/slices"
+	"verification/io"
+)
+
+ghost
+decreases
+pure func AbsSetCurrSeg(seg io.IO_seg3, info path.IntermediateAbsInfoField) (io.IO_seg3) {
+	return io.IO_seg3_ {
+		info.AInfo,
+		info.UInfo,
+		info.ConsDir,
+		info.Peer,
+		seg.Past,
+		seg.Future,
+		seg.History,
+	}
+}
+
+ghost
+decreases
+pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField) (newPkt io.IO_pkt2) {
+	return let newCurrSeg := AbsSetCurrSeg(oldPkt.CurrSeg, info) in
+	io.IO_Packet2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg}
+}
+
+// SliceBytesIntoSegments splits the raw bytes of a packet into its three hopfield segments
+ghost
+requires 0 < p
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires 0 <= offset
+requires offset + (seg1Len + seg2Len + seg3Len)*path.HopLen <= len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), p)
+ensures  acc(sl.AbsSlice_Bytes(raw[:offset], 0, offset), p)
+ensures  acc(sl.AbsSlice_Bytes(raw[offset:offset+seg1Len*path.HopLen], 0, seg1Len*path.HopLen), p)
+ensures  acc(sl.AbsSlice_Bytes(raw[offset+seg1Len*path.HopLen:offset+(seg1Len+seg2Len)*path.HopLen], 0, seg2Len*path.HopLen), p)
+ensures  acc(sl.AbsSlice_Bytes(raw[offset+(seg1Len+seg2Len)*path.HopLen:offset+(seg1Len+seg2Len+seg3Len)*path.HopLen], 0, seg3Len*path.HopLen), p)
+ensures  acc(sl.AbsSlice_Bytes(raw[offset+(seg1Len+seg2Len+seg3Len)*path.HopLen:], 0, len(raw[offset+(seg1Len+seg2Len+seg3Len)*path.HopLen:])), p)
+decreases
+func SliceBytesIntoSegments(raw []byte, offset int, seg1Len int, seg2Len int, seg3Len int, p perm) {
+	sl.SplitByIndex_Bytes(raw, 0, len(raw), offset, p)
+	sl.SplitByIndex_Bytes(raw, offset, len(raw), offset+seg1Len*path.HopLen, p)
+	sl.SplitByIndex_Bytes(raw, offset+seg1Len*path.HopLen, len(raw), offset+(seg1Len+seg2Len)*path.HopLen, p)
+	sl.SplitByIndex_Bytes(raw, offset+(seg1Len+seg2Len)*path.HopLen, len(raw), offset+(seg1Len+seg2Len+seg3Len)*path.HopLen, p)
+	sl.Reslice_Bytes(raw, 0, offset, p)
+	sl.Reslice_Bytes(raw, offset, offset+seg1Len*path.HopLen, p)
+	sl.Reslice_Bytes(raw, offset+seg1Len*path.HopLen, offset+(seg1Len+seg2Len)*path.HopLen, p)
+	sl.Reslice_Bytes(raw, offset+(seg1Len+seg2Len)*path.HopLen, offset+(seg1Len+seg2Len+seg3Len)*path.HopLen, p)
+	sl.Reslice_Bytes(raw, offset+(seg1Len+seg2Len+seg3Len)*path.HopLen, len(raw), p)
+}
+
+// CombineBytesFromSegments combines the three hopfield segments of a packet into a single slice of bytes.
+ghost
+requires 0 < p
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires 0 <= offset
+requires offset + (seg1Len + seg2Len + seg3Len)*path.HopLen <= len(raw)
+requires acc(sl.AbsSlice_Bytes(raw[:offset], 0, offset), p)
+requires acc(sl.AbsSlice_Bytes(raw[offset:offset+seg1Len*path.HopLen], 0, seg1Len*path.HopLen), p)
+requires acc(sl.AbsSlice_Bytes(raw[offset+seg1Len*path.HopLen:offset+(seg1Len+seg2Len)*path.HopLen], 0, seg2Len*path.HopLen), p)
+requires acc(sl.AbsSlice_Bytes(raw[offset+(seg1Len+seg2Len)*path.HopLen:offset+(seg1Len+seg2Len+seg3Len)*path.HopLen], 0, seg3Len*path.HopLen), p)
+requires acc(sl.AbsSlice_Bytes(raw[offset+(seg1Len+seg2Len+seg3Len)*path.HopLen:], 0, len(raw[offset+(seg1Len+seg2Len+seg3Len)*path.HopLen:])), p)
+ensures acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), p)
+decreases
+func CombineBytesFromSegments(raw []byte, offset int, seg1Len int, seg2Len int, seg3Len int, p perm) {
+	sl.Unslice_Bytes(raw, 0, offset, p)
+	sl.Unslice_Bytes(raw, offset, offset+seg1Len*path.HopLen, p)
+	sl.Unslice_Bytes(raw, offset+seg1Len*path.HopLen, offset+(seg1Len+seg2Len)*path.HopLen, p)
+	sl.Unslice_Bytes(raw, offset+(seg1Len+seg2Len)*path.HopLen, offset+(seg1Len+seg2Len+seg3Len)*path.HopLen, p)
+	sl.Unslice_Bytes(raw, offset+(seg1Len+seg2Len+seg3Len)*path.HopLen, len(raw), p)
+	sl.CombineAtIndex_Bytes(raw, offset+(seg1Len+seg2Len)*path.HopLen, len(raw), offset+(seg1Len+seg2Len+seg3Len)*path.HopLen, p)
+	sl.CombineAtIndex_Bytes(raw, offset+seg1Len*path.HopLen, len(raw), offset+(seg1Len+seg2Len)*path.HopLen, p)
+	sl.CombineAtIndex_Bytes(raw, offset, len(raw), offset+seg1Len*path.HopLen, p)
+	sl.CombineAtIndex_Bytes(raw, 0, len(raw), offset, p)
+}
+
+// SliceBytesIntoInfoFields splits the raw bytes of a packet into its at most three infofields
+ghost
+requires 0 < p
+requires 0 < numInf && numInf <= 3
+requires 0 <= offset
+requires offset + numInf*path.InfoLen <= len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), p)
+ensures  acc(sl.AbsSlice_Bytes(raw[:offset], 0, offset), p)
+ensures  acc(sl.AbsSlice_Bytes(raw[offset:offset+path.InfoLen], 0, path.InfoLen), p)
+ensures  1 < numInf ==> acc(sl.AbsSlice_Bytes(raw[offset+path.InfoLen:offset+2*path.InfoLen], 0, path.InfoLen), p)
+ensures  2 < numInf ==> acc(sl.AbsSlice_Bytes(raw[offset+2*path.InfoLen:offset+3*path.InfoLen], 0, path.InfoLen), p)
+ensures  acc(sl.AbsSlice_Bytes(raw[offset+numInf*path.InfoLen:], 0, len(raw[offset+numInf*path.InfoLen:])), p)
+decreases
+func SliceBytesIntoInfoFields(raw []byte, offset int, numInf int, p perm) {
+	sl.SplitByIndex_Bytes(raw, 0, len(raw), offset, p)
+	sl.SplitByIndex_Bytes(raw, offset, len(raw), offset+path.InfoLen, p)
+	sl.Reslice_Bytes(raw, 0, offset, p)
+	sl.Reslice_Bytes(raw, offset, offset+path.InfoLen, p)
+	if(numInf > 1) {
+		sl.SplitByIndex_Bytes(raw, offset+path.InfoLen, len(raw), offset+2*path.InfoLen, p)
+		sl.Reslice_Bytes(raw, offset+path.InfoLen, offset+2*path.InfoLen, p)
+	}
+	if(numInf > 2) {
+		sl.SplitByIndex_Bytes(raw, offset+2*path.InfoLen, len(raw), offset+3*path.InfoLen, p)
+		sl.Reslice_Bytes(raw, offset+2*path.InfoLen, offset+3*path.InfoLen, p)
+	}
+	sl.Reslice_Bytes(raw, offset+numInf*path.InfoLen, len(raw), p)
+}
+
+// CombineBytesFromInfoFields combines the at most three infofields of a packet into a single slice of bytes.
+ghost
+requires 0 < p
+requires 0 < numInf && numInf <= 3
+requires 0 <= offset
+requires offset + numInf*path.InfoLen <= len(raw)
+requires acc(sl.AbsSlice_Bytes(raw[:offset], 0, offset), p)
+requires acc(sl.AbsSlice_Bytes(raw[offset:offset+path.InfoLen], 0, path.InfoLen), p)
+requires 1 < numInf ==> acc(sl.AbsSlice_Bytes(raw[offset+path.InfoLen:offset+2*path.InfoLen], 0, path.InfoLen), p)
+requires 2 < numInf ==> acc(sl.AbsSlice_Bytes(raw[offset+2*path.InfoLen:offset+3*path.InfoLen], 0, path.InfoLen), p)
+requires acc(sl.AbsSlice_Bytes(raw[offset+numInf*path.InfoLen:], 0, len(raw[offset+numInf*path.InfoLen:])), p)
+ensures  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), p)
+decreases
+func CombineBytesFromInfoFields(raw []byte, offset int, numInf int, p perm) {
+	sl.Unslice_Bytes(raw, offset+numInf*path.InfoLen, len(raw), p)
+	if(numInf > 2) {
+		sl.Unslice_Bytes(raw, offset+2*path.InfoLen, offset+3*path.InfoLen, p)
+		sl.CombineAtIndex_Bytes(raw, offset+2*path.InfoLen, len(raw), offset+3*path.InfoLen, p)
+	}
+	if(numInf > 1) {
+		sl.Unslice_Bytes(raw, offset+path.InfoLen, offset+2*path.InfoLen, p)
+		sl.CombineAtIndex_Bytes(raw, offset+path.InfoLen, len(raw), offset+2*path.InfoLen, p)
+
+	}
+	sl.Unslice_Bytes(raw, offset, offset+path.InfoLen, p)
+	sl.Unslice_Bytes(raw, 0, offset, p)
+	sl.CombineAtIndex_Bytes(raw, offset, len(raw), offset+path.InfoLen, p)
+	sl.CombineAtIndex_Bytes(raw, 0, len(raw), offset, p)
+}
+
+// CurrSegWithInfo depends only on the hopfield segment rather than the entire raw bytes of the packet.
+// This simplifies proving changes within a segment after updates to the packet's raw bytes.
+ghost
+opaque
+requires 0 < segLen
+requires 0 <= currHfIdx && currHfIdx <= segLen
+requires segLen*path.HopLen == len(hopfields)
+requires acc(sl.AbsSlice_Bytes(hopfields, 0, len(hopfields)), R56)
+decreases
+pure func CurrSegWithInfo(hopfields []byte, currHfIdx int, segLen int, inf path.IntermediateAbsInfoField) io.IO_seg3 {
+	return segment(hopfields, 0, currHfIdx, inf.AInfo, inf.UInfo, inf.ConsDir, inf.Peer, segLen)
+}
+
+// LeftSegWithInfo depends only on the hopfield segment rather than the entire raw bytes of the packet.
+// Depending on which segment of the packet is represented by the left segment (currInfIdx), it requires
+// permissions to a different slice of the packet's bytes.
+ghost
+opaque
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires currInfIdx == 1 && seg2Len > 0 ==>
+	inf != none[path.IntermediateAbsInfoField] &&
+	acc(sl.AbsSlice_Bytes(hopfields, 0, len(hopfields)), R56) &&
+	seg2Len*path.HopLen == len(hopfields)
+requires currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
+	inf != none[path.IntermediateAbsInfoField] &&
+	acc(sl.AbsSlice_Bytes(hopfields, 0, len(hopfields)), R56) &&
+	seg3Len*path.HopLen == len(hopfields)
+decreases
+pure func LeftSegWithInfo(
+	hopfields []byte,
+	currInfIdx int,
+	seg1Len int,
+	seg2Len int,
+	seg3Len int,
+	inf option[path.IntermediateAbsInfoField]) option[io.IO_seg3] {
+	return (currInfIdx == 1 && seg2Len > 0) ?
+			some(CurrSegWithInfo(hopfields, 0, seg2Len, get(inf))) :
+			(currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
+				some(CurrSegWithInfo(hopfields, 0, seg3Len, get(inf))) :
+				none[io.IO_seg3]
+}
+
+// RightSegWithInfo depends only on the hopfield segment rather than the entire raw bytes of the packet.
+// Depending on which segment of the packet is represented by the right segment (currInfIdx), it
+// requires permissions to a different slice of the packet's bytes.
+ghost
+opaque
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires currInfIdx == 1 && seg2Len > 0 && seg3Len > 0 ==>
+	inf != none[path.IntermediateAbsInfoField] &&
+	acc(sl.AbsSlice_Bytes(hopfields, 0, len(hopfields)), R56) &&
+	seg2Len*path.HopLen == len(hopfields)
+requires currInfIdx == 0 && seg2Len > 0 ==>
+	inf != none[path.IntermediateAbsInfoField] &&
+	acc(sl.AbsSlice_Bytes(hopfields, 0, len(hopfields)), R56) &&
+	seg1Len*path.HopLen == len(hopfields)
+decreases
+pure func RightSegWithInfo(
+	hopfields []byte,
+	currInfIdx int,
+	seg1Len int,
+	seg2Len int,
+	seg3Len int,
+	inf option[path.IntermediateAbsInfoField]) option[io.IO_seg3] {
+	return (currInfIdx == 1 && seg2Len > 0 && seg3Len > 0) ?
+			some(CurrSegWithInfo(hopfields, seg2Len, seg2Len, get(inf))) :
+			(currInfIdx == 0 && seg2Len > 0) ?
+				some(CurrSegWithInfo(hopfields, seg1Len, seg1Len, get(inf))) :
+				none[io.IO_seg3]
+}
+
+// MidSegWithInfo depends only on the hopfield segment rather than the entire raw bytes of the packet.
+// Depending on which segment of the packet is represented by the mid segment (currInfIdx), it requires
+// permissions to a different slice of the packet's bytes.
+ghost
+opaque
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires currInfIdx == 4 && seg2Len > 0 && seg3Len > 0 ==>
+	inf != none[path.IntermediateAbsInfoField] &&
+	acc(sl.AbsSlice_Bytes(hopfields, 0, len(hopfields)), R56) &&
+	seg1Len*path.HopLen == len(hopfields)
+requires currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
+	inf != none[path.IntermediateAbsInfoField] &&
+	acc(sl.AbsSlice_Bytes(hopfields, 0, len(hopfields)), R56) &&
+	seg3Len*path.HopLen == len(hopfields)
+decreases
+pure func MidSegWithInfo(
+	hopfields []byte,
+	currInfIdx int,
+	seg1Len int,
+	seg2Len int,
+	seg3Len int,
+	inf option[path.IntermediateAbsInfoField]) option[io.IO_seg3] {
+	return (currInfIdx == 4 && seg2Len > 0 && seg3Len > 0) ?
+			some(CurrSegWithInfo(hopfields, seg1Len, seg1Len, get(inf))) :
+			(currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
+				some(CurrSegWithInfo(hopfields, 0, seg3Len, get(inf))) :
+				none[io.IO_seg3]
+}
+
+// CurrSegEquality ensures that the two definitions of abstract segments, CurrSegWithInfo(..)
+// and CurrSeg(..), represent the same abstract segment.
+ghost
+requires path.InfoFieldOffset(currInfIdx, MetaLen) + path.InfoLen <= offset
+requires 0 < segLen
+requires offset + path.HopLen * segLen <= len(raw)
+requires 0 <= currHfIdx && currHfIdx <= segLen
+requires 0 <= currInfIdx && currInfIdx < 3
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
+preserves acc(sl.AbsSlice_Bytes(raw[offset:offset+segLen*path.HopLen], 0, segLen*path.HopLen), R50)
+preserves let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R50)
+ensures let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let inf := path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen) in
+	CurrSegWithInfo(raw[offset:offset+segLen*path.HopLen], currHfIdx, segLen, inf) ==
+	CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, MetaLen)
+decreases
+func CurrSegEquality(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen int) {
+	infOffset := MetaLen + currInfIdx*path.InfoLen
+	inf := reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)
+	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+	unfold acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	assert reveal path.BytesToIntermediateAbsInfoField(raw, 0, infOffset, len(raw)) ==
+        reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)
+	reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, MetaLen)
+	reveal CurrSegWithInfo(raw[offset:offset+segLen*path.HopLen], currHfIdx, segLen, inf)
+	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+	fold acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	widenSegment(raw, offset, currHfIdx, inf.AInfo, inf.UInfo, inf.ConsDir,
+        inf.Peer, segLen, offset, offset+segLen*path.HopLen)
+}
+
+// UpdateCurrSegInfo proves that updating the infofield from inf1 to inf2 does not alter the hopfields
+// of the current segment.
+ghost
+requires 0 < segLen
+requires 0 <= currHfIdx && currHfIdx <= segLen
+requires segLen*path.HopLen == len(raw)
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
+ensures AbsSetCurrSeg(CurrSegWithInfo(raw, currHfIdx, segLen, inf1), inf2) ==
+	CurrSegWithInfo(raw, currHfIdx, segLen, inf2)
+decreases
+func UpdateCurrSegInfo(raw []byte, currHfIdx int, segLen int,
+	inf1 path.IntermediateAbsInfoField, inf2 path.IntermediateAbsInfoField) {
+	seg1 := reveal CurrSegWithInfo(raw, currHfIdx, segLen, inf1)
+	seg2 := reveal CurrSegWithInfo(raw, currHfIdx, segLen, inf2)
+}
+
+// LeftSegEquality ensures that the two definitions of abstract segments, LeftSegWithInfo(..)
+// and LeftSeg(..), represent the same abstract segment.
+// The left segment corresponds to different segments of the packet depending on the currInfIdx.
+// To address this, we need to consider all possible cases of currInfIdx. This results in fairly
+// complex preconditions and postconditions because, for every currInfIdx, we need an offset for
+// its infofield and one for its hopfields.
+ghost
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires pktLen(seg1Len, seg2Len, seg3Len, MetaLen) <= len(raw)
+requires 1 <= currInfIdx && currInfIdx < 4
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
+preserves currInfIdx == 1 && seg2Len > 0 ==>
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
+	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
+	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg2Len*path.HopLen], 0, seg2Len*path.HopLen), R49)
+preserves currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen) in
+	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
+	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg3Len*path.HopLen], 0, seg3Len*path.HopLen), R49)
+ensures !(currInfIdx == 1 && seg2Len > 0 || currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) ==>
+	LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+	LeftSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
+ensures currInfIdx == 1 && seg2Len > 0 ==>
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
+	LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+	LeftSegWithInfo(raw[offset:offset+seg2Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+ensures currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen)  in
+	LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+	LeftSegWithInfo(raw[offset:offset+seg3Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+decreases
+func LeftSegEquality(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) {
+	reveal LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen)
+	if (currInfIdx == 1 && seg2Len > 0) {
+		infOffset := MetaLen + currInfIdx*path.InfoLen
+		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
+		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen)
+		reveal LeftSegWithInfo(raw[offset:offset+seg2Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+		CurrSegEquality(raw, offset, currInfIdx, 0, seg2Len)
+	} else if (currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) {
+		infOffset := MetaLen + currInfIdx*path.InfoLen
+		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
+		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen)
+		reveal LeftSegWithInfo(raw[offset:offset+seg3Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+		CurrSegEquality(raw, offset, currInfIdx, 0, seg3Len)
+	} else {
+		reveal LeftSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
+	}
+}
+
+// RightSegEquality ensures that the two definitions of abstract segments, RightSegWithInfo(..)
+// and RightSeg(..), represent the same abstract segment.
+// The right segment corresponds to different segments of the packet depending on the currInfIdx.
+// To address this, we need to consider all possible cases of currInfIdx. This results in fairly
+// complex preconditions and postconditions because, for every currInfIdx, we need an offset for
+// its infofield and one for its hopfields.
+ghost
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires pktLen(seg1Len, seg2Len, seg3Len, MetaLen) <= len(raw)
+requires -1 <= currInfIdx && currInfIdx < 2
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
+preserves currInfIdx == 0 && seg2Len > 0 ==>
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen) in
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+ 	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
+	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg1Len*path.HopLen], 0, seg1Len*path.HopLen), R49)
+preserves currInfIdx == 1 && seg2Len > 0 && seg3Len > 0 ==>
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+ 	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
+	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg2Len*path.HopLen], 0, seg2Len*path.HopLen), R49)
+ensures !(currInfIdx == 0 && seg2Len > 0 || currInfIdx == 1 && seg2Len > 0 && seg3Len > 0) ==>
+	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+	RightSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
+ensures currInfIdx == 0 && seg2Len > 0 ==>
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen) in
+	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+	RightSegWithInfo(raw[offset:offset+seg1Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+ensures currInfIdx == 1 && seg2Len > 0 && seg3Len > 0 ==>
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
+	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+	RightSegWithInfo(raw[offset:offset+seg2Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+decreases
+func RightSegEquality(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) {
+	reveal RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen)
+	if (currInfIdx == 1 && seg2Len > 0 && seg3Len > 0) {
+		infOffset := MetaLen + currInfIdx*path.InfoLen
+		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
+		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen)
+		reveal RightSegWithInfo(raw[offset:offset+seg2Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+		CurrSegEquality(raw, offset, currInfIdx, seg2Len, seg2Len)
+	} else if (currInfIdx == 0 && seg2Len > 0) {
+		infOffset := MetaLen + currInfIdx*path.InfoLen
+		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
+		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen)
+		reveal RightSegWithInfo(raw[offset:offset+seg1Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+		CurrSegEquality(raw, offset, currInfIdx, seg1Len, seg1Len)
+	} else {
+		reveal RightSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
+	}
+}
+
+// MidSegEquality ensures that the two definitions of abstract segments, MidSegWithInfo(..)
+// and MidSeg(..), represent the same abstract segment.
+// The mid segment corresponds to different segments of the packet depending on the currInfIdx.
+// To address this, we need to consider all possible cases of currInfIdx. This results in fairly
+// complex preconditions and postconditions because, for every currInfIdx, we need an offset for
+// its infofield and one for its hopfields.
+ghost
+requires  0 < seg1Len
+requires  0 <= seg2Len
+requires  0 <= seg3Len
+requires  pktLen(seg1Len, seg2Len, seg3Len, MetaLen) <= len(raw)
+requires  2 <= currInfIdx && currInfIdx < 5
+preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
+preserves currInfIdx == 4 && seg2Len > 0 && seg3Len > 0 ==>
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen) in
+	let infOffset := MetaLen in
+	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg1Len*path.HopLen], 0, seg1Len*path.HopLen), R49) &&
+	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49)
+preserves currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen) in
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg3Len*path.HopLen], 0, seg3Len*path.HopLen), R49) &&
+	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49)
+ensures !(currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 || currInfIdx == 4 && seg2Len > 0 && seg3Len > 0) ==>
+	MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+	MidSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
+ensures currInfIdx == 4 && seg2Len > 0 && seg3Len > 0 ==>
+	let infOffset := MetaLen in
+	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen) in
+	MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+	MidSegWithInfo(raw[offset:offset+seg1Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+ensures currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
+	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen) in
+	MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+	MidSegWithInfo(raw[offset:offset+seg3Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+decreases
+func MidSegEquality(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) {
+	reveal MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen)
+	if (currInfIdx == 4 && seg2Len > 0 && seg3Len > 0) {
+		infOffset := MetaLen
+		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
+		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen)
+		reveal MidSegWithInfo(raw[offset:offset+seg1Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+		CurrSegEquality(raw, offset, 0, seg1Len, seg1Len)
+	} else if (currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) {
+		infOffset := MetaLen + currInfIdx*path.InfoLen
+		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
+		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen)
+		reveal MidSegWithInfo(raw[offset:offset+seg3Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+		CurrSegEquality(raw, offset, currInfIdx, 0, seg3Len)
+	} else {
+		reveal MidSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
+	}
+}
