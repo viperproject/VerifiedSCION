@@ -273,15 +273,15 @@ requires 0 <= currHfIdx && currHfIdx <= segLen
 requires 0 <= currInfIdx && currInfIdx < 3
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
 preserves acc(sl.AbsSlice_Bytes(raw[offset:offset+segLen*path.HopLen], 0, segLen*path.HopLen), R50)
-preserves let infOffset := MetaLen + currInfIdx*path.InfoLen in
+preserves let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
 	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R50)
-ensures let infOffset := MetaLen + currInfIdx*path.InfoLen in
+ensures let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
 	let inf := path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen) in
 	CurrSegWithInfo(raw[offset:offset+segLen*path.HopLen], currHfIdx, segLen, inf) ==
 	CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, MetaLen)
 decreases
 func CurrSegEquality(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen int) {
-	infOffset := MetaLen + currInfIdx*path.InfoLen
+	infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
 	inf := reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)
 	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R56)
@@ -311,6 +311,41 @@ func UpdateCurrSegInfo(raw []byte, currHfIdx int, segLen int,
 	seg2 := reveal CurrSegWithInfo(raw, currHfIdx, segLen, inf2)
 }
 
+ghost
+requires 0 < seg1Len
+requires 0 <= seg2Len
+requires 0 <= seg3Len
+requires pktLen(seg1Len, seg2Len, seg3Len, MetaLen) <= len(raw)
+requires 1 <= currInfIdx && currInfIdx < 4
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
+requires currInfIdx == 1 && seg2Len > 0 ==>
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
+	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
+	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg2Len*path.HopLen], 0, seg2Len*path.HopLen), R49)
+requires currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
+	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen) in
+	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
+	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg3Len*path.HopLen], 0, seg3Len*path.HopLen), R49)
+decreases
+pure func LeftSegEqualitySpec(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) bool {
+    return currInfIdx == 1 && seg2Len > 0 ?
+        let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
+        let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+        let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
+        LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+        LeftSegWithInfo(raw[offset:offset+seg2Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf) :
+        currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ?
+        let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
+        let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+        let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen)  in
+        LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+        LeftSegWithInfo(raw[offset:offset+seg3Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf) :
+        LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+        LeftSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
+}
+
 // LeftSegEquality ensures that the two definitions of abstract segments, LeftSegWithInfo(..)
 // and LeftSeg(..), represent the same abstract segment.
 // The left segment corresponds to different segments of the packet depending on the currInfIdx.
@@ -325,41 +360,42 @@ requires pktLen(seg1Len, seg2Len, seg3Len, MetaLen) <= len(raw)
 requires 1 <= currInfIdx && currInfIdx < 4
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
 preserves currInfIdx == 1 && seg2Len > 0 ==>
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
 	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
 	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg2Len*path.HopLen], 0, seg2Len*path.HopLen), R49)
 preserves currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen) in
 	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
 	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg3Len*path.HopLen], 0, seg3Len*path.HopLen), R49)
-ensures !(currInfIdx == 1 && seg2Len > 0 || currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) ==>
-	LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
-	LeftSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
-ensures currInfIdx == 1 && seg2Len > 0 ==>
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
-	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
-	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
-	LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
-	LeftSegWithInfo(raw[offset:offset+seg2Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
-ensures currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
-	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
-	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen)  in
-	LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
-	LeftSegWithInfo(raw[offset:offset+seg3Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+ensures LeftSegEqualitySpec(raw, currInfIdx, seg1Len, seg2Len, seg3Len)
+// ensures !(currInfIdx == 1 && seg2Len > 0 || currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) ==>
+// 	LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+// 	LeftSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
+// ensures currInfIdx == 1 && seg2Len > 0 ==>
+// 	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
+// 	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+// 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
+// 	LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+// 	LeftSegWithInfo(raw[offset:offset+seg2Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
+// ensures currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
+// 	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
+// 	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+// 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen)  in
+// 	LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
+// 	LeftSegWithInfo(raw[offset:offset+seg3Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
 decreases
 func LeftSegEquality(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) {
 	reveal LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen)
 	if (currInfIdx == 1 && seg2Len > 0) {
-		infOffset := MetaLen + currInfIdx*path.InfoLen
+		infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
 		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
 		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen)
 		reveal LeftSegWithInfo(raw[offset:offset+seg2Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
 		CurrSegEquality(raw, offset, currInfIdx, 0, seg2Len)
 	} else if (currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) {
-		infOffset := MetaLen + currInfIdx*path.InfoLen
+		infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
 		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
 		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen)
 		reveal LeftSegWithInfo(raw[offset:offset+seg3Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
@@ -384,25 +420,25 @@ requires -1 <= currInfIdx && currInfIdx < 2
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
 preserves currInfIdx == 0 && seg2Len > 0 ==>
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen) in
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
  	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
 	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg1Len*path.HopLen], 0, seg1Len*path.HopLen), R49)
 preserves currInfIdx == 1 && seg2Len > 0 && seg3Len > 0 ==>
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
  	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49) &&
 	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg2Len*path.HopLen], 0, seg2Len*path.HopLen), R49)
 ensures !(currInfIdx == 0 && seg2Len > 0 || currInfIdx == 1 && seg2Len > 0 && seg3Len > 0) ==>
 	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
 	RightSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
 ensures currInfIdx == 0 && seg2Len > 0 ==>
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
 	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen) in
 	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
 	RightSegWithInfo(raw[offset:offset+seg1Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
 ensures currInfIdx == 1 && seg2Len > 0 && seg3Len > 0 ==>
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
 	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen) in
 	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
@@ -411,13 +447,13 @@ decreases
 func RightSegEquality(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) {
 	reveal RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen)
 	if (currInfIdx == 1 && seg2Len > 0 && seg3Len > 0) {
-		infOffset := MetaLen + currInfIdx*path.InfoLen
+		infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
 		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
 		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len, MetaLen)
 		reveal RightSegWithInfo(raw[offset:offset+seg2Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
 		CurrSegEquality(raw, offset, currInfIdx, seg2Len, seg2Len)
 	} else if (currInfIdx == 0 && seg2Len > 0) {
-		infOffset := MetaLen + currInfIdx*path.InfoLen
+		infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
 		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
 		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen)
 		reveal RightSegWithInfo(raw[offset:offset+seg1Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
@@ -442,25 +478,23 @@ requires  2 <= currInfIdx && currInfIdx < 5
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R49)
 preserves currInfIdx == 4 && seg2Len > 0 && seg3Len > 0 ==>
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen) in
-	let infOffset := MetaLen in
 	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg1Len*path.HopLen], 0, seg1Len*path.HopLen), R49) &&
-	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49)
+	acc(sl.AbsSlice_Bytes(raw[MetaLen:MetaLen+path.InfoLen], 0, path.InfoLen), R49)
 preserves currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen) in
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
 	acc(sl.AbsSlice_Bytes(raw[offset:offset+seg3Len*path.HopLen], 0, seg3Len*path.HopLen), R49) &&
 	acc(sl.AbsSlice_Bytes(raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen), R49)
 ensures !(currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 || currInfIdx == 4 && seg2Len > 0 && seg3Len > 0) ==>
 	MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
 	MidSegWithInfo(nil, currInfIdx, seg1Len, seg2Len, seg3Len, none[path.IntermediateAbsInfoField])
 ensures currInfIdx == 4 && seg2Len > 0 && seg3Len > 0 ==>
-	let infOffset := MetaLen in
-	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
+	let inf := some(path.BytesToIntermediateAbsInfoField(raw[MetaLen:MetaLen+path.InfoLen], 0, 0, path.InfoLen)) in
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen) in
 	MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
 	MidSegWithInfo(raw[offset:offset+seg1Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
 ensures currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 ==>
-	let infOffset := MetaLen + currInfIdx*path.InfoLen in
+	let infOffset := path.InfoFieldOffset(currInfIdx, MetaLen) in
 	let inf := some(path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen)) in
 	let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen) in
 	MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen) ==
@@ -469,13 +503,12 @@ decreases
 func MidSegEquality(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len int) {
 	reveal MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, MetaLen)
 	if (currInfIdx == 4 && seg2Len > 0 && seg3Len > 0) {
-		infOffset := MetaLen
-		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
+		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[MetaLen:MetaLen+path.InfoLen], 0, 0, path.InfoLen))
 		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, MetaLen)
 		reveal MidSegWithInfo(raw[offset:offset+seg1Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
 		CurrSegEquality(raw, offset, 0, seg1Len, seg1Len)
 	} else if (currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) {
-		infOffset := MetaLen + currInfIdx*path.InfoLen
+		infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
 		inf := some(reveal path.BytesToIntermediateAbsInfoField(raw[infOffset:infOffset+path.InfoLen], 0, 0, path.InfoLen))
 		offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), seg1Len+seg2Len, MetaLen)
 		reveal MidSegWithInfo(raw[offset:offset+seg3Len*path.HopLen], currInfIdx, seg1Len, seg2Len, seg3Len, inf)
