@@ -44,7 +44,7 @@ pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField)
 	io.IO_Packet2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg}
 }
 
-// SliceBytesIntoSegments splits the raw bytes of a packet into its three hopfield segments
+// SliceBytesIntoSegments splits the raw bytes of a packet into its hopfield segments
 ghost
 requires 0 < p
 requires 0 < seg1Len
@@ -98,7 +98,7 @@ func CombineBytesFromSegments(raw []byte, offset int, seg1Len int, seg2Len int, 
 	sl.CombineAtIndex_Bytes(raw, 0, len(raw), offset, p)
 }
 
-// SliceBytesIntoInfoFields splits the raw bytes of a packet into its at most three infofields
+// SliceBytesIntoInfoFields splits the raw bytes of a packet into its infofields
 ghost
 requires 0 < p
 requires 0 < numInf && numInf <= 3
@@ -127,7 +127,7 @@ func SliceBytesIntoInfoFields(raw []byte, offset int, numInf int, p perm) {
 	sl.Reslice_Bytes(raw, offset+numInf*path.InfoLen, len(raw), p)
 }
 
-// CombineBytesFromInfoFields combines the at most three infofields of a packet into a single slice of bytes.
+// CombineBytesFromInfoFields combines the infofields of a packet into a single slice of bytes.
 ghost
 requires 0 < p
 requires 0 < numInf && numInf <= 3
