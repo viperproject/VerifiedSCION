@@ -402,7 +402,7 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // @ 	validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
 // @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
 // @ 	let oldPkt := old(s.absPkt(ubuf)) in
-// @ 	let newPkt := io.UpdateInfoField(oldPkt, info.ToAbsInfoField()) in
+// @ 	let newPkt := oldPkt.UpdateInfoField(info.ToAbsInfoField()) in
 // @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
 // @ #backend[exhaleMode(1)]
