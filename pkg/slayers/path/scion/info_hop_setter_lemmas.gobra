@@ -312,7 +312,7 @@ requires 0 < SegLen
 requires 0 <= currHfIdx && currHfIdx <= SegLen
 requires SegLen*path.HopLen == len(raw)
 preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R50)
-ensures io.UpdateCurrSeg(CurrSegWithInfo(raw, currHfIdx, SegLen, inf1), inf2) ==
+ensures CurrSegWithInfo(raw, currHfIdx, SegLen, inf1).UpdateCurrSeg(inf2) ==
 	CurrSegWithInfo(raw, currHfIdx, SegLen, inf2)
 decreases
 func UpdateCurrSegInfo(raw []byte, currHfIdx int, SegLen int,

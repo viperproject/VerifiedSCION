@@ -59,7 +59,7 @@ pure func establishGuardTraversedsegInc(currseg IO_seg3, direction bool) IO_seg3
 
 ghost
 decreases
-pure func UpdateCurrSeg(seg IO_seg3, info AbsInfoField) (IO_seg3) {
+pure func (seg IO_seg3) UpdateCurrSeg( info AbsInfoField) (IO_seg3) {
 	return IO_seg3_ {
 		info.AInfo,
 		info.UInfo,
@@ -74,7 +74,7 @@ pure func UpdateCurrSeg(seg IO_seg3, info AbsInfoField) (IO_seg3) {
 ghost
 decreases
 pure func UpdateInfoField(oldPkt IO_pkt2, info AbsInfoField) (newPkt IO_pkt2) {
-	return let newCurrSeg := UpdateCurrSeg(oldPkt.CurrSeg, info) in
+	return let newCurrSeg := oldPkt.CurrSeg.UpdateCurrSeg(info) in
 		IO_Packet2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg}
 }
 
