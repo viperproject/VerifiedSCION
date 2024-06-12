@@ -20,7 +20,7 @@ import (
 	"net"
 
 	. "github.com/scionproto/scion/verification/utils/definitions"
-	"github.com/scionproto/scion/verification/utils/slices"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
@@ -66,7 +66,7 @@ pred (c *Config) Mem() {
 *connUDPIPv4 implements Conn
 
 requires  acc(c.Mem(), _)
-preserves slices.AbsSlice_Bytes(b, 0, len(b))
+preserves sl.Bytes(b, 0, len(b))
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err == nil ==> acc(addr.Mem(), _)
 ensures   err != nil ==> err.ErrorMem()
@@ -83,7 +83,7 @@ func (c *connUDPIPv4) ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error) {
 }
 
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
+preserves acc(sl.Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) Write(b []byte) (n int, err error) {
@@ -101,7 +101,7 @@ func (c *connUDPIPv4) Write(b []byte) (n int, err error) {
 
 requires  acc(dst.Mem(), _)
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
+preserves acc(sl.Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
@@ -151,7 +151,7 @@ func (c *connUDPIPv4) Close() (err error) {
 *connUDPIPv6 implements Conn
 
 preserves acc(c.Mem(), _)
-preserves slices.AbsSlice_Bytes(b, 0, len(b))
+preserves sl.Bytes(b, 0, len(b))
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err == nil ==> acc(addr.Mem(), _)
 ensures   err != nil ==> err.ErrorMem()
@@ -169,7 +169,7 @@ func (c *connUDPIPv6) ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error) {
 }
 
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
+preserves acc(sl.Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) Write(b []byte) (n int, err error) {
@@ -187,7 +187,7 @@ func (c *connUDPIPv6) Write(b []byte) (n int, err error) {
 
 requires  acc(dst.Mem(), _)
 preserves acc(c.Mem(), _)
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
+preserves acc(sl.Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {

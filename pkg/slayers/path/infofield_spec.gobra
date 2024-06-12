@@ -32,31 +32,31 @@ pure func InfoFieldOffset(currINF, headerOffset int) int {
 ghost
 requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) < len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func ConsDir(raw []byte, currINF int, headerOffset int) bool {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+	return unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
 		raw[InfoFieldOffset(currINF, headerOffset)] & 0x1 == 0x1
 }
 
 ghost
 requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) < len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func Peer(raw []byte, currINF int, headerOffset int) bool {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+	return unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
 		raw[InfoFieldOffset(currINF, headerOffset)] & 0x2 == 0x2
 }
 
 ghost
 requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) + InfoLen < len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func Timestamp(raw []byte, currINF int, headerOffset int) io.IO_ainfo {
 	return let idx := InfoFieldOffset(currINF, headerOffset) + 4 in
-		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
 		let _ := Asserting(forall i int :: { &raw[idx+i] } { &raw[idx:idx+4][i] } 0 <= i && i < 4 ==>
 			&raw[idx+i] == &raw[idx:idx+4][i]) in
 		io.IO_ainfo(binary.BigEndian.Uint32(raw[idx : idx + 4]))
@@ -65,11 +65,11 @@ pure func Timestamp(raw []byte, currINF int, headerOffset int) io.IO_ainfo {
 ghost
 requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) + InfoLen < len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func AbsUinfo(raw []byte, currINF int, headerOffset int) set[io.IO_msgterm] {
 	return 	let idx := InfoFieldOffset(currINF, headerOffset) + 2 in
-		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
 		let _ := Asserting(forall k int :: {&raw[idx:idx+2][k]} 0 <= k && k < 2 ==>
 			&raw[idx:idx+4][k] == &raw[idx + k]) in
 		AbsUInfoFromUint16(binary.BigEndian.Uint16(raw[idx:idx+2]))
@@ -89,10 +89,10 @@ type IntermediateAbsInfoField adt {
 ghost
 requires 0 <= start && start <= middle
 requires middle+InfoLen <= end && end <= len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, start, end), _)
+requires acc(sl.Bytes(raw, start, end), _)
 decreases
 pure func BytesToIntermediateAbsInfoField(raw [] byte, start int, middle int, end int) (IntermediateAbsInfoField) {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, start, end), _) in
+	return unfolding acc(sl.Bytes(raw, start, end), _) in
 		BytesToIntermediateAbsInfoFieldHelper(raw, middle, end)
 }
 

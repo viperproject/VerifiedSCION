@@ -13,7 +13,7 @@ import (
 	"time"
 
 	. "github.com/scionproto/scion/verification/utils/definitions"
-	"github.com/scionproto/scion/verification/utils/slices"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // Addr represents a network end point address.
@@ -36,14 +36,14 @@ type Conn interface {
 
 	// Read reads data from the connection.
 	requires  acc(Mem(), _)
-	preserves slices.AbsSlice_Bytes(b, 0, len(b))
+	preserves sl.Bytes(b, 0, len(b))
 	ensures   err == nil ==> 0 <= n && n <= len(b)
 	ensures   err != nil ==> err.ErrorMem()
 	Read(b []byte) (n int, err error)
 
 	// Write writes data to the connection.
 	preserves acc(Mem(), _)
-	preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R15)
+	preserves acc(sl.Bytes(b, 0, len(b)), R15)
 	ensures   err == nil ==> 0 <= n && n <= len(b)
 	ensures   err != nil ==> err.ErrorMem()
 	Write(b []byte) (n int, err error)
@@ -93,7 +93,7 @@ type PacketConn interface {
 	pred Mem()
 
 	preserves acc(Mem(), _)
-	preserves slices.AbsSlice_Bytes(p, 0, len(p))
+	preserves sl.Bytes(p, 0, len(p))
 	ensures   err == nil ==> 0 <= n && n <= len(p)
 	ensures   err == nil ==> acc(addr.Mem(), _)
 	ensures   err != nil ==> err.ErrorMem()
@@ -101,7 +101,7 @@ type PacketConn interface {
 
 	requires  acc(addr.Mem(), _)
 	preserves acc(Mem(), _)
-	preserves acc(slices.AbsSlice_Bytes(p, 0, len(p)), R15)
+	preserves acc(sl.Bytes(p, 0, len(p)), R15)
 	ensures   err == nil ==> 0 <= n && n <= len(p)
 	ensures   err != nil ==> err.ErrorMem()
 	WriteTo(p []byte, addr Addr) (n int, err error)
