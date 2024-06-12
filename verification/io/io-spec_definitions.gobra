@@ -1,4 +1,4 @@
-// Copyright 2022 ETH Zurich
+// Copyright 2024 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 
 package io
 
-/*** All definitions/functions here are not part of the Isabelle specifications ***/
-
+/*** This file contains helpful definitions that do not have a counterpart in the Isabelle formalization. ***/
 
 // Establishes the traversed segment for packets which are not incremented (internal).
 ghost

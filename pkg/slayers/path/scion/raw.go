@@ -437,7 +437,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ newInfo := info.ToAbsInfoField()
 	//@ hfIdxSeg := currHfIdx-prevSegLen
 	//@ hopfields := ubuf[offset:offset + segLen*path.HopLen]
-	//@ ghost if(idx == currInfIdx) {
+	//@ ghost if idx == currInfIdx {
 	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
 	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
 	//@  	MidSegEquality(ubuf, currInfIdx+2, segLens)
@@ -451,9 +451,9 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm-R40)
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ assert reveal validPktMetaHdr(ubuf)
-	//@ ghost if(idx == currInfIdx) {
+	//@ ghost if idx == currInfIdx {
 	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
-	//@		UpdateCurrSegInfo(hopfields, hfIdxSeg, segLen, oldInfo, newInfo)
+	//@ 	UpdateCurrSegInfo(hopfields, hfIdxSeg, segLen, oldInfo, newInfo)
 	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
 	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
 	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
