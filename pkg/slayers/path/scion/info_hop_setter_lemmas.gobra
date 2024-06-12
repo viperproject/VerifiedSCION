@@ -371,8 +371,9 @@ func LeftSegEquality(raw []byte, currInfIdx int, s io.SegLens) {
         hopBytes := HopfieldsByteSlice(raw, currInfIdx, s)
 		inf := some(reveal path.BytesToAbsInfoField(infoBytes, 0))
 		offset := HopfieldsStartIdx(currInfIdx, s)
+        segLen := currInfIdx == 1 ? s.SegLen[1] : s.SegLen[2]
 		reveal LeftSegWithInfo(hopBytes, currInfIdx, s, inf)
-		CurrSegEquality(raw, offset, currInfIdx, 0, s.SegLen[1])
+		CurrSegEquality(raw, offset, currInfIdx, 0, segLen)
 	} else {
 		reveal LeftSegWithInfo(nil, currInfIdx, s, none[io.AbsInfoField])
 	}
@@ -429,9 +430,9 @@ func RightSegEquality(raw []byte, currInfIdx int, s io.SegLens) {
         hopBytes := HopfieldsByteSlice(raw, currInfIdx, s)
 		inf := some(reveal path.BytesToAbsInfoField(infoBytes, 0))
 		offset := HopfieldsStartIdx(currInfIdx, s)
-        SegLen := currInfIdx == 0 ? s.SegLen[0] : s.SegLen[1]
+        segLen := currInfIdx == 0 ? s.SegLen[0] : s.SegLen[1]
 		reveal RightSegWithInfo(hopBytes, currInfIdx, s, inf)
-		CurrSegEquality(raw, offset, currInfIdx, SegLen, SegLen)
+		CurrSegEquality(raw, offset, currInfIdx, segLen, segLen)
 	} else {
 		reveal RightSegWithInfo(nil, currInfIdx, s, none[io.AbsInfoField])
 	}
