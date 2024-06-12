@@ -75,40 +75,29 @@ pure func AbsUinfo(raw []byte, currINF int, headerOffset int) set[io.IO_msgterm]
 		AbsUInfoFromUint16(binary.BigEndian.Uint16(raw[idx:idx+2]))
 }
 
-// This type simplifies the infoField, making it easier
-// to use than the IO_seg3 from the IO-spec.
-type IntermediateAbsInfoField adt {
-	IntermediateAbsInfoField_ {
-		AInfo io.IO_ainfo
-		UInfo set[io.IO_msgterm]
-		ConsDir bool
-		Peer bool
-	}
-}
-
 ghost
 opaque
-requires 0 <= start && start <= middle
-requires middle+InfoLen <= end && end <= len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, start, end), _)
+requires 0 <= middle
+requires middle+InfoLen <= len(raw)
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _)
 decreases
-pure func BytesToIntermediateAbsInfoField(raw [] byte, start int, middle int, end int) (IntermediateAbsInfoField) {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, start, end), _) in
-		BytesToIntermediateAbsInfoFieldHelper(raw, middle, end)
+pure func BytesToAbsInfoField(raw [] byte, middle int) (io.AbsInfoField) {
+	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), _) in
+		BytesToAbsInfoFieldHelper(raw, middle)
 }
 
 ghost
 requires 0 <= middle
-requires middle+InfoLen <= end && end <= len(raw)
-requires forall i int :: { &raw[i] } middle <= i && i < end ==>
+requires middle+InfoLen <= len(raw)
+requires forall i int :: { &raw[i] } middle <= i && i < len(raw) ==>
 	acc(&raw[i], _)
 decreases
-pure func BytesToIntermediateAbsInfoFieldHelper(raw [] byte, middle int, end int) (IntermediateAbsInfoField) {
+pure func BytesToAbsInfoFieldHelper(raw [] byte, middle int) (io.AbsInfoField) {
 	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==>
 		&raw[middle+2:middle+4][k] == &raw[middle+2 + k]) in
 		let _ := Asserting(forall k int :: {&raw[middle+4:middle+8][k]} 0 <= k && k < 4 ==>
 			&raw[middle+4:middle+8][k] == &raw[middle+4 + k]) in
-		IntermediateAbsInfoField(IntermediateAbsInfoField_{
+		io.AbsInfoField(io.AbsInfoField_{
 			AInfo : io.IO_ainfo(binary.BigEndian.Uint32(raw[middle+4:middle+8])),
 			UInfo : AbsUInfoFromUint16(binary.BigEndian.Uint16(raw[middle+2:middle+4])),
 			ConsDir : raw[middle] & 0x1 == 0x1,
@@ -118,8 +107,8 @@ pure func BytesToIntermediateAbsInfoFieldHelper(raw [] byte, middle int, end int
 
 ghost
 decreases
-pure func (inf InfoField) ToIntermediateAbsInfoField() (IntermediateAbsInfoField) {
-	return IntermediateAbsInfoField(IntermediateAbsInfoField_{
+pure func (inf InfoField) ToAbsInfoField() (io.AbsInfoField) {
+	return io.AbsInfoField(io.AbsInfoField_{
 		AInfo : io.IO_ainfo(inf.Timestamp),
 		UInfo : AbsUInfoFromUint16(inf.SegID),
 		ConsDir : inf.ConsDir,

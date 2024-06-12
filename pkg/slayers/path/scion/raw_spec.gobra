@@ -728,8 +728,8 @@ pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.Info
 		unfolding acc(s.Base.Mem(), _) in
 		let infOffset := MetaLen + idx*path.InfoLen in
 		infOffset+path.InfoLen <= len(ub) &&
-		info.ToIntermediateAbsInfoField() ==
-			reveal path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
+		info.ToAbsInfoField() ==
+			reveal path.BytesToAbsInfoField(ub, infOffset)
 }
 
 ghost
@@ -743,8 +743,8 @@ pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
 		unfolding acc(s.Base.Mem(), _) in
 		let infOffset := MetaLen + int(s.Base.PathMeta.CurrINF)*path.InfoLen in
 		infOffset+path.InfoLen <= len(ub) &&
-		info.ToIntermediateAbsInfoField() ==
-			reveal path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
+		info.ToAbsInfoField() ==
+			reveal path.BytesToAbsInfoField(ub, infOffset)
 }
 
 ghost
@@ -841,7 +841,7 @@ pure func (s *Raw) EqAbsHopField(pkt io.IO_pkt2, hop io.IO_HF) bool {
 ghost
 opaque
 decreases
-pure func (s *Raw) EqAbsInfoField(pkt io.IO_pkt2, info path.IntermediateAbsInfoField) bool {
+pure func (s *Raw) EqAbsInfoField(pkt io.IO_pkt2, info io.AbsInfoField) bool {
 	return let currseg := pkt.CurrSeg in
 		info.AInfo == currseg.AInfo &&
 		info.UInfo == currseg.UInfo &&
@@ -859,7 +859,7 @@ preserves s.ValidCurrINF(ubuf)
 preserves s.ValidCurrHF(ubuf)
 preserves s.CorrectlyDecodedInf(ubuf, info)
 preserves s.CorrectlyDecodedHf(ubuf, hop)
-ensures   s.EqAbsInfoField(s.absPkt(ubuf), info.ToIntermediateAbsInfoField())
+ensures   s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
 ensures   s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
 decreases
 func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField) {
@@ -886,7 +886,7 @@ func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField)
 	assert hopFields[hfIdxSeg] ==
 		path.BytesToIO_HF(ubuf, 0, offset + path.HopLen * hfIdxSeg, len(ubuf))
 	assert currseg.Future[0] == path.BytesToIO_HF(ubuf, 0, offset + path.HopLen * hfIdxSeg, len(ubuf))
-	assert reveal s.EqAbsInfoField(s.absPkt(ubuf), info.ToIntermediateAbsInfoField())
+	assert reveal s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
 	assert reveal s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
 }
 

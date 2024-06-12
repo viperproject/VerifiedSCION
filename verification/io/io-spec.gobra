@@ -51,46 +51,6 @@ requires CBio_IN_bio3s_enter(t, v)
 decreases
 pure func CBio_IN_bio3s_enter_T(t Place, v IO_val) Place
 
-/*** Helper functions, not in Isabelle ***/
-// Establishes the traversed segment for packets which are not incremented (internal).
-ghost
-requires len(currseg.Future) > 0
-decreases
-pure func establishGuardTraversedseg(currseg IO_seg3, direction bool) IO_seg3 {
-	return let uinfo := direction ?
-		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
-		currseg.UInfo in
-		IO_seg3_ {
-			AInfo: currseg.AInfo,
-			UInfo: uinfo,
-			ConsDir: currseg.ConsDir,
-			Peer: currseg.Peer,
-			Past: currseg.Past,
-			Future: currseg.Future,
-			History: currseg.History,
-		}
-}
-
-// Establishes the traversed segment for packets that are incremented (external).
-ghost
-requires len(currseg.Future) > 0
-decreases
-pure func establishGuardTraversedsegInc(currseg IO_seg3, direction bool) IO_seg3 {
-	return let uinfo := direction ?
-		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
-		currseg.UInfo in
-		IO_seg3_ {
-			AInfo: currseg.AInfo,
-			UInfo: uinfo,
-			ConsDir: currseg.ConsDir,
-			Peer: currseg.Peer,
-			Past: seq[IO_HF]{currseg.Future[0]} ++ currseg.Past,
-			Future: currseg.Future[1:],
-			History: seq[IO_ahi]{currseg.Future[0].Toab()} ++ currseg.History,
-		}
-}
-/*** End of helper functions, not in Isabelle ***/
-
 // This corresponds to the condition of the if statement in the io-spec case for enter
 ghost
 requires v.isIO_Internal_val1

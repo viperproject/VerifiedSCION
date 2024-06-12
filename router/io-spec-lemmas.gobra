@@ -380,7 +380,7 @@ opaque
 requires acc(&p.infoField, R55)
 decreases
 pure func (p* scionPacketProcessor) EqAbsInfoField(pkt io.IO_pkt2) bool {
-	return let absInf := p.infoField.ToIntermediateAbsInfoField() in
+	return let absInf := p.infoField.ToAbsInfoField() in
 		let currseg := pkt.CurrSeg in
 		absInf.AInfo == currseg.AInfo &&
 		absInf.UInfo == currseg.UInfo &&

@@ -64,8 +64,8 @@ type InfoField struct {
 // @ preserves acc(inf)
 // @ preserves acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R45)
 // @ ensures   err == nil
-// @ ensures   BytesToIntermediateAbsInfoField(raw, 0, 0, InfoLen) ==
-// @	inf.ToIntermediateAbsInfoField()
+// @ ensures   BytesToAbsInfoField(raw, 0) ==
+// @	inf.ToAbsInfoField()
 // @ decreases
 func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < InfoLen {
@@ -80,8 +80,8 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert &raw[4:8][2] == &raw[6] && &raw[4:8][3] == &raw[7]
 	inf.Timestamp = binary.BigEndian.Uint32(raw[4:8])
 	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R50)
-	//@ assert reveal BytesToIntermediateAbsInfoField(raw, 0, 0, InfoLen) ==
-	//@ 	inf.ToIntermediateAbsInfoField()
+	//@ assert reveal BytesToAbsInfoField(raw, 0) ==
+	//@ 	inf.ToAbsInfoField()
 	return nil
 }
 
@@ -89,30 +89,30 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // path.InfoLen.
 // @ requires  len(b) >= InfoLen
 // @ preserves acc(inf, R10)
-// @ preserves slices.AbsSlice_Bytes(b, 0, InfoLen)
+// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
 // @ ensures   err == nil
-// @ ensures   inf.ToIntermediateAbsInfoField() ==
-// @ 	BytesToIntermediateAbsInfoField(b, 0, 0, InfoLen)
+// @ ensures   inf.ToAbsInfoField() ==
+// @ 	BytesToAbsInfoField(b, 0)
 // @ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	if len(b) < InfoLen {
 		return serrors.New("buffer for InfoField too short", "expected", InfoLen,
 			"actual", len(b))
 	}
-	//@ ghost targetAbsInfo := inf.ToIntermediateAbsInfoField()
-	//@ unfold slices.AbsSlice_Bytes(b, 0, InfoLen)
+	//@ ghost targetAbsInfo := inf.ToAbsInfoField()
+	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	b[0] = 0
 	if inf.ConsDir {
 		b[0] |= 0x1
 	}
-	//@ ghost tmpInfo1 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ ghost tmpInfo1 := BytesToAbsInfoFieldHelper(b, 0)
 	//@ bits.InfoFieldFirstByteSerializationLemmas()
 	//@ assert tmpInfo1.ConsDir == targetAbsInfo.ConsDir
 	//@ ghost firstByte := b[0]
 	if inf.Peer {
 		b[0] |= 0x2
 	}
-	//@ tmpInfo2 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ tmpInfo2 := BytesToAbsInfoFieldHelper(b, 0)
 	//@ assert tmpInfo2.Peer == (b[0] & 0x2 == 0x2)
 	//@ assert tmpInfo2.ConsDir == (b[0] & 0x1 == 0x1)
 	//@ assert tmpInfo2.Peer == targetAbsInfo.Peer
@@ -121,16 +121,16 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	b[1] = 0 // reserved
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]
 	binary.BigEndian.PutUint16(b[2:4], inf.SegID)
-	//@ ghost tmpInfo3 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ ghost tmpInfo3 := BytesToAbsInfoFieldHelper(b, 0)
 	//@ assert tmpInfo3.UInfo == targetAbsInfo.UInfo
 	//@ assert &b[4:8][0] == &b[4] && &b[4:8][1] == &b[5]
 	//@ assert &b[4:8][2] == &b[6] && &b[4:8][3] == &b[7]
 	binary.BigEndian.PutUint32(b[4:8], inf.Timestamp)
-	//@ ghost tmpInfo4 := BytesToIntermediateAbsInfoFieldHelper(b, 0, InfoLen)
+	//@ ghost tmpInfo4 := BytesToAbsInfoFieldHelper(b, 0)
 	//@ assert tmpInfo4.AInfo == targetAbsInfo.AInfo
-	//@ fold slices.AbsSlice_Bytes(b, 0, InfoLen)
-	//@ assert inf.ToIntermediateAbsInfoField() ==
-	//@ 	reveal BytesToIntermediateAbsInfoField(b, 0, 0, InfoLen)
+	//@ fold slices.AbsSlice_Bytes(b, 0, len(b))
+	//@ assert inf.ToAbsInfoField() ==
+	//@ 	reveal BytesToAbsInfoField(b, 0)
 	return nil
 }
 
