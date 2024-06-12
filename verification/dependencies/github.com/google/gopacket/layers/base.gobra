@@ -8,7 +8,7 @@
 
 package layers
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import sl "github.com/scionproto/scion/verification/utils/slices"
 
 type BaseLayer struct {
 	Contents []byte
@@ -28,29 +28,29 @@ pred (b *BaseLayer) PayloadMem() {
 }
 
 requires b.LayerMem()
-ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem()
+ensures sl.Bytes(res, 0, len(res))
+ensures sl.Bytes(res, 0, len(res)) --* b.LayerMem()
 decreases
 func (b *BaseLayer) LayerContents() (res []byte) {
 	unfold b.LayerMem()
 	res = b.Contents
-	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.LayerMem() {
-		unfold slices.AbsSlice_Bytes(res, 0, len(res))
+	fold sl.Bytes(res, 0, len(res))
+	package sl.Bytes(res, 0, len(res)) --* b.LayerMem() {
+		unfold sl.Bytes(res, 0, len(res))
 		fold b.LayerMem()
 	}
 }
 
 requires b.PayloadMem()
-ensures slices.AbsSlice_Bytes(res, 0, len(res))
-ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem()
+ensures sl.Bytes(res, 0, len(res))
+ensures sl.Bytes(res, 0, len(res)) --* b.PayloadMem()
 decreases
 func (b *BaseLayer) LayerPayload() (res []byte) {
 	unfold b.PayloadMem()
 	res = b.Payload
-	fold slices.AbsSlice_Bytes(res, 0, len(res))
-	package slices.AbsSlice_Bytes(res, 0, len(res)) --* b.PayloadMem() {
-		unfold slices.AbsSlice_Bytes(res, 0, len(res))
+	fold sl.Bytes(res, 0, len(res))
+	package sl.Bytes(res, 0, len(res)) --* b.PayloadMem() {
+		unfold sl.Bytes(res, 0, len(res))
 		fold b.PayloadMem()
 	}
 }

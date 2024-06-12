@@ -20,7 +20,7 @@ package slayers
 import (
 	"encoding/binary"
 	"fmt"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
+	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 )
 
@@ -133,11 +133,11 @@ func (a SCMPTypeCode) String() string {
 
 // SerializeTo writes the SCMPTypeCode value to the buffer.
 // @ requires len(bytes) >= 2
-// @ preserves slices.AbsSlice_Bytes(bytes, 0, 2)
+// @ preserves sl.Bytes(bytes, 0, 2)
 // @ decreases
 func (a SCMPTypeCode) SerializeTo(bytes []byte) {
-	//@ unfold slices.AbsSlice_Bytes(bytes, 0, 2)
-	//@ defer fold slices.AbsSlice_Bytes(bytes, 0, 2)
+	//@ unfold sl.Bytes(bytes, 0, 2)
+	//@ defer fold sl.Bytes(bytes, 0, 2)
 	binary.BigEndian.PutUint16(bytes, uint16(a))
 }
 

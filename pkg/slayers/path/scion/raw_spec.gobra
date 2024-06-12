@@ -44,7 +44,7 @@ pred (s *Raw) Mem(buf []byte) {
 ghost
 pure
 requires  acc(s.Mem(buf), _)
-requires  acc(sl.AbsSlice_Bytes(buf, 0, len(buf)), R42)
+requires  acc(sl.Bytes(buf, 0, len(buf)), R42)
 decreases
 func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
 	return s.EqAbsHeader(buf) &&
@@ -153,7 +153,7 @@ pure func (s *Raw) CurrInfMatchesCurrHF(ghost ub []byte) bool {
 
 ghost
 requires acc(s.Mem(ub), _)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) EqAbsHeader(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
@@ -192,103 +192,6 @@ func (s *Raw) DowngradePerm(buf []byte) {
 	fold s.Base.NonInitMem()
 	fold s.NonInitMem()
 }
-
-/******** Lemma: RawPerm ********/
-pred (r *Raw) RawPermRemainder(ubuf []byte, p perm) {
-	0 < p &&
-	acc(r.Base.Mem(), p/2) &&
-	acc(&r.Raw, p/2) &&
-	len(r.Raw) <= len(ubuf) &&
-	r.Raw === ubuf[:len(r.Raw)] &&
-	acc(sl.AbsSlice_Bytes(ubuf, len(r.Raw), len(ubuf)), p) &&
-	len(r.Raw) == r.Base.Len()
-}
-
-ghost
-requires 0 < p
-requires acc(&r.Raw, p/2) && acc(sl.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p) && acc(r.Base.Mem(), p/2)
-requires r.RawPermRemainder(ubuf, p)
-ensures  acc(r.Mem(ubuf), p)
-ensures  acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-decreases
-func (r *Raw) UndoRawPerm(ubuf []byte, p perm) {
-	unfold r.RawPermRemainder(ubuf, p)
-	sl.Unslice_Bytes(ubuf, 0, len(r.Raw), p)
-	sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
-	fold acc(r.Mem(ubuf), p)
-}
-
-ghost
-requires 0 < p
-requires acc(r.Mem(ubuf), p)
-requires acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-ensures  acc(&r.Raw, p/2)
-ensures  acc(sl.AbsSlice_Bytes(r.Raw, 0, len(r.Raw)), p)
-ensures  acc(r.Base.Mem(), p/2)
-ensures  r.RawPermRemainder(ubuf, p)
-ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
-decreases
-func (r *Raw) RawPerm(ubuf []byte, p perm) {
-	unfold acc(r.Mem(ubuf), p)
-	sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
-	sl.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
-	fold r.RawPermRemainder(ubuf, p)
-}
-/******** End of Lemma: RawPerm ********/
-
-/******** Lemma: RawRangePerm ********/
-pred (r *Raw) RawRangePermRemainder(ubuf []byte, start, end int, p perm) {
-	0 < p &&
-	acc(r.Base.Mem(), p) &&
-	acc(&r.Raw, p/2) &&
-	0 <= start && start <= end && end <= len(r.Raw) &&
-	len(r.Raw) <= len(ubuf) &&
-	r.Raw === ubuf[:len(r.Raw)] &&
-	acc(sl.AbsSlice_Bytes(r.Raw, 0, start), p) &&
-	acc(sl.AbsSlice_Bytes(r.Raw, end, len(r.Raw)), p) &&
-	acc(sl.AbsSlice_Bytes(ubuf, len(r.Raw), len(ubuf)), p) &&
-	len(r.Raw) == r.Base.Len()
-}
-
-ghost
-requires 0 < p
-requires acc(&r.Raw, p/2)
-requires 0 <= start && start <= end && end <= len(r.Raw)
-requires acc(sl.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
-requires r.RawRangePermRemainder(ubuf, start, end, p)
-ensures  acc(r.Mem(ubuf), p)
-ensures  acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-decreases
-func (r *Raw) UndoRawRangePerm(ubuf []byte, start, end int, p perm) {
-	unfold r.RawRangePermRemainder(ubuf, start, end, p)
-	sl.Unslice_Bytes(r.Raw, start, end, p)
-	sl.CombineAtIndex_Bytes(r.Raw, 0, end, start, p)
-	sl.CombineAtIndex_Bytes(r.Raw, 0, len(r.Raw), end, p)
-	fold r.RawPermRemainder(ubuf, p)
-	r.UndoRawPerm(ubuf, p)
-}
-
-// Notice that no permission to r.Base.Mem() is provided, unlike the previous methods
-ghost
-requires 0 < p
-requires acc(r.Mem(ubuf), p)
-requires acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), p)
-requires 0 <= start && start <= end && end <= unfolding acc(r.Mem(ubuf), p) in len(r.Raw)
-ensures  acc(&r.Raw, p/2)
-ensures  r.Raw === old(unfolding acc(r.Mem(ubuf), p) in r.Raw)
-ensures  acc(sl.AbsSlice_Bytes(r.Raw[start:end], 0, end-start), p)
-ensures  r.RawRangePermRemainder(ubuf, start, end, p)
-decreases
-func (r *Raw) RawRangePerm(ubuf []byte, start, end int, p perm) {
-	unfold acc(r.Mem(ubuf), p)
-	sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(r.Raw), p)
-	sl.Reslice_Bytes(ubuf, 0, len(r.Raw), p)
-	sl.SplitByIndex_Bytes(r.Raw, 0, len(r.Raw), start, p)
-	sl.SplitByIndex_Bytes(r.Raw, start, len(r.Raw), end, p)
-	sl.Reslice_Bytes(r.Raw, start, end, p)
-	fold r.RawRangePermRemainder(ubuf, start, end, p)
-}
-/******** End of Lemma: RawRangePerm ********/
 
 ghost
 requires r.Mem(ubuf1)
@@ -387,7 +290,7 @@ ghost
 requires  0 <= offset
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires  acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures   len(res) == segLen - currHfIdx
 decreases segLen - currHfIdx
 pure func hopFields(
@@ -433,7 +336,7 @@ requires 0 <= offset
 requires 0 < segLen
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires offset + path.HopLen * segLen <= len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures len(res.Future) == segLen - currHfIdx
 ensures len(res.History) == currHfIdx
 ensures len(res.Past) == currHfIdx
@@ -466,7 +369,7 @@ requires 0 < segLen
 requires offset + path.HopLen * segLen <= len(raw)
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires 0 <= currInfIdx && currInfIdx < 3
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func CurrSeg(raw []byte,
 	offset int,
@@ -489,7 +392,7 @@ requires 0 <= seg2Len
 requires 0 <= seg3Len
 requires pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= len(raw)
 requires 1 <= currInfIdx && currInfIdx < 4
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func LeftSeg(
 	raw []byte,
@@ -514,7 +417,7 @@ requires 0 <= seg2Len
 requires 0 <= seg3Len
 requires pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= len(raw)
 requires -1 <= currInfIdx && currInfIdx < 2
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func RightSeg(
 	raw []byte,
@@ -539,7 +442,7 @@ requires 0 <= seg2Len
 requires 0 <= seg3Len
 requires pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= len(raw)
 requires 2 <= currInfIdx && currInfIdx < 5
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func MidSeg(
 	raw []byte,
@@ -558,7 +461,7 @@ pure func MidSeg(
 
 ghost
 opaque
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 requires validPktMetaHdr(raw)
 decreases
 pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
@@ -585,10 +488,10 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 // the return type.
 ghost
 requires MetaLen <= len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
-	return unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+	return unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
 		let hdr := binary.BigEndian.Uint32(raw[:MetaLen])          in
 		DecodedFrom(hdr)
 }
@@ -597,7 +500,7 @@ pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
 // the return type.
 ghost
 requires MetaLen <= len(raw)
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func RawBytesToBase(raw []byte) Base {
 	return let metaHdr := RawBytesToMetaHdr(raw) in
@@ -609,7 +512,7 @@ pure func RawBytesToBase(raw []byte) Base {
 
 ghost
 opaque
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func validPktMetaHdr(raw []byte) bool {
 	return MetaLen <= len(raw)  &&
@@ -626,32 +529,32 @@ pure func validPktMetaHdr(raw []byte) bool {
 
 ghost
 requires  MetaLen <= idx && idx <= len(raw)
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-preserves acc(sl.AbsSlice_Bytes(raw[:idx], 0, idx), R56)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
+preserves acc(sl.Bytes(raw[:idx], 0, idx), R56)
 ensures   RawBytesToMetaHdr(raw) == RawBytesToMetaHdr(raw[:idx])
 ensures   RawBytesToBase(raw) == RawBytesToBase(raw[:idx])
 decreases
 func ValidPktMetaHdrSublice(raw []byte, idx int) {
 	reveal validPktMetaHdr(raw)
 	reveal validPktMetaHdr(raw[:idx])
-	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-	unfold acc(sl.AbsSlice_Bytes(raw[:idx], 0, idx), R56)
+	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	unfold acc(sl.Bytes(raw[:idx], 0, idx), R56)
 	assert forall i int :: { &raw[:MetaLen][i] } 0 <= i && i < MetaLen ==>
 		&raw[:MetaLen][i] == &raw[:idx][:MetaLen][i]
-	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
-	fold acc(sl.AbsSlice_Bytes(raw[:idx], 0, idx), R56)
+	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	fold acc(sl.Bytes(raw[:idx], 0, idx), R56)
 }
 
 ghost
 requires acc(s.Mem(ub), R54)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+requires acc(sl.Bytes(ub, 0, len(ub)), R55)
 requires s.InfsMatchHfs(ub)
 requires s.ValidCurrINF(ub)
 requires s.ValidCurrHF(ub)
 requires s.SegsInBounds(ub)
 requires s.CurrInfMatchesCurrHF(ub)
 requires s.EqAbsHeader(ub)
-ensures  acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
+ensures  acc(sl.Bytes(ub, 0, len(ub)), R55)
 ensures  acc(s.Mem(ub), R54)
 ensures  validPktMetaHdr(ub)
 ensures  s.EqAbsHeader(ub)
@@ -739,7 +642,7 @@ ghost
 opaque
 requires acc(s.Mem(ub), _)
 requires 0 <= idx && idx < s.GetNumINF(ub)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.InfoField) bool {
 	return unfolding acc(s.Mem(ub), _) in
@@ -754,7 +657,7 @@ ghost
 opaque
 requires acc(s.Mem(ub), _)
 requires s.ValidCurrINF(ub)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
 	return unfolding acc(s.Mem(ub), _) in
@@ -769,7 +672,7 @@ ghost
 opaque
 requires acc(s.Mem(ub), _)
 requires 0 <= idx && idx < s.GetNumHops(ub)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) CorrectlyDecodedHfWithIdx(ub []byte, idx int, hop path.HopField) bool {
 	return unfolding acc(s.Mem(ub), _) in
@@ -783,7 +686,7 @@ ghost
 opaque
 requires acc(s.Mem(ub), _)
 requires s.ValidCurrHF(ub)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s *Raw) CorrectlyDecodedHf(ub []byte, hop path.HopField) bool {
 	return unfolding acc(s.Mem(ub), _) in
@@ -797,7 +700,7 @@ pure func (s *Raw) CorrectlyDecodedHf(ub []byte, hop path.HopField) bool {
 ghost
 preserves acc(s.Mem(ubuf), R55)
 preserves s.IsLastHopSpec(ubuf)
-preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
 preserves validPktMetaHdr(ubuf)
 preserves s.EqAbsHeader(ubuf)
 ensures len(s.absPkt(ubuf).CurrSeg.Future) == 1
@@ -822,7 +725,7 @@ func (s *Raw) LastHopLemma(ubuf []byte) {
 ghost
 preserves acc(s.Mem(ubuf), R55)
 preserves s.GetIsXoverSpec(ubuf)
-preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R56)
+preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
 preserves validPktMetaHdr(ubuf)
 preserves s.EqAbsHeader(ubuf)
 ensures   s.absPkt(ubuf).LeftSeg != none[io.IO_seg2]
@@ -869,7 +772,7 @@ pure func (s *Raw) EqAbsInfoField(pkt io.IO_pkt2, info path.IntermediateAbsInfoF
 
 ghost
 preserves acc(s.Mem(ubuf), R53)
-preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R53)
+preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R53)
 preserves validPktMetaHdr(ubuf)
 preserves s.EqAbsHeader(ubuf)
 preserves len(s.absPkt(ubuf).CurrSeg.Future) > 0
@@ -913,7 +816,7 @@ requires  0 < segLen
 requires  offset + path.HopLen * segLen <= len(raw)
 requires  0 <= currHfIdx && currHfIdx < segLen
 requires  0 <= currInfIdx && currInfIdx < 3
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures   len(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0).Future) > 0
 decreases
 func LenCurrSeg(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen int) {
@@ -927,7 +830,7 @@ requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 requires  0 <= currInfIdx && currInfIdx < 2
 requires  1 <= currInfIdx ==> 0 < seg3Len
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures   LeftSeg(raw, currInfIdx+1, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
 ensures   RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
 decreases
@@ -942,7 +845,7 @@ requires  0 < segLen
 requires  offset + path.HopLen * segLen <= len(raw)
 requires  0 <= currHfIdx && currHfIdx < segLen
 requires  0 <= currInfIdx && currInfIdx < 3
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
 preserves len(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0).Future) > 0
 ensures CurrSeg(raw, offset, currInfIdx, currHfIdx+1, segLen, 0) ==
 	absIncPathSeg(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0))
@@ -969,7 +872,7 @@ requires  1 <= currInfIdx && currInfIdx < 3
 requires  1 == currInfIdx ==> currHfIdx+1 == seg1Len
 requires  2 == currInfIdx ==> 0 < seg3Len && currHfIdx+1 == seg1Len + seg2Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
 preserves LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
 ensures
 	let prevSegLen := LengthOfPrevSeg(currHfIdx+1, seg1Len, seg2Len, seg3Len) in
@@ -995,7 +898,7 @@ requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 requires  2 <= currInfIdx && currInfIdx < 4
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures   LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0) ==
 	MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 decreases
@@ -1011,7 +914,7 @@ requires  0 <= seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 requires  -1 <= currInfIdx && currInfIdx < 1
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures   MidSeg(raw, currInfIdx+4, seg1Len, seg2Len, seg3Len, 0) ==
 	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 decreases
@@ -1030,7 +933,7 @@ requires  0 <= currInfIdx && currInfIdx < 2
 requires  0 == currInfIdx ==> currHfIdx+1 == seg1Len
 requires  1 == currInfIdx ==> 0 < seg3Len && currHfIdx+1 == seg1Len + seg2Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
 preserves RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0) != none[io.IO_seg3]
 ensures
 	let prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
@@ -1063,7 +966,7 @@ requires  0 <= offset
 requires  0 <= currHFIdx && currHFIdx <= segLen
 requires  len(hops) == segLen - currHFIdx
 requires  offset + path.HopLen * segLen <= len(raw)
-requires  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires  acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func hopFieldsBytePositions(raw []byte, offset int, currHFIdx int, segLen int, hops seq[io.IO_HF]) bool {
 	return forall i int :: { hops[i] } 0 <= i && i < len(hops) ==>
@@ -1075,7 +978,7 @@ requires  R55 < p
 requires  0 <= offset
 requires  0 <= currHFIdx && currHFIdx <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), p)
+preserves acc(sl.Bytes(raw, 0, len(raw)), p)
 ensures   hopFieldsBytePositions(raw, offset, currHFIdx, segLen, hopFields(raw, offset, currHFIdx, segLen))
 decreases segLen - currHFIdx
 func hopFieldsBytePositionsLemma(
