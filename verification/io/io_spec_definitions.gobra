@@ -125,7 +125,7 @@ pure func (s SegLens) NumInfoFields() int {
 
 ghost
 decreases
-pure func (s SegLens) Sum() int {
+pure func (s SegLens) TotalHops() int {
     return s.Seg1Len + s.Seg2Len + s.Seg3Len
 }
 

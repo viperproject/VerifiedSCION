@@ -417,11 +417,11 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ seg1Len := int(s.PathMeta.SegLen[0])
 	//@ seg2Len := int(s.PathMeta.SegLen[1])
 	//@ seg3Len := int(s.PathMeta.SegLen[2])
-	//@ segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
-	//@ prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
+	//@ segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
+	//@ segLen := segLens.LengthOfCurrSeg(currHfIdx)
+	//@ prevSegLen := segLens.LengthOfPrevSeg(currHfIdx)
 	//@ offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
 	//@ hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
-	//@ segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
 	if idx >= s.NumINF {
 		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
 		//@ fold acc(s.Base.Mem(), R50)
