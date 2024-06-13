@@ -41,6 +41,13 @@ func (p Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
 	return true
 }
 
+ghost
+pure
+decreases
+func (p Path) LenSpec(ghost ub []byte) (l int) {
+	return PathLen
+}
+
 Path implements path.Path
 
 // Definitions to allow *Path to be treated as a path.Path

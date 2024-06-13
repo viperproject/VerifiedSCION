@@ -178,7 +178,7 @@ pred (s *SCION) Mem(ubuf []byte) {
 	// end of path pool
 	// helpful facts for other methods:
 	// - for router::updateScionLayer:
-	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
+	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
 }
 
 ghost
@@ -718,6 +718,6 @@ decreases
 pure func (s *SCION) InferSizeOHP(ghost ub []byte) (b bool) {
 	return unfolding acc(s.Mem(ub), _) in
 		let pathSlice := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
-		let pathLen := s.Path.Len(pathSlice) in
+		let pathLen := s.Path.LenSpec(pathSlice) in
 		CmnHdrLen + s.AddrHdrLenSpecInternal() + pathLen <= len(ub)
 }

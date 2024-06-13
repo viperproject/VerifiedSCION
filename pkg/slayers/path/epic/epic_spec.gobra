@@ -18,6 +18,8 @@ package epic
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
+
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -33,6 +35,17 @@ pred (p *Path) Mem(ubuf []byte) {
 	p.ScionPath != nil &&
 	MetadataLen <= len(ubuf) &&
 	p.ScionPath.Mem(ubuf[MetadataLen:])
+}
+
+ghost
+pure
+requires acc(p.Mem(ub), _)
+decreases
+func (p *Path) LenSpec(ghost ub []byte) (l int) {
+	return unfolding acc(p.Mem(ub), _) in
+		(p.ScionPath == nil ?
+			MetadataLen :
+			MetadataLen + p.ScionPath.LenSpec(ub[MetadataLen:]))
 }
 
 ghost

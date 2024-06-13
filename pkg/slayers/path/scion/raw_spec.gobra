@@ -72,13 +72,20 @@ func (s *Raw) Type(ghost buf []byte) (t path.Type) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-pure
-requires acc(s.Mem(buf), _)
-ensures  unfolding acc(s.Mem(buf), _) in l == s.Base.Len()
-ensures  l >= 0
+preserves acc(s.Mem(buf), R50)
+ensures   l == s.LenSpec(buf)
 decreases
 func (s *Raw) Len(ghost buf []byte) (l int) {
 	return unfolding acc(s.Mem(buf), _) in s.Base.Len()
+}
+
+ghost
+pure
+requires acc(s.Mem(ub), _)
+ensures  unfolding acc(s.Mem(ub), _) in l == s.Base.Len()
+decreases
+func (s *Raw) LenSpec(ghost ub []byte) (l int) {
+	return unfolding acc(s.Mem(ub), _) in s.Base.Len()
 }
 
 /**
