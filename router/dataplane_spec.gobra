@@ -68,7 +68,7 @@ pred (d *DataPlane) Mem() {
 	(d.svc != nil               ==> d.svc.Mem())                  &&
 	(d.macFactory != nil        ==> (
 		acc(d.key)                                        &&
-		acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
+		acc(sl.Bytes(*d.key, 0, len(*d.key)), _) &&
 		scrypto.ValidKeyForHash(*d.key)                   &&
 		d.macFactory implements MacFactorySpec{d.key}))           &&
 	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions)) &&
@@ -146,9 +146,9 @@ pred (p *scionPacketProcessor) initMem() {
 }
 
 // This is used as a signature, not as an assumed function.
-requires acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
+requires acc(key, _) && acc(sl.Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
-ensures  acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
+ensures  acc(key, _) && acc(sl.Bytes(*key, 0, len(*key)), _)
 ensures  res != nil && res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
@@ -418,7 +418,7 @@ func (d *DataPlane) getMacFactoryMem() {
 ghost
 requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
-ensures  acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
+ensures  acc(sl.Bytes(*d.key, 0, len(*d.key)), _)
 ensures  scrypto.ValidKeyForHash(*d.key)
 ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
@@ -523,8 +523,8 @@ pred writeMsgInv(writeMsgs underlayconn.Messages) {
 	acc(&writeMsgs[0]) &&
 	len(writeMsgs[0].Buffers) == 1 &&
 	acc(&writeMsgs[0].Buffers[0]) &&
-	// sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])) &&
-	sl.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB)) &&
+	// sl.Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])) &&
+	sl.Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB)) &&
 	0 <= writeMsgs[0].N
 }
 /** end of definitions used internally for the proof of Run **/
@@ -580,7 +580,7 @@ pred (s* scionPacketProcessor) sInit() {
 	acc(&s.segmentChange)                        &&
 	acc(&s.cachedMac)                            &&
 	acc(&s.macBuffers)                           &&
-	sl.AbsSlice_Bytes(s.macBuffers.scionInput, 0, len(s.macBuffers.scionInput)) &&
+	sl.Bytes(s.macBuffers.scionInput, 0, len(s.macBuffers.scionInput)) &&
 	s.bfdLayer.NonInitMem()                      &&
 	acc(&s.srcAddr)                              &&
 	acc(&s.rawPkt)

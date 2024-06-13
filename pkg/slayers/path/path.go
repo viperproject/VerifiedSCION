@@ -71,9 +71,9 @@ type Path interface {
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
-	//@ preserves sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+	//@ preserves sl.Bytes(underlyingBuf, 0, len(underlyingBuf))
 	//@ preserves acc(Mem(underlyingBuf), R1)
-	//@ preserves sl.AbsSlice_Bytes(b, 0, len(b))
+	//@ preserves sl.Bytes(b, 0, len(b))
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e error)
@@ -81,7 +81,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
-	//@ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
+	//@ preserves acc(sl.Bytes(b, 0, len(b)), R42)
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> NonInitMem()
@@ -91,13 +91,13 @@ type Path interface {
 	//@ ghost
 	//@ pure
 	//@ requires Mem(b)
-	//@ requires acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
+	//@ requires acc(sl.Bytes(b, 0, len(b)), R42)
 	//@ decreases
 	//@ IsValidResultOfDecoding(b []byte, err error) (res bool)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires  Mem(underlyingBuf)
-	//@ preserves sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf))
+	//@ preserves sl.Bytes(underlyingBuf, 0, len(underlyingBuf))
 	//@ ensures   e == nil ==> p != nil
 	//@ ensures   e == nil ==> p.Mem(underlyingBuf)
 	//@ ensures   e != nil ==> e.ErrorMem()
@@ -210,23 +210,23 @@ type rawPath struct {
 }
 
 // @ preserves acc(p.Mem(underlyingBuf), R10)
-// @ preserves acc(sl.AbsSlice_Bytes(underlyingBuf, 0, len(underlyingBuf)), R10)
-// @ preserves sl.AbsSlice_Bytes(b, 0, len(b))
+// @ preserves acc(sl.Bytes(underlyingBuf, 0, len(underlyingBuf)), R10)
+// @ preserves sl.Bytes(b, 0, len(b))
 // @ ensures   e == nil
 // @ decreases
 func (p *rawPath) SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e error) {
-	//@ unfold sl.AbsSlice_Bytes(b, 0, len(b))
+	//@ unfold sl.Bytes(b, 0, len(b))
 	//@ unfold acc(p.Mem(underlyingBuf), R10)
-	//@ unfold acc(sl.AbsSlice_Bytes(p.raw, 0, len(p.raw)), R11)
+	//@ unfold acc(sl.Bytes(p.raw, 0, len(p.raw)), R11)
 	copy(b, p.raw /*@, R11 @*/)
-	//@ fold acc(sl.AbsSlice_Bytes(p.raw, 0, len(p.raw)), R11)
+	//@ fold acc(sl.Bytes(p.raw, 0, len(p.raw)), R11)
 	//@ fold acc(p.Mem(underlyingBuf), R10)
-	//@ fold sl.AbsSlice_Bytes(b, 0, len(b))
+	//@ fold sl.Bytes(b, 0, len(b))
 	return nil
 }
 
 // @ requires  p.NonInitMem()
-// @ preserves acc(sl.AbsSlice_Bytes(b, 0, len(b)), R42)
+// @ preserves acc(sl.Bytes(b, 0, len(b)), R42)
 // @ ensures   p.Mem(b)
 // @ ensures   e == nil
 // @ decreases

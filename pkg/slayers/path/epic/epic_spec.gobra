@@ -20,7 +20,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 
-	"github.com/scionproto/scion/verification/utils/slices"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 pred (p *Path) NonInitMem() {
@@ -29,8 +29,8 @@ pred (p *Path) NonInitMem() {
 
 pred (p *Path) Mem(ubuf []byte) {
 	acc(&p.PktID) &&
-	acc(&p.PHVF) && slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)) &&
-	acc(&p.LHVF) && slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)) &&
+	acc(&p.PHVF) && sl.Bytes(p.PHVF, 0, len(p.PHVF)) &&
+	acc(&p.LHVF) && sl.Bytes(p.LHVF, 0, len(p.LHVF)) &&
 	acc(&p.ScionPath) &&
 	p.ScionPath != nil &&
 	MetadataLen <= len(ubuf) &&

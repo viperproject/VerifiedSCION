@@ -241,7 +241,7 @@ pure func DecodedFrom(line uint32) MetaHdr {
 }
 
 ghost
-requires acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
+requires acc(sl.Bytes(b, 0, len(b)), _)
 decreases
 pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
 	return MetaLen <= len(b)             &&
@@ -259,7 +259,7 @@ pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
 
 ghost
 requires acc(s.Mem(), _)
-requires acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
+requires acc(sl.Bytes(b, 0, len(b)), _)
 decreases
 pure func (s *Base) DecodeFromBytesSpec(b []byte) bool {
 	return unfolding acc(s.Mem(), _) in
@@ -293,7 +293,7 @@ pure func (m MetaHdr) SerializedToLine() uint32 {
 }
 
 ghost
-requires acc(sl.AbsSlice_Bytes(b, 0, len(b)), _)
+requires acc(sl.Bytes(b, 0, len(b)), _)
 decreases
 pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
 	return MetaLen <= len(b)                &&
@@ -307,7 +307,7 @@ pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
 }
 
 ghost
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), R56)
 decreases
 pure func (s Base) EqAbsHeader(ub []byte) bool {
 	// we compute the sublice ub[:MetaLen] inside this function instead
@@ -319,25 +319,25 @@ pure func (s Base) EqAbsHeader(ub []byte) bool {
 }
 
 ghost
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
 pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
 	return MetaLen <= len(ub) &&
-		unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+		unfolding acc(sl.Bytes(ub, 0, len(ub)), _) in
 		s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen]))
 }
 
 ghost
 opaque
 requires MetaLen <= idx && idx <= len(ub)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R55)
-requires acc(sl.AbsSlice_Bytes(ub[:idx], 0, idx), R55)
+requires acc(sl.Bytes(ub, 0, len(ub)), R55)
+requires acc(sl.Bytes(ub[:idx], 0, idx), R55)
 ensures  s.EqAbsHeader(ub) == s.EqAbsHeader(ub[:idx])
 decreases
 pure func (s MetaHdr) EqAbsHeaderForSublice(ub []byte, idx int) Lemma {
 	return let _ := Asserting(ub[:MetaLen] === ub[:idx][:MetaLen]) in
-		unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R56) in
-		unfolding acc(sl.AbsSlice_Bytes(ub[:idx], 0, idx), R56) in
+		unfolding acc(sl.Bytes(ub, 0, len(ub)), R56) in
+		unfolding acc(sl.Bytes(ub[:idx], 0, idx), R56) in
 		let _ := Asserting(s.EqAbsHeader(ub) == (s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen])))) in
 		Lemma{}
 }
