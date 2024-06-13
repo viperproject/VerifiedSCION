@@ -66,9 +66,9 @@ func absPktFutureLemma(raw []byte) {
 	segLen := scion.LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := scion.LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen)
+	offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen)
 	pkt := reveal absPkt(raw)
-	assert pkt.CurrSeg == reveal scion.CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen)
+	assert pkt.CurrSeg == reveal scion.CurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen)
 	assert len(pkt.CurrSeg.Future) > 0
 }
 
@@ -294,9 +294,9 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	segLen := scion.LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := scion.LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen)
+	offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen)
 
-	scion.WidenCurrSeg(ub, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
+	scion.WidenCurrSeg(ub, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
 	scion.WidenLeftSeg(ub, currInfIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenMidSeg(ub, currInfIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenRightSeg(ub, currInfIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
@@ -355,9 +355,9 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	segLen := scion.LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := scion.LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := scion.HopFieldOffset(numINF, 0, headerOffsetWithMetaLen)
+	offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen)
 
-	scion.WidenCurrSeg(ub, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
+	scion.WidenCurrSeg(ub, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen, start, end)
 	scion.WidenLeftSeg(ub, currInfIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenMidSeg(ub, currInfIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
 	scion.WidenRightSeg(ub, currInfIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, start, end)
@@ -380,7 +380,7 @@ opaque
 requires acc(&p.infoField, R55)
 decreases
 pure func (p* scionPacketProcessor) EqAbsInfoField(pkt io.IO_pkt2) bool {
-	return let absInf := p.infoField.ToIntermediateAbsInfoField() in
+	return let absInf := p.infoField.ToAbsInfoField() in
 		let currseg := pkt.CurrSeg in
 		absInf.AInfo == currseg.AInfo &&
 		absInf.UInfo == currseg.UInfo &&

@@ -1981,7 +1981,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	// @ absPktFutureLemma(ub)
 	// @ p.path.DecodingLemma(ubPath, p.infoField, p.hopField)
 	// @ assert reveal p.path.EqAbsInfoField(p.path.absPkt(ubPath),
-	// @	p.infoField.ToIntermediateAbsInfoField())
+	// @	p.infoField.ToAbsInfoField())
 	// @ assert reveal p.path.EqAbsHopField(p.path.absPkt(ubPath),
 	// @	p.hopField.ToIO_HF())
 	// @ assert reveal p.EqAbsHopField(absPkt(ub))
@@ -2527,7 +2527,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost oldPkt io.IO_pkt2, gh
 	// @ reveal p.EqAbsInfoField(oldPkt)
 	// @ reveal p.EqAbsHopField(oldPkt)
 	// (VerifiedSCION) Assumptions for Cryptography:
-	// @ absInf := p.infoField.ToIntermediateAbsInfoField()
+	// @ absInf := p.infoField.ToAbsInfoField()
 	// @ absHF := p.hopField.ToIO_HF()
 	// @ AssumeForIO(dp.hf_valid(absInf.ConsDir, absInf.AInfo, absInf.UInfo, absHF))
 	// @ reveal AbsVerifyCurrentMACConstraint(oldPkt, dp)

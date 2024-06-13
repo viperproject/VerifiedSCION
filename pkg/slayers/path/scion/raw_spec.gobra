@@ -452,7 +452,7 @@ pure func MidSeg(
 	seg3Len int,
 	headerOffset int) option[io.IO_seg3] {
 	return let offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset) in
-		(currInfIdx == 4 && seg2Len > 0) ?
+		(currInfIdx == 4 && seg2Len > 0 && seg3Len > 0) ?
 			some(CurrSeg(raw, offset, 0, seg1Len, seg1Len, headerOffset)) :
 			((currInfIdx == 2 && seg2Len > 0 && seg3Len > 0) ?
 				some(CurrSeg(raw, offset + path.HopLen * (seg1Len + seg2Len), currInfIdx, 0, seg3Len, headerOffset)) :
@@ -475,17 +475,15 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 		let segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
 		let prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
 		let numINF := NumInfoFields(seg1Len, seg2Len, seg3Len) in
-		let offset := HopFieldOffset(numINF, 0, MetaLen) in
+		let offset := HopFieldOffset(numINF, prevSegLen, MetaLen) in
 		io.IO_Packet2 {
-			CurrSeg : CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen),
+			CurrSeg : CurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen),
 			LeftSeg : LeftSeg(raw, currInfIdx + 1, seg1Len, seg2Len , seg3Len, MetaLen),
 			MidSeg : MidSeg(raw, currInfIdx + 2, seg1Len, seg2Len , seg3Len, MetaLen),
 			RightSeg : RightSeg(raw, currInfIdx - 1, seg1Len, seg2Len , seg3Len, MetaLen),
 		}
 }
 
-// In the future, this should probably use AbsMetaHdr as
-// the return type.
 ghost
 requires MetaLen <= len(raw)
 requires acc(sl.Bytes(raw, 0, len(raw)), R56)
@@ -496,8 +494,6 @@ pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
 		DecodedFrom(hdr)
 }
 
-// In the future, this should probably use AbsBase as
-// the return type.
 ghost
 requires MetaLen <= len(raw)
 requires acc(sl.Bytes(raw, 0, len(raw)), R56)
@@ -576,20 +572,6 @@ func (s *Raw) EstablishValidPktMetaHdr(ghost ub []byte) {
 }
 
 ghost
-decreases
-pure func AbsSetInfoField(oldPkt io.IO_pkt2, info path.IntermediateAbsInfoField) (newPkt io.IO_pkt2) {
-	return let newCurrSeg := io.IO_seg3_ {
-		info.AInfo,
-		info.UInfo,
-		info.ConsDir,
-		info.Peer,
-		oldPkt.CurrSeg.Past,
-		oldPkt.CurrSeg.Future,
-		oldPkt.CurrSeg.History} in
-	io.IO_Packet2{newCurrSeg, oldPkt.LeftSeg, oldPkt.MidSeg, oldPkt.RightSeg}
-}
-
-ghost
 requires oldPkt.LeftSeg != none[io.IO_seg2]
 requires len(oldPkt.CurrSeg.Future) > 0
 decreases
@@ -649,8 +631,8 @@ pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.Info
 		unfolding acc(s.Base.Mem(), _) in
 		let infOffset := MetaLen + idx*path.InfoLen in
 		infOffset+path.InfoLen <= len(ub) &&
-		info.ToIntermediateAbsInfoField() ==
-			path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
+		info.ToAbsInfoField() ==
+			reveal path.BytesToAbsInfoField(ub, infOffset)
 }
 
 ghost
@@ -664,8 +646,8 @@ pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
 		unfolding acc(s.Base.Mem(), _) in
 		let infOffset := MetaLen + int(s.Base.PathMeta.CurrINF)*path.InfoLen in
 		infOffset+path.InfoLen <= len(ub) &&
-		info.ToIntermediateAbsInfoField() ==
-			path.BytesToIntermediateAbsInfoField(ub, 0, infOffset, len(ub))
+		info.ToAbsInfoField() ==
+			reveal path.BytesToAbsInfoField(ub, infOffset)
 }
 
 ghost
@@ -716,9 +698,9 @@ func (s *Raw) LastHopLemma(ubuf []byte) {
 	segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := HopFieldOffset(numINF, 0, MetaLen)
+	offset := HopFieldOffset(numINF, prevSegLen, MetaLen)
 	pkt := reveal s.absPkt(ubuf)
-	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen)
+	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen)
 	assert len(pkt.CurrSeg.Future) == 1
 }
 
@@ -742,9 +724,9 @@ func (s *Raw) XoverLemma(ubuf []byte) {
 	segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := HopFieldOffset(numINF, 0, MetaLen)
+	offset := HopFieldOffset(numINF, prevSegLen, MetaLen)
 	pkt := reveal s.absPkt(ubuf)
-	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen)
+	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen)
 	assert pkt.LeftSeg == reveal LeftSeg(ubuf, currInfIdx + 1, seg1Len, seg2Len , seg3Len, MetaLen)
 	assert len(pkt.CurrSeg.Future) == 1
 	assert pkt.LeftSeg != none[io.IO_seg2]
@@ -762,7 +744,7 @@ pure func (s *Raw) EqAbsHopField(pkt io.IO_pkt2, hop io.IO_HF) bool {
 ghost
 opaque
 decreases
-pure func (s *Raw) EqAbsInfoField(pkt io.IO_pkt2, info path.IntermediateAbsInfoField) bool {
+pure func (s *Raw) EqAbsInfoField(pkt io.IO_pkt2, info io.AbsInfoField) bool {
 	return let currseg := pkt.CurrSeg in
 		info.AInfo == currseg.AInfo &&
 		info.UInfo == currseg.UInfo &&
@@ -780,7 +762,7 @@ preserves s.ValidCurrINF(ubuf)
 preserves s.ValidCurrHF(ubuf)
 preserves s.CorrectlyDecodedInf(ubuf, info)
 preserves s.CorrectlyDecodedHf(ubuf, hop)
-ensures   s.EqAbsInfoField(s.absPkt(ubuf), info.ToIntermediateAbsInfoField())
+ensures   s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
 ensures   s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
 decreases
 func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField) {
@@ -794,19 +776,20 @@ func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField)
 	segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numINF := NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := HopFieldOffset(numINF, 0, MetaLen)
+	offset := HopFieldOffset(numINF, prevSegLen, MetaLen)
+	hfIdxSeg := currHfIdx-prevSegLen
 	reveal s.CorrectlyDecodedInf(ubuf, info)
 	reveal s.CorrectlyDecodedHf(ubuf, hop)
 	pkt := reveal s.absPkt(ubuf)
-	currseg := reveal CurrSeg(ubuf, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, MetaLen)
-	hopFields := hopFields(ubuf, offset + path.HopLen * prevSegLen, 0, segLen)
-	hopFieldsBytePositionsLemma(ubuf, offset + path.HopLen * prevSegLen, 0, segLen, R54)
-	reveal hopFieldsBytePositions(ubuf, offset + path.HopLen * prevSegLen, 0, segLen, hopFields)
-	assert currseg.Future[0] == hopFields[currHfIdx-prevSegLen]
-	assert hopFields[currHfIdx-prevSegLen] ==
-		path.BytesToIO_HF(ubuf, 0, offset + path.HopLen * currHfIdx, len(ubuf))
-	assert currseg.Future[0] == path.BytesToIO_HF(ubuf, 0, offset + path.HopLen * currHfIdx, len(ubuf))
-	assert reveal s.EqAbsInfoField(s.absPkt(ubuf), info.ToIntermediateAbsInfoField())
+	currseg := reveal CurrSeg(ubuf, offset, currInfIdx, hfIdxSeg, segLen, MetaLen)
+	hopFields := hopFields(ubuf, offset, 0, segLen)
+	hopFieldsBytePositionsLemma(ubuf, offset, 0, segLen, R54)
+	reveal hopFieldsBytePositions(ubuf, offset, 0, segLen, hopFields)
+	assert currseg.Future[0] == hopFields[hfIdxSeg]
+	assert hopFields[hfIdxSeg] ==
+		path.BytesToIO_HF(ubuf, 0, offset + path.HopLen * hfIdxSeg, len(ubuf))
+	assert currseg.Future[0] == path.BytesToIO_HF(ubuf, 0, offset + path.HopLen * hfIdxSeg, len(ubuf))
+	assert reveal s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
 	assert reveal s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
 }
 
@@ -878,23 +861,23 @@ ensures
 	let prevSegLen := LengthOfPrevSeg(currHfIdx+1, seg1Len, seg2Len, seg3Len) in
 	let segLen := LengthOfCurrSeg(currHfIdx+1, seg1Len, seg2Len, seg3Len) in
 	let numInf := NumInfoFields(seg1Len, seg2Len, seg3Len) in
-	let offset := HopFieldOffset(numInf, 0, 0) in
-	CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen+1, segLen, 0) ==
+	let offset := HopFieldOffset(numInf, prevSegLen, 0) in
+	CurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen+1, segLen, 0) ==
 		get(LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0))
 decreases
 func XoverCurrSeg(raw []byte, currInfIdx int, currHfIdx int, seg1Len int, seg2Len int, seg3Len int) {
 	prevSegLen := LengthOfPrevSeg(currHfIdx+1, seg1Len, seg2Len, seg3Len)
 	segLen := LengthOfCurrSeg(currHfIdx+1, seg1Len, seg2Len, seg3Len)
 	numInf := NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := HopFieldOffset(numInf, 0, 0)
-	currseg := reveal CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, 0, segLen, 0)
+	offset := HopFieldOffset(numInf, prevSegLen, 0)
+	currseg := reveal CurrSeg(raw, offset, currInfIdx, 0, segLen, 0)
 	leftseg := reveal LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 	assert currseg == get(leftseg)
 }
 
 ghost
 requires  0 < seg1Len
-requires  0 <= seg2Len
+requires  0 < seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 requires  2 <= currInfIdx && currInfIdx < 4
@@ -910,10 +893,11 @@ func XoverLeftSeg(raw []byte, currInfIdx int, seg1Len int, seg2Len int, seg3Len 
 
 ghost
 requires  0 < seg1Len
-requires  0 <= seg2Len
+requires  0 < seg2Len
 requires  0 <= seg3Len
 requires  pktLen(seg1Len, seg2Len, seg3Len, 0) <= len(raw)
 requires  -1 <= currInfIdx && currInfIdx < 1
+requires  0 == currInfIdx ==> 0 < seg3Len
 preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures   MidSeg(raw, currInfIdx+4, seg1Len, seg2Len, seg3Len, 0) ==
 	RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
@@ -939,8 +923,8 @@ ensures
 	let prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
 	let segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
 	let numInf := NumInfoFields(seg1Len, seg2Len, seg3Len) in
-	let offset := HopFieldOffset(numInf, 0, 0) in
-	let currseg := CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, currHfIdx-prevSegLen, segLen, 0) in
+	let offset := HopFieldOffset(numInf, prevSegLen, 0) in
+	let currseg := CurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen, segLen, 0) in
 	len(currseg.Future) > 0 &&
 	get(RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)) ==
 		absIncPathSeg(currseg)
@@ -949,11 +933,11 @@ func XoverRightSeg(raw []byte, currInfIdx int, currHfIdx int, seg1Len int, seg2L
 	prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
 	numInf := NumInfoFields(seg1Len, seg2Len, seg3Len)
-	offset := HopFieldOffset(numInf, 0, 0)
-	LenCurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, segLen - 1, segLen)
-	IncCurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, segLen - 1, segLen)
-	currseg := CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, segLen - 1, segLen, 0)
-	nextseg := CurrSeg(raw, offset + path.HopLen * prevSegLen, currInfIdx, segLen, segLen, 0)
+	offset := HopFieldOffset(numInf, prevSegLen, 0)
+	LenCurrSeg(raw, offset, currInfIdx, segLen - 1, segLen)
+	IncCurrSeg(raw, offset, currInfIdx, segLen - 1, segLen)
+	currseg := CurrSeg(raw, offset, currInfIdx, segLen - 1, segLen, 0)
+	nextseg := CurrSeg(raw, offset, currInfIdx, segLen, segLen, 0)
 	rightseg := reveal RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, 0)
 	assert absIncPathSeg(currseg) == nextseg
 	assert nextseg == get(rightseg)
