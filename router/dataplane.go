@@ -1487,39 +1487,37 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ fold p.sInitD().validResult(processResult{}, false)
 		return processResult{}, err /*@, false, io.IO_val_Unit{} @*/
 	}
-	/*@
-	ghost var ub []byte
-	ghost var ubScionLayer []byte = p.rawPkt
-	ghost var ubHbhLayer []byte
-	ghost var ubE2eLayer []byte
+	// @ ghost var ub []byte
+	// @ ghost var ubScionLayer []byte = p.rawPkt
+	// @ ghost var ubHbhLayer []byte
+	// @ ghost var ubE2eLayer []byte
 
-	ghost llStart := 0
-	ghost llEnd := 0
-	ghost mustCombineRanges := lastLayerIdx != -1 && !offsets[lastLayerIdx].isNil
-	ghost var o offsetPair
-	ghost if lastLayerIdx == -1 {
-		ub = p.rawPkt
-	} else {
-		if offsets[lastLayerIdx].isNil {
-			ub = nil
-			sl.NilAcc_Bytes()
-		} else {
-			o = offsets[lastLayerIdx]
-			ub = p.rawPkt[o.start:o.end]
-			llStart = o.start
-			llEnd = o.end
-			sl.SplitRange_Bytes(p.rawPkt, o.start, o.end, HalfPerm)
-		}
-	}
-	hasHbhLayer := processed[0]
-	oHbh := offsets[0]
-	ubHbhLayer = hasHbhLayer && !oHbh.isNil ? p.rawPkt[oHbh.start:oHbh.end] : ([]byte)(nil)
-	hasE2eLayer := processed[1]
-	oE2e := offsets[1]
-	ubE2eLayer = hasE2eLayer && !oE2e.isNil ? p.rawPkt[oE2e.start:oE2e.end] : ([]byte)(nil)
-	assert processed[0] ==> p.hbhLayer.Mem(ubHbhLayer)
-	assert processed[1] ==> p.e2eLayer.Mem(ubE2eLayer)
-	@*/
+	// @ ghost llStart := 0
+	// @ ghost llEnd := 0
+	// @ ghost mustCombineRanges := lastLayerIdx != -1 && !offsets[lastLayerIdx].isNil
+	// @ ghost var o offsetPair
+	// @ ghost if lastLayerIdx == -1 {
+	// @ 	ub = p.rawPkt
+	// @ } else {
+	// @ 	if offsets[lastLayerIdx].isNil {
+	// @ 		ub = nil
+	// @ 		sl.NilAcc_Bytes()
+	// @ 	} else {
+	// @ 		o = offsets[lastLayerIdx]
+	// @ 		ub = p.rawPkt[o.start:o.end]
+	// @ 		llStart = o.start
+	// @ 		llEnd = o.end
+	// @ 		sl.SplitRange_Bytes(p.rawPkt, o.start, o.end, HalfPerm)
+	// @ 	}
+	// @ }
+	// @ hasHbhLayer := processed[0]
+	// @ oHbh := offsets[0]
+	// @ ubHbhLayer = hasHbhLayer && !oHbh.isNil ? p.rawPkt[oHbh.start:oHbh.end] : ([]byte)(nil)
+	// @ hasE2eLayer := processed[1]
+	// @ oE2e := offsets[1]
+	// @ ubE2eLayer = hasE2eLayer && !oE2e.isNil ? p.rawPkt[oE2e.start:oE2e.end] : ([]byte)(nil)
+	// @ assert processed[0] ==> p.hbhLayer.Mem(ubHbhLayer)
+	// @ assert processed[1] ==> p.e2eLayer.Mem(ubE2eLayer)
 	// @ assert acc(sl.Bytes(ub, 0, len(ub)), HalfPerm)
 	pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ub @*/ )
 	// @ sl.SplitRange_Bytes(ub, start, end, HalfPerm)
@@ -2921,19 +2919,18 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ assert slayers.ValidPktMetaHdr(ub)
 	// @ assert reveal p.LastHopLen(ub)
 	// @ assert p.scionLayer.EqAbsHeader(ub)
-	/*@
-	ghost var ubLL []byte
-	ghost if &p.scionLayer === p.lastLayer {
-		ubLL = ub
-	} else if llIsNil {
-		ubLL = nil
-		sl.NilAcc_Bytes()
-	} else {
-		ubLL = ub[startLL:endLL]
-		sl.SplitRange_Bytes(ub, startLL, endLL, R1)
-		ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, R1)
-	}
-	@*/
+
+	// @ ghost var ubLL []byte
+	// @ ghost if &p.scionLayer === p.lastLayer {
+	// @ 	ubLL = ub
+	// @ } else if llIsNil {
+	// @ 	ubLL = nil
+	// @ 	sl.NilAcc_Bytes()
+	// @ } else {
+	// @ 	ubLL = ub[startLL:endLL]
+	// @ 	sl.SplitRange_Bytes(ub, startLL, endLL, R1)
+	// @ 	ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, R1)
+	// @ }
 	return p.handleSCMPTraceRouteRequest(p.ingressID /*@, ubLL @*/)
 }
 
@@ -3027,19 +3024,18 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	// @ TemporaryAssumeForIO(p.EqAbsInfoField(absPkt(ub)))
 	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ TemporaryAssumeForIO(absPkt(ub) == old(absPkt(ub)))
-	/*@
-	ghost var ubLL []byte
-	ghost if &p.scionLayer === p.lastLayer {
-		ubLL = ub
-	} else if llIsNil {
-		ubLL = nil
-		sl.NilAcc_Bytes()
-	} else {
-		ubLL = ub[startLL:endLL]
-		sl.SplitRange_Bytes(ub, startLL, endLL, R1)
-		ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, R1)
-	}
-	@*/
+
+	// @ ghost var ubLL []byte
+	// @ ghost if &p.scionLayer === p.lastLayer {
+	// @ 	ubLL = ub
+	// @ } else if llIsNil {
+	// @ 	ubLL = nil
+	// @ 	sl.NilAcc_Bytes()
+	// @ } else {
+	// @ 	ubLL = ub[startLL:endLL]
+	// @ 	sl.SplitRange_Bytes(ub, startLL, endLL, R1)
+	// @ 	ghost defer sl.CombineRange_Bytes(ub, startLL, endLL, R1)
+	// @ }
 	return p.handleSCMPTraceRouteRequest(egressID /*@, ubLL@*/)
 }
 
