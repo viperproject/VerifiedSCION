@@ -108,9 +108,6 @@ pure func (s SegLens) Valid() bool {
 }
 
 ghost
-requires seg1Len > 0
-requires seg2Len >= 0
-requires seg3Len >= 0
 decreases
 pure func CombineSegLens(seg1Len int, seg2Len int, seg3Len int) SegLens {
     return SegLens_ {
