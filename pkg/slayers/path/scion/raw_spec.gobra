@@ -781,7 +781,8 @@ func LenCurrSeg(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen in
 }
 
 ghost
-requires s.Valid()
+requires  s.Valid()
+requires  0 < s.Seg2Len
 requires  pktLen(s, 0) <= len(raw)
 requires  0 <= currInfIdx && currInfIdx < 2
 requires  1 <= currInfIdx ==> 0 < s.Seg3Len
@@ -802,7 +803,7 @@ requires  0 <= currHfIdx && currHfIdx < segLen
 requires  0 <= currInfIdx && currInfIdx < 3
 preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
 preserves len(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0).Future) > 0
-ensures CurrSeg(raw, offset, currInfIdx, currHfIdx+1, segLen, 0) ==
+ensures   CurrSeg(raw, offset, currInfIdx, currHfIdx+1, segLen, 0) ==
 	absIncPathSeg(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0))
 decreases
 func IncCurrSeg(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen int) {
@@ -819,7 +820,8 @@ func IncCurrSeg(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen in
 }
 
 ghost
-requires s.Valid()
+requires  s.Valid()
+requires  0 < s.Seg2Len
 requires  pktLen(s, 0) <= len(raw)
 requires  1 <= currInfIdx && currInfIdx < 3
 requires  1 == currInfIdx ==> currHfIdx+1 == s.Seg1Len
@@ -846,7 +848,7 @@ func XoverCurrSeg(raw []byte, currInfIdx int, currHfIdx int, s io.SegLens) {
 }
 
 ghost
-requires s.Valid()
+requires  s.Valid()
 requires  pktLen(s, 0) <= len(raw)
 requires  2 <= currInfIdx && currInfIdx < 4
 preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
@@ -860,7 +862,8 @@ func XoverLeftSeg(raw []byte, currInfIdx int, s io.SegLens) {
 }
 
 ghost
-requires s.Valid()
+requires  s.Valid()
+requires  0 < s.Seg2Len
 requires  pktLen(s, 0) <= len(raw)
 requires  -1 <= currInfIdx && currInfIdx < 1
 requires  0 == currInfIdx ==> 0 < s.Seg3Len
@@ -875,7 +878,8 @@ func XoverMidSeg(raw []byte, currInfIdx int, s io.SegLens) {
 }
 
 ghost
-requires s.Valid()
+requires  s.Valid()
+requires  0 < s.Seg2Len
 requires  pktLen(s, 0) <= len(raw)
 requires  0 <= currInfIdx && currInfIdx < 2
 requires  0 == currInfIdx ==> currHfIdx+1 == s.Seg1Len
