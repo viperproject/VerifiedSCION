@@ -835,20 +835,18 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 // @ ensures   0 <= res
 // @ decreases
 func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
-	/*@
-	ghost if !insideSlayers {
-		unfold acc(s.Mem(ubuf), R51)
-		defer fold acc(s.Mem(ubuf), R51)
-		unfold acc(s.HeaderMem(ubuf[CmnHdrLen:]), R51)
-		defer fold acc(s.HeaderMem(ubuf[CmnHdrLen:]), R51)
-		assert s.AddrHdrLenSpec(ubuf) == (
-			unfolding acc(s.Mem(ubuf), R52) in
-			unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), R52) in
-			2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length())
-		assert s.AddrHdrLenSpec(ubuf) ==
-			2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
-	}
-	@*/
+	// @ ghost if !insideSlayers {
+	// @ 	unfold acc(s.Mem(ubuf), R51)
+	// @ 	defer fold acc(s.Mem(ubuf), R51)
+	// @ 	unfold acc(s.HeaderMem(ubuf[CmnHdrLen:]), R51)
+	// @ 	defer fold acc(s.HeaderMem(ubuf[CmnHdrLen:]), R51)
+	// @ 	assert s.AddrHdrLenSpec(ubuf) == (
+	// @ 		unfolding acc(s.Mem(ubuf), R52) in
+	// @ 		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), R52) in
+	// @ 		2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length())
+	// @ 	assert s.AddrHdrLenSpec(ubuf) ==
+	// @ 		2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
+	// @ }
 	return 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
