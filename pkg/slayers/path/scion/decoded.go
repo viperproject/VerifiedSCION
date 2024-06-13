@@ -37,7 +37,7 @@ type Decoded struct {
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 // @ requires  s.NonInitMem()
-// @ preserves acc(sl.AbsSlice_Bytes(data, 0, len(data)), R42)
+// @ preserves acc(sl.Bytes(data, 0, len(data)), R42)
 // @ ensures   r == nil ==> (
 // @ 	s.Mem(data) &&
 // @ 	let lenD := len(data) in
@@ -77,8 +77,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.GetNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + i * path.InfoLen
 	//@ invariant forall j int :: { &s.InfoFields[j] } 0 <= j && j < s.Base.GetNumINF() ==> acc(&s.InfoFields[j])
-	//@ invariant acc(sl.AbsSlice_Bytes(data, 0, offset), R43)
-	//@ invariant acc(sl.AbsSlice_Bytes(data, offset, len(data)), R43)
+	//@ invariant acc(sl.Bytes(data, 0, offset), R43)
+	//@ invariant acc(sl.Bytes(data, offset, len(data)), R43)
 	//@ decreases s.Base.GetNumINF() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), _) in @*/ s.NumINF; i++ {
 		//@ sl.SplitByIndex_Bytes(data, offset, len(data), offset + path.InfoLen, R43)
@@ -102,8 +102,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant forall j int :: { &s.HopFields[j] } 0 <= j && j < i ==> s.HopFields[j].Mem()
 	//@ invariant len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.GetNumHops() * path.HopLen
 	//@ invariant offset == MetaLen + s.Base.GetNumINF() * path.InfoLen + i * path.HopLen
-	//@ invariant acc(sl.AbsSlice_Bytes(data, 0, offset), R43)
-	//@ invariant acc(sl.AbsSlice_Bytes(data, offset, len(data)), R43)
+	//@ invariant acc(sl.Bytes(data, 0, offset), R43)
+	//@ invariant acc(sl.Bytes(data, offset, len(data)), R43)
 	//@ decreases s.Base.GetNumHops() - i
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), R2) in @*/ s.NumHops; i++ {
 		//@ sl.SplitByIndex_Bytes(data, offset, len(data), offset + path.HopLen, R43)
@@ -126,8 +126,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 // SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
 // @ preserves acc(s.Mem(ubuf), R1)
-// @ preserves sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-// @ preserves b !== ubuf ==> sl.AbsSlice_Bytes(b, 0, len(b))
+// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
+// @ preserves b !== ubuf ==> sl.Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
@@ -136,7 +136,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 			"actual", len(b))
 	}
 	//@ unfold acc(s.Mem(ubuf), R1)
-	//@ assert sl.AbsSlice_Bytes(b, 0, len(b))
+	//@ assert sl.Bytes(b, 0, len(b))
 	//@ sl.SplitByIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
 	//@ sl.Reslice_Bytes(b, 0, MetaLen, writePerm)
 	//@ unfold acc(s.Base.Mem(), R1)
@@ -151,8 +151,8 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	offset := MetaLen
 
 	//@ invariant acc(s.Mem(ubuf), R1)
-	//@ invariant sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-	//@ invariant b !== ubuf ==> sl.AbsSlice_Bytes(b, 0, len(b))
+	//@ invariant sl.Bytes(ubuf, 0, len(ubuf))
+	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
 	//@ invariant s.Len(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenInfoFields(ubuf)
 	//@ invariant offset == MetaLen + i * path.InfoLen
@@ -166,7 +166,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 		//@ sl.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
 		//@ sl.SplitByIndex_Bytes(b, offset, len(b), offset + path.InfoLen, writePerm)
 		//@ sl.Reslice_Bytes(b, offset, offset + path.InfoLen, writePerm)
-		//@ assert sl.AbsSlice_Bytes(b[offset:offset+path.InfoLen], 0, path.InfoLen)
+		//@ assert sl.Bytes(b[offset:offset+path.InfoLen], 0, path.InfoLen)
 		if err := info.SerializeTo(b[offset : offset+path.InfoLen]); err != nil {
 			//@ Unreachable()
 			return err
@@ -178,8 +178,8 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 		offset += path.InfoLen
 	}
 	//@ invariant acc(s.Mem(ubuf), R1)
-	//@ invariant sl.AbsSlice_Bytes(ubuf, 0, len(ubuf))
-	//@ invariant b !== ubuf ==> sl.AbsSlice_Bytes(b, 0, len(b))
+	//@ invariant sl.Bytes(ubuf, 0, len(ubuf))
+	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
 	//@ invariant s.Len(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenHopFields(ubuf)
 	//@ invariant offset == MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + i * path.HopLen
@@ -291,7 +291,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 
 // ToRaw tranforms scion.Decoded into scion.Raw.
 // @ preserves s.Mem(ubuf1)
-// @ preserves sl.AbsSlice_Bytes(ubuf1, 0, len(ubuf1))
+// @ preserves sl.Bytes(ubuf1, 0, len(ubuf1))
 // @ ensures   err == nil ==> r.Mem(ubuf2)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -300,7 +300,7 @@ func (s *Decoded) ToRaw( /*@ ghost ubuf1 []byte @*/ ) (r *Raw, err error /*@, gh
 	// make cannot contain ghost subexpressions
 	tmp := s.Len( /*@ ubuf1 @*/ )
 	b := make([]byte, tmp)
-	//@ fold sl.AbsSlice_Bytes(b, 0, len(b))
+	//@ fold sl.Bytes(b, 0, len(b))
 	if err := s.SerializeTo(b /*@, ubuf1 @*/); err != nil {
 		return nil, err /*@, b @*/
 	}

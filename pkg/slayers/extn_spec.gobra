@@ -20,7 +20,7 @@ import (
 	"github.com/google/gopacket"
 
 	. "github.com/scionproto/scion/verification/utils/definitions"
-	"github.com/scionproto/scion/verification/utils/slices"
+	// sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 /** start of extnBase **/
@@ -226,7 +226,7 @@ func (s *EndToEndExtnSkipper) DowngradePerm(ghost ub []byte) {
 pred (o *HopByHopOption) Mem(_ int) {
 	// permissions to the elements of OptData will be stored
 	// together with the underlying, not in the option itself
-	acc(o) // && slices.AbsSlice_Bytes(o.OptData, 0, len(o.OptData))
+	acc(o) // && sl.Bytes(o.OptData, 0, len(o.OptData))
 }
 
 // TODO: maybe add the underlying slice as a parameter to be able to
@@ -234,7 +234,7 @@ pred (o *HopByHopOption) Mem(_ int) {
 pred (e *EndToEndOption) Mem(_ int) {
 	// permissions to the elements of OptData will be stored
 	// together with the underlying, not in the option itself
-	acc(e) // && slices.AbsSlice_Bytes(e.OptData, 0, len(e.OptData))
+	acc(e) // && sl.Bytes(e.OptData, 0, len(e.OptData))
 }
 
 
