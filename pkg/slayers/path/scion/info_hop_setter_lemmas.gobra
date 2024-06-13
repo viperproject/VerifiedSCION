@@ -90,7 +90,7 @@ pure func HopfieldsEndIdx(currInfIdx int, s io.SegLens) int {
 ghost
 requires s.Valid()
 requires 0 <= currInfIdx
-requires pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires pktLen(s, MetaLen) <= len(raw)
 decreases
 pure func HopfieldsByteSlice(raw []byte, currInfIdx int, s io.SegLens) ([]byte) {
     return let numInf := s.NumInfoFields() in
@@ -104,7 +104,7 @@ pure func HopfieldsByteSlice(raw []byte, currInfIdx int, s io.SegLens) ([]byte) 
 ghost
 requires 0 < p
 requires s.Valid()
-requires pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires pktLen(s, MetaLen) <= len(raw)
 requires acc(sl.Bytes(raw, 0, len(raw)), p)
 ensures  acc(sl.Bytes(raw[:HopfieldsStartIdx(0, s)], 0, HopfieldsStartIdx(0, s)), p)
 ensures  acc(sl.Bytes(HopfieldsByteSlice(raw, 0, s), 0, s.Seg1Len*path.HopLen), p)
@@ -128,7 +128,7 @@ func SliceBytesIntoSegments(raw []byte, s io.SegLens, p perm) {
 ghost
 requires 0 < p
 requires s.Valid()
-requires pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires pktLen(s, MetaLen) <= len(raw)
 requires acc(sl.Bytes(raw[:HopfieldsStartIdx(0, s)], 0, HopfieldsStartIdx(0, s)), p)
 requires acc(sl.Bytes(HopfieldsByteSlice(raw, 0, s), 0, s.Seg1Len*path.HopLen), p)
 requires acc(sl.Bytes(HopfieldsByteSlice(raw, 1, s), 0, s.Seg2Len*path.HopLen), p)
@@ -152,7 +152,7 @@ func CombineBytesFromSegments(raw []byte, s io.SegLens, p perm) {
 ghost
 requires 0 < p
 requires s.Valid()
-requires pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires pktLen(s, MetaLen) <= len(raw)
 requires numInf == s.NumInfoFields()
 requires acc(sl.Bytes(raw, 0, len(raw)), p)
 ensures  acc(sl.Bytes(raw[:MetaLen], 0, MetaLen), p)
@@ -184,7 +184,7 @@ func SliceBytesIntoInfoFields(raw []byte, numInf int, s io.SegLens, p perm) {
 ghost
 requires 0 < p
 requires s.Valid()
-requires pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires pktLen(s, MetaLen) <= len(raw)
 requires numInf == s.NumInfoFields()
 requires acc(sl.Bytes(raw[:MetaLen], 0, MetaLen), p)
 requires acc(sl.Bytes(InfofieldByteSlice(raw, 0), 0, path.InfoLen), p)
@@ -361,7 +361,7 @@ func UpdateCurrSegInfo(raw []byte, currHfIdx int, SegLen int,
 // and LeftSeg(..) to represent the same abstract segment.
 ghost
 requires s.Valid()
-requires pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires pktLen(s, MetaLen) <= len(raw)
 requires 1 <= currInfIdx && currInfIdx < 4
 requires acc(sl.Bytes(raw, 0, len(raw)), R49)
 requires (currInfIdx == 1 && s.Seg2Len > 0) ||
@@ -377,9 +377,9 @@ pure func LeftSegEqualitySpec(raw []byte, currInfIdx int, s io.SegLens) bool {
         let infoBytes := InfofieldByteSlice(raw, currInfIdx) in
         let hopBytes := HopfieldsByteSlice(raw, currInfIdx, s) in
         let inf := some(path.BytesToAbsInfoField(infoBytes, 0)) in
-        LeftSeg(raw, currInfIdx, s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) ==
+        LeftSeg(raw, currInfIdx, s, MetaLen) ==
         LeftSegWithInfo(hopBytes, currInfIdx, s, inf) :
-        LeftSeg(raw, currInfIdx, s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) ==
+        LeftSeg(raw, currInfIdx, s, MetaLen) ==
         LeftSegWithInfo(nil, currInfIdx, s, none[io.AbsInfoField])
 }
 
@@ -391,7 +391,7 @@ pure func LeftSegEqualitySpec(raw []byte, currInfIdx int, s io.SegLens) bool {
 // its infofield and one for its hopfields.
 ghost
 requires  s.Valid()
-requires  pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires  pktLen(s, MetaLen) <= len(raw)
 requires  1 <= currInfIdx && currInfIdx < 4
 preserves acc(sl.Bytes(raw, 0, len(raw)), R49)
 preserves (currInfIdx == 1 && s.Seg2Len > 0) ||
@@ -403,7 +403,7 @@ preserves (currInfIdx == 1 && s.Seg2Len > 0) ||
 ensures   LeftSegEqualitySpec(raw, currInfIdx, s)
 decreases
 func LeftSegEquality(raw []byte, currInfIdx int, s io.SegLens) {
-    reveal LeftSeg(raw, currInfIdx, s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen)
+    reveal LeftSeg(raw, currInfIdx, s, MetaLen)
     if ((currInfIdx == 1 && s.Seg2Len > 0) ||
         (currInfIdx == 2 && s.Seg2Len > 0 && s.Seg3Len > 0)) {
         infoBytes := InfofieldByteSlice(raw, currInfIdx)
@@ -422,7 +422,7 @@ func LeftSegEquality(raw []byte, currInfIdx int, s io.SegLens) {
 // and RightSeg(..) to represent the same abstract segment.
 ghost
 requires s.Valid()
-requires pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires pktLen(s, MetaLen) <= len(raw)
 requires -1 <= currInfIdx && currInfIdx < 2
 requires acc(sl.Bytes(raw, 0, len(raw)), R49)
 requires (currInfIdx == 0 && s.Seg2Len > 0) ||
@@ -438,9 +438,9 @@ pure func RightSegEqualitySpec(raw []byte, currInfIdx int, s io.SegLens) bool {
         let infoBytes := InfofieldByteSlice(raw, currInfIdx) in
         let hopBytes := HopfieldsByteSlice(raw, currInfIdx, s) in
         let inf := some(path.BytesToAbsInfoField(infoBytes, 0)) in
-        RightSeg(raw, currInfIdx, s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) ==
+        RightSeg(raw, currInfIdx, s, MetaLen) ==
         RightSegWithInfo(hopBytes, currInfIdx, s, inf) :
-        RightSeg(raw, currInfIdx, s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) ==
+        RightSeg(raw, currInfIdx, s, MetaLen) ==
         RightSegWithInfo(nil, currInfIdx, s, none[io.AbsInfoField])
 }
 
@@ -452,7 +452,7 @@ pure func RightSegEqualitySpec(raw []byte, currInfIdx int, s io.SegLens) bool {
 // its infofield and one for its hopfields.
 ghost
 requires  s.Valid()
-requires  pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires  pktLen(s, MetaLen) <= len(raw)
 requires  -1 <= currInfIdx && currInfIdx < 2
 preserves acc(sl.Bytes(raw, 0, len(raw)), R49)
 preserves (currInfIdx == 0 && s.Seg2Len > 0) ||
@@ -464,7 +464,7 @@ preserves (currInfIdx == 0 && s.Seg2Len > 0) ||
 ensures   RightSegEqualitySpec(raw, currInfIdx, s)
 decreases
 func RightSegEquality(raw []byte, currInfIdx int, s io.SegLens) {
-    reveal RightSeg(raw, currInfIdx, s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen)
+    reveal RightSeg(raw, currInfIdx, s, MetaLen)
     if ((currInfIdx == 0 && s.Seg2Len > 0) ||
         (currInfIdx == 1 && s.Seg2Len > 0 && s.Seg3Len > 0)) {
         infoBytes := InfofieldByteSlice(raw, currInfIdx)
@@ -483,7 +483,7 @@ func RightSegEquality(raw []byte, currInfIdx int, s io.SegLens) {
 // and MidSeg(..) to represent the same abstract segment.
 ghost
 requires s.Valid()
-requires pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires pktLen(s, MetaLen) <= len(raw)
 requires 2 <= currInfIdx && currInfIdx < 5
 requires acc(sl.Bytes(raw, 0, len(raw)), R49)
 requires (s.Seg2Len > 0 && s.Seg3Len > 0 &&
@@ -499,9 +499,9 @@ pure func MidSegEqualitySpec(raw []byte, currInfIdx int, s io.SegLens) bool {
         let infoBytes := InfofieldByteSlice(raw, currInfIdx) in
         let hopBytes := HopfieldsByteSlice(raw, currInfIdx, s) in
         let inf := some(path.BytesToAbsInfoField(infoBytes, 0)) in
-        MidSeg(raw, currInfIdx, s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) ==
+        MidSeg(raw, currInfIdx, s, MetaLen) ==
         MidSegWithInfo(hopBytes, currInfIdx, s, inf) :
-        MidSeg(raw, currInfIdx, s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) ==
+        MidSeg(raw, currInfIdx, s, MetaLen) ==
         MidSegWithInfo(nil, currInfIdx, s, none[io.AbsInfoField])
 }
 
@@ -513,7 +513,7 @@ pure func MidSegEqualitySpec(raw []byte, currInfIdx int, s io.SegLens) bool {
 // its infofield and one for its hopfields.
 ghost
 requires  s.Valid()
-requires  pktLen(s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen) <= len(raw)
+requires  pktLen(s, MetaLen) <= len(raw)
 requires  2 <= currInfIdx && currInfIdx < 5
 preserves acc(sl.Bytes(raw, 0, len(raw)), R49)
 preserves (s.Seg2Len > 0 && s.Seg3Len > 0 &&
@@ -525,7 +525,7 @@ preserves (s.Seg2Len > 0 && s.Seg3Len > 0 &&
 ensures   MidSegEqualitySpec(raw, currInfIdx, s)
 decreases
 func MidSegEquality(raw []byte, currInfIdx int, s io.SegLens) {
-    reveal MidSeg(raw, currInfIdx, s.Seg1Len, s.Seg2Len, s.Seg3Len, MetaLen)
+    reveal MidSeg(raw, currInfIdx, s, MetaLen)
     if (currInfIdx == 4 && s.Seg2Len > 0 && s.Seg3Len > 0) {
         infoBytes := InfofieldByteSlice(raw, 0)
         hopBytes := HopfieldsByteSlice(raw, 0, s)

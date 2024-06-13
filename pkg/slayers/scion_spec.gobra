@@ -29,6 +29,7 @@ import (
 
 	. "verification/utils/definitions"
 	sl "verification/utils/slices"
+	"verification/io"
 	"encoding/binary"
 )
 
@@ -427,8 +428,9 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 		let seg1 := int(metaHdr.SegLen[0]) in
 		let seg2 := int(metaHdr.SegLen[1]) in
 		let seg3 := int(metaHdr.SegLen[2]) in
+		let segs := io.CombineSegLens(seg1, seg2, seg3) in
 		s.Path.(*scion.Raw).Base.GetBase() ==
-		scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
+		scion.Base{metaHdr, segs.NumInfoFields(), segs.Sum()}
 }
 
 // Describes a SCION packet that was successfully decoded by `DecodeFromBytes`.
@@ -467,11 +469,12 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let seg1 := int(metaHdr.SegLen[0])         in
 		let seg2 := int(metaHdr.SegLen[1])         in
 		let seg3 := int(metaHdr.SegLen[2])         in
-		let base := scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1+seg2+seg3} in
+		let s := io.CombineSegLens(seg1, seg2, seg3) in
+		let base := scion.Base{metaHdr, s.NumInfoFields(), s.Sum()} in
 		0 < metaHdr.SegLen[0]    	&&
 		base.ValidCurrIdxsSpec() 	&&
 		base.CurrInfMatchesCurrHF()	&&
-		scion.pktLen(seg1, seg2, seg3, start + scion.MetaLen) <= length
+		scion.pktLen(s, start + scion.MetaLen) <= length
 }
 
 ghost

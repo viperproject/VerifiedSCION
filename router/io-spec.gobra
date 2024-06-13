@@ -47,15 +47,16 @@ pure func absPkt(raw []byte) (res io.IO_pkt2) {
 		let seg1Len := int(metaHdr.SegLen[0]) in
 		let seg2Len := int(metaHdr.SegLen[1]) in
 		let seg3Len := int(metaHdr.SegLen[2]) in
-		let segLen := scion.LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
-		let prevSegLen := scion.LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len) in
-		let numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len) in
+		let s := io.CombineSegLens(seg1Len, seg2Len, seg3Len) in
+		let segLen := s.LengthOfCurrSeg(currHfIdx) in
+		let prevSegLen := s.LengthOfPrevSeg(currHfIdx) in
+		let numINF := s.NumInfoFields() in
 		let offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen) in
 		io.IO_Packet2 {
 			CurrSeg : scion.CurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen),
-			LeftSeg : scion.LeftSeg(raw, currInfIdx + 1, seg1Len, seg2Len , seg3Len, headerOffsetWithMetaLen),
-			MidSeg : scion.MidSeg(raw, currInfIdx + 2, seg1Len, seg2Len , seg3Len, headerOffsetWithMetaLen),
-			RightSeg : scion.RightSeg(raw, currInfIdx - 1, seg1Len, seg2Len , seg3Len, headerOffsetWithMetaLen),
+			LeftSeg : scion.LeftSeg(raw, currInfIdx + 1, s, headerOffsetWithMetaLen),
+			MidSeg : scion.MidSeg(raw, currInfIdx + 2, s, headerOffsetWithMetaLen),
+			RightSeg : scion.RightSeg(raw, currInfIdx - 1, s, headerOffsetWithMetaLen),
 		}
 }
 
