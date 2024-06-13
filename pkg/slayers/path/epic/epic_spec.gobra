@@ -54,35 +54,6 @@ pure func (r *Path) GetBase(ub []byte) scion.Base {
 		r.ScionPath.GetBase(ub[MetadataLen:])
 }
 
-// TODO: drop
-ghost
-requires acc(p.Mem(ub), _)
-decreases
-pure func (p *Path) ValidCurrINF(ghost ub []byte) bool {
-	return unfolding acc(p.Mem(ub), _) in
-		let ubPath := ub[MetadataLen:] in
-		p.ScionPath.ValidCurrINF(ubPath)
-}
-
-ghost
-requires acc(p.Mem(ub), _)
-decreases
-pure func (p *Path) ValidCurrHF(ghost ub []byte) bool {
-	return unfolding acc(p.Mem(ub), _) in
-		let ubPath := ub[MetadataLen:] in
-		p.ScionPath.ValidCurrHF(ubPath)
-}
-
-// TODO: drop this
-ghost
-requires acc(p.Mem(ub), _)
-decreases
-pure func (p *Path) ValidCurrIdxs(ghost ub []byte) bool {
-	return unfolding acc(p.Mem(ub), _) in
-		let ubPath := ub[MetadataLen:] in
-		p.ScionPath.ValidCurrIdxs(ubPath)
-}
-
 ghost
 pure
 requires acc(p.Mem(buf), _)

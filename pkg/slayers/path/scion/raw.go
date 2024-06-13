@@ -37,11 +37,10 @@ type Raw struct {
 // @ requires  s.NonInitMem()
 // @ preserves acc(sl.Bytes(data, 0, len(data)), R42)
 // @ ensures   res == nil ==> s.Mem(data)
-// @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
-// posts for IO:
 // @ ensures   res == nil ==>
 // @ 	s.GetBase(data).WeaklyValid() &&
 // @ 	s.GetBase(data).EqAbsHeader(data)
+// @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()
