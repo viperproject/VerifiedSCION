@@ -64,61 +64,72 @@ func (t Type) String() string {
 // Path is the path contained in the SCION header.
 type Path interface {
 	// (VerifiedSCION) Must hold for every valid Path.
-	//@ pred Mem(underlyingBuf []byte)
+	//@ pred Mem()
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
 	//@ pred NonInitMem()
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
-	//@ preserves sl.Bytes(underlyingBuf, 0, len(underlyingBuf))
-	//@ preserves acc(Mem(underlyingBuf), R1)
+	//@ preserves sl.Bytes(RawBytes(), 0, len(RawBytes()))
+	//@ preserves acc(Mem(), R1)
 	//@ preserves sl.Bytes(b, 0, len(b))
 	//@ ensures   e != nil ==> e.ErrorMem()
+	//@ ensures   RawBytes() === old(RawBytes())
 	//@ decreases
-	SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e error)
+	SerializeTo(b []byte) (e error)
 	// DecodesFromBytes decodes the path from the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
 	//@ preserves acc(sl.Bytes(b, 0, len(b)), R42)
-	//@ ensures   err == nil ==> Mem(b)
+	//@ ensures   err == nil ==>
+	//@ 	Mem() && RawBytes() === b
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> NonInitMem()
-	//@ ensures   err == nil ==> IsValidResultOfDecoding(b, err)
+	//@ ensures   err == nil ==> IsValidResultOfDecoding(err)
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
 	//@ ghost
 	//@ pure
-	//@ requires Mem(b)
-	//@ requires acc(sl.Bytes(b, 0, len(b)), R42)
+	//@ requires Mem()
+	//@ requires acc(sl.Bytes(RawBytes(), 0, len(RawBytes())), R42)
 	//@ decreases
-	//@ IsValidResultOfDecoding(b []byte, err error) (res bool)
+	//@ IsValidResultOfDecoding(err error) (res bool)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
-	//@ requires  Mem(underlyingBuf)
-	//@ preserves sl.Bytes(underlyingBuf, 0, len(underlyingBuf))
-	//@ ensures   e == nil ==> p != nil
-	//@ ensures   e == nil ==> p.Mem(underlyingBuf)
+	//@ requires  Mem()
+	//@ preserves sl.Bytes(RawBytes(), 0, len(RawBytes()))
+	//@ ensures   e == nil ==>
+	//@ 	p != nil &&
+	//@ 	p.Mem()  &&
+	//@ 	p.RawBytes() === RawBytes()
+	//@ ensures old(RawBytes()) === RawBytes()
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
-	Reverse( /*@ ghost underlyingBuf []byte @*/ ) (p Path, e error)
+	Reverse() (p Path, e error)
 	// Len returns the length of a path in bytes.
 	//@ pure
-	//@ requires acc(Mem(underlyingBuf), _)
+	//@ requires acc(Mem(), _)
 	//@ ensures  l >= 0
 	//@ decreases
-	Len( /*@ ghost underlyingBuf []byte @*/ ) (l int)
+	Len() (l int)
 	// Type returns the type of a path.
 	//@ pure
-	//@ requires acc(Mem(underlyingBuf), _)
+	//@ requires acc(Mem(), _)
 	//@ decreases
-	Type( /*@ ghost underlyingBuf []byte @*/ ) Type
+	Type() Type
 	//@ ghost
-	//@ requires Mem(underlyingBuf)
+	//@ requires Mem()
 	//@ ensures  NonInitMem()
 	//@ decreases
-	//@ DowngradePerm(ghost underlyingBuf []byte)
+	//@ DowngradePerm()
+
+	//@ ghost
+	//@ pure
+	//@ requires acc(Mem(), _)
+	//@ decreases
+	//@ RawBytes() (res []byte)
 }
 
 type metadata struct {
@@ -209,51 +220,53 @@ type rawPath struct {
 	pathType Type
 }
 
-// @ preserves acc(p.Mem(underlyingBuf), R10)
-// @ preserves acc(sl.Bytes(underlyingBuf, 0, len(underlyingBuf)), R10)
+// @ preserves acc(p.Mem(), R10)
+// @ preserves let raw := p.RawBytes() in
+// @ 	acc(sl.Bytes(raw, 0, len(raw)), R10)
 // @ preserves sl.Bytes(b, 0, len(b))
 // @ ensures   e == nil
+// @ ensures   p.RawBytes() === old(p.RawBytes())
 // @ decreases
-func (p *rawPath) SerializeTo(b []byte /*@, ghost underlyingBuf []byte @*/) (e error) {
+func (p *rawPath) SerializeTo(b []byte) (e error) {
 	//@ unfold sl.Bytes(b, 0, len(b))
-	//@ unfold acc(p.Mem(underlyingBuf), R10)
+	//@ unfold acc(p.Mem(), R10)
 	//@ unfold acc(sl.Bytes(p.raw, 0, len(p.raw)), R11)
 	copy(b, p.raw /*@, R11 @*/)
 	//@ fold acc(sl.Bytes(p.raw, 0, len(p.raw)), R11)
-	//@ fold acc(p.Mem(underlyingBuf), R10)
+	//@ fold acc(p.Mem(), R10)
 	//@ fold sl.Bytes(b, 0, len(b))
 	return nil
 }
 
 // @ requires  p.NonInitMem()
 // @ preserves acc(sl.Bytes(b, 0, len(b)), R42)
-// @ ensures   p.Mem(b)
+// @ ensures   p.Mem()
 // @ ensures   e == nil
 // @ decreases
 func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
 	//@ unfold p.NonInitMem()
 	p.raw = b
-	//@ fold p.Mem(b)
+	//@ fold p.Mem()
 	return nil
 }
 
 // @ ensures  e != nil && e.ErrorMem()
 // @ decreases
-func (p *rawPath) Reverse( /*@ ghost underlyingBuf []byte @*/ ) (r Path, e error) {
+func (p *rawPath) Reverse() (r Path, e error) {
 	return nil, serrors.New("not supported")
 }
 
 // @ pure
-// @ requires acc(p.Mem(underlyingBuf), _)
+// @ requires acc(p.Mem(), _)
 // @ ensures l >= 0
 // @ decreases
-func (p *rawPath) Len( /*@ ghost underlyingBuf []byte @*/ ) (l int) {
-	return /*@ unfolding acc(p.Mem(underlyingBuf), _) in @*/ len(p.raw)
+func (p *rawPath) Len() (l int) {
+	return /*@ unfolding acc(p.Mem(), _) in @*/ len(p.raw)
 }
 
 // @ pure
-// @ requires acc(p.Mem(underlyingBuf), _)
+// @ requires acc(p.Mem(), _)
 // @ decreases
-func (p *rawPath) Type( /*@ ghost underlyingBuf []byte @*/ ) Type {
-	return /*@ unfolding acc(p.Mem(underlyingBuf), _) in @*/ p.pathType
+func (p *rawPath) Type() Type {
+	return /*@ unfolding acc(p.Mem(), _) in @*/ p.pathType
 }
