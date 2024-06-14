@@ -153,7 +153,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ invariant acc(s.Mem(ubuf), R1)
 	//@ invariant sl.Bytes(ubuf, 0, len(ubuf))
 	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
-	//@ invariant s.Len(ubuf) <= len(b)
+	//@ invariant s.LenSpec(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenInfoFields(ubuf)
 	//@ invariant offset == MetaLen + i * path.InfoLen
 	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
@@ -180,7 +180,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ invariant acc(s.Mem(ubuf), R1)
 	//@ invariant sl.Bytes(ubuf, 0, len(ubuf))
 	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
-	//@ invariant s.Len(ubuf) <= len(b)
+	//@ invariant s.LenSpec(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenHopFields(ubuf)
 	//@ invariant offset == MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + i * path.HopLen
 	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
