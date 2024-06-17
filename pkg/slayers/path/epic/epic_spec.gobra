@@ -19,8 +19,8 @@ package epic
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
-
-	"github.com/scionproto/scion/verification/utils/slices"
+	. "github.com/scionproto/scion/verification/utils/definitions"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 pred (p *Path) NonInitMem() {
@@ -29,12 +29,23 @@ pred (p *Path) NonInitMem() {
 
 pred (p *Path) Mem(ubuf []byte) {
 	acc(&p.PktID) &&
-	acc(&p.PHVF) && slices.AbsSlice_Bytes(p.PHVF, 0, len(p.PHVF)) &&
-	acc(&p.LHVF) && slices.AbsSlice_Bytes(p.LHVF, 0, len(p.LHVF)) &&
+	acc(&p.PHVF) && sl.Bytes(p.PHVF, 0, len(p.PHVF)) &&
+	acc(&p.LHVF) && sl.Bytes(p.LHVF, 0, len(p.LHVF)) &&
 	acc(&p.ScionPath) &&
 	p.ScionPath != nil &&
 	MetadataLen <= len(ubuf) &&
 	p.ScionPath.Mem(ubuf[MetadataLen:])
+}
+
+ghost
+pure
+requires acc(p.Mem(ub), _)
+decreases
+func (p *Path) LenSpec(ghost ub []byte) (l int) {
+	return unfolding acc(p.Mem(ub), _) in
+		(p.ScionPath == nil ?
+			MetadataLen :
+			MetadataLen + p.ScionPath.LenSpec(ub[MetadataLen:]))
 }
 
 ghost
@@ -52,35 +63,6 @@ decreases
 pure func (r *Path) GetBase(ub []byte) scion.Base {
 	return unfolding acc(r.Mem(ub), _) in
 		r.ScionPath.GetBase(ub[MetadataLen:])
-}
-
-// TODO: drop
-ghost
-requires acc(p.Mem(ub), _)
-decreases
-pure func (p *Path) ValidCurrINF(ghost ub []byte) bool {
-	return unfolding acc(p.Mem(ub), _) in
-		let ubPath := ub[MetadataLen:] in
-		p.ScionPath.ValidCurrINF(ubPath)
-}
-
-ghost
-requires acc(p.Mem(ub), _)
-decreases
-pure func (p *Path) ValidCurrHF(ghost ub []byte) bool {
-	return unfolding acc(p.Mem(ub), _) in
-		let ubPath := ub[MetadataLen:] in
-		p.ScionPath.ValidCurrHF(ubPath)
-}
-
-// TODO: drop this
-ghost
-requires acc(p.Mem(ub), _)
-decreases
-pure func (p *Path) ValidCurrIdxs(ghost ub []byte) bool {
-	return unfolding acc(p.Mem(ub), _) in
-		let ubPath := ub[MetadataLen:] in
-		p.ScionPath.ValidCurrIdxs(ubPath)
 }
 
 ghost

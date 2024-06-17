@@ -10,7 +10,7 @@
 package net
 
 import . "github.com/scionproto/scion/verification/utils/definitions"
-import "github.com/scionproto/scion/verification/utils/slices"
+import sl "github.com/scionproto/scion/verification/utils/slices"
 
 // IP address lengths (bytes).
 const (
@@ -133,8 +133,8 @@ func (ip *IP) UnmarshalText(text []byte) error
 // considered to be equal.
 // (VerifiedSCION) we consider this function to be morally pure
 pure
-requires acc(slices.AbsSlice_Bytes(ip, 0, len(ip)), _)
-requires acc(slices.AbsSlice_Bytes(x, 0, len(x)), _)
+requires acc(sl.Bytes(ip, 0, len(ip)), _)
+requires acc(sl.Bytes(x, 0, len(x)), _)
 decreases _
 func (ip IP) Equal(x IP) bool
 

@@ -32,8 +32,8 @@ requires  offset + path.HopLen * segLen <= length
 requires  length <= len(raw)
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  0 <= currInfIdx && currInfIdx < 3
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
+preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
 ensures   CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset) ==
 	CurrSeg(raw[start:length], offset-start, currInfIdx, currHfIdx, segLen, headerOffset-start)
 decreases
@@ -45,8 +45,8 @@ func WidenCurrSeg(raw []byte,
 	headerOffset int,
 	start int,
 	length int) {
-	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R53)
-	unfold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R53)
+	unfold acc(sl.Bytes(raw, 0, len(raw)), R53)
+	unfold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R53)
 
 	ainfo1 := path.Timestamp(raw, currInfIdx, headerOffset)
 	ainfo2 := path.Timestamp(raw[start:length], currInfIdx, headerOffset-start)
@@ -67,8 +67,8 @@ func WidenCurrSeg(raw []byte,
 	widenSegment(raw, offset, currHfIdx, ainfo1, uinfo1, consDir1, peer1, segLen, start, length)
 	reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset)
 	reveal CurrSeg(raw[start:length], offset-start, currInfIdx, currHfIdx, segLen, headerOffset-start)
-	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R53)
-	fold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R53)
+	fold acc(sl.Bytes(raw, 0, len(raw)), R53)
+	fold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R53)
 }
 
 ghost
@@ -77,8 +77,8 @@ requires 0 < segLen
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires length <= len(raw)
 requires offset + path.HopLen * segLen <= length
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R52)
-preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R52)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R52)
+preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R52)
 ensures  segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ==
 	segment(raw[start:length], offset-start, currHfIdx, ainfo, uinfo, consDir, peer, segLen)
 decreases
@@ -100,19 +100,19 @@ ghost
 requires  0 <= start && start <= middle
 requires  middle + path.HopLen <= length
 requires  length <= len(raw)
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R54)
-preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R54)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
+preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R54)
 ensures   path.BytesToIO_HF(raw, 0, middle, len(raw)) ==
 	path.BytesToIO_HF(raw[start:length], 0, middle-start, length-start)
 decreases
 func widenBytesToIO_HF(raw []byte, middle int, start int, length int) {
-	unfold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
-	unfold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R55)
+	unfold acc(sl.Bytes(raw, 0, len(raw)), R55)
+	unfold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R55)
 	hfBytes1 := path.BytesToIO_HF(raw, 0, middle, len(raw))
 	hfBytes2 := path.BytesToIO_HF(raw[start:length], 0, middle-start, length-start)
 	assert hfBytes1 == hfBytes2
-	fold acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R55)
-	fold acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R55)
+	fold acc(sl.Bytes(raw, 0, len(raw)), R55)
+	fold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R55)
 }
 
 ghost
@@ -121,8 +121,8 @@ requires  0 <= start && start <= offset
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  offset + path.HopLen * segLen <= length
 requires  length <= len(raw)
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), p)
-preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), p)
+preserves acc(sl.Bytes(raw, 0, len(raw)), p)
+preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), p)
 ensures   hopFields(raw, offset, currHfIdx, segLen) ==
 	hopFields(raw[start:length], offset-start, currHfIdx, segLen)
 decreases segLen - currHfIdx
@@ -138,97 +138,85 @@ func widenHopFields(raw []byte, offset int, currHfIdx int, segLen int, start int
 
 ghost
 requires  0 <= start && start <= headerOffset
-requires  0 < seg1Len
-requires  0 <= seg2Len
-requires  0 <= seg3Len
+requires  segs.Valid()
 requires  0 <= length && length <= len(raw)
-requires  pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= length
+requires  PktLen(segs, headerOffset) <= length
 requires  1 <= currInfIdx && currInfIdx < 4
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset) ==
-	LeftSeg(raw[start:length], currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset-start)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
+preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
+ensures   LeftSeg(raw, currInfIdx, segs, headerOffset) ==
+	LeftSeg(raw[start:length], currInfIdx, segs, headerOffset-start)
 decreases
 func WidenLeftSeg(raw []byte,
 	currInfIdx int,
-	seg1Len int,
-	seg2Len int,
-	seg3Len int,
+	segs io.SegLens,
 	headerOffset int,
 	start int,
 	length int) {
-	offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset)
-	if currInfIdx == 1 && seg2Len > 0 {
-		offsetWithHopfields := offset + path.HopLen * seg1Len
-		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, 0, seg2Len, headerOffset, start, length)
-	} else if currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 {
-		offsetWithHopfields := offset + path.HopLen * (seg1Len + seg2Len)
-		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, 0, seg3Len, headerOffset, start, length)
+	offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset)
+	if currInfIdx == 1 && segs.Seg2Len > 0 {
+		offsetWithHopfields := offset + path.HopLen * segs.Seg1Len
+		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, 0, segs.Seg2Len, headerOffset, start, length)
+	} else if currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0 {
+		offsetWithHopfields := offset + path.HopLen * (segs.Seg1Len + segs.Seg2Len)
+		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, 0, segs.Seg3Len, headerOffset, start, length)
 	}
-	reveal LeftSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-	reveal LeftSeg(raw[start:length], currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset- start)
+	reveal LeftSeg(raw, currInfIdx, segs, headerOffset)
+	reveal LeftSeg(raw[start:length], currInfIdx, segs, headerOffset- start)
 }
 
 ghost
 requires  0 <= start && start <= headerOffset
-requires  0 < seg1Len
-requires  0 <= seg2Len
-requires  0 <= seg3Len
+requires  segs.Valid()
 requires  0 <= length && length <= len(raw)
-requires  pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= length
+requires  PktLen(segs, headerOffset) <= length
 requires  -1 <= currInfIdx && currInfIdx < 2
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset) ==
-	RightSeg(raw[start:length], currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset-start)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
+preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
+ensures   RightSeg(raw, currInfIdx, segs, headerOffset) ==
+	RightSeg(raw[start:length], currInfIdx, segs, headerOffset-start)
 decreases
 func WidenRightSeg(raw []byte,
 	currInfIdx int,
-	seg1Len int,
-	seg2Len int,
-	seg3Len int,
+	segs io.SegLens,
 	headerOffset int,
 	start int,
 	length int) {
-	offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset)
-	if currInfIdx == 1 && seg2Len > 0 && seg3Len > 0 {
-		offsetWithHopfields := offset + path.HopLen * seg1Len
-		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, seg2Len, seg2Len, headerOffset, start, length)
-	} else if currInfIdx == 0 && seg2Len > 0 {
-		WidenCurrSeg(raw, offset, currInfIdx, seg1Len, seg1Len, headerOffset, start, length)
+	offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset)
+	if currInfIdx == 1 && segs.Seg2Len > 0 && segs.Seg3Len > 0 {
+		offsetWithHopfields := offset + path.HopLen * segs.Seg1Len
+		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, segs.Seg2Len, segs.Seg2Len, headerOffset, start, length)
+	} else if currInfIdx == 0 && segs.Seg2Len > 0 {
+		WidenCurrSeg(raw, offset, currInfIdx, segs.Seg1Len, segs.Seg1Len, headerOffset, start, length)
 	}
-	reveal RightSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-	reveal RightSeg(raw[start:length], currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
+	reveal RightSeg(raw, currInfIdx, segs, headerOffset)
+	reveal RightSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
 }
 
 ghost
 requires  0 <= start && start <= headerOffset
-requires  0 < seg1Len
-requires  0 <= seg2Len
-requires  0 <= seg3Len
+requires  segs.Valid()
 requires  2 <= currInfIdx && currInfIdx < 5
 requires  0 <= length && length <= len(raw)
-requires  pktLen(seg1Len, seg2Len, seg3Len, headerOffset) <= length
-preserves acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.AbsSlice_Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset) ==
-	MidSeg(raw[start:length], currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
+requires  PktLen(segs, headerOffset) <= length
+preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
+preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
+ensures   MidSeg(raw, currInfIdx, segs, headerOffset) ==
+	MidSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
 decreases
 func WidenMidSeg(raw []byte,
 	currInfIdx int,
-	seg1Len int,
-	seg2Len int,
-	seg3Len int,
+	segs io.SegLens,
 	headerOffset int,
 	start int,
 	length int) {
-	offset := HopFieldOffset(NumInfoFields(seg1Len, seg2Len, seg3Len), 0, headerOffset)
-	if currInfIdx == 4 && seg2Len > 0 {
-		WidenCurrSeg(raw, offset, 0, seg1Len, seg1Len, headerOffset, start, length)
-	} else if currInfIdx == 2 && seg2Len > 0 && seg3Len > 0 {
-		offsetWithHopfields := offset + path.HopLen * (seg1Len + seg2Len)
-		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, 0, seg3Len, headerOffset, start, length)
+	offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset)
+	if currInfIdx == 4 && segs.Seg2Len > 0 {
+		WidenCurrSeg(raw, offset, 0, segs.Seg1Len, segs.Seg1Len, headerOffset, start, length)
+	} else if currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0 {
+		offsetWithHopfields := offset + path.HopLen * (segs.Seg1Len + segs.Seg2Len)
+		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, 0, segs.Seg3Len, headerOffset, start, length)
 	}
-	reveal MidSeg(raw, currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset)
-	reveal MidSeg(raw[start:length], currInfIdx, seg1Len, seg2Len, seg3Len, headerOffset - start)
+	reveal MidSeg(raw, currInfIdx, segs, headerOffset)
+	reveal MidSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
 }

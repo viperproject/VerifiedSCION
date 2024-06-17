@@ -21,7 +21,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
+	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // PathLen is the length of a serialized one hop path in bytes.
@@ -66,7 +66,7 @@ type Path struct {
 }
 
 // @ requires  o.NonInitMem()
-// @ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R42)
+// @ preserves acc(sl.Bytes(data, 0, len(data)), R42)
 // @ ensures   (len(data) >= PathLen) == (r == nil)
 // @ ensures   r == nil ==> o.Mem(data)
 // @ ensures   r != nil ==> o.NonInitMem()
@@ -79,33 +79,33 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	}
 	offset := 0
 	//@ unfold o.NonInitMem()
-	//@ slices.SplitRange_Bytes(data, 0, path.InfoLen, R42)
+	//@ sl.SplitRange_Bytes(data, 0, path.InfoLen, R42)
 	if err := o.Info.DecodeFromBytes(data[:path.InfoLen]); err != nil {
 		// @ Unreachable()
 		return err
 	}
-	//@ slices.CombineRange_Bytes(data,0,  path.InfoLen, R42)
+	//@ sl.CombineRange_Bytes(data,0,  path.InfoLen, R42)
 	offset += path.InfoLen
-	//@ slices.SplitRange_Bytes(data, offset, offset+path.HopLen, R42)
+	//@ sl.SplitRange_Bytes(data, offset, offset+path.HopLen, R42)
 	if err := o.FirstHop.DecodeFromBytes(data[offset : offset+path.HopLen]); err != nil {
 		// @ Unreachable()
 		return err
 	}
-	//@ slices.CombineRange_Bytes(data, offset, offset+path.HopLen, R42)
+	//@ sl.CombineRange_Bytes(data, offset, offset+path.HopLen, R42)
 	offset += path.HopLen
-	//@ slices.SplitRange_Bytes(data, offset, offset+path.HopLen, R42)
+	//@ sl.SplitRange_Bytes(data, offset, offset+path.HopLen, R42)
 	r = o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen])
-	//@ slices.CombineRange_Bytes(data, offset, offset+path.HopLen, R42)
+	//@ sl.CombineRange_Bytes(data, offset, offset+path.HopLen, R42)
 	//@ ghost if r == nil { fold o.Mem(data) } else { fold o.NonInitMem() }
 	return r
 }
 
 // @ preserves acc(o.Mem(ubuf), R1)
-// @ preserves acc(slices.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R1)
-// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R1)
+// @ preserves sl.Bytes(b, 0, len(b))
 // @ ensures   (len(b) >= PathLen) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
-// @ ensures   err == nil ==> o.Len(ubuf) <= len(b)
+// @ ensures   err == nil ==> o.LenSpec(ubuf) <= len(b)
 // @ decreases
 func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	if len(b) < PathLen {
@@ -114,23 +114,23 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	}
 	offset := 0
 	//@ unfold acc(o.Mem(ubuf), R1)
-	//@ slices.SplitRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
+	//@ sl.SplitRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 	if err := o.Info.SerializeTo(b[:offset+path.InfoLen]); err != nil {
-		//@ slices.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
+		//@ sl.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 		return err
 	}
-	//@ slices.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
+	//@ sl.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 	offset += path.InfoLen
-	//@ slices.SplitRange_Bytes(b, offset, offset+path.HopLen, writePerm)
+	//@ sl.SplitRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	if err := o.FirstHop.SerializeTo(b[offset : offset+path.HopLen]); err != nil {
-		//@ slices.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
+		//@ sl.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 		return err
 	}
-	//@ slices.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
+	//@ sl.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	offset += path.HopLen
-	//@ slices.SplitRange_Bytes(b, offset, offset+path.HopLen, writePerm)
+	//@ sl.SplitRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	err = o.SecondHop.SerializeTo(b[offset : offset+path.HopLen])
-	//@ slices.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
+	//@ sl.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	//@ fold acc(o.Mem(ubuf), R1)
 	return err
 }
@@ -138,7 +138,7 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
 // @ preserves o.Mem(ubuf)
-// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures   err == nil ==> (sd != nil && sd.Mem(ubuf))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -201,7 +201,7 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 
 // Reverse a OneHop path that returns a reversed SCION path.
 // @ requires o.Mem(ubuf)
-// @ preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures err == nil ==> p != nil
 // @ ensures err == nil ==> p.Mem(ubuf)
 // @ ensures err == nil ==> typeOf(p) == type[*scion.Decoded]
@@ -219,8 +219,7 @@ func (o *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	return sp.Reverse( /*@ ubuf @*/ )
 }
 
-// @ pure
-// @ ensures l == PathLen
+// @ ensures l == o.LenSpec(ubuf)
 // @ decreases
 func (o *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 	return PathLen

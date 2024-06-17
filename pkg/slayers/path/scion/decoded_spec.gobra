@@ -58,13 +58,20 @@ pred (d *Decoded) Mem(ubuf []byte) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this method which acts as a wrapper.
   */
-pure
-requires acc(d.Mem(ubuf), _)
-ensures  unfolding acc(d.Mem(ubuf), _) in l == d.Base.Len()
-ensures  l >= 0
+preserves acc(d.Mem(ubuf), R50)
+ensures   l == d.LenSpec(ubuf)
 decreases
 func (d *Decoded) Len(ghost ubuf []byte) (l int) {
 	return unfolding acc(d.Mem(ubuf), _) in d.Base.Len()
+}
+
+ghost
+pure
+requires acc(d.Mem(ub), _)
+ensures  unfolding acc(d.Mem(ub), _) in l == d.Base.Len()
+decreases
+func (d *Decoded) LenSpec(ghost ub []byte) (l int) {
+	return unfolding acc(d.Mem(ub), _) in d.Base.Len()
 }
 
 /**
@@ -105,8 +112,8 @@ func (d *Decoded) IsXover(ghost ubuf []byte) bool {
 requires d.Mem(ubuf)
 ensures  e == nil ==> (
 	d.Mem(ubuf) &&
-	d.Len(ubuf) == old(d.Len(ubuf)) &&
-	(old(d.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(ubuf)))
+	d.LenSpec(ubuf) == old(d.LenSpec(ubuf)) &&
+	(old(d.GetBase(ubuf).StronglyValid()) ==> d.GetBase(ubuf).StronglyValid()))
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
@@ -118,27 +125,6 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 		fold d.NonInitMem()
 	}
 	return e
-}
-
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) ValidCurrINF(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrINF()
-}
-
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) ValidCurrHF(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrHF()
-}
-
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) ValidCurrIdxs(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrIdxs()
 }
 
 ghost
@@ -160,13 +146,6 @@ requires acc(s.Mem(ub), _)
 decreases
 pure func (s *Decoded) GetMetaHdr(ub []byte) MetaHdr {
 	return unfolding acc(s.Mem(ub), _) in s.Base.GetMetaHdr()
-}
-
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) InfsMatchHfs(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.InfsMatchHfs()
 }
 
 /**** End of Stubs ****/
