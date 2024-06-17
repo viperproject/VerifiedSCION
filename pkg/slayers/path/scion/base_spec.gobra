@@ -28,20 +28,13 @@ pred (b *Base) NonInitMem() {
 	acc(b)
 }
 
-// TODO: simplify; drop this predicate
 // This predicate is established right after DecodeFromBytes.
-// Because this method does not perform any bounds checks, it
-// is not possible to have assertions in this invariant about
-// how the fields of Base compare to those of its MetaHdr field.
 pred (b *Base) Mem() {
-	acc(&b.NumINF) &&
-	acc(&b.NumHops) &&
-	acc(&b.PathMeta.CurrINF) &&
-	acc(&b.PathMeta.CurrHF) &&
-	acc(&b.PathMeta.SegLen[0]) &&
-	acc(&b.PathMeta.SegLen[1]) &&
-	acc(&b.PathMeta.SegLen[2]) &&
-	// TODO: move to WeaklyValid
+	acc(b) &&
+	// In the future, we might want to drop the properties
+	// below, as they are already present in WeaklyValid.
+	// This requires a bit of refactoring to pass around the
+	// knowledge that WeaklyValid holds between methods.
 	0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
 	0 <= b.NumHops && b.NumHops <= MaxHops &&
 	(0 < b.NumINF ==> 0 < b.NumHops)

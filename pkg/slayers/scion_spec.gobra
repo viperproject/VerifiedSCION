@@ -182,7 +182,6 @@ pred (s *SCION) Mem(ubuf []byte) {
 	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
 }
 
-// TODO: drop
 ghost
 requires acc(s.Mem(ub), _)
 decreases

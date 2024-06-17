@@ -229,7 +229,6 @@ func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 // @ pure
 // @ requires acc(s.Mem(), _)
 // @ ensures  r >= MetaLen
-// @ ensures  r == (unfolding acc(s.Mem(), _) in (MetaLen + int(s.NumINF)*path.InfoLen + int(s.NumHops)*path.HopLen))
 // @ decreases
 func (s *Base) Len() (r int) {
 	return /*@ unfolding acc(s.Mem(), _) in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen

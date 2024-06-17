@@ -1972,7 +1972,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	}
 	// (VerifiedSCION) This assumption will be dropped after clarifying
 	// https://github.com/scionproto/scion/issues/4531
-	// @ TemporaryAssumeForIO(p.path.CurrInfMatchesCurrHF(ubPath))
+	// @ TemporaryAssumeForIO(p.path.GetBase(ubPath).CurrInfMatchesCurrHF())
 	// @ p.EstablishEqAbsHeader(ub, startP, endP)
 	// @ p.path.EstablishValidPktMetaHdr(ubPath)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
@@ -2631,7 +2631,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	}
 	// (VerifiedSCION) This assumption will be dropped after clarifying
 	// https://github.com/scionproto/scion/issues/4524.
-	//@ TemporaryAssumeForIO(!p.path.GetIsXoverSpec(ubPath))
+	//@ TemporaryAssumeForIO(!p.path.GetBase(ubPath).IsXoverSpec())
 	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
@@ -3936,7 +3936,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	_, external := p.d.external[p.ingressID]
 	if external {
 		// @ requires revPath.Mem(rawPath)
-		// @ requires revPath.ValidCurrIdxs(rawPath)
+		// @ requires revPath.GetBase(rawPath).StronglyValid()
 		// @ ensures  revPath.Mem(rawPath)
 		// @ decreases
 		// @ outline(

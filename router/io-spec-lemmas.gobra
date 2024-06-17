@@ -159,7 +159,7 @@ decreases
 pure func (p* scionPacketProcessor) GetIsXoverSpec(ub []byte) bool {
 	return let ubPath := p.scionLayer.UBPath(ub) in
 		unfolding acc(p.scionLayer.Mem(ub), R55) in
-		p.path.GetIsXoverSpec(ubPath)
+		p.path.GetBase(ubPath).IsXoverSpec()
 }
 
 ghost
@@ -224,8 +224,7 @@ ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 ensures  start == p.scionLayer.PathStartIdx(ub)
 ensures  end == p.scionLayer.PathEndIdx(ub)
 ensures  p.path.EqAbsHeader(ub[start:end])
-ensures  p.path.InfsMatchHfs(ub[start:end])
-ensures  p.path.GetBase(ub[start:end]).SegsInBounds()
+ensures  p.path.GetBase(ub[start:end]).WeaklyValid()
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
 decreases
 func (p* scionPacketProcessor) EstablishEqAbsHeader(ub []byte, start int, end int) {
