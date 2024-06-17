@@ -173,6 +173,7 @@ pure func (s Base) IsXoverSpec() bool {
 ghost
 requires s.NumINF != 0
 requires int(s.PathMeta.CurrHF) < s.NumHops-1
+ensures  s.WeaklyValid() ==> res.WeaklyValid()
 ensures  s.StronglyValid() ==> res.StronglyValid()
 decreases
 pure func (s Base) IncPathSpec() (res Base) {
@@ -217,9 +218,17 @@ ghost
 requires b.StronglyValid()
 ensures  b.ReverseSpec().StronglyValid()
 decreases
-pure func (b Base) ReversingBaseValidSegLenHasValidSegLen() Lemma {
+pure func (b Base) ReversingBaseStronglyValidSegLenHasValidSegLen() Lemma {
 	return Lemma{}
 }
+
+// ghost
+// requires b.WeaklyValid()
+// ensures  b.ReverseSpec().WeaklyValid()
+// decreases
+// pure func (b Base) ReversingBaseWeaklyValidSegLenHasValidSegLen() Lemma {
+// 	return Lemma{}
+// }
 
 ghost
 requires b.Mem()
