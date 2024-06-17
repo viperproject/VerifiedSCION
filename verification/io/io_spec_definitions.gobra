@@ -108,9 +108,6 @@ pure func (s SegLens) Valid() bool {
 }
 
 ghost
-requires seg1Len > 0
-requires seg2Len >= 0
-requires seg3Len >= 0
 decreases
 pure func CombineSegLens(seg1Len int, seg2Len int, seg3Len int) SegLens {
     return SegLens_ {
@@ -124,4 +121,24 @@ ghost
 decreases
 pure func (s SegLens) NumInfoFields() int {
     return s.Seg3Len > 0 ? 3 : (s.Seg2Len > 0 ? 2 : (s.Seg1Len > 0 ? 1 : 0))
+}
+
+ghost
+decreases
+pure func (s SegLens) TotalHops() int {
+    return s.Seg1Len + s.Seg2Len + s.Seg3Len
+}
+
+ghost
+decreases
+pure func (s SegLens) LengthOfCurrSeg(currHF int) int {
+	return s.Seg1Len > currHF ? s.Seg1Len : ((s.Seg1Len + s.Seg2Len) > currHF ? s.Seg2Len : s.Seg3Len)
+}
+
+ghost
+requires 0 <= currHF
+ensures  res <= currHF
+decreases
+pure func (s SegLens) LengthOfPrevSeg(currHF int) (res int) {
+	return s.Seg1Len > currHF ? 0 : ((s.Seg1Len + s.Seg2Len) > currHF ? s.Seg1Len : s.Seg1Len + s.Seg2Len)
 }

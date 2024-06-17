@@ -58,13 +58,20 @@ pred (d *Decoded) Mem(ubuf []byte) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this method which acts as a wrapper.
   */
-pure
-requires acc(d.Mem(ubuf), _)
-ensures  unfolding acc(d.Mem(ubuf), _) in l == d.Base.Len()
-ensures  l >= 0
+preserves acc(d.Mem(ubuf), R50)
+ensures   l == d.LenSpec(ubuf)
 decreases
 func (d *Decoded) Len(ghost ubuf []byte) (l int) {
 	return unfolding acc(d.Mem(ubuf), _) in d.Base.Len()
+}
+
+ghost
+pure
+requires acc(d.Mem(ub), _)
+ensures  unfolding acc(d.Mem(ub), _) in l == d.Base.Len()
+decreases
+func (d *Decoded) LenSpec(ghost ub []byte) (l int) {
+	return unfolding acc(d.Mem(ub), _) in d.Base.Len()
 }
 
 /**
@@ -105,7 +112,7 @@ func (d *Decoded) IsXover(ghost ubuf []byte) bool {
 requires d.Mem(ubuf)
 ensures  e == nil ==> (
 	d.Mem(ubuf) &&
-	d.Len(ubuf) == old(d.Len(ubuf)) &&
+	d.LenSpec(ubuf) == old(d.LenSpec(ubuf)) &&
 	(old(d.GetBase(ubuf).StronglyValid()) ==> d.GetBase(ubuf).StronglyValid()))
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases

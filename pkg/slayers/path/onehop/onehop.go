@@ -105,7 +105,7 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 // @ preserves sl.Bytes(b, 0, len(b))
 // @ ensures   (len(b) >= PathLen) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
-// @ ensures   err == nil ==> o.Len(ubuf) <= len(b)
+// @ ensures   err == nil ==> o.LenSpec(ubuf) <= len(b)
 // @ decreases
 func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	if len(b) < PathLen {
@@ -219,8 +219,7 @@ func (o *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	return sp.Reverse( /*@ ubuf @*/ )
 }
 
-// @ pure
-// @ ensures l == PathLen
+// @ ensures l == o.LenSpec(ubuf)
 // @ decreases
 func (o *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 	return PathLen

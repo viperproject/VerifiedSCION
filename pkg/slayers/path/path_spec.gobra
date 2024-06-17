@@ -44,6 +44,15 @@ func (p *rawPath) IsValidResultOfDecoding(b []byte, err error) (res bool) {
 	return true
 }
 
+ghost
+pure
+requires acc(p.Mem(ub), _)
+ensures  0 <= l
+decreases
+func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
+	return unfolding acc(p.Mem(ub), _) in len(p.raw)
+}
+
 (*rawPath) implements Path
 
 /** End of rawPath spec **/

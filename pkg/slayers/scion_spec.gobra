@@ -29,6 +29,7 @@ import (
 
 	. "verification/utils/definitions"
 	sl "verification/utils/slices"
+	"verification/io"
 	"encoding/binary"
 )
 
@@ -178,7 +179,7 @@ pred (s *SCION) Mem(ubuf []byte) {
 	// end of path pool
 	// helpful facts for other methods:
 	// - for router::updateScionLayer:
-	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
+	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
 }
 
 // TODO: drop
@@ -441,8 +442,9 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 		let seg1 := int(metaHdr.SegLen[0]) in
 		let seg2 := int(metaHdr.SegLen[1]) in
 		let seg3 := int(metaHdr.SegLen[2]) in
+		let segs := io.CombineSegLens(seg1, seg2, seg3) in
 		s.Path.(*scion.Raw).Base.GetBase() ==
-		scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1 + seg2 + seg3}
+		scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()}
 }
 
 // Describes a SCION packet that was successfully decoded by `DecodeFromBytes`.
@@ -479,11 +481,12 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let seg1 := int(metaHdr.SegLen[0])         in
 		let seg2 := int(metaHdr.SegLen[1])         in
 		let seg3 := int(metaHdr.SegLen[2])         in
-		let base := scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1+seg2+seg3} in
+		let segs := io.CombineSegLens(seg1, seg2, seg3) in
+		let base := scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()} in
 		0 < metaHdr.SegLen[0]    &&
 		base.StronglyValid() && // TODO: replace by fully valid when scion performs full validation
 		base.CurrInfMatchesCurrHF() &&
-		scion.pktLen(seg1, seg2, seg3, start + scion.MetaLen) <= length
+		scion.PktLen(segs, start + scion.MetaLen) <= length
 }
 
 ghost
@@ -730,6 +733,6 @@ decreases
 pure func (s *SCION) InferSizeOHP(ghost ub []byte) (b bool) {
 	return unfolding acc(s.Mem(ub), _) in
 		let pathSlice := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
-		let pathLen := s.Path.Len(pathSlice) in
+		let pathLen := s.Path.LenSpec(pathSlice) in
 		CmnHdrLen + s.AddrHdrLenSpecInternal() + pathLen <= len(ub)
 }

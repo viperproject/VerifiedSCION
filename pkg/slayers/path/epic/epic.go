@@ -85,7 +85,7 @@ type Path struct {
 // @ preserves sl.Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ ensures   !old(p.hasScionPath(ubuf)) ==> r != nil
-// @ ensures   len(b) < old(p.Len(ubuf)) ==> r != nil
+// @ ensures   len(b) < old(p.LenSpec(ubuf)) ==> r != nil
 // @ ensures   old(p.getPHVFLen(ubuf)) != HVFLen ==> r != nil
 // @ ensures   old(p.getLHVFLen(ubuf)) != HVFLen ==> r != nil
 // @ decreases
@@ -211,20 +211,16 @@ func (p *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (ret path.Path, r error) {
 }
 
 // Len returns the length of the EPIC path in bytes.
-// (VerifiedSCION) This is currently not checked here because Gobra
-// does not support statements in pure functions. The proof obligations
-// for this method are discharged in function `len_test` in the file `epic_spec_test.gobra`.
-// @ trusted
-// @ pure
-// @ requires acc(p.Mem(ubuf), _)
-// @ ensures  !p.hasScionPath(ubuf) ==> l == MetadataLen
-// @ ensures  p.hasScionPath(ubuf)  ==> l == MetadataLen + unfolding acc(p.Mem(ubuf), _) in p.ScionPath.Len(ubuf[MetadataLen:])
+// @ preserves acc(p.Mem(ubuf), R50)
+// @ ensures   l == p.LenSpec(ubuf)
 // @ decreases
 func (p *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
+	// @ unfold acc(p.Mem(ubuf), R50)
+	// @ defer fold acc(p.Mem(ubuf), R50)
 	if p.ScionPath == nil {
 		return MetadataLen
 	}
-	return MetadataLen + p.ScionPath.Len( /*@ ubuf @*/ )
+	return MetadataLen + p.ScionPath.Len( /*@ ubuf[MetadataLen:] @*/ )
 }
 
 // Type returns the EPIC path type identifier.
