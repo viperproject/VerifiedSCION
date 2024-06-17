@@ -223,7 +223,7 @@ ensures  acc(sl.Bytes(ub[start:end], 0, len(ub[start:end])), R50)
 ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 ensures  start == p.scionLayer.PathStartIdx(ub)
 ensures  end == p.scionLayer.PathEndIdx(ub)
-ensures  p.path.EqAbsHeader(ub[start:end])
+ensures  p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 ensures  p.path.GetBase(ub[start:end]).WeaklyValid()
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
 decreases
