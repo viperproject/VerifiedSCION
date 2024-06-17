@@ -463,11 +463,7 @@ func ValidPktMetaHdrSublice(raw []byte, idx int) {
 ghost
 requires acc(s.Mem(ub), R54)
 requires acc(sl.Bytes(ub, 0, len(ub)), R55)
-requires s.GetBase(ub).NumsCompatibleWithSegLen()
-requires s.GetBase(ub).ValidCurrInfSpec()
-requires s.GetBase(ub).ValidCurrHfSpec()
-requires s.GetBase(ub).PathMeta.SegsInBounds()
-requires s.GetBase(ub).CurrInfMatchesCurrHF()
+requires s.GetBase(ub).FullyValid()
 requires s.GetBase(ub).EqAbsHeader(ub)
 ensures  acc(sl.Bytes(ub, 0, len(ub)), R55)
 ensures  acc(s.Mem(ub), R54)
