@@ -1103,7 +1103,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ ghost ioLock.Unlock()
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
 					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
-					// @	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.Bytes(tmpBuf, 0, len(tmpBuf)), R15)
+					// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.Bytes(tmpBuf, 0, len(tmpBuf)), R15)
 					// @ }
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					// @ msgs[:pkts][i0].IsActive = false
@@ -1756,11 +1756,11 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ requires  acc(ioLock.LockP(), _)
 // @ requires  ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 // @ requires  let absPkt := absIO_val(p.rawPkt, p.ingressID) in
-// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
+// @ 	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
 // @ ensures   reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
-// @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
+// @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 // @ ensures   respr.OutPkt != nil ==>
-// @	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID)
+// @ 	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	newAbsPkt.isIO_val_Unsupported
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
@@ -1884,8 +1884,8 @@ type macBuffersT struct {
 }
 
 // @ trusted
-// @ requires 	false
-// @ ensures	reserr != nil && respr.OutPkt != nil ==>
+// @ requires false
+// @ ensures  reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 func (p *scionPacketProcessor) packSCMP(
 	typ slayers.SCMPType,
@@ -1924,14 +1924,14 @@ func (p *scionPacketProcessor) packSCMP(
 // @ ensures   acc(&p.hopField) && acc(&p.infoField)
 // @ ensures   respr === processResult{}
 // @ ensures   reserr == nil ==> (
-// @	let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @	p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath))
+// @ 	let ubPath := p.scionLayer.UBPath(ub) in
+// @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
+// @ 	p.path.GetCurrHF(ubPath) < p.path.GetNumHops(ubPath))
 // @ ensures   acc(p.scionLayer.Mem(ub), R6)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   reserr == nil ==> (
-// @	let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), R10) in
+// @ 	let ubPath := p.scionLayer.UBPath(ub) in
+// @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
 // @ 	p.path.GetCurrINF(ubPath) < p.path.GetNumINF(ubPath))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
@@ -1979,9 +1979,9 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	// @ absPktFutureLemma(ub)
 	// @ p.path.DecodingLemma(ubPath, p.infoField, p.hopField)
 	// @ assert reveal p.path.EqAbsInfoField(p.path.absPkt(ubPath),
-	// @	p.infoField.ToAbsInfoField())
+	// @ 	p.infoField.ToAbsInfoField())
 	// @ assert reveal p.path.EqAbsHopField(p.path.absPkt(ubPath),
-	// @	p.hopField.ToIO_HF())
+	// @ 	p.hopField.ToIO_HF())
 	// @ assert reveal p.EqAbsHopField(absPkt(ub))
 	// @ assert reveal p.EqAbsInfoField(absPkt(ub))
 	return processResult{}, nil
@@ -2137,17 +2137,17 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte @*/ )
 		// @ ghost if(p.path.IsLastHopSpec(ubPath)) {
 		// @ 	p.path.LastHopLemma(ubPath)
 		// @ 	p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ubScionL, startP)
-		// @	p.SubSliceAbsPktToAbsPkt(ubScionL, startP, endP)
+		// @ 	p.SubSliceAbsPktToAbsPkt(ubScionL, startP, endP)
 		// @ }
 	}
 	// @ fold p.d.validResult(processResult{}, false)
 
 	// @ assert  (unfolding acc(p.scionLayer.Mem(ubScionL), R55) in
-	// @	(unfolding acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), R55) in
-	// @	p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.ingressID != 0
+	// @ 	(unfolding acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), R55) in
+	// @ 	p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.ingressID != 0
 	// @ assert  (unfolding acc(p.scionLayer.Mem(ubScionL), R55) in
-	// @	(unfolding acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), R55) in
-	// @	p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.path.IsLastHopSpec(ubPath)
+	// @ 	(unfolding acc(p.scionLayer.HeaderMem(ubScionL[slayers.CmnHdrLen:]), R55) in
+	// @ 	p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.path.IsLastHopSpec(ubPath)
 	// @ assert reveal p.DstIsLocalIngressID(ubScionL)
 	// @ assert reveal p.LastHopLen(ubScionL)
 	return processResult{}, nil
@@ -2188,11 +2188,11 @@ func (p *scionPacketProcessor) invalidDstIA() (processResult, error) {
 // @ requires  acc(&p.ingressID, R21)
 // @ requires  acc(&p.infoField, R4) && acc(&p.hopField, R4)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @	p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
+// @ 	p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
-// @	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @	p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
+// @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
+// @ 	p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires  acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(sl.Bytes(ub, 0, len(ub)), R4)
@@ -2227,7 +2227,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	expectedSrc, ok := p.d.internalNextHops[pktIngressID]
 	// @ ghost if ok {
-	// @	assert expectedSrc in range(p.d.internalNextHops)
+	// @ 	assert expectedSrc in range(p.d.internalNextHops)
 	// @    unfold acc(expectedSrc.Mem(), _)
 	// @ }
 	// @ unfold acc(p.srcAddr.Mem(), _)
@@ -3075,7 +3075,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 	scionPld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ubLastLayer @*/ )
 	// @ assert scionPld === ubLastLayer[start:end] || scionPld == nil
 	// @ if scionPld == nil { sl.NilAcc_Bytes() } else {
-	// @	sl.SplitRange_Bytes(ubLastLayer, start, end, R1)
+	// @ 	sl.SplitRange_Bytes(ubLastLayer, start, end, R1)
 	// @ 	ghost defer sl.CombineRange_Bytes(ubLastLayer, start, end, R1)
 	// @ }
 	// @ gopacket.AssertInvariantNilDecodeFeedback()
@@ -3193,11 +3193,11 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  acc(ioLock.LockP(), _)
 // @ requires  ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 // @ requires  let absPkt := absIO_val(ub, p.ingressID) in
-// @	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
+// @ 	absPkt.isIO_val_Pkt2 ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.IO_val_Pkt2_2)
 // @ ensures   reserr == nil && newAbsPkt.isIO_val_Pkt2 ==>
-// @	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
+// @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.IO_val_Pkt2_1, newAbsPkt.IO_val_Pkt2_2)
 // @ ensures   respr.OutPkt != nil ==>
-// @	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID)
+// @ 	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	newAbsPkt.isIO_val_Unsupported
 // @ ensures (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
@@ -3344,10 +3344,10 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ ghost if(slayers.IsSupportedPkt(ub)) {
 		// @ 	ghost if(!p.segmentChange) {
 		// 			enter/exit event
-		// @		ExternalEnterOrExitEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
+		// @ 		ExternalEnterOrExitEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
 		// @ 	} else {
 		// 			xover event
-		// @		XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
+		// @ 		XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
 		// @ 	}
 		// @ }
 		// @ newAbsPkt = reveal absIO_val(p.rawPkt, egressID)
@@ -3364,9 +3364,9 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ TemporaryAssumeForIO(old(slayers.IsSupportedPkt(ub)) == slayers.IsSupportedPkt(ub))
 		// @ ghost if(slayers.IsSupportedPkt(ub)) {
 		// @ 	if(!p.segmentChange) {
-		// @		InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ 		InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
 		// @ 	} else {
-		// @		XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
+		// @ 		XoverEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
 		// @ 	}
 		// @ }
 		// @ newAbsPkt = reveal absIO_val(p.rawPkt, 0)
