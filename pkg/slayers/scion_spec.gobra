@@ -194,19 +194,6 @@ pure func (s *SCION) ValidPathMetaData(ghost ub []byte) bool {
 			s.Path.(*epic.Path).GetBase(ubPath).StronglyValid())
 }
 
-ghost
-opaque
-requires acc(s.Mem(ub), _)
-decreases
-pure func (s *SCION) ValidCurrFieldsIfPresent(ghost ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		let ubPath := s.UBPath(ub) in
-		(typeOf(s.Path) == type[*scion.Raw] ==>
-			s.Path.(*scion.Raw).GetBase(ubPath).ValidCurrFieldsSpec()) &&
-		(typeOf(s.Path) == type[*epic.Path] ==>
-			s.Path.(*epic.Path).GetBase(ubPath).ValidCurrFieldsSpec())
-}
-
 // TODO: simplify the body of the predicate when let expressions
 //       support predicates
 pred (s *SCION) HeaderMem(ubuf []byte) {
