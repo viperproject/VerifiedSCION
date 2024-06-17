@@ -235,7 +235,7 @@ func (p* scionPacketProcessor) EstablishEqAbsHeader(ub []byte, start int, end in
 	reveal p.scionLayer.EqAbsHeader(ub)
 	reveal p.scionLayer.ValidScionInitSpec(ub)
 	assert reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
-	assert p.path.EqAbsHeader(ub[start:end])
+	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.path.Mem(ub[start:end]), R56)
 	fold acc(p.scionLayer.Mem(ub), R56)
 	fold acc(sl.Bytes(ub[start:end], 0, len(ub[start:end])), R56)
@@ -274,7 +274,7 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	assert reveal scion.validPktMetaHdr(ub[start:end])
 	unfold acc(p.scionLayer.Mem(ub), R56)
 	reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
-	assert p.path.EqAbsHeader(ub[start:end])
+	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.scionLayer.Mem(ub), R56)
 	assert start == slayers.GetAddressOffset(ub)
 

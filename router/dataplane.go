@@ -2909,7 +2909,7 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	}
 	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ assert p.DstIsLocalIngressID(ub)
-	// @ TemporaryAssumeForIO(scion.validPktMetaHdr(ubPath) && p.path.EqAbsHeader(ubPath)) // postcondition of SetHopfield
+	// @ TemporaryAssumeForIO(scion.validPktMetaHdr(ubPath) && p.path.GetBase(ubPath).EqAbsHeader(ubPath)) // postcondition of SetHopfield
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
 	// @ absPktFutureLemma(ub)
@@ -3016,7 +3016,7 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
 	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
-	// @ TemporaryAssumeForIO(scion.validPktMetaHdr(ubPath) && p.path.EqAbsHeader(ubPath)) // postcondition of SetHopfield
+	// @ TemporaryAssumeForIO(scion.validPktMetaHdr(ubPath) && p.path.GetBase(ubPath).EqAbsHeader(ubPath)) // postcondition of SetHopfield
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
 	// @ absPktFutureLemma(ub)
