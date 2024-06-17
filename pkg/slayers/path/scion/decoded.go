@@ -282,7 +282,7 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	s.PathMeta.CurrINF = uint8(s.NumINF) - s.PathMeta.CurrINF - 1
 	s.PathMeta.CurrHF = uint8(s.NumHops) - s.PathMeta.CurrHF - 1
 	//@ assert s.Base == base.ReverseSpec()
-	//@ ghost if isValid { base.ReversingBaseValidSegLenHasValidSegLen() }
+	//@ ghost if isValid { base.ReversingBaseStronglyValidSegLenHasValidSegLen() }
 	//@ assert isValid ==> s.Base.StronglyValid()
 	//@ fold s.Base.Mem()
 	//@ fold s.Mem(ubuf)

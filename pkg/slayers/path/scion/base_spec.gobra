@@ -222,14 +222,6 @@ pure func (b Base) ReversingBaseStronglyValidSegLenHasValidSegLen() Lemma {
 	return Lemma{}
 }
 
-// ghost
-// requires b.WeaklyValid()
-// ensures  b.ReverseSpec().WeaklyValid()
-// decreases
-// pure func (b Base) ReversingBaseWeaklyValidSegLenHasValidSegLen() Lemma {
-// 	return Lemma{}
-// }
-
 ghost
 requires b.Mem()
 ensures  b.NonInitMem()
@@ -279,16 +271,16 @@ ghost
 decreases
 pure func (m MetaHdr) InBounds() bool {
 	return 0 <= m.CurrINF && m.CurrINF <= MaxINFs  &&
-		0 <= m.CurrHF && m.CurrHF <= MaxHops       &&
+		0 <= m.CurrHF && m.CurrHF < MaxHops        &&
 		m.SegsInBounds()
 }
 
 ghost
 decreases
 pure func (m MetaHdr) SegsInBounds() bool {
-	return 0 <= m.SegLen[0] && m.SegLen[0] <= MaxHops &&
-		0 <= m.SegLen[1] && m.SegLen[1] <= MaxHops    &&
-		0 <= m.SegLen[2] && m.SegLen[2] <= MaxHops
+	return 0 <= m.SegLen[0] && m.SegLen[0] < MaxHops &&
+		0 <= m.SegLen[1] && m.SegLen[1] < MaxHops    &&
+		0 <= m.SegLen[2] && m.SegLen[2] < MaxHops
 }
 
 ghost

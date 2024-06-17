@@ -48,7 +48,7 @@ requires  acc(sl.Bytes(buf, 0, len(buf)), R42)
 decreases
 func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
 	return let base := s.GetBase(buf) in
-		base.EqAbsHeader(buf)              &&
+		base.EqAbsHeader(buf)           &&
 		base.NumsCompatibleWithSegLen() &&
 		base.PathMeta.SegsInBounds()
 }
