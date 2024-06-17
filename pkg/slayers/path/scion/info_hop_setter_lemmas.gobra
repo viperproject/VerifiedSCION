@@ -249,10 +249,10 @@ pure func LeftSegWithInfo(
 	segs io.SegLens,
 	inf option[io.AbsInfoField]) option[io.IO_seg3] {
 	return (currInfIdx == 1 && segs.Seg2Len > 0) ?
-			some(CurrSegWithInfo(hopfields, 0, segs.Seg2Len, get(inf))) :
-			(currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
-				some(CurrSegWithInfo(hopfields, 0, segs.Seg3Len, get(inf))) :
-				none[io.IO_seg3]
+		some(CurrSegWithInfo(hopfields, 0, segs.Seg2Len, get(inf))) :
+		(currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
+			some(CurrSegWithInfo(hopfields, 0, segs.Seg3Len, get(inf))) :
+			none[io.IO_seg3]
 }
 
 // RightSegWithInfo returns the abstract representation of the previous segment of a packet.
@@ -276,10 +276,10 @@ pure func RightSegWithInfo(
 	segs io.SegLens,
 	inf option[io.AbsInfoField]) option[io.IO_seg3] {
 	return (currInfIdx == 1 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
-			some(CurrSegWithInfo(hopfields, segs.Seg2Len, segs.Seg2Len, get(inf))) :
-			(currInfIdx == 0 && segs.Seg2Len > 0) ?
-				some(CurrSegWithInfo(hopfields, segs.Seg1Len, segs.Seg1Len, get(inf))) :
-				none[io.IO_seg3]
+		some(CurrSegWithInfo(hopfields, segs.Seg2Len, segs.Seg2Len, get(inf))) :
+		(currInfIdx == 0 && segs.Seg2Len > 0) ?
+			some(CurrSegWithInfo(hopfields, segs.Seg1Len, segs.Seg1Len, get(inf))) :
+			none[io.IO_seg3]
 }
 
 // MidSegWithInfo returns the abstract representation of the last or first segment of a packet.
@@ -303,10 +303,10 @@ pure func MidSegWithInfo(
 	segs io.SegLens,
 	inf option[io.AbsInfoField]) option[io.IO_seg3] {
 	return (currInfIdx == 4 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
-			some(CurrSegWithInfo(hopfields, segs.Seg1Len, segs.Seg1Len, get(inf))) :
-			(currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
-				some(CurrSegWithInfo(hopfields, 0, segs.Seg3Len, get(inf))) :
-				none[io.IO_seg3]
+		some(CurrSegWithInfo(hopfields, segs.Seg1Len, segs.Seg1Len, get(inf))) :
+		(currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
+			some(CurrSegWithInfo(hopfields, 0, segs.Seg3Len, get(inf))) :
+			none[io.IO_seg3]
 }
 
 // CurrSegEquality ensures that the two definitions of abstract segments, CurrSegWithInfo(..)
@@ -496,13 +496,13 @@ decreases
 pure func MidSegEqualitySpec(raw []byte, currInfIdx int, segs io.SegLens) bool {
 	return (segs.Seg2Len > 0 && segs.Seg3Len > 0 &&
 		(currInfIdx == 2 || currInfIdx == 4)) ?
-		let infoBytes := InfofieldByteSlice(raw, currInfIdx) in
-		let hopBytes := HopfieldsByteSlice(raw, currInfIdx, segs) in
-		let inf := some(path.BytesToAbsInfoField(infoBytes, 0)) in
-		MidSeg(raw, currInfIdx, segs, MetaLen) ==
-		MidSegWithInfo(hopBytes, currInfIdx, segs, inf) :
-		MidSeg(raw, currInfIdx, segs, MetaLen) ==
-		MidSegWithInfo(nil, currInfIdx, segs, none[io.AbsInfoField])
+			let infoBytes := InfofieldByteSlice(raw, currInfIdx) in
+			let hopBytes := HopfieldsByteSlice(raw, currInfIdx, segs) in
+			let inf := some(path.BytesToAbsInfoField(infoBytes, 0)) in
+			MidSeg(raw, currInfIdx, segs, MetaLen) ==
+			MidSegWithInfo(hopBytes, currInfIdx, segs, inf) :
+			MidSeg(raw, currInfIdx, segs, MetaLen) ==
+			MidSegWithInfo(nil, currInfIdx, segs, none[io.AbsInfoField])
 }
 
 // MidSegEquality ensures that the two definitions of abstract segments, MidSegWithInfo(..)
