@@ -434,7 +434,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	unfold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(data[offset : offset+pathLen]), R55)
 	// @ 	assert reveal s.EqAbsHeader(data)
-	// @	assert reveal s.ValidScionInitSpec(data)
+	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
 	// @ 	fold acc(sl.Bytes(data, 0, len(data)), R56)
 	// @ 	fold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)

@@ -113,7 +113,7 @@ requires d.Mem(ubuf)
 ensures  e == nil ==> (
 	d.Mem(ubuf) &&
 	d.LenSpec(ubuf) == old(d.LenSpec(ubuf)) &&
-	(old(d.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(ubuf)))
+	(old(d.GetBase(ubuf).StronglyValid()) ==> d.GetBase(ubuf).StronglyValid()))
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
@@ -125,27 +125,6 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 		fold d.NonInitMem()
 	}
 	return e
-}
-
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) ValidCurrINF(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrINF()
-}
-
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) ValidCurrHF(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrHF()
-}
-
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) ValidCurrIdxs(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.ValidCurrIdxs()
 }
 
 ghost
@@ -167,13 +146,6 @@ requires acc(s.Mem(ub), _)
 decreases
 pure func (s *Decoded) GetMetaHdr(ub []byte) MetaHdr {
 	return unfolding acc(s.Mem(ub), _) in s.Base.GetMetaHdr()
-}
-
-ghost
-requires acc(d.Mem(ub), _)
-decreases
-pure func (d *Decoded) InfsMatchHfs(ub []byte) bool {
-	return unfolding acc(d.Mem(ub), _) in d.Base.InfsMatchHfs()
 }
 
 /**** End of Stubs ****/

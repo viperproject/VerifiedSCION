@@ -37,10 +37,10 @@ type Raw struct {
 // @ requires  s.NonInitMem()
 // @ preserves acc(sl.Bytes(data, 0, len(data)), R42)
 // @ ensures   res == nil ==> s.Mem(data)
+// @ ensures   res == nil ==>
+// @ 	s.GetBase(data).WeaklyValid() &&
+// @ 	s.GetBase(data).EqAbsHeader(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
-// posts for IO:
-// @ ensures   res == nil ==> s.EqAbsHeader(data) &&
-// @ 	s.InfsMatchHfs(data) && s.SegsInBounds(data)
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()
@@ -139,7 +139,7 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ ensures   err == nil ==> (
 // @ 	let newUb := s.RawBufferMem(ubuf) in
 // @ 	d.Mem(newUb) &&
-// @ 	(old(s.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(newUb)))
+// @ 	(old(s.GetBase(ubuf).StronglyValid()) ==> d.GetBase(newUb).StronglyValid()))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
@@ -147,9 +147,9 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ unfold acc(s.Base.Mem(), R6)
 	//@ ghost var base Base = s.Base
 	//@ ghost var pathMeta MetaHdr = s.Base.PathMeta
-	//@ ghost validIdxs := s.ValidCurrIdxs(ubuf)
+	//@ ghost validIdxs := s.GetBase(ubuf).StronglyValid()
 	//@ assert validIdxs ==> s.Base.PathMeta.InBounds()
-	//@ assert validIdxs ==> base.ValidCurrIdxsSpec()
+	//@ assert validIdxs ==> base.StronglyValid()
 	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
 
 	// (VerifiedSCION) In this method, many slice operations are done in two
@@ -207,8 +207,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ ghost if validIdxs {
 	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ 	assert pathMeta == decoded.GetMetaHdr(s.Raw)
-	//@ 	assert decoded.GetBase(s.Raw).ValidCurrIdxsSpec()
-	//@ 	assert decoded.ValidCurrIdxs(s.Raw)
+	//@ 	assert decoded.GetBase(s.Raw).StronglyValid()
 	//@ }
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
@@ -223,10 +222,10 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ requires s.Mem(ubuf)
 // @ requires sl.Bytes(ubuf, 0, len(ubuf))
 // pres for IO:
-// @ requires s.EqAbsHeader(ubuf)
+// @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ requires validPktMetaHdr(ubuf)
 // @ requires len(s.absPkt(ubuf).CurrSeg.Future) > 0
-// @ requires s.GetIsXoverSpec(ubuf) ==>
+// @ requires s.GetBase(ubuf).IsXoverSpec() ==>
 // @ 	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
@@ -235,10 +234,10 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
 // post for IO:
-// @ ensures  r == nil ==> s.EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
-// @ ensures  r == nil && old(s.GetIsXoverSpec(ubuf)) ==>
+// @ ensures  r == nil ==> s.GetBase(ubuf).EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
+// @ ensures  r == nil && old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))
-// @ ensures  r == nil && !old(s.GetIsXoverSpec(ubuf)) ==>
+// @ ensures  r == nil && !old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsIncPath(old(s.absPkt(ubuf)))
 // @ decreases
 func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
@@ -276,7 +275,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ unfold acc(s.Base.Mem(), R2)
 	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
-	//@ assert s.Base.ValidCurrIdxs()
+	//@ assert s.Base.StronglyValid()
 	//@ assert s.PathMeta.InBounds()
 	//@ v := s.Raw[:MetaLen]
 	//@ b0 := sl.GetByte(v, 0, MetaLen, 0)
@@ -285,7 +284,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ b3 := sl.GetByte(v, 0, MetaLen, 3)
 	//@ s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ assert s.PathMeta.EqAbsHeader(v)
-	//@ assert RawBytesToBase(v).ValidCurrIdxsSpec()
+	//@ assert RawBytesToBase(v).StronglyValid()
 	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ assert s.EqAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(ubuf)
@@ -371,7 +370,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 // CurrINF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
 // @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R9)
-// @ ensures   (r == nil) == s.ValidCurrINF(ubuf)
+// @ ensures   (r == nil) == s.GetBase(ubuf).ValidCurrInfSpec()
 // @ ensures   r == nil ==> s.CorrectlyDecodedInf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -384,7 +383,7 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
-	//@ assert forall res path.InfoField :: {s.CorrectlyDecodedInf(ubuf, res)} s.ValidCurrINF(ubuf) ==>
+	//@ assert forall res path.InfoField :: { s.CorrectlyDecodedInf(ubuf, res) } s.GetBase(ubuf).ValidCurrInfSpec() ==>
 	//@ 	reveal s.CorrectlyDecodedInf(ubuf, res) == reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, res)
 	return s.GetInfoField(idx /*@, ubuf @*/)
 }
@@ -394,13 +393,14 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // @ requires sl.Bytes(ubuf, 0, len(ubuf))
 // @ requires acc(s.Mem(ubuf), R20)
 // pres for IO:
-// @ requires validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
+// @ requires validPktMetaHdr(ubuf)
+// @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ ensures  acc(s.Mem(ubuf), R20)
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures  r != nil ==> r.ErrorMem()
 // posts for IO:
 // @ ensures  r == nil ==>
-// @ 	validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
+// @ 	validPktMetaHdr(ubuf) && s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
 // @ 	let oldPkt := old(s.absPkt(ubuf)) in
 // @ 	let newPkt := oldPkt.UpdateInfoField(info.ToAbsInfoField()) in
@@ -510,7 +510,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 // CurrHF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
 // @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R9)
-// @ ensures   (r == nil) == s.ValidCurrHF(ubuf)
+// @ ensures   (r == nil) == s.GetBase(ubuf).ValidCurrHfSpec()
 // @ ensures   r == nil ==> s.CorrectlyDecodedHf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -523,7 +523,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
-	//@ assert forall res path.HopField :: {s.CorrectlyDecodedHf(ubuf, res)} s.ValidCurrHF(ubuf) ==>
+	//@ assert forall res path.HopField :: { s.CorrectlyDecodedHf(ubuf, res) } s.GetBase(ubuf).ValidCurrHfSpec() ==>
 	//@ 	reveal s.CorrectlyDecodedHf(ubuf, res) == reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
 	return s.GetHopField(idx /*@, ubuf @*/)
 }

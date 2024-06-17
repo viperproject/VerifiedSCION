@@ -159,7 +159,7 @@ decreases
 pure func (p* scionPacketProcessor) GetIsXoverSpec(ub []byte) bool {
 	return let ubPath := p.scionLayer.UBPath(ub) in
 		unfolding acc(p.scionLayer.Mem(ub), R55) in
-		p.path.GetIsXoverSpec(ubPath)
+		p.path.GetBase(ubPath).IsXoverSpec()
 }
 
 ghost
@@ -223,9 +223,8 @@ ensures  acc(sl.Bytes(ub[start:end], 0, len(ub[start:end])), R50)
 ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 ensures  start == p.scionLayer.PathStartIdx(ub)
 ensures  end == p.scionLayer.PathEndIdx(ub)
-ensures  p.path.EqAbsHeader(ub[start:end])
-ensures  p.path.InfsMatchHfs(ub[start:end])
-ensures  p.path.SegsInBounds(ub[start:end])
+ensures  p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
+ensures  p.path.GetBase(ub[start:end]).WeaklyValid()
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
 decreases
 func (p* scionPacketProcessor) EstablishEqAbsHeader(ub []byte, start int, end int) {
@@ -236,7 +235,7 @@ func (p* scionPacketProcessor) EstablishEqAbsHeader(ub []byte, start int, end in
 	reveal p.scionLayer.EqAbsHeader(ub)
 	reveal p.scionLayer.ValidScionInitSpec(ub)
 	assert reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
-	assert p.path.EqAbsHeader(ub[start:end])
+	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.path.Mem(ub[start:end]), R56)
 	fold acc(p.scionLayer.Mem(ub), R56)
 	fold acc(sl.Bytes(ub[start:end], 0, len(ub[start:end])), R56)
@@ -263,7 +262,7 @@ ensures  p.scionLayer.EqAbsHeader(ub)
 ensures  start == p.scionLayer.PathStartIdx(ub)
 ensures  end == p.scionLayer.PathEndIdx(ub)
 ensures  scion.validPktMetaHdr(ub[start:end])
-ensures  p.path.EqAbsHeader(ub[start:end])
+ensures  p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
 ensures  absPkt(ub) == p.path.absPkt(ub[start:end])
 decreases
@@ -275,7 +274,7 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	assert reveal scion.validPktMetaHdr(ub[start:end])
 	unfold acc(p.scionLayer.Mem(ub), R56)
 	reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
-	assert p.path.EqAbsHeader(ub[start:end])
+	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.scionLayer.Mem(ub), R56)
 	assert start == slayers.GetAddressOffset(ub)
 
@@ -315,7 +314,7 @@ requires p.path === p.scionLayer.GetPath(ub)
 requires scion.validPktMetaHdr(ub[start:end])
 requires start == p.scionLayer.PathStartIdx(ub)
 requires end == p.scionLayer.PathEndIdx(ub)
-requires p.path.EqAbsHeader(ub[start:end])
+requires p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 requires p.scionLayer.ValidHeaderOffset(ub, len(ub))
 ensures  acc(sl.Bytes(ub, 0, len(ub)), R50)
 ensures  acc(p.scionLayer.Mem(ub), R55)

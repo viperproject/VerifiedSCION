@@ -18,7 +18,7 @@ package epic
 
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
-
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
@@ -58,30 +58,11 @@ func (p *Path) DowngradePerm(buf []byte) {
 }
 
 ghost
-requires acc(p.Mem(ub), _)
+requires acc(r.Mem(ub), _)
 decreases
-pure func (p *Path) ValidCurrINF(ghost ub []byte) bool {
-	return unfolding acc(p.Mem(ub), _) in
-		let ubPath := ub[MetadataLen:] in
-		p.ScionPath.ValidCurrINF(ubPath)
-}
-
-ghost
-requires acc(p.Mem(ub), _)
-decreases
-pure func (p *Path) ValidCurrHF(ghost ub []byte) bool {
-	return unfolding acc(p.Mem(ub), _) in
-		let ubPath := ub[MetadataLen:] in
-		p.ScionPath.ValidCurrHF(ubPath)
-}
-
-ghost
-requires acc(p.Mem(ub), _)
-decreases
-pure func (p *Path) ValidCurrIdxs(ghost ub []byte) bool {
-	return unfolding acc(p.Mem(ub), _) in
-		let ubPath := ub[MetadataLen:] in
-		p.ScionPath.ValidCurrIdxs(ubPath)
+pure func (r *Path) GetBase(ub []byte) scion.Base {
+	return unfolding acc(r.Mem(ub), _) in
+		r.ScionPath.GetBase(ub[MetadataLen:])
 }
 
 ghost

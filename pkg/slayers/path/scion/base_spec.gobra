@@ -29,17 +29,12 @@ pred (b *Base) NonInitMem() {
 }
 
 // This predicate is established right after DecodeFromBytes.
-// Because this method does not perform any bounds checks, it
-// is not possible to have assertions in this invariant about
-// how the fileds of Base compare to those of its MetaHdr field.
 pred (b *Base) Mem() {
-	acc(&b.NumINF) &&
-	acc(&b.NumHops) &&
-	acc(&b.PathMeta.CurrINF) &&
-	acc(&b.PathMeta.CurrHF) &&
-	acc(&b.PathMeta.SegLen[0]) &&
-	acc(&b.PathMeta.SegLen[1]) &&
-	acc(&b.PathMeta.SegLen[2]) &&
+	acc(b) &&
+	// In the future, we might want to drop the properties
+	// below, as they are already present in WeaklyValid.
+	// This requires a bit of refactoring to pass around the
+	// knowledge that WeaklyValid holds between methods.
 	0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
 	0 <= b.NumHops && b.NumHops <= MaxHops &&
 	(0 < b.NumINF ==> 0 < b.NumHops)
@@ -59,21 +54,41 @@ pure func (b Base) ValidCurrHfSpec() bool {
 
 ghost
 decreases
-pure func (b Base) ValidCurrIdxsSpec() bool {
+pure func (b Base) ValidCurrFieldsSpec() bool {
 	return 0 <= b.NumINF && b.NumINF <= MaxINFs &&
 		0 <= b.NumHops && b.NumHops <= MaxHops  &&
-		b.ValidCurrHfSpec()  &&
-		b.ValidCurrInfSpec() &&
-		0 <= b.PathMeta.SegLen[0] && b.PathMeta.SegLen[0] < MaxHops &&
-		0 <= b.PathMeta.SegLen[1] && b.PathMeta.SegLen[1] < MaxHops &&
-		0 <= b.PathMeta.SegLen[2] && b.PathMeta.SegLen[2] < MaxHops &&
-		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
-		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
-		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
-		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
-			b.PathMeta.SegLen[i] != 0) &&
-		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
-			b.PathMeta.SegLen[i] == 0)
+		b.ValidCurrInfSpec()                    &&
+		b.ValidCurrHfSpec()
+}
+
+// A `Base` is weakly valid when the fields `NumINF` and `NumHops` are,
+// at most, `MaxINF` and `MaxHops`, respectively, and the field `SegLen`
+// is valid as well. `DecodeFromBytes` guarantees that all `Base`s
+// obtained from raw bytes will be weakly valid.
+ghost
+decreases
+pure func (b Base) WeaklyValid() bool {
+	return 0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
+		0 <= b.NumHops && b.NumHops <= MaxHops    &&
+		(0 < b.NumINF ==> 0 < b.NumHops)          &&
+		b.PathMeta.InBounds()                     &&
+		b.NumsCompatibleWithSegLen()
+}
+
+// A `Base` is strongly valid iff it is weakly valid and its `CurrHF`
+// and `CurrINF` are within bounds.
+ghost
+decreases
+pure func (b Base) StronglyValid() bool {
+	return b.WeaklyValid() && b.ValidCurrFieldsSpec()
+}
+
+// A `Base` is fully valid iff it is strongly valid and its `CurrHF` is
+// compatible with its `CurrINF`.
+ghost
+decreases
+pure func (b Base) FullyValid() bool {
+	return b.StronglyValid() && b.CurrInfMatchesCurrHF()
 }
 
 ghost
@@ -84,7 +99,7 @@ pure func (b Base) CurrInfMatchesCurrHF() bool {
 
 ghost
 decreases
-pure func (b Base) InfsMatchHfsSpec() bool {
+pure func (b Base) NumsCompatibleWithSegLen() bool {
 	return 0 <= b.NumINF && b.NumINF <= 3 &&
 		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
 		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
@@ -93,34 +108,6 @@ pure func (b Base) InfsMatchHfsSpec() bool {
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
 			b.PathMeta.SegLen[i] == 0)
-}
-
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) ValidCurrINF() bool {
-	return unfolding acc(b.Mem(), _) in (*b).ValidCurrInfSpec()
-}
-
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) ValidCurrHF() bool {
-	return unfolding acc(b.Mem(), _) in (*b).ValidCurrHfSpec()
-}
-
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) ValidCurrIdxs() bool {
-	return unfolding acc(b.Mem(), _) in (*b).ValidCurrIdxsSpec()
-}
-
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) InfsMatchHfs() bool {
-	return unfolding acc(b.Mem(), _) in (*b).InfsMatchHfsSpec()
 }
 
 ghost
@@ -170,21 +157,20 @@ pure func (s Base) InfForHfSpec(hf uint8) (r uint8) {
 }
 
 ghost
-requires acc(s.Mem(), _)
 decreases
-pure func (s *Base) IsXoverSpec() bool {
-	return unfolding acc(s.Mem(), _) in (
-		s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
-		s.PathMeta.CurrINF != s.InfForHfSpec(s.PathMeta.CurrHF+1))
+pure func (s Base) IsXoverSpec() bool {
+	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
+		s.PathMeta.CurrINF != s.InfForHfSpec(s.PathMeta.CurrHF+1)
 }
 
 ghost
 requires s.NumINF != 0
 requires int(s.PathMeta.CurrHF) < s.NumHops-1
-ensures  s.ValidCurrIdxsSpec() ==> res.ValidCurrIdxsSpec()
+ensures  s.WeaklyValid() ==> res.WeaklyValid()
+ensures  s.StronglyValid() ==> res.StronglyValid()
 decreases
 pure func (s Base) IncPathSpec() (res Base) {
-	return Base{
+	return Base {
 		PathMeta: MetaHdr{s.InfForHfSpec(s.PathMeta.CurrHF+1), s.PathMeta.CurrHF+1, s.PathMeta.SegLen},
 		NumINF: s.NumINF,
 		NumHops: s.NumHops,
@@ -222,10 +208,10 @@ pure func (b Base) ReverseSegLen() [3]uint8 {
 }
 
 ghost
-requires b.ValidCurrIdxsSpec()
-ensures  b.ReverseSpec().ValidCurrIdxsSpec()
+requires b.StronglyValid()
+ensures  b.ReverseSpec().StronglyValid()
 decreases
-pure func (b Base) ReversingValidBaseIsValidBase() Lemma {
+pure func (b Base) ReversingBaseStronglyValidSegLenHasValidSegLen() Lemma {
 	return Lemma{}
 }
 
@@ -276,10 +262,18 @@ pure func (s *Base) DecodeFromBytesSpec(b []byte) bool {
 
 ghost
 decreases
+pure func (m MetaHdr) InBounds() bool {
+	return 0 <= m.CurrINF && m.CurrINF <= MaxINFs  &&
+		0 <= m.CurrHF && m.CurrHF < MaxHops        &&
+		m.SegsInBounds()
+}
+
+ghost
+decreases
 pure func (m MetaHdr) SegsInBounds() bool {
-	return 0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&
-		0 <= m.SegLen[1] && m.SegLen[1] <= 63    &&
-		0 <= m.SegLen[2] && m.SegLen[2] <= 63
+	return 0 <= m.SegLen[0] && m.SegLen[0] < MaxHops &&
+		0 <= m.SegLen[1] && m.SegLen[1] < MaxHops    &&
+		0 <= m.SegLen[2] && m.SegLen[2] < MaxHops
 }
 
 ghost
@@ -304,16 +298,6 @@ pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
 		let b3 := sl.GetByte(b, 0, lenR, 3) in
 		let v  := m.SerializedToLine()      in
 		binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, v)
-}
-
-ghost
-decreases
-pure func (m MetaHdr) InBounds() bool {
-	return 0 <= m.CurrINF && m.CurrINF <= 3   &&
-		0 <= m.CurrHF && m.CurrHF <= 63       &&
-		0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&
-		0 <= m.SegLen[1] && m.SegLen[1] <= 63 &&
-		0 <= m.SegLen[2] && m.SegLen[2] <= 63
 }
 
 ghost

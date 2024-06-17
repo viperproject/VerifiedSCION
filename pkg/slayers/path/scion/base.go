@@ -83,7 +83,9 @@ type Base struct {
 // @ ensures   r != nil ==>
 // @ 	s.NonInitMem() && r.ErrorMem()
 // @ ensures   r == nil ==>
-// @ 	s.Mem() && s.DecodeFromBytesSpec(data) && s.InfsMatchHfs()
+// @ 	s.Mem() &&
+// @ 	s.GetBase().WeaklyValid() &&
+// @ 	s.DecodeFromBytesSpec(data)
 // @ ensures   len(data) < MetaLen ==> r != nil
 // posts for IO:
 // @ ensures   r == nil ==> s.GetBase().EqAbsHeader(data)
@@ -162,8 +164,8 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 // @ 	old(int(s.GetCurrHF()) >= s.GetNumHops()-1))
 // @ ensures  e == nil ==> (
 // @ 	s.Mem() &&
-// @ 	let oldBase := old(unfolding s.Mem() in *s) in
-// @ 	let newBase := (unfolding s.Mem() in *s) in
+// @ 	let oldBase := old(s.GetBase()) in
+// @ 	let newBase := s.GetBase() in
 // @ 	newBase == oldBase.IncPathSpec())
 // @ ensures  e != nil ==> (s.NonInitMem() && e.ErrorMem())
 // @ decreases
@@ -187,7 +189,7 @@ func (s *Base) IncPath() (e error) {
 
 // IsXover returns whether we are at a crossover point.
 // @ preserves acc(s.Mem(), R45)
-// @ ensures   r == s.IsXoverSpec()
+// @ ensures   r == s.GetBase().IsXoverSpec()
 // @ decreases
 func (s *Base) IsXover() (r bool) {
 	//@ unfold acc(s.Mem(), R45)
@@ -227,7 +229,6 @@ func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 // @ pure
 // @ requires acc(s.Mem(), _)
 // @ ensures  r >= MetaLen
-// @ ensures  r == (unfolding acc(s.Mem(), _) in (MetaLen + int(s.NumINF)*path.InfoLen + int(s.NumHops)*path.HopLen))
 // @ decreases
 func (s *Base) Len() (r int) {
 	return /*@ unfolding acc(s.Mem(), _) in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
@@ -253,6 +254,7 @@ type MetaHdr struct {
 // @ preserves acc(m)
 // @ preserves acc(sl.Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
+// @ ensures   e == nil ==> m.InBounds()
 // @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
