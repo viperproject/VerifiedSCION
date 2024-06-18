@@ -335,8 +335,8 @@ ghost
 requires  0 < p
 preserves acc(s.Mem(ub), p)
 ensures   let start := s.PathStartIdx(ub) in
-		  let end   := s.PathEndIdx(ub) in
-		  0 <= start && start <= end && end <= len(ub)
+	let end   := s.PathEndIdx(ub) in
+	0 <= start && start <= end && end <= len(ub)
 decreases
 func LemmaPathIdxStartEnd(s *SCION, ub []byte, p perm) {
 	unfold acc(s.Mem(ub), p)
@@ -461,7 +461,7 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let length := GetLength(raw) in
 		length <= len(raw) &&
 		unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
-	 	let _ := Asserting(forall k int :: {&rawHdr[k]} 0 <= k && k < scion.MetaLen ==> &rawHdr[k] == &raw[start + k]) in
+		let _ := Asserting(forall k int :: {&rawHdr[k]} 0 <= k && k < scion.MetaLen ==> &rawHdr[k] == &raw[start + k]) in
 		let hdr := binary.BigEndian.Uint32(rawHdr) in
 		let metaHdr := scion.DecodedFrom(hdr)      in
 		let seg1 := int(metaHdr.SegLen[0])         in
