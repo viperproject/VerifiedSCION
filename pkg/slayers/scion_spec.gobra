@@ -335,7 +335,7 @@ ghost
 requires  0 < p
 preserves acc(s.Mem(ub), p)
 ensures   let start := s.PathStartIdx(ub) in
-	let end   := s.PathEndIdx(ub) in
+	let end := s.PathEndIdx(ub) in
 	0 <= start && start <= end && end <= len(ub)
 decreases
 func LemmaPathIdxStartEnd(s *SCION, ub []byte, p perm) {

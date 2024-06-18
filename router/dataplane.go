@@ -1883,36 +1883,32 @@ type macBuffersT struct {
 	epicInput  []byte
 }
 
-// @ requires   acc(&p.d, R20) && acc(p.d.Mem(), _)
-// @ requires   acc(p.scionLayer.Mem(ub), R4)
-// @ requires   0 <= startLL && startLL <= endLL && endLL <= len(ub)
-// @ requires   ubLL == nil || ubLL === ub[startLL:endLL]
-// @ requires   acc(&p.lastLayer, R55) && p.lastLayer != nil
-// @ requires   &p.scionLayer !== p.lastLayer ==>
-// @ 	acc(p.lastLayer.Mem(ubLL), R15)
-// @ requires   &p.scionLayer === p.lastLayer ==>
-// @ 	ub === ubLL
-// @ requires   p.scionLayer.ValidPathMetaData(ub)
-// @ requires   sl.Bytes(ub, 0, len(ub))
-// @ requires   acc(&p.ingressID,  R45)
-// @ requires   acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires   cause.ErrorMem()
-// @ ensures    acc(&p.d, R20)
-// @ ensures    acc(p.scionLayer.Mem(ub), R4)
-// @ ensures    acc(&p.lastLayer, R55) && p.lastLayer != nil
-// @ ensures    &p.scionLayer !== p.lastLayer ==>
-// @ 	acc(p.lastLayer.Mem(ubLL), R15)
-// @ ensures    sl.Bytes(ub, 0, len(ub))
-// @ ensures    acc(&p.ingressID,  R45)
-// @ ensures    p.d.validResult(respr, false)
-// @ ensures    acc(&p.buffer, R50)
-// @ ensures    respr === processResult{} ==>
+// @ requires acc(&p.d, R20) && acc(p.d.Mem(), _)
+// @ requires acc(p.scionLayer.Mem(ub), R4)
+// @ requires 0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires ubLL == nil || ubLL === ub[startLL:endLL]
+// @ requires acc(&p.lastLayer, R55) && p.lastLayer != nil
+// @ requires acc(p.lastLayer.Mem(ubLL), R15)
+// @ requires p.scionLayer.ValidPathMetaData(ub)
+// @ requires sl.Bytes(ub, 0, len(ub))
+// @ requires acc(&p.ingressID,  R45)
+// @ requires acc(&p.buffer, R50) && p.buffer.Mem()
+// @ requires cause.ErrorMem()
+// @ ensures  acc(&p.d, R20)
+// @ ensures  acc(p.scionLayer.Mem(ub), R4)
+// @ ensures  acc(&p.lastLayer, R55) && p.lastLayer != nil
+// @ ensures  acc(p.lastLayer.Mem(ubLL), R15)
+// @ ensures  sl.Bytes(ub, 0, len(ub))
+// @ ensures  acc(&p.ingressID,  R45)
+// @ ensures  p.d.validResult(respr, false)
+// @ ensures  acc(&p.buffer, R50)
+// @ ensures  respr === processResult{} ==>
 // @ 	p.buffer.Mem()
-// @ ensures    respr !== processResult{} ==>
+// @ ensures  respr !== processResult{} ==>
 // @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
-// @ ensures    reserr != nil ==> reserr.ErrorMem()
-// @ ensures    reserr != nil && respr.OutPkt != nil ==>
+// @ ensures  reserr != nil ==> reserr.ErrorMem()
+// @ ensures  reserr != nil && respr.OutPkt != nil ==>
 // @ 	!slayers.IsSupportedPkt(respr.OutPkt)
 // @ decreases
 func (p *scionPacketProcessor) packSCMP(
@@ -2942,10 +2938,7 @@ func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ 
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires  ubLL == nil || ubLL === ub[startLL:endLL]
 // @ requires  acc(&p.lastLayer, R55) && p.lastLayer != nil
-// @ requires  &p.scionLayer !== p.lastLayer ==>
-// @ 	acc(p.lastLayer.Mem(ubLL), R15)
-// @ requires  &p.scionLayer === p.lastLayer ==>
-// @ 	ub === ubLL
+// @ requires  acc(p.lastLayer.Mem(ubLL), R15)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
 // @ requires  acc(&p.infoField, R20)
 // @ requires  acc(&p.hopField, R20)
@@ -2963,8 +2956,7 @@ func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ 
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   acc(p.scionLayer.Mem(ub), R4)
 // @ ensures   acc(&p.lastLayer, R55) && p.lastLayer != nil
-// @ ensures   &p.scionLayer !== p.lastLayer ==>
-// @ 	acc(p.lastLayer.Mem(ubLL), R15)
+// @ ensures   acc(p.lastLayer.Mem(ubLL), R15)
 // @ ensures   acc(&p.buffer, R50)
 // @ ensures   respr === processResult{} ==>
 // @ 	p.buffer.Mem()
@@ -2975,7 +2967,13 @@ func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ 
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (p *scionPacketProcessor) validateEgressUp( /*@ ghost ub []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int, ghost oldPkt io.IO_pkt2 @*/ ) (respr processResult, reserr error) {
+func (p *scionPacketProcessor) validateEgressUp(
+// @ 	ghost ub []byte,
+// @ 	ghost ubLL []byte,
+// @ 	ghost startLL int,
+// @ 	ghost endLL int,
+// @ 	ghost oldPkt io.IO_pkt2,
+) (respr processResult, reserr error) {
 	egressID := p.egressInterface( /*@ oldPkt @ */ )
 	// @ p.d.getBfdSessionsMem()
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
@@ -3374,7 +3372,15 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 // @ #backend[stateConsolidationMode(6)]
-func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, ghost addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
+func (p *scionPacketProcessor) process(
+// @ 	ghost ub []byte,
+// @ 	ghost llIsNil bool,
+// @ 	ghost startLL int,
+// @ 	ghost endLL int,
+// @ 	ghost ioLock gpointer[gsync.GhostMutex],
+// @ 	ghost ioSharedArg SharedArg,
+// @ 	ghost dp io.DataPlaneSpec,
+) (respr processResult, reserr error /*@, ghost addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
 	if r, err := p.parsePath( /*@ ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, absReturnErr(r) @*/
@@ -4230,9 +4236,9 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   -1 <= idx && idx < len(opts)
 // @ ensures   len(processed) == len(opts)
 // @ ensures   len(offsets) == len(opts)
-// @ ensures   reterr == nil && 0  <= idx ==> processed[idx]
+// @ ensures   reterr == nil && 0 <= idx ==> processed[idx]
 // @ ensures   reterr == nil && idx == -1  ==> retl === base
-// @ ensures   reterr == nil && 0   <= idx ==> retl === opts[idx]
+// @ ensures   reterr == nil && 0 <= idx ==> retl === opts[idx]
 // @ ensures   reterr == nil ==> retl != nil
 // @ ensures   reterr == nil ==> base.Mem(data)
 // @ ensures   reterr == nil && typeOf(base.GetPath(data)) == *scion.Raw ==>
