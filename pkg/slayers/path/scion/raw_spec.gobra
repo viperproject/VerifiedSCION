@@ -232,31 +232,27 @@ pure func hopFields(
 }
 
 ghost
-requires -1 <= currHfIdx && currHfIdx < len(hopfields)
-ensures len(res) == currHfIdx + 1
-decreases currHfIdx + 1
-pure func segPast(hopfields seq[io.IO_HF], currHfIdx int) (res seq[io.IO_HF]) {
-	return currHfIdx == -1  ?
-		seq[io.IO_HF]{} :
-		seq[io.IO_HF]{hopfields[currHfIdx]} ++ segPast(hopfields, currHfIdx - 1)
+ensures len(res) == len(hopfields)
+decreases
+pure func segPast(hopfields seq[io.IO_HF]) (res seq[io.IO_HF]) {
+	return len(hopfields) == 0 ? seq[io.IO_HF]{} :
+		segPast(hopfields[1:]) ++ seq[io.IO_HF]{hopfields[0]}
 }
 
 ghost
-requires 0 <= currHfIdx && currHfIdx <= len(hopfields)
-ensures len(res) == len(hopfields) - currHfIdx
-decreases len(hopfields) - currHfIdx
-pure func segFuture(hopfields seq[io.IO_HF], currHfIdx int) (res seq[io.IO_HF]) {
-	return currHfIdx == len(hopfields) ? seq[io.IO_HF]{} :
-		seq[io.IO_HF]{hopfields[currHfIdx]} ++ segFuture(hopfields, currHfIdx + 1)
+ensures len(res) == len(hopfields)
+decreases
+pure func segFuture(hopfields seq[io.IO_HF]) (res seq[io.IO_HF]) {
+	return len(hopfields) == 0 ? seq[io.IO_HF]{} :
+		seq[io.IO_HF]{hopfields[0]} ++ segFuture(hopfields[1:])
 }
 
 ghost
-requires -1 <= currHfIdx && currHfIdx < len(hopfields)
-ensures len(res) == currHfIdx + 1
-decreases currHfIdx + 1
-pure func segHistory(hopfields seq[io.IO_HF], currHfIdx int) (res seq[io.IO_ahi]) {
-	return currHfIdx == -1 ? seq[io.IO_ahi]{} :
-		seq[io.IO_ahi]{hopfields[currHfIdx].Toab()} ++ segHistory(hopfields, currHfIdx - 1)
+ensures len(res) == len(hopfields)
+decreases
+pure func segHistory(hopfields seq[io.IO_HF]) (res seq[io.IO_ahi]) {
+	return len(hopfields) == 0 ? seq[io.IO_ahi]{} :
+		segHistory(hopfields[1:]) ++ seq[io.IO_ahi]{hopfields[0].Toab()}
 }
 
 ghost
@@ -283,9 +279,9 @@ pure func segment(raw []byte,
 			UInfo : uinfo,
 			ConsDir : consDir,
 			Peer : peer,
-			Past : segPast(hopfields, currHfIdx - 1),
-			Future : segFuture(hopfields, currHfIdx),
-			History : segHistory(hopfields, currHfIdx - 1),
+			Past : segPast(hopfields[:currHfIdx]),
+			Future : segFuture(hopfields[currHfIdx:]),
+			History : segHistory(hopfields[:currHfIdx]),
 		}
 }
 

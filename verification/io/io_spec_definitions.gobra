@@ -57,8 +57,31 @@ pure func establishGuardTraversedsegInc(currseg IO_seg3, direction bool) IO_seg3
 }
 
 ghost
+requires len(seg.Future) > 0
 decreases
-pure func (seg IO_seg3) UpdateCurrSeg( info AbsInfoField) IO_seg3 {
+pure func (seg IO_seg3) UpdateCurrHf(hf IO_HF) IO_seg3 {
+	return IO_seg3_ {
+		seg.AInfo,
+		seg.UInfo,
+		seg.ConsDir,
+		seg.Peer,
+		seg.Past,
+		seq[IO_HF]{hf} ++ seg.Future[1:],
+		seg.History,
+	}
+}
+
+ghost
+requires len(pkt.CurrSeg.Future) > 0
+decreases
+pure func (pkt IO_pkt2) UpdateHopField(hf IO_HF) IO_pkt2 {
+	return let newCurrSeg := pkt.CurrSeg.UpdateCurrHf(hf) in
+	IO_Packet2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
+}
+
+ghost
+decreases
+pure func (seg IO_seg3) UpdateCurrSeg(info AbsInfoField) IO_seg3 {
     return IO_seg3_ {
         info.AInfo,
         info.UInfo,

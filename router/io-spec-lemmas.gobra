@@ -74,6 +74,26 @@ func absPktFutureLemma(raw []byte) {
 }
 
 ghost
+requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires slayers.ValidPktMetaHdr(raw)
+requires  len(absPkt(raw).CurrSeg.Future) > 0
+requires acc(&p.hopField, R55)
+requires p.EqAbsHopField(absPkt(raw))
+ensures  acc(&p.hopField, R55)
+ensures  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures  slayers.ValidPktMetaHdr(raw)
+ensures  len(absPkt(raw).CurrSeg.Future) > 0
+ensures  absPkt(raw) ==
+	absPkt(raw).UpdateHopField(p.hopField.ToIO_HF())
+decreases
+func (p* scionPacketProcessor) absPktUpdateLemma(raw []byte) {
+	reveal p.EqAbsHopField(absPkt(raw))
+	hf := p.hopField.ToIO_HF()
+	fut := absPkt(raw).CurrSeg.Future
+	assert fut == seq[io.IO_HF]{hf} ++ fut[1:]
+}
+
+ghost
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  AbsValidateIngressIDConstraint(oldPkt, ingressID)
 requires  newPkt == AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
