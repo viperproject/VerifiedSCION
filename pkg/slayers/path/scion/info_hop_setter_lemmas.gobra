@@ -557,7 +557,7 @@ pure func UpdateCurrSegHFSpec(hopfields []byte, currHfIdx int, segLen int, inf i
 	return let currseg := CurrSegWithInfo(hopfields, currHfIdx, segLen, inf) in
 		len(currseg.Future) > 0  &&
 		currseg.Future[0] == path.BytesToIO_HF(hopfields[currHfIdx*path.HopLen:(currHfIdx+1)*path.HopLen], 0, 0, path.HopLen) &&
-		currseg.Future[1:] == segFuture(hopFields(hopfields[(currHfIdx+1)*path.HopLen:], 0, 0, (segLen-(currHfIdx+1)))) &&
+		currseg.Future[1:] == hopFields(hopfields[(currHfIdx+1)*path.HopLen:], 0, 0, (segLen-(currHfIdx+1))) &&
 		currseg.Past == segPast(hopFields(hopfields[:currHfIdx*path.HopLen], 0, 0, currHfIdx)) &&
 		currseg.History == segHistory(hopFields(hopfields[:currHfIdx*path.HopLen], 0, 0, currHfIdx)) &&
 		currseg.AInfo == inf.AInfo &&
@@ -588,8 +588,8 @@ func UpdateCurrSegHF(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfo
 	assert currseg.Past == segPast(hopFields(hopfields[:currHfIdx*path.HopLen], 0, 0, currHfIdx))
 	assert currseg.Future[0] == hf[currHfIdx]
 	assert hf[currHfIdx:][1:] == hf[currHfIdx+1:]
-	assert currseg.Future == seq[io.IO_HF]{hf[currHfIdx]} ++ segFuture(hf[currHfIdx+1:])
-	assert currseg.Future[1:] == segFuture(hopFields(hopfields[(currHfIdx+1)*path.HopLen:], 0, 0, (segLen-(currHfIdx+1))))
+	assert currseg.Future == hf[currHfIdx:]
+	assert currseg.Future[1:] == hopFields(hopfields[(currHfIdx+1)*path.HopLen:], 0, 0, (segLen-(currHfIdx+1)))
 	assert currseg.History == segHistory(hopFields(hopfields[:currHfIdx*path.HopLen], 0, 0, currHfIdx))
 	fold acc(sl.Bytes(hopfields[currHfIdx*path.HopLen:(currHfIdx+1)*path.HopLen], 0, path.HopLen), R56)
 	fold acc(sl.Bytes(hopfields, 0, len(hopfields)), R56)

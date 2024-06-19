@@ -236,15 +236,8 @@ ensures len(res) == len(hopfields)
 decreases len(hopfields)
 pure func segPast(hopfields seq[io.IO_HF]) (res seq[io.IO_HF]) {
 	return len(hopfields) == 0 ? seq[io.IO_HF]{} :
-		segPast(hopfields[1:]) ++ seq[io.IO_HF]{hopfields[0]}
-}
-
-ghost
-ensures len(res) == len(hopfields)
-decreases len(hopfields)
-pure func segFuture(hopfields seq[io.IO_HF]) (res seq[io.IO_HF]) {
-	return len(hopfields) == 0 ? seq[io.IO_HF]{} :
-		seq[io.IO_HF]{hopfields[0]} ++ segFuture(hopfields[1:])
+		seq[io.IO_HF]{hopfields[len(hopfields)-1]} ++ segPast(
+			hopfields[:len(hopfields)-1])
 }
 
 ghost
@@ -252,7 +245,8 @@ ensures len(res) == len(hopfields)
 decreases len(hopfields)
 pure func segHistory(hopfields seq[io.IO_HF]) (res seq[io.IO_ahi]) {
 	return len(hopfields) == 0 ? seq[io.IO_ahi]{} :
-		segHistory(hopfields[1:]) ++ seq[io.IO_ahi]{hopfields[0].Toab()}
+		seq[io.IO_ahi]{hopfields[len(hopfields)-1].Toab()} ++ segHistory(
+			hopfields[:len(hopfields)-1])
 }
 
 ghost
@@ -280,7 +274,7 @@ pure func segment(raw []byte,
 			ConsDir : consDir,
 			Peer : peer,
 			Past : segPast(hopfields[:currHfIdx]),
-			Future : segFuture(hopfields[currHfIdx:]),
+			Future : hopfields[currHfIdx:],
 			History : segHistory(hopfields[:currHfIdx]),
 		}
 }
@@ -750,6 +744,9 @@ decreases
 func IncCurrSeg(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen int) {
 	currseg := reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0)
 	incseg := reveal CurrSeg(raw, offset, currInfIdx, currHfIdx+1, segLen, 0)
+	hf := hopFields(raw, offset, 0, segLen)
+	hfPast := hf[:currHfIdx+1]
+	assert hfPast[:len(hfPast)-1] == hf[:currHfIdx]
 	assert currseg.AInfo == incseg.AInfo
 	assert currseg.UInfo == incseg.UInfo
 	assert currseg.ConsDir == incseg.ConsDir

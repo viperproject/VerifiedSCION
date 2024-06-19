@@ -2930,6 +2930,7 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ assert reveal p.EqAbsHopField(absPkt(ub))
 	// @ assert reveal p.LastHopLen(ub)
 	// @ assert p.scionLayer.EqAbsHeader(ub)
+	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 
 	// @ ghost var ubLL []byte
 	// @ ghost if &p.scionLayer === p.lastLayer {
