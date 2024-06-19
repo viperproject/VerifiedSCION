@@ -2743,7 +2743,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte @*/ ) (respr process
 	// @ absPktFutureLemma(ub)
 	// @ p.path.DecodingLemma(ubPath, p.infoField, p.hopField)
 	// @ assert reveal p.path.EqAbsInfoField(p.path.absPkt(ubPath),
-	// @	p.infoField.ToIntermediateAbsInfoField())
+	// @	p.infoField.ToAbsInfoField())
 	// @ assert reveal p.path.EqAbsHopField(p.path.absPkt(ubPath),
 	// @	p.hopField.ToIO_HF())
 	// @ assert reveal p.EqAbsHopField(absPkt(ub))

@@ -74,13 +74,13 @@ func absPktFutureLemma(raw []byte) {
 }
 
 ghost
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 requires slayers.ValidPktMetaHdr(raw)
 requires  len(absPkt(raw).CurrSeg.Future) > 0
 requires acc(&p.hopField, R55)
 requires p.EqAbsHopField(absPkt(raw))
 ensures  acc(&p.hopField, R55)
-ensures  acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+ensures  acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures  slayers.ValidPktMetaHdr(raw)
 ensures  len(absPkt(raw).CurrSeg.Future) > 0
 ensures  absPkt(raw) ==
