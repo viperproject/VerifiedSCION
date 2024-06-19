@@ -233,7 +233,7 @@ pure func hopFields(
 
 ghost
 ensures len(res) == len(hopfields)
-decreases
+decreases len(hopfields)
 pure func segPast(hopfields seq[io.IO_HF]) (res seq[io.IO_HF]) {
 	return len(hopfields) == 0 ? seq[io.IO_HF]{} :
 		segPast(hopfields[1:]) ++ seq[io.IO_HF]{hopfields[0]}
@@ -241,7 +241,7 @@ pure func segPast(hopfields seq[io.IO_HF]) (res seq[io.IO_HF]) {
 
 ghost
 ensures len(res) == len(hopfields)
-decreases
+decreases len(hopfields)
 pure func segFuture(hopfields seq[io.IO_HF]) (res seq[io.IO_HF]) {
 	return len(hopfields) == 0 ? seq[io.IO_HF]{} :
 		seq[io.IO_HF]{hopfields[0]} ++ segFuture(hopfields[1:])
@@ -249,7 +249,7 @@ pure func segFuture(hopfields seq[io.IO_HF]) (res seq[io.IO_HF]) {
 
 ghost
 ensures len(res) == len(hopfields)
-decreases
+decreases len(hopfields)
 pure func segHistory(hopfields seq[io.IO_HF]) (res seq[io.IO_ahi]) {
 	return len(hopfields) == 0 ? seq[io.IO_ahi]{} :
 		segHistory(hopfields[1:]) ++ seq[io.IO_ahi]{hopfields[0].Toab()}
