@@ -577,9 +577,9 @@ preserves acc(sl.Bytes(hopfields, 0, len(hopfields)), R49)
 preserves acc(sl.Bytes(hopfields[:currHfIdx*path.HopLen], 0, currHfIdx*path.HopLen), R49)
 preserves acc(sl.Bytes(hopfields[currHfIdx*path.HopLen:(currHfIdx+1)*path.HopLen], 0, path.HopLen), R49)
 preserves acc(sl.Bytes(hopfields[(currHfIdx+1)*path.HopLen:], 0, (segLen-(currHfIdx+1))*path.HopLen), R49)
-ensures  UpdateCurrSegHFs(hopfields, currHfIdx, segLen, inf)
+ensures  UpdateCurrSegHF(hopfields, currHfIdx, segLen, inf)
 decreases
-func SplitCurrSegHF(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) {
+func SplitCurrSegHFs(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) {
 	currseg := reveal CurrSegWithInfo(hopfields, currHfIdx, segLen, inf)
 	unfold acc(sl.Bytes(hopfields, 0, len(hopfields)), R56)
 	unfold  acc(sl.Bytes(hopfields[currHfIdx*path.HopLen:(currHfIdx+1)*path.HopLen], 0, path.HopLen), R56)
