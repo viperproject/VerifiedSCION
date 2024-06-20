@@ -545,6 +545,8 @@ func MidSegEquality(raw []byte, currInfIdx int, segs io.SegLens) {
 	}
 }
 
+// UpdateCurrSegHF specifies the relationship between different parts of the hopfield's raw bytes
+// and their corresponding future, past and history segments in the abstract representation.
 ghost
 requires 0 <= currHfIdx && currHfIdx < segLen
 requires segLen*path.HopLen == len(hopfields)
@@ -553,7 +555,7 @@ requires acc(sl.Bytes(hopfields[:currHfIdx*path.HopLen], 0, currHfIdx*path.HopLe
 requires acc(sl.Bytes(hopfields[currHfIdx*path.HopLen:(currHfIdx+1)*path.HopLen], 0, path.HopLen), R50)
 requires acc(sl.Bytes(hopfields[(currHfIdx+1)*path.HopLen:], 0, (segLen-(currHfIdx+1))*path.HopLen), R50)
 decreases
-pure func UpdateCurrSegHFSpec(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) bool {
+pure func UpdateCurrSegHF(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) bool {
 	return let currseg := CurrSegWithInfo(hopfields, currHfIdx, segLen, inf) in
 		len(currseg.Future) > 0  &&
 		currseg.Future[0] == path.BytesToIO_HF(hopfields[currHfIdx*path.HopLen:(currHfIdx+1)*path.HopLen], 0, 0, path.HopLen) &&
@@ -566,6 +568,8 @@ pure func UpdateCurrSegHFSpec(hopfields []byte, currHfIdx int, segLen int, inf i
 		currseg.Peer == inf.Peer
 }
 
+// SplitCurrSegHF verifies that the relationships defined in UpdateCurrSegHF hold
+// for the current segment.
 ghost
 requires 0 <= currHfIdx && currHfIdx < segLen
 requires segLen*path.HopLen == len(hopfields)
@@ -573,9 +577,9 @@ preserves acc(sl.Bytes(hopfields, 0, len(hopfields)), R49)
 preserves acc(sl.Bytes(hopfields[:currHfIdx*path.HopLen], 0, currHfIdx*path.HopLen), R49)
 preserves acc(sl.Bytes(hopfields[currHfIdx*path.HopLen:(currHfIdx+1)*path.HopLen], 0, path.HopLen), R49)
 preserves acc(sl.Bytes(hopfields[(currHfIdx+1)*path.HopLen:], 0, (segLen-(currHfIdx+1))*path.HopLen), R49)
-ensures  UpdateCurrSegHFSpec(hopfields, currHfIdx, segLen, inf)
+ensures  UpdateCurrSegHFs(hopfields, currHfIdx, segLen, inf)
 decreases
-func UpdateCurrSegHF(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) {
+func SplitCurrSegHF(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) {
 	currseg := reveal CurrSegWithInfo(hopfields, currHfIdx, segLen, inf)
 	unfold acc(sl.Bytes(hopfields, 0, len(hopfields)), R56)
 	unfold  acc(sl.Bytes(hopfields[currHfIdx*path.HopLen:(currHfIdx+1)*path.HopLen], 0, path.HopLen), R56)
@@ -595,6 +599,9 @@ func UpdateCurrSegHF(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfo
 	fold acc(sl.Bytes(hopfields, 0, len(hopfields)), R56)
 }
 
+// HopFieldHelperLemma verifies that we can split the abstract representation of hopfields into
+// its future and past hopfields. This simplification helps in proving that the future and past
+// hopfields remain unchanged when the current hopfield is modified.
 ghost
 requires  0 < segLen
 requires  0 <= currHfIdx && currHfIdx < segLen
@@ -624,6 +631,8 @@ func HopFieldHelperLemma(hopfields []byte, currHfIdx int, segLen int) {
 		(currHfIdx+1)*path.HopLen, segLen*path.HopLen, R52)
 }
 
+// SplitHopfields splits the raw bytes of a segment into its past hopfields,
+// future hopfields and current hopfield.
 ghost
 requires 0 < p
 requires 0 <= currHfIdx && currHfIdx < segLen
@@ -641,6 +650,8 @@ func SplitHopfields(hopfields []byte, currHfIdx int, segLen int, p perm) {
 	sl.Reslice_Bytes(hopfields, (currHfIdx+1)*path.HopLen, len(hopfields), p)
 }
 
+// CombineHopfields combines the past hopfields, future hopfields and current hopfield of a packet
+// into a single slice of bytes.
 ghost
 requires 0 < p
 requires 0 <= currHfIdx && currHfIdx < segLen

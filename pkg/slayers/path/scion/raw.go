@@ -594,7 +594,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
 	//@ 	reveal s.absPkt(ubuf)
 	//@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
-	//@ 	UpdateCurrSegHF(currHopfields, hfIdxSeg, segLen, inf)
+	//@ 	SplitCurrSegHFs(currHopfields, hfIdxSeg, segLen, inf)
 	//@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
 	//@ } else {
 	//@ 	sl.SplitRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
@@ -607,25 +607,15 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ assert reveal validPktMetaHdr(ubuf)
 	//@ ghost if idx == currHfIdx {
 	//@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
-	//@ 	UpdateCurrSegHF(currHopfields, hfIdxSeg, segLen, inf)
+	//@ 	SplitCurrSegHFs(currHopfields, hfIdxSeg, segLen, inf)
 	//@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
 	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
 	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
 	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
 	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
 	//@ 	reveal s.absPkt(ubuf)
-	//@ 	assert s.absPkt(ubuf).CurrSeg.Future[0] == tmpHopField.ToIO_HF()
-	//@ 	assert s.absPkt(ubuf).CurrSeg.Future[1:] == old(s.absPkt(ubuf).CurrSeg.Future[1:])
-	//@ 	assert s.absPkt(ubuf).CurrSeg.Future == seq[io.IO_HF]{tmpHopField.ToIO_HF()} ++ old(s.absPkt(ubuf).CurrSeg.Future[1:])
-	//@ 	assert s.absPkt(ubuf).CurrSeg.AInfo == old(s.absPkt(ubuf)).CurrSeg.AInfo
-	//@ 	assert s.absPkt(ubuf).CurrSeg.UInfo == old(s.absPkt(ubuf)).CurrSeg.UInfo
-	//@ 	assert s.absPkt(ubuf).CurrSeg.Peer == old(s.absPkt(ubuf)).CurrSeg.Peer
-	//@ 	assert s.absPkt(ubuf).CurrSeg.ConsDir == old(s.absPkt(ubuf)).CurrSeg.ConsDir
-	//@ 	assert s.absPkt(ubuf).CurrSeg ==
-	//@ 		old(s.absPkt(ubuf)).CurrSeg.UpdateCurrHf(tmpHopField.ToIO_HF())
-	//@ 	assert s.absPkt(ubuf).CurrSeg.Past == old(s.absPkt(ubuf).CurrSeg.Past)
-	//@ 	assert s.absPkt(ubuf).CurrSeg.History == old(s.absPkt(ubuf).CurrSeg.History)
-	//@ 	assert s.absPkt(ubuf) == old(s.absPkt(ubuf)).UpdateHopField(tmpHopField.ToIO_HF())
+	//@ 	assert s.absPkt(ubuf).CurrSeg.Future ==
+	//@ 		seq[io.IO_HF]{tmpHopField.ToIO_HF()} ++ old(s.absPkt(ubuf).CurrSeg.Future[1:])
 	//@ } else {
 	//@ 	sl.CombineRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
 	//@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)
