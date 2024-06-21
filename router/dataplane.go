@@ -3327,8 +3327,6 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires  acc(&p.d, R5) && acc(p.d.Mem(), _) && p.d.WellConfigured()
 // @ requires  p.d.getValSvc() != nil
-// The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
-// which slightly simplifies the spec
 // @ requires  acc(&p.rawPkt, R1) && ub === p.rawPkt
 // @ requires  acc(&p.path, R10)
 // @ requires  p.scionLayer.Mem(ub)
@@ -3336,6 +3334,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires  sl.Bytes(ub, 0, len(ub))
 // @ requires  acc(&p.ingressID, R15)
 // @ requires  acc(&p.segmentChange) && !p.segmentChange
+// @ requires  acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
 // @ preserves acc(&p.srcAddr, R10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, R10)
 // @ preserves p.lastLayer != nil
@@ -3362,8 +3361,11 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte @*/ ) (
 // @ ensures   !addrAliasesPkt ==> acc(sl.Bytes(ub, 0, len(ub)), R15)
 // @ ensures   respr.OutPkt !== ub && respr.OutPkt != nil ==>
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
-// @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
-// @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
+// @ ensures   acc(&p.buffer, R10)
+// @ ensures   reserr == nil ==> p.scionLayer.Mem(ub) && p.buffer.Mem()
+// @ ensures   reserr != nil ==> p.scionLayer.NonInitMem() &&
+// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt)              &&
+// @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
@@ -3510,7 +3512,11 @@ func (p *scionPacketProcessor) process(
 		return r, err /*@, false, absReturnErr(r) @*/
 	}
 	// @ assert nextPkt == absPkt(ub)
-	// @ ghost ubLL := llIsNil ? []byte(nil) : ub[startLL:endLL]
+	// @ ghost ubLL := llIsNil ? []byte(nil) : (p.lastLayer === &p.scionLayer ? ub : ub[startLL:endLL])
+	// @ ghost if !llIsNil && p.lastLayer === &p.scionLayer {
+	// @ 	startLL = 0
+	// @ 	endLL = len(ub)
+	// @ }
 	if r, err := p.validateEgressUp( /*@ ub, ubLL, startLL, endLL, nextPkt, @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, absReturnErr(r) @*/
