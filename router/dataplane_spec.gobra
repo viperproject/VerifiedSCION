@@ -164,6 +164,7 @@ pred (err scmpError) ErrorMem() {
 
 scmpError implements error
 
+// TODO: drop
 type offsetPair struct {
 	start int
 	end int
@@ -717,4 +718,43 @@ pure func (d *DataPlane) DomainForwardingMetrics() set[uint16] {
 			unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
 				domain(d.forwardingMetrics) :
 			set[uint16]{}
+}
+
+/**** Abstractions for `decodeLayers` and dealing with SCMP packets ****/
+type decodedLayerRelation adt {
+	decodedLayerIsNil {}
+	decodedLayerIsBaseLayer {}
+	decodedLayerIsSubsliceOfBase {
+		start int
+		end int
+	}
+}
+
+ghost
+decreases
+pure func (l decodedLayerRelation) IsValid(base []byte) bool {
+	return (match l {
+		case decodedLayerIsNil{}:
+			true
+		case decodedLayerIsBaseLayer{}:
+			true
+		case decodedLayerIsSubsliceOfBase{?start, ?end}:
+			0 <= start   &&
+			start <= end &&
+			end <= len(base)
+	})
+}
+
+ghost
+requires l.IsValid(base)
+decreases
+pure func (l decodedLayerRelation) LayerSlice(base []byte) []byte {
+	return (match l {
+		case decodedLayerIsNil{}:
+			nil
+		case decodedLayerIsBaseLayer{}:
+			base
+		case decodedLayerIsSubsliceOfBase{?start, ?end}:
+			base[start:end]
+	})
 }
