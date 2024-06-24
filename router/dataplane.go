@@ -1888,7 +1888,8 @@ type macBuffersT struct {
 // @ requires 0 <= startLL && startLL <= endLL && endLL <= len(ub)
 // @ requires ubLL == nil || ubLL === ub[startLL:endLL]
 // @ requires acc(&p.lastLayer, R55) && p.lastLayer != nil
-// @ requires acc(p.lastLayer.Mem(ubLL), R15)
+// @ requires &p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(ubLL), R15)
 // @ requires p.scionLayer.ValidPathMetaData(ub)
 // @ requires sl.Bytes(ub, 0, len(ub))
 // @ requires acc(&p.ingressID,  R45)
@@ -1896,8 +1897,9 @@ type macBuffersT struct {
 // @ requires cause.ErrorMem()
 // @ ensures  acc(&p.d, R20)
 // @ ensures  acc(p.scionLayer.Mem(ub), R4)
-// @ ensures  acc(&p.lastLayer, R55) && p.lastLayer != nil
-// @ ensures  acc(p.lastLayer.Mem(ubLL), R15)
+// @ ensures  acc(&p.lastLayer, R55)
+// @ ensures  &p.scionLayer !== p.lastLayer ==>
+// @ 	acc(p.lastLayer.Mem(ubLL), R15)
 // @ ensures  sl.Bytes(ub, 0, len(ub))
 // @ ensures  acc(&p.ingressID,  R45)
 // @ ensures  p.d.validResult(respr, false)
