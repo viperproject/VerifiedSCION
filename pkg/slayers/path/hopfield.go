@@ -79,8 +79,8 @@ type HopField struct {
 // @ preserves acc(sl.Bytes(raw, 0, HopLen), R45)
 // @ ensures   h.Mem()
 // @ ensures   err == nil
-// @ ensures   unfolding h.Mem() in
-// @	BytesToIO_HF(raw, 0, 0, HopLen) == h.ToIO_HF()
+// @ ensures  BytesToIO_HF(raw, 0, 0, HopLen) ==
+// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF()
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < HopLen {
@@ -114,8 +114,8 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // @ preserves acc(h.Mem(), R10)
 // @ preserves sl.Bytes(b, 0, HopLen)
 // @ ensures   err == nil
-// @ ensures   unfolding acc(h.Mem(), R10) in
-// @	BytesToIO_HF(b, 0, 0, HopLen) == h.ToIO_HF()
+// @ ensures  BytesToIO_HF(b, 0, 0, HopLen) ==
+// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF()
 // @ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {
 	if len(b) < HopLen {

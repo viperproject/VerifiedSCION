@@ -76,7 +76,7 @@ requires len(pkt.CurrSeg.Future) > 0
 decreases
 pure func (pkt IO_pkt2) UpdateHopField(hf IO_HF) IO_pkt2 {
 	return let newCurrSeg := pkt.CurrSeg.UpdateCurrHf(hf) in
-	IO_Packet2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
+	    IO_Packet2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
 }
 
 ghost

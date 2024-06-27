@@ -224,7 +224,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // pres for IO:
 // @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ requires validPktMetaHdr(ubuf)
-// @ requires len(s.absPkt(ubuf).CurrSeg.Future) > 0
+// @ requires NotFullyTraversedPkt(s.absPkt(ubuf))
 // @ requires s.GetBase(ubuf).IsXoverSpec() ==>
 // @ 	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
@@ -535,7 +535,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 // pres for IO:
 // @ requires validPktMetaHdr(ubuf)
 // @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
-// @ requires len(s.absPkt(ubuf).CurrSeg.Future) > 0
+// @ requires NotFullyTraversedPkt(s.absPkt(ubuf))
 // @ ensures  acc(s.Mem(ubuf), R20)
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures  r != nil ==> r.ErrorMem()
@@ -594,7 +594,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
 	//@ 	reveal s.absPkt(ubuf)
 	//@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
-	//@ 	SplitCurrSegHFs(currHopfields, hfIdxSeg, segLen, inf)
+	//@ 	EstablishBytesStoreCurrSeg(currHopfields, hfIdxSeg, segLen, inf)
 	//@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
 	//@ } else {
 	//@ 	sl.SplitRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
@@ -607,7 +607,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ assert reveal validPktMetaHdr(ubuf)
 	//@ ghost if idx == currHfIdx {
 	//@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
-	//@ 	SplitCurrSegHFs(currHopfields, hfIdxSeg, segLen, inf)
+	//@ 	EstablishBytesStoreCurrSeg(currHopfields, hfIdxSeg, segLen, inf)
 	//@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
 	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
 	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)

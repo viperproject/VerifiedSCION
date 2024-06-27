@@ -32,7 +32,7 @@ preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
 ensures   slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw) ==>
 	absIO_val(raw, ingressID).isIO_val_Pkt2 &&
 	absIO_val(raw, ingressID).IO_val_Pkt2_2 == absPkt(raw) &&
-	len(absPkt(raw).CurrSeg.Future) > 0
+	scion.NotFullyTraversedPkt(absPkt(raw))
 decreases
 func absIO_valLemma(raw []byte, ingressID uint16) {
 	if(slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)){
@@ -48,7 +48,7 @@ requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 requires slayers.ValidPktMetaHdr(raw)
 ensures  acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures  slayers.ValidPktMetaHdr(raw)
-ensures  len(absPkt(raw).CurrSeg.Future) > 0
+ensures  scion.NotFullyTraversedPkt(absPkt(raw))
 decreases
 func absPktFutureLemma(raw []byte) {
 	reveal slayers.ValidPktMetaHdr(raw)
@@ -70,31 +70,11 @@ func absPktFutureLemma(raw []byte) {
 	offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen)
 	pkt := reveal absPkt(raw)
 	assert pkt.CurrSeg == reveal scion.CurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen)
-	assert len(pkt.CurrSeg.Future) > 0
+	assert scion.NotFullyTraversedPkt(pkt)
 }
 
 ghost
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
-requires slayers.ValidPktMetaHdr(raw)
-requires len(absPkt(raw).CurrSeg.Future) > 0
-requires acc(&p.hopField, R55)
-requires p.EqAbsHopField(absPkt(raw))
-ensures  acc(&p.hopField, R55)
-ensures  acc(sl.Bytes(raw, 0, len(raw)), R56)
-ensures  slayers.ValidPktMetaHdr(raw)
-ensures  len(absPkt(raw).CurrSeg.Future) > 0
-ensures  absPkt(raw) ==
-	absPkt(raw).UpdateHopField(p.hopField.ToIO_HF())
-decreases
-func (p* scionPacketProcessor) absPktUpdateLemma(raw []byte) {
-	reveal p.EqAbsHopField(absPkt(raw))
-	hf := p.hopField.ToIO_HF()
-	fut := absPkt(raw).CurrSeg.Future
-	assert fut == seq[io.IO_HF]{hf} ++ fut[1:]
-}
-
-ghost
-requires  len(oldPkt.CurrSeg.Future) > 0
+requires  scion.NotFullyTraversedPkt(oldPkt)
 requires  AbsValidateIngressIDConstraint(oldPkt, ingressID)
 requires  newPkt == AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
 ensures   AbsValidateIngressIDConstraint(newPkt, ingressID)
@@ -108,7 +88,7 @@ func AbsValidateIngressIDLemma(oldPkt io.IO_pkt2, newPkt io.IO_pkt2, ingressID o
 ghost
 requires  len(oldPkt.CurrSeg.Future) == 1
 requires  oldPkt.LeftSeg != none[io.IO_seg2]
-requires  len(get(oldPkt.LeftSeg).Future) > 0
+requires  scion.NotFullyTraversedPkt(oldPkt)
 requires  len(get(oldPkt.LeftSeg).History) == 0
 requires  AbsValidateIngressIDConstraint(oldPkt, ingressID)
 requires  newPkt == AbsDoXover(oldPkt)
@@ -186,7 +166,7 @@ ghost
 opaque
 requires acc(&p.d, R55) && acc(p.d.Mem(), _)
 requires acc(&p.ingressID, R55)
-requires len(pkt.CurrSeg.Future) > 0
+requires scion.NotFullyTraversedPkt(pkt)
 decreases
 pure func (p *scionPacketProcessor) NoBouncingPkt(pkt io.IO_pkt2) bool {
 	return let currseg := pkt.CurrSeg in
@@ -198,7 +178,7 @@ pure func (p *scionPacketProcessor) NoBouncingPkt(pkt io.IO_pkt2) bool {
 ghost
 requires acc(&p.d, R55) && acc(p.d.Mem(), _)
 requires acc(&p.ingressID, R55)
-requires len(pkt.CurrSeg.Future) > 0
+requires scion.NotFullyTraversedPkt(pkt)
 requires AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
 requires (egressID in p.d.getDomExternal()) || p.ingressID != 0
 ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
@@ -213,7 +193,7 @@ func (p *scionPacketProcessor) EstablishNoBouncingPkt(pkt io.IO_pkt2, egressID u
 ghost
 requires acc(&p.d, R55) && acc(p.d.Mem(), _)
 requires acc(&p.ingressID, R55)
-requires len(pkt.CurrSeg.Future) > 0
+requires scion.NotFullyTraversedPkt(pkt)
 requires AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
 requires p.NoBouncingPkt(pkt)
 requires !(egressID in p.d.getDomExternal())
@@ -389,7 +369,7 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 ghost
 opaque
 requires acc(&p.hopField, R55)
-requires len(pkt.CurrSeg.Future) > 0
+requires scion.NotFullyTraversedPkt(pkt)
 decreases
 pure func (p* scionPacketProcessor) EqAbsHopField(pkt io.IO_pkt2) bool {
 	return let absHop := p.hopField.ToIO_HF() in
