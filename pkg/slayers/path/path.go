@@ -71,12 +71,12 @@ type Path interface {
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
-	//@ preserves sl.Bytes(RawBytes(), 0, len(RawBytes()))
-	//@ preserves acc(Mem(), R1)
-	//@ preserves sl.Bytes(b, 0, len(b))
-	//@ ensures   e != nil ==> e.ErrorMem()
-	//@ ensures   RawBytes() === old(RawBytes())
-	//@ decreases
+	// @ preserves acc(Mem(), R1)
+	// @ preserves sl.Bytes(RawBytes(), 0, len(RawBytes()))
+	// @ preserves sl.Bytes(b, 0, len(b))
+	// @ ensures   e != nil ==> e.ErrorMem()
+	// @ ensures   RawBytes() === old(RawBytes())
+	// @ decreases
 	SerializeTo(b []byte) (e error)
 	// DecodesFromBytes decodes the path from the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
@@ -98,15 +98,14 @@ type Path interface {
 	//@ IsValidResultOfDecoding(err error) (res bool)
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
-	//@ requires  Mem()
-	//@ preserves sl.Bytes(RawBytes(), 0, len(RawBytes()))
-	//@ ensures   e == nil ==>
-	//@ 	p != nil &&
-	//@ 	p.Mem()  &&
-	//@ 	p.RawBytes() === RawBytes()
-	//@ ensures old(RawBytes()) === RawBytes()
-	//@ ensures   e != nil ==> e.ErrorMem()
-	//@ decreases
+	// @ requires  Mem()
+	// @ requires  sl.Bytes(RawBytes(), 0, len(RawBytes()))
+	// @ ensures   e == nil ==>
+	// @ 	p != nil &&
+	// @ 	p.Mem()  &&
+	// @  sl.Bytes(p.RawBytes(), 0, len(p.RawBytes()))
+	// @ ensures   e != nil ==> e.ErrorMem()
+	// @ decreases
 	Reverse() (p Path, e error)
 	// Len returns the length of a path in bytes.
 	//@ pure
@@ -241,6 +240,7 @@ func (p *rawPath) SerializeTo(b []byte) (e error) {
 // @ requires  p.NonInitMem()
 // @ preserves acc(sl.Bytes(b, 0, len(b)), R42)
 // @ ensures   p.Mem()
+// @ ensures   p.RawBytes() === b
 // @ ensures   e == nil
 // @ decreases
 func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
