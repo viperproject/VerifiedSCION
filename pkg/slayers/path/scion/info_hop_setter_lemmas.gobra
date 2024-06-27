@@ -628,8 +628,8 @@ ensures   let currHfStart := currHfIdx * path.HopLen in
 	let currHfEnd := currHfStart + path.HopLen in
 	hopFields(hopfields, 0, 0, segLen)[:currHfIdx] ==
 		hopFields(hopfields[:currHfStart], 0, 0, currHfIdx) &&
-	hopFields(hopfields, 0, 0, segLen)[currHfEnd:]  ==
-		hopFields(hopfields[currHfEnd:], 0, 0, (segLen - currHfIdx - 1))
+	hopFields(hopfields, 0, 0, segLen)[currHfIdx + 1:]  ==
+		hopFields(hopfields[currHfEnd:], 0, 0, segLen - currHfIdx - 1)
 decreases
 func splitHopFieldsInPastAndFuture(hopfields []byte, currHfIdx int, segLen int) {
 	currHfStart := currHfIdx * path.HopLen
