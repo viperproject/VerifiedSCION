@@ -37,10 +37,10 @@ type Raw struct {
 // @ requires  s.NonInitMem()
 // @ preserves acc(sl.Bytes(data, 0, len(data)), R42)
 // @ ensures   res == nil ==> s.Mem(data)
+// @ ensures   res == nil ==>
+// @ 	s.GetBase(data).WeaklyValid() &&
+// @ 	s.GetBase(data).EqAbsHeader(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
-// posts for IO:
-// @ ensures   res == nil ==> s.EqAbsHeader(data) &&
-// @ 	s.InfsMatchHfs(data) && s.SegsInBounds(data)
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()
@@ -139,7 +139,7 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ ensures   err == nil ==> (
 // @ 	let newUb := s.RawBufferMem(ubuf) in
 // @ 	d.Mem(newUb) &&
-// @ 	(old(s.ValidCurrIdxs(ubuf)) ==> d.ValidCurrIdxs(newUb)))
+// @ 	(old(s.GetBase(ubuf).StronglyValid()) ==> d.GetBase(newUb).StronglyValid()))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
@@ -147,9 +147,9 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ unfold acc(s.Base.Mem(), R6)
 	//@ ghost var base Base = s.Base
 	//@ ghost var pathMeta MetaHdr = s.Base.PathMeta
-	//@ ghost validIdxs := s.ValidCurrIdxs(ubuf)
+	//@ ghost validIdxs := s.GetBase(ubuf).StronglyValid()
 	//@ assert validIdxs ==> s.Base.PathMeta.InBounds()
-	//@ assert validIdxs ==> base.ValidCurrIdxsSpec()
+	//@ assert validIdxs ==> base.StronglyValid()
 	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
 
 	// (VerifiedSCION) In this method, many slice operations are done in two
@@ -207,8 +207,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ ghost if validIdxs {
 	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ 	assert pathMeta == decoded.GetMetaHdr(s.Raw)
-	//@ 	assert decoded.GetBase(s.Raw).ValidCurrIdxsSpec()
-	//@ 	assert decoded.ValidCurrIdxs(s.Raw)
+	//@ 	assert decoded.GetBase(s.Raw).StronglyValid()
 	//@ }
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
@@ -223,10 +222,10 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ requires s.Mem(ubuf)
 // @ requires sl.Bytes(ubuf, 0, len(ubuf))
 // pres for IO:
-// @ requires s.EqAbsHeader(ubuf)
+// @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ requires validPktMetaHdr(ubuf)
 // @ requires len(s.absPkt(ubuf).CurrSeg.Future) > 0
-// @ requires s.GetIsXoverSpec(ubuf) ==>
+// @ requires s.GetBase(ubuf).IsXoverSpec() ==>
 // @ 	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
@@ -235,10 +234,10 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
 // post for IO:
-// @ ensures  r == nil ==> s.EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
-// @ ensures  r == nil && old(s.GetIsXoverSpec(ubuf)) ==>
+// @ ensures  r == nil ==> s.GetBase(ubuf).EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
+// @ ensures  r == nil && old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))
-// @ ensures  r == nil && !old(s.GetIsXoverSpec(ubuf)) ==>
+// @ ensures  r == nil && !old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsIncPath(old(s.absPkt(ubuf)))
 // @ decreases
 func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
@@ -250,8 +249,9 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ oldSeg1Len := int(s.PathMeta.SegLen[0])
 	//@ oldSeg2Len := int(s.PathMeta.SegLen[1])
 	//@ oldSeg3Len := int(s.PathMeta.SegLen[2])
-	//@ oldSegLen := LengthOfCurrSeg(oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@ oldPrevSegLen := LengthOfPrevSeg(oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ oldSegs := io.CombineSegLens(oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ oldSegLen := oldSegs.LengthOfCurrSeg(oldCurrHfIdx)
+	//@ oldPrevSegLen := oldSegs.LengthOfPrevSeg(oldCurrHfIdx)
 	//@ oldOffset := HopFieldOffset(s.Base.NumINF, oldPrevSegLen, 0)
 	//@ fold acc(s.Base.Mem(), R56)
 	if err := s.Base.IncPath(); err != nil {
@@ -267,15 +267,15 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ oldHfIdxSeg := oldCurrHfIdx-oldPrevSegLen
 	//@	WidenCurrSeg(ubuf, oldOffset + MetaLen, oldCurrInfIdx, oldHfIdxSeg,
 	//@ 	oldSegLen, MetaLen, MetaLen, len(ubuf))
-	//@	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@	WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSegs, MetaLen, MetaLen, len(ubuf))
+	//@	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSegs, MetaLen, MetaLen, len(ubuf))
+	//@	WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSegs, MetaLen, MetaLen, len(ubuf))
 	//@	LenCurrSeg(tail, oldOffset, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
 	//@ oldAbsPkt := reveal s.absPkt(ubuf)
 	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ unfold acc(s.Base.Mem(), R2)
 	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
-	//@ assert s.Base.ValidCurrIdxs()
+	//@ assert s.Base.StronglyValid()
 	//@ assert s.PathMeta.InBounds()
 	//@ v := s.Raw[:MetaLen]
 	//@ b0 := sl.GetByte(v, 0, MetaLen, 0)
@@ -284,7 +284,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ b3 := sl.GetByte(v, 0, MetaLen, 3)
 	//@ s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ assert s.PathMeta.EqAbsHeader(v)
-	//@ assert RawBytesToBase(v).ValidCurrIdxsSpec()
+	//@ assert RawBytesToBase(v).StronglyValid()
 	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ assert s.EqAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(ubuf)
@@ -297,24 +297,24 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ 	IncCurrSeg(tail, oldOffset, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
 	//@ 	WidenCurrSeg(ubuf, oldOffset + MetaLen, oldCurrInfIdx, oldHfIdxSeg + 1,
 	//@ 		oldSegLen, MetaLen, MetaLen, len(ubuf))
-	//@ 	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@ 	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@ 	WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSegs, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSegs, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSegs, MetaLen, MetaLen, len(ubuf))
 	//@ 	assert reveal s.absPkt(ubuf) == AbsIncPath(oldAbsPkt)
 	//@ } else {
-	//@ 	segLen := LengthOfCurrSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@ 	prevSegLen := LengthOfPrevSeg(currHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ 	segLen := oldSegs.LengthOfCurrSeg(currHfIdx)
+	//@ 	prevSegLen := oldSegs.LengthOfPrevSeg(currHfIdx)
 	//@ 	offsetWithHops := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
 	//@ 	hfIdxSeg := currHfIdx-prevSegLen
-	//@ 	XoverSegNotNone(tail, oldCurrInfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@ 	XoverCurrSeg(tail, oldCurrInfIdx + 1, oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@ 	XoverLeftSeg(tail, oldCurrInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@ 	XoverMidSeg(tail, oldCurrInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len)
-	//@ 	XoverRightSeg(tail, oldCurrInfIdx, oldCurrHfIdx, oldSeg1Len, oldSeg2Len, oldSeg3Len)
+	//@ 	XoverSegNotNone(tail, oldCurrInfIdx, oldSegs)
+	//@ 	XoverCurrSeg(tail, oldCurrInfIdx + 1, oldCurrHfIdx, oldSegs)
+	//@ 	XoverLeftSeg(tail, oldCurrInfIdx + 2, oldSegs)
+	//@ 	XoverMidSeg(tail, oldCurrInfIdx - 1, oldSegs)
+	//@ 	XoverRightSeg(tail, oldCurrInfIdx, oldCurrHfIdx, oldSegs)
 	//@ 	WidenCurrSeg(ubuf, offsetWithHops, currInfIdx, hfIdxSeg, segLen, MetaLen, MetaLen, len(ubuf))
-	//@ 	WidenLeftSeg(ubuf, currInfIdx + 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@ 	WidenMidSeg(ubuf, currInfIdx + 2, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
-	//@ 	WidenRightSeg(ubuf, currInfIdx - 1, oldSeg1Len, oldSeg2Len, oldSeg3Len, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenLeftSeg(ubuf, currInfIdx + 1, oldSegs, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenMidSeg(ubuf, currInfIdx + 2, oldSegs, MetaLen, MetaLen, len(ubuf))
+	//@ 	WidenRightSeg(ubuf, currInfIdx - 1, oldSegs, MetaLen, MetaLen, len(ubuf))
 	//@ 	assert reveal s.absPkt(ubuf) == AbsXover(oldAbsPkt)
 	//@ }
 
@@ -370,7 +370,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 // CurrINF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
 // @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R9)
-// @ ensures   (r == nil) == s.ValidCurrINF(ubuf)
+// @ ensures   (r == nil) == s.GetBase(ubuf).ValidCurrInfSpec()
 // @ ensures   r == nil ==> s.CorrectlyDecodedInf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -383,7 +383,7 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
-	//@ assert forall res path.InfoField :: {s.CorrectlyDecodedInf(ubuf, res)} s.ValidCurrINF(ubuf) ==>
+	//@ assert forall res path.InfoField :: { s.CorrectlyDecodedInf(ubuf, res) } s.GetBase(ubuf).ValidCurrInfSpec() ==>
 	//@ 	reveal s.CorrectlyDecodedInf(ubuf, res) == reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, res)
 	return s.GetInfoField(idx /*@, ubuf @*/)
 }
@@ -393,13 +393,14 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // @ requires sl.Bytes(ubuf, 0, len(ubuf))
 // @ requires acc(s.Mem(ubuf), R20)
 // pres for IO:
-// @ requires validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
+// @ requires validPktMetaHdr(ubuf)
+// @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ ensures  acc(s.Mem(ubuf), R20)
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures  r != nil ==> r.ErrorMem()
 // posts for IO:
 // @ ensures  r == nil ==>
-// @ 	validPktMetaHdr(ubuf) && s.EqAbsHeader(ubuf)
+// @ 	validPktMetaHdr(ubuf) && s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ ensures  r == nil && idx == int(old(s.GetCurrINF(ubuf))) ==>
 // @ 	let oldPkt := old(s.absPkt(ubuf)) in
 // @ 	let newPkt := oldPkt.UpdateInfoField(info.ToAbsInfoField()) in
@@ -416,11 +417,11 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ seg1Len := int(s.PathMeta.SegLen[0])
 	//@ seg2Len := int(s.PathMeta.SegLen[1])
 	//@ seg3Len := int(s.PathMeta.SegLen[2])
-	//@ segLen := LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
-	//@ prevSegLen := LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
+	//@ segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
+	//@ segLen := segLens.LengthOfCurrSeg(currHfIdx)
+	//@ prevSegLen := segLens.LengthOfPrevSeg(currHfIdx)
 	//@ offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
 	//@ hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
-	//@ segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
 	if idx >= s.NumINF {
 		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
 		//@ fold acc(s.Base.Mem(), R50)
@@ -509,7 +510,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 // CurrHF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
 // @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R9)
-// @ ensures   (r == nil) == s.ValidCurrHF(ubuf)
+// @ ensures   (r == nil) == s.GetBase(ubuf).ValidCurrHfSpec()
 // @ ensures   r == nil ==> s.CorrectlyDecodedHf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -522,7 +523,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
-	//@ assert forall res path.HopField :: {s.CorrectlyDecodedHf(ubuf, res)} s.ValidCurrHF(ubuf) ==>
+	//@ assert forall res path.HopField :: { s.CorrectlyDecodedHf(ubuf, res) } s.GetBase(ubuf).ValidCurrHfSpec() ==>
 	//@ 	reveal s.CorrectlyDecodedHf(ubuf, res) == reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
 	return s.GetHopField(idx /*@, ubuf @*/)
 }

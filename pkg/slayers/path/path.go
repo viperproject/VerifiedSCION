@@ -108,10 +108,15 @@ type Path interface {
 	// @ ensures   e != nil ==> e.ErrorMem()
 	// @ decreases
 	Reverse() (p Path, e error)
-	// Len returns the length of a path in bytes.
+	//@ ghost
 	//@ pure
 	//@ requires acc(Mem(), _)
-	//@ ensures  l >= 0
+	//@ ensures  0 <= l
+	//@ decreases
+	//@ LenSpec() (l int)
+	// Len returns the length of a path in bytes.
+	//@ preserves acc(Mem(), R50)
+	//@ ensures  l == LenSpec()
 	//@ decreases
 	Len() (l int)
 	// Type returns the type of a path.
@@ -257,9 +262,8 @@ func (p *rawPath) Reverse() (r Path, e error) {
 	return nil, serrors.New("not supported")
 }
 
-// @ pure
-// @ requires acc(p.Mem(), _)
-// @ ensures l >= 0
+// @ preserves acc(p.Mem(), R50)
+// @ ensures l == p.LenSpec()
 // @ decreases
 func (p *rawPath) Len() (l int) {
 	return /*@ unfolding acc(p.Mem(), _) in @*/ len(p.raw)

@@ -51,6 +51,15 @@ func (p *rawPath) RawBytes() (res []byte) {
 	return unfolding acc(p.Mem(), _) in p.raw
 }
 
+ghost
+pure
+requires acc(p.Mem(), _)
+ensures  0 <= l
+decreases
+func (p *rawPath) LenSpec() (l int) {
+	return unfolding acc(p.Mem(), _) in len(p.raw)
+}
+
 (*rawPath) implements Path
 
 /** End of rawPath spec **/

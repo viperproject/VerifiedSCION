@@ -136,15 +136,16 @@ func absPktWidenLemma(raw []byte, length int) {
 	seg1Len := int(metaHdr.SegLen[0])
 	seg2Len := int(metaHdr.SegLen[1])
 	seg3Len := int(metaHdr.SegLen[2])
-	segLen := scion.LengthOfCurrSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
-	prevSegLen := scion.LengthOfPrevSeg(currHfIdx, seg1Len, seg2Len, seg3Len)
-	numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len)
+	segs := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
+	segLen := segs.LengthOfCurrSeg(currHfIdx)
+	prevSegLen := segs.LengthOfPrevSeg(currHfIdx)
+	numINF := segs.NumInfoFields()
 	offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen)
 
 	scion.WidenCurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen, 0, length)
-	scion.WidenLeftSeg(raw, currInfIdx + 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, 0, length)
-	scion.WidenMidSeg(raw, currInfIdx + 2, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, 0, length)
-	scion.WidenRightSeg(raw, currInfIdx - 1, seg1Len, seg2Len, seg3Len, headerOffsetWithMetaLen, 0, length)
+	scion.WidenLeftSeg(raw, currInfIdx + 1, segs, headerOffsetWithMetaLen, 0, length)
+	scion.WidenMidSeg(raw, currInfIdx + 2, segs, headerOffsetWithMetaLen, 0, length)
+	scion.WidenRightSeg(raw, currInfIdx - 1, segs, headerOffsetWithMetaLen, 0, length)
 
 	assert reveal absPkt(raw) == reveal absPkt(raw[:length])
 }

@@ -224,9 +224,9 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // TODO: hide internal spec details
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
 // @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), R55) in
-// @		(CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]))
+// @		(CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]))
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @	(unfolding acc(s.Mem(ubuf), R55) in CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])) <= len(ubuf)
+// @	(unfolding acc(s.Mem(ubuf), R55) in CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])) <= len(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
@@ -423,8 +423,8 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	}
 	// @ ghost if typeOf(s.Path) == type[*onehop.Path] {
 	// @ 	s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
-	// @ 	assert s.Path.Len(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
-	// @ 	assert CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(data[offset : offset+pathLen]) <= len(data)
+	// @ 	assert s.Path.LenSpec(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
+	// @ 	assert CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(data[offset : offset+pathLen]) <= len(data)
 	// @ }
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
@@ -434,7 +434,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	unfold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(data[offset : offset+pathLen]), R55)
 	// @ 	assert reveal s.EqAbsHeader(data)
-	// @	assert reveal s.ValidScionInitSpec(data)
+	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
 	// @ 	fold acc(sl.Bytes(data, 0, len(data)), R56)
 	// @ 	fold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
