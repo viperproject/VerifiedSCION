@@ -415,8 +415,9 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          chop: 10
           parallelizeBranches: '1'
-          conditionalizePermissions: '0'
+          conditionalizePermissions: '1'
           moreJoins: 'impure'
           imageVersion: ${{ env.imageVersion }}
           mceMode: 'on'

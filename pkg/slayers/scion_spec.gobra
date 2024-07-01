@@ -29,6 +29,7 @@ import (
 
 	. "verification/utils/definitions"
 	sl "verification/utils/slices"
+	"verification/io"
 	"encoding/binary"
 )
 
@@ -178,7 +179,7 @@ pred (s *SCION) Mem(ubuf []byte) {
 	// end of path pool
 	// helpful facts for other methods:
 	// - for router::updateScionLayer:
-	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.Len(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
+	(typeOf(s.Path) == type[*onehop.Path] ==> CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) <= len(ubuf))
 }
 
 ghost
@@ -188,9 +189,9 @@ pure func (s *SCION) ValidPathMetaData(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		let ubPath := s.UBPath(ub) in
 		(typeOf(s.Path) == type[*scion.Raw] ==>
-			s.Path.(*scion.Raw).ValidCurrIdxs(ubPath)) &&
+			s.Path.(*scion.Raw).GetBase(ubPath).StronglyValid()) &&
 		(typeOf(s.Path) == type[*epic.Path] ==>
-			s.Path.(*epic.Path).ValidCurrIdxs(ubPath))
+			s.Path.(*epic.Path).GetBase(ubPath).StronglyValid())
 }
 
 // TODO: simplify the body of the predicate when let expressions
@@ -232,8 +233,8 @@ pred (s *SCION) ChecksumMem() {
 	acc(&s.RawSrcAddr) && acc(&s.RawDstAddr) &&
 	len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0 &&
 	acc(&s.SrcIA) && acc(&s.DstIA) &&
-	sl.AbsSlice_Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
-	sl.AbsSlice_Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
+	sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
+	sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 }
 
 pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
@@ -354,31 +355,102 @@ ghost
 opaque
 pure
 requires acc(s.Mem(ub), _)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires acc(sl.Bytes(ub, 0, length), _)
+requires CmnHdrLen <= length
+decreases
+func (s *SCION) ValidHeaderOffset(ub []byte, length int) bool {
+	return GetAddressOffsetWithinLength(ub, length) == s.PathStartIdx(ub) &&
+		GetLengthWithinLength(ub,length) == s.PathEndIdx(ub)
+}
+
+ghost
+requires acc(s.Mem(ub), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), R55)
+requires acc(sl.Bytes(ub, 0, length), R55)
+requires CmnHdrLen <= length && length <= len(ub)
+requires s.ValidHeaderOffset(ub, len(ub))
+ensures  acc(s.Mem(ub), R56)
+ensures  acc(sl.Bytes(ub, 0, len(ub)), R55)
+ensures  acc(sl.Bytes(ub, 0, length), R55)
+ensures  s.ValidHeaderOffset(ub, length)
+decreases
+func (s *SCION) ValidHeaderOffsetToSubSliceLemma(ub []byte, length int) {
+	reveal s.ValidHeaderOffset(ub, len(ub))
+	unfold acc(sl.Bytes(ub, 0, len(ub)), R56)
+	unfold acc(sl.Bytes(ub, 0, length), R56)
+	assert reveal s.ValidHeaderOffset(ub, length)
+	fold acc(sl.Bytes(ub, 0, len(ub)), R56)
+	fold acc(sl.Bytes(ub, 0, length), R56)
+}
+
+ghost
+requires acc(s.Mem(ub), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), R55)
+requires acc(sl.Bytes(ub, 0, length), R55)
+requires CmnHdrLen <= length && length <= len(ub)
+requires s.ValidHeaderOffset(ub, length)
+ensures  acc(s.Mem(ub), R56)
+ensures  acc(sl.Bytes(ub, 0, len(ub)), R55)
+ensures  acc(sl.Bytes(ub, 0, length), R55)
+ensures  s.ValidHeaderOffset(ub, len(ub))
+decreases
+func (s *SCION) ValidHeaderOffsetFromSubSliceLemma(ub []byte, length int) {
+	reveal s.ValidHeaderOffset(ub, len(ub))
+	unfold acc(sl.Bytes(ub, 0, len(ub)), R56)
+	unfold acc(sl.Bytes(ub, 0, length), R56)
+	assert reveal s.ValidHeaderOffset(ub, length)
+	fold acc(sl.Bytes(ub, 0, len(ub)), R56)
+	fold acc(sl.Bytes(ub, 0, length), R56)
+}
+
+ghost
+opaque
+pure
+requires acc(s.Mem(ub), _)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
 func (s *SCION) EqAbsHeader(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen in
 		GetAddressOffset(ub) == low &&
-		GetLength(ub) == int(high) &&
+		GetLength(ub) == int(high)        &&
 		// Might be worth introducing EqAbsHeader as an interface method on Path
 		// to avoid doing these casts, especially when we add support for EPIC.
-		typeOf(s.Path) == (*scion.Raw)                               &&
+		typeOf(s.Path) == (*scion.Raw) &&
 		unfolding acc(s.Path.Mem(ub[low:high]), _) in
-		unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+		unfolding acc(sl.Bytes(ub, 0, len(ub)), _) in
 		let _ := Asserting(forall k int :: {&ub[low:high][k]} 0 <= k && k < high ==>
 			&ub[low:high][k] == &ub[low + k]) in
 		let _ := Asserting(forall k int :: {&ub[low:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
 			&ub[low:high][:scion.MetaLen][k] == &ub[low:high][k]) in
-		s.Path.(*scion.Raw).Base.GetMetaHdr() ==
-		scion.DecodedFrom(binary.BigEndian.Uint32(ub[low:high][:scion.MetaLen]))
+		let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(ub[low:high][:scion.MetaLen])) in
+		let seg1 := int(metaHdr.SegLen[0]) in
+		let seg2 := int(metaHdr.SegLen[1]) in
+		let seg3 := int(metaHdr.SegLen[2]) in
+		let segs := io.CombineSegLens(seg1, seg2, seg3) in
+		s.Path.(*scion.Raw).Base.GetBase() ==
+		scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()}
+}
+
+// Describes a SCION packet that was successfully decoded by `DecodeFromBytes`.
+ghost
+opaque
+pure
+requires acc(s.Mem(ub), _)
+decreases
+func (s *SCION) ValidScionInitSpec(ub []byte) bool {
+	return unfolding acc(s.Mem(ub), _)                  in
+		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
+		let high := s.HdrLen*LineLen                    in
+		typeOf(s.Path) == (*scion.Raw) &&
+		s.Path.(*scion.Raw).GetBase(ub[low:high]).WeaklyValid()
 }
 
 // Checks if the common path header is valid in the serialized scion packet.
 ghost
 opaque
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func ValidPktMetaHdr(raw []byte) bool {
 	return CmnHdrLen <= len(raw) &&
@@ -388,71 +460,87 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let rawHdr := raw[start:end] in
 		let length := GetLength(raw) in
 		length <= len(raw) &&
-		unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
 	 	let _ := Asserting(forall k int :: {&rawHdr[k]} 0 <= k && k < scion.MetaLen ==> &rawHdr[k] == &raw[start + k]) in
 		let hdr := binary.BigEndian.Uint32(rawHdr) in
 		let metaHdr := scion.DecodedFrom(hdr)      in
 		let seg1 := int(metaHdr.SegLen[0])         in
 		let seg2 := int(metaHdr.SegLen[1])         in
 		let seg3 := int(metaHdr.SegLen[2])         in
-		let base := scion.Base{metaHdr, scion.NumInfoFields(seg1, seg2, seg3), seg1+seg2+seg3} in
-		metaHdr.InBounds()       &&
-		0 < metaHdr.SegLen[0]    &&
-		base.ValidCurrIdxsSpec() &&
-		scion.pktLen(seg1, seg2, seg3, start) <= length
+		let segs := io.CombineSegLens(seg1, seg2, seg3) in
+		let base := scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()} in
+		0 < metaHdr.SegLen[0] &&
+		base.FullyValid() &&
+		scion.PktLen(segs, start + scion.MetaLen) <= length
 }
 
 ghost
 opaque
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func IsSupportedPkt(raw []byte) bool {
 	return CmnHdrLen <= len(raw) &&
-		let pathType  := path.Type(GetPathType(raw))   in
-		let nextHdr := L4ProtocolType(GetNextHdr(raw)) in
+		let pathType := path.Type(GetPathType(raw))     in
+		let nextHdr  := L4ProtocolType(GetNextHdr(raw)) in
 		pathType == scion.PathType &&
 		nextHdr != L4SCMP
 }
 
 ghost
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 requires CmnHdrLen <= len(ub)
 decreases
 pure func GetAddressOffset(ub []byte) int {
-	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+	return GetAddressOffsetWithinLength(ub, len(ub))
+}
+
+ghost
+requires acc(sl.Bytes(ub, 0, length), _)
+requires CmnHdrLen <= length
+decreases
+pure func GetAddressOffsetWithinLength(ub []byte, length int) int {
+	return unfolding acc(sl.Bytes(ub, 0, length), _) in
 		let dstAddrLen := AddrType(ub[9] >> 4 & 0x7).Length() in
 		let srcAddrLen := AddrType(ub[9] & 0x7).Length() in
 		CmnHdrLen + 2*addr.IABytes + dstAddrLen + srcAddrLen
 }
 
 ghost
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 requires CmnHdrLen <= len(ub)
 decreases
 pure func GetLength(ub []byte) int {
-	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in int(ub[5])*LineLen
+	return GetLengthWithinLength(ub, len(ub))
 }
 
 ghost
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires acc(sl.Bytes(ub, 0, length), _)
+requires CmnHdrLen <= length
+decreases
+pure func GetLengthWithinLength(ub []byte, length int) int {
+	return unfolding acc(sl.Bytes(ub, 0, length), _) in int(ub[5])*LineLen
+}
+
+ghost
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 requires CmnHdrLen <= len(ub)
 decreases
 pure func GetPathType(ub []byte) int {
-	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in int(ub[8])
+	return unfolding acc(sl.Bytes(ub, 0, len(ub)), _) in int(ub[8])
 }
 
 ghost
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 requires CmnHdrLen <= len(ub)
 decreases
 pure func GetNextHdr(ub []byte) int {
-	return unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in int(ub[4])
+	return unfolding acc(sl.Bytes(ub, 0, len(ub)), _) in int(ub[4])
 }
 
 ghost
 opaque
 requires acc(s.Mem(ub), _)
-requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
 pure func (s *SCION) EqPathType(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
@@ -630,6 +718,6 @@ decreases
 pure func (s *SCION) InferSizeOHP(ghost ub []byte) (b bool) {
 	return unfolding acc(s.Mem(ub), _) in
 		let pathSlice := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
-		let pathLen := s.Path.Len(pathSlice) in
+		let pathLen := s.Path.LenSpec(pathSlice) in
 		CmnHdrLen + s.AddrHdrLenSpecInternal() + pathLen <= len(ub)
 }

@@ -68,7 +68,7 @@ pred (d *DataPlane) Mem() {
 	(d.svc != nil               ==> d.svc.Mem())                  &&
 	(d.macFactory != nil        ==> (
 		acc(d.key)                                        &&
-		acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _) &&
+		acc(sl.Bytes(*d.key, 0, len(*d.key)), _) &&
 		scrypto.ValidKeyForHash(*d.key)                   &&
 		d.macFactory implements MacFactorySpec{d.key}))           &&
 	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions)) &&
@@ -145,9 +145,10 @@ pred (p *scionPacketProcessor) initMem() {
 	acc(&p.bfdLayer)
 }
 
-requires acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
+// This is used as a signature, not as an assumed function.
+requires acc(key, _) && acc(sl.Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
-ensures  acc(key, _) && acc(sl.AbsSlice_Bytes(*key, 0, len(*key)), _)
+ensures  acc(key, _) && acc(sl.Bytes(*key, 0, len(*key)), _)
 ensures  res != nil && res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
@@ -242,6 +243,7 @@ pure func (d *DataPlane) GetDomInternalNextHops() set[uint16] {
 }
 
 ghost
+opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) getDomExternal() set[uint16] {
@@ -253,11 +255,32 @@ pure func (d *DataPlane) getDomExternal() set[uint16] {
 }
 
 ghost
+requires acc(d.Mem(), _)
+decreases
+pure func (d *DataPlane) getDomNeighborIAs() set[uint16] {
+	return unfolding acc(d.Mem(), _) in
+		d.neighborIAs == nil ?
+			set[uint16]{} : domain(d.neighborIAs)
+}
+
+ghost
+requires acc(d.Mem(), _)
+decreases
+pure func (d *DataPlane) getDomLinkTypes() set[uint16] {
+	return unfolding acc(d.Mem(), _) in
+		d.linkTypes == nil ?
+			set[uint16]{} : domain(d.linkTypes)
+}
+
+ghost
 opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
-	return d.getDomExternal() subset d.getDomForwardingMetrics()
+	return d.getDomNeighborIAs() == d.getDomExternal() &&
+		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
+		!(0 in d.getDomNeighborIAs()) &&
+		d.getDomExternal() subset d.getDomForwardingMetrics()
 }
 
 ghost
@@ -265,7 +288,10 @@ opaque
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) PreWellConfigured() bool {
-	return d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
+	return d.getDomNeighborIAs() == d.getDomExternal() &&
+		d.getDomExternal() == d.getDomLinkTypes() &&
+		!(0 in d.getDomNeighborIAs()) &&
+		d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 }
 
 ghost
@@ -392,7 +418,7 @@ func (d *DataPlane) getMacFactoryMem() {
 ghost
 requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
-ensures  acc(sl.AbsSlice_Bytes(*d.key, 0, len(*d.key)), _)
+ensures  acc(sl.Bytes(*d.key, 0, len(*d.key)), _)
 ensures  scrypto.ValidKeyForHash(*d.key)
 ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
@@ -497,8 +523,8 @@ pred writeMsgInv(writeMsgs underlayconn.Messages) {
 	acc(&writeMsgs[0]) &&
 	len(writeMsgs[0].Buffers) == 1 &&
 	acc(&writeMsgs[0].Buffers[0]) &&
-	// sl.AbsSlice_Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])) &&
-	sl.AbsSlice_Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB)) &&
+	// sl.Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])) &&
+	sl.Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB)) &&
 	0 <= writeMsgs[0].N
 }
 /** end of definitions used internally for the proof of Run **/
@@ -508,7 +534,6 @@ pred (s *scmpError) Mem() {
 	acc(s)
 }
 
-ghost
 preserves s.Mem() && s.CanSet(e)
 ensures   s.Get() === e
 decreases
@@ -555,7 +580,7 @@ pred (s* scionPacketProcessor) sInit() {
 	acc(&s.segmentChange)                        &&
 	acc(&s.cachedMac)                            &&
 	acc(&s.macBuffers)                           &&
-	sl.AbsSlice_Bytes(s.macBuffers.scionInput, 0, len(s.macBuffers.scionInput)) &&
+	sl.Bytes(s.macBuffers.scionInput, 0, len(s.macBuffers.scionInput)) &&
 	s.bfdLayer.NonInitMem()                      &&
 	acc(&s.srcAddr)                              &&
 	acc(&s.rawPkt)
@@ -661,19 +686,6 @@ func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
 
 ghost
 requires acc(d.Mem(), _) && d.WellConfigured()
-requires acc(&d.external, _) && acc(d.external, _)
-requires id in domain(d.external)
-ensures  acc(d.Mem(), _)
-ensures  id in d.getDomForwardingMetrics()
-decreases
-func (d *DataPlane) InDomainExternalInForwardingMetrics2(id uint16) {
-	unfold acc(d.Mem(), _)
-	reveal d.WellConfigured()
-	unfold acc(accBatchConn(d.external), _)
-}
-
-ghost
-requires acc(d.Mem(), _) && d.WellConfigured()
 requires acc(&d.external, _) && acc(d.external, R55)
 requires id in domain(d.external)
 ensures  acc(d.Mem(), _)
@@ -682,6 +694,7 @@ ensures  id in d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics3(id uint16) {
 	reveal d.WellConfigured()
+	reveal d.getDomExternal()
 	assert unfolding acc(d.Mem(), _) in
 		(unfolding acc(accBatchConn(d.external), _) in true)
 }

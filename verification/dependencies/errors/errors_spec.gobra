@@ -68,7 +68,6 @@ type ErrorCell interface {
 	// This is not meant to be called. Instead,
 	// it shows that Mem() is strong enough to
 	// allow for the assignment of an error.
-	ghost
 	requires  Mem() && CanSet(e)
 	ensures   Mem() && Get() === e
 	decreases
