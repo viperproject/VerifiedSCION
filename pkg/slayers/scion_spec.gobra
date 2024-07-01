@@ -487,6 +487,21 @@ pure func IsSupportedPkt(raw []byte) bool {
 }
 
 ghost
+requires  CmnHdrLen <= idx && idx <= len(raw)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
+preserves acc(sl.Bytes(raw[:idx], 0, idx), R55)
+ensures   IsSupportedPkt(raw) == IsSupportedPkt(raw[:idx])
+decreases
+func IsSupportedPktSubslice(raw []byte, idx int) {
+	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	unfold acc(sl.Bytes(raw[:idx], 0, idx), R56)
+	reveal IsSupportedPkt(raw)
+	reveal IsSupportedPkt(raw[:idx])
+	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	fold acc(sl.Bytes(raw[:idx], 0, idx), R56)
+}
+
+ghost
 requires acc(sl.Bytes(ub, 0, len(ub)), _)
 requires CmnHdrLen <= len(ub)
 decreases
