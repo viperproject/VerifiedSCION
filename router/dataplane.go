@@ -1981,6 +1981,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 			p.path.PathMeta.SegLen[1] == 1 ||
 			p.path.PathMeta.SegLen[2] == 1
 	if hasSingletonSegment {
+		// @ establishMemMalformedPath()
 		return processResult{}, malformedPath
 	}
 	if !p.path.CurrINFMatchesCurrHF( /*@ ubPath @*/ ) {
