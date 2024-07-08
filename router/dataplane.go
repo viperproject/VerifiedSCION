@@ -3385,7 +3385,6 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 	}
 	// @ assert p.path.GetBase(ubPath).FullyValid()
 	// @ p.path.GetBase(ubPath).NotIsXoverAfterIncPath()
-	// @ assert !p.path.IncPathSpec().IsXoverSpec()
 	// @ fold acc(p.scionLayer.Mem(ub), R3)
 	// @ assert p.segmentChange ==> nextPkt.RightSeg != none[io.IO_seg2]
 	if r, err := p.validateEgressID( /*@ nextPkt, dp @*/ ); err != nil {
