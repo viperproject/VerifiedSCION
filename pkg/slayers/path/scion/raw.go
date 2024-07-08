@@ -265,12 +265,12 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ tail := ubuf[MetaLen:]
 	//@ unfold acc(sl.Bytes(tail, 0, len(tail)), R50)
 	//@ oldHfIdxSeg := oldCurrHfIdx-oldPrevSegLen
-	//@	WidenCurrSeg(ubuf, oldOffset + MetaLen, oldCurrInfIdx, oldHfIdxSeg,
-	//@ 	oldSegLen, MetaLen, MetaLen, len(ubuf))
-	//@	WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSegs, MetaLen, MetaLen, len(ubuf))
-	//@	WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSegs, MetaLen, MetaLen, len(ubuf))
-	//@	WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSegs, MetaLen, MetaLen, len(ubuf))
-	//@	LenCurrSeg(tail, oldOffset, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
+	//@ WidenCurrSeg(ubuf, oldOffset + MetaLen, oldCurrInfIdx, oldHfIdxSeg,
+	//@ oldSegLen, MetaLen, MetaLen, len(ubuf))
+	//@ WidenLeftSeg(ubuf, oldCurrInfIdx + 1, oldSegs, MetaLen, MetaLen, len(ubuf))
+	//@ WidenMidSeg(ubuf, oldCurrInfIdx + 2, oldSegs, MetaLen, MetaLen, len(ubuf))
+	//@ WidenRightSeg(ubuf, oldCurrInfIdx - 1, oldSegs, MetaLen, MetaLen, len(ubuf))
+	//@ LenCurrSeg(tail, oldOffset, oldCurrInfIdx, oldHfIdxSeg, oldSegLen)
 	//@ oldAbsPkt := reveal s.absPkt(ubuf)
 	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ unfold acc(s.Base.Mem(), R2)
@@ -441,7 +441,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ ghost if idx == currInfIdx {
 	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
 	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
-	//@  	MidSegEquality(ubuf, currInfIdx+2, segLens)
+	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
 	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
 	//@ }
 	//@ reveal s.absPkt(ubuf)
@@ -582,7 +582,7 @@ func (s *Raw) IsPenultimateHop( /*@ ghost ubuf []byte @*/ ) bool {
 
 // IsLastHop returns whether the current hop is the last hop on the path.
 // @ preserves acc(s.Mem(ubuf), R40)
-// @ ensures res == s.IsLastHopSpec(ubuf)
+// @ ensures   res == s.IsLastHopSpec(ubuf)
 // @ decreases
 func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) (res bool) {
 	//@ unfold acc(s.Mem(ubuf), R40)
@@ -590,4 +590,17 @@ func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) (res bool) {
 	//@ unfold acc(s.Base.Mem(), R40)
 	//@ defer  fold acc(s.Base.Mem(), R40)
 	return int(s.PathMeta.CurrHF) == (s.NumHops - 1)
+}
+
+// CurrINFMatchesCurrHF returns whether the the path's current hopfield
+// is in the path's current segment.
+// @ preserves acc(s.Mem(ub), R40)
+// @ ensures   res == s.GetBase(ub).CurrInfMatchesCurrHFSpec()
+// @ decreases
+func (s *Raw) CurrINFMatchesCurrHF( /*@ ghost ub []byte @*/ ) (res bool) {
+	// @ unfold acc(s.Mem(ub), R40)
+	// @ defer fold acc(s.Mem(ub), R40)
+	// @ unfold acc(s.Base.Mem(), R40)
+	// @ defer fold acc(s.Base.Mem(), R40)
+	return s.PathMeta.CurrINF == s.infIndexForHF(s.PathMeta.CurrHF)
 }

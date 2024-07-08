@@ -57,8 +57,7 @@ decreases
 pure func (b Base) ValidCurrFieldsSpec() bool {
 	return 0 <= b.NumINF && b.NumINF <= MaxINFs &&
 		0 <= b.NumHops && b.NumHops <= MaxHops  &&
-		b.ValidCurrInfSpec()                    &&
-		b.ValidCurrHfSpec()
+		b.ValidCurrInfSpec() && b.ValidCurrHfSpec()
 }
 
 // A `Base` is weakly valid when the fields `NumINF` and `NumHops` are,
@@ -71,8 +70,7 @@ pure func (b Base) WeaklyValid() bool {
 	return 0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
 		0 <= b.NumHops && b.NumHops <= MaxHops    &&
 		(0 < b.NumINF ==> 0 < b.NumHops)          &&
-		b.PathMeta.InBounds()                     &&
-		b.NumsCompatibleWithSegLen()
+		b.PathMeta.InBounds() && b.NumsCompatibleWithSegLen()
 }
 
 // A `Base` is strongly valid iff it is weakly valid and its `CurrHF`
@@ -88,12 +86,16 @@ pure func (b Base) StronglyValid() bool {
 ghost
 decreases
 pure func (b Base) FullyValid() bool {
-	return b.StronglyValid() && b.CurrInfMatchesCurrHF()
+	return b.StronglyValid()         &&
+		b.CurrInfMatchesCurrHFSpec() &&
+		b.PathMeta.SegLen[0] != 1    &&
+		b.PathMeta.SegLen[1] != 1    &&
+		b.PathMeta.SegLen[2] != 1
 }
 
 ghost
 decreases
-pure func (b Base) CurrInfMatchesCurrHF() bool {
+pure func (b Base) CurrInfMatchesCurrHFSpec() bool {
 	return b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
 }
 
@@ -168,6 +170,7 @@ requires s.NumINF != 0
 requires int(s.PathMeta.CurrHF) < s.NumHops-1
 ensures  s.WeaklyValid() ==> res.WeaklyValid()
 ensures  s.StronglyValid() ==> res.StronglyValid()
+ensures  s.FullyValid() ==> res.FullyValid()
 decreases
 pure func (s Base) IncPathSpec() (res Base) {
 	return Base {
@@ -176,6 +179,12 @@ pure func (s Base) IncPathSpec() (res Base) {
 		NumHops: s.NumHops,
 	}
 }
+
+ghost
+requires s.FullyValid()
+ensures  s.IsXoverSpec() ==> !s.IncPathSpec().IsXoverSpec()
+decreases
+func (s Base) NotIsXoverAfterIncPath() {}
 
 ghost
 decreases

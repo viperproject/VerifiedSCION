@@ -181,7 +181,8 @@ ghost
 requires acc(r.Mem(ub), _)
 decreases
 pure func (r *Raw) GetCurrHF(ghost ub []byte) uint8 {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrHF)
+	return unfolding acc(r.Mem(ub), _) in
+		(unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrHF)
 }
 
 ghost
@@ -438,7 +439,7 @@ pure func validPktMetaHdr(raw []byte) bool {
 		let base := RawBytesToBase(raw)       in
 		0 < metaHdr.SegLen[0]           &&
 		base.StronglyValid()            &&
-		base.CurrInfMatchesCurrHF()		&&
+		base.CurrInfMatchesCurrHFSpec() &&
 		PktLen(segs, MetaLen) <= len(raw)
 }
 
