@@ -1970,10 +1970,17 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
-	// All segments without the Peering flag need to consist of at least two HFs (https://github.com/scionproto/scion/issues/4524).
-	// The version verified here is prior to the support of peering links, so we do not check the Peering flag here.
-	if p.path.PathMeta.SegLen[0] == 1 || p.path.PathMeta.SegLen[1] == 1 || p.path.PathMeta.SegLen[2] == 1 {
-		// @ establishMemMalformedPath()
+	// Segments without the Peering flag must consist of at least two HFs:
+	// https://github.com/scionproto/scion/issues/4524
+	// (VerifiedSCION) The version verified here is prior to the support of peering
+	// links, so we do not check the Peering flag here.
+	hasSingletonSegment :=
+		// @ unfolding acc(p.path.Mem(ubPath), _) in
+		// @ unfolding acc(p.path.Base.Mem(), _) in
+		p.path.PathMeta.SegLen[0] == 1 ||
+			p.path.PathMeta.SegLen[1] == 1 ||
+			p.path.PathMeta.SegLen[2] == 1
+	if hasSingletonSegment {
 		return processResult{}, malformedPath
 	}
 	if !p.path.CurrINFMatchesCurrHF( /*@ ubPath @*/ ) {
