@@ -17,7 +17,7 @@ env:
   module: 'github.com/scionproto/scion'
   includePaths: '. verification/dependencies'
   assumeInjectivityOnInhale: '1'
-  parallelizeBranches: '1'
+  parallelizeBranches: '0'
   checkConsistency: '1'
   imageVersion: 'latest'
   mceMode: 'od'
@@ -271,7 +271,7 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
+          parallelizeBranches: '1'
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
