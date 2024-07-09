@@ -437,9 +437,8 @@ pure func validPktMetaHdr(raw []byte) bool {
 		let seg3 := int(metaHdr.SegLen[2])    in
 		let segs := io.CombineSegLens(seg1, seg2, seg3) in
 		let base := RawBytesToBase(raw)       in
-		0 < metaHdr.SegLen[0]           &&
-		base.StronglyValid()            &&
-		base.CurrInfMatchesCurrHFSpec() &&
+		0 < metaHdr.SegLen[0] &&
+		base.FullyValid()     &&
 		PktLen(segs, MetaLen) <= len(raw)
 }
 
