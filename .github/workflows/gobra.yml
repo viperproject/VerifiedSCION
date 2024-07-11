@@ -415,6 +415,9 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          # Due to a bug introduced in https://github.com/viperproject/gobra/pull/776,
+          # we must currently disable the chopper, otherwise we well-founded orders
+          # for termination checking are not available at the chopped Viper parts.
           # chop: 10
           parallelizeBranches: '1'
           conditionalizePermissions: '1'
