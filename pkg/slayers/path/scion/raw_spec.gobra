@@ -181,7 +181,8 @@ ghost
 requires acc(r.Mem(ub), _)
 decreases
 pure func (r *Raw) GetCurrHF(ghost ub []byte) uint8 {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrHF)
+	return unfolding acc(r.Mem(ub), _) in
+		(unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrHF)
 }
 
 ghost
@@ -432,9 +433,8 @@ pure func validPktMetaHdr(raw []byte) bool {
 		let seg3 := int(metaHdr.SegLen[2])    in
 		let segs := io.CombineSegLens(seg1, seg2, seg3) in
 		let base := RawBytesToBase(raw)       in
-		0 < metaHdr.SegLen[0]           &&
-		base.StronglyValid()            &&
-		base.CurrInfMatchesCurrHF()		&&
+		0 < metaHdr.SegLen[0] &&
+		base.Valid()     &&
 		PktLen(segs, MetaLen) <= len(raw)
 }
 
@@ -459,7 +459,7 @@ func ValidPktMetaHdrSublice(raw []byte, idx int) {
 ghost
 requires acc(s.Mem(ub), R54)
 requires acc(sl.Bytes(ub, 0, len(ub)), R55)
-requires s.GetBase(ub).FullyValid()
+requires s.GetBase(ub).Valid()
 requires s.GetBase(ub).EqAbsHeader(ub)
 ensures  acc(sl.Bytes(ub, 0, len(ub)), R55)
 ensures  acc(s.Mem(ub), R54)

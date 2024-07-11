@@ -57,8 +57,7 @@ decreases
 pure func (b Base) ValidCurrFieldsSpec() bool {
 	return 0 <= b.NumINF && b.NumINF <= MaxINFs &&
 		0 <= b.NumHops && b.NumHops <= MaxHops  &&
-		b.ValidCurrInfSpec()                    &&
-		b.ValidCurrHfSpec()
+		b.ValidCurrInfSpec() && b.ValidCurrHfSpec()
 }
 
 // A `Base` is weakly valid when the fields `NumINF` and `NumHops` are,
@@ -71,29 +70,29 @@ pure func (b Base) WeaklyValid() bool {
 	return 0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
 		0 <= b.NumHops && b.NumHops <= MaxHops    &&
 		(0 < b.NumINF ==> 0 < b.NumHops)          &&
-		b.PathMeta.InBounds()                     &&
-		b.NumsCompatibleWithSegLen()
+		b.PathMeta.InBounds() && b.NumsCompatibleWithSegLen()
 }
 
-// A `Base` is strongly valid iff it is weakly valid and its `CurrHF`
-// and `CurrINF` are within bounds.
+// A `Base` is valid (a.k.a fully valid) iff it is weakly valid
+// and its `CurrHF` and `CurrINF` are within bounds, its `CurrHF`
+// is compatible with its `CurrINF`, and there are no singleton
+// segments. In the past, there used to be another validity
+// criteria, stronger than WeaklyValid and weaker than FullyValid.
+// This was known as StronglyValid and has been derprecated.
 ghost
 decreases
-pure func (b Base) StronglyValid() bool {
-	return b.WeaklyValid() && b.ValidCurrFieldsSpec()
+pure func (b Base) Valid() bool {
+	return b.WeaklyValid()           &&
+		b.ValidCurrFieldsSpec()      &&
+		b.CurrInfMatchesCurrHFSpec() &&
+		b.PathMeta.SegLen[0] != 1    &&
+		b.PathMeta.SegLen[1] != 1    &&
+		b.PathMeta.SegLen[2] != 1
 }
 
-// A `Base` is fully valid iff it is strongly valid and its `CurrHF` is
-// compatible with its `CurrINF`.
 ghost
 decreases
-pure func (b Base) FullyValid() bool {
-	return b.StronglyValid() && b.CurrInfMatchesCurrHF()
-}
-
-ghost
-decreases
-pure func (b Base) CurrInfMatchesCurrHF() bool {
+pure func (b Base) CurrInfMatchesCurrHFSpec() bool {
 	return b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
 }
 
@@ -167,7 +166,7 @@ ghost
 requires s.NumINF != 0
 requires int(s.PathMeta.CurrHF) < s.NumHops-1
 ensures  s.WeaklyValid() ==> res.WeaklyValid()
-ensures  s.StronglyValid() ==> res.StronglyValid()
+ensures  s.Valid() ==> res.Valid()
 decreases
 pure func (s Base) IncPathSpec() (res Base) {
 	return Base {
@@ -176,6 +175,12 @@ pure func (s Base) IncPathSpec() (res Base) {
 		NumHops: s.NumHops,
 	}
 }
+
+ghost
+requires s.Valid()
+ensures  s.IsXoverSpec() ==> !s.IncPathSpec().IsXoverSpec()
+decreases
+func (s Base) NotIsXoverAfterIncPath() {}
 
 ghost
 decreases
@@ -208,12 +213,10 @@ pure func (b Base) ReverseSegLen() [3]uint8 {
 }
 
 ghost
-requires b.StronglyValid()
-ensures  b.ReverseSpec().StronglyValid()
+requires b.Valid()
+ensures  b.ReverseSpec().Valid()
 decreases
-pure func (b Base) ReversingBaseStronglyValidSegLenHasValidSegLen() Lemma {
-	return Lemma{}
-}
+func (b Base) ReversingBaseValidSegLenHasValidSegLen() { }
 
 ghost
 requires b.Mem()
@@ -319,21 +322,6 @@ pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
 	return MetaLen <= len(ub) &&
 		unfolding acc(sl.Bytes(ub, 0, len(ub)), _) in
 		s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen]))
-}
-
-ghost
-opaque
-requires MetaLen <= idx && idx <= len(ub)
-requires acc(sl.Bytes(ub, 0, len(ub)), R55)
-requires acc(sl.Bytes(ub[:idx], 0, idx), R55)
-ensures  s.EqAbsHeader(ub) == s.EqAbsHeader(ub[:idx])
-decreases
-pure func (s MetaHdr) EqAbsHeaderForSublice(ub []byte, idx int) Lemma {
-	return let _ := Asserting(ub[:MetaLen] === ub[:idx][:MetaLen]) in
-		unfolding acc(sl.Bytes(ub, 0, len(ub)), R56) in
-		unfolding acc(sl.Bytes(ub[:idx], 0, idx), R56) in
-		let _ := Asserting(s.EqAbsHeader(ub) == (s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen])))) in
-		Lemma{}
 }
 
 /** Lemma proven in /VerifiedSCION/verification/utils/bitwise/proofs.dfy **/

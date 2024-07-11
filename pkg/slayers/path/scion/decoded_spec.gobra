@@ -113,7 +113,7 @@ requires d.Mem(ubuf)
 ensures  e == nil ==> (
 	d.Mem(ubuf) &&
 	d.LenSpec(ubuf) == old(d.LenSpec(ubuf)) &&
-	(old(d.GetBase(ubuf).StronglyValid()) ==> d.GetBase(ubuf).StronglyValid()))
+	(old(d.GetBase(ubuf).Valid()) ==> d.GetBase(ubuf).Valid()))
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
