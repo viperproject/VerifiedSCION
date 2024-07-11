@@ -216,9 +216,7 @@ ghost
 requires b.Valid()
 ensures  b.ReverseSpec().Valid()
 decreases
-pure func (b Base) ReversingBaseValidSegLenHasValidSegLen() Lemma {
-	return Lemma{}
-}
+func (b Base) ReversingBaseValidSegLenHasValidSegLen() { }
 
 ghost
 requires b.Mem()
@@ -324,21 +322,6 @@ pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
 	return MetaLen <= len(ub) &&
 		unfolding acc(sl.Bytes(ub, 0, len(ub)), _) in
 		s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen]))
-}
-
-ghost
-opaque
-requires MetaLen <= idx && idx <= len(ub)
-requires acc(sl.Bytes(ub, 0, len(ub)), R55)
-requires acc(sl.Bytes(ub[:idx], 0, idx), R55)
-ensures  s.EqAbsHeader(ub) == s.EqAbsHeader(ub[:idx])
-decreases
-pure func (s MetaHdr) EqAbsHeaderForSublice(ub []byte, idx int) Lemma {
-	return let _ := Asserting(ub[:MetaLen] === ub[:idx][:MetaLen]) in
-		unfolding acc(sl.Bytes(ub, 0, len(ub)), R56) in
-		unfolding acc(sl.Bytes(ub[:idx], 0, idx), R56) in
-		let _ := Asserting(s.EqAbsHeader(ub) == (s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen])))) in
-		Lemma{}
 }
 
 /** Lemma proven in /VerifiedSCION/verification/utils/bitwise/proofs.dfy **/
