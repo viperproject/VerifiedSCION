@@ -1936,7 +1936,7 @@ func (p *scionPacketProcessor) packSCMP(
 // Postconditions for IO:
 // @ ensures   reserr == nil ==>
 // @ 	slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ ensures   reserr == nil ==> len(absPkt(ub).CurrSeg.Future) > 0
+// @ ensures   reserr == nil ==> scion.NotFullyTraversedPkt(absPkt(ub))
 // @ ensures   reserr == nil ==> p.EqAbsHopField(absPkt(ub))
 // @ ensures   reserr == nil ==> p.EqAbsInfoField(absPkt(ub))
 // @ ensures   old(slayers.IsSupportedPkt(ub)) == slayers.IsSupportedPkt(ub)
@@ -2612,7 +2612,7 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires !p.GetIsXoverSpec(ub)
 // Preconditions for IO:
 // @ requires slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ requires len(absPkt(ub).CurrSeg.Future) > 0
+// @ requires scion.NotFullyTraversedPkt(absPkt(ub))
 // @ requires p.EqAbsHopField(absPkt(ub))
 // @ requires p.EqAbsInfoField(absPkt(ub))
 // @ ensures  acc(&p.infoField)
@@ -2721,7 +2721,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ ensures  reserr == nil ==> len(get(old(absPkt(ub)).LeftSeg).Future) > 0
 // @ ensures  reserr == nil ==> len(get(old(absPkt(ub)).LeftSeg).History) == 0
 // @ ensures  reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ ensures  reserr == nil ==> len(absPkt(ub).CurrSeg.Future) > 0
+// @ ensures  reserr == nil ==> scion.NotFullyTraversedPkt(absPkt(ub))
 // @ ensures  reserr == nil ==> p.EqAbsHopField(absPkt(ub))
 // @ ensures  reserr == nil ==> p.EqAbsInfoField(absPkt(ub))
 // @ ensures  reserr == nil ==> absPkt(ub) == AbsDoXover(old(absPkt(ub)))
