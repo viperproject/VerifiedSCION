@@ -265,13 +265,13 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/scion'
-          timeout: 1h
+          timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: '1'
+          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
@@ -432,4 +432,3 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-
