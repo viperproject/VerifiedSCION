@@ -1929,7 +1929,7 @@ func (p *scionPacketProcessor) packSCMP(
 // @ ensures   reserr == nil ==>
 // @ 	let ubPath := p.scionLayer.UBPath(ub) in
 // @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @ 	p.path.GetBase(ubPath).FullyValid()
+// @ 	p.path.GetBase(ubPath).Valid()
 // @ ensures   acc(p.scionLayer.Mem(ub), R6)
 // @ ensures   p.d.validResult(respr, false)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
@@ -2702,7 +2702,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ requires p.GetIsXoverSpec(ub)
 // @ requires let ubPath := p.scionLayer.UBPath(ub) in
 // @ 	(unfolding acc(p.scionLayer.Mem(ub), _) in p.path.GetBase(ubPath)) == currBase
-// @ requires currBase.FullyValid()
+// @ requires currBase.Valid()
 // @ ensures  acc(&p.segmentChange)
 // @ ensures  acc(&p.hopField)
 // @ ensures  acc(&p.infoField)
@@ -2731,7 +2731,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ 	(unfolding acc(p.scionLayer.Mem(ub), _) in
 // @ 	p.path === p.scionLayer.GetPath(ub) &&
 // @ 	p.path.GetBase(ubPath) == currBase.IncPathSpec() &&
-// @ 	currBase.IncPathSpec().FullyValid())
+// @ 	currBase.IncPathSpec().Valid())
 // @ decreases
 func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scion.Base @*/ ) (respr processResult, reserr error) {
 	p.segmentChange = true
@@ -3383,7 +3383,7 @@ func (p *scionPacketProcessor) process( /*@ ghost ub []byte, ghost llIsNil bool,
 		// @ assert AbsVerifyCurrentMACConstraint(nextPkt, dp)
 		// @ unfold acc(p.scionLayer.Mem(ub), R3)
 	}
-	// @ assert p.path.GetBase(ubPath).FullyValid()
+	// @ assert p.path.GetBase(ubPath).Valid()
 	// @ p.path.GetBase(ubPath).NotIsXoverAfterIncPath()
 	// @ fold acc(p.scionLayer.Mem(ub), R3)
 	// @ assert p.segmentChange ==> nextPkt.RightSeg != none[io.IO_seg2]
@@ -4012,7 +4012,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	_, external := p.d.external[p.ingressID]
 	if external {
 		// @ requires revPath.Mem(rawPath)
-		// @ requires revPath.GetBase(rawPath).StronglyValid()
+		// @ requires revPath.GetBase(rawPath).Valid()
 		// @ ensures  revPath.Mem(rawPath)
 		// @ decreases
 		// @ outline(

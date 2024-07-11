@@ -139,7 +139,7 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ ensures   err == nil ==> (
 // @ 	let newUb := s.RawBufferMem(ubuf) in
 // @ 	d.Mem(newUb) &&
-// @ 	(old(s.GetBase(ubuf).StronglyValid()) ==> d.GetBase(newUb).StronglyValid()))
+// @ 	(old(s.GetBase(ubuf).Valid()) ==> d.GetBase(newUb).Valid()))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
@@ -147,9 +147,9 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ unfold acc(s.Base.Mem(), R6)
 	//@ ghost var base Base = s.Base
 	//@ ghost var pathMeta MetaHdr = s.Base.PathMeta
-	//@ ghost validIdxs := s.GetBase(ubuf).StronglyValid()
+	//@ ghost validIdxs := s.GetBase(ubuf).Valid()
 	//@ assert validIdxs ==> s.Base.PathMeta.InBounds()
-	//@ assert validIdxs ==> base.StronglyValid()
+	//@ assert validIdxs ==> base.Valid()
 	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
 
 	// (VerifiedSCION) In this method, many slice operations are done in two
@@ -207,7 +207,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ ghost if validIdxs {
 	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ 	assert pathMeta == decoded.GetMetaHdr(s.Raw)
-	//@ 	assert decoded.GetBase(s.Raw).StronglyValid()
+	//@ 	assert decoded.GetBase(s.Raw).Valid()
 	//@ }
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
@@ -274,7 +274,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ unfold acc(s.Base.Mem(), R2)
 	err := s.PathMeta.SerializeTo(s.Raw[:MetaLen])
-	//@ assert s.Base.StronglyValid()
+	//@ assert s.Base.Valid()
 	//@ assert s.PathMeta.InBounds()
 	//@ v := s.Raw[:MetaLen]
 	//@ b0 := sl.GetByte(v, 0, MetaLen, 0)
@@ -283,7 +283,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ b3 := sl.GetByte(v, 0, MetaLen, 3)
 	//@ s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ assert s.PathMeta.EqAbsHeader(v)
-	//@ assert RawBytesToBase(v).StronglyValid()
+	//@ assert RawBytesToBase(v).Valid()
 	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ assert s.EqAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(ubuf)

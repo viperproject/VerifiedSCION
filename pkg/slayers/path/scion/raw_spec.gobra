@@ -438,7 +438,7 @@ pure func validPktMetaHdr(raw []byte) bool {
 		let segs := io.CombineSegLens(seg1, seg2, seg3) in
 		let base := RawBytesToBase(raw)       in
 		0 < metaHdr.SegLen[0] &&
-		base.FullyValid()     &&
+		base.Valid()     &&
 		PktLen(segs, MetaLen) <= len(raw)
 }
 
@@ -463,7 +463,7 @@ func ValidPktMetaHdrSublice(raw []byte, idx int) {
 ghost
 requires acc(s.Mem(ub), R54)
 requires acc(sl.Bytes(ub, 0, len(ub)), R55)
-requires s.GetBase(ub).FullyValid()
+requires s.GetBase(ub).Valid()
 requires s.GetBase(ub).EqAbsHeader(ub)
 ensures  acc(sl.Bytes(ub, 0, len(ub)), R55)
 ensures  acc(s.Mem(ub), R54)

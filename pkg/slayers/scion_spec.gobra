@@ -189,9 +189,9 @@ pure func (s *SCION) ValidPathMetaData(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		let ubPath := s.UBPath(ub) in
 		(typeOf(s.Path) == type[*scion.Raw] ==>
-			s.Path.(*scion.Raw).GetBase(ubPath).StronglyValid()) &&
+			s.Path.(*scion.Raw).GetBase(ubPath).Valid()) &&
 		(typeOf(s.Path) == type[*epic.Path] ==>
-			s.Path.(*epic.Path).GetBase(ubPath).StronglyValid())
+			s.Path.(*epic.Path).GetBase(ubPath).Valid())
 }
 
 // TODO: simplify the body of the predicate when let expressions
@@ -470,7 +470,7 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let segs := io.CombineSegLens(seg1, seg2, seg3) in
 		let base := scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()} in
 		0 < metaHdr.SegLen[0] &&
-		base.FullyValid() &&
+		base.Valid() &&
 		scion.PktLen(segs, start + scion.MetaLen) <= length
 }
 
