@@ -575,6 +575,9 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ fold acc(s.Base.Mem(), R20)
 	//@ fold acc(s.Mem(ubuf), R20)
+	// (VerifiedSCION) The proof for these assumptions is provided in PR #361
+	// (https://github.com/viperproject/VerifiedSCION/pull/361), which will
+	// be merged once the performance issues are resolved.
 	//@ TemporaryAssumeForIO(validPktMetaHdr(ubuf) && s.GetBase(ubuf).EqAbsHeader(ubuf))
 	//@ TemporaryAssumeForIO(idx == int(old(s.GetCurrHF(ubuf))) ==>
 	//@  	let oldPkt := old(s.absPkt(ubuf)) in
