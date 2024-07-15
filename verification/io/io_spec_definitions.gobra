@@ -80,7 +80,6 @@ pure func (pkt IO_pkt2) UpdateHopField(hf IO_HF) IO_pkt2 {
 }
 
 ghost
-requires len(seg.Future) > 0
 decreases
 pure func (seg IO_seg3) UpdateCurrSeg(info AbsInfoField) IO_seg3 {
 	return IO_seg3_ {
