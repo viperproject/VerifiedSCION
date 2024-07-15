@@ -224,7 +224,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // pres for IO:
 // @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ requires validPktMetaHdr(ubuf)
-// @ requires NotFullyTraversedPkt(s.absPkt(ubuf))
+// @ requires s.absPkt(ubuf).PathNotFullyTraversed()
 // @ requires s.GetBase(ubuf).IsXoverSpec() ==>
 // @ 	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
@@ -534,7 +534,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 // pres for IO:
 // @ requires validPktMetaHdr(ubuf)
 // @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
-// @ requires NotFullyTraversedPkt(s.absPkt(ubuf))
+// @ requires s.absPkt(ubuf).PathNotFullyTraversed()
 // @ ensures  acc(s.Mem(ubuf), R20)
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures  r != nil ==> r.ErrorMem()

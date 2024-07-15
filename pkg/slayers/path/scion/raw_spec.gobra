@@ -393,12 +393,6 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 }
 
 ghost
-decreases
-pure func NotFullyTraversedPkt(pkt io.IO_pkt2) bool {
-	return len(pkt.CurrSeg.Future) > 0
-}
-
-ghost
 requires MetaLen <= len(raw)
 requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
@@ -485,7 +479,7 @@ func (s *Raw) EstablishValidPktMetaHdr(ghost ub []byte) {
 
 ghost
 requires oldPkt.LeftSeg != none[io.IO_seg2]
-requires NotFullyTraversedPkt(oldPkt)
+requires oldPkt.PathNotFullyTraversed()
 decreases
 pure func AbsXover(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
 	return io.IO_Packet2 {
@@ -497,7 +491,7 @@ pure func AbsXover(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
 }
 
 ghost
-requires NotFullyTraversedPkt(oldPkt)
+requires oldPkt.PathNotFullyTraversed()
 decreases
 pure func AbsIncPath(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
 	return io.IO_Packet2 {
@@ -648,7 +642,7 @@ func (s *Raw) XoverLemma(ubuf []byte) {
 
 ghost
 opaque
-requires NotFullyTraversedPkt(pkt)
+requires pkt.PathNotFullyTraversed()
 decreases
 pure func (s *Raw) EqAbsHopField(pkt io.IO_pkt2, hop io.IO_HF) bool {
 	return let currHF := pkt.CurrSeg.Future[0] in
@@ -671,7 +665,7 @@ preserves acc(s.Mem(ubuf), R53)
 preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R53)
 preserves validPktMetaHdr(ubuf)
 preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
-preserves NotFullyTraversedPkt(s.absPkt(ubuf))
+preserves s.absPkt(ubuf).PathNotFullyTraversed()
 preserves s.GetBase(ubuf).ValidCurrInfSpec()
 preserves s.GetBase(ubuf).ValidCurrHfSpec()
 preserves s.CorrectlyDecodedInf(ubuf, info)

@@ -1936,7 +1936,7 @@ func (p *scionPacketProcessor) packSCMP(
 // Postconditions for IO:
 // @ ensures   reserr == nil ==>
 // @ 	slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ ensures   reserr == nil ==> scion.NotFullyTraversedPkt(absPkt(ub))
+// @ ensures   reserr == nil ==> absPkt(ub).PathNotFullyTraversed()
 // @ ensures   reserr == nil ==> p.EqAbsHopField(absPkt(ub))
 // @ ensures   reserr == nil ==> p.EqAbsInfoField(absPkt(ub))
 // @ ensures   old(slayers.IsSupportedPkt(ub)) == slayers.IsSupportedPkt(ub)
@@ -2058,7 +2058,7 @@ func (p *scionPacketProcessor) validateHopExpiry() (respr processResult, reserr 
 // @ ensures   reserr == nil && !p.infoField.ConsDir ==> (
 // @ 	p.ingressID == 0 || p.hopField.ConsEgress == p.ingressID)
 // contracts for IO-spec
-// @ requires  scion.NotFullyTraversedPkt(oldPkt)
+// @ requires  oldPkt.PathNotFullyTraversed()
 // @ requires  p.EqAbsHopField(oldPkt)
 // @ requires  p.EqAbsInfoField(oldPkt)
 // @ ensures   reserr == nil ==>
@@ -2275,7 +2275,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // @ requires  dp.Valid()
 // @ requires  p.d.WellConfigured()
 // @ requires  p.d.DpAgreesWithSpec(dp)
-// @ requires  scion.NotFullyTraversedPkt(oldPkt)
+// @ requires  oldPkt.PathNotFullyTraversed()
 // @ requires  p.EqAbsHopField(oldPkt)
 // @ requires  p.EqAbsInfoField(oldPkt)
 // @ requires  p.segmentChange ==>
@@ -2391,7 +2391,7 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 // @ requires  acc(&p.ingressID, R21)
 // preconditions for IO:
 // @ requires  slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ requires  scion.NotFullyTraversedPkt(absPkt(ub))
+// @ requires  absPkt(ub).PathNotFullyTraversed()
 // @ requires  acc(&p.d, R55) && acc(p.d.Mem(), _) && acc(&p.ingressID, R55)
 // @ requires  p.LastHopLen(ub)
 // @ requires  p.EqAbsHopField(absPkt(ub))
@@ -2406,7 +2406,7 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 // posconditions for IO:
 // @ ensures   acc(&p.d, R55) && acc(p.d.Mem(), _) && acc(&p.ingressID, R55)
 // @ ensures   err == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ ensures   err == nil ==> scion.NotFullyTraversedPkt(absPkt(ub))
+// @ ensures   err == nil ==> absPkt(ub).PathNotFullyTraversed()
 // @ ensures   err == nil ==>
 // @ 	absPkt(ub) == AbsUpdateNonConsDirIngressSegID(old(absPkt(ub)), path.ifsToIO_ifs(p.ingressID))
 // @ ensures   err == nil ==> p.LastHopLen(ub)
@@ -2520,7 +2520,7 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ ensures   sl.Bytes(p.cachedMac, 0, len(p.cachedMac))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
-// @ requires  scion.NotFullyTraversedPkt(oldPkt)
+// @ requires  oldPkt.PathNotFullyTraversed()
 // @ requires  p.EqAbsHopField(oldPkt)
 // @ requires  p.EqAbsInfoField(oldPkt)
 // @ ensures   reserr == nil ==> AbsVerifyCurrentMACConstraint(oldPkt, dp)
@@ -2612,7 +2612,7 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte @*/ ) (
 // @ requires !p.GetIsXoverSpec(ub)
 // Preconditions for IO:
 // @ requires slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ requires scion.NotFullyTraversedPkt(absPkt(ub))
+// @ requires absPkt(ub).PathNotFullyTraversed()
 // @ requires p.EqAbsHopField(absPkt(ub))
 // @ requires p.EqAbsInfoField(absPkt(ub))
 // @ ensures  acc(&p.infoField)
@@ -2721,7 +2721,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ ensures  reserr == nil ==> len(get(old(absPkt(ub)).LeftSeg).Future) > 0
 // @ ensures  reserr == nil ==> len(get(old(absPkt(ub)).LeftSeg).History) == 0
 // @ ensures  reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ ensures  reserr == nil ==> scion.NotFullyTraversedPkt(absPkt(ub))
+// @ ensures  reserr == nil ==> absPkt(ub).PathNotFullyTraversed()
 // @ ensures  reserr == nil ==> p.EqAbsHopField(absPkt(ub))
 // @ ensures  reserr == nil ==> p.EqAbsInfoField(absPkt(ub))
 // @ ensures  reserr == nil ==> absPkt(ub) == AbsDoXover(old(absPkt(ub)))
@@ -2845,7 +2845,7 @@ func (p *scionPacketProcessor) ingressInterface( /*@ ghost ubPath []byte @*/ ) u
 // @ ensures  acc(&p.infoField, R21)
 // @ ensures  acc(&p.hopField, R21)
 // contracts for IO-spec
-// @ requires scion.NotFullyTraversedPkt(oldPkt)
+// @ requires oldPkt.PathNotFullyTraversed()
 // @ requires p.EqAbsInfoField(oldPkt)
 // @ requires p.EqAbsHopField(oldPkt)
 // @ ensures  p.EqAbsInfoField(oldPkt)
@@ -2875,7 +2875,7 @@ func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ 
 // @ 	reserr != nil && sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
-// @ requires  scion.NotFullyTraversedPkt(oldPkt)
+// @ requires  oldPkt.PathNotFullyTraversed()
 // @ requires  p.EqAbsInfoField(oldPkt)
 // @ requires  p.EqAbsHopField(oldPkt)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
@@ -2940,12 +2940,12 @@ func (p *scionPacketProcessor) validateEgressUp( /*@ ghost oldPkt io.IO_pkt2 @*/
 // @ requires  slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ requires  p.DstIsLocalIngressID(ub)
 // @ requires  p.LastHopLen(ub)
-// @ requires  scion.NotFullyTraversedPkt(absPkt(ub))
+// @ requires  absPkt(ub).PathNotFullyTraversed()
 // @ requires  p.EqAbsHopField(absPkt(ub))
 // @ ensures   reserr == nil ==> p.DstIsLocalIngressID(ub)
 // @ ensures   reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 // @ ensures   reserr == nil ==> p.LastHopLen(ub)
-// @ ensures   reserr == nil ==> scion.NotFullyTraversedPkt(absPkt(ub))
+// @ ensures   reserr == nil ==> absPkt(ub).PathNotFullyTraversed()
 // @ ensures   reserr == nil ==> p.EqAbsHopField(absPkt(ub))
 // @ ensures   reserr == nil ==> absPkt(ub) == old(absPkt(ub))
 // @ ensures   reserr == nil ==> old(slayers.IsSupportedPkt(ub)) == slayers.IsSupportedPkt(ub)
@@ -3052,11 +3052,11 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // constracts for IO-spec
 // @ requires slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ requires scion.NotFullyTraversedPkt(absPkt(ub))
+// @ requires absPkt(ub).PathNotFullyTraversed()
 // @ requires p.EqAbsHopField(absPkt(ub))
 // @ requires p.EqAbsInfoField(absPkt(ub))
 // @ ensures reserr == nil ==> slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
-// @ ensures reserr == nil ==> scion.NotFullyTraversedPkt(absPkt(ub))
+// @ ensures reserr == nil ==> absPkt(ub).PathNotFullyTraversed()
 // @ ensures reserr == nil ==> p.EqAbsHopField(absPkt(ub))
 // @ ensures reserr == nil ==> p.EqAbsInfoField(absPkt(ub))
 // @ ensures reserr == nil ==> absPkt(ub) == old(absPkt(ub))
