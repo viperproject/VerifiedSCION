@@ -393,12 +393,6 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 }
 
 ghost
-decreases
-pure func NotFullyTraversedPkt(pkt io.IO_pkt2) bool {
-	return len(pkt.CurrSeg.Future) > 0
-}
-
-ghost
 requires MetaLen <= len(raw)
 requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
