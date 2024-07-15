@@ -79,8 +79,8 @@ type HopField struct {
 // @ preserves acc(sl.Bytes(raw, 0, HopLen), R45)
 // @ ensures   h.Mem()
 // @ ensures   err == nil
-// @ ensures   unfolding h.Mem() in
-// @	BytesToIO_HF(raw, 0, 0, HopLen) == h.ToIO_HF()
+// @ ensures  BytesToIO_HF(raw, 0, 0, HopLen) ==
+// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF()
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < HopLen {
@@ -114,16 +114,13 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // @ preserves acc(h.Mem(), R10)
 // @ preserves sl.Bytes(b, 0, HopLen)
 // @ ensures   err == nil
+// @ ensures  BytesToIO_HF(b, 0, 0, HopLen) ==
+// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF()
 // @ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {
 	if len(b) < HopLen {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
 	}
-	//@ requires  len(b) >= HopLen
-	//@ preserves acc(h.Mem(), R11)
-	//@ preserves sl.Bytes(b, 0, HopLen)
-	//@ decreases
-	//@ outline(
 	//@ unfold sl.Bytes(b, 0, HopLen)
 	//@ unfold acc(h.Mem(), R11)
 	b[0] = 0
@@ -139,24 +136,17 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	//@ assert &b[4:6][0] == &b[4] && &b[4:6][1] == &b[5]
 	binary.BigEndian.PutUint16(b[4:6], h.ConsEgress)
 	//@ assert forall i int :: { &b[i] } 0 <= i && i < HopLen ==> acc(&b[i])
-	//@ fold sl.Bytes(b, 0, HopLen)
-	//@ fold acc(h.Mem(), R11)
-	//@ )
-	//@ requires  len(b) >= HopLen
-	//@ preserves acc(h.Mem(), R11)
-	//@ preserves sl.Bytes(b, 0, HopLen)
-	//@ decreases
-	//@ outline(
-	//@ unfold sl.Bytes(b, 0, HopLen)
-	//@ unfold acc(h.Mem(), R11)
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
 	//@ assert forall i int :: { &b[6:6+MacLen][i] }{ &b[i+6] } 0 <= i && i < MacLen ==>
 	//@     &b[6:6+MacLen][i] == &b[i+6]
-	copy(b[6:6+MacLen], h.Mac[:] /*@, R11 @*/)
+	copy(b[6:6+MacLen], h.Mac[:] /*@, R47 @*/)
+	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == b[6:6+MacLen][i]
+	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
+	//@ EqualBytesImplyEqualMac(b[6:6+MacLen], h.Mac)
 	//@ fold sl.Bytes(b, 0, HopLen)
+	//@ assert h.ToIO_HF() == BytesToIO_HF(b, 0, 0, HopLen)
 	//@ fold acc(h.Mem(), R11)
-	//@ )
 	return nil
 }
 
