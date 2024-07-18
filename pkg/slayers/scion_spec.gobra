@@ -189,9 +189,9 @@ pure func (s *SCION) ValidPathMetaData(ghost ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		let ubPath := s.UBPath(ub) in
 		(typeOf(s.Path) == type[*scion.Raw] ==>
-			s.Path.(*scion.Raw).GetBase(ubPath).StronglyValid()) &&
+			s.Path.(*scion.Raw).GetBase(ubPath).Valid()) &&
 		(typeOf(s.Path) == type[*epic.Path] ==>
-			s.Path.(*epic.Path).GetBase(ubPath).StronglyValid())
+			s.Path.(*epic.Path).GetBase(ubPath).Valid())
 }
 
 // TODO: simplify the body of the predicate when let expressions
@@ -470,7 +470,7 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let segs := io.CombineSegLens(seg1, seg2, seg3) in
 		let base := scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()} in
 		0 < metaHdr.SegLen[0] &&
-		base.FullyValid() &&
+		base.Valid() &&
 		scion.PktLen(segs, start + scion.MetaLen) <= length
 }
 
@@ -484,6 +484,21 @@ pure func IsSupportedPkt(raw []byte) bool {
 		let nextHdr  := L4ProtocolType(GetNextHdr(raw)) in
 		pathType == scion.PathType &&
 		nextHdr != L4SCMP
+}
+
+ghost
+requires  CmnHdrLen <= idx && idx <= len(raw)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
+preserves acc(sl.Bytes(raw[:idx], 0, idx), R55)
+ensures   IsSupportedPkt(raw) == IsSupportedPkt(raw[:idx])
+decreases
+func IsSupportedPktSubslice(raw []byte, idx int) {
+	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	unfold acc(sl.Bytes(raw[:idx], 0, idx), R56)
+	reveal IsSupportedPkt(raw)
+	reveal IsSupportedPkt(raw[:idx])
+	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	fold acc(sl.Bytes(raw[:idx], 0, idx), R56)
 }
 
 ghost
