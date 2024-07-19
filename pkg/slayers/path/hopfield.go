@@ -23,6 +23,7 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ sl "github.com/scionproto/scion/verification/utils/slices"
+	//@ "verification/io"
 )
 
 const (
@@ -79,10 +80,10 @@ type HopField struct {
 // @ preserves acc(sl.Bytes(raw, 0, HopLen), R45)
 // @ ensures   h.Mem()
 // @ ensures   err == nil
-// @ ensures  BytesToIO_HF(raw, 0, 0, HopLen) ==
-// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF()
+// @ ensures  BytesToIO_HF(raw, 0, 0, HopLen, inf, asid) ==
+// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF(inf, asid)
 // @ decreases
-func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
+func (h *HopField) DecodeFromBytes(raw []byte /*@, ghost inf io.AbsInfoField, ghost asid io.IO_as @*/) (err error) {
 	if len(raw) < HopLen {
 		return serrors.New("HopField raw too short", "expected", HopLen, "actual", len(raw))
 	}
@@ -101,8 +102,8 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	copy(h.Mac[:], raw[6:6+MacLen] /*@ , R47 @*/)
 	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == raw[6:6+MacLen][i]
 	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
-	//@ EqualBytesImplyEqualMac(raw[6:6+MacLen], h.Mac)
-	//@ assert BytesToIO_HF(raw, 0, 0, HopLen) == h.ToIO_HF()
+	// EqualBytesImplyEqualMac(raw[6:6+MacLen], h.Mac)
+	//@ assert BytesToIO_HF(raw, 0, 0, HopLen, inf, asid) == h.ToIO_HF(inf, asid)
 	//@ fold acc(sl.Bytes(raw, 0, HopLen), R46)
 	//@ fold h.Mem()
 	return nil
@@ -114,10 +115,10 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // @ preserves acc(h.Mem(), R10)
 // @ preserves sl.Bytes(b, 0, HopLen)
 // @ ensures   err == nil
-// @ ensures  BytesToIO_HF(b, 0, 0, HopLen) ==
-// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF()
+// @ ensures  BytesToIO_HF(b, 0, 0, HopLen, inf, asid) ==
+// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF(inf, asid)
 // @ decreases
-func (h *HopField) SerializeTo(b []byte) (err error) {
+func (h *HopField) SerializeTo(b []byte /*@, ghost inf io.AbsInfoField, ghost asid io.IO_as @*/) (err error) {
 	if len(b) < HopLen {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
 	}
@@ -137,15 +138,15 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	binary.BigEndian.PutUint16(b[4:6], h.ConsEgress)
 	//@ assert forall i int :: { &b[i] } 0 <= i && i < HopLen ==> acc(&b[i])
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac) ==>
-	//@     &h.Mac[i] == &h.Mac[:][i]
+	//@ 	&h.Mac[i] == &h.Mac[:][i]
 	//@ assert forall i int :: { &b[6:6+MacLen][i] }{ &b[i+6] } 0 <= i && i < MacLen ==>
-	//@     &b[6:6+MacLen][i] == &b[i+6]
+	//@ 	&b[6:6+MacLen][i] == &b[i+6]
 	copy(b[6:6+MacLen], h.Mac[:] /*@, R47 @*/)
 	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == b[6:6+MacLen][i]
 	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
-	//@ EqualBytesImplyEqualMac(b[6:6+MacLen], h.Mac)
+	// EqualBytesImplyEqualMac(b[6:6+MacLen], h.Mac)
 	//@ fold sl.Bytes(b, 0, HopLen)
-	//@ assert h.ToIO_HF() == BytesToIO_HF(b, 0, 0, HopLen)
+	//@ assert h.ToIO_HF(inf, asid) == BytesToIO_HF(b, 0, 0, HopLen, inf, asid)
 	//@ fold acc(h.Mem(), R11)
 	return nil
 }

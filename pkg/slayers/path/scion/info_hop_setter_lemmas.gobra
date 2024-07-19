@@ -324,7 +324,7 @@ ensures let inf := path.BytesToAbsInfoField(InfofieldByteSlice(raw, currInfIdx),
 	CurrSegWithInfo(raw[offset:offset + SegLen * path.HopLen], currHfIdx, SegLen, inf) ==
 	CurrSeg(raw, offset, currInfIdx, currHfIdx, SegLen, MetaLen)
 decreases
-func CurrSegEquality(raw []byte, offset int, currInfIdx int, currHfIdx int, SegLen int) {
+func CurrSegEquality(raw []byte, offset int, currInfIdx int, currHfIdx int, SegLen int, inf io.AbsInfoField, asid io.IO_as) {
 	infoBytes := InfofieldByteSlice(raw, currInfIdx)
 	inf := path.BytesToAbsInfoField(infoBytes, 0)
 	infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
@@ -337,7 +337,7 @@ func CurrSegEquality(raw []byte, offset int, currInfIdx int, currHfIdx int, SegL
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	fold acc(sl.Bytes(infoBytes, 0, path.InfoLen), R56)
 	widenSegment(raw, offset, currHfIdx, inf.AInfo, inf.UInfo, inf.ConsDir,
-		inf.Peer, SegLen, offset, offset + SegLen * path.HopLen)
+		inf.Peer, SegLen, offset, offset + SegLen * path.HopLen, inf, asid)
 }
 
 // UpdateCurrSegInfo proves that updating the infofield from inf1 to inf2 does not alter the hopfields
@@ -524,7 +524,7 @@ preserves (segs.Seg2Len > 0 && segs.Seg3Len > 0 &&
 		acc(sl.Bytes(hopBytes, 0, len(hopBytes)), R49)
 ensures   MidSegEqualitySpec(raw, currInfIdx, segs)
 decreases
-func MidSegEquality(raw []byte, currInfIdx int, segs io.SegLens) {
+func MidSegEquality(raw []byte, currInfIdx int, segs io.SegLens, absInf io.AbsInfoField, asid io.IO_as) {
 	reveal MidSeg(raw, currInfIdx, segs, MetaLen)
 	if (currInfIdx == 4 && segs.Seg2Len > 0 && segs.Seg3Len > 0) {
 		infoBytes := InfofieldByteSlice(raw, 0)
@@ -532,14 +532,14 @@ func MidSegEquality(raw []byte, currInfIdx int, segs io.SegLens) {
 		inf := some(reveal path.BytesToAbsInfoField(infoBytes, 0))
 		offset := HopfieldsStartIdx(currInfIdx, segs)
 		reveal MidSegWithInfo(hopBytes, currInfIdx, segs, inf)
-		CurrSegEquality(raw, offset, 0, segs.Seg1Len, segs.Seg1Len)
+		CurrSegEquality(raw, offset, 0, segs.Seg1Len, segs.Seg1Len, absInf, asid)
 	} else if (currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0) {
 		infoBytes := InfofieldByteSlice(raw, currInfIdx)
 		hopBytes := HopfieldsByteSlice(raw, currInfIdx, segs)
 		inf := some(reveal path.BytesToAbsInfoField(infoBytes, 0))
 		offset := HopfieldsStartIdx(currInfIdx, segs)
 		reveal MidSegWithInfo(hopBytes, currInfIdx, segs, inf)
-		CurrSegEquality(raw, offset, currInfIdx, 0, segs.Seg3Len)
+		CurrSegEquality(raw, offset, currInfIdx, 0, segs.Seg3Len, absInf, asid)
 	} else {
 		reveal MidSegWithInfo(nil, currInfIdx, segs, none[io.AbsInfoField])
 	}
@@ -558,12 +558,12 @@ requires let currHfStart := currHfIdx * path.HopLen in
 	acc(sl.Bytes(hopfields[currHfStart:currHfEnd], 0, path.HopLen), R50) &&
 	acc(sl.Bytes(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen), R50)
 decreases
-pure func BytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) bool {
+pure func BytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField, asid io.IO_as) bool {
 	return let currseg := CurrSegWithInfo(hopfields, currHfIdx, segLen, inf) in
 		let currHfStart := currHfIdx * path.HopLen in
 		let currHfEnd := currHfStart + path.HopLen in
 		len(currseg.Future) > 0  &&
-		currseg.Future[0] == path.BytesToIO_HF(hopfields[currHfStart:currHfEnd], 0, 0, path.HopLen) &&
+		currseg.Future[0] == path.BytesToIO_HF(hopfields[currHfStart:currHfEnd], 0, 0, path.HopLen, inf, asid) &&
 		currseg.Future[1:] == hopFields(hopfields[currHfEnd:], 0, 0, (segLen - currHfIdx - 1)) &&
 		currseg.Past == segPast(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx)) &&
 		currseg.History == segHistory(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx)) &&
@@ -587,9 +587,9 @@ preserves let currHfStart := currHfIdx * path.HopLen in
 	acc(sl.Bytes(hopfields[:currHfStart], 0, currHfStart), R49) &&
 	acc(sl.Bytes(hopfields[currHfStart:currHfEnd], 0, path.HopLen), R49) &&
 	acc(sl.Bytes(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen), R49)
-ensures  BytesStoreCurrSeg(hopfields, currHfIdx, segLen, inf)
+ensures  BytesStoreCurrSeg(hopfields, currHfIdx, segLen, inf, asid)
 decreases
-func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) {
+func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField, asid io.IO_as) {
 	currseg := reveal CurrSegWithInfo(hopfields, currHfIdx, segLen, inf)
 	currHfStart := currHfIdx * path.HopLen
 	currHfEnd := currHfStart + path.HopLen
@@ -599,13 +599,13 @@ func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf
 	hopFieldsBytePositionsLemma(hopfields, 0, 0, segLen, R54)
 	reveal hopFieldsBytePositions(hopfields, 0, 0, segLen, hf)
 	assert len(currseg.Future) > 0
-	assert currseg.Future[0] == path.BytesToIO_HF(hopfields[currHfStart:currHfEnd], 0, 0, path.HopLen)
-	splitHopFieldsInPastAndFuture(hopfields, currHfIdx, segLen)
+	assert currseg.Future[0] == path.BytesToIO_HF(hopfields[currHfStart:currHfEnd], 0, 0, path.HopLen, inf, asid)
+	splitHopFieldsInPastAndFuture(hopfields, currHfIdx, segLen, inf, asid)
 	assert currseg.Past == segPast(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx))
 	assert currseg.Future[0] == hf[currHfIdx]
 	assert hf[currHfIdx:][1:] == hf[currHfIdx + 1:]
 	assert currseg.Future == hf[currHfIdx:]
-	assert currseg.Future[1:] == hopFields(hopfields[currHfEnd:], 0, 0, (segLen - currHfIdx- 1))
+	assert currseg.Future[1:] == hopFields(hopfields[currHfEnd:], 0, 0, segLen - currHfIdx - 1)
 	assert currseg.History == segHistory(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx))
 	fold acc(sl.Bytes(hopfields[currHfStart:currHfEnd], 0, path.HopLen), R56)
 	fold acc(sl.Bytes(hopfields, 0, len(hopfields)), R56)
@@ -631,7 +631,7 @@ ensures   let currHfStart := currHfIdx * path.HopLen in
 	hopFields(hopfields, 0, 0, segLen)[currHfIdx + 1:]  ==
 		hopFields(hopfields[currHfEnd:], 0, 0, segLen - currHfIdx - 1)
 decreases
-func splitHopFieldsInPastAndFuture(hopfields []byte, currHfIdx int, segLen int) {
+func splitHopFieldsInPastAndFuture(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField, asid io.IO_as) {
 	currHfStart := currHfIdx * path.HopLen
 	currHfEnd := currHfStart + path.HopLen
 	hf := hopFields(hopfields, 0, 0, segLen)
@@ -641,13 +641,13 @@ func splitHopFieldsInPastAndFuture(hopfields []byte, currHfIdx int, segLen int) 
 	hfPast := hopFields(hopfields, 0, 0, currHfIdx)
 	hopFieldsBytePositionsLemma(hopfields, 0, 0, currHfIdx, R54)
 	reveal hopFieldsBytePositions(hopfields, 0, 0, currHfIdx, hfPast)
-	widenHopFields(hopfields, 0, 0, currHfIdx, 0, currHfStart, R52)
+	widenHopFields(hopfields, 0, 0, currHfIdx, 0, currHfStart, R52, inf, asid)
 
 	hfFuture := hopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1)
 	hopFieldsBytePositionsLemma(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, R54)
 	reveal hopFieldsBytePositions(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, hfFuture)
 	widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1,
-		currHfEnd, segLen * path.HopLen, R52)
+		currHfEnd, segLen * path.HopLen, R52, inf, asid)
 }
 
 // `SplitHopfields` splits the permission to the raw bytes of a segment into the permission

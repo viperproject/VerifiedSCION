@@ -26,13 +26,42 @@ import (
 // Gobra the correctness of these operations. Given that we do not prove any properties
 // about this function, we currently do not provide a definition for it.
 
+// TODO: try to move this to ghost code received by msg?
 ghost
 decreases
 pure func AbsUInfoFromUint16(SegID uint16) set[io.IO_msgterm]
 
+/*
 ghost
 decreases
-pure func AbsMac(mac [MacLen]byte) (io.IO_msgterm)
+pure func (h HopField) AbsMac(i InfoField, asid io.IO_as) (io.IO_msgterm) {
+	return let inif := ifsToIO_ifs(h.ConsIngress) in
+		let egif := ifsToIO_ifs(h.ConsEgress) in
+		let uinfo := AbsUInfoFromUint16(i.SegID) in
+		let l := io.IO_msgterm(io.MsgTerm_L{
+			seq[io.IO_msgterm]{
+				io.IO_msgterm(io.MsgTerm_Num{io.IO_ainfo(i.Timestamp)}),
+				io.if2term(inif),
+				io.if2term(egif),
+				io.IO_msgterm(io.MsgTerm_FS{uinfo})}}) in
+		io.mac(io.macKey(io.asidToKey(asid)), l)
+}
+*/
+
+ghost
+decreases
+pure func (h HopField) AbsMac(i io.AbsInfoField, asid io.IO_as) (io.IO_msgterm) {
+	return let inif := ifsToIO_ifs(h.ConsIngress) in
+		let egif := ifsToIO_ifs(h.ConsEgress) in
+		let uinfo := i.UInfo in
+		let l := io.IO_msgterm(io.MsgTerm_L{
+			seq[io.IO_msgterm]{
+				io.IO_msgterm(io.MsgTerm_Num{i.AInfo}),
+				io.if2term(inif),
+				io.if2term(egif),
+				io.IO_msgterm(io.MsgTerm_FS{uinfo})}}) in
+		io.mac(io.macKey(io.asidToKey(asid)), l)
+}
 
 // The following function converts a slice with at least `MacLen` elements into
 // an (exclusive) array containing the mac. Note that there are no permissions
@@ -47,6 +76,7 @@ pure func FromSliceToMacArray(mac []byte) (res [MacLen]byte) {
 	return [MacLen]byte{ mac[0], mac[1], mac[2], mac[3], mac[4], mac[5] }
 }
 
+/*
 ghost
 requires len(mac1) == MacLen
 requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R50)
@@ -74,3 +104,4 @@ requires mac1 == mac2
 ensures  AbsMac(mac1) == AbsMac(mac2)
 decreases
 func AbsMacArrayCongruence(mac1 [MacLen]byte, mac2 [MacLen]byte)
+*/

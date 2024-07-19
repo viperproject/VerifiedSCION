@@ -53,7 +53,9 @@ pure func same_uinfo2(currseg, traversedseg IO_seg2) bool {
 ghost
 decreases
 pure func  update_uinfo(condition bool, currseg, traversedseg IO_seg2, hf1 IO_HF) bool {
-	return condition? update_uinfo2(currseg, traversedseg, hf1) : same_uinfo2(currseg, traversedseg)
+	return condition ?
+		update_uinfo2(currseg, traversedseg, hf1) :
+		same_uinfo2(currseg, traversedseg)
 }
 
 ghost
