@@ -229,9 +229,8 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @	(unfolding acc(s.Mem(ubuf), R55) in CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])) <= len(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // post for IO:
-// ensures   e == nil ==> s.EqPathTypeSeq(ubuf, b.View())
-// @ ensures   e == nil && old(s.EqPathType(ubuf)) ==> IsSupportedPktSeq(b.View()) ==
-// @ 	old(IsSupportedPkt(ubuf))
+// @ ensures   e == nil && old(s.EqPathType(ubuf)) ==>
+// @ 	IsSupportedRawPkt(b.View()) == old(IsSupportedPkt(ubuf))
 // @ decreases
 // #backend[moreJoins(1)]
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
@@ -323,7 +322,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ sl.CombineRange_Bytes(ubuf, startP, endP, HalfPerm)
 	// @ reveal IsSupportedPkt(uSerBufN)
 	// @ b.RestoreMem(uSerBufN)
-	// @ reveal IsSupportedPktSeq(b.View())
+	// @ reveal IsSupportedRawPkt(b.View())
 	return tmp
 }
 

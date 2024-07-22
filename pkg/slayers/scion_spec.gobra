@@ -490,7 +490,7 @@ pure func IsSupportedPkt(raw []byte) bool {
 ghost
 opaque
 decreases
-pure func IsSupportedPktSeq(raw seq[byte]) bool {
+pure func IsSupportedRawPkt(raw seq[byte]) bool {
 	return CmnHdrLen <= len(raw) &&
 		let pathType := path.Type(raw[8])     in
 		let nextHdr  := L4ProtocolType(raw[4]) in

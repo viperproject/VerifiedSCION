@@ -16,6 +16,8 @@
 
 package seqs
 
+import sl "verification/utils/slices"
+
 ghost
 pure
 requires 0 <= n
@@ -39,8 +41,9 @@ decreases _
 pure func NewSeqByteSlice(size int) (res seq[[]byte])
 
 ghost
-requires forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], _)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 ensures len(res) == len(ub)
-ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==> res[i] == ub[i]
+ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
+    res[i] == sl.GetByte(ub, 0, len(ub), i)
 decreases _
 pure func ToSeqByte(ub []byte) (res seq[byte])

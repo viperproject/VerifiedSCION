@@ -3600,7 +3600,6 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 			// @ fold p.d.validResult(processResult{}, false)
 			return processResult{}, err /*@ , false, absReturnErr(processResult{}) @*/
 		}
-
 		// OHP should always be directed to the correct BR.
 		// @ p.d.getExternalMem()
 		// @ ghost if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
@@ -3763,14 +3762,15 @@ func addEndhostPort(dst *net.IPAddr) (res *net.UDPAddr) {
 // @ requires  s.HasOneHopPath(rawPkt)
 // @ requires  sl.Bytes(rawPkt, 0, len(rawPkt))
 // @ preserves buffer != nil && buffer.Mem()
+// pres for IO:
+// @ requires s.EqPathType(rawPkt)
+// @ requires !slayers.IsSupportedPkt(rawPkt)
 // @ ensures   sl.Bytes(rawPkt, 0, len(rawPkt))
 // @ ensures   acc(s.Mem(rawPkt), R00)
 // @ ensures   res != nil ==> res.ErrorMem()
-// @ decreases
-// Contracts for IO-sepc
-// @ requires s.EqPathType(rawPkt)
-// @ requires !slayers.IsSupportedPkt(rawPkt)
+// post for IO:
 // @ ensures res == nil ==> !slayers.IsSupportedPkt(rawPkt)
+// @ decreases
 // (VerifiedSCION) the type of 's' was changed from slayers.SCION to *slayers.SCION. This makes
 // specs a lot easier and, makes the implementation faster as well by avoiding passing large data-structures
 // by value. We should consider porting merging this in upstream SCION.
@@ -3781,8 +3781,7 @@ func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.Serialize
 	if err := s.SerializeTo(buffer, gopacket.SerializeOptions{} /*@ , rawPkt @*/); err != nil {
 		return err
 	}
-
-	// @ reveal slayers.IsSupportedPktSeq(buffer.View())
+	// @ reveal slayers.IsSupportedRawPkt(buffer.View())
 	// TODO(lukedirtwalker): We should add a method to the scion layers
 	// which can write into the existing buffer, see also the discussion in
 	// https://fsnets.slack.com/archives/C8ADBBG0J/p1592805884250700
