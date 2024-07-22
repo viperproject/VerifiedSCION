@@ -8,8 +8,9 @@
 
 package gopacket
 
-import . "github.com/scionproto/scion/verification/utils/definitions"
-import sl "github.com/scionproto/scion/verification/utils/slices"
+import . "verification/utils/definitions"
+import sl "verification/utils/slices"
+import "verification/utils/seqs"
 
 type SerializableLayer interface {
 	pred Mem(ubuf []byte)
@@ -45,10 +46,18 @@ type SerializeBuffer interface {
 	UBuf() []byte
 
 	ghost
+	pure
+	requires acc(Mem(), _)
+	decreases
+	View() (ghost res seq[byte])
+
+	ghost
 	requires Mem()
 	ensures  res === old(UBuf())
 	ensures  sl.Bytes(res, 0, len(res))
 	ensures  MemWithoutUBuf(res)
+	ensures  old(View()) == unfolding sl.Bytes(res, 0, len(res)) in
+		seqs.ToSeqByte(res)
 	decreases
 	ExchangePred() (res []byte)
 
@@ -56,6 +65,8 @@ type SerializeBuffer interface {
 	requires MemWithoutUBuf(ub)
 	requires sl.Bytes(ub, 0, len(ub))
 	ensures  Mem() && UBuf() === ub
+	ensures  View() == old(unfolding sl.Bytes(ub, 0, len(ub)) in
+		seqs.ToSeqByte(ub))
 	decreases
 	RestoreMem(ghost ub []byte)
 
@@ -63,6 +74,8 @@ type SerializeBuffer interface {
 	ensures  res === old(UBuf())
 	ensures  sl.Bytes(res, 0, len(res))
 	ensures  MemWithoutUBuf(res)
+	ensures  old(View()) == unfolding sl.Bytes(res, 0, len(res)) in
+		seqs.ToSeqByte(res)
 	decreases
 	Bytes() (res []byte)
 
