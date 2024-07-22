@@ -3586,13 +3586,13 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 			return processResult{}, serrors.New("MAC", "expected", fmt.Sprintf("%x", macCopy),
 				"actual", fmt.Sprintf("%x", ohp.FirstHop.Mac), "type", "ohp") /*@ , false, absReturnErr(processResult{}) @*/
 		}
-		// assert reveal p.scionLayer.EqPathType(p.rawPkt)
+		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 		// @ unfold acc(p.scionLayer.Mem(ubScionL), 1-R15)
 		// @ unfold acc(s.Path.Mem(ubPath), 1-R50)
 		ohp.Info.UpdateSegID(ohp.FirstHop.Mac /*@, ohp.FirstHop.ToIO_HF() @*/)
 		// @ fold acc(s.Path.Mem(ubPath), 1-R50)
 		// @ fold acc(p.scionLayer.Mem(ubScionL), 1-R15)
-		// assert reveal p.scionLayer.EqPathType(p.rawPkt)
+		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 
 		// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
 		// changes made to 'updateSCIONLayer'.
@@ -3636,9 +3636,9 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 			"type", "ohp", "ingress", p.ingressID,
 			"neighborIA", neighborIA, "srcIA", s.SrcIA) /*@ , false, absReturnErr(processResult{}) @*/
 	}
-	// assert reveal p.scionLayer.EqPathType(p.rawPkt)
+	// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 	// @ unfold acc(p.scionLayer.Mem(ubScionL), 1-R15)
-	// @ unfold acc(s.Path.Mem(ubPath), 1-R50)
+	// @ unfold s.Path.Mem(ubPath)
 	// @ unfold ohp.SecondHop.Mem()
 	ohp.SecondHop = path.HopField{
 		ConsIngress: p.ingressID,
@@ -3652,9 +3652,9 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	// for the rest of processing.
 	ohp.SecondHop.Mac = path.MAC(p.mac, ohp.Info, ohp.SecondHop, p.macBuffers.scionInput)
 	// @ fold ohp.SecondHop.Mem()
-	// @ fold acc(s.Path.Mem(ubPath), 1-R50)
+	// @ fold s.Path.Mem(ubPath)
 	// @ fold acc(p.scionLayer.Mem(ubScionL), 1-R15)
-	// assert reveal p.scionLayer.EqPathType(p.rawPkt)
+	// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 
 	// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
 	// changes made to 'updateSCIONLayer'.
