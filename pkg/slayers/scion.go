@@ -232,7 +232,6 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ ensures   e == nil && old(s.EqPathType(ubuf)) ==>
 // @ 	IsSupportedRawPkt(b.View()) == old(IsSupportedPkt(ubuf))
 // @ decreases
-// #backend[moreJoins(1)]
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
 	// @ unfold acc(s.Mem(ubuf), R1)
 	// @ defer fold acc(s.Mem(ubuf), R1)
