@@ -1,0 +1,158 @@
+// +gobra
+package router
+
+import (
+	"net"
+)
+
+// @ assert err1 != nil
+// @ requires param1 != nil && param1.Mem()
+func TestDataPlaneAddInternalInterface_0(param1 BatchConn) {
+	d := &DataPlane{}
+	d.FakeStart()
+	fold d.Mem()
+	ip := net.IP{}
+	err1 := d.AddInternalInterface(param1, ip)
+	assert err1 != nil
+}
+
+// @ assert err1 != nil
+func TestDataPlaneAddInternalInterface_1() {
+	d := &DataPlane{}
+	err1 := d.AddInternalInterface(nil, nil)
+}
+
+// @assert err1 == nil
+func TestDataPlaneAddInternalInterface_2(param1 BatchConn) {
+
+	d := &DataPlane{}
+	err1 := d.AddInternalInterface(param1, net.IP{})
+}
+
+// @assert err1 == nil
+// @assert err2 != nil
+func TestDataPlaneAddInternalInterface_3(param1 BatchConn, param2 BatchConn) {
+
+	d := &DataPlane{}
+	err1 := d.AddInternalInterface(param1, net.IP{})
+	err2 := d.AddInternalInterface(param2, net.IP{})
+}
+
+// @assert err1 != nil
+func TestDataPlaneSetKey_0() {
+	d := &DataPlane{}
+	d.FakeStart()
+	err1 := d.SetKey([]byte("dummy"))
+}
+
+// @assert err1 != nil
+func TestDataPlaneSetKey_1() {
+	d := &DataPlane{}
+	d.FakeStart() // unnecessary
+	err1 := d.SetKey(nil)
+}
+
+// @assert err1 == nil
+func TestDataPlaneSetKey_2() {
+	d := &DataPlane{}
+	err1 := d.SetKey([]byte("dummy key xxxxxx"))
+}
+
+// @assert err1 == nil
+// @assert err2 != nil
+func TestDataPlaneSetKey_3() {
+	d := &DataPlane{}
+	err1 := d.SetKey([]byte("dummy key xxxxxx"))
+	err2 := d.SetKey([]byte("dummy key xxxxxx"))
+}
+
+// @assert err1 != nil
+func TestDataPlaneAddExternalInterface_0(param1 BatchConn) {
+
+	d := &DataPlane{}
+	d.FakeStart()
+	err1 := d.AddExternalInterface(42, param1)
+}
+
+// @assert err1 != nil
+func TestDataPlaneAddExternalInterface_1() {
+
+	d := &DataPlane{}
+	err1 := d.AddExternalInterface(42, nil)
+}
+
+// @assert err1 == nil
+// @assert err2 == nil
+func TestDataPlaneAddExternalInterface_2(param1 BatchConn, param2 BatchConn) {
+
+	d := &DataPlane{}
+	err1 := d.AddExternalInterface(42, param1)
+	err2 := d.AddExternalInterface(45, param2)
+}
+
+// @assert err1 == nil
+// @assert err2 != nil
+func TestDataPlaneAddExternalInterface_3(param1 BatchConn, param2 BatchConn) {
+
+	d := &DataPlane{}
+	err1 := d.AddExternalInterface(42, param1)
+	err2 := d.AddExternalInterface(42, param2)
+}
+
+// @assert err1 == nil
+func TestDataPlaneAddSVC_0() {
+	d := &DataPlane{}
+	d.FakeStart()
+	err1 := d.AddSvc(addr.SvcCS, &net.UDPAddr{})
+}
+
+// @assert err1 != nil
+func TestDataPlaneAddSVC_1() {
+	d := &DataPlane{}
+	err1 := d.AddSvc(addr.SvcCS, nil)
+}
+
+// @assert err1 == nil
+// @assert err2 == nil
+func TestDataPlaneAddSVC_2() {
+	d := &DataPlane{}
+	err1 := d.AddSvc(addr.SvcCS, &net.UDPAddr{})
+	err2 := d.AddSvc(addr.SvcDS, &net.UDPAddr{})
+}
+
+// @assert err1 == nil
+// @assert err2 == nil
+func TestDataPlaneAddSVC_3() {
+	d := &DataPlane{}
+	err1 := d.AddSvc(addr.SvcCS, &net.UDPAddr{})
+	err2 := d.AddSvc(addr.SvcCS, &net.UDPAddr{})
+}
+
+// @assert err1 != nil
+func TestDataPlaneAddNextHop_0() {
+	d := &DataPlane{}
+	d.FakeStart()
+	err1 := d.AddNextHop(45, &net.UDPAddr{})
+}
+
+// @assert err1 != nil
+func TestDataPlaneAddNextHop_1() {
+	d := &DataPlane{}
+	err1 := d.AddNextHop(45, nil)
+}
+
+// @assert err1 == nil
+// @assert err2 == nil
+func TestDataPlaneAddNextHop_2() {
+	d := &DataPlane{}
+	err1 := d.AddNextHop(45, &net.UDPAddr{})
+	err2 := d.AddNextHop(43, &net.UDPAddr{})
+}
+
+// @assert err1 == nil
+// @assert err2 != nil
+func TestDataPlaneAddNextHop_3() {
+	d := &DataPlane{}
+	err1 := d.AddNextHop(45, &net.UDPAddr{})
+	err2 := d.AddNextHop(45, &net.UDPAddr{})
+}
