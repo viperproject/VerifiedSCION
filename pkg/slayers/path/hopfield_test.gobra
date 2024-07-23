@@ -1,0 +1,42 @@
+// +gobra
+package path
+
+import (
+	"encoding/binary"
+	"time"
+
+	"github.com/scionproto/scion/pkg/private/serrors"
+	"github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices" // find a way to add these manually -> take from original file, i.e. hopfield.go?
+)
+
+// @ assert err1 == nil
+// @ assert err2 == nil
+// @ assert want == got
+// NO ERROR
+// doesn't verify
+func TestHopSerializeDecode() {
+	want := &HopField{
+		IngressRouterAlert: true,
+		EgressRouterAlert:  true,
+		ExpTime:            63,
+		ConsIngress:        1,
+		ConsEgress:         0,
+		Mac:                [MacLen]byte{1, 2, 3, 4, 5, 6},
+	}
+	c := make([]byte, HopLen)
+	b := make([]byte, HopLen)
+
+	fold want.Mem() // needs to be added manually
+	fold slices.AbsSlice_Bytes(b, 0, HopLen) // needs to be added manually
+	err1 := want.SerializeTo(b)
+
+    assert c === b
+
+	got := &HopField{}
+	err2 := got.DecodeFromBytes(b)
+
+	assert err1 == nil
+	assert err2 == nil
+	assert want == got // might not hold
+}
