@@ -1,0 +1,305 @@
+// Copyright 2020 Anapaya Systems
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package scion
+
+import (
+    "github.com/scionproto/scion/pkg/slayers/path"
+    "github.com/scionproto/scion/verification/utils/definitions"
+    sl "github.com/scionproto/scion/verification/utils/slices"
+)
+
+var testInfoFields = []path.InfoField{
+    {
+        Peer:      false,
+        ConsDir:   false,
+        SegID:     0x111,
+        Timestamp: 0x100,
+    },
+    {
+        Peer:      false,
+        ConsDir:   true,
+        SegID:     0x222,
+        Timestamp: 0x100,
+    },
+}
+
+var testHopFields = []path.HopField{
+    {
+        ExpTime:     63,
+        ConsIngress: 1,
+        ConsEgress:  0,
+        Mac:         [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+    },
+    {
+        ExpTime:     63,
+        ConsIngress: 3,
+        ConsEgress:  2,
+        Mac:         [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+    },
+    {
+        ExpTime:     63,
+        ConsIngress: 0,
+        ConsEgress:  2,
+        Mac:         [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+    },
+    {
+        ExpTime:     63,
+        ConsIngress: 1,
+        ConsEgress:  0,
+        Mac:         [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+    },
+}
+
+var decodedTestPath = &Decoded{
+    Base: Base{
+        PathMeta: MetaHdr{
+            CurrINF: 0,
+            CurrHF:  0,
+            SegLen:  [3]uint8{2, 2, 0},
+        },
+
+        NumINF:  2,
+        NumHops: 4,
+    },
+    InfoFields: testInfoFields,
+    HopFields:  testHopFields,
+}
+
+var emptyDecodedTestPath = &Decoded{
+    Base:       Base{},
+    InfoFields: []path.InfoField{},
+    HopFields:  []path.HopField{},
+}
+
+var rawPath = []byte("\x00\x00\x20\x80\x00\x00\x01\x11\x00\x00\x01\x00\x01\x00\x02\x22\x00\x00" +
+    "\x01\x00\x00\x3f\x00\x01\x00\x00\x01\x02\x03\x04\x05\x06\x00\x3f\x00\x03\x00\x02\x01\x02\x03" +
+    "\x04\x05\x06\x00\x3f\x00\x00\x00\x02\x01\x02\x03\x04\x05\x06\x00\x3f\x00\x01\x00\x00\x01\x02" +
+    "\x03\x04\x05\x06")
+
+var rawTestPath = &Raw{
+    Base: Base{
+        PathMeta: MetaHdr{
+            CurrINF: 0,
+            CurrHF:  0,
+            SegLen:  [3]uint8{2, 2, 0},
+        },
+        NumINF:  2,
+        NumHops: 4,
+    },
+    Raw: rawPath,
+}
+
+type pathCase struct {
+    infos []bool
+    hops  [][]uint16
+}
+
+var pathReverseCases = map[string]struct {
+    input    pathCase
+    want     pathCase
+    inIdxs   [][2]int
+    wantIdxs [][2]int
+}{
+    "1 segment, 2 hops": {
+        input:    pathCase{[]bool{true}, [][]uint16{{11, 12}}},
+        want:     pathCase{[]bool{false}, [][]uint16{{12, 11}}},
+        inIdxs:   [][2]int{{0, 0}, {0, 1}},
+        wantIdxs: [][2]int{{0, 1}, {0, 0}},
+    },
+    "1 segment, 5 hops": {
+        input:    pathCase{[]bool{true}, [][]uint16{{11, 12, 13, 14, 15}}},
+        want:     pathCase{[]bool{false}, [][]uint16{{15, 14, 13, 12, 11}}},
+        inIdxs:   [][2]int{{0, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}},
+        wantIdxs: [][2]int{{0, 4}, {0, 3}, {0, 2}, {0, 1}, {0, 0}},
+    },
+    "2 segments, 5 hops": {
+        input:    pathCase{[]bool{true, false}, [][]uint16{{11, 12}, {13, 14, 15}}},
+        want:     pathCase{[]bool{true, false}, [][]uint16{{15, 14, 13}, {12, 11}}},
+        inIdxs:   [][2]int{{0, 0}, {0, 1}, {1, 2}, {1, 3}, {1, 4}},
+        wantIdxs: [][2]int{{1, 4}, {1, 3}, {0, 2}, {0, 1}, {0, 0}},
+    },
+    "3 segments, 9 hops": {
+        input: pathCase{
+            []bool{true, false, false},
+            [][]uint16{
+                {11, 12},
+                {13, 14, 15, 16},
+                {17, 18, 19},
+            },
+        },
+        want: pathCase{
+            []bool{true, true, false},
+            [][]uint16{
+                {19, 18, 17},
+                {16, 15, 14, 13},
+                {12, 11},
+            },
+        },
+        inIdxs: [][2]int{
+            {0, 0}, {0, 1}, {1, 2}, {1, 3}, {1, 4}, {1, 5}, {2, 6}, {2, 7}, {2, 8},
+        },
+        wantIdxs: [][2]int{
+            {2, 8}, {2, 7}, {1, 6}, {1, 5}, {1, 4}, {1, 3}, {0, 2}, {0, 1}, {0, 0},
+        },
+    },
+}
+
+// NO ERROR
+// doesn't terminate
+func TestDecodedSerialize(ubuf []byte) {
+    fold decodedTestPath.Base.Mem()
+    fold decodedTestPath.HopFields[0].Mem()
+    fold decodedTestPath.HopFields[1].Mem()
+    fold decodedTestPath.HopFields[2].Mem()
+    fold decodedTestPath.HopFields[3].Mem()
+    fold decodedTestPath.Mem(ubuf)
+
+    length := decodedTestPath.Len(ubuf)
+    b := make([]byte, length)
+
+    res := decodedTestPath.SerializeTo(b, ubuf)
+
+    assert res == nil
+    assert rawPath === b
+}
+
+// NO ERROR
+// doesn't verify
+requires acc(sl.Bytes(rawPath, 0, len(rawPath)), definitions.R42) // has to be added manually
+func TestDecodedDecodeFromBytes(ubuf1 []byte) {
+    s := &Decoded{}
+
+    fold s.Base.NonInitMem()
+    fold s.NonInitMem()
+    err := s.DecodeFromBytes(rawPath)
+
+    assert err == nil
+    assert decodedTestPath == s // assertion fails
+}
+
+// NO ERROR
+// doesn't verify
+func TestDecodedSerializeDecode(ubuf1 []byte, ubuf2 []byte) {
+    inhale acc(decodedTestPath.Mem(ubuf1), definitions.R50)
+    b := make([]byte, decodedTestPath.Len(ubuf1))
+
+    inhale acc(decodedTestPath.Mem(ubuf2), definitions.R1)
+    inhale sl.Bytes(ubuf2, 0, len(ubuf2))
+    inhale b !== ubuf2 ==> sl.Bytes(b, 0, len(b))
+    err1 := decodedTestPath.SerializeTo(b, ubuf2)
+
+    assert err1 == nil // assertion fails
+
+    s := &Decoded{}
+
+    err2 := s.DecodeFromBytes(b)
+
+    assert err2 == nil
+    assert decodedTestPath == s
+}
+
+
+// 1 segment, 2 hops
+// NO ERROR
+func TestDecodedReverse1(ubuf []byte) {
+    input := pathCase{[]bool{true}, [][]uint16{{11, 12}}}
+    want := pathCase{[]bool{false}, [][]uint16{{12, 11}}}
+    inIdxs := [][2]int{{0, 0}, {0, 1}}
+    wantIdxs := [][2]int{{0, 1}, {0, 0}}
+
+    idx := 0
+
+    // inline mkDecodedPath
+    pcase1 := input
+    infIdx1 := uint8(inIdxs[idx][0])
+    hopIdx1 := uint8(inIdxs[idx][1])
+
+    s1 := &Decoded{}
+    meta1 := MetaHdr{
+        CurrINF: infIdx1,
+        CurrHF:  hopIdx1,
+    }
+    // TODO loop unrolling
+    for i, dir := range pcase1.infos {
+        s1.InfoFields = append(perm(1/1), s1.InfoFields, path.InfoField{ConsDir: dir})
+        meta1.SegLen[i] = uint8(len(pcase1.hops[i]))
+    }
+    i1 := 0
+    for _, hops := range pcase1.hops {
+        for _, hop := range hops {
+            s1.HopFields = append(perm(1/1), s1.HopFields, path.HopField{ConsIngress: hop, ConsEgress: hop})
+            i1++
+        }
+    }
+    s1.PathMeta = meta1
+    s1.NumINF = len(pcase1.infos)
+    s1.NumHops = i1
+
+    inputPath := s1
+
+    // inline mkDecodedPath
+    pcase2 := want
+    infIdx2 := uint8(wantIdxs[idx][0])
+    hopIdx2 := uint8(wantIdxs[idx][1])
+
+    s2 := &Decoded{}
+    meta2 := MetaHdr{
+        CurrINF: infIdx2,
+        CurrHF:  hopIdx2,
+    }
+    for i, dir := range pcase2.infos {
+        s2.InfoFields = append(perm(1/1), s2.InfoFields, path.InfoField{ConsDir: dir})
+        meta2.SegLen[i] = uint8(len(pcase2.hops[i]))
+    }
+    i2 := 0
+    for _, hops := range pcase2.hops {
+        for _, hop := range hops {
+            s2.HopFields = append(perm(1/1), s2.HopFields, path.HopField{ConsIngress: hop, ConsEgress: hop})
+            i2++
+        }
+    }
+    s2.PathMeta = meta2
+    s2.NumINF = len(pcase2.infos)
+    s2.NumHops = i2
+
+    wantPath := s2
+
+    inhale inputPath.Mem(ubuf)
+    revPath, err := inputPath.Reverse(ubuf)
+
+    assert err == nil
+    assert wantPath == revPath
+}
+
+// ERROR
+// doesn't verify
+func TestEmptyDecodedReverse(decoded *Decoded, ubuf []byte) {
+    assume decoded == emptyDecodedTestPath
+
+    inhale decoded.Mem(ubuf)
+    _, err := decoded.Reverse(ubuf)
+    assert err != nil
+}
+
+// NO ERROR
+// doesn't verify
+func TestDecodedToRaw(ubuf1 []byte, ghost res []byte) {
+    inhale decodedTestPath.Mem(ubuf1)
+    inhale sl.Bytes(ubuf1, 0, len(ubuf1))
+    raw, err, res := decodedTestPath.ToRaw(ubuf1)
+
+    assert err == nil
+    assert rawTestPath == raw
+}
