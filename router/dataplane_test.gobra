@@ -1,0 +1,133 @@
+// +gobra
+
+package router
+
+import (
+    "github.com/scionproto/scion/verification/utils/slices"
+    "net"
+)
+
+// fails after serve
+// doesn't verify
+requires conn != nil && conn.Mem()
+func TestDataPlaneAddInternalInterface1(conn BatchConn) { // mock passed as parameter
+	d := &DataPlane{}
+	d.running = true // inlined method body of d.FakeStart()
+	fold d.Mem() // has to be inserted to satisfy precondition
+	fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
+	d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
+
+	ip := net.IP{}
+	fold ip.Mem() // has to be inserted to satisfy precondition, fails because len(ip) == IPv4len || len(ip) == IPv6len might not hold
+
+	err := d.AddInternalInterface(conn, ip) // precondition !d.IsRunning() might not hold
+	assert err != nil
+}
+
+// setting nil value is not allowed
+// doesn't verify
+func TestDataPlaneAddInternalInterface2() {
+	d := &DataPlane{}
+    fold d.Mem() // has to be inserted to satisfy precondition acc(d.Mem(), OutMutexPerm)
+	err := d.AddInternalInterface(nil, nil) // precondition conn != nil might not hold
+	assert err != nil
+}
+
+// single set works
+// doesn't verify
+requires conn != nil && conn.Mem() // has to be added to satisfy precondition
+func TestDataPlaneAddInternalInterface3(conn BatchConn) { // mock passed as parameter
+	d := &DataPlane{}
+    fold d.Mem() // has to be inserted to satisfy precondition
+	fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
+	d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
+
+	ip := net.IP{}
+	fold ip.Mem() // has to be inserted to satisfy precondition, fails because len(ip) == IPv4len || len(ip) == IPv6len might not hold
+
+	err := d.AddInternalInterface(conn, ip)
+	assert err == nil
+}
+
+// double set fails
+// doesn't verify
+requires conn != nil && conn.Mem() // has to be added to satisfy precondition conn != nil && conn.Mem()
+func TestDataPlaneAddInternalInterface4(conn BatchConn) { // mock passed as parameter
+	d := &DataPlane{}
+    fold d.Mem() // has to be inserted to satisfy precondition acc(d.Mem(), OutMutexPerm)
+    fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
+    d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
+
+	ip := net.IP{}
+    fold ip.Mem() // has to be inserted to satisfy precondition, fails because len(ip) == IPv4len || len(ip) == IPv6len might not hold
+
+	err1 := d.AddInternalInterface(conn, ip)
+	err2 := d.AddInternalInterface(conn, ip)
+
+    assert err1 == nil
+	assert err2 != nil
+}
+
+// fails after serve
+// doesn't verify because precondition not satisfied
+func TestDataPlaneSetKey1() {
+	d := &DataPlane{}
+	d.running = true
+    key := []byte("dummy")
+
+    fold slices.AbsSlice_Bytes(key, 0, len(key))
+	fold d.Mem() // has to be inserted to satisfy precondition acc(d.Mem(), OutMutexPerm)
+    fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
+    d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
+
+	err := d.SetKey(key)  // precondition not met (!d.IsRunning() does not hold)
+
+	assert err != nil
+}
+
+// setting nil value is not allowed
+// doesn't verify because precondition not satisfied
+func TestDataPlaneSetKey2() {
+	d := &DataPlane{}
+	fold d.Mem() // has to be inserted to satisfy precondition acc(d.Mem(), OutMutexPerm)
+    fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
+    d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
+
+	err := d.SetKey(nil)  // precondition not met (len(key) > 0 does not hold)
+
+	assert err != nil
+}
+
+// single set works
+// doesn't verify
+func TestDataPlaneSetKey3() {
+	d := &DataPlane{}
+
+    key := []byte("dummy key xxxxxx")
+    fold slices.AbsSlice_Bytes(key, 0, len(key))
+    fold d.Mem() // has to be inserted to satisfy precondition acc(d.Mem(), OutMutexPerm)
+    fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
+    d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
+
+	err := d.SetKey(key)
+
+	assert err == nil // might not hold
+}
+
+// double set fails
+// doesn't verify
+func TestDataPlaneSetKey4() {
+	d := &DataPlane{}
+
+    key := []byte("dummy key xxxxxx")
+    fold slices.AbsSlice_Bytes(key, 0, len(key))
+    fold d.Mem() // has to be inserted to satisfy precondition acc(d.Mem(), OutMutexPerm)
+    fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
+    d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
+
+	err1 := d.SetKey(key)
+	err2 := d.SetKey(key) // precondition !d.KeyIsSet() might not hold
+
+    assert err1 == nil
+    assert err2 != nil
+}
