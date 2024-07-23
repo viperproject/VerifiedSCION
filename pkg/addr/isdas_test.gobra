@@ -1,0 +1,114 @@
+// Copyright 2021 ETH Zurich, Anapaya Systems
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package addr
+
+// ERROR
+// doesn't verify
+func TestParseISD1(src string) {
+    assume src == ""
+
+    _, err := ParseISD(src)
+
+    assert err != nil // might not hold
+}
+
+// ERROR
+// doesn't verify
+func TestParseISD2(src string) {
+    assume src == "a"
+
+    _, err := ParseISD(src)
+
+    assert err != nil // might not hold
+}
+
+// NO ERROR
+// doesn't verify
+func TestParseISD3() {
+    src := "0"
+    expected := uint16(0)
+    isd, err := ParseISD(src)
+    got := uint16(isd)
+
+    assert err == nil // might not hold
+    assert got == expected
+}
+
+// NO ERROR
+// doesn't verify
+func TestParseISD4() {
+    src := "1"
+    expected := uint16(1)
+    isd, err := ParseISD(src)
+    got := uint16(isd)
+
+    assert err == nil // might not hold
+    assert got == expected
+}
+
+// NO ERROR
+// doesn't verify
+func TestParseISD5() {
+    src := "65535"
+    expected := MaxISD
+    isd, err := ParseISD(src)
+
+    assert err == nil // might not hold
+    assert isd == expected
+}
+
+// ERROR
+// doesn't verify
+func TestParseISD6(src string) {
+    assume src == "65536"
+
+    _, err := ParseISD(src)
+
+    assert err != nil // might not hold
+}
+
+// ERROR
+// doesn't verify
+func TestParseAS1(src string) {
+    assume src == ""
+
+    _, err := ParseAS(src)
+
+    assert err != nil // might not hold
+}
+
+// NO ERROR
+// doesn't verify
+func TestParseAS2() {
+    src := "0"
+    expected := uint16(0)
+    asEx, err := ParseAS("0")
+    got := uint16(asEx)
+
+    assert err == nil // might not hold
+    assert got == expected
+}
+
+// ERROR
+// doesn't verify
+func TestParseIA1(src string) {
+    assume src == ""
+
+    ia, err := ParseIA(src)
+
+    assert err != nil // might not hold
+}
