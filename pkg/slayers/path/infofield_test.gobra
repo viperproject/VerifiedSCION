@@ -1,0 +1,40 @@
+// +gobra
+package path
+
+import (
+	"encoding/binary"
+	"time"
+
+	"github.com/scionproto/scion/pkg/private/serrors"
+	"github.com/scionproto/scion/verification/utils/definitions"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
+
+// @ assert err1 == nil
+// @ assert err2 == nil
+// @ assert want == got
+// NO ERROR
+// doesn't verify
+func TestInfoSerializeDecode1() {
+	want := &InfoField{
+		Peer:      true,
+		ConsDir:   true,
+		SegID:     0x222,
+		Timestamp: 0x100,
+	}
+	b := make([]byte, InfoLen)
+	fold slices.AbsSlice_Bytes(b, 0, InfoLen) // needs to be added manually
+	err1 := want.SerializeTo(b)
+
+	got := &InfoField{}
+	err2 := got.DecodeFromBytes(b)
+
+	assert err1 == nil
+	assert err2 == nil
+    assert want.Peer == got.Peer
+	assert want.ConsDir == got.ConsDir
+	assert want.Timestamp == got.Timestamp
+	assert want.SegID == got.SegID
+
+	assert *want == *got
+}
