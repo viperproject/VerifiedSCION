@@ -1,0 +1,186 @@
+// Copyright 2021 ETH Zurich, Anapaya Systems
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package addr
+
+import (
+	"encoding/binary"
+    "github.com/scionproto/scion/verification/utils/slices"
+    "net"
+)
+
+// ERROR
+// nil IPv4
+func TestHostFromRaw1(b []byte, htype HostAddrType) {
+    assume b === []byte(nil) // test input
+    assume htype == HostTypeIPv4 // test input
+
+    inhale acc(b) // precondition 1
+    inhale isValidHostAddrType(htype) // precondition 2
+    inhale len(b) == sizeOfHostAddrType(htype) // precondition 3 -> contradiction
+
+    _, err := HostFromRaw(b, htype) // method call
+    assert err != nil // assertion
+}
+
+// ERROR
+// short IPv4
+func TestHostFromRaw2(b []byte, htype HostAddrType) {
+    inp := make([]byte, 3)
+    assume b === inp // test input
+    assume htype == HostTypeIPv4 // test input
+
+    inhale acc(b) // precondition 1
+    inhale isValidHostAddrType(htype) // precondition 2
+    inhale len(b) == sizeOfHostAddrType(htype) // precondition 3 -> contradiction
+
+	_, err := HostFromRaw(b, htype) // method call
+	assert err != nil // assertion
+}
+
+// NO ERROR
+// valid IPv4
+// doesn't verify
+func TestHostFromRaw3() {
+    b := []byte{127, 0, 0, 1} // test input
+    htype := HostTypeIPv4 // test input
+
+    ip := net.IPv4(127, 0, 0, 1)
+
+    // inline HostFromIP
+    expected := HostAddr(nil)
+    if ip4 := ip.To4(false); ip4 != nil {
+        tmp := HostIPv4(ip4)
+        fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+        fold tmp.Mem()
+        expected = tmp
+    } else {
+        tmp := HostIPv6(ip)
+        fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+        fold tmp.Mem()
+        expected = tmp
+    }
+
+    got, err := HostFromRaw(b, htype) // method call
+    res := got.Equal(expected) // precondition might not hold (the receiver might be nil)
+
+    assert err == nil // assertion
+    assert res // assertion
+}
+
+// ERROR
+// nil IPv6
+func TestHostFromRaw4(b []byte, htype HostAddrType) {
+    assume b === []byte(nil) // test input
+    assume htype == HostTypeIPv6 // test input
+
+    inhale acc(b) // precondition 1
+    inhale isValidHostAddrType(htype) // precondition 2
+    inhale len(b) == sizeOfHostAddrType(htype) // precondition 3 -> contradiction
+
+    _, err := HostFromRaw(b, htype) // method call
+    assert err != nil // assertion
+}
+
+// ERROR
+// short IPv6
+func TestHostFromRaw5(b []byte, htype HostAddrType) {
+    inp := make([]byte, 14)
+    assume b === inp // test input
+    assume htype == HostTypeIPv4 // test input
+
+    inhale acc(b) // precondition 1
+    inhale isValidHostAddrType(htype) // precondition 2
+    inhale len(b) == sizeOfHostAddrType(htype) // precondition 3 -> contradiction
+
+    _, err := HostFromRaw(b, htype) // method call
+    assert err != nil // assertion
+}
+
+// NO ERROR
+// valid IPv6
+// doesn't verify
+func TestHostFromRaw6() {
+    b := net.ParseIP("dead::beef") // test input
+    htype := HostTypeIPv6 // test input
+
+    ip := net.ParseIP("dead::beef")
+
+    // inline HostFromIP
+    expected := HostAddr(nil)
+    if ip4 := ip.To4(false); ip4 != nil {
+        tmp := HostIPv4(ip4)
+        fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+        fold tmp.Mem()
+        expected = tmp
+    } else {
+        tmp := HostIPv6(ip)
+        fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+        fold tmp.Mem()
+        expected = tmp
+    }
+
+    got, err := HostFromRaw(b, htype) // precondition might not hold (len(b) == sizeOfHostAddrType(htype)) -> len(b) = 10, expected length = 16
+    res := got.Equal(expected)
+
+    assert err == nil
+    assert res
+}
+
+// ERROR
+// nil SVC
+func TestHostFromRaw7(b []byte, htype HostAddrType) {
+    assume b === []byte(nil) // test input
+    assume htype == HostTypeSVC // test input
+
+    inhale acc(b) // precondition 1
+    inhale isValidHostAddrType(htype) // precondition 2
+    inhale len(b) == sizeOfHostAddrType(htype) // precondition 3 -> contradiction
+
+    _, err := HostFromRaw(b, htype) // method call
+    assert err != nil // assertion
+}
+
+// ERROR
+// short SVC
+func TestHostFromRaw8(b []byte, htype HostAddrType) {
+    inp := make([]byte, 1)
+    assume b === inp // test input
+    assume htype == HostTypeSVC // test input
+
+    inhale acc(b) // precondition 1
+    inhale isValidHostAddrType(htype) // precondition 2
+    inhale len(b) == sizeOfHostAddrType(htype) // precondition 3 -> contradiction
+
+    _, err := HostFromRaw(b, htype) // method call
+    assert err != nil // assertion
+}
+
+// NO ERROR
+// valid SVC
+// doesn't verify
+func TestHostFromRaw9() {
+    // inline SvcDS.Pack()
+	out := make([]byte, HostLenSVC)
+    binary.BigEndian.PutUint16(out, uint16(SvcDS))
+
+    htype := HostTypeSVC // test input
+
+	got, err := HostFromRaw(out, htype) // method call
+
+	assert err == nil // might not hold
+	assert got == SvcDS // might not hold
+}
