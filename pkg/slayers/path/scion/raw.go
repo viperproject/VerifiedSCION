@@ -224,7 +224,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // pres for IO:
 // @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ requires validPktMetaHdr(ubuf)
-// @ requires len(s.absPkt(ubuf).CurrSeg.Future) > 0
+// @ requires s.absPkt(ubuf).PathNotFullyTraversed()
 // @ requires s.GetBase(ubuf).IsXoverSpec() ==>
 // @ 	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
@@ -529,16 +529,34 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 
 // SetHopField updates the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves acc(s.Mem(ubuf), R20)
-// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
-// @ ensures   r != nil ==> r.ErrorMem()
+// @ requires  acc(s.Mem(ubuf), R20)
+// @ requires  sl.Bytes(ubuf, 0, len(ubuf))
+// pres for IO:
+// @ requires validPktMetaHdr(ubuf)
+// @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
+// @ requires s.absPkt(ubuf).PathNotFullyTraversed()
+// @ ensures  acc(s.Mem(ubuf), R20)
+// @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
+// @ ensures  r != nil ==> r.ErrorMem()
+// posts for IO:
+// @ ensures  r == nil ==>
+// @ 	validPktMetaHdr(ubuf) &&
+// @	s.GetBase(ubuf).EqAbsHeader(ubuf)
+// @ ensures  r == nil && idx == int(old(s.GetCurrHF(ubuf))) ==>
+// @ 	let oldPkt := old(s.absPkt(ubuf)) in
+// @ 	let newPkt := oldPkt.UpdateHopField(hop.ToIO_HF()) in
+// @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
+// @ #backend[exhaleMode(1)]
 func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/) (r error) {
-	//@ share hop
+	// (VerifiedSCION) Due to an incompleteness (https://github.com/viperproject/gobra/issues/770),
+	// we introduce a temporary variable to be able to call `path.AbsMacArrayCongruence()`.
+	tmpHopField /*@@@*/ := hop
+	//@ path.AbsMacArrayCongruence(hop.Mac, tmpHopField.Mac)
 	// (VerifiedSCION) Cannot assert bounds of uint:
 	// https://github.com/viperproject/gobra/issues/192
-	//@ assume 0 <= hop.ConsIngress && 0 <= hop.ConsEgress
-	//@ fold hop.Mem()
+	//@ assume 0 <= tmpHopField.ConsIngress && 0 <= tmpHopField.ConsEgress
+	//@ fold acc(tmpHopField.Mem(), R9)
 	//@ unfold acc(s.Mem(ubuf), R20)
 	//@ unfold acc(s.Base.Mem(), R20)
 	if idx >= s.NumHops {
@@ -552,11 +570,19 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ assert sl.Bytes(s.Raw, 0, len(s.Raw))
 	//@ sl.SplitRange_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
-	ret := hop.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
+	ret := tmpHopField.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
 	//@ sl.CombineRange_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
 	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ fold acc(s.Base.Mem(), R20)
 	//@ fold acc(s.Mem(ubuf), R20)
+	// (VerifiedSCION) The proof for these assumptions is provided in PR #361
+	// (https://github.com/viperproject/VerifiedSCION/pull/361), which will
+	// be merged once the performance issues are resolved.
+	//@ TemporaryAssumeForIO(validPktMetaHdr(ubuf) && s.GetBase(ubuf).EqAbsHeader(ubuf))
+	//@ TemporaryAssumeForIO(idx == int(old(s.GetCurrHF(ubuf))) ==>
+	//@  	let oldPkt := old(s.absPkt(ubuf)) in
+	//@  	let newPkt := oldPkt.UpdateHopField(hop.ToIO_HF()) in
+	//@  	s.absPkt(ubuf) == newPkt)
 	return ret
 }
 
