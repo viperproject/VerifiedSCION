@@ -1,0 +1,190 @@
+// +gobra
+
+package scion
+
+import (
+    "github.com/scionproto/scion/pkg/slayers/path"
+)
+
+
+// NO ERROR
+// 1 segment, 2 hops
+// verifies
+func TestIncPath1() {
+    i := 0
+    nsegs :=  1
+	nhops := 2
+	segLens := [3]uint8{2, 0, 0}
+	inIdxs := [][2]int{{0, 0}, {0, 1}}
+	wantIdxs := [][2]int{{0, 1}, {0, 0}}
+
+
+    metaHdr := MetaHdr{
+        CurrINF: uint8(inIdxs[i][0]),
+        CurrHF:  uint8(inIdxs[i][1]),
+        SegLen:  segLens,
+    }
+
+    s@ := Base{
+		PathMeta: metaHdr,
+		NumINF:  nsegs,
+		NumHops: nhops,
+	}
+
+    fold s.Mem()
+    err := s.IncPath()
+    unfold s.Mem()
+
+    if wantIdxs[i][0] == 0 && wantIdxs[i][1] == 0 {
+        assert err != nil
+    } else {
+        assert err == nil
+        assert uint8(wantIdxs[i][0]) == s.PathMeta.CurrINF
+        assert uint8(wantIdxs[i][1]) == s.PathMeta.CurrHF
+    }
+}
+
+// ERROR
+// 1 segment, 2 hops
+// doesn't verify
+func TestIncPath2(s *Base) {
+    i := 1
+    nsegs :=  1
+    nhops := 2
+    segLens := [3]uint8{2, 0, 0}
+    inIdxs := [][2]int{{0, 0}, {0, 1}}
+    wantIdxs := [][2]int{{0, 1}, {0, 0}}
+
+    metaHdr := MetaHdr{
+        CurrINF: uint8(inIdxs[i][0]),
+        CurrHF:  uint8(inIdxs[i][1]),
+        SegLen:  segLens,
+    }
+
+    sInp@ := &Base{
+        PathMeta: metaHdr,
+        NumINF:  nsegs,
+        NumHops: nhops,
+    }
+
+    assume s == sInp
+
+    inhale s.Mem()
+    err := s.IncPath()
+
+    if wantIdxs[i][0] == 0 && wantIdxs[i][1] == 0 {
+        assert err != nil // assertion fails
+    } else {
+        assert err == nil
+        assert uint8(wantIdxs[i][0]) == s.PathMeta.CurrINF
+        assert uint8(wantIdxs[i][1]) == s.PathMeta.CurrHF
+    }
+}
+
+// ERROR
+// 1 segment, 2 hops
+// verifies
+func TestIncPath3(s *Base) {
+    nsegs :=  1
+    nhops := 2
+    segLens := [3]uint8{2, 0, 0}
+    inIdxs := [][2]int{{0, 0}, {0, 1}}
+
+    metaHdr := MetaHdr{
+        CurrINF: uint8(inIdxs[0][0]),
+        CurrHF:  uint8(inIdxs[0][1]),
+        SegLen:  segLens,
+    }
+
+    sInp := Base{
+        PathMeta: metaHdr,
+        NumINF:  nsegs,
+        NumHops: nhops,
+    }
+
+    assume sInp == s
+
+    inhale s.Mem()
+    err := s.IncPath()
+
+    assert err != nil
+}
+
+
+// NO ERROR
+// 1 segment, 2 hops
+// verifies
+func TestIsXOver1() {
+    i := 0
+    nsegs :=  1
+    nhops := 2
+    segLens := [3]uint8{2, 0, 0}
+    inIdxs := [][2]int{{0, 0}, {0, 1}}
+    xover := []bool{false, false}
+
+
+    metaHdr := MetaHdr{
+        CurrINF: uint8(inIdxs[0][0]),
+        CurrHF:  uint8(inIdxs[0][1]),
+        SegLen:  segLens,
+    }
+
+    s@ := Base{
+        PathMeta: metaHdr,
+        NumINF:  nsegs,
+        NumHops: nhops,
+    }
+
+    fold s.Mem()
+    res1 := s.IsXover()
+
+    firstHopAfterXover := false
+
+    if i > 0 {
+        firstHopAfterXover = xover[i-1]
+    }
+
+    res2 := s.IsFirstHopAfterXover()
+
+    assert res1 == xover[0]
+    assert res2 == firstHopAfterXover
+}
+
+// NO ERROR
+// 1 segment, 2 hops
+// verifies
+func TestIsXOver2() {
+    i := 1
+    nsegs :=  1
+    nhops := 2
+    segLens := [3]uint8{2, 0, 0}
+    inIdxs := [][2]int{{0, 0}, {0, 1}}
+    xover := []bool{false, false}
+
+
+    metaHdr := MetaHdr{
+        CurrINF: uint8(inIdxs[0][0]),
+        CurrHF:  uint8(inIdxs[0][1]),
+        SegLen:  segLens,
+    }
+
+    s@ := Base{
+        PathMeta: metaHdr,
+        NumINF:  nsegs,
+        NumHops: nhops,
+    }
+
+    fold s.Mem()
+    res1 := s.IsXover()
+
+    firstHopAfterXover := false
+
+    if i > 0 {
+        firstHopAfterXover = xover[i-1]
+    }
+
+    res2 := s.IsFirstHopAfterXover()
+
+    assert res1 == xover[0]
+    assert res2 == firstHopAfterXover
+}
