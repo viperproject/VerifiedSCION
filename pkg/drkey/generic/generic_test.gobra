@@ -1,0 +1,30 @@
+package drkey
+
+import (
+    "encoding/hex"
+    "github.com/scionproto/scion/pkg/drkey"
+	"github.com/scionproto/scion/pkg/private/xtest"
+	"github.com/scionproto/scion/private/drkey/drkeytest"
+)
+
+func TestDeriveASHostGeneric() {
+	level1Key := drkeytest.GetLevel1(t, protoId, epoch, srcIA, dstIA)
+
+	key, err := drkeytest.DeriveASHostGeneric(drkey.ASHostMeta{
+				    ProtoId: drkey.Protocol(10000),
+				    DstHost: dstHost,
+			    }, level1Key)
+
+	assert err == nil
+
+	goldenRaw := []byte(hex.EncodeToString(key.Key[:]))
+
+	var expectedKey drkey.Key
+	goldenKey, err := hex.DecodeString(string(goldenRaw))
+
+    assert err == nil
+
+	copy(expectedKey[:], goldenKey)
+
+    assert expectedKey == key.Key
+}
