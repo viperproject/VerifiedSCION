@@ -27,7 +27,7 @@ pure func if2term(ifs option[IO_ifs]) IO_msgterm {
 		case none[IO_ifs]:
 			MsgTerm_Empty{}
 		default:
-			IO_msgterm(MsgTerm_AS{IO_as(get(ifs))})
+			MsgTerm_AS{IO_as(get(ifs))}
 	}
 }
 
@@ -65,33 +65,33 @@ pure func plaintextToMac(inif option[IO_ifs], egif option[IO_ifs], ts uint, uinf
 			MsgTerm_Num{ts},
 			if2term(inif),
 			if2term(egif),
-			MsgTerm_FS{uinfo}},
+			MsgTerm_FS{uinfo},
+		},
 	}
 }
-
 
 ghost
 decreases
 pure func macKey(key IO_key) IO_msgterm {
-	return IO_msgterm(MsgTerm_Key{key})
+	return MsgTerm_Key{key}
 }
 
 ghost
 decreases
 pure func mac(fst IO_msgterm, snd IO_msgterm) IO_msgterm {
-	return IO_msgterm( MsgTerm_Hash {
-		MsgTerm_Hash_ : IO_msgterm( MsgTerm_MPair{
-			MsgTerm_MPair_1 : fst,
-			MsgTerm_MPair_2 : snd,
-		}),
-	})
+	return MsgTerm_Hash {
+		MsgTerm_Hash_: MsgTerm_MPair {
+			MsgTerm_MPair_1: fst,
+			MsgTerm_MPair_2: snd,
+		},
+	}
 }
 
 // helper function, not defined in IO spec
 ghost
 decreases
-pure func asidToKey(asid IO_as) IO_key{
-	return IO_key(Key_macK{asid})
+pure func asidToKey(asid IO_as) IO_key {
+	return Key_macK{asid}
 }
 
 ghost
