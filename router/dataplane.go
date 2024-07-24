@@ -1890,6 +1890,8 @@ type macBuffersT struct {
 // @ requires acc(&p.lastLayer, R55) && p.lastLayer != nil
 // @ requires &p.scionLayer !== p.lastLayer ==>
 // @ 	acc(p.lastLayer.Mem(ubLL), R15)
+// @ requires &p.scionLayer === p.lastLayer ==>
+// @ 	ub === ubLL
 // @ requires p.scionLayer.ValidPathMetaData(ub)
 // @ requires sl.Bytes(ub, 0, len(ub))
 // @ requires acc(&p.ingressID,  R45)
