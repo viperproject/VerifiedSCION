@@ -15,24 +15,15 @@
 
 package cipher
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import sl "github.com/scionproto/scion/verification/utils/slices"
 
 // NewCBCEncrypter returns a BlockMode which encrypts in cipher block chaining
 // mode, using the given Block. The length of iv must be the same as the
 // Block's block size.
-trusted
 requires  b != nil && b.Mem()
 requires  len(iv) == b.BlockSize()
-preserves acc(slices.AbsSlice_Bytes(iv, 0, len(iv)), _)
+preserves acc(sl.Bytes(iv, 0, len(iv)), _)
 ensures   result != nil && result.Mem()
 ensures   result.BlockSize() == old(b.BlockSize())
 decreases _
-func NewCBCEncrypter(b Block, iv []byte) (result BlockMode) {
-	if len(iv) != b.BlockSize() {
-		panic("cipher.NewCBCEncrypter: IV length must equal block size")
-	}
-	if cbc, ok := b.(cbcEncAble); ok {
-		return cbc.NewCBCEncrypter(iv)
-	}
-	return (*cbcEncrypter)(newCBC(b, iv))
-}
+func NewCBCEncrypter(b Block, iv []byte) (result BlockMode)

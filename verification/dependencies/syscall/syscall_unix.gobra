@@ -54,7 +54,6 @@ pred (s *Errno) Mem() {
 	acc(s)
 }
 
-ghost
 preserves s.Mem() && s.CanSet(e)
 ensures   s.Get() === e
 decreases

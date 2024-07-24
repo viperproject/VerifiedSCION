@@ -72,7 +72,7 @@ pure func asidToKey(asid IO_as) IO_key{
 
 ghost
 decreases
-pure func upd_uinfo(segid set[IO_msgterm], hf IO_HF) set[IO_msgterm]{
+pure func upd_uinfo(segid set[IO_msgterm], hf IO_HF) set[IO_msgterm] {
 	return let setHVF := set[IO_msgterm]{hf.HVF} in
 		(segid union setHVF) setminus (segid intersection setHVF)
 }
@@ -96,7 +96,7 @@ pure func (dp DataPlaneSpec) is_target(asid IO_as, nextif IO_ifs, a2 IO_as, i2 I
 ghost
 decreases
 pure func dp3s_add_ibuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
-	return IO_dp3s_state_local_{
+	return IO_dp3s_state_local_ {
 		ibuf: insert(s.ibuf, i, pkt),
 		obuf: s.obuf,
 	}
@@ -105,7 +105,7 @@ pure func dp3s_add_ibuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO
 ghost
 decreases
 pure func dp3s_add_obuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
-	return IO_dp3s_state_local_{
+	return IO_dp3s_state_local_ {
 		ibuf: s.ibuf,
 		obuf: insert(s.obuf, i, pkt),
 	}
@@ -129,7 +129,6 @@ pure func (dp DataPlaneSpec) dp3s_forward_ext(m IO_pkt3, newpkt IO_pkt3, nextif 
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in
 		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
-		dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), hf1) &&
 		(nextif in domain(dp.GetNeighborIAs())) &&
 		let a2 := dp.GetNeighborIA(nextif) in
 		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
@@ -152,8 +151,6 @@ pure func (dp DataPlaneSpec) dp3s_forward_ext_xover(m IO_pkt3, newpkt IO_pkt3, n
 		dp.is_target(dp.Asid(), nextif, a2, i2)
 }
 
-
-// TODO: should we change IO_ifs to being implemented as an option type?
 ghost
 requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()
@@ -184,7 +181,7 @@ ghost
 requires len(intermediatepkt.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_xover_common(
+pure func (dp DataPlaneSpec) dp3s_xover_guard(
 	s IO_dp3s_state_local,
 	m IO_pkt3,
 	currseg IO_seg3,
@@ -193,6 +190,7 @@ pure func (dp DataPlaneSpec) dp3s_xover_common(
 	intermediatepkt IO_pkt3,
 	hf1 IO_HF,
 	hf2 IO_HF,
+	nextfut seq[IO_HF],
 	recvif IO_ifs,
 	newpkt IO_pkt3,
 	nextif option[IO_ifs],
@@ -201,6 +199,6 @@ pure func (dp DataPlaneSpec) dp3s_xover_common(
 		// this is because of the way math. maps are implemented, we can only obtain a key that is in the map before.
 		return some(recvif) in domain(s.ibuf) &&
 			(let lookupRes := s.ibuf[some(recvif)] in (m in lookupRes)) &&
-			dp.dp2_xover_common_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, dp.Asid(), recvif) &&
+			dp.dp2_xover_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, nextfut, dp.Asid(), recvif) &&
 			dp.dp3s_forward_xover(intermediatepkt, newpkt, nextif)
 }

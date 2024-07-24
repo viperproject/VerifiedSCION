@@ -9,7 +9,7 @@
 package gopacket
 
 import . "github.com/scionproto/scion/verification/utils/definitions"
-import "github.com/scionproto/scion/verification/utils/slices"
+import sl "github.com/scionproto/scion/verification/utils/slices"
 
 type SerializableLayer interface {
 	pred Mem(ubuf []byte)
@@ -17,7 +17,7 @@ type SerializableLayer interface {
 	requires  !opts.FixLengths
 	requires  b != nil && b.Mem()
 	requires  Mem(ubuf)
-	preserves slices.AbsSlice_Bytes(ubuf, 0, len(ubuf))
+	preserves sl.Bytes(ubuf, 0, len(ubuf))
 	ensures   err == nil ==> (Mem(ubuf) && b.Mem())
 	ensures   err != nil ==> err.ErrorMem()
 	decreases
@@ -35,7 +35,7 @@ type SerializeOptions struct {
 
 type SerializeBuffer interface {
 	pred Mem()
-	// morally, corresponds to slices.AbsSlice_Bytes(ub, 0, len(ub)) --* (Mem() && UBuf() === ub)
+	// morally, corresponds to sl.Bytes(ub, 0, len(ub)) --* (Mem() && UBuf() === ub)
 	pred MemWithoutUBuf(ub []byte)
 
 	ghost
@@ -47,21 +47,21 @@ type SerializeBuffer interface {
 	ghost
 	requires Mem()
 	ensures  res === old(UBuf())
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures  sl.Bytes(res, 0, len(res))
 	ensures  MemWithoutUBuf(res)
 	decreases
 	ExchangePred() (res []byte)
 
 	ghost
 	requires MemWithoutUBuf(ub)
-	requires slices.AbsSlice_Bytes(ub, 0, len(ub))
+	requires sl.Bytes(ub, 0, len(ub))
 	ensures  Mem() && UBuf() === ub
 	decreases
 	RestoreMem(ghost ub []byte)
 
 	requires Mem()
 	ensures  res === old(UBuf())
-	ensures  slices.AbsSlice_Bytes(res, 0, len(res))
+	ensures  sl.Bytes(res, 0, len(res))
 	ensures  MemWithoutUBuf(res)
 	decreases
 	Bytes() (res []byte)

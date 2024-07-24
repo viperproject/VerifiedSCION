@@ -75,6 +75,7 @@ const (
 	R53
 	R54
 	R55
+	R56
 )
 
 // To be used as a precondition of functions and methods that can never be called
@@ -91,20 +92,23 @@ pure func Uncallable() (res bool) {
 	return false
 }
 
-ghost
-ensures false
-decreases _
-func IgnoreBranch()
+/**** Functions to introduce temporary assumptions **/
 
-ghost
-ensures false
-decreases _
-func IgnoreFromHere()
-
+// Kills the branches that reach this point.
 ghost
 ensures false
 decreases _
 func TODO()
+
+// Does the same as TODO, but should be used when it kills a branch
+// that cannot be verified until an issue in SCION is fixed and ported
+// to our branch of SCION.
+ghost
+ensures false
+decreases _
+func ToDoAfterScionFix(url string)
+
+/**** End of functions to introduce temporary assumptions **/
 
 // type to be used as a stub for sets of private fields in formalizations of
 // third party libs
@@ -117,3 +121,16 @@ decreases
 func Asserting(ghost b bool) bool {
 	return true
 }
+
+type Lemma struct{}
+
+// Assumption for IO-Specification
+ghost
+ensures b
+decreases
+func AssumeForIO(b bool)
+
+ghost
+ensures b
+decreases
+func TemporaryAssumeForIO(b bool)
