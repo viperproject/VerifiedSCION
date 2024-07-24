@@ -16,8 +16,6 @@
 
 package slices
 
-import "github.com/scionproto/scion/verification/utils/seqs"
-
 /** Bytes **/
 
 func Bytes_test() {
