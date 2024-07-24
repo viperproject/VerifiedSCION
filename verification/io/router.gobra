@@ -33,19 +33,42 @@ pure func if2term(ifs option[IO_ifs]) IO_msgterm {
 
 ghost
 decreases
-opaque
 pure func (dp DataPlaneSpec) hf_valid(d bool, ts uint, uinfo set[IO_msgterm], hf IO_HF) bool {
 	return let inif := hf.InIF2 in
 		let egif := hf.EgIF2 in
 		let x := hf.HVF in
-		let l := IO_msgterm(MsgTerm_L{
-			seq[IO_msgterm]{
-				IO_msgterm(MsgTerm_Num{ts}),
-				if2term(inif),
-				if2term(egif),
-				IO_msgterm(MsgTerm_FS{uinfo})}}) in
-		x == mac(macKey(asidToKey(dp.Asid())), l)
+		let next := dp.nextMsgtermSpec(inif, egif, ts, uinfo) in
+		x == next
 }
+
+ghost
+//opaque
+decreases
+pure func (dp DataPlaneSpec) nextMsgtermSpec(inif option[IO_ifs], egif option[IO_ifs], ts uint, uinfo set[IO_msgterm]) IO_msgterm {
+	// return let l := MsgTerm_L {
+	// 	seq[IO_msgterm]{
+	// 		MsgTerm_Num{ts},
+	// 		if2term(inif),
+	// 		if2term(egif),
+	// 		MsgTerm_FS{uinfo}},
+	// } in mac(macKey(asidToKey(dp.Asid())), l)
+	return let l := plaintextToMac(inif, egif, ts, uinfo) in
+		mac(macKey(asidToKey(dp.Asid())), l)
+}
+
+ghost
+opaque
+decreases
+pure func plaintextToMac(inif option[IO_ifs], egif option[IO_ifs], ts uint, uinfo set[IO_msgterm]) IO_msgterm {
+	return MsgTerm_L {
+		seq[IO_msgterm]{
+			MsgTerm_Num{ts},
+			if2term(inif),
+			if2term(egif),
+			MsgTerm_FS{uinfo}},
+	}
+}
+
 
 ghost
 decreases
