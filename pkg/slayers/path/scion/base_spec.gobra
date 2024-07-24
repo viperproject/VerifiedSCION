@@ -20,6 +20,8 @@ import (
 	"encoding/binary"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	sl "github.com/scionproto/scion/verification/utils/slices"
+
+	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (b *Base) NonInitMem() {
@@ -27,21 +29,14 @@ pred (b *Base) NonInitMem() {
 }
 
 // This predicate is established right after DecodeFromBytes.
-// Because this method does not perform any bounds checks, it
-// is not possible to have assertions in this invariant about
-// how the fileds of Base compare to those of its MetaHdr field.
 pred (b *Base) Mem() {
-	acc(&b.NumINF) &&
-	acc(&b.NumHops) &&
-	acc(&b.PathMeta.CurrINF) &&
-	acc(&b.PathMeta.CurrHF) &&
-	acc(&b.PathMeta.SegLen[0]) &&
-	acc(&b.PathMeta.SegLen[1]) &&
-	acc(&b.PathMeta.SegLen[2]) &&
-	0 <= b.NumINF && b.NumINF <= MaxINFs &&
-	// the program defines 64 as the maximum number of hops,
-	// but this does not seem to be enforced anywhere.
-	0 <= b.NumHops && // b.NumHops <= MaxHops &&
+	acc(b) &&
+	// In the future, we might want to drop the properties
+	// below, as they are already present in WeaklyValid.
+	// This requires a bit of refactoring to pass around the
+	// knowledge that WeaklyValid holds between methods.
+	0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
+	0 <= b.NumHops && b.NumHops <= MaxHops &&
 	(0 < b.NumINF ==> 0 < b.NumHops)
 }
 
@@ -59,28 +54,51 @@ pure func (b Base) ValidCurrHfSpec() bool {
 
 ghost
 decreases
-pure func (b Base) ValidCurrIdxsSpec() bool {
+pure func (b Base) ValidCurrFieldsSpec() bool {
 	return 0 <= b.NumINF && b.NumINF <= MaxINFs &&
 		0 <= b.NumHops && b.NumHops <= MaxHops  &&
-		b.ValidCurrHfSpec()  &&
-		b.ValidCurrInfSpec() &&
-		0 <= b.PathMeta.SegLen[0] && b.PathMeta.SegLen[0] < MaxHops &&
-		0 <= b.PathMeta.SegLen[1] && b.PathMeta.SegLen[1] < MaxHops &&
-		0 <= b.PathMeta.SegLen[2] && b.PathMeta.SegLen[2] < MaxHops &&
-		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
-		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
-		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
-		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
-			b.PathMeta.SegLen[i] != 0) &&
-		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
-			b.PathMeta.SegLen[i] == 0)
-		// Surprisingly, the following does not seem to be needed
-		// b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+		b.ValidCurrInfSpec() && b.ValidCurrHfSpec()
+}
+
+// A `Base` is weakly valid when the fields `NumINF` and `NumHops` are,
+// at most, `MaxINF` and `MaxHops`, respectively, and the field `SegLen`
+// is valid as well. `DecodeFromBytes` guarantees that all `Base`s
+// obtained from raw bytes will be weakly valid.
+ghost
+decreases
+pure func (b Base) WeaklyValid() bool {
+	return 0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
+		0 <= b.NumHops && b.NumHops <= MaxHops    &&
+		(0 < b.NumINF ==> 0 < b.NumHops)          &&
+		b.PathMeta.InBounds() && b.NumsCompatibleWithSegLen()
+}
+
+// A `Base` is valid (a.k.a fully valid) iff it is weakly valid
+// and its `CurrHF` and `CurrINF` are within bounds, its `CurrHF`
+// is compatible with its `CurrINF`, and there are no singleton
+// segments. In the past, there used to be another validity
+// criteria, stronger than WeaklyValid and weaker than FullyValid.
+// This was known as StronglyValid and has been derprecated.
+ghost
+decreases
+pure func (b Base) Valid() bool {
+	return b.WeaklyValid()           &&
+		b.ValidCurrFieldsSpec()      &&
+		b.CurrInfMatchesCurrHFSpec() &&
+		b.PathMeta.SegLen[0] != 1    &&
+		b.PathMeta.SegLen[1] != 1    &&
+		b.PathMeta.SegLen[2] != 1
 }
 
 ghost
 decreases
-pure func (b Base) InfsMatchHfsSpec() bool {
+pure func (b Base) CurrInfMatchesCurrHFSpec() bool {
+	return b.PathMeta.CurrINF == b.InfForHfSpec(b.PathMeta.CurrHF)
+}
+
+ghost
+decreases
+pure func (b Base) NumsCompatibleWithSegLen() bool {
 	return 0 <= b.NumINF && b.NumINF <= 3 &&
 		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
 		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
@@ -89,34 +107,6 @@ pure func (b Base) InfsMatchHfsSpec() bool {
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
 			b.PathMeta.SegLen[i] == 0)
-}
-
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) ValidCurrINF() bool {
-	return unfolding acc(b.Mem(), _) in (*b).ValidCurrInfSpec()
-}
-
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) ValidCurrHF() bool {
-	return unfolding acc(b.Mem(), _) in (*b).ValidCurrHfSpec()
-}
-
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) ValidCurrIdxs() bool {
-	return unfolding acc(b.Mem(), _) in (*b).ValidCurrIdxsSpec()
-}
-
-ghost
-requires acc(b.Mem(), _)
-decreases
-pure func (b *Base) InfsMatchHfs() bool {
-	return unfolding acc(b.Mem(), _) in (*b).InfsMatchHfsSpec()
 }
 
 ghost
@@ -145,6 +135,13 @@ pure func (s *Base) GetMetaHdr() MetaHdr {
 ghost
 requires acc(s.Mem(), _)
 decreases
+pure func (s *Base) GetBase() Base {
+	return unfolding acc(s.Mem(), _) in *s
+}
+
+ghost
+requires acc(s.Mem(), _)
+decreases
 pure func (s *Base) GetCurrHF() uint8 {
 	return s.GetMetaHdr().CurrHF
 }
@@ -159,26 +156,67 @@ pure func (s Base) InfForHfSpec(hf uint8) (r uint8) {
 }
 
 ghost
-requires acc(s.Mem(), _)
 decreases
-pure func (s *Base) IsXoverSpec() bool {
-	return unfolding acc(s.Mem(), _) in (
-		s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
-		s.PathMeta.CurrINF != s.InfForHfSpec(s.PathMeta.CurrHF+1))
+pure func (s Base) IsXoverSpec() bool {
+	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
+		s.PathMeta.CurrINF != s.InfForHfSpec(s.PathMeta.CurrHF+1)
 }
 
 ghost
 requires s.NumINF != 0
 requires int(s.PathMeta.CurrHF) < s.NumHops-1
-ensures  s.ValidCurrIdxsSpec() ==> res.ValidCurrIdxsSpec()
+ensures  s.WeaklyValid() ==> res.WeaklyValid()
+ensures  s.Valid() ==> res.Valid()
 decreases
 pure func (s Base) IncPathSpec() (res Base) {
-	return Base{
+	return Base {
 		PathMeta: MetaHdr{s.InfForHfSpec(s.PathMeta.CurrHF+1), s.PathMeta.CurrHF+1, s.PathMeta.SegLen},
 		NumINF: s.NumINF,
 		NumHops: s.NumHops,
 	}
 }
+
+ghost
+requires s.Valid()
+ensures  s.IsXoverSpec() ==> !s.IncPathSpec().IsXoverSpec()
+decreases
+func (s Base) NotIsXoverAfterIncPath() {}
+
+ghost
+decreases
+pure func (b Base) ReverseSpec() Base {
+	return Base {
+		PathMeta: b.ReverseMetaHdrSpec(),
+		NumINF: b.NumINF,
+		NumHops: b.NumHops,
+	}
+}
+
+ghost
+decreases
+pure func (b Base) ReverseMetaHdrSpec() MetaHdr {
+	return MetaHdr {
+		CurrINF: uint8(b.NumINF) - b.PathMeta.CurrINF - 1,
+		CurrHF: uint8(b.NumHops) - b.PathMeta.CurrHF - 1,
+		SegLen: b.ReverseSegLen(),
+	}
+}
+
+ghost
+decreases
+pure func (b Base) ReverseSegLen() [3]uint8 {
+	return (match b.NumINF {
+		case 2: [3]uint8{ b.PathMeta.SegLen[1], b.PathMeta.SegLen[0], b.PathMeta.SegLen[2] }
+		case 3: [3]uint8{ b.PathMeta.SegLen[2], b.PathMeta.SegLen[1], b.PathMeta.SegLen[0] }
+		default: b.PathMeta.SegLen
+	})
+}
+
+ghost
+requires b.Valid()
+ensures  b.ReverseSpec().Valid()
+decreases
+func (b Base) ReversingBaseValidSegLenHasValidSegLen() { }
 
 ghost
 requires b.Mem()
@@ -200,11 +238,45 @@ pure func DecodedFrom(line uint32) MetaHdr {
 }
 
 ghost
+requires acc(sl.Bytes(b, 0, len(b)), _)
+decreases
+pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
+	return MetaLen <= len(b)             &&
+		0 <= m.CurrINF && m.CurrINF <= 3 &&
+		0 <= m.CurrHF  && m.CurrHF < 64  &&
+		m.SegsInBounds() &&
+		let lenR := len(b) in
+		let b0 := sl.GetByte(b, 0, lenR, 0) in
+		let b1 := sl.GetByte(b, 0, lenR, 1) in
+		let b2 := sl.GetByte(b, 0, lenR, 2) in
+		let b3 := sl.GetByte(b, 0, lenR, 3) in
+		let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
+		DecodedFrom(line) == m
+}
+
+ghost
+requires acc(s.Mem(), _)
+requires acc(sl.Bytes(b, 0, len(b)), _)
+decreases
+pure func (s *Base) DecodeFromBytesSpec(b []byte) bool {
+	return unfolding acc(s.Mem(), _) in
+		s.PathMeta.DecodeFromBytesSpec(b)
+}
+
+ghost
+decreases
+pure func (m MetaHdr) InBounds() bool {
+	return 0 <= m.CurrINF && m.CurrINF <= MaxINFs  &&
+		0 <= m.CurrHF && m.CurrHF < MaxHops        &&
+		m.SegsInBounds()
+}
+
+ghost
 decreases
 pure func (m MetaHdr) SegsInBounds() bool {
-	return 0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&
-		0 <= m.SegLen[1] && m.SegLen[1] <= 63    &&
-		0 <= m.SegLen[2] && m.SegLen[2] <= 63
+	return 0 <= m.SegLen[0] && m.SegLen[0] < MaxHops &&
+		0 <= m.SegLen[1] && m.SegLen[1] < MaxHops    &&
+		0 <= m.SegLen[2] && m.SegLen[2] < MaxHops
 }
 
 ghost
@@ -218,13 +290,38 @@ pure func (m MetaHdr) SerializedToLine() uint32 {
 }
 
 ghost
+requires acc(sl.Bytes(b, 0, len(b)), _)
 decreases
-pure func (m MetaHdr) InBounds() bool {
-	return 0 <= m.CurrINF && m.CurrINF <= 3   &&
-		0 <= m.CurrHF && m.CurrHF <= 63       &&
-		0 <= m.SegLen[0] && m.SegLen[0] <= 63 &&
-		0 <= m.SegLen[1] && m.SegLen[1] <= 63 &&
-		0 <= m.SegLen[2] && m.SegLen[2] <= 63
+pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
+	return MetaLen <= len(b)                &&
+		let lenR := len(b)                  in
+		let b0 := sl.GetByte(b, 0, lenR, 0) in
+		let b1 := sl.GetByte(b, 0, lenR, 1) in
+		let b2 := sl.GetByte(b, 0, lenR, 2) in
+		let b3 := sl.GetByte(b, 0, lenR, 3) in
+		let v  := m.SerializedToLine()      in
+		binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, v)
+}
+
+ghost
+requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+decreases
+pure func (s Base) EqAbsHeader(ub []byte) bool {
+	// we compute the sublice ub[:MetaLen] inside this function instead
+	// of expecting the correct subslice to be passed, otherwise this function
+	// becomes too cumbersome to use in calls from (*Raw).EqAbsHeader due to the
+	// lack of a folding expression. Same goes for MetaHdr.EqAbsHeader.
+	return MetaLen <= len(ub) &&
+		s == RawBytesToBase(ub)
+}
+
+ghost
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
+decreases
+pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
+	return MetaLen <= len(ub) &&
+		unfolding acc(sl.Bytes(ub, 0, len(ub)), _) in
+		s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen]))
 }
 
 /** Lemma proven in /VerifiedSCION/verification/utils/bitwise/proofs.dfy **/

@@ -28,14 +28,14 @@ HostNone implements HostAddr
 
 pred (h HostIPv4) Mem() {
 	len(h) == HostLenIPv4 &&
-	slices.AbsSlice_Bytes(h, 0, len(h))
+	slices.Bytes(h, 0, len(h))
 }
 
 HostIPv4 implements HostAddr
 
 pred (h HostIPv6) Mem() {
 	len(h) == HostLenIPv6 &&
-	slices.AbsSlice_Bytes(h, 0, len(h))
+	slices.Bytes(h, 0, len(h))
 }
 
 HostIPv6 implements HostAddr

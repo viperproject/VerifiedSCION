@@ -24,21 +24,4 @@ func testAllocateNonInitMem() {
 }
 
 // A test folding Mem(ubuf) is skipped here, as one can just call DesugarFromBytes to get the
-// desired predicate
-
-// (*Path).Len() cannot be currently be verified because Gobra does not allow statements in
-// pure functions, but Len must be pure.
-// This method contains the same exact body and checks that the contract holds.
-ghost
-preserves acc(p.Mem(ubuf), _)
-ensures   !p.hasScionPath(ubuf) ==> l == MetadataLen
-ensures   p.hasScionPath(ubuf)  ==> l == MetadataLen + unfolding acc(p.Mem(ubuf), _) in p.ScionPath.Len(ubuf[MetadataLen:])
-decreases
-func len_test(p *Path, ubuf []byte) (l int) {
-	unfold acc(p.Mem(ubuf), _) // would need to be 'unfolding' in the pure version
-	if p.ScionPath == nil {
-		return MetadataLen
-	}
-	unfold acc(p.ScionPath.Mem(ubuf[MetadataLen:]), _) // would need to be 'unfolding' in the pure version
-	return  MetadataLen + p.ScionPath.Len(ubuf[MetadataLen:])
-}
+// desired predicate.

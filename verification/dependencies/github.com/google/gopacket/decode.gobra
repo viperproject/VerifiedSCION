@@ -8,7 +8,7 @@
 
 package gopacket
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import sl "github.com/scionproto/scion/verification/utils/slices"
 
 type DecodeFeedback interface {
 	pred Mem()
@@ -90,7 +90,7 @@ type Decoder interface {
 	pred Mem()
 
 	requires acc(LayerTypesMem(), _)
-	requires slices.AbsSlice_Bytes(b, 0, len(b))
+	requires sl.Bytes(b, 0, len(b))
 	preserves Mem()
 	preserves p.Mem()
 	decreases

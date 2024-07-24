@@ -126,20 +126,40 @@ ensures res == "binary.LittleEndian"
 decreases
 pure func (l littleEndian) GoString() (res string) { return "binary.LittleEndian" }
 
+// The specs here could be simpler now that we have FUint16Spec and FPutUint16Spec.
+
+decreases
+pure func (e bigEndian) Uint16Spec(b0, b1 byte) (res uint16) {
+	return uint16(b1) | uint16(b0)<<8
+}
+
 trusted // related to https://github.com/viperproject/gobra/issues/192
 requires acc(&b[0], _) && acc(&b[1], _)
 ensures  res >= 0
+ensures  res == BigEndian.Uint16Spec(b[0], b[1])
 decreases
 pure func (e bigEndian) Uint16(b []byte) (res uint16) {
 	return uint16(b[1]) | uint16(b[0])<<8
 }
 
+decreases
+pure func (e bigEndian) PutUint16Spec(b0, b1 byte, v uint16) bool {
+	return b0 == byte(v >> 8) &&
+		b1 == byte(v)
+}
+
+// Proven in verification/utils/bitwise/proofs.dfy
+trusted
 preserves acc(&b[0]) && acc(&b[1])
+ensures   BigEndian.PutUint16Spec(b[0], b[1], v)
+ensures   BigEndian.Uint16Spec(b[0], b[1]) == v
 decreases
 func (e bigEndian) PutUint16(b []byte, v uint16) {
 	b[0] = byte(v >> 8)
 	b[1] = byte(v)
 }
+
+// The specs here could be simpler now that we have FUint32Spec and FPutUint32Spec.
 
 decreases
 pure func (e bigEndian) Uint32Spec(b0, b1, b2, b3 byte) (res uint32) {
@@ -163,8 +183,11 @@ pure func (e bigEndian) PutUint32Spec(b0, b1, b2, b3 byte, v uint32) bool {
 		b3 == byte(v)
 }
 
+// Proven in verification/utils/bitwise/proofs.dfy
+trusted
 preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
 ensures   BigEndian.PutUint32Spec(b[0], b[1], b[2], b[3], v)
+ensures   BigEndian.Uint32Spec(b[0], b[1], b[2], b[3]) == v
 decreases
 func (e bigEndian) PutUint32(b []byte, v uint32) {
 	b[0] = byte(v >> 24)

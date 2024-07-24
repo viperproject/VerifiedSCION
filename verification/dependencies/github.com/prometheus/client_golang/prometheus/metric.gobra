@@ -39,7 +39,7 @@ type Metric interface {
 
 	// Write encodes the Metric into a "Metric" Protocol Buffer data
 	// transmission object.
-	// (joao) Not supported; we do not need to go down this rabbit hole for our purposes
+	// (VerifiedSCION) Not supported; we do not need to go down this rabbit hole for our purposes
 	// Write(*dto.Metric) error
 
 }

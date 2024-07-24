@@ -19,8 +19,9 @@
 package io
 
 // pkt2
+// Here, we already instantiated the type params, instead of
+// leaving them generic as done in Isabelle.
 type IO_pkt2 adt {
-	// Here, we already instantiated the type params
 	IO_Packet2 {
 		CurrSeg  IO_seg3
 		LeftSeg  option[IO_seg2]

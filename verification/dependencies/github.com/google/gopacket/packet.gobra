@@ -10,7 +10,7 @@ package gopacket
 
 import (
 	"time"
-	"github.com/scionproto/scion/verification/utils/slices"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 type CaptureInfo struct {
@@ -105,8 +105,8 @@ type Packet interface {
 
 	requires Mem()
 	// (VerifiedSCION) not sure if we need this
-	// ensures slices.AbsSlice_Bytes(res, 0, len(res))
-	// ensures slices.AbsSlice_Bytes(res, 0, len(res)) --* Mem()
+	// ensures sl.Bytes(res, 0, len(res))
+	// ensures sl.Bytes(res, 0, len(res)) --* Mem()
 	decreases
 	Data() (res []byte)
 	

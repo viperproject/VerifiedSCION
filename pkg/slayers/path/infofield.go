@@ -22,8 +22,10 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/private/util"
+	//@ bits "github.com/scionproto/scion/verification/utils/bitwise"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ "github.com/scionproto/scion/verification/utils/slices"
+	//@ "verification/io"
 )
 
 // InfoLen is the size of an InfoField in bytes.
@@ -60,14 +62,16 @@ type InfoField struct {
 // path.InfoLen.
 // @ requires  len(raw) >= InfoLen
 // @ preserves acc(inf)
-// @ preserves acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R45)
+// @ preserves acc(slices.Bytes(raw, 0, len(raw)), R45)
 // @ ensures   err == nil
+// @ ensures   BytesToAbsInfoField(raw, 0) ==
+// @	inf.ToAbsInfoField()
 // @ decreases
 func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < InfoLen {
 		return serrors.New("InfoField raw too short", "expected", InfoLen, "actual", len(raw))
 	}
-	//@ unfold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R50)
+	//@ unfold acc(slices.Bytes(raw, 0, len(raw)), R50)
 	inf.ConsDir = raw[0]&0x1 == 0x1
 	inf.Peer = raw[0]&0x2 == 0x2
 	//@ assert &raw[2:4][0] == &raw[2] && &raw[2:4][1] == &raw[3]
@@ -75,7 +79,9 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert &raw[4:8][0] == &raw[4] && &raw[4:8][1] == &raw[5]
 	//@ assert &raw[4:8][2] == &raw[6] && &raw[4:8][3] == &raw[7]
 	inf.Timestamp = binary.BigEndian.Uint32(raw[4:8])
-	//@ fold acc(slices.AbsSlice_Bytes(raw, 0, InfoLen), R50)
+	//@ fold acc(slices.Bytes(raw, 0, len(raw)), R50)
+	//@ assert reveal BytesToAbsInfoField(raw, 0) ==
+	//@ 	inf.ToAbsInfoField()
 	return nil
 }
 
@@ -83,40 +89,63 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // path.InfoLen.
 // @ requires  len(b) >= InfoLen
 // @ preserves acc(inf, R10)
-// @ preserves slices.AbsSlice_Bytes(b, 0, InfoLen)
+// @ preserves slices.Bytes(b, 0, len(b))
 // @ ensures   err == nil
+// @ ensures   inf.ToAbsInfoField() ==
+// @ 	BytesToAbsInfoField(b, 0)
 // @ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	if len(b) < InfoLen {
 		return serrors.New("buffer for InfoField too short", "expected", InfoLen,
 			"actual", len(b))
 	}
-	//@ unfold slices.AbsSlice_Bytes(b, 0, InfoLen)
+	//@ ghost targetAbsInfo := inf.ToAbsInfoField()
+	//@ unfold slices.Bytes(b, 0, len(b))
 	b[0] = 0
 	if inf.ConsDir {
 		b[0] |= 0x1
 	}
+	//@ ghost tmpInfo1 := BytesToAbsInfoFieldHelper(b, 0)
+	//@ bits.InfoFieldFirstByteSerializationLemmas()
+	//@ assert tmpInfo1.ConsDir == targetAbsInfo.ConsDir
+	//@ ghost firstByte := b[0]
 	if inf.Peer {
 		b[0] |= 0x2
 	}
+	//@ tmpInfo2 := BytesToAbsInfoFieldHelper(b, 0)
+	//@ assert tmpInfo2.Peer == (b[0] & 0x2 == 0x2)
+	//@ assert tmpInfo2.ConsDir == (b[0] & 0x1 == 0x1)
+	//@ assert tmpInfo2.Peer == targetAbsInfo.Peer
+	//@ assert tmpInfo2.ConsDir == tmpInfo1.ConsDir
+	//@ assert tmpInfo2.ConsDir == targetAbsInfo.ConsDir
 	b[1] = 0 // reserved
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]
 	binary.BigEndian.PutUint16(b[2:4], inf.SegID)
+	//@ ghost tmpInfo3 := BytesToAbsInfoFieldHelper(b, 0)
+	//@ assert tmpInfo3.UInfo == targetAbsInfo.UInfo
 	//@ assert &b[4:8][0] == &b[4] && &b[4:8][1] == &b[5]
 	//@ assert &b[4:8][2] == &b[6] && &b[4:8][3] == &b[7]
 	binary.BigEndian.PutUint32(b[4:8], inf.Timestamp)
-	//@ fold slices.AbsSlice_Bytes(b, 0, InfoLen)
+	//@ ghost tmpInfo4 := BytesToAbsInfoFieldHelper(b, 0)
+	//@ assert tmpInfo4.AInfo == targetAbsInfo.AInfo
+	//@ fold slices.Bytes(b, 0, len(b))
+	//@ assert inf.ToAbsInfoField() ==
+	//@ 	reveal BytesToAbsInfoField(b, 0)
 	return nil
 }
 
 // UpdateSegID updates the SegID field by XORing the SegID field with the 2
 // first bytes of the MAC. It is the beta calculation according to
 // https://docs.scion.org/en/latest/protocols/scion-header.html#hop-field-mac-computation
+// @ requires hf.HVF == AbsMac(hfMac)
 // @ preserves acc(&inf.SegID)
+// @ ensures AbsUInfoFromUint16(inf.SegID) ==
+// @ 	old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf))
 // @ decreases
-func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte) {
+func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte /* @, ghost hf io.IO_HF @ */) {
 	//@ share hfMac
 	inf.SegID = inf.SegID ^ binary.BigEndian.Uint16(hfMac[:2])
+	// @ AssumeForIO(AbsUInfoFromUint16(inf.SegID) == old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf)))
 }
 
 // @ decreases

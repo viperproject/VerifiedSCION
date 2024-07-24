@@ -32,6 +32,6 @@ pred (b *bfdSend) Mem() {
 	acc(b.scn) &&
 	acc(b.ohp) &&
 	b.mac.Mem() &&
-	sl.AbsSlice_Bytes(b.macBuffer, 0, path.MACBufferSize) &&
+	sl.Bytes(b.macBuffer, 0, path.MACBufferSize) &&
 	b.buffer.Mem()
 }

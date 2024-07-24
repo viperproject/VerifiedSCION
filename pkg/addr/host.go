@@ -28,7 +28,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
+	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 type HostAddrType uint8
@@ -196,7 +196,7 @@ func (h HostIPv4) Pack() (res []byte) {
 func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
 	//@ unfold acc(h.Mem(), R13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
+	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
 	return net.IP(h).To4( /*@ false @*/ )
 }
 
@@ -205,10 +205,10 @@ func (h HostIPv4) IP() (res net.IP) {
 // @ decreases
 func (h HostIPv4) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), R13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
+	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
 	var tmp HostIPv4 = HostIPv4(append( /*@ R13, @*/ net.IP(nil), h...))
-	//@ fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
-	//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+	//@ fold acc(sl.Bytes(h, 0, len(h)), R13)
+	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	//@ fold acc(h.Mem(), R13)
 	//@ fold tmp.Mem()
 	return tmp
@@ -231,7 +231,7 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
 	//@ ghost defer fold acc(h.Mem(), R13)
-	//@ ghost defer fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
+	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
 	return h.IP().String()
 }
 
@@ -254,7 +254,7 @@ func (h HostIPv6) Type() HostAddrType {
 // @ decreases
 func (h HostIPv6) Pack() (res []byte) {
 	//@ unfold acc(h.Mem(), R13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
+	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
 	return []byte(h)[:HostLenIPv6]
 }
 
@@ -264,7 +264,7 @@ func (h HostIPv6) Pack() (res []byte) {
 // @ decreases
 func (h HostIPv6) IP() (res net.IP) {
 	//@ unfold acc(h.Mem(), R13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
+	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
 	return net.IP(h)
 }
 
@@ -273,10 +273,10 @@ func (h HostIPv6) IP() (res net.IP) {
 // @ decreases
 func (h HostIPv6) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), R13)
-	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
+	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
 	var tmp HostIPv6 = HostIPv6(append( /*@ R13, @*/ net.IP(nil), h...))
-	//@ fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
-	//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+	//@ fold acc(sl.Bytes(h, 0, len(h)), R13)
+	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	//@ fold acc(h.Mem(), R13)
 	//@ fold tmp.Mem()
 	return tmp
@@ -299,7 +299,7 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 func (h HostIPv6) String() string {
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv6
 	//@ ghost defer fold acc(h.Mem(), R13)
-	//@ ghost defer fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), R13)
+	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
 	return h.IP().String()
 }
 
@@ -442,7 +442,7 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		}
 		//@ assert forall i int :: { &b[:HostLenIPv4][i] } 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
 		tmp := HostIPv4(b[:HostLenIPv4])
-		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+		//@ fold sl.Bytes(tmp, 0, len(tmp))
 		//@ fold tmp.Mem()
 		return tmp, nil
 	case HostTypeIPv6:
@@ -451,7 +451,7 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 		}
 		//@ assert forall i int :: { &b[:HostLenIPv4][i] } 0 <= i && i < len(b[:HostLenIPv4]) ==> &b[:HostLenIPv4][i] == &b[i]
 		tmp := HostIPv6(b[:HostLenIPv6])
-		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+		//@ fold sl.Bytes(tmp, 0, len(tmp))
 		//@ fold tmp.Mem()
 		return tmp, nil
 	case HostTypeSVC:
@@ -473,12 +473,12 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 func HostFromIP(ip net.IP) (res HostAddr) {
 	if ip4 := ip.To4( /*@ false @*/ ); ip4 != nil {
 		tmp := HostIPv4(ip4)
-		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+		//@ fold sl.Bytes(tmp, 0, len(tmp))
 		//@ fold tmp.Mem()
 		return tmp
 	}
 	tmp := HostIPv6(ip)
-	//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	//@ fold tmp.Mem()
 	return tmp
 }

@@ -16,7 +16,7 @@
 
 package scion
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import sl "github.com/scionproto/scion/verification/utils/slices"
 
 func testAllocateNonInitRaw() {
 	r := &Raw{}
@@ -29,7 +29,7 @@ func testAllocateRaw() {
 	fold r.Base.Mem()
 	assert r.Base.Len() == MetaLen
 	s := make([]byte, MetaLen)
-	fold slices.AbsSlice_Bytes(s, 0, len(s))
+	fold sl.Bytes(s, 0, len(s))
 	r.Raw = s
 	fold r.Mem(s)
 }

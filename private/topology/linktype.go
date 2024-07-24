@@ -22,7 +22,7 @@ import (
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
-	//@ "github.com/scionproto/scion/verification/utils/slices"
+	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // LinkType describes inter-AS links.
@@ -44,7 +44,7 @@ const (
 	Peer LinkType = 4
 )
 
-//@ decreases
+// @ decreases
 func (l LinkType) String() string {
 	if l == Unset {
 		return "unset"
@@ -53,57 +53,57 @@ func (l LinkType) String() string {
 	if err != nil {
 		return err.Error()
 	}
-	//@ unfold slices.AbsSlice_Bytes(s, 0, len(s))
+	//@ unfold sl.Bytes(s, 0, len(s))
 	return string(s)
 }
 
 // LinkTypeFromString returns the numerical link type associated with a string description. If the
 // string is not recognized, an Unset link type is returned. The matching is case-insensitive.
-//@ decreases
+// @ decreases
 func LinkTypeFromString(s string) (res LinkType) {
 	var l /*@@@*/ LinkType
 	tmp := []byte(s)
-	//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	if err := l.UnmarshalText(tmp); err != nil {
 		return Unset
 	}
 	return l
 }
 
-//@ ensures (l == Core || l == Parent || l == Child || l == Peer) == (err == nil)
-//@ ensures err == nil ==> slices.AbsSlice_Bytes(res, 0, len(res))
-//@ ensures err != nil ==> err.ErrorMem()
-//@ decreases
+// @ ensures (l == Core || l == Parent || l == Child || l == Peer) == (err == nil)
+// @ ensures err == nil ==> sl.Bytes(res, 0, len(res))
+// @ ensures err != nil ==> err.ErrorMem()
+// @ decreases
 func (l LinkType) MarshalText() (res []byte, err error) {
 	switch l {
 	case Core:
 		tmp := []byte("core")
-		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+		//@ fold sl.Bytes(tmp, 0, len(tmp))
 		return tmp, nil
 	case Parent:
 		tmp := []byte("parent")
-		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+		//@ fold sl.Bytes(tmp, 0, len(tmp))
 		return tmp, nil
 	case Child:
 		tmp := []byte("child")
-		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+		//@ fold sl.Bytes(tmp, 0, len(tmp))
 		return tmp, nil
 	case Peer:
 		tmp := []byte("peer")
-		//@ fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+		//@ fold sl.Bytes(tmp, 0, len(tmp))
 		return tmp, nil
 	default:
 		return nil, serrors.New("invalid link type")
 	}
 }
 
-//@ preserves acc(l)
-//@ preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R15)
-//@ ensures   err != nil ==> err.ErrorMem()
-//@ decreases
+// @ preserves acc(l)
+// @ preserves acc(sl.Bytes(data, 0, len(data)), R15)
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ decreases
 func (l *LinkType) UnmarshalText(data []byte) (err error) {
-	//@ unfold acc(slices.AbsSlice_Bytes(data, 0, len(data)), R15)
-	//@ ghost defer fold acc(slices.AbsSlice_Bytes(data, 0, len(data)), R15)
+	//@ unfold acc(sl.Bytes(data, 0, len(data)), R15)
+	//@ ghost defer fold acc(sl.Bytes(data, 0, len(data)), R15)
 	switch strings.ToLower(string(data)) {
 	case "core":
 		*l = Core

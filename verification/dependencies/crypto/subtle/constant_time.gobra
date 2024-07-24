@@ -9,16 +9,16 @@
 
 package subtle
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import sl "github.com/scionproto/scion/verification/utils/slices"
 
 // ConstantTimeCompare returns 1 if the two slices, x and y, have equal contents
 // and 0 otherwise. The time taken is a function of the length of the slices and
 // is independent of the contents.
-requires acc(slices.AbsSlice_Bytes(x, 0, len(x)), _)
-requires acc(slices.AbsSlice_Bytes(y, 0, len(y)), _)
+requires acc(sl.Bytes(x, 0, len(x)), _)
+requires acc(sl.Bytes(y, 0, len(y)), _)
 // postconditions hidden for now:
-// ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> (forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 1)
-// ensures unfolding slices.AbsSlice_Bytes(x, 0, len(x)) in (unfolding slices.AbsSlice_Bytes(y, 0, len(y)) in len(x) == len(y) ==> !(forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 0)
+// ensures unfolding sl.Bytes(x, 0, len(x)) in (unfolding sl.Bytes(y, 0, len(y)) in len(x) == len(y) ==> (forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 1)
+// ensures unfolding sl.Bytes(x, 0, len(x)) in (unfolding sl.Bytes(y, 0, len(y)) in len(x) == len(y) ==> !(forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 0)
 ensures len(x) != len(y) ==> res == 0
 decreases _
 pure func ConstantTimeCompare(x, y []byte) (res int)

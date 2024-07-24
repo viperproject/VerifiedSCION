@@ -59,27 +59,3 @@ ensures child.Mem()
 ensures child.Mem() --* parent.Mem()
 decreases _
 func WithValue(parent Context, key, val interface{ pred Mem() }) (child Context)
-
-/* Below functions are closure-dependent and currently unsupported.
-
-type CancelFunc func()
-
-requires parent.Mem()
-ensures child.Mem()
-ensures child.Mem() --* parent.Mem()
-decreases _
-func WithCancel(parent Context) (child Context, cancel CancelFunc)
-
-requires parent.Mem()
-ensures child.Mem()
-ensures child.Mem() --* parent.Mem()
-decreases _
-func WithDeadline(parent Context, d time.Time) (child Context, cancel CancelFunc)
-
-requires parent.Mem()
-ensures child.Mem()
-ensures child.Mem() --* parent.Mem()
-decreases _
-func WithTimeout(parent Context, timeout time.Duration) (child Context, cancel CancelFunc)
-
-*/

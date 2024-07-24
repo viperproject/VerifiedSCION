@@ -42,19 +42,18 @@ type Message struct {
 	NN    int // # of bytes read or written from/to OOB
 	Flags int // protocol-specific information on the received message
 
-	// (VerifiedSCION) the following are, morally, ghost fields:
 	// is it still ok to read the Addr of the Message?
-	IsActive bool
+	ghost IsActive bool
 	// do we have a fixed amount of perms to the Addr or a wildcard amount?
-	WildcardPerm bool
+	ghost WildcardPerm bool
 }
 
 pred (m *Message) Mem() {
 	acc(m) &&
 	len(m.Buffers) == 1 &&
 	acc(&m.Buffers[0]) &&
-	sl.AbsSlice_Bytes(m.Buffers[0], 0, len(m.Buffers[0])) &&
-	sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
+	sl.Bytes(m.Buffers[0], 0, len(m.Buffers[0])) &&
+	sl.Bytes(m.OOB, 0, len(m.OOB)) &&
 	// typeOf(m.Addr) == type[*net.UDPAddr] &&
 	((m.Addr != nil && m.IsActive && !m.WildcardPerm) ==> m.Addr.Mem()) &&
 	((m.Addr != nil && m.IsActive && m.WildcardPerm) ==> acc(m.Addr.Mem(), _)) &&
