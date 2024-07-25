@@ -205,7 +205,6 @@ func ExternalEnterOrExitEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], ne
 	reveal AbsValidateEgressIDConstraint(nextPkt, (ingressID != none[io.IO_ifs]), dp)
 	reveal AbsProcessEgress(nextPkt)
 	if(ingressID == none[io.IO_ifs]){
-		// assert false
 		AtomicExit(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 	} else {
 		AtomicEnter(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
