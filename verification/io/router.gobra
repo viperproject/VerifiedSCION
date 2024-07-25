@@ -38,7 +38,6 @@ pure func (dp DataPlaneSpec) hf_valid(d bool, ts uint, uinfo set[IO_msgterm], hf
 }
 
 ghost
-opaque
 decreases
 pure func hf_valid_impl(asid IO_as, ts uint, uinfo set[IO_msgterm], hf IO_HF) bool {
 	return let inif := hf.InIF2 in
@@ -49,6 +48,7 @@ pure func hf_valid_impl(asid IO_as, ts uint, uinfo set[IO_msgterm], hf IO_HF) bo
 }
 
 ghost
+opaque
 ensures result.extract_asid() == asid
 decreases
 pure func nextMsgtermSpec(asid IO_as, inif option[IO_ifs], egif option[IO_ifs], ts uint, uinfo set[IO_msgterm]) (result IO_msgterm) {
