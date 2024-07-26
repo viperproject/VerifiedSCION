@@ -27,6 +27,7 @@ func Unwrap(err error) (res error)
 // it implements a method Is(error) bool such that Is(target) returns true.
 preserves err    != nil ==> err.ErrorMem()
 preserves target != nil ==> target.ErrorMem()
+ensures   res && target != nil ==> err != nil
 decreases err.ErrorMem()
 func Is(err, target error) (res bool)
 

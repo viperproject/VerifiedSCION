@@ -76,12 +76,12 @@ func Wrap(msg, cause error, errCtx ...interface{}) (res error)
 // Elements of errCtx are limited to "primitive types" at the moment.
 // This is a safe but strict under-approximation of what can be done
 // with this method.
-requires  cause.ErrorMem()
+requires  cause != nil ==> cause.ErrorMem()
 preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 // The following precondition cannot be adequately captured in Gobra.
 // requires forall i int :: 0 <= i && i < len(errCtx) ==> IsOfPrimitiveType(errCtx[i])
 ensures res != nil && res.ErrorMem()
-ensures res.ErrorMem() --* cause.ErrorMem()
+ensures cause != nil ==> (res.ErrorMem() --* cause.ErrorMem())
 decreases
 func WrapStr(msg string, cause error, errCtx ...interface{}) (res error)
 

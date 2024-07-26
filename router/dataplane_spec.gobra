@@ -129,6 +129,7 @@ func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
 pred (p *scionPacketProcessor) initMem() {
 	acc(&p.d)                                    &&
 	acc(&p.ingressID)                            &&
+	acc(&p.buffWithFullPerm)                     &&
 	acc(&p.buffer)                               &&
 	acc(&p.mac)                                  &&
 	acc(p.scionLayer.NonInitMem())               &&
@@ -566,7 +567,8 @@ pred (s* scionPacketProcessor) sInit() {
 	acc(&s.d)                                    &&
 	acc(&s.ingressID)                            &&
 	acc(&s.buffer) && s.buffer != nil            &&
-	s.buffer.Mem()                               &&
+	acc(&s.buffWithFullPerm)                     &&
+	(s.buffWithFullPerm ==> s.buffer.Mem())      &&
 	acc(&s.mac) && s.mac != nil && s.mac.Mem()   &&
 	s.scionLayer.NonInitMem()                    &&
 	// The following is not necessary
@@ -628,6 +630,21 @@ requires acc(s.sInit(), _)
 decreases
 pure func (s* scionPacketProcessor) sInitSegmentChange() (res bool) {
 	return unfolding acc(s.sInit(), _) in s.segmentChange
+}
+
+ghost
+requires acc(s.sInit(), _)
+decreases
+pure func (s* scionPacketProcessor) sInitBuffWithFullPerm() (res bool) {
+	return unfolding acc(s.sInit(), _) in s.buffWithFullPerm
+}
+
+ghost
+requires acc(s.sInit(), _)
+ensures  res != nil
+decreases
+pure func (s* scionPacketProcessor) sInitBuffer() (res gopacket.SerializeBuffer) {
+	return unfolding acc(s.sInit(), _) in s.buffer
 }
 
 /** end spec for newPacketProcessor **/
