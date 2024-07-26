@@ -1409,8 +1409,8 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	return p
 }
 
-// @ requires  p.sInitBuffWithFullPerm()
 // @ preserves p.sInit()
+// @ preserves p.sInitBuffWithFullPerm()
 // @ ensures   p.sInitD()         == old(p.sInitD())
 // @ ensures   p.getIngressID()   == old(p.getIngressID())
 // @ ensures   p.sInitRawPkt()    == nil
@@ -1922,7 +1922,7 @@ type macBuffersT struct {
 // @ requires sl.Bytes(ub, 0, len(ub))
 // @ requires acc(&p.ingressID,  R45)
 // @ requires acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires cause.ErrorMem()
+// @ requires cause != nil ==> cause.ErrorMem()
 // @ requires acc(&p.buffWithFullPerm)
 // @ requires p.buffWithFullPerm
 // @ ensures  acc(&p.buffWithFullPerm)
@@ -2138,7 +2138,8 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // posts for IO:
 // @ ensures   reserr == nil ==>
-// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL))
+// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL)) &&
+// @ 	respr === processResult{}
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases
@@ -2237,7 +2238,8 @@ func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost ubScionL []byte, gho
 // @ requires  p.EqAbsHopField(oldPkt)
 // @ requires  p.EqAbsInfoField(oldPkt)
 // @ ensures   reserr == nil ==>
-// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL))
+// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL)) &&
+// @ 	respr === processResult{}
 // @ ensures   reserr == nil ==>
 // @ 	AbsValidateIngressIDConstraint(oldPkt, path.ifsToIO_ifs(p.ingressID))
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
@@ -2312,7 +2314,8 @@ func (p *scionPacketProcessor) validateIngressID( /*@ ghost oldPkt io.IO_pkt2, g
 // @ ensures   reserr == nil ==> p.DstIsLocalIngressID(ubScionL)
 // @ ensures   reserr == nil ==> p.LastHopLen(ubScionL)
 // @ ensures   reserr == nil ==>
-// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL))
+// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL)) &&
+// @ 	respr === processResult{}
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases
@@ -2451,7 +2454,7 @@ func (p *scionPacketProcessor) invalidSrcIA(
 // @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.ingressID, R40)
-// @ ensures   acc(&p.d, R50)
+// @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ub), R3)
@@ -2624,7 +2627,8 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ ensures   reserr == nil ==>
-// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL))
+// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL)) &&
+// @ 	respr === processResult{}
 // @ decreases
 func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, ghost dp io.DataPlaneSpec, ghost ubScionL []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	pktEgressID := p.egressInterface( /*@ oldPkt @*/ )
@@ -2718,7 +2722,7 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost oldPkt io.IO_pkt2, gh
 		tmpRes, tmpErr := p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidSegmentChange,
-			&slayers.SCMPParameterProblem{Pointer: p.currentInfoPointer( /*@ nil @*/ )},
+			&slayers.SCMPParameterProblem{Pointer: p.currentInfoPointer( /*@ ubScionL @*/ )},
 			serrors.WithCtx(cannotRoute, "ingress_id", p.ingressID, "ingress_type", ingress,
 				"egress_id", pktEgressID, "egress_type", egress),
 			/*@ ubScionL, ubLL, startLL, endLL, @*/)
@@ -2903,7 +2907,8 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ ensures   reserr == nil ==>
-// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL))
+// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL)) &&
+// @ 	respr === processResult{}
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases
@@ -3003,7 +3008,8 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost oldPkt io.IO_pkt2, gh
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ ensures   reserr == nil ==>
-// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL))
+// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL)) &&
+// @ 	respr === processResult{}
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
@@ -3721,7 +3727,8 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ ensures   reserr == nil ==>
-// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL))
+// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL)) &&
+// @ 	respr === processResult{}
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases
@@ -4433,6 +4440,7 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ requires  acc(&p.buffer, R55) && p.buffer.Mem()
 // @ requires  acc(&p.buffWithFullPerm)
 // @ requires  p.buffWithFullPerm
+// @ requires  cause != nil ==> cause.ErrorMem()
 // @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   acc(p.scionLayer.Mem(ub), R4)
