@@ -3038,8 +3038,12 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost oldPkt io.IO_pkt2, gh
 // @ ensures   reserr == nil ==>
 // @ 	respr === processResult{}
 // contracts for IO-spec
-// @ ensures   reserr == nil ==>
-// @ 	seqs.ToSeqByte(ubScionL) == old(seqs.ToSeqByte(ubScionL))
+// @ requires  slayers.ValidPktMetaHdr(ubScionL) && p.scionLayer.EqAbsHeader(ubScionL)
+// @ requires  absPkt(ubScionL).PathNotFullyTraversed()
+// @ ensures   reserr == nil ==> slayers.ValidPktMetaHdr(ubScionL) && p.scionLayer.EqAbsHeader(ubScionL)
+// @ ensures   reserr == nil ==> absPkt(ubScionL).PathNotFullyTraversed()
+// @ ensures   reserr == nil ==> absPkt(ubScionL) == old(absPkt(ubScionL))
+// @ ensures   reserr == nil ==> old(slayers.IsSupportedPkt(ubScionL)) == slayers.IsSupportedPkt(ubScionL)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isIO_val_Unsupported
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
@@ -4031,6 +4035,7 @@ func (p *scionPacketProcessor) process(
 		// @ unfold p.d.validResult(r, aliasesUb)
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, aliasesUb)
 		// @ assert ub === p.rawPkt
+		// @ assert slayers.IsSupportedPkt(ub) == old(slayers.IsSupportedPkt(ub))
 		// @ ghost if(slayers.IsSupportedPkt(ub)) {
 		// @ 	InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
 		// @ }
@@ -4101,6 +4106,7 @@ func (p *scionPacketProcessor) process(
 		// @ p.d.InDomainExternalInForwardingMetrics(egressID)
 		// @ assert absPkt(ub) == AbsProcessEgress(nextPkt)
 		// @ nextPkt = absPkt(ub)
+		// @ assert slayers.IsSupportedPkt(ub) == old(slayers.IsSupportedPkt(ub))
 		// @ ghost if(slayers.IsSupportedPkt(ub)) {
 		// @ 	ghost if(!p.segmentChange) {
 		// @ 		ExternalEnterOrExitEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
@@ -4119,6 +4125,7 @@ func (p *scionPacketProcessor) process(
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	if a, ok := p.d.internalNextHops[egressID]; ok {
 		// @ p.d.getInternal()
+		// @ assert slayers.IsSupportedPkt(ub) == old(slayers.IsSupportedPkt(ub))
 		// @ ghost if(slayers.IsSupportedPkt(ub)) {
 		// @ 	if(!p.segmentChange) {
 		// @ 		InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.IO_ifs], ioLock, ioSharedArg, dp)
