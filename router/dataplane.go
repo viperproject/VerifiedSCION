@@ -1410,7 +1410,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 }
 
 // @ requires  p.sInitBuffWithFullPerm()
-// @ preserves p.sInit(
+// @ preserves p.sInit()
 // @ ensures   p.sInitD()         == old(p.sInitD())
 // @ ensures   p.getIngressID()   == old(p.getIngressID())
 // @ ensures   p.sInitRawPkt()    == nil
@@ -2992,7 +2992,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost oldPkt io.IO_pkt2, gh
 // @ 	acc(p.lastLayer.Mem(ubLL), R15)
 // @ ensures   &p.scionLayer === p.lastLayer ==>
 // @ 	ubScionL === ubLL
-// @ ensures   sl.Bytes(ubScionL, 0, len(ubScionL))
+// @ ensures   acc(sl.Bytes(ubScionL, 0, len(ubScionL)), 1-R15)
 // @ ensures   acc(&p.buffer, R50)
 // @ ensures   respr === processResult{} ==>
 // @ 	p.buffer.Mem() && p.buffWithFullPerm

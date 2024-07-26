@@ -15,7 +15,7 @@
 // +gobra
 
 // This file is used for declaring assumptions which we cannot currenlty do
-// away with, due to Gobra's incompletnesses or lack of support for 
+// away with, due to Gobra's incompletnesses or lack of support for
 // specific features, like post-initialization invariants or because
 // Gobra does not currently infer that 'x' != nil if 'x.Mem()' holds,
 // where 'x' is of an interface type.
@@ -67,6 +67,7 @@ func establishInvalidSrcAddrForTransit()
 
 ghost
 ensures noSVCBackend.ErrorMem()
+ensures noSVCBackend != nil
 decreases _
 func establishNoSVCBackend()
 
