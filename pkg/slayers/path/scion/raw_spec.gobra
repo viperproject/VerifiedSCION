@@ -858,8 +858,9 @@ requires  offset + path.HopLen * segLen <= len(raw)
 requires  acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func hopFieldsBytePositions(raw []byte, offset int, currHFIdx int, segLen int, hops seq[io.IO_HF]) bool {
-	return forall i int :: { hops[i] } 0 <= i && i < len(hops) ==>
-		hops[i] == path.BytesToIO_HF(raw, 0, offset + path.HopLen * (currHFIdx + i), len(raw))
+	return forall i, j int :: { hops[i], path.BytesToIO_HF(raw, 0, j, len(raw))} 0 <= i && i < len(hops) ==>
+		(j == offset + path.HopLen * (currHFIdx + i)) &&
+		hops[i] == path.BytesToIO_HF(raw, 0, j, len(raw))
 }
 
 ghost
