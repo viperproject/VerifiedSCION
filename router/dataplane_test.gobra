@@ -75,7 +75,7 @@ func TestDataPlaneSetKey1() {
 	d.running = true
     key := []byte("dummy")
 
-    fold slices.AbsSlice_Bytes(key, 0, len(key))
+    fold slices.Bytes(key, 0, len(key))
 	fold d.Mem() // has to be inserted to satisfy precondition acc(d.Mem(), OutMutexPerm)
     fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
     d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
@@ -104,7 +104,7 @@ func TestDataPlaneSetKey3() {
 	d := &DataPlane{}
 
     key := []byte("dummy key xxxxxx")
-    fold slices.AbsSlice_Bytes(key, 0, len(key))
+    fold slices.Bytes(key, 0, len(key))
     fold d.Mem() // has to be inserted to satisfy precondition acc(d.Mem(), OutMutexPerm)
     fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
     d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
@@ -120,7 +120,7 @@ func TestDataPlaneSetKey4() {
 	d := &DataPlane{}
 
     key := []byte("dummy key xxxxxx")
-    fold slices.AbsSlice_Bytes(key, 0, len(key))
+    fold slices.Bytes(key, 0, len(key))
     fold d.Mem() // has to be inserted to satisfy precondition acc(d.Mem(), OutMutexPerm)
     fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
     d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
