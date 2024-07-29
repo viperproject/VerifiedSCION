@@ -23,7 +23,7 @@ func TestInfoSerializeDecode1() {
 		Timestamp: 0x100,
 	}
 	b := make([]byte, InfoLen)
-	fold slices.AbsSlice_Bytes(b, 0, InfoLen) // needs to be added manually
+	fold slices.Bytes(b, 0, InfoLen) // needs to be added manually
 	err1 := want.SerializeTo(b)
 
 	got := &InfoField{}

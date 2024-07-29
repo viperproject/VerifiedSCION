@@ -64,12 +64,12 @@ func TestHostFromRaw3() {
     expected := HostAddr(nil)
     if ip4 := ip.To4(false); ip4 != nil {
         tmp := HostIPv4(ip4)
-        fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+        fold slices.Bytes(tmp, 0, len(tmp))
         fold tmp.Mem()
         expected = tmp
     } else {
         tmp := HostIPv6(ip)
-        fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+        fold slices.Bytes(tmp, 0, len(tmp))
         fold tmp.Mem()
         expected = tmp
     }
@@ -123,12 +123,12 @@ func TestHostFromRaw6() {
     expected := HostAddr(nil)
     if ip4 := ip.To4(false); ip4 != nil {
         tmp := HostIPv4(ip4)
-        fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+        fold slices.Bytes(tmp, 0, len(tmp))
         fold tmp.Mem()
         expected = tmp
     } else {
         tmp := HostIPv6(ip)
-        fold slices.AbsSlice_Bytes(tmp, 0, len(tmp))
+        fold slices.Bytes(tmp, 0, len(tmp))
         fold tmp.Mem()
         expected = tmp
     }
