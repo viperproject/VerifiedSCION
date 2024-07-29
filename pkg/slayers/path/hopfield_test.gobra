@@ -28,7 +28,7 @@ func TestHopSerializeDecode() {
 	b := make([]byte, HopLen)
 
 	fold want.Mem() // needs to be added manually
-	fold slices.AbsSlice_Bytes(b, 0, HopLen) // needs to be added manually
+	fold slices.Bytes(b, 0, HopLen) // needs to be added manually
 	err1 := want.SerializeTo(b)
 
     assert c === b
