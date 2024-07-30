@@ -1,0 +1,149 @@
+// Copyright 2020 Anapaya Systems
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package onehop
+
+import (
+	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
+    "github.com/scionproto/scion/verification/utils/definitions"
+    sl "github.com/scionproto/scion/verification/utils/slices"
+)
+
+// NO ERROR
+// doesn't verify
+func TestSerializeDecode(ubuf []byte) {
+	want@ := Path{
+		Info: path.InfoField{
+			ConsDir:   true,
+			SegID:     0x222,
+			Timestamp: 0x100,
+		},
+		FirstHop: path.HopField{
+			IngressRouterAlert: true,
+			EgressRouterAlert:  true,
+			ExpTime:            63,
+			ConsIngress:        0,
+			ConsEgress:         1,
+			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+		},
+		SecondHop: path.HopField{
+			IngressRouterAlert: true,
+			EgressRouterAlert:  true,
+			ExpTime:            63,
+			ConsIngress:        2,
+			ConsEgress:         0,
+			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+		},
+	}
+
+	b := make([]byte, PathLen)
+
+    fold sl.Bytes(b, 0, len(b))
+
+    inhale acc(want.Mem(ubuf), definitions.R1)
+    inhale acc(sl.Bytes(ubuf, 0, len(ubuf)), definitions.R1)
+	err := want.SerializeTo(b, ubuf)
+	assert err == nil
+
+	got@ := Path{}
+    fold got.NonInitMem()
+	err := got.DecodeFromBytes(b)
+	assert err == nil
+
+    unfold got.Mem(b)
+
+	assert want == got
+}
+
+// complete path converts correctly
+// NO ERROR
+// doesn't verify
+func TestPathToSCIONDecoded1(ubuf []byte) {
+	input@ := Path{
+		Info: path.InfoField{
+			ConsDir:   true,
+			SegID:     0x222,
+			Timestamp: 0x100,
+		},
+		FirstHop: path.HopField{
+			IngressRouterAlert: true,
+			EgressRouterAlert:  true,
+			ExpTime:            63,
+			ConsIngress:        0,
+			ConsEgress:         1,
+			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+		},
+		SecondHop: path.HopField{
+			IngressRouterAlert: true,
+			EgressRouterAlert:  true,
+			ExpTime:            63,
+			ConsIngress:        2,
+			ConsEgress:         0,
+			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+		},
+	}
+
+	want := &scion.Decoded{
+		Base: scion.Base{
+			PathMeta: scion.MetaHdr{
+				CurrHF:  0,
+				CurrINF: 0,
+				SegLen:  [3]uint8{2, 0, 0},
+			},
+			NumHops: 2,
+			NumINF:  1,
+		},
+		HopFields:  []path.HopField{input.FirstHop, input.SecondHop},
+		InfoFields: []path.InfoField{input.Info},
+	}
+
+    inhale input.Mem(ubuf)
+    inhale sl.Bytes(ubuf, 0, len(ubuf))
+
+    sp, err := input.ToSCIONDecoded(ubuf)
+	assert err == nil
+	assert sp == want
+}
+
+// incomplete path
+// ERROR
+// doesn't verify
+func TestPathToSCIONDecoded2(input *Path, ubuf []byte) {
+	inputInp@ := &Path{
+		Info: path.InfoField{
+			ConsDir:   true,
+			SegID:     0x222,
+			Timestamp: 0x100,
+		},
+		FirstHop: path.HopField{
+			IngressRouterAlert: true,
+			EgressRouterAlert:  true,
+			ExpTime:            63,
+			ConsIngress:        0,
+			ConsEgress:         1,
+			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
+		},
+	}
+
+    assume input == inputInp
+
+    inhale input.Mem(ubuf)
+    inhale sl.Bytes(ubuf, 0, len(ubuf))
+    sp, err := input.ToSCIONDecoded(ubuf)
+    assert err != nil
+    assert sp == nil
+}
