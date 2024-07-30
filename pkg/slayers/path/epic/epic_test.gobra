@@ -1,0 +1,280 @@
+// Copyright 2020 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package epic
+
+import (
+	"github.com/scionproto/scion/pkg/slayers/path/scion"
+    "github.com/scionproto/scion/verification/utils/definitions"
+    sl "github.com/scionproto/scion/verification/utils/slices"
+)
+
+var (
+	// Values for the SCION subheader are taken from scion_test.go and raw_test.go.
+	rawScionPath = []byte(
+		"\x00\x00\x20\x80\x00\x00\x01\x11\x00\x00\x01\x00\x01\x00\x02\x22\x00\x00" +
+			"\x01\x00\x00\x3f\x00\x01\x00\x00\x01\x02\x03\x04\x05\x06\x00\x3f\x00" +
+			"\x03\x00\x02\x01\x02" +
+			"\x03\x04\x05\x06\x00\x3f\x00\x00\x00\x02\x01\x02\x03\x04\x05\x06\x00" +
+			"\x3f\x00\x01\x00\x00" +
+			"\x01\x02\x03\x04\x05\x06")
+	rawScionReversePath = []byte(
+		"\x43\x00\x20\x80\x00\x00\x02\x22\x00\x00\x01\x00\x01\x00\x01\x11\x00\x00" +
+			"\x01\x00\x00\x3f\x00\x01\x00\x00\x01\x02\x03\x04\x05\x06\x00\x3f\x00" +
+			"\x00\x00\x02\x01\x02" +
+			"\x03\x04\x05\x06\x00\x3f\x00\x03\x00\x02\x01\x02\x03\x04\x05\x06\x00" +
+			"\x3f\x00\x01\x00\x00" +
+			"\x01\x02\x03\x04\x05\x06")
+	rawEpicPath = append(perm(1/1), []byte("\x00\x00\x00\x01\x02\x00\x00\x03\x01\x02\x03\x04\x05\x06\x07\x08"),
+		rawScionPath...)
+	decodedScionPath = &scion.Raw{
+		Base: scion.Base{
+			PathMeta: scion.MetaHdr{
+				CurrINF: 0,
+				CurrHF:  0,
+				SegLen:  [3]uint8{2, 2, 0},
+			},
+			NumINF:  2,
+			NumHops: 4,
+		},
+		Raw: rawScionPath,
+	}
+)
+
+// Basic
+// NO ERROR
+// doesn't verify
+func TestSerialize1(ubuf []byte) {
+    path@ := Path{
+        PktID: PktID{
+            Timestamp: 1,
+            Counter:   0x02000003,
+        },
+        PHVF: []byte{1, 2, 3, 4},
+        LHVF: []byte{5, 6, 7, 8},
+        ScionPath: &scion.Raw{
+            Base: scion.Base{
+                PathMeta: scion.MetaHdr{
+                    CurrINF: 0,
+                    CurrHF:  0,
+                    SegLen:  [3]uint8{2, 2, 0},
+                },
+                NumINF:  2,
+                NumHops: 4,
+            },
+            Raw: rawScionPath,
+        },
+    }
+    serialized := rawEpicPath
+
+    b := make([]byte, len(serialized))
+
+    inhale acc(path.Mem(ubuf), definitions.R1)
+    inhale sl.Bytes(ubuf, 0, len(ubuf))
+
+    fold sl.Bytes(b, 0, len(b))
+    err := path.SerializeTo(b, ubuf)
+
+    assert err == nil
+
+    if err == nil {
+        assert serialized === b
+    }
+}
+
+// HVF too short
+// ERROR
+// verifies
+func TestSerialize2(path *Path, b []byte, ubuf []byte) {
+    pathTmp@ := &Path{
+        PktID: PktID{
+            Timestamp: 1,
+            Counter:   0x02000003,
+        },
+        PHVF: []byte{1, 2, 3},
+        LHVF: []byte{5, 6, 7, 8},
+        ScionPath: &scion.Raw{
+            Base: scion.Base{
+                PathMeta: scion.MetaHdr{
+                    CurrINF: 0,
+                    CurrHF:  0,
+                    SegLen:  [3]uint8{2, 2, 0},
+                },
+                NumINF:  2,
+                NumHops: 4,
+            },
+            Raw: rawScionPath,
+        },
+    }
+
+    assume path === pathTmp
+
+    serialize := []byte(nil)
+    bTmp := make([]byte, len(serialize))
+
+    assume b === bTmp
+
+    inhale acc(path.Mem(ubuf), definitions.R1)
+    inhale sl.Bytes(ubuf, 0, len(ubuf))
+    inhale sl.Bytes(b, 0, len(b))
+    err := path.SerializeTo(b, ubuf)
+
+    assert err != nil
+
+    if err == nil {
+        assert serialize === b
+    }
+}
+
+// Basic
+// NO ERROR
+// doesn't verify
+func TestDecode() {
+    path := Path{
+            PktID: PktID{
+                Timestamp: 1,
+                Counter:   0x02000003,
+            },
+            PHVF:      []byte{1, 2, 3, 4},
+            LHVF:      []byte{5, 6, 7, 8},
+            ScionPath: decodedScionPath,
+    }
+    rawScionPathTmp := []byte(
+        "\x00\x00\x20\x80\x00\x00\x01\x11\x00\x00\x01\x00\x01\x00\x02\x22\x00\x00" +
+            "\x01\x00\x00\x3f\x00\x01\x00\x00\x01\x02\x03\x04\x05\x06\x00\x3f\x00" +
+            "\x03\x00\x02\x01\x02" +
+            "\x03\x04\x05\x06\x00\x3f\x00\x00\x00\x02\x01\x02\x03\x04\x05\x06\x00" +
+            "\x3f\x00\x01\x00\x00" +
+            "\x01\x02\x03\x04\x05\x06")
+    serialized := append(perm(1/1), []byte("\x00\x00\x00\x01\x02\x00\x00\x03\x01\x02\x03\x04\x05\x06\x07\x08"),
+        rawScionPathTmp...)
+
+
+    got@ := Path{}
+
+    fold got.NonInitMem()
+    fold acc(sl.Bytes(serialized, 0, len(serialized)), definitions.R42)
+
+    err := got.DecodeFromBytes(serialized)
+
+    unfold got.Mem(serialized)
+
+    assert err == nil
+    assert path === got // assertion fails
+}
+
+// Basic reverse
+// NO ERROR
+// doesn't verify
+func TestReverse1(ubuf []byte) {
+    rawScionPathTmp := []byte(
+        "\x00\x00\x20\x80\x00\x00\x01\x11\x00\x00\x01\x00\x01\x00\x02\x22\x00\x00" +
+            "\x01\x00\x00\x3f\x00\x01\x00\x00\x01\x02\x03\x04\x05\x06\x00\x3f\x00" +
+            "\x03\x00\x02\x01\x02" +
+            "\x03\x04\x05\x06\x00\x3f\x00\x00\x00\x02\x01\x02\x03\x04\x05\x06\x00" +
+            "\x3f\x00\x01\x00\x00" +
+            "\x01\x02\x03\x04\x05\x06")
+
+    rawScionReversePathTmp := []byte(
+        "\x43\x00\x20\x80\x00\x00\x02\x22\x00\x00\x01\x00\x01\x00\x01\x11\x00\x00" +
+            "\x01\x00\x00\x3f\x00\x01\x00\x00\x01\x02\x03\x04\x05\x06\x00\x3f\x00" +
+            "\x00\x00\x02\x01\x02" +
+            "\x03\x04\x05\x06\x00\x3f\x00\x03\x00\x02\x01\x02\x03\x04\x05\x06\x00" +
+            "\x3f\x00\x01\x00\x00" +
+            "\x01\x02\x03\x04\x05\x06")
+
+    path@ := &Path{
+        PktID: PktID{
+            Timestamp: 1,
+            Counter:   0x02000003,
+        },
+        PHVF: []byte{1, 2, 3, 4},
+        LHVF: []byte{5, 6, 7, 8},
+        ScionPath: &scion.Raw{
+            Base: scion.Base{
+                PathMeta: scion.MetaHdr{
+                    CurrINF: 0,
+                    CurrHF:  0,
+                    SegLen:  [3]uint8{2, 2, 0},
+                },
+                NumINF:  2,
+                NumHops: 4,
+            },
+            Raw: append(perm(1/1), []byte(nil), rawScionPathTmp...), // copy of rawScionPath
+        },
+    }
+
+        pathReversed := &Path{
+            PktID: PktID{
+                Timestamp: 1,
+                Counter:   0x02000003,
+            },
+            PHVF: []byte{1, 2, 3, 4},
+            LHVF: []byte{5, 6, 7, 8},
+            ScionPath: &scion.Raw{
+                Base: scion.Base{
+                    PathMeta: scion.MetaHdr{
+                        CurrINF: 1,
+                        CurrHF:  3,
+                        SegLen:  [3]uint8{2, 2, 0},
+                    },
+                    NumINF:  2,
+                    NumHops: 4,
+                },
+                Raw: append(perm(1/1), []byte(nil), rawScionReversePathTmp...), // copy of rawScionReversePath
+            },
+        }
+
+    inhale path.Mem(ubuf)
+    inhale sl.Bytes(ubuf, 0, len(ubuf))
+    got, err := path.Reverse(ubuf)
+    assert err == nil
+    assert pathReversed === got // assertion fails
+}
+
+// Basic
+// NO ERROR
+// doesn't verify
+func TestSerializePktID1() {
+    pktID@ := PktID{
+        Timestamp: 1,
+        Counter:   0x02000003,
+    }
+    serialized := []byte{0, 0, 0, 1, 2, 0, 0, 3}
+
+    bNew := make([]byte, PktIDLen)
+    fold sl.Bytes(bNew, 0, len(bNew))
+    pktID.SerializeTo(bNew)
+    assert serialized === bNew // assertion fails
+}
+
+// Basic
+// NO ERROR
+// doesn't verify
+func TestDecodePktID1() {
+    pktID := PktID{
+        Timestamp: 1,
+        Counter:   0x02000003,
+    }
+    serialized := []byte{0, 0, 0, 1, 2, 0, 0, 3}
+
+    pktIDNew@ := PktID{}
+    fold acc(sl.Bytes(serialized, 0, len(serialized)), definitions.R42)
+
+    pktIDNew.DecodeFromBytes(serialized)
+
+    assert pktID === pktIDNew // assertion fails
+}
