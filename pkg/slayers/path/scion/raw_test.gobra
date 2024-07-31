@@ -1,0 +1,374 @@
+// Copyright 2020 Anapaya Systems
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package scion
+
+import (
+    "github.com/scionproto/scion/pkg/private/serrors"
+    "github.com/scionproto/scion/pkg/slayers/path"
+    "github.com/scionproto/scion/verification/utils/definitions"
+    sl "github.com/scionproto/scion/verification/utils/slices"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
+    "testing"
+)
+
+var rawPathRaw = []byte("\x00\x00\x20\x80\x00\x00\x01\x11\x00\x00\x01\x00\x01\x00\x02\x22\x00\x00" +
+    "\x01\x00\x00\x3f\x00\x01\x00\x00\x01\x02\x03\x04\x05\x06\x00\x3f\x00\x03\x00\x02\x01\x02\x03" +
+    "\x04\x05\x06\x00\x3f\x00\x00\x00\x02\x01\x02\x03\x04\x05\x06\x00\x3f\x00\x01\x00\x00\x01\x02" +
+    "\x03\x04\x05\x06")
+
+var rawTestPathRaw = &Raw{
+    Base: Base{
+        PathMeta: MetaHdr{
+            CurrINF: 0,
+            CurrHF:  0,
+            SegLen:  [3]uint8{2, 2, 0},
+        },
+        NumINF:  2,
+        NumHops: 4,
+    },
+    Raw: rawPathRaw,
+}
+
+var emptyRawTestPath = &Raw{
+    Base: Base{
+        PathMeta: MetaHdr{
+            CurrINF: 0,
+            CurrHF:  0,
+            SegLen:  [3]uint8{0, 0, 0},
+        },
+        NumINF:  0,
+        NumHops: 0,
+    },
+    Raw: make([]byte, MetaLen),
+}
+
+var overlongPath = &Raw{
+    Base: Base{
+        PathMeta: MetaHdr{
+            CurrINF: 0,
+            CurrHF:  0,
+            SegLen:  [3]uint8{24, 24, 17},
+        },
+        NumINF:  3,
+        NumHops: 65,
+    },
+    Raw: rawPathRaw,
+}
+
+// NO ERROR
+// doesn't verify
+func TestRawSerialize(buf []byte, ubuf []byte) {
+    inhale acc(rawTestPathRaw.Mem(buf), definitions.R50)
+    b := make([]byte, rawTestPathRaw.Len(buf))
+
+    inhale acc(rawTestPathRaw.Mem(ubuf), definitions.R1)
+    inhale sl.Bytes(ubuf, 0, len(ubuf))
+    fold sl.Bytes(b, 0, len(b))
+
+    err := rawTestPathRaw.SerializeTo(b, ubuf)
+    assert err == nil
+    assert rawPathRaw === b
+}
+
+// NO ERROR
+// doesn't verify
+func TestRawDecodeFromBytes() {
+    rawPathRawTmp := []byte("\x00\x00\x20\x80\x00\x00\x01\x11\x00\x00\x01\x00\x01\x00\x02\x22\x00\x00" +
+        "\x01\x00\x00\x3f\x00\x01\x00\x00\x01\x02\x03\x04\x05\x06\x00\x3f\x00\x03\x00\x02\x01\x02\x03" +
+        "\x04\x05\x06\x00\x3f\x00\x00\x00\x02\x01\x02\x03\x04\x05\x06\x00\x3f\x00\x01\x00\x00\x01\x02" +
+        "\x03\x04\x05\x06")
+
+    s := &Raw{}
+    fold s.Base.NonInitMem()
+    fold s.NonInitMem()
+    fold acc(sl.Bytes(rawPathRawTmp, 0, len(rawPathRawTmp)), definitions.R42)
+
+    err := s.DecodeFromBytes(rawPathRawTmp)
+    assert err == nil
+    assert rawTestPathRaw === s // assertion fails
+}
+
+// NO ERROR
+// doesn't verify
+func TestRawSerializeDecode(buf []byte, ubuf []byte) {
+    inhale acc(rawTestPathRaw.Mem(buf), definitions.R50)
+	b := make([]byte, rawTestPathRaw.Len(buf))
+
+    inhale acc(rawTestPathRaw.Mem(ubuf), definitions.R1)
+    inhale sl.Bytes(ubuf, 0, len(ubuf))
+    fold sl.Bytes(b, 0, len(b))
+    err1 := rawTestPathRaw.SerializeTo(b, ubuf)
+    assert err1 == nil // assertion fails
+
+	s := &Raw{}
+
+    fold s.NonInitMem()
+    fold acc(sl.Bytes(b, 0, len(b)), definitions.R42)
+
+	err2 := s.DecodeFromBytes(b)
+    assert rawTestPathRaw === s
+}
+
+// ERROR / NO ERROR
+// doesn't verify
+func TestOverlongSerializeDecode(buf []byte, ubuf []byte) {
+    inhale acc(overlongPath.Mem(buf), definitions.R50)
+	b := make([]byte, overlongPath.Len(buf))
+
+    inhale acc(overlongPath.Mem(ubuf), definitions.R1)
+    inhale sl.Bytes(ubuf, 0, len(ubuf))
+    fold sl.Bytes(b, 0, len(b))
+    err1 := overlongPath.SerializeTo(b, ubuf)
+    assert err1 == nil // assertion fails
+
+	s := &Raw{}
+	expected := serrors.New("NumHops too large", "NumHops", 65, "Maximum", MaxHops)
+    expectedErr := expected.Error()
+	err2 := s.DecodeFromBytes(b)
+    err3 := err2.Error()
+    assert err3 == expectedErr
+}
+/*
+func TestRawReverse(t *testing.T) {
+	for name, tc := range pathReverseCases {
+		name, tc := name, tc
+		for i := range tc.inIdxs {
+			i := i
+			t.Run(fmt.Sprintf("%s case %d", name, i+1), func(t *testing.T) {
+				t.Parallel()
+				input := mkRawPath(t, tc.input, uint8(tc.inIdxs[i][0]), uint8(tc.inIdxs[i][1]))
+				want := mkRawPath(t, tc.want, uint8(tc.wantIdxs[i][0]), uint8(tc.wantIdxs[i][1]))
+				revPath, err := input.Reverse()
+				assert.NoError(t, err)
+				assert.Equal(t, want, revPath)
+			})
+		}
+	}
+}
+
+func TestEmptyRawReverse(t *testing.T) {
+	_, err := emptyRawTestPath.Reverse()
+	assert.Error(t, err)
+}
+
+func TestRawToDecoded(t *testing.T) {
+	decoded, err := rawTestPathRaw.ToDecoded()
+	assert.NoError(t, err)
+	assert.Equal(t, decodedTestPath, decoded)
+}
+
+func TestGetInfoField(t *testing.T) {
+	testCases := map[string]struct {
+		idx       int
+		want      path.InfoField
+		errorFunc assert.ErrorAssertionFunc
+	}{
+		"first info": {
+			idx:       0,
+			want:      testInfoFields[0],
+			errorFunc: assert.NoError,
+		},
+		"second info": {
+			idx:       1,
+			want:      testInfoFields[1],
+			errorFunc: assert.NoError,
+		},
+		"out of bounds": {
+			idx:       2,
+			want:      path.InfoField{},
+			errorFunc: assert.Error,
+		},
+	}
+
+	for name, tc := range testCases {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got, err := rawTestPathRaw.GetInfoField(tc.idx)
+			tc.errorFunc(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestGetHopField(t *testing.T) {
+	testCases := map[string]struct {
+		idx       int
+		want      path.HopField
+		errorFunc assert.ErrorAssertionFunc
+	}{
+		"first hop": {
+			idx:       0,
+			want:      testHopFields[0],
+			errorFunc: assert.NoError,
+		},
+		"third hop": {
+			idx:       2,
+			want:      testHopFields[2],
+			errorFunc: assert.NoError,
+		},
+		"out of bounds": {
+			idx:       4,
+			errorFunc: assert.Error,
+		},
+	}
+
+	for name, tc := range testCases {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got, err := rawTestPathRaw.GetHopField(tc.idx)
+			tc.errorFunc(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestSetInfoField(t *testing.T) {
+	testCases := map[string]struct {
+		idx       int
+		want      path.InfoField
+		errorFunc assert.ErrorAssertionFunc
+	}{
+		"first info": {
+			idx:       0,
+			want:      testInfoFields[1],
+			errorFunc: assert.NoError,
+		},
+		"second info": {
+			idx:       1,
+			want:      testInfoFields[0],
+			errorFunc: assert.NoError,
+		},
+		"out of bounds": {
+			idx:       2,
+			want:      path.InfoField{},
+			errorFunc: assert.Error,
+		},
+	}
+
+	for name, tc := range testCases {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			raw := &Raw{}
+			require.NoError(t, raw.DecodeFromBytes(rawPathRaw))
+
+			err := raw.SetInfoField(tc.want, tc.idx)
+			tc.errorFunc(t, err)
+			if err != nil {
+				return
+			}
+			got, err := raw.GetInfoField(tc.idx)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestSetHopField(t *testing.T) {
+	testCases := map[string]struct {
+		idx       int
+		want      path.HopField
+		errorFunc assert.ErrorAssertionFunc
+	}{
+		"first hop": {
+			idx:       0,
+			want:      testHopFields[3],
+			errorFunc: assert.NoError,
+		},
+		"third hop": {
+			idx:       2,
+			want:      testHopFields[0],
+			errorFunc: assert.NoError,
+		},
+		"out of bounds": {
+			idx:       4,
+			errorFunc: assert.Error,
+		},
+	}
+
+	for name, tc := range testCases {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			raw := &Raw{}
+			require.NoError(t, raw.DecodeFromBytes(rawPathRaw))
+
+			err := raw.SetHopField(tc.want, tc.idx)
+			tc.errorFunc(t, err)
+			if err != nil {
+				return
+			}
+			got, err := raw.GetHopField(tc.idx)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func mkRawPath(t *testing.T, pcase pathCase, infIdx, hopIdx uint8) *Raw {
+	t.Helper()
+	decoded := mkDecodedPath(t, pcase, infIdx, hopIdx)
+	raw, err := decoded.ToRaw()
+	require.NoError(t, err)
+	return raw
+}
+
+func TestPenultimateHop(t *testing.T) {
+	testCases := map[*Raw]bool{
+		createScionPath(0, 2): true,
+		createScionPath(1, 2): false,
+		createScionPath(2, 2): false,
+		createScionPath(5, 7): true,
+		createScionPath(6, 7): false,
+		createScionPath(7, 7): false,
+	}
+	for scionRaw, want := range testCases {
+		got := scionRaw.IsPenultimateHop()
+		assert.Equal(t, want, got)
+	}
+}
+
+func TestLastHop(t *testing.T) {
+	testCases := map[*Raw]bool{
+		createScionPath(0, 2): false,
+		createScionPath(1, 2): true,
+		createScionPath(2, 2): false,
+		createScionPath(5, 7): false,
+		createScionPath(6, 7): true,
+		createScionPath(7, 7): false,
+	}
+	for scionRaw, want := range testCases {
+		got := scionRaw.IsLastHop()
+		assert.Equal(t, want, got)
+	}
+}
+
+func createScionPath(currHF uint8, numHops int) *Raw {
+	scionRaw := &Raw{
+		Base: Base{
+			PathMeta: MetaHdr{
+				CurrHF: currHF,
+			},
+			NumHops: numHops,
+		},
+	}
+	return scionRaw
+}
+*/
