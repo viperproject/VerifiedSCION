@@ -60,8 +60,8 @@ ensures   len(res) != 0 ==> res === ub[start:end]
 decreases
 func (p Payload) Payload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	res = []byte(p)
-    assert unfolding acc(p.Mem(ub), R20) in true
-    return res, 0, len(p)
+	assert unfolding acc(p.Mem(ub), R20) in true
+	return res, 0, len(p)
 }
 
 requires b != nil && b.Mem()
