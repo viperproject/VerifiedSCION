@@ -21,16 +21,16 @@ package io
 //     to the interface y of AS a2.
 type DataPlaneSpec adt {
 	DataPlaneSpec_{
-		linkTypes		dict[IO_ifs]IO_Link
-		neighborIAs		dict[IO_ifs]IO_as
-		localIA			IO_as
-		links			dict[AsIfsPair]AsIfsPair
+		linkTypes   dict[IO_ifs]IO_Link
+		neighborIAs dict[IO_ifs]IO_as
+		localIA     IO_as
+		links       dict[AsIfsPair]AsIfsPair
 	}
 }
 
 type AsIfsPair struct {
-	asid	IO_as
-	ifs		IO_ifs
+	asid IO_as
+	ifs  IO_ifs
 }
 
 ghost
