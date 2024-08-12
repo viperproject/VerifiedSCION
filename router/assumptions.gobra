@@ -67,7 +67,6 @@ func establishInvalidSrcAddrForTransit()
 
 ghost
 ensures noSVCBackend.ErrorMem()
-ensures noSVCBackend != nil
 decreases _
 func establishNoSVCBackend()
 
