@@ -191,7 +191,8 @@ ensures   err != nil ==> err.ErrorMem() && d.NonInitMem()
 decreases
 func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err error)
 
-requires d.Mem(ub) && b.Mem()
+requires d.Mem(ub)
+requires b != nil && b.Mem()
 requires sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 ensures  err == nil ==> d.Mem(ub) && b.Mem()
 ensures  err == nil ==> sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
