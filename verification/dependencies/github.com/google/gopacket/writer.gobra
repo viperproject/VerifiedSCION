@@ -17,9 +17,11 @@ type SerializableLayer interface {
 
 	requires  !opts.FixLengths
 	requires  b != nil && b.Mem()
+	requires  sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 	requires  Mem(ubuf)
 	preserves sl.Bytes(ubuf, 0, len(ubuf))
 	ensures   err == nil ==> (Mem(ubuf) && b.Mem())
+	ensures   err == nil ==> sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 	ensures   err != nil ==> err.ErrorMem()
 	decreases
 	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)
