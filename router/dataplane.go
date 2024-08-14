@@ -877,7 +877,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant acc(rd.Mem(), _)
 			// @ invariant processor.sInit() && processor.sInitD() === d
 			// @ invariant processor.getIngressID() == ingressID
-			// @ invariant processor.sInitBuffWithFullPerm()
 			// @ invariant acc(ioLock.LockP(), _)
 			// @ invariant ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 			// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
@@ -954,7 +953,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant processor.sInit() && processor.sInitD() === d
 				// @ invariant processor.getIngressID() == ingressID
-				// @ invariant processor.sInitBuffWithFullPerm()
 				// contracts for IO-spec
 				// @ invariant pkts <= len(ioValSeq)
 				// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
@@ -1110,12 +1108,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					// @ msgs[:pkts][i0].IsActive = false
 					// @ fold msgs[:pkts][i0].Mem()
-					// @ ghost if !processor.sInitBuffWithFullPerm(){
-					// @ 	processor.sInitBuffer().RestoreMem(writeMsgs[0].Buffers[0])
-					// @ 	unfold acc(processor.sInit(), _)
-					// @ 	processor.buffWithFullPerm = true
-					// @ 	fold acc(processor.sInit(), _)
-					// @ }
 					// @ fold writeMsgInv(writeMsgs)
 					if err != nil {
 						// @ requires err != nil && err.ErrorMem()
@@ -1381,7 +1373,6 @@ type processResult struct {
 
 // @ requires acc(d.Mem(), _) && d.getMacFactory() != nil
 // @ ensures  res.sInit() && res.sInitD() == d && res.getIngressID() == ingressID
-// @ ensures  res.sInitBuffWithFullPerm()
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
@@ -1397,7 +1388,6 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 			epicInput:  make([]byte, libepic.MACBufferSize),
 		},
 	}
-	// @ p.buffWithFullPerm = true
 	// @ fold sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
@@ -1410,7 +1400,6 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 }
 
 // @ preserves p.sInit()
-// @ preserves p.sInitBuffWithFullPerm()
 // @ ensures   p.sInitD()         == old(p.sInitD())
 // @ ensures   p.getIngressID()   == old(p.getIngressID())
 // @ ensures   p.sInitRawPkt()    == nil
@@ -1434,7 +1423,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 	}
 	p.mac.Reset()
 	p.cachedMac = nil
-	// @ p.buffWithFullPerm = true
 	return nil
 }
 
@@ -1447,7 +1435,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	d.getValSvc() != nil      &&
 // @ 	d.getValForwardingMetrics() != nil &&
 // @ 	d.DpAgreesWithSpec(dp)
-// @ requires p.sInitBuffWithFullPerm()
 // @ ensures  p.sInit()
 // @ ensures  acc(p.sInitD().Mem(), _)
 // @ ensures  p.sInitD() == old(p.sInitD())
@@ -1461,7 +1448,6 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  respr.OutPkt !== rawPkt && respr.OutPkt != nil ==>
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
-// @ ensures  !p.sInitBuffWithFullPerm() ==> p.sInitBuffer().MemWithoutUBuf(respr.OutPkt)
 // contracts for IO-spec
 // @ requires dp.Valid()
 // @ requires acc(ioLock.LockP(), _)
@@ -1733,7 +1719,6 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ requires  acc(&p.segmentChange) && !p.segmentChange
 // @ requires  acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
 // @ requires  acc(&p.ingressID, R10)
-// @ requires  acc(&p.buffWithFullPerm) && p.buffWithFullPerm
 // @ preserves acc(&p.srcAddr, R10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, R10)
 // @ preserves p.lastLayer != nil
@@ -1749,7 +1734,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
-// @ ensures   acc(&p.buffWithFullPerm)
+
 // @ ensures   acc(&p.segmentChange)
 // @ ensures   acc(&p.ingressID, R10)
 // @ ensures   acc(&p.d, R5)
@@ -1763,14 +1748,11 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ ensures   !addrAliasesPkt ==> acc(sl.Bytes(ub, 0, len(ub)), R15)
 // @ ensures   respr.OutPkt !== ub && respr.OutPkt != nil ==>
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
-// @ ensures   acc(&p.buffer, R10)
+// @ ensures   acc(&p.buffer, R10) && p.buffer.Mem()
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
-// @ ensures   reserr == nil ==> p.buffer.Mem() && p.buffWithFullPerm
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
-// @ ensures   reserr != nil && respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
 // @ ensures   reserr != nil && respr !== processResult{} ==>
-// @ 	!p.buffWithFullPerm && p.buffer.MemWithoutUBuf(respr.OutPkt)
+// @ 	respr.OutPkt === p.buffer.UBuf()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
@@ -1859,9 +1841,6 @@ func (p *scionPacketProcessor) processEPIC() (processResult, error) {
 // scionPacketProcessor processes packets. It contains pre-allocated per-packet
 // mutable state and context information which should be reused.
 type scionPacketProcessor struct {
-	// (VerifiedSCION) buffWithFullPerm holds if we currently hold full permissions
-	// to the underlying slice from `buffer`.
-	// @ ghost buffWithFullPerm bool
 	// d is a reference to the dataplane instance that initiated this processor.
 	d *DataPlane
 	// ingressID is the interface ID this packet came in, determined from the
@@ -1919,26 +1898,20 @@ type macBuffersT struct {
 // @ requires  acc(&p.ingressID,  R45)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
 // @ requires  cause != nil ==> cause.ErrorMem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ preserves ubLL == nil || ubLL === ub[startLL:endLL]
 // @ preserves acc(&p.lastLayer, R55) && p.lastLayer != nil
 // @ preserves &p.scionLayer !== p.lastLayer ==>
 // @ 	acc(p.lastLayer.Mem(ubLL), R15)
 // @ preserves &p.scionLayer === p.lastLayer ==>
 // @ 	ub === ubLL
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   acc(p.scionLayer.Mem(ub), R4)
 // @ ensures   sl.Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.ingressID,  R45)
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil && reserr.ErrorMem()
 // @ ensures   respr.OutPkt != nil ==>
@@ -2103,8 +2076,6 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  p.path == p.scionLayer.GetPath(ubScionL)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // pres for IO:
 // @ requires  slayers.ValidPktMetaHdr(ubScionL) && p.scionLayer.EqAbsHeader(ubScionL)
 // @ requires  absPkt(ubScionL).PathNotFullyTraversed()
@@ -2117,18 +2088,14 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 // @ preserves acc(&p.infoField, R20)
 // @ preserves acc(&p.hopField, R20)
 // @ preserves acc(&p.ingressID, R20)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R3)
 // @ ensures   sl.Bytes(ubScionL, 0, len(ubScionL))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -2195,8 +2162,6 @@ func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost ubScionL []byte, gho
 // @ requires  p.scionLayer.ValidPathMetaData(ubScionL)
 // @ requires  p.path == p.scionLayer.GetPath(ubScionL)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.ingressID, R21)
 // @ requires  acc(&p.hopField, R20)
 // @ requires  acc(&p.infoField, R20)
@@ -2209,7 +2174,6 @@ func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost ubScionL []byte, gho
 // @ 	ubScionL === ubLL
 // @ ensures   acc(&p.d, R50)
 // @ ensures   acc(&p.path, R20)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(&p.infoField, R20)
 // @ ensures   acc(&p.hopField, R20)
 // @ ensures   acc(&p.ingressID, R21)
@@ -2220,12 +2184,9 @@ func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost ubScionL []byte, gho
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R3)
 // @ ensures   sl.Bytes(ubScionL, 0, len(ubScionL))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -2279,8 +2240,6 @@ func (p *scionPacketProcessor) validateIngressID( /*@ ghost ubScionL []byte, gho
 // @ requires  p.scionLayer.ValidPathMetaData(ubScionL)
 // @ requires  p.path == p.scionLayer.GetPath(ubScionL)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.ingressID, R21)
 // @ preserves ubLL == nil || ubLL === ubScionL[startLL:endLL]
@@ -2290,17 +2249,13 @@ func (p *scionPacketProcessor) validateIngressID( /*@ ghost ubScionL []byte, gho
 // @ preserves &p.scionLayer === p.lastLayer ==>
 // @ 	ubScionL === ubLL
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R2)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   sl.Bytes(ubScionL, 0, len(ubScionL))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -2382,8 +2337,6 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghos
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.ingressID, R40)
 // @ preserves ubLL == nil || ubLL === ub[startLL:endLL]
@@ -2394,16 +2347,12 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghos
 // @ 	ub === ubLL
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   acc(&p.path, R20)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ub), R3)
 // @ ensures   sl.Bytes(ub, 0, len(ub))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil && reserr.ErrorMem()
 // @ ensures   respr.OutPkt != nil ==>
@@ -2437,8 +2386,6 @@ func (p *scionPacketProcessor) invalidSrcIA(
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.ingressID, R40)
 // @ preserves ubLL == nil || ubLL === ub[startLL:endLL]
@@ -2449,16 +2396,12 @@ func (p *scionPacketProcessor) invalidSrcIA(
 // @ 	ub === ubLL
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   acc(&p.path, R20)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ub), R3)
 // @ ensures   sl.Bytes(ub, 0, len(ub))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil && reserr.ErrorMem()
 // @ ensures   respr.OutPkt != nil ==>
@@ -2557,8 +2500,6 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  p.path == p.scionLayer.GetPath(ubScionL)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.segmentChange, R20)
 // @ requires  acc(&p.ingressID, R21)
 // @ requires  acc(&p.infoField, R20)
@@ -2573,18 +2514,14 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 // @ ensures   acc(&p.hopField, R20)
 // @ ensures   acc(&p.ingressID, R21)
 // @ ensures   acc(&p.segmentChange, R20)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R3)
 // @ ensures   sl.Bytes(ubScionL, 0, len(ubScionL))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -2849,8 +2786,6 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ requires  p.scionLayer.ValidPathMetaData(ubScionL)
 // @ requires  p.path == p.scionLayer.GetPath(ubScionL)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.ingressID, R21)
 // @ requires  acc(&p.infoField, R20)
@@ -2869,16 +2804,12 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ ensures   acc(&p.infoField, R20)
 // @ ensures   acc(&p.hopField,  R20)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R3)
 // @ ensures   sl.Bytes(ubScionL, 0, len(ubScionL))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -2961,8 +2892,6 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 // @ requires  p.scionLayer.ValidPathMetaData(ubScionL)
 // @ requires  p.path == p.scionLayer.GetPath(ubScionL)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R15) && acc(p.d.Mem(), _)
 // pres for IO:
 // @ requires  slayers.ValidPktMetaHdr(ubScionL) && p.scionLayer.EqAbsHeader(ubScionL)
@@ -2984,15 +2913,11 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 // @ ensures   addrAliasesUb ==> (acc(resaddr.Mem(), R15) --* acc(sl.Bytes(ubScionL, 0, len(ubScionL)), R15))
 // @ ensures   reserr != nil ==> !addrAliasesUb
 // @ ensures   acc(&p.path, R20)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R3)
 // @ ensures   acc(sl.Bytes(ubScionL, 0, len(ubScionL)), 1-R15)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -3302,9 +3227,7 @@ func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ 
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.infoField, R20)
 // @ requires  acc(&p.hopField, R20)
 // @ requires  acc(&p.ingressID, R21)
@@ -3324,16 +3247,12 @@ func (p *scionPacketProcessor) egressInterface( /*@ ghost oldPkt io.IO_pkt2 @*/ 
 // @ ensures   acc(&p.ingressID, R21)
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ub), R2)
 // @ ensures   sl.Bytes(ub, 0, len(ub))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -3391,8 +3310,6 @@ func (p *scionPacketProcessor) validateEgressUp(
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  acc(&p.ingressID, R21)
 // @ requires  acc(&p.infoField, R20)
@@ -3412,16 +3329,12 @@ func (p *scionPacketProcessor) validateEgressUp(
 // @ ensures   acc(&p.infoField, R20)
 // @ ensures   acc(&p.hopField)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ub), R3)
 // @ ensures   sl.Bytes(ub, 0, len(ub))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -3511,8 +3424,6 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ requires  p.scionLayer.ValidPathMetaData(ub)
 // @ requires  p.path == p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  acc(&p.ingressID, R21)
 // @ requires  acc(&p.infoField, R20)
@@ -3532,16 +3443,12 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ ensures   acc(&p.infoField, R20)
 // @ ensures   acc(&p.hopField)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ub), R3)
 // @ ensures   sl.Bytes(ub, 0, len(ub))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -3632,10 +3539,7 @@ func (p *scionPacketProcessor) egressRouterAlertFlag() (res *bool) {
 // @ requires  p.scionLayer.ValidPathMetaData(ubScionL)
 // @ requires  p.path == p.scionLayer.GetPath(ubScionL)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
-
 // @ requires  acc(&p.infoField, R20)
 // @ requires  acc(&p.hopField, R20)
 // pres for IO:
@@ -3657,16 +3561,12 @@ func (p *scionPacketProcessor) egressRouterAlertFlag() (res *bool) {
 // @ ensures   acc(&p.infoField, R20)
 // @ ensures   acc(&p.hopField,  R20)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R3)
 // @ ensures   sl.Bytes(ubScionL, 0, len(ubScionL))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
@@ -3764,8 +3664,6 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 // @ requires  p.scionLayer.ValidPathMetaData(ubScionL)
 // @ requires  p.path == p.scionLayer.GetPath(ubScionL)
 // @ requires  acc(&p.buffer, R50) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ preserves acc(&p.ingressID, R20)
 // @ preserves ubLL == nil || ubLL === ubScionL[startLL:endLL]
@@ -3776,16 +3674,12 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 // @ 	ubScionL === ubLL
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   acc(&p.path, R20)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R3)
 // @ ensures   sl.Bytes(ubScionL, 0, len(ubScionL))
 // @ ensures   p.d.validResult(respr, false)
-// @ ensures   acc(&p.buffer, R50)
-// @ ensures   respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R50) && p.buffer.Mem()
 // @ ensures   respr !== processResult{} ==>
-// @ 	p.buffer.MemWithoutUBuf(respr.OutPkt) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	respr.OutPkt === p.buffer.UBuf() &&
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr == nil ==>
 // @ 	int(p.scionLayer.GetPayloadLen(ubScionL)) == len(p.scionLayer.GetPayload(ubScionL))
@@ -3835,7 +3729,6 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ requires  acc(&p.ingressID, R15)
 // @ requires  acc(&p.segmentChange) && !p.segmentChange
 // @ requires  acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm) && p.buffWithFullPerm
 // @ preserves acc(&p.srcAddr, R10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, R10)
 // @ preserves p.lastLayer != nil
@@ -3850,7 +3743,6 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(&p.segmentChange)
 // @ ensures   acc(&p.ingressID, R15)
 // @ ensures   acc(&p.d, R5)
@@ -3864,14 +3756,11 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ ensures   !addrAliasesPkt ==> acc(sl.Bytes(ub, 0, len(ub)), R15)
 // @ ensures   respr.OutPkt !== ub && respr.OutPkt != nil ==>
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
-// @ ensures   acc(&p.buffer, R10)
+// @ ensures   acc(&p.buffer, R10) && p.buffer.Mem()
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
-// @ ensures   reserr == nil ==> p.buffer.Mem() && p.buffWithFullPerm
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
-// @ ensures   reserr != nil && respr === processResult{} ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
 // @ ensures   reserr != nil && respr !== processResult{} ==>
-// @ 	!p.buffWithFullPerm && p.buffer.MemWithoutUBuf(respr.OutPkt)
+// @ 	respr.OutPkt === p.buffer.UBuf()
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
@@ -4389,6 +4278,7 @@ func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.Serialize
 	if err := buffer.Clear(); err != nil {
 		return err
 	}
+	// @ fold sl.Bytes(buffer.UBuf(), 0, len(buffer.UBuf()))
 	if err := s.SerializeTo(buffer, gopacket.SerializeOptions{} /*@ , rawPkt @*/); err != nil {
 		return err
 	}
@@ -4410,7 +4300,6 @@ func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.Serialize
 	copy(rawPkt[:len(rawContents)], rawContents /*@ , R20 @*/)
 	// @ fold sl.Bytes(rawPkt, 0, len(rawPkt))
 	// @ fold acc(sl.Bytes(rawContents, 0, len(rawContents)), R20)
-	// @ buffer.RestoreMem(rawContents)
 	// @ assert !(reveal slayers.IsSupportedPkt(rawPkt))
 	return nil
 }
@@ -4515,20 +4404,14 @@ func (b *bfdSend) Send(bfd *layers.BFD) error {
 // @ requires  sl.Bytes(ub, 0, len(ub))
 // @ requires  acc(&p.ingressID,  R50)
 // @ requires  acc(&p.buffer, R55) && p.buffer.Mem()
-// @ requires  acc(&p.buffWithFullPerm)
-// @ requires  p.buffWithFullPerm
 // @ requires  cause != nil ==> cause.ErrorMem()
-// @ ensures   acc(&p.buffWithFullPerm)
 // @ ensures   acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ ensures   acc(p.scionLayer.Mem(ub), R4)
 // @ ensures   sl.Bytes(ub, 0, len(ub))
 // @ ensures   acc(&p.ingressID,  R50)
-// @ ensures   acc(&p.buffer, R55)
-// @ ensures   result == nil ==>
-// @ 	p.buffer.Mem() && p.buffWithFullPerm
+// @ ensures   acc(&p.buffer, R55) && p.buffer.Mem()
 // @ ensures   result != nil ==>
-// @ 	p.buffer.MemWithoutUBuf(result) &&
-// @ 	!p.buffWithFullPerm &&
+// @ 	result === p.buffer.UBuf() &&
 // @ 	sl.Bytes(result, 0, len(result))
 // @ ensures   reserr != nil && reserr.ErrorMem()
 // @ ensures   result != nil ==>
@@ -4708,7 +4591,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	if err := p.buffer.Clear(); err != nil {
 		return nil, err
 	}
-
+	// @ fold sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
 	sopts := gopacket.SerializeOptions{
 		ComputeChecksums: true,
 		FixLengths:       true,
@@ -4737,7 +4620,6 @@ func (p *scionPacketProcessor) prepareSCMP(
 	if err != nil {
 		return nil, serrors.Wrap(cannotRoute, err, "details", "serializing SCMP message")
 	}
-	// @ p.buffWithFullPerm = false
 	return p.buffer.Bytes(), scmpError{TypeCode: typeCode, Cause: cause}
 }
 
