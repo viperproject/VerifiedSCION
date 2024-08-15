@@ -88,13 +88,10 @@ type SerializeBuffer interface {
 	Clear() (err error)
 
 	requires false
-	// preserves Mem()
-	// ensures forall i int :: {&res[i]} 0 <= i && i < len(res) ==> acc(&res[i])
 	decreases
 	Layers() (res []LayerType)
 
 	requires false
-	// preserves Mem()
 	decreases
 	PushLayer(LayerType)
 }
