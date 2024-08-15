@@ -2126,11 +2126,6 @@ func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost ubScionL []byte, gho
 	// @ defer fold acc(p.path.Mem(ubPath), R14)
 	// @ unfold acc(p.path.Base.Mem(), R15)
 	// @ defer fold acc(p.path.Base.Mem(), R15)
-	// (VerifiedSCION) Gobra is unable to verify permissions for `p.path.PathMeta.CurrINF`
-	// and `p.path.PathMeta.CurrHF` directly at the function call.
-	// To work around this limitation, these fields are first stored in temporary variables.
-	tmpCurrINF := p.path.PathMeta.CurrINF
-	tmpCurrHF := p.path.PathMeta.CurrHF
 
 	tmpRes, tmpErr := p.packSCMP(
 		slayers.SCMPTypeParameterProblem,
@@ -2143,9 +2138,9 @@ func (p *scionPacketProcessor) validateHopExpiry( /*@ ghost ubScionL []byte, gho
 			"if_id",
 			p.ingressID,
 			"curr_inf",
-			tmpCurrINF,
+			p.path.PathMeta.CurrINF,
 			"curr_hf",
-			tmpCurrHF),
+			p.path.PathMeta.CurrHF),
 		/*@ ubScionL, ubLL, startLL, endLL, @*/
 	)
 	// @ ghost if tmpErr != nil && tmpRes.OutPkt != nil {
@@ -2741,10 +2736,10 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 }
 
 // @ requires acc(p.scionLayer.Mem(ubScionL), R20)
-// @ requires acc(&p.path, R20)
+// @ requires acc(&p.path, R50)
 // @ requires p.path == p.scionLayer.GetPath(ubScionL)
 // @ ensures  acc(p.scionLayer.Mem(ubScionL), R20)
-// @ ensures  acc(&p.path, R20)
+// @ ensures  acc(&p.path, R50)
 // @ decreases
 func (p *scionPacketProcessor) currentInfoPointer( /*@ ghost ubScionL []byte @*/ ) uint16 {
 	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
@@ -2761,10 +2756,10 @@ func (p *scionPacketProcessor) currentInfoPointer( /*@ ghost ubScionL []byte @*/
 // (VerifiedSCION) This could probably be made pure, but it is likely not beneficial, nor needed
 // to expose the body of this function at the moment.
 // @ requires acc(p.scionLayer.Mem(ubScionL), R20)
-// @ requires acc(&p.path, R20)
+// @ requires acc(&p.path, R50)
 // @ requires p.path == p.scionLayer.GetPath(ubScionL)
 // @ ensures  acc(p.scionLayer.Mem(ubScionL), R20)
-// @ ensures  acc(&p.path, R20)
+// @ ensures  acc(&p.path, R50)
 // @ decreases
 func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ ) uint16 {
 	// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
@@ -2847,11 +2842,6 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 		// @ defer fold acc(p.path.Mem(ubPath), R14)
 		// @ unfold acc(p.path.Base.Mem(), R15)
 		// @ defer fold acc(p.path.Base.Mem(), R15)
-		// (VerifiedSCION) Gobra is unable to verify permissions for `p.path.PathMeta.CurrINF`
-		// and `p.path.PathMeta.CurrHF` directly at the function call.
-		// To work around this limitation, these fields are first stored in temporary variables.
-		tmpCurrINF := p.path.PathMeta.CurrINF
-		tmpCurrHF := p.path.PathMeta.CurrHF
 
 		tmpRes, tmpErr := p.packSCMP(
 			slayers.SCMPTypeParameterProblem,
@@ -2861,8 +2851,8 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 				"%x", fullMac[:path.MacLen]),
 				"actual", fmt.Sprintf("%x", p.hopField.Mac[:path.MacLen]),
 				"cons_dir", p.infoField.ConsDir,
-				"if_id", p.ingressID, "curr_inf", tmpCurrINF,
-				"curr_hf", tmpCurrHF, "seg_id", p.infoField.SegID),
+				"if_id", p.ingressID, "curr_inf", p.path.PathMeta.CurrINF,
+				"curr_hf", p.path.PathMeta.CurrHF, "seg_id", p.infoField.SegID),
 			/*@ ubScionL, ubLL, startLL, endLL, @*/
 		)
 		// @ ghost if tmpErr != nil && tmpRes.OutPkt != nil {
