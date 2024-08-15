@@ -1,6 +1,6 @@
 # VerifiedSCION
 
-This package contains the **verified** implementation of the
+This package contains the **verified** implementation of the router from the
 [SCION](http://www.scion-architecture.net) protocol, a future Internet architecture.
 SCION is the first
 clean-slate Internet architecture designed to provide route control, failure
@@ -10,7 +10,7 @@ isolation, and explicit trust information for end-to-end communication.
 
 To find out more about the project, please visit the [official project page](https://www.pm.inf.ethz.ch/research/verifiedscion.html).
 
-> We are currently in the process of migrating the specifications and other annotations from the [original VerifiedSCION repository](https://github.com/jcp19/VerifiedSCION) to this one. This repository contains an up-to-date version of SCION (which we plan to keep updated), as well as improvements resulting from our experience from our first efforts on verifying SCION.
+> This repository contains a recent version of SCION (which we plan to keep updated), as well as fixes to the bugs we report as a result of verifying the SCION router from the mainline SCION repository.
 
 ## Methodology
 We focus on verifying the main implementation of SCION, written in the *Go* programming language.
