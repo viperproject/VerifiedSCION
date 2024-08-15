@@ -3635,7 +3635,6 @@ func (p *scionPacketProcessor) egressRouterAlertFlag() (res *bool) {
 // @ requires  acc(&p.buffWithFullPerm)
 // @ requires  p.buffWithFullPerm
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
-
 // @ requires  acc(&p.infoField, R20)
 // @ requires  acc(&p.hopField, R20)
 // pres for IO:
