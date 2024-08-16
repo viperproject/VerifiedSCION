@@ -821,7 +821,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			d := *dPtr
 			msgs := conn.NewReadMessages(inputBatchCnt)
 			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
+			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil &&
+			// @ 	acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), writePerm)
 			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() &&
 			// @ 	msgs[i].HasActiveAddr() &&
@@ -1394,6 +1395,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	var verScionTmp gopacket.SerializeBuffer
 	// @ d.getNewPacketProcessorFootprint()
 	verScionTmp = gopacket.NewSerializeBuffer()
+	// @ assert acc(sl.Bytes(verScionTmp.UBuf(), 0, len(verScionTmp.UBuf())), writePerm)
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
@@ -1404,6 +1406,8 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 			epicInput:  make([]byte, libepic.MACBufferSize),
 		},
 	}
+	// @ assert p.buffer.UBuf() === verScionTmp.UBuf()
+	// @ assert acc(sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf())), writePerm)
 	// @ fold sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
