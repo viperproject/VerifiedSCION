@@ -120,9 +120,11 @@ type BatchConn interface {
 
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	msgs[i].Mem()
+	// @ 	msgs[i].Mem() &&
+	// @ 	acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), writePerm)
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr())
+	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr() &&
+	// @ 	acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), writePerm))
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> (
@@ -153,10 +155,12 @@ type BatchConn interface {
 	// performance reasons.
 	// @ requires  len(msgs) == 1
 	// @ requires  acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
+	// @ requires  acc(sl.Bytes(msgs[0].GetFstBuffer(), 0, len(msgs[0].GetFstBuffer())), R50)
 	// preconditions for IO-spec:
 	// @ requires  MsgToAbsVal(&msgs[0], egressID) == ioAbsPkts
 	// @ requires  io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
 	// @ ensures   acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
+	// @ ensures   acc(sl.Bytes(msgs[0].GetFstBuffer(), 0, len(msgs[0].GetFstBuffer())), R50)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	// postconditions for IO-spec:
@@ -821,14 +825,17 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() &&
 			// @ 	msgs[i].HasActiveAddr() &&
-			// @ 	msgs[i].GetAddr() == nil
+			// @ 	msgs[i].GetAddr() == nil &&
+			// @ 	acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), writePerm)
 			// @ decreases
 			// @ outline(
 			// @ invariant 0 <= i0 && i0 <= len(msgs)
 			// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
-			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
+			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil &&
+			// @ 	acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), writePerm)
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==>
-			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil && msgs[i].HasActiveAddr()
+			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil && msgs[i].HasActiveAddr() &&
+			// @ 	acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), writePerm)
 			// @ decreases len(msgs) - i0
 			for i0 := 0; i0 < len(msgs); i0 += 1 {
 				// (VerifiedSCION) changed a range loop in favor of a normal loop
@@ -865,7 +872,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 
 			// @ invariant acc(&scmpErr)
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-			// @ 	msgs[i].Mem()
+			// @ 	msgs[i].Mem() &&
+			// @ 	acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), writePerm)
 			// @ invariant writeMsgInv(writeMsgs)
 			// @ invariant acc(dPtr, _) && *dPtr === d
 			// @ invariant acc(&d.running, _) // necessary for loop condition
@@ -876,6 +884,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant ingressID in d.getDomForwardingMetrics()
 			// @ invariant acc(rd.Mem(), _)
 			// @ invariant processor.sInit() && processor.sInitD() === d
+			// @ invariant let ubuf := processor.sInitBufferUBuf() in
+			// @ 	acc(sl.Bytes(ubuf, 0, len(ubuf)), writePerm)
 			// @ invariant processor.getIngressID() == ingressID
 			// @ invariant acc(ioLock.LockP(), _)
 			// @ invariant ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
@@ -912,7 +922,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ ioLock.Unlock()
 				// End of multi recv event
 
-				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
+				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem() &&
+				// @ 	acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), writePerm)
 				// @ assert err == nil ==>
 				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				if err != nil {
@@ -934,7 +945,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
 				// @ invariant acc(&scmpErr)
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
+				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem() &&
+				// @ 	acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), writePerm)
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(dPtr, _) && *dPtr === d
 				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
@@ -952,6 +964,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant processor.sInit() && processor.sInitD() === d
+				// @ invariant let ubuf := processor.sInitBufferUBuf() in
+				// @	acc(sl.Bytes(ubuf, 0, len(ubuf)), writePerm)
 				// @ invariant processor.getIngressID() == ingressID
 				// contracts for IO-spec
 				// @ invariant pkts <= len(ioValSeq)
@@ -1084,7 +1098,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert result.OutPkt != nil ==> newAbsPkt ==
 					// @ 	absIO_val(writeMsgs[0].Buffers[0], result.EgressID)
 					// @ fold acc(writeMsgs[0].Mem(), R50)
-
+					// @ assert acc(sl.Bytes(writeMsgs[0].GetFstBuffer(), 0, len(writeMsgs[0].GetFstBuffer())), R50)
 					// @ ghost ioLock.Lock()
 					// @ unfold SharedInv!< dp, ioSharedArg !>()
 					// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
@@ -1373,6 +1387,8 @@ type processResult struct {
 
 // @ requires acc(d.Mem(), _) && d.getMacFactory() != nil
 // @ ensures  res.sInit() && res.sInitD() == d && res.getIngressID() == ingressID
+// @ ensures  let ubuf := res.sInitBufferUBuf() in
+// @ 	acc(sl.Bytes(ubuf, 0, len(ubuf)), writePerm)
 // @ decreases
 func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcessor) {
 	var verScionTmp gopacket.SerializeBuffer
@@ -1449,11 +1465,10 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	respr.OutAddr != nil &&
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.Bytes(rawPkt, 0, len(rawPkt)), R15)))
 // @ ensures  !addrAliasesPkt ==> acc(sl.Bytes(rawPkt, 0, len(rawPkt)), R15)
-// @ ensures  respr.OutPkt !== rawPkt && respr.OutPkt != nil ==>
-// @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures let ubuf := p.sInitBufferUBuf() in
-// @	respr.OutPkt !== ubuf ==>
-// @	acc(sl.Bytes(ubuf, 0, len(ubuf)), writePerm)
+// @ 	acc(sl.Bytes(ubuf, 0, len(ubuf)), writePerm)
+// @ ensures respr.OutPkt != nil ==>
+// @ 	(respr.OutPkt === rawPkt || respr.OutPkt === p.sInitBufferUBuf())
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires dp.Valid()
@@ -1753,15 +1768,12 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ 	respr.OutAddr != nil &&
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.Bytes(ub, 0, len(ub)), R15)))
 // @ ensures   !addrAliasesPkt ==> acc(sl.Bytes(ub, 0, len(ub)), R15)
-// @ ensures   respr.OutPkt !== ub && respr.OutPkt != nil ==>
-// @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
-// @ ensures   reserr == nil || respr === processResult{} ==>
-// @ 	sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
-// @ ensures   reserr != nil && respr !== processResult{} ==>
-// @ 	respr.OutPkt === p.buffer.UBuf()
+// @ ensures   sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
+// @ ensures respr.OutPkt != nil ==>
+// @ 	(respr.OutPkt === ub || respr.OutPkt === p.buffer.UBuf())
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
@@ -3768,15 +3780,12 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ 	respr.OutAddr != nil &&
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.Bytes(ub, 0, len(ub)), R15)))
 // @ ensures   !addrAliasesPkt ==> acc(sl.Bytes(ub, 0, len(ub)), R15)
-// @ ensures   respr.OutPkt !== ub && respr.OutPkt != nil ==>
-// @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
-// @ ensures   reserr == nil || respr === processResult{} ==>
-// @ 	sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
-// @ ensures   reserr != nil && respr !== processResult{} ==>
-// @ 	respr.OutPkt === p.buffer.UBuf()
+// @ ensures   sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
+// @ ensures   respr.OutPkt != nil ==>
+// @ 	(respr.OutPkt === ub || respr.OutPkt === p.buffer.UBuf())
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires  p.d.DpAgreesWithSpec(dp)
@@ -4016,8 +4025,7 @@ func (p *scionPacketProcessor) process(
 // @ 	let rawPkt := p.rawPkt in
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.Bytes(rawPkt, 0, len(rawPkt)), R15)))
 // @ ensures  !addrAliasesPkt ==> acc(sl.Bytes(p.rawPkt, 0, len(p.rawPkt)), R15)
-// @ ensures  respr.OutPkt !== p.rawPkt && respr.OutPkt != nil ==>
-// @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
+// @ ensures  respr.OutPkt != nil ==> respr.OutPkt === p.rawPkt
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires p.scionLayer.EqPathType(p.rawPkt)
