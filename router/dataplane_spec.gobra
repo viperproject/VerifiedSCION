@@ -638,6 +638,13 @@ pure func (s* scionPacketProcessor) sInitBuffer() (res gopacket.SerializeBuffer)
 	return unfolding acc(s.sInit(), _) in s.buffer
 }
 
+ghost
+requires acc(s.sInit(), _)
+decreases
+pure func (s* scionPacketProcessor) sInitBufferUBuf() (res []byte) {
+	return unfolding acc(s.sInit(), _) in s.buffer.UBuf()
+}
+
 /** end spec for newPacketProcessor **/
 
 ghost

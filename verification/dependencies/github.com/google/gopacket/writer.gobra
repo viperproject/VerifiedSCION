@@ -82,6 +82,7 @@ type SerializeBuffer interface {
 	AppendBytes(num int) (res []byte, err error)
 
 	preserves Mem()
+	preserves sl.Bytes(UBuf(), 0, len(UBuf()))
 	ensures   err != nil ==> err.ErrorMem()
 	ensures   err == nil ==> len(UBuf()) == 0
 	decreases
