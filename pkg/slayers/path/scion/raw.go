@@ -560,16 +560,16 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ reveal validPktMetaHdr(ubuf)
 	//@ unfold acc(s.Mem(ubuf), R50)
 	//@ unfold acc(s.Base.Mem(), R50)
-	//@ currInfIdx := int(s.PathMeta.CurrINF)
-	//@ currHfIdx := int(s.PathMeta.CurrHF)
-	//@ seg1Len := int(s.PathMeta.SegLen[0])
-	//@ seg2Len := int(s.PathMeta.SegLen[1])
-	//@ seg3Len := int(s.PathMeta.SegLen[2])
-	//@ segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
-	//@ segLen := segLens.LengthOfCurrSeg(idx)
-	//@ prevSegLen := segLens.LengthOfPrevSeg(idx)
-	//@ offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
-	//@ hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
+	//@ ghost currInfIdx := int(s.PathMeta.CurrINF)
+	//@ ghost currHfIdx := int(s.PathMeta.CurrHF)
+	//@ ghost seg1Len := int(s.PathMeta.SegLen[0])
+	//@ ghost seg2Len := int(s.PathMeta.SegLen[1])
+	//@ ghost seg3Len := int(s.PathMeta.SegLen[2])
+	//@ ghost segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
+	//@ ghost segLen := segLens.LengthOfCurrSeg(idx)
+	//@ ghost prevSegLen := segLens.LengthOfPrevSeg(idx)
+	//@ ghost offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
+	//@ ghost hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
 	if idx >= s.NumHops {
 		// (VerifiedSCION) introduced `err`
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
@@ -583,9 +583,9 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ SliceBytesIntoInfoFields(ubuf[:hopfieldOffset], s.NumINF, segLens, R40)
 
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
-	//@ inf := path.BytesToAbsInfoField(InfofieldByteSlice(ubuf, currInfIdx), 0)
-	//@ hfIdxSeg := idx-prevSegLen
-	//@ currHopfields := HopfieldsByteSlice(ubuf, currInfIdx, segLens)
+	//@ ghost inf := path.BytesToAbsInfoField(InfofieldByteSlice(ubuf, currInfIdx), 0)
+	//@ ghost hfIdxSeg := idx-prevSegLen
+	//@ ghost currHopfields := HopfieldsByteSlice(ubuf, currInfIdx, segLens)
 	//@ ghost if idx == currHfIdx {
 	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
 	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
