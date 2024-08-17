@@ -123,7 +123,7 @@ type BatchConn interface {
 	// @ 	msgs[i].Mem()
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-	// @ requires  forall ubuf []byte :: { ubuf } ubuf in msgsUBufs ==>
+	// @ requires  forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
 	// @ 	sl.Bytes(ubuf, 0, len(ubuf))
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr())
@@ -136,7 +136,7 @@ type BatchConn interface {
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-	// @ ensures   forall ubuf []byte :: { ubuf } ubuf in msgsUBufs ==>
+	// @ ensures   forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
 	// @ 	sl.Bytes(ubuf, 0, len(ubuf))
 	// @ ensures   err != nil ==> err.ErrorMem()
 	// contracts for IO-spec
@@ -835,7 +835,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ 	msgs[i].GetAddr() == nil
 			// @ ensures forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-			// @ ensures forall ubuf []byte :: { ubuf } ubuf in msgsUBufs ==>
+			// @ ensures forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
 			// @ 	sl.Bytes(ubuf, 0, len(ubuf))
 			// @ decreases
 			// @ outline(
@@ -847,7 +847,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil && msgs[i].HasActiveAddr()
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==>
 			// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-			// @ invariant forall ubuf []byte :: { ubuf } ubuf in msgsUBufs ==>
+			// @ invariant forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
 			// @ 	sl.Bytes(ubuf, 0, len(ubuf))
 			// @ decreases len(msgs) - i0
 			for i0 := 0; i0 < len(msgs); i0 += 1 {
@@ -889,7 +889,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ 	msgs[i].Mem()
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-			// @ invariant forall ubuf []byte :: { ubuf } ubuf in msgsUBufs ==>
+			// @ invariant forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
 			// @ 	sl.Bytes(ubuf, 0, len(ubuf))
 			// @ invariant writeMsgInv(writeMsgs)
 			// @ invariant acc(dPtr, _) && *dPtr === d
@@ -964,7 +964,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 				// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-				// @ invariant forall ubuf []byte :: { ubuf } ubuf in msgsUBufs ==>
+				// @ invariant forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
 				// @ 	sl.Bytes(ubuf, 0, len(ubuf))
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(dPtr, _) && *dPtr === d
