@@ -593,61 +593,14 @@ func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf
 	currseg := reveal CurrSegWithInfo(hopfields, currHfIdx, segLen, inf)
 	currHfStart := currHfIdx * path.HopLen
 	currHfEnd := currHfStart + path.HopLen
-	unfold acc(sl.Bytes(hopfields, 0, len(hopfields)), R56)
-	unfold  acc(sl.Bytes(hopfields[currHfStart:currHfEnd], 0, path.HopLen), R56)
-	hf := hopFields(hopfields, 0, 0, segLen)
-	hopFieldsBytePositionsLemma(hopfields, 0, 0, segLen, R54)
-	reveal hopFieldsBytePositions(hopfields, 0, 0, segLen, hf)
-	assert len(currseg.Future) > 0
-	assert currseg.Future[0] == path.BytesToIO_HF(hopfields[currHfStart:currHfEnd], 0, 0, path.HopLen)
-	splitHopFieldsInPastAndFuture(hopfields, currHfIdx, segLen)
-	assert currseg.Past == segPast(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx))
-	assert currseg.Future[0] == hf[currHfIdx]
-	assert hf[currHfIdx:][1:] == hf[currHfIdx + 1:]
-	assert currseg.Future == hf[currHfIdx:]
-	assert currseg.Future[1:] == hopFields(hopfields[currHfEnd:], 0, 0, (segLen - currHfIdx- 1))
-	assert currseg.History == segHistory(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx))
-	fold acc(sl.Bytes(hopfields[currHfStart:currHfEnd], 0, path.HopLen), R56)
-	fold acc(sl.Bytes(hopfields, 0, len(hopfields)), R56)
-}
 
-// `splitHopFieldsInPastAndFuture` shows that the raw bytes containing all hopfields
-// can be split into two slices, one that exclusively contains all past hopfields and another
-// that exclusively contains all future ones. This helps in proving that the future and past
-// hopfields remain unchanged when the current hopfield is modified.
-ghost
-requires  0 < segLen
-requires  0 <= currHfIdx && currHfIdx < segLen
-requires  segLen * path.HopLen == len(hopfields)
-preserves acc(sl.Bytes(hopfields, 0, len(hopfields)), R50)
-preserves let currHfStart := currHfIdx * path.HopLen in
-	let currHfEnd := currHfStart + path.HopLen in
-	acc(sl.Bytes(hopfields[:currHfStart], 0, currHfStart), R50) &&
-	acc(sl.Bytes(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen), R50)
-ensures   let currHfStart := currHfIdx * path.HopLen in
-	let currHfEnd := currHfStart + path.HopLen in
-	hopFields(hopfields, 0, 0, segLen)[:currHfIdx] ==
-		hopFields(hopfields[:currHfStart], 0, 0, currHfIdx) &&
-	hopFields(hopfields, 0, 0, segLen)[currHfIdx + 1:]  ==
-		hopFields(hopfields[currHfEnd:], 0, 0, segLen - currHfIdx - 1)
-decreases
-func splitHopFieldsInPastAndFuture(hopfields []byte, currHfIdx int, segLen int) {
-	currHfStart := currHfIdx * path.HopLen
-	currHfEnd := currHfStart + path.HopLen
-	hf := hopFields(hopfields, 0, 0, segLen)
-	hopFieldsBytePositionsLemma(hopfields, 0, 0, segLen, R54)
-	reveal hopFieldsBytePositions(hopfields, 0, 0, segLen, hf)
-
-	hfPast := hopFields(hopfields, 0, 0, currHfIdx)
-	hopFieldsBytePositionsLemma(hopfields, 0, 0, currHfIdx, R54)
-	reveal hopFieldsBytePositions(hopfields, 0, 0, currHfIdx, hfPast)
+	hopFieldsSliceEnd(hopfields, 0, 0, segLen, currHfIdx, R54)
+	hopFieldsIdxOffsetEq(hopfields, 0, currHfIdx + 1, segLen, currHfIdx + 1, R54)
+	hopFieldsSliceStart(hopfields, 0, 0, segLen, currHfIdx + 1, R54)
+	hopFieldsSliceStart(hopfields, 0, 0, segLen, currHfIdx, R54)
 	widenHopFields(hopfields, 0, 0, currHfIdx, 0, currHfStart, R52)
-
-	hfFuture := hopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1)
-	hopFieldsBytePositionsLemma(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, R54)
-	reveal hopFieldsBytePositions(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, hfFuture)
-	widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1,
-		currHfEnd, segLen * path.HopLen, R52)
+	widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, currHfEnd, segLen * path.HopLen, R52)
+	widenHopFields(hopfields, currHfStart, 0, 1, currHfStart, currHfEnd, R52)
 }
 
 // `SplitHopfields` splits the permission to the raw bytes of a segment into the permission

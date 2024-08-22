@@ -689,15 +689,9 @@ func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField)
 	hfIdxSeg := currHfIdx-prevSegLen
 	reveal s.CorrectlyDecodedInf(ubuf, info)
 	reveal s.CorrectlyDecodedHf(ubuf, hop)
-	pkt := reveal s.absPkt(ubuf)
-	currseg := reveal CurrSeg(ubuf, offset, currInfIdx, hfIdxSeg, segLen, MetaLen)
-	hopFields := hopFields(ubuf, offset, 0, segLen)
-	hopFieldsBytePositionsLemma(ubuf, offset, 0, segLen, R54)
-	reveal hopFieldsBytePositions(ubuf, offset, 0, segLen, hopFields)
-	assert currseg.Future[0] == hopFields[hfIdxSeg]
-	assert hopFields[hfIdxSeg] ==
-		path.BytesToIO_HF(ubuf, 0, offset + path.HopLen * hfIdxSeg, len(ubuf))
-	assert currseg.Future[0] == path.BytesToIO_HF(ubuf, 0, offset + path.HopLen * hfIdxSeg, len(ubuf))
+	reveal s.absPkt(ubuf)
+	reveal CurrSeg(ubuf, offset, currInfIdx, hfIdxSeg, segLen, MetaLen)
+	hopFieldsSliceStart(ubuf, offset, 0, segLen, hfIdxSeg, R54)
 	assert reveal s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
 	assert reveal s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
 }
@@ -850,39 +844,52 @@ func XoverRightSeg(raw []byte, currInfIdx int, currHfIdx int, segs io.SegLens) {
 }
 
 ghost
-opaque
+requires  R55 < p
 requires  0 <= offset
-requires  0 <= currHFIdx && currHFIdx <= segLen
-requires  len(hops) == segLen - currHFIdx
+requires  0 <= currHfIdx && currHfIdx <= end
+requires  end <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-requires  acc(sl.Bytes(raw, 0, len(raw)), R56)
-decreases
-pure func hopFieldsBytePositions(raw []byte, offset int, currHFIdx int, segLen int, hops seq[io.IO_HF]) bool {
-	return forall i, j int :: { hops[i], path.BytesToIO_HF(raw, 0, j, len(raw))} 0 <= i && i < len(hops) ==>
-		(j == offset + path.HopLen * (currHFIdx + i)) &&
-		hops[i] == path.BytesToIO_HF(raw, 0, j, len(raw))
+preserves acc(sl.Bytes(raw, 0, len(raw)), p)
+ensures   hopFields(raw, offset, currHfIdx, segLen)[:end-currHfIdx] ==
+	hopFields(raw, offset, currHfIdx, end)
+decreases end - currHfIdx
+func hopFieldsSliceEnd(raw []byte, offset int, currHfIdx int, segLen int, end int, p perm) {
+	if (currHfIdx != end) {
+		newP := (p + R55)/2
+		hopFieldsSliceEnd(raw, offset, currHfIdx + 1, segLen, end, newP)
+	}
 }
 
 ghost
 requires  R55 < p
 requires  0 <= offset
-requires  0 <= currHFIdx && currHFIdx <= segLen
+requires  0 <= start
+requires  0 <= currHfIdx && currHfIdx <= segLen - start
 requires  offset + path.HopLen * segLen <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), p)
-ensures   hopFieldsBytePositions(raw, offset, currHFIdx, segLen, hopFields(raw, offset, currHFIdx, segLen))
-decreases segLen - currHFIdx
-func hopFieldsBytePositionsLemma(
-	raw []byte,
-	offset int,
-	currHFIdx int,
-	segLen int,
-	p perm) {
-	newP := (p + R55)/2
-	hopfields := hopFields(raw, offset, currHFIdx, segLen)
-	if (currHFIdx != segLen) {
-		hopFieldsBytePositionsLemma(raw, offset, currHFIdx + 1, segLen, newP)
-		hopfieldsInc := hopFields(raw, offset, currHFIdx + 1, segLen)
-		assert reveal hopFieldsBytePositions(raw, offset, currHFIdx + 1, segLen, hopfieldsInc)
+ensures   hopFields(raw, offset, currHfIdx, segLen)[start:] ==
+ 	hopFields(raw, offset, currHfIdx+start, segLen)
+decreases start
+func hopFieldsSliceStart(raw []byte, offset int, currHfIdx int, segLen int, start int, p perm) {
+	if (start != 0) {
+		newP := (p + R55)/2
+		hopFieldsSliceStart(raw, offset, currHfIdx, segLen, start-1, newP)
 	}
-	assert reveal hopFieldsBytePositions(raw, offset, currHFIdx, segLen, hopfields)
+}
+
+ghost
+requires  R55 < p
+requires  0 <= offset
+requires  0 <= start && start <= currHfIdx
+requires  0 <= currHfIdx && currHfIdx <= segLen
+requires  offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.Bytes(raw, 0, len(raw)), p)
+ensures   hopFields(raw, offset, currHfIdx, segLen) ==
+ 	hopFields(raw, offset+start*path.HopLen, currHfIdx-start, segLen-start)
+decreases segLen - currHfIdx
+func hopFieldsIdxOffsetEq(raw []byte, offset int, currHfIdx int, segLen int, start int, p perm) {
+	if (currHfIdx != segLen) {
+		newP := (p + R55)/2
+		hopFieldsIdxOffsetEq(raw, offset, currHfIdx + 1, segLen, start, newP)
+	}
 }
