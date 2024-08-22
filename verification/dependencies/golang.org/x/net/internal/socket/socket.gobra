@@ -14,8 +14,8 @@ package socket
 
 import (
 	"net"
-
-	sl "github.com/scionproto/scion/verification/utils/slices"
+	. "verification/utils/definitions"
+	sl "verification/utils/slices"
 )
 
 
@@ -108,4 +108,29 @@ ensures  0 <= res
 decreases
 pure func (m *Message) GetN() (res int) {
 	return unfolding acc(m.Mem(), _) in m.N
+}
+
+
+// proves injectivity of underlying buffers
+ghost
+requires 0 <= k && k < len(msgs)
+preserves acc(m.Mem(), R55)
+preserves len(m.GetFstBuffer()) > 0
+preserves sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(), R55)
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> // (VerifedSCION) TODO: Why is a  trigger like msgs[i].GetFstBuffer() breaking everything?
+	 sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer()))
+ensures forall i int :: { &msgs[i] } 0 <= i && i <= k ==> msgs[i].GetFstBuffer() !== m.GetFstBuffer()
+decreases k
+func (m *Message) MessageInjectivity(msgs []Message, k int) {
+	if(k != 0){
+		m.MessageInjectivity(msgs, k-1)
+	}
+	unfold sl.Bytes(msgs[k].GetFstBuffer(), 0, len(msgs[k].GetFstBuffer()))
+	unfold sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+	if len(msgs[k].GetFstBuffer()) != 0 {
+		assert &msgs[k].GetFstBuffer()[0] != &m.GetFstBuffer()[0]
+	}
+	fold sl.Bytes(msgs[k].GetFstBuffer(), 0, len(msgs[k].GetFstBuffer()))
+	fold sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
 }

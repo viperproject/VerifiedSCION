@@ -121,10 +121,10 @@ type BatchConn interface {
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].Mem()
-	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-	// @ requires  forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
-	// @ 	sl.Bytes(ubuf, 0, len(ubuf))
+	// @ requires forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
+	// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
+	// @ requires forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
+	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr())
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
@@ -134,10 +134,10 @@ type BatchConn interface {
 	// @ 		!msgs[i].HasWildcardPermAddr())
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
-	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-	// @ ensures   forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
-	// @ 	sl.Bytes(ubuf, 0, len(ubuf))
+	// @ ensures forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
+	// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
+	// @ ensures forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
+	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 	// @ ensures   err != nil ==> err.ErrorMem()
 	// contracts for IO-spec
 	// @ requires  Prophecy(prophecyM)
@@ -149,7 +149,7 @@ type BatchConn interface {
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
 	// @ 		MsgToAbsVal(&msgs[i], ingressID) == old(MultiReadBioIO_val(place, n)[i])
-	ReadBatch(msgs underlayconn.Messages /*@, ghost msgsUBufs set[[]byte], ghost ingressID uint16, ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
+	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
 	// @ preserves acc(sl.Bytes(b, 0, len(b)), R10)
@@ -826,29 +826,27 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane /*@, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			d := *dPtr
 			msgs := conn.NewReadMessages(inputBatchCnt)
-			// @ ghost var msgsUBufs set[[]byte]
 			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
 			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() &&
 			// @ 	msgs[i].HasActiveAddr() &&
 			// @ 	msgs[i].GetAddr() == nil
-			// @ ensures forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-			// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-			// @ ensures forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
-			// @ 	sl.Bytes(ubuf, 0, len(ubuf))
+			// @ ensures forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
+			// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
+			// @ ensures forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
+			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 			// @ decreases
 			// @ outline(
-			// @ msgsUBufs := set[[]byte]{}
 			// @ invariant 0 <= i0 && i0 <= len(msgs)
 			// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==>
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil && msgs[i].HasActiveAddr()
-			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==>
-			// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-			// @ invariant forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
-			// @ 	sl.Bytes(ubuf, 0, len(ubuf))
+			// @ invariant forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < i0) ==>
+			// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
+			// @ invariant forall j int :: { &msgs[j] } (0 <= j && j < i0) ==>
+			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
 			// @ decreases len(msgs) - i0
 			for i0 := 0; i0 < len(msgs); i0 += 1 {
 				// (VerifiedSCION) changed a range loop in favor of a normal loop
@@ -856,6 +854,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ unfold msgs[i0].Mem()
 				msg := msgs[i0]
 				// @ ensures sl.Bytes(tmp, 0, len(tmp))
+				// @ ensures len(tmp) > 0
 				// @ decreases
 				// @ outline(
 				tmp := make([]byte, bufSize)
@@ -866,7 +865,9 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				msg.Buffers[0] = tmp
 				// @ msgs[i0].IsActive = true
 				// @ fold msgs[i0].Mem()
-				// @ msgsUBufs = msgsUBufs union set[[]byte]{msgs[i0].GetFstBuffer()}
+				// @ ghost if(i0 != 0){
+				// @ 	msgs[i0].MessageInjectivity(msgs[:i0], i0-1)
+				// @ }
 			}
 			// @ )
 			// @ ensures writeMsgInv(writeMsgs)
@@ -887,10 +888,10 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant acc(&scmpErr)
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem()
-			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-			// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-			// @ invariant forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
-			// @ 	sl.Bytes(ubuf, 0, len(ubuf))
+			// @ invariant forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
+			// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
+			// @ invariant forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
+			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 			// @ invariant writeMsgInv(writeMsgs)
 			// @ invariant acc(dPtr, _) && *dPtr === d
 			// @ invariant acc(&d.running, _) // necessary for loop condition
@@ -922,7 +923,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
 				// @ assert dp.dp3s_iospec_ordered(sN, tN)
 				// @ BeforeReadBatch:
-				pkts, err := rd.ReadBatch(msgs /*@, msgsUBufs, ingressID, numberOfReceivedPacketsProphecy, t @*/)
+				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t @*/)
 				// @ assert old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)) == ioValSeq
 				// @ assert err == nil ==>
 				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
@@ -962,10 +963,10 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// complications with permissions
 				// @ invariant acc(&scmpErr)
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-				// @ 	msgs[i].GetFstBuffer() in msgsUBufs
-				// @ invariant forall ubuf []byte :: { ubuf in msgsUBufs } ubuf in msgsUBufs ==>
-				// @ 	sl.Bytes(ubuf, 0, len(ubuf))
+				// @ invariant forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
+				// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
+				// @ invariant forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
+				// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(dPtr, _) && *dPtr === d
 				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
@@ -1414,6 +1415,8 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	// @ d.getNewPacketProcessorFootprint()
 	verScionTmp = gopacket.NewSerializeBuffer()
 	// @ unfold acc(sl.Bytes(verScionTmp.UBuf(), 0, len(verScionTmp.UBuf())), writePerm)
+	// (VerifedSCION) TODO: Why is this unfold needed?
+	// Why is an unfold with partial permissions not working?
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
