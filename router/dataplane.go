@@ -121,8 +121,6 @@ type BatchConn interface {
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].Mem()
-	// @ requires forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
-	// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
 	// @ requires forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
 	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
@@ -134,8 +132,6 @@ type BatchConn interface {
 	// @ 		!msgs[i].HasWildcardPermAddr())
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
-	// @ ensures forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
-	// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
 	// @ ensures forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
 	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 	// @ ensures   err != nil ==> err.ErrorMem()
@@ -832,8 +828,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ 	msgs[i].Mem() &&
 			// @ 	msgs[i].HasActiveAddr() &&
 			// @ 	msgs[i].GetAddr() == nil
-			// @ ensures forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
-			// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
 			// @ ensures forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
 			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 			// @ decreases
@@ -888,8 +882,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant acc(&scmpErr)
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem()
-			// @ invariant forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
-			// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
 			// @ invariant forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
 			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 			// @ invariant writeMsgInv(writeMsgs)
@@ -963,8 +955,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// complications with permissions
 				// @ invariant acc(&scmpErr)
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
-				// @ invariant forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < len(msgs)) ==>
-				// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
 				// @ invariant forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
 				// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
 				// @ invariant writeMsgInv(writeMsgs)
