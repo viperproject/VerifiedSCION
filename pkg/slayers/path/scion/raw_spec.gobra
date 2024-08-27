@@ -853,7 +853,7 @@ ensures   hopFields(raw, offset, currHfIdx, segLen)[:end-currHfIdx] ==
 	hopFields(raw, offset, currHfIdx, end)
 decreases end - currHfIdx
 func HopsFromSuffixOfRawMatchSuffixOfHops(raw []byte, offset int, currHfIdx int, segLen int, end int) {
-	hopsFromSuffixOfRawMatchSuffixOfHops(raw, offset, currHfIdx + 1, segLen, end, R54)
+	hopsFromSuffixOfRawMatchSuffixOfHops(raw, offset, currHfIdx, segLen, end, R54)
 }
 
 ghost
@@ -883,7 +883,7 @@ ensures   hopFields(raw, offset, currHfIdx, segLen)[start:] ==
  	hopFields(raw, offset, currHfIdx+start, segLen)
 decreases start
 func HopsFromPrefixOfRawMatchPrefixOfHops(raw []byte, offset int, currHfIdx int, segLen int, start int) {
-	hopsFromPrefixOfRawMatchPrefixOfHops(raw, offset, currHfIdx, segLen, start-1, R54)
+	hopsFromPrefixOfRawMatchPrefixOfHops(raw, offset, currHfIdx, segLen, start, R54)
 }
 
 ghost
@@ -913,7 +913,7 @@ ensures   hopFields(raw, offset, currHfIdx, segLen) ==
  	hopFields(raw, offset+start*path.HopLen, currHfIdx-start, segLen-start)
 decreases segLen - currHfIdx
 func AlignHopsOfRawWithOffsetAndIndex(raw []byte, offset int, currHfIdx int, segLen int, start int) {
-	alignHopsOfRawWithOffsetAndIndex(raw, offset, currHfIdx + 1, segLen, start, R54)
+	alignHopsOfRawWithOffsetAndIndex(raw, offset, currHfIdx, segLen, start, R54)
 }
 
 ghost
