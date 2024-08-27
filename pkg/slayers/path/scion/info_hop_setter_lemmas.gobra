@@ -594,10 +594,10 @@ func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf
 	currHfStart := currHfIdx * path.HopLen
 	currHfEnd := currHfStart + path.HopLen
 
-	hopFieldsSliceEnd(hopfields, 0, 0, segLen, currHfIdx, R54)
-	hopFieldsIdxOffsetEq(hopfields, 0, currHfIdx + 1, segLen, currHfIdx + 1, R54)
-	hopFieldsSliceStart(hopfields, 0, 0, segLen, currHfIdx + 1, R54)
-	hopFieldsSliceStart(hopfields, 0, 0, segLen, currHfIdx, R54)
+	HopsFromSuffixOfRawMatchSuffixOfHops(hopfields, 0, 0, segLen, currHfIdx)
+	AlignHopsOfRawWithOffsetAndIndex(hopfields, 0, currHfIdx + 1, segLen, currHfIdx + 1)
+	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx + 1)
+	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx)
 	widenHopFields(hopfields, 0, 0, currHfIdx, 0, currHfStart, R52)
 	widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, currHfEnd, segLen * path.HopLen, R52)
 	widenHopFields(hopfields, currHfStart, 0, 1, currHfStart, currHfEnd, R52)

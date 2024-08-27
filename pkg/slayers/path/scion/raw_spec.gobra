@@ -691,7 +691,7 @@ func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField)
 	reveal s.CorrectlyDecodedHf(ubuf, hop)
 	reveal s.absPkt(ubuf)
 	reveal CurrSeg(ubuf, offset, currInfIdx, hfIdxSeg, segLen, MetaLen)
-	hopFieldsSliceStart(ubuf, offset, 0, segLen, hfIdxSeg, R54)
+	HopsFromPrefixOfRawMatchPrefixOfHops(ubuf, offset, 0, segLen, hfIdxSeg)
 	assert reveal s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
 	assert reveal s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
 }
@@ -844,6 +844,19 @@ func XoverRightSeg(raw []byte, currInfIdx int, currHfIdx int, segs io.SegLens) {
 }
 
 ghost
+requires  0 <= offset
+requires  0 <= currHfIdx && currHfIdx <= end
+requires  end <= segLen
+requires  offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
+ensures   hopFields(raw, offset, currHfIdx, segLen)[:end-currHfIdx] ==
+	hopFields(raw, offset, currHfIdx, end)
+decreases end - currHfIdx
+func HopsFromSuffixOfRawMatchSuffixOfHops(raw []byte, offset int, currHfIdx int, segLen int, end int) {
+	hopsFromSuffixOfRawMatchSuffixOfHops(raw, offset, currHfIdx + 1, segLen, end, R54)
+}
+
+ghost
 requires  R55 < p
 requires  0 <= offset
 requires  0 <= currHfIdx && currHfIdx <= end
@@ -853,11 +866,24 @@ preserves acc(sl.Bytes(raw, 0, len(raw)), p)
 ensures   hopFields(raw, offset, currHfIdx, segLen)[:end-currHfIdx] ==
 	hopFields(raw, offset, currHfIdx, end)
 decreases end - currHfIdx
-func hopFieldsSliceEnd(raw []byte, offset int, currHfIdx int, segLen int, end int, p perm) {
+func hopsFromSuffixOfRawMatchSuffixOfHops(raw []byte, offset int, currHfIdx int, segLen int, end int, p perm) {
 	if (currHfIdx != end) {
 		newP := (p + R55)/2
-		hopFieldsSliceEnd(raw, offset, currHfIdx + 1, segLen, end, newP)
+		hopsFromSuffixOfRawMatchSuffixOfHops(raw, offset, currHfIdx + 1, segLen, end, newP)
 	}
+}
+
+ghost
+requires  0 <= offset
+requires  0 <= start
+requires  0 <= currHfIdx && currHfIdx <= segLen - start
+requires  offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
+ensures   hopFields(raw, offset, currHfIdx, segLen)[start:] ==
+ 	hopFields(raw, offset, currHfIdx+start, segLen)
+decreases start
+func HopsFromPrefixOfRawMatchPrefixOfHops(raw []byte, offset int, currHfIdx int, segLen int, start int) {
+	hopsFromPrefixOfRawMatchPrefixOfHops(raw, offset, currHfIdx, segLen, start-1, R54)
 }
 
 ghost
@@ -870,11 +896,24 @@ preserves acc(sl.Bytes(raw, 0, len(raw)), p)
 ensures   hopFields(raw, offset, currHfIdx, segLen)[start:] ==
  	hopFields(raw, offset, currHfIdx+start, segLen)
 decreases start
-func hopFieldsSliceStart(raw []byte, offset int, currHfIdx int, segLen int, start int, p perm) {
+func hopsFromPrefixOfRawMatchPrefixOfHops(raw []byte, offset int, currHfIdx int, segLen int, start int, p perm) {
 	if (start != 0) {
 		newP := (p + R55)/2
-		hopFieldsSliceStart(raw, offset, currHfIdx, segLen, start-1, newP)
+		hopsFromPrefixOfRawMatchPrefixOfHops(raw, offset, currHfIdx, segLen, start-1, newP)
 	}
+}
+
+ghost
+requires  0 <= offset
+requires  0 <= start && start <= currHfIdx
+requires  0 <= currHfIdx && currHfIdx <= segLen
+requires  offset + path.HopLen * segLen <= len(raw)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
+ensures   hopFields(raw, offset, currHfIdx, segLen) ==
+ 	hopFields(raw, offset+start*path.HopLen, currHfIdx-start, segLen-start)
+decreases segLen - currHfIdx
+func AlignHopsOfRawWithOffsetAndIndex(raw []byte, offset int, currHfIdx int, segLen int, start int) {
+	alignHopsOfRawWithOffsetAndIndex(raw, offset, currHfIdx + 1, segLen, start, R54)
 }
 
 ghost
@@ -887,9 +926,9 @@ preserves acc(sl.Bytes(raw, 0, len(raw)), p)
 ensures   hopFields(raw, offset, currHfIdx, segLen) ==
  	hopFields(raw, offset+start*path.HopLen, currHfIdx-start, segLen-start)
 decreases segLen - currHfIdx
-func hopFieldsIdxOffsetEq(raw []byte, offset int, currHfIdx int, segLen int, start int, p perm) {
+func alignHopsOfRawWithOffsetAndIndex(raw []byte, offset int, currHfIdx int, segLen int, start int, p perm) {
 	if (currHfIdx != segLen) {
 		newP := (p + R55)/2
-		hopFieldsIdxOffsetEq(raw, offset, currHfIdx + 1, segLen, start, newP)
+		alignHopsOfRawWithOffsetAndIndex(raw, offset, currHfIdx + 1, segLen, start, newP)
 	}
 }
