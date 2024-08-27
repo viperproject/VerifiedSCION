@@ -1402,9 +1402,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	var verScionTmp gopacket.SerializeBuffer
 	// @ d.getNewPacketProcessorFootprint()
 	verScionTmp = gopacket.NewSerializeBuffer()
-	// @ unfold acc(sl.Bytes(verScionTmp.UBuf(), 0, len(verScionTmp.UBuf())), writePerm)
-	// (VerifedSCION) TODO: Why is this unfold needed?
-	// Why is an unfold with partial permissions not working?
+	// @ sl.PermsImplyIneqWithWildcard(verScionTmp.UBuf(), *d.key)
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
@@ -1415,7 +1413,6 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 			epicInput:  make([]byte, libepic.MACBufferSize),
 		},
 	}
-	// @ fold acc(sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf())), writePerm)
 	// @ fold sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
