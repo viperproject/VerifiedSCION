@@ -851,7 +851,7 @@ requires  offset + path.HopLen * segLen <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
 ensures   hopFields(raw, offset, currHfIdx, segLen)[:end-currHfIdx] ==
 	hopFields(raw, offset, currHfIdx, end)
-decreases end - currHfIdx
+decreases
 func HopsFromSuffixOfRawMatchSuffixOfHops(raw []byte, offset int, currHfIdx int, segLen int, end int) {
 	hopsFromSuffixOfRawMatchSuffixOfHops(raw, offset, currHfIdx, segLen, end, R54)
 }
@@ -880,8 +880,8 @@ requires  0 <= currHfIdx && currHfIdx <= segLen - start
 requires  offset + path.HopLen * segLen <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
 ensures   hopFields(raw, offset, currHfIdx, segLen)[start:] ==
- 	hopFields(raw, offset, currHfIdx+start, segLen)
-decreases start
+ 	hopFields(raw, offset, currHfIdx + start, segLen)
+decreases
 func HopsFromPrefixOfRawMatchPrefixOfHops(raw []byte, offset int, currHfIdx int, segLen int, start int) {
 	hopsFromPrefixOfRawMatchPrefixOfHops(raw, offset, currHfIdx, segLen, start, R54)
 }
@@ -911,7 +911,7 @@ requires  offset + path.HopLen * segLen <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
 ensures   hopFields(raw, offset, currHfIdx, segLen) ==
  	hopFields(raw, offset+start*path.HopLen, currHfIdx-start, segLen-start)
-decreases segLen - currHfIdx
+decreases
 func AlignHopsOfRawWithOffsetAndIndex(raw []byte, offset int, currHfIdx int, segLen int, start int) {
 	alignHopsOfRawWithOffsetAndIndex(raw, offset, currHfIdx, segLen, start, R54)
 }
