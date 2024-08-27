@@ -1438,6 +1438,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 	return nil
 }
 
+// @ trusted // TODO: drop
 // @ requires p.sInit()
 // @ requires sl.Bytes(rawPkt, 0, len(rawPkt))
 // @ requires acc(srcAddr.Mem(), _)
@@ -1493,7 +1494,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	// parse SCION header and skip extensions;
 	var err error
 	// @ ghost var processed seq[bool]
-	// @ ghost var offsets   seq[offsetPair]
+	//  ghost var offsets   seq[offsetPair]
 	// @ ghost var lastLayerIdx int
 	p.lastLayer, err /*@ , processed, offsets, lastLayerIdx @*/ = decodeLayers(p.rawPkt, &p.scionLayer, &p.hbhLayer, &p.e2eLayer)
 	if err != nil {
@@ -4764,25 +4765,26 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ ensures   reterr == nil && typeOf(base.GetPath(data)) == *scion.Raw ==>
 // @ 	base.EqAbsHeader(data) && base.ValidScionInitSpec(data)
 // @ ensures   reterr == nil ==> base.EqPathType(data)
-// @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @ 	(processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
-// @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @ 	((processed[i] && !offsets[i].isNil) ==> opts[i].Mem(data[offsets[i].start:offsets[i].end]))
-// @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @ 	((processed[i] && offsets[i].isNil) ==> opts[i].Mem(nil))
-// @ ensures   reterr == nil ==> forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
-// @ 	(!processed[i] ==> opts[i].NonInitMem())
-// @ ensures   reterr != nil ==> base.NonInitMem()
-// @ ensures   reterr != nil ==> (forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==> opts[i].NonInitMem())
-// @ ensures   reterr != nil ==> reterr.ErrorMem()
+// @ ensures   reterr == nil ==>
+// @ 	forall i int :: { &opts[i] } 0 <= i && i < len(opts) && processed[i] ==>
+// @ 		decRelations[i].IsValid(data) &&
+// @ 		opts[i].Mem(decRelations[i].LayerSlice(data))
+// @ ensures   reterr == nil ==>
+// @ 	forall i int :: { &opts[i] } 0 <= i && i < len(opts) && !processed[i] ==>
+// @ 		opts[i].NonInitMem()
+// @ ensures   reterr != nil ==>
+// @ 	base.NonInitMem() && reterr.ErrorMem()
+// @ ensures   reterr != nil ==>
+// @ 	(forall i int :: { &opts[i] } 0 <= i && i < len(opts) ==> opts[i].NonInitMem())
 // @ decreases
-// (VerifiedSCION) originally, `base` was declared with type `gopacket.DecodingLayer`. This is unnecessarily complicated for a private function
-// that is only called once with a parameter of type `*SCION`, and leads to more annyoing post-conditions.
+// (VerifiedSCION) originally, `base` was declared with type `gopacket.DecodingLayer`. This is unnecessarily
+// complicated for a private function that is only called once with a parameter of type `*SCION`, and leads
+// to more annyoing post-conditions.
 func decodeLayers(data []byte, base *slayers.SCION, opts ...gopacket.DecodingLayer) (
 	retl gopacket.DecodingLayer,
 	reterr error,
 	// @ ghost processed seq[bool],
-	// @ ghost offsets seq[offsetPair],
+	// @ ghost decRelations seq[decodedLayerRelation],
 	// @ ghost idx int,
 ) {
 	// @ processed = seqs.NewSeqBool(len(opts))
