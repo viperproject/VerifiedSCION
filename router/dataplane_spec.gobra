@@ -67,11 +67,11 @@ pred (d *DataPlane) Mem() {
 	(d.internalNextHops != nil  ==> accAddr(d.internalNextHops))  &&
 	(d.svc != nil               ==> d.svc.Mem())                  &&
 	(d.macFactory != nil        ==> (
-		acc(d.key)                                                &&
-		acc(sl.Bytes(*d.key, 0, len(*d.key)), _)                  &&
-		len(*d.key) > 0                                           &&
-		scrypto.ValidKeyForHash(*d.key)                           &&
-		d.macFactory implements MacFactorySpec{d.key}))           &&
+		acc(d.key)                                      &&
+		acc(sl.Bytes(*d.key, 0, len(*d.key)), _)        &&
+		len(*d.key) > 0                                 &&
+		scrypto.ValidKeyForHash(*d.key)                 &&
+		d.macFactory implements MacFactorySpec{d.key})) &&
 	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions)) &&
 	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))      &&
 	// The following permissions are enough to call all methods needed in fields

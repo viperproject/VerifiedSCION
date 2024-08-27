@@ -318,6 +318,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ d.key = &key
 	verScionTemp :=
 		// @ requires acc(&key, _) && acc(sl.Bytes(key, 0, len(key)), _)
+		// @ requires len(key) > 0
 		// @ requires scrypto.ValidKeyForHash(key)
 		// @ ensures  acc(&key, _) && acc(sl.Bytes(key, 0, len(key)), _)
 		// @ ensures  h != nil && h.Mem()
