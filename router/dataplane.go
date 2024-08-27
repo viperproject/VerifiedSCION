@@ -859,9 +859,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				msg.Buffers[0] = tmp
 				// @ msgs[i0].IsActive = true
 				// @ fold msgs[i0].Mem()
-				// @ ghost if(i0 != 0){
-				// @ 	msgs[i0].MessageInjectivity(msgs[:i0], i0-1)
-				// @ }
+				// @ msgs[i0].EnsureBufferInjectivityAgainstList(msgs[:i0])
 			}
 			// @ )
 			// @ ensures writeMsgInv(writeMsgs)

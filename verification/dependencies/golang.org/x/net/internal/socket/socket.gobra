@@ -110,8 +110,18 @@ pure func (m *Message) GetN() (res int) {
 	return unfolding acc(m.Mem(), _) in m.N
 }
 
-
-// proves injectivity of underlying buffers
+// This function establishes the injectivity of the underlying buffers across a list of messages.
+// Specifically, it ensures that for any given message `m` and any message in the list `msgs` up to index `k`,
+// their buffers are not pointing to the same memory location.
+//
+// The challenge arises when initializing buffers for each message in `msgs`, as Gobra cannot automatically infer
+// that these buffers are located in distinct memory regions. Consequently, the property
+// `forall msg1, msg2 in msgs :: msg1.Buffer !== msg2.Buffer` does not hold automatically.
+//
+// To address this, the function uses a proof by recursion, ensuring that the buffer of a new message `m`
+// is distinct from the buffers of all previously checked messages in the list. This is done by asserting
+// `&msgs[k].GetFstBuffer()[0] != &m.GetFstBuffer()[0]`, which instantiates the necessary triggers to
+// prove the required quantified property.
 ghost
 requires 0 <= k && k < len(msgs)
 preserves acc(m.Mem(), R55)
@@ -122,9 +132,9 @@ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> // (VerifedSC
 	 sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer()))
 ensures forall i int :: { &msgs[i] } 0 <= i && i <= k ==> msgs[i].GetFstBuffer() !== m.GetFstBuffer()
 decreases k
-func (m *Message) MessageInjectivity(msgs []Message, k int) {
-	if(k != 0){
-		m.MessageInjectivity(msgs, k-1)
+func (m *Message) ensureBufferInjectivityAgainstList(msgs []Message, k int) {
+	if k != 0 {
+		m.ensureBufferInjectivityAgainstList(msgs, k-1)
 	}
 	unfold sl.Bytes(msgs[k].GetFstBuffer(), 0, len(msgs[k].GetFstBuffer()))
 	unfold sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
@@ -133,4 +143,19 @@ func (m *Message) MessageInjectivity(msgs []Message, k int) {
 	}
 	fold sl.Bytes(msgs[k].GetFstBuffer(), 0, len(msgs[k].GetFstBuffer()))
 	fold sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+}
+
+ghost
+preserves acc(m.Mem(), R55)
+preserves len(m.GetFstBuffer()) > 0
+preserves sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(), R55)
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	 sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer()))
+ensures forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].GetFstBuffer() !== m.GetFstBuffer()
+decreases
+func (m *Message) EnsureBufferInjectivityAgainstList(msgs []Message) {
+	if len(msgs) != 0 {
+		m.EnsureBufferInjectivityAgainstList(msgs, len(msgs)-1)
+	}
 }
