@@ -218,9 +218,11 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ requires  b != nil && b.Mem()
 // @ requires  acc(s.Mem(ubuf), R0)
 // @ requires  sl.Bytes(ubuf, 0, len(ubuf))
+// @ requires  sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 // @ ensures   b.Mem()
 // @ ensures   acc(s.Mem(ubuf), R0)
 // @ ensures   sl.Bytes(ubuf, 0, len(ubuf))
+// @ ensures   sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 // TODO: hide internal spec details
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
 // @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), R55) in
@@ -257,7 +259,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	}
 	// @ ghost uSerBufN := b.UBuf()
 	// @ assert buf === uSerBufN[:scnLen]
-	// @ b.ExchangePred()
 
 	// @ unfold acc(sl.Bytes(uSerBufN, 0, len(uSerBufN)), writePerm)
 	// Serialize common header.
@@ -287,7 +288,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		// @ sl.Unslice_Bytes(uSerBufN, 0, CmnHdrLen, R54)
 		// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm)
 		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
-		// @ b.RestoreMem(uSerBufN)
 		return err
 	}
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
@@ -320,7 +320,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ sl.CombineRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
 	// @ sl.CombineRange_Bytes(ubuf, startP, endP, HalfPerm)
 	// @ reveal IsSupportedPkt(uSerBufN)
-	// @ b.RestoreMem(uSerBufN)
 	// @ reveal IsSupportedRawPkt(b.View())
 	return tmp
 }
