@@ -142,15 +142,18 @@ func NilAcc_Bytes() {
 }
 
 ghost
-requires len(s1) > 0 || len(s2) > 0
+requires  len(s1) > 0 || len(s2) > 0
 preserves Bytes(s1, 0, len(s1))
 preserves acc(Bytes(s2, 0, len(s2)), _)
-ensures s1 !== s2
+ensures   s1 !== s2
 decreases
 func PermsImplyIneqWithWildcard(s1 []byte, s2 []byte) {
 	unfold Bytes(s1, 0, len(s1))
 	unfold acc(Bytes(s2, 0, len(s2)), _)
 	if len(s1) > 0 && len(s2) > 0 {
+		// This assertion checks that the memory addresses of the first elements
+		// in s1 and s2 are different. By doing so, we instantiate the triggers in
+		// the quantifier bodies to prove the required inequality for non-empty slices.
 		assert &s1[0] != &s2[0]
 	}
 	fold Bytes(s1, 0, len(s1))
@@ -158,16 +161,19 @@ func PermsImplyIneqWithWildcard(s1 []byte, s2 []byte) {
 }
 
 ghost
-requires 0 < p
-requires len(s1) > 0 || len(s2) > 0
+requires  0 < p
+requires  len(s1) > 0 || len(s2) > 0
 preserves Bytes(s1, 0, len(s1))
 preserves acc(Bytes(s2, 0, len(s2)), p)
-ensures s1 !== s2
+ensures   s1 !== s2
 decreases
 func PermsImplyIneq(s1 []byte, s2 []byte, p perm) {
 	unfold Bytes(s1, 0, len(s1))
 	unfold acc(Bytes(s2, 0, len(s2)), p)
 	if len(s1) > 0 && len(s2) > 0 {
+		// This assertion checks that the memory addresses of the first elements
+		// in s1 and s2 are different. By doing so, we instantiate the triggers in
+		// the quantifier bodies to prove the required inequality for non-empty slices.
 		assert &s1[0] != &s2[0]
 	}
 	fold Bytes(s1, 0, len(s1))

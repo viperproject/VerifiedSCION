@@ -28,15 +28,12 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 // ghost function.
 ghost
 requires  acc(sl.Bytes(key, 0, len(key)), _)
-requires  len(key) > 0
 decreases _
 pure func ValidKeyForHash(key []byte) bool
 
-// Alternatively we could require len(key) > 0?
 preserves acc(sl.Bytes(key, 0, len(key)), _)
-ensures   old(len(key) > 0 && ValidKeyForHash(key)) ==> e == nil
-ensures   e == nil ==>
-    (h != nil && h.Mem() && len(key) > 0 && ValidKeyForHash(key))
+ensures   old(ValidKeyForHash(key)) ==> e == nil
+ensures   e == nil ==> (h != nil && h.Mem() && ValidKeyForHash(key))
 ensures   e != nil ==> e.ErrorMem()
 decreases _
 func InitMac(key []byte) (h hash.Hash, e error)

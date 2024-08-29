@@ -121,8 +121,8 @@ type BatchConn interface {
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].Mem()
-	// @ requires forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
-	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
+	// @ requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
+	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr())
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
@@ -132,8 +132,8 @@ type BatchConn interface {
 	// @ 		!msgs[i].HasWildcardPermAddr())
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==> msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
-	// @ ensures forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
-	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
+	// @ ensures forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
+	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
 	// @ ensures   err != nil ==> err.ErrorMem()
 	// contracts for IO-spec
 	// @ requires  Prophecy(prophecyM)
@@ -318,7 +318,6 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ d.key = &key
 	verScionTemp :=
 		// @ requires acc(&key, _) && acc(sl.Bytes(key, 0, len(key)), _)
-		// @ requires len(key) > 0
 		// @ requires scrypto.ValidKeyForHash(key)
 		// @ ensures  acc(&key, _) && acc(sl.Bytes(key, 0, len(key)), _)
 		// @ ensures  h != nil && h.Mem()
@@ -829,8 +828,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ 	msgs[i].Mem() &&
 			// @ 	msgs[i].HasActiveAddr() &&
 			// @ 	msgs[i].GetAddr() == nil
-			// @ ensures forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
-			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
+			// @ ensures forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
+			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
 			// @ decreases
 			// @ outline(
 			// @ invariant 0 <= i0 && i0 <= len(msgs)
@@ -838,9 +837,9 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < i0 ==>
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil && msgs[i].HasActiveAddr()
-			// @ invariant forall j, k int :: { &msgs[j], &msgs[k] } (0 <= j && j < k && k < i0) ==>
+			// @ invariant forall j, k int :: { &msgs[j], &msgs[k] } 0 <= j && j < k && k < i0 ==>
 			// @ 	msgs[j].GetFstBuffer() !== msgs[k].GetFstBuffer()
-			// @ invariant forall j int :: { &msgs[j] } (0 <= j && j < i0) ==>
+			// @ invariant forall j int :: { &msgs[j] } 0 <= j && j < i0 ==>
 			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
 			// @ decreases len(msgs) - i0
 			for i0 := 0; i0 < len(msgs); i0 += 1 {
@@ -881,8 +880,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant acc(&scmpErr)
 			// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem()
-			// @ invariant forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
-			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
+			// @ invariant forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
+			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
 			// @ invariant writeMsgInv(writeMsgs)
 			// @ invariant acc(dPtr, _) && *dPtr === d
 			// @ invariant acc(&d.running, _) // necessary for loop condition
@@ -954,8 +953,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// complications with permissions
 				// @ invariant acc(&scmpErr)
 				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
-				// @ invariant forall j int :: { &msgs[j] } (0 <= j && j < len(msgs)) ==>
-				// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0 , len(msgs[j].GetFstBuffer()))
+				// @ invariant forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
+				// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(dPtr, _) && *dPtr === d
 				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
@@ -1107,7 +1106,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert result.OutPkt != nil ==> newAbsPkt ==
 					// @ 	absIO_val(writeMsgs[0].Buffers[0], result.EgressID)
 					// @ fold acc(writeMsgs[0].Mem(), R50)
-					// @ assert acc(sl.Bytes(writeMsgs[0].GetFstBuffer(), 0, len(writeMsgs[0].GetFstBuffer())), R50)
 					// @ ghost ioLock.Lock()
 					// @ unfold SharedInv!< dp, ioSharedArg !>()
 					// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
