@@ -16,34 +16,10 @@
 
 package slices
 
-import "github.com/scionproto/scion/verification/utils/seqs"
-
 /** Bytes **/
-func AbsSliceC_Bytes_test() {
+
+func Bytes_test() {
 	s := make([]byte, 10)
-	ghost contents := seqs.NewSeqByte(10)
-	fold AbsSliceC_Bytes(s, 0, 10, contents)
-	// assert false // fails
-}
-
-func AbsSlice_Bytes_test() {
-	s := make([]byte, 10)
-	fold AbsSlice_Bytes(s, 0, 10)
-	// assert false // fails
-}
-
-/** Any **/
-func AbsSliceC_Any_test() {
-	s := make([]any, 1)
-	var elem interface{} = int(1)
-	ghost contents := seq[any]{elem}
-	s[0] = elem
-	fold AbsSliceC_Any(s, 0, 1, contents)
-	// assert false // fails
-}
-
-func AbsSlice_Any_test() {
-	s := make([]any, 10)
-	fold AbsSlice_Any(s, 0, 10)
+	fold Bytes(s, 0, 10)
 	// assert false // fails
 }

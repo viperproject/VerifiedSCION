@@ -65,7 +65,7 @@ func (m Month) String() (res string)
 type Weekday int
 
 const (
-	// (joao) this used to be defined in terms of iota
+	// (VerifiedSCION) this used to be defined in terms of iota
 	Sunday Weekday = 0
 	Monday Weekday = 1
 	Tuesday Weekday = 2
@@ -175,17 +175,6 @@ func (d Duration) Microseconds() int64 { return int64(d) / 1000 }
 // Milliseconds returns the duration as an integer millisecond count.
 decreases
 func (d Duration) Milliseconds() int64 { return int64(d) / 1000000 }
-
-// Seconds returns the duration as a floating point number of seconds.
-/* (joao) no support for float
-func (d Duration) Seconds() float64
-
-// Minutes returns the duration as a floating point number of minutes.
-func (d Duration) Minutes() float64
-
-// Hours returns the duration as a floating point number of hours.
-func (d Duration) Hours() float64
-*/
 
 // Truncate returns the result of rounding d toward zero to a multiple of m.
 // If m <= 0, Truncate returns d unchanged.

@@ -20,8 +20,9 @@ package io
 
 type IO_ainfo = uint
 
+// Here, we already instantiated the type params, contrary to what
+// is done in Isabelle, where they are left generic.
 type IO_seg2 adt {
-	// Here, we already instantiated the type params
 	IO_seg3_ {
 		AInfo IO_ainfo // nat in Isabelle
 		UInfo set[IO_msgterm]

@@ -19,8 +19,7 @@ const BlockSize = 16
 // The key argument should be the AES key,
 // either 16, 24, or 32 bytes to select
 // AES-128, AES-192, or AES-256.
-trusted
-preserves acc(slices.AbsSlice_Bytes(key, 0, len(key)), R50)
+preserves acc(slices.Bytes(key, 0, len(key)), R50)
 ensures   err == nil ==>
 	len(key) == 16 || len(key) == 24 || len(key) == 32
 ensures   err == nil ==>
@@ -29,16 +28,4 @@ ensures   err == nil ==>
 	result.BlockSize() == len(key))
 ensures   err != nil ==> err.ErrorMem()
 decreases
-func NewCipher(key []byte) (result cipher.Block, err error) {
-	k := len(key)
-	switch k {
-	default:
-		return nil, KeySizeError(k)
-	case 16, 24, 32:
-		break
-	}
-	if boring.Enabled {
-		return boring.NewAESCipher(key)
-	}
-	return newCipher(key)
-}
+func NewCipher(key []byte) (result cipher.Block, err error)

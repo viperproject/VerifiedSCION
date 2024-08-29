@@ -89,7 +89,7 @@ func Fields(s string) (res []string)
 requires forall i int :: { &elems[i] } 0 <= i && i < len(elems) ==> acc(&elems[i], _)
 ensures len(elems) == 0 ==> res == ""
 ensures len(elems) == 1 ==> res == elems[0]
-// (joao) Leads to precondition of call might not hold (permission to elems[i] might not suffice)
+// (VerifiedSCION) Leads to precondition of call might not hold (permission to elems[i] might not suffice)
 // ensures len(elems) > 1 ==> res == elems[0] + sep + Join(elems[1:], sep)
 decreases _
 pure func Join(elems []string, sep string) (res string)
