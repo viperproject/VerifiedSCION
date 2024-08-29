@@ -84,6 +84,16 @@ pure func absIO_val(raw []byte, ingressID uint16) (val io.IO_val) {
 }
 
 ghost
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires !slayers.IsSupportedPkt(raw)
+ensures  acc(sl.Bytes(raw, 0, len(raw)), R56)
+ensures  absIO_val(raw, ingressID).isIO_val_Unsupported
+decreases
+func AbsUnsupportedPktIsUnsupportedVal(raw []byte, ingressID uint16) {
+	reveal absIO_val(raw, ingressID)
+}
+
+ghost
 requires respr.OutPkt != nil ==>
 	acc(sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt)), R56)
 decreases
@@ -189,6 +199,7 @@ func (d *DataPlane) getDomExternalLemma() {
 
 ghost
 requires acc(msg.Mem(), R50)
+requires acc(sl.Bytes(msg.GetFstBuffer(), 0, len(msg.GetFstBuffer())), R50)
 decreases
 pure func MsgToAbsVal(msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
 	return unfolding acc(msg.Mem(), R50) in

@@ -373,15 +373,15 @@ requires validPktMetaHdr(raw)
 decreases
 pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
-		let metaHdr := RawBytesToMetaHdr(raw) in
+		let metaHdr := RawBytesToMetaHdr(raw)  in
 		let currInfIdx := int(metaHdr.CurrINF) in
-		let currHfIdx := int(metaHdr.CurrHF) in
-		let seg1Len := int(metaHdr.SegLen[0]) in
-		let seg2Len := int(metaHdr.SegLen[1]) in
-		let seg3Len := int(metaHdr.SegLen[2]) in
+		let currHfIdx := int(metaHdr.CurrHF)   in
+		let seg1Len := int(metaHdr.SegLen[0])  in
+		let seg2Len := int(metaHdr.SegLen[1])  in
+		let seg3Len := int(metaHdr.SegLen[2])  in
 		let segs := io.CombineSegLens(seg1Len, seg2Len, seg3Len) in
-		let segLen := segs.LengthOfCurrSeg(currHfIdx) in
-		let prevSegLen := segs.LengthOfPrevSeg(currHfIdx) in
+		let segLen := segs.LengthOfCurrSeg(currHfIdx)            in
+		let prevSegLen := segs.LengthOfPrevSeg(currHfIdx)        in
 		let numINF := segs.NumInfoFields() in
 		let offset := HopFieldOffset(numINF, prevSegLen, MetaLen) in
 		io.IO_Packet2 {
@@ -428,7 +428,7 @@ pure func validPktMetaHdr(raw []byte) bool {
 		let segs := io.CombineSegLens(seg1, seg2, seg3) in
 		let base := RawBytesToBase(raw)       in
 		0 < metaHdr.SegLen[0] &&
-		base.Valid()     &&
+		base.Valid()          &&
 		PktLen(segs, MetaLen) <= len(raw)
 }
 

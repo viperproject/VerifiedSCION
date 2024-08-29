@@ -111,6 +111,7 @@ func (s *SCMP) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 // @ requires  b != nil
 // @ requires  s.Mem(ubufMem)
 // @ preserves b.Mem()
+// @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 // @ ensures   err == nil ==> s.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -121,15 +122,6 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		return err
 	}
 	// @ unfold s.Mem(ubufMem)
-
-	// @ requires len(underlyingBufRes) >= 4
-	// @ requires bytes === underlyingBufRes[:4]
-	// @ requires b != nil
-	// @ preserves acc(&s.TypeCode)
-	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
-	// @ decreases
-	// @ outline (
-	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ unfold sl.Bytes(underlyingBufRes, 0, 2)
 	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 2 ==> &bytes[i] == &underlyingBufRes[i]
@@ -138,8 +130,6 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// @ unfold sl.Bytes(bytes, 0, 2)
 	// @ fold sl.Bytes(underlyingBufRes, 0, 2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ b.RestoreMem(underlyingBufRes)
-	// @ )
 
 	if opts.ComputeChecksums {
 		if s.scn == nil {
@@ -147,13 +137,6 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 			return serrors.New("can not calculate checksum without SCION header")
 		}
 		// zero out checksum bytes
-		// @ requires len(underlyingBufRes) >= 4
-		// @ requires bytes === underlyingBufRes[:4]
-		// @ requires b != nil
-		// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
-		// @ decreases
-		// @ outline (
-		// @ b.ExchangePred()
 		// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 		// @ unfold sl.Bytes(underlyingBufRes, 0, 4)
 		// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
@@ -161,27 +144,16 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		bytes[3] = 0
 		// @ fold sl.Bytes(underlyingBufRes, 0, 4)
 		// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-		// @ b.RestoreMem(underlyingBufRes)
-		// @ )
 		verScionTmp := b.Bytes()
 		// @ unfold s.scn.ChecksumMem()
 		s.Checksum, err = s.scn.computeChecksum(verScionTmp, uint8(L4SCMP))
 		// @ fold s.scn.ChecksumMem()
-		// @ b.RestoreMem(verScionTmp)
 		if err != nil {
 			// @ fold s.Mem(ubufMem)
 			return err
 		}
 
 	}
-	// @ requires len(underlyingBufRes) >= 4
-	// @ requires bytes === underlyingBufRes[:4]
-	// @ requires b != nil
-	// @ preserves acc(&s.Checksum)
-	// @ preserves b.Mem() && b.UBuf() === underlyingBufRes
-	// @ decreases
-	// @ outline (
-	// @ b.ExchangePred()
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
 	// @ unfold sl.Bytes(underlyingBufRes, 0, 4)
 	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
@@ -189,8 +161,6 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	binary.BigEndian.PutUint16(bytes[2:], s.Checksum)
 	// @ fold sl.Bytes(underlyingBufRes, 0, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-	// @ b.RestoreMem(underlyingBufRes)
-	// @ )
 	// @ fold s.Mem(ubufMem)
 	return nil
 }
