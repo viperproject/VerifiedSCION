@@ -27,47 +27,72 @@ pure func if2term(ifs option[IO_ifs]) IO_msgterm {
 		case none[IO_ifs]:
 			MsgTerm_Empty{}
 		default:
-			IO_msgterm(MsgTerm_AS{IO_as(get(ifs))})
+			MsgTerm_AS{IO_as(get(ifs))}
 	}
 }
 
 ghost
 decreases
 pure func (dp DataPlaneSpec) hf_valid(d bool, ts uint, uinfo set[IO_msgterm], hf IO_HF) bool {
+	return hf_valid_impl(dp.Asid(), ts, uinfo, hf)
+}
+
+ghost
+decreases
+pure func hf_valid_impl(asid IO_as, ts uint, uinfo set[IO_msgterm], hf IO_HF) bool {
 	return let inif := hf.InIF2 in
 		let egif := hf.EgIF2 in
-		let x := hf.HVF in
-		let l := IO_msgterm(MsgTerm_L{
-			seq[IO_msgterm]{
-				IO_msgterm(MsgTerm_Num{ts}),
-				if2term(inif),
-				if2term(egif),
-				IO_msgterm(MsgTerm_FS{uinfo})}}) in
-		x == mac(macKey(asidToKey(dp.Asid())), l)
+		let hvf := hf.HVF in
+		let next := nextMsgtermSpec(asid, inif, egif, ts, uinfo) in
+		hvf == next
+}
+
+ghost
+opaque
+ensures result.extract_asid() == asid
+decreases
+pure func nextMsgtermSpec(asid IO_as, inif option[IO_ifs], egif option[IO_ifs], ts uint, uinfo set[IO_msgterm]) (result IO_msgterm) {
+	return let l := plaintextToMac(inif, egif, ts, uinfo) in
+		let res := mac(macKey(asidToKey(asid)), l) in
+		let _ := reveal res.extract_asid() in
+		res
+}
+
+ghost
+decreases
+pure func plaintextToMac(inif option[IO_ifs], egif option[IO_ifs], ts uint, uinfo set[IO_msgterm]) IO_msgterm {
+	return MsgTerm_L {
+		seq[IO_msgterm]{
+			MsgTerm_Num{ts},
+			if2term(inif),
+			if2term(egif),
+			MsgTerm_FS{uinfo},
+		},
+	}
 }
 
 ghost
 decreases
 pure func macKey(key IO_key) IO_msgterm {
-	return IO_msgterm(MsgTerm_Key{key})
+	return MsgTerm_Key{key}
 }
 
 ghost
 decreases
 pure func mac(fst IO_msgterm, snd IO_msgterm) IO_msgterm {
-	return IO_msgterm( MsgTerm_Hash {
-		MsgTerm_Hash_ : IO_msgterm( MsgTerm_MPair{
-			MsgTerm_MPair_1 : fst,
-			MsgTerm_MPair_2 : snd,
-		}),
-	})
+	return MsgTerm_Hash {
+		MsgTerm_Hash_: MsgTerm_MPair {
+			MsgTerm_MPair_1: fst,
+			MsgTerm_MPair_2: snd,
+		},
+	}
 }
 
 // helper function, not defined in IO spec
 ghost
 decreases
-pure func asidToKey(asid IO_as) IO_key{
-	return IO_key(Key_macK{asid})
+pure func asidToKey(asid IO_as) IO_key {
+	return Key_macK{asid}
 }
 
 ghost
@@ -96,7 +121,7 @@ pure func (dp DataPlaneSpec) is_target(asid IO_as, nextif IO_ifs, a2 IO_as, i2 I
 ghost
 decreases
 pure func dp3s_add_ibuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
-	return IO_dp3s_state_local_{
+	return IO_dp3s_state_local_ {
 		ibuf: insert(s.ibuf, i, pkt),
 		obuf: s.obuf,
 	}
@@ -105,7 +130,7 @@ pure func dp3s_add_ibuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO
 ghost
 decreases
 pure func dp3s_add_obuf(s IO_dp3s_state_local, i option[IO_ifs], pkt IO_pkt3) IO_dp3s_state_local {
-	return IO_dp3s_state_local_{
+	return IO_dp3s_state_local_ {
 		ibuf: s.ibuf,
 		obuf: insert(s.obuf, i, pkt),
 	}
@@ -151,8 +176,6 @@ pure func (dp DataPlaneSpec) dp3s_forward_ext_xover(m IO_pkt3, newpkt IO_pkt3, n
 		dp.is_target(dp.Asid(), nextif, a2, i2)
 }
 
-
-// TODO: should we change IO_ifs to being implemented as an option type?
 ghost
 requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()

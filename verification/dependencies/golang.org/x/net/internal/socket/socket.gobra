@@ -14,8 +14,8 @@ package socket
 
 import (
 	"net"
-
-	sl "github.com/scionproto/scion/verification/utils/slices"
+	. "verification/utils/definitions"
+	sl "verification/utils/slices"
 )
 
 
@@ -42,19 +42,17 @@ type Message struct {
 	NN    int // # of bytes read or written from/to OOB
 	Flags int // protocol-specific information on the received message
 
-	// (VerifiedSCION) the following are, morally, ghost fields:
 	// is it still ok to read the Addr of the Message?
-	IsActive bool
+	ghost IsActive bool
 	// do we have a fixed amount of perms to the Addr or a wildcard amount?
-	WildcardPerm bool
+	ghost WildcardPerm bool
 }
 
 pred (m *Message) Mem() {
 	acc(m) &&
 	len(m.Buffers) == 1 &&
 	acc(&m.Buffers[0]) &&
-	sl.AbsSlice_Bytes(m.Buffers[0], 0, len(m.Buffers[0])) &&
-	sl.AbsSlice_Bytes(m.OOB, 0, len(m.OOB)) &&
+	sl.Bytes(m.OOB, 0, len(m.OOB)) &&
 	// typeOf(m.Addr) == type[*net.UDPAddr] &&
 	((m.Addr != nil && m.IsActive && !m.WildcardPerm) ==> m.Addr.Mem()) &&
 	((m.Addr != nil && m.IsActive && m.WildcardPerm) ==> acc(m.Addr.Mem(), _)) &&
@@ -110,4 +108,50 @@ ensures  0 <= res
 decreases
 pure func (m *Message) GetN() (res int) {
 	return unfolding acc(m.Mem(), _) in m.N
+}
+
+// This function establishes the injectivity of the underlying buffers across
+// a list of messages. Specifically, it ensures that for any given message `m`
+// and any message in the list `msgs` up to index `k`, their buffers are not
+// pointing to the same memory location.
+//
+// The challenge arises when initializing buffers for each message in `msgs`,
+// as Gobra cannot automatically infer that these buffers are located in distinct
+// memory regions. Consequently, the property
+// `forall i int :: 0 <= i && i <= k ==> msgs[i].GetFstBuffer() !== m.GetFstBuffer()`
+// does not hold automatically. To address this, the function uses a proof by
+// recursion, ensuring that the buffer of a new message `m` is distinct from the
+// buffers of all messages in the list.
+ghost
+requires  0 <= k && k < len(msgs)
+preserves acc(m.Mem(), R55)
+preserves len(m.GetFstBuffer()) > 0
+preserves sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(), R55)
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	 acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), R55)
+ensures   forall i int :: { &msgs[i] } 0 <= i && i <= k ==>
+	msgs[i].GetFstBuffer() !== m.GetFstBuffer()
+decreases k
+func (m *Message) ensureBufferInjectivityAgainstList(msgs []Message, k int) {
+	if k != 0 {
+		m.ensureBufferInjectivityAgainstList(msgs, k-1)
+	}
+	sl.PermsImplyIneq(m.GetFstBuffer(), msgs[k].GetFstBuffer(), R55)
+}
+
+ghost
+preserves acc(m.Mem(), R55)
+preserves len(m.GetFstBuffer()) > 0
+preserves sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(), R55)
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	 acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), R55)
+ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	msgs[i].GetFstBuffer() !== m.GetFstBuffer()
+decreases
+func (m *Message) EnsureBufferInjectivityAgainstList(msgs []Message) {
+	if len(msgs) != 0 {
+		m.ensureBufferInjectivityAgainstList(msgs, len(msgs)-1)
+	}
 }

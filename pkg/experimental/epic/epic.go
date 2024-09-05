@@ -48,13 +48,11 @@ const (
 
 var zeroInitVector /*@@@*/ [16]byte
 
-/*@
 // ghost init
-func init() {
-	fold acc(sl.AbsSlice_Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), _)
-	fold acc(postInitInvariant(), _)
-}
-@*/
+// @ func init() {
+// @ 	fold acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), _)
+// @ 	fold acc(postInitInvariant(), _)
+// @ }
 
 // CreateTimestamp returns the epic timestamp, which encodes the current time (now) relative to the
 // input timestamp. The input timestamp must not be in the future (compared to the current time),
@@ -107,26 +105,24 @@ func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) (err err
 // If the same buffer is provided in subsequent calls to this function, the previously returned
 // EPIC MAC may get overwritten. Only the most recently returned EPIC MAC is guaranteed to be
 // valid.
-// (VerifiedSCION) ::OVERRIDE:: the following function is marked as trusted, even though it is verified,
-// due to an incompletness of Gobra that keeps it from being able to prove that we have
-// the magic wand at the end of a successful run.
-// @ trusted
 // @ requires  len(auth) == 16
-// @ requires  sl.AbsSlice_Bytes(buffer, 0, len(buffer))
+// @ requires  sl.Bytes(buffer, 0, len(buffer))
 // @ preserves acc(s.Mem(ub), R20)
-// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
-// @ preserves acc(sl.AbsSlice_Bytes(auth, 0, len(auth)), R30)
-// @ ensures   reserr == nil ==> sl.AbsSlice_Bytes(res, 0, len(res))
-// @ ensures   reserr == nil ==> (sl.AbsSlice_Bytes(res, 0, len(res)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer)))
+// @ preserves acc(sl.Bytes(ub, 0, len(ub)), R20)
+// @ preserves acc(sl.Bytes(auth, 0, len(auth)), R30)
+// @ ensures   reserr == nil ==> sl.Bytes(res, 0, len(res))
+// @ ensures   reserr == nil ==> (sl.Bytes(res, 0, len(res)) --* sl.Bytes(buffer, 0, len(buffer)))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// @ ensures   reserr != nil ==> sl.AbsSlice_Bytes(buffer, 0, len(buffer))
+// @ ensures   reserr != nil ==> sl.Bytes(buffer, 0, len(buffer))
 // @ decreases
 func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	timestamp uint32, buffer []byte /*@ , ghost ub []byte @*/) (res []byte, reserr error) {
 
+	// @ ghost oldBuffer := buffer
+	// @ ghost allocatesNewBuffer := len(buffer) < MACBufferSize
 	if len(buffer) < MACBufferSize {
 		buffer = make([]byte, MACBufferSize)
-		// @ fold sl.AbsSlice_Bytes(buffer, 0, len(buffer))
+		// @ fold sl.Bytes(buffer, 0, len(buffer))
 	}
 
 	// Initialize cryptographic MAC function
@@ -149,11 +145,14 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	// @ ghost end   := start + 4
 	result := input[len(input)-f.BlockSize() : len(input)-f.BlockSize()+4]
 	// @ sl.SplitRange_Bytes(input, start, end, writePerm)
-	// @ package (sl.AbsSlice_Bytes(result, 0, len(result)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer))) {
-	// @ 	sl.CombineRange_Bytes(input, start, end, writePerm)
-	// @ 	sl.CombineRange_Bytes(buffer, 0, inputLength, writePerm)
+	// @ package (sl.Bytes(result, 0, len(result)) --* sl.Bytes(oldBuffer, 0, len(oldBuffer))) {
+	// @ 	ghost if !allocatesNewBuffer {
+	// @ 		assert oldBuffer === buffer
+	// @ 		sl.CombineRange_Bytes(input, start, end, writePerm)
+	// @ 		sl.CombineRange_Bytes(oldBuffer, 0, inputLength, writePerm)
+	// @ 	}
 	// @ }
-	// @ assert (sl.AbsSlice_Bytes(result, 0, len(result)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer)))
+	// @ assert (sl.Bytes(result, 0, len(result)) --* sl.Bytes(oldBuffer, 0, len(oldBuffer)))
 	return result, nil
 }
 
@@ -162,11 +161,11 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 // bytes of the SCION path type MAC, has invalid length, or if the MAC calculation gives an error,
 // also VerifyHVF returns an error. The verification was successful if and only if VerifyHVF
 // returns nil.
-// @ preserves sl.AbsSlice_Bytes(buffer, 0, len(buffer))
+// @ preserves sl.Bytes(buffer, 0, len(buffer))
 // @ preserves acc(s.Mem(ub), R20)
-// @ preserves acc(sl.AbsSlice_Bytes(hvf, 0, len(hvf)), R50)
-// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
-// @ preserves acc(sl.AbsSlice_Bytes(auth, 0, len(auth)), R30)
+// @ preserves acc(sl.Bytes(hvf, 0, len(hvf)), R50)
+// @ preserves acc(sl.Bytes(ub, 0, len(ub)), R20)
+// @ preserves acc(sl.Bytes(auth, 0, len(auth)), R30)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func VerifyHVF(auth []byte, pktID epic.PktID, s *slayers.SCION,
@@ -182,11 +181,11 @@ func VerifyHVF(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	}
 
 	if subtle.ConstantTimeCompare(hvf, mac) == 0 {
-		// @ apply sl.AbsSlice_Bytes(mac, 0, len(mac)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer))
+		// @ apply sl.Bytes(mac, 0, len(mac)) --* sl.Bytes(buffer, 0, len(buffer))
 		return serrors.New("epic hop validation field verification failed",
 			"hvf in packet", hvf, "calculated mac", mac, "auth", auth)
 	}
-	// @ apply sl.AbsSlice_Bytes(mac, 0, len(mac)) --* sl.AbsSlice_Bytes(buffer, 0, len(buffer))
+	// @ apply sl.Bytes(mac, 0, len(mac)) --* sl.Bytes(buffer, 0, len(buffer))
 	return nil
 }
 
@@ -205,7 +204,7 @@ func CoreFromPktCounter(counter uint32) (uint8, uint32) {
 }
 
 // @ requires  len(key) == 16
-// @ preserves acc(sl.AbsSlice_Bytes(key, 0, len(key)), R50)
+// @ preserves acc(sl.Bytes(key, 0, len(key)), R50)
 // @ ensures   reserr == nil ==> res != nil && res.Mem() && res.BlockSize() == 16
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
@@ -224,8 +223,8 @@ func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 
 // @ requires  MACBufferSize <= len(inputBuffer)
 // @ preserves acc(s.Mem(ub), R20)
-// @ preserves acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), R20)
-// @ preserves sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
+// @ preserves acc(sl.Bytes(ub, 0, len(ub)), R20)
+// @ preserves sl.Bytes(inputBuffer, 0, len(inputBuffer))
 // @ ensures   reserr == nil ==> 16 <= res && res <= len(inputBuffer)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
@@ -264,7 +263,7 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	inputLength := 16 * nrBlocks
 
 	// Fill input
-	// @ unfold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
+	// @ unfold sl.Bytes(inputBuffer, 0, len(inputBuffer))
 	offset := 0
 	inputBuffer[0] = uint8(s.SrcAddrType & 0x3) // extract length bits
 	offset += 1
@@ -272,12 +271,12 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
 	binary.BigEndian.PutUint32(inputBuffer[offset:], timestamp)
 	offset += 4
-	// @ fold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
+	// @ fold sl.Bytes(inputBuffer, 0, len(inputBuffer))
 	// @ sl.SplitRange_Bytes(inputBuffer, offset, len(inputBuffer), writePerm)
 	pktID.SerializeTo(inputBuffer[offset:])
 	// @ sl.CombineRange_Bytes(inputBuffer, offset, len(inputBuffer), writePerm)
 	offset += epic.PktIDLen
-	// @ unfold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
+	// @ unfold sl.Bytes(inputBuffer, 0, len(inputBuffer))
 	// @ assert forall i int :: { &inputBuffer[offset:][i] } 0 <= i && i < len(inputBuffer[offset:]) ==>
 	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
 	binary.BigEndian.PutUint64(inputBuffer[offset:], uint64(s.SrcIA))
@@ -285,9 +284,9 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	// @ assert forall i int :: { &inputBuffer[offset:][i] } 0 <= i && i < len(inputBuffer[offset:]) ==>
 	// @ 	&inputBuffer[offset:][i] == &inputBuffer[offset+i]
 	// @ sl.SplitRange_Bytes(ub, start, end, R20)
-	// @ unfold acc(sl.AbsSlice_Bytes(srcAddr, 0, len(srcAddr)), R20)
+	// @ unfold acc(sl.Bytes(srcAddr, 0, len(srcAddr)), R20)
 	copy(inputBuffer[offset:], srcAddr /*@ , R20 @*/)
-	// @ fold acc(sl.AbsSlice_Bytes(srcAddr, 0, len(srcAddr)), R20)
+	// @ fold acc(sl.Bytes(srcAddr, 0, len(srcAddr)), R20)
 	// @ sl.CombineRange_Bytes(ub, start, end, R20)
 	offset += l
 	// @ assert forall i int :: { &inputBuffer[offset:][i] } 0 <= i && i < len(inputBuffer[offset:]) ==>
@@ -303,15 +302,15 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	// @ 	acc(&inputBuffer[offset:inputLength][i])
 	// @ establishPostInitInvariant()
 	// @ unfold acc(postInitInvariant(), _)
-	// @ assert acc(sl.AbsSlice_Bytes(zeroInitVector[:], 0, 16), _)
+	// @ assert acc(sl.Bytes(zeroInitVector[:], 0, 16), _)
 	// (VerifiedSCION) From the package invariant, we learn that we have a wildcard access to zeroInitVector.
 	// Unfortunately, it is not possible to call `copy` with a wildcard amount, even though
 	// that would be perfectly fine. The spec of `copy` would need to be adapted to allow for that case.
-	// @ inhale acc(sl.AbsSlice_Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), R55)
-	// @ unfold acc(sl.AbsSlice_Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), R55)
+	// @ inhale acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), R55)
+	// @ unfold acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), R55)
 	// @ assert forall i int :: { &zeroInitVector[:][i] } 0 <= i && i < len(zeroInitVector[:]) ==>
 	// @ 	&zeroInitVector[:][i] == &zeroInitVector[i]
 	copy(inputBuffer[offset:inputLength], zeroInitVector[:] /*@ , R55 @*/)
-	// @ fold sl.AbsSlice_Bytes(inputBuffer, 0, len(inputBuffer))
+	// @ fold sl.Bytes(inputBuffer, 0, len(inputBuffer))
 	return inputLength, nil
 }

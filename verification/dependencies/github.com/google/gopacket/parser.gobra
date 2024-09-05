@@ -9,7 +9,7 @@
 package gopacket
 
 import (
-	"github.com/scionproto/scion/verification/utils/slices"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
@@ -17,7 +17,7 @@ import (
 // values into specified slice. Returns either first encountered
 // unsupported LayerType value or decoding error. In case of success,
 // returns (LayerTypeZero, nil).
-preserves acc(slices.AbsSlice_Bytes(b, 0, len(b)), R13)
+preserves acc(sl.Bytes(b, 0, len(b)), R13)
 preserves acc(ltypes, R13) && acc(*ltypes, R13)
 ensures err != nil ==> err.ErrorMem()
 func decodingLayerFunc_spec(b []byte, ltypes *[]LayerType) (l LayerType, err error)
@@ -28,7 +28,7 @@ type DecodingLayer interface {
 
 	requires  NonInitMem()
 	requires  df != nil
-	preserves acc(slices.AbsSlice_Bytes(data, 0, len(data)), R40)
+	preserves acc(sl.Bytes(data, 0, len(data)), R40)
 	preserves df.Mem()
 	ensures   res == nil ==> Mem(data)
 	ensures   res != nil ==> (NonInitMem() && res.ErrorMem())

@@ -11,7 +11,7 @@ package layers
 
 import (
 	"github.com/google/gopacket"
-	"github.com/scionproto/scion/verification/utils/slices"
+	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 type BFDVersion uint8
@@ -132,7 +132,7 @@ type BFDAuthHeader struct {
 }
 
 pred (b *BFDAuthHeader) Mem() {
-	acc(b) && slices.AbsSlice_Bytes(b.Data, 0, len(b.Data))
+	acc(b) && sl.Bytes(b.Data, 0, len(b.Data))
 }
 
 preserves acc(h, 1/10000)
@@ -185,14 +185,17 @@ pure func (d *BFD) LayerType() gopacket.LayerType
 
 requires  d.NonInitMem()
 preserves df.Mem()
-preserves slices.AbsSlice_Bytes(data, 0, len(data))
+preserves sl.Bytes(data, 0, len(data))
 ensures   err == nil ==> d.Mem(data)
 ensures   err != nil ==> err.ErrorMem() && d.NonInitMem()
 decreases
 func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err error)
 
-requires d.Mem(ub) && b.Mem()
+requires d.Mem(ub)
+requires b != nil && b.Mem()
+requires sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 ensures  err == nil ==> d.Mem(ub) && b.Mem()
+ensures  err == nil ==> sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 ensures  err != nil ==> err.ErrorMem()
 decreases
 func (d *BFD) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions, ghost ub []byte) (err error)

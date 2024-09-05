@@ -18,9 +18,7 @@
 
 package io
 
-type Unit adt {
-	Unit_{}
-}
+type Unit struct{}
 
 // interface IDs
 type IO_ifs uint16
@@ -202,6 +200,7 @@ type IO_dp2_state adt {
 }
 
 ghost
+opaque
 decreases
 pure func (m IO_msgterm) extract_asid() IO_as {
 	return m.MsgTerm_Hash_.MsgTerm_MPair_1.MsgTerm_Key_.Key_macK_

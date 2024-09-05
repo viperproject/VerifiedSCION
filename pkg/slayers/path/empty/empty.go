@@ -71,29 +71,28 @@ func (o Path) DecodeFromBytes(r []byte) (e error) {
 
 // @ ensures e == nil
 // @ decreases
-func (o Path) SerializeTo(b []byte /*@, underlyingBuf []byte @*/) (e error) {
+func (o Path) SerializeTo(b []byte /*@, ub []byte @*/) (e error) {
 	return nil
 }
 
-// @ requires o.Mem(underlyingBuf)
+// @ requires o.Mem(ub)
 // @ ensures  p == o
-// @ ensures  p.Mem(underlyingBuf)
+// @ ensures  p.Mem(ub)
 // @ ensures  e == nil
 // @ decreases
-func (o Path) Reverse( /*@ underlyingBuf []byte @*/ ) (p path.Path, e error) {
+func (o Path) Reverse( /*@ ub []byte @*/ ) (p path.Path, e error) {
 	return o, nil
 }
 
-// @ pure
-// @ ensures 0 <= r
+// @ ensures r == o.LenSpec(ub)
 // @ decreases
-func (o Path) Len( /*@ underlyingBuf []byte @*/ ) (r int) {
+func (o Path) Len( /*@ ub []byte @*/ ) (r int) {
 	return PathLen
 }
 
 // @ pure
 // @ ensures r == PathType
 // @ decreases
-func (o Path) Type( /*@ underlyingBuf []byte @*/ ) (r path.Type) {
+func (o Path) Type( /*@ ub []byte @*/ ) (r path.Type) {
 	return PathType
 }
