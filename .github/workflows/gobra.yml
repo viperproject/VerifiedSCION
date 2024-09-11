@@ -265,7 +265,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/scion'
-          timeout: 5m
+          timeout: 30m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -395,7 +395,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Upload the verification report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: stats_addr.json
           path: /stats/stats_addr.json

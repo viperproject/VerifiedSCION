@@ -31,6 +31,7 @@ import (
 	sl "verification/utils/slices"
 	"verification/io"
 	"encoding/binary"
+	"verification/utils/seqs"
 )
 
 pred PathPoolMem(pathPool []path.Path, pathPoolRaw path.Path) {
@@ -335,8 +336,8 @@ ghost
 requires  0 < p
 preserves acc(s.Mem(ub), p)
 ensures   let start := s.PathStartIdx(ub) in
-		  let end   := s.PathEndIdx(ub) in
-		  0 <= start && start <= end && end <= len(ub)
+	let end := s.PathEndIdx(ub) in
+	0 <= start && start <= end && end <= len(ub)
 decreases
 func LemmaPathIdxStartEnd(s *SCION, ub []byte, p perm) {
 	unfold acc(s.Mem(ub), p)
@@ -461,7 +462,7 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let length := GetLength(raw) in
 		length <= len(raw) &&
 		unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
-	 	let _ := Asserting(forall k int :: {&rawHdr[k]} 0 <= k && k < scion.MetaLen ==> &rawHdr[k] == &raw[start + k]) in
+		let _ := Asserting(forall k int :: {&rawHdr[k]} 0 <= k && k < scion.MetaLen ==> &rawHdr[k] == &raw[start + k]) in
 		let hdr := binary.BigEndian.Uint32(rawHdr) in
 		let metaHdr := scion.DecodedFrom(hdr)      in
 		let seg1 := int(metaHdr.SegLen[0])         in
@@ -487,6 +488,17 @@ pure func IsSupportedPkt(raw []byte) bool {
 }
 
 ghost
+opaque
+decreases
+pure func IsSupportedRawPkt(raw seq[byte]) bool {
+	return CmnHdrLen <= len(raw) &&
+		let pathType := path.Type(raw[8])     in
+		let nextHdr  := L4ProtocolType(raw[4]) in
+		pathType == scion.PathType &&
+		nextHdr != L4SCMP
+}
+
+ghost
 requires  CmnHdrLen <= idx && idx <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
 preserves acc(sl.Bytes(raw[:idx], 0, idx), R55)
@@ -499,6 +511,21 @@ func IsSupportedPktSubslice(raw []byte, idx int) {
 	reveal IsSupportedPkt(raw[:idx])
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	fold acc(sl.Bytes(raw[:idx], 0, idx), R56)
+}
+
+ghost
+preserves acc(s.Mem(ub), R55)
+preserves acc(sl.Bytes(ub, 0, len(ub)), R55)
+preserves acc(sl.Bytes(buffer, 0, len(buffer)), R55)
+preserves s.EqPathType(ub)
+preserves s.EqPathTypeWithBuffer(ub, buffer)
+ensures   IsSupportedPkt(ub) == IsSupportedPkt(buffer)
+decreases
+func (s *SCION) IsSupportedPktLemma(ub []byte, buffer []byte) {
+	reveal s.EqPathType(ub)
+	reveal s.EqPathTypeWithBuffer(ub, buffer)
+	reveal IsSupportedPkt(ub)
+	reveal IsSupportedPkt(buffer)
 }
 
 ghost
@@ -558,9 +585,19 @@ requires acc(s.Mem(ub), _)
 requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
 pure func (s *SCION) EqPathType(ub []byte) bool {
+	return reveal s.EqPathTypeWithBuffer(ub, ub)
+}
+
+ghost
+opaque
+requires acc(s.Mem(ub), _)
+requires acc(sl.Bytes(buffer, 0, len(buffer)), _)
+decreases
+pure func (s *SCION) EqPathTypeWithBuffer(ub []byte, buffer []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
-		path.Type(GetPathType(ub)) == s.PathType &&
-		L4ProtocolType(GetNextHdr(ub)) == s.NextHdr
+		CmnHdrLen <= len(buffer) &&
+		path.Type(GetPathType(buffer)) == s.PathType &&
+		L4ProtocolType(GetNextHdr(buffer)) == s.NextHdr
 }
 
 ghost

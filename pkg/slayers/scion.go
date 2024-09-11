@@ -218,9 +218,11 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ requires  b != nil && b.Mem()
 // @ requires  acc(s.Mem(ubuf), R0)
 // @ requires  sl.Bytes(ubuf, 0, len(ubuf))
+// @ requires  sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 // @ ensures   b.Mem()
 // @ ensures   acc(s.Mem(ubuf), R0)
 // @ ensures   sl.Bytes(ubuf, 0, len(ubuf))
+// @ ensures   sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 // TODO: hide internal spec details
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
 // @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), R55) in
@@ -228,13 +230,16 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
 // @	(unfolding acc(s.Mem(ubuf), R55) in CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])) <= len(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
+// post for IO:
+// @ ensures   e == nil && old(s.EqPathType(ubuf)) ==>
+// @ 	IsSupportedRawPkt(b.View()) == old(IsSupportedPkt(ubuf))
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
-	// @ unfold acc(s.Mem(ubuf), R0)
-	// @ defer  fold acc(s.Mem(ubuf), R0)
-	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), writePerm)
-	// @ ghost defer sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLenSpecInternal()), int(s.HdrLen*LineLen), writePerm)
+	// @ unfold acc(s.Mem(ubuf), R1)
+	// @ defer fold acc(s.Mem(ubuf), R1)
+	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), R10)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
+	// @ sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLenSpecInternal()), int(s.HdrLen*LineLen), R10)
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
 			"max", MaxHdrLen, "actual", scnLen)
@@ -254,61 +259,68 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	}
 	// @ ghost uSerBufN := b.UBuf()
 	// @ assert buf === uSerBufN[:scnLen]
-	// @ b.ExchangePred()
-	// @ sl.SplitRange_Bytes(uSerBufN, 0, scnLen, writePerm)
 
+	// @ unfold acc(sl.Bytes(uSerBufN, 0, len(uSerBufN)), writePerm)
 	// Serialize common header.
 	firstLine := uint32(s.Version&0xF)<<28 | uint32(s.TrafficClass)<<20 | s.FlowID&0xFFFFF
-	// @ sl.SplitRange_Bytes(buf, 0, 4, writePerm)
-	// @ unfold acc(sl.Bytes(buf[:4], 0, 4), writePerm)
 	binary.BigEndian.PutUint32(buf[:4], firstLine)
-	// @ fold acc(sl.Bytes(buf[:4], 0, 4), writePerm)
-	// @ sl.CombineRange_Bytes(buf, 0, 4, writePerm)
-	// @ unfold acc(sl.Bytes(buf, 0, len(buf)), writePerm)
 	buf[4] = uint8(s.NextHdr)
 	buf[5] = s.HdrLen
-	// @ fold acc(sl.Bytes(buf, 0, len(buf)), writePerm)
-	// @ sl.SplitRange_Bytes(buf, 6, 8, writePerm)
-	// @ unfold acc(sl.Bytes(buf[6:8], 0, 2), writePerm)
+	// @ assert &buf[6:8][0] == &buf[6] && &buf[6:8][1] == &buf[7]
 	binary.BigEndian.PutUint16(buf[6:8], s.PayloadLen)
-	// @ fold acc(sl.Bytes(buf[6:8], 0, 2), writePerm)
-	// @ sl.CombineRange_Bytes(buf, 6, 8, writePerm)
-	// @ unfold acc(sl.Bytes(buf, 0, len(buf)), writePerm)
 	buf[8] = uint8(s.PathType)
 	buf[9] = uint8(s.DstAddrType&0x7)<<4 | uint8(s.SrcAddrType&0x7)
-	// @ fold acc(sl.Bytes(buf, 0, len(buf)), writePerm)
-	// @ sl.SplitRange_Bytes(buf, 10, 12, writePerm)
-	// @ unfold acc(sl.Bytes(buf[10:12], 0, 2), writePerm)
+	// @ assert &buf[10:12][0] == &buf[10] && &buf[10:12][1] == &buf[11]
 	binary.BigEndian.PutUint16(buf[10:12], 0)
-	// @ fold acc(sl.Bytes(buf[10:12], 0, 2), writePerm)
-	// @ sl.CombineRange_Bytes(buf, 10, 12, writePerm)
-
-	// @ ghost sPath := s.Path
-	// @ ghost pathSlice := ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]
-	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLenSpecInternal(), int(s.HdrLen*LineLen), R10)
+	// @ fold acc(sl.Bytes(uSerBufN, 0, len(uSerBufN)), writePerm)
+	// @ ghost if s.EqPathType(ubuf) {
+	// @ 	assert reveal s.EqPathTypeWithBuffer(ubuf, uSerBufN)
+	// @ 	s.IsSupportedPktLemma(ubuf, uSerBufN)
+	// @ }
 
 	// Serialize address header.
-	// @ sl.SplitRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
+	// @ sl.SplitRange_Bytes(uSerBufN, CmnHdrLen, scnLen, HalfPerm)
+	// @ sl.Reslice_Bytes(uSerBufN, 0, CmnHdrLen, R54)
+	// @ IsSupportedPktSubslice(uSerBufN, CmnHdrLen)
+	// @ sl.SplitRange_Bytes(uSerBufN, CmnHdrLen, scnLen, HalfPerm)
 	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
 	if err := s.SerializeAddrHdr(buf[CmnHdrLen:] /*@ , ubuf[CmnHdrLen:] @*/); err != nil {
-		// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
+		// @ sl.Unslice_Bytes(uSerBufN, 0, CmnHdrLen, R54)
+		// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm)
 		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
-		// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLenSpecInternal(), int(s.HdrLen*LineLen), R10)
-		// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
-		// @ b.RestoreMem(uSerBufN)
 		return err
 	}
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
 
-	// @ sl.CombineRange_Bytes(buf, CmnHdrLen, len(buf), writePerm)
+	// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, HalfPerm)
 	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
-	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen+s.AddrHdrLenSpecInternal(), int(s.HdrLen*LineLen), R10)
+	// @ IsSupportedPktSubslice(uSerBufN, CmnHdrLen)
+	// @ sl.Unslice_Bytes(uSerBufN, 0, CmnHdrLen, R54)
+	// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, HalfPerm)
+
 	// Serialize path header.
-	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
+	// @ ghost startP := int(CmnHdrLen+s.AddrHdrLenSpecInternal())
+	// @ ghost endP := int(s.HdrLen*LineLen)
+	// @ ghost pathSlice := ubuf[startP : endP]
+	// @ sl.SplitRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
+	// @ sl.SplitRange_Bytes(ubuf, startP, endP, HalfPerm)
+	// @ sl.Reslice_Bytes(uSerBufN, 0, offset, R54)
+	// @ sl.Reslice_Bytes(ubuf, 0, startP, R54)
+	// @ IsSupportedPktSubslice(uSerBufN, offset)
+	// @ IsSupportedPktSubslice(ubuf, startP)
+	// @ sl.SplitRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
+	// @ sl.SplitRange_Bytes(ubuf, startP, endP, HalfPerm)
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
-	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
-	// @ sl.CombineRange_Bytes(uSerBufN, 0, scnLen, writePerm)
-	// @ b.RestoreMem(uSerBufN)
+	// @ sl.CombineRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
+	// @ sl.CombineRange_Bytes(ubuf, startP, endP, HalfPerm)
+	// @ IsSupportedPktSubslice(uSerBufN, offset)
+	// @ IsSupportedPktSubslice(ubuf, startP)
+	// @ sl.Unslice_Bytes(uSerBufN, 0, offset, R54)
+	// @ sl.Unslice_Bytes(ubuf, 0, startP, R54)
+	// @ sl.CombineRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
+	// @ sl.CombineRange_Bytes(ubuf, startP, endP, HalfPerm)
+	// @ reveal IsSupportedPkt(uSerBufN)
+	// @ reveal IsSupportedRawPkt(b.View())
 	return tmp
 }
 

@@ -67,9 +67,10 @@ pred (d *DataPlane) Mem() {
 	(d.internalNextHops != nil  ==> accAddr(d.internalNextHops))  &&
 	(d.svc != nil               ==> d.svc.Mem())                  &&
 	(d.macFactory != nil        ==> (
-		acc(d.key)                                        &&
-		acc(sl.Bytes(*d.key, 0, len(*d.key)), _) &&
-		scrypto.ValidKeyForHash(*d.key)                   &&
+		acc(d.key)                                      &&
+		acc(sl.Bytes(*d.key, 0, len(*d.key)), _)        &&
+		len(*d.key) > 0                                 &&
+		scrypto.ValidKeyForHash(*d.key)                 &&
 		d.macFactory implements MacFactorySpec{d.key}))           &&
 	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions)) &&
 	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))      &&
@@ -420,6 +421,7 @@ requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
 ensures  acc(sl.Bytes(*d.key, 0, len(*d.key)), _)
 ensures  scrypto.ValidKeyForHash(*d.key)
+ensures  len(*d.key) > 0
 ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
 func (d *DataPlane) getNewPacketProcessorFootprint() {
@@ -628,6 +630,13 @@ requires acc(s.sInit(), _)
 decreases
 pure func (s* scionPacketProcessor) sInitSegmentChange() (res bool) {
 	return unfolding acc(s.sInit(), _) in s.segmentChange
+}
+
+ghost
+requires acc(s.sInit(), _)
+decreases
+pure func (s* scionPacketProcessor) sInitBufferUBuf() (res []byte) {
+	return unfolding acc(s.sInit(), _) in s.buffer.UBuf()
 }
 
 /** end spec for newPacketProcessor **/
