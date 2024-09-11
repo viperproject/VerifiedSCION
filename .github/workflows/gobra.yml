@@ -395,7 +395,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Upload the verification report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: stats_addr.json
           path: /stats/stats_addr.json
