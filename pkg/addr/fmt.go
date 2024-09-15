@@ -63,6 +63,7 @@ func ParseFormattedISD(isd string, opts ...FormatOption) (ISD, error) {
 // ParseFormattedAS parses an AS number that was formatted with the FormatAS
 // function. The same options must be provided to successfully parse.
 // @ trusted
+// @ requires false
 func ParseFormattedAS(as_ string, opts ...FormatOption) (AS, error) {
 	o := applyFormatOptions(opts)
 	if o.defaultPrefix {
