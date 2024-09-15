@@ -34,10 +34,6 @@ ensures   err == nil
 decreases _
 func (b *Builder) WriteString(s string) (n int, err error)
 
-requires b.Mem()
-decreases _
-func (b *Builder) String() string
-
 ghost
 requires acc(b)
 requires *b === Builder{}
