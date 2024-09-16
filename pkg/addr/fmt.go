@@ -117,14 +117,14 @@ func fmtAS(as_ AS, sep string) string {
 	if !as_.inRange() {
 		return fmt.Sprintf("%d [Illegal AS: larger than %d]", as_, MaxAS)
 	}
-	// Format BGP ASes as_ decimal
+	// Format BGP ASes as decimal
 	if as_ <= MaxBGPAS {
 		// (VerifiedSCION) the following property is guaranteed by the type system,
 		// but Gobra cannot infer it yet
 		// @ assume 0 <= as_
 		return strconv.FormatUint(uint64(as_), 10)
 	}
-	// Format all other ASes as_ 'sep'-separated hex.
+	// Format all other ASes as 'sep'-separated hex.
 	// (VerifiedSCION) revert this change when Gobra is fixed.
 	// const maxLen = len("ffff:ffff:ffff")
 	var maxLen = len("ffff:ffff:ffff")
