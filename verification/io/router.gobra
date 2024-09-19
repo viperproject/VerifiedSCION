@@ -18,8 +18,6 @@
 
 package io
 
-// TODO: make individual_router an interface type with the following methods
-
 ghost
 decreases
 pure func if2term(ifs option[IO_ifs]) IO_msgterm {

@@ -1,0 +1,25 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// Assumptions related to cryptography, based on the paper
+// https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10179325
+
+package router
+
+// TODO:
+// - drop AbsUInfoFromUint16(...), compute set of from the sequence of hopfields and ConsDir. Prove that, if crypto check passes, the set is properly updated (need to axiomoatize xor)
+// - see if we can introduce a gamma function
+// - return seq. of HVFs from the receive function, which is compatible w/ absPkt if packets are well formed
