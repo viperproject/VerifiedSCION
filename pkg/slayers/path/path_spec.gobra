@@ -16,7 +16,10 @@
 
 package path
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"github.com/scionproto/scion/verification/utils/monoset"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
 
 /** rawPath spec **/
 pred (r *rawPath) Mem(underlyingBuf []byte) {
@@ -60,6 +63,21 @@ func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
 /** Global state of the package **/
 ghost const MaxPathType = maxPathType
 
+pred PkgInv() {
+	acc(&registeredPaths) &&
+	registeredKeys.Inv()  &&
+	(forall i uint16 :: 0 <= i && i < maxPathType ==>
+		registeredPaths[i].inUse == registeredKeys.FContains(i))
+}
+
+ghost
+decreases
+pure func RegisteredTypes() monotonicset.BoundedMonotonicSet {
+	return registeredKeys
+}
+
+
+// TODO: Drop what I can
 pred PathPackageMem() {
 	acc(&registeredPaths) &&
 	acc(&strictDecoding) &&
@@ -91,6 +109,7 @@ pure func IsStrictDecoding() (b bool) {
 	return unfolding acc(PathPackageMem(), _) in strictDecoding
 }
 
+// Tge following is a closure spec, not an assumed impl.
 // without passing `writePerm` explicitely below, we run into
 // exceptions when verifying method RegisterPath in package 'empty'
 ensures acc(p.NonInitMem(), writePerm)

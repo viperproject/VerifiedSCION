@@ -16,6 +16,8 @@
 
 package monoset
 
+// BoundedMonotonicSet represents sets of uint8 to which we may add new elements, but
+// never remove old ones.
 type BoundedMonotonicSet struct {
 	ghost valuesMap dict[uint16](gpointer[bool])
 }

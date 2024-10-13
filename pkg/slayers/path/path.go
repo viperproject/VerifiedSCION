@@ -15,11 +15,19 @@
 // +gobra
 
 // @ initEnsures PathPackageMem()
-// Skipped the following post-condition due to performance reasons
-// initEnsures forall t Type :: 0 <= t && t < maxPathType ==> !Registered(t)
-// Instead, we have:
+
 // @ initEnsures !Registered(0) && !Registered(1) && !Registered(2) && !Registered(3)
 package path
+
+// @ friendPkg "github.com/scionproto/scion/pkg/slayers" PkgInv()
+// We have a simpler version than the following friend-package clause due to performance reasons:
+// friendPkg "github.com/scionproto/scion/pkg/slayers" forall t Type :: { RegisteredTypes().DoesNotContain(t) } 0 <= t && t < 256 ==>
+// 	RegisteredTypes().DoesNotContain(t)
+// Instead, we have:
+// @ friendPkg "github.com/scionproto/scion/pkg/slayers" RegisteredTypes().DoesNotContain(0) &&
+// @ 	RegisteredTypes().DoesNotContain(1)
+// @ 	RegisteredTypes().DoesNotContain(2)
+// @ 	RegisteredTypes().DoesNotContain(3)
 
 import (
 	"fmt"
@@ -37,6 +45,8 @@ var (
 	registeredPaths/*@@@*/ [maxPathType]metadata
 	strictDecoding/*@@@*/ bool = true
 )
+
+// @ ghost var registeredKeys = monoset.Alloc()
 
 func init() {
 	// (VerifiedSCION) ghost initialization code to establish the PathPackageMem predicate.
