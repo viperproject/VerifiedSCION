@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion-pki_certificate_create:
 
 scion-pki certificate create
@@ -102,12 +104,14 @@ Options
       --bundle               Bundle the certificate with the issuer certificate as a certificate chain
       --ca string            The path to the issuer certificate
       --ca-key string        The path to the issuer private key used to sign the new certificate
+      --ca-kms string        The uri to configure a Cloud KMS or an HSM used for signing the certificate.
       --common-name string   The common name that replaces the common name in the subject template
       --csr                  Generate a certificate signign request instead of a certificate
       --curve string         The elliptic curve to use (P-256|P-384|P-521) (default "P-256")
       --force                Force overwritting existing files
   -h, --help                 help for create
       --key string           The path to the existing private key to use instead of creating a new one
+      --kms string           The uri to configure a Cloud KMS or an HSM.
       --not-after time       The NotAfter time of the certificate. Can either be a timestamp or an offset.
                              
                              If the value is a timestamp, it is expected to either be an RFC 3339 formatted
@@ -123,5 +127,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion-pki certificate <scion-pki_certificate.html>`_ 	 - Manage certificates for the SCION control plane PKI.
+* :ref:`scion-pki certificate <scion-pki_certificate>` 	 - Manage certificates for the SCION control plane PKI.
 

@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion_completion_bash:
 
 scion completion bash
@@ -26,7 +28,7 @@ To load completions for every new session, execute once:
 
 #### macOS:
 
-	scion completion bash > /usr/local/etc/bash_completion.d/scion
+	scion completion bash > $(brew --prefix)/etc/bash_completion.d/scion
 
 You will need to start a new shell for this setup to take effect.
 
@@ -46,5 +48,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion completion <scion_completion.html>`_ 	 - Generate the autocompletion script for the specified shell
+* :ref:`scion completion <scion_completion>` 	 - Generate the autocompletion script for the specified shell
 

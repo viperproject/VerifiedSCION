@@ -16,24 +16,16 @@ package config
 
 import (
 	"io"
+	"net/netip"
 	"strings"
-	"time"
 
-	"inet.af/netaddr"
-
-	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/private/config"
 	"github.com/scionproto/scion/private/storage"
 )
 
-const (
-	// DefaultEpochDuration is the default duration for the drkey SecretValue and derived keys
-	DefaultEpochDuration   = 24 * time.Hour
-	DefaultPrefetchEntries = 10000
-	EnvVarEpochDuration    = "SCION_TESTING_DRKEY_EPOCH_DURATION"
-)
+const DefaultPrefetchEntries = 10000
 
 var _ (config.Config) = (*DRKeyConfig)(nil)
 
@@ -119,7 +111,7 @@ func (cfg *SecretValueHostList) Validate() error {
 			return serrors.New("GENERIC protocol is not allowed")
 		}
 		for _, ip := range list {
-			if h := addr.HostFromIPStr(ip); h == nil {
+			if _, err := netip.ParseAddr(ip); err != nil {
 				return serrors.New("Syntax error: not a valid address", "ip", ip)
 			}
 		}
@@ -138,7 +130,7 @@ func (cfg *SecretValueHostList) ConfigName() string {
 }
 
 type HostProto struct {
-	Host  netaddr.IP
+	Host  netip.Addr
 	Proto drkey.Protocol
 }
 
@@ -147,7 +139,7 @@ func (cfg *SecretValueHostList) ToAllowedSet() map[HostProto]struct{} {
 	m := make(map[HostProto]struct{})
 	for proto, ipList := range *cfg {
 		for _, ip := range ipList {
-			host, err := netaddr.ParseIP(ip)
+			host, err := netip.ParseAddr(ip)
 			if err != nil {
 				continue
 			}

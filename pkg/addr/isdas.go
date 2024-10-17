@@ -52,9 +52,19 @@ type ISD uint16
 func ParseISD(s string) (ISD, error) {
 	isd, err := strconv.ParseUint(s, 10, ISDBits)
 	if err != nil {
-		return 0, serrors.WrapStr("parsing ISD", err)
+		return 0, serrors.Wrap("parsing ISD", err)
 	}
 	return ISD(isd), nil
+}
+
+// MustParseISD parses s and returns the corresponding addr.ISD object. It panics
+// if s is not valid ISD representation.
+func MustParseISD(s string) ISD {
+	isd, err := ParseISD(s)
+	if err != nil {
+		panic(err)
+	}
+	return isd
 }
 
 // @ requires isd >= 0
@@ -75,6 +85,16 @@ type AS uint64
 // @ decreases
 func ParseAS(_as string) (retAs AS, retErr error) {
 	return parseAS(_as, ":")
+}
+
+// MustParseAS parses s and returns the corresponding addr.AS object. It panics
+// if s is not valid AS representation.
+func MustParseAS(s string) AS {
+	as, err := ParseAS(s)
+	if err != nil {
+		panic(err)
+	}
+	return as
 }
 
 // @ ensures retErr == nil ==> retAs.inRange()
@@ -115,7 +135,7 @@ func parseAS(_as string, sep string) (retAs AS, retErr error) {
 func asParseBGP(s string) (retAs AS, retErr error) {
 	_as, err := strconv.ParseUint(s, 10, BGPASBits)
 	if err != nil {
-		return 0, serrors.WrapStr("parsing BGP AS", err)
+		return 0, serrors.Wrap("parsing BGP AS", err)
 	}
 	// (VerifiedSCION)
 	// The following assertions are needed to prove retAs.inRange().
@@ -212,6 +232,16 @@ func ParseIA(ia string) (IA, error) {
 		return 0, err
 	}
 	return MustIAFrom(isd, _as), nil
+}
+
+// MustParseIA parses s and returns the corresponding addr.IA object. It
+// panics if s is not a valid ISD-AS representation.
+func MustParseIA(s string) IA {
+	ia, err := ParseIA(s)
+	if err != nil {
+		panic(err)
+	}
+	return ia
 }
 
 // @ decreases

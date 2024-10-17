@@ -32,7 +32,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/scionproto/scion/pkg/log"
-	"github.com/scionproto/scion/pkg/metrics"
 	"github.com/scionproto/scion/pkg/private/prom"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/private/app"
@@ -121,7 +120,9 @@ func (a *Application) run() error {
 	// The configuration file location is specified through command-line flags.
 	// Once the comand-line flags are parsed, we register the location of the
 	// config file with the viper config.
-	a.config.BindPFlag(cfgConfigFile, cmd.Flags().Lookup(cfgConfigFile))
+	if err := a.config.BindPFlag(cfgConfigFile, cmd.Flags().Lookup(cfgConfigFile)); err != nil {
+		return err
+	}
 
 	// All servers accept SIGTERM to perform clean shutdown (for example, this
 	// is used behind the scenes by docker stop to cleanly shut down a container).
@@ -162,17 +163,19 @@ func (a *Application) executeCommand(ctx context.Context, shortName string) erro
 	a.config.SetConfigType("toml")
 	a.config.SetConfigFile(a.config.GetString(cfgConfigFile))
 	if err := a.config.ReadInConfig(); err != nil {
-		return serrors.WrapStr("loading generic server config from file", err,
+		return serrors.Wrap("loading generic server config from file", err,
 			"file", a.config.GetString(cfgConfigFile))
+
 	}
 
 	if err := libconfig.LoadFile(a.config.GetString(cfgConfigFile), a.TOMLConfig); err != nil {
-		return serrors.WrapStr("loading config from file", err,
+		return serrors.Wrap("loading config from file", err,
 			"file", a.config.GetString(cfgConfigFile))
+
 	}
 	a.TOMLConfig.InitDefaults()
 
-	logEntriesTotal := metrics.NewPromCounterFrom(
+	logEntriesTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "lib_log_emitted_entries_total",
 			Help: "Total number of log entries emitted.",
@@ -180,19 +183,19 @@ func (a *Application) executeCommand(ctx context.Context, shortName string) erro
 		[]string{"level"},
 	)
 	opt := log.WithEntriesCounter(log.EntriesCounter{
-		Debug: logEntriesTotal.With("level", "debug"),
-		Info:  logEntriesTotal.With("level", "info"),
-		Error: logEntriesTotal.With("level", "error"),
+		Debug: logEntriesTotal.With(prometheus.Labels{"level": "debug"}),
+		Info:  logEntriesTotal.With(prometheus.Labels{"level": "info"}),
+		Error: logEntriesTotal.With(prometheus.Labels{"level": "error"}),
 	})
 
 	if err := log.Setup(a.getLogging(), opt); err != nil {
-		return serrors.WrapStr("initialize logging", err)
+		return serrors.Wrap("initialize logging", err)
 	}
 	defer log.Flush()
 	if a.RequiredIPs != nil {
 		ips, err := a.RequiredIPs()
 		if err != nil {
-			return serrors.WrapStr("loading required IPs", err)
+			return serrors.Wrap("loading required IPs", err)
 		}
 		WaitForNetworkReady(ctx, ips)
 	}
@@ -205,7 +208,7 @@ func (a *Application) executeCommand(ctx context.Context, shortName string) erro
 	exportBuildInfo()
 	prom.ExportElementID(a.config.GetString(cfgGeneralID))
 	if err := a.TOMLConfig.Validate(); err != nil {
-		return serrors.WrapStr("validate config", err)
+		return serrors.Wrap("validate config", err)
 	}
 
 	if a.Main == nil {

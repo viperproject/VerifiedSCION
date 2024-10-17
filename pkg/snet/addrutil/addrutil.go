@@ -40,7 +40,7 @@ type Pather struct {
 }
 
 // GetPath computes the remote address with a path based on the provided segment.
-func (p Pather) GetPath(svc addr.HostSVC, ps *seg.PathSegment) (*snet.SVCAddr, error) {
+func (p Pather) GetPath(svc addr.SVC, ps *seg.PathSegment) (*snet.SVCAddr, error) {
 	if len(ps.ASEntries) == 0 {
 		return nil, serrors.New("empty path")
 	}
@@ -81,7 +81,7 @@ func (p Pather) GetPath(svc addr.HostSVC, ps *seg.PathSegment) (*snet.SVCAddr, e
 	}
 	path, err := snetpath.NewSCIONFromDecoded(dec)
 	if err != nil {
-		return nil, serrors.WrapStr("serializing path", err)
+		return nil, serrors.Wrap("serializing path", err)
 	}
 	ifID := dec.HopFields[0].ConsIngress
 	nextHop := p.NextHopper.UnderlayNextHop(ifID)

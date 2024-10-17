@@ -239,9 +239,9 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 
 	// Reverse order of InfoFields and SegLens
 	if s.NumINF > 1 {
-		lastIdx := s.NumINF - 1
-		s.InfoFields[0], s.InfoFields[lastIdx] = s.InfoFields[lastIdx], s.InfoFields[0]
-		s.PathMeta.SegLen[0], s.PathMeta.SegLen[lastIdx] = s.PathMeta.SegLen[lastIdx], s.PathMeta.SegLen[0]
+		l := s.NumINF - 1
+		s.InfoFields[0], s.InfoFields[l] = s.InfoFields[l], s.InfoFields[0]
+		s.PathMeta.SegLen[0], s.PathMeta.SegLen[l] = s.PathMeta.SegLen[l], s.PathMeta.SegLen[0]
 	}
 	//@ fold s.Base.Mem()
 	//@ invariant acc(s.Base.Mem(), R10)

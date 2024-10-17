@@ -23,52 +23,61 @@ import (
 	"os"
 	"strings"
 
-	"github.com/scionproto/scion/pkg/private/common"
+	"github.com/scionproto/scion/pkg/log"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/private/util"
+	"github.com/scionproto/scion/pkg/segment/iface"
 )
 
 // Attribute indicates the capability of a primary AS.
 type Attribute string
 
 const (
-	// Authoritative indicates an authoritative AS.
-	Authoritative Attribute = "authoritative"
 	// AttrCore indicates a core AS.
 	AttrCore Attribute = "core"
-	// Issuing indicates an issuing AS.
-	Issuing Attribute = "issuing"
-	// Voting indicates a voting AS. A voting AS must also be a core AS.
-	Voting Attribute = "voting"
 )
 
-// UnmarshalText checks that the attribute is valid. It can either be
-// "authoritative", "core", "issuing", or "voting".
+// UnmarshalText checks that the attribute is valid. It can only be "core";
+// Deprecated values "authoritative", "issuing", or "voting" are ignored.
 func (t *Attribute) UnmarshalText(b []byte) error {
 	switch Attribute(b) {
-	case Authoritative:
-		*t = Authoritative
-	case Issuing:
-		*t = Issuing
-	case Voting:
-		*t = Voting
 	case AttrCore:
 		*t = AttrCore
+	case "authoritative", "issuing", "voting":
+		// ignore
+		log.Info("topology.json; ignoring deprecated attribute value", "value", string(b))
 	default:
 		return serrors.New("invalid attribute", "input", string(b))
 	}
 	return nil
 }
 
+type Attributes []Attribute
+
+func (as *Attributes) UnmarshalJSON(b []byte) error {
+	var attrs []Attribute
+	if err := json.Unmarshal(b, &attrs); err != nil {
+		return err
+	}
+	var filtered Attributes
+	for _, a := range attrs {
+		if a != "" { // drop ignored deprecated values
+			filtered = append(filtered, a)
+		}
+	}
+	*as = filtered
+	return nil
+}
+
 // Topology is the JSON type for the entire AS topology file.
 type Topology struct {
-	Timestamp      int64  `json:"timestamp,omitempty"`
-	TimestampHuman string `json:"timestamp_human,omitempty"`
-	IA             string `json:"isd_as"`
-	MTU            int    `json:"mtu"`
-	// Attributes are the primary AS attributes as described in
-	// https://github.com/scionproto/scion/blob/master/doc/ControlPlanePKI.md#primary-ases
-	Attributes          []Attribute             `json:"attributes"`
+	Timestamp        int64  `json:"timestamp,omitempty"`
+	TimestampHuman   string `json:"timestamp_human,omitempty"`
+	IA               string `json:"isd_as"`
+	MTU              int    `json:"mtu"`
+	EndhostPortRange string `json:"dispatched_ports"`
+	// Attributes specify whether this is a core AS or not.
+	Attributes          Attributes              `json:"attributes"`
 	BorderRouters       map[string]*BRInfo      `json:"border_routers,omitempty"`
 	ControlService      map[string]*ServerInfo  `json:"control_service,omitempty"`
 	DiscoveryService    map[string]*ServerInfo  `json:"discovery_service,omitempty"`
@@ -84,8 +93,8 @@ type ServerInfo struct {
 
 // BRInfo contains Border Router specific information.
 type BRInfo struct {
-	InternalAddr string                           `json:"internal_addr"`
-	Interfaces   map[common.IFIDType]*BRInterface `json:"interfaces"`
+	InternalAddr string                    `json:"internal_addr"`
+	Interfaces   map[iface.ID]*BRInterface `json:"interfaces"`
 }
 
 // GatewayInfo contains SCION gateway information.
@@ -99,23 +108,25 @@ type GatewayInfo struct {
 // BRInterface contains the information for an data-plane BR socket that is external (i.e., facing
 // the neighboring AS).
 type BRInterface struct {
-	Underlay Underlay `json:"underlay,omitempty"`
-	IA       string   `json:"isd_as"`
-	LinkTo   string   `json:"link_to"`
-	MTU      int      `json:"mtu"`
-	BFD      *BFD     `json:"bfd,omitempty"`
+	Underlay   Underlay `json:"underlay,omitempty"`
+	IA         string   `json:"isd_as"`
+	LinkTo     string   `json:"link_to"`
+	MTU        int      `json:"mtu"`
+	BFD        *BFD     `json:"bfd,omitempty"`
+	RemoteIfID iface.ID `json:"remote_interface_id,omitempty"`
 }
 
 // Underlay is the underlay information for a BR interface.
 type Underlay struct {
-	Public string `json:"public,omitempty"`
-	Remote string `json:"remote,omitempty"`
-	Bind   string `json:"bind,omitempty"`
+	Local            string `json:"local,omitempty"`
+	DeprecatedBind   string `json:"bind,omitempty"`   // superseded by "local", for backwards compat
+	DeprecatedPublic string `json:"public,omitempty"` // superseded by "local", for backwards compat
+	Remote           string `json:"remote,omitempty"`
 }
 
 // BFD configuration.
 type BFD struct {
-	Disable               bool         `json:"disable,omitempty"`
+	Disable               *bool        `json:"disable,omitempty"`
 	DetectMult            uint8        `json:"detect_mult,omitempty"`
 	DesiredMinTxInterval  util.DurWrap `json:"desired_min_tx_interval,omitempty"`
 	RequiredMinRxInterval util.DurWrap `json:"required_min_rx_interval,omitempty"`
@@ -128,8 +139,8 @@ func (i ServerInfo) String() string {
 func (i BRInfo) String() string {
 	var s []string
 	s = append(s, fmt.Sprintf("Loc addrs:\n  %s\nInterfaces:", i.InternalAddr))
-	for ifid, intf := range i.Interfaces {
-		s = append(s, fmt.Sprintf("%d: %+v", ifid, intf))
+	for ifID, intf := range i.Interfaces {
+		s = append(s, fmt.Sprintf("%d: %+v", ifID, intf))
 	}
 	return strings.Join(s, "\n")
 }
@@ -138,7 +149,7 @@ func (i BRInfo) String() string {
 func Load(b []byte) (*Topology, error) {
 	rt := &Topology{}
 	if err := json.Unmarshal(b, rt); err != nil {
-		return nil, serrors.WrapStr("unable to parse topology from JSON", err)
+		return nil, serrors.Wrap("unable to parse topology from JSON", err)
 	}
 	return rt, nil
 }
@@ -147,7 +158,7 @@ func Load(b []byte) (*Topology, error) {
 func LoadFromFile(path string) (*Topology, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, serrors.WrapStr("unable to open topology", err, "path", path)
+		return nil, serrors.Wrap("unable to open topology", err, "path", path)
 	}
 	return Load(b)
 }

@@ -43,6 +43,7 @@ compile_commands.json
 # Environment files
 #########################
 /venv/
+doc/venv/
 
 # Docker working directory
 ##########################
@@ -64,6 +65,10 @@ compile_commands.json
 ##########################
 /bin/*
 !/bin/.keepme
+
+# Generated package files
+##########################
+/installables/
 
 # CTags
 ##########################
@@ -103,3 +108,10 @@ target
 .metals
 .bazelbsp
 .bazel
+*.vpr
+tmp/
+logger.log
+
+# emacs backup files
+####################
+*~
