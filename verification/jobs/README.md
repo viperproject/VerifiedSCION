@@ -3,4 +3,4 @@ They can be passed to [gobrago](https://github.com/jcp19/gobrago/tree/main) to v
 
 TODO:
 - [ ] Deprecate the `verification/scripts` folder
-- [ ] Deprecate the use of the current gobra-action. Instead, rely on a simpler action containing java and gobrago installed; specify the gobra version to use through a link to the jar.
+- [ ] Deprecate the use of the current gobra-action. Instead, rely on a simpler action containing java and gobrago installed and use the .json files listed in this folder; specify the gobra version to use through a link to the jar.
