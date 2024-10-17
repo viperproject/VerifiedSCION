@@ -8,5 +8,4 @@
 	"more_joins": "off",
 	"parallelize_branches": true,
 	"pkg_path": "../../pkg/slayers/path/",
-	"print_vpr": true
 }
