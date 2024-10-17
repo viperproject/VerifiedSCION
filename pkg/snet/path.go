@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/private/common"
+	"github.com/scionproto/scion/pkg/segment/iface"
 	"github.com/scionproto/scion/pkg/slayers"
 )
 
@@ -70,7 +70,7 @@ type Path interface {
 // PathInterface is an interface of the path.
 type PathInterface struct {
 	// ID is the ID of the interface.
-	ID common.IFIDType
+	ID iface.ID
 	// IA is the ISD AS identifier of the interface.
 	IA addr.IA
 }
@@ -219,8 +219,14 @@ func Fingerprint(path Path) PathFingerprint {
 	}
 	h := sha256.New()
 	for _, intf := range meta.Interfaces {
-		binary.Write(h, binary.BigEndian, intf.IA)
-		binary.Write(h, binary.BigEndian, intf.ID)
+		if err := binary.Write(h, binary.BigEndian, intf.IA); err != nil {
+			// hash.Hash.Write may never error.
+			// The type check in binary.Write should also pass for addr.IA.
+			panic(err)
+		}
+		if err := binary.Write(h, binary.BigEndian, intf.ID); err != nil {
+			panic(err)
+		}
 	}
 	return PathFingerprint(h.Sum(nil))
 }
@@ -241,10 +247,6 @@ func (p *partialPath) UnderlayNextHop() *net.UDPAddr {
 
 func (p *partialPath) Dataplane() DataplanePath {
 	return p.dataplane
-}
-
-func (p *partialPath) Interfaces() []PathInterface {
-	return nil
 }
 
 func (p *partialPath) Source() addr.IA {

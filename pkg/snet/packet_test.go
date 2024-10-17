@@ -15,7 +15,6 @@
 package snet_test
 
 import (
-	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +22,6 @@ import (
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/onehop"
@@ -54,12 +52,12 @@ func TestPacketSerializeDecodeLoop(t *testing.T) {
 		"UDP OHP packet": {
 			PacketInfo: snet.PacketInfo{
 				Destination: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:110"),
-					Host: addr.SvcCS,
+					IA:   addr.MustParseIA("1-ff00:0:110"),
+					Host: addr.HostSVC(addr.SvcCS),
 				},
 				Source: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:112"),
-					Host: addr.HostIPv4(net.ParseIP("127.0.0.1").To4()),
+					IA:   addr.MustParseIA("1-ff00:0:112"),
+					Host: addr.MustParseHost("127.0.0.1"),
 				},
 				Path: snetpath.OneHop{},
 				Payload: snet.UDPPayload{
@@ -72,12 +70,12 @@ func TestPacketSerializeDecodeLoop(t *testing.T) {
 		"UDP packet": {
 			PacketInfo: snet.PacketInfo{
 				Destination: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:110"),
-					Host: addr.SvcCS,
+					IA:   addr.MustParseIA("1-ff00:0:110"),
+					Host: addr.HostSVC(addr.SvcCS),
 				},
 				Source: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:112"),
-					Host: addr.HostIPv4(net.ParseIP("127.0.0.1").To4()),
+					IA:   addr.MustParseIA("1-ff00:0:112"),
+					Host: addr.MustParseHost("127.0.0.1"),
 				},
 				Path: snetpath.SCION{
 					Raw: rawSP(),
@@ -92,12 +90,12 @@ func TestPacketSerializeDecodeLoop(t *testing.T) {
 		"SCMP EchoRequest": {
 			PacketInfo: snet.PacketInfo{
 				Destination: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:110"),
-					Host: addr.SvcCS,
+					IA:   addr.MustParseIA("1-ff00:0:110"),
+					Host: addr.HostSVC(addr.SvcCS),
 				},
 				Source: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:112"),
-					Host: addr.HostIPv4(net.ParseIP("127.0.0.1").To4()),
+					IA:   addr.MustParseIA("1-ff00:0:112"),
+					Host: addr.MustParseHost("127.0.0.1"),
 				},
 				Path: snetpath.SCION{
 					Raw: rawSP(),
@@ -112,12 +110,12 @@ func TestPacketSerializeDecodeLoop(t *testing.T) {
 		"SCMP EchoReply": {
 			PacketInfo: snet.PacketInfo{
 				Destination: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:110"),
-					Host: addr.SvcCS,
+					IA:   addr.MustParseIA("1-ff00:0:110"),
+					Host: addr.HostSVC(addr.SvcCS),
 				},
 				Source: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:112"),
-					Host: addr.HostIPv4(net.ParseIP("127.0.0.1").To4()),
+					IA:   addr.MustParseIA("1-ff00:0:112"),
+					Host: addr.MustParseHost("127.0.0.1"),
 				},
 				Path: snetpath.SCION{
 					Raw: rawSP(),
@@ -132,18 +130,18 @@ func TestPacketSerializeDecodeLoop(t *testing.T) {
 		"SCMP ExternalInterfaceDown": {
 			PacketInfo: snet.PacketInfo{
 				Destination: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:110"),
-					Host: addr.SvcCS,
+					IA:   addr.MustParseIA("1-ff00:0:110"),
+					Host: addr.HostSVC(addr.SvcCS),
 				},
 				Source: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:112"),
-					Host: addr.HostIPv4(net.ParseIP("127.0.0.1").To4()),
+					IA:   addr.MustParseIA("1-ff00:0:112"),
+					Host: addr.MustParseHost("127.0.0.1"),
 				},
 				Path: snetpath.SCION{
 					Raw: rawSP(),
 				},
 				Payload: snet.SCMPExternalInterfaceDown{
-					IA:        xtest.MustParseIA("1-ff00:0:111"),
+					IA:        addr.MustParseIA("1-ff00:0:111"),
 					Interface: 13,
 					Payload:   []byte("scmp quote"),
 				},
@@ -152,18 +150,18 @@ func TestPacketSerializeDecodeLoop(t *testing.T) {
 		"SCMP InternalConnectivityDown": {
 			PacketInfo: snet.PacketInfo{
 				Destination: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:110"),
-					Host: addr.SvcCS,
+					IA:   addr.MustParseIA("1-ff00:0:110"),
+					Host: addr.HostSVC(addr.SvcCS),
 				},
 				Source: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:112"),
-					Host: addr.HostIPv4(net.ParseIP("127.0.0.1").To4()),
+					IA:   addr.MustParseIA("1-ff00:0:112"),
+					Host: addr.MustParseHost("127.0.0.1"),
 				},
 				Path: snetpath.SCION{
 					Raw: rawSP(),
 				},
 				Payload: snet.SCMPInternalConnectivityDown{
-					IA:      xtest.MustParseIA("1-ff00:0:111"),
+					IA:      addr.MustParseIA("1-ff00:0:111"),
 					Ingress: 14,
 					Egress:  25,
 					Payload: []byte("scmp quote"),
@@ -173,12 +171,12 @@ func TestPacketSerializeDecodeLoop(t *testing.T) {
 		"SCMP ParameterProblem": {
 			PacketInfo: snet.PacketInfo{
 				Destination: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:110"),
-					Host: addr.SvcCS,
+					IA:   addr.MustParseIA("1-ff00:0:110"),
+					Host: addr.HostSVC(addr.SvcCS),
 				},
 				Source: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:112"),
-					Host: addr.HostIPv4(net.ParseIP("127.0.0.1").To4()),
+					IA:   addr.MustParseIA("1-ff00:0:112"),
+					Host: addr.MustParseHost("127.0.0.1"),
 				},
 				Path: snetpath.SCION{
 					Raw: rawSP(),
@@ -195,12 +193,12 @@ func TestPacketSerializeDecodeLoop(t *testing.T) {
 		"SCMP PacketTooBig": {
 			PacketInfo: snet.PacketInfo{
 				Destination: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:110"),
-					Host: addr.SvcCS,
+					IA:   addr.MustParseIA("1-ff00:0:110"),
+					Host: addr.HostSVC(addr.SvcCS),
 				},
 				Source: snet.SCIONAddress{
-					IA:   xtest.MustParseIA("1-ff00:0:112"),
-					Host: addr.HostIPv4(net.ParseIP("127.0.0.1").To4()),
+					IA:   addr.MustParseIA("1-ff00:0:112"),
+					Host: addr.MustParseHost("127.0.0.1"),
 				},
 				Path: snetpath.SCION{
 					Raw: rawSP(),
@@ -242,7 +240,7 @@ func convertRawPath(r snet.RawPath) (snet.DataplanePath, error) {
 	case onehop.PathType:
 		p := onehop.Path{}
 		if err := p.DecodeFromBytes(r.Raw); err != nil {
-			return nil, serrors.WrapStr("decoding ohp", err)
+			return nil, serrors.Wrap("decoding ohp", err)
 		}
 		return snetpath.OneHop{
 			Info:      p.Info,
@@ -257,7 +255,7 @@ func convertRawPath(r snet.RawPath) (snet.DataplanePath, error) {
 func TestPacketSerialize(t *testing.T) {
 	decodedOHP := onehop.Path{}
 	rawOHP := make([]byte, decodedOHP.Len())
-	decodedOHP.SerializeTo(rawOHP)
+	require.NoError(t, decodedOHP.SerializeTo(rawOHP))
 
 	testCases := map[string]struct {
 		input     snet.Packet
@@ -267,12 +265,12 @@ func TestPacketSerialize(t *testing.T) {
 			input: snet.Packet{
 				PacketInfo: snet.PacketInfo{
 					Destination: snet.SCIONAddress{
-						IA:   xtest.MustParseIA("1-ff00:0:110"),
-						Host: addr.SvcCS,
+						IA:   addr.MustParseIA("1-ff00:0:110"),
+						Host: addr.HostSVC(addr.SvcCS),
 					},
 					Source: snet.SCIONAddress{
-						IA:   xtest.MustParseIA("1-ff00:0:112"),
-						Host: addr.HostIPv4(net.ParseIP("127.0.0.1")),
+						IA:   addr.MustParseIA("1-ff00:0:112"),
+						Host: addr.MustParseHost("127.0.0.1"),
 					},
 					Path: snetpath.OneHop{},
 					Payload: snet.UDPPayload{
@@ -288,12 +286,12 @@ func TestPacketSerialize(t *testing.T) {
 			input: snet.Packet{
 				PacketInfo: snet.PacketInfo{
 					Destination: snet.SCIONAddress{
-						IA:   xtest.MustParseIA("1-ff00:0:110"),
-						Host: addr.SvcCS,
+						IA:   addr.MustParseIA("1-ff00:0:110"),
+						Host: addr.HostSVC(addr.SvcCS),
 					},
 					Source: snet.SCIONAddress{
-						IA:   xtest.MustParseIA("1-ff00:0:112"),
-						Host: addr.HostIPv4(net.ParseIP("127.0.0.1")),
+						IA:   addr.MustParseIA("1-ff00:0:112"),
+						Host: addr.MustParseHost("127.0.0.1"),
 					},
 					Payload: snet.UDPPayload{
 						SrcPort: 25,
@@ -312,12 +310,12 @@ func TestPacketSerialize(t *testing.T) {
 			input: snet.Packet{
 				PacketInfo: snet.PacketInfo{
 					Destination: snet.SCIONAddress{
-						IA:   xtest.MustParseIA("1-ff00:0:110"),
-						Host: addr.SvcCS,
+						IA:   addr.MustParseIA("1-ff00:0:110"),
+						Host: addr.HostSVC(addr.SvcCS),
 					},
 					Source: snet.SCIONAddress{
-						IA:   xtest.MustParseIA("1-ff00:0:112"),
-						Host: addr.HostIPv4(net.ParseIP("127.0.0.1")),
+						IA:   addr.MustParseIA("1-ff00:0:112"),
+						Host: addr.MustParseHost("127.0.0.1"),
 					},
 					Path: snetpath.OneHop{},
 				},

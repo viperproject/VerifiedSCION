@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion-pki_completion_bash:
 
 scion-pki completion bash
@@ -26,7 +28,7 @@ To load completions for every new session, execute once:
 
 #### macOS:
 
-	scion-pki completion bash > /usr/local/etc/bash_completion.d/scion-pki
+	scion-pki completion bash > $(brew --prefix)/etc/bash_completion.d/scion-pki
 
 You will need to start a new shell for this setup to take effect.
 
@@ -46,5 +48,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion-pki completion <scion-pki_completion.html>`_ 	 - Generate the autocompletion script for the specified shell
+* :ref:`scion-pki completion <scion-pki_completion>` 	 - Generate the autocompletion script for the specified shell
 

@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion_showpaths:
 
 scion showpaths
@@ -12,7 +14,7 @@ Synopsis
 'showpaths' lists available paths between the local and the specified
 SCION ASe a.
 
-By default, the paths are probed. Paths served from the SCION Deamon's might not
+By default, the paths are probed. Paths served from the SCION Daemon's might not
 forward traffic successfully (e.g. if a network link went down, or there is a black
 hole on the path). To disable path probing, set the appropriate flag.
 
@@ -88,19 +90,18 @@ Options
 
 ::
 
-      --dispatcher string      Path to the dispatcher socket (default "/run/shm/dispatcher/default.sock")
       --epic                   Enable EPIC.
   -e, --extended               Show extended path meta data information
       --format string          Specify the output format (human|json|yaml) (default "human")
   -h, --help                   help for showpaths
       --isd-as isd-as          The local ISD-AS to use. (default 0-0)
-  -l, --local ip               Local IP address to listen on. (default zero IP)
+  -l, --local ip               Local IP address to listen on. (default invalid IP)
       --log.level string       Console logging level verbosity (debug|info|error)
   -m, --maxpaths int           Maximum number of paths that are displayed (default 10)
       --no-color               disable colored output
       --no-probe               Do not probe the paths and print the health status
-  -r, --refresh                Set refresh flag for SCION Deamon path request
-      --sciond string          SCION Deamon address. (default "127.0.0.1:30255")
+  -r, --refresh                Set refresh flag for SCION Daemon path request
+      --sciond string          SCION Daemon address. (default "127.0.0.1:30255")
       --sequence string        Space separated list of hop predicates
       --timeout duration       Timeout (default 5s)
       --tracing.agent string   Tracing agent address
@@ -108,5 +109,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion <scion.html>`_ 	 - A clean-slate Internet architecture
+* :ref:`scion <scion>` 	 - SCION networking utilities.
 

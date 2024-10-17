@@ -60,8 +60,9 @@ func Setup(cfg Config, opts ...Option) error {
 func convertCfg(cfg ConsoleConfig) (zap.Config, error) {
 	var level zapcore.Level
 	if err := level.UnmarshalText([]byte(cfg.Level)); err != nil {
-		return zap.Config{}, serrors.WrapStr("unable to parse log.console.level", err,
+		return zap.Config{}, serrors.Wrap("unable to parse log.console.level", err,
 			"level", cfg.Level)
+
 	}
 	encoding := "console"
 	if cfg.Format == "json" {
@@ -90,8 +91,9 @@ func getStacktraceLvl(cfg ConsoleConfig) (zapcore.LevelEnabler, error) {
 	}
 	var level zapcore.Level
 	if err := level.UnmarshalText([]byte(cfg.StacktraceLevel)); err != nil {
-		return nil, serrors.WrapStr("unable to parse log.console.stacktrace_level", err,
+		return nil, serrors.Wrap("unable to parse log.console.stacktrace_level", err,
 			"level", cfg.Level)
+
 	}
 	return level, nil
 }
@@ -114,7 +116,7 @@ func setupConsole(cfg ConsoleConfig, opts options) error {
 
 	logger, err := zCfg.Build(zapOpts...)
 	if err != nil {
-		return serrors.WrapStr("creating logger", err)
+		return serrors.Wrap("creating logger", err)
 	}
 	zap.ReplaceGlobals(logger)
 	ConsoleLevel = httpLevel{a: zCfg.Level}
@@ -138,7 +140,8 @@ func HandlePanic() {
 
 // Flush writes the logs to the underlying buffer.
 func Flush() {
-	zap.L().Sync()
+	// Deliberately ignore sync error, see https://github.com/uber-go/zap/issues/328
+	_ = zap.L().Sync()
 }
 
 // ConsoleLevel allows interacting with the logging level at runtime.
@@ -168,7 +171,7 @@ func (l httpLevel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		lvl := l.a.Level()
-		enc.Encode(payload{Level: &lvl})
+		_ = enc.Encode(payload{Level: &lvl})
 	case http.MethodPut:
 		lvl, err := func() (*zapcore.Level, error) {
 			switch r.Header.Get("Content-Type") {
@@ -203,14 +206,14 @@ func (l httpLevel) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}()
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			enc.Encode(errorResponse{Error: err.Error()})
+			_ = enc.Encode(errorResponse{Error: err.Error()})
 			return
 		}
 		l.a.SetLevel(*lvl)
-		enc.Encode(payload{Level: lvl})
+		_ = enc.Encode(payload{Level: lvl})
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		enc.Encode(errorResponse{
+		_ = enc.Encode(errorResponse{
 			Error: fmt.Sprintf("HTTP method not supported: %v", r.Method),
 		})
 	}

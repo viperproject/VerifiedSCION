@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/scionproto/scion/pkg/private/util"
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path/empty"
@@ -67,7 +67,7 @@ func TestSCIONSCMP(t *testing.T) {
 					TypeCode: slayers.CreateSCMPTypeCode(6, 0),
 				},
 				&slayers.SCMPInternalConnectivityDown{
-					IA:      xtest.MustParseIA("1-ff00:0:111"),
+					IA:      addr.MustParseIA("1-ff00:0:111"),
 					Ingress: 5,
 					Egress:  15,
 				},
@@ -82,7 +82,7 @@ func TestSCIONSCMP(t *testing.T) {
 					TypeCode: slayers.CreateSCMPTypeCode(5, 0),
 				},
 				&slayers.SCMPExternalInterfaceDown{
-					IA:   xtest.MustParseIA("1-ff00:0:111"),
+					IA:   addr.MustParseIA("1-ff00:0:111"),
 					IfID: uint64(5),
 				},
 				gopacket.Payload(bytes.Repeat([]byte{0xff}, 18)),
@@ -196,8 +196,8 @@ func TestPaths(t *testing.T) {
 					PathType:     empty.PathType,
 					DstAddrType:  slayers.T16Ip,
 					SrcAddrType:  slayers.T4Ip,
-					DstIA:        xtest.MustParseIA("1-ff00:0:111"),
-					SrcIA:        xtest.MustParseIA("1-ff00:0:111"),
+					DstIA:        addr.MustParseIA("1-ff00:0:111"),
+					SrcIA:        addr.MustParseIA("1-ff00:0:111"),
 					Path:         empty.Path{},
 				}
 				require.NoError(t, s.SetDstAddr(ip6Addr))
@@ -225,8 +225,8 @@ func TestPaths(t *testing.T) {
 					PathType:     scion.PathType,
 					DstAddrType:  slayers.T16Ip,
 					SrcAddrType:  slayers.T4Ip,
-					DstIA:        xtest.MustParseIA("1-ff00:0:111"),
-					SrcIA:        xtest.MustParseIA("2-ff00:0:222"),
+					DstIA:        addr.MustParseIA("1-ff00:0:111"),
+					SrcIA:        addr.MustParseIA("2-ff00:0:222"),
 					Path:         &scion.Raw{},
 				}
 				require.NoError(t, s.SetDstAddr(ip6Addr))
@@ -371,7 +371,10 @@ func TestSerializeSCIONUPDExtn(t *testing.T) {
 	// checksum is set should result in 0.
 	udpBuf := gopacket.NewSerializeBuffer()
 	assert.NoError(t, gopacket.SerializeLayers(udpBuf, opts, u, pld))
-	csum := util.Checksum(pseudoHeader(t, s, len(udpBuf.Bytes()), 17), udpBuf.Bytes())
+	csum := referenceChecksum(append(
+		pseudoHeader(t, s, len(udpBuf.Bytes()), 17),
+		udpBuf.Bytes()...,
+	))
 	assert.Zero(t, csum)
 }
 

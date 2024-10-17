@@ -18,7 +18,8 @@ package router
 
 import (
 	mrand "math/rand"
-	"net"
+	"net/netip"
+	"slices"
 	"sync"
 
 	"github.com/scionproto/scion/pkg/addr"
@@ -27,13 +28,13 @@ import (
 
 type services struct {
 	mtx sync.Mutex
-	m   map[addr.HostSVC][]*net.UDPAddr
+	m   map[addr.SVC][]netip.AddrPort
 }
 
 // @ ensures s != nil && s.Mem()
 // @ decreases
 func newServices() (s *services) {
-	tmp := &services{m: make(map[addr.HostSVC][]*net.UDPAddr)}
+	tmp := &services{m: make(map[addr.SVC][]netip.AddrPort)}
 	//@ fold internalLockInv!<tmp!>()
 	//@ ghost tmp.mtx.SetInv(internalLockInv!<tmp!>)
 	//@ fold tmp.Mem()
@@ -43,7 +44,7 @@ func newServices() (s *services) {
 // @ preserves acc(s.Mem(), R50)
 // @ requires  acc(a.Mem(), R10)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
+func (s *services) AddSvc(svc addr.SVC, a netip.AddrPort) {
 	//@ unfold acc(s.Mem(), R50)
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
@@ -52,7 +53,7 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	addrs := s.m[svc]
 	//@ ghost if addrs == nil { fold validMapValue(svc, addrs) }
 	//@ unfold acc(validMapValue(svc, addrs), R10)
-	if _, ok := s.index(a, addrs /*@, svc @*/); ok {
+	if slices.Contains(addrs, a) {
 		//@ fold acc(validMapValue(svc, addrs), R10)
 		//@ fold internalLockInv!<s!>()
 		//@ fold acc(s.Mem(), R50)
@@ -71,7 +72,7 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 // @ preserves acc(s.Mem(), R50)
 // @ preserves acc(a.Mem(), R10)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
+func (s *services) DelSvc(svc addr.SVC, a netip.AddrPort) {
 	//@ unfold acc(s.Mem(), R50)
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
@@ -80,8 +81,8 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	addrs := s.m[svc]
 	//@ ghost if addrs == nil { fold validMapValue(svc, addrs) }
 	//@ assert validMapValue(svc, addrs)
-	index, ok := s.index(a, addrs /*@, svc @*/)
-	if !ok {
+	index := slices.Index(addrs, a)
+	if index == -1 {
 		//@ fold internalLockInv!<s!>()
 		//@ fold acc(s.Mem(), R50)
 		return
@@ -93,7 +94,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	addrs[index] = addrs[len(addrs)-1]
 	//@ fold InjectiveMem(addrs[index], index)
 	//@ unfold acc(hiddenPerm(a), R10)
-	addrs[len(addrs)-1] = nil
+	addrs[len(addrs)-1] = netip.AddrPort{}
 	//@ assert forall i int :: { &addrs[:len(addrs)-1][i] }{ &addrs[i] } 0 <= i && i < len(addrs)-1 ==> &addrs[:len(addrs)-1][i] == &addrs[i]
 	s.m[svc] = addrs[:len(addrs)-1]
 	//@ fold validMapValue(svc, s.m[svc])
@@ -105,7 +106,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 // @ ensures  !b ==> r == nil
 // @ ensures  b  ==> acc(r.Mem(), _)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
+func (s *services) Any(svc addr.SVC) (r netip.AddrPort, b bool) {
 	//@ unfold acc(s.Mem(), _)
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
@@ -114,7 +115,7 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	addrs := s.m[svc]
 	if len(addrs) == 0 {
 		//@ fold internalLockInv!<s!>()
-		return nil, false
+		return netip.AddrPort{}, false
 	}
 	//@ assert validMapValue(svc, addrs)
 	//@ unfold acc(validMapValue(svc, addrs))
@@ -125,33 +126,4 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	//@ unfold InjectiveMem(tmpAddr, tmpIdx)
 	//@ fold InjectiveMem(tmpAddr, tmpIdx)
 	return tmpAddr, true
-}
-
-// @ preserves acc(a.Mem(), R10)
-// @ preserves acc(validMapValue(k, addrs), R10)
-// @ ensures   b ==> res >= 0 && 0 < len(addrs) && 0 <= res && res < len(addrs)
-// @ ensures   b ==> 0 < len(addrs)
-// @ ensures   b ==> 0 <= res && res < len(addrs)
-// @ ensures   !b ==> res == -1
-// @ decreases
-func (s *services) index(a *net.UDPAddr, addrs []*net.UDPAddr /*@ , ghost k addr.HostSVC @*/) (res int, b bool) {
-	// @ unfold acc(validMapValue(k, addrs), R11)
-	// @ defer  fold acc(validMapValue(k, addrs), R11)
-
-	// @ invariant acc(a.Mem(), R10)
-	// @ invariant acc(addrs, R11)
-	// @ invariant forall i1 int :: { addrs[i1] } 0 <= i1 && i1 < len(addrs) ==> acc(InjectiveMem(addrs[i1], i1), R11)
-	// @ decreases len(addrs) - i0
-	for i, o := range addrs /*@ with i0 @*/ {
-		// @ unfold acc(a.Mem(), R10)
-		// @ unfold acc(InjectiveMem(addrs[i], i), R11)
-		// @ fold   acc(InjectiveMem(addrs[i], i), R11)
-		// @ unfold acc(o.Mem(), _)
-		if a.IP.Equal(o.IP) && a.Port == o.Port {
-			// @ fold acc(a.Mem(), R10)
-			return i, true
-		}
-		// @ fold acc(a.Mem(), R10)
-	}
-	return -1, false
 }

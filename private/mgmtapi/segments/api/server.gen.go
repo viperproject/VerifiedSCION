@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/go-chi/chi/v5"
+	"github.com/oapi-codegen/runtime"
 )
 
 // ServerInterface represents all server handlers.
@@ -16,12 +16,43 @@ type ServerInterface interface {
 	// List the SCION path segments
 	// (GET /segments)
 	GetSegments(w http.ResponseWriter, r *http.Request, params GetSegmentsParams)
+	// Delete the SCION path segment
+	// (DELETE /segments/{segment-id})
+	DeleteSegment(w http.ResponseWriter, r *http.Request, segmentId SegmentID)
 	// Get the SCION path segment description
 	// (GET /segments/{segment-id})
 	GetSegment(w http.ResponseWriter, r *http.Request, segmentId SegmentID)
 	// Get the SCION path segment blob
 	// (GET /segments/{segment-id}/blob)
 	GetSegmentBlob(w http.ResponseWriter, r *http.Request, segmentId SegmentID)
+}
+
+// Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
+
+type Unimplemented struct{}
+
+// List the SCION path segments
+// (GET /segments)
+func (_ Unimplemented) GetSegments(w http.ResponseWriter, r *http.Request, params GetSegmentsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete the SCION path segment
+// (DELETE /segments/{segment-id})
+func (_ Unimplemented) DeleteSegment(w http.ResponseWriter, r *http.Request, segmentId SegmentID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the SCION path segment description
+// (GET /segments/{segment-id})
+func (_ Unimplemented) GetSegment(w http.ResponseWriter, r *http.Request, segmentId SegmentID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the SCION path segment blob
+// (GET /segments/{segment-id}/blob)
+func (_ Unimplemented) GetSegmentBlob(w http.ResponseWriter, r *http.Request, segmentId SegmentID) {
+	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -31,7 +62,7 @@ type ServerInterfaceWrapper struct {
 	ErrorHandlerFunc   func(w http.ResponseWriter, r *http.Request, err error)
 }
 
-type MiddlewareFunc func(http.HandlerFunc) http.HandlerFunc
+type MiddlewareFunc func(http.Handler) http.Handler
 
 // GetSegments operation middleware
 func (siw *ServerInterfaceWrapper) GetSegments(w http.ResponseWriter, r *http.Request) {
@@ -43,9 +74,6 @@ func (siw *ServerInterfaceWrapper) GetSegments(w http.ResponseWriter, r *http.Re
 	var params GetSegmentsParams
 
 	// ------------- Optional query parameter "start_isd_as" -------------
-	if paramValue := r.URL.Query().Get("start_isd_as"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "start_isd_as", r.URL.Query(), &params.StartIsdAs)
 	if err != nil {
@@ -54,9 +82,6 @@ func (siw *ServerInterfaceWrapper) GetSegments(w http.ResponseWriter, r *http.Re
 	}
 
 	// ------------- Optional query parameter "end_isd_as" -------------
-	if paramValue := r.URL.Query().Get("end_isd_as"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "end_isd_as", r.URL.Query(), &params.EndIsdAs)
 	if err != nil {
@@ -64,15 +89,41 @@ func (siw *ServerInterfaceWrapper) GetSegments(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var handler = func(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSegments(w, r, params)
-	}
+	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		handler = middleware(handler)
 	}
 
-	handler(w, r.WithContext(ctx))
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// DeleteSegment operation middleware
+func (siw *ServerInterfaceWrapper) DeleteSegment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "segment-id" -------------
+	var segmentId SegmentID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "segment-id", chi.URLParam(r, "segment-id"), &segmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "segment-id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteSegment(w, r, segmentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // GetSegment operation middleware
@@ -84,21 +135,21 @@ func (siw *ServerInterfaceWrapper) GetSegment(w http.ResponseWriter, r *http.Req
 	// ------------- Path parameter "segment-id" -------------
 	var segmentId SegmentID
 
-	err = runtime.BindStyledParameter("simple", false, "segment-id", chi.URLParam(r, "segment-id"), &segmentId)
+	err = runtime.BindStyledParameterWithOptions("simple", "segment-id", chi.URLParam(r, "segment-id"), &segmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "segment-id", Err: err})
 		return
 	}
 
-	var handler = func(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSegment(w, r, segmentId)
-	}
+	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		handler = middleware(handler)
 	}
 
-	handler(w, r.WithContext(ctx))
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // GetSegmentBlob operation middleware
@@ -110,21 +161,21 @@ func (siw *ServerInterfaceWrapper) GetSegmentBlob(w http.ResponseWriter, r *http
 	// ------------- Path parameter "segment-id" -------------
 	var segmentId SegmentID
 
-	err = runtime.BindStyledParameter("simple", false, "segment-id", chi.URLParam(r, "segment-id"), &segmentId)
+	err = runtime.BindStyledParameterWithOptions("simple", "segment-id", chi.URLParam(r, "segment-id"), &segmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "segment-id", Err: err})
 		return
 	}
 
-	var handler = func(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSegmentBlob(w, r, segmentId)
-	}
+	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		handler = middleware(handler)
 	}
 
-	handler(w, r.WithContext(ctx))
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 type UnescapedCookieParamError struct {
@@ -242,6 +293,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/segments", wrapper.GetSegments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/segments/{segment-id}", wrapper.DeleteSegment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/segments/{segment-id}", wrapper.GetSegment)

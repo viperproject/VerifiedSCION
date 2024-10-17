@@ -30,14 +30,11 @@ SCION_SERVICE_NAMES = (
     "control_service",
     "discovery_service",
     "border_routers",
-    "colibri_service",
 )
 
-BR_CONFIG_NAME = 'br.toml'
 BS_CONFIG_NAME = 'bs.toml'
 CS_CONFIG_NAME = 'cs.toml'
 PS_CONFIG_NAME = 'ps.toml'
-CO_CONFIG_NAME = 'co.toml'
 SD_CONFIG_NAME = 'sd.toml'
 DISP_CONFIG_NAME = 'disp.toml'
 SIG_CONFIG_NAME = 'sig.toml'
@@ -182,10 +179,6 @@ def remote_nets(networks, topo_id):
 
 def sciond_name(topo_id):
     return 'sd%s' % topo_id.file_fmt()
-
-
-def sciond_svc_name(topo_id):
-    return 'scion_%s' % sciond_name(topo_id)
 
 
 def json_default(o):

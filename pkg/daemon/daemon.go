@@ -18,13 +18,12 @@ package daemon
 
 import (
 	"context"
-	"net"
+	"net/netip"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon/internal/metrics"
 	"github.com/scionproto/scion/pkg/drkey"
 	libmetrics "github.com/scionproto/scion/pkg/metrics"
-	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/private/ctrl/path_mgmt"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/snet"
@@ -63,22 +62,24 @@ func NewService(name string) Service {
 // either an error occurs, or the method successfully returns.
 type Connector interface {
 	// LocalIA requests from the daemon the local ISD-AS number.
+	// TODO: Caching this value to avoid contacting the daemon, since this never changes.
 	LocalIA(ctx context.Context) (addr.IA, error)
+	// PortRange returns the beginning and the end of the SCION/UDP endhost port range, configured
+	// for the local IA.
+	PortRange(ctx context.Context) (uint16, uint16, error)
+	// Interfaces returns the map of interface identifiers to the underlay internal address.
+	Interfaces(ctx context.Context) (map[uint16]netip.AddrPort, error)
 	// Paths requests from the daemon a set of end to end paths between the source and destination.
 	Paths(ctx context.Context, dst, src addr.IA, f PathReqFlags) ([]snet.Path, error)
 	// ASInfo requests from the daemon information about AS ia, the zero IA can be
 	// use to detect the local IA.
 	ASInfo(ctx context.Context, ia addr.IA) (ASInfo, error)
-	// IFInfo requests from SCION Daemon addresses and ports of interfaces. Slice
-	// ifs contains interface IDs of BRs. If empty, a fresh (i.e., uncached)
-	// answer containing all interfaces is returned.
-	IFInfo(ctx context.Context, ifs []common.IFIDType) (map[common.IFIDType]*net.UDPAddr, error)
 	// SVCInfo requests from the daemon information about addresses and ports of
 	// infrastructure services.  Slice svcTypes contains a list of desired
 	// service types. If unset, a fresh (i.e., uncached) answer containing all
 	// service types is returned. The reply is a map from service type to a list
 	// of URIs of the service in the local AS.
-	SVCInfo(ctx context.Context, svcTypes []addr.HostSVC) (map[addr.HostSVC][]string, error)
+	SVCInfo(ctx context.Context, svcTypes []addr.SVC) (map[addr.SVC][]string, error)
 	// RevNotification sends a RevocationInfo message to the daemon.
 	RevNotification(ctx context.Context, revInfo *path_mgmt.RevInfo) error
 	// DRKeyGetASHostKey requests a AS-Host Key from the daemon.

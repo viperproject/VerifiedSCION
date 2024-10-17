@@ -45,7 +45,7 @@ type Querier struct {
 func (q Querier) Query(ctx context.Context, dst addr.IA) ([]snet.Path, error) {
 	paths, err := q.Connector.Paths(ctx, dst, q.IA, PathReqFlags{})
 	if err != nil {
-		return paths, serrors.WrapStr("querying paths", err, "local_isd_as", q.IA)
+		return paths, serrors.Wrap("querying paths", err, "local_isd_as", q.IA)
 	}
 	return paths, nil
 }
@@ -65,11 +65,11 @@ type TopoQuerier struct {
 }
 
 // UnderlayAnycast provides any address for the given svc type.
-func (h TopoQuerier) UnderlayAnycast(ctx context.Context, svc addr.HostSVC) (*net.UDPAddr, error) {
+func (h TopoQuerier) UnderlayAnycast(ctx context.Context, svc addr.SVC) (*net.UDPAddr, error) {
 	if err := checkSVC(svc); err != nil {
 		return nil, err
 	}
-	r, err := h.Connector.SVCInfo(ctx, []addr.HostSVC{svc})
+	r, err := h.Connector.SVCInfo(ctx, []addr.SVC{svc})
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (h TopoQuerier) UnderlayAnycast(ctx context.Context, svc addr.HostSVC) (*ne
 	return &net.UDPAddr{IP: a.IP, Port: topology.EndhostPort, Zone: a.Zone}, nil
 }
 
-func checkSVC(svc addr.HostSVC) error {
+func checkSVC(svc addr.SVC) error {
 	switch svc {
 	case addr.SvcCS:
 		return nil
