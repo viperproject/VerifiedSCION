@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion_ping:
 
 scion ping
@@ -85,7 +87,6 @@ Options
 ::
 
   -c, --count uint16           total number of packets to send
-      --dispatcher string      Path to the dispatcher socket (default "/run/shm/dispatcher/default.sock")
       --epic                   Enable EPIC for path probing.
       --format string          Specify the output format (human|json|yaml) (default "human")
       --healthy-only           only use healthy paths
@@ -93,7 +94,7 @@ Options
   -i, --interactive            interactive mode
       --interval duration      time between packets (default 1s)
       --isd-as isd-as          The local ISD-AS to use. (default 0-0)
-  -l, --local ip               Local IP address to listen on. (default zero IP)
+  -l, --local ip               Local IP address to listen on. (default invalid IP)
       --log.level string       Console logging level verbosity (debug|info|error)
       --max-mtu                choose the payload size such that the sent SCION packet including the SCION Header,
                                SCMP echo header and payload are equal to the MTU of the path. This flag overrides the
@@ -106,7 +107,7 @@ Options
                                the total size of the packet is still variable size due to the variable size of
                                the SCION path.
       --refresh                set refresh flag for path request
-      --sciond string          SCION Deamon address. (default "127.0.0.1:30255")
+      --sciond string          SCION Daemon address. (default "127.0.0.1:30255")
       --sequence string        Space separated list of hop predicates
       --timeout duration       timeout per packet (default 1s)
       --tracing.agent string   Tracing agent address
@@ -114,5 +115,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion <scion.html>`_ 	 - A clean-slate Internet architecture
+* :ref:`scion <scion>` 	 - SCION networking utilities.
 

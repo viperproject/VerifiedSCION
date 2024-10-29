@@ -25,12 +25,11 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"math/big"
 	"net"
 	"time"
 
-	"github.com/lucas-clemente/quic-go"
+	"github.com/quic-go/quic-go"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
@@ -38,16 +37,16 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/squic"
-	"github.com/scionproto/scion/pkg/sock/reliable"
-	"github.com/scionproto/scion/pkg/sock/reliable/reconnect"
 	"github.com/scionproto/scion/private/env"
 	"github.com/scionproto/scion/private/svc"
+	"github.com/scionproto/scion/private/trust"
 )
 
 // QUIC contains the QUIC configuration for control-plane speakers.
 type QUIC struct {
-	// Address is the UDP address to start the QUIC server on.
-	Address string
+	GetCertificate       func(*tls.ClientHelloInfo) (*tls.Certificate, error)
+	GetClientCertificate func(*tls.CertificateRequestInfo) (*tls.Certificate, error)
+	TLSVerifier          *trust.TLSCryptoVerifier
 }
 
 // NetworkConfig describes the networking configuration of a SCION
@@ -58,12 +57,7 @@ type NetworkConfig struct {
 	// Public is the Internet-reachable address in the case where the service
 	// is behind NAT.
 	Public *net.UDPAddr
-	// ReconnectToDispatcher sets up sockets that automatically reconnect if
-	// the dispatcher closes the connection (e.g., if the dispatcher goes
-	// down).
-	ReconnectToDispatcher bool
-	// QUIC contains configuration details for QUIC servers. If the listening
-	// address is the empty string, then no QUIC socket is opened.
+	// QUIC contains configuration details for QUIC servers.
 	QUIC QUIC
 	// SVCResolver is used to discover the underlay addresses of intra-AS SVC
 	// servers.
@@ -75,15 +69,20 @@ type NetworkConfig struct {
 	SCMPHandler snet.SCMPHandler
 	// Metrics injected into SCIONNetwork.
 	SCIONNetworkMetrics snet.SCIONNetworkMetrics
-	// Metrics injected into DefaultPacketDispatcherService.
+	// Metrics injected into SCIONPacketConn.
 	SCIONPacketConnMetrics snet.SCIONPacketConnMetrics
+	// MTU of the local AS
+	MTU uint16
+	// Topology is the helper class to get control-plane information for the
+	// local AS.
+	Topology snet.Topology
 }
 
 // QUICStack contains everything to run a QUIC based RPC stack.
 type QUICStack struct {
 	Listener       *squic.ConnListener
+	InsecureDialer *squic.ConnDialer
 	Dialer         *squic.ConnDialer
-	RedirectCloser func()
 }
 
 func (nc *NetworkConfig) TCPStack() (net.Listener, error) {
@@ -95,9 +94,7 @@ func (nc *NetworkConfig) TCPStack() (net.Listener, error) {
 }
 
 func (nc *NetworkConfig) QUICStack() (*QUICStack, error) {
-	if nc.QUIC.Address == "" {
-		nc.QUIC.Address = net.JoinHostPort(nc.Public.IP.String(), "0")
-	}
+
 	client, server, err := nc.initQUICSockets()
 	if err != nil {
 		return nil, err
@@ -105,34 +102,43 @@ func (nc *NetworkConfig) QUICStack() (*QUICStack, error) {
 	log.Info("QUIC server conn initialized", "local_addr", server.LocalAddr())
 	log.Info("QUIC client conn initialized", "local_addr", client.LocalAddr())
 
-	tlsConfig, err := GenerateTLSConfig()
-	if err != nil {
-		return nil, err
-	}
-	listener, err := quic.Listen(server, tlsConfig, nil)
-	if err != nil {
-		return nil, serrors.WrapStr("listening QUIC/SCION", err)
+	serverTLSConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		GetCertificate:     nc.QUIC.GetCertificate,
+		ClientAuth:         tls.RequestClientCert,
+		NextProtos:         []string{"SCION"},
 	}
 
-	serverAddr, ok := server.LocalAddr().(*snet.UDPAddr)
-	if !ok {
-		return nil, serrors.New("unexpected server address type",
-			"type", fmt.Sprintf("%T", server.LocalAddr()),
-		)
+	listener, err := quic.Listen(server, serverTLSConfig, nil)
+	if err != nil {
+		return nil, serrors.Wrap("listening QUIC/SCION", err)
 	}
 
-	cancel, err := nc.initSvcRedirect(serverAddr.Host.String())
-	if err != nil {
-		return nil, serrors.WrapStr("starting service redirection", err)
+	insecureClientTLSConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		NextProtos:         []string{"SCION"},
+	}
+	clientTLSConfig := &tls.Config{
+		InsecureSkipVerify:    true, // ... but VerifyServerCertificate and VerifyConnection
+		GetClientCertificate:  nc.QUIC.GetClientCertificate,
+		VerifyPeerCertificate: nc.QUIC.TLSVerifier.VerifyServerCertificate,
+		VerifyConnection:      nc.QUIC.TLSVerifier.VerifyConnection,
+		NextProtos:            []string{"SCION"},
+	}
+	clientTransport := &quic.Transport{
+		Conn: client,
 	}
 
 	return &QUICStack{
 		Listener: squic.NewConnListener(listener),
-		Dialer: &squic.ConnDialer{
-			Conn:      client,
-			TLSConfig: tlsConfig,
+		InsecureDialer: &squic.ConnDialer{
+			Transport: clientTransport,
+			TLSConfig: insecureClientTLSConfig,
 		},
-		RedirectCloser: cancel,
+		Dialer: &squic.ConnDialer{
+			Transport: clientTransport,
+			TLSConfig: clientTLSConfig,
+		},
 	}, nil
 }
 
@@ -146,7 +152,7 @@ func GenerateTLSConfig() (*tls.Config, error) {
 	serialLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serial, err := rand.Int(rand.Reader, serialLimit)
 	if err != nil {
-		return nil, serrors.WrapStr("creating random serial number", err)
+		return nil, serrors.Wrap("creating random serial number", err)
 	}
 
 	template := x509.Certificate{
@@ -183,129 +189,82 @@ func GenerateTLSConfig() (*tls.Config, error) {
 
 // AddressRewriter initializes path and svc resolvers for infra servers.
 //
-// The connection factory is used to open sockets for SVC resolution requests.
-// If the connection factory is nil, the default connection factory is used.
-func (nc *NetworkConfig) AddressRewriter(
-	connFactory snet.PacketDispatcherService) *AddressRewriter {
-
-	if connFactory == nil {
-		connFactory = &snet.DefaultPacketDispatcherService{
-			Dispatcher:  reliable.NewDispatcher(""),
-			SCMPHandler: nc.SCMPHandler,
-		}
-	}
+// The connector is used to open sockets for SVC resolution requests.
+// If the connector is nil, the default connection factory is used.
+func (nc *NetworkConfig) AddressRewriter() *AddressRewriter {
 	return &AddressRewriter{
-		Router:    &snet.BaseRouter{Querier: snet.IntraASPathQuerier{IA: nc.IA}},
+		Router:    &snet.BaseRouter{Querier: IntraASPathQuerier{IA: nc.IA, MTU: nc.MTU}},
 		SVCRouter: nc.SVCResolver,
 		Resolver: &svc.Resolver{
-			LocalIA:     nc.IA,
-			ConnFactory: connFactory,
-			LocalIP:     nc.Public.IP,
+			LocalIA: nc.IA,
+			Network: &snet.SCIONNetwork{
+				Topology:          nc.Topology,
+				SCMPHandler:       nc.SCMPHandler,
+				Metrics:           nc.SCIONNetworkMetrics,
+				PacketConnMetrics: nc.SCIONPacketConnMetrics,
+			},
+			LocalIP: nc.Public.IP,
 		},
-		SVCResolutionFraction: 1.337,
 	}
 }
 
-// initSvcRedirect creates the main control-plane UDP socket. SVC anycasts will be
-// delivered to this socket, which replies to SVC resolution requests. The
-// address will be included as the QUIC address in SVC resolution replies.
-func (nc *NetworkConfig) initSvcRedirect(quicAddress string) (func(), error) {
+func (nc *NetworkConfig) initQUICSockets() (net.PacketConn, net.PacketConn, error) {
 	reply := &svc.Reply{
 		Transports: map[svc.Transport]string{
-			svc.QUIC: quicAddress,
+			svc.QUIC: nc.Public.String(),
 		},
 	}
 
 	svcResolutionReply, err := reply.Marshal()
 	if err != nil {
-		return nil, serrors.WrapStr("building SVC resolution reply", err)
-	}
-
-	dispatcherService := reliable.NewDispatcher("")
-	if nc.ReconnectToDispatcher {
-		dispatcherService = reconnect.NewDispatcherService(dispatcherService)
-	}
-	packetDispatcher := svc.NewResolverPacketDispatcher(
-		&snet.DefaultPacketDispatcherService{
-			Dispatcher:             dispatcherService,
-			SCMPHandler:            nc.SCMPHandler,
-			SCIONPacketConnMetrics: nc.SCIONPacketConnMetrics,
-		},
-		&svc.BaseHandler{
-			Message: svcResolutionReply,
-		},
-	)
-	network := &snet.SCIONNetwork{
-		LocalIA:    nc.IA,
-		Dispatcher: packetDispatcher,
-		Metrics:    nc.SCIONNetworkMetrics,
-	}
-	conn, err := network.Listen(context.Background(), "udp", nc.Public, addr.SvcWildcard)
-	if err != nil {
-		return nil, serrors.WrapStr("listening on SCION", err, "addr", nc.Public)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		defer log.HandlePanic()
-		buf := make([]byte, 1500)
-		done := ctx.Done()
-		for {
-			select {
-			case <-done:
-				return
-			default:
-				conn.Read(buf)
-			}
-		}
-	}()
-	return cancel, nil
-}
-
-func (nc *NetworkConfig) initQUICSockets() (net.PacketConn, net.PacketConn, error) {
-	dispatcherService := reliable.NewDispatcher("")
-	if nc.ReconnectToDispatcher {
-		dispatcherService = reconnect.NewDispatcherService(dispatcherService)
+		return nil, nil, serrors.Wrap("building SVC resolution reply", err)
 	}
 
 	serverNet := &snet.SCIONNetwork{
-		LocalIA: nc.IA,
-		Dispatcher: &snet.DefaultPacketDispatcherService{
-			Dispatcher: dispatcherService,
-			// XXX(roosd): This is essential, the server must not read SCMP
-			// errors. Otherwise, the accept loop will always return that error
-			// on every subsequent call to accept.
-			SCMPHandler:            ignoreSCMP{},
-			SCIONPacketConnMetrics: nc.SCIONPacketConnMetrics,
+		Topology: nc.Topology,
+		// XXX(roosd): This is essential, the server must not read SCMP
+		// errors. Otherwise, the accept loop will always return that error
+		// on every subsequent call to accept.
+		SCMPHandler:       ignoreSCMP{},
+		PacketConnMetrics: nc.SCIONPacketConnMetrics,
+	}
+	pconn, err := serverNet.OpenRaw(context.Background(), nc.Public)
+	if err != nil {
+		return nil, nil, serrors.Wrap("creating server raw PacketConn", err)
+	}
+	resolvedPacketConn := &svc.ResolverPacketConn{
+		PacketConn: pconn,
+		Source: snet.SCIONAddress{
+			IA:   nc.IA,
+			Host: addr.HostIP(nc.Public.AddrPort().Addr()),
 		},
-		Metrics: nc.SCIONNetworkMetrics,
+		Handler: &svc.BaseHandler{
+			Message: svcResolutionReply,
+		},
 	}
-	serverAddr, err := net.ResolveUDPAddr("udp", nc.QUIC.Address)
+	server, err := snet.NewCookedConn(resolvedPacketConn, nc.Topology)
 	if err != nil {
-		return nil, nil, serrors.WrapStr("parsing server QUIC address", err)
-	}
-	server, err := serverNet.Listen(context.Background(), "udp", serverAddr, addr.SvcNone)
-	if err != nil {
-		return nil, nil, serrors.WrapStr("creating server connection", err)
+		return nil, nil, serrors.Wrap("creating server connection", err)
 	}
 
 	clientNet := &snet.SCIONNetwork{
-		LocalIA: nc.IA,
-		Dispatcher: &snet.DefaultPacketDispatcherService{
-			Dispatcher:             dispatcherService,
-			SCMPHandler:            nc.SCMPHandler,
-			SCIONPacketConnMetrics: nc.SCIONPacketConnMetrics,
+		Topology: nc.Topology,
+		// Discard all SCMP propagation, to avoid read errors on the QUIC
+		// client.
+		SCMPHandler: snet.SCMPPropagationStopper{
+			Handler: nc.SCMPHandler,
+			Log:     log.Debug,
 		},
-		Metrics: nc.SCIONNetworkMetrics,
+		Metrics:           nc.SCIONNetworkMetrics,
+		PacketConnMetrics: nc.SCIONPacketConnMetrics,
 	}
-	// Let the dispatcher decide on the port for the client connection.
 	clientAddr := &net.UDPAddr{
-		IP:   serverAddr.IP,
-		Zone: serverAddr.Zone,
+		IP:   nc.Public.IP,
+		Zone: nc.Public.Zone,
 	}
-	client, err := clientNet.Listen(context.Background(), "udp", clientAddr, addr.SvcNone)
+	client, err := clientNet.Listen(context.Background(), "udp", clientAddr)
 	if err != nil {
-		return nil, nil, serrors.WrapStr("creating client connection", err)
+		return nil, nil, serrors.Wrap("creating client connection", err)
 	}
 	return client, server, nil
 }
@@ -336,7 +295,7 @@ func NewRouter(localIA addr.IA, sd env.Daemon) (snet.Router, error) {
 		select {
 		case <-ticker.C:
 		case <-timer.C:
-			return nil, serrors.WrapStr("Timed out during initial daemon connect", err)
+			return nil, serrors.Wrap("Timed out during initial daemon connect", err)
 		}
 	}
 	return router, nil

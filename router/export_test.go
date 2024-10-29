@@ -1,4 +1,5 @@
 // Copyright 2020 Anapaya Systems
+// Copyright 2023 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,59 +17,97 @@ package router
 
 import (
 	"net"
-
-	"golang.org/x/net/ipv4"
+	"net/netip"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/private/topology"
 )
 
+var (
+	dispatchedPortStart = 1024
+	dispatchedPortEnd   = 1<<16 - 1
+)
+
+var metrics = NewMetrics()
+
+func GetMetrics() *Metrics {
+	return metrics
+}
+
 var NewServices = newServices
 
-type ProcessResult struct {
-	processResult
+// Export the Packet struct so dataplane test can call ProcessPkt
+type Packet struct {
+	packet
+}
+
+type Disposition disposition
+
+const PDiscard = Disposition(pDiscard)
+
+func NewPacket(raw []byte, src, dst *net.UDPAddr, ingress, egress uint16) *Packet {
+	p := Packet{
+		packet: packet{
+			dstAddr:   &net.UDPAddr{IP: make(net.IP, 0, net.IPv6len)},
+			srcAddr:   &net.UDPAddr{IP: make(net.IP, 0, net.IPv6len)},
+			rawPacket: make([]byte, len(raw)),
+			ingress:   ingress,
+			egress:    egress,
+		},
+	}
+	if src != nil {
+		p.srcAddr = src
+	}
+	if dst != nil {
+		p.dstAddr = dst
+	}
+	copy(p.rawPacket, raw)
+	return &p
 }
 
 func NewDP(
 	external map[uint16]BatchConn,
 	linkTypes map[uint16]topology.LinkType,
 	internal BatchConn,
-	internalNextHops map[uint16]*net.UDPAddr,
-	svc map[addr.HostSVC][]*net.UDPAddr,
+	internalNextHops map[uint16]netip.AddrPort,
+	svc map[addr.SVC][]netip.AddrPort,
 	local addr.IA,
 	neighbors map[uint16]addr.IA,
 	key []byte) *DataPlane {
 
 	dp := &DataPlane{
-		localIA:          local,
-		external:         external,
-		linkTypes:        linkTypes,
-		neighborIAs:      neighbors,
-		internalNextHops: internalNextHops,
-		svc:              &services{m: svc},
-		internal:         internal,
+		localIA:             local,
+		external:            external,
+		linkTypes:           linkTypes,
+		neighborIAs:         neighbors,
+		internalNextHops:    internalNextHops,
+		dispatchedPortStart: uint16(dispatchedPortStart),
+		dispatchedPortEnd:   uint16(dispatchedPortEnd),
+		svc:                 &services{m: svc},
+		internal:            internal,
+		internalIP:          netip.MustParseAddr("198.51.100.1"),
+		Metrics:             metrics,
 	}
-	dp.SetKey(key)
+	if err := dp.SetKey(key); err != nil {
+		panic(err)
+	}
+	dp.initMetrics()
 	return dp
 }
 
 func (d *DataPlane) FakeStart() {
-	d.running = true
+	d.setRunning()
 }
 
-func (d *DataPlane) ProcessPkt(ifID uint16, m *ipv4.Message) (ProcessResult, error) {
+func (d *DataPlane) ProcessPkt(pkt *Packet) Disposition {
 
-	p := newPacketProcessor(d, ifID)
-	var srcAddr *net.UDPAddr
-	// for real packets received from ReadBatch this is always non-nil.
-	// Allow nil in test cases for brevity.
-	if m.Addr != nil {
-		srcAddr = m.Addr.(*net.UDPAddr)
-	}
-	result, err := p.processPkt(m.Buffers[0], srcAddr)
-	return ProcessResult{processResult: result}, err
+	p := newPacketProcessor(d)
+	disp := p.processPkt(&(pkt.packet))
+	// Erase trafficType; we don't set it in the expected results.
+	pkt.trafficType = ttOther
+	return Disposition(disp)
 }
 
-func ExtractServices(s *services) map[addr.HostSVC][]*net.UDPAddr {
+func ExtractServices(s *services) map[addr.SVC][]netip.AddrPort {
 	return s.m
 }

@@ -82,6 +82,9 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ assert sl.Bytes(s.Raw, 0, len(s.Raw))
 	//@ sl.SplitRange_Bytes(s.Raw, 0, MetaLen, writePerm)
+	// TODO(matzf, jiceatscion): it is not clear whether updating pathmeta in s.Raw is desirable
+	// or not. It migh be best to make that question moot by not keeping the path meta header as
+	// raw bytes at all. However that's a viral change.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		// @ Unreachable()
 		return err

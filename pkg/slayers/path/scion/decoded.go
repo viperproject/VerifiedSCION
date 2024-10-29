@@ -140,8 +140,8 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ sl.SplitByIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
 	//@ sl.Reslice_Bytes(b, 0, MetaLen, writePerm)
 	//@ unfold acc(s.Base.Mem(), R1)
-	if err := s.PathMeta.SerializeTo(b[:MetaLen]); err != nil {
-		// @ Unreachable()
+	if err := s.PathMeta.SerializeTo(b); err != nil {
+		//@ Unreachable()
 		return err
 	}
 	//@ fold acc(s.Base.Mem(), R1)
@@ -239,9 +239,9 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 
 	// Reverse order of InfoFields and SegLens
 	if s.NumINF > 1 {
-		lastIdx := s.NumINF - 1
-		s.InfoFields[0], s.InfoFields[lastIdx] = s.InfoFields[lastIdx], s.InfoFields[0]
-		s.PathMeta.SegLen[0], s.PathMeta.SegLen[lastIdx] = s.PathMeta.SegLen[lastIdx], s.PathMeta.SegLen[0]
+		l := s.NumINF - 1
+		s.InfoFields[0], s.InfoFields[l] = s.InfoFields[l], s.InfoFields[0]
+		s.PathMeta.SegLen[0], s.PathMeta.SegLen[l] = s.PathMeta.SegLen[l], s.PathMeta.SegLen[0]
 	}
 	//@ fold s.Base.Mem()
 	//@ invariant acc(s.Base.Mem(), R10)

@@ -22,9 +22,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/scionproto/scion/control/beaconing"
 	"github.com/scionproto/scion/control/beaconing/mock_beaconing"
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/experimental/hiddenpath"
 	hpgrpc "github.com/scionproto/scion/pkg/experimental/hiddenpath/grpc"
 	"github.com/scionproto/scion/pkg/experimental/hiddenpath/grpc/mock_grpc"
@@ -66,7 +68,7 @@ func TestRegistererRegisterSegment(t *testing.T) {
 			},
 			input: hiddenpath.SegmentRegistration{
 				GroupID: hiddenpath.GroupID{Suffix: 42},
-				Seg:     createSeg(),
+				Seg:     createSeg(t),
 			},
 			assertErr: assert.NoError,
 		},
@@ -86,7 +88,7 @@ func TestRegistererRegisterSegment(t *testing.T) {
 				return r
 			},
 			input: hiddenpath.SegmentRegistration{
-				Seg: createSeg(),
+				Seg: createSeg(t),
 			},
 			assertErr: assert.NoError,
 		},
@@ -118,15 +120,16 @@ func TestRegistererRegisterSegment(t *testing.T) {
 
 }
 
-func createSeg() seg.Meta {
+func createSeg(t *testing.T) seg.Meta {
+	t.Helper()
 	asEntry := seg.ASEntry{
-		Local: xtest.MustParseIA("1-ff00:0:110"),
+		Local: addr.MustParseIA("1-ff00:0:110"),
 		HopEntry: seg.HopEntry{
 			HopField: seg.HopField{MAC: [path.MacLen]byte{0x11, 0x11, 0x11, 0x11, 0x11, 0x11}},
 		},
 	}
 	ps, _ := seg.CreateSegment(time.Now(), 1337)
-	ps.AddASEntry(context.Background(), asEntry, graph.NewSigner())
+	require.NoError(t, ps.AddASEntry(context.Background(), asEntry, graph.NewSigner()))
 
 	return seg.Meta{Type: seg.TypeDown, Segment: ps}
 }

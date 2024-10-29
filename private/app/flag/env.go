@@ -18,22 +18,20 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"net/netip"
 	"os"
 	"sync"
 
 	"github.com/spf13/pflag"
-	"inet.af/netaddr"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/private/serrors"
-	"github.com/scionproto/scion/pkg/sock/reliable"
 	"github.com/scionproto/scion/private/app/env"
 )
 
 const (
-	defaultDaemon     = daemon.DefaultAPIAddress
-	defaultDispatcher = reliable.DefaultDispPath
+	defaultDaemon = daemon.DefaultAPIAddress
 
 	defaultEnvironmentFile = "/etc/scion/environment.json"
 )
@@ -62,10 +60,10 @@ func (v *iaVal) Set(val string) error {
 func (v *iaVal) Type() string   { return "isd-as" }
 func (v *iaVal) String() string { return addr.IA(*v).String() }
 
-type ipVal netaddr.IP
+type ipVal netip.Addr
 
 func (v *ipVal) Set(val string) error {
-	ip, err := netaddr.ParseIP(val)
+	ip, err := netip.ParseAddr(val)
 	if err != nil {
 		return err
 	}
@@ -74,20 +72,17 @@ func (v *ipVal) Set(val string) error {
 }
 
 func (v *ipVal) Type() string   { return "ip" }
-func (v *ipVal) String() string { return netaddr.IP(*v).String() }
+func (v *ipVal) String() string { return netip.Addr(*v).String() }
 
 // SCIONEnvironment can be used to access the common SCION configuration values,
-// like the SCION daemon address, the dispatcher socket address and the local IP
-// as well as the local ISD-AS.
+// like the SCION daemon address and the local IP as well as the local ISD-AS.
 type SCIONEnvironment struct {
 	sciondFlag *pflag.Flag
 	sciondEnv  *string
 	ia         addr.IA
 	iaFlag     *pflag.Flag
-	dispFlag   *pflag.Flag
-	dispEnv    *string
-	local      netaddr.IP
-	localEnv   *netaddr.IP
+	local      netip.Addr
+	localEnv   *netip.Addr
 	localFlag  *pflag.Flag
 	file       env.SCION
 	filepath   string
@@ -104,13 +99,10 @@ func (e *SCIONEnvironment) Register(flagSet *pflag.FlagSet) {
 	defer e.mtx.Unlock()
 
 	sciond := defaultDaemon
-	dispatcher := defaultDispatcher
 	e.sciondFlag = flagSet.VarPF((*stringVal)(&sciond), "sciond", "",
-		"SCION Deamon address.")
+		"SCION Daemon address.")
 	e.iaFlag = flagSet.VarPF((*iaVal)(&e.ia), "isd-as", "",
 		"The local ISD-AS to use.")
-	e.dispFlag = flagSet.VarPF((*stringVal)(&dispatcher), "dispatcher", "",
-		"Path to the dispatcher socket")
 	e.localFlag = flagSet.VarPF((*ipVal)(&e.local), "local", "l",
 		"Local IP address to listen on.")
 }
@@ -123,10 +115,10 @@ func (e *SCIONEnvironment) LoadExternalVars() error {
 	defer e.mtx.Unlock()
 
 	if err := e.loadFile(); err != nil {
-		return serrors.WrapStr("loading environment file", err)
+		return serrors.Wrap("loading environment file", err)
 	}
 	if err := e.loadEnv(); err != nil {
-		return serrors.WrapStr("loading environment variables", err)
+		return serrors.Wrap("loading environment variables", err)
 	}
 	return nil
 }
@@ -145,10 +137,10 @@ func (e *SCIONEnvironment) loadFile() error {
 		return nil
 	}
 	if err != nil {
-		return serrors.WrapStr("loading file", err)
+		return serrors.Wrap("loading file", err)
 	}
 	if err := json.Unmarshal(raw, &e.file); err != nil {
-		return serrors.WrapStr("parsing file", err)
+		return serrors.Wrap("parsing file", err)
 	}
 	return nil
 }
@@ -161,13 +153,10 @@ func (e *SCIONEnvironment) loadEnv() error {
 	if d, ok := os.LookupEnv("SCION_DAEMON"); ok {
 		e.sciondEnv = &d
 	}
-	if d, ok := os.LookupEnv("SCION_DISPATCHER"); ok {
-		e.dispEnv = &d
-	}
 	if l, ok := os.LookupEnv("SCION_LOCAL_ADDR"); ok {
-		a, err := netaddr.ParseIP(l)
+		a, err := netip.ParseAddr(l)
 		if err != nil {
-			return serrors.WrapStr("parsing SCION_LOCAL_ADDR", err)
+			return serrors.Wrap("parsing SCION_LOCAL_ADDR", err)
 		}
 		e.localEnv = &a
 	}
@@ -200,34 +189,12 @@ func (e *SCIONEnvironment) Daemon() string {
 	return defaultDaemon
 }
 
-// Dispatcher returns the path to the SCION dispatcher socket. The value is
-// loaded from one of the following sources with the precedence as listed:
-//  1. Command line flag
-//  2. Environment variable
-//  3. Environment configuration file
-//  4. Default value.
-func (e *SCIONEnvironment) Dispatcher() string {
-	e.mtx.Lock()
-	defer e.mtx.Unlock()
-
-	if e.dispFlag != nil && e.dispFlag.Changed {
-		return e.dispFlag.Value.String()
-	}
-	if e.dispEnv != nil {
-		return *e.dispEnv
-	}
-	if s := e.file.General.DispatcherSocket; s != "" {
-		return s
-	}
-	return defaultDispatcher
-}
-
 // Local returns the loca IP to listen on. The value is loaded from one of the
 // following sources with the precedence as listed:
 //  1. Command line flag
 //  2. Environment variable
 //  3. Default value.
-func (e *SCIONEnvironment) Local() netaddr.IP {
+func (e *SCIONEnvironment) Local() netip.Addr {
 	e.mtx.Lock()
 	defer e.mtx.Unlock()
 
@@ -237,5 +204,5 @@ func (e *SCIONEnvironment) Local() netaddr.IP {
 	if e.localEnv != nil {
 		return *e.localEnv
 	}
-	return netaddr.IP{}
+	return netip.Addr{}
 }

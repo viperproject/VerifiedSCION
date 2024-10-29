@@ -16,7 +16,7 @@ package slayers_test
 
 import (
 	"encoding/binary"
-	"net"
+	"fmt"
 	"testing"
 
 	"github.com/google/gopacket"
@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/private/util"
 	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
@@ -34,10 +33,11 @@ import (
 )
 
 var (
-	ip6Addr = &net.IPAddr{IP: net.ParseIP("2001:db8::68")}
-	ip4Addr = &net.IPAddr{IP: net.ParseIP("10.0.0.100").To4()}
-	svcAddr = addr.HostSVCFromString("Wildcard")
-	rawPath = func() []byte {
+	ip6Addr    = addr.MustParseHost("2001:db8::68")
+	ip4Addr    = addr.MustParseHost("10.0.0.100")
+	ip4in6Addr = addr.MustParseHost("::ffff:10.0.0.100")
+	svcAddr    = addr.MustParseHost("Wildcard")
+	rawPath    = func() []byte {
 		return []byte("\x00\x00\x20\x80\x00\x00\x01\x11\x00\x00\x01\x00\x01\x00\x02\x22\x00" +
 			"\x00\x01\x00\x00\x3f\x00\x01\x00\x00\x01\x02\x03\x04\x05\x06\x00\x3f\x00\x03\x00" +
 			"\x02\x01\x02\x03\x04\x05\x06\x00\x3f\x00\x00\x00\x02\x01\x02\x03\x04\x05\x06\x00" +
@@ -57,10 +57,10 @@ func TestSCIONLayerString(t *testing.T) {
 		DstIA:        ia1,
 		SrcIA:        ia2,
 	}
-	if err := sc.SetDstAddr(&net.IPAddr{IP: net.ParseIP("1.2.3.4").To4()}); err != nil {
+	if err := sc.SetDstAddr(addr.MustParseHost("1.2.3.4")); err != nil {
 		assert.NoError(t, err)
 	}
-	if err := sc.SetSrcAddr(&net.IPAddr{IP: net.ParseIP("5.6.7.8").To4()}); err != nil {
+	if err := sc.SetSrcAddr(addr.MustParseHost("5.6.7.8")); err != nil {
 		assert.NoError(t, err)
 	}
 
@@ -245,7 +245,7 @@ func TestSCIONSerializeLengthCheck(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			pkt.Path = path.NewRawPath()
-			pkt.Path.DecodeFromBytes(make([]byte, tc.pathLen))
+			require.NoError(t, pkt.Path.DecodeFromBytes(make([]byte, tc.pathLen)))
 
 			buffer := gopacket.NewSerializeBuffer()
 			err := pkt.SerializeTo(buffer, gopacket.SerializeOptions{FixLengths: true})
@@ -256,8 +256,8 @@ func TestSCIONSerializeLengthCheck(t *testing.T) {
 
 func TestSetAndGetAddr(t *testing.T) {
 	testCases := map[string]struct {
-		srcAddr net.Addr
-		dstAddr net.Addr
+		srcAddr addr.Host
+		dstAddr addr.Host
 	}{
 		"set/get IPv4/IPv4": {
 			srcAddr: ip4Addr,
@@ -293,22 +293,15 @@ func TestSetAndGetAddr(t *testing.T) {
 			gotDst, err := s.DstAddr()
 			assert.NoError(t, err)
 
-			equalAddr := func(t *testing.T, expected, actual net.Addr) {
-				if _, ok := expected.(*net.IPAddr); !ok {
-					assert.Equal(t, expected, actual)
-					return
-				}
-				assert.True(t, expected.(*net.IPAddr).IP.Equal(actual.(*net.IPAddr).IP))
-			}
-			equalAddr(t, tc.srcAddr, gotSrc)
-			equalAddr(t, tc.dstAddr, gotDst)
+			assert.Equal(t, tc.srcAddr, gotSrc)
+			assert.Equal(t, tc.dstAddr, gotDst)
 		})
 	}
 }
 
 func TestPackAddr(t *testing.T) {
 	testCases := map[string]struct {
-		addr      net.Addr
+		addr      addr.Host
 		addrType  slayers.AddrType
 		rawAddr   []byte
 		errorFunc assert.ErrorAssertionFunc
@@ -316,19 +309,25 @@ func TestPackAddr(t *testing.T) {
 		"pack IPv4": {
 			addr:      ip4Addr,
 			addrType:  slayers.T4Ip,
-			rawAddr:   []byte(ip4Addr.IP),
+			rawAddr:   ip4Addr.IP().AsSlice(),
+			errorFunc: assert.NoError,
+		},
+		"pack IPv4-mapped IPv6": {
+			addr:      ip4in6Addr,
+			addrType:  slayers.T4Ip,
+			rawAddr:   []byte{0xa, 0x0, 0x0, 0x64},
 			errorFunc: assert.NoError,
 		},
 		"pack IPv6": {
 			addr:      ip6Addr,
 			addrType:  slayers.T16Ip,
-			rawAddr:   []byte(ip6Addr.IP),
+			rawAddr:   ip6Addr.IP().AsSlice(),
 			errorFunc: assert.NoError,
 		},
 		"pack SVC": {
-			addr:      svcAddr,
+			addr:      addr.HostSVC(addr.SvcWildcard),
 			addrType:  slayers.T4Svc,
-			rawAddr:   svcAddr.PackWithPad(2),
+			rawAddr:   []byte{0, 0x10, 0, 0},
 			errorFunc: assert.NoError,
 		},
 	}
@@ -350,31 +349,31 @@ func TestParseAddr(t *testing.T) {
 	testCases := map[string]struct {
 		addrType  slayers.AddrType
 		rawAddr   []byte
-		want      net.Addr
+		want      addr.Host
 		errorFunc assert.ErrorAssertionFunc
 	}{
 		"parse IPv4": {
 			addrType:  slayers.T4Ip,
-			rawAddr:   []byte(ip4Addr.IP.To4()),
+			rawAddr:   ip4Addr.IP().AsSlice(),
 			want:      ip4Addr,
 			errorFunc: assert.NoError,
 		},
 		"parse IPv6": {
 			addrType:  slayers.T16Ip,
-			rawAddr:   []byte(ip6Addr.IP),
+			rawAddr:   ip6Addr.IP().AsSlice(),
 			want:      ip6Addr,
 			errorFunc: assert.NoError,
 		},
 		"parse SVC": {
 			addrType:  slayers.T4Svc,
-			rawAddr:   svcAddr.PackWithPad(2),
-			want:      svcAddr,
+			rawAddr:   []byte{0, 0x10, 0, 0},
+			want:      addr.HostSVC(addr.SvcWildcard),
 			errorFunc: assert.NoError,
 		},
 		"parse unknown type": {
 			addrType:  0b0001, // T=0,Len=8
 			rawAddr:   []byte{0, 0, 0, 0, 0, 0, 0, 0},
-			want:      nil,
+			want:      addr.Host{},
 			errorFunc: assert.Error,
 		},
 	}
@@ -391,11 +390,75 @@ func TestParseAddr(t *testing.T) {
 	}
 }
 
+func TestUnkownAddrType(t *testing.T) {
+
+	testCases := []struct {
+		addrType slayers.AddrType
+		rawAddr  []byte
+	}{
+		{
+			addrType: slayers.AddrType(0b1000), // T=2, L=0
+			rawAddr:  []byte(`foo_`),           // 4 bytes
+		},
+		{
+			addrType: slayers.AddrType(0b0001), // T=0, L=1
+			rawAddr:  []byte(`foo_bar_`),       // 8 bytes
+		},
+		{
+			addrType: slayers.AddrType(0b1110), // T=3, L=2
+			rawAddr:  []byte(`foo_bar_boo_`),   // 12 bytes
+		},
+		{
+			addrType: slayers.AddrType(0b0111),   // T=1, L=3
+			rawAddr:  []byte(`foo_bar_boo_bop_`), // 16 bytes
+		},
+	}
+
+	roundTrip := func(in *slayers.SCION) *slayers.SCION {
+		// serialize
+		buffer := gopacket.NewSerializeBuffer()
+		require.NoError(t, in.SerializeTo(buffer, gopacket.SerializeOptions{FixLengths: true}))
+
+		// decode
+		decoded := &slayers.SCION{}
+		err := decoded.DecodeFromBytes(buffer.Bytes(), gopacket.NilDecodeFeedback)
+		require.NoError(t, err)
+
+		return decoded
+	}
+
+	for _, tc := range testCases {
+		require.Equal(t, tc.addrType.Length(), len(tc.rawAddr)) // sanity check
+
+		t.Run(fmt.Sprintf("src 0b%04b", tc.addrType), func(t *testing.T) {
+			pkt := prepPacket(t, slayers.L4UDP)
+			pkt.SrcAddrType = tc.addrType
+			pkt.RawSrcAddr = tc.rawAddr
+
+			got := roundTrip(pkt)
+			assert.Equal(t, tc.addrType, got.SrcAddrType)
+			assert.Equal(t, tc.rawAddr, got.RawSrcAddr)
+		})
+
+		t.Run(fmt.Sprintf("dest 0b%04b", tc.addrType), func(t *testing.T) {
+			pkt := prepPacket(t, slayers.L4UDP)
+			pkt.DstAddrType = tc.addrType
+			pkt.RawDstAddr = tc.rawAddr
+
+			got := roundTrip(pkt)
+			assert.Equal(t, tc.addrType, got.DstAddrType)
+			assert.Equal(t, tc.rawAddr, got.RawDstAddr)
+		})
+	}
+
+}
+
 func BenchmarkDecodePreallocNoParse(b *testing.B) {
 	raw := prepRawPacket(b)
 	s := &slayers.SCION{}
 	for i := 0; i < b.N; i++ {
-		s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		err := s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		require.NoError(b, err)
 	}
 }
 
@@ -403,7 +466,8 @@ func BenchmarkDecodeNoPreallocNoParse(b *testing.B) {
 	raw := prepRawPacket(b)
 	for i := 0; i < b.N; i++ {
 		s := &slayers.SCION{}
-		s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		err := s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		require.NoError(b, err)
 	}
 }
 
@@ -411,9 +475,11 @@ func BenchmarkDecodePreallocFull(b *testing.B) {
 	raw := prepRawPacket(b)
 	s := &slayers.SCION{}
 	for i := 0; i < b.N; i++ {
-		s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		err := s.DecodeFromBytes(raw, gopacket.NilDecodeFeedback)
+		require.NoError(b, err)
 		p := s.Path.(*scion.Raw)
-		p.ToDecoded()
+		_, err = p.ToDecoded()
+		require.NoError(b, err)
 	}
 }
 
@@ -422,8 +488,10 @@ func BenchmarkSerializeReuseBuffer(b *testing.B) {
 	buffer := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{FixLengths: true}
 	for i := 0; i < b.N; i++ {
-		s.SerializeTo(buffer, opts)
-		buffer.Clear()
+		err := s.SerializeTo(buffer, opts)
+		require.NoError(b, err)
+		err = buffer.Clear()
+		require.NoError(b, err)
 	}
 }
 
@@ -432,7 +500,8 @@ func BenchmarkSerializeNoReuseBuffer(b *testing.B) {
 	opts := gopacket.SerializeOptions{FixLengths: true}
 	for i := 0; i < b.N; i++ {
 		buffer := gopacket.NewSerializeBuffer()
-		s.SerializeTo(buffer, opts)
+		err := s.SerializeTo(buffer, opts)
+		require.NoError(b, err)
 	}
 }
 
@@ -446,13 +515,13 @@ func prepPacket(t testing.TB, c slayers.L4ProtocolType) *slayers.SCION {
 		PathType:     scion.PathType,
 		DstAddrType:  slayers.T16Ip,
 		SrcAddrType:  slayers.T4Ip,
-		DstIA:        xtest.MustParseIA("1-ff00:0:111"),
-		SrcIA:        xtest.MustParseIA("2-ff00:0:222"),
+		DstIA:        addr.MustParseIA("1-ff00:0:111"),
+		SrcIA:        addr.MustParseIA("2-ff00:0:222"),
 		Path:         &scion.Raw{},
 	}
-	spkt.SetDstAddr(ip6Addr)
-	spkt.SetSrcAddr(ip4Addr)
-	spkt.Path.DecodeFromBytes(rawPath())
+	require.NoError(t, spkt.SetDstAddr(ip6Addr))
+	require.NoError(t, spkt.SetSrcAddr(ip4Addr))
+	require.NoError(t, spkt.Path.DecodeFromBytes(rawPath()))
 	return spkt
 }
 
@@ -460,7 +529,7 @@ func prepRawPacket(t testing.TB) []byte {
 	t.Helper()
 	spkt := prepPacket(t, slayers.L4UDP)
 	buffer := gopacket.NewSerializeBuffer()
-	spkt.SerializeTo(buffer, gopacket.SerializeOptions{FixLengths: true})
+	require.NoError(t, spkt.SerializeTo(buffer, gopacket.SerializeOptions{FixLengths: true}))
 	return buffer.Bytes()
 }
 
@@ -474,12 +543,12 @@ func TestSCIONComputeChecksum(t *testing.T) {
 		"IPv4/IPv4": {
 			Header: func(t *testing.T) *slayers.SCION {
 				s := &slayers.SCION{
-					SrcIA: xtest.MustParseIA("1-ff00:0:110"),
-					DstIA: xtest.MustParseIA("1-ff00:0:112"),
+					SrcIA: addr.MustParseIA("1-ff00:0:110"),
+					DstIA: addr.MustParseIA("1-ff00:0:112"),
 				}
-				err := s.SetSrcAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()})
+				err := s.SetSrcAddr(addr.MustParseHost("174.16.4.1"))
 				require.NoError(t, err)
-				err = s.SetDstAddr(&net.IPAddr{IP: net.ParseIP("172.16.4.2").To4()})
+				err = s.SetDstAddr(addr.MustParseHost("172.16.4.2"))
 				require.NoError(t, err)
 				return s
 			},
@@ -487,15 +556,31 @@ func TestSCIONComputeChecksum(t *testing.T) {
 			Protocol:   1,
 			Checksum:   0x2615,
 		},
+		"IPv4/IPv4 odd length": {
+			Header: func(t *testing.T) *slayers.SCION {
+				s := &slayers.SCION{
+					SrcIA: addr.MustParseIA("1-ff00:0:110"),
+					DstIA: addr.MustParseIA("1-ff00:0:112"),
+				}
+				err := s.SetSrcAddr(addr.MustParseHost("174.16.4.1"))
+				require.NoError(t, err)
+				err = s.SetDstAddr(addr.MustParseHost("172.16.4.2"))
+				require.NoError(t, err)
+				return s
+			},
+			UpperLayer: xtest.MustParseHexString("aabbccddee"),
+			Protocol:   1,
+			Checksum:   0x3813,
+		},
 		"IPv4/IPv6": {
 			Header: func(t *testing.T) *slayers.SCION {
 				s := &slayers.SCION{
-					SrcIA: xtest.MustParseIA("1-ff00:0:110"),
-					DstIA: xtest.MustParseIA("1-ff00:0:112"),
+					SrcIA: addr.MustParseIA("1-ff00:0:110"),
+					DstIA: addr.MustParseIA("1-ff00:0:112"),
 				}
-				err := s.SetSrcAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()})
+				err := s.SetSrcAddr(addr.MustParseHost("174.16.4.1"))
 				require.NoError(t, err)
-				err = s.SetDstAddr(&net.IPAddr{IP: net.ParseIP("dead::beef")})
+				err = s.SetDstAddr(addr.MustParseHost("dead::beef"))
 				require.NoError(t, err)
 				return s
 			},
@@ -506,12 +591,12 @@ func TestSCIONComputeChecksum(t *testing.T) {
 		"IPv4/SVC": {
 			Header: func(t *testing.T) *slayers.SCION {
 				s := &slayers.SCION{
-					SrcIA: xtest.MustParseIA("1-ff00:0:110"),
-					DstIA: xtest.MustParseIA("1-ff00:0:112"),
+					SrcIA: addr.MustParseIA("1-ff00:0:110"),
+					DstIA: addr.MustParseIA("1-ff00:0:112"),
 				}
-				err := s.SetSrcAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()})
+				err := s.SetSrcAddr(addr.MustParseHost("174.16.4.1"))
 				require.NoError(t, err)
-				err = s.SetDstAddr(addr.SvcCS)
+				err = s.SetDstAddr(addr.HostSVC(addr.SvcCS))
 				require.NoError(t, err)
 				return s
 			},
@@ -530,7 +615,10 @@ func TestSCIONComputeChecksum(t *testing.T) {
 			ul := append([]byte{0, 0}, tc.UpperLayer...)
 
 			// Reference checksum
-			reference := util.Checksum(pseudoHeader(t, s, len(ul), tc.Protocol), ul)
+			reference := referenceChecksum(append(
+				pseudoHeader(t, s, len(ul), tc.Protocol),
+				ul...,
+			))
 
 			// Compute checksum
 			csum, err := s.ComputeChecksum(ul, tc.Protocol)
@@ -557,4 +645,19 @@ func pseudoHeader(t *testing.T, s *slayers.SCION, upperLayerLength int, protocol
 	offset += 4
 	binary.BigEndian.PutUint32(pseudo[offset:], uint32(protocol))
 	return pseudo
+}
+
+func referenceChecksum(data []byte) uint16 {
+	// pad at end with 0
+	if len(data)%2 == 1 {
+		data = append(data, 0)
+	}
+	var csum uint32
+	for i := 0; i+1 < len(data); i += 2 {
+		csum += uint32(binary.BigEndian.Uint16(data[i:]))
+	}
+	for csum > 0xffff {
+		csum = (csum >> 16) + (csum & 0xffff)
+	}
+	return ^uint16(csum)
 }

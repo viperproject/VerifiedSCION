@@ -35,7 +35,7 @@ type Addr struct {
 	// Egress is the interface over which the remote AS should be reached.
 	Egress uint16
 	// SVC is the service anycast address of the designated service in the remote AS.
-	SVC addr.HostSVC
+	SVC addr.SVC
 	// NextHop is the router that owns the egress interface.
 	NextHop *net.UDPAddr
 }
@@ -61,14 +61,14 @@ type AddressRewriter struct {
 func (r *AddressRewriter) RedirectToQUIC(
 	ctx context.Context,
 	address net.Addr,
-) (net.Addr, bool, error) {
+) (net.Addr, error) {
 	a, ok := address.(*Addr)
 	if !ok {
 		return r.Rewriter.RedirectToQUIC(ctx, address)
 	}
 	path, err := r.getPath(a.Egress)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	svc := &snet.SVCAddr{
 		IA:      a.IA,

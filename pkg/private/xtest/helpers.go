@@ -20,21 +20,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"net"
+	"net/netip"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"inet.af/netaddr"
-
-	"github.com/scionproto/scion/pkg/addr"
 )
 
 // Update registers the '-update' flag for the test.
@@ -132,22 +127,6 @@ func SanitizedName(t testing.TB) string {
 	return strings.NewReplacer(" ", "_", "/", "_", "\\", "_", ":", "_").Replace(t.Name())
 }
 
-func TempDir(t testing.TB) (string, func()) {
-	name, err := os.MkdirTemp("", fmt.Sprintf("%s_*", SanitizedName(t)))
-	require.NoError(t, err)
-	return name, func() {
-		os.RemoveAll(name)
-	}
-}
-
-// CopyDir copies "from" to "to", using the unix cp command.
-func CopyDir(t testing.TB, from, to string) {
-	t.Helper()
-	cmd := exec.Command("cp", "-rL", from, to)
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, string(out))
-}
-
 // CopyFile copies the file.
 func CopyFile(t testing.TB, src, dst string) {
 	t.Helper()
@@ -155,15 +134,6 @@ func CopyFile(t testing.TB, src, dst string) {
 	raw, err := os.ReadFile(src)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(dst, raw, 0666))
-}
-
-// FailOnErr causes t to exit with a fatal error if err is non-nil.
-func FailOnErr(t testing.TB, err error, desc ...string) {
-	t.Helper()
-
-	if err != nil {
-		t.Fatal(strings.Join(desc, " "), err)
-	}
 }
 
 // MustMarshalJSONToFile marshals v and writes the result to file
@@ -214,48 +184,6 @@ func ExpandPath(file string) string {
 	return filepath.Join("testdata", file)
 }
 
-// MustParseIA parses s and returns the corresponding addr.IA object. It
-// panics if s is not a valid ISD-AS representation.
-func MustParseIA(s string) addr.IA {
-	ia, err := addr.ParseIA(s)
-	if err != nil {
-		panic(err)
-	}
-	return ia
-}
-
-// MustParseIAs parses a list of comma separated ISD-AS strings. It panics in case
-// parsing fails.
-func MustParseIAs(list string) []addr.IA {
-	l := strings.Split(list, ",")
-	var ias []addr.IA
-	for _, raw := range l {
-		ias = append(ias, MustParseIA(raw))
-	}
-	return ias
-}
-
-// MustParseAS parses s and returns the corresponding addr.AS object. It panics
-// if s is not valid AS representation.
-func MustParseAS(s string) addr.AS {
-	ia, err := addr.ParseAS(s)
-	if err != nil {
-		panic(err)
-	}
-	return ia
-}
-
-// MustParseASes parses a list of comma separated AS strings. It panics in case
-// parsing fails.
-func MustParseASes(list string) []addr.AS {
-	l := strings.Split(list, ",")
-	var ases []addr.AS
-	for _, raw := range l {
-		ases = append(ases, MustParseAS(raw))
-	}
-	return ases
-}
-
 // MustParseHexString parses s and returns the corresponding byte slice.
 // It panics if the decoding fails.
 func MustParseHexString(s string) []byte {
@@ -296,12 +224,12 @@ func MustParseCIDRs(t *testing.T, entries ...string) []*net.IPNet {
 }
 
 // MustParseIPPrefixes parses the CIDR entries and returns a list containing the
-// parsed netaddr.IPPrefix objects.
-func MustParseIPPrefixes(t *testing.T, prefixes ...string) []netaddr.IPPrefix {
+// parsed netip.Prefix objects.
+func MustParseIPPrefixes(t *testing.T, prefixes ...string) []netip.Prefix {
 	t.Helper()
-	var result []netaddr.IPPrefix
+	var result []netip.Prefix
 	for _, prefix := range prefixes {
-		p, err := netaddr.ParseIPPrefix(prefix)
+		p, err := netip.ParsePrefix(prefix)
 		require.NoError(t, err)
 		result = append(result, p)
 	}
@@ -342,6 +270,17 @@ func MustParseUDPAddrs(t *testing.T, entries ...string) []*net.UDPAddr {
 	return result
 }
 
+// MustParseTime parses s and returns the corresponding time.Time object. It
+// fails the test if s is not a valid time string.
+func MustParseTime(t *testing.T, s string) time.Time {
+	t.Helper()
+	res, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return res
+}
+
 // AssertReadReturnsBetween will call t.Fatalf if the first read from the
 // channel doesn't happen between x and y.
 func AssertReadReturnsBetween(t testing.TB, ch <-chan struct{}, x, y time.Duration) {
@@ -369,14 +308,5 @@ func AssertReadDoesNotReturnBefore(t testing.TB, ch <-chan struct{}, timeout tim
 	case <-ch:
 		t.Fatalf("goroutine finished too quickly")
 	case <-time.After(timeout):
-	}
-}
-
-// AssertError checks that err is not nil if expectError is true and that is it nil otherwise
-func AssertError(t *testing.T, err error, expectError bool) {
-	if expectError {
-		assert.Error(t, err)
-	} else {
-		assert.NoError(t, err)
 	}
 }

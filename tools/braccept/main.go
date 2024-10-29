@@ -116,6 +116,7 @@ func realMain() int {
 		cases.SCMPTracerouteEgressConsDir(artifactsDir, hfMAC),
 		cases.SCMPTracerouteEgressAfterXover(artifactsDir, hfMAC),
 		cases.SCMPTracerouteInternal(artifactsDir, hfMAC),
+		cases.SCMPTracerouteIngressWithSPAO(artifactsDir, hfMAC),
 		cases.SCMPBadPktLen(artifactsDir, hfMAC),
 		cases.SCMPQuoteCut(artifactsDir, hfMAC),
 		cases.SCMPInvalidSrcIAInternalHostToChild(artifactsDir, hfMAC),
@@ -123,10 +124,14 @@ func realMain() int {
 		cases.SCMPInvalidSrcIAChildToParent(artifactsDir, hfMAC),
 		cases.SCMPInvalidDstIAChildToParent(artifactsDir, hfMAC),
 		cases.NoSCMPReplyForSCMPError(artifactsDir, hfMAC),
+		cases.MalformedPathSingletonSegment(artifactsDir, hfMAC),
+		cases.MalformedPathCurrHFNotInCurrINF(artifactsDir, hfMAC),
 		cases.IncomingOneHop(artifactsDir, hfMAC),
 		cases.OutgoingOneHop(artifactsDir, hfMAC),
 		cases.SVC(artifactsDir, hfMAC),
 		cases.JumboPacket(artifactsDir, hfMAC),
+		cases.ChildToPeer(artifactsDir, hfMAC),
+		cases.PeerToChild(artifactsDir, hfMAC),
 	}
 
 	if *bfd {
@@ -164,7 +169,7 @@ func loadKey(artifactsDir string) (hash.Hash, error) {
 // registerScionPorts registers the following UDP ports in gopacket such as SCION is the
 // next layer. In other words, map the following ports to expect SCION as the payload.
 func registerScionPorts() {
-	layers.RegisterUDPPortLayerType(layers.UDPPort(30041), slayers.LayerTypeSCION)
+	layers.RegisterUDPPortLayerType(layers.UDPPort(53), slayers.LayerTypeSCION)
 	for i := 30000; i < 30010; i++ {
 		layers.RegisterUDPPortLayerType(layers.UDPPort(i), slayers.LayerTypeSCION)
 	}

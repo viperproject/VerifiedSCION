@@ -16,6 +16,7 @@ package control
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"path/filepath"
 	"time"
@@ -34,7 +35,7 @@ func LoadTrustMaterial(ctx context.Context, configDir string, db trust.DB) error
 	certsDir := filepath.Join(configDir, "certs")
 	loaded, err := trust.LoadTRCs(context.Background(), certsDir, db)
 	if err != nil {
-		return serrors.WrapStr("loading TRCs from disk", err)
+		return serrors.Wrap("loading TRCs from disk", err)
 	}
 	logger.Info("TRCs loaded", "files", loaded.Loaded)
 	for f, r := range loaded.Ignored {
@@ -47,7 +48,7 @@ func LoadTrustMaterial(ctx context.Context, configDir string, db trust.DB) error
 	localCertsDir := filepath.Join(configDir, "crypto/as")
 	loaded, err = trust.LoadChains(context.Background(), localCertsDir, db)
 	if err != nil {
-		return serrors.WrapStr("loading certificate chains from disk", err)
+		return serrors.Wrap("loading certificate chains from disk", err)
 	}
 	logger.Info("Certificate chains loaded", "files", loaded.Loaded)
 	for f, r := range loaded.Ignored {
@@ -64,24 +65,22 @@ func LoadTrustMaterial(ctx context.Context, configDir string, db trust.DB) error
 	return nil
 }
 
-// NewSigner creates a renewing signer backed by a certificate chain.
-func NewSigner(ia addr.IA, db trust.DB, cfgDir string) (cstrust.RenewingSigner, error) {
-	gen := trust.SignerGen{
-		IA: ia,
-		DB: cstrust.CryptoLoader{
-			Dir:     filepath.Join(cfgDir, "crypto/as"),
-			TRCDirs: []string{filepath.Join(cfgDir, "certs")},
-			DB:      db,
-		},
-		KeyRing: cstrust.LoadingRing{
-			Dir: filepath.Join(cfgDir, "crypto/as"),
-		},
+func NewTLSCertificateLoader(
+	ia addr.IA,
+	extKeyUsage x509.ExtKeyUsage,
+	db trust.DB,
+	cfgDir string,
+) cstrust.TLSCertificateLoader {
+
+	return cstrust.TLSCertificateLoader{
+		SignerGen: newCachingSignerGen(ia, extKeyUsage, db, cfgDir),
 	}
+}
+
+// NewSigner creates a renewing signer backed by a certificate chain.
+func NewSigner(ia addr.IA, db trust.DB, cfgDir string) cstrust.RenewingSigner {
 	signer := cstrust.RenewingSigner{
-		SignerGen: &cstrust.CachingSignerGen{
-			SignerGen: gen,
-			Interval:  5 * time.Second,
-		},
+		SignerGen: newCachingSignerGen(ia, x509.ExtKeyUsageAny, db, cfgDir),
 	}
 
 	ctx, cancelF := context.WithTimeout(context.Background(), time.Second)
@@ -89,7 +88,35 @@ func NewSigner(ia addr.IA, db trust.DB, cfgDir string) (cstrust.RenewingSigner, 
 	if _, err := signer.SignerGen.Generate(ctx); err != nil {
 		log.Debug("Initial signer generation failed", "err", err)
 	}
-	return signer, nil
+	return signer
+}
+
+// newCachingSignerGen creates a caching signer generator (i.e. a key/cert loader).
+// If key usage is specified (not ExtKeyUsageAny), only signers with matching
+// certificates will be returned.
+func newCachingSignerGen(
+	ia addr.IA,
+	extKeyUsage x509.ExtKeyUsage,
+	db trust.DB,
+	cfgDir string,
+) *cstrust.CachingSignerGen {
+
+	gen := trust.SignerGen{
+		IA: ia,
+		DB: &cstrust.CryptoLoader{
+			Dir:     filepath.Join(cfgDir, "crypto/as"),
+			TRCDirs: []string{filepath.Join(cfgDir, "certs")},
+			DB:      db,
+		},
+		KeyRing: cstrust.LoadingRing{
+			Dir: filepath.Join(cfgDir, "crypto/as"),
+		},
+		ExtKeyUsage: extKeyUsage,
+	}
+	return &cstrust.CachingSignerGen{
+		SignerGen: gen,
+		Interval:  5 * time.Second,
+	}
 }
 
 type ChainBuilderConfig struct {

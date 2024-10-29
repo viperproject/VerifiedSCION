@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/go-chi/chi/v5"
+	"github.com/oapi-codegen/runtime"
 )
 
 // ServerInterface represents all server handlers.
@@ -33,6 +33,46 @@ type ServerInterface interface {
 	GetTrcBlob(w http.ResponseWriter, r *http.Request, isd int, base int, serial int)
 }
 
+// Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
+
+type Unimplemented struct{}
+
+// List the certificate chains
+// (GET /certificates)
+func (_ Unimplemented) GetCertificates(w http.ResponseWriter, r *http.Request, params GetCertificatesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the certificate chain
+// (GET /certificates/{chain-id})
+func (_ Unimplemented) GetCertificate(w http.ResponseWriter, r *http.Request, chainId ChainID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the certificate chain blob
+// (GET /certificates/{chain-id}/blob)
+func (_ Unimplemented) GetCertificateBlob(w http.ResponseWriter, r *http.Request, chainId ChainID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the TRCs
+// (GET /trcs)
+func (_ Unimplemented) GetTrcs(w http.ResponseWriter, r *http.Request, params GetTrcsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the TRC
+// (GET /trcs/isd{isd}-b{base}-s{serial})
+func (_ Unimplemented) GetTrc(w http.ResponseWriter, r *http.Request, isd int, base int, serial int) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the TRC blob
+// (GET /trcs/isd{isd}-b{base}-s{serial}/blob)
+func (_ Unimplemented) GetTrcBlob(w http.ResponseWriter, r *http.Request, isd int, base int, serial int) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // ServerInterfaceWrapper converts contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler            ServerInterface
@@ -40,7 +80,7 @@ type ServerInterfaceWrapper struct {
 	ErrorHandlerFunc   func(w http.ResponseWriter, r *http.Request, err error)
 }
 
-type MiddlewareFunc func(http.HandlerFunc) http.HandlerFunc
+type MiddlewareFunc func(http.Handler) http.Handler
 
 // GetCertificates operation middleware
 func (siw *ServerInterfaceWrapper) GetCertificates(w http.ResponseWriter, r *http.Request) {
@@ -52,9 +92,6 @@ func (siw *ServerInterfaceWrapper) GetCertificates(w http.ResponseWriter, r *htt
 	var params GetCertificatesParams
 
 	// ------------- Optional query parameter "isd_as" -------------
-	if paramValue := r.URL.Query().Get("isd_as"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "isd_as", r.URL.Query(), &params.IsdAs)
 	if err != nil {
@@ -63,9 +100,6 @@ func (siw *ServerInterfaceWrapper) GetCertificates(w http.ResponseWriter, r *htt
 	}
 
 	// ------------- Optional query parameter "valid_at" -------------
-	if paramValue := r.URL.Query().Get("valid_at"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "valid_at", r.URL.Query(), &params.ValidAt)
 	if err != nil {
@@ -74,9 +108,6 @@ func (siw *ServerInterfaceWrapper) GetCertificates(w http.ResponseWriter, r *htt
 	}
 
 	// ------------- Optional query parameter "all" -------------
-	if paramValue := r.URL.Query().Get("all"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "all", r.URL.Query(), &params.All)
 	if err != nil {
@@ -84,15 +115,15 @@ func (siw *ServerInterfaceWrapper) GetCertificates(w http.ResponseWriter, r *htt
 		return
 	}
 
-	var handler = func(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCertificates(w, r, params)
-	}
+	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		handler = middleware(handler)
 	}
 
-	handler(w, r.WithContext(ctx))
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // GetCertificate operation middleware
@@ -104,21 +135,21 @@ func (siw *ServerInterfaceWrapper) GetCertificate(w http.ResponseWriter, r *http
 	// ------------- Path parameter "chain-id" -------------
 	var chainId ChainID
 
-	err = runtime.BindStyledParameter("simple", false, "chain-id", chi.URLParam(r, "chain-id"), &chainId)
+	err = runtime.BindStyledParameterWithOptions("simple", "chain-id", chi.URLParam(r, "chain-id"), &chainId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "chain-id", Err: err})
 		return
 	}
 
-	var handler = func(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCertificate(w, r, chainId)
-	}
+	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		handler = middleware(handler)
 	}
 
-	handler(w, r.WithContext(ctx))
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // GetCertificateBlob operation middleware
@@ -130,21 +161,21 @@ func (siw *ServerInterfaceWrapper) GetCertificateBlob(w http.ResponseWriter, r *
 	// ------------- Path parameter "chain-id" -------------
 	var chainId ChainID
 
-	err = runtime.BindStyledParameter("simple", false, "chain-id", chi.URLParam(r, "chain-id"), &chainId)
+	err = runtime.BindStyledParameterWithOptions("simple", "chain-id", chi.URLParam(r, "chain-id"), &chainId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "chain-id", Err: err})
 		return
 	}
 
-	var handler = func(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCertificateBlob(w, r, chainId)
-	}
+	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		handler = middleware(handler)
 	}
 
-	handler(w, r.WithContext(ctx))
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // GetTrcs operation middleware
@@ -157,9 +188,6 @@ func (siw *ServerInterfaceWrapper) GetTrcs(w http.ResponseWriter, r *http.Reques
 	var params GetTrcsParams
 
 	// ------------- Optional query parameter "isd" -------------
-	if paramValue := r.URL.Query().Get("isd"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", false, false, "isd", r.URL.Query(), &params.Isd)
 	if err != nil {
@@ -168,9 +196,6 @@ func (siw *ServerInterfaceWrapper) GetTrcs(w http.ResponseWriter, r *http.Reques
 	}
 
 	// ------------- Optional query parameter "all" -------------
-	if paramValue := r.URL.Query().Get("all"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "all", r.URL.Query(), &params.All)
 	if err != nil {
@@ -178,15 +203,15 @@ func (siw *ServerInterfaceWrapper) GetTrcs(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var handler = func(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTrcs(w, r, params)
-	}
+	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		handler = middleware(handler)
 	}
 
-	handler(w, r.WithContext(ctx))
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // GetTrc operation middleware
@@ -198,7 +223,7 @@ func (siw *ServerInterfaceWrapper) GetTrc(w http.ResponseWriter, r *http.Request
 	// ------------- Path parameter "isd" -------------
 	var isd int
 
-	err = runtime.BindStyledParameter("simple", false, "isd", chi.URLParam(r, "isd"), &isd)
+	err = runtime.BindStyledParameterWithOptions("simple", "isd", chi.URLParam(r, "isd"), &isd, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "isd", Err: err})
 		return
@@ -207,7 +232,7 @@ func (siw *ServerInterfaceWrapper) GetTrc(w http.ResponseWriter, r *http.Request
 	// ------------- Path parameter "base" -------------
 	var base int
 
-	err = runtime.BindStyledParameter("simple", false, "base", chi.URLParam(r, "base"), &base)
+	err = runtime.BindStyledParameterWithOptions("simple", "base", chi.URLParam(r, "base"), &base, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "base", Err: err})
 		return
@@ -216,21 +241,21 @@ func (siw *ServerInterfaceWrapper) GetTrc(w http.ResponseWriter, r *http.Request
 	// ------------- Path parameter "serial" -------------
 	var serial int
 
-	err = runtime.BindStyledParameter("simple", false, "serial", chi.URLParam(r, "serial"), &serial)
+	err = runtime.BindStyledParameterWithOptions("simple", "serial", chi.URLParam(r, "serial"), &serial, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serial", Err: err})
 		return
 	}
 
-	var handler = func(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTrc(w, r, isd, base, serial)
-	}
+	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		handler = middleware(handler)
 	}
 
-	handler(w, r.WithContext(ctx))
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // GetTrcBlob operation middleware
@@ -242,7 +267,7 @@ func (siw *ServerInterfaceWrapper) GetTrcBlob(w http.ResponseWriter, r *http.Req
 	// ------------- Path parameter "isd" -------------
 	var isd int
 
-	err = runtime.BindStyledParameter("simple", false, "isd", chi.URLParam(r, "isd"), &isd)
+	err = runtime.BindStyledParameterWithOptions("simple", "isd", chi.URLParam(r, "isd"), &isd, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "isd", Err: err})
 		return
@@ -251,7 +276,7 @@ func (siw *ServerInterfaceWrapper) GetTrcBlob(w http.ResponseWriter, r *http.Req
 	// ------------- Path parameter "base" -------------
 	var base int
 
-	err = runtime.BindStyledParameter("simple", false, "base", chi.URLParam(r, "base"), &base)
+	err = runtime.BindStyledParameterWithOptions("simple", "base", chi.URLParam(r, "base"), &base, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "base", Err: err})
 		return
@@ -260,21 +285,21 @@ func (siw *ServerInterfaceWrapper) GetTrcBlob(w http.ResponseWriter, r *http.Req
 	// ------------- Path parameter "serial" -------------
 	var serial int
 
-	err = runtime.BindStyledParameter("simple", false, "serial", chi.URLParam(r, "serial"), &serial)
+	err = runtime.BindStyledParameterWithOptions("simple", "serial", chi.URLParam(r, "serial"), &serial, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "serial", Err: err})
 		return
 	}
 
-	var handler = func(w http.ResponseWriter, r *http.Request) {
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetTrcBlob(w, r, isd, base, serial)
-	}
+	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		handler = middleware(handler)
 	}
 
-	handler(w, r.WithContext(ctx))
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
 type UnescapedCookieParamError struct {

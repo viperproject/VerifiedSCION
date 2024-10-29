@@ -24,8 +24,8 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/util"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/onehop"
@@ -33,7 +33,11 @@ import (
 )
 
 // IncomingOneHop tests one-hop being sent from the remote AS to the local AS.
-func IncomingOneHop(artifactsDir string, mac hash.Hash) runner.Case {
+func IncomingOneHop(
+	artifactsDir string,
+	mac hash.Hash,
+) runner.Case {
+	const endhostPort = 21000
 	options := gopacket.SerializeOptions{
 		FixLengths:       true,
 		ComputeChecksums: true,
@@ -74,20 +78,20 @@ func IncomingOneHop(artifactsDir string, mac hash.Hash) runner.Case {
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     onehop.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:3"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:1"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:3"),
+		DstIA:        addr.MustParseIA("1-ff00:0:1"),
 		Path:         ohp,
 	}
-	if err := scionL.SetSrcAddr(&net.IPAddr{IP: net.ParseIP("172.16.4.1")}); err != nil {
+	if err := scionL.SetSrcAddr(addr.MustParseHost("172.16.4.1")); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("192.168.0.71")}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("192.168.0.71")); err != nil {
 		panic(err)
 	}
 
 	scionudp := &slayers.UDP{}
 	scionudp.SrcPort = 2345
-	scionudp.DstPort = 53
+	scionudp.DstPort = uint16(endhostPort)
 	scionudp.SetNetworkLayerForChecksum(scionL)
 
 	payload := []byte("actualpayloadbytes")
@@ -106,7 +110,7 @@ func IncomingOneHop(artifactsDir string, mac hash.Hash) runner.Case {
 	ethernet.DstMAC = net.HardwareAddr{0xf0, 0x0d, 0xca, 0xfe, 0xbe, 0xef}
 	ip.SrcIP = net.IP{192, 168, 0, 11}
 	ip.DstIP = net.IP{192, 168, 0, 71}
-	udp.SrcPort, udp.DstPort = 30001, 30041
+	udp.SrcPort, udp.DstPort = 30001, layers.UDPPort(endhostPort)
 	// Second hop in OHP should have been set by BR.
 	ohp.SecondHop.ConsIngress = 131
 	ohp.SecondHop.Mac = path.MAC(mac, ohp.Info, ohp.SecondHop, nil)
@@ -169,14 +173,14 @@ func OutgoingOneHop(artifactsDir string, mac hash.Hash) runner.Case {
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     onehop.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:1"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:1"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         ohp,
 	}
-	if err := scionL.SetSrcAddr(&net.IPAddr{IP: net.ParseIP("192.168.0.71")}); err != nil {
+	if err := scionL.SetSrcAddr(addr.MustParseHost("192.168.0.71")); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("172.16.4.1")}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("172.16.4.1")); err != nil {
 		panic(err)
 	}
 

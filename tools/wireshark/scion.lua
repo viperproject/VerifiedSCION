@@ -45,7 +45,7 @@ local HOP_EXP_UNIT = HOP_MAX_TTL / 256
 --local scion_raw = ProtoField.bytes("scion.raw", "Raw packet")
 
 local scion_version = ProtoField.uint32("scion.version", "Version", base.DEC, nil, 0xf0000000)
-local scion_qos = ProtoField.uint32("scion.qos", "QoS", base.HEX, nil, 0x0ff00000)
+local scion_traffic_class = ProtoField.uint32("scion.traffic_class", "Traffic Class", base.HEX, nil, 0x0ff00000)
 local scion_flow_id = ProtoField.uint32("scion.flow_id", "FlowID", base.HEX, nil, 0x000fffff)
 local scion_next_hdr = ProtoField.uint8("scion.next_hdr", "Next Header", base.DEC, hdrTypes)
 local scion_hdr_len = ProtoField.uint8("scion.hdr_len", "Header Length", base.DEC)
@@ -79,7 +79,7 @@ scion_proto.fields = {
     scion_raw,
 
     scion_version,
-    scion_qos,
+    scion_traffic_class,
     scion_flow_id,
     scion_next_hdr,
     scion_hdr_len,
@@ -129,6 +129,33 @@ scion_proto.experts = {
     e_nosup_proto,
 }
 
+-- This function heuristically identifies SCION packets. If the packet looks like it may be
+-- a SCION packet, it returns true, which causes the associated scion disector to be invoked.
+-- This doesn't have much data available to weed out non-SCION packets. False positives end-up being
+-- described as broken SCION packets and are not passed to the vanilla UDP parser.
+-- However, with the removal of the dispatcher, we have no narrow set of UDP ports to identify
+-- SCION traffic from. So, there's no choice.
+local function scion_proto_filter(tvbuf, pktinfo, root)
+    local version_valid = (bit.rshift(tvbuf(0,1):uint(), 4) == 0)
+    local next_hdr_valid = (hdrTypes[tvbuf(4, 1):uint()] ~= nil)
+    local path_type_valid = (tvbuf(8, 1):uint() < 5)
+    local addr_type_dst_valid = (addrTypes[bit.rshift(tvbuf(9, 1):uint(), 4)] ~= nil)
+    local addr_type_src_valid = (addrTypes[bit.band(tvbuf(9, 1):uint(), 0xf)] ~= nil)
+    local rsv_valid = (tvbuf(10, 2):uint() == 0)
+    
+    if not (version_valid and next_hdr_valid and path_type_valid and addr_type_dst_valid and addr_type_src_valid and rsv_valid) then
+       return false
+    end
+
+    -- This looks like a SCION packet, dissect it.
+    scion_proto.dissector(tvbuf, pktinfo, root)
+    -- Set the scion_proto dissector for the conversation, so that all packets with the same
+    -- 4-tuple use directly the scion_proto dissector (instead of calling again this
+    -- heuristic function).
+    pktinfo.conversation = scion_proto
+    return true
+end
+
 function scion_proto.dissector(tvbuf, pktinfo, root)
     local tree = root:add(scion_proto, tvbuf())
     local header_str = tree
@@ -148,7 +175,7 @@ function scion_proto.dissector(tvbuf, pktinfo, root)
     end
 
     tree:add(scion_version, tvbuf(0, 4))
-    tree:add(scion_qos, tvbuf(0, 4))
+    tree:add(scion_traffic_class, tvbuf(0, 4))
     tree:add(scion_flow_id, tvbuf(0, 4))
 
     scion["next_hdr"] = tvbuf(4, 1)
@@ -280,9 +307,9 @@ end
 function addr_str(buf, addrTypeLen, with_svc)
     local addrType = addrTypes[addrTypeLen]
     if addrType == "IPv4" then
-        return string.format("%s", buf:ipv4())
+        return string.format("%s", tostring(buf:ipv4()))
     elseif addrType == "IPv6" then
-        return string.format("%s", buf:ipv6())
+        return string.format("%s", tostring(buf:ipv6()))
     elseif with_svc and addrType == "SVC" then
         local svcVal = buf(0, 2):uint()
         local svc = svcTypes[svcVal]
@@ -558,7 +585,9 @@ function scion_extn_tlv_option_dissect(tvbuf, pktinfo, root)
     else
         -- no specific dissector
         ret_len = data_len
-        tree:add(scion_extn_tlv_option_value, tlv.data)
+        if tlv.data ~= nil then
+            tree:add(scion_extn_tlv_option_value, tlv.data)
+        end
     end
 
     local type_str = scion_extn_tlv_option_types[tlv.type:uint()]
@@ -787,7 +816,7 @@ function epic_path_dissect(tvbuf, pktinfo, root)
     -- Get the timestamp of the first InfoField
     -- (No checks needed, as SCION path type parsing was successful)
     local tsInfo = tvbuf(24, 4):uint()
-    
+
     -- Calculate and add the EPIC timestamp (absolute)
     -- (depends on the timestamp of the first InfoField)
     packetTsTree:add(epath_ts_abs, tvbuf(0, 4), NSTime.new(tsInfo+epicTsRelSec, epicTsRelNs))
@@ -1150,21 +1179,28 @@ function scmp_proto_dissect(tvbuf, pktinfo, root)
 end
 
 
--- Below we configure Wireshark to identify SCION as the next protocol when using
--- the specified range of ports.
---
 -- SCION packet on UDP/IP overlay.
-table_udp = DissectorTable.get("udp.port")
--- intra-AS traffic
-for i = 30000, 32000, 1 do
-    table_udp:add(i, scion_proto)
-end
--- inter-AS BR traffic
-for i = 40000, 40050, 1 do
-    table_udp:add(i, scion_proto)
-end
--- FIXME remove once acceptance tests are updated to use ports above
--- acceptance tests
-for i = 50000, 50050, 1 do
-    table_udp:add(i, scion_proto)
-end
+-- Two options are available. Identify SCION traffic by port number, or heuristically, by
+-- looking for clues in the header. The heuristic is not extremely robust. It may mistake
+-- non-SCION packet for SCION packets. If you know precisely which ports carry SCION
+-- traffic (which is made difficult by the removal of the dispatcher), you may prefer to
+-- identify them by port. Keep the unwanted option commented out.
+
+-- Heuristic selection
+scion_proto:register_heuristic("udp", scion_proto_filter)
+
+-- Port-based selection
+-- table_udp = DissectorTable.get("udp.port")
+-- -- intra-AS traffic
+-- for i = 31000, 32767, 1 do
+--    table_udp:add(i, scion_proto)
+-- end
+-- -- inter-AS BR traffic
+-- for i = 40000, 40050, 1 do
+--    table_udp:add(i, scion_proto)
+-- end
+-- -- FIXME remove once acceptance tests are updated to use ports above
+-- -- acceptance tests
+-- for i = 50000, 50050, 1 do
+--     table_udp:add(i, scion_proto)
+-- end

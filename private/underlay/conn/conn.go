@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build go1.9 && linux
-// +build go1.9,linux
+//go:build go1.9
+// +build go1.9
 
 // +gobra
 
@@ -23,6 +23,7 @@ package conn
 
 import (
 	"net"
+	"net/netip"
 	"syscall"
 	"time"
 
@@ -42,59 +43,15 @@ type Messages []ipv4.Message
 
 // Conn describes the API for an underlay socket
 type Conn interface {
-	//@ pred Mem()
-	// (VerifiedSCION) Reads a message to b. Returns the number of read bytes.
-	//@ requires  acc(Mem(), _)
-	//@ preserves sl.Bytes(b, 0, len(b))
-	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
-	//@ ensures   err == nil ==> acc(addr.Mem(), _)
-	//@ ensures   err != nil ==> err.ErrorMem()
-	ReadFrom(b []byte) (n int, addr *net.UDPAddr, err error)
-	//@ requires  acc(Mem(), _)
-	//@ preserves forall i int :: { &m[i] } 0 <= i && i < len(m) ==> m[i].Mem()
-	//@ ensures   err == nil ==> 0 <= n && n <= len(m)
-	//@ ensures   err != nil ==> err.ErrorMem()
-	ReadBatch(m Messages) (n int, err error)
-	//@ requires  acc(Mem(), _)
-	//@ preserves acc(sl.Bytes(b, 0, len(b)), R10)
-	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
-	//@ ensures   err != nil ==> err.ErrorMem()
-	Write(b []byte) (n int, err error)
-	//@ requires  acc(u.Mem(), _)
-	//@ requires  acc(Mem(), _)
-	//@ preserves acc(sl.Bytes(b, 0, len(b)), R10)
-	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
-	//@ ensures   err != nil ==> err.ErrorMem()
-	WriteTo(b []byte, u *net.UDPAddr) (n int, err error)
-	//@ requires  acc(Mem(), _)
-	//@ preserves forall i int :: { &m[i] } 0 <= i && i < len(m) ==> acc(m[i].Mem(), R10)
-	//@ ensures   err == nil ==> 0 <= n && n <= len(m)
-	//@ ensures   err != nil ==> err.ErrorMem()
-	WriteBatch(m Messages, k int) (n int, err error)
-	//@ preserves acc(Mem(), R10)
-	//@ ensures   u != nil ==> acc(u.Mem(), _)
-	//@ decreases
-	LocalAddr() (u *net.UDPAddr)
-	//@ preserves acc(Mem(), R10)
-	//@ ensures   u != nil ==> acc(u.Mem(), _)
-	//@ decreases
-	RemoteAddr() (u *net.UDPAddr)
-	//@ preserves Mem()
-	//@ ensures   err != nil ==> err.ErrorMem()
-	//@ decreases
-	SetReadDeadline(time.Time) (err error)
-	//@ preserves Mem()
-	//@ ensures   err != nil ==> err.ErrorMem()
-	//@ decreases
-	SetWriteDeadline(time.Time) (err error)
-	//@ preserves Mem()
-	//@ ensures   err != nil ==> err.ErrorMem()
-	//@ decreases
-	SetDeadline(time.Time) (err error)
-	//@ requires Mem()
-	//@ ensures  err != nil ==> err.ErrorMem()
-	//@ decreases
-	Close() (err error)
+	ReadBatch(Messages) (int, error)
+	WriteTo([]byte, netip.AddrPort) (int, error)
+	WriteBatch(Messages, int) (int, error)
+	LocalAddr() netip.AddrPort
+	RemoteAddr() netip.AddrPort
+	SetReadDeadline(time.Time) error
+	SetWriteDeadline(time.Time) error
+	SetDeadline(time.Time) error
+	Close() error
 }
 
 // Config customizes the behavior of an underlay socket.
@@ -110,27 +67,15 @@ type Config struct {
 // New opens a new underlay socket on the specified addresses.
 //
 // The config can be used to customize socket behavior.
-// @ requires cfg.Mem()
-// @ requires listen != nil || remote != nil
-// @ requires listen != nil ==> acc(listen.Mem(), R10)
-// @ requires remote != nil ==> acc(remote.Mem(), R10)
-// @ ensures  e == nil ==> res.Mem()
-// @ ensures  e != nil ==> e.ErrorMem()
-// @ decreases
-func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
+func New(listen, remote netip.AddrPort, cfg *Config) (Conn, error) {
 	a := listen
-	if remote != nil {
+	if remote.IsValid() {
 		a = remote
 	}
-	if listen == nil && remote == nil {
+	if !a.IsValid() {
 		panic("either listen or remote must be set")
 	}
-	// @ assert remote != nil ==> a == remote
-	// @ assert remote == nil ==> a == listen
-	// @ unfold acc(a.Mem(), R15)
-	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15)
-	// @ assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], R15)
-	if a.IP.To4( /*@ false @*/ ) != nil {
+	if a.Addr().Is4() {
 		return newConnUDPIPv4(listen, remote, cfg)
 	}
 	return newConnUDPIPv6(listen, remote, cfg)
@@ -141,13 +86,7 @@ type connUDPIPv4 struct {
 	pconn *ipv4.PacketConn
 }
 
-// @ requires cfg.Mem()
-// @ requires listen != nil ==> acc(listen.Mem(), _)
-// @ requires remote != nil ==> acc(remote.Mem(), _)
-// @ ensures  e == nil ==> res.Mem()
-// @ ensures  e != nil ==> e.ErrorMem()
-// @ decreases
-func newConnUDPIPv4(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv4, e error) {
+func newConnUDPIPv4(listen, remote netip.AddrPort, cfg *Config) (*connUDPIPv4, error) {
 	cc := &connUDPIPv4{}
 	if err := cc.initConnUDP("udp4", listen, remote, cfg); err != nil {
 		return nil, err
@@ -161,14 +100,8 @@ func newConnUDPIPv4(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv4,
 
 // ReadBatch reads up to len(msgs) packets, and stores them in msgs.
 // It returns the number of packets read, and an error if any.
-// @ requires  acc(c.Mem(), _)
-// @ preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
-// @ ensures   errRet == nil ==> 0 <= nRet && nRet <= len(msgs)
-// @ ensures   errRet != nil ==> errRet.ErrorMem()
-func (c *connUDPIPv4) ReadBatch(msgs Messages) (nRet int, errRet error) {
-	//@ unfold acc(c.Mem(), _)
-	// (VerifiedSCION) 1 is the length of the buffers of the messages in msgs
-	n, err := c.pconn.ReadBatch(msgs, syscall.MSG_WAITFORONE)
+func (c *connUDPIPv4) ReadBatch(msgs Messages) (int, error) {
+	n, err := c.pconn.ReadBatch(msgs, syscallMSG_WAITFORONE)
 	return n, err
 }
 
@@ -215,13 +148,7 @@ type connUDPIPv6 struct {
 	pconn *ipv6.PacketConn
 }
 
-// @ requires cfg.Mem()
-// @ requires listen != nil ==> acc(listen.Mem(), _)
-// @ requires remote != nil ==> acc(remote.Mem(), _)
-// @ ensures  e == nil ==> res.Mem()
-// @ ensures  e != nil ==> e.ErrorMem()
-// @ decreases
-func newConnUDPIPv6(listen, remote *net.UDPAddr, cfg *Config) (res *connUDPIPv6, e error) {
+func newConnUDPIPv6(listen, remote netip.AddrPort, cfg *Config) (*connUDPIPv6, error) {
 	cc := &connUDPIPv6{}
 	if err := cc.initConnUDP("udp6", listen, remote, cfg); err != nil {
 		return nil, err
@@ -286,32 +213,34 @@ func (c *connUDPIPv6) SetDeadline(t time.Time) (err error) {
 
 type connUDPBase struct {
 	conn   *net.UDPConn
-	Listen *net.UDPAddr
-	Remote *net.UDPAddr
+	Listen netip.AddrPort
+	Remote netip.AddrPort
 	closed bool
 }
 
-// @ requires acc(cc)
-// @ requires laddr != nil ==> acc(laddr.Mem(), _)
-// @ requires raddr != nil ==> acc(raddr.Mem(), _)
-// @ requires cfg.Mem()
-// @ ensures  errRet == nil ==> cc.Mem()
-// @ ensures  errRet != nil ==> errRet.ErrorMem()
-// @ decreases
-func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cfg *Config) (errRet error) {
+func (cc *connUDPBase) initConnUDP(
+	network string,
+	laddr, raddr netip.AddrPort,
+	cfg *Config) error {
+
 	var c *net.UDPConn
 	var err error
-	if laddr == nil {
+	if !laddr.IsValid() {
 		return serrors.New("listen address must be specified")
 	}
-	if raddr == nil {
-		if c, err = net.ListenUDP(network, laddr); err != nil {
-			return serrors.WrapStr("Error listening on socket", err,
+	if !raddr.IsValid() {
+		if c, err = net.ListenUDP(network, net.UDPAddrFromAddrPort(laddr)); err != nil {
+			return serrors.Wrap("Error listening on socket", err,
 				"network", network, "listen", laddr)
+
 		}
 	} else {
-		if c, err = net.DialUDP(network, laddr, raddr); err != nil {
-			return serrors.WrapStr("Error setting up connection", err,
+		if c, err = net.DialUDP(
+			network,
+			net.UDPAddrFromAddrPort(laddr),
+			net.UDPAddrFromAddrPort(raddr),
+		); err != nil {
+			return serrors.Wrap("Error setting up connection", err,
 				"network", network, "listen", laddr, "remote", raddr)
 		}
 	}
@@ -321,21 +250,21 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 	if cfg.SendBufferSize != 0 {
 		beforeV, err := sockctrl.GetsockoptInt(c, syscall.SOL_SOCKET, syscall.SO_SNDBUF)
 		if err != nil {
-			return serrors.WrapStr("Error getting SO_SNDBUF socket option (before)", err,
+			return serrors.Wrap("Error getting SO_SNDBUF socket option (before)", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
 		}
 		target := cfg.SendBufferSize
 		if err = c.SetWriteBuffer(target); err != nil {
-			return serrors.WrapStr("Error setting send buffer size", err,
+			return serrors.Wrap("Error setting send buffer size", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
 		}
 		after, err := sockctrl.GetsockoptInt(c, syscall.SOL_SOCKET, syscall.SO_SNDBUF)
 		if err != nil {
-			return serrors.WrapStr("Error getting SO_SNDBUF socket option (after)", err,
+			return serrors.Wrap("Error getting SO_SNDBUF socket option (after)", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
@@ -352,24 +281,24 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 	}
 
 	// Set and confirm receive buffer size
-	{
+	if cfg.ReceiveBufferSize != 0 {
 		beforeV, err := sockctrl.GetsockoptInt(c, syscall.SOL_SOCKET, syscall.SO_RCVBUF)
 		if err != nil {
-			return serrors.WrapStr("Error getting SO_RCVBUF socket option (before)", err,
+			return serrors.Wrap("Error getting SO_RCVBUF socket option (before)", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
 		}
 		target := cfg.ReceiveBufferSize
 		if err = c.SetReadBuffer(target); err != nil {
-			return serrors.WrapStr("Error setting recv buffer size", err,
+			return serrors.Wrap("Error setting recv buffer size", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
 		}
 		after, err := sockctrl.GetsockoptInt(c, syscall.SOL_SOCKET, syscall.SO_RCVBUF)
 		if err != nil {
-			return serrors.WrapStr("Error getting SO_RCVBUF socket option (after)", err,
+			return serrors.Wrap("Error getting SO_RCVBUF socket option (after)", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
@@ -392,56 +321,22 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 	return nil
 }
 
-// @ preserves acc(c.Mem(), _)
-// @ preserves sl.Bytes(b, 0, len(b))
-// @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
-// @ ensures   err == nil ==> 0 <= n && n <= len(b)
-// @ ensures   err == nil ==> acc(addr.Mem(), _)
-// @ ensures   err != nil ==> err.ErrorMem()
-func (c *connUDPBase) ReadFrom(b []byte /*@, ghost underlyingConn *net.UDPConn @*/) (n int, addr *net.UDPAddr, err error) {
-	//@ unfold acc(c.Mem(), _)
-	return c.conn.ReadFromUDP(b)
-}
-
-// @ preserves acc(c.Mem(), _)
-// @ preserves acc(sl.Bytes(b, 0, len(b)), R15)
-// @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
-// @ ensures   err == nil ==> 0 <= n && n <= len(b)
-// @ ensures   err != nil ==> err.ErrorMem()
-func (c *connUDPBase) Write(b []byte /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
-	//@ unfold acc(c.Mem(), _)
+func (c *connUDPBase) Write(b []byte) (int, error) {
 	return c.conn.Write(b)
 }
 
-// @ requires  acc(dst.Mem(), _)
-// @ preserves acc(c.Mem(), _)
-// @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
-// @ preserves acc(sl.Bytes(b, 0, len(b)), R15)
-// @ ensures   err == nil ==> 0 <= n && n <= len(b)
-// @ ensures   err != nil ==> err.ErrorMem()
-func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
-	//@ unfold acc(c.Mem(), _)
-	if c.Remote != nil {
+func (c *connUDPBase) WriteTo(b []byte, dst netip.AddrPort) (int, error) {
+	if c.Remote.IsValid() {
 		return c.conn.Write(b)
 	}
-	return c.conn.WriteTo(b, dst)
+	return c.conn.WriteToUDPAddrPort(b, dst)
 }
 
-// @ preserves acc(c.MemWithoutConn(), R16)
-// @ ensures   u != nil ==> acc(u.Mem(), _)
-// @ decreases
-func (c *connUDPBase) LocalAddr() (u *net.UDPAddr) {
-	//@ unfold acc(c.MemWithoutConn(), R16)
-	//@ defer fold acc(c.MemWithoutConn(), R16)
+func (c *connUDPBase) LocalAddr() netip.AddrPort {
 	return c.Listen
 }
 
-// @ preserves acc(c.MemWithoutConn(), R16)
-// @ ensures   u != nil ==> acc(u.Mem(), _)
-// @ decreases
-func (c *connUDPBase) RemoteAddr() (u *net.UDPAddr) {
-	//@ unfold acc(c.MemWithoutConn(), R16)
-	//@ defer fold acc(c.MemWithoutConn(), R16)
+func (c *connUDPBase) RemoteAddr() netip.AddrPort {
 	return c.Remote
 }
 

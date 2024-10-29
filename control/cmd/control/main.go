@@ -16,13 +16,12 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
+	"net/netip"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -34,10 +33,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-	"inet.af/netaddr"
 
 	cs "github.com/scionproto/scion/control"
 	"github.com/scionproto/scion/control/beacon"
@@ -59,14 +56,13 @@ import (
 	libgrpc "github.com/scionproto/scion/pkg/grpc"
 	"github.com/scionproto/scion/pkg/log"
 	libmetrics "github.com/scionproto/scion/pkg/metrics"
-	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/private/prom"
 	"github.com/scionproto/scion/pkg/private/serrors"
-	"github.com/scionproto/scion/pkg/private/util"
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
 	dpb "github.com/scionproto/scion/pkg/proto/discovery"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/scrypto/cppki"
+	"github.com/scionproto/scion/pkg/segment/iface"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/private/app"
 	infraenv "github.com/scionproto/scion/private/app/appnet"
@@ -77,6 +73,7 @@ import (
 	"github.com/scionproto/scion/private/ca/renewal"
 	renewalgrpc "github.com/scionproto/scion/private/ca/renewal/grpc"
 	"github.com/scionproto/scion/private/discovery"
+	"github.com/scionproto/scion/private/drkey/drkeyutil"
 	"github.com/scionproto/scion/private/keyconf"
 	cppkiapi "github.com/scionproto/scion/private/mgmtapi/cppki/api"
 	"github.com/scionproto/scion/private/mgmtapi/jwtauth"
@@ -122,7 +119,7 @@ func realMain(ctx context.Context) error {
 		Metrics:   metrics.TopoLoader,
 	})
 	if err != nil {
-		return serrors.WrapStr("creating topology loader", err)
+		return serrors.Wrap("creating topology loader", err)
 	}
 	g, errCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
@@ -146,7 +143,7 @@ func realMain(ctx context.Context) error {
 
 	closer, err := cs.InitTracer(globalCfg.Tracing, globalCfg.General.ID)
 	if err != nil {
-		return serrors.WrapStr("initializing tracer", err)
+		return serrors.Wrap("initializing tracer", err)
 	}
 	defer closer.Close()
 
@@ -154,7 +151,7 @@ func realMain(ctx context.Context) error {
 	defer revCache.Close()
 	pathDB, err := storage.NewPathStorage(globalCfg.PathDB)
 	if err != nil {
-		return serrors.WrapStr("initializing path storage", err)
+		return serrors.Wrap("initializing path storage", err)
 	}
 	pathDB = pathstoragemetrics.WrapDB(pathDB, pathstoragemetrics.Config{
 		Driver:       string(storage.BackendSqlite),
@@ -167,41 +164,9 @@ func realMain(ctx context.Context) error {
 		return err
 	}
 
-	nc := infraenv.NetworkConfig{
-		IA:                    topo.IA(),
-		Public:                topo.ControlServiceAddress(globalCfg.General.ID),
-		ReconnectToDispatcher: globalCfg.General.ReconnectToDispatcher,
-		QUIC: infraenv.QUIC{
-			Address: globalCfg.QUIC.Address,
-		},
-		SVCResolver: topo,
-		SCMPHandler: snet.DefaultSCMPHandler{
-			RevocationHandler: cs.RevocationHandler{RevCache: revCache},
-			SCMPErrors:        metrics.SCMPErrors,
-		},
-		SCIONNetworkMetrics:    metrics.SCIONNetworkMetrics,
-		SCIONPacketConnMetrics: metrics.SCIONPacketConnMetrics,
-	}
-	quicStack, err := nc.QUICStack()
-	if err != nil {
-		return serrors.WrapStr("initializing QUIC stack", err)
-	}
-	defer quicStack.RedirectCloser()
-	tcpStack, err := nc.TCPStack()
-	if err != nil {
-		return serrors.WrapStr("initializing TCP stack", err)
-	}
-	dialer := &libgrpc.QUICDialer{
-		Rewriter: &onehop.AddressRewriter{
-			Rewriter: nc.AddressRewriter(nil),
-			MAC:      macGen(),
-		},
-		Dialer: quicStack.Dialer,
-	}
-
 	trustDB, err := storage.NewTrustStorage(globalCfg.TrustDB)
 	if err != nil {
-		return serrors.WrapStr("initializing trust storage", err)
+		return serrors.Wrap("initializing trust storage", err)
 	}
 	defer trustDB.Close()
 	fileWrites := libmetrics.NewPromCounter(metrics.TrustTRCFileWritesTotal)
@@ -233,9 +198,49 @@ func realMain(ctx context.Context) error {
 		return err
 	}
 
+	// FIXME: readability would be improved if we could be consistent with address
+	// representations in NetworkConfig (string or cooked, chose one).
+	nc := infraenv.NetworkConfig{
+		IA:     topo.IA(),
+		Public: topo.ControlServiceAddress(globalCfg.General.ID),
+		QUIC: infraenv.QUIC{
+			TLSVerifier: trust.NewTLSCryptoVerifier(trustDB),
+			GetCertificate: cs.NewTLSCertificateLoader(
+				topo.IA(), x509.ExtKeyUsageServerAuth, trustDB, globalCfg.General.ConfigDir,
+			).GetCertificate,
+			GetClientCertificate: cs.NewTLSCertificateLoader(
+				topo.IA(), x509.ExtKeyUsageClientAuth, trustDB, globalCfg.General.ConfigDir,
+			).GetClientCertificate,
+		},
+		SVCResolver: topo,
+		SCMPHandler: snet.DefaultSCMPHandler{
+			RevocationHandler: cs.RevocationHandler{RevCache: revCache},
+			SCMPErrors:        metrics.SCMPErrors,
+		},
+		SCIONNetworkMetrics:    metrics.SCIONNetworkMetrics,
+		SCIONPacketConnMetrics: metrics.SCIONPacketConnMetrics,
+		MTU:                    topo.MTU(),
+		Topology:               cpInfoProvider{topo: topo},
+	}
+	quicStack, err := nc.QUICStack()
+	if err != nil {
+		return serrors.Wrap("initializing QUIC stack", err)
+	}
+	tcpStack, err := nc.TCPStack()
+	if err != nil {
+		return serrors.Wrap("initializing TCP stack", err)
+	}
+	dialer := &libgrpc.QUICDialer{
+		Rewriter: &onehop.AddressRewriter{
+			Rewriter: nc.AddressRewriter(),
+			MAC:      macGen(),
+		},
+		Dialer: quicStack.InsecureDialer,
+	}
+
 	beaconDB, err := storage.NewBeaconStorage(globalCfg.BeaconDB, topo.IA())
 	if err != nil {
-		return serrors.WrapStr("initializing beacon storage", err)
+		return serrors.Wrap("initializing beacon storage", err)
 	}
 	defer beaconDB.Close()
 	beaconDB = beaconstoragemetrics.WrapDB(beaconDB, beaconstoragemetrics.Config{
@@ -247,9 +252,16 @@ func realMain(ctx context.Context) error {
 		beaconDB,
 		topo.Core(),
 		globalCfg.BS.Policies,
+		trust.FetchingProvider{
+			DB:       trustDB,
+			Recurser: trust.NeverRecurser{},
+			// XXX(roosd): Do not set fetcher or router because they are not
+			// used and we rather panic if they are reached due to a implementation
+			// bug.
+		},
 	)
 	if err != nil {
-		return serrors.WrapStr("initializing beacon store", err)
+		return serrors.Wrap("initializing beacon store", err)
 	}
 
 	trustengineCache := globalCfg.TrustEngine.Cache.New()
@@ -259,7 +271,7 @@ func realMain(ctx context.Context) error {
 			DB: trustDB,
 		},
 		CacheHits:          cacheHits,
-		MaxCacheExpiration: globalCfg.TrustEngine.Cache.Expiration,
+		MaxCacheExpiration: globalCfg.TrustEngine.Cache.Expiration.Duration,
 		Cache:              trustengineCache,
 	}
 	provider := trust.FetchingProvider{
@@ -276,7 +288,7 @@ func realMain(ctx context.Context) error {
 		Verifier: trust.Verifier{
 			Engine:             provider,
 			CacheHits:          cacheHits,
-			MaxCacheExpiration: globalCfg.TrustEngine.Cache.Expiration,
+			MaxCacheExpiration: globalCfg.TrustEngine.Cache.Expiration.Duration,
 			Cache:              trustengineCache,
 		},
 	}
@@ -300,8 +312,15 @@ func realMain(ctx context.Context) error {
 		Router: segreq.NewRouter(fetcherCfg),
 	}
 
-	quicServer := grpc.NewServer(libgrpc.UnaryServerInterceptor())
-	tcpServer := grpc.NewServer(libgrpc.UnaryServerInterceptor())
+	quicServer := grpc.NewServer(
+		grpc.Creds(libgrpc.PassThroughCredentials{}),
+		libgrpc.UnaryServerInterceptor(),
+		libgrpc.DefaultMaxConcurrentStreams(),
+	)
+	tcpServer := grpc.NewServer(
+		libgrpc.UnaryServerInterceptor(),
+		libgrpc.DefaultMaxConcurrentStreams(),
+	)
 
 	// Register trust material related handlers.
 	trustServer := &cstrustgrpc.MaterialServer{
@@ -375,10 +394,7 @@ func realMain(ctx context.Context) error {
 
 	}
 
-	signer, err := cs.NewSigner(topo.IA(), trustDB, globalCfg.General.ConfigDir)
-	if err != nil {
-		return serrors.WrapStr("initializing AS signer", err)
-	}
+	signer := cs.NewSigner(topo.IA(), trustDB, globalCfg.General.ConfigDir)
 
 	var chainBuilder renewal.ChainBuilder
 	var caClient *caapi.Client
@@ -504,9 +520,13 @@ func realMain(ctx context.Context) error {
 		periodic.Func{
 			TaskName: "signer generator",
 			Task: func(ctx context.Context) {
-				signer.Sign(ctx, []byte{})
+				if _, err := signer.Sign(ctx, []byte{}); err != nil {
+					log.Info("Failed signer health check", "err", err)
+				}
 				if chainBuilder.PolicyGen != nil {
-					chainBuilder.PolicyGen.Generate(ctx)
+					if _, err := chainBuilder.PolicyGen.Generate(ctx); err != nil {
+						log.Info("Failed renewal signer health check", "err", err)
+					}
 				}
 			},
 		},
@@ -568,21 +588,17 @@ func realMain(ctx context.Context) error {
 
 	// DRKey feature
 	var drkeyEngine *drkey.ServiceEngine
-	var quicTLSServer *grpc.Server
 	var epochDuration time.Duration
 	if globalCfg.DRKey.Enabled() {
-		epochDuration, err = loadEpochDuration()
-		if err != nil {
-			return err
-		}
+		epochDuration = drkeyutil.LoadEpochDuration()
 		log.Debug("DRKey debug info", "epoch duration", epochDuration.String())
 		masterKey, err := loadMasterSecret(globalCfg.General.ConfigDir)
 		if err != nil {
-			return serrors.WrapStr("loading master secret in DRKey", err)
+			return serrors.Wrap("loading master secret in DRKey", err)
 		}
 		svBackend, err := storage.NewDRKeySecretValueStorage(globalCfg.DRKey.SecretValueDB)
 		if err != nil {
-			return serrors.WrapStr("initializing Secret Value DB", err)
+			return serrors.Wrap("initializing Secret Value DB", err)
 		}
 		svCounter := libmetrics.NewPromCounter(metrics.DRKeySecretValueQueriesTotal)
 		svDB := &secret.Database{
@@ -599,7 +615,7 @@ func realMain(ctx context.Context) error {
 		defer svDB.Close()
 		level1Backend, err := storage.NewDRKeyLevel1Storage(globalCfg.DRKey.Level1DB)
 		if err != nil {
-			return serrors.WrapStr("initializing DRKey DB", err)
+			return serrors.Wrap("initializing DRKey DB", err)
 		}
 		lvl1Counter := libmetrics.NewPromCounter(metrics.DRKeyLevel1QueriesTotal)
 		level1DB := &level1.Database{
@@ -614,23 +630,11 @@ func realMain(ctx context.Context) error {
 			},
 		}
 		defer level1DB.Close()
-		loader := trust.X509KeyPairProvider{
-			IA: topo.IA(),
-			DB: trustDB,
-			KeyLoader: cstrust.LoadingRing{
-				Dir: filepath.Join(globalCfg.General.ConfigDir, "crypto/as"),
-			},
-		}
-		tlsMgr := trust.NewTLSCryptoManager(loader, trustDB)
+
 		drkeyFetcher := drkeygrpc.Fetcher{
-			Dialer: &libgrpc.TLSQUICDialer{
-				QUICDialer: dialer,
-				Credentials: credentials.NewTLS(&tls.Config{
-					InsecureSkipVerify:    true,
-					GetClientCertificate:  tlsMgr.GetClientCertificate,
-					VerifyPeerCertificate: tlsMgr.VerifyServerCertificate,
-					VerifyConnection:      tlsMgr.VerifyConnection,
-				}),
+			Dialer: &libgrpc.QUICDialer{
+				Rewriter: nc.AddressRewriter(),
+				Dialer:   quicStack.Dialer,
 			},
 			Router:     segreq.NewRouter(fetcherCfg),
 			MaxRetries: 20,
@@ -647,21 +651,12 @@ func realMain(ctx context.Context) error {
 			PrefetchKeeper: prefetchKeeper,
 		}
 		drkeyService := &drkeygrpc.Server{
-			LocalIA:            topo.IA(),
-			Engine:             drkeyEngine,
-			AllowedSVHostProto: globalCfg.DRKey.Delegation.ToAllowedSet(),
+			LocalIA:                   topo.IA(),
+			ClientCertificateVerifier: nc.QUIC.TLSVerifier,
+			Engine:                    drkeyEngine,
+			AllowedSVHostProto:        globalCfg.DRKey.Delegation.ToAllowedSet(),
 		}
-		srvConfig := &tls.Config{
-			InsecureSkipVerify:    true,
-			GetCertificate:        tlsMgr.GetCertificate,
-			VerifyPeerCertificate: tlsMgr.VerifyClientCertificate,
-			ClientAuth:            tls.RequireAnyClientCert,
-		}
-		quicTLSServer = grpc.NewServer(
-			grpc.Creds(credentials.NewTLS(srvConfig)),
-			libgrpc.UnaryServerInterceptor(),
-		)
-		cppb.RegisterDRKeyInterServiceServer(quicTLSServer, drkeyService)
+		cppb.RegisterDRKeyInterServiceServer(quicServer, drkeyService)
 		cppb.RegisterDRKeyIntraServiceServer(tcpServer, drkeyService)
 		log.Info("DRKey is enabled")
 	} else {
@@ -675,25 +670,15 @@ func realMain(ctx context.Context) error {
 	g.Go(func() error {
 		defer log.HandlePanic()
 		if err := quicServer.Serve(quicStack.Listener); err != nil {
-			return serrors.WrapStr("serving gRPC/QUIC API", err)
+			return serrors.Wrap("serving gRPC/QUIC API", err)
 		}
 		return nil
 	})
 	cleanup.Add(func() error { quicServer.GracefulStop(); return nil })
-	if quicTLSServer != nil {
-		g.Go(func() error {
-			defer log.HandlePanic()
-			if err := quicTLSServer.Serve(quicStack.Listener); err != nil {
-				return serrors.WrapStr("serving gRPC(TLS)/QUIC API", err)
-			}
-			return nil
-		})
-		cleanup.Add(func() error { quicTLSServer.GracefulStop(); return nil })
-	}
 	g.Go(func() error {
 		defer log.HandlePanic()
 		if err := tcpServer.Serve(tcpStack); err != nil {
-			return serrors.WrapStr("serving gRPC/TCP API", err)
+			return serrors.Wrap("serving gRPC/TCP API", err)
 		}
 		return nil
 	})
@@ -735,7 +720,7 @@ func realMain(ctx context.Context) error {
 		g.Go(func() error {
 			defer log.HandlePanic()
 			if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				return serrors.WrapStr("serving service management API", err)
+				return serrors.Wrap("serving service management API", err)
 			}
 			return nil
 		})
@@ -795,13 +780,26 @@ func realMain(ctx context.Context) error {
 		},
 		SegmentRegister: beaconinggrpc.Registrar{Dialer: dialer},
 		BeaconStore:     beaconStore,
-		Signer:          signer,
-		Inspector:       inspector,
-		Metrics:         metrics,
-		DRKeyEngine:     drkeyEngine,
-		MACGen:          macGen,
-		NextHopper:      topo,
-		StaticInfo:      func() *beaconing.StaticInfoCfg { return staticInfo },
+		SignerGen: beaconing.SignerGenFunc(func(ctx context.Context) ([]beaconing.Signer, error) {
+			signers, err := signer.SignerGen.Generate(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if len(signers) == 0 {
+				return nil, nil
+			}
+			r := make([]beaconing.Signer, 0, len(signers))
+			for _, s := range signers {
+				r = append(r, s)
+			}
+			return r, nil
+		}),
+		Inspector:   inspector,
+		Metrics:     metrics,
+		DRKeyEngine: drkeyEngine,
+		MACGen:      macGen,
+		NextHopper:  topo,
+		StaticInfo:  func() *beaconing.StaticInfoCfg { return staticInfo },
 
 		OriginationInterval:       globalCfg.BS.OriginationInterval.Duration,
 		PropagationInterval:       globalCfg.BS.PropagationInterval.Duration,
@@ -812,7 +810,7 @@ func realMain(ctx context.Context) error {
 		EPIC:                      globalCfg.BS.EPIC,
 	})
 	if err != nil {
-		return serrors.WrapStr("starting periodic tasks", err)
+		return serrors.Wrap("starting periodic tasks", err)
 	}
 	defer tasks.Kill()
 	log.Info("Started periodic tasks")
@@ -835,6 +833,7 @@ func createBeaconStore(
 	db storage.BeaconDB,
 	core bool,
 	policyConfig config.Policies,
+	provider beacon.ChainProvider,
 ) (cs.Store, bool, error) {
 
 	if core {
@@ -842,34 +841,26 @@ func createBeaconStore(
 		if err != nil {
 			return nil, false, err
 		}
-		store, err := beacon.NewCoreBeaconStore(policies, db)
+		store, err := beacon.NewCoreBeaconStore(policies, db, beacon.WithCheckChain(provider))
 		return store, *policies.Prop.Filter.AllowIsdLoop, err
 	}
 	policies, err := cs.LoadNonCorePolicies(policyConfig)
 	if err != nil {
 		return nil, false, err
 	}
-	store, err := beacon.NewBeaconStore(policies, db)
+	store, err := beacon.NewBeaconStore(policies, db, beacon.WithCheckChain(provider))
 	return store, *policies.Prop.Filter.AllowIsdLoop, err
 }
 
-func adaptInterfaceMap(in map[common.IFIDType]topology.IFInfo) map[uint16]ifstate.InterfaceInfo {
+func adaptInterfaceMap(in map[iface.ID]topology.IFInfo) map[uint16]ifstate.InterfaceInfo {
 	converted := make(map[uint16]ifstate.InterfaceInfo, len(in))
 	for id, info := range in {
-		addr, ok := netaddr.FromStdAddr(
-			info.InternalAddr.IP,
-			info.InternalAddr.Port,
-			info.InternalAddr.Zone,
-		)
-		if !ok {
-			panic(fmt.Sprintf("failed to adapt the topology format. Input %s", info.InternalAddr))
-		}
 		converted[uint16(id)] = ifstate.InterfaceInfo{
 			ID:           uint16(info.ID),
 			IA:           info.IA,
 			LinkType:     info.LinkType,
-			InternalAddr: addr,
-			RemoteID:     uint16(info.RemoteIFID),
+			InternalAddr: info.InternalAddr,
+			RemoteID:     uint16(info.RemoteIfID),
 			MTU:          uint16(info.MTU),
 		}
 	}
@@ -903,7 +894,18 @@ type healther struct {
 }
 
 func (h *healther) GetSignerHealth(ctx context.Context) api.SignerHealthData {
-	signer, err := h.Signer.SignerGen.Generate(ctx)
+	signers, err := h.Signer.SignerGen.Generate(ctx)
+	if err != nil {
+		return api.SignerHealthData{
+			SignerMissing:       true,
+			SignerMissingDetail: err.Error(),
+		}
+	}
+	now := time.Now()
+	signer, err := trust.LastExpiring(signers, cppki.Validity{
+		NotBefore: now,
+		NotAfter:  now,
+	})
 	if err != nil {
 		return api.SignerHealthData{
 			SignerMissing:       true,
@@ -939,6 +941,31 @@ func (h *healther) GetCAHealth(ctx context.Context) (api.CAHealthStatus, bool) {
 		return h.CAHealth.GetStatus(), true
 	}
 	return api.Unavailable, false
+}
+
+type cpInfoProvider struct {
+	topo *topology.Loader
+}
+
+func (c cpInfoProvider) LocalIA(_ context.Context) (addr.IA, error) {
+	return c.topo.IA(), nil
+}
+
+func (c cpInfoProvider) PortRange(_ context.Context) (uint16, uint16, error) {
+	start, end := c.topo.PortRange()
+	return start, end, nil
+}
+
+func (c cpInfoProvider) Interfaces(_ context.Context) (map[uint16]netip.AddrPort, error) {
+	ifMap := c.topo.InterfaceInfoMap()
+	ifsToUDP := make(map[uint16]netip.AddrPort, len(ifMap))
+	for i, v := range ifMap {
+		if i > (1<<16)-1 {
+			return nil, serrors.New("invalid interface id", "id", i)
+		}
+		ifsToUDP[uint16(i)] = v.InternalAddr
+	}
+	return ifsToUDP, nil
 }
 
 func getCAHealth(
@@ -991,19 +1018,7 @@ func updateCAHealthMetrics(caHealthGauge libmetrics.Gauge, caStatus api.CAHealth
 func loadMasterSecret(dir string) (keyconf.Master, error) {
 	masterKey, err := keyconf.LoadMaster(filepath.Join(dir, "keys"))
 	if err != nil {
-		return keyconf.Master{}, serrors.WrapStr("error getting master secret", err)
+		return keyconf.Master{}, serrors.Wrap("error getting master secret", err)
 	}
 	return masterKey, nil
-}
-
-func loadEpochDuration() (time.Duration, error) {
-	s := os.Getenv(config.EnvVarEpochDuration)
-	if s == "" {
-		return config.DefaultEpochDuration, nil
-	}
-	duration, err := util.ParseDuration(s)
-	if err != nil {
-		return 0, serrors.WrapStr("parsing SCION_TESTING_DRKEY_EPOCH_DURATION", err)
-	}
-	return duration, nil
 }

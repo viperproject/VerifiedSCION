@@ -57,19 +57,17 @@ func main() {
 		trcs.Cmd(cmd),
 		testcrypto.Cmd(cmd),
 		newGendocs(cmd),
+		newKms(cmd),
 	)
 	// This Templatefunc allows use some escape characters for the rst
 	// documentation conversion without compromising the readability of the help
 	// text in the CLI.
-	cobra.AddTemplateFunc("removeEscape", func(s string) string {
-		s = strings.ReplaceAll(s, "::", ":")
-		s = strings.ReplaceAll(s, "\\-", "-")
-		return s
-	})
+	cobra.AddTemplateFunc("removeEscape", removeEscape)
 
 	cmd.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces | removeEscape}}
 
 {{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`)
+	cmd.DisableAutoGenTag = true
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
@@ -78,4 +76,10 @@ func main() {
 		}
 		os.Exit(1)
 	}
+}
+
+func removeEscape(s string) string {
+	s = strings.ReplaceAll(s, "::", ":")
+	s = strings.ReplaceAll(s, "\\-", "-")
+	return s
 }

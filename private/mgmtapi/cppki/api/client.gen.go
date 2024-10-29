@@ -7,12 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/deepmap/oapi-codegen/pkg/runtime"
+	"github.com/oapi-codegen/runtime"
 )
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
@@ -198,57 +198,59 @@ func NewGetCertificatesRequest(server string, params *GetCertificatesParams) (*h
 		return nil, err
 	}
 
-	queryValues := queryURL.Query()
+	if params != nil {
+		queryValues := queryURL.Query()
 
-	if params.IsdAs != nil {
+		if params.IsdAs != nil {
 
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "isd_as", runtime.ParamLocationQuery, *params.IsdAs); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "isd_as", runtime.ParamLocationQuery, *params.IsdAs); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
 				}
 			}
+
 		}
 
-	}
+		if params.ValidAt != nil {
 
-	if params.ValidAt != nil {
-
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "valid_at", runtime.ParamLocationQuery, *params.ValidAt); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "valid_at", runtime.ParamLocationQuery, *params.ValidAt); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
 				}
 			}
+
 		}
 
-	}
+		if params.All != nil {
 
-	if params.All != nil {
-
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "all", runtime.ParamLocationQuery, *params.All); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "all", runtime.ParamLocationQuery, *params.All); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
 				}
 			}
+
 		}
 
+		queryURL.RawQuery = queryValues.Encode()
 	}
-
-	queryURL.RawQuery = queryValues.Encode()
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
@@ -345,41 +347,43 @@ func NewGetTrcsRequest(server string, params *GetTrcsParams) (*http.Request, err
 		return nil, err
 	}
 
-	queryValues := queryURL.Query()
+	if params != nil {
+		queryValues := queryURL.Query()
 
-	if params.Isd != nil {
+		if params.Isd != nil {
 
-		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "isd", runtime.ParamLocationQuery, *params.Isd); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
+			if queryFrag, err := runtime.StyleParamWithLocation("form", false, "isd", runtime.ParamLocationQuery, *params.Isd); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
 				}
 			}
+
 		}
 
-	}
+		if params.All != nil {
 
-	if params.All != nil {
-
-		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "all", runtime.ParamLocationQuery, *params.All); err != nil {
-			return nil, err
-		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-			return nil, err
-		} else {
-			for k, v := range parsed {
-				for _, v2 := range v {
-					queryValues.Add(k, v2)
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "all", runtime.ParamLocationQuery, *params.All); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
 				}
 			}
+
 		}
 
+		queryURL.RawQuery = queryValues.Encode()
 	}
-
-	queryURL.RawQuery = queryValues.Encode()
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
@@ -528,29 +532,30 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// GetCertificates request
+	// GetCertificatesWithResponse request
 	GetCertificatesWithResponse(ctx context.Context, params *GetCertificatesParams, reqEditors ...RequestEditorFn) (*GetCertificatesResponse, error)
 
-	// GetCertificate request
+	// GetCertificateWithResponse request
 	GetCertificateWithResponse(ctx context.Context, chainId ChainID, reqEditors ...RequestEditorFn) (*GetCertificateResponse, error)
 
-	// GetCertificateBlob request
+	// GetCertificateBlobWithResponse request
 	GetCertificateBlobWithResponse(ctx context.Context, chainId ChainID, reqEditors ...RequestEditorFn) (*GetCertificateBlobResponse, error)
 
-	// GetTrcs request
+	// GetTrcsWithResponse request
 	GetTrcsWithResponse(ctx context.Context, params *GetTrcsParams, reqEditors ...RequestEditorFn) (*GetTrcsResponse, error)
 
-	// GetTrc request
+	// GetTrcWithResponse request
 	GetTrcWithResponse(ctx context.Context, isd int, base int, serial int, reqEditors ...RequestEditorFn) (*GetTrcResponse, error)
 
-	// GetTrcBlob request
+	// GetTrcBlobWithResponse request
 	GetTrcBlobWithResponse(ctx context.Context, isd int, base int, serial int, reqEditors ...RequestEditorFn) (*GetTrcBlobResponse, error)
 }
 
 type GetCertificatesResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *[]ChainBrief
+	Body                      []byte
+	HTTPResponse              *http.Response
+	JSON200                   *[]ChainBrief
+	ApplicationproblemJSON400 *Problem
 }
 
 // Status returns HTTPResponse.Status
@@ -570,9 +575,10 @@ func (r GetCertificatesResponse) StatusCode() int {
 }
 
 type GetCertificateResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Chain
+	Body                      []byte
+	HTTPResponse              *http.Response
+	JSON200                   *Chain
+	ApplicationproblemJSON400 *Problem
 }
 
 // Status returns HTTPResponse.Status
@@ -592,8 +598,9 @@ func (r GetCertificateResponse) StatusCode() int {
 }
 
 type GetCertificateBlobResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
+	Body                      []byte
+	HTTPResponse              *http.Response
+	ApplicationproblemJSON400 *Problem
 }
 
 // Status returns HTTPResponse.Status
@@ -616,7 +623,7 @@ type GetTrcsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *[]TRCBrief
-	JSON400      *StandardError
+	JSON400      *BadRequest
 }
 
 // Status returns HTTPResponse.Status
@@ -639,7 +646,7 @@ type GetTrcResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *TRC
-	JSON400      *StandardError
+	JSON400      *BadRequest
 }
 
 // Status returns HTTPResponse.Status
@@ -661,7 +668,7 @@ func (r GetTrcResponse) StatusCode() int {
 type GetTrcBlobResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON400      *StandardError
+	JSON400      *BadRequest
 }
 
 // Status returns HTTPResponse.Status
@@ -736,7 +743,7 @@ func (c *ClientWithResponses) GetTrcBlobWithResponse(ctx context.Context, isd in
 
 // ParseGetCertificatesResponse parses an HTTP response from a GetCertificatesWithResponse call
 func ParseGetCertificatesResponse(rsp *http.Response) (*GetCertificatesResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -755,6 +762,13 @@ func ParseGetCertificatesResponse(rsp *http.Response) (*GetCertificatesResponse,
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
 	}
 
 	return response, nil
@@ -762,7 +776,7 @@ func ParseGetCertificatesResponse(rsp *http.Response) (*GetCertificatesResponse,
 
 // ParseGetCertificateResponse parses an HTTP response from a GetCertificateWithResponse call
 func ParseGetCertificateResponse(rsp *http.Response) (*GetCertificateResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -781,6 +795,13 @@ func ParseGetCertificateResponse(rsp *http.Response) (*GetCertificateResponse, e
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
 	}
 
 	return response, nil
@@ -788,7 +809,7 @@ func ParseGetCertificateResponse(rsp *http.Response) (*GetCertificateResponse, e
 
 // ParseGetCertificateBlobResponse parses an HTTP response from a GetCertificateBlobWithResponse call
 func ParseGetCertificateBlobResponse(rsp *http.Response) (*GetCertificateBlobResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -799,12 +820,22 @@ func ParseGetCertificateBlobResponse(rsp *http.Response) (*GetCertificateBlobRes
 		HTTPResponse: rsp,
 	}
 
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
+	}
+
 	return response, nil
 }
 
 // ParseGetTrcsResponse parses an HTTP response from a GetTrcsWithResponse call
 func ParseGetTrcsResponse(rsp *http.Response) (*GetTrcsResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -824,7 +855,7 @@ func ParseGetTrcsResponse(rsp *http.Response) (*GetTrcsResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest StandardError
+		var dest BadRequest
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -837,7 +868,7 @@ func ParseGetTrcsResponse(rsp *http.Response) (*GetTrcsResponse, error) {
 
 // ParseGetTrcResponse parses an HTTP response from a GetTrcWithResponse call
 func ParseGetTrcResponse(rsp *http.Response) (*GetTrcResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -857,7 +888,7 @@ func ParseGetTrcResponse(rsp *http.Response) (*GetTrcResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest StandardError
+		var dest BadRequest
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -870,7 +901,7 @@ func ParseGetTrcResponse(rsp *http.Response) (*GetTrcResponse, error) {
 
 // ParseGetTrcBlobResponse parses an HTTP response from a GetTrcBlobWithResponse call
 func ParseGetTrcBlobResponse(rsp *http.Response) (*GetTrcBlobResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -883,7 +914,7 @@ func ParseGetTrcBlobResponse(rsp *http.Response) (*GetTrcBlobResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest StandardError
+		var dest BadRequest
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
