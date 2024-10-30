@@ -50,7 +50,7 @@ type Metrics struct {
 // NewMetrics initializes the metrics for the Border Router, and registers them with the default
 // registry.
 func NewMetrics() *Metrics {
-	return &Metrics{
+	tmp := &Metrics{
 		ProcessedPackets: promauto.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "router_processed_pkts_total",

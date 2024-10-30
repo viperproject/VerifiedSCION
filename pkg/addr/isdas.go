@@ -95,8 +95,8 @@ func MustParseAS(s string) AS {
 	return as
 }
 
-func parseAS(as string, sep string) (AS, error) {
-	parts := strings.Split(as, sep)
+func parseAS(_as string, sep string) (AS, error) {
+	parts := strings.Split(_as, sep)
 	if len(parts) == 1 {
 		// Must be a BGP AS, parse as 32-bit decimal number
 		return asParseBGP(_as)
@@ -113,7 +113,7 @@ func parseAS(as string, sep string) (AS, error) {
 		parsed <<= asPartBits
 		v, err := strconv.ParseUint(parts[i], asPartBase, asPartBits)
 		if err != nil {
-			return 0, serrors.Wrap("parsing AS part", err, "index", i, "value", as)
+			return 0, serrors.Wrap("parsing AS part", err, "index", i, "value", _as)
 		}
 		parsed |= AS(v)
 	}
