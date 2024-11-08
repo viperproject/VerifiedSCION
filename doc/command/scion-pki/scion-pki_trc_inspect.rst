@@ -1,15 +1,17 @@
+:orphan:
+
 .. _scion-pki_trc_inspect:
 
 scion-pki trc inspect
 ---------------------
 
-Represent TRC in a human readable form
+Print TRC details in a human readable format
 
 Synopsis
 ~~~~~~~~
 
 
-'human' outputs the TRC contents in a human readable form.
+'inspect' prints the details of a TRC a human-readable fromat.
 
 The input file can either be a TRC payload, or a signed TRC.
 The output can either be in yaml, or json.
@@ -27,8 +29,8 @@ Examples
 
 ::
 
-    scion-pki trc human ISD1-B1-S1.pld.der
-    scion-pki trc human ISD1-B1-S1.trc
+    scion-pki trc inspect ISD1-B1-S1.pld.der
+    scion-pki trc inspect ISD1-B1-S1.trc
 
 Options
 ~~~~~~~
@@ -43,5 +45,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion-pki trc <scion-pki_trc.html>`_ 	 - Manage TRCs for the SCION control plane PKI
+* :ref:`scion-pki trc <scion-pki_trc>` 	 - Manage TRCs for the SCION control plane PKI
 

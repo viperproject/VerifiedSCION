@@ -20,6 +20,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/private/ptr"
 	"github.com/scionproto/scion/pkg/private/serrors"
 )
 
@@ -204,25 +205,24 @@ func (p *Policy) InitDefaults() {
 	p.Filter.InitDefaults()
 }
 
-func (p *Policy) initDefaults(t PolicyType) error {
+func (p *Policy) initDefaults(t PolicyType) {
 	p.InitDefaults()
-	if p.Type != "" && p.Type != t {
-		return serrors.New("Specified policy type does not match",
-			"expected", t, "actual", p.Type)
+	if p.Type == "" {
+		p.Type = t
 	}
-	p.Type = t
-	return nil
 }
 
 // ParsePolicyYaml parses the policy in yaml format and initializes the default values.
 func ParsePolicyYaml(b []byte, t PolicyType) (*Policy, error) {
 	p := &Policy{}
 	if err := yaml.UnmarshalStrict(b, p); err != nil {
-		return nil, serrors.WrapStr("Unable to parse policy", err)
+		return nil, serrors.Wrap("Unable to parse policy", err)
 	}
-	if err := p.initDefaults(t); err != nil {
-		return nil, err
+	if p.Type != "" && p.Type != t {
+		return nil, serrors.New("specified policy type does not match",
+			"expected", t, "actual", p.Type)
 	}
+	p.initDefaults(t)
 	return p, nil
 }
 
@@ -231,7 +231,7 @@ func ParsePolicyYaml(b []byte, t PolicyType) (*Policy, error) {
 func LoadPolicyFromYaml(path string, t PolicyType) (*Policy, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, serrors.WrapStr("Unable to read policy file", err, "path", path)
+		return nil, serrors.Wrap("Unable to read policy file", err, "path", path)
 	}
 	return ParsePolicyYaml(b, t)
 }
@@ -254,8 +254,7 @@ func (f *Filter) InitDefaults() {
 		f.MaxHopsLength = DefaultMaxHopsLength
 	}
 	if f.AllowIsdLoop == nil {
-		t := true
-		f.AllowIsdLoop = &t
+		f.AllowIsdLoop = ptr.To(true)
 	}
 }
 

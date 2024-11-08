@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion-pki_trc_sign:
 
 scion-pki trc sign
@@ -21,6 +23,9 @@ naming pattern::
 
 An alternative name can be specified with the \--out flag.
 
+If 'dummy' is provided as the payload file, a dummy TRC payload is signed. This is useful for
+testing access to the necessary cryptographic material, especially in preparation for
+a TRC signing ceremony.
 
 
 ::
@@ -41,11 +46,12 @@ Options
 ::
 
   -h, --help             help for sign
+      --kms string       The uri to configure a Cloud KMS or an HSM.
   -o, --out string       Output file path. If --out is set, --out-dir is ignored.
       --out-dir string   Output directory. If --out is set, --out-dir is ignored. (default ".")
 
 SEE ALSO
 ~~~~~~~~
 
-* `scion-pki trc <scion-pki_trc.html>`_ 	 - Manage TRCs for the SCION control plane PKI
+* :ref:`scion-pki trc <scion-pki_trc>` 	 - Manage TRCs for the SCION control plane PKI
 

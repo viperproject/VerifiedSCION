@@ -23,7 +23,7 @@ package slayers
 
 import (
 	"encoding/binary"
-	"net"
+	"net/netip"
 
 	"github.com/google/gopacket"
 
@@ -269,8 +269,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ assert &buf[6:8][0] == &buf[6] && &buf[6:8][1] == &buf[7]
 	binary.BigEndian.PutUint16(buf[6:8], s.PayloadLen)
 	buf[8] = uint8(s.PathType)
-	buf[9] = uint8(s.DstAddrType&0x7)<<4 | uint8(s.SrcAddrType&0x7)
-	// @ assert &buf[10:12][0] == &buf[10] && &buf[10:12][1] == &buf[11]
+	buf[9] = uint8(s.DstAddrType&0xF)<<4 | uint8(s.SrcAddrType&0xF)
 	binary.BigEndian.PutUint16(buf[10:12], 0)
 	// @ fold acc(sl.Bytes(uSerBufN, 0, len(uSerBufN)), writePerm)
 	// @ ghost if s.EqPathType(ubuf) {
@@ -376,13 +375,9 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
 	// @ b.ByteValue(data[8])
 	s.PathType = path.Type(data[8])
-	// @ assert 0 <= s.PathType && s.PathType < 256
-	s.DstAddrType = AddrType(data[9] >> 4 & 0x7)
-	// @ assert int(s.DstAddrType) == b.BitAnd7(int(data[9] >> 4))
-	s.SrcAddrType = AddrType(data[9] & 0x7)
-	// @ assert int(s.SrcAddrType) == b.BitAnd7(int(data[9]))
-	// @ fold acc(sl.Bytes(data, 0, len(data)), R41)
-	// @ )
+	s.DstAddrType = AddrType(data[9] >> 4 & 0xF)
+	s.SrcAddrType = AddrType(data[9] & 0xF)
+
 	// Decode address header.
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
 	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), R41)
@@ -602,231 +597,67 @@ func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 	}
 }
 
-// DstAddr parses the destination address into a net.Addr. The returned net.Addr references data
-// from the underlaying layer data. Changing the net.Addr object might lead to inconsistent layer
-// information and thus should be treated read-only. Instead, SetDstAddr should be used to update
-// the destination address.
-// @ requires acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
-// @ requires s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
-// @ requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R15)
-// @ ensures  acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
-// @ ensures  err == nil ==> acc(res.Mem(), R15)
-// @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
-// @ ensures  err == nil ==>
-// @ 	let rawDstAddr := s.RawDstAddr in
-// @ 	(acc(res.Mem(), R15) --* acc(sl.Bytes(rawDstAddr, 0, len(rawDstAddr)), R15))
-// @ ensures  err != nil ==>
-// @ 	acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R15)
-// @ ensures  err != nil ==> err.ErrorMem()
-// @ decreases
-func (s *SCION) DstAddr() (res net.Addr, err error) {
-	return parseAddr(s.DstAddrType, s.RawDstAddr)
+// DstAddr parses the destination address into a addr.Host.
+func (s *SCION) DstAddr() (addr.Host, error) {
+	return ParseAddr(s.DstAddrType, s.RawDstAddr)
 }
 
-// SrcAddr parses the source address into a net.Addr. The returned net.Addr references data from the
-// underlaying layer data. Changing the net.Addr object might lead to inconsistent layer information
-// and thus should be treated read-only. Instead, SetDstAddr should be used to update the source
-// address.
-// @ requires  acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
-// @ requires  s.SrcAddrType == T4Svc ==> len(s.RawSrcAddr) >= addr.HostLenSVC
-// @ requires  acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R15)
-// @ ensures   acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
-// @ ensures   err == nil ==> acc(res.Mem(), R15)
-// @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
-// @ ensures   err == nil ==>
-// @ 	let rawSrcAddr := s.RawSrcAddr in
-// @ 	(acc(res.Mem(), R15) --* acc(sl.Bytes(rawSrcAddr, 0, len(rawSrcAddr)), R15))
-// @ ensures   err != nil ==>
-// @ 	acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R15)
-// @ ensures   err != nil ==> err.ErrorMem()
-// @ decreases
-func (s *SCION) SrcAddr() (res net.Addr, err error) {
-	return parseAddr(s.SrcAddrType, s.RawSrcAddr)
+// SrcAddr parses the source address into a addr.Host.
+func (s *SCION) SrcAddr() (addr.Host, error) {
+	return ParseAddr(s.SrcAddrType, s.RawSrcAddr)
 }
 
 // SetDstAddr sets the destination address and updates the DstAddrType field accordingly.
-// SetDstAddr takes ownership of dst and callers should not write to it after calling SetDstAddr.
-// Changes to dst might leave the layer in an inconsistent state.
-// @ requires  acc(&s.RawDstAddr)
-// @ requires  acc(&s.DstAddrType)
-// @ requires  wildcard ==> acc(dst.Mem(), _)
-// @ requires  !wildcard ==> acc(dst.Mem(), R18)
-// @ ensures   isIP(dst) ==> res == nil
-// @ ensures   isHostSVC(dst) ==> res == nil
-// @ ensures   acc(&s.RawDstAddr) && acc(&s.DstAddrType)
-// @ ensures   res != nil ==> res.ErrorMem()
-// @ ensures   res == nil ==> isIP(dst) || isHostSVC(dst)
-// @ ensures   res == nil && wildcard && isIP(dst) ==> acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), _)
-// @ ensures   res == nil && wildcard && isHostSVC(dst) ==> sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
-// @ ensures   res == nil && !wildcard && isHostSVC(dst) ==> sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
-// @ ensures   res == nil && !wildcard ==> acc(dst.Mem(), R18)
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[12+i]))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (!isIPv4(dst) && !isIPv6(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==> len(s.RawDstAddr) == len(dst.(*net.IPAddr).IP)))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr) + 12))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (!isIPv4(dst) && !isIPv6(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
-// @ ensures   (res == nil) == (typeOf(dst) == type[*net.IPAddr] || typeOf(dst) == type[addr.HostSVC])
-// @ decreases
-func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res error) {
+func (s *SCION) SetDstAddr(dst addr.Host) error {
 	var err error
-	var verScionTmp []byte
-	s.DstAddrType, verScionTmp, err = packAddr(dst /*@ , wildcard @*/)
-	// @ ghost if !wildcard && err == nil && isIP(dst) {
-	// @   apply acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(dst.Mem(), R20)
-	// @ }
-	s.RawDstAddr = verScionTmp
+	s.DstAddrType, s.RawDstAddr, err = PackAddr(dst)
 	return err
 }
 
 // SetSrcAddr sets the source address and updates the DstAddrType field accordingly.
-// SetSrcAddr takes ownership of src and callers should not write to it after calling SetSrcAddr.
-// Changes to src might leave the layer in an inconsistent state.
-// @ requires  acc(&s.RawSrcAddr)
-// @ requires  acc(&s.SrcAddrType)
-// @ requires  wildcard ==> acc(src.Mem(), _)
-// @ requires  !wildcard ==> acc(src.Mem(), R18)
-// @ ensures   isIP(src) ==> res == nil
-// @ ensures   isHostSVC(src) ==> res == nil
-// @ ensures   acc(&s.RawSrcAddr) && acc(&s.SrcAddrType)
-// @ ensures   res != nil ==> res.ErrorMem()
-// @ ensures   res == nil ==> isIP(src) || isHostSVC(src)
-// @ ensures   res == nil && wildcard && isIP(src) ==> acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
-// @ ensures   res == nil && wildcard && isHostSVC(src) ==> sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
-// @ ensures   res == nil && !wildcard && isHostSVC(src) ==> sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
-// @ ensures   res == nil && !wildcard ==> acc(src.Mem(), R18)
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[12+i]))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (!isIPv4(src) && !isIPv6(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv4(src) ==> len(s.RawSrcAddr) == len(src.(*net.IPAddr).IP)))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr) + 12))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (!isIPv4(src) && !isIPv6(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
-// @ ensures   (res == nil) == (typeOf(src) == type[*net.IPAddr] || typeOf(src) == type[addr.HostSVC])
-// @ decreases
-func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error) {
+func (s *SCION) SetSrcAddr(src addr.Host) error {
 	var err error
-	var verScionTmp []byte
-	s.SrcAddrType, verScionTmp, err = packAddr(src /*@ , wildcard @*/)
-	// @ ghost if !wildcard && err == nil && isIP(src) {
-	// @   apply acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(src.Mem(), R20)
-	// @ }
-	s.RawSrcAddr = verScionTmp
+	s.SrcAddrType, s.RawSrcAddr, err = PackAddr(src)
 	return err
 }
 
-// @ requires addrType == T4Svc ==> len(raw) >= addr.HostLenSVC
-// @ requires acc(sl.Bytes(raw, 0, len(raw)), R15)
-// @ ensures  err == nil ==> acc(res.Mem(), R15)
-// @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
-// @ ensures  err == nil ==>
-// @ 	(acc(res.Mem(), R15) --* acc(sl.Bytes(raw, 0, len(raw)), R15))
-// @ ensures  err != nil ==> acc(sl.Bytes(raw, 0, len(raw)), R15)
-// @ ensures  err != nil ==> err.ErrorMem()
-// @ decreases
-func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
+func ParseAddr(addrType AddrType, raw []byte) (addr.Host, error) {
 	switch addrType {
 	case T4Ip:
-		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
-		// @ unfold acc(sl.Bytes(raw, 0, len(raw)), R15)
-		// @ fold acc(verScionTmp.Mem(), R15)
-		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* acc(sl.Bytes(raw, 0, len(raw)), R15)) {
-		// @ 	assert acc(&verScionTmp.IP, R50) && verScionTmp.IP === raw
-		// @ 	unfold acc(verScionTmp.Mem(), R15)
-		// @ 	fold acc(sl.Bytes(raw, 0, len(raw)), R15)
-		// @ }
-		return verScionTmp, nil
+		var raw4 [4]byte
+		copy(raw4[:], raw)
+		return addr.HostIP(netip.AddrFrom4(raw4)), nil
 	case T4Svc:
-		// @ unfold acc(sl.Bytes(raw, 0, len(raw)), R15)
-		verScionTmp := addr.HostSVC(binary.BigEndian.Uint16(raw[:addr.HostLenSVC]))
-		// @ fold acc(sl.Bytes(raw, 0, len(raw)), R15)
-		// @ fold acc(verScionTmp.Mem(), R15)
-		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* acc(sl.Bytes(raw, 0, len(raw)), R15)) { }
-		return verScionTmp, nil
+		svc := addr.SVC(binary.BigEndian.Uint16(raw[:2]))
+		return addr.HostSVC(svc), nil
 	case T16Ip:
-		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
-		// @ unfold acc(sl.Bytes(raw, 0, len(raw)), R15)
-		// @ fold acc(verScionTmp.Mem(), R15)
-		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* acc(sl.Bytes(raw, 0, len(raw)), R15)) {
-		// @ 	assert acc(&verScionTmp.IP, R50) && verScionTmp.IP === raw
-		// @ 	unfold acc(verScionTmp.Mem(), R15)
-		// @ 	fold acc(sl.Bytes(raw, 0, len(raw)), R15)
-		// @ }
-		return verScionTmp, nil
+		var raw16 [16]byte
+		copy(raw16[:], raw)
+		return addr.HostIP(netip.AddrFrom16(raw16)), nil
 	}
-	return nil, serrors.New("unsupported address type/length combination",
+	return addr.Host{}, serrors.New("unsupported address type/length combination",
 		"type", addrType, "len", addrType.Length())
 }
 
-// @ requires  wildcard ==> acc(hostAddr.Mem(), _)
-// @ requires  !wildcard ==> acc(hostAddr.Mem(), R19)
-// @ ensures   !wildcard ==> acc(hostAddr.Mem(), R20)
-// @ ensures   hostAddr === old(hostAddr)
-// @ ensures   isIP(hostAddr) ==> err == nil
-// @ ensures   isHostSVC(hostAddr) ==> err == nil
-// @ ensures   err == nil ==> isIP(hostAddr) || isHostSVC(hostAddr)
-// @ ensures   err != nil ==> err.ErrorMem()
-// @ ensures   err == nil && wildcard && isIP(hostAddr) ==> acc(sl.Bytes(b, 0, len(b)), _)
-// @ ensures   err == nil && wildcard && isHostSVC(hostAddr) ==> sl.Bytes(b, 0, len(b))
-// @ ensures   err == nil && !wildcard && isHostSVC(hostAddr) ==> sl.Bytes(b, 0, len(b))
-// @ ensures   err == nil && !wildcard && isHostSVC(hostAddr) ==> acc(hostAddr.Mem(), R20)
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> acc(sl.Bytes(b, 0, len(b)), R20)
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (acc(sl.Bytes(b, 0, len(b)), R20) --* acc(hostAddr.Mem(), R20))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv4(hostAddr) ==> len(b) == len(hostAddr.(*net.IPAddr).IP)))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b) + 12))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
-// @ ensures   (err == nil) == (typeOf(hostAddr) == type[*net.IPAddr] || typeOf(hostAddr) == type[addr.HostSVC])
-// @ decreases
-func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType, b []byte, err error) {
-	switch a := hostAddr.(type) {
-	case *net.IPAddr:
-		// @ ghost if wildcard {
-		// @     unfold acc(hostAddr.Mem(), _)
-		// @ } else {
-		// @ 	 unfold acc(hostAddr.Mem(), R20)
-		// @ }
-		if ip := a.IP.To4( /*@ wildcard @*/ ); ip != nil {
-			// @ ghost if !wildcard && isIPv6(a) {
-			// @   assert isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &a.IP[12+i]
-			// @ }
-			// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
-			// @ ghost if wildcard {
-			// @   fold acc(sl.Bytes(ip, 0, len(ip)), _)
-			// @ } else {
-			// @   fold acc(sl.Bytes(ip, 0, len(ip)), R20)
-			// @   package acc(sl.Bytes(ip, 0, len(ip)), R20) --* acc(hostAddr.Mem(), R20) {
-			// @     unfold acc(sl.Bytes(ip, 0, len(ip)), R20)
-			// @     fold acc(hostAddr.Mem(), R20)
-			// @   }
-			// @ }
-			return T4Ip, ip, nil
+func PackAddr(host addr.Host) (AddrType, []byte, error) {
+	switch host.Type() {
+	case addr.HostTypeIP:
+		// The IP is potentially IPv4-in-IPv6. We need to unmap it to ensure
+		// we only have true IPv4 or IPv6 addresses.
+		ip := host.IP().Unmap()
+		if !ip.IsValid() {
+			break
 		}
-		// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
-		verScionTmp := a.IP
-		// @ ghost if wildcard {
-		// @   fold acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), _)
-		// @ } else {
-		// @   fold acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20)
-		// @   package acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(hostAddr.Mem(), R20) {
-		// @     unfold acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20)
-		// @     fold acc(hostAddr.Mem(), R20)
-		// @   }
-		// @ }
-		return T16Ip, verScionTmp, nil
-	case addr.HostSVC:
-		verScionTmp := a.PackWithPad(2)
-		// @ fold sl.Bytes(verScionTmp, 0, len(verScionTmp))
-		return T4Svc, verScionTmp, nil
+		if ip.Is6() {
+			return T16Ip, ip.AsSlice(), nil
+		}
+		return T4Ip, ip.AsSlice(), nil
+	case addr.HostTypeSVC:
+		raw := make([]byte, 4)
+		binary.BigEndian.PutUint16(raw, uint16(host.SVC()))
+		return T4Svc, raw, nil
 	}
-	return 0, nil, serrors.New("unsupported address", "addr", hostAddr)
+	return 0, nil, serrors.New("unsupported address", "addr", host)
 }
 
 // AddrHdrLen returns the length of the address header (destination and source ISD-AS-Host triples)

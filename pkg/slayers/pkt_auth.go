@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // This file includes the SPAO header implementation as specified
-// in https://scion.docs.anapaya.net/en/latest/protocols/authenticator-option.html
+// in https://docs.scion.org/en/latest/protocols/authenticator-option.html
 
 // The Authenticator option format is as follows:
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -21,9 +21,9 @@
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |                   Security Parameter Index                    |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |    Algorithm  |                    Timestamp                  |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |      RSV      |                  Sequence Number              |
+// |    Algorithm  |      RSV      |                               |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+							   |
+// |                   Timestamp / Sequence Number                 |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |                                                               |
 // +                                                               +
@@ -53,15 +53,13 @@ const (
 )
 
 const (
-	PacketAuthLater uint8 = iota
-	PacketAuthEarlier
+	// PacketAuthOptionMetadataLen is the size of the SPAO Metadata and
+	// corresponds the minimum size of the SPAO OptData.
+	// The SPAO header contains the following fixed-length fields:
+	// SPI (4 Bytes), Algorithm (1 Byte), RSV (1 Byte) and
+	// Timestamp / Sequence Number (6 Bytes).
+	PacketAuthOptionMetadataLen = 12
 )
-
-// MinPacketAuthDataLen is the minimum size of the SPAO OptData.
-// The SPAO header contains the following fixed-length fields:
-// SPI (4 Bytes), Algorithm (1 Byte), Timestamp (3 Bytes),
-// RSV (1 Byte) and Sequence Number (3 Bytes).
-const MinPacketAuthDataLen = 12
 
 // PacketAuthSPI (Security Parameter Index) is the identifier for the key
 // used for the packet authentication option. DRKey values are in the
@@ -69,24 +67,17 @@ const MinPacketAuthDataLen = 12
 type PacketAuthSPI uint32
 
 func (p PacketAuthSPI) Type() uint8 {
-	if p&(1<<18) == 0 {
+	if p&(1<<17) == 0 {
 		return PacketAuthASHost
 	}
 	return PacketAuthHostHost
 }
 
 func (p PacketAuthSPI) Direction() uint8 {
-	if p&(1<<17) == 0 {
+	if p&(1<<16) == 0 {
 		return PacketAuthSenderSide
 	}
 	return PacketAuthReceiverSide
-}
-
-func (p PacketAuthSPI) Epoch() uint8 {
-	if p&(1<<16) == 0 {
-		return PacketAuthLater
-	}
-	return PacketAuthEarlier
 }
 
 func (p PacketAuthSPI) DRKeyProto() uint16 {
@@ -101,7 +92,6 @@ func MakePacketAuthSPIDRKey(
 	proto uint16,
 	drkeyType uint8,
 	dir uint8,
-	epoch uint8,
 ) (PacketAuthSPI, error) {
 
 	if proto < 1 {
@@ -113,12 +103,8 @@ func MakePacketAuthSPIDRKey(
 	if dir > 1 {
 		return 0, serrors.New("Invalid DRKeyDirection value")
 	}
-	if epoch > 1 {
-		return 0, serrors.New("Invalid DRKeyEpochType value")
-	}
-	spi := uint32((drkeyType & 0x1)) << 18
-	spi |= uint32((dir & 0x1)) << 17
-	spi |= uint32((epoch & 0x1)) << 16
+	spi := uint32((drkeyType & 0x1)) << 17
+	spi |= uint32((dir & 0x1)) << 16
 	spi |= uint32(proto)
 
 	return PacketAuthSPI(spi), nil
@@ -134,11 +120,10 @@ const (
 )
 
 type PacketAuthOptionParams struct {
-	SPI            PacketAuthSPI
-	Algorithm      PacketAuthAlg
-	Timestamp      uint32
-	SequenceNumber uint32
-	Auth           []byte
+	SPI         PacketAuthSPI
+	Algorithm   PacketAuthAlg
+	TimestampSN uint64
+	Auth        []byte
 }
 
 // PacketAuthOption wraps an EndToEndOption of OptTypeAuthenticator.
@@ -169,7 +154,7 @@ func ParsePacketAuthOption(o *EndToEndOption) (PacketAuthOption, error) {
 		return PacketAuthOption{},
 			serrors.New("wrong option type", "expected", OptTypeAuthenticator, "actual", o.OptType)
 	}
-	if len(o.OptData) < MinPacketAuthDataLen {
+	if len(o.OptData) < PacketAuthOptionMetadataLen {
 		return PacketAuthOption{},
 			serrors.New("buffer too short", "expected at least", 12, "actual", len(o.OptData))
 	}
@@ -182,16 +167,13 @@ func (o PacketAuthOption) Reset(
 	p PacketAuthOptionParams,
 ) error {
 
-	if p.Timestamp >= (1 << 24) {
-		return serrors.New("Timestamp value should be smaller than 2^24")
-	}
-	if p.SequenceNumber >= (1 << 24) {
-		return serrors.New("Sequence number should be smaller than 2^24")
+	if p.TimestampSN >= (1 << 48) {
+		return serrors.New("Timestamp value should be smaller than 2^48")
 	}
 
 	o.OptType = OptTypeAuthenticator
 
-	n := MinPacketAuthDataLen + len(p.Auth)
+	n := PacketAuthOptionMetadataLen + len(p.Auth)
 	if n <= cap(o.OptData) {
 		o.OptData = o.OptData[:n]
 	} else {
@@ -199,13 +181,8 @@ func (o PacketAuthOption) Reset(
 	}
 	binary.BigEndian.PutUint32(o.OptData[:4], uint32(p.SPI))
 	o.OptData[4] = byte(p.Algorithm)
-	o.OptData[5] = byte(p.Timestamp >> 16)
-	o.OptData[6] = byte(p.Timestamp >> 8)
-	o.OptData[7] = byte(p.Timestamp)
-	o.OptData[8] = byte(0)
-	o.OptData[9] = byte(p.SequenceNumber >> 16)
-	o.OptData[10] = byte(p.SequenceNumber >> 8)
-	o.OptData[11] = byte(p.SequenceNumber)
+	o.OptData[5] = byte(0)
+	bigEndianPutUint48(o.OptData[6:12], p.TimestampSN)
 	copy(o.OptData[12:], p.Auth)
 
 	o.OptAlign = [2]uint8{4, 2}
@@ -226,13 +203,8 @@ func (o PacketAuthOption) Algorithm() PacketAuthAlg {
 }
 
 // Timestamp returns the value set in the homonym field in the extension.
-func (o PacketAuthOption) Timestamp() uint32 {
-	return uint32(o.OptData[5])<<16 + uint32(o.OptData[6])<<8 + uint32(o.OptData[7])
-}
-
-// SequenceNumber returns the value set in the homonym field in the extension.
-func (o PacketAuthOption) SequenceNumber() uint32 {
-	return uint32(o.OptData[9])<<16 + uint32(o.OptData[10])<<8 + uint32(o.OptData[11])
+func (o PacketAuthOption) TimestampSN() uint64 {
+	return bigEndianUint48(o.OptData[6:12])
 }
 
 // Authenticator returns slice of the underlying auth buffer.
@@ -240,4 +212,15 @@ func (o PacketAuthOption) SequenceNumber() uint32 {
 // the extension is serialized.
 func (o PacketAuthOption) Authenticator() []byte {
 	return o.OptData[12:]
+}
+
+func bigEndianUint48(b []byte) uint64 {
+	return uint64(b[0])<<40 + uint64(b[1])<<32 +
+		uint64(binary.BigEndian.Uint32(b[2:6]))
+}
+
+func bigEndianPutUint48(b []byte, v uint64) {
+	b[0] = byte(v >> 40)
+	b[1] = byte(v >> 32)
+	binary.BigEndian.PutUint32(b[2:6], uint32(v))
 }

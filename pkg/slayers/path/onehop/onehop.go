@@ -210,11 +210,11 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 func (o *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	sp, err := o.ToSCIONDecoded( /*@ ubuf @*/ )
 	if err != nil {
-		return nil, serrors.WrapStr("converting to scion path", err)
+		return nil, serrors.Wrap("converting to scion path", err)
 	}
 	// increment the path, since we are at the receiver side.
-	if err := sp.IncPath( /*@ ubuf @*/ ); err != nil {
-		return nil, serrors.WrapStr("incrementing path", err)
+	if err := sp.IncPath(); err != nil {
+		return nil, serrors.Wrap("incrementing path", err)
 	}
 	return sp.Reverse( /*@ ubuf @*/ )
 }

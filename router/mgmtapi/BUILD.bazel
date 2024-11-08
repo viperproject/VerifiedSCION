@@ -1,17 +1,10 @@
 load("//tools/lint:go.bzl", "go_library", "go_test")
-load("@com_github_scionproto_scion//rules_openapi:defs.bzl", "openapi_generate_go")
+load("//private/mgmtapi:api.bzl", "openapi_docs", "openapi_generate_go")
 
-genrule(
-    name = "bundle",
-    srcs = ["//spec:router"],
-    outs = ["index.html"],
-    cmd = (
-        "$(execpath @rules_openapi_npm//redoc-cli/bin:redoc-cli) " +
-        "bundle $(location //spec:router) " +
-        "-o $@"
-    ),
-    tools = ["@rules_openapi_npm//redoc-cli/bin:redoc-cli"],
-    visibility = ["//visibility:public"],
+openapi_docs(
+    name = "doc",
+    src = "//spec:router",
+    out = "index.html",
 )
 
 openapi_generate_go(
@@ -30,7 +23,7 @@ go_library(
         ":api_generated",  # keep
     ],
     embedsrcs = select({
-        "//:mgmtapi_bundle_doc_build": [":bundle"],
+        "//:mgmtapi_bundle_doc_build": [":doc"],
         "//conditions:default": [":dummy.html"],
     }),  # keep
     importpath = "github.com/scionproto/scion/router/mgmtapi",
@@ -39,10 +32,9 @@ go_library(
         "//pkg/addr:go_default_library",
         "//private/mgmtapi:go_default_library",
         "//router/control:go_default_library",
-        "@com_github_deepmap_oapi_codegen//pkg/runtime:go_default_library",  # keep
         "@com_github_getkin_kin_openapi//openapi3:go_default_library",  # keep
         "@com_github_go_chi_chi_v5//:go_default_library",  # keep
-        "@com_github_pkg_errors//:go_default_library",  # keep
+        "@com_github_oapi_codegen_runtime//:go_default_library",  # keep
     ],
 )
 
@@ -52,6 +44,8 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
+        "//pkg/addr:go_default_library",
+        "//pkg/private/ptr:go_default_library",
         "//pkg/private/serrors:go_default_library",
         "//pkg/private/xtest:go_default_library",
         "//private/topology:go_default_library",

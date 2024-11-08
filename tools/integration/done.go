@@ -27,7 +27,7 @@ import (
 // ListenDone opens a RPC server to listen for done signals.
 func ListenDone(dir string, onDone func(src, dst addr.IA)) (string, func(), error) {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		return "", nil, serrors.WrapStr("creating socket directory", err)
+		return "", nil, serrors.Wrap("creating socket directory", err)
 	}
 	file, err := os.CreateTemp(dir, "integration-*.sock")
 	if err != nil {
@@ -47,7 +47,9 @@ func ListenDone(dir string, onDone func(src, dst addr.IA)) (string, func(), erro
 	srv := progress.Server{OnDone: onDone}
 	go func() {
 		defer log.HandlePanic()
-		srv.Serve(l)
+		if err := srv.Serve(l); err != nil {
+			log.Error("listening for done signals", "err", err)
+		}
 	}()
 	return name, func() { os.Remove(name) }, nil
 }

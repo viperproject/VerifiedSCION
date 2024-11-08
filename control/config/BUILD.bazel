@@ -11,7 +11,6 @@ go_library(
     importpath = "github.com/scionproto/scion/control/config",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/addr:go_default_library",
         "//pkg/drkey:go_default_library",
         "//pkg/log:go_default_library",
         "//pkg/private/serrors:go_default_library",
@@ -22,7 +21,6 @@ go_library(
         "//private/mgmtapi/jwtauth:go_default_library",
         "//private/storage:go_default_library",
         "//private/trust/config:go_default_library",
-        "@af_inet_netaddr//:go_default_library",
     ],
 )
 
@@ -41,8 +39,7 @@ go_test(
         "//private/mgmtapi/mgmtapitest:go_default_library",
         "//private/storage:go_default_library",
         "//private/storage/test:go_default_library",
-        "@af_inet_netaddr//:go_default_library",
-        "@com_github_pelletier_go_toml//:go_default_library",
+        "@com_github_pelletier_go_toml_v2//:go_default_library",
         "@com_github_stretchr_testify//assert:go_default_library",
         "@com_github_stretchr_testify//require:go_default_library",
     ],

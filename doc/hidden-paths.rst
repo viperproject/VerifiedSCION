@@ -2,7 +2,12 @@
 Hidden Paths
 ************
 
-This file documents the design for the hidden paths infrastructure.
+.. admonition:: TODO
+
+   Add the EPIC-HP overview documentation (from the design document).
+
+   Move configuration file description to the Manual section.
+
 
 Overview
 ========
@@ -144,7 +149,7 @@ Below is an example registration configuration.
 
 Segments constructed via interfaces not listed in the registration policy will not
 be registered at all. This default prevents the scenario where an AS that wants to stay
-hidden adds an new interface, and announces paths to itself without realizing.
+hidden adds a new interface, and announces paths to itself without realizing.
 
 Example complete configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
