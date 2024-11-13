@@ -27,6 +27,7 @@ func Unwrap(err error) (res error)
 // it implements a method Is(error) bool such that Is(target) returns true.
 preserves err    != nil ==> err.ErrorMem()
 preserves target != nil ==> target.ErrorMem()
+ensures   res && target != nil ==> err != nil
 decreases err.ErrorMem()
 func Is(err, target error) (res bool)
 
@@ -68,7 +69,6 @@ type ErrorCell interface {
 	// This is not meant to be called. Instead,
 	// it shows that Mem() is strong enough to
 	// allow for the assignment of an error.
-	ghost
 	requires  Mem() && CanSet(e)
 	ensures   Mem() && Get() === e
 	decreases

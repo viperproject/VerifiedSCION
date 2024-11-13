@@ -68,3 +68,10 @@ ensures 3 & 1 == 1
 ensures 3 & 2 == 2
 decreases
 pure func InfoFieldFirstByteSerializationLemmas() bool
+
+ghost
+ensures csum > 0xffff ==>
+	let newCsum := (csum >> 16) + (csum & 0xffff) in
+	newCsum < csum
+decreases
+pure func FoldChecksumLemma(csum uint32) struct{}

@@ -32,89 +32,74 @@ import (
 
 ghost
 opaque
-requires dp.Valid()
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 requires slayers.ValidPktMetaHdr(raw)
 decreases
-pure func absPkt(dp io.DataPlaneSpec, raw []byte) (res io.IO_pkt2) {
+pure func absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetAddressOffset(raw) in
-		let _ := Asserting(forall k int :: {&raw[headerOffset:headerOffset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
-			&raw[headerOffset:headerOffset+scion.MetaLen][k] == &raw[headerOffset + k]) in
-		let hdr := (unfolding acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56) in
+		let headerOffsetWithMetaLen := headerOffset + scion.MetaLen in
+		let hdr := (unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
 			binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen])) in
 		let metaHdr := scion.DecodedFrom(hdr) in
-		let currINFIdx := int(metaHdr.CurrINF) in
-		let currHFIdx := int(metaHdr.CurrHF) in
+		let currInfIdx := int(metaHdr.CurrINF) in
+		let currHfIdx := int(metaHdr.CurrHF) in
 		let seg1Len := int(metaHdr.SegLen[0]) in
 		let seg2Len := int(metaHdr.SegLen[1]) in
 		let seg3Len := int(metaHdr.SegLen[2]) in
-		let segLen := scion.LengthOfCurrSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
-		let prevSegLen := scion.LengthOfPrevSeg(currHFIdx, seg1Len, seg2Len, seg3Len) in
-		let numINF := scion.NumInfoFields(seg1Len, seg2Len, seg3Len) in
-		let offset := scion.HopFieldOffset(numINF, 0, headerOffset) in
-		io.IO_pkt2(io.IO_Packet2{
-			CurrSeg : scion.CurrSeg(raw, offset+prevSegLen, currINFIdx, currHFIdx-prevSegLen, segLen, headerOffset),
-			LeftSeg : scion.LeftSeg(raw, currINFIdx + 1, seg1Len, seg2Len , seg3Len, headerOffset),
-			MidSeg : scion.MidSeg(raw, currINFIdx + 2, seg1Len, seg2Len , seg3Len, headerOffset),
-			RightSeg : scion.RightSeg(raw, currINFIdx - 1, seg1Len, seg2Len , seg3Len, headerOffset),
-		})
+		let segs := io.CombineSegLens(seg1Len, seg2Len, seg3Len) in
+		let segLen := segs.LengthOfCurrSeg(currHfIdx) in
+		let prevSegLen := segs.LengthOfPrevSeg(currHfIdx) in
+		let numINF := segs.NumInfoFields() in
+		let offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen) in
+		io.IO_Packet2 {
+			CurrSeg : scion.CurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen),
+			LeftSeg : scion.LeftSeg(raw, currInfIdx + 1, segs, headerOffsetWithMetaLen),
+			MidSeg : scion.MidSeg(raw, currInfIdx + 2, segs, headerOffsetWithMetaLen),
+			RightSeg : scion.RightSeg(raw, currInfIdx - 1, segs, headerOffsetWithMetaLen),
+		}
 }
 
 ghost
-requires len(hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
-decreases
-pure func hvfSet(hopfield io.IO_HF) set[io.IO_msgterm] {
-	return let l := hopfield.HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_ in
-		l[len(l) - 1].MsgTerm_FS_
-}
-
-ghost
-requires 0 < len(hopfields)
-requires 0 <= currHFIdx && currHFIdx <= len(hopfields)
-requires forall idx int :: {hopfields[idx]} 0 <= idx && idx < len(hopfields) ==>
-	len(hopfields[idx].HVF.MsgTerm_Hash_.MsgTerm_MPair_2.MsgTerm_L_) > 0
-decreases
-pure func uInfo(hopfields seq[io.IO_HF], currHFIdx int, consDir bool) set[io.IO_msgterm] {
-	return currHFIdx + 1 >= len(hopfields) ?
-		hvfSet(hopfields[len(hopfields)-1]) :
-		(consDir ?
-			hvfSet(hopfields[currHFIdx]) :
-			hvfSet(hopfields[currHFIdx+1]))
-}
-
-ghost
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Unsupported
 ensures val.IO_val_Unsupported_1 == path.ifsToIO_ifs(ingressID)
 decreases
 pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val) {
 	return io.IO_val(io.IO_val_Unsupported{
 		path.ifsToIO_ifs(ingressID),
-		io.Unit(io.Unit_{}),
+		io.Unit{},
 	})
 }
 
 ghost
 opaque
-requires dp.Valid()
-requires acc(sl.AbsSlice_Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
-pure func absIO_val(dp io.DataPlaneSpec, raw []byte, ingressID uint16) (val io.IO_val) {
+pure func absIO_val(raw []byte, ingressID uint16) (val io.IO_val) {
 	return (reveal slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)) ?
-		io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(dp, raw)}) :
+		io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(raw)}) :
 		absIO_val_Unsupported(raw, ingressID)
 }
 
 ghost
-requires dp.Valid()
-requires respr.OutPkt != nil ==>
-	acc(sl.AbsSlice_Bytes(respr.OutPkt, 0, len(respr.OutPkt)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires !slayers.IsSupportedPkt(raw)
+ensures  acc(sl.Bytes(raw, 0, len(raw)), R56)
+ensures  absIO_val(raw, ingressID).isIO_val_Unsupported
 decreases
-pure func absReturnErr(dp io.DataPlaneSpec, respr processResult) (val io.IO_val) {
+func AbsUnsupportedPktIsUnsupportedVal(raw []byte, ingressID uint16) {
+	reveal absIO_val(raw, ingressID)
+}
+
+ghost
+requires respr.OutPkt != nil ==>
+	acc(sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt)), R56)
+decreases
+pure func absReturnErr(respr processResult) (val io.IO_val) {
 	return respr.OutPkt == nil ? io.IO_val_Unit{} :
-		absIO_val(dp, respr.OutPkt, respr.EgressID)
+		absIO_val(respr.OutPkt, respr.EgressID)
 }
 
 ghost
@@ -147,8 +132,7 @@ ghost
 requires acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool {
-	return !(0 in domain(d.linkTypes)) &&
-		forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
+	return forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
 		io.IO_ifs(ifs) in domain(dp.GetLinkTypes()) &&
 		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.IO_ifs(ifs))
 }
@@ -167,28 +151,57 @@ pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 ghost
 requires acc(d.Mem(), _)
 requires d.DpAgreesWithSpec(dp)
-ensures acc(&d.linkTypes, _) && (d.linkTypes != nil ==> acc(d.linkTypes, _))
-ensures d.dpSpecWellConfiguredLinkTypes(dp)
+requires d.WellConfigured()
+ensures  acc(&d.linkTypes, _)
+ensures  d.linkTypes != nil ==> acc(d.linkTypes, _) && !(0 in domain(d.linkTypes))
+ensures  d.dpSpecWellConfiguredLinkTypes(dp)
 decreases
 func (d *DataPlane) LinkTypesLemma(dp io.DataPlaneSpec) {
+	reveal d.WellConfigured()
 	reveal d.DpAgreesWithSpec(dp)
+	assert !(0 in d.getDomLinkTypes())
 	unfold acc(d.Mem(), _)
+	assert !(0 in domain(d.linkTypes))
 }
 
 ghost
-requires dp.Valid()
+requires acc(d.Mem(), _)
+requires d.DpAgreesWithSpec(dp)
+requires d.WellConfigured()
+requires egressID in d.getDomExternal()
+ensures  egressID != 0
+ensures  io.IO_ifs(egressID) in domain(dp.GetNeighborIAs())
+decreases
+func (d *DataPlane) EgressIDNotZeroLemma(egressID uint16, dp io.DataPlaneSpec) {
+	reveal d.WellConfigured()
+	reveal d.DpAgreesWithSpec(dp)
+}
+
+ghost
+requires acc(d.Mem(), _)
+requires acc(&d.external, _)
+requires d.external != nil ==> acc(d.external, _)
+ensures  acc(d.Mem(), _)
+ensures  acc(&d.external, _)
+ensures  d.external != nil ==> acc(d.external, _)
+ensures  d.getDomExternal() == domain(d.external)
+decreases
+func (d *DataPlane) getDomExternalLemma() {
+	if (d.external != nil) {
+		assert reveal d.getDomExternal() == unfolding acc(d.Mem(), _) in
+			(unfolding acc(accBatchConn(d.external), _) in
+					domain(d.external))
+	} else {
+		assert reveal d.getDomExternal() ==
+			unfolding acc(d.Mem(), _) in set[uint16]{}
+	}
+}
+
+ghost
 requires acc(msg.Mem(), R50)
+requires acc(sl.Bytes(msg.GetFstBuffer(), 0, len(msg.GetFstBuffer())), R50)
 decreases
-pure func MsgToAbsVal(dp io.DataPlaneSpec, msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
+pure func MsgToAbsVal(msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
 	return unfolding acc(msg.Mem(), R50) in
-		absIO_val(dp, msg.Buffers[0], ingressID)
+		absIO_val(msg.Buffers[0], ingressID)
 }
-
-// This assumption will be dropped as soon as we can establish that the contents
-// of the underlying buffer did not change between the call to `decodeLayers` and
-// `p.processSCION` in the function `processPkt` in the router.
-ghost
-ensures absPkt.isIO_val_Pkt2 ==>
-	ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(ingressID), absPkt.IO_val_Pkt2_2)
-decreases
-func TemporaryAssumeForIOWitness(absPkt io.IO_val, ingressID uint16, ioSharedArg SharedArg)

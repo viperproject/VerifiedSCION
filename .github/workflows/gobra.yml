@@ -265,7 +265,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/scion'
-          timeout: 5m
+          timeout: 30m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
@@ -395,7 +395,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
       - name: Upload the verification report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: stats_addr.json
           path: /stats/stats_addr.json
@@ -415,10 +415,15 @@ jobs:
           includePaths: ${{ env.includePaths }}
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
+          # Due to a bug introduced in https://github.com/viperproject/gobra/pull/776,
+          # we must currently disable the chopper, otherwise we well-founded orders
+          # for termination checking are not available at the chopped Viper parts.
+          # We should reenable it whenever possible, as it reduces verification time in
+          # ~8 min (20%).
+          # chop: 10
           parallelizeBranches: '1'
-          # The following flag has a significant influence on the number of branches verified.
-          # Without it, verification would take a lot longer.
           conditionalizePermissions: '1'
+          moreJoins: 'impure'
           imageVersion: ${{ env.imageVersion }}
           mceMode: 'on'
           requireTriggers: ${{ env.requireTriggers }}
@@ -427,4 +432,3 @@ jobs:
           disableNL: '0'
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
-
