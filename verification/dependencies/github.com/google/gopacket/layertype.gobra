@@ -48,6 +48,7 @@ pred LayerTypesMem() {
 }
 
 ghost
+mayInit
 requires acc(LayerTypesMem(), _)
 ensures  res == unfolding acc(LayerTypesMem(), _) in (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
 decreases
@@ -57,6 +58,7 @@ pure func Registered(t LayerType) (res bool) {
 }
 
 ghost
+mayInit
 requires acc(&ltMeta, _) && acc(&ltMetaMap, _) && acc(ltMetaMap, _) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName, _)
 ensures  res == (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
 decreases
@@ -65,6 +67,7 @@ pure func registeredDuringInit(t LayerType) (res bool) {
 }
 
 // cannot be made ghost, even though it is morally so
+mayInit
 requires acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
 requires forall t LayerType :: { registeredDuringInit(t) } !registeredDuringInit(t)
 ensures  LayerTypesMem()
@@ -90,16 +93,19 @@ var DecodersByLayerName@ = map[string]Decoder{}
 /** Globals not originally declared in this file **/
 /** Vars defined in decode.go that are required to establish preconditions of RegisterLayer. **/
 // TODO: specify and verify the creation of these decoders
+mayInit
 ensures d.Mem() && d.Mem() // d.Mem() must be duplicable!
 decreases _
 func generateDecodeUnknown() (d Decoder)
 var DecodeUnknown = generateDecodeUnknown()
 
+mayInit
 ensures d.Mem()
 decreases _
 func generateDecodePayload() (d Decoder)
 var DecodePayload = generateDecodePayload()
 
+mayInit
 ensures d.Mem()
 decreases _
 func generateDecodeFragment() (d Decoder)
@@ -136,6 +142,7 @@ func init() {
 /** End of ghost init operations **/
 
 /** Actual Methods **/
+mayInit
 requires LayerTypesMem()
 requires !Registered(LayerType(num))
 requires meta.Decoder != nil ==> meta.Decoder.Mem()
@@ -159,6 +166,7 @@ func RegisterLayerType(num int, meta LayerTypeMetadata) (res LayerType) {
 	return OverrideLayerType(num, meta)
 }
 
+mayInit
 requires LayerTypesMem()
 requires meta.Decoder != nil ==> meta.Decoder.Mem()
 ensures  LayerTypesMem()
