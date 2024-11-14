@@ -63,50 +63,45 @@ func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
 /** Global state of the package **/
 ghost const MaxPathType = maxPathType
 
-pred PkgInv() {
-	acc(&registeredPaths) &&
-	registeredKeys.Inv()  &&
-	(forall i uint16 :: 0 <= i && i < maxPathType ==>
-		registeredPaths[i].inUse == registeredKeys.FContains(i))
-}
-
 ghost
 decreases
-pure func RegisteredTypes() monotonicset.BoundedMonotonicSet {
+pure func RegisteredTypes() monoset.BoundedMonotonicSet {
 	return registeredKeys
 }
 
-
-// TODO: Drop what I can
-pred PathPackageMem() {
+pred PkgMem() {
 	acc(&registeredPaths) &&
-	acc(&strictDecoding) &&
-	forall t Type :: { &registeredPaths[t].inUse } (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==> registeredPaths[t].Metadata.New implements NewPathSpec
+	acc(&strictDecoding)  &&
+	registeredKeys.Inv()  &&
+	(forall t Type :: { &registeredPaths[t].inUse } 0 <= t && t < maxPathType ==>
+		registeredPaths[t].inUse == registeredKeys.FContains(uint16(t))) &&
+	(forall t Type :: { &registeredPaths[t].inUse } (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==>
+		registeredPaths[t].Metadata.New implements NewPathSpec)
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PathPackageMem(), _)
-ensures  res == unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
+requires acc(PkgMem(), _)
+ensures  res == unfolding acc(PkgMem(), _) in registeredPaths[t].inUse
 decreases
 pure func Registered(t Type) (res bool) {
-	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
+	return unfolding acc(PkgMem(), _) in registeredPaths[t].inUse
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PathPackageMem(), _)
+requires acc(PkgMem(), _)
 decreases
 pure func GetType(t Type) (res Metadata) {
-	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].Metadata
+	return unfolding acc(PkgMem(), _) in registeredPaths[t].Metadata
 }
 
 ghost
-requires acc(PathPackageMem(), _)
-ensures  b == unfolding acc(PathPackageMem(), _) in strictDecoding
+requires acc(PkgMem(), _)
+ensures  b == unfolding acc(PkgMem(), _) in strictDecoding
 decreases
 pure func IsStrictDecoding() (b bool) {
-	return unfolding acc(PathPackageMem(), _) in strictDecoding
+	return unfolding acc(PkgMem(), _) in strictDecoding
 }
 
 // Tge following is a closure spec, not an assumed impl.
