@@ -39,27 +39,35 @@ type LayerTypeMetadata struct {
 /** Constants **/
 const maxLayerType = 2000
 ghost const MaxLayerType = maxLayerType // can be used for spec purposes
-
 /** End of Constants **/
 
 /** Predicates and ghost helper members **/
 pred LayerTypesMem() {
-	acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
+	acc(&ltMeta)                 &&
+	acc(&ltMetaMap)              &&
+	acc(ltMetaMap)               &&
+	acc(&DecodersByLayerName, _) &&
+	acc(DecodersByLayerName)
 }
 
 ghost
-mayInit
 requires acc(LayerTypesMem(), _)
-ensures  res == unfolding acc(LayerTypesMem(), _) in (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+// TODO: drop these posts
+ensures  res == unfolding acc(LayerTypesMem(), _) in
+	0 <= t && t < MaxLayerType ?
+		ltMeta[t].inUse :
+		(t in domain(ltMetaMap) && ltMetaMap[t].inUse)
 decreases
 pure func Registered(t LayerType) (res bool) {
 	return unfolding acc(LayerTypesMem(), _) in
-		(0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+		0 <= t && t < MaxLayerType?
+			ltMeta[t].inUse :
+			(t in domain(ltMetaMap) && ltMetaMap[t].inUse)
 }
 
 ghost
-mayInit
-requires acc(&ltMeta, _) && acc(&ltMetaMap, _) && acc(ltMetaMap, _) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName, _)
+requires acc(&ltMeta, _) && acc(&ltMetaMap, _) && acc(ltMetaMap, _)
+requires acc(&DecodersByLayerName, _) && acc(DecodersByLayerName, _)
 ensures  res == (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
 decreases
 pure func registeredDuringInit(t LayerType) (res bool) {
