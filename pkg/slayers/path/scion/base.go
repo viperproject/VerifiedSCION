@@ -39,12 +39,10 @@ const (
 	PathType path.Type = 1
 )
 
-// @ requires path.PathPackageMem()
-// @ requires !path.Registered(PathType)
-// @ ensures  path.PathPackageMem()
-// @ ensures  forall t path.Type :: { old(path.Registered(t)) }{ path.Registered(t) } 0 <= t && t < path.MaxPathType ==>
-// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-// @ ensures  path.Registered(PathType)
+// @ requires path.PkgMem()
+// @ requires path.RegisteredTypes().DoesNotContain(uint16(PathType))
+// @ ensures  path.PkgMem()
+// @ ensures  path.RegisteredTypes().Contains(uint16(PathType))
 // @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
