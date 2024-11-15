@@ -751,7 +751,7 @@ pure func isHostSVC(a net.Addr) bool {
 
 // invariant established by initialization
 ghost
-ensures acc(path.PathPackageMem(), _)
+ensures acc(path.PkgMem(), _)
 decreases
 func EstablishPathPkgMem()
 

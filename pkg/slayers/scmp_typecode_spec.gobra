@@ -23,6 +23,7 @@ pred SCMPTypeCodeMem() {
 	forall i SCMPType :: { scmpTypeCodeInfo[i] } i in domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
 }
 
+mayInit
 requires acc(scmpTypeCodeInfo)
 requires forall i SCMPType :: { scmpTypeCodeInfo[i] } i in domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
 ensures SCMPTypeCodeMem()
