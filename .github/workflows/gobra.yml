@@ -21,7 +21,10 @@ env:
   checkConsistency: '1'
   imageVersion: 'latest'
   mceMode: 'od'
-  requireTriggers: '1'
+  # disabled for now, as it is unclear which triggers to
+  # provide to monoset in a way that it does not severely
+  # affect perf.
+  requireTriggers: '0'
   useZ3API: '0'
   viperBackend: 'SILICON'
   disableNL: '0'

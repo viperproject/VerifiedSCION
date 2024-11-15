@@ -27,9 +27,9 @@ const PathLen = 0
 const PathType path.Type = 0
 
 // @ requires path.PkgMem()
-// @ requires path.RegisteredTypes().DoesNotContain(uint16(PathType))
+// @ requires path.RegisteredTypes().DoesNotContain(int64(PathType))
 // @ ensures  path.PkgMem()
-// @ ensures  path.RegisteredTypes().Contains(uint16(PathType))
+// @ ensures  path.RegisteredTypes().Contains(int64(PathType))
 // @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{

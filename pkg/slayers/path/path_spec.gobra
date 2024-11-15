@@ -70,11 +70,13 @@ pure func RegisteredTypes() monoset.BoundedMonotonicSet {
 }
 
 pred PkgMem() {
-	acc(&registeredPaths) &&
-	acc(&strictDecoding)  &&
-	registeredKeys.Inv()  &&
+	acc(&registeredPaths)             &&
+	acc(&strictDecoding)              &&
+	registeredKeys.Inv()              &&
+	registeredKeys.Start == 0         &&
+	registeredKeys.End == maxPathType &&
 	(forall t Type :: { &registeredPaths[t].inUse } 0 <= t && t < maxPathType ==>
-		registeredPaths[t].inUse == registeredKeys.FContains(uint16(t))) &&
+		registeredPaths[t].inUse == registeredKeys.FContains(int64(t))) &&
 	(forall t Type :: { &registeredPaths[t].inUse } (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==>
 		registeredPaths[t].Metadata.New implements NewPathSpec)
 }

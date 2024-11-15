@@ -40,7 +40,7 @@ var (
 	strictDecoding/*@@@*/ bool = true
 )
 
-// @ ghost var registeredKeys monoset.BoundedMonotonicSet = monoset.Alloc()
+// @ ghost var registeredKeys monoset.BoundedMonotonicSet = monoset.Alloc(0, int64(maxPathType))
 
 func init() {
 	// (VerifiedSCION) initialization code to establish the pkg invariant.
@@ -148,22 +148,22 @@ type Metadata struct {
 // The PathType passed in must be unique, or a runtime panic will occur.
 // @ requires 0 <= pathMeta.Type && pathMeta.Type < maxPathType
 // @ requires PkgMem()
-// @ requires RegisteredTypes().DoesNotContain(uint16(pathMeta.Type))
+// @ requires RegisteredTypes().DoesNotContain(int64(pathMeta.Type))
 // @ requires pathMeta.New implements NewPathSpec
 // @ ensures  PkgMem()
-// @ ensures  RegisteredTypes().Contains(uint16(pathMeta.Type))
+// @ ensures  RegisteredTypes().Contains(int64(pathMeta.Type))
 // @ decreases
 func RegisterPath(pathMeta Metadata) {
 	//@ unfold PkgMem()
 	pm := registeredPaths[pathMeta.Type]
-	// @ RegisteredTypes().DoesNotContainImpliesNotFContains(uint16(pathMeta.Type))
+	// @ RegisteredTypes().DoesNotContainImpliesNotFContains(int64(pathMeta.Type))
 	if pm.inUse {
 		panic("path type already registered")
 	}
-	// @ RegisteredTypes().Add(uint16(pathMeta.Type))
+	// @ RegisteredTypes().Add(int64(pathMeta.Type))
 	registeredPaths[pathMeta.Type].inUse = true
 	registeredPaths[pathMeta.Type].Metadata = pathMeta
-	// @ RegisteredTypes().ContainsImpliesFContains(uint16(pathMeta.Type))
+	// @ RegisteredTypes().ContainsImpliesFContains(int64(pathMeta.Type))
 	//@ fold PkgMem()
 }
 
