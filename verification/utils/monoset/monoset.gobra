@@ -69,6 +69,15 @@ func (b BoundedMonotonicSet) ContainsIsDup(i int64) {
 	fold   b.Contains(i)
 }
 
+ghost
+requires acc(b.Contains(i), _)
+ensures  b.Contains(i)
+decreases
+func (b BoundedMonotonicSet) PromoteContains(i int64) {
+	unfold acc(b.Contains(i), _)
+	fold   b.Contains(i)
+}
+
 pred (b BoundedMonotonicSet) DoesNotContain(i int64) {
 	b.Start <= i && i <= b.End &&
 	i in domain(b.valuesMap) &&
