@@ -6,28 +6,20 @@
 
 // +gobra
 
-// initEnsures PkgMem()
-// initEnsures LayerTypeZero == 0
-// initEnsures LayerTypeDecodeFailure == 1
-// initEnsures LayerTypePayload == 2
-// initEnsures LayerTypeFragment == 3
-// initEnsures Registered(LayerTypeZero)
-// initEnsures Registered(LayerTypeDecodeFailure)
-// initEnsures Registered(LayerTypePayload)
-// initEnsures Registered(LayerTypeFragment)
-// initEnsures forall t LayerType :: { Registered(t) } t < 0 ==> !Registered(t)
-// initEnsures forall t LayerType :: { Registered(t) } 3 < t ==> !Registered(t)
 pkgInvariant PkgMem()
-pkgInvariant Registered(LayerTypeZero) &&
-	Registered(LayerTypeDecodeFailure) &&
-	Registered(LayerTypePayload)       &&
-	Registered(LayerTypeFragment)
+dup pkgInvariant acc(RegisteredTypes.Contains(int64(LayerTypeZero)), _) &&
+	acc(RegisteredTypes.Contains(int64(LayerTypeDecodeFailure)), _) &&
+	acc(RegisteredTypes.Contains(int64(LayerTypePayload)), _)       &&
+	acc(RegisteredTypes.Contains(int64(LayerTypeFragment)), _)
 dup pkgInvariant LayerTypeZero == 0 &&
 	LayerTypeDecodeFailure == 1 &&
 	LayerTypePayload       == 2 &&
 	LayerTypeFragment      == 3
 
 package gopacket
+
+friendPkg "github.com/google/gopacket/layers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 10 <= t && t <= 146 ==>
+	RegisteredTypes.DoesNotContain(int64(t))
 
 import ms "github.com/scionproto/scion/verification/utils/monoset"
 import sl "github.com/scionproto/scion/verification/utils/slices"
@@ -172,10 +164,11 @@ var LayerTypeFragment = RegisterLayerType(3, LayerTypeMetadata{Name: "Fragment",
 
 /** Ghost init operations **/
 func init() {
-	assert forall t LayerType :: { Registered(t) } (t != 0 && t != 1 && t != 2 && t != 3) ==>
-		!Registered(t)
-	assert forall t LayerType :: { Registered(t) } t < 0 ==> !Registered(t)
-	assert forall t LayerType :: { Registered(t) } 3 < t ==> !Registered(t)
+	assert PkgMem()
+	assert RegisteredTypes.Contains(0)
+	assert RegisteredTypes.Contains(1)
+	assert RegisteredTypes.Contains(2)
+	assert RegisteredTypes.Contains(3)
 }
 /** End of ghost init operations **/
 
