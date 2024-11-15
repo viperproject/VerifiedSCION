@@ -15,17 +15,28 @@
 // +gobra
 
 // (VerifiedSCION) the following init-postconditions causes severe slowdowns
-// @ initEnsures alreadySet                    != nil && alreadySet.ErrorMem()
-// @ initEnsures cannotRoute                   != nil && cannotRoute.ErrorMem()
-// @ initEnsures emptyValue                    != nil && emptyValue.ErrorMem()
-// @ initEnsures malformedPath                 != nil && malformedPath.ErrorMem()
-// @ initEnsures modifyExisting                != nil && modifyExisting.ErrorMem()
-// @ initEnsures noSVCBackend                  != nil && noSVCBackend.ErrorMem()
-// @ initEnsures unsupportedPathType           != nil && unsupportedPathType.ErrorMem()
-// @ initEnsures unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.ErrorMem()
-// @ initEnsures noBFDSessionFound             != nil && noBFDSessionFound.ErrorMem()
-// @ initEnsures noBFDSessionConfigured        != nil && noBFDSessionConfigured.ErrorMem()
-// @ initEnsures errBFDDisabled                != nil && errBFDDisabled.ErrorMem()
+// @ dup pkgInvariant alreadySet                    != nil && acc(alreadySet.ErrorMem(), _)     &&
+// @ 	alreadySet != nil && alreadySet.IsDuplicableMem()
+// @ dup pkgInvariant cannotRoute                   != nil && acc(cannotRoute.ErrorMem(), _)    &&
+// @ 	cannotRoute != nil && cannotRoute.IsDuplicableMem()
+// @ dup pkgInvariant emptyValue                    != nil && acc(emptyValue.ErrorMem(), _)     &&
+// @ 	emptyValue != nil && emptyValue.IsDuplicableMem()
+// @ dup pkgInvariant malformedPath                 != nil && acc(malformedPath.ErrorMem(), _)  &&
+// @ 	malformedPath != nil && malformedPath.IsDuplicableMem()
+// @ dup pkgInvariant modifyExisting                != nil && acc(modifyExisting.ErrorMem(), _) &&
+// @ 	modifyExisting != nil && modifyExisting.IsDuplicableMem()
+// @ dup pkgInvariant noSVCBackend                  != nil && acc(noSVCBackend.ErrorMem(), _)   &&
+// @ 	noSVCBackend != nil && noSVCBackend.IsDuplicableMem()
+// @ dup pkgInvariant unsupportedPathType           != nil && acc(unsupportedPathType.ErrorMem(), _)           &&
+// @ 	unsupportedPathType != nil && unsupportedPathType.IsDuplicableMem()
+// @ dup pkgInvariant unsupportedPathTypeNextHeader != nil && acc(unsupportedPathTypeNextHeader.ErrorMem(), _) &&
+// @ 	unsupportedPathTypeNextHeader != nil && unsupportedPathTypeNextHeader.IsDuplicableMem()
+// @ dup pkgInvariant noBFDSessionFound             != nil && acc(noBFDSessionFound.ErrorMem(), _)             &&
+// @ 	noBFDSessionFound != nil && noBFDSessionFound.IsDuplicableMem()
+// @ dup pkgInvariant noBFDSessionConfigured        != nil && acc(noBFDSessionConfigured.ErrorMem(), _)        &&
+// @ 	noBFDSessionConfigured != nil && noBFDSessionConfigured.IsDuplicableMem()
+// @ dup pkgInvariant errBFDDisabled                != nil && acc(errBFDDisabled.ErrorMem(), _) &&
+// @ 	errBFDDisabled!= nil && errBFDDisabled.IsDuplicableMem()
 package router
 
 import (
