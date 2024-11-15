@@ -22,68 +22,99 @@
 
 package router
 
-/**** Post-init invariants ****/
+import "github.com/scionproto/scion/verification/utils/errors"
 
-// All global variables of type 'error' declared in dataplane.go
-// are duplicable. As such, we can always establish their invariants
-// AFTER INITIALIZATION.
+/**** Post-init invariants ****/
 
 ghost
 ensures unsupportedPathType.ErrorMem()
-decreases _
-func establishMemUnsupportedPathType()
+decreases
+func establishMemUnsupportedPathType() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(unsupportedPathType)
+}
 
 ghost
 ensures malformedPath != nil
 ensures malformedPath.ErrorMem()
-decreases _
-func establishMemMalformedPath()
+decreases
+func establishMemMalformedPath() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(malformedPath)
+}
 
 ghost
 ensures alreadySet != nil
 ensures alreadySet.ErrorMem()
-decreases _
-func establishAlreadySet()
+decreases
+func establishAlreadySet() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(alreadySet)
+}
 
 ghost
 ensures unsupportedPathTypeNextHeader.ErrorMem()
-decreases _
-func establishMemUnsupportedPathTypeNextHeader()
+decreases
+func establishMemUnsupportedPathTypeNextHeader() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(unsupportedPathTypeNextHeader)
+}
 
 ghost
 ensures noBFDSessionConfigured.ErrorMem()
-decreases _
-func establishMemNoBFDSessionConfigured()
+decreases
+func establishMemNoBFDSessionConfigured() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(noBFDSessionConfigured)
+}
 
 ghost
 ensures noBFDSessionFound.ErrorMem()
-decreases _
-func establishMemNoBFDSessionFound()
+decreases
+func establishMemNoBFDSessionFound() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(noBFDSessionFound)
+}
 
 ghost
 ensures invalidSrcAddrForTransit.ErrorMem()
-decreases _
-func establishInvalidSrcAddrForTransit()
+decreases
+func establishInvalidSrcAddrForTransit() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(invalidSrcAddrForTransit)
+}
 
 ghost
 ensures noSVCBackend.ErrorMem()
-decreases _
-func establishNoSVCBackend()
+decreases
+func establishNoSVCBackend() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(noSVCBackend)
+}
 
 ghost
 ensures cannotRoute.ErrorMem()
-decreases _
-func establishCannotRoute()
+decreases
+func establishCannotRoute() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(cannotRoute)
+}
 
 ghost
 ensures invalidSrcIA.ErrorMem()
-decreases _
-func establishInvalidSrcIA()
+decreases
+func establishInvalidSrcIA() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(invalidSrcIA)
+}
 
 ghost
 ensures invalidDstIA.ErrorMem()
-decreases _
-func establishInvalidDstIA()
+decreases
+func establishInvalidDstIA() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(invalidDstIA)
+}
 
 /**** End of post-init invariants ****/
 
