@@ -65,13 +65,28 @@ var gobraCfgFile = filepath.Join(rootPath, "gobra.json")
 
 // maps unique ids to their cfg files
 var jobCfgFiles = map[string]string{
-	"path":    filepath.Join(rootPath, "path.json"),
-	"pempty":  filepath.Join(rootPath, "pempty.json"),
-	"pepic":   filepath.Join(rootPath, "pepic.json"),
-	"ponehop": filepath.Join(rootPath, "ponehop.json"),
-	"pscion":  filepath.Join(rootPath, "pscion.json"),
-	"slayers": filepath.Join(rootPath, "slayers.json"),
-	"router":  filepath.Join(rootPath, "router.json"),
+	// dataplane
+	"router": filepath.Join(rootPath, "router.json"),
+	// first-party dependencies
+	"pkg/addr":                  filepath.Join(rootPath, "addr.json"),
+	"pkg/experimental/epic":     filepath.Join(rootPath, "eepic.json"),
+	"pkg/log":                   filepath.Join(rootPath, "log.json"),
+	"pkg/private/serrors":       filepath.Join(rootPath, "serrors.json"),
+	"pkg/scrypto":               filepath.Join(rootPath, "scrypto.json"),
+	"pkg/slayers":               filepath.Join(rootPath, "slayers.json"),
+	"pkg/slayers/path":          filepath.Join(rootPath, "path.json"),
+	"pkg/slayers/path/empty":    filepath.Join(rootPath, "pempty.json"),
+	"pkg/slayers/path/epic":     filepath.Join(rootPath, "pepic.json"),
+	"pkg/slayers/path/onehop":   filepath.Join(rootPath, "ponehop.json"),
+	"pkg/slayers/path/scion":    filepath.Join(rootPath, "pscion.json"),
+	"private/topology":          filepath.Join(rootPath, "topology.json"),
+	"private/topology/underlay": filepath.Join(rootPath, "underlay.json"),
+	"private/underlay/conn":     filepath.Join(rootPath, "conn.json"),
+	"private/underlay/sockctrl": filepath.Join(rootPath, "sockctrl.json"),
+	"router/bfd":                filepath.Join(rootPath, "bfd.json"),
+	"router/control":            filepath.Join(rootPath, "control.json"),
+	// third-party lib specs and utils
+	"dependencies": filepath.Join(rootPath, "dependencies.json"),
 }
 
 func main() {
