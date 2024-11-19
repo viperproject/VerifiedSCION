@@ -1,0 +1,11 @@
+{
+	"includes": [
+		"../..",
+		"../../verification/dependencies"
+	],
+	"mce_mode": "on",
+	"module": "github.com/scionproto/scion",
+	"more_joins": "off",
+	"parallelize_branches": true,
+	"pkg_path": "../../pkg/slayers/path/",
+}
