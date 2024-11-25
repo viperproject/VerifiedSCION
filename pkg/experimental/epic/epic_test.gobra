@@ -19,133 +19,83 @@ package epic
 import (
 	"github.com/scionproto/scion/pkg/addr"
     "github.com/scionproto/scion/pkg/slayers"
-	pathepic "github.com/scionproto/scion/pkg/slayers/path/epic"
+    "github.com/scionproto/scion/pkg/slayers/path"
+    pathepic "github.com/scionproto/scion/pkg/slayers/path/epic"
     "github.com/scionproto/scion/verification/utils/definitions" // import necessary for R18
     sl "github.com/scionproto/scion/verification/utils/slices" // import necessary for precondition about ghost parameter
     "net"
     "time"
 )
 
+// done
 // NO ERROR
 // doesn't verify
-func TestPrepareMacInput1(ghostWildcard bool, ghostUb []byte) {
-    // inline createEpicPath
-	pktID := pathepic.PktID{
-        Timestamp: 1,
-        Counter:   PktCounterFromCore(2, 3),
-    }
-    e := &pathepic.Path{
-        PktID: pktID,
-        PHVF:  []byte{1, 2, 3, 4},
-        LHVF:  []byte{5, 6, 7, 8},
-    }
-
-    // inline createScionCmnAddrHdr
-    // inline MustParseIA
-    srcIa, err := addr.ParseIA("2-ff00:0:222")
-    if err != nil {
-        // panic(err) // omit panic calls
-    }
-
-    header := &slayers.SCION{
-        SrcIA:      srcIa,
-        PayloadLen: 120,
-    }
-    ip4Addr := &net.IPAddr{IP: net.ParseIP("10.0.0.100")}
-
-    inhale ghostWildcard ==> acc(ip4Addr.Mem(), _) // inhale precondition of call with ghost parameter
-    inhale !ghostWildcard ==> acc(ip4Addr.Mem(), definitions.R18) // inhale precondition of call with ghost parameter
-    header.SetSrcAddr(ip4Addr, ghostWildcard)
-
-    expected := []byte(
-        "\x00\x4a\xf9\xf0\x70\x00\x00\x00\x01\x02\x00\x00\x03" +
-            "\x00\x02\xff\x00\x00\x00\x02\x22\x0a\x00\x00\x64\x00\x78" +
-            "\x00\x00\x00\x00\x00")
-
-	var ts uint32 = 1257894000 // = [4a f9 f0 70]
-
-    inputBuffer := make([]byte, MACBufferSize)
-
-    inhale acc(header.Mem(ghostUb), definitions.R20) // inhale precondition of call with ghost parameter
-    inhale acc(sl.Bytes(ghostUb, 0, len(ghostUb)), definitions.R20) // inhale precondition of call with ghost parameter
-    fold sl.Bytes(inputBuffer, 0, len(inputBuffer)) // fold of predicate in precondition
-    inputLength, err := prepareMacInput(e.PktID, header, ts, inputBuffer, ghostUb)
-
-    assert err == nil // assertion fails
-
-    got := inputBuffer[:inputLength]
-
-    assert got === expected
-}
-
-// NO ERROR
-// doesn't verify
-func TestPrepareMacInput1DebuggingInfo(pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, inputBuffer []byte, ghost ghostUb []byte) {
-    inhale acc(s.Mem(ghostUb), definitions.R20)
-    inhale acc(sl.Bytes(ghostUb, 0, len(ghostUb)), definitions.R20)
-    inhale sl.Bytes(inputBuffer, 0, len(inputBuffer))
-
-    tmpPktID := pathepic.PktID{
-        Timestamp: 1,
-        Counter:   33554435,
-    }
+func TestPrepareMacInput1(pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, inputBuffer []byte , ub []byte) {
+    tmpPktID := pathepic.PktID{Timestamp:0x1, Counter:0x2000003}
     tmpS := &slayers.SCION{
-        SrcIA:      843325418504738,
-        RawSrcAddr: []uint8{10, 0, 0, 100},
+        BaseLayer:slayers.BaseLayer{Contents:[]uint8(nil),
+            Payload:[]uint8(nil)},
+            Version:0x0,
+            TrafficClass:0x0,
+            FlowID:0x0,
+            NextHdr:0x0,
+            HdrLen:0x0,
+            PayloadLen:0x78,
+            PathType:0x0,
+            DstAddrType:0x0,
+            SrcAddrType:0x0,
+            DstIA:0x0,
+            SrcIA:0x2ff0000000222,
+            RawDstAddr:[]uint8(nil),
+            RawSrcAddr:[]uint8{0xa, 0x0, 0x0, 0x64},
+            Path:path.Path(nil),
     }
-    tmpTimestamp := uint32(1257894000)
-    tmpInputBuffer := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    tmpInputBuffer := []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 
-    assume pktID == tmpPktID
-    assume s == tmpS
-    assume timestamp == tmpTimestamp
-    assume inputBuffer === tmpInputBuffer
-
-    // actual test
-    inputLength, err := prepareMacInput(pktID, s, timestamp, inputBuffer, ghostUb)
-
-    assert err == nil // assertion fails
-
-    got := inputBuffer[:inputLength]
-
-    expected := []byte(
-        "\x00\x4a\xf9\xf0\x70\x00\x00\x00\x01\x02\x00\x00\x03" +
-            "\x00\x02\xff\x00\x00\x00\x02\x22\x0a\x00\x00\x64\x00\x78" +
-            "\x00\x00\x00\x00\x00")
-
-    assert got === expected
-}
-
-// ERROR
-// doesn't verify
-func TestPrepareMacInput2(pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, inputBuffer []byte, ub []byte) {
-    // inline createEpicPath
-    inpPktID := pathepic.PktID{
-        Timestamp: 1,
-        Counter:   PktCounterFromCore(2, 3),
-    }
-    e := &pathepic.Path{
-        PktID: inpPktID,
-        PHVF:  []byte{1, 2, 3, 4},
-        LHVF:  []byte{5, 6, 7, 8},
-    }
-
-    inp := make([]byte, MACBufferSize)
-
-    assume pktID === e.PktID
-    assume s == nil
-    assume timestamp == 1257894000 // = [4a f9 f0 70]
-    assume inputBuffer === inp
-
-    inhale  MACBufferSize <= len(inputBuffer)
+    inhale MACBufferSize <= len(inputBuffer)
     inhale acc(s.Mem(ub), definitions.R20)
     inhale acc(sl.Bytes(ub, 0, len(ub)), definitions.R20)
     inhale sl.Bytes(inputBuffer, 0, len(inputBuffer))
-    _, err := prepareMacInput(pktID, s, timestamp, inputBuffer, ub)
 
-    assert err != nil // assertion fails (test would verify if prepareMacInput had precondition s == nil ==> reserr != nil)
+    assume pktID == tmpPktID
+    assume s == tmpS
+    assume timestamp == 0x4af9f070
+    assume inputBuffer === tmpInputBuffer
+
+    expected := []byte{0x0, 0x4a, 0xf9, 0xf0, 0x70, 0x0, 0x0, 0x0, 0x1, 0x2, 0x0, 0x0, 0x3, 0x0, 0x2, 0xff, 0x0, 0x0, 0x0, 0x2, 0x22, 0xa, 0x0, 0x0, 0x64, 0x0, 0x78, 0x0, 0x0, 0x0, 0x0, 0x0}
+
+	inputLength, err := prepareMacInput(pktID, s, timestamp, inputBuffer, ub)
+
+    assert err == nil // assertion fails
+
+    got := inputBuffer[:inputLength]
+    assert got === expected
 }
 
+// done
+// NO ERROR
+// doesn't verify
+func TestPrepareMacInput2(pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, inputBuffer []byte , ub []byte) {
+    tmpPktID := pathepic.PktID{Timestamp:0x1, Counter:0x2000003}
+    tmpS := (*slayers.SCION)(nil)
+    tmpInputBuffer := []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+
+    inhale MACBufferSize <= len(inputBuffer)
+    inhale acc(s.Mem(ub), definitions.R20)
+    inhale acc(sl.Bytes(ub, 0, len(ub)), definitions.R20)
+    inhale sl.Bytes(inputBuffer, 0, len(inputBuffer))
+
+    assume pktID == tmpPktID
+    assume s == tmpS
+    assume timestamp == 0x4af9f070
+    assume inputBuffer === tmpInputBuffer
+
+    _, err := prepareMacInput(pktID, s, timestamp, inputBuffer, ub)
+
+    assert err != nil // assertion fails
+}
+
+// TODO
 // ERROR
 // doesn't verify
 func TestCreateTimestamp1(input time.Time, now time.Time) {
