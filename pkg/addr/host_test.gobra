@@ -22,65 +22,65 @@ import (
     "net"
 )
 
+// done
 // ERROR
 // nil IPv4
 func TestHostFromRaw1(b []byte, htype HostAddrType) {
-    assume b === []byte(nil) // test input
-    assume htype == HostTypeIPv4 // test input
+    tmpB := []byte(nil)
 
     inhale acc(b) // precondition 1
     inhale isValidHostAddrType(htype) // precondition 2
     inhale len(b) == sizeOfHostAddrType(htype) // precondition 3 -> contradiction
+
+    assume b === tmpB // test input
+    assume htype == 0x1 // test input
 
     _, err := HostFromRaw(b, htype) // method call
     assert err != nil // assertion
 }
 
+// done
 // ERROR
 // short IPv4
 func TestHostFromRaw2(b []byte, htype HostAddrType) {
-    inp := make([]byte, 3)
-    assume b === inp // test input
-    assume htype == HostTypeIPv4 // test input
+    tmpB := []byte{0x0, 0x0, 0x0}
 
     inhale acc(b) // precondition 1
     inhale isValidHostAddrType(htype) // precondition 2
     inhale len(b) == sizeOfHostAddrType(htype) // precondition 3 -> contradiction
 
-	_, err := HostFromRaw(b, htype) // method call
-	assert err != nil // assertion
+    assume b === tmpB
+    assume htype == 0x1
+
+    _, err := HostFromRaw(b, htype) // method call
+    assert err != nil // assertion
 }
 
+// done
 // NO ERROR
 // valid IPv4
 // doesn't verify
-func TestHostFromRaw3() {
-    b := []byte{127, 0, 0, 1} // test input
-    htype := HostTypeIPv4 // test input
+func TestHostFromRaw3(b []byte, htype HostAddrType) {
+    tmpB := []byte{0x7f, 0x0, 0x0, 0x1}
 
-    ip := net.IPv4(127, 0, 0, 1)
+    inhale acc(b) // precondition 1
+    inhale isValidHostAddrType(htype) // precondition 2
+    inhale len(b) == sizeOfHostAddrType(htype) // precondition 3
 
-    // inline HostFromIP
-    expected := HostAddr(nil)
-    if ip4 := ip.To4(false); ip4 != nil {
-        tmp := HostIPv4(ip4)
-        fold slices.Bytes(tmp, 0, len(tmp))
-        fold tmp.Mem()
-        expected = tmp
-    } else {
-        tmp := HostIPv6(ip)
-        fold slices.Bytes(tmp, 0, len(tmp))
-        fold tmp.Mem()
-        expected = tmp
-    }
+    assume b === tmpB
+    assume htype == 0x1
 
     got, err := HostFromRaw(b, htype) // method call
+
+    expected := HostIPv4{0x7f, 0x0, 0x0, 0x1}
     res := got.Equal(expected) // precondition might not hold (the receiver might be nil)
 
-    assert err == nil // assertion
-    assert res // assertion
+    assert err == nil // assertion 1
+    assert res // assertion 2
 }
 
+
+// TODO
 // ERROR
 // nil IPv6
 func TestHostFromRaw4(b []byte, htype HostAddrType) {
