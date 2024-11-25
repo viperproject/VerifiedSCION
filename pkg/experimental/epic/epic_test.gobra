@@ -78,6 +78,44 @@ func TestPrepareMacInput1(ghostWildcard bool, ghostUb []byte) {
     assert got === expected
 }
 
+// NO ERROR
+// doesn't verify
+func TestPrepareMacInput1DebuggingInfo(pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, inputBuffer []byte, ghost ghostUb []byte) {
+    inhale acc(s.Mem(ghostUb), definitions.R20)
+    inhale acc(sl.Bytes(ghostUb, 0, len(ghostUb)), definitions.R20)
+    inhale sl.Bytes(inputBuffer, 0, len(inputBuffer))
+
+    tmpPktID := pathepic.PktID{
+        Timestamp: 1,
+        Counter:   33554435,
+    }
+    tmpS := &slayers.SCION{
+        SrcIA:      843325418504738,
+        RawSrcAddr: []uint8{10, 0, 0, 100},
+    }
+    tmpTimestamp := uint32(1257894000)
+    tmpInputBuffer := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+    assume pktID == tmpPktID
+    assume s == tmpS
+    assume timestamp == tmpTimestamp
+    assume inputBuffer === tmpInputBuffer
+
+    // actual test
+    inputLength, err := prepareMacInput(pktID, s, timestamp, inputBuffer, ghostUb)
+
+    assert err == nil // assertion fails
+
+    got := inputBuffer[:inputLength]
+
+    expected := []byte(
+        "\x00\x4a\xf9\xf0\x70\x00\x00\x00\x01\x02\x00\x00\x03" +
+            "\x00\x02\xff\x00\x00\x00\x02\x22\x0a\x00\x00\x64\x00\x78" +
+            "\x00\x00\x00\x00\x00")
+
+    assert got === expected
+}
+
 // ERROR
 // doesn't verify
 func TestPrepareMacInput2(pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, inputBuffer []byte, ub []byte) {
@@ -268,6 +306,41 @@ func TestVerifyHVF1(ub []byte, wildcard bool, cmUb1 []byte) {
     fold sl.Bytes(buffer, 0, len(buffer))
     fold acc(sl.Bytes(authPenultimate, 0, len(authPenultimate)), definitions.R30)
     err = VerifyHVF(authPenultimate, pktID, s, timestamp, PHVF, buffer, ub)
+
+    assert err == nil
+}
+
+// NO ERROR
+// doesn't verify
+func TestVerifyHVF1Debugging(auth []byte, pktID pathepic.PktID, s *slayers.SCION,
+    timestamp uint32, hvf []byte, buffer []byte, ghost ub []byte) {
+    inhale sl.Bytes(buffer, 0, len(buffer))
+    inhale acc(s.Mem(ub), definitions.R20)
+    inhale acc(sl.Bytes(hvf, 0, len(hvf)), definitions.R50)
+    inhale acc(sl.Bytes(ub, 0, len(ub)), definitions.R20)
+    inhale acc(sl.Bytes(auth, 0, len(auth)), definitions.R30)
+
+    tmpAuth := []uint8{102, 99, 100, 99, 56, 50, 48, 50, 53, 48, 50, 100, 52, 53, 50, 101}
+    tmpPktID := pathepic.PktID{
+        Timestamp: 2860218,
+        Counter: 16777218,
+    }
+    tmpS := &slayers.SCION{
+        SrcIA: 843325418504738,
+        RawSrcAddr: []uint8{10, 0, 0, 100},
+    }
+    tmpTimestamp := uint32(1731680062)
+    tmpHvf := []uint8{41, 127, 23, 2}
+    tmpBuffer := []uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+    assume auth === tmpAuth
+    assume pktID == tmpPktID
+    assume s == tmpS
+    assume timestamp == tmpTimestamp
+    assume hvf === tmpHvf
+    assume buffer === tmpBuffer
+
+    err := VerifyHVF(auth, pktID, s, timestamp, hvf, buffer, ub)
 
     assert err == nil
 }
