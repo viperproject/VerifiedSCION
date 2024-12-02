@@ -67,8 +67,6 @@ pred PathPackageMem() {
 ghost
 requires 0 <= t && t < maxPathType
 requires acc(PathPackageMem(), _)
-// TODO: drop post
-ensures  res == unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
 decreases
 pure func Registered(t Type) (res bool) {
 	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse

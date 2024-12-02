@@ -66,8 +66,6 @@ func (d *Decoded) Len(ghost ubuf []byte) (l int) {
 
 ghost
 requires acc(d.Mem(ub), _)
-// TODO: drop post
-ensures  unfolding acc(d.Mem(ub), _) in l == d.Base.Len()
 decreases
 pure func (d *Decoded) LenSpec(ghost ub []byte) (l int) {
 	return unfolding acc(d.Mem(ub), _) in d.Base.Len()
@@ -80,8 +78,6 @@ pure func (d *Decoded) LenSpec(ghost ub []byte) (l int) {
   * introduced this method which acts as a wrapper.
   */
 requires acc(d.Mem(ubuf), _)
-// TODO: drop post
-ensures  unfolding acc(d.Mem(ubuf), _) in t == d.Base.Type()
 decreases
 pure func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
 	return unfolding acc(d.Mem(ubuf), _) in d.Base.Type()

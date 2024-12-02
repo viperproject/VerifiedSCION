@@ -95,16 +95,12 @@ decreases _
 pure func Join(elems []string, sep string) (res string)
 
 // HasPrefix tests whether the string s begins with prefix.
-// TODO: drop post
-ensures ret == (len(s) >= len(prefix) && s[0:len(prefix)] == prefix)
 decreases
 pure func HasPrefix(s, prefix string) (ret bool) {
 	return len(s) >= len(prefix) && (s[0:len(prefix)] == prefix)
 }
 
 // HasSuffix tests whether the string s ends with suffix.
-// TODO: drop post
-ensures ret == (len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix)
 decreases
 pure func HasSuffix(s, suffix string) (ret bool) {
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix

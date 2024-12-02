@@ -49,8 +49,6 @@ pred LayerTypesMem() {
 
 ghost
 requires acc(LayerTypesMem(), _)
-// TODO: drop post
-ensures  res == unfolding acc(LayerTypesMem(), _) in (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
 decreases
 pure func Registered(t LayerType) (res bool) {
 	return unfolding acc(LayerTypesMem(), _) in
@@ -59,8 +57,6 @@ pure func Registered(t LayerType) (res bool) {
 
 ghost
 requires acc(&ltMeta, _) && acc(&ltMetaMap, _) && acc(ltMetaMap, _) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName, _)
-// TODO: drop post
-ensures  res == (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
 decreases
 pure func registeredDuringInit(t LayerType) (res bool) {
 	return (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))

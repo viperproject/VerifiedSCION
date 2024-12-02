@@ -74,8 +74,6 @@ pure func (p *Path) getPHVFLen(buf []byte) (l int) {
 
 ghost
 requires acc(p.Mem(buf), _)
-// TODO: drop post
-ensures l == (unfolding acc(p.Mem(buf), _) in len(p.LHVF))
 decreases
 pure func (p *Path) getLHVFLen(buf []byte) (l int) {
 	return unfolding acc(p.Mem(buf), _) in len(p.LHVF)

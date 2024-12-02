@@ -59,8 +59,6 @@ pure func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
   * introduced this wrapper method which acts as a wrapper.
   */
 requires acc(s.Mem(buf), _)
-// TODO: drop post
-ensures  unfolding acc(s.Mem(buf), _) in t == s.Base.Type()
 decreases
 pure func (s *Raw) Type(ghost buf []byte) (t path.Type) {
 	return unfolding acc(s.Mem(buf), _) in s.Base.Type()
@@ -81,8 +79,6 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
 
 ghost
 requires acc(s.Mem(ub), _)
-// TODO: drop post
-ensures  unfolding acc(s.Mem(ub), _) in l == s.Base.Len()
 decreases
 pure func (s *Raw) LenSpec(ghost ub []byte) (l int) {
 	return unfolding acc(s.Mem(ub), _) in s.Base.Len()
