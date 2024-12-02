@@ -269,26 +269,23 @@ func (s *SCION) ExtractAcc(ghost ub []byte) (start, end int) {
 }
 
 ghost
-pure
 decreases
-func (a AddrType) Has3Bits() (res bool) {
+pure func (a AddrType) Has3Bits() (res bool) {
 	return 0 <= a && a <= 7
 }
 
 ghost
-pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) UBPath(ub []byte) []byte {
+pure func (s *SCION) UBPath(ub []byte) []byte {
 	return unfolding acc(s.Mem(ub), _) in
 		ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]
 }
 
 ghost
-pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) UBScionPath(ub []byte) []byte {
+pure func (s *SCION) UBScionPath(ub []byte) []byte {
 	return unfolding acc(s.Mem(ub), _) in
 		let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
 		typeOf(s.Path) == *epic.Path ?
@@ -297,26 +294,23 @@ func (s *SCION) UBScionPath(ub []byte) []byte {
 }
 
 ghost
-pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) PathStartIdx(ub []byte) int {
+pure func (s *SCION) PathStartIdx(ub []byte) int {
 	return unfolding acc(s.Mem(ub), _) in CmnHdrLen+s.AddrHdrLenSpecInternal()
 }
 
 ghost
-pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) PathEndIdx(ub []byte) int {
+pure func (s *SCION) PathEndIdx(ub []byte) int {
 	return unfolding acc(s.Mem(ub), _) in int(s.HdrLen*LineLen)
 }
 
 ghost
-pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) PathScionStartIdx(ub []byte) int {
+pure func (s *SCION) PathScionStartIdx(ub []byte) int {
 	return unfolding acc(s.Mem(ub), _) in
 		let offset := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		typeOf(s.Path) == *epic.Path ?
@@ -325,10 +319,9 @@ func (s *SCION) PathScionStartIdx(ub []byte) int {
 }
 
 ghost
-pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) PathScionEndIdx(ub []byte) int {
+pure func (s *SCION) PathScionEndIdx(ub []byte) int {
 	return unfolding acc(s.Mem(ub), _) in int(s.HdrLen*LineLen)
 }
 
@@ -345,21 +338,19 @@ func LemmaPathIdxStartEnd(s *SCION, ub []byte, p perm) {
 }
 
 ghost
-pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) GetPath(ub []byte) path.Path {
+pure func (s *SCION) GetPath(ub []byte) path.Path {
 	return unfolding acc(s.Mem(ub), _) in s.Path
 }
 
 ghost
 opaque
-pure
 requires acc(s.Mem(ub), _)
 requires acc(sl.Bytes(ub, 0, length), _)
 requires CmnHdrLen <= length
 decreases
-func (s *SCION) ValidHeaderOffset(ub []byte, length int) bool {
+pure func (s *SCION) ValidHeaderOffset(ub []byte, length int) bool {
 	return GetAddressOffsetWithinLength(ub, length) == s.PathStartIdx(ub) &&
 		GetLengthWithinLength(ub,length) == s.PathEndIdx(ub)
 }
@@ -406,11 +397,10 @@ func (s *SCION) ValidHeaderOffsetFromSubSliceLemma(ub []byte, length int) {
 
 ghost
 opaque
-pure
 requires acc(s.Mem(ub), _)
 requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
-func (s *SCION) EqAbsHeader(ub []byte) bool {
+pure func (s *SCION) EqAbsHeader(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _) in
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen in
@@ -437,10 +427,9 @@ func (s *SCION) EqAbsHeader(ub []byte) bool {
 // Describes a SCION packet that was successfully decoded by `DecodeFromBytes`.
 ghost
 opaque
-pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) ValidScionInitSpec(ub []byte) bool {
+pure func (s *SCION) ValidScionInitSpec(ub []byte) bool {
 	return unfolding acc(s.Mem(ub), _)                  in
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen                    in
@@ -451,7 +440,7 @@ func (s *SCION) ValidScionInitSpec(ub []byte) bool {
 // Checks if the common path header is valid in the serialized scion packet.
 ghost
 opaque
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 decreases
 pure func ValidPktMetaHdr(raw []byte) bool {
 	return CmnHdrLen <= len(raw) &&
@@ -461,7 +450,7 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let rawHdr := raw[start:end] in
 		let length := GetLength(raw) in
 		length <= len(raw) &&
-		unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
+		unfolding acc(sl.Bytes(raw, 0, len(raw)), _) in
 		let _ := Asserting(forall k int :: {&rawHdr[k]} 0 <= k && k < scion.MetaLen ==> &rawHdr[k] == &raw[start + k]) in
 		let hdr := binary.BigEndian.Uint32(rawHdr) in
 		let metaHdr := scion.DecodedFrom(hdr)      in
@@ -477,7 +466,7 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 
 ghost
 opaque
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 decreases
 pure func IsSupportedPkt(raw []byte) bool {
 	return CmnHdrLen <= len(raw) &&
@@ -601,10 +590,9 @@ pure func (s *SCION) EqPathTypeWithBuffer(ub []byte, buffer []byte) bool {
 }
 
 ghost
-pure
 requires acc(s.Mem(ub), _)
 decreases
-func (s *SCION) GetScionPath(ub []byte) path.Path {
+pure func (s *SCION) GetScionPath(ub []byte) path.Path {
 	return unfolding acc(s.Mem(ub), _) in (
 	typeOf(s.Path) == *epic.Path ?
 		(let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
@@ -632,19 +620,17 @@ requires acc(&s.DstAddrType, _) && acc(&s.SrcAddrType, _)
 requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 ensures  0 <= res
 decreases
-pure
-func (s *SCION) AddrHdrLenSpecInternal() (res int) {
+pure func (s *SCION) AddrHdrLenSpecInternal() (res int) {
 	return 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
 ghost
-requires acc(s.Mem(ubuf), R55)
+requires acc(s.Mem(ubuf), _)
 ensures  0 <= res
 decreases
-pure
-func (s *SCION) AddrHdrLenSpec(ubuf []byte) (res int) {
-	return unfolding acc(s.Mem(ubuf), R55) in
-		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), R55) in
+pure func (s *SCION) AddrHdrLenSpec(ubuf []byte) (res int) {
+	return unfolding acc(s.Mem(ubuf), _) in
+		unfolding acc(s.HeaderMem(ubuf[CmnHdrLen:]), _) in
 		2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 }
 
@@ -712,7 +698,8 @@ func (s *SCION) PathPoolMemExchange(pathType path.Type, p path.Path) {
 ghost
 requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP, _)
-requires forall i int :: { &a.(*net.IPAddr).IP[i] } 0 <= i && i < len(a.(*net.IPAddr).IP) ==> acc(&a.(*net.IPAddr).IP[i], _)
+requires forall i int :: { &a.(*net.IPAddr).IP[i] } 0 <= i && i < len(a.(*net.IPAddr).IP) ==>
+	acc(&a.(*net.IPAddr).IP[i], _)
 requires len(a.(*net.IPAddr).IP) == net.IPv6len
 decreases
 pure func isConvertibleToIPv4(a net.Addr) bool {

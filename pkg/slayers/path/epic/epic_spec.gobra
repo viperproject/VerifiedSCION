@@ -38,10 +38,9 @@ pred (p *Path) Mem(ubuf []byte) {
 }
 
 ghost
-pure
 requires acc(p.Mem(ub), _)
 decreases
-func (p *Path) LenSpec(ghost ub []byte) (l int) {
+pure func (p *Path) LenSpec(ghost ub []byte) (l int) {
 	return unfolding acc(p.Mem(ub), _) in
 		(p.ScionPath == nil ?
 			MetadataLen :
@@ -66,29 +65,28 @@ pure func (r *Path) GetBase(ub []byte) scion.Base {
 }
 
 ghost
-pure
 requires acc(p.Mem(buf), _)
 ensures l == (unfolding acc(p.Mem(buf), _) in len(p.PHVF))
 decreases
-func (p *Path) getPHVFLen(buf []byte) (l int) {
+pure func (p *Path) getPHVFLen(buf []byte) (l int) {
 	return unfolding acc(p.Mem(buf), _) in len(p.PHVF)
 }
 
 ghost
-pure
 requires acc(p.Mem(buf), _)
+// TODO: drop post
 ensures l == (unfolding acc(p.Mem(buf), _) in len(p.LHVF))
 decreases
-func (p *Path) getLHVFLen(buf []byte) (l int) {
+pure func (p *Path) getLHVFLen(buf []byte) (l int) {
 	return unfolding acc(p.Mem(buf), _) in len(p.LHVF)
 }
 
 ghost
-pure
 requires acc(p.Mem(buf), _)
+// TODO: drop post
 ensures  r == (unfolding acc(p.Mem(buf), _) in p.ScionPath != nil)
 decreases
-func (p *Path) hasScionPath(buf []byte) (r bool) {
+pure func (p *Path) hasScionPath(buf []byte) (r bool) {
 	return unfolding acc(p.Mem(buf), _) in p.ScionPath != nil
 }
 
@@ -100,9 +98,8 @@ pure func (p *Path) GetUnderlyingScionPathBuf(buf []byte) []byte {
 }
 
 ghost
-pure
 decreases
-func (p *Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+pure func (p *Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
 	return true
 }
 

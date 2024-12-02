@@ -32,14 +32,14 @@ import (
 
 ghost
 opaque
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 requires slayers.ValidPktMetaHdr(raw)
 decreases
 pure func absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetAddressOffset(raw) in
 		let headerOffsetWithMetaLen := headerOffset + scion.MetaLen in
-		let hdr := (unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
+		let hdr := (unfolding acc(sl.Bytes(raw, 0, len(raw)), _) in
 			binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen])) in
 		let metaHdr := scion.DecodedFrom(hdr) in
 		let currInfIdx := int(metaHdr.CurrINF) in
@@ -61,7 +61,7 @@ pure func absPkt(raw []byte) (res io.IO_pkt2) {
 }
 
 ghost
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 ensures val.isIO_val_Unsupported
 ensures val.IO_val_Unsupported_1 == path.ifsToIO_ifs(ingressID)
 decreases
@@ -74,7 +74,7 @@ pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val) {
 
 ghost
 opaque
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
 decreases
 pure func absIO_val(raw []byte, ingressID uint16) (val io.IO_val) {
@@ -95,7 +95,7 @@ func AbsUnsupportedPktIsUnsupportedVal(raw []byte, ingressID uint16) {
 
 ghost
 requires respr.OutPkt != nil ==>
-	acc(sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt)), R56)
+	acc(sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt)), _)
 decreases
 pure func absReturnErr(respr processResult) (val io.IO_val) {
 	return respr.OutPkt == nil ? io.IO_val_Unit{} :
@@ -198,10 +198,10 @@ func (d *DataPlane) getDomExternalLemma() {
 }
 
 ghost
-requires acc(msg.Mem(), R50)
-requires acc(sl.Bytes(msg.GetFstBuffer(), 0, len(msg.GetFstBuffer())), R50)
+requires acc(msg.Mem(), _)
+requires acc(sl.Bytes(msg.GetFstBuffer(), 0, len(msg.GetFstBuffer())), _)
 decreases
 pure func MsgToAbsVal(msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
-	return unfolding acc(msg.Mem(), R50) in
+	return unfolding acc(msg.Mem(), _) in
 		absIO_val(msg.Buffers[0], ingressID)
 }

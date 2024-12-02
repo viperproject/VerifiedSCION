@@ -431,75 +431,67 @@ func (d *DataPlane) getNewPacketProcessorFootprint() {
 type Unit struct{}
 
 ghost
-pure
 requires acc(d.Mem(), _)
 decreases
-func (d *DataPlane) IsRunning() bool {
+pure func (d *DataPlane) IsRunning() bool {
 	return unfolding acc(d.Mem(), _) in d.running
 }
 
 ghost
 opaque
-pure
 requires acc(d.Mem(), _)
 requires acc(&d.running, _)
 ensures  d.IsRunning() == d.running
 decreases
-func (d *DataPlane) isRunningEq() Unit {
+pure func (d *DataPlane) isRunningEq() Unit {
 	return unfolding acc(d.Mem(), _) in Unit{}
 }
 
 ghost
-pure
 requires acc(d.Mem(), _)
 decreases
-func (d *DataPlane) InternalConnIsSet() bool {
+pure func (d *DataPlane) InternalConnIsSet() bool {
 	return unfolding acc(d.Mem(), _) in d.internal != nil
 }
 
 ghost
-pure
 requires acc(d.Mem(), _)
 decreases
-func (d *DataPlane) MetricsAreSet() bool {
+pure func (d *DataPlane) MetricsAreSet() bool {
 	return unfolding acc(d.Mem(), _) in d.Metrics != nil
 }
 
 ghost
 opaque
-pure
 requires acc(d.Mem(), _)
 requires acc(&d.internal, _)
 ensures  d.InternalConnIsSet() == (d.internal != nil)
 decreases
-func (d *DataPlane) internalIsSetEq() Unit {
+pure func (d *DataPlane) internalIsSetEq() Unit {
 	return unfolding acc(d.Mem(), _) in Unit{}
 }
 
 ghost
-pure
 requires acc(d.Mem(), _)
 decreases
-func (d *DataPlane) KeyIsSet() bool {
+pure func (d *DataPlane) KeyIsSet() bool {
 	return unfolding acc(d.Mem(), _) in d.macFactory != nil
 }
 
 ghost
 opaque
-pure
 requires acc(d.Mem(), _)
 requires acc(&d.macFactory, _)
 ensures  d.KeyIsSet() == (d.macFactory != nil)
 decreases
-func (d *DataPlane) keyIsSetEq() Unit {
+pure func (d *DataPlane) keyIsSetEq() Unit {
 	return unfolding acc(d.Mem(), _) in Unit{}
 }
 
 ghost
-pure
 requires acc(d.Mem(), _)
 decreases
-func (d *DataPlane) LocalIA() addr.IA {
+pure func (d *DataPlane) LocalIA() addr.IA {
 	return unfolding acc(d.Mem(), _) in d.localIA
 }
 
@@ -547,17 +539,15 @@ func (s *scmpError) Set(e error) {
 }
 
 ghost
-pure
 requires acc(s.Mem(), _)
 decreases
-func (s *scmpError) Get() error {
+pure func (s *scmpError) Get() error {
 	return unfolding acc(s.Mem(), _) in *s
 }
 
 ghost
-pure
 decreases
-func (s *scmpError) CanSet(e error) bool {
+pure func (s *scmpError) CanSet(e error) bool {
 	return typeOf(e) == type[scmpError]
 }
 

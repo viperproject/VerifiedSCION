@@ -84,10 +84,9 @@ func (ip IP) To4(ghost wildcard bool) (res IP) {
 	return nil
 }
 
-pure
-preserves forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], R55)
+preserves forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], _)
 decreases
-func isZeros(s []byte) bool
+pure func isZeros(s []byte) bool
 
 // To16 converts the IP address ip to a 16-byte representation.
 preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
@@ -132,11 +131,10 @@ func (ip *IP) UnmarshalText(text []byte) error
 // An IPv4 address and that same address in IPv6 form are
 // considered to be equal.
 // (VerifiedSCION) we consider this function to be morally pure
-pure
 requires acc(sl.Bytes(ip, 0, len(ip)), _)
 requires acc(sl.Bytes(x, 0, len(x)), _)
 decreases _
-func (ip IP) Equal(x IP) bool
+pure func (ip IP) Equal(x IP) bool
 
 // ParseIP parses s as an IP address, returning the result.
 ensures forall i int :: {&res[i]} 0 <= i && i < len(res) ==> acc(&res[i])

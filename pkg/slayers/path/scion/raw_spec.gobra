@@ -42,11 +42,10 @@ pred (s *Raw) Mem(buf []byte) {
 (*Raw) implements path.Path
 
 ghost
-pure
 requires  acc(s.Mem(buf), _)
-requires  acc(sl.Bytes(buf, 0, len(buf)), R42)
+requires  acc(sl.Bytes(buf, 0, len(buf)), _)
 decreases
-func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
+pure func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
 	return let base := s.GetBase(buf) in
 		base.EqAbsHeader(buf) &&
 		base.WeaklyValid()
@@ -59,11 +58,11 @@ func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-pure
 requires acc(s.Mem(buf), _)
+// TODO: drop post
 ensures  unfolding acc(s.Mem(buf), _) in t == s.Base.Type()
 decreases
-func (s *Raw) Type(ghost buf []byte) (t path.Type) {
+pure func (s *Raw) Type(ghost buf []byte) (t path.Type) {
 	return unfolding acc(s.Mem(buf), _) in s.Base.Type()
 }
 
@@ -81,11 +80,11 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
 }
 
 ghost
-pure
 requires acc(s.Mem(ub), _)
+// TODO: drop post
 ensures  unfolding acc(s.Mem(ub), _) in l == s.Base.Len()
 decreases
-func (s *Raw) LenSpec(ghost ub []byte) (l int) {
+pure func (s *Raw) LenSpec(ghost ub []byte) (l int) {
 	return unfolding acc(s.Mem(ub), _) in s.Base.Len()
 }
 
@@ -186,18 +185,16 @@ pure func (r *Raw) GetCurrHF(ghost ub []byte) uint8 {
 }
 
 ghost
-pure
 requires acc(s.Mem(buf), _)
 decreases
-func (s *Raw) RawBufferMem(ghost buf []byte) []byte {
+pure func (s *Raw) RawBufferMem(ghost buf []byte) []byte {
 	return unfolding acc(s.Mem(buf), _) in s.Raw
 }
 
 ghost
-pure
 requires acc(s.NonInitMem(), _)
 decreases
-func (s *Raw) RawBufferNonInitMem() []byte {
+pure func (s *Raw) RawBufferNonInitMem() []byte {
 	return unfolding acc(s.NonInitMem(), _) in s.Raw
 }
 /**** End of helpful pure functions ****/
@@ -219,7 +216,7 @@ ghost
 requires  0 <= offset
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-requires  acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires  acc(sl.Bytes(raw, 0, len(raw)), _)
 ensures   len(res) == segLen - currHfIdx
 decreases segLen - currHfIdx
 pure func hopFields(
@@ -255,10 +252,10 @@ requires 0 <= offset
 requires 0 < segLen
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires offset + path.HopLen * segLen <= len(raw)
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
-ensures len(res.Future) == segLen - currHfIdx
-ensures len(res.History) == currHfIdx
-ensures len(res.Past) == currHfIdx
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
+ensures  len(res.Future) == segLen - currHfIdx
+ensures  len(res.History) == currHfIdx
+ensures  len(res.Past) == currHfIdx
 decreases
 pure func segment(raw []byte,
 	offset int,
@@ -288,7 +285,7 @@ requires 0 < segLen
 requires offset + path.HopLen * segLen <= len(raw)
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires 0 <= currInfIdx && currInfIdx < 3
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 decreases
 pure func CurrSeg(raw []byte,
 	offset int,
@@ -309,7 +306,7 @@ requires 0 <= headerOffset
 requires segs.Valid()
 requires PktLen(segs, headerOffset) <= len(raw)
 requires 1 <= currInfIdx && currInfIdx < 4
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 decreases
 pure func LeftSeg(
 	raw []byte,
@@ -330,7 +327,7 @@ requires 0 <= headerOffset
 requires segs.Valid()
 requires PktLen(segs, headerOffset) <= len(raw)
 requires -1 <= currInfIdx && currInfIdx < 2
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 decreases
 pure func RightSeg(
 	raw []byte,
@@ -351,7 +348,7 @@ requires 0 <= headerOffset
 requires segs.Valid()
 requires PktLen(segs, headerOffset) <= len(raw)
 requires 2 <= currInfIdx && currInfIdx < 5
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 decreases
 pure func MidSeg(
 	raw []byte,
@@ -368,7 +365,7 @@ pure func MidSeg(
 
 ghost
 opaque
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 requires validPktMetaHdr(raw)
 decreases
 pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
@@ -394,17 +391,17 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 
 ghost
 requires MetaLen <= len(raw)
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 decreases
 pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
-	return unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
+	return unfolding acc(sl.Bytes(raw, 0, len(raw)), _) in
 		let hdr := binary.BigEndian.Uint32(raw[:MetaLen]) in
 		DecodedFrom(hdr)
 }
 
 ghost
 requires MetaLen <= len(raw)
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 decreases
 pure func RawBytesToBase(raw []byte) Base {
 	return let metaHdr := RawBytesToMetaHdr(raw) in
@@ -417,7 +414,7 @@ pure func RawBytesToBase(raw []byte) Base {
 
 ghost
 opaque
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires acc(sl.Bytes(raw, 0, len(raw)), _)
 decreases
 pure func validPktMetaHdr(raw []byte) bool {
 	return MetaLen <= len(raw)  &&
@@ -530,7 +527,7 @@ ghost
 opaque
 requires acc(s.Mem(ub), _)
 requires 0 <= idx && idx < s.GetNumINF(ub)
-requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
 pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.InfoField) bool {
 	return unfolding acc(s.Mem(ub), _) in
@@ -545,7 +542,7 @@ ghost
 opaque
 requires acc(s.Mem(ub), _)
 requires s.GetBase(ub).ValidCurrInfSpec()
-requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
 pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
 	return unfolding acc(s.Mem(ub), _) in
@@ -560,7 +557,7 @@ ghost
 opaque
 requires acc(s.Mem(ub), _)
 requires 0 <= idx && idx < s.GetNumHops(ub)
-requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
 pure func (s *Raw) CorrectlyDecodedHfWithIdx(ub []byte, idx int, hop path.HopField) bool {
 	return unfolding acc(s.Mem(ub), _) in
@@ -574,7 +571,7 @@ ghost
 opaque
 requires acc(s.Mem(ub), _)
 requires s.GetBase(ub).ValidCurrHfSpec()
-requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
 pure func (s *Raw) CorrectlyDecodedHf(ub []byte, hop path.HopField) bool {
 	return unfolding acc(s.Mem(ub), _) in

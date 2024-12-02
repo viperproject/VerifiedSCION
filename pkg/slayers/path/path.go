@@ -91,7 +91,7 @@ type Path interface {
 	//@ ghost
 	//@ pure
 	//@ requires Mem(b)
-	//@ requires acc(sl.Bytes(b, 0, len(b)), R42)
+	//@ requires acc(sl.Bytes(b, 0, len(b)), _)
 	//@ decreases
 	//@ IsValidResultOfDecoding(b []byte, err error) (res bool)
 	// Reverse reverses a path such that it can be used in the reversed direction.

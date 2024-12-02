@@ -2790,8 +2790,6 @@ func (p *scionPacketProcessor) currentInfoPointer( /*@ ghost ubScionL []byte @*/
 		scion.MetaLen + path.InfoLen*int(p.path.PathMeta.CurrINF))
 }
 
-// (VerifiedSCION) This could probably be made pure, but it is likely not beneficial, nor needed
-// to expose the body of this function at the moment.
 // @ requires acc(p.scionLayer.Mem(ubScionL), R20)
 // @ requires acc(&p.path, R50)
 // @ requires p.path == p.scionLayer.GetPath(ubScionL)

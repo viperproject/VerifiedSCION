@@ -30,15 +30,15 @@ pred (n nat) Mem() {
 
 // TODO: This returns int when it should return a mathematical Integer
 ghost
-requires acc(n.Mem(), R13)
+requires acc(n.Mem(), _)
 decreases
 pure func (n nat) toInt() int {
-	return len(n) == 0 ? int(0) : unfolding acc(n.Mem(), R13) in toIntHelper(n, 0)
+	return len(n) == 0 ? int(0) : unfolding acc(n.Mem(), _) in toIntHelper(n, 0)
 }
 
 // TODO: This returns int when it should return a mathematical Integer
 ghost
-requires acc(n, R13)
+requires acc(n, _)
 requires 0 <= i && i < len(n)
 decreases _
 pure func toIntHelper (n nat, i int) int {

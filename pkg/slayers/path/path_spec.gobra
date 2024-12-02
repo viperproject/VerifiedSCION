@@ -38,18 +38,16 @@ func (p *rawPath) DowngradePerm(ghost buf []byte) {
 }
 
 ghost
-pure
 decreases
-func (p *rawPath) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+pure func (p *rawPath) IsValidResultOfDecoding(b []byte, err error) (res bool) {
 	return true
 }
 
 ghost
-pure
 requires acc(p.Mem(ub), _)
 ensures  0 <= l
 decreases
-func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
+pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
 	return unfolding acc(p.Mem(ub), _) in len(p.raw)
 }
 
@@ -69,6 +67,7 @@ pred PathPackageMem() {
 ghost
 requires 0 <= t && t < maxPathType
 requires acc(PathPackageMem(), _)
+// TODO: drop post
 ensures  res == unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
 decreases
 pure func Registered(t Type) (res bool) {

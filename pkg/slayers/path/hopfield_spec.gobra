@@ -30,13 +30,13 @@ pred (h *HopField) Mem() {
 
 ghost
 decreases
-pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs]{
+pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs] {
 	return ifs == 0 ? none[io.IO_ifs] : some(io.IO_ifs(ifs))
 }
 
 ghost
 decreases
-pure func IO_ifsToIfs(ifs option[io.IO_ifs]) uint16{
+pure func IO_ifsToIfs(ifs option[io.IO_ifs]) uint16 {
 	return ifs == none[io.IO_ifs] ? 0 : uint16(get(ifs))
 }
 

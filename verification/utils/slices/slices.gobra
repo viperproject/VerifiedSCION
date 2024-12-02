@@ -32,11 +32,10 @@ pred Bytes(s []byte, start int, end int) {
 	forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i])
 }
 
-pure
 requires acc(Bytes(s, start, end), _)
 requires start <= i && i < end
 decreases
-func GetByte(s []byte, start int, end int, i int) byte {
+pure func GetByte(s []byte, start int, end int, i int) byte {
 	return unfolding acc(Bytes(s, start, end), _) in s[i]
 }
 

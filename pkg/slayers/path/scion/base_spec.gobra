@@ -304,7 +304,7 @@ pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
 }
 
 ghost
-requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+requires acc(sl.Bytes(ub, 0, len(ub)), _)
 decreases
 pure func (s Base) EqAbsHeader(ub []byte) bool {
 	// we compute the sublice ub[:MetaLen] inside this function instead
