@@ -81,8 +81,6 @@ pure func (p *Path) getLHVFLen(buf []byte) (l int) {
 
 ghost
 requires acc(p.Mem(buf), _)
-// TODO: drop post
-ensures  r == (unfolding acc(p.Mem(buf), _) in p.ScionPath != nil)
 decreases
 pure func (p *Path) hasScionPath(buf []byte) (r bool) {
 	return unfolding acc(p.Mem(buf), _) in p.ScionPath != nil
