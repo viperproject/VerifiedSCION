@@ -1,0 +1,132 @@
+// Minimal working example 2.
+package mwe2
+
+// Used to track position in protocol.
+type Place int
+pred token(ghost p Place)
+
+pred RecvPerm(ghost p Place)
+
+// Returns the next place after calling `Recv` from `p`.
+// Avoids using an existential quantifier.
+ghost
+requires RecvPerm(p)
+decreases
+pure func Recv_T(ghost p Place) Place
+
+// Used to refer to the received message.
+ghost
+requires RecvPerm(p)
+decreases
+pure func Recv_R(ghost p Place) int
+
+// This is how the state is/should be updated after receiving message `m`.
+decreases
+pure func Recv_S(s state, m int) state {
+    return state { key: s.key, lastMsg1: m, lastMsg2: s.lastMsg1, lastMsg3: s.lastMsg2 }
+}
+
+requires token(p) && RecvPerm(p)
+ensures token(old(Recv_T(p)))
+ensures m == old(Recv_R(p))
+ensures low(m) 
+func Recv(ghost p Place) (m int)
+
+pred SendPerm(ghost p Place, t int)
+
+ghost
+requires SendPerm(p, t)
+decreases
+pure func Send_T(ghost p Place, t int) Place
+
+requires token(p) && SendPerm(p, t)
+requires low(t)
+ensures token(old(Send_T(p, t)))
+func Send(ghost p Place, t int)
+
+pred DeclassifyPerm(ghost p Place, tag int, t int)
+
+ghost
+requires DeclassifyPerm(p, tag, t)
+decreases
+pure func Declassify_T(ghost p Place, tag int, t int) Place
+
+// In order to make permitted declassifications deterministic in low data,
+// we add low parameter `p` to "tag" declassifications.
+// (Necessary as otherwise IOD spec Protocol2 would not be well-formed.)
+ghost
+requires token(p) && DeclassifyPerm(p, tag, t)
+requires low(tag)
+ensures token(old(Declassify_T(p, tag, t)))
+ensures low(t)
+decreases
+func Declassify(ghost p Place, tag int, t int)
+
+// "Linear" protocol.
+pred Protocol1(ghost p Place, key int) {
+    // 1. Receive a message.
+    RecvPerm(p) && 
+    // 2. Compute MAC tag and declassify it.
+    DeclassifyPerm(Recv_T(p), Recv_R(p), MAC(key, Recv_R(p))) &&
+    // 3. Send MAC tag over network.
+    SendPerm(Declassify_T(Recv_T(p), Recv_R(p), MAC(key, Recv_R(p))), MAC(key, Recv_R(p))) && 
+    // 4. Restart.
+    Protocol1(Send_T(Declassify_T(Recv_T(p), Recv_R(p), MAC(key, Recv_R(p))), MAC(key, Recv_R(p))), key)
+}
+
+type state struct {
+    key int // the private key
+    lastMsg1 int // 1st most recently received message
+    lastMsg2 int // 2nd 
+    lastMsg3 int // 3rd 
+}
+
+pred Protocol2(ghost p Place, s state) {
+    // Receive a message at any time.
+    RecvPerm(p) && Protocol2(Recv_T(p), Recv_S(s, Recv_R(p))) &&
+    // NOTE: at the moment we can declassify things before receiving anything
+    // Declassify and send either the most or the 2nd most recently received message.
+    DeclassifyPerm(p, s.lastMsg1, MAC(s.key, s.lastMsg1)) && Protocol2(Declassify_T(p, s.lastMsg1, MAC(s.key, s.lastMsg1)), s) &&
+    DeclassifyPerm(p, s.lastMsg2, MAC(s.key, s.lastMsg2)) && Protocol2(Declassify_T(p, s.lastMsg2, MAC(s.key, s.lastMsg2)), s) &&
+    SendPerm(p, MAC(s.key, s.lastMsg1)) && Protocol2(Send_T(p, MAC(s.key, s.lastMsg1)), s) &&
+    SendPerm(p, MAC(s.key, s.lastMsg2)) && Protocol2(Send_T(p, MAC(s.key, s.lastMsg2)), s)
+}
+
+// Abstract function representing the computation of a MAC.
+// key x message -> MAC tag
+decreases
+pure func MAC(int, int) int
+
+requires token(p0) && Protocol2(p0, s)
+func authenticate(ghost p0 Place, s state) {
+
+    invariant token(p0) && Protocol2(p0, s)
+    for {
+        unfold Protocol2(p0, s)
+        ghost p1 := Recv_T(p0)
+        m1 := Recv(p0)
+        s = Recv_S(s, m1)
+
+        unfold Protocol2(p1, s)
+        ghost p2 := Recv_T(p1)
+        m2 := Recv(p1)
+        s = Recv_S(s, m2)
+
+        unfold Protocol2(p2, s)
+        ghost p3 := Recv_T(p2)
+        m3 := Recv(p2)
+        s = Recv_S(s, m3)
+
+        // We can use m2, m3 here. m1 won't work.
+        t := MAC(s.key, m3)
+
+        unfold Protocol2(p3, s)
+        ghost p4 := Declassify_T(p3, m3, t)
+        Declassify(p3, m3, t)
+
+        unfold Protocol2(p4, s)
+        ghost p0 = Send_T(p4, t)
+        Send(p4, t)
+    }
+
+}

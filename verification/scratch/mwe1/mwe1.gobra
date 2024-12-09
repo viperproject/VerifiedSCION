@@ -3,7 +3,7 @@
 // 1. We receive a message M over the network.
 // 2. We compute a "MAC tag" of M using K.
 // 3. We send the computed tag over the network.
-package mwe
+package mwe1
 
 ////////////////////////////// I/O Actions ////////////////////////////// 
 // cf. running-example/policy/actions.gobra
