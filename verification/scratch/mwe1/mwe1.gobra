@@ -3,7 +3,7 @@
 // 1. We receive a message M over the network.
 // 2. We compute a "MAC tag" of M using K.
 // 3. We send the computed tag over the network.
-package mwe1
+package mwe
 
 ////////////////////////////// I/O Actions ////////////////////////////// 
 // cf. running-example/policy/actions.gobra
@@ -96,27 +96,43 @@ pure func Low(v int) Observation {
 // this allows us to assume that the sensitivity postconditions are satisfied.
 ghost
 decreases
-requires acc(History(), 1/2) && low(Pre(sig,*History()))
-ensures  acc(History(), 1/2) && low(Post(sig,*History()))
+requires sig != nil && acc(History(), 1/2) && low(Pre(sig,*History()))
+ensures acc(History(), 1/2) && low(Post(sig,*History()))
 func LowPost(sig ClassificationSpec)
 
-type Collect domain {
-    func Post(ClassificationSpec, Trace) ObservationTrace
-    func Pre(ClassificationSpec, Trace) ObservationTrace
-    func pre_(Specification) Observation
-    func post_(Specification) Observation
+// NOTE: these are the low projections mentioned in the paper
+ghost
+decreases
+pure func pre_(spec Specification) Observation {
+    return match spec {
+        case Spec{?p, _}: p
+    } 
+}
+ghost
+decreases
+pure func post_(spec Specification) Observation {
+    return match spec {
+        case Spec{_, ?q}: q
+    } 
+}
 
-    // NOTE: these are the low projections mentioned in the paper
-    axiom {
-      (forall p,q Observation :: {pre_(Spec{p,q})} pre_(Spec{p,q}) == p) &&
-      (forall p,q Observation :: {post_(Spec{p,q})} post_(Spec{p,q}) == q)
+ghost 
+decreases len(trace)
+requires sig != nil
+pure func Pre(sig ClassificationSpec, trace Trace) ObservationTrace {
+    return match trace {
+        case Empty{}: EmptyObs{}
+        case Snoc{?t, ?e}: SnocObs{Pre(sig, t), pre_(sig.Classification(e))}
     }
+}
 
-    axiom {
-      (forall sig ClassificationSpec :: {Post(sig,Empty{})} Post(sig,Empty{}) == EmptyObs{}) &&
-      (forall sig ClassificationSpec :: {Pre(sig,Empty{})} Pre(sig,Empty{}) == EmptyObs{}) &&
-      (forall sig ClassificationSpec, t Trace, e Action :: {Post(sig,Snoc{t,e})} Post(sig,Snoc{t,e}) == SnocObs{Post(sig,t), post_(sig.Classification(e))}) &&
-      (forall sig ClassificationSpec, t Trace, e Action :: {Pre(sig,Snoc{t,e})} Pre(sig,Snoc{t,e}) == SnocObs{Pre(sig,t), pre_(sig.Classification(e))})
+ghost 
+decreases len(trace)
+requires sig != nil
+pure func Post(sig ClassificationSpec, trace Trace) ObservationTrace {
+    return match trace {
+        case Empty{}: EmptyObs{}
+        case Snoc{?t, ?e}: SnocObs{Post(sig, t), post_(sig.Classification(e))}
     }
 }
 
@@ -147,16 +163,12 @@ type IODSpec interface {
     pure Update(state, Action) state
 }
 
+// NOTE: We don't need IsTrace but it is not clear how to translate Reaches.
 type Restriction domain {
-    func IsTrace(IODSpec, Trace) bool
     func Reaches(IODSpec, Trace, state) bool
 
     axiom {
         forall r IODSpec, t Trace, s state, a Action :: { Snoc{t, a}, Reaches(r, t, s) } Reaches(r, t, s) && r.Guard(s, a) ==> Reaches(r, Snoc{t, a}, r.Update(s, a))
-    }
-
-    axiom {
-        forall r IODSpec, t Trace, s state :: {Reaches(r, t, s)} Reaches(r, t, s) ==> IsTrace(r,t)
     }
 }
 
@@ -175,7 +187,7 @@ ghost
 decreases
 pure func (MWE1) Guard(s state, a Action) bool {
     return match a {
-        // NOTE: This makess our IOD spec well-formed, as what is allowed to be
+        // NOTE: This makes our IOD spec well-formed, as what is allowed to be
         // declassified is now deterministic in the previous I/O actions.
         case DeclassifyIO{?t}: t == MAC(s.key, s.lastMsg)
         case _: true
@@ -231,6 +243,12 @@ pure func MAC(int, int) int
 // In the original example, I think this is done via the shared invariant.
 preserves acc(History()) && acc(s) && low(Pre(DefaultClassification{}, *History())) && Reaches(MWE1{}, *History(), *s)
 func authenticate(ghost s *state) {
+    // NOTE: forgetting the calls to either of `Declassify` and `LowPost`
+    // would result in a verification error *in the postcondition* (and not in
+    // the call to send), as here, compliance to the classification spec is 
+    // not checked on every I/O call, but instead on the trace at the end of
+    // the function call.
+     
     m := Recv()
     LowPost(DefaultClassification{})
     ghost s.lastMsg = m
@@ -240,5 +258,8 @@ func authenticate(ghost s *state) {
     /* ghost */ Declassify(t)
     /* ghost */ LowPost(DefaultClassification{})
     Send(t)
+    // The following call to `LowPost` is the only one not needed (here),
+    // as we don't need the postcondition of the last I/O call to verify
+    // the remainder of the function.
     /* ghost */ LowPost(DefaultClassification{})
 }
