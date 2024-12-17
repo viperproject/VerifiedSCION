@@ -1,5 +1,5 @@
 // Minimal working example 2.
-package mwe
+package mwe2
 
 // Used to track position in protocol.
 type Place int
@@ -21,7 +21,7 @@ pure func Recv_R(ghost p Place) int
 // This is how the state is/should be updated after receiving message `m`.
 decreases
 pure func Recv_S(s state, m int) state {
-    return state { key: s.key, lastMsg1: m, lastMsg2: s.lastMsg1, lastMsg3: s.lastMsg2 }
+    return state { key: s.key, lastMsg1: m, lastMsg2: s.lastMsg1 }
 }
 
 requires token(p) && RecvPerm(p)
@@ -72,7 +72,6 @@ type state struct {
     key int // the private key
     lastMsg1 int // 1st most recently received message
     lastMsg2 int // 2nd 
-    lastMsg3 int // 3rd 
 }
 
 pred Protocol2(ghost p0 Place, s0 state) {
