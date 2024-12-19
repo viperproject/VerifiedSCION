@@ -1032,6 +1032,9 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert sl.Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.Bytes(tmpBuf, 0, len(tmpBuf))
 					result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := processor.processPkt(tmpBuf, srcAddr /*@, ioLock, ioSharedArg, dp @*/)
+					// (VerifiedSCION) This assertion is crucial to keep verification stable. Without it,
+					// the fold operation in the branch protected by the condition `result.OutConn == nil`
+					// may fail non-deterministically.
 					// @ assert forall i int :: { &msgs[i] } i0 < i && i < pkts ==>
 					// @ 	MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]
 					// @ fold scmpErr.Mem()
