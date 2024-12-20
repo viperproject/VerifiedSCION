@@ -102,28 +102,27 @@ func AbsValidateIngressIDXoverLemma(oldPkt io.IO_pkt2, newPkt io.IO_pkt2, ingres
 
 ghost
 opaque
-requires acc(p.scionLayer.Mem(ub), _)
-requires acc(&p.d, _) && acc(p.d.Mem(), _)
-requires acc(&p.ingressID, _)
+requires p.scionLayer.Mem(ub)
+requires acc(&p.d) && p.d.Mem()
+requires acc(&p.ingressID)
 decreases
 pure func (p *scionPacketProcessor) DstIsLocalIngressID(ub []byte) bool {
-	return (unfolding acc(p.scionLayer.Mem(ub), _) in
-		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), _) in
-		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==> p.ingressID != 0
+	return (unfolding p.scionLayer.Mem(ub) in
+		(unfolding p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]) in p.scionLayer.DstIA) == (unfolding p.d.Mem() in p.d.localIA)) ==>
+			p.ingressID != 0
 }
 
 ghost
 opaque
-requires acc(p.scionLayer.Mem(ub), _)
-requires acc(&p.d, _) && acc(p.d.Mem(), _)
-requires acc(&p.ingressID, _)
-requires acc(sl.Bytes(ub, 0, len(ub)), _)
+requires p.scionLayer.Mem(ub)
+requires acc(&p.d) && p.d.Mem()
+requires acc(&p.ingressID)
+requires sl.Bytes(ub, 0, len(ub))
 requires slayers.ValidPktMetaHdr(ub)
 decreases
 pure func (p *scionPacketProcessor) LastHopLen(ub []byte) bool {
-	return (unfolding acc(p.scionLayer.Mem(ub), _) in
-		(unfolding acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), _) in
-		p.scionLayer.DstIA) == (unfolding acc(p.d.Mem(), _) in p.d.localIA)) ==>
+	return (unfolding p.scionLayer.Mem(ub) in
+		(unfolding p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]) in p.scionLayer.DstIA) == (unfolding p.d.Mem() in p.d.localIA)) ==>
 			len(absPkt(ub).CurrSeg.Future) == 1
 }
 
@@ -153,19 +152,19 @@ func (p* scionPacketProcessor) LocalDstLemma(ub []byte) {
 }
 
 ghost
-requires acc(p.scionLayer.Mem(ub), _)
-requires acc(&p.path, _) && p.path == p.scionLayer.GetPath(ub)
+requires p.scionLayer.Mem(ub)
+requires acc(&p.path) && p.path == p.scionLayer.GetPath(ub)
 decreases
 pure func (p* scionPacketProcessor) GetIsXoverSpec(ub []byte) bool {
 	return let ubPath := p.scionLayer.UBPath(ub) in
-		unfolding acc(p.scionLayer.Mem(ub), _) in
+		unfolding p.scionLayer.Mem(ub)           in
 		p.path.GetBase(ubPath).IsXoverSpec()
 }
 
 ghost
 opaque
-requires acc(&p.d, _) && acc(p.d.Mem(), _)
-requires acc(&p.ingressID, _)
+requires acc(&p.d) && p.d.Mem()
+requires acc(&p.ingressID)
 requires pkt.PathNotFullyTraversed()
 decreases
 pure func (p *scionPacketProcessor) NoBouncingPkt(pkt io.IO_pkt2) bool {
@@ -368,7 +367,7 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 
 ghost
 opaque
-requires acc(&p.hopField, _)
+requires acc(&p.hopField)
 requires pkt.PathNotFullyTraversed()
 decreases
 pure func (p* scionPacketProcessor) EqAbsHopField(pkt io.IO_pkt2) bool {
@@ -379,13 +378,13 @@ pure func (p* scionPacketProcessor) EqAbsHopField(pkt io.IO_pkt2) bool {
 
 ghost
 opaque
-requires acc(&p.infoField, _)
+requires acc(&p.infoField)
 decreases
 pure func (p* scionPacketProcessor) EqAbsInfoField(pkt io.IO_pkt2) bool {
 	return let absInf := p.infoField.ToAbsInfoField() in
-		let currseg := pkt.CurrSeg in
-		absInf.AInfo == currseg.AInfo &&
-		absInf.UInfo == currseg.UInfo &&
+		let currseg := pkt.CurrSeg                    in
+		absInf.AInfo == currseg.AInfo     &&
+		absInf.UInfo == currseg.UInfo     &&
 		absInf.ConsDir == currseg.ConsDir &&
 		absInf.Peer == currseg.Peer
 }

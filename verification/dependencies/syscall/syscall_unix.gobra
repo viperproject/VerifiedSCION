@@ -64,10 +64,11 @@ func (s *Errno) Set(e error) {
 }
 
 ghost
-requires acc(s.Mem(), _)
+requires s.Mem()
 decreases
 pure func (s *Errno) Get() error {
-	return unfolding acc(s.Mem(), _) in *s
+	return unfolding s.Mem() in
+		*s
 }
 
 ghost

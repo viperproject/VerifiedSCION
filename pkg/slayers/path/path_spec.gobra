@@ -44,11 +44,12 @@ pure func (p *rawPath) IsValidResultOfDecoding(b []byte, err error) (res bool) {
 }
 
 ghost
-requires acc(p.Mem(ub), _)
+requires p.Mem(ub)
 ensures  0 <= l
 decreases
 pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
-	return unfolding acc(p.Mem(ub), _) in len(p.raw)
+	return unfolding p.Mem(ub) in
+		len(p.raw)
 }
 
 (*rawPath) implements Path
@@ -66,26 +67,30 @@ pred PathPackageMem() {
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PathPackageMem(), _)
+requires PathPackageMem()
 decreases
 pure func Registered(t Type) (res bool) {
-	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
+	return unfolding PathPackageMem() in
+		registeredPaths[t].inUse
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PathPackageMem(), _)
+requires PathPackageMem()
 decreases
 pure func GetType(t Type) (res Metadata) {
-	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].Metadata
+	return unfolding PathPackageMem() in
+		registeredPaths[t].Metadata
 }
 
 ghost
-requires acc(PathPackageMem(), _)
-ensures  b == unfolding acc(PathPackageMem(), _) in strictDecoding
+requires PathPackageMem()
+// TODO: drop
+// ensures  b == unfolding acc(PathPackageMem(), _) in strictDecoding
 decreases
 pure func IsStrictDecoding() (b bool) {
-	return unfolding acc(PathPackageMem(), _) in strictDecoding
+	return unfolding PathPackageMem() in
+		strictDecoding
 }
 
 // without passing `writePerm` explicitely below, we run into

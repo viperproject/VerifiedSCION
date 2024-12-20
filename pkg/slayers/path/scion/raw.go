@@ -628,10 +628,10 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 
 // IsFirstHop returns whether the current hop is the first hop on the path.
 // @ pure
-// @ requires  acc(s.Mem(ubuf), _)
+// @ requires  s.Mem(ubuf)
 // @ decreases
 func (s *Raw) IsFirstHop( /*@ ghost ubuf []byte @*/ ) bool {
-	return /*@ unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.Base.Mem(), _) in @*/ s.PathMeta.CurrHF == 0 /*@ ) @*/
+	return /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.PathMeta.CurrHF == 0 /*@ ) @*/
 }
 
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.

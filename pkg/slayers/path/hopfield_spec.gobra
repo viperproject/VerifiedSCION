@@ -43,13 +43,13 @@ pure func IO_ifsToIfs(ifs option[io.IO_ifs]) uint16 {
 ghost
 requires 0 <= start && start <= middle
 requires middle + HopLen <= end && end <= len(raw)
-requires acc(sl.Bytes(raw, start, end), _)
+requires sl.Bytes(raw, start, end)
 decreases
 pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 	return let _ := Asserting(forall k int :: {&raw[middle+2:middle+4][k]} 0 <= k && k < 2 ==> &raw[middle+2:middle+4][k] == &raw[middle + 2 + k]) in
 		let _ := Asserting(forall k int :: {&raw[middle+4:middle+6][k]} 0 <= k && k < 4 ==> &raw[middle+4:middle+6][k] == &raw[middle + 4 + k]) in
 		let _ := Asserting(forall k int :: {&raw[middle+6:middle+6+MacLen][k]} 0 <= k && k < MacLen ==> &raw[middle+6:middle+6+MacLen][k] == &raw[middle + 6 + k]) in
-		unfolding acc(sl.Bytes(raw, start, end), _) in
+		unfolding sl.Bytes(raw, start, end) in
 		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4]) in
 		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6]) in
 		let op_inif2 := ifsToIO_ifs(inif2) in

@@ -44,13 +44,14 @@ func (x *Int) Uint64() (res uint64)
 
 // TODO: This returns int when it should return a mathematical Integer
 ghost
-requires acc(i.Mem(), _)
+requires i.Mem()
 decreases
 pure func (i *Int) toInt() int {
-	return (unfolding acc(i.Mem(), _) in i.neg) ? -((unfolding acc(i.Mem(), _) in i.abs.toInt())) : (unfolding acc(i.Mem(), _) in i.abs.toInt())
+	return (unfolding i.Mem() in i.neg) ? -((unfolding i.Mem() in i.abs.toInt())) : (unfolding i.Mem() in i.abs.toInt())
 }
 
 // TODO: This returns int when it should return a mathematical Integer
 ghost
+trusted
 decreases
 pure func toInt(n uint64) int

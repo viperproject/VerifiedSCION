@@ -48,7 +48,7 @@ pred LayerTypesMem() {
 }
 
 ghost
-requires acc(LayerTypesMem(), _)
+requires LayerTypesMem()
 decreases
 pure func Registered(t LayerType) (res bool) {
 	return unfolding acc(LayerTypesMem(), _) in
@@ -56,14 +56,22 @@ pure func Registered(t LayerType) (res bool) {
 }
 
 ghost
-requires acc(&ltMeta, _) && acc(&ltMetaMap, _) && acc(ltMetaMap, _) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName, _)
+requires acc(&ltMeta)         &&
+	acc(&ltMetaMap)           &&
+	acc(ltMetaMap)            &&
+	acc(&DecodersByLayerName) &&
+	acc(DecodersByLayerName)
 decreases
 pure func registeredDuringInit(t LayerType) (res bool) {
 	return (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
 }
 
 // cannot be made ghost, even though it is morally so
-requires acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap) && acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
+requires acc(&ltMeta) &&
+	acc(&ltMetaMap)   &&
+	acc(ltMetaMap)    &&
+	acc(&DecodersByLayerName, _) &&
+	acc(DecodersByLayerName)
 requires forall t LayerType :: { registeredDuringInit(t) } !registeredDuringInit(t)
 ensures  LayerTypesMem()
 ensures  forall t LayerType :: { Registered(t) } !Registered(t)
