@@ -115,10 +115,9 @@ func ToDoAfterScionFix(url string)
 type PrivateField *int
 
 // ghost
-pure
 requires b
 decreases
-func Asserting(ghost b bool) bool {
+pure func Asserting(ghost b bool) bool {
 	return true
 }
 

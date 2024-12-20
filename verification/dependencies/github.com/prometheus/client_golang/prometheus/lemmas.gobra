@@ -22,7 +22,7 @@ type Unit struct{}
 // even though the precondition morally implies it. This should be
 // fixed by PR #536 of Gobra.
 ghost
-requires  acc(c.Mem(), _)
+requires  c.Mem()
 ensures   c != nil
 decreases _
 pure func CounterMemImpliesNonNil(c Counter) Unit

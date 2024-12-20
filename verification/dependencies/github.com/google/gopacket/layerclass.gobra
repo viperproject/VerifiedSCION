@@ -30,10 +30,9 @@ LayerType implements LayerClass
 pred (l LayerType) Mem() { true }
 
 // Contains implements LayerClass.
-pure
 ensures res == (l == a)
 decreases
-func (l LayerType) Contains(a LayerType) (res bool) {
+pure func (l LayerType) Contains(a LayerType) (res bool) {
 	return l == a
 }
 

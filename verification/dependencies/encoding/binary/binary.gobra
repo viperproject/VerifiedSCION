@@ -12,18 +12,18 @@ package binary
 // A ByteOrder specifies how to convert byte sequences into
 // 16-, 32-, or 64-bit unsigned integers.
 type ByteOrder interface {
-	requires acc(&b[0], _) && acc(&b[1], _)
+	requires acc(&b[0]) && acc(&b[1])
 	ensures res >= 0
 	decreases
 	pure Uint16(b []byte) (res uint16)
 
-	requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
+	requires acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
 	ensures res >= 0
 	decreases
 	pure Uint32(b []byte) (res uint32)
 
-	requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
-	requires acc(&b[4], _) && acc(&b[5], _) && acc(&b[6], _) && acc(&b[7], _)
+	requires acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
+	requires acc(&b[4]) && acc(&b[5]) && acc(&b[6]) && acc(&b[7])
 	ensures res >= 0
 	decreases
 	pure Uint64(b []byte) (res uint64)
@@ -62,7 +62,7 @@ type bigEndian int
 (bigEndian) implements ByteOrder
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
-requires acc(&b[0], _) && acc(&b[1], _)
+requires acc(&b[0]) && acc(&b[1])
 ensures res >= 0
 decreases
 pure func (e littleEndian) Uint16(b []byte) (res uint16) {
@@ -77,7 +77,7 @@ func (e littleEndian) PutUint16(b []byte, v uint16) {
 }
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
-requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
+requires acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
 ensures  0 <= res
 ensures  res == uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 decreases
@@ -95,8 +95,8 @@ func (e littleEndian) PutUint32(b []byte, v uint32) {
 }
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
-requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
-requires acc(&b[4], _) && acc(&b[5], _) && acc(&b[6], _) && acc(&b[7], _)
+requires acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
+requires acc(&b[4]) && acc(&b[5]) && acc(&b[6]) && acc(&b[7])
 ensures res >= 0
 decreases
 pure func (e littleEndian) Uint64(b []byte) (res uint64) {
@@ -134,7 +134,7 @@ pure func (e bigEndian) Uint16Spec(b0, b1 byte) (res uint16) {
 }
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
-requires acc(&b[0], _) && acc(&b[1], _)
+requires acc(&b[0]) && acc(&b[1])
 ensures  res >= 0
 ensures  res == BigEndian.Uint16Spec(b[0], b[1])
 decreases
@@ -167,7 +167,7 @@ pure func (e bigEndian) Uint32Spec(b0, b1, b2, b3 byte) (res uint32) {
 }
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
-requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
+requires acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
 ensures  0 <= res
 ensures  res == BigEndian.Uint32Spec(b[0], b[1], b[2], b[3])
 decreases
@@ -197,8 +197,8 @@ func (e bigEndian) PutUint32(b []byte, v uint32) {
 }
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
-requires acc(&b[0], _) && acc(&b[1], _) && acc(&b[2], _) && acc(&b[3], _)
-requires acc(&b[4], _) && acc(&b[5], _) && acc(&b[6], _) && acc(&b[7], _)
+requires acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
+requires acc(&b[4]) && acc(&b[5]) && acc(&b[6]) && acc(&b[7])
 ensures  res >= 0
 decreases
 pure func (e bigEndian) Uint64(b []byte) (res uint64) {
