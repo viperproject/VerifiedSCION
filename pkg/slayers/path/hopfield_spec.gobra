@@ -62,6 +62,27 @@ pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 }
 
 ghost
+requires  0 <= middle
+requires  middle+HopLen <= len(raw)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
+preserves acc(sl.Bytes(raw[middle:middle+HopLen], 0, HopLen), R55)
+ensures   BytesToIO_HF(raw, 0, middle, len(raw)) ==
+	BytesToIO_HF(raw[middle:middle+HopLen], 0, 0, HopLen)
+decreases
+func BytesToAbsHopFieldOffsetEq(raw [] byte, start int, middle int, end int) {
+	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	unfold acc(sl.Bytes(raw[middle:middle+HopLen], 0, HopLen), R56)
+	absHop1 := BytesToIO_HF(raw, 0, middle, len(raw))
+	absHop2 := BytesToIO_HF(raw[middle:middle+HopLen], 0, 0, HopLen)
+	sl.AssertSliceOverlap(raw, middle, middle+HopLen)
+	sl.AssertSliceOverlap(raw[middle:middle+HopLen], 2, 4)
+	sl.AssertSliceOverlap(raw[middle:middle+HopLen], 4, 6)
+	sl.AssertSliceOverlap(raw[middle:middle+HopLen], 6, 6+MacLen)
+	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	fold acc(sl.Bytes(raw[middle : middle+HopLen], 0, HopLen), R56)
+}
+
+ghost
 decreases
 pure func (h HopField) ToIO_HF() (io.IO_HF) {
 	return io.IO_HF_ {

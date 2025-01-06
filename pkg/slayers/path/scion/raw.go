@@ -486,12 +486,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 	}
 	//@ unfold hop.Mem()
 	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
-	//@ unfold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ unfold acc(sl.Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
-	//@ assert hop.ToIO_HF() ==
-	//@ 	path.BytesToIO_HF(ubuf, 0, hopOffset, len(ubuf))
-	//@ fold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ fold acc(sl.Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
+	//@ path.BytesToAbsHopFieldOffsetEq(ubuf, 0, hopOffset, len(ubuf))
 	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
 	//@ fold acc(s.Mem(ubuf), R11)
 	//@ assert reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, hop)
