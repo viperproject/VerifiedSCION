@@ -41,7 +41,6 @@ func init() {
 	// (VerifiedSCION) ghost initialization code to establish the PathPackageMem predicate.
 	// @ assert acc(&registeredPaths)
 	// @ assert acc(&strictDecoding)
-	// @ assert forall t Type :: { registeredPaths[t] } 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
 	// @ fold PathPackageMem()
 }
 
