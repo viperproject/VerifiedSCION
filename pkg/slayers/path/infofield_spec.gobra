@@ -69,8 +69,7 @@ decreases
 pure func AbsUinfo(raw []byte, currINF int, headerOffset int) set[io.IO_msgterm] {
 	return let idx := InfoFieldOffset(currINF, headerOffset)+2 in
 		unfolding sl.Bytes(raw, 0, len(raw)) in
-		let _ := Asserting(&raw[idx:idx+4][0] == &raw[idx+0]) in
-		let _ := Asserting(&raw[idx:idx+4][1] == &raw[idx+1]) in
+		let _ := sl.AssertSliceOverlap(raw, idx, idx+2) in
 		AbsUInfoFromUint16(binary.BigEndian.Uint16(raw[idx:idx+2]))
 }
 
@@ -100,6 +99,35 @@ pure func BytesToAbsInfoFieldHelper(raw [] byte, middle int) (io.AbsInfoField) {
 			ConsDir: raw[middle] & 0x1 == 0x1,
 			Peer: raw[middle] & 0x2  == 0x2,
 		}
+}
+
+ghost
+requires  0 <= middle
+requires  middle+InfoLen <= len(raw)
+preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
+preserves acc(sl.Bytes(raw[middle:middle+InfoLen], 0, InfoLen), R55)
+ensures   BytesToAbsInfoField(raw, middle) ==
+	BytesToAbsInfoField(raw[middle:middle+InfoLen], 0)
+decreases
+func BytesToAbsInfoFieldOffsetEq(raw [] byte, middle int) {
+	start := middle
+	end := middle+InfoLen
+	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	unfold acc(sl.Bytes(raw[start:end], 0, InfoLen), R56)
+	absInfo1 := reveal BytesToAbsInfoField(raw, start)
+	absInfo2 := reveal BytesToAbsInfoField(raw[start:end], 0)
+
+	assert absInfo1.ConsDir == absInfo2.ConsDir
+	assert absInfo1.Peer == absInfo2.Peer
+	sl.AssertSliceOverlap(raw, start, end)
+	sl.AssertSliceOverlap(raw[start:end], 4, 8)
+	assert absInfo1.AInfo == absInfo2.AInfo
+	sl.AssertSliceOverlap(raw[start:end], 2, 4)
+	assert absInfo1.UInfo == absInfo2.UInfo
+	assert absInfo1 == absInfo2
+
+	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
+	fold acc(sl.Bytes(raw[start:end], 0, InfoLen), R56)
 }
 
 ghost

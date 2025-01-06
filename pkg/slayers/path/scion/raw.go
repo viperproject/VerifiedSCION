@@ -351,14 +351,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 		return path.InfoField{}, err
 	}
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
-	//@ unfold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ unfold acc(sl.Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
-	//@ assert reveal path.BytesToAbsInfoField(ubuf, infOffset) ==
-	//@ 	reveal path.BytesToAbsInfoField(ubuf[infOffset : infOffset+path.InfoLen], 0)
-	//@ assert info.ToAbsInfoField() ==
-	//@ 	reveal path.BytesToAbsInfoField(ubuf, infOffset)
-	//@ fold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ fold acc(sl.Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	//@ path.BytesToAbsInfoFieldOffsetEq(ubuf, infOffset)
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
 	//@ fold acc(s.Mem(ubuf), R11)
 	//@ assert reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, info)
