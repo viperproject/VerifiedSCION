@@ -330,8 +330,10 @@ func CurrSegEquality(raw []byte, offset int, currInfIdx int, currHfIdx int, SegL
 	infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.Bytes(infoBytes, 0, path.InfoLen), R56)
-	assert reveal path.BytesToAbsInfoField(raw, infOffset) ==
-		reveal path.BytesToAbsInfoField(infoBytes, 0)
+	path.BytesToAbsInfoFieldOffsetEq(raw, infOffset)
+	// TODO: drop reveal
+	assert /*reveal*/ path.BytesToAbsInfoField(raw, infOffset) ==
+		/*reveal*/ path.BytesToAbsInfoField(infoBytes, 0)
 	reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, SegLen, MetaLen)
 	reveal CurrSegWithInfo(raw[offset:offset + SegLen * path.HopLen], currHfIdx, SegLen, inf)
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)

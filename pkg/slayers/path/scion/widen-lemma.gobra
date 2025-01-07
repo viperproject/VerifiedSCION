@@ -97,25 +97,6 @@ func widenSegment(raw []byte,
 }
 
 ghost
-requires  0 <= start && start <= middle
-requires  middle + path.HopLen <= length
-requires  length <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
-preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R54)
-ensures   path.BytesToIO_HF(raw, 0, middle, len(raw)) ==
-	path.BytesToIO_HF(raw[start:length], 0, middle-start, length-start)
-decreases
-func widenBytesToIO_HF(raw []byte, middle int, start int, length int) {
-	unfold acc(sl.Bytes(raw, 0, len(raw)), R55)
-	unfold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R55)
-	hfBytes1 := path.BytesToIO_HF(raw, 0, middle, len(raw))
-	hfBytes2 := path.BytesToIO_HF(raw[start:length], 0, middle-start, length-start)
-	assert hfBytes1 == hfBytes2
-	fold acc(sl.Bytes(raw, 0, len(raw)), R55)
-	fold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R55)
-}
-
-ghost
 requires  R53 < p
 requires  0 <= start && start <= offset
 requires  0 <= currHfIdx && currHfIdx <= segLen
@@ -128,7 +109,7 @@ ensures   hopFields(raw, offset, currHfIdx, segLen) ==
 decreases segLen - currHfIdx
 func widenHopFields(raw []byte, offset int, currHfIdx int, segLen int, start int, length int, p perm) {
 	if (currHfIdx != segLen) {
-		widenBytesToIO_HF(raw, offset + path.HopLen * currHfIdx, start, length)
+		path.WidenBytesHopField(raw, offset + path.HopLen * currHfIdx, start, length)
 		hf1 := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHfIdx, len(raw))
 		hf2 := path.BytesToIO_HF(raw[start:length], 0, offset + path.HopLen * currHfIdx - start, length - start)
 		newP := (p + R53)/2
