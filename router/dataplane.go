@@ -4324,7 +4324,7 @@ func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.Serialize
 	// https://fsnets.slack.com/archives/C8ADBBG0J/p1592805884250700
 	rawContents := buffer.Bytes()
 	// @ assert !(reveal slayers.IsSupportedPkt(rawContents))
-	// @ s.InferSizeOHP(rawPkt)
+	// @ s.ValidSizeOhpUb(rawPkt)
 	// @ assert len(rawContents) <= len(rawPkt)
 	// @ unfold sl.Bytes(rawPkt, 0, len(rawPkt))
 	// @ unfold acc(sl.Bytes(rawContents, 0, len(rawContents)), R20)
