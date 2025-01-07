@@ -763,32 +763,6 @@ pure func (s *SCION) HasOneHopPath(ghost ub []byte) bool {
 }
 
 ghost
-requires acc(&s.DstAddrType, _) &&
-	acc(&s.SrcAddrType, _)      &&
-	acc(&s.HdrLen, _)           &&
-	acc(&s.Path, _)
-requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
-requires 0 <= CmnHdrLen+s.AddrHdrLenSpecInternal() &&
-	CmnHdrLen+s.AddrHdrLenSpecInternal() <= s.HdrLen*LineLen &&
-	s.HdrLen*LineLen <= len(ub)
-requires s.Path != nil
-requires acc(s.Path.Mem(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]), _)
-decreases
-pure func (s *SCION) MinimalSizeOfUbufWithOneHopOpenInv(ub []byte) int {
-	return let pathSlice := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
-		let pathLen := s.Path.LenSpec(pathSlice) in
-		CmnHdrLen + s.AddrHdrLenSpecInternal() + pathLen
-}
-
-ghost
-requires acc(s.Mem(ub), _)
-decreases
-pure func (s *SCION) MinimalSizeOfUbuf(ub []byte) int {
-	return unfolding acc(s.Mem(ub), _) in
-		s.MinimalSizeOfUbufWithOneHopOpenInv(ub)
-}
-
-ghost
 requires acc(s.Mem(ub), _)
 requires s.HasOneHopPath(ub)
 ensures  b
