@@ -795,17 +795,19 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 		// @ }
 		if ip := a.IP.To4( /*@ wildcard @*/ ); ip != nil {
 			// @ ghost if !wildcard && isIPv6(a) {
-			// @   assert isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &a.IP[12+i]
+			// @ 	assert isConvertibleToIPv4(hostAddr) ==>
+			// @ 		forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &a.IP[12+i]
 			// @ }
-			// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
+			// @ assert !wildcard && isIP(hostAddr) ==>
+			// @ 	(unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 			// @ ghost if wildcard {
-			// @   fold acc(sl.Bytes(ip, 0, len(ip)), _)
+			// @ 	fold acc(sl.Bytes(ip, 0, len(ip)), _)
 			// @ } else {
-			// @   fold acc(sl.Bytes(ip, 0, len(ip)), R20)
-			// @   package acc(sl.Bytes(ip, 0, len(ip)), R20) --* acc(hostAddr.Mem(), R20) {
-			// @     unfold acc(sl.Bytes(ip, 0, len(ip)), R20)
-			// @     fold acc(hostAddr.Mem(), R20)
-			// @   }
+			// @ 	fold acc(sl.Bytes(ip, 0, len(ip)), R20)
+			// @ 	package acc(sl.Bytes(ip, 0, len(ip)), R20) --* acc(hostAddr.Mem(), R20) {
+			// @ 		unfold acc(sl.Bytes(ip, 0, len(ip)), R20)
+			// @ 		fold acc(hostAddr.Mem(), R20)
+			// @ 	}
 			// @ }
 			return T4Ip, ip, nil
 		}

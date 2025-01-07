@@ -68,7 +68,11 @@ ensures   len(ip) == IPv4len ==> ip === res
 ensures   (len(ip) == IPv6len && isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255) ==> res != nil
 ensures   (len(ip) == IPv6len && !(isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255)) ==> res == nil
 ensures   (len(ip) == IPv6len && res != nil) ==>
-	(forall i int :: { &ip[12+i] }{ &res[i] } 0 <= i && i < IPv4len ==> &ip[12+i] == &res[i])
+	// even though it is technically unecessary,
+	// this assertion allows us to change this contract
+	// without breaking the clients atm.
+	let _ := sl.AssertSliceOverlap(ip, 12, 16) in
+	res === ip[12:16]
 ensures   len(ip) != IPv4len && len(ip) != IPv6len ==> res == nil
 decreases
 func (ip IP) To4(ghost wildcard bool) (res IP) {
