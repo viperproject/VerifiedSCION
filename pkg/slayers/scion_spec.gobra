@@ -810,8 +810,5 @@ ensures  b
 decreases
 pure func (s *SCION) ValidSizeOhpUb(ub []byte) (b bool) {
 	return unfolding s.Mem(ub) in
-		// let pathSlice := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
-		// let pathLen := s.Path.LenSpec(pathSlice) in
-		// CmnHdrLen + s.AddrHdrLenSpecInternal() + pathLen <= len(ub)
 		s.ValidSizeOhpUbOpenInv(ub)
 }
