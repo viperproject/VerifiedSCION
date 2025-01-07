@@ -317,16 +317,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ sl.CombineRange_Bytes(ubuf, startP, endP, HalfPerm)
 	// @ reveal IsSupportedPkt(uSerBufN)
 	// @ reveal IsSupportedRawPkt(b.View())
-
-	// (VerifiedSCION) to check the proof obligations related
-	// to the branch "typeOf(s.Path) == type[*onehop.Path]"
-	// in SCION.Mem():
-	//  ghost if err != nil && typeOf(s.Path) == type[*onehop.Path] {
-	//  	s.MinSizeOfUbufWithOneHopOpenInv(ubuf)
-	//  	pathLen := s.Path.LenSpec(pathSlice)
-	//  	assert CmnHdrLen + s.AddrHdrLenSpecInternal() + pathLen <= len(ubuf)
-	//  	assert s.ValidSizeOhpUbOpenInv(ubuf)
-	//  }
 	return tmp
 }
 
