@@ -372,6 +372,7 @@ opaque
 requires sl.Bytes(raw, 0, len(raw))
 requires validPktMetaHdr(raw)
 decreases
+// TODO: rename this to View()
 pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
 		let metaHdr := RawBytesToMetaHdr(raw)  in
@@ -386,10 +387,10 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 		let numINF := segs.NumInfoFields() in
 		let offset := HopFieldOffset(numINF, prevSegLen, MetaLen) in
 		io.IO_Packet2 {
-			CurrSeg : CurrSeg(raw, offset, currInfIdx, currHfIdx - prevSegLen, segLen, MetaLen),
-			LeftSeg : LeftSeg(raw, currInfIdx + 1, segs, MetaLen),
-			MidSeg : MidSeg(raw, currInfIdx + 2, segs, MetaLen),
-			RightSeg : RightSeg(raw, currInfIdx - 1, segs, MetaLen),
+			CurrSeg: CurrSeg(raw, offset, currInfIdx, currHfIdx - prevSegLen, segLen, MetaLen),
+			LeftSeg: LeftSeg(raw, currInfIdx + 1, segs, MetaLen),
+			MidSeg: MidSeg(raw, currInfIdx + 2, segs, MetaLen),
+			RightSeg: RightSeg(raw, currInfIdx - 1, segs, MetaLen),
 		}
 }
 
@@ -675,7 +676,7 @@ ensures   s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
 ensures   s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
 decreases
 func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField) {
-	reveal validPktMetaHdr(ubuf)
+	assert reveal validPktMetaHdr(ubuf)
 	metaHdr := RawBytesToMetaHdr(ubuf)
 	currInfIdx := int(metaHdr.CurrINF)
 	currHfIdx := int(metaHdr.CurrHF)
@@ -688,13 +689,18 @@ func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField)
 	numINF := segs.NumInfoFields()
 	offset := HopFieldOffset(numINF, prevSegLen, MetaLen)
 	hfIdxSeg := currHfIdx - prevSegLen
-	reveal s.CorrectlyDecodedInf(ubuf, info)
-	reveal s.CorrectlyDecodedHf(ubuf, hop)
-	reveal s.absPkt(ubuf)
+	assert reveal s.CorrectlyDecodedInf(ubuf, info)
+	assert reveal s.CorrectlyDecodedHf(ubuf, hop)
+
 	reveal CurrSeg(ubuf, offset, currInfIdx, hfIdxSeg, segLen, MetaLen)
 	HopsFromPrefixOfRawMatchPrefixOfHops(ubuf, offset, 0, segLen, hfIdxSeg)
-	assert reveal s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
-	assert reveal s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
+
+	pktView := reveal s.absPkt(ubuf)
+	infoView := info.ToAbsInfoField()
+
+	assert pktView.CurrSeg.Peer == infoView.Peer
+	assert reveal s.EqAbsInfoField(pktView, infoView)
+	assert reveal s.EqAbsHopField(pktView, hop.ToIO_HF())
 }
 
 ghost
