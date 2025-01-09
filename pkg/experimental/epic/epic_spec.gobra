@@ -19,9 +19,9 @@ package epic
 import sl "github.com/scionproto/scion/verification/utils/slices"
 
 pred postInitInvariant() {
-	acc(&zeroInitVector, _) &&
+	acc(&zeroInitVector) &&
 	len(zeroInitVector[:]) == 16 &&
-	acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), _)
+	acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])))
 }
 
 // learn the invariant established by init
