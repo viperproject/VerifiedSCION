@@ -271,13 +271,13 @@ pure func segment(raw []byte,
 	segLen int) (res io.IO_seg2) {
 	return let hopfields := hopFields(raw, offset, 0, segLen) in
 		io.IO_seg3_ {
-			AInfo :ainfo,
-			UInfo : uinfo,
-			ConsDir : consDir,
-			Peer : peer,
-			Past : segPast(hopfields[:currHfIdx]),
-			Future : hopfields[currHfIdx:],
-			History : segHistory(hopfields[:currHfIdx]),
+			AInfo: ainfo,
+			UInfo: uinfo,
+			ConsDir: consDir,
+			Peer: peer,
+			Past: segPast(hopfields[:currHfIdx]),
+			Future: hopfields[currHfIdx:],
+			History: segHistory(hopfields[:currHfIdx]),
 		}
 }
 
