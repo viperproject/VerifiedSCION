@@ -191,23 +191,3 @@ decreases
 pure func AssertSliceOverlap(ghost s []byte, ghost subStart int, ghost subEnd int) Unit {
 	return Unit{}
 }
-
-// ghost
-requires 0 <= subStart1
-requires subStart1 <= subEnd1
-requires subEnd1 <= cap(s)
-requires 0 <= subStart2
-requires subStart2 <= subEnd2
-requires subEnd2 <= len(s[subStart1:subEnd1])
-ensures  forall i int :: { &s[subStart1:subEnd1][subStart2:subEnd2][i] } 0 <= i && i < len(s[subStart1:subEnd1][subStart2:subEnd2]) ==>
-	&s[subStart1:subEnd1][subStart2:subEnd2][i] == &s[subStart1+subStart2+i]
-decreases
-pure func AssertNestedSliceOverlap(
-	ghost s []byte,
-	ghost subStart1 int,
-	ghost subEnd1 int,
-	ghost subStart2 int,
-	ghost subEnd2 int,
-) Unit {
-	return Unit{}
-}
