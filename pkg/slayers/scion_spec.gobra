@@ -677,7 +677,7 @@ func FoldEpicMem(p *epic.Path) (r *epic.Path) {
 	return p
 }
 
-requires Uncallable()
+requires false
 func (s *SCION) LayerContents() (res []byte) {
 	res = s.Contents
 	return res

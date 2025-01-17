@@ -4416,7 +4416,7 @@ func (b *bfdSend) String() string {
 // Due to the internal state of the MAC computation, this is not goroutine
 // safe.
 // @ trusted
-// @ requires Uncallable()
+// @ requires false
 func (b *bfdSend) Send(bfd *layers.BFD) error {
 	if b.ohp != nil {
 		// Subtract 10 seconds to deal with possible clock drift.

@@ -181,7 +181,7 @@ func PermsImplyIneq(s1 []byte, s2 []byte, p perm) {
 
 type Unit struct{}
 
-// ghost
+ghost
 requires 0 <= subStart
 requires subStart <= subEnd
 requires subEnd <= cap(s)

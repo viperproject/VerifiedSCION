@@ -101,7 +101,7 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
-// @ requires Uncallable()
+// @ requires false
 func (b *BaseLayer) LayerContents() (res []byte) {
 	res = b.Contents
 	return res

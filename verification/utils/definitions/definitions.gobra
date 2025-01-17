@@ -85,36 +85,18 @@ requires false
 decreases
 func Unreachable() {}
 
-ghost
-ensures !res
-decreases
-pure func Uncallable() (res bool) {
-	return false
-}
-
-/**** Functions to introduce temporary assumptions **/
-
 // Kills the branches that reach this point.
 ghost
+trusted
 ensures false
 decreases _
 func TODO()
-
-// Does the same as TODO, but should be used when it kills a branch
-// that cannot be verified until an issue in SCION is fixed and ported
-// to our branch of SCION.
-ghost
-ensures false
-decreases _
-func ToDoAfterScionFix(url string)
-
-/**** End of functions to introduce temporary assumptions **/
 
 // type to be used as a stub for sets of private fields in formalizations of
 // third party libs
 type PrivateField *int
 
-// ghost
+ghost
 requires b
 decreases
 pure func Asserting(ghost b bool) bool {
