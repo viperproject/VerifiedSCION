@@ -692,13 +692,26 @@ func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField)
 	assert reveal s.CorrectlyDecodedInf(ubuf, info)
 	assert reveal s.CorrectlyDecodedHf(ubuf, hop)
 
-	reveal CurrSeg(ubuf, offset, currInfIdx, hfIdxSeg, segLen, MetaLen)
+	currSeg := reveal CurrSeg(ubuf, offset, currInfIdx, hfIdxSeg, segLen, MetaLen)
 	HopsFromPrefixOfRawMatchPrefixOfHops(ubuf, offset, 0, segLen, hfIdxSeg)
 
 	pktView := reveal s.absPkt(ubuf)
 	infoView := info.ToAbsInfoField()
 
-	assert pktView.CurrSeg.Peer == infoView.Peer
+	// assertions for proving s.EqAbsInfoField(pktView, infoView)
+	{
+		// equality of Peer
+		assert pktView.CurrSeg.Peer == infoView.Peer
+		// equality of AInfo
+		assert currSeg.AInfo == path.Timestamp(ubuf, currInfIdx, MetaLen)
+		infOffset := MetaLen + currInfIdx * path.InfoLen
+		sl.AssertSliceOverlap(ubuf, infOffset+4, infOffset+8)
+		assert pktView.CurrSeg.AInfo == infoView.AInfo
+		// equality of UInfo
+		sl.AssertSliceOverlap(ubuf, infOffset+2, infOffset+4)
+		assert pktView.CurrSeg.UInfo == infoView.UInfo
+	}
+
 	assert reveal s.EqAbsInfoField(pktView, infoView)
 	assert reveal s.EqAbsHopField(pktView, hop.ToIO_HF())
 }
