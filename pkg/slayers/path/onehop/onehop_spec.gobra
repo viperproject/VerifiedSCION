@@ -54,7 +54,7 @@ pure func (o *Path) InferSizeUb(ghost ub []byte) (b bool) {
 
 ghost
 decreases
-pure func (p *Path) IsValidResultOfDecoding(b []byte, err error) bool {
+pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
 	return true
 }
 

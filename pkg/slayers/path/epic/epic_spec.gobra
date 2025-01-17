@@ -98,7 +98,7 @@ pure func (p *Path) GetUnderlyingScionPathBuf(buf []byte) []byte {
 
 ghost
 decreases
-pure func (p *Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
 	return true
 }
 

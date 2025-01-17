@@ -39,7 +39,7 @@ func (p *rawPath) DowngradePerm(ghost buf []byte) {
 
 ghost
 decreases
-pure func (p *rawPath) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+pure func (p *rawPath) IsValidResultOfDecoding(b []byte) bool {
 	return true
 }
 

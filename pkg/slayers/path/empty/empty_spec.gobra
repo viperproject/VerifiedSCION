@@ -36,7 +36,7 @@ func (e Path) DowngradePerm(buf []byte) {
 
 ghost
 decreases
-pure func (p Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+pure func (p Path) IsValidResultOfDecoding(b []byte) bool {
 	return true
 }
 

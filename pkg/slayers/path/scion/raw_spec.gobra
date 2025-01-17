@@ -45,7 +45,7 @@ ghost
 requires s.Mem(buf)
 requires sl.Bytes(buf, 0, len(buf))
 decreases
-pure func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) bool {
+pure func (s *Raw) IsValidResultOfDecoding(buf []byte) bool {
 	return let base := s.GetBase(buf) in
 		base.EqAbsHeader(buf) &&
 		base.WeaklyValid()

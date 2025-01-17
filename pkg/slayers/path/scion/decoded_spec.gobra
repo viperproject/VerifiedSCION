@@ -24,7 +24,7 @@ import (
 
 ghost
 decreases
-pure func (p *Decoded) IsValidResultOfDecoding(b []byte, err error) bool {
+pure func (p *Decoded) IsValidResultOfDecoding(b []byte) bool {
 	return true
 }
 
