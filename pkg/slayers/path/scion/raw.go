@@ -236,11 +236,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // post for IO:
 // @ ensures  r == nil ==> s.GetBase(ubuf).EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
 // @ ensures  r == nil && old(s.GetBase(ubuf).IsXoverSpec()) ==>
-// @ 	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))  &&
-// The following are logically redundant, but they are helpful
-// in establishing these properties in clients more easily.
-// @ 	len(get(old(s.absPkt(ubuf)).LeftSeg).Future) > 0 &&
-// @ 	len(get(old(s.absPkt(ubuf)).LeftSeg).History) == 0
+// @ 	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))
 // @ ensures  r == nil && !old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsIncPath(old(s.absPkt(ubuf)))
 // @ decreases
