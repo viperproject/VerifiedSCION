@@ -3117,7 +3117,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ 	p.path === p.scionLayer.GetPath(ub) &&
 // @ 	p.path.GetBase(ubPath) == currBase.IncPathSpec() &&
 // @ 	currBase.IncPathSpec().Valid())
-// @ ensures   reserr == nil ==>
+// @ ensures  reserr == nil ==>
 // @ 	p.scionLayer.ValidPathMetaData(ub) == old(p.scionLayer.ValidPathMetaData(ub))
 // @ decreases
 func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scion.Base @*/ ) (respr processResult, reserr error) {
@@ -3167,7 +3167,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// we introduce a temporary variable to be able to call `path.AbsMacArrayCongruence()`.
 	var tmpHopField path.HopField
 	if tmpHopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
-		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 		// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
@@ -3179,7 +3179,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ assert reveal p.path.CorrectlyDecodedHf(ubPath, tmpHopField)
 	// @ assert reveal p.path.CorrectlyDecodedHf(ubPath, p.hopField)
 	if p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ ); err != nil {
-		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 		// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
