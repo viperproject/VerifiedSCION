@@ -326,15 +326,30 @@ ensures   let inf := path.BytesToAbsInfoField(InfofieldByteSlice(raw, currInfIdx
 decreases
 func CurrSegEquality(raw []byte, offset int, currInfIdx int, currHfIdx int, SegLen int) {
 	infoBytes := InfofieldByteSlice(raw, currInfIdx)
-	inf := path.BytesToAbsInfoField(infoBytes, 0)
+	inf := reveal path.BytesToAbsInfoField(infoBytes, 0)
 	infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.Bytes(infoBytes, 0, path.InfoLen), R56)
 	path.BytesToAbsInfoFieldOffsetEq(raw, infOffset)
 	assert path.BytesToAbsInfoField(raw, infOffset) ==
 		path.BytesToAbsInfoField(infoBytes, 0)
-	reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, SegLen, MetaLen)
-	reveal CurrSegWithInfo(raw[offset:offset + SegLen * path.HopLen], currHfIdx, SegLen, inf)
+	sl.AssertSliceOverlap(raw, infOffset, offset + SegLen * path.HopLen)
+	currseg1 := reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, SegLen, MetaLen)
+	currseg2 := reveal CurrSegWithInfo(raw[offset:offset + SegLen * path.HopLen], currHfIdx, SegLen, inf)
+
+	// Establish equality of AInfo
+	sl.AssertSliceOverlap(raw, infOffset+2, infOffset+4)
+	sl.AssertSliceOverlap(raw, infOffset+4, infOffset+8)
+	_ := reveal path.BytesToAbsInfoField(raw, infOffset)
+	assert currseg1.AInfo == path.Timestamp(raw, currInfIdx, MetaLen)
+	assert currseg2.AInfo == inf.AInfo
+	assert currseg1.AInfo == currseg2.AInfo
+
+	// Establish equality of Peer
+	assert currseg1.Peer == path.Peer(raw, currInfIdx, MetaLen)
+	assert currseg2.Peer == inf.Peer
+	assert currseg1.Peer == currseg2.Peer
+
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	fold acc(sl.Bytes(infoBytes, 0, path.InfoLen), R56)
 	widenSegment(raw, offset, currHfIdx, inf.AInfo, inf.UInfo, inf.ConsDir,
