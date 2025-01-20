@@ -33,9 +33,9 @@ pred (dp DataPlaneSpec) dp3s_iospec_ordered(s IO_dp3s_state_local, t Place) {
 	dp.dp3s_iospec_bio3s_send(s, t) &&
 	dp.dp3s_iospec_bio3s_recv(s, t) &&
 	dp.dp3s_iospec_skip(s, t) &&
-	dp.dp3s_iospec_stop(s, t) // &&
-	// SIF
-	// dp.dp4s_iospec_bio4s_decl(s, t)
+	dp.dp3s_iospec_stop(s, t) &&
+	// SIF:
+	dp.dp4s_iospec_bio4s_decl(s, t)
 }
 
 type Place int
