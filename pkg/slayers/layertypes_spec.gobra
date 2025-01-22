@@ -18,16 +18,11 @@
 // +gobra
 
 // To be added on a per-need basis
-initEnsures LayerTypeSCION == 1000
+dup pkgInvariant LayerTypeSCION == 1000
 package slayers
 
 import (
 	"github.com/google/gopacket"
-
-	// the following comes from gopacket/layers instead of gopacket
-	importRequires gopacket.LayerTypesMem()
-	importRequires forall t gopacket.LayerType :: { gopacket.Registered(t) } 1000 <= t ==>
-		!gopacket.Registered(t)
 	"github.com/google/gopacket/layers"
 )
 
@@ -60,6 +55,7 @@ var (
 
 // post init properties
 ghost
+trusted
 ensures res === LayerClassSCION
 ensures res != nil
 ensures res == (gopacket.LayerClass)(gopacket.LayerType(1000))
@@ -67,6 +63,7 @@ decreases
 func LayerClassSCIONIsLayerType() (res gopacket.LayerClass)
 
 ghost
+trusted
 ensures res === LayerClassSCMP
 ensures res != nil
 ensures res == (gopacket.LayerClass)(gopacket.LayerType(1002))
@@ -74,6 +71,7 @@ decreases
 func LayerClassSCMPIsLayerType() (res gopacket.LayerClass)
 
 ghost
+trusted
 ensures res === LayerClassHopByHopExtn
 ensures res != nil
 ensures res == (gopacket.LayerClass)(gopacket.LayerType(1003))
