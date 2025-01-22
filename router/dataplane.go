@@ -145,6 +145,14 @@ type BatchConn interface {
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
 	// @ 		MsgToAbsVal(&msgs[i], ingressID) == old(MultiReadBioIO_val(place, n)[i])
+	// SIF: classification spec
+	// NOTE: The postcondition for recv specifies that received messages are low.
+	// TODO: I have decided to mark the abstraction as low for now.
+	// And also used MultiReadBioIOI_val instead of MsgToAbsVal to match what is
+	// used in permissions.
+	// @ ensures err == nil ==>
+	// @ 	forall i int :: { MutliReadBioIO_val(place, n)[i] } 0 <= i && i < n ==>
+	// @		low(old(MultiReadBioIO_val(place, n)[i]))
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
@@ -161,6 +169,10 @@ type BatchConn interface {
 	// preconditions for IO-spec:
 	// @ requires  MsgToAbsVal(&msgs[0], egressID) == ioAbsPkts
 	// @ requires  io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
+	// SIF: classification spec
+	// NOTE: I mark `ioAbsPkts` instead of `MsgToAbsVal(...)` as low here to
+	// match variable used in send permission.
+	// @ requires low(ioAbsPkts)
 	// @ ensures   acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
 	// @ ensures   acc(sl.Bytes(msgs[0].GetFstBuffer(), 0, len(msgs[0].GetFstBuffer())), R50)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)

@@ -363,10 +363,13 @@ ensures  token(old(dp3s_iospec_bio3s_exit_T(t, v)))
 func Exit(ghost t Place, ghost v IO_val)
 
 // SIF: declassification action
+// TODO: maybe it's a good idea to split up sigma and p in IO_val
 ghost
 decreases
 requires token(t) && CBio_IN_bio4s_decl(t, v)
+requires v.isIO_decl_val && low(v.IO_decl_val_inif) && low(v.IO_decl_val_egif) && low(v.IO_decl_val_ts) && low(v.IO_decl_val_beta)
 ensures token(dp4s_iospec_bio4s_decl_T(t, v))
+ensures low(v.IO_decl_val_sigma)
 func Decl(ghost t Place, ghost v IO_val)
 
 /** End of helper functions to perfrom BIO operations **/
