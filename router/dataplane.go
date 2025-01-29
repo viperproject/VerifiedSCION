@@ -2869,6 +2869,8 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, ghost ubScionL []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	// @ ghost oldPkt := absPkt(ubScionL)
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput)
+	// NOTE: Might need FromSliceToMacArray here and maybe [:path.MacLen] on hopField.Mac
+	// @ ghost absMac := path.AbsMac(fullMac[:path.MacLen])
 	// @ fold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
 	// @ defer unfold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
 	// @ sl.SplitRange_Bytes(fullMac, 0, path.MacLen, R21)
@@ -2903,15 +2905,38 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 		// @ }
 		return tmpRes, tmpErr
 	}
+
+	// NOTE: We want to establish hf_valid (or rather hf_valid_impl) = true here
+	// To that end, we need to relate abstract and concrete inif, egif, hvf, ts, uinfo etc.
+	// nextMsgtermSpec should be done by FullMAC
+
 	// Add the full MAC to the SCION packet processor,
 	// such that EPIC does not need to recalculate it.
 	p.cachedMac = fullMac
 	// @ reveal p.EqAbsInfoField(oldPkt)
 	// @ reveal p.EqAbsHopField(oldPkt)
+
+	// NOTE: taken out for now
 	// (VerifiedSCION) Assumptions for Cryptography:
+	//  absInf := p.infoField.ToAbsInfoField()
+	//  absHF := p.hopField.ToIO_HF()
+	//  AssumeForIO(dp.hf_valid(absInf.ConsDir, absInf.AInfo, absInf.UInfo, absHF))
+
+	// NOTE: This should be assert-able after `if` from postcondition of `ConstantTimeCompare`.
+	// @ assert hopField.Mac == fullMac[:path.MacLen]
+
+	// @ AbsMacArrayCongruence(hopField.Mac, fullMac[:path.MacLen])
+	// NOTE: ==> path.AbsMac(hopField.Mac) == path.AbsMac(fullMac[:path.MacLen])
+
 	// @ absInf := p.infoField.ToAbsInfoField()
 	// @ absHF := p.hopField.ToIO_HF()
-	// @ AssumeForIO(dp.hf_valid(absInf.ConsDir, absInf.AInfo, absInf.UInfo, absHF))
+	// NOTE: This should be assert-able after FullMAC(...)
+	// @ assert absMac == io.nextMsgtermSpec(dp.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo, absInf.UInfo)
+	// NOTE: ==> path.AbsMac(hopField.Mac) == io.nextMsgtermSpec(dp.Asid(), absHF.InIF2, absHf.EgIF2, absInf.AInfo, absInf.UInfo)
+	// NOTE: ==> absHF.HVF := path.AbsMac(hopField.Mac) == ...
+	// @ assert dp.hf_valid_impl(dp.Asid(), absInf.AInfo, absInf.UInfo, absHF)
+	// @ assert dp.hf_valid(absInf.ConsDir, absInf.AInfo, absInf.UInfo, absHF)
+
 	// @ reveal AbsVerifyCurrentMACConstraint(oldPkt, dp)
 	// @ fold p.d.validResult(processResult{}, false)
 	return processResult{}, nil

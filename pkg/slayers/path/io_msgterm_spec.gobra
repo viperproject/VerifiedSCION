@@ -18,7 +18,7 @@ package path
 
 import (
 	"verification/io"
-	. "verification/utils/definitions"
+	. "verification/utils/definitions"	
 )
 
 // At the moment, we assume that all cryptographic operations performed at the code level
@@ -34,6 +34,11 @@ ghost
 decreases
 pure func AbsMac(mac [MacLen]byte) (io.IO_msgterm)
 
+// SIF: Version for FullMAC
+// ghost 
+// decreases
+// pure func AbsFullMac(mac [MACBufferSize]byte) (io.IO_msgterm)
+
 // The following function converts a slice with at least `MacLen` elements into
 // an (exclusive) array containing the mac. Note that there are no permissions
 // involved for accessing exclusive arrays.
@@ -46,6 +51,18 @@ decreases
 pure func FromSliceToMacArray(mac []byte) (res [MacLen]byte) {
 	return [MacLen]byte{ mac[0], mac[1], mac[2], mac[3], mac[4], mac[5] }
 }
+
+// SIF: Version for FullMAC
+// ghost
+// requires MACBufferSize <= len(mac)
+// requires forall i int :: { &mac[i] } 0 <= i && i < MACBufferSize ==> acc(&mac[i], _)
+// ensures  len(res) == MACBufferSize
+// ensures  forall i int :: { res[i] } 0 <= i && i < MACBufferSize ==> mac[i] == res[i]
+// decreases
+// pure func FromSliceToFullMacArray(mac []byte) (res [MACBufferSize]byte) {
+// 	// NOTE: formatting this differently caused a parsing problem
+// 	return [MACBufferSize]byte{ mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], mac[6], mac[7], mac[8], mac[9], mac[10], mac[11], mac[12], mac[13], mac[14], mac[15] }
+// }
 
 ghost
 requires len(mac1) == MacLen

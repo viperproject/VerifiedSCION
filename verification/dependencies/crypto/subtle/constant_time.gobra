@@ -20,5 +20,6 @@ requires acc(sl.Bytes(y, 0, len(y)), _)
 // ensures unfolding sl.Bytes(x, 0, len(x)) in (unfolding sl.Bytes(y, 0, len(y)) in len(x) == len(y) ==> (forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 1)
 // ensures unfolding sl.Bytes(x, 0, len(x)) in (unfolding sl.Bytes(y, 0, len(y)) in len(x) == len(y) ==> !(forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i]) ==> res == 0)
 ensures len(x) != len(y) ==> res == 0
+ensures res != 0 ==> unfolding sl.Bytes(x, 0, len(x)) in (unfolding sl.bytes(y, 0, len(y)) in forall i int :: 0 <= i && i < len(x) ==> x[i] == y[i])
 decreases _
 pure func ConstantTimeCompare(x, y []byte) (res int)
