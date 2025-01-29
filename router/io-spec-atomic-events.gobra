@@ -158,3 +158,33 @@ func AtomicXover(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pk
 	fold SharedInv!< dp, ioSharedArg !>()
 	ghost ioLock.Unlock()
 }
+
+ghost
+// NOTE: I don't think I need this here
+// requires dp.Valid()
+requires low(beta) && low(ts) && low(inif) && low(egif)
+requires sigma == io.nextMsgtermSpec(dp.Asid(), inif, egif, ts, beta)
+preserves acc(ioLock.LockP(), _)
+preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+ensures low(sigma)
+// NOTE: Not sure if I need this
+decreases _
+func AtomicDecl(beta set[io.IO_msgterm], ts uint, inif, egif option[io.IO_ifs], sigma io.IO_msgterm, ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
+	ghost ioLock.Lock()
+	unfold SharedInv!< dp, ioSharedArg !>()
+
+	t, s := *ioSharedArg.Place, *ioSharedArg.State
+	ghost tag := io.IO_val(io.IO_decl_val{beta, ts, inif, egif, sigma})
+
+	assert dp.dp4s_iospec_bio4s_decl_guard(s, t, tag)
+	unfold dp.dp3s_iospec_ordered(s, t)
+	unfold dp.dp4s_iospec_bio4s_decl(s, t)
+
+	io.TriggerBodyIoDecl(tag)
+	tN := io.dp4s_iospec_bio4s_decl_T(t, tag)
+	io.Decl(t, tag)
+	ghost *ioSharedArg.Place = tN
+
+	fold SharedInv!< dp, ioSharedArg !>()
+	ghost ioLock.Unlock()
+}

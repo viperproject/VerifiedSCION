@@ -313,7 +313,8 @@ pure func dp4s_iospec_bio4s_decl_T(t Place, v IO_val) Place
 
 ghost
 requires v.isIO_decl_val
-requires dp.Valid()
+// NOTE: Not sure I need this here
+// requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp4s_iospec_bio4s_decl_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	// SIF: cf. `hf_valid` in `router.gobra`
@@ -329,11 +330,13 @@ pure func (dp DataPlaneSpec) dp4s_iospec_bio4s_decl_guard(s IO_dp3s_state_local,
 pred (dp DataPlaneSpec) dp4s_iospec_bio4s_decl(s IO_dp3s_state_local, t Place) {
 	// SIF: just copying with `TriggerBodyIoEnter` for now.
 	// NOTE: here as well we need some specific formatting
-	forall v IO_val :: { TriggerBodyIoEnter(v) } (
+	forall v IO_val :: { TriggerBodyIoDecl(v) } (
 		match v {
 			case IO_decl_val{?beta, ?ts, ?inif, ?egif, ?sigma}:
-				let _ignored := TriggerBodyIoEnter(v) in
-				(dp.Valid() && dp.dp4s_iospec_bio4s_decl_guard(s, t, v) ==>
+				let _ignored := TriggerBodyIoDecl(v) in
+				// NOTE: Not sure I need this here
+				// (dp.Valid() && dp.dp4s_iospec_bio4s_decl_guard(s, t, v) ==>
+				(dp.dp4s_iospec_bio4s_decl_guard(s, t, v) ==>
 					(CBio_IN_bio4s_decl(t, v) &&
 					dp.dp3s_iospec_ordered(
 						s, 
@@ -342,6 +345,10 @@ pred (dp DataPlaneSpec) dp4s_iospec_bio4s_decl(s IO_dp3s_state_local, t Place) {
 				true
 		})
 }
+
+ghost
+decreases
+pure func TriggerBodyIoDecl(v IO_val) BogusTrigger { return BogusTrigger{} }
 
 /** BIO operations **/
 ghost
