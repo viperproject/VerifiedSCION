@@ -167,7 +167,7 @@ requires sigma == io.nextMsgtermSpec(dp.Asid(), inif, egif, ts, beta)
 preserves acc(ioLock.LockP(), _)
 preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 ensures low(sigma)
-// NOTE: Not sure if I need this
+// NOTE: Seems to be needed bc. lock might not terminate
 decreases _
 func AtomicDecl(beta set[io.IO_msgterm], ts uint, inif, egif option[io.IO_ifs], sigma io.IO_msgterm, ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
 	ghost ioLock.Lock()

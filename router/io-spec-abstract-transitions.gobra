@@ -251,17 +251,3 @@ func XoverEvent(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt
 	}
 	AtomicXover(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 }
-
-ghost
-// NOTE: Not sure if I need this
-// requires dp.Valid()
-// TODO: Not sure if we need this next to `AtomicDecl` 
-requires low(beta) && low(ts) && low(inif) && low(egif)
-requires sigma == io.nextMsgtermSpec(dp.Asid(), inif, egif, ts, beta)
-preserves acc(ioLock.LockP(), _)
-preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
-ensures low(sigma)
-decreases
-func DeclEvent(beta set[io.IO_msgterm], ts uint, inif, egif option[io.IO_ifs], sigma io.IO_msgterm, ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) { 
-	AtomicDecl(beta, ts, inif, egif, sigma, ioLock, ioSharedArg, dp)
-}
