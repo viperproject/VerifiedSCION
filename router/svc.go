@@ -17,7 +17,7 @@
 package router
 
 import (
-	mrand "math/rand"
+	"math/rand/v2"
 	"net/netip"
 	"slices"
 	"sync"
@@ -85,13 +85,5 @@ func (s *services) Any(svc addr.SVC) (netip.AddrPort, bool) {
 	if len(addrs) == 0 {
 		return netip.AddrPort{}, false
 	}
-	//@ assert validMapValue(svc, addrs)
-	//@ unfold acc(validMapValue(svc, addrs))
-	//@ defer fold internalLockInv!<s!>()
-	//@ defer fold acc(validMapValue(svc, addrs))
-	tmpIdx := mrand.Intn(len(addrs))
-	tmpAddr := addrs[tmpIdx]
-	//@ unfold InjectiveMem(tmpAddr, tmpIdx)
-	//@ fold InjectiveMem(tmpAddr, tmpIdx)
-	return tmpAddr, true
+	return addrs[rand.IntN(len(addrs))], true
 }

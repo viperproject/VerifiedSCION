@@ -16,9 +16,10 @@ package router
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"hash/fnv"
-	"math/rand"
+	mrand "math/rand/v2"
 	"net"
 	"net/netip"
 	"reflect"
@@ -26,7 +27,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/google/gopacket"
+	"github.com/gopacket/gopacket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -140,7 +141,7 @@ func TestForwarder(t *testing.T) {
 				for i, m := range ms {
 					totalCount++
 					// 1/5 of the packets (randomly chosen) are errors
-					if rand.Intn(5) == 0 {
+					if mrand.IntN(5) == 0 {
 						expectedPktId++
 						ms = ms[:i]
 						break
