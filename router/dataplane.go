@@ -3164,8 +3164,10 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
 	// @ assert p.path == p.scionLayer.GetPath(ub)
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
+	// @ assert p.scionLayer.ValidHeaderOffset(ub, len(ub))
 	// @ assert p.path == p.scionLayer.GetPath(ub)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
+	// @ assert p.scionLayer.ValidHeaderOffset(ub, len(ub))
 	// @ assert p.path == p.scionLayer.GetPath(ub)
 	// @ assert len(get(old(absPkt(ub)).LeftSeg).Future) > 0
 	// @ assert len(get(old(absPkt(ub)).LeftSeg).History) == 0
@@ -3195,7 +3197,6 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
-	// @ assume p.scionLayer.ValidHeaderOffset(ub, len(ub)) // TODO: drop
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm/2)
 	// @ absPktFutureLemma(ub)
