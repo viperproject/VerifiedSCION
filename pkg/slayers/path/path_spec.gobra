@@ -85,8 +85,6 @@ pure func GetType(t Type) (res Metadata) {
 
 ghost
 requires PathPackageMem()
-// TODO: drop
-// ensures  b == unfolding acc(PathPackageMem(), _) in strictDecoding
 decreases
 pure func IsStrictDecoding() (b bool) {
 	return unfolding PathPackageMem() in
