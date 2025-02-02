@@ -3200,13 +3200,19 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm/2)
 	// @ absPktFutureLemma(ub)
 	// @ p.path.DecodingLemma(ubPath, p.infoField, p.hopField)
-	// @ assume false
 	// @ assert reveal p.path.EqAbsInfoField(p.path.absPkt(ubPath), p.infoField.ToAbsInfoField())
 	// @ assert reveal p.path.EqAbsHopField(p.path.absPkt(ubPath), p.hopField.ToIO_HF())
 	// @ assert reveal p.EqAbsHopField(absPkt(ub))
 	// @ assert reveal p.EqAbsInfoField(absPkt(ub))
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm/2)
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
+	// (VerifiedSCION) problematic posts:
+	// TODO: drop assumptions
+	// @ assume p.scionLayer.ValidPathMetaData(ub) == old(p.scionLayer.ValidPathMetaData(ub))
+	// @ assume let ubPath := p.scionLayer.UBPath(ub) in
+	// @ 	(unfolding acc(p.scionLayer.Mem(ub), _) in
+	// @ 	p.path.GetBase(ubPath) == currBase.IncPathSpec() &&
+	// @ 	currBase.IncPathSpec().Valid())
 	return processResult{}, nil
 }
 
