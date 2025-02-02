@@ -3154,8 +3154,6 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 		return processResult{}, serrors.WrapStr("incrementing path", err)
 	}
 	// @ assert p.path.absPkt(ubPath) == scion.AbsXover(preAbsPkt)
-	// assert len(get(preAbsPkt.LeftSeg).Future) > 0
-	// assert len(get(preAbsPkt.LeftSeg).History) == 0
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
 	// @ assert reveal p.scionLayer.ValidHeaderOffset(ub, startP)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
