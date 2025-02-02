@@ -3115,8 +3115,8 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 // @ 	let ubPath := p.scionLayer.UBPath(ub)   in
 // @ 	(unfolding acc(p.scionLayer.Mem(ub), _) in
 // @ 	p.path === p.scionLayer.GetPath(ub) &&
-// @ 	p.path.GetBase(ubPath) == currBase.IncPathSpec() &&
-// @ 	currBase.IncPathSpec().Valid())
+// @ 	p.path.GetBase(ubPath) == currBase.IncPathSpec())
+// @ ensures  reserr == nil ==> currBase.IncPathSpec().Valid()
 // @ ensures  reserr == nil ==>
 // @ 	p.scionLayer.ValidPathMetaData(ub) == old(p.scionLayer.ValidPathMetaData(ub))
 // @ decreases
@@ -3205,13 +3205,12 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ assert reveal p.EqAbsInfoField(absPkt(ub))
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm/2)
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
-	// (VerifiedSCION) problematic posts:
-	// TODO: drop assumptions
+	// @ assert currBase.IncPathSpec().Valid()
+	// TODO (VerifiedSCION): drop assumptions
 	// @ assume p.scionLayer.ValidPathMetaData(ub) == old(p.scionLayer.ValidPathMetaData(ub))
 	// @ assume let ubPath := p.scionLayer.UBPath(ub) in
 	// @ 	(unfolding acc(p.scionLayer.Mem(ub), _) in
-	// @ 	p.path.GetBase(ubPath) == currBase.IncPathSpec() &&
-	// @ 	currBase.IncPathSpec().Valid())
+	// @ 	p.path.GetBase(ubPath) == currBase.IncPathSpec())
 	return processResult{}, nil
 }
 
