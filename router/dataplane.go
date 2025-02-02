@@ -3213,8 +3213,6 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm/2)
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
 	// @ assert currBase.IncPathSpec().Valid()
-	// TODO (VerifiedSCION): drop assumptions
-	// @ assume p.scionLayer.ValidPathMetaData(ub) == old(p.scionLayer.ValidPathMetaData(ub))
 	return processResult{}, nil
 }
 
