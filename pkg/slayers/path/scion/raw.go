@@ -234,11 +234,18 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
 // post for IO:
-// @ ensures  r == nil ==> s.GetBase(ubuf).EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
+// @ ensures  r == nil ==>
+// @ 	s.GetBase(ubuf).EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
 // @ ensures  r == nil && old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))
 // @ ensures  r == nil && !old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsIncPath(old(s.absPkt(ubuf)))
+// (VerifiedSCION) the following post is technically redundant,
+// as it conveys information that could, in principle, be conveyed
+// with the previous posts. We should at some point revisit all
+// abstractions we use for paths and potentially unify them.
+// @ ensures  r == nil ==>
+// @ 	s.GetBase(ubuf) == old(s.GetBase(ubuf).IncPathSpec())
 // @ decreases
 func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ unfold s.Mem(ubuf)

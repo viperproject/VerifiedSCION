@@ -3142,6 +3142,8 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ reveal p.scionLayer.ValidHeaderOffset(ub, startP)
 	// @ unfold acc(p.scionLayer.Mem(ub), R55)
+	// @ assert p.path.GetBase(ubPath) == currBase
+	// @ ghost nextBase := currBase.IncPathSpec()
 	if err := p.path.IncPath( /*@ ubPath @*/ ); err != nil {
 		// TODO parameter problem invalid path
 		// (VerifiedSCION) we currently expose a lot of internal information from slayers here. Can we avoid it?
@@ -3153,6 +3155,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 		// @ fold p.scionLayer.NonInitMem()
 		return processResult{}, serrors.WrapStr("incrementing path", err)
 	}
+	// @ assert p.path.GetBase(ubPath) == nextBase
 	// @ assert p.path.absPkt(ubPath) == scion.AbsXover(preAbsPkt)
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
 	// @ assert reveal p.scionLayer.ValidHeaderOffset(ub, startP)
@@ -3167,11 +3170,13 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
 	// @ assert p.scionLayer.ValidHeaderOffset(ub, len(ub))
 	// @ assert p.path == p.scionLayer.GetPath(ub)
+	// @ assert p.path.GetBase(ubPath) == nextBase
 	// @ assert len(get(old(absPkt(ub)).LeftSeg).Future) > 0
 	// @ assert len(get(old(absPkt(ub)).LeftSeg).History) == 0
 	// @ assert slayers.ValidPktMetaHdr(ub) && p.scionLayer.EqAbsHeader(ub)
 	// @ assert absPkt(ub) == reveal AbsDoXover(old(absPkt(ub)))
 	// @ assert p.path == p.scionLayer.GetPath(ub)
+	// @ assert p.path.GetBase(ubPath) == nextBase
 	var err error
 	// (VerifiedSCION) Due to an incompleteness (https://github.com/viperproject/gobra/issues/770),
 	// we introduce a temporary variable to be able to call `path.AbsMacArrayCongruence()`.
@@ -3183,6 +3188,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
+	// @ assert p.path.GetBase(ubPath) == nextBase
 	p.hopField = tmpHopField
 	// @ path.AbsMacArrayCongruence(p.hopField.Mac, tmpHopField.Mac)
 	// @ assert p.hopField.ToIO_HF() == tmpHopField.ToIO_HF()
@@ -3195,6 +3201,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 		// TODO parameter problem invalid path
 		return processResult{}, err
 	}
+	// @ assert p.path.GetBase(ubPath) == nextBase
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm/2)
 	// @ absPktFutureLemma(ub)
@@ -3208,9 +3215,6 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ assert currBase.IncPathSpec().Valid()
 	// TODO (VerifiedSCION): drop assumptions
 	// @ assume p.scionLayer.ValidPathMetaData(ub) == old(p.scionLayer.ValidPathMetaData(ub))
-	// @ assume let ubPath := p.scionLayer.UBPath(ub) in
-	// @ 	(unfolding acc(p.scionLayer.Mem(ub), _) in
-	// @ 	p.path.GetBase(ubPath) == currBase.IncPathSpec())
 	return processResult{}, nil
 }
 
