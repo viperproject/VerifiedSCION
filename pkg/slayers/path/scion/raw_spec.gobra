@@ -621,6 +621,8 @@ preserves validPktMetaHdr(ubuf)
 preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
 ensures   s.absPkt(ubuf).LeftSeg != none[io.IO_seg2]
 ensures   len(s.absPkt(ubuf).CurrSeg.Future) == 1
+ensures   len(get(s.absPkt(ubuf).LeftSeg).Future) > 0
+ensures   len(get(s.absPkt(ubuf).LeftSeg).History) == 0
 decreases
 func (s *Raw) XoverLemma(ubuf []byte) {
 	reveal validPktMetaHdr(ubuf)
@@ -640,6 +642,7 @@ func (s *Raw) XoverLemma(ubuf []byte) {
 	assert pkt.LeftSeg == reveal LeftSeg(ubuf, currInfIdx + 1, segs, MetaLen)
 	assert len(pkt.CurrSeg.Future) == 1
 	assert pkt.LeftSeg != none[io.IO_seg2]
+	assert len(get(pkt.LeftSeg).Future) > 0
 }
 
 ghost
