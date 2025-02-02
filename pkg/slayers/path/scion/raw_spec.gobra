@@ -290,13 +290,16 @@ requires 0 < segLen
 requires offset + path.HopLen * segLen <= len(raw)
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires 0 <= currInfIdx && currInfIdx < 3
+ensures  len(res.Future) == segLen - currHfIdx
+ensures  len(res.History) == currHfIdx
+ensures  len(res.Past) == currHfIdx
 decreases
 pure func CurrSeg(raw []byte,
 	offset int,
 	currInfIdx int,
 	currHfIdx int,
 	segLen int,
-	headerOffset int) io.IO_seg3 {
+	headerOffset int) (res io.IO_seg3) {
 	return let ainfo := path.Timestamp(raw, currInfIdx, headerOffset) in
 		let consDir := path.ConsDir(raw, currInfIdx, headerOffset) in
 		let peer := path.Peer(raw, currInfIdx, headerOffset) in
@@ -642,6 +645,7 @@ func (s *Raw) XoverLemma(ubuf []byte) {
 	assert pkt.LeftSeg == reveal LeftSeg(ubuf, currInfIdx + 1, segs, MetaLen)
 	assert len(pkt.CurrSeg.Future) == 1
 	assert pkt.LeftSeg != none[io.IO_seg2]
+	assert len(get(s.absPkt(ubuf).LeftSeg).History) == 0
 	assert len(get(pkt.LeftSeg).Future) > 0
 }
 
