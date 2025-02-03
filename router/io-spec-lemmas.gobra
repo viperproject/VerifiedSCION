@@ -263,6 +263,7 @@ ensures  end == p.scionLayer.PathEndIdx(ub)
 ensures  scion.validPktMetaHdr(ub[start:end])
 ensures  p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
+ensures  p.path === p.scionLayer.GetPath(ub)
 ensures  absPkt(ub) == p.path.absPkt(ub[start:end])
 decreases
 func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end int) {
@@ -324,7 +325,9 @@ ensures  start == p.scionLayer.PathStartIdx(ub)
 ensures  end == p.scionLayer.PathEndIdx(ub)
 ensures  scion.validPktMetaHdr(ub[start:end])
 ensures  p.scionLayer.EqAbsHeader(ub)
+ensures  p.path === p.scionLayer.GetPath(ub)
 ensures  absPkt(ub) == p.path.absPkt(ub[start:end])
+ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
 decreases
 func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end int){
 	unfold acc(sl.Bytes(ub, 0, len(ub)), R56)
