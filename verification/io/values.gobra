@@ -52,4 +52,17 @@ type IO_val adt {
 		IO_Internal_val2_2 IO_pkt3
 		IO_Internal_val2_3 IO_ifs
 	}
+
+	/* SIF: Output (to env.) for declassification action.
+	This consists of the segment identifier `beta`, the timestamp `ts, the 
+	ingress and egress interfaces `inif` and `egif` (resp.), and a hop 
+	authenticator `sigma`. 
+	Also see `router.gobra` for  types. */
+	IO_decl_val {
+		IO_decl_val_beta set[IO_msgterm]  // uinfo
+		IO_decl_val_ts uint
+		IO_decl_val_inif option[IO_ifs]
+		IO_decl_val_egif option[IO_ifs]
+		IO_decl_val_sigma IO_msgterm
+	}
 }
