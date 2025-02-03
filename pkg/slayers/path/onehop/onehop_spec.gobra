@@ -44,24 +44,23 @@ func (p *Path) DowngradePerm(buf []byte) {
 }
 
 ghost
-requires acc(o.Mem(ub), _)
+requires o.Mem(ub)
 ensures  b
 decreases
 pure func (o *Path) InferSizeUb(ghost ub []byte) (b bool) {
-	return unfolding acc(o.Mem(ub), _) in o.LenSpec(ub) <= len(ub)
+	return unfolding o.Mem(ub) in
+		o.LenSpec(ub) <= len(ub)
 }
 
 ghost
-pure
 decreases
-func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
+pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
 	return true
 }
 
 ghost
-pure
 decreases
-func (p *Path) LenSpec(ghost ub []byte) (l int) {
+pure func (p *Path) LenSpec(ghost ub []byte) int {
 	return PathLen
 }
 

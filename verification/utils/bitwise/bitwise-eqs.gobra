@@ -26,21 +26,19 @@ decreases
 func ByteValue(b byte)
 
 ghost
-pure
 ensures 0 <= b & 0x3 && b & 0x3 <= 3
 ensures b == 0 ==> res == 0
 ensures b == 3 ==> res == 3
 ensures b == 4 ==> res == 0
 ensures res == b & 0x3
 decreases
-func BitAnd3(b int) (res int)
+pure func BitAnd3(b int) (res int)
 
 ghost
-pure
 ensures 0 <= b & 0x7 && b & 0x7 <= 7
 ensures res == b & 0x7
 decreases
-func BitAnd7(b int) (res int)
+pure func BitAnd7(b int) (res int)
 
 ghost
 ensures res == b >> 30
