@@ -18,8 +18,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 
 	"github.com/scionproto/scion/gateway/control"
 	"github.com/scionproto/scion/pkg/log"
@@ -83,7 +83,7 @@ func (f *IPForwarder) Run(ctx context.Context) error {
 		length, err := f.Reader.Read(buf)
 		if err != nil {
 			metrics.CounterInc(f.Metrics.ReceiveLocalErrors)
-			return serrors.WrapStr("read device error", err)
+			return serrors.Wrap("read device error", err)
 		}
 		metrics.CounterInc(f.Metrics.IPPktsLocalRecv)
 		metrics.CounterAdd(f.Metrics.IPPktBytesLocalRecv, float64(length))

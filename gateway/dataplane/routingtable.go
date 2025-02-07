@@ -19,8 +19,8 @@ import (
 	"io"
 	"net"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 
 	"github.com/scionproto/scion/gateway/control"
 	"github.com/scionproto/scion/gateway/pktcls"
@@ -107,7 +107,7 @@ func (rt *RoutingTable) DiagnosticsWrite(w io.Writer) {
 		raw += e.String()
 	}
 
-	w.Write([]byte(raw))
+	_, _ = w.Write([]byte(raw))
 }
 
 // RouteIPv4 returns the session the IPv4 packet should be routed on. It returns after doing a

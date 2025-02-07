@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion-pki_certificate_match_private:
 
 scion-pki certificate match private
@@ -34,10 +36,11 @@ Options
 ::
 
   -h, --help               help for private
+      --kms string         The uri to configure a Cloud KMS or an HSM.
       --separator string   The separator between file names (default "\n")
 
 SEE ALSO
 ~~~~~~~~
 
-* `scion-pki certificate match <scion-pki_certificate_match.html>`_ 	 - Match the certificate with other trust objects
+* :ref:`scion-pki certificate match <scion-pki_certificate_match>` 	 - Match the certificate with other trust objects
 

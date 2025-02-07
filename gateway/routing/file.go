@@ -17,7 +17,6 @@
 package routing
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,10 +30,10 @@ func LoadPolicy(path string) (Policy, error) {
 	p := Policy{}
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return Policy{}, serrors.WrapStr("reading file", err)
+		return Policy{}, serrors.Wrap("reading file", err)
 	}
 	if err := p.UnmarshalText(raw); err != nil {
-		return Policy{}, serrors.WrapStr("parsing file", err, "file", path)
+		return Policy{}, serrors.Wrap("parsing file", err, "file", path)
 	}
 	return p, nil
 }
@@ -65,7 +64,7 @@ func NewPolicyHandler(policyPublisher PolicyPublisher,
 					http.StatusInternalServerError)
 				return
 			}
-			io.Copy(w, bytes.NewReader(raw))
+			_, _ = w.Write(raw)
 		case http.MethodPut:
 			rawPolicy, err := io.ReadAll(r.Body)
 			if err != nil {

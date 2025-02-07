@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion-pki_certificate_sign:
 
 scion-pki certificate sign
@@ -55,6 +57,7 @@ Options
       --bundle            Bundle the certificate with the issuer certificate as a certificate chain
       --ca string         The path to the issuer certificate
       --ca-key string     The path to the issuer private key used to sign the new certificate
+      --ca-kms string     The uri to configure a Cloud KMS or an HSM used for signing the certificate.
   -h, --help              help for sign
       --not-after time    The NotAfter time of the certificate. Can either be a timestamp or an offset.
                           
@@ -71,5 +74,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion-pki certificate <scion-pki_certificate.html>`_ 	 - Manage certificates for the SCION control plane PKI.
+* :ref:`scion-pki certificate <scion-pki_certificate>` 	 - Manage certificates for the SCION control plane PKI.
 

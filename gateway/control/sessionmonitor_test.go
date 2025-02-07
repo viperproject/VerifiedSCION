@@ -31,8 +31,8 @@ import (
 	"github.com/scionproto/scion/gateway/control"
 	"github.com/scionproto/scion/gateway/control/mock_control"
 	"github.com/scionproto/scion/gateway/pathhealth"
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/mocks/net/mock_net"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	gatewaypb "github.com/scionproto/scion/pkg/proto/gateway"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/mock_snet"
@@ -45,7 +45,7 @@ type pktMatcher struct {
 }
 
 // Matches returns whether x is a match.
-func (m pktMatcher) Matches(x interface{}) bool {
+func (m pktMatcher) Matches(x any) bool {
 	other, ok := x.([]byte)
 	if !ok {
 		return false
@@ -69,7 +69,7 @@ type udpAddrMatcher struct {
 }
 
 // Matches returns whether x is a match.
-func (m udpAddrMatcher) Matches(x interface{}) bool {
+func (m udpAddrMatcher) Matches(x any) bool {
 	other, ok := x.(*snet.UDPAddr)
 	if !ok {
 		return false
@@ -89,7 +89,7 @@ func TestSessionMonitorTestProbing(t *testing.T) {
 	pathReg := mock_control.NewMockPathMonitorRegistration(ctrl)
 	sessMon := control.SessionMonitor{
 		ID:               25,
-		RemoteIA:         xtest.MustParseIA("1-ff00:0:110"),
+		RemoteIA:         addr.MustParseIA("1-ff00:0:110"),
 		ProbeAddr:        &net.UDPAddr{IP: net.IP{10, 0, 01}, Port: 42},
 		Events:           make(chan control.SessionEvent, 50),
 		ProbeConn:        conn,
@@ -144,7 +144,7 @@ func TestSessionMonitorTestEvents(t *testing.T) {
 	pathReg.EXPECT().Get().Return(pathhealth.Selection{}).AnyTimes()
 	sessMon := control.SessionMonitor{
 		ID:               25,
-		RemoteIA:         xtest.MustParseIA("1-ff00:0:110"),
+		RemoteIA:         addr.MustParseIA("1-ff00:0:110"),
 		ProbeAddr:        &net.UDPAddr{IP: net.IP{10, 0, 01}, Port: 42},
 		Events:           events,
 		ProbeConn:        conn,

@@ -39,18 +39,18 @@ in the location given as an argument.`,
 			directory := args[0]
 
 			filePrepender := func(filename string) string {
-				return ""
+				return ":orphan:\n\n" //
 			}
 
 			linkHandler := func(name, ref string) string {
-				return fmt.Sprintf("`%s <%s.html>`_", name, ref)
+				return fmt.Sprintf(":ref:`%s <%s>`", name, ref)
 			}
 			if err := os.MkdirAll(directory, 0755); err != nil {
-				return serrors.WrapStr("creating directory", err, "directory", directory)
+				return serrors.Wrap("creating directory", err, "directory", directory)
 			}
 			err := doc.GenReSTTreeCustom(cmd.Parent(), directory, filePrepender, linkHandler)
 			if err != nil {
-				return serrors.WrapStr("generating RST documentation", err)
+				return serrors.Wrap("generating RST documentation", err)
 			}
 
 			return nil

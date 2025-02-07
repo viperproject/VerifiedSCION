@@ -17,32 +17,30 @@ package scrypto
 import (
 	"crypto/aes"
 	"crypto/sha256"
+	"errors"
 	"hash"
 
 	"github.com/dchest/cmac"
 	"golang.org/x/crypto/pbkdf2"
 
-	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/private/serrors"
 )
 
-const (
-	ErrCipherFailure common.ErrMsg = "Unable to initialize AES cipher"
-	ErrMacFailure    common.ErrMsg = "Unable to initialize Mac"
+var (
+	ErrCipherFailure = errors.New("unable to initialize AES cipher")
+	ErrMacFailure    = errors.New("unable to initialize Mac")
 )
 
-var (
-	hfMacSalt = []byte("Derive OF Key")
-)
+var hfMacSalt = []byte("Derive OF Key")
 
 func InitMac(key []byte) (hash.Hash, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, serrors.Wrap(ErrCipherFailure, err)
+		return nil, serrors.JoinNoStack(ErrCipherFailure, err)
 	}
 	mac, err := cmac.New(block)
 	if err != nil {
-		return nil, serrors.Wrap(ErrMacFailure, err)
+		return nil, serrors.JoinNoStack(ErrMacFailure, err)
 	}
 	return mac, nil
 }

@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion-pki_key_public:
 
 scion-pki key public
@@ -33,10 +35,11 @@ Options
 
       --force        Force overwritting existing public key
   -h, --help         help for public
+      --kms string   The uri to configure a Cloud KMS or an HSM.
       --out string   Path to write public key
 
 SEE ALSO
 ~~~~~~~~
 
-* `scion-pki key <scion-pki_key.html>`_ 	 - Manage private and public keys
+* :ref:`scion-pki key <scion-pki_key>` 	 - Manage private and public keys
 

@@ -20,11 +20,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/util"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
@@ -95,15 +95,15 @@ func SCMPInvalidSrcIAInternalHostToChild(artifactsDir string, mac hash.Hash) run
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:2"), // != local IA, invalid Src IA
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:2"), // != local IA, invalid Src IA
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("192.168.0.51")}
+	srcA := addr.MustParseHost("192.168.0.51")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1")}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -132,11 +132,11 @@ func SCMPInvalidSrcIAInternalHostToChild(artifactsDir string, mac hash.Hash) run
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA // This is bogus, correct is local IA.
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -145,7 +145,10 @@ func SCMPInvalidSrcIAInternalHostToChild(artifactsDir string, mac hash.Hash) run
 	if err != nil {
 		panic(err)
 	}
-	scionL.NextHdr = slayers.L4SCMP
+
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidSourceAddress),
@@ -159,18 +162,19 @@ func SCMPInvalidSrcIAInternalHostToChild(artifactsDir string, mac hash.Hash) run
 	quoteStart := 14 + 20 + 8
 	quote := input.Bytes()[quoteStart:]
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
 
 	return runner.Case{
-		Name:     "SCMPInvalidSrcIAInternalHostToChild",
-		WriteTo:  "veth_int_host",
-		ReadFrom: "veth_int_host",
-		Input:    input.Bytes(),
-		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPInvalidSrcIAInternalHostToChild"),
+		Name:            "SCMPInvalidSrcIAInternalHostToChild",
+		WriteTo:         "veth_int_host",
+		ReadFrom:        "veth_int_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPInvalidSrcIAInternalHostToChild"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }
 
@@ -238,15 +242,15 @@ func SCMPInvalidDstIAInternalHostToChild(artifactsDir string, mac hash.Hash) run
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:1"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:1"), // == local IA, invalid Dst IA
+		SrcIA:        addr.MustParseIA("1-ff00:0:1"),
+		DstIA:        addr.MustParseIA("1-ff00:0:1"), // == local IA, invalid Dst IA
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("192.168.0.51")}
+	srcA := addr.MustParseHost("192.168.0.51")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1")}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -275,11 +279,11 @@ func SCMPInvalidDstIAInternalHostToChild(artifactsDir string, mac hash.Hash) run
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -288,7 +292,10 @@ func SCMPInvalidDstIAInternalHostToChild(artifactsDir string, mac hash.Hash) run
 	if err != nil {
 		panic(err)
 	}
-	scionL.NextHdr = slayers.L4SCMP
+
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidDestinationAddress),
@@ -302,18 +309,19 @@ func SCMPInvalidDstIAInternalHostToChild(artifactsDir string, mac hash.Hash) run
 	quoteStart := 14 + 20 + 8
 	quote := input.Bytes()[quoteStart:]
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
 
 	return runner.Case{
-		Name:     "SCMPInvalidDstIAInternalHostToChild",
-		WriteTo:  "veth_int_host",
-		ReadFrom: "veth_int_host",
-		Input:    input.Bytes(),
-		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPInvalidDstIAInternalHostToChild"),
+		Name:            "SCMPInvalidDstIAInternalHostToChild",
+		WriteTo:         "veth_int_host",
+		ReadFrom:        "veth_int_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPInvalidDstIAInternalHostToChild"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }
 
@@ -385,15 +393,15 @@ func SCMPInvalidSrcIAChildToParent(artifactsDir string, mac hash.Hash) runner.Ca
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:1"), // == local IA, invalid Src IA
-		DstIA:        xtest.MustParseIA("1-ff00:0:3"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:1"), // == local IA, invalid Src IA
+		DstIA:        addr.MustParseIA("1-ff00:0:3"),
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.4.1")}
+	srcA := addr.MustParseHost("172.16.4.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.3.1")}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.3.1")); err != nil {
 		panic(err)
 	}
 
@@ -422,11 +430,11 @@ func SCMPInvalidSrcIAChildToParent(artifactsDir string, mac hash.Hash) runner.Ca
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA // This is bogus, but we don't know the correct IA.
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -441,7 +449,9 @@ func SCMPInvalidSrcIAChildToParent(artifactsDir string, mac hash.Hash) runner.Ca
 		panic(err)
 	}
 
-	scionL.NextHdr = slayers.L4SCMP
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidSourceAddress),
@@ -455,18 +465,19 @@ func SCMPInvalidSrcIAChildToParent(artifactsDir string, mac hash.Hash) runner.Ca
 	quoteStart := 14 + 20 + 8
 	quote := input.Bytes()[quoteStart:]
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
 
 	return runner.Case{
-		Name:     "SCMPInvalidSrcIAChildToParent",
-		WriteTo:  "veth_141_host",
-		ReadFrom: "veth_141_host",
-		Input:    input.Bytes(),
-		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPInvalidSrcIAChildToParent"),
+		Name:            "SCMPInvalidSrcIAChildToParent",
+		WriteTo:         "veth_141_host",
+		ReadFrom:        "veth_141_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPInvalidSrcIAChildToParent"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }
 
@@ -538,15 +549,15 @@ func SCMPInvalidDstIAChildToParent(artifactsDir string, mac hash.Hash) runner.Ca
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:9"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:1"), // == local IA, invalid Dst IA
+		SrcIA:        addr.MustParseIA("1-ff00:0:9"),
+		DstIA:        addr.MustParseIA("1-ff00:0:1"), // == local IA, invalid Dst IA
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.4.1")}
+	srcA := addr.MustParseHost("172.16.4.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.3.1")}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.3.1")); err != nil {
 		panic(err)
 	}
 
@@ -575,11 +586,11 @@ func SCMPInvalidDstIAChildToParent(artifactsDir string, mac hash.Hash) runner.Ca
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -594,7 +605,9 @@ func SCMPInvalidDstIAChildToParent(artifactsDir string, mac hash.Hash) runner.Ca
 		panic(err)
 	}
 
-	scionL.NextHdr = slayers.L4SCMP
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodeInvalidDestinationAddress),
@@ -608,17 +621,18 @@ func SCMPInvalidDstIAChildToParent(artifactsDir string, mac hash.Hash) runner.Ca
 	quoteStart := 14 + 20 + 8
 	quote := input.Bytes()[quoteStart:]
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
 
 	return runner.Case{
-		Name:     "SCMPInvalidDstIAChildToParent",
-		WriteTo:  "veth_141_host",
-		ReadFrom: "veth_141_host",
-		Input:    input.Bytes(),
-		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPInvalidDstIAChildToParent"),
+		Name:            "SCMPInvalidDstIAChildToParent",
+		WriteTo:         "veth_141_host",
+		ReadFrom:        "veth_141_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPInvalidDstIAChildToParent"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }

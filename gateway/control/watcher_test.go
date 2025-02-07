@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/scionproto/scion/gateway/control"
 	"github.com/scionproto/scion/gateway/control/mock_control"
@@ -48,14 +49,14 @@ func TestGatewayWatcherRun(t *testing.T) {
 	fetcher.EXPECT().Close().AnyTimes().Return(nil)
 
 	discoverer.EXPECT().Gateways(gomock.Any()).DoAndReturn(
-		func(interface{}) ([]control.Gateway, error) {
+		func(any) ([]control.Gateway, error) {
 			discoveryCounts.Add(1)
 			return []control.Gateway{gateway1, gateway2}, nil
 		},
 	)
 
 	fetcher.EXPECT().Prefixes(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
-		func(_ interface{}, g *net.UDPAddr) ([]*net.IPNet, error) {
+		func(_ any, g *net.UDPAddr) ([]*net.IPNet, error) {
 			fetcherCounts.With("gateway", g.String()).Add(1)
 			return nil, serrors.New("error")
 		},
@@ -79,7 +80,14 @@ func TestGatewayWatcherRun(t *testing.T) {
 	// run initially
 	remotes.Set(0)
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
-	go w.Run(ctx)
+	var bg errgroup.Group
+	bg.Go(func() error {
+		return w.Run(ctx)
+	})
+	t.Cleanup(func() {
+		assert.NoError(t, bg.Wait())
+	})
+
 	for {
 		if metrics.GaugeValue(remotes) > 0 {
 			break
@@ -97,7 +105,7 @@ func TestGatewayWatcherRun(t *testing.T) {
 
 	// now let's reset and remove one gateway, this time we only return gateway1
 	discoverer.EXPECT().Gateways(gomock.Any()).DoAndReturn(
-		func(interface{}) ([]control.Gateway, error) {
+		func(any) ([]control.Gateway, error) {
 			discoveryCounts.Add(1)
 			return []control.Gateway{gateway1}, nil
 		},
@@ -107,7 +115,7 @@ func TestGatewayWatcherRun(t *testing.T) {
 	// nothing really checks the context except the run loop, so we can
 	// immediately cancel and then it will run only once.
 	cancel()
-	w.RunAllPrefixWatchersOnceForTest(ctx)
+	assert.NoError(t, w.RunAllPrefixWatchersOnceForTest(ctx))
 
 	assert.Equal(t, 2, int(metrics.CounterValue(g1)))
 	assert.Equal(t, 1, int(metrics.CounterValue(g2)))
@@ -136,26 +144,26 @@ func TestPrefixWatcherRun(t *testing.T) {
 	// called with the up to date list.
 	first := []*net.IPNet{cidr(t, "127.0.0.0/24"), cidr(t, "127.0.1.0/24"), cidr(t, "::/64")}
 	fetcher.EXPECT().Prefixes(gomock.Any(), gateway.Control).DoAndReturn(
-		func(_, _ interface{}) ([]*net.IPNet, error) {
+		func(_, _ any) ([]*net.IPNet, error) {
 			fetcherCounts.Add(1)
 			return first, nil
 		},
 	)
 	consumer.EXPECT().Prefixes(gomock.Any(), gateway, first).Do(
-		func(_, _, _ interface{}) {
+		func(_, _, _ any) {
 			consumerCounts.Add(1)
 		},
 	)
 
 	afterwards := []*net.IPNet{cidr(t, "127.0.0.0/24"), cidr(t, "::/64")}
 	fetcher.EXPECT().Prefixes(gomock.Any(), gateway.Control).AnyTimes().DoAndReturn(
-		func(_, _ interface{}) ([]*net.IPNet, error) {
+		func(_, _ any) ([]*net.IPNet, error) {
 			fetcherCounts.Add(1)
 			return afterwards, nil
 		},
 	)
 	consumer.EXPECT().Prefixes(gomock.Any(), gateway, afterwards).AnyTimes().Do(
-		func(_, _, _ interface{}) {
+		func(_, _, _ any) {
 			consumerCounts.Add(1)
 		},
 	)
@@ -170,7 +178,13 @@ func TestPrefixWatcherRun(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	go w.Run(ctx)
+	var bg errgroup.Group
+	bg.Go(func() error {
+		return w.Run(ctx)
+	})
+	t.Cleanup(func() {
+		assert.NoError(t, bg.Wait())
+	})
 	<-ctx.Done()
 	time.Sleep(10 * time.Millisecond)
 

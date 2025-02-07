@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -163,16 +163,10 @@ func TestIPForwarderRun(t *testing.T) {
 		art.SetRoutingTable(rt)
 
 		sessionOne := mock_control.NewMockPktWriter(ctrl)
-		rt.SetSession(
-			1,
-			sessionOne,
-		)
+		require.NoError(t, rt.SetSession(1, sessionOne))
 
 		sessionTwo := mock_control.NewMockPktWriter(ctrl)
-		rt.SetSession(
-			2,
-			sessionTwo,
-		)
+		require.NoError(t, rt.SetSession(2, sessionTwo))
 
 		ipv4Packet := newIPv4Packet(t, net.IP{10, 0, 0, 1})
 		reader.EXPECT().Read(gomock.Any()).DoAndReturn(
@@ -265,7 +259,7 @@ type packetMatcher struct {
 	packet gopacket.Packet
 }
 
-func (pm *packetMatcher) Matches(x interface{}) bool {
+func (pm *packetMatcher) Matches(x any) bool {
 	packet := x.(gopacket.Packet)
 	return bytes.Equal(packet.Data(), pm.packet.Data())
 }

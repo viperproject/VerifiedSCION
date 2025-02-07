@@ -6,14 +6,13 @@ package mock_daemon
 
 import (
 	context "context"
-	net "net"
+	netip "net/netip"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
 	addr "github.com/scionproto/scion/pkg/addr"
 	daemon "github.com/scionproto/scion/pkg/daemon"
 	drkey "github.com/scionproto/scion/pkg/drkey"
-	common "github.com/scionproto/scion/pkg/private/common"
 	path_mgmt "github.com/scionproto/scion/pkg/private/ctrl/path_mgmt"
 	snet "github.com/scionproto/scion/pkg/snet"
 )
@@ -115,19 +114,19 @@ func (mr *MockConnectorMockRecorder) DRKeyGetHostHostKey(arg0, arg1 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DRKeyGetHostHostKey", reflect.TypeOf((*MockConnector)(nil).DRKeyGetHostHostKey), arg0, arg1)
 }
 
-// IFInfo mocks base method.
-func (m *MockConnector) IFInfo(arg0 context.Context, arg1 []common.IFIDType) (map[common.IFIDType]*net.UDPAddr, error) {
+// Interfaces mocks base method.
+func (m *MockConnector) Interfaces(arg0 context.Context) (map[uint16]netip.AddrPort, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IFInfo", arg0, arg1)
-	ret0, _ := ret[0].(map[common.IFIDType]*net.UDPAddr)
+	ret := m.ctrl.Call(m, "Interfaces", arg0)
+	ret0, _ := ret[0].(map[uint16]netip.AddrPort)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// IFInfo indicates an expected call of IFInfo.
-func (mr *MockConnectorMockRecorder) IFInfo(arg0, arg1 interface{}) *gomock.Call {
+// Interfaces indicates an expected call of Interfaces.
+func (mr *MockConnectorMockRecorder) Interfaces(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IFInfo", reflect.TypeOf((*MockConnector)(nil).IFInfo), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Interfaces", reflect.TypeOf((*MockConnector)(nil).Interfaces), arg0)
 }
 
 // LocalIA mocks base method.
@@ -160,6 +159,22 @@ func (mr *MockConnectorMockRecorder) Paths(arg0, arg1, arg2, arg3 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Paths", reflect.TypeOf((*MockConnector)(nil).Paths), arg0, arg1, arg2, arg3)
 }
 
+// PortRange mocks base method.
+func (m *MockConnector) PortRange(arg0 context.Context) (uint16, uint16, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PortRange", arg0)
+	ret0, _ := ret[0].(uint16)
+	ret1, _ := ret[1].(uint16)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// PortRange indicates an expected call of PortRange.
+func (mr *MockConnectorMockRecorder) PortRange(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PortRange", reflect.TypeOf((*MockConnector)(nil).PortRange), arg0)
+}
+
 // RevNotification mocks base method.
 func (m *MockConnector) RevNotification(arg0 context.Context, arg1 *path_mgmt.RevInfo) error {
 	m.ctrl.T.Helper()
@@ -175,10 +190,10 @@ func (mr *MockConnectorMockRecorder) RevNotification(arg0, arg1 interface{}) *go
 }
 
 // SVCInfo mocks base method.
-func (m *MockConnector) SVCInfo(arg0 context.Context, arg1 []addr.HostSVC) (map[addr.HostSVC][]string, error) {
+func (m *MockConnector) SVCInfo(arg0 context.Context, arg1 []addr.SVC) (map[addr.SVC][]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SVCInfo", arg0, arg1)
-	ret0, _ := ret[0].(map[addr.HostSVC][]string)
+	ret0, _ := ret[0].(map[addr.SVC][]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

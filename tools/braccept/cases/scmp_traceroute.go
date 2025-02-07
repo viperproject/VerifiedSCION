@@ -20,14 +20,17 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 
+	"github.com/scionproto/scion/pkg/addr"
+	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/private/util"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
+	"github.com/scionproto/scion/pkg/spao"
+	"github.com/scionproto/scion/private/drkey/drkeyutil"
 	"github.com/scionproto/scion/tools/braccept/runner"
 )
 
@@ -89,15 +92,15 @@ func SCMPTracerouteIngress(artifactsDir string, mac hash.Hash) runner.Case {
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4SCMP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:4"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:2"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:4"),
+		DstIA:        addr.MustParseIA("1-ff00:0:2"),
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.4.1").To4()}
+	srcA := addr.MustParseHost("172.16.4.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.2.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.2.1")); err != nil {
 		panic(err)
 	}
 
@@ -125,11 +128,11 @@ func SCMPTracerouteIngress(artifactsDir string, mac hash.Hash) runner.Case {
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -155,7 +158,6 @@ func SCMPTracerouteIngress(artifactsDir string, mac hash.Hash) runner.Case {
 		Interface:  141,
 	}
 
-	// Skip Ethernet + IPv4 + UDP
 	if err := gopacket.SerializeLayers(want, options,
 		ethernet, ip, udp, scionL, scmpH, scmpP,
 	); err != nil {
@@ -169,6 +171,224 @@ func SCMPTracerouteIngress(artifactsDir string, mac hash.Hash) runner.Case {
 		Input:    input.Bytes(),
 		Want:     want.Bytes(),
 		StoreDir: filepath.Join(artifactsDir, "SCMPTracerouteIngress"),
+	}
+}
+
+// SCMPTracerouteIngressWithSPAO tests an SCMP traceroute request with alert on the
+// ingress interface and a SPAO header.
+func SCMPTracerouteIngressWithSPAO(artifactsDir string, mac hash.Hash) runner.Case {
+	options := gopacket.SerializeOptions{
+		FixLengths:       true,
+		ComputeChecksums: true,
+	}
+	ethernet := &layers.Ethernet{
+		SrcMAC:       net.HardwareAddr{0xf0, 0x0d, 0xca, 0xfe, 0xbe, 0xef},
+		DstMAC:       net.HardwareAddr{0xf0, 0x0d, 0xca, 0xfe, 0x00, 0x14},
+		EthernetType: layers.EthernetTypeIPv4,
+	}
+	ip := &layers.IPv4{
+		Version:  4,
+		IHL:      5,
+		TTL:      64,
+		SrcIP:    net.IP{192, 168, 14, 3},
+		DstIP:    net.IP{192, 168, 14, 2},
+		Protocol: layers.IPProtocolUDP,
+		Flags:    layers.IPv4DontFragment,
+	}
+	udp := &layers.UDP{
+		SrcPort: layers.UDPPort(40000),
+		DstPort: layers.UDPPort(50000),
+	}
+	_ = udp.SetNetworkLayerForChecksum(ip)
+
+	sp := &scion.Decoded{
+		Base: scion.Base{
+			PathMeta: scion.MetaHdr{
+				CurrHF: 1,
+				SegLen: [3]uint8{3, 0, 0},
+			},
+			NumINF:  1,
+			NumHops: 3,
+		},
+		InfoFields: []path.InfoField{
+			{
+				SegID:     0x111,
+				ConsDir:   false,
+				Timestamp: util.TimeToSecs(time.Now()),
+			},
+		},
+		HopFields: []path.HopField{
+			{ConsIngress: 411, ConsEgress: 0},
+			{ConsIngress: 121, ConsEgress: 141, EgressRouterAlert: true},
+			{ConsIngress: 0, ConsEgress: 211},
+		},
+	}
+	sp.HopFields[1].Mac = path.MAC(mac, sp.InfoFields[0], sp.HopFields[1], nil)
+	sp.InfoFields[0].UpdateSegID(sp.HopFields[1].Mac)
+
+	scionL := &slayers.SCION{
+		Version:      0,
+		TrafficClass: 0xb8,
+		FlowID:       0xdead,
+		NextHdr:      slayers.End2EndClass,
+		HdrLen:       0x15,
+		PayloadLen:   0x18,
+		PathType:     scion.PathType,
+		SrcIA:        addr.MustParseIA("1-ff00:0:4"),
+		DstIA:        addr.MustParseIA("1-ff00:0:2"),
+		Path:         sp,
+	}
+	srcA := addr.MustParseHost("172.16.4.1")
+	if err := scionL.SetSrcAddr(srcA); err != nil {
+		panic(err)
+	}
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.2.1")); err != nil {
+		panic(err)
+	}
+
+	scmpH := &slayers.SCMP{
+		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeTracerouteRequest, 0),
+	}
+	scmpH.SetNetworkLayerForChecksum(scionL)
+	scmpP := &slayers.SCMPTraceroute{
+		Identifier: 567,
+		Sequence:   129,
+	}
+
+	e2e := &slayers.EndToEndExtn{}
+
+	sendTime := time.Now()
+	key, err := (&drkeyutil.FakeProvider{
+		EpochDuration:    drkeyutil.LoadEpochDuration(),
+		AcceptanceWindow: drkeyutil.LoadAcceptanceWindow(),
+	}).GetASHostKey(sendTime, addr.MustParseIA("1-ff00:0:4"), srcA)
+	if err != nil {
+		panic(err)
+	}
+	timestamp, err := spao.RelativeTimestamp(key.Epoch, sendTime)
+	if err != nil {
+		panic(err)
+	}
+	optAuth, err := slayers.NewPacketAuthOption(slayers.PacketAuthOptionParams{
+		TimestampSN: timestamp,
+		Auth:        make([]byte, 16),
+	})
+	if err != nil {
+		panic(err)
+	}
+	e2e.Options = []*slayers.EndToEndOption{optAuth.EndToEndOption}
+	e2e.NextHdr = slayers.L4SCMP
+	e2ePayload := gopacket.NewSerializeBuffer()
+	err = gopacket.SerializeLayers(
+		e2ePayload,
+		gopacket.SerializeOptions{
+			FixLengths:       true,
+			ComputeChecksums: true,
+		},
+		scmpH,
+		scmpP,
+	)
+	if err != nil {
+		panic(err)
+	}
+	_, err = spao.ComputeAuthCMAC(
+		spao.MACInput{
+			Key:        key.Key[:],
+			Header:     optAuth,
+			ScionLayer: scionL,
+			PldType:    slayers.L4SCMP,
+			Pld:        e2ePayload.Bytes(),
+		},
+
+		make([]byte, spao.MACBufferSize),
+		optAuth.Authenticator(),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// Prepare input packet
+	input := gopacket.NewSerializeBuffer()
+	if err := gopacket.SerializeLayers(input, options,
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP,
+	); err != nil {
+		panic(err)
+	}
+
+	// Prepare want packet
+	want := gopacket.NewSerializeBuffer()
+	ethernet.SrcMAC, ethernet.DstMAC = ethernet.DstMAC, ethernet.SrcMAC
+	ip.SrcIP, ip.DstIP = ip.DstIP, ip.SrcIP
+	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
+
+	scionL.DstIA = scionL.SrcIA
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
+	if err := scionL.SetDstAddr(srcA); err != nil {
+		panic(err)
+	}
+	intlA := addr.MustParseHost("192.168.0.11")
+	if err := scionL.SetSrcAddr(intlA); err != nil {
+		panic(err)
+	}
+
+	sp.HopFields[1].EgressRouterAlert = false
+	p, err := sp.Reverse()
+	if err != nil {
+		panic(err)
+	}
+	sp = p.(*scion.Decoded)
+	if err := sp.IncPath(); err != nil {
+		panic(err)
+	}
+	scionL.NextHdr = slayers.End2EndClass
+	spi, err := slayers.MakePacketAuthSPIDRKey(
+		uint16(drkey.SCMP),
+		slayers.PacketAuthASHost,
+		slayers.PacketAuthSenderSide,
+	)
+	if err != nil {
+		panic(err)
+	}
+	packAuthOpt, err := slayers.NewPacketAuthOption(slayers.PacketAuthOptionParams{
+		SPI:         spi,
+		Algorithm:   slayers.PacketAuthCMAC,
+		TimestampSN: uint64(0),
+		Auth:        make([]byte, 16),
+	})
+	if err != nil {
+		panic(err)
+	}
+	e2e = &slayers.EndToEndExtn{
+		Options: []*slayers.EndToEndOption{
+			packAuthOpt.EndToEndOption,
+		},
+	}
+	e2e.NextHdr = slayers.L4SCMP
+	scmpH = &slayers.SCMP{
+		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeTracerouteReply, 0),
+	}
+	scmpH.SetNetworkLayerForChecksum(scionL)
+	scmpP = &slayers.SCMPTraceroute{
+		Identifier: scmpP.Identifier,
+		Sequence:   scmpP.Sequence,
+		IA:         scionL.SrcIA,
+		Interface:  141,
+	}
+
+	if err := gopacket.SerializeLayers(want, options,
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP,
+	); err != nil {
+		panic(err)
+	}
+
+	return runner.Case{
+		Name:            "SCMPTracerouteIngressWithSPAO",
+		WriteTo:         "veth_141_host",
+		ReadFrom:        "veth_141_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPTracerouteIngressWithSPAO"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }
 
@@ -229,15 +449,15 @@ func SCMPTracerouteIngressConsDir(artifactsDir string, mac hash.Hash) runner.Cas
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4SCMP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:3"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:3"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.3.1").To4()}
+	srcA := addr.MustParseHost("172.16.3.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -270,11 +490,11 @@ func SCMPTracerouteIngressConsDir(artifactsDir string, mac hash.Hash) runner.Cas
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -300,7 +520,6 @@ func SCMPTracerouteIngressConsDir(artifactsDir string, mac hash.Hash) runner.Cas
 		Interface:  131,
 	}
 
-	// Skip Ethernet + IPv4 + UDP
 	if err := gopacket.SerializeLayers(want, options,
 		ethernet, ip, udp, scionL, scmpH, scmpP,
 	); err != nil {
@@ -375,15 +594,15 @@ func SCMPTracerouteEgress(artifactsDir string, mac hash.Hash) runner.Case {
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4SCMP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:4"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:3"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:4"),
+		DstIA:        addr.MustParseIA("1-ff00:0:3"),
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.4.1").To4()}
+	srcA := addr.MustParseHost("172.16.4.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.2.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.2.1")); err != nil {
 		panic(err)
 	}
 
@@ -411,11 +630,11 @@ func SCMPTracerouteEgress(artifactsDir string, mac hash.Hash) runner.Case {
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -441,7 +660,6 @@ func SCMPTracerouteEgress(artifactsDir string, mac hash.Hash) runner.Case {
 		Interface:  131,
 	}
 
-	// Skip Ethernet + IPv4 + UDP
 	if err := gopacket.SerializeLayers(want, options,
 		ethernet, ip, udp, scionL, scmpH, scmpP,
 	); err != nil {
@@ -515,15 +733,15 @@ func SCMPTracerouteEgressConsDir(artifactsDir string, mac hash.Hash) runner.Case
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4SCMP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:3"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:3"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.3.1").To4()}
+	srcA := addr.MustParseHost("172.16.3.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -556,11 +774,11 @@ func SCMPTracerouteEgressConsDir(artifactsDir string, mac hash.Hash) runner.Case
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -586,7 +804,6 @@ func SCMPTracerouteEgressConsDir(artifactsDir string, mac hash.Hash) runner.Case
 		Interface:  141,
 	}
 
-	// Skip Ethernet + IPv4 + UDP
 	if err := gopacket.SerializeLayers(want, options,
 		ethernet, ip, udp, scionL, scmpH, scmpP,
 	); err != nil {
@@ -675,16 +892,16 @@ func SCMPTracerouteEgressAfterXover(artifactsDir string, mac hash.Hash) runner.C
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4SCMP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:8"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:8"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
 
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.8.1").To4()}
+	srcA := addr.MustParseHost("172.16.8.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	dstA := &net.IPAddr{IP: net.ParseIP("172.16.4.1").To4()}
+	dstA := addr.MustParseHost("172.16.4.1")
 	if err := scionL.SetDstAddr(dstA); err != nil {
 		panic(err)
 	}
@@ -714,11 +931,11 @@ func SCMPTracerouteEgressAfterXover(artifactsDir string, mac hash.Hash) runner.C
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -745,7 +962,6 @@ func SCMPTracerouteEgressAfterXover(artifactsDir string, mac hash.Hash) runner.C
 		Interface:  141,
 	}
 
-	// Skip Ethernet + IPv4 + UDP
 	if err := gopacket.SerializeLayers(want, options,
 		ethernet, ip, udp, scionL, scmpH, scmpP,
 	); err != nil {
@@ -817,15 +1033,15 @@ func SCMPTracerouteInternal(artifactsDir string, mac hash.Hash) runner.Case {
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4SCMP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:1"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:1"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("192.168.0.51").To4()}
+	srcA := addr.MustParseHost("192.168.0.51")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -854,21 +1070,20 @@ func SCMPTracerouteInternal(artifactsDir string, mac hash.Hash) runner.Case {
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
 
 	sp.HopFields[0].EgressRouterAlert = false
-	p, err := sp.Reverse()
+	_, err := sp.Reverse()
 	if err != nil {
 		panic(err)
 	}
-	sp = p.(*scion.Decoded)
 	scionL.NextHdr = slayers.L4SCMP
 	scmpH = &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeTracerouteReply, 0),
@@ -881,7 +1096,6 @@ func SCMPTracerouteInternal(artifactsDir string, mac hash.Hash) runner.Case {
 		Interface:  141,
 	}
 
-	// Skip Ethernet + IPv4 + UDP
 	if err := gopacket.SerializeLayers(want, options,
 		ethernet, ip, udp, scionL, scmpH, scmpP,
 	); err != nil {

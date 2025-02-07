@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 
@@ -36,6 +35,7 @@ import (
 
 type SegmentStore interface {
 	Get(context.Context, *query.Params) (query.Results, error)
+	DeleteSegment(ctx context.Context, partialID string) error
 }
 
 type Server struct {
@@ -47,17 +47,17 @@ func (s *Server) GetSegments(w http.ResponseWriter, r *http.Request, params GetS
 	q := query.Params{}
 	var errs serrors.List
 	if params.StartIsdAs != nil {
-		if ia, err := addr.ParseIA(string(*params.StartIsdAs)); err == nil {
+		if ia, err := addr.ParseIA(*params.StartIsdAs); err == nil {
 			q.StartsAt = []addr.IA{ia}
 		} else {
-			errs = append(errs, serrors.WithCtx(err, "parameter", "start_isd_as"))
+			errs = append(errs, serrors.Wrap("invalid start ISD_AS", err))
 		}
 	}
 	if params.EndIsdAs != nil {
-		if ia, err := addr.ParseIA(string(*params.EndIsdAs)); err == nil {
+		if ia, err := addr.ParseIA(*params.EndIsdAs); err == nil {
 			q.EndsAt = []addr.IA{ia}
 		} else {
-			errs = append(errs, serrors.WithCtx(err, "parameter", "end_isd_as"))
+			errs = append(errs, serrors.Wrap("invalid end ISD_AS", err))
 		}
 	}
 	if err := errs.ToError(); err != nil {
@@ -83,9 +83,9 @@ func (s *Server) GetSegments(w http.ResponseWriter, r *http.Request, params GetS
 	rep := make([]*SegmentBrief, 0, len(res))
 	for _, segRes := range res {
 		rep = append(rep, &SegmentBrief{
-			Id:         SegmentID(SegID(segRes.Seg)),
-			StartIsdAs: IsdAs(segRes.Seg.FirstIA().String()),
-			EndIsdAs:   IsdAs(segRes.Seg.LastIA().String()),
+			Id:         SegID(segRes.Seg),
+			StartIsdAs: segRes.Seg.FirstIA().String(),
+			EndIsdAs:   segRes.Seg.LastIA().String(),
 			Length:     len(segRes.Seg.ASEntries),
 		})
 	}
@@ -104,7 +104,7 @@ func (s *Server) GetSegments(w http.ResponseWriter, r *http.Request, params GetS
 
 // GetSegment gets a segments details specified by its ID.
 func (s *Server) GetSegment(w http.ResponseWriter, r *http.Request, segmentID SegmentID) {
-	id, err := hex.DecodeString(string(segmentID))
+	id, err := hex.DecodeString(segmentID)
 	if err != nil {
 		Error(w, Problem{
 			Detail: api.StringRef(err.Error()),
@@ -143,16 +143,18 @@ func (s *Server) GetSegment(w http.ResponseWriter, r *http.Request, segmentID Se
 		if i != 0 {
 			hops = append(hops, Hop{
 				Interface: int(as.HopEntry.HopField.ConsIngress),
-				IsdAs:     IsdAs(as.Local.String())})
+				IsdAs:     as.Local.String(),
+			})
 		}
 		if i != len(segRes.Seg.ASEntries)-1 {
 			hops = append(hops, Hop{
 				Interface: int(as.HopEntry.HopField.ConsEgress),
-				IsdAs:     IsdAs(as.Local.String())})
+				IsdAs:     as.Local.String(),
+			})
 		}
 	}
 	rep := Segment{
-		Id:          SegmentID(SegID(segRes.Seg)),
+		Id:          SegID(segRes.Seg),
 		Timestamp:   segRes.Seg.Info.Timestamp.UTC(),
 		Expiration:  segRes.Seg.MinExpiry().UTC(),
 		LastUpdated: segRes.LastUpdate.UTC(),
@@ -172,11 +174,32 @@ func (s *Server) GetSegment(w http.ResponseWriter, r *http.Request, segmentID Se
 	}
 }
 
+func (s *Server) DeleteSegment(w http.ResponseWriter, r *http.Request, segmentId SegmentID) {
+	if segmentId == "" {
+		Error(w, Problem{
+			Status: http.StatusBadRequest,
+			Title:  "segment ID is required",
+			Type:   api.StringRef(api.BadRequest),
+		})
+		return
+	}
+	if err := s.Segments.DeleteSegment(r.Context(), segmentId); err != nil {
+		Error(w, Problem{
+			Detail: api.StringRef(err.Error()),
+			Status: http.StatusInternalServerError,
+			Title:  "unable to delete segment",
+			Type:   api.StringRef(api.InternalError),
+		})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // GetSegmentBlob gets a segment (specified by its ID) as a pem encoded blob.
 func (s *Server) GetSegmentBlob(w http.ResponseWriter, r *http.Request, segmentID SegmentID) {
 	w.Header().Set("Content-Type", "application/x-pem-file")
 
-	id, err := hex.DecodeString(string(segmentID))
+	id, err := hex.DecodeString(segmentID)
 	if err != nil {
 		Error(w, Problem{
 			Detail: api.StringRef(err.Error()),
@@ -234,7 +257,7 @@ func (s *Server) GetSegmentBlob(w http.ResponseWriter, r *http.Request, segmentI
 		})
 		return
 	}
-	io.Copy(w, &buf)
+	_, _ = w.Write(buf.Bytes())
 }
 
 // SegID makes a hex encoded string of the segment id.
@@ -247,5 +270,5 @@ func Error(w http.ResponseWriter, p Problem) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	// no point in catching error here, there is nothing we can do about it anymore.
-	enc.Encode(p)
+	_ = enc.Encode(p)
 }

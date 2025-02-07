@@ -17,14 +17,13 @@ package topology
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"sort"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/private/serrors"
-	jsontopo "github.com/scionproto/scion/private/topology/json"
+	"github.com/scionproto/scion/pkg/segment/iface"
 )
 
 // Topology is the topology type for applications and libraries that only need read access to AS
@@ -39,27 +38,28 @@ type Topology interface {
 	MTU() uint16
 	// Core returns whether the local AS is core.
 	Core() bool
-	// CA returns whether the local AS is a CA.
-	CA() bool
 	// InterfaceIDs returns all interface IDS from the local AS.
-	InterfaceIDs() []common.IFIDType
+	IfIDs() []iface.ID
+	// PortRange returns the first and last ports of the port range (both included),
+	// in which endhost listen for SCION/UDP application using the UDP/IP underlay.
+	PortRange() (uint16, uint16)
 
 	// PublicAddress gets the public address of a server with the requested type and name, and nil
 	// if no such server exists.
-	PublicAddress(svc addr.HostSVC, name string) *net.UDPAddr
+	PublicAddress(svc addr.SVC, name string) *net.UDPAddr
 
 	// Anycast returns the address for an arbitrary server of the requested type.
-	Anycast(svc addr.HostSVC) (*net.UDPAddr, error)
+	Anycast(svc addr.SVC) (*net.UDPAddr, error)
 	// Multicast returns all addresses for the requested type.
-	Multicast(svc addr.HostSVC) ([]*net.UDPAddr, error)
+	Multicast(svc addr.SVC) ([]*net.UDPAddr, error)
 
 	// UnderlayAnycast returns the underlay address for an arbitrary server of the requested type.
-	UnderlayAnycast(svc addr.HostSVC) (*net.UDPAddr, error)
+	UnderlayAnycast(svc addr.SVC) (*net.UDPAddr, error)
 	// UnderlayMulticast returns all underlay addresses for the requested type.
-	UnderlayMulticast(svc addr.HostSVC) ([]*net.UDPAddr, error)
+	UnderlayMulticast(svc addr.SVC) ([]*net.UDPAddr, error)
 	// UnderlayNextHop returns the internal underlay address of the router
 	// containing the interface ID.
-	UnderlayNextHop(ifID common.IFIDType) (*net.UDPAddr, bool)
+	UnderlayNextHop(ifID iface.ID) (*net.UDPAddr, bool)
 
 	// MakeHostInfos returns the underlay addresses of all services for the specified service type.
 	MakeHostInfos(st ServiceType) ([]*net.UDPAddr, error)
@@ -80,19 +80,12 @@ type Topology interface {
 	// XXX(scrye): Return value is a shallow copy.
 	IFInfoMap() IfInfoMap
 
-	// BRNames returns the names of all BRs in the topology.
-	//
-	// FIXME(scrye): Remove this, callers shouldn't care about names.
-	//
-	// XXX(scrye): Return value is a shallow copy.
-	BRNames() []string
-
 	// SVCNames returns the names of all servers in the topology for the specified service.
 	//
 	// FIXME(scrye): Remove this, callers shouldn't care about names.
 	//
 	// XXX(scrye): Return value is a shallow copy.
-	SVCNames(svc addr.HostSVC) ServiceNames
+	SVCNames(svc addr.SVC) ServiceNames
 
 	// Writable returns a pointer to the underlying topology object. This is included for legacy
 	// reasons and should never be used.
@@ -151,20 +144,24 @@ func (t *topologyS) MTU() uint16 {
 	return uint16(t.Topology.MTU)
 }
 
-func (t *topologyS) InterfaceIDs() []common.IFIDType {
-	intfs := make([]common.IFIDType, 0, len(t.Topology.IFInfoMap))
-	for ifid := range t.Topology.IFInfoMap {
-		intfs = append(intfs, ifid)
+func (t *topologyS) IfIDs() []iface.ID {
+	intfs := make([]iface.ID, 0, len(t.Topology.IFInfoMap))
+	for ifID := range t.Topology.IFInfoMap {
+		intfs = append(intfs, ifID)
 	}
 	return intfs
 }
 
-func (t *topologyS) UnderlayNextHop(ifid common.IFIDType) (*net.UDPAddr, bool) {
-	ifInfo, ok := t.Topology.IFInfoMap[ifid]
+func (t *topologyS) PortRange() (uint16, uint16) {
+	return t.Topology.DispatchedPortStart, t.Topology.DispatchedPortEnd
+}
+
+func (t *topologyS) UnderlayNextHop(ifID iface.ID) (*net.UDPAddr, bool) {
+	ifInfo, ok := t.Topology.IFInfoMap[ifID]
 	if !ok {
 		return nil, false
 	}
-	return copyUDPAddr(ifInfo.InternalAddr), true
+	return net.UDPAddrFromAddrPort(ifInfo.InternalAddr), true
 }
 
 func (t *topologyS) MakeHostInfos(st ServiceType) ([]*net.UDPAddr, error) {
@@ -182,21 +179,7 @@ func (t *topologyS) MakeHostInfos(st ServiceType) ([]*net.UDPAddr, error) {
 }
 
 func (t *topologyS) Core() bool {
-	for _, attr := range t.Topology.Attributes {
-		if attr == jsontopo.AttrCore {
-			return true
-		}
-	}
-	return false
-}
-
-func (t *topologyS) CA() bool {
-	for _, attr := range t.Topology.Attributes {
-		if attr == jsontopo.Issuing {
-			return true
-		}
-	}
-	return false
+	return t.Topology.IsCore
 }
 
 func (t *topologyS) Gateways() ([]GatewayInfo, error) {
@@ -220,7 +203,7 @@ func (t *topologyS) BR(name string) (BRInfo, bool) {
 	return br, ok
 }
 
-func (t *topologyS) PublicAddress(svc addr.HostSVC, name string) *net.UDPAddr {
+func (t *topologyS) PublicAddress(svc addr.SVC, name string) *net.UDPAddr {
 	topoAddr := t.topoAddress(svc, name)
 	if topoAddr == nil {
 		return nil
@@ -228,7 +211,7 @@ func (t *topologyS) PublicAddress(svc addr.HostSVC, name string) *net.UDPAddr {
 	return topoAddr.SCIONAddress
 }
 
-func (t *topologyS) topoAddress(svc addr.HostSVC, name string) *TopoAddr {
+func (t *topologyS) topoAddress(svc addr.SVC, name string) *TopoAddr {
 	var addresses IDAddrMap
 	switch svc.Base() {
 	case addr.SvcDS:
@@ -242,15 +225,15 @@ func (t *topologyS) topoAddress(svc addr.HostSVC, name string) *TopoAddr {
 	return addresses.GetByID(name)
 }
 
-func (t *topologyS) Anycast(svc addr.HostSVC) (*net.UDPAddr, error) {
+func (t *topologyS) Anycast(svc addr.SVC) (*net.UDPAddr, error) {
 	addrs, err := t.Multicast(svc)
 	if err != nil {
 		return nil, err
 	}
-	return addrs[rand.Intn(len(addrs))], nil
+	return addrs[rand.IntN(len(addrs))], nil
 }
 
-func (t *topologyS) Multicast(svc addr.HostSVC) ([]*net.UDPAddr, error) {
+func (t *topologyS) Multicast(svc addr.SVC) ([]*net.UDPAddr, error) {
 	st, err := toServiceType(svc)
 	if err != nil {
 		return nil, err
@@ -263,7 +246,7 @@ func (t *topologyS) Multicast(svc addr.HostSVC) ([]*net.UDPAddr, error) {
 	for _, name := range names {
 		topoAddr, err := t.Topology.GetTopoAddr(name, st)
 		if err != nil {
-			return nil, serrors.Wrap(addr.ErrUnsupportedSVCAddress, err, "svc", svc)
+			return nil, serrors.JoinNoStack(addr.ErrUnsupportedSVCAddress, err, "svc", svc)
 		}
 		addrs = append(addrs, &net.UDPAddr{
 			IP:   topoAddr.SCIONAddress.IP,
@@ -274,37 +257,38 @@ func (t *topologyS) Multicast(svc addr.HostSVC) ([]*net.UDPAddr, error) {
 	return addrs, nil
 }
 
-func (t *topologyS) UnderlayAnycast(svc addr.HostSVC) (*net.UDPAddr, error) {
+func (t *topologyS) UnderlayAnycast(svc addr.SVC) (*net.UDPAddr, error) {
 	names := t.SVCNames(svc)
 	name, err := names.GetRandom()
 	if err != nil {
 		if supportedSVC(svc) {
 			return nil, serrors.New("no instances found for service", "svc", svc)
 		}
-		return nil, serrors.WithCtx(addr.ErrUnsupportedSVCAddress, "svc", svc)
+		return nil, serrors.JoinNoStack(addr.ErrUnsupportedSVCAddress, nil, "svc", svc)
 	}
 	underlay, err := t.underlayByName(svc, name)
 	if err != nil {
-		return nil, serrors.WrapStr("BUG! Selected random service name, but service info not found",
+		return nil, serrors.Wrap("BUG! Selected random service name, but service info not found",
 			err, "service_names", names, "selected_name", name)
+
 	}
 	// FIXME(scrye): This should return net.Addr
 	return underlay, nil
 }
 
-func supportedSVC(svc addr.HostSVC) bool {
+func supportedSVC(svc addr.SVC) bool {
 	b := svc.Base()
 	return b == addr.SvcDS || b == addr.SvcCS
 }
 
-func (t *topologyS) UnderlayMulticast(svc addr.HostSVC) ([]*net.UDPAddr, error) {
+func (t *topologyS) UnderlayMulticast(svc addr.SVC) ([]*net.UDPAddr, error) {
 	st, err := toServiceType(svc)
 	if err != nil {
 		return nil, err
 	}
 	topoAddrs, err := t.Topology.getAllTopoAddrs(st)
 	if err != nil {
-		return nil, serrors.Wrap(addr.ErrUnsupportedSVCAddress, err, "svc", svc)
+		return nil, serrors.JoinNoStack(addr.ErrUnsupportedSVCAddress, err, "svc", svc)
 	}
 
 	if len(topoAddrs) == 0 {
@@ -329,14 +313,14 @@ func (t *topologyS) UnderlayMulticast(svc addr.HostSVC) ([]*net.UDPAddr, error) 
 	return underlayAddrs, nil
 }
 
-func (t *topologyS) underlayByName(svc addr.HostSVC, name string) (*net.UDPAddr, error) {
+func (t *topologyS) underlayByName(svc addr.SVC, name string) (*net.UDPAddr, error) {
 	st, err := toServiceType(svc)
 	if err != nil {
 		return nil, err
 	}
 	topoAddr, err := t.Topology.GetTopoAddr(name, st)
 	if err != nil {
-		return nil, serrors.Wrap(addr.ErrUnsupportedSVCAddress, err, "svc", svc)
+		return nil, serrors.JoinNoStack(addr.ErrUnsupportedSVCAddress, err, "svc", svc)
 	}
 	underlayAddr := topoAddr.UnderlayAddr()
 	if underlayAddr == nil {
@@ -345,14 +329,14 @@ func (t *topologyS) underlayByName(svc addr.HostSVC, name string) (*net.UDPAddr,
 	return copyUDPAddr(underlayAddr), nil
 }
 
-func toServiceType(svc addr.HostSVC) (ServiceType, error) {
+func toServiceType(svc addr.SVC) (ServiceType, error) {
 	switch svc.Base() {
 	case addr.SvcDS:
 		return Discovery, nil
 	case addr.SvcCS:
 		return Control, nil
 	default:
-		return 0, serrors.WithCtx(addr.ErrUnsupportedSVCAddress, "svc", svc)
+		return 0, serrors.JoinNoStack(addr.ErrUnsupportedSVCAddress, nil, "svc", svc)
 	}
 }
 
@@ -360,11 +344,7 @@ func (t *topologyS) IFInfoMap() IfInfoMap {
 	return t.Topology.IFInfoMap
 }
 
-func (t *topologyS) BRNames() []string {
-	return t.Topology.BRNames
-}
-
-func (t *topologyS) SVCNames(svc addr.HostSVC) ServiceNames {
+func (t *topologyS) SVCNames(svc addr.SVC) ServiceNames {
 	var m IDAddrMap
 	switch svc.Base() {
 	case addr.SvcDS:
@@ -385,7 +365,7 @@ func (t *topologyS) Writable() *RWTopology {
 	return t.Topology
 }
 
-func Digest(t interface{}) ([]byte, error) {
+func Digest(t any) ([]byte, error) {
 	h := sha256.New()
 	enc := json.NewEncoder(h)
 	if err := enc.Encode(t); err != nil {

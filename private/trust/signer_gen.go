@@ -37,56 +37,60 @@ type SignerGen struct {
 	IA      addr.IA
 	KeyRing KeyRing
 	DB      DB // FIXME(roosd): Eventually this should use a crypto provider
+
+	// ExtKeyUsage filters the available certificates for specific key usage types.
+	// If ExtKeyUsage is not ExtKeyUsageAny, Generate will return a Signer with
+	// a certificate supporting this usage type (if one exists).
+	ExtKeyUsage x509.ExtKeyUsage
 }
 
 // Generate fetches private keys from the key ring and searches active
 // certificate chains that authenticate the corresponding public key. The
 // returned signer uses the private key which is backed by the certificate chain
 // with the highest expiration time.
-func (s SignerGen) Generate(ctx context.Context) (Signer, error) {
+func (s SignerGen) Generate(ctx context.Context) ([]Signer, error) {
 	l := metrics.SignerLabels{}
 	keys, err := s.KeyRing.PrivateKeys(ctx)
 	if err != nil {
 		metrics.Signer.Generate(l.WithResult(metrics.ErrKey)).Inc()
-		return Signer{}, err
+		return nil, err
 	}
 	if len(keys) == 0 {
 		metrics.Signer.Generate(l.WithResult(metrics.ErrKey)).Inc()
-		return Signer{}, serrors.New("no private key found")
+		return nil, serrors.New("no private key found")
 	}
 
 	trcs, res, err := activeTRCs(ctx, s.DB, s.IA.ISD())
 	if err != nil {
 		metrics.Signer.Generate(l.WithResult(res)).Inc()
-		return Signer{}, serrors.WrapStr("loading TRC", err)
+		return nil, serrors.Wrap("loading TRC", err)
 	}
 
-	// Search the private key that has a certificate that expires the latest.
-	var best *Signer
+	var bests []Signer
 	for _, key := range keys {
 		signer, err := s.bestForKey(ctx, key, trcs)
 		if err != nil {
 			metrics.Signer.Generate(l.WithResult(metrics.ErrDB)).Inc()
-			return Signer{}, err
+			return nil, err
 		}
 		if signer == nil {
 			continue
 		}
-		if best != nil && signer.Expiration.Before(best.Expiration) {
-			continue
-		}
-		best = signer
+		bests = append(bests, *signer)
 	}
-	if best == nil {
+	if len(bests) == 0 {
 		metrics.Signer.Generate(l.WithResult(metrics.ErrNotFound)).Inc()
-		return Signer{}, serrors.New("no certificate found", "num_private_keys", len(keys))
+		return nil, serrors.New("no certificate found", "num_private_keys", len(keys))
 	}
 	metrics.Signer.Generate(l.WithResult(metrics.Success)).Inc()
-	return *best, nil
+	return bests, nil
 }
 
-func (s *SignerGen) bestForKey(ctx context.Context, key crypto.Signer,
-	trcs []cppki.SignedTRC) (*Signer, error) {
+func (s *SignerGen) bestForKey(
+	ctx context.Context,
+	key crypto.Signer,
+	trcs []cppki.SignedTRC,
+) (*Signer, error) {
 	// FIXME(roosd): We currently take the sha1 sum of the public key.
 	// The final implementation needs to be smarter than that, but this
 	// requires a proper design that also considers certificate renewal.
@@ -100,14 +104,21 @@ func (s *SignerGen) bestForKey(ctx context.Context, key crypto.Signer,
 	if err != nil {
 		return nil, err
 	}
+	now := time.Now()
 	chains, err := s.DB.Chains(ctx, ChainQuery{
 		IA:           s.IA,
 		SubjectKeyID: skid,
-		Date:         time.Now(),
+		Validity: cppki.Validity{
+			NotBefore: now,
+			NotAfter:  now,
+		},
 	})
 	if err != nil {
 		// TODO	metrics.Signer.Generate(l.WithResult(metrics.ErrDB)).Inc()
 		return nil, err
+	}
+	if s.ExtKeyUsage != x509.ExtKeyUsageAny {
+		chains = filterChains(chains, s.ExtKeyUsage)
 	}
 	chain := bestChain(&trcs[0].TRC, chains)
 	if chain == nil && len(trcs) == 1 {
@@ -125,7 +136,13 @@ func (s *SignerGen) bestForKey(ctx context.Context, key crypto.Signer,
 	}
 	expiry := min(chain[0].NotAfter, trcs[0].TRC.Validity.NotAfter)
 	if inGrace {
-		expiry = min(chain[0].NotAfter, trcs[0].TRC.GracePeriodEnd())
+		// In the grace period the expiry is the minimum of the chain expiry,
+		// the grace period defined in the new TRC, and the expiry of the
+		// previous TRC.
+		expiry = min(
+			min(chain[0].NotAfter, trcs[0].TRC.GracePeriodEnd()),
+			trcs[1].TRC.Validity.NotAfter,
+		)
 	}
 	return &Signer{
 		PrivateKey:   key,
@@ -142,6 +159,18 @@ func (s *SignerGen) bestForKey(ctx context.Context, key crypto.Signer,
 		},
 		InGrace: inGrace,
 	}, nil
+}
+
+// filterChains returns only the chains with matching key usage.
+func filterChains(chains [][]*x509.Certificate, keyUsage x509.ExtKeyUsage) [][]*x509.Certificate {
+	filtered := make([][]*x509.Certificate, 0, len(chains))
+	for _, chain := range chains {
+		if err := verifyExtendedKeyUsage(chain[0], keyUsage); err != nil {
+			continue
+		}
+		filtered = append(filtered, chain)
+	}
+	return filtered
 }
 
 func bestChain(trc *cppki.TRC, chains [][]*x509.Certificate) []*x509.Certificate {

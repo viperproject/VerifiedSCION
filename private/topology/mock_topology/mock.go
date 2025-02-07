@@ -10,7 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	addr "github.com/scionproto/scion/pkg/addr"
-	common "github.com/scionproto/scion/pkg/private/common"
+	iface "github.com/scionproto/scion/pkg/segment/iface"
 	topology "github.com/scionproto/scion/private/topology"
 )
 
@@ -38,7 +38,7 @@ func (m *MockTopology) EXPECT() *MockTopologyMockRecorder {
 }
 
 // Anycast mocks base method.
-func (m *MockTopology) Anycast(arg0 addr.HostSVC) (*net.UDPAddr, error) {
+func (m *MockTopology) Anycast(arg0 addr.SVC) (*net.UDPAddr, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Anycast", arg0)
 	ret0, _ := ret[0].(*net.UDPAddr)
@@ -65,34 +65,6 @@ func (m *MockTopology) BR(arg0 string) (topology.BRInfo, bool) {
 func (mr *MockTopologyMockRecorder) BR(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BR", reflect.TypeOf((*MockTopology)(nil).BR), arg0)
-}
-
-// BRNames mocks base method.
-func (m *MockTopology) BRNames() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BRNames")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// BRNames indicates an expected call of BRNames.
-func (mr *MockTopologyMockRecorder) BRNames() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BRNames", reflect.TypeOf((*MockTopology)(nil).BRNames))
-}
-
-// CA mocks base method.
-func (m *MockTopology) CA() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CA")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// CA indicates an expected call of CA.
-func (mr *MockTopologyMockRecorder) CA() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CA", reflect.TypeOf((*MockTopology)(nil).CA))
 }
 
 // Core mocks base method.
@@ -152,18 +124,18 @@ func (mr *MockTopologyMockRecorder) IFInfoMap() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IFInfoMap", reflect.TypeOf((*MockTopology)(nil).IFInfoMap))
 }
 
-// InterfaceIDs mocks base method.
-func (m *MockTopology) InterfaceIDs() []common.IFIDType {
+// IfIDs mocks base method.
+func (m *MockTopology) IfIDs() []iface.ID {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InterfaceIDs")
-	ret0, _ := ret[0].([]common.IFIDType)
+	ret := m.ctrl.Call(m, "IfIDs")
+	ret0, _ := ret[0].([]iface.ID)
 	return ret0
 }
 
-// InterfaceIDs indicates an expected call of InterfaceIDs.
-func (mr *MockTopologyMockRecorder) InterfaceIDs() *gomock.Call {
+// IfIDs indicates an expected call of IfIDs.
+func (mr *MockTopologyMockRecorder) IfIDs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InterfaceIDs", reflect.TypeOf((*MockTopology)(nil).InterfaceIDs))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IfIDs", reflect.TypeOf((*MockTopology)(nil).IfIDs))
 }
 
 // MTU mocks base method.
@@ -196,7 +168,7 @@ func (mr *MockTopologyMockRecorder) MakeHostInfos(arg0 interface{}) *gomock.Call
 }
 
 // Multicast mocks base method.
-func (m *MockTopology) Multicast(arg0 addr.HostSVC) ([]*net.UDPAddr, error) {
+func (m *MockTopology) Multicast(arg0 addr.SVC) ([]*net.UDPAddr, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Multicast", arg0)
 	ret0, _ := ret[0].([]*net.UDPAddr)
@@ -210,8 +182,23 @@ func (mr *MockTopologyMockRecorder) Multicast(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Multicast", reflect.TypeOf((*MockTopology)(nil).Multicast), arg0)
 }
 
+// PortRange mocks base method.
+func (m *MockTopology) PortRange() (uint16, uint16) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PortRange")
+	ret0, _ := ret[0].(uint16)
+	ret1, _ := ret[1].(uint16)
+	return ret0, ret1
+}
+
+// PortRange indicates an expected call of PortRange.
+func (mr *MockTopologyMockRecorder) PortRange() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PortRange", reflect.TypeOf((*MockTopology)(nil).PortRange))
+}
+
 // PublicAddress mocks base method.
-func (m *MockTopology) PublicAddress(arg0 addr.HostSVC, arg1 string) *net.UDPAddr {
+func (m *MockTopology) PublicAddress(arg0 addr.SVC, arg1 string) *net.UDPAddr {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PublicAddress", arg0, arg1)
 	ret0, _ := ret[0].(*net.UDPAddr)
@@ -225,7 +212,7 @@ func (mr *MockTopologyMockRecorder) PublicAddress(arg0, arg1 interface{}) *gomoc
 }
 
 // SVCNames mocks base method.
-func (m *MockTopology) SVCNames(arg0 addr.HostSVC) topology.ServiceNames {
+func (m *MockTopology) SVCNames(arg0 addr.SVC) topology.ServiceNames {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SVCNames", arg0)
 	ret0, _ := ret[0].(topology.ServiceNames)
@@ -239,7 +226,7 @@ func (mr *MockTopologyMockRecorder) SVCNames(arg0 interface{}) *gomock.Call {
 }
 
 // UnderlayAnycast mocks base method.
-func (m *MockTopology) UnderlayAnycast(arg0 addr.HostSVC) (*net.UDPAddr, error) {
+func (m *MockTopology) UnderlayAnycast(arg0 addr.SVC) (*net.UDPAddr, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UnderlayAnycast", arg0)
 	ret0, _ := ret[0].(*net.UDPAddr)
@@ -254,7 +241,7 @@ func (mr *MockTopologyMockRecorder) UnderlayAnycast(arg0 interface{}) *gomock.Ca
 }
 
 // UnderlayMulticast mocks base method.
-func (m *MockTopology) UnderlayMulticast(arg0 addr.HostSVC) ([]*net.UDPAddr, error) {
+func (m *MockTopology) UnderlayMulticast(arg0 addr.SVC) ([]*net.UDPAddr, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UnderlayMulticast", arg0)
 	ret0, _ := ret[0].([]*net.UDPAddr)
@@ -269,7 +256,7 @@ func (mr *MockTopologyMockRecorder) UnderlayMulticast(arg0 interface{}) *gomock.
 }
 
 // UnderlayNextHop mocks base method.
-func (m *MockTopology) UnderlayNextHop(arg0 common.IFIDType) (*net.UDPAddr, bool) {
+func (m *MockTopology) UnderlayNextHop(arg0 iface.ID) (*net.UDPAddr, bool) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UnderlayNextHop", arg0)
 	ret0, _ := ret[0].(*net.UDPAddr)

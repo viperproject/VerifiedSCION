@@ -22,13 +22,12 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
 	dkpb "github.com/scionproto/scion/pkg/proto/drkey"
-	"github.com/scionproto/scion/pkg/scrypto/cppki"
 )
 
 func secretRequestToMeta(req *cppb.DRKeySecretValueRequest) (drkey.SecretValueMeta, error) {
 	err := req.ValTime.CheckValid()
 	if err != nil {
-		return drkey.SecretValueMeta{}, serrors.WrapStr("invalid valTime from request", err)
+		return drkey.SecretValueMeta{}, serrors.Wrap("invalid valTime from request", err)
 	}
 	return drkey.SecretValueMeta{
 		Validity: req.ValTime.AsTime(),
@@ -58,17 +57,15 @@ func getLevel1KeyFromReply(
 
 	err := rep.EpochBegin.CheckValid()
 	if err != nil {
-		return drkey.Level1Key{}, serrors.WrapStr("invalid EpochBegin from response", err)
+		return drkey.Level1Key{}, serrors.Wrap("invalid EpochBegin from response", err)
 	}
 	err = rep.EpochEnd.CheckValid()
 	if err != nil {
-		return drkey.Level1Key{}, serrors.WrapStr("invalid EpochEnd from response", err)
+		return drkey.Level1Key{}, serrors.Wrap("invalid EpochEnd from response", err)
 	}
 	epoch := drkey.Epoch{
-		Validity: cppki.Validity{
-			NotBefore: rep.EpochBegin.AsTime(),
-			NotAfter:  rep.EpochEnd.AsTime(),
-		},
+		NotBefore: rep.EpochBegin.AsTime(),
+		NotAfter:  rep.EpochEnd.AsTime(),
 	}
 	returningKey := drkey.Level1Key{
 		SrcIA:   meta.SrcIA,
@@ -103,7 +100,7 @@ func keyToASASResp(drkey drkey.Level1Key) *cppb.DRKeyIntraLevel1Response {
 func requestToASHostMeta(req *cppb.DRKeyASHostRequest) (drkey.ASHostMeta, error) {
 	err := req.ValTime.CheckValid()
 	if err != nil {
-		return drkey.ASHostMeta{}, serrors.WrapStr("invalid valTime from pb request", err)
+		return drkey.ASHostMeta{}, serrors.Wrap("invalid valTime from pb request", err)
 	}
 	return drkey.ASHostMeta{
 		ProtoId:  drkey.Protocol(req.ProtocolId),
@@ -125,7 +122,7 @@ func keyToASHostResp(drkey drkey.ASHostKey) *cppb.DRKeyASHostResponse {
 func requestToHostASMeta(req *cppb.DRKeyHostASRequest) (drkey.HostASMeta, error) {
 	err := req.ValTime.CheckValid()
 	if err != nil {
-		return drkey.HostASMeta{}, serrors.WrapStr("invalid valTime from pb request", err)
+		return drkey.HostASMeta{}, serrors.Wrap("invalid valTime from pb request", err)
 	}
 	return drkey.HostASMeta{
 		ProtoId:  drkey.Protocol(req.ProtocolId),
@@ -147,7 +144,7 @@ func keyToHostASResp(drkey drkey.HostASKey) *cppb.DRKeyHostASResponse {
 func requestToHostHostMeta(req *cppb.DRKeyHostHostRequest) (drkey.HostHostMeta, error) {
 	err := req.ValTime.CheckValid()
 	if err != nil {
-		return drkey.HostHostMeta{}, serrors.WrapStr("invalid valTime from pb request", err)
+		return drkey.HostHostMeta{}, serrors.Wrap("invalid valTime from pb request", err)
 	}
 	return drkey.HostHostMeta{
 		ProtoId:  drkey.Protocol(req.ProtocolId),

@@ -5,9 +5,8 @@ BFD on top of SCION
 .. _bfd-specification:
 
 BFD (Bidirectional Forwarding Detection) is a network protocol that is used to
-detect faults between two forwarding engines connected by a link. (See `rfc5880
-<https://tools.ietf.org/html/rfc5880>`__ and `rfc5881
-<https://tools.ietf.org/html/rfc5881>`__.)
+detect faults between two forwarding engines connected by a link.
+See :rfc:`5880` and :rfc:`5881`.
 
 BFD can be layered on top of different transport protocols. This document
 describes how BFD should be layered on top of SCION.
@@ -28,7 +27,7 @@ directly into SCION payload, with no additional intermediate protocol::
     |         BFD          |
     +----------------------+
 
-The `NextHdr` field in the SCION common header must be set to type `BFD` (17).
+The ``NextHdr`` field in the SCION common header must be set to type ``BFD`` (17).
 
 BFD in SCION Router
 ===================
@@ -41,7 +40,7 @@ SCION router should choose its discriminators for BFD sessions at random.
 Bootstrapping
 -------------
 
-BFD bootstrapping process (that is, how incoming BFD packet with `Your Discriminator`
+BFD bootstrapping process (that is, how incoming BFD packet with ``Your Discriminator``
 field equal to zero is mapped to a BFD session) is to be defined by each
 particular application.
 

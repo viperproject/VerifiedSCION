@@ -54,7 +54,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pelletier/go-toml"
+	"github.com/pelletier/go-toml/v2"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 )
@@ -147,7 +147,7 @@ func (s StringSampler) ConfigName() string {
 func ValidateAll(validators ...Validator) error {
 	for _, v := range validators {
 		if err := v.Validate(); err != nil {
-			return serrors.WrapStr("Unable to validate", err, "type", fmt.Sprintf("%T", v))
+			return serrors.Wrap("Unable to validate", err, "type", fmt.Sprintf("%T", v))
 		}
 	}
 	return nil
@@ -161,12 +161,12 @@ func InitAll(defaulters ...Defaulter) {
 }
 
 // Decode decodes a raw config.
-func Decode(raw []byte, cfg interface{}) error {
-	return toml.NewDecoder(bytes.NewReader(raw)).Strict(true).Decode(cfg)
+func Decode(raw []byte, cfg any) error {
+	return toml.NewDecoder(bytes.NewReader(raw)).DisallowUnknownFields().Decode(cfg)
 }
 
 // LoadFile loads the config from file.
-func LoadFile(file string, cfg interface{}) error {
+func LoadFile(file string, cfg any) error {
 	raw, err := os.ReadFile(file)
 	if err != nil {
 		return err
@@ -194,7 +194,7 @@ func OverrideName(s Sampler, name string) Sampler {
 
 type formatDataSampler struct {
 	Sampler
-	data []interface{}
+	data []any
 }
 
 func (s formatDataSampler) Sample(dst io.Writer, path Path, ctx CtxMap) {
@@ -205,7 +205,7 @@ func (s formatDataSampler) Sample(dst io.Writer, path Path, ctx CtxMap) {
 
 // FormatData creates a sampler that will call fmt.Sprintf on the string returned
 // by s.Sample using the supplied argument information.
-func FormatData(s Sampler, a ...interface{}) Sampler {
+func FormatData(s Sampler, a ...any) Sampler {
 	return formatDataSampler{
 		Sampler: s,
 		data:    a,
@@ -228,14 +228,14 @@ func LoadResource(location string) (io.ReadCloser, error) {
 	if strings.HasPrefix(location, "http://") || strings.HasPrefix(location, "https://") {
 		response, err := http.Get(location)
 		if err != nil {
-			return nil, serrors.WrapStr("fetching config over HTTP", err)
+			return nil, serrors.Wrap("fetching config over HTTP", err)
 		}
 
 		return response.Body, nil
 	}
 	rc, err := os.Open(location)
 	if err != nil {
-		return nil, serrors.WrapStr("loading config from disk", err)
+		return nil, serrors.Wrap("loading config from disk", err)
 	}
 	return rc, nil
 }

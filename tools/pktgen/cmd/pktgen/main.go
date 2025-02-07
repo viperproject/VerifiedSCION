@@ -18,13 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 
-	"github.com/google/gopacket"
+	"github.com/gopacket/gopacket"
 	"github.com/spf13/cobra"
 
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/log"
 	"github.com/scionproto/scion/pkg/private/common"
@@ -66,7 +67,7 @@ func main() {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dst, err := snet.ParseUDPAddr(args[0])
 			if err != nil {
-				return serrors.WrapStr("parsing destination addr", err)
+				return serrors.Wrap("parsing destination addr", err)
 			}
 			return run(cfg, dst)
 		},
@@ -97,20 +98,20 @@ func main() {
 func run(cfg flags, dst *snet.UDPAddr) error {
 	defer log.Flush()
 	if err := log.Setup(log.Config{Console: log.ConsoleConfig{Level: cfg.logLevel}}); err != nil {
-		return serrors.WrapStr("setting up log", err)
+		return serrors.Wrap("setting up log", err)
 	}
 
 	raw, err := os.ReadFile(cfg.config)
 	if err != nil {
-		return serrors.WrapStr("reading config file", err)
+		return serrors.Wrap("reading config file", err)
 	}
 	var layersCfg jsonConfig
 	if err := json.Unmarshal(raw, &layersCfg); err != nil {
-		return serrors.WrapStr("parsing layers config", err, "file", cfg.config)
+		return serrors.Wrap("parsing layers config", err, "file", cfg.config)
 	}
 	ethernetLayer, err := parseEthernet(&layersCfg)
 	if err != nil {
-		return serrors.WrapStr("parsing ethernet config", err, "file", cfg.config)
+		return serrors.Wrap("parsing ethernet config", err, "file", cfg.config)
 	}
 	ipv4Layer := parseIPv4(&layersCfg)
 	udpLayer := parseUDP(&layersCfg)
@@ -120,12 +121,12 @@ func run(cfg flags, dst *snet.UDPAddr) error {
 	ctx := app.WithSignal(context.Background(), os.Kill)
 	sdConn, err := daemon.NewService(cfg.daemon).Connect(ctx)
 	if err != nil {
-		return serrors.WrapStr("connecting to SCION daemon", err)
+		return serrors.Wrap("connecting to SCION daemon", err)
 	}
 	defer sdConn.Close()
 	localIA, err := sdConn.LocalIA(ctx)
 	if err != nil {
-		return serrors.WrapStr("determining local ISD-AS", err)
+		return serrors.Wrap("determining local ISD-AS", err)
 	}
 	path, err := path.Choose(ctx, sdConn, dst.IA,
 		path.WithInteractive(cfg.interactive),
@@ -134,13 +135,13 @@ func run(cfg flags, dst *snet.UDPAddr) error {
 		path.WithColorScheme(path.DefaultColorScheme(cfg.noColor)),
 	)
 	if err != nil {
-		return serrors.WrapStr("fetching paths", err)
+		return serrors.Wrap("fetching paths", err)
 	}
 	dst.NextHop = path.UnderlayNextHop()
 	dst.Path = path.Dataplane()
 	localIP, err := resolveLocal(dst)
 	if err != nil {
-		return serrors.WrapStr("resolving local IP", err)
+		return serrors.Wrap("resolving local IP", err)
 	}
 	scionPath, ok := path.Dataplane().(snetpath.SCION)
 	if !ok {
@@ -148,18 +149,22 @@ func run(cfg flags, dst *snet.UDPAddr) error {
 	}
 	decPath := &scion.Decoded{}
 	if err := decPath.DecodeFromBytes(scionPath.Raw); err != nil {
-		return serrors.WrapStr("decoding path", err)
+		return serrors.Wrap("decoding path", err)
 	}
 
 	scionLayer.PathType = scion.PathType
 	scionLayer.SrcIA = localIA
 	scionLayer.DstIA = path.Destination()
 	scionLayer.Path = decPath
-	if err := scionLayer.SetDstAddr(&net.IPAddr{IP: dst.Host.IP, Zone: dst.Host.Zone}); err != nil {
-		return serrors.WrapStr("setting SCION dest address", err)
+	dstHostIP, ok := netip.AddrFromSlice(dst.Host.IP)
+	if !ok {
+		return serrors.New("invalid destination host IP", "ip", dst.Host.IP)
 	}
-	if err := scionLayer.SetSrcAddr(&net.IPAddr{IP: localIP}); err != nil {
-		return serrors.WrapStr("setting SCION source address", err)
+	if err := scionLayer.SetDstAddr(addr.HostIP(dstHostIP)); err != nil {
+		return serrors.Wrap("setting SCION dest address", err)
+	}
+	if err := scionLayer.SetSrcAddr(addr.HostIP(localIP)); err != nil {
+		return serrors.Wrap("setting SCION source address", err)
 	}
 	scionudpLayer := &slayers.UDP{}
 	scionudpLayer.SrcPort = 40111
@@ -174,7 +179,7 @@ func run(cfg flags, dst *snet.UDPAddr) error {
 	}
 	if err := gopacket.SerializeLayers(input, options, ethernetLayer, ipv4Layer, udpLayer,
 		scionLayer, scionudpLayer, gopacket.Payload(payload)); err != nil {
-		return serrors.WrapStr("serializing go packet", err)
+		return serrors.Wrap("serializing go packet", err)
 	}
 	if err := pktgen.StorePcap(cfg.out, input.Bytes()); err != nil {
 		return err
@@ -184,15 +189,18 @@ func run(cfg flags, dst *snet.UDPAddr) error {
 	return nil
 }
 
-func resolveLocal(dst *snet.UDPAddr) (net.IP, error) {
+func resolveLocal(dst *snet.UDPAddr) (netip.Addr, error) {
 	target := dst.Host.IP
 	if dst.NextHop != nil {
 		target = dst.NextHop.IP
 	}
-	localIP, err := addrutil.ResolveLocal(target)
+	resolvedIP, err := addrutil.ResolveLocal(target)
 	if err != nil {
-		return nil, serrors.WrapStr("resolving local address", err)
-
+		return netip.Addr{}, serrors.Wrap("resolving local address", err)
+	}
+	localIP, ok := netip.AddrFromSlice(resolvedIP)
+	if !ok {
+		return netip.Addr{}, serrors.New("invalid local IP", "ip", resolvedIP)
 	}
 	return localIP, nil
 }

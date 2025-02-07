@@ -21,13 +21,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers/path"
 )
 
 var (
-	core1_110 = xtest.MustParseIA("1-ff00:0:110")
-	core1_120 = xtest.MustParseIA("1-ff00:0:120")
+	core1_110 = addr.MustParseIA("1-ff00:0:110")
+	core1_120 = addr.MustParseIA("1-ff00:0:120")
 )
 
 func allocPathSegment(ias []addr.IA) *PathSegment {
@@ -91,7 +90,8 @@ func TestFilterSegments(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			segs := Segments(test.Segs)
-			segs.FilterSegs(test.KeepF)
+			_, err := segs.FilterSegs(test.KeepF)
+			assert.NoError(t, err)
 			assert.Equal(t, Segments(test.Filtered), segs)
 		})
 	}

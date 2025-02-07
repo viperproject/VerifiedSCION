@@ -19,10 +19,9 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"net/netip"
 	"strings"
 	"text/tabwriter"
-
-	"inet.af/netaddr"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
@@ -59,7 +58,7 @@ func (p *Policy) UnmarshalText(b []byte) error {
 	for scanner.Scan() {
 		rule, err := parseRule(scanner.Bytes())
 		if err != nil {
-			return serrors.WrapStr("parsing rule", err, "line", len(rules))
+			return serrors.Wrap("parsing rule", err, "line", len(rules))
 		}
 		rules = append(rules, rule)
 	}
@@ -84,19 +83,19 @@ func parseRule(b []byte) (Rule, error) {
 
 	action, err := parseAction(columns[0])
 	if err != nil {
-		return Rule{}, serrors.WrapStr("parsing 'action'", err, "input", string(columns[0]))
+		return Rule{}, serrors.Wrap("parsing 'action'", err, "input", string(columns[0]))
 	}
 	fromMatcher, err := parseIAMatcher(columns[1])
 	if err != nil {
-		return Rule{}, serrors.WrapStr("parsing 'to'", err, "input", string(columns[1]))
+		return Rule{}, serrors.Wrap("parsing 'to'", err, "input", string(columns[1]))
 	}
 	toMatcher, err := parseIAMatcher(columns[2])
 	if err != nil {
-		return Rule{}, serrors.WrapStr("parsing 'from'", err, "input", string(columns[2]))
+		return Rule{}, serrors.Wrap("parsing 'from'", err, "input", string(columns[2]))
 	}
 	networkMatcher, err := parseNetworkMatcher(columns[3])
 	if err != nil {
-		return Rule{}, serrors.WrapStr("parsing 'network'", err, "input", string(columns[3]))
+		return Rule{}, serrors.Wrap("parsing 'network'", err, "input", string(columns[3]))
 	}
 
 	maxColumns := 4
@@ -147,11 +146,11 @@ func parseNetworkMatcher(b []byte) (NetworkMatcher, error) {
 		negative = true
 		b = b[1:]
 	}
-	var networks []netaddr.IPPrefix
+	var networks []netip.Prefix
 	for _, network := range bytes.Split(b, []byte(",")) {
-		n, err := netaddr.ParseIPPrefix(string(network))
+		n, err := netip.ParsePrefix(string(network))
 		if err != nil {
-			return NetworkMatcher{}, serrors.WrapStr("parsing network", err)
+			return NetworkMatcher{}, serrors.Wrap("parsing network", err)
 		}
 		networks = append(networks, n)
 	}

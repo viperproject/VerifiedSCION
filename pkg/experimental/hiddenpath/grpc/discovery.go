@@ -20,7 +20,6 @@ import (
 
 	"github.com/scionproto/scion/pkg/experimental/hiddenpath"
 	"github.com/scionproto/scion/pkg/grpc"
-	libgrpc "github.com/scionproto/scion/pkg/grpc"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	dspb "github.com/scionproto/scion/pkg/proto/discovery"
 )
@@ -28,7 +27,7 @@ import (
 // Discoverer can be used to discover remote hidden path instances.
 type Discoverer struct {
 	// Dialer dials a new gRPC connection.
-	Dialer libgrpc.Dialer
+	Dialer grpc.Dialer
 }
 
 // Discover discovers hidden path services at the discovery service that is
@@ -36,7 +35,7 @@ type Discoverer struct {
 func (d *Discoverer) Discover(ctx context.Context, dsAddr net.Addr) (hiddenpath.Servers, error) {
 	conn, err := d.Dialer.Dial(ctx, dsAddr)
 	if err != nil {
-		return hiddenpath.Servers{}, serrors.WrapStr("dialing", err)
+		return hiddenpath.Servers{}, serrors.Wrap("dialing", err)
 	}
 	defer conn.Close()
 	client := dspb.NewDiscoveryServiceClient(conn)
@@ -62,14 +61,14 @@ func (d *Discoverer) Discover(ctx context.Context, dsAddr net.Addr) (hiddenpath.
 	for _, l := range r.Lookup {
 		a, err := parseUDPAddr(l.Address)
 		if err != nil {
-			return hiddenpath.Servers{}, serrors.WrapStr("parsing address", err, "raw", l.Address)
+			return hiddenpath.Servers{}, serrors.Wrap("parsing address", err, "raw", l.Address)
 		}
 		reply.Lookup = append(reply.Lookup, a)
 	}
 	for _, l := range r.Registration {
 		a, err := parseUDPAddr(l.Address)
 		if err != nil {
-			return hiddenpath.Servers{}, serrors.WrapStr("parsing address", err, "raw", l.Address)
+			return hiddenpath.Servers{}, serrors.Wrap("parsing address", err, "raw", l.Address)
 		}
 		reply.Registration = append(reply.Registration, a)
 	}

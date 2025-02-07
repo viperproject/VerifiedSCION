@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"hash"
 	"net"
+	"net/netip"
 	"sync"
 	"testing"
 	"time"
@@ -30,19 +31,18 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"inet.af/netaddr"
 
 	"github.com/scionproto/scion/control/beacon"
 	"github.com/scionproto/scion/control/beaconing"
 	"github.com/scionproto/scion/control/beaconing/mock_beaconing"
 	"github.com/scionproto/scion/control/ifstate"
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/private/xtest/graph"
 	"github.com/scionproto/scion/pkg/scrypto"
 	"github.com/scionproto/scion/pkg/scrypto/cppki"
 	"github.com/scionproto/scion/pkg/scrypto/signed"
 	seg "github.com/scionproto/scion/pkg/segment"
+	"github.com/scionproto/scion/pkg/segment/iface"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/pkg/snet/addrutil"
@@ -97,9 +97,11 @@ func TestRegistrarRun(t *testing.T) {
 			r := beaconing.WriteScheduler{
 				Writer: &beaconing.LocalWriter{
 					Extender: &beaconing.DefaultExtender{
-						IA:         topo.IA(),
-						MTU:        topo.MTU(),
-						Signer:     testSigner(t, priv, topo.IA()),
+						IA:  topo.IA(),
+						MTU: topo.MTU(),
+						SignerGen: testSignerGen{
+							Signers: []trust.Signer{testSigner(t, priv, topo.IA())},
+						},
 						Intfs:      intfs,
 						MAC:        macFactory,
 						MaxExpTime: func() uint8 { return beacon.DefaultMaxExpTime },
@@ -117,7 +119,7 @@ func TestRegistrarRun(t *testing.T) {
 
 			g := graph.NewDefaultGraph(mctrl)
 			segProvider.EXPECT().SegmentsToRegister(gomock.Any(), test.segType).DoAndReturn(
-				func(_, _ interface{}) ([]beacon.Beacon, error) {
+				func(_, _ any) ([]beacon.Beacon, error) {
 					res := make([]beacon.Beacon, 0, len(test.beacons))
 					for _, desc := range test.beacons {
 						res = append(res, testBeacon(g, desc))
@@ -183,9 +185,11 @@ func TestRegistrarRun(t *testing.T) {
 			r := beaconing.WriteScheduler{
 				Writer: &beaconing.RemoteWriter{
 					Extender: &beaconing.DefaultExtender{
-						IA:         topo.IA(),
-						MTU:        topo.MTU(),
-						Signer:     testSigner(t, priv, topo.IA()),
+						IA:  topo.IA(),
+						MTU: topo.MTU(),
+						SignerGen: testSignerGen{
+							Signers: []trust.Signer{testSigner(t, priv, topo.IA())},
+						},
 						Intfs:      intfs,
 						MAC:        macFactory,
 						MaxExpTime: func() uint8 { return beacon.DefaultMaxExpTime },
@@ -206,7 +210,7 @@ func TestRegistrarRun(t *testing.T) {
 
 			g := graph.NewDefaultGraph(mctrl)
 			segProvider.EXPECT().SegmentsToRegister(gomock.Any(), test.segType).DoAndReturn(
-				func(_, _ interface{}) ([]beacon.Beacon, error) {
+				func(_, _ any) ([]beacon.Beacon, error) {
 					res := make([]beacon.Beacon, len(test.beacons))
 					for _, desc := range test.beacons {
 						res = append(res, testBeacon(g, desc))
@@ -259,7 +263,7 @@ func TestRegistrarRun(t *testing.T) {
 						assert.Equal(t, pathHopField.ConsEgress, segHopField.ConsEgress)
 
 						nextHop := pathHopField.ConsIngress
-						a := interfaceInfos(topo)[nextHop].InternalAddr.UDPAddr()
+						a := net.UDPAddrFromAddrPort(interfaceInfos(topo)[nextHop].InternalAddr)
 						assert.Equal(t, a, s.Addr.NextHop)
 					}
 				})
@@ -282,9 +286,11 @@ func TestRegistrarRun(t *testing.T) {
 		r := beaconing.WriteScheduler{
 			Writer: &beaconing.RemoteWriter{
 				Extender: &beaconing.DefaultExtender{
-					IA:         topo.IA(),
-					MTU:        topo.MTU(),
-					Signer:     testSigner(t, priv, topo.IA()),
+					IA:  topo.IA(),
+					MTU: topo.MTU(),
+					SignerGen: testSignerGen{
+						Signers: []trust.Signer{testSigner(t, priv, topo.IA())},
+					},
 					Intfs:      intfs,
 					MAC:        macFactory,
 					MaxExpTime: func() uint8 { return beacon.DefaultMaxExpTime },
@@ -307,10 +313,10 @@ func TestRegistrarRun(t *testing.T) {
 		require.NoError(t, err)
 		segProvider.EXPECT().SegmentsToRegister(gomock.Any(),
 			seg.TypeDown).DoAndReturn(
-			func(_, _ interface{}) (<-chan beacon.Beacon, error) {
+			func(_, _ any) (<-chan beacon.Beacon, error) {
 				res := make(chan beacon.Beacon, 1)
 				b := testBeacon(g, []uint16{graph.If_120_X_111_B})
-				b.InIfId = 10
+				b.InIfID = 10
 				res <- b
 				close(res)
 				return res, nil
@@ -325,12 +331,12 @@ func testBeacon(g *graph.Graph, desc []uint16) beacon.Beacon {
 	bseg.ASEntries = bseg.ASEntries[:len(bseg.ASEntries)-1]
 
 	return beacon.Beacon{
-		InIfId:  asEntry.HopEntry.HopField.ConsIngress,
+		InIfID:  asEntry.HopEntry.HopField.ConsIngress,
 		Segment: bseg,
 	}
 }
 
-func testSigner(t *testing.T, priv crypto.Signer, ia addr.IA) seg.Signer {
+func testSigner(t *testing.T, priv crypto.Signer, ia addr.IA) trust.Signer {
 	return trust.Signer{
 		PrivateKey: priv,
 		Algorithm:  signed.ECDSAWithSHA256,
@@ -343,6 +349,18 @@ func testSigner(t *testing.T, priv crypto.Signer, ia addr.IA) seg.Signer {
 		SubjectKeyID: []byte("skid"),
 		Expiration:   time.Now().Add(time.Hour),
 	}
+}
+
+type testSignerGen struct {
+	Signers []trust.Signer
+}
+
+func (s testSignerGen) Generate(ctx context.Context) ([]beaconing.Signer, error) {
+	var signers []beaconing.Signer
+	for _, s := range s.Signers {
+		signers = append(signers, s)
+	}
+	return signers, nil
 }
 
 var macFactory = func() hash.Hash {
@@ -359,7 +377,7 @@ type topoWrap struct {
 }
 
 func (w topoWrap) UnderlayNextHop(id uint16) *net.UDPAddr {
-	a, _ := w.Topo.UnderlayNextHop(common.IFIDType(id))
+	a, _ := w.Topo.UnderlayNextHop(iface.ID(id))
 	return a
 }
 
@@ -371,8 +389,8 @@ func interfaceInfos(topo topology.Topology) map[uint16]ifstate.InterfaceInfo {
 			ID:           uint16(info.ID),
 			IA:           info.IA,
 			LinkType:     info.LinkType,
-			InternalAddr: netaddr.MustParseIPPort(info.InternalAddr.String()),
-			RemoteID:     uint16(info.RemoteIFID),
+			InternalAddr: netip.MustParseAddrPort(info.InternalAddr.String()),
+			RemoteID:     uint16(info.RemoteIfID),
 			MTU:          uint16(info.MTU),
 		}
 	}

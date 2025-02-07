@@ -24,12 +24,14 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/credentials"
 
 	csdrkey "github.com/scionproto/scion/control/drkey"
 	dk_grpc "github.com/scionproto/scion/control/drkey/grpc"
 	"github.com/scionproto/scion/control/drkey/grpc/mock_grpc"
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/drkey"
 	"github.com/scionproto/scion/pkg/private/xtest"
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
@@ -44,6 +46,10 @@ import (
 var _ csdrkey.Fetcher = (*dk_grpc.Fetcher)(nil)
 
 func TestLevel1KeyFetching(t *testing.T) {
+	// In this test, we request the Level1 key from the local AS. This never
+	// happens in the real system.
+	// This test uses grpc's TLS stack, unlike the  real system, where the TLS of
+	// the QUIC session is used.
 	dir := genCrypto(t)
 
 	trc := xtest.LoadTRC(t, filepath.Join(dir, "trcs/ISD1-B1-S1.trc"))
@@ -57,60 +63,86 @@ func TestLevel1KeyFetching(t *testing.T) {
 	defer ctrl.Finish()
 
 	lvl1db := mock_grpc.NewMockEngine(ctrl)
-	lvl1db.EXPECT().DeriveLevel1(gomock.Any()).Return(drkey.Level1Key{}, nil)
+	lvl1db.EXPECT().DeriveLevel1(gomock.Any()).AnyTimes().Return(drkey.Level1Key{}, nil)
 
-	mgrdb := mock_trust.NewMockDB(ctrl)
-	mgrdb.EXPECT().SignedTRC(gomock.Any(), gomock.Any()).AnyTimes().Return(trc, nil)
-	loader := mock_trust.NewMockX509KeyPairLoader(ctrl)
-	loader.EXPECT().LoadClientKeyPair(gomock.Any()).AnyTimes().Return(&tlsCert, nil)
-	loader.EXPECT().LoadServerKeyPair(gomock.Any()).AnyTimes().Return(&tlsCert, nil)
-	mgr := trust.NewTLSCryptoManager(loader, mgrdb)
-
-	serverCreds := credentials.NewTLS(&tls.Config{
-		InsecureSkipVerify:    true,
-		GetCertificate:        mgr.GetCertificate,
-		VerifyPeerCertificate: mgr.VerifyClientCertificate,
-		ClientAuth:            tls.RequireAnyClientCert,
-	})
-	clientCreds := credentials.NewTLS(&tls.Config{
-		InsecureSkipVerify:    true,
-		GetClientCertificate:  mgr.GetClientCertificate,
-		VerifyPeerCertificate: mgr.VerifyServerCertificate,
-		VerifyConnection:      mgr.VerifyConnection,
-	})
-
-	server := xtest.NewGRPCService(xtest.WithCredentials(clientCreds, serverCreds))
-	cppb.RegisterDRKeyInterServiceServer(server.Server(), &dk_grpc.Server{
-		Engine: lvl1db,
-	})
-	server.Start(t)
+	db := mock_trust.NewMockDB(ctrl)
+	db.EXPECT().SignedTRC(gomock.Any(), gomock.Any()).AnyTimes().Return(trc, nil)
+	verifier := trust.NewTLSCryptoVerifier(db)
 
 	path := mock_snet.NewMockPath(ctrl)
 	path.EXPECT().Metadata().AnyTimes().Return(&snet.PathMetadata{
-		Interfaces: []snet.PathInterface{
-			{IA: xtest.MustParseIA("1-ff00:0:111"), ID: 2},
-			{IA: xtest.MustParseIA("1-ff00:0:110"), ID: 1},
-		},
+		Interfaces: []snet.PathInterface{},
 	})
-	path.EXPECT().Dataplane().Return(nil)
-	path.EXPECT().UnderlayNextHop().Return(&net.UDPAddr{})
+	path.EXPECT().Dataplane().AnyTimes().Return(nil)
+	path.EXPECT().UnderlayNextHop().AnyTimes().Return(&net.UDPAddr{})
 
 	router := mock_snet.NewMockRouter(ctrl)
-	router.EXPECT().AllRoutes(gomock.Any(), gomock.Any()).Return([]snet.Path{path}, nil)
+	router.EXPECT().AllRoutes(gomock.Any(), gomock.Any()).AnyTimes().Return([]snet.Path{path}, nil)
 
-	fetcher := dk_grpc.Fetcher{
-		Dialer:     server,
-		Router:     router,
-		MaxRetries: 10,
+	testCases := map[string]struct {
+		omitClientCert bool
+		assertErr      assert.ErrorAssertionFunc
+	}{
+		"ok": {
+			omitClientCert: false,
+			assertErr:      assert.NoError,
+		},
+		"no certificate": {
+			omitClientCert: true,
+			assertErr:      assert.Error,
+		},
 	}
 
-	meta := drkey.Level1Meta{
-		ProtoId:  drkey.Generic,
-		Validity: time.Now(),
-		SrcIA:    xtest.MustParseIA("1-ff00:0:111"),
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+
+			// TODO(matzf): change xtest library to allow specifying the client
+			// credentials for individual calls so that server does not need to be
+			// recreated here.
+			serverCreds := credentials.NewTLS(&tls.Config{
+				InsecureSkipVerify: true,
+				GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+					return &tlsCert, nil
+				},
+				VerifyPeerCertificate: nil, // certificate verified in the service
+				ClientAuth:            tls.RequestClientCert,
+			})
+
+			clientTLSConfig := &tls.Config{
+				InsecureSkipVerify: true,
+				GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+					return &tlsCert, nil
+				},
+				VerifyPeerCertificate: verifier.VerifyServerCertificate,
+				VerifyConnection:      verifier.VerifyConnection,
+			}
+			if tc.omitClientCert {
+				clientTLSConfig.GetClientCertificate = nil
+			}
+			clientCreds := credentials.NewTLS(clientTLSConfig)
+
+			server := xtest.NewGRPCService(xtest.WithCredentials(clientCreds, serverCreds))
+			cppb.RegisterDRKeyInterServiceServer(server.Server(), &dk_grpc.Server{
+				Engine:                    lvl1db,
+				ClientCertificateVerifier: verifier,
+			})
+			server.Start(t)
+
+			fetcher := dk_grpc.Fetcher{
+				Dialer:     server,
+				Router:     router,
+				MaxRetries: 1,
+			}
+
+			meta := drkey.Level1Meta{
+				ProtoId:  drkey.Generic,
+				Validity: time.Now(),
+				SrcIA:    addr.MustParseIA("1-ff00:0:111"),
+			}
+			_, err = fetcher.Level1(context.Background(), meta)
+			tc.assertErr(t, err)
+		})
 	}
-	_, err = fetcher.Level1(context.Background(), meta)
-	require.NoError(t, err)
 }
 
 func genCrypto(t testing.TB) string {

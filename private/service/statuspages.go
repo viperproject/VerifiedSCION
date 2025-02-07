@@ -23,12 +23,11 @@ import (
 	"sort"
 	"strings"
 
-	toml "github.com/pelletier/go-toml"
+	toml "github.com/pelletier/go-toml/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/scionproto/scion/pkg/log"
 	"github.com/scionproto/scion/pkg/private/serrors"
-	"github.com/scionproto/scion/pkg/private/util"
 	"github.com/scionproto/scion/private/env"
 	"github.com/scionproto/scion/private/topology"
 )
@@ -100,7 +99,7 @@ func (s StatusPages) Register(serveMux *http.ServeMux, elemId string) error {
 	})
 	var mainBuf bytes.Buffer
 	if err := t.Execute(&mainBuf, mainData{ElemId: elemId, Pages: pages}); err != nil {
-		return serrors.WrapStr("executing template", err)
+		return serrors.Wrap("executing template", err)
 	}
 	serveMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, mainBuf.String())
@@ -126,11 +125,15 @@ func (s StatusPages) Register(serveMux *http.ServeMux, elemId string) error {
 }
 
 // NewConfigStatusPage returns a page with the specified TOML config.
-func NewConfigStatusPage(config interface{}) StatusPage {
+func NewConfigStatusPage(config any) StatusPage {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
 		var buf bytes.Buffer
-		toml.NewEncoder(&buf).Order(toml.OrderPreserve).Encode(config)
+		err := toml.NewEncoder(&buf).Encode(config)
+		if err != nil {
+			http.Error(w, "Error encoding toml config", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprint(w, buf.String())
 	}
 	return StatusPage{
@@ -143,7 +146,7 @@ func NewConfigStatusPage(config interface{}) StatusPage {
 func NewInfoStatusPage() StatusPage {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		info := env.VersionInfo()
-		inDocker, err := util.RunsInDocker()
+		inDocker, err := env.RunsInDocker()
 		if err == nil {
 			info += fmt.Sprintf("  In docker:     %v\n", inDocker)
 		}
