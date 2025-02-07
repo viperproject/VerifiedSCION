@@ -101,7 +101,7 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
-// @ requires Uncallable()
+// @ requires false
 func (b *BaseLayer) LayerContents() (res []byte) {
 	res = b.Contents
 	return res
@@ -223,12 +223,8 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ ensures   acc(s.Mem(ubuf), R0)
 // @ ensures   sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures   sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-// TODO: hide internal spec details
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), R55) in
-// @		(CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]))
-// @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @	(unfolding acc(s.Mem(ubuf), R55) in CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])) <= len(ubuf)
+// @ 	len(b.UBuf()) == old(len(b.UBuf())) + s.MinSizeOfUbufWithOneHop(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // post for IO:
 // @ ensures   e == nil && old(s.EqPathType(ubuf)) ==>

@@ -232,11 +232,11 @@ func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 // store it, based on the metadata. The actual number of bytes available to contain it
 // can be inferred from the common header field HdrLen. It may or may not be consistent.
 // @ pure
-// @ requires acc(s.Mem(), _)
+// @ requires s.Mem()
 // @ ensures  r >= MetaLen
 // @ decreases
 func (s *Base) Len() (r int) {
-	return /*@ unfolding acc(s.Mem(), _) in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
+	return /*@ unfolding s.Mem() in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
 }
 
 // Type returns the type of the path.

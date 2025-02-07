@@ -237,11 +237,18 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
 // post for IO:
-// @ ensures  r == nil ==> s.GetBase(ubuf).EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
+// @ ensures  r == nil ==>
+// @ 	s.GetBase(ubuf).EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
 // @ ensures  r == nil && old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))
 // @ ensures  r == nil && !old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsIncPath(old(s.absPkt(ubuf)))
+// (VerifiedSCION) the following post is technically redundant,
+// as it conveys information that could, in principle, be conveyed
+// with the previous posts. We should at some point revisit all
+// abstractions we use for paths and potentially unify them.
+// @ ensures  r == nil ==>
+// @ 	s.GetBase(ubuf) == old(s.GetBase(ubuf).IncPathSpec())
 // @ decreases
 func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ unfold s.Mem(ubuf)
@@ -354,14 +361,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 		return path.InfoField{}, err
 	}
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
-	//@ unfold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ unfold acc(sl.Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
-	//@ assert reveal path.BytesToAbsInfoField(ubuf, infOffset) ==
-	//@ 	reveal path.BytesToAbsInfoField(ubuf[infOffset : infOffset+path.InfoLen], 0)
-	//@ assert info.ToAbsInfoField() ==
-	//@ 	reveal path.BytesToAbsInfoField(ubuf, infOffset)
-	//@ fold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ fold acc(sl.Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	//@ path.BytesToAbsInfoFieldOffsetEq(ubuf, infOffset)
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
 	//@ fold acc(s.Mem(ubuf), R11)
 	//@ assert reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, info)
@@ -496,12 +496,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 	}
 	//@ unfold hop.Mem()
 	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
-	//@ unfold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ unfold acc(sl.Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
-	//@ assert hop.ToIO_HF() ==
-	//@ 	path.BytesToIO_HF(ubuf, 0, hopOffset, len(ubuf))
-	//@ fold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ fold acc(sl.Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
+	//@ path.BytesToAbsHopFieldOffsetEq(ubuf, hopOffset)
 	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
 	//@ fold acc(s.Mem(ubuf), R11)
 	//@ assert reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, hop)
@@ -631,10 +626,10 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 
 // IsFirstHop returns whether the current hop is the first hop on the path.
 // @ pure
-// @ requires  acc(s.Mem(ubuf), _)
+// @ requires  s.Mem(ubuf)
 // @ decreases
 func (s *Raw) IsFirstHop( /*@ ghost ubuf []byte @*/ ) bool {
-	return /*@ unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.Base.Mem(), _) in @*/ s.PathMeta.CurrHF == 0 /*@ ) @*/
+	return /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.PathMeta.CurrHF == 0 /*@ ) @*/
 }
 
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.

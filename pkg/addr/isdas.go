@@ -267,8 +267,8 @@ func (ia *IA) UnmarshalText(b []byte) error {
 	return nil
 }
 
-// @ pure
 // @ decreases
+// @ pure
 func (ia IA) IsZero() bool {
 	return ia == 0
 }
