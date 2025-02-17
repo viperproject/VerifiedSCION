@@ -16,16 +16,38 @@
 
 package addr
 
-// ERROR
-// doesn't verify
+// done
+// error case
+// DOES NOT VERIFY
 func TestParseISD1(src string) {
-    assume src == ""
+    tmpSrc := ""
 
-    _, err := ParseISD(src)
+    assume src == tmpSrc
 
-    assert err != nil // might not hold
+    _, err := ParseISD(src) // method call
+
+    assert err != nil // ERROR: might not hold
 }
 
+// done
+// no error case
+// DOES NOT VERIFY
+func TestParseISD3(src string) {
+    tmpSrc := "0"
+
+    assume src == tmpSrc
+
+    refute false
+
+    got, err := ParseISD(src) // method call
+
+    expected := uint16(0)
+
+    assert err == nil // ERROR: might not hold
+    assert uint16(got) == expected
+}
+
+// TODO
 // ERROR
 // doesn't verify
 func TestParseISD2(src string) {
@@ -34,18 +56,6 @@ func TestParseISD2(src string) {
     _, err := ParseISD(src)
 
     assert err != nil // might not hold
-}
-
-// NO ERROR
-// doesn't verify
-func TestParseISD3() {
-    src := "0"
-    expected := uint16(0)
-    isd, err := ParseISD(src)
-    got := uint16(isd)
-
-    assert err == nil // might not hold
-    assert got == expected
 }
 
 // NO ERROR
