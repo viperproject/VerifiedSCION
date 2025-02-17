@@ -17,133 +17,172 @@
 package onehop
 
 import (
-	"github.com/scionproto/scion/pkg/slayers/path"
-	"github.com/scionproto/scion/pkg/slayers/path/scion"
+    "github.com/scionproto/scion/pkg/slayers/path"
+    "github.com/scionproto/scion/pkg/slayers/path/scion"
     "github.com/scionproto/scion/verification/utils/definitions"
     sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
-// NO ERROR
-// doesn't verify
-func TestSerializeDecode(ubuf []byte) {
-	want@ := Path{
-		Info: path.InfoField{
-			ConsDir:   true,
-			SegID:     0x222,
-			Timestamp: 0x100,
-		},
-		FirstHop: path.HopField{
-			IngressRouterAlert: true,
-			EgressRouterAlert:  true,
-			ExpTime:            63,
-			ConsIngress:        0,
-			ConsEgress:         1,
-			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
-		},
-		SecondHop: path.HopField{
-			IngressRouterAlert: true,
-			EgressRouterAlert:  true,
-			ExpTime:            63,
-			ConsIngress:        2,
-			ConsEgress:         0,
-			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
-		},
-	}
+// done
+// no error case
+// DOES NOT VERIFY
+func TestSerializeDecode(o1 *Path, b []byte, ubuf []byte, o2 *Path, data []byte) {
+    tmpO1 := &Path{
+        Info: path.InfoField{
+            Peer:      false,
+            ConsDir:   true,
+            SegID:     0x222,
+            Timestamp: 0x100},
+        FirstHop: path.HopField{
+            IngressRouterAlert: true,
+            EgressRouterAlert:  true,
+            ExpTime:            0x3f,
+            ConsIngress:        0x0,
+            ConsEgress:         0x1,
+            Mac:                [6]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6}},
+        SecondHop: path.HopField{
+            IngressRouterAlert: true,
+            EgressRouterAlert:  true,
+            ExpTime:            0x3f,
+            ConsIngress:        0x2,
+            ConsEgress:         0x0,
+            Mac:                [6]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6}},
+    }
+    tmpB := []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 
-	b := make([]byte, PathLen)
+    tmpO2 := &Path{
+        Info: path.InfoField{
+            Peer:      false,
+            ConsDir:   false,
+            SegID:     0x0,
+            Timestamp: 0x0},
+        FirstHop: path.HopField{
+            IngressRouterAlert: false,
+            EgressRouterAlert:  false,
+            ExpTime:            0x0,
+            ConsIngress:        0x0,
+            ConsEgress:         0x0,
+            Mac:                [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}},
+        SecondHop: path.HopField{
+            IngressRouterAlert: false,
+            EgressRouterAlert:  false,
+            ExpTime:            0x0,
+            ConsIngress:        0x0,
+            ConsEgress:         0x0,
+            Mac:                [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0}},
+    }
 
-    fold sl.Bytes(b, 0, len(b))
-
-    inhale acc(want.Mem(ubuf), definitions.R1)
+    inhale acc(o1.Mem(ubuf), definitions.R1)
     inhale acc(sl.Bytes(ubuf, 0, len(ubuf)), definitions.R1)
-	err := want.SerializeTo(b, ubuf)
-	assert err == nil
+    inhale sl.Bytes(b, 0, len(b))
 
-	got@ := Path{}
-    fold got.NonInitMem()
-	err := got.DecodeFromBytes(b)
-	assert err == nil
+    assume o1 == tmpO1
+    assume b === tmpB
 
-    unfold got.Mem(b)
+    refute false
 
-	assert want == got
+    err := o1.SerializeTo(b, ubuf)
+
+    assert err == nil // passes
+
+    inhale o2.NonInitMem()
+
+    assume o2 == tmpO2
+
+    refute false
+
+    err := o2.DecodeFromBytes(b)
+
+    assert err == nil       // passes
+    assert *o1 == *o2 // ERROR: might not hold
 }
 
+// done
 // complete path converts correctly
-// NO ERROR
-// doesn't verify
-func TestPathToSCIONDecoded1(ubuf []byte) {
-	input@ := Path{
-		Info: path.InfoField{
-			ConsDir:   true,
-			SegID:     0x222,
-			Timestamp: 0x100,
-		},
-		FirstHop: path.HopField{
-			IngressRouterAlert: true,
-			EgressRouterAlert:  true,
-			ExpTime:            63,
-			ConsIngress:        0,
-			ConsEgress:         1,
-			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
-		},
-		SecondHop: path.HopField{
-			IngressRouterAlert: true,
-			EgressRouterAlert:  true,
-			ExpTime:            63,
-			ConsIngress:        2,
-			ConsEgress:         0,
-			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
-		},
-	}
+// no error case
+// DOES NOT VERIFY
+func TestPathToSCIONDecoded1(o *Path, ubuf []byte) {
+    tmpO := &Path{
+        Info: path.InfoField{
+            Peer:      false,
+            ConsDir:   true,
+            SegID:     0x222,
+            Timestamp: 0x100},
+        FirstHop: path.HopField{
+            IngressRouterAlert: true,
+            EgressRouterAlert:  true,
+            ExpTime:            0x3f,
+            ConsIngress:        0x0,
+            ConsEgress:         0x1,
+            Mac:                [6]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6},
+        },
+        SecondHop: path.HopField{
+            IngressRouterAlert: true,
+            EgressRouterAlert:  true,
+            ExpTime:            0x3f,
+            ConsIngress:        0x2,
+            ConsEgress:         0x0,
+            Mac:                [6]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6},
+        },
+    }
 
-	want := &scion.Decoded{
-		Base: scion.Base{
-			PathMeta: scion.MetaHdr{
-				CurrHF:  0,
-				CurrINF: 0,
-				SegLen:  [3]uint8{2, 0, 0},
-			},
-			NumHops: 2,
-			NumINF:  1,
-		},
-		HopFields:  []path.HopField{input.FirstHop, input.SecondHop},
-		InfoFields: []path.InfoField{input.Info},
-	}
+    assume o == tmpO
 
-    inhale input.Mem(ubuf)
+    inhale o.Mem(ubuf)
     inhale sl.Bytes(ubuf, 0, len(ubuf))
 
-    sp, err := input.ToSCIONDecoded(ubuf)
-	assert err == nil
-	assert sp == want
+    sp, err := o.ToSCIONDecoded(ubuf)
+
+    expected := &scion.Decoded{
+        Base: scion.Base{
+            PathMeta: scion.MetaHdr{CurrINF: 0x0, CurrHF: 0x0, SegLen: [3]uint8{0x2, 0x0, 0x0}},
+            NumINF:   1,
+            NumHops:  2},
+        InfoFields: []path.InfoField{
+            path.InfoField{Peer: false, ConsDir: true, SegID: 0x222, Timestamp: 0x100},
+        },
+        HopFields: []path.HopField{
+            path.HopField{IngressRouterAlert: true, EgressRouterAlert: true, ExpTime: 0x3f, ConsIngress: 0x0, ConsEgress: 0x1, Mac: [6]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6}},
+            path.HopField{IngressRouterAlert: true, EgressRouterAlert: true, ExpTime: 0x3f, ConsIngress: 0x2, ConsEgress: 0x0, Mac: [6]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6}},
+        },
+    }
+
+    assert err == nil
+    assert sp == expected // ERROR: might not hold
 }
 
+// done
 // incomplete path
-// ERROR
-// doesn't verify
-func TestPathToSCIONDecoded2(input *Path, ubuf []byte) {
-	inputInp@ := &Path{
-		Info: path.InfoField{
-			ConsDir:   true,
-			SegID:     0x222,
-			Timestamp: 0x100,
-		},
-		FirstHop: path.HopField{
-			IngressRouterAlert: true,
-			EgressRouterAlert:  true,
-			ExpTime:            63,
-			ConsIngress:        0,
-			ConsEgress:         1,
-			Mac:                [path.MacLen]byte{1, 2, 3, 4, 5, 6},
-		},
-	}
+// error case
+// DOES NOT VERIFY
+func TestPathToSCIONDecoded2(o *Path, ubuf []byte) {
+    tmpO := &Path{
+        Info: path.InfoField{Peer: false, ConsDir: true, SegID: 0x222, Timestamp: 0x100},
+        FirstHop: path.HopField{
+            IngressRouterAlert: true,
+            EgressRouterAlert:  true,
+            ExpTime:            0x3f,
+            ConsIngress:        0x0,
+            ConsEgress:         0x1,
+            Mac:                [6]byte{0x1, 0x2, 0x3, 0x4, 0x5, 0x6},
+        },
+        SecondHop: path.HopField{
+            IngressRouterAlert: false,
+            EgressRouterAlert:  false,
+            ExpTime:            0x0,
+            ConsIngress:        0x0,
+            ConsEgress:         0x0,
+            Mac:                [6]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+        },
+    }
 
-    assume input == inputInp
+    assume o == tmpO
 
-    inhale input.Mem(ubuf)
+    inhale o.Mem(ubuf)
     inhale sl.Bytes(ubuf, 0, len(ubuf))
-    sp, err := input.ToSCIONDecoded(ubuf)
-    assert err != nil
+
+    sp, err := o.ToSCIONDecoded(ubuf)
+
+    assert err != nil // ERROR: might not hold
     assert sp == nil
 }
