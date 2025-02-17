@@ -15,6 +15,11 @@ type Time struct {
     privateFields def.PrivateField
 }
 
+var Local *Location = localLoc()
+
+decreases
+pure func localLoc() *Location
+
 // After reports whether the time instant t is after u.
 decreases
 pure func (t Time) After(u Time) bool
@@ -241,7 +246,7 @@ func (t Time) Location() (res *Location)
 // Zone computes the time zone in effect at time t, returning the abbreviated
 // name of the zone (such as "CET") and its offset in seconds east of UTC.
 decreases
-func (t Time) Zone() (name string, offset int) 
+func (t Time) Zone() (name string, offset int)
 
 // Unix returns t as a Unix time, the number of seconds elapsed
 // since January 1, 1970 UTC.
@@ -255,7 +260,7 @@ func (t Time) UnixNano() int64
 
 // MarshalBinary implements the encoding.BinaryMarshaler interface.
 decreases
-func (t Time) MarshalBinary() ([]byte, error) 
+func (t Time) MarshalBinary() ([]byte, error)
 
 // UnmarshalBinary implements the encoding.BinaryUnmarshaler interface.
 requires acc(t)

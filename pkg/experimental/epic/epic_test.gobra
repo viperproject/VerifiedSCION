@@ -28,8 +28,9 @@ import (
 )
 
 // done
-// NO ERROR
-// doesn't verify
+// Correct input
+// no error case
+// DOES NOT VERIFY
 func TestPrepareMacInput1(pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, inputBuffer []byte , ub []byte) {
     tmpPktID := pathepic.PktID{Timestamp:0x1, Counter:0x2000003}
     tmpS := &slayers.SCION{
@@ -62,19 +63,22 @@ func TestPrepareMacInput1(pktID pathepic.PktID, s *slayers.SCION, timestamp uint
     assume timestamp == 0x4af9f070
     assume inputBuffer === tmpInputBuffer
 
+    refute false
+
     expected := []byte{0x0, 0x4a, 0xf9, 0xf0, 0x70, 0x0, 0x0, 0x0, 0x1, 0x2, 0x0, 0x0, 0x3, 0x0, 0x2, 0xff, 0x0, 0x0, 0x0, 0x2, 0x22, 0xa, 0x0, 0x0, 0x64, 0x0, 0x78, 0x0, 0x0, 0x0, 0x0, 0x0}
 
-	inputLength, err := prepareMacInput(pktID, s, timestamp, inputBuffer, ub)
+	inputLength, err := prepareMacInput(pktID, s, timestamp, inputBuffer, ub) // method call
 
-    assert err == nil // assertion fails
+    assert err == nil // ERROR: might not hold
 
     got := inputBuffer[:inputLength]
     assert got === expected
 }
 
 // done
-// NO ERROR
-// doesn't verify
+// SCION header nil
+// error case
+// DOES NOT VERIFY
 func TestPrepareMacInput2(pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, inputBuffer []byte , ub []byte) {
     tmpPktID := pathepic.PktID{Timestamp:0x1, Counter:0x2000003}
     tmpS := (*slayers.SCION)(nil)
@@ -92,25 +96,94 @@ func TestPrepareMacInput2(pktID pathepic.PktID, s *slayers.SCION, timestamp uint
 
     _, err := prepareMacInput(pktID, s, timestamp, inputBuffer, ub)
 
-    assert err != nil // assertion fails
+    assert err != nil // ERROR: might not hold
 }
 
-// TODO
-// ERROR
-// doesn't verify
-func TestCreateTimestamp1(input time.Time, now time.Time) {
-    nowInp := time.Now().Truncate(time.Second)
-    assume now == nowInp
+// done
+// Timestamp way too far in the past
+// error case
+// DOES NOT VERIFY
+func TestCreateTimestamp1(input time.Time, now time.Time, ghost p perm) {
+    loc := time.Local
+    inhale p > 0
+    inhale acc(loc, p)
+    tmpInput := time.Date(1970, time.January, 1, 1, 0, 0, 0, loc, p)
+    tmpNow := time.Date(2025, time.February, 17, 7, 9, 27, 0, loc, p)
 
-    inp := time.Unix(0, 0)
-    assume input == inp
+    assume input == tmpInput
+    assume now == tmpNow
+
+    expected := uint32(0)
 
     res, err := CreateTimestamp(input, now)
 
     assert err != nil
-    assert res == 0
+    assert res == expected // ERROR: might not hold
 }
 
+// done
+// PHVF valid
+// no error case
+// DOES NOT VERIFY
+func TestVerifyHVF1(auth []byte, pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, hvf []byte, buffer []byte, ub []byte) {
+    tmpAuth := []byte{0x66, 0x63, 0x64, 0x63, 0x38, 0x32, 0x30, 0x32, 0x35, 0x30, 0x32, 0x64, 0x34, 0x35, 0x32, 0x65}
+    tmpPktID := pathepic.PktID{Timestamp: 0x2c1785, Counter: 0x1000002}
+    tmpS := &slayers.SCION{BaseLayer: slayers.BaseLayer{Contents: []uint8(nil), Payload: []uint8(nil)}, Version: 0x0, TrafficClass: 0x0, FlowID: 0x0, NextHdr: 0x0, HdrLen: 0x0, PayloadLen: 0x78, PathType: 0x0, DstAddrType: 0x0, SrcAddrType: 0x0, DstIA: 0x0, SrcIA: 0x2ff0000000222, RawDstAddr: []uint8(nil), RawSrcAddr: []uint8{0xa, 0x0, 0x0, 0x64}, Path: path.Path(nil), pathPool: []path.Path(nil), pathPoolRaw: path.Path(nil)}
+    tmpTimestamp := uint32(0x67b2d5b9)
+    tmpHvf := []byte{0xac, 0x23, 0x66, 0x20}
+    tmpBuffer := []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+
+    assume auth === tmpAuth
+    assume pktID == tmpPktID
+    assume s == tmpS
+    assume timestamp == tmpTimestamp
+    assume hvf === tmpHvf
+    assume buffer === tmpBuffer
+
+    inhale sl.Bytes(buffer, 0, len(buffer))
+    inhale acc(s.Mem(ub), definitions.R20)
+    inhale acc(sl.Bytes(hvf, 0, len(hvf)), definitions.R50)
+    inhale acc(sl.Bytes(ub, 0, len(ub)), definitions.R20)
+    inhale acc(sl.Bytes(auth, 0, len(auth)), definitions.R30)
+
+    refute false
+
+    err := VerifyHVF(auth, pktID, s, timestamp, hvf, buffer, ub)
+
+    assert err == nil // ERROR: might not hold
+}
+
+// done
+// PHVF with wrong authenticator
+// error case
+// DOES NOT VERIFY
+func TestVerifyHVF2(auth []byte, pktID pathepic.PktID, s *slayers.SCION, timestamp uint32, hvf []byte, buffer []byte, ub []byte) {
+    tmpAuth := []byte{0x30, 0x37, 0x34, 0x34, 0x38, 0x37, 0x62, 0x66, 0x32, 0x32, 0x65, 0x34, 0x36, 0x37, 0x34, 0x32}
+    tmpPktID := pathepic.PktID{Timestamp:0x2c16f3, Counter:0x1000002}
+    tmpS := &slayers.SCION{BaseLayer:slayers.BaseLayer{Contents:[]uint8(nil), Payload:[]uint8(nil)}, Version:0x0, TrafficClass:0x0, FlowID:0x0, NextHdr:0x0, HdrLen:0x0, PayloadLen:0x78, PathType:0x0, DstAddrType:0x0, SrcAddrType:0x0, DstIA:0x0, SrcIA:0x2ff0000000222, RawDstAddr:[]uint8(nil), RawSrcAddr:[]uint8{0xa, 0x0, 0x0, 0x64}, Path:path.Path(nil), pathPool:[]path.Path(nil), pathPoolRaw:path.Path(nil)}
+    tmpTimestamp := uint32(0x67b2dcf7)
+    tmpHvf := []byte{0xd4, 0x30, 0xbd, 0xdc}
+    tmpBuffer := []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
+
+    assume auth === tmpAuth
+    assume pktID == tmpPktID
+    assume s == tmpS
+    assume timestamp == tmpTimestamp
+    assume hvf === tmpHvf
+    assume buffer === tmpBuffer
+
+    inhale sl.Bytes(buffer, 0, len(buffer))
+    inhale acc(s.Mem(ub), definitions.R20)
+    inhale acc(sl.Bytes(hvf, 0, len(hvf)), definitions.R50)
+    inhale acc(sl.Bytes(ub, 0, len(ub)), definitions.R20)
+    inhale acc(sl.Bytes(auth, 0, len(auth)), definitions.R30)
+
+    err := VerifyHVF(auth, pktID, s, timestamp, hvf, buffer, ub)
+
+    assert err != nil // ERROR: might not hold
+}
+
+// TODO
 // ERROR
 // doesn't verify
 func TestCreateTimestamp2(input time.Time, now time.Time) {
@@ -204,164 +277,6 @@ func TestVerifyTimestamp3() {
     err := VerifyTimestamp(timestamp, epicTS, now)
 
     assert err == nil
-}
-
-// NO ERROR
-// doesn't verify
-func TestVerifyHVF1(ub []byte, wildcard bool, cmUb1 []byte) {
-    // inline createScionCmnAddrHdr
-    // inline MustParseIA
-    ia, err := addr.ParseIA("2-ff00:0:222")
-    if err != nil {
-        // panic(err) // omit panic calls
-    }
-
-    spkt := &slayers.SCION{
-        SrcIA:      ia,
-        PayloadLen: 120,
-    }
-    ip4Addr := &net.IPAddr{IP: net.ParseIP("10.0.0.100")}
-
-    inhale wildcard ==> acc(ip4Addr.Mem(), _) // inhale precondition of call with ghost parameter
-    inhale !wildcard ==> acc(ip4Addr.Mem(), definitions.R18) // inhale precondition of call with ghost parameter
-    _ := spkt.SetSrcAddr(ip4Addr, wildcard)
-
-    s := spkt
-
-    now := time.Now().Truncate(time.Second)
-    timestamp := uint32(now.Add(-time.Minute).Unix())
-    epicTS, _ := CreateTimestamp(now.Add(-time.Minute), time.Now())
-    pktID := pathepic.PktID{
-        Timestamp: epicTS,
-        Counter:   PktCounterFromCore(1, 2),
-    }
-
-    // Use random authenticators
-    authPenultimate := []byte("fcdc8202502d452e")
-    authLast := []byte("f5fcc4ce2250db36")
-
-    // Generate PHVF and LHVF
-    buffer1 := []byte(nil)
-    inhale acc(s.Mem(cmUb1), definitions.R20)
-    inhale acc(sl.Bytes(cmUb1, 0, len(cmUb1)), definitions.R20)
-    fold sl.Bytes(buffer1, 0, len(buffer1))
-    fold acc(sl.Bytes(authPenultimate, 0, len(authPenultimate)), definitions.R30)
-    PHVF, err := CalcMac(authPenultimate, pktID, s, timestamp, buffer1, cmUb1)
-    assert err == nil
-
-    buffer := make([]byte, MACBufferSize)
-
-    inhale acc(s.Mem(ub), definitions.R20)
-    inhale acc(sl.Bytes(ub, 0, len(ub)), definitions.R20)
-    fold sl.Bytes(buffer, 0, len(buffer))
-    fold acc(sl.Bytes(authPenultimate, 0, len(authPenultimate)), definitions.R30)
-    err = VerifyHVF(authPenultimate, pktID, s, timestamp, PHVF, buffer, ub)
-
-    assert err == nil
-}
-
-// NO ERROR
-// doesn't verify
-func TestVerifyHVF1Debugging(auth []byte, pktID pathepic.PktID, s *slayers.SCION,
-    timestamp uint32, hvf []byte, buffer []byte, ghost ub []byte) {
-    inhale sl.Bytes(buffer, 0, len(buffer))
-    inhale acc(s.Mem(ub), definitions.R20)
-    inhale acc(sl.Bytes(hvf, 0, len(hvf)), definitions.R50)
-    inhale acc(sl.Bytes(ub, 0, len(ub)), definitions.R20)
-    inhale acc(sl.Bytes(auth, 0, len(auth)), definitions.R30)
-
-    tmpAuth := []uint8{102, 99, 100, 99, 56, 50, 48, 50, 53, 48, 50, 100, 52, 53, 50, 101}
-    tmpPktID := pathepic.PktID{
-        Timestamp: 2860218,
-        Counter: 16777218,
-    }
-    tmpS := &slayers.SCION{
-        SrcIA: 843325418504738,
-        RawSrcAddr: []uint8{10, 0, 0, 100},
-    }
-    tmpTimestamp := uint32(1731680062)
-    tmpHvf := []uint8{41, 127, 23, 2}
-    tmpBuffer := []uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-
-    assume auth === tmpAuth
-    assume pktID == tmpPktID
-    assume s == tmpS
-    assume timestamp == tmpTimestamp
-    assume hvf === tmpHvf
-    assume buffer === tmpBuffer
-
-    err := VerifyHVF(auth, pktID, s, timestamp, hvf, buffer, ub)
-
-    assert err == nil
-}
-
-// ERROR
-// doesn't verify
-func TestVerifyHVF2(auth []byte, pktID pathepic.PktID, s *slayers.SCION,
-    timestamp uint32, hvf []byte, buffer []byte,
-    ub []byte, wildcard bool, cmUb1 []byte) {
-
-    authInp := []byte("074487bf22e46742")
-    assume auth === authInp
-
-    // inline createScionCmnAddrHdr
-    // inline MustParseIA
-    ia, err := addr.ParseIA("2-ff00:0:222")
-    if err != nil {
-        // panic(err) // omit panic calls
-    }
-
-    spkt := &slayers.SCION{
-        SrcIA:      ia,
-        PayloadLen: 120,
-    }
-    ip4Addr := &net.IPAddr{IP: net.ParseIP("10.0.0.100")}
-
-    inhale wildcard ==> acc(ip4Addr.Mem(), _) // inhale precondition of call with ghost parameter
-    inhale !wildcard ==> acc(ip4Addr.Mem(), definitions.R18) // inhale precondition of call with ghost parameter
-    _ := spkt.SetSrcAddr(ip4Addr, wildcard)
-
-    assume s == spkt
-
-    now := time.Now().Truncate(time.Second)
-    timestampInp := uint32(now.Add(-time.Minute).Unix())
-
-    assume timestamp == timestampInp
-
-    epicTS, _ := CreateTimestamp(now.Add(-time.Minute), time.Now())
-    pktIDInp := pathepic.PktID{
-        Timestamp: epicTS,
-        Counter:   PktCounterFromCore(1, 2),
-    }
-
-    assume pktID == pktIDInp
-
-    // Use random authenticators
-    authPenultimate := []byte("fcdc8202502d452e")
-    authLast := []byte("f5fcc4ce2250db36")
-
-    // Generate PHVF and LHVF
-    buffer1 := []byte(nil)
-    inhale acc(s.Mem(cmUb1), definitions.R20)
-    inhale acc(sl.Bytes(cmUb1, 0, len(cmUb1)), definitions.R20)
-    fold sl.Bytes(buffer1, 0, len(buffer1))
-    fold acc(sl.Bytes(authPenultimate, 0, len(authPenultimate)), definitions.R30)
-    PHVFInp, err := CalcMac(authPenultimate, pktID, s, timestamp, buffer1, cmUb1)
-    assert err == nil
-
-    assume hvf === PHVFInp
-
-    bufferInp := make([]byte, MACBufferSize)
-
-    assume buffer === bufferInp
-
-    inhale acc(s.Mem(ub), definitions.R20)
-    inhale acc(sl.Bytes(ub, 0, len(ub)), definitions.R20)
-    fold sl.Bytes(buffer, 0, len(buffer))
-    fold acc(sl.Bytes(authPenultimate, 0, len(authPenultimate)), definitions.R30)
-    err = VerifyHVF(authPenultimate, pktID, s, timestamp, hvf, buffer, ub)
-
-    assert err != nil // assertion fails
 }
 
 // NO ERROR
