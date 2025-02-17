@@ -23,7 +23,7 @@ import (
 )
 
 // done
-// ERROR
+// error case
 // nil IPv4
 func TestHostFromRaw1(b []byte, htype HostAddrType) {
     tmpB := []byte(nil)
@@ -40,7 +40,7 @@ func TestHostFromRaw1(b []byte, htype HostAddrType) {
 }
 
 // done
-// ERROR
+// error case
 // short IPv4
 func TestHostFromRaw2(b []byte, htype HostAddrType) {
     tmpB := []byte{0x0, 0x0, 0x0}
@@ -57,9 +57,9 @@ func TestHostFromRaw2(b []byte, htype HostAddrType) {
 }
 
 // done
-// NO ERROR
+// no error case
 // valid IPv4
-// doesn't verify
+// DOES NOT VERIFY
 func TestHostFromRaw3(b []byte, htype HostAddrType) {
     tmpB := []byte{0x7f, 0x0, 0x0, 0x1}
 
@@ -70,10 +70,12 @@ func TestHostFromRaw3(b []byte, htype HostAddrType) {
     assume b === tmpB
     assume htype == 0x1
 
+    refute false
+
     got, err := HostFromRaw(b, htype) // method call
 
     expected := HostIPv4{0x7f, 0x0, 0x0, 0x1}
-    res := got.Equal(expected) // precondition might not hold (the receiver might be nil)
+    res := got.Equal(expected) // ERROR: precondition might not hold (the receiver might be nil)
 
     assert err == nil // assertion 1
     assert res // assertion 2
