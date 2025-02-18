@@ -106,7 +106,7 @@ ghost
 requires acc(&d.localIA)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool {
-	return io.IO_as(d.localIA) == dp.Asid()
+	return io.IO_as{uint(d.localIA)} == dp.Asid()
 }
 
 ghost
@@ -115,8 +115,8 @@ requires d.neighborIAs != nil ==> acc(d.neighborIAs)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredNeighborIAs(dp io.DataPlaneSpec) bool {
 	return forall ifs uint16 :: {ifs in domain(d.neighborIAs)} ifs in domain(d.neighborIAs) ==>
-		io.IO_ifs(ifs) in domain(dp.GetNeighborIAs()) &&
-		io.IO_as(d.neighborIAs[ifs]) == dp.GetNeighborIA(io.IO_ifs(ifs))
+		io.IO_ifs{ifs} in domain(dp.GetNeighborIAs()) &&
+		io.IO_as{uint(d.neighborIAs[ifs])} == dp.GetNeighborIA(io.IO_ifs{ifs})
 }
 
 ghost
@@ -135,8 +135,8 @@ requires d.linkTypes != nil ==> acc(d.linkTypes)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool {
 	return forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
-		io.IO_ifs(ifs) in domain(dp.GetLinkTypes()) &&
-		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.IO_ifs(ifs))
+		io.IO_ifs{ifs} in domain(dp.GetLinkTypes()) &&
+		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.IO_ifs{ifs})
 }
 
 ghost
@@ -172,7 +172,7 @@ requires d.DpAgreesWithSpec(dp)
 requires d.WellConfigured()
 requires egressID in d.getDomExternal()
 ensures  egressID != 0
-ensures  io.IO_ifs(egressID) in domain(dp.GetNeighborIAs())
+ensures  io.IO_ifs{egressID} in domain(dp.GetNeighborIAs())
 decreases
 func (d *DataPlane) EgressIDNotZeroLemma(egressID uint16, dp io.DataPlaneSpec) {
 	reveal d.WellConfigured()

@@ -146,8 +146,9 @@ pure func AbsVerifyCurrentMACConstraint(pkt io.IO_pkt2, dp io.DataPlaneSpec) boo
 		let ts := currseg.AInfo in
 		let hf := currseg.Future[0] in
 		let uinfo := currseg.UInfo in
-		dp.hf_valid(d, ts, uinfo, hf)
+		dp.hf_valid(d, ts.V, uinfo, hf)
 }
+
 // This executes the IO enter event whenever a pkt was received
 // from a different AS (ingressID != none[io.IO_ifs])
 // and will be forwarded to another border router within the AS (egressID == none[io.IO_ifs])

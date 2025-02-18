@@ -54,8 +54,8 @@ pure func (dp DataPlaneSpec) dp2_xover_guard(m IO_pkt2,
 			dp.xover2_link_type_dir(dp.Asid(), currseg.ConsDir, hf1, nextseg.ConsDir, hf2) &&
 			update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
 			inc_seg2(currseg, traversedseg, hf1, seq[IO_HF]{}) &&
-			dp.hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1) &&
-			dp.hf_valid(nextseg.ConsDir, nextseg.AInfo, nextseg.UInfo, hf2) &&
+			dp.hf_valid(currseg.ConsDir, currseg.AInfo.V, traversedseg.UInfo, hf1) &&
+			dp.hf_valid(nextseg.ConsDir, nextseg.AInfo.V, nextseg.UInfo, hf2) &&
 			hf1.extr_asid() == asid &&
 			hf2.extr_asid() == asid &&
 			same_other2(currseg, traversedseg)

@@ -27,7 +27,7 @@ pure func if2term(ifs option[IO_ifs]) IO_msgterm {
 		case none[IO_ifs]:
 			MsgTerm_Empty{}
 		default:
-			MsgTerm_AS{IO_as(get(ifs))}
+			MsgTerm_AS{IO_as{uint(get(ifs).V)}}
 	}
 }
 

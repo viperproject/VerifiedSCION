@@ -18,16 +18,20 @@
 
 package io
 
-type Unit struct{}
+ghost type Unit ghost struct{}
 
 // interface IDs
-type IO_ifs uint16
+ghost type IO_ifs ghost struct {
+	V uint16
+}
 
 // type of AS identifiers
-type IO_as uint
+ghost type IO_as ghost struct {
+	V uint
+}
 
 // msgTerms consist of terms from our term algebra.
-type IO_msgterm adt {
+ghost type IO_msgterm adt {
 	MsgTerm_Empty{}
 
 	MsgTerm_AS {
@@ -65,7 +69,7 @@ type IO_msgterm adt {
 	}
 }
 
-type IO_key adt {
+ghost type IO_key adt {
 	Key_macK {
 		Key_macK_ IO_as
 	}
@@ -80,7 +84,7 @@ type IO_key adt {
 }
 
 // "authenticated hop information"
-type IO_ahi adt {
+ghost type IO_ahi adt {
 	IO_ahi_ {
 		InIF option[IO_ifs]
 		EgIF option[IO_ifs]
@@ -102,7 +106,7 @@ pure func (h IO_HF) Toab() IO_ahi {
 }
 
 /* Link Types */
-type IO_Link adt {
+ghost type IO_Link adt {
 	IO_CustProv{}
 	IO_ProvCust{}
 	IO_Core{}
@@ -182,14 +186,14 @@ pure func (dp DataPlaneSpec) if_type(asid IO_as, ifs option[IO_ifs], link IO_Lin
 	}
 }
 
-type ext2_rec struct {
+ghost type ext2_rec ghost struct {
 	op1 IO_as
 	op2 IO_ifs
 	op3 IO_as
 	op4 IO_as
 }
 
-type IO_dp2_state adt {
+ghost type IO_dp2_state adt {
 	IO_dp2_state_ {
 		// In the Isabelle spec, the following are functions
 		// instead of mathematical maps

@@ -2909,7 +2909,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 	// (VerifiedSCION) Assumptions for Cryptography:
 	// @ absInf := p.infoField.ToAbsInfoField()
 	// @ absHF := p.hopField.ToIO_HF()
-	// @ AssumeForIO(dp.hf_valid(absInf.ConsDir, absInf.AInfo, absInf.UInfo, absHF))
+	// @ AssumeForIO(dp.hf_valid(absInf.ConsDir, absInf.AInfo.V, absInf.UInfo, absHF))
 	// @ reveal AbsVerifyCurrentMACConstraint(oldPkt, dp)
 	// @ fold p.d.validResult(processResult{}, false)
 	return processResult{}, nil

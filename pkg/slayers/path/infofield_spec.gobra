@@ -58,7 +58,7 @@ pure func Timestamp(raw []byte, currINF int, headerOffset int) io.IO_ainfo {
 	return let idx := InfoFieldOffset(currINF, headerOffset)+4 in
 		unfolding sl.Bytes(raw, 0, len(raw)) in
 		let _ := sl.AssertSliceOverlap(raw, idx, idx+4) in
-		io.IO_ainfo(binary.BigEndian.Uint32(raw[idx:idx+4]))
+		io.IO_ainfo{uint(binary.BigEndian.Uint32(raw[idx:idx+4]))}
 }
 
 ghost
@@ -94,7 +94,7 @@ pure func BytesToAbsInfoFieldHelper(raw [] byte, middle int) (io.AbsInfoField) {
 	return let _ := sl.AssertSliceOverlap(raw, middle+2, middle+4) in
 		let _ := sl.AssertSliceOverlap(raw, middle+4, middle+8) in
 		io.AbsInfoField_{
-			AInfo: io.IO_ainfo(binary.BigEndian.Uint32(raw[middle+4:middle+8])),
+			AInfo: io.IO_ainfo{uint(binary.BigEndian.Uint32(raw[middle+4:middle+8]))},
 			UInfo: AbsUInfoFromUint16(binary.BigEndian.Uint16(raw[middle+2:middle+4])),
 			ConsDir: raw[middle] & 0x1 == 0x1,
 			Peer: raw[middle] & 0x2  == 0x2,
@@ -134,7 +134,7 @@ ghost
 decreases
 pure func (inf InfoField) ToAbsInfoField() (io.AbsInfoField) {
 	return io.AbsInfoField_{
-		AInfo: io.IO_ainfo(inf.Timestamp),
+		AInfo: io.IO_ainfo{uint(inf.Timestamp)},
 		UInfo: AbsUInfoFromUint16(inf.SegID),
 		ConsDir: inf.ConsDir,
 		Peer: inf.Peer,

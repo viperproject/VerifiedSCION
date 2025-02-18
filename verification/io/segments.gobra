@@ -18,11 +18,13 @@
 
 package io
 
-type IO_ainfo = uint
+ghost type IO_ainfo ghost struct {
+	V uint
+}
 
 // Here, we already instantiated the type params, contrary to what
 // is done in Isabelle, where they are left generic.
-type IO_seg2 adt {
+ghost type IO_seg2 adt {
 	IO_seg3_ {
 		AInfo IO_ainfo // nat in Isabelle
 		UInfo set[IO_msgterm]
@@ -35,4 +37,4 @@ type IO_seg2 adt {
 }
 
 // seg3 is the same as seg2 instantiated with type parameters
-type IO_seg3 = IO_seg2
+ghost type IO_seg3 = IO_seg2
