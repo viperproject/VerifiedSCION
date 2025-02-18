@@ -24,16 +24,14 @@ ghost type IO_ainfo ghost struct {
 
 // Here, we already instantiated the type params, contrary to what
 // is done in Isabelle, where they are left generic.
-ghost type IO_seg2 adt {
-	IO_seg3_ {
-		AInfo IO_ainfo // nat in Isabelle
-		UInfo set[IO_msgterm]
-		ConsDir bool
-		Peer bool
-		Past seq[IO_HF]     // formalized originally as a seq of HF_scheme
-		Future seq[IO_HF]   // formalized originally as a seq of HF_scheme
-		History seq[IO_ahi] // formalized originally as a seq of ahi_scheme
-	}
+ghost type IO_seg2 ghost struct {
+	AInfo IO_ainfo // nat in Isabelle
+	UInfo set[IO_msgterm]
+	ConsDir bool
+	Peer bool
+	Past seq[IO_HF]     // formalized originally as a seq of HF_scheme
+	Future seq[IO_HF]   // formalized originally as a seq of HF_scheme
+	History seq[IO_ahi] // formalized originally as a seq of ahi_scheme
 }
 
 // seg3 is the same as seg2 instantiated with type parameters

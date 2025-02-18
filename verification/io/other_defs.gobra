@@ -84,12 +84,10 @@ ghost type IO_key adt {
 }
 
 // "authenticated hop information"
-ghost type IO_ahi adt {
-	IO_ahi_ {
-		InIF option[IO_ifs]
-		EgIF option[IO_ifs]
-		ASID IO_as
-	}
+ghost type IO_ahi ghost struct {
+	InIF option[IO_ifs]
+	EgIF option[IO_ifs]
+	ASID IO_as
 }
 
 ghost
@@ -102,7 +100,7 @@ pure func (hf IO_HF) extr_asid() IO_as {
 ghost
 decreases
 pure func (h IO_HF) Toab() IO_ahi {
-	return IO_ahi_{h.InIF2, h.EgIF2, h.HVF.extract_asid()}
+	return IO_ahi{h.InIF2, h.EgIF2, h.HVF.extract_asid()}
 }
 
 /* Link Types */
@@ -193,13 +191,11 @@ ghost type ext2_rec ghost struct {
 	op4 IO_as
 }
 
-ghost type IO_dp2_state adt {
-	IO_dp2_state_ {
-		// In the Isabelle spec, the following are functions
-		// instead of mathematical maps
-		ext2 dict[ext2_rec](set[IO_pkt2])
-		int2 dict[IO_as](set[IO_pkt2])
-	}
+ghost type IO_dp2_state ghost struct {
+	// In the Isabelle spec, the following are functions
+	// instead of mathematical maps
+	ext2 dict[ext2_rec](set[IO_pkt2])
+	int2 dict[IO_as](set[IO_pkt2])
 }
 
 ghost

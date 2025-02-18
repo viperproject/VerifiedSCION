@@ -41,7 +41,7 @@ ensures  newPkt.PathNotFullyTraversed()
 ensures  len(newPkt.CurrSeg.Future) == len(oldPkt.CurrSeg.Future)
 decreases
 pure func AbsUpdateNonConsDirIngressSegID(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs]) (newPkt io.IO_pkt2) {
-	return ingressID == none[io.IO_ifs] ? oldPkt : io.IO_Packet2 {
+	return ingressID == none[io.IO_ifs] ? oldPkt : io.IO_pkt2 {
 		io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
 		oldPkt.LeftSeg,
 		oldPkt.MidSeg,
@@ -95,7 +95,7 @@ requires oldPkt.PathNotFullyTraversed()
 ensures  len(newPkt.CurrSeg.Future) >= 0
 decreases
 pure func AbsProcessEgress(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
-	return io.IO_Packet2 {
+	return io.IO_pkt2 {
 		io.establishGuardTraversedsegInc(oldPkt.CurrSeg, oldPkt.CurrSeg.ConsDir),
 		oldPkt.LeftSeg,
 		oldPkt.MidSeg,
@@ -114,7 +114,7 @@ ensures  newPkt.RightSeg != none[io.IO_seg2]
 ensures  len(get(newPkt.RightSeg).Past) > 0
 decreases
 pure func AbsDoXover(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
-	return io.IO_Packet2 {
+	return io.IO_pkt2 {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,

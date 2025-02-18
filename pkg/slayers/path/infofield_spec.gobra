@@ -93,7 +93,7 @@ decreases
 pure func BytesToAbsInfoFieldHelper(raw [] byte, middle int) (io.AbsInfoField) {
 	return let _ := sl.AssertSliceOverlap(raw, middle+2, middle+4) in
 		let _ := sl.AssertSliceOverlap(raw, middle+4, middle+8) in
-		io.AbsInfoField_{
+		io.AbsInfoField {
 			AInfo: io.IO_ainfo{uint(binary.BigEndian.Uint32(raw[middle+4:middle+8]))},
 			UInfo: AbsUInfoFromUint16(binary.BigEndian.Uint16(raw[middle+2:middle+4])),
 			ConsDir: raw[middle] & 0x1 == 0x1,
@@ -133,7 +133,7 @@ func BytesToAbsInfoFieldOffsetEq(raw [] byte, middle int) {
 ghost
 decreases
 pure func (inf InfoField) ToAbsInfoField() (io.AbsInfoField) {
-	return io.AbsInfoField_{
+	return io.AbsInfoField {
 		AInfo: io.IO_ainfo{uint(inf.Timestamp)},
 		UInfo: AbsUInfoFromUint16(inf.SegID),
 		ConsDir: inf.ConsDir,

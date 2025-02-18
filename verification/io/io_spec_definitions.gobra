@@ -26,7 +26,7 @@ pure func establishGuardTraversedseg(currseg IO_seg3, direction bool) IO_seg3 {
 	return let uinfo := direction ?
 		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
-		IO_seg3_ {
+		IO_seg3 {
 			AInfo: currseg.AInfo,
 			UInfo: uinfo,
 			ConsDir: currseg.ConsDir,
@@ -45,7 +45,7 @@ pure func establishGuardTraversedsegInc(currseg IO_seg3, direction bool) IO_seg3
 	return let uinfo := direction ?
 		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
-		IO_seg3_ {
+		IO_seg3 {
 			AInfo: currseg.AInfo,
 			UInfo: uinfo,
 			ConsDir: currseg.ConsDir,
@@ -60,7 +60,7 @@ ghost
 requires len(seg.Future) > 0
 decreases
 pure func (seg IO_seg3) UpdateCurrHf(hf IO_HF) IO_seg3 {
-	return IO_seg3_ {
+	return IO_seg3 {
 		seg.AInfo,
 		seg.UInfo,
 		seg.ConsDir,
@@ -76,13 +76,13 @@ requires pkt.PathNotFullyTraversed()
 decreases
 pure func (pkt IO_pkt2) UpdateHopField(hf IO_HF) IO_pkt2 {
 	return let newCurrSeg := pkt.CurrSeg.UpdateCurrHf(hf) in
-		IO_Packet2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
+		IO_pkt2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
 }
 
 ghost
 decreases
 pure func (seg IO_seg3) UpdateCurrSeg(info AbsInfoField) IO_seg3 {
-	return IO_seg3_ {
+	return IO_seg3 {
 		info.AInfo,
 		info.UInfo,
 		info.ConsDir,
@@ -97,29 +97,25 @@ ghost
 decreases
 pure func (pkt IO_pkt2) UpdateInfoField(info AbsInfoField) IO_pkt2 {
 	return let newCurrSeg := pkt.CurrSeg.UpdateCurrSeg(info) in
-		IO_Packet2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
+		IO_pkt2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
 }
 
 // This type simplifies the infoField, making it easier
 // to use than the IO_seg3 from the IO-spec.
-ghost type AbsInfoField adt {
-	AbsInfoField_ {
-		AInfo IO_ainfo
-		UInfo set[IO_msgterm]
-		ConsDir bool
-		Peer bool
-	}
+ghost type AbsInfoField ghost struct {
+	AInfo IO_ainfo
+	UInfo set[IO_msgterm]
+	ConsDir bool
+	Peer bool
 }
 
 // The segment lengths of a packet are frequently used together.
 // This type combines them into a single structure to simplify
 // their specification.
-ghost type SegLens adt {
-	SegLens_ {
-		Seg1Len int
-		Seg2Len int
-		Seg3Len int
-	}
+ghost type SegLens ghost struct {
+	Seg1Len int
+	Seg2Len int
+	Seg3Len int
 }
 
 ghost
@@ -133,7 +129,7 @@ pure func (s SegLens) Valid() bool {
 ghost
 decreases
 pure func CombineSegLens(seg1Len int, seg2Len int, seg3Len int) SegLens {
-	return SegLens_ {
+	return SegLens {
 			seg1Len,
 			seg2Len,
 			seg3Len,
