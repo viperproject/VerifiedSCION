@@ -38,11 +38,10 @@ pred (p *Path) Mem(ubuf []byte) {
 }
 
 ghost
-pure
-requires acc(p.Mem(ub), _)
+requires p.Mem(ub)
 decreases
-func (p *Path) LenSpec(ghost ub []byte) (l int) {
-	return unfolding acc(p.Mem(ub), _) in
+pure func (p *Path) LenSpec(ghost ub []byte) (l int) {
+	return unfolding p.Mem(ub) in
 		(p.ScionPath == nil ?
 			MetadataLen :
 			MetadataLen + p.ScionPath.LenSpec(ub[MetadataLen:]))
@@ -58,51 +57,48 @@ func (p *Path) DowngradePerm(buf []byte) {
 }
 
 ghost
-requires acc(r.Mem(ub), _)
+requires r.Mem(ub)
 decreases
 pure func (r *Path) GetBase(ub []byte) scion.Base {
-	return unfolding acc(r.Mem(ub), _) in
+	return unfolding r.Mem(ub) in
 		r.ScionPath.GetBase(ub[MetadataLen:])
 }
 
 ghost
-pure
-requires acc(p.Mem(buf), _)
-ensures l == (unfolding acc(p.Mem(buf), _) in len(p.PHVF))
+requires p.Mem(buf)
 decreases
-func (p *Path) getPHVFLen(buf []byte) (l int) {
-	return unfolding acc(p.Mem(buf), _) in len(p.PHVF)
+pure func (p *Path) getPHVFLen(buf []byte) (l int) {
+	return unfolding p.Mem(buf) in
+		len(p.PHVF)
 }
 
 ghost
-pure
-requires acc(p.Mem(buf), _)
-ensures l == (unfolding acc(p.Mem(buf), _) in len(p.LHVF))
+requires p.Mem(buf)
 decreases
-func (p *Path) getLHVFLen(buf []byte) (l int) {
-	return unfolding acc(p.Mem(buf), _) in len(p.LHVF)
+pure func (p *Path) getLHVFLen(buf []byte) (l int) {
+	return unfolding p.Mem(buf) in
+		len(p.LHVF)
 }
 
 ghost
-pure
-requires acc(p.Mem(buf), _)
-ensures  r == (unfolding acc(p.Mem(buf), _) in p.ScionPath != nil)
+requires p.Mem(buf)
 decreases
-func (p *Path) hasScionPath(buf []byte) (r bool) {
-	return unfolding acc(p.Mem(buf), _) in p.ScionPath != nil
+pure func (p *Path) hasScionPath(buf []byte) (r bool) {
+	return unfolding p.Mem(buf) in
+		p.ScionPath != nil
 }
 
 ghost
-requires acc(p.Mem(buf), _)
+requires p.Mem(buf)
 decreases
 pure func (p *Path) GetUnderlyingScionPathBuf(buf []byte) []byte {
-	return unfolding acc(p.Mem(buf), _) in buf[MetadataLen:]
+	return unfolding p.Mem(buf) in
+		buf[MetadataLen:]
 }
 
 ghost
-pure
 decreases
-func (p *Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
 	return true
 }
 

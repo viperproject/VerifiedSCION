@@ -32,12 +32,11 @@ pred Bytes(s []byte, start int, end int) {
 	forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i])
 }
 
-pure
-requires acc(Bytes(s, start, end), _)
+requires Bytes(s, start, end)
 requires start <= i && i < end
 decreases
-func GetByte(s []byte, start int, end int, i int) byte {
-	return unfolding acc(Bytes(s, start, end), _) in s[i]
+pure func GetByte(s []byte, start int, end int, i int) byte {
+	return unfolding Bytes(s, start, end) in s[i]
 }
 
 ghost
@@ -180,16 +179,15 @@ func PermsImplyIneq(s1 []byte, s2 []byte, p perm) {
 	fold acc(Bytes(s2, 0, len(s2)), p)
 }
 
-/** Auxiliar definitions Any **/
+type Unit struct{}
+
 ghost
-requires size >= 0
-ensures len(res) == size
-ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
-decreases _
-pure func NewSeq_Any(size int) (res seq[any])
-
-// TODO:
-// func ToSeq_Any
-// ResliceC_Any
-
-/** End of Auxiliar definitions Any **/
+requires 0 <= subStart
+requires subStart <= subEnd
+requires subEnd <= cap(s)
+ensures  forall i int :: { &s[subStart:subEnd][i] } 0 <= i && i < len(s[subStart:subEnd]) ==>
+	&s[subStart:subEnd][i] == &s[subStart+i]
+decreases
+pure func AssertSliceOverlap(ghost s []byte, ghost subStart int, ghost subEnd int) Unit {
+	return Unit{}
+}

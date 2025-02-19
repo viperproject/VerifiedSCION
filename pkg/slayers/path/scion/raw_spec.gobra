@@ -42,11 +42,10 @@ pred (s *Raw) Mem(buf []byte) {
 (*Raw) implements path.Path
 
 ghost
-pure
-requires  acc(s.Mem(buf), _)
-requires  acc(sl.Bytes(buf, 0, len(buf)), R42)
+requires s.Mem(buf)
+requires sl.Bytes(buf, 0, len(buf))
 decreases
-func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
+pure func (s *Raw) IsValidResultOfDecoding(buf []byte) bool {
 	return let base := s.GetBase(buf) in
 		base.EqAbsHeader(buf) &&
 		base.WeaklyValid()
@@ -59,12 +58,11 @@ func (s *Raw) IsValidResultOfDecoding(buf []byte, err error) (res bool) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-pure
-requires acc(s.Mem(buf), _)
-ensures  unfolding acc(s.Mem(buf), _) in t == s.Base.Type()
+requires s.Mem(buf)
 decreases
-func (s *Raw) Type(ghost buf []byte) (t path.Type) {
-	return unfolding acc(s.Mem(buf), _) in s.Base.Type()
+pure func (s *Raw) Type(ghost buf []byte) path.Type {
+	return unfolding s.Mem(buf) in
+		s.Base.Type()
 }
 
 /**
@@ -81,12 +79,11 @@ func (s *Raw) Len(ghost buf []byte) (l int) {
 }
 
 ghost
-pure
-requires acc(s.Mem(ub), _)
-ensures  unfolding acc(s.Mem(ub), _) in l == s.Base.Len()
+requires s.Mem(ub)
 decreases
-func (s *Raw) LenSpec(ghost ub []byte) (l int) {
-	return unfolding acc(s.Mem(ub), _) in s.Base.Len()
+pure func (s *Raw) LenSpec(ghost ub []byte) int {
+	return unfolding s.Mem(ub) in
+		s.Base.Len()
 }
 
 /**
@@ -150,55 +147,59 @@ func (r *Raw) Widen(ubuf1, ubuf2 []byte) {
 
 /**** Start of helpful pure functions ****/
 ghost
-requires acc(r.Mem(ub), _)
+requires r.Mem(ub)
 decreases
 pure func (r *Raw) GetBase(ub []byte) Base {
-	return unfolding acc(r.Mem(ub), _) in r.Base.GetBase()
+	return unfolding r.Mem(ub) in
+		r.Base.GetBase()
 }
 
 ghost
-requires acc(r.Mem(ub), _)
+requires r.Mem(ub)
 decreases
 pure func (r *Raw) GetNumINF(ghost ub []byte) int {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.NumINF)
+	return unfolding r.Mem(ub) in
+		(unfolding r.Base.Mem() in r.NumINF)
 }
 
 ghost
-requires acc(r.Mem(ub), _)
+requires r.Mem(ub)
 decreases
 pure func (r *Raw) GetNumHops(ghost ub []byte) int {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.NumHops)
+	return unfolding r.Mem(ub) in
+		(unfolding r.Base.Mem() in r.NumHops)
 }
 
 ghost
-requires acc(r.Mem(ub), _)
+requires r.Mem(ub)
 decreases
 pure func (r *Raw) GetCurrINF(ghost ub []byte) uint8 {
-	return unfolding acc(r.Mem(ub), _) in (unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrINF)
+	return unfolding r.Mem(ub) in
+		(unfolding r.Base.Mem() in r.PathMeta.CurrINF)
 }
 
 ghost
-requires acc(r.Mem(ub), _)
+requires r.Mem(ub)
 decreases
 pure func (r *Raw) GetCurrHF(ghost ub []byte) uint8 {
-	return unfolding acc(r.Mem(ub), _) in
-		(unfolding acc(r.Base.Mem(), _) in r.PathMeta.CurrHF)
+	return unfolding r.Mem(ub) in
+		(unfolding r.Base.Mem() in r.PathMeta.CurrHF)
 }
 
 ghost
-pure
-requires acc(s.Mem(buf), _)
+requires s.Mem(buf)
 decreases
-func (s *Raw) RawBufferMem(ghost buf []byte) []byte {
-	return unfolding acc(s.Mem(buf), _) in s.Raw
+pure func (s *Raw) RawBufferMem(ghost buf []byte) []byte {
+	return unfolding s.Mem(buf) in
+		s.Raw
 }
 
 ghost
-pure
-requires acc(s.NonInitMem(), _)
+requires s.NonInitMem()
 decreases
-func (s *Raw) RawBufferNonInitMem() []byte {
-	return unfolding acc(s.NonInitMem(), _) in s.Raw
+pure func (s *Raw) RawBufferNonInitMem() []byte {
+	return unfolding s.NonInitMem() in
+		s.Raw
 }
 /**** End of helpful pure functions ****/
 
@@ -219,7 +220,7 @@ ghost
 requires  0 <= offset
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-requires  acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires  sl.Bytes(raw, 0, len(raw))
 ensures   len(res) == segLen - currHfIdx
 decreases segLen - currHfIdx
 pure func hopFields(
@@ -251,14 +252,14 @@ pure func segHistory(hopfields seq[io.IO_HF]) (res seq[io.IO_ahi]) {
 }
 
 ghost
+requires sl.Bytes(raw, 0, len(raw))
 requires 0 <= offset
 requires 0 < segLen
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires offset + path.HopLen * segLen <= len(raw)
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
-ensures len(res.Future) == segLen - currHfIdx
-ensures len(res.History) == currHfIdx
-ensures len(res.Past) == currHfIdx
+ensures  len(res.Future) == segLen - currHfIdx
+ensures  len(res.History) == currHfIdx
+ensures  len(res.Past) == currHfIdx
 decreases
 pure func segment(raw []byte,
 	offset int,
@@ -270,32 +271,35 @@ pure func segment(raw []byte,
 	segLen int) (res io.IO_seg2) {
 	return let hopfields := hopFields(raw, offset, 0, segLen) in
 		io.IO_seg3_ {
-			AInfo :ainfo,
-			UInfo : uinfo,
-			ConsDir : consDir,
-			Peer : peer,
-			Past : segPast(hopfields[:currHfIdx]),
-			Future : hopfields[currHfIdx:],
-			History : segHistory(hopfields[:currHfIdx]),
+			AInfo: ainfo,
+			UInfo: uinfo,
+			ConsDir: consDir,
+			Peer: peer,
+			Past: segPast(hopfields[:currHfIdx]),
+			Future: hopfields[currHfIdx:],
+			History: segHistory(hopfields[:currHfIdx]),
 		}
 }
 
 ghost
 opaque
+requires sl.Bytes(raw, 0, len(raw))
 requires 0 <= headerOffset
 requires path.InfoFieldOffset(currInfIdx, headerOffset) + path.InfoLen <= offset
 requires 0 < segLen
 requires offset + path.HopLen * segLen <= len(raw)
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires 0 <= currInfIdx && currInfIdx < 3
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+ensures  len(res.Future) == segLen - currHfIdx
+ensures  len(res.History) == currHfIdx
+ensures  len(res.Past) == currHfIdx
 decreases
 pure func CurrSeg(raw []byte,
 	offset int,
 	currInfIdx int,
 	currHfIdx int,
 	segLen int,
-	headerOffset int) io.IO_seg3 {
+	headerOffset int) (res io.IO_seg3) {
 	return let ainfo := path.Timestamp(raw, currInfIdx, headerOffset) in
 		let consDir := path.ConsDir(raw, currInfIdx, headerOffset) in
 		let peer := path.Peer(raw, currInfIdx, headerOffset) in
@@ -305,11 +309,11 @@ pure func CurrSeg(raw []byte,
 
 ghost
 opaque
+requires sl.Bytes(raw, 0, len(raw))
 requires 0 <= headerOffset
 requires segs.Valid()
 requires PktLen(segs, headerOffset) <= len(raw)
 requires 1 <= currInfIdx && currInfIdx < 4
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func LeftSeg(
 	raw []byte,
@@ -326,11 +330,11 @@ pure func LeftSeg(
 
 ghost
 opaque
+requires sl.Bytes(raw, 0, len(raw))
 requires 0 <= headerOffset
 requires segs.Valid()
 requires PktLen(segs, headerOffset) <= len(raw)
 requires -1 <= currInfIdx && currInfIdx < 2
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func RightSeg(
 	raw []byte,
@@ -347,11 +351,11 @@ pure func RightSeg(
 
 ghost
 opaque
+requires sl.Bytes(raw, 0, len(raw))
 requires 0 <= headerOffset
 requires segs.Valid()
 requires PktLen(segs, headerOffset) <= len(raw)
 requires 2 <= currInfIdx && currInfIdx < 5
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 decreases
 pure func MidSeg(
 	raw []byte,
@@ -368,9 +372,10 @@ pure func MidSeg(
 
 ghost
 opaque
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires sl.Bytes(raw, 0, len(raw))
 requires validPktMetaHdr(raw)
 decreases
+// TODO: rename this to View()
 pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 	return let _ := reveal validPktMetaHdr(raw) in
 		let metaHdr := RawBytesToMetaHdr(raw)  in
@@ -385,26 +390,26 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 		let numINF := segs.NumInfoFields() in
 		let offset := HopFieldOffset(numINF, prevSegLen, MetaLen) in
 		io.IO_Packet2 {
-			CurrSeg : CurrSeg(raw, offset, currInfIdx, currHfIdx - prevSegLen, segLen, MetaLen),
-			LeftSeg : LeftSeg(raw, currInfIdx + 1, segs, MetaLen),
-			MidSeg : MidSeg(raw, currInfIdx + 2, segs, MetaLen),
-			RightSeg : RightSeg(raw, currInfIdx - 1, segs, MetaLen),
+			CurrSeg: CurrSeg(raw, offset, currInfIdx, currHfIdx - prevSegLen, segLen, MetaLen),
+			LeftSeg: LeftSeg(raw, currInfIdx + 1, segs, MetaLen),
+			MidSeg: MidSeg(raw, currInfIdx + 2, segs, MetaLen),
+			RightSeg: RightSeg(raw, currInfIdx - 1, segs, MetaLen),
 		}
 }
 
 ghost
 requires MetaLen <= len(raw)
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires sl.Bytes(raw, 0, len(raw))
 decreases
 pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
-	return unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
+	return unfolding sl.Bytes(raw, 0, len(raw)) in
 		let hdr := binary.BigEndian.Uint32(raw[:MetaLen]) in
 		DecodedFrom(hdr)
 }
 
 ghost
 requires MetaLen <= len(raw)
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires sl.Bytes(raw, 0, len(raw))
 decreases
 pure func RawBytesToBase(raw []byte) Base {
 	return let metaHdr := RawBytesToMetaHdr(raw) in
@@ -417,7 +422,7 @@ pure func RawBytesToBase(raw []byte) Base {
 
 ghost
 opaque
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
+requires sl.Bytes(raw, 0, len(raw))
 decreases
 pure func validPktMetaHdr(raw []byte) bool {
 	return MetaLen <= len(raw)  &&
@@ -518,23 +523,23 @@ pure func absIncPathSeg(currseg io.IO_seg3) io.IO_seg3 {
 }
 
 ghost
-requires acc(s.Mem(ub), _)
+requires s.Mem(ub)
 decreases
 pure func (s *Raw) IsLastHopSpec(ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		unfolding acc(s.Base.Mem(), _) in
+	return unfolding s.Mem(ub) in
+		unfolding s.Base.Mem() in
 		int(s.PathMeta.CurrHF) == (s.NumHops - 1)
 }
 
 ghost
 opaque
-requires acc(s.Mem(ub), _)
+requires s.Mem(ub)
 requires 0 <= idx && idx < s.GetNumINF(ub)
-requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+requires sl.Bytes(ub, 0, len(ub))
 decreases
 pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.InfoField) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		unfolding acc(s.Base.Mem(), _) in
+	return unfolding s.Mem(ub) in
+		unfolding s.Base.Mem() in
 		let infOffset := MetaLen + idx*path.InfoLen in
 		infOffset + path.InfoLen <= len(ub) &&
 		info.ToAbsInfoField() ==
@@ -543,13 +548,13 @@ pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.Info
 
 ghost
 opaque
-requires acc(s.Mem(ub), _)
+requires s.Mem(ub)
 requires s.GetBase(ub).ValidCurrInfSpec()
-requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+requires sl.Bytes(ub, 0, len(ub))
 decreases
 pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		unfolding acc(s.Base.Mem(), _) in
+	return unfolding s.Mem(ub) in
+		unfolding s.Base.Mem() in
 		let infOffset := MetaLen + int(s.Base.PathMeta.CurrINF) * path.InfoLen in
 		infOffset + path.InfoLen <= len(ub) &&
 		info.ToAbsInfoField() ==
@@ -558,13 +563,13 @@ pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
 
 ghost
 opaque
-requires acc(s.Mem(ub), _)
+requires s.Mem(ub)
 requires 0 <= idx && idx < s.GetNumHops(ub)
-requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+requires sl.Bytes(ub, 0, len(ub))
 decreases
 pure func (s *Raw) CorrectlyDecodedHfWithIdx(ub []byte, idx int, hop path.HopField) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		unfolding acc(s.Base.Mem(), _) in
+	return unfolding s.Mem(ub) in
+		unfolding s.Base.Mem() in
 		let hopOffset := MetaLen + int(s.NumINF) * path.InfoLen + idx * path.HopLen in
 		hopOffset + path.HopLen <= len(ub) &&
 		hop.ToIO_HF() == path.BytesToIO_HF(ub, 0, hopOffset, len(ub))
@@ -572,13 +577,13 @@ pure func (s *Raw) CorrectlyDecodedHfWithIdx(ub []byte, idx int, hop path.HopFie
 
 ghost
 opaque
-requires acc(s.Mem(ub), _)
+requires s.Mem(ub)
 requires s.GetBase(ub).ValidCurrHfSpec()
-requires acc(sl.Bytes(ub, 0, len(ub)), R56)
+requires sl.Bytes(ub, 0, len(ub))
 decreases
 pure func (s *Raw) CorrectlyDecodedHf(ub []byte, hop path.HopField) bool {
-	return unfolding acc(s.Mem(ub), _) in
-		unfolding acc(s.Base.Mem(), _) in
+	return unfolding s.Mem(ub) in
+		unfolding s.Base.Mem() in
 		let hopOffset := MetaLen + int(s.NumINF) * path.InfoLen +
 			int(s.Base.PathMeta.CurrHF) * path.HopLen in
 		hopOffset + path.HopLen <= len(ub) &&
@@ -619,6 +624,8 @@ preserves validPktMetaHdr(ubuf)
 preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
 ensures   s.absPkt(ubuf).LeftSeg != none[io.IO_seg2]
 ensures   len(s.absPkt(ubuf).CurrSeg.Future) == 1
+ensures   len(get(s.absPkt(ubuf).LeftSeg).Future) > 0
+ensures   len(get(s.absPkt(ubuf).LeftSeg).History) == 0
 decreases
 func (s *Raw) XoverLemma(ubuf []byte) {
 	reveal validPktMetaHdr(ubuf)
@@ -638,6 +645,8 @@ func (s *Raw) XoverLemma(ubuf []byte) {
 	assert pkt.LeftSeg == reveal LeftSeg(ubuf, currInfIdx + 1, segs, MetaLen)
 	assert len(pkt.CurrSeg.Future) == 1
 	assert pkt.LeftSeg != none[io.IO_seg2]
+	assert len(get(s.absPkt(ubuf).LeftSeg).History) == 0
+	assert len(get(pkt.LeftSeg).Future) > 0
 }
 
 ghost
@@ -654,8 +663,8 @@ opaque
 decreases
 pure func (s *Raw) EqAbsInfoField(pkt io.IO_pkt2, info io.AbsInfoField) bool {
 	return let currseg := pkt.CurrSeg in
-		info.AInfo == currseg.AInfo &&
-		info.UInfo == currseg.UInfo &&
+		info.AInfo == currseg.AInfo     &&
+		info.UInfo == currseg.UInfo     &&
 		info.ConsDir == currseg.ConsDir &&
 		info.Peer == currseg.Peer
 }
@@ -674,7 +683,7 @@ ensures   s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
 ensures   s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
 decreases
 func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField) {
-	reveal validPktMetaHdr(ubuf)
+	assert reveal validPktMetaHdr(ubuf)
 	metaHdr := RawBytesToMetaHdr(ubuf)
 	currInfIdx := int(metaHdr.CurrINF)
 	currHfIdx := int(metaHdr.CurrHF)
@@ -687,13 +696,31 @@ func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField)
 	numINF := segs.NumInfoFields()
 	offset := HopFieldOffset(numINF, prevSegLen, MetaLen)
 	hfIdxSeg := currHfIdx - prevSegLen
-	reveal s.CorrectlyDecodedInf(ubuf, info)
-	reveal s.CorrectlyDecodedHf(ubuf, hop)
-	reveal s.absPkt(ubuf)
-	reveal CurrSeg(ubuf, offset, currInfIdx, hfIdxSeg, segLen, MetaLen)
+	assert reveal s.CorrectlyDecodedInf(ubuf, info)
+	assert reveal s.CorrectlyDecodedHf(ubuf, hop)
+
+	currSeg := reveal CurrSeg(ubuf, offset, currInfIdx, hfIdxSeg, segLen, MetaLen)
 	HopsFromPrefixOfRawMatchPrefixOfHops(ubuf, offset, 0, segLen, hfIdxSeg)
-	assert reveal s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
-	assert reveal s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
+
+	pktView := reveal s.absPkt(ubuf)
+	infoView := info.ToAbsInfoField()
+
+	// assertions for proving s.EqAbsInfoField(pktView, infoView)
+	{
+		// equality of Peer
+		assert pktView.CurrSeg.Peer == infoView.Peer
+		// equality of AInfo
+		assert currSeg.AInfo == path.Timestamp(ubuf, currInfIdx, MetaLen)
+		infOffset := MetaLen + currInfIdx * path.InfoLen
+		sl.AssertSliceOverlap(ubuf, infOffset+4, infOffset+8)
+		assert pktView.CurrSeg.AInfo == infoView.AInfo
+		// equality of UInfo
+		sl.AssertSliceOverlap(ubuf, infOffset+2, infOffset+4)
+		assert pktView.CurrSeg.UInfo == infoView.UInfo
+	}
+
+	assert reveal s.EqAbsInfoField(pktView, infoView)
+	assert reveal s.EqAbsHopField(pktView, hop.ToIO_HF())
 }
 
 ghost

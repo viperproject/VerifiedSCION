@@ -41,7 +41,6 @@ func init() {
 	// (VerifiedSCION) ghost initialization code to establish the PathPackageMem predicate.
 	// @ assert acc(&registeredPaths)
 	// @ assert acc(&strictDecoding)
-	// @ assert forall t Type :: { registeredPaths[t] } 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
 	// @ fold PathPackageMem()
 }
 
@@ -83,17 +82,17 @@ type Path interface {
 	//@ requires  NonInitMem()
 	//@ preserves acc(sl.Bytes(b, 0, len(b)), R42)
 	//@ ensures   err == nil ==> Mem(b)
+	//@ ensures   err == nil ==> IsValidResultOfDecoding(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> NonInitMem()
-	//@ ensures   err == nil ==> IsValidResultOfDecoding(b, err)
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
 	//@ ghost
 	//@ pure
 	//@ requires Mem(b)
-	//@ requires acc(sl.Bytes(b, 0, len(b)), R42)
+	//@ requires sl.Bytes(b, 0, len(b))
 	//@ decreases
-	//@ IsValidResultOfDecoding(b []byte, err error) (res bool)
+	//@ IsValidResultOfDecoding(b []byte) bool
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires  Mem(ub)
@@ -105,7 +104,7 @@ type Path interface {
 	Reverse( /*@ ghost ub []byte @*/ ) (p Path, e error)
 	//@ ghost
 	//@ pure
-	//@ requires acc(Mem(ub), _)
+	//@ requires Mem(ub)
 	//@ ensures  0 <= l
 	//@ decreases
 	//@ LenSpec(ghost ub []byte) (l int)
@@ -117,7 +116,7 @@ type Path interface {
 	Len( /*@ ghost ub []byte @*/ ) (l int)
 	// Type returns the type of a path.
 	//@ pure
-	//@ requires acc(Mem(ub), _)
+	//@ requires Mem(ub)
 	//@ decreases
 	Type( /*@ ghost ub []byte @*/ ) Type
 	//@ ghost
@@ -257,8 +256,8 @@ func (p *rawPath) Len( /*@ ghost ub []byte @*/ ) (l int) {
 }
 
 // @ pure
-// @ requires acc(p.Mem(ub), _)
+// @ requires p.Mem(ub)
 // @ decreases
 func (p *rawPath) Type( /*@ ghost ub []byte @*/ ) Type {
-	return /*@ unfolding acc(p.Mem(ub), _) in @*/ p.pathType
+	return /*@ unfolding p.Mem(ub) in @*/ p.pathType
 }
