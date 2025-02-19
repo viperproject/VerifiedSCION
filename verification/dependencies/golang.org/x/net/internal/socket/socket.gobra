@@ -52,7 +52,7 @@ pred (m *Message) Mem() {
 	acc(m) &&
 	len(m.Buffers) == 1 &&
 	acc(&m.Buffers[0]) &&
-	sl.Bytes(m.OOB, 0, len(m.OOB)) &&
+	0 <= 0 && 0 <= len(m.OOB) && len(m.OOB) <= cap(m.OOB) && forall i int :: { &m.OOB[i] } 0 <= i && i < len(m.OOB) ==> acc(&m.OOB[i]) &&
 	// typeOf(m.Addr) == type[*net.UDPAddr] &&
 	((m.Addr != nil && m.IsActive && !m.WildcardPerm) ==> m.Addr.Mem()) &&
 	((m.Addr != nil && m.IsActive && m.WildcardPerm) ==> acc(m.Addr.Mem(), _)) &&
@@ -133,10 +133,10 @@ ghost
 requires  0 <= k && k < len(msgs)
 preserves acc(m.Mem(), R55)
 preserves len(m.GetFstBuffer()) > 0
-preserves sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+preserves 0 <= 0 && 0 <= len(m.GetFstBuffer()) && len(m.GetFstBuffer()) <= cap(m.GetFstBuffer()) && forall i int :: { &m.GetFstBuffer()[i] } 0 <= i && i < len(m.GetFstBuffer()) ==> acc(&m.GetFstBuffer()[i])
 preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(), R55)
 preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	 acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), R55)
+	 0 <= 0 && 0 <= len(msgs[i].GetFstBuffer()) && len(msgs[i].GetFstBuffer()) <= cap(msgs[i].GetFstBuffer()) && forall i int :: { &msgs[i].GetFstBuffer()[i] } 0 <= i && i < len(msgs[i].GetFstBuffer()) ==> acc(&msgs[i].GetFstBuffer()[i], R55)
 ensures   forall i int :: { &msgs[i] } 0 <= i && i <= k ==>
 	msgs[i].GetFstBuffer() !== m.GetFstBuffer()
 decreases k
@@ -144,16 +144,18 @@ func (m *Message) ensureBufferInjectivityAgainstList(msgs []Message, k int) {
 	if k != 0 {
 		m.ensureBufferInjectivityAgainstList(msgs, k-1)
 	}
-	sl.PermsImplyIneq(m.GetFstBuffer(), msgs[k].GetFstBuffer(), R55)
+	ghost if len(m.GetFstBuffer()) > 0 && len(msgs[k].GetFstBuffer()) > 0 {
+// @ assert &m.GetFstBuffer()[0] != &msgs[k].GetFstBuffer()[0]
+// @ }
 }
 
 ghost
 preserves acc(m.Mem(), R55)
 preserves len(m.GetFstBuffer()) > 0
-preserves sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+preserves 0 <= 0 && 0 <= len(m.GetFstBuffer()) && len(m.GetFstBuffer()) <= cap(m.GetFstBuffer()) && forall i int :: { &m.GetFstBuffer()[i] } 0 <= i && i < len(m.GetFstBuffer()) ==> acc(&m.GetFstBuffer()[i])
 preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(), R55)
 preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-	 acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), R55)
+	 0 <= 0 && 0 <= len(msgs[i].GetFstBuffer()) && len(msgs[i].GetFstBuffer()) <= cap(msgs[i].GetFstBuffer()) && forall i int :: { &msgs[i].GetFstBuffer()[i] } 0 <= i && i < len(msgs[i].GetFstBuffer()) ==> acc(&msgs[i].GetFstBuffer()[i], R55)
 ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	msgs[i].GetFstBuffer() !== m.GetFstBuffer()
 decreases

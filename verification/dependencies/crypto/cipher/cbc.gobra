@@ -22,7 +22,7 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 // Block's block size.
 requires  b != nil && b.Mem()
 requires  len(iv) == b.BlockSize()
-preserves acc(sl.Bytes(iv, 0, len(iv)), _)
+preserves 0 <= 0 && 0 <= len(iv) && len(iv) <= cap(iv) && forall i int :: { &iv[i] } 0 <= i && i < len(iv) ==> acc(&iv[i], _)
 ensures   result != nil && result.Mem()
 ensures   result.BlockSize() == old(b.BlockSize())
 decreases _

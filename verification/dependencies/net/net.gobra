@@ -36,14 +36,14 @@ type Conn interface {
 
 	// Read reads data from the connection.
 	requires  acc(Mem(), _)
-	preserves sl.Bytes(b, 0, len(b))
+	preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 	ensures   err == nil ==> 0 <= n && n <= len(b)
 	ensures   err != nil ==> err.ErrorMem()
 	Read(b []byte) (n int, err error)
 
 	// Write writes data to the connection.
 	preserves acc(Mem(), _)
-	preserves acc(sl.Bytes(b, 0, len(b)), R15)
+	preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R15)
 	ensures   err == nil ==> 0 <= n && n <= len(b)
 	ensures   err != nil ==> err.ErrorMem()
 	Write(b []byte) (n int, err error)
@@ -93,7 +93,7 @@ type PacketConn interface {
 	pred Mem()
 
 	preserves acc(Mem(), _)
-	preserves sl.Bytes(p, 0, len(p))
+	preserves 0 <= 0 && 0 <= len(p) && len(p) <= cap(p) && forall i int :: { &p[i] } 0 <= i && i < len(p) ==> acc(&p[i])
 	ensures   err == nil ==> 0 <= n && n <= len(p)
 	ensures   err == nil ==> acc(addr.Mem(), _)
 	ensures   err != nil ==> err.ErrorMem()
@@ -101,7 +101,7 @@ type PacketConn interface {
 
 	requires  acc(addr.Mem(), _)
 	preserves acc(Mem(), _)
-	preserves acc(sl.Bytes(p, 0, len(p)), R15)
+	preserves 0 <= 0 && 0 <= len(p) && len(p) <= cap(p) && forall i int :: { &p[i] } 0 <= i && i < len(p) ==> acc(&p[i], R15)
 	ensures   err == nil ==> 0 <= n && n <= len(p)
 	ensures   err != nil ==> err.ErrorMem()
 	WriteTo(p []byte, addr Addr) (n int, err error)

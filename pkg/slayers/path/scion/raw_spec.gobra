@@ -43,7 +43,7 @@ pred (s *Raw) Mem(buf []byte) {
 
 ghost
 requires s.Mem(buf)
-requires sl.Bytes(buf, 0, len(buf))
+requires 0 <= 0 && 0 <= len(buf) && len(buf) <= cap(buf) && forall i int :: { &buf[i] } 0 <= i && i < len(buf) ==> acc(&buf[i])
 decreases
 pure func (s *Raw) IsValidResultOfDecoding(buf []byte) bool {
 	return let base := s.GetBase(buf) in
@@ -220,7 +220,7 @@ ghost
 requires  0 <= offset
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-requires  sl.Bytes(raw, 0, len(raw))
+requires  0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 ensures   len(res) == segLen - currHfIdx
 decreases segLen - currHfIdx
 pure func hopFields(
@@ -252,7 +252,7 @@ pure func segHistory(hopfields seq[io.IO_HF]) (res seq[io.IO_ahi]) {
 }
 
 ghost
-requires sl.Bytes(raw, 0, len(raw))
+requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 requires 0 <= offset
 requires 0 < segLen
 requires 0 <= currHfIdx && currHfIdx <= segLen
@@ -283,7 +283,7 @@ pure func segment(raw []byte,
 
 ghost
 opaque
-requires sl.Bytes(raw, 0, len(raw))
+requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 requires 0 <= headerOffset
 requires path.InfoFieldOffset(currInfIdx, headerOffset) + path.InfoLen <= offset
 requires 0 < segLen
@@ -309,7 +309,7 @@ pure func CurrSeg(raw []byte,
 
 ghost
 opaque
-requires sl.Bytes(raw, 0, len(raw))
+requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 requires 0 <= headerOffset
 requires segs.Valid()
 requires PktLen(segs, headerOffset) <= len(raw)
@@ -330,7 +330,7 @@ pure func LeftSeg(
 
 ghost
 opaque
-requires sl.Bytes(raw, 0, len(raw))
+requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 requires 0 <= headerOffset
 requires segs.Valid()
 requires PktLen(segs, headerOffset) <= len(raw)
@@ -351,7 +351,7 @@ pure func RightSeg(
 
 ghost
 opaque
-requires sl.Bytes(raw, 0, len(raw))
+requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 requires 0 <= headerOffset
 requires segs.Valid()
 requires PktLen(segs, headerOffset) <= len(raw)
@@ -372,7 +372,7 @@ pure func MidSeg(
 
 ghost
 opaque
-requires sl.Bytes(raw, 0, len(raw))
+requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 requires validPktMetaHdr(raw)
 decreases
 // TODO: rename this to View()
@@ -399,17 +399,17 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 
 ghost
 requires MetaLen <= len(raw)
-requires sl.Bytes(raw, 0, len(raw))
+requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 decreases
 pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
-	return unfolding sl.Bytes(raw, 0, len(raw)) in
+	return  
 		let hdr := binary.BigEndian.Uint32(raw[:MetaLen]) in
 		DecodedFrom(hdr)
 }
 
 ghost
 requires MetaLen <= len(raw)
-requires sl.Bytes(raw, 0, len(raw))
+requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 decreases
 pure func RawBytesToBase(raw []byte) Base {
 	return let metaHdr := RawBytesToMetaHdr(raw) in
@@ -422,7 +422,7 @@ pure func RawBytesToBase(raw []byte) Base {
 
 ghost
 opaque
-requires sl.Bytes(raw, 0, len(raw))
+requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 decreases
 pure func validPktMetaHdr(raw []byte) bool {
 	return MetaLen <= len(raw)  &&
@@ -439,28 +439,28 @@ pure func validPktMetaHdr(raw []byte) bool {
 
 ghost
 requires  MetaLen <= idx && idx <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
-preserves acc(sl.Bytes(raw[:idx], 0, idx), R56)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56)
+preserves 0 <= 0 && 0 <= idx && idx <= cap(raw[:idx]) && forall i int :: { &raw[:idx][i] } 0 <= i && i < idx ==> acc(&raw[:idx][i], R56)
 ensures   RawBytesToMetaHdr(raw) == RawBytesToMetaHdr(raw[:idx])
 ensures   RawBytesToBase(raw) == RawBytesToBase(raw[:idx])
 decreases
 func ValidPktMetaHdrSublice(raw []byte, idx int) {
 	reveal validPktMetaHdr(raw)
 	reveal validPktMetaHdr(raw[:idx])
-	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
-	unfold acc(sl.Bytes(raw[:idx], 0, idx), R56)
+
+
 	assert forall i int :: { &raw[:MetaLen][i] } 0 <= i && i < MetaLen ==>
 		&raw[:MetaLen][i] == &raw[:idx][:MetaLen][i]
-	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
-	fold acc(sl.Bytes(raw[:idx], 0, idx), R56)
+
+
 }
 
 ghost
 requires acc(s.Mem(ub), R54)
-requires acc(sl.Bytes(ub, 0, len(ub)), R55)
+requires 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], R55)
 requires s.GetBase(ub).Valid()
 requires s.GetBase(ub).EqAbsHeader(ub)
-ensures  acc(sl.Bytes(ub, 0, len(ub)), R55)
+ensures  0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], R55)
 ensures  acc(s.Mem(ub), R54)
 ensures  validPktMetaHdr(ub)
 ensures  s.GetBase(ub).EqAbsHeader(ub)
@@ -535,7 +535,7 @@ ghost
 opaque
 requires s.Mem(ub)
 requires 0 <= idx && idx < s.GetNumINF(ub)
-requires sl.Bytes(ub, 0, len(ub))
+requires 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i])
 decreases
 pure func (s *Raw) CorrectlyDecodedInfWithIdx(ub []byte, idx int, info path.InfoField) bool {
 	return unfolding s.Mem(ub) in
@@ -550,7 +550,7 @@ ghost
 opaque
 requires s.Mem(ub)
 requires s.GetBase(ub).ValidCurrInfSpec()
-requires sl.Bytes(ub, 0, len(ub))
+requires 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i])
 decreases
 pure func (s *Raw) CorrectlyDecodedInf(ub []byte, info path.InfoField) bool {
 	return unfolding s.Mem(ub) in
@@ -565,7 +565,7 @@ ghost
 opaque
 requires s.Mem(ub)
 requires 0 <= idx && idx < s.GetNumHops(ub)
-requires sl.Bytes(ub, 0, len(ub))
+requires 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i])
 decreases
 pure func (s *Raw) CorrectlyDecodedHfWithIdx(ub []byte, idx int, hop path.HopField) bool {
 	return unfolding s.Mem(ub) in
@@ -579,7 +579,7 @@ ghost
 opaque
 requires s.Mem(ub)
 requires s.GetBase(ub).ValidCurrHfSpec()
-requires sl.Bytes(ub, 0, len(ub))
+requires 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i])
 decreases
 pure func (s *Raw) CorrectlyDecodedHf(ub []byte, hop path.HopField) bool {
 	return unfolding s.Mem(ub) in
@@ -593,7 +593,7 @@ pure func (s *Raw) CorrectlyDecodedHf(ub []byte, hop path.HopField) bool {
 ghost
 preserves acc(s.Mem(ubuf), R55)
 preserves s.IsLastHopSpec(ubuf)
-preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
+preserves 0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i], R56)
 preserves validPktMetaHdr(ubuf)
 preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
 ensures len(s.absPkt(ubuf).CurrSeg.Future) == 1
@@ -619,7 +619,7 @@ func (s *Raw) LastHopLemma(ubuf []byte) {
 ghost
 preserves acc(s.Mem(ubuf), R55)
 preserves s.GetBase(ubuf).IsXoverSpec()
-preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
+preserves 0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i], R56)
 preserves validPktMetaHdr(ubuf)
 preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
 ensures   s.absPkt(ubuf).LeftSeg != none[io.IO_seg2]
@@ -671,7 +671,7 @@ pure func (s *Raw) EqAbsInfoField(pkt io.IO_pkt2, info io.AbsInfoField) bool {
 
 ghost
 preserves acc(s.Mem(ubuf), R53)
-preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R53)
+preserves 0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i], R53)
 preserves validPktMetaHdr(ubuf)
 preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
 preserves s.absPkt(ubuf).PathNotFullyTraversed()
@@ -729,7 +729,7 @@ requires  0 < segLen
 requires  offset + path.HopLen * segLen <= len(raw)
 requires  0 <= currHfIdx && currHfIdx < segLen
 requires  0 <= currInfIdx && currInfIdx < 3
-preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56)
 ensures   len(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0).Future) > 0
 decreases
 func LenCurrSeg(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen int) {
@@ -742,7 +742,7 @@ requires  0 < segs.Seg2Len
 requires  PktLen(segs, 0) <= len(raw)
 requires  0 <= currInfIdx && currInfIdx < 2
 requires  1 <= currInfIdx ==> 0 < segs.Seg3Len
-preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56)
 ensures   LeftSeg(raw, currInfIdx + 1, segs, 0) != none[io.IO_seg3]
 ensures   RightSeg(raw, currInfIdx, segs, 0) != none[io.IO_seg3]
 decreases
@@ -757,7 +757,7 @@ requires  0 < segLen
 requires  offset + path.HopLen * segLen <= len(raw)
 requires  0 <= currHfIdx && currHfIdx < segLen
 requires  0 <= currInfIdx && currInfIdx < 3
-preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56)
 preserves len(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0).Future) > 0
 ensures   CurrSeg(raw, offset, currInfIdx, currHfIdx + 1, segLen, 0) ==
 	absIncPathSeg(CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, 0))
@@ -786,7 +786,7 @@ requires  1 <= currInfIdx && currInfIdx < 3
 requires  1 == currInfIdx ==> currHfIdx + 1 == segs.Seg1Len
 requires  2 == currInfIdx ==> 0 < segs.Seg3Len && currHfIdx + 1 == segs.Seg1Len + segs.Seg2Len
 requires  PktLen(segs, 0) <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56)
 preserves LeftSeg(raw, currInfIdx, segs, 0) != none[io.IO_seg3]
 ensures
 	let prevSegLen := segs.LengthOfPrevSeg(currHfIdx + 1) in
@@ -810,7 +810,7 @@ ghost
 requires  segs.Valid()
 requires  PktLen(segs, 0) <= len(raw)
 requires  2 <= currInfIdx && currInfIdx < 4
-preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56)
 ensures   LeftSeg(raw, currInfIdx, segs, 0) ==
 	MidSeg(raw, currInfIdx, segs, 0)
 decreases
@@ -826,7 +826,7 @@ requires  0 < segs.Seg2Len
 requires  PktLen(segs, 0) <= len(raw)
 requires  -1 <= currInfIdx && currInfIdx < 1
 requires  0 == currInfIdx ==> 0 < segs.Seg3Len
-preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56)
 ensures   MidSeg(raw, currInfIdx + 4, segs, 0) ==
 	RightSeg(raw, currInfIdx, segs, 0)
 decreases
@@ -844,7 +844,7 @@ requires  0 <= currInfIdx && currInfIdx < 2
 requires  0 == currInfIdx ==> currHfIdx + 1 == segs.Seg1Len
 requires  1 == currInfIdx ==> 0 < segs.Seg3Len && currHfIdx + 1 == segs.Seg1Len + segs.Seg2Len
 requires  PktLen(segs, 0) <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56)
 preserves RightSeg(raw, currInfIdx, segs, 0) != none[io.IO_seg3]
 ensures
 	let prevSegLen := segs.LengthOfPrevSeg(currHfIdx) in
@@ -875,7 +875,7 @@ requires  0 <= offset
 requires  0 <= currHfIdx && currHfIdx <= end
 requires  end <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R54)
 ensures   hopFields(raw, offset, currHfIdx, segLen)[:end - currHfIdx] ==
 	hopFields(raw, offset, currHfIdx, end)
 decreases
@@ -889,7 +889,7 @@ requires  0 <= offset
 requires  0 <= currHfIdx && currHfIdx <= end
 requires  end <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), p)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], p)
 ensures   hopFields(raw, offset, currHfIdx, segLen)[:end - currHfIdx] ==
 	hopFields(raw, offset, currHfIdx, end)
 decreases end - currHfIdx
@@ -905,7 +905,7 @@ requires  0 <= offset
 requires  0 <= start
 requires  0 <= currHfIdx && currHfIdx <= segLen - start
 requires  offset + path.HopLen * segLen <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R54)
 ensures   hopFields(raw, offset, currHfIdx, segLen)[start:] ==
  	hopFields(raw, offset, currHfIdx + start, segLen)
 decreases
@@ -919,7 +919,7 @@ requires  0 <= offset
 requires  0 <= start
 requires  0 <= currHfIdx && currHfIdx <= segLen - start
 requires  offset + path.HopLen * segLen <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), p)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], p)
 ensures   hopFields(raw, offset, currHfIdx, segLen)[start:] ==
  	hopFields(raw, offset, currHfIdx + start, segLen)
 decreases start
@@ -935,7 +935,7 @@ requires  0 <= offset
 requires  0 <= start && start <= currHfIdx
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), R54)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R54)
 ensures   hopFields(raw, offset, currHfIdx, segLen) ==
  	hopFields(raw, offset + start * path.HopLen, currHfIdx - start, segLen - start)
 decreases
@@ -949,7 +949,7 @@ requires  0 <= offset
 requires  0 <= start && start <= currHfIdx
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  offset + path.HopLen * segLen <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), p)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], p)
 ensures   hopFields(raw, offset, currHfIdx, segLen) ==
  	hopFields(raw, offset + start * path.HopLen, currHfIdx - start, segLen - start)
 decreases segLen - currHfIdx

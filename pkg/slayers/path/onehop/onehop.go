@@ -66,7 +66,7 @@ type Path struct {
 }
 
 // @ requires  o.NonInitMem()
-// @ preserves acc(sl.Bytes(data, 0, len(data)), R42)
+// @ preserves 0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R42)
 // @ ensures   (len(data) >= PathLen) == (r == nil)
 // @ ensures   r == nil ==> o.Mem(data)
 // @ ensures   r != nil ==> o.NonInitMem()
@@ -101,8 +101,8 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 }
 
 // @ preserves acc(o.Mem(ubuf), R1)
-// @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R1)
-// @ preserves sl.Bytes(b, 0, len(b))
+// @ preserves 0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i], R1)
+// @ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ ensures   (len(b) >= PathLen) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ ensures   err == nil ==> o.LenSpec(ubuf) <= len(b)
@@ -138,7 +138,7 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
 // @ preserves o.Mem(ubuf)
-// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
+// @ preserves 0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i])
 // @ ensures   err == nil ==> (sd != nil && sd.Mem(ubuf))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -201,7 +201,7 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 
 // Reverse a OneHop path that returns a reversed SCION path.
 // @ requires o.Mem(ubuf)
-// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
+// @ preserves 0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i])
 // @ ensures err == nil ==> p != nil
 // @ ensures err == nil ==> p.Mem(ubuf)
 // @ ensures err == nil ==> typeOf(p) == type[*scion.Decoded]

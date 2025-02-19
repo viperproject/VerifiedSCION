@@ -70,9 +70,9 @@ type Path interface {
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
-	//@ preserves sl.Bytes(ub, 0, len(ub))
+	//@ preserves 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i])
 	//@ preserves acc(Mem(ub), R1)
-	//@ preserves sl.Bytes(b, 0, len(b))
+	//@ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error)
@@ -80,7 +80,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
-	//@ preserves acc(sl.Bytes(b, 0, len(b)), R42)
+	//@ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R42)
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err == nil ==> IsValidResultOfDecoding(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
@@ -90,13 +90,13 @@ type Path interface {
 	//@ ghost
 	//@ pure
 	//@ requires Mem(b)
-	//@ requires sl.Bytes(b, 0, len(b))
+	//@ requires 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 	//@ decreases
 	//@ IsValidResultOfDecoding(b []byte) bool
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires  Mem(ub)
-	//@ preserves sl.Bytes(ub, 0, len(ub))
+	//@ preserves 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i])
 	//@ ensures   e == nil ==> p != nil
 	//@ ensures   e == nil ==> p.Mem(ub)
 	//@ ensures   e != nil ==> e.ErrorMem()
@@ -215,23 +215,23 @@ type rawPath struct {
 }
 
 // @ preserves acc(p.Mem(ub), R10)
-// @ preserves acc(sl.Bytes(ub, 0, len(ub)), R10)
-// @ preserves sl.Bytes(b, 0, len(b))
+// @ preserves 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], R10)
+// @ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ ensures   e == nil
 // @ decreases
 func (p *rawPath) SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error) {
-	//@ unfold sl.Bytes(b, 0, len(b))
+
 	//@ unfold acc(p.Mem(ub), R10)
-	//@ unfold acc(sl.Bytes(p.raw, 0, len(p.raw)), R11)
+
 	copy(b, p.raw /*@, R11 @*/)
-	//@ fold acc(sl.Bytes(p.raw, 0, len(p.raw)), R11)
+
 	//@ fold acc(p.Mem(ub), R10)
-	//@ fold sl.Bytes(b, 0, len(b))
+
 	return nil
 }
 
 // @ requires  p.NonInitMem()
-// @ preserves acc(sl.Bytes(b, 0, len(b)), R42)
+// @ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R42)
 // @ ensures   p.Mem(b)
 // @ ensures   e == nil
 // @ decreases

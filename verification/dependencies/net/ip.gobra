@@ -135,8 +135,8 @@ func (ip *IP) UnmarshalText(text []byte) error
 // An IPv4 address and that same address in IPv6 form are
 // considered to be equal.
 // (VerifiedSCION) we consider this function to be morally pure
-requires sl.Bytes(ip, 0, len(ip))
-requires sl.Bytes(x, 0, len(x))
+requires 0 <= 0 && 0 <= len(ip) && len(ip) <= cap(ip) && forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i])
+requires 0 <= 0 && 0 <= len(x) && len(x) <= cap(x) && forall i int :: { &x[i] } 0 <= i && i < len(x) ==> acc(&x[i])
 decreases _
 pure func (ip IP) Equal(x IP) bool
 

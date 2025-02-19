@@ -66,9 +66,9 @@ func (p Payload) Payload(ghost ub []byte) (res []byte, ghost start int, ghost en
 
 requires b != nil && b.Mem()
 requires p.Mem(ubuf)
-requires slices.Bytes(b.UBuf(), 0, len(b.UBuf()))
+requires 0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &b.UBuf()[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&b.UBuf()[i])
 ensures  err == nil ==> (p.Mem(ubuf) && b.Mem())
-ensures  err == nil ==> slices.Bytes(b.UBuf(), 0, len(b.UBuf()))
+ensures  err == nil ==> 0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &b.UBuf()[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&b.UBuf()[i])
 ensures  err != nil ==> err.ErrorMem()
 decreases
 func (p Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)

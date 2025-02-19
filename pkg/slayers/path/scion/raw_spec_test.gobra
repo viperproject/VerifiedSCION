@@ -29,7 +29,7 @@ func testAllocateRaw() {
 	fold r.Base.Mem()
 	assert r.Base.Len() == MetaLen
 	s := make([]byte, MetaLen)
-	fold sl.Bytes(s, 0, len(s))
+
 	r.Raw = s
 	fold r.Mem(s)
 }

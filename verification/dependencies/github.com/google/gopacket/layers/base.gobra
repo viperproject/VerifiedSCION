@@ -28,29 +28,29 @@ pred (b *BaseLayer) PayloadMem() {
 }
 
 requires b.LayerMem()
-ensures sl.Bytes(res, 0, len(res))
-ensures sl.Bytes(res, 0, len(res)) --* b.LayerMem()
+ensures 0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])
+ensures 0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]) --* b.LayerMem()
 decreases
 func (b *BaseLayer) LayerContents() (res []byte) {
 	unfold b.LayerMem()
 	res = b.Contents
-	fold sl.Bytes(res, 0, len(res))
-	package sl.Bytes(res, 0, len(res)) --* b.LayerMem() {
-		unfold sl.Bytes(res, 0, len(res))
+
+	package 0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]) --* b.LayerMem() {
+
 		fold b.LayerMem()
 	}
 }
 
 requires b.PayloadMem()
-ensures sl.Bytes(res, 0, len(res))
-ensures sl.Bytes(res, 0, len(res)) --* b.PayloadMem()
+ensures 0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])
+ensures 0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]) --* b.PayloadMem()
 decreases
 func (b *BaseLayer) LayerPayload() (res []byte) {
 	unfold b.PayloadMem()
 	res = b.Payload
-	fold sl.Bytes(res, 0, len(res))
-	package sl.Bytes(res, 0, len(res)) --* b.PayloadMem() {
-		unfold sl.Bytes(res, 0, len(res))
+
+	package 0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]) --* b.PayloadMem() {
+
 		fold b.PayloadMem()
 	}
 }

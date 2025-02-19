@@ -20,7 +20,7 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 
 func foldMem_test() {
 	r := &rawPath{}
-	fold sl.Bytes(r.raw, 0, 0)
+
 	fold r.Mem(nil)
 }
 

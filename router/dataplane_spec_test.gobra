@@ -83,7 +83,7 @@ func canModifyRunning(d *DataPlane) {
 requires macFactory != nil                        &&
 	acc(key)                                      &&
 	len(*key) > 0                                 &&
-	acc(sl.Bytes(*key, 0, len(*key)), _)          &&
+	0 <= 0 && 0 <= len(*key) && len(*key) <= cap(*key) && forall i int :: { &*key[i] } 0 <= i && i < len(*key) ==> acc(&*key[i], _)          &&
 	scrypto.ValidKeyForHash(*key)                 &&
 	macFactory implements MacFactorySpec{key}
 requires metrics != nil && metrics.Mem()

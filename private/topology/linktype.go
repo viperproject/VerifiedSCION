@@ -53,7 +53,7 @@ func (l LinkType) String() string {
 	if err != nil {
 		return err.Error()
 	}
-	//@ unfold sl.Bytes(s, 0, len(s))
+
 	return string(s)
 }
 
@@ -63,7 +63,7 @@ func (l LinkType) String() string {
 func LinkTypeFromString(s string) (res LinkType) {
 	var l /*@@@*/ LinkType
 	tmp := []byte(s)
-	//@ fold sl.Bytes(tmp, 0, len(tmp))
+
 	if err := l.UnmarshalText(tmp); err != nil {
 		return Unset
 	}
@@ -71,26 +71,26 @@ func LinkTypeFromString(s string) (res LinkType) {
 }
 
 // @ ensures (l == Core || l == Parent || l == Child || l == Peer) == (err == nil)
-// @ ensures err == nil ==> sl.Bytes(res, 0, len(res))
+// @ ensures err == nil ==> 0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])
 // @ ensures err != nil ==> err.ErrorMem()
 // @ decreases
 func (l LinkType) MarshalText() (res []byte, err error) {
 	switch l {
 	case Core:
 		tmp := []byte("core")
-		//@ fold sl.Bytes(tmp, 0, len(tmp))
+
 		return tmp, nil
 	case Parent:
 		tmp := []byte("parent")
-		//@ fold sl.Bytes(tmp, 0, len(tmp))
+
 		return tmp, nil
 	case Child:
 		tmp := []byte("child")
-		//@ fold sl.Bytes(tmp, 0, len(tmp))
+
 		return tmp, nil
 	case Peer:
 		tmp := []byte("peer")
-		//@ fold sl.Bytes(tmp, 0, len(tmp))
+
 		return tmp, nil
 	default:
 		return nil, serrors.New("invalid link type")
@@ -98,12 +98,12 @@ func (l LinkType) MarshalText() (res []byte, err error) {
 }
 
 // @ preserves acc(l)
-// @ preserves acc(sl.Bytes(data, 0, len(data)), R15)
+// @ preserves 0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R15)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (l *LinkType) UnmarshalText(data []byte) (err error) {
-	//@ unfold acc(sl.Bytes(data, 0, len(data)), R15)
-	//@ ghost defer fold acc(sl.Bytes(data, 0, len(data)), R15)
+
+
 	switch strings.ToLower(string(data)) {
 	case "core":
 		*l = Core

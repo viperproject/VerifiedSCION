@@ -32,6 +32,6 @@ pred (b *bfdSend) Mem() {
 	acc(b.scn) &&
 	acc(b.ohp) &&
 	b.mac.Mem() &&
-	sl.Bytes(b.macBuffer, 0, path.MACBufferSize) &&
+	0 <= 0 && 0 <= path.MACBufferSize && path.MACBufferSize <= cap(b.macBuffer) && forall i int :: { &b.macBuffer[i] } 0 <= i && i < path.MACBufferSize ==> acc(&b.macBuffer[i]) &&
 	b.buffer.Mem()
 }

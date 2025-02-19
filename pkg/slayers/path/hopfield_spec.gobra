@@ -43,13 +43,13 @@ pure func IO_ifsToIfs(ifs option[io.IO_ifs]) uint16 {
 ghost
 requires 0 <= start && start <= middle
 requires middle + HopLen <= end && end <= len(raw)
-requires sl.Bytes(raw, start, end)
+requires 0 <= start && start <= end && end <= cap(raw) && forall i int :: { &raw[i] } start <= i && i < end ==> acc(&raw[i])
 decreases
 pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 	return let _ := sl.AssertSliceOverlap(raw, middle+2, middle+4)     in
 		let _ := sl.AssertSliceOverlap(raw, middle+4, middle+6)        in
 		let _ := sl.AssertSliceOverlap(raw, middle+6, middle+6+MacLen) in
-		unfolding sl.Bytes(raw, start, end)                            in
+		 
 		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4])   in
 		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6])   in
 		let op_inif2 := ifsToIO_ifs(inif2)                             in
@@ -68,14 +68,14 @@ ghost
 requires  0 <= start && start <= offset
 requires  offset + HopLen <= end
 requires  end <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
-preserves acc(sl.Bytes(raw[start:end], 0, len(raw[start:end])), R55)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R55)
+preserves 0 <= 0 && 0 <= len(raw[start:end]) && len(raw[start:end]) <= cap(raw[start:end]) && forall i int :: { &raw[start:end][i] } 0 <= i && i < len(raw[start:end]) ==> acc(&raw[start:end][i], R55)
 ensures   BytesToIO_HF(raw, 0, offset, len(raw)) ==
 	BytesToIO_HF(raw[start:end], 0, offset-start, end-start)
 decreases
 func WidenBytesHopField(raw []byte, offset int, start int, end int) {
-	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
-	unfold acc(sl.Bytes(raw[start:end], 0, len(raw[start:end])), R56)
+
+
 	hfBytes1 := BytesToIO_HF(raw, 0, offset, len(raw))
 	hfBytes2 := BytesToIO_HF(raw[start:end], 0, offset-start, end-start)
 
@@ -86,8 +86,8 @@ func WidenBytesHopField(raw []byte, offset int, start int, end int) {
 	assert hfBytes1.EgIF2 == hfBytes2.EgIF2
 	sl.AssertSliceOverlap(raw[start:end], offset-start+6, offset-start+6+MacLen)
 
-	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
-	fold acc(sl.Bytes(raw[start:end], 0, len(raw[start:end])), R56)
+
+
 }
 
 // WidenBytesHopField shows the equality between the IO_HF computed
@@ -97,8 +97,8 @@ func WidenBytesHopField(raw []byte, offset int, start int, end int) {
 ghost
 requires  0 <= offset
 requires  offset+HopLen <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
-preserves acc(sl.Bytes(raw[offset:offset+HopLen], 0, HopLen), R55)
+preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R55)
+preserves 0 <= 0 && 0 <= HopLen && HopLen <= cap(raw[offset:offset+HopLen]) && forall i int :: { &raw[offset:offset+HopLen][i] } 0 <= i && i < HopLen ==> acc(&raw[offset:offset+HopLen][i], R55)
 ensures   BytesToIO_HF(raw, 0, offset, len(raw)) ==
 	BytesToIO_HF(raw[offset:offset+HopLen], 0, 0, HopLen)
 decreases

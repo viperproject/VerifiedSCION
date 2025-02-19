@@ -105,8 +105,8 @@ type Packet interface {
 
 	requires Mem()
 	// (VerifiedSCION) not sure if we need this
-	// ensures sl.Bytes(res, 0, len(res))
-	// ensures sl.Bytes(res, 0, len(res)) --* Mem()
+	// ensures 0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])
+	// ensures 0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]) --* Mem()
 	decreases
 	Data() (res []byte)
 	

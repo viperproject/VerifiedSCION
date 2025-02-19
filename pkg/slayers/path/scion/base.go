@@ -79,7 +79,7 @@ type Base struct {
 }
 
 // @ requires  s.NonInitMem()
-// @ preserves acc(sl.Bytes(data, 0, len(data)), R50)
+// @ preserves 0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R50)
 // @ ensures   r != nil ==>
 // @ 	s.NonInitMem() && r.ErrorMem()
 // @ ensures   r == nil ==>
@@ -252,7 +252,7 @@ type MetaHdr struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
 // @ preserves acc(m)
-// @ preserves acc(sl.Bytes(raw, 0, len(raw)), R50)
+// @ preserves 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
 // @ ensures   e == nil ==> m.InBounds()
 // @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
@@ -263,7 +263,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
 		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
-	//@ unfold acc(sl.Bytes(raw, 0, len(raw)), R50)
+
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
@@ -275,7 +275,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	//@ bit.And3fAtMost64(uint8(line>>12))
 	//@ bit.And3fAtMost64(uint8(line>>6))
 	//@ bit.And3fAtMost64(uint8(line))
-	//@ fold acc(sl.Bytes(raw, 0, len(raw)), R50)
+
 	return nil
 }
 
@@ -283,7 +283,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 // scion.MetaLen.
 // @ requires  len(b) >= MetaLen
 // @ preserves acc(m, R50)
-// @ preserves sl.Bytes(b, 0, len(b))
+// @ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ ensures   e == nil
 // @ ensures   m.SerializeToSpec(b)
 // @ decreases
@@ -296,9 +296,9 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	line |= uint32(m.SegLen[0]&0x3F) << 12
 	line |= uint32(m.SegLen[1]&0x3F) << 6
 	line |= uint32(m.SegLen[2] & 0x3F)
-	//@ unfold acc(sl.Bytes(b, 0, len(b)))
+
 	binary.BigEndian.PutUint32(b, line)
-	//@ fold acc(sl.Bytes(b, 0, len(b)))
+
 	return nil
 }
 

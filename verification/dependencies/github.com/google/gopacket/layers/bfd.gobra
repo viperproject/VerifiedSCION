@@ -132,7 +132,7 @@ type BFDAuthHeader struct {
 }
 
 pred (b *BFDAuthHeader) Mem() {
-	acc(b) && sl.Bytes(b.Data, 0, len(b.Data))
+	acc(b) && 0 <= 0 && 0 <= len(b.Data) && len(b.Data) <= cap(b.Data) && forall i int :: { &b.Data[i] } 0 <= i && i < len(b.Data) ==> acc(&b.Data[i])
 }
 
 preserves acc(h, 1/10000)
@@ -185,7 +185,7 @@ pure func (d *BFD) LayerType() gopacket.LayerType
 
 requires  d.NonInitMem()
 preserves df.Mem()
-preserves sl.Bytes(data, 0, len(data))
+preserves 0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i])
 ensures   err == nil ==> d.Mem(data)
 ensures   err != nil ==> err.ErrorMem() && d.NonInitMem()
 decreases
@@ -193,9 +193,9 @@ func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err erro
 
 requires d.Mem(ub)
 requires b != nil && b.Mem()
-requires sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+requires 0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &b.UBuf()[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&b.UBuf()[i])
 ensures  err == nil ==> d.Mem(ub) && b.Mem()
-ensures  err == nil ==> sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+ensures  err == nil ==> 0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &b.UBuf()[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&b.UBuf()[i])
 ensures  err != nil ==> err.ErrorMem()
 decreases
 func (d *BFD) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions, ghost ub []byte) (err error)

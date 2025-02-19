@@ -90,7 +90,7 @@ type Decoder interface {
 	pred Mem()
 
 	requires acc(LayerTypesMem(), _)
-	requires sl.Bytes(b, 0, len(b))
+	requires 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 	preserves Mem()
 	preserves p.Mem()
 	decreases

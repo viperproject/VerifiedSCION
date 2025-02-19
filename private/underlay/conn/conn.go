@@ -45,7 +45,7 @@ type Conn interface {
 	//@ pred Mem()
 	// (VerifiedSCION) Reads a message to b. Returns the number of read bytes.
 	//@ requires  acc(Mem(), _)
-	//@ preserves sl.Bytes(b, 0, len(b))
+	//@ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err == nil ==> acc(addr.Mem(), _)
 	//@ ensures   err != nil ==> err.ErrorMem()
@@ -56,13 +56,13 @@ type Conn interface {
 	//@ ensures   err != nil ==> err.ErrorMem()
 	ReadBatch(m Messages) (n int, err error)
 	//@ requires  acc(Mem(), _)
-	//@ preserves acc(sl.Bytes(b, 0, len(b)), R10)
+	//@ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	Write(b []byte) (n int, err error)
 	//@ requires  acc(u.Mem(), _)
 	//@ requires  acc(Mem(), _)
-	//@ preserves acc(sl.Bytes(b, 0, len(b)), R10)
+	//@ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, u *net.UDPAddr) (n int, err error)
@@ -128,7 +128,7 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	// @ assert remote != nil ==> a == remote
 	// @ assert remote == nil ==> a == listen
 	// @ unfold acc(a.Mem(), R15)
-	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15)
+
 	// @ assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], R15)
 	if a.IP.To4( /*@ false @*/ ) != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
@@ -393,7 +393,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 }
 
 // @ preserves acc(c.Mem(), _)
-// @ preserves sl.Bytes(b, 0, len(b))
+// @ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err == nil ==> acc(addr.Mem(), _)
@@ -404,7 +404,7 @@ func (c *connUDPBase) ReadFrom(b []byte /*@, ghost underlyingConn *net.UDPConn @
 }
 
 // @ preserves acc(c.Mem(), _)
-// @ preserves acc(sl.Bytes(b, 0, len(b)), R15)
+// @ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R15)
 // @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err != nil ==> err.ErrorMem()
@@ -416,7 +416,7 @@ func (c *connUDPBase) Write(b []byte /*@, ghost underlyingConn *net.UDPConn @*/)
 // @ requires  acc(dst.Mem(), _)
 // @ preserves acc(c.Mem(), _)
 // @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
-// @ preserves acc(sl.Bytes(b, 0, len(b)), R15)
+// @ preserves 0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R15)
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
@@ -473,8 +473,8 @@ func NewReadMessages(n int) (res Messages) {
 	for i := range m /*@ with i0 @*/ {
 		// Allocate a single-element, to avoid allocations when setting the buffer.
 		m[i].Buffers = make([][]byte, 1)
-		//@ fold sl.Bytes(m[i].Buffers[0], 0, len(m[i].Buffers[0]))
-		//@ fold sl.Bytes(m[i].OOB, 0, len(m[i].OOB))
+
+
 		//@ fold m[i].Mem()
 	}
 	return m

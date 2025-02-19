@@ -226,7 +226,7 @@ func (s *EndToEndExtnSkipper) DowngradePerm(ghost ub []byte) {
 pred (o *HopByHopOption) Mem(_ int) {
 	// permissions to the elements of OptData will be stored
 	// together with the underlying, not in the option itself
-	acc(o) // && sl.Bytes(o.OptData, 0, len(o.OptData))
+	acc(o) // && 0 <= 0 && 0 <= len(o.OptData) && len(o.OptData) <= cap(o.OptData) && forall i int :: { &o.OptData[i] } 0 <= i && i < len(o.OptData) ==> acc(&o.OptData[i])
 }
 
 // TODO: maybe add the underlying slice as a parameter to be able to
@@ -234,7 +234,7 @@ pred (o *HopByHopOption) Mem(_ int) {
 pred (e *EndToEndOption) Mem(_ int) {
 	// permissions to the elements of OptData will be stored
 	// together with the underlying, not in the option itself
-	acc(e) // && sl.Bytes(e.OptData, 0, len(e.OptData))
+	acc(e) // && 0 <= 0 && 0 <= len(e.OptData) && len(e.OptData) <= cap(e.OptData) && forall i int :: { &e.OptData[i] } 0 <= i && i < len(e.OptData) ==> acc(&e.OptData[i])
 }
 
 

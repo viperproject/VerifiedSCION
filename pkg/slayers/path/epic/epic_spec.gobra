@@ -29,8 +29,8 @@ pred (p *Path) NonInitMem() {
 
 pred (p *Path) Mem(ubuf []byte) {
 	acc(&p.PktID) &&
-	acc(&p.PHVF) && sl.Bytes(p.PHVF, 0, len(p.PHVF)) &&
-	acc(&p.LHVF) && sl.Bytes(p.LHVF, 0, len(p.LHVF)) &&
+	acc(&p.PHVF) && 0 <= 0 && 0 <= len(p.PHVF) && len(p.PHVF) <= cap(p.PHVF) && forall i int :: { &p.PHVF[i] } 0 <= i && i < len(p.PHVF) ==> acc(&p.PHVF[i]) &&
+	acc(&p.LHVF) && 0 <= 0 && 0 <= len(p.LHVF) && len(p.LHVF) <= cap(p.LHVF) && forall i int :: { &p.LHVF[i] } 0 <= i && i < len(p.LHVF) ==> acc(&p.LHVF[i]) &&
 	acc(&p.ScionPath) &&
 	p.ScionPath != nil &&
 	MetadataLen <= len(ubuf) &&

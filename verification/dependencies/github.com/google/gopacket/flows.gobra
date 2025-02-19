@@ -29,13 +29,13 @@ type Flow struct {
 	src, dst   [MaxEndpointSize]byte
 }
 
-preserves acc(sl.Bytes(src, 0, len(src)), 1/10000) && acc(sl.Bytes(dst, 0, len(dst)), 1/10000)
+preserves 0 <= 0 && 0 <= len(src) && len(src) <= cap(src) && forall i int :: { &src[i] } 0 <= i && i < len(src) ==> acc(&src[i], 1/10000) && 0 <= 0 && 0 <= len(dst) && len(dst) <= cap(dst) && forall i int :: { &dst[i] } 0 <= i && i < len(dst) ==> acc(&dst[i], 1/10000)
 requires len(src) <= MaxEndpointSize && len(dst) <= MaxEndpointSize
 ensures f.slen == len(src)
 ensures f.dlen == len(dst)
-ensures unfolding acc(sl.Bytes(src, 0, len(src)), 1/10000) in
+ensures  
 	forall i int :: { &src[i] } 0 <= i && i < len(src) ==> f.src[i] == src[i]
-ensures unfolding acc(sl.Bytes(dst, 0, len(dst)), 1/10000) in
+ensures  
 	forall i int :: { &dst[i] } 0 <= i && i < len(dst) ==> f.dst[i] == dst[i]
 ensures f.typ == t
 decreases
