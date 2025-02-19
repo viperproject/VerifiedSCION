@@ -167,14 +167,11 @@ func SliceBytesIntoInfoFields(raw []byte, numInf int, segs io.SegLens, p perm) {
 	sl.Reslice_Bytes(raw, 0, MetaLen, p)
 	sl.Reslice_Bytes(raw, MetaLen, path.InfoFieldOffset(1, MetaLen), p)
 	if(numInf > 1) {
-		sl.SplitByIndex_Bytes(raw, path.InfoFieldOffset(1, MetaLen), len(raw),
-			path.InfoFieldOffset(2, MetaLen), p)
-		sl.Reslice_Bytes(raw, path.InfoFieldOffset(1, MetaLen),
-			path.InfoFieldOffset(2, MetaLen), p)
+		sl.SplitByIndex_Bytes(raw, path.InfoFieldOffset(1, MetaLen), len(raw), path.InfoFieldOffset(2, MetaLen), p)
+		sl.Reslice_Bytes(raw, path.InfoFieldOffset(1, MetaLen), path.InfoFieldOffset(2, MetaLen), p)
 	}
 	if(numInf > 2) {
-		sl.SplitByIndex_Bytes(raw, path.InfoFieldOffset(2, MetaLen), len(raw),
-			HopfieldsStartIdx(0, segs), p)
+		sl.SplitByIndex_Bytes(raw, path.InfoFieldOffset(2, MetaLen), len(raw), HopfieldsStartIdx(0, segs), p)
 		sl.Reslice_Bytes(raw, path.InfoFieldOffset(2, MetaLen), HopfieldsStartIdx(0, segs), p)
 	}
 	sl.Reslice_Bytes(raw, HopfieldsStartIdx(0, segs), len(raw), p)
@@ -197,14 +194,11 @@ func CombineBytesFromInfoFields(raw []byte, numInf int, segs io.SegLens, p perm)
 	sl.Unslice_Bytes(raw, HopfieldsStartIdx(0, segs), len(raw), p)
 	if(numInf > 2) {
 		sl.Unslice_Bytes(raw, path.InfoFieldOffset(2, MetaLen), HopfieldsStartIdx(0, segs), p)
-		sl.CombineAtIndex_Bytes(raw, path.InfoFieldOffset(2, MetaLen), len(raw),
-			HopfieldsStartIdx(0, segs), p)
+		sl.CombineAtIndex_Bytes(raw, path.InfoFieldOffset(2, MetaLen), len(raw), HopfieldsStartIdx(0, segs), p)
 	}
 	if(numInf > 1) {
-		sl.Unslice_Bytes(raw, path.InfoFieldOffset(1, MetaLen),
-			path.InfoFieldOffset(2, MetaLen), p)
-		sl.CombineAtIndex_Bytes(raw, path.InfoFieldOffset(1, MetaLen), len(raw),
-			path.InfoFieldOffset(2, MetaLen), p)
+		sl.Unslice_Bytes(raw, path.InfoFieldOffset(1, MetaLen), path.InfoFieldOffset(2, MetaLen), p)
+		sl.CombineAtIndex_Bytes(raw, path.InfoFieldOffset(1, MetaLen), len(raw), path.InfoFieldOffset(2, MetaLen), p)
 	}
 	sl.Unslice_Bytes(raw, MetaLen, path.InfoFieldOffset(1, MetaLen), p)
 	sl.Unslice_Bytes(raw, 0, MetaLen, p)
