@@ -87,13 +87,6 @@ func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 	Unslice_Bytes(s, start, end, p)
 }
 
-ghost
-ensures 0 <= 0 && 0 <= 0 && 0 <= cap(nil) && forall i int :: { &nil[i] } 0 <= i && i < 0 ==> acc(&nil[i])
-decreases
-func NilAcc_Bytes() {
-
-}
-
 type Unit struct{}
 
 ghost
