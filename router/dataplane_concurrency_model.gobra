@@ -21,8 +21,6 @@ import (
 	io "verification/io"
 )
 
-// Never use `==` for comparisons! Because this is a ghost structure, only the ghost comparison (`===`)
-// is meaningful.
 ghost type SharedArg ghost struct {
 	Place gpointer[io.Place] // Existential for the current place
 	State gpointer[io.IO_dp3s_state_local] // Existential for the current model state
