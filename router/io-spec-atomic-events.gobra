@@ -43,7 +43,7 @@ requires  dp.dp2_enter_guard(
 	get(ingressID),
 	oldPkt.CurrSeg.Future[1:])
 requires  dp.dp3s_forward(
-	io.IO_Packet2 {
+	io.IO_pkt2 {
 		io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
 		oldPkt.LeftSeg,
 		oldPkt.MidSeg,
@@ -116,7 +116,7 @@ requires  dp.dp2_xover_guard(
 	oldPkt.CurrSeg,
 	get(oldPkt.LeftSeg),
 	io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
-	io.IO_Packet2 {
+	io.IO_pkt2 {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
@@ -128,7 +128,7 @@ requires  dp.dp2_xover_guard(
 	dp.Asid(),
 	get(ingressID))
 requires  dp.dp3s_forward_xover(
-	io.IO_Packet2 {
+	io.IO_pkt2 {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,

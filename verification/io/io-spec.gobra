@@ -74,7 +74,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local
 			v.IO_Internal_val1_2,
 			fut) &&
 			dp.dp3s_forward(
-				IO_Packet2 {
+				IO_pkt2 {
 					traversedseg,
 					v.IO_Internal_val1_1.LeftSeg,
 					v.IO_Internal_val1_1.MidSeg,
@@ -137,7 +137,7 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_guard(s IO_dp3s_state_local
 					currseg,
 					nextseg,
 					traversedseg,
-					IO_Packet2 { nextseg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg, some(traversedseg) },
+					IO_pkt2 { nextseg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg, some(traversedseg) },
 					hf1,
 					hf2,
 					nextfut,
