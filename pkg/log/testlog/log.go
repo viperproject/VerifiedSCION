@@ -24,11 +24,6 @@ import (
 	"github.com/scionproto/scion/pkg/log"
 )
 
-// SetupGlobal sets up the global logger that writes to stderr.
-func SetupGlobal() {
-	log.Setup(log.Config{Console: log.ConsoleConfig{Level: "debug"}})
-}
-
 // NewLogger builds a new Logger that logs all messages to the given testing.TB.
 func NewLogger(t testing.TB, opts ...zaptest.LoggerOption) log.Logger {
 	return &logger{
@@ -41,23 +36,23 @@ type logger struct {
 }
 
 // New creates a logger with the given context.
-func New(ctx ...interface{}) log.Logger {
+func New(ctx ...any) log.Logger {
 	return &logger{logger: zap.L().With(convertCtx(ctx)...)}
 }
 
-func (l *logger) New(ctx ...interface{}) log.Logger {
+func (l *logger) New(ctx ...any) log.Logger {
 	return &logger{logger: l.logger.With(convertCtx(ctx)...)}
 }
 
-func (l *logger) Debug(msg string, ctx ...interface{}) {
+func (l *logger) Debug(msg string, ctx ...any) {
 	l.logger.Debug(msg, convertCtx(ctx)...)
 }
 
-func (l *logger) Info(msg string, ctx ...interface{}) {
+func (l *logger) Info(msg string, ctx ...any) {
 	l.logger.Info(msg, convertCtx(ctx)...)
 }
 
-func (l *logger) Error(msg string, ctx ...interface{}) {
+func (l *logger) Error(msg string, ctx ...any) {
 	l.logger.Error(msg, convertCtx(ctx)...)
 }
 
@@ -65,7 +60,7 @@ func (l *logger) Enabled(lvl log.Level) bool {
 	return l.logger.Core().Enabled(zapcore.Level(lvl))
 }
 
-func convertCtx(ctx []interface{}) []zap.Field {
+func convertCtx(ctx []any) []zap.Field {
 	fields := make([]zap.Field, 0, len(ctx)/2)
 	for i := 0; i+1 < len(ctx); i += 2 {
 		fields = append(fields, zap.Any(ctx[i].(string), ctx[i+1]))

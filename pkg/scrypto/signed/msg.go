@@ -18,15 +18,12 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"encoding/asn1"
 	"errors"
 	"fmt"
-	"math/big"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	cryptopb "github.com/scionproto/scion/pkg/proto/crypto"
@@ -68,13 +65,9 @@ func Sign(hdr Header, body []byte, signer crypto.Signer,
 	if err := checkPubKeyAlgo(hdr.SignatureAlgorithm, signer.Public()); err != nil {
 		return nil, err
 	}
-	var ts *timestamp.Timestamp
+	var ts *timestamppb.Timestamp
 	if !hdr.Timestamp.IsZero() {
-		var err error
-		ts, err = ptypes.TimestampProto(hdr.Timestamp)
-		if err != nil {
-			return nil, serrors.WrapStr("converting timestamp", err)
-		}
+		ts = timestamppb.New(hdr.Timestamp)
 	}
 
 	inputHdr := &cryptopb.Header{
@@ -86,7 +79,7 @@ func Sign(hdr Header, body []byte, signer crypto.Signer,
 	}
 	rawHdr, err := proto.Marshal(inputHdr)
 	if err != nil {
-		return nil, serrors.WrapStr("packing header", err)
+		return nil, serrors.Wrap("packing header", err)
 	}
 	hdrAndBody := &cryptopb.HeaderAndBodyInternal{
 		Header: rawHdr,
@@ -94,7 +87,7 @@ func Sign(hdr Header, body []byte, signer crypto.Signer,
 	}
 	rawHdrAndBody, err := proto.Marshal(hdrAndBody)
 	if err != nil {
-		return nil, serrors.WrapStr("packing signature input", err)
+		return nil, serrors.Wrap("packing signature input", err)
 	}
 	input, algo := computeSignatureInput(hdr.SignatureAlgorithm, rawHdrAndBody, associatedData...)
 	signature, err := signer.Sign(rand.Reader, input, algo)
@@ -116,7 +109,7 @@ func Verify(signed *cryptopb.SignedMessage, key crypto.PublicKey,
 	}
 	hdr, body, err := extractHeaderAndBody(signed)
 	if err != nil {
-		return nil, serrors.WrapStr("extracting header", err)
+		return nil, serrors.Wrap("extracting header", err)
 	}
 	if l := associatedDataLen(associatedData...); l != hdr.AssociatedDataLength {
 		return nil, serrors.New("header specifies a different associated data length",
@@ -131,21 +124,7 @@ func Verify(signed *cryptopb.SignedMessage, key crypto.PublicKey,
 
 	switch pub := key.(type) {
 	case *ecdsa.PublicKey:
-		type ecdsaSignature struct {
-			R, S *big.Int
-		}
-
-		// XXX(roosd): Copied from x509/x509.go:checkSignature.
-		var sig ecdsaSignature
-		if rest, err := asn1.Unmarshal(signed.Signature, &sig); err != nil {
-			return nil, err
-		} else if len(rest) != 0 {
-			return nil, serrors.New("trailing data after ECDSA signature")
-		}
-		if sig.R.Sign() <= 0 || sig.S.Sign() <= 0 {
-			return nil, errors.New("ECDSA signature contained zero or negative values")
-		}
-		if !ecdsa.Verify(pub, input, sig.R, sig.S) {
+		if !ecdsa.VerifyASN1(pub, input, signed.Signature) {
 			return nil, errors.New("ECDSA verification failure")
 		}
 	default:
@@ -236,10 +215,7 @@ func extractHeaderAndBody(signed *cryptopb.SignedMessage) (*Header, []byte, erro
 	}
 	var ts time.Time
 	if hdr.Timestamp != nil {
-		var err error
-		if ts, err = ptypes.Timestamp(hdr.Timestamp); err != nil {
-			return nil, nil, err
-		}
+		ts = hdr.Timestamp.AsTime()
 	}
 	return &Header{
 		SignatureAlgorithm:   signatureAlgorithmFromPB(hdr.SignatureAlgorithm),

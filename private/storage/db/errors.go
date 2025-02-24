@@ -32,27 +32,27 @@ var (
 	ErrTx = serrors.New("db: transaction error")
 )
 
-func NewTxError(msg common.ErrMsg, err error, logCtx ...interface{}) error {
-	return serrors.Wrap(ErrTx, err,
-		append([]interface{}{"detailMsg", msg}, logCtx...)...)
+func NewTxError(msg common.ErrMsg, err error, logCtx ...any) error {
+	return serrors.JoinNoStack(ErrTx, err,
+		append([]any{"detailMsg", msg}, logCtx...)...)
 }
 
-func NewInputDataError(msg common.ErrMsg, err error, logCtx ...interface{}) error {
-	return serrors.Wrap(ErrInvalidInputData, err,
-		append([]interface{}{"detailMsg", msg}, logCtx...)...)
+func NewInputDataError(msg common.ErrMsg, err error, logCtx ...any) error {
+	return serrors.JoinNoStack(ErrInvalidInputData, err,
+		append([]any{"detailMsg", msg}, logCtx...)...)
 }
 
-func NewDataError(msg common.ErrMsg, err error, logCtx ...interface{}) error {
-	return serrors.Wrap(ErrDataInvalid, err,
-		append([]interface{}{"detailMsg", msg}, logCtx...)...)
+func NewDataError(msg common.ErrMsg, err error, logCtx ...any) error {
+	return serrors.JoinNoStack(ErrDataInvalid, err,
+		append([]any{"detailMsg", msg}, logCtx...)...)
 }
 
-func NewReadError(msg common.ErrMsg, err error, logCtx ...interface{}) error {
-	return serrors.Wrap(ErrReadFailed, err,
-		append([]interface{}{"detailMsg", msg}, logCtx...)...)
+func NewReadError(msg common.ErrMsg, err error, logCtx ...any) error {
+	return serrors.JoinNoStack(ErrReadFailed, err,
+		append([]any{"detailMsg", msg}, logCtx...)...)
 }
 
-func NewWriteError(msg common.ErrMsg, err error, logCtx ...interface{}) error {
-	return serrors.Wrap(ErrWriteFailed, err,
-		append([]interface{}{"detailMsg", msg}, logCtx...)...)
+func NewWriteError(msg common.ErrMsg, err error, logCtx ...any) error {
+	return serrors.JoinNoStack(ErrWriteFailed, err,
+		append([]any{"detailMsg", msg}, logCtx...)...)
 }

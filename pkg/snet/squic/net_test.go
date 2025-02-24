@@ -27,10 +27,11 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/lucas-clemente/quic-go"
+	"github.com/quic-go/quic-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
 	mock_cp "github.com/scionproto/scion/pkg/proto/control_plane/mock_control_plane"
@@ -46,9 +47,12 @@ func TestAcceptLoopParallelism(t *testing.T) {
 	defer mctrl.Finish()
 
 	handler := mock_cp.NewMockTrustMaterialServiceServer(mctrl)
-	handler.EXPECT().TRC(gomock.Any(), gomock.Any()).Return(
+	handler.EXPECT().TRC( // nolint - name from published protobuf
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
 		&cppb.TRCResponse{
-			Trc: make([]byte, 500),
+			Trc: make([]byte, 500), // nolint - name from published protobuf
 		},
 		nil,
 	).AnyTimes()
@@ -75,18 +79,20 @@ func TestAcceptLoopParallelism(t *testing.T) {
 
 				dialer := connDialer(t)
 				conn, err := grpc.DialContext(ctx, "server",
-					grpc.WithInsecure(),
+					grpc.WithTransportCredentials(insecure.NewCredentials()),
 					grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 						return dialer.Dial(ctx, srvConn.LocalAddr())
 					}),
 				)
 				if err != nil {
+					t.Log(err)
 					return false
 				}
 				defer conn.Close()
 
 				client := cppb.NewTrustMaterialServiceClient(conn)
 				if _, err := client.TRC(ctx, &cppb.TRCRequest{}); err != nil {
+					t.Log(err)
 					return false
 				}
 				return true
@@ -111,7 +117,7 @@ func TestGRPCQUIC(t *testing.T) {
 	handler := mock_cp.NewMockTrustMaterialServiceServer(mctrl)
 	handler.EXPECT().TRC(gomock.Any(), gomock.Any()).Return(
 		&cppb.TRCResponse{
-			Trc: []byte("hello"),
+			Trc: []byte("hello"), // nolint - name from published protobuf
 		},
 		nil,
 	)
@@ -126,7 +132,7 @@ func TestGRPCQUIC(t *testing.T) {
 
 	dialer := connDialer(t)
 	conn, err := grpc.DialContext(context.Background(), "server",
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 			return dialer.Dial(ctx, srvConn.LocalAddr())
 		}),
@@ -137,7 +143,7 @@ func TestGRPCQUIC(t *testing.T) {
 	client := cppb.NewTrustMaterialServiceClient(conn)
 	rep, err := client.TRC(context.Background(), &cppb.TRCRequest{})
 	require.NoError(t, err)
-	assert.Equal(t, "hello", string(rep.Trc))
+	assert.Equal(t, "hello", string(rep.Trc)) // nolint - name from published protobuf
 }
 
 func TestEstablishConnection(t *testing.T) {
@@ -209,7 +215,7 @@ func netListener(t *testing.T) (net.Listener, *net.UDPConn) {
 
 func connDialer(t *testing.T) *squic.ConnDialer {
 	return &squic.ConnDialer{
-		Conn:      newConn(t),
+		Transport: &quic.Transport{Conn: newConn(t)},
 		TLSConfig: tlsConfig(t),
 	}
 }

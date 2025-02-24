@@ -9,12 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/deepmap/oapi-codegen/pkg/runtime"
+	"github.com/oapi-codegen/runtime"
 )
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
@@ -90,7 +89,7 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// PostAuthToken request with any body
+	// PostAuthTokenWithBody request with any body
 	PostAuthTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PostAuthToken(ctx context.Context, body PostAuthTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -98,7 +97,7 @@ type ClientInterface interface {
 	// GetHealthcheck request
 	GetHealthcheck(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PostCertificateRenewal request with any body
+	// PostCertificateRenewalWithBody request with any body
 	PostCertificateRenewalWithBody(ctx context.Context, isdNumber int, asNumber AS, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PostCertificateRenewal(ctx context.Context, isdNumber int, asNumber AS, body PostCertificateRenewalJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -328,24 +327,28 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// PostAuthToken request with any body
+	// PostAuthTokenWithBodyWithResponse request with any body
 	PostAuthTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostAuthTokenResponse, error)
 
 	PostAuthTokenWithResponse(ctx context.Context, body PostAuthTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*PostAuthTokenResponse, error)
 
-	// GetHealthcheck request
+	// GetHealthcheckWithResponse request
 	GetHealthcheckWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHealthcheckResponse, error)
 
-	// PostCertificateRenewal request with any body
+	// PostCertificateRenewalWithBodyWithResponse request with any body
 	PostCertificateRenewalWithBodyWithResponse(ctx context.Context, isdNumber int, asNumber AS, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostCertificateRenewalResponse, error)
 
 	PostCertificateRenewalWithResponse(ctx context.Context, isdNumber int, asNumber AS, body PostCertificateRenewalJSONRequestBody, reqEditors ...RequestEditorFn) (*PostCertificateRenewalResponse, error)
 }
 
 type PostAuthTokenResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *AccessToken
+	Body                      []byte
+	HTTPResponse              *http.Response
+	JSON200                   *AccessToken
+	ApplicationproblemJSON400 *N400BadRequest
+	ApplicationproblemJSON401 *N401UnauthorizedError
+	ApplicationproblemJSON500 *N500InternalServerError
+	ApplicationproblemJSON503 *N503ServiceUnavailable
 }
 
 // Status returns HTTPResponse.Status
@@ -365,9 +368,11 @@ func (r PostAuthTokenResponse) StatusCode() int {
 }
 
 type GetHealthcheckResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *HealthCheckStatus
+	Body                      []byte
+	HTTPResponse              *http.Response
+	JSON200                   *HealthCheckStatus
+	ApplicationproblemJSON500 *N500InternalServerError
+	ApplicationproblemJSON503 *N503ServiceUnavailable
 }
 
 // Status returns HTTPResponse.Status
@@ -387,9 +392,14 @@ func (r GetHealthcheckResponse) StatusCode() int {
 }
 
 type PostCertificateRenewalResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *RenewalResponse
+	Body                      []byte
+	HTTPResponse              *http.Response
+	JSON200                   *RenewalResponse
+	ApplicationproblemJSON400 *N400BadRequest
+	ApplicationproblemJSON401 *N401UnauthorizedError
+	ApplicationproblemJSON404 *N404NotFound
+	ApplicationproblemJSON500 *N500InternalServerError
+	ApplicationproblemJSON503 *N503ServiceUnavailable
 }
 
 // Status returns HTTPResponse.Status
@@ -453,7 +463,7 @@ func (c *ClientWithResponses) PostCertificateRenewalWithResponse(ctx context.Con
 
 // ParsePostAuthTokenResponse parses an HTTP response from a PostAuthTokenWithResponse call
 func ParsePostAuthTokenResponse(rsp *http.Response) (*PostAuthTokenResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -472,6 +482,34 @@ func ParsePostAuthTokenResponse(rsp *http.Response) (*PostAuthTokenResponse, err
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest N400BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest N401UnauthorizedError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest N500InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest N503ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
 	}
 
 	return response, nil
@@ -479,7 +517,7 @@ func ParsePostAuthTokenResponse(rsp *http.Response) (*PostAuthTokenResponse, err
 
 // ParseGetHealthcheckResponse parses an HTTP response from a GetHealthcheckWithResponse call
 func ParseGetHealthcheckResponse(rsp *http.Response) (*GetHealthcheckResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -498,6 +536,20 @@ func ParseGetHealthcheckResponse(rsp *http.Response) (*GetHealthcheckResponse, e
 		}
 		response.JSON200 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest N500InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest N503ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
+
 	}
 
 	return response, nil
@@ -505,7 +557,7 @@ func ParseGetHealthcheckResponse(rsp *http.Response) (*GetHealthcheckResponse, e
 
 // ParsePostCertificateRenewalResponse parses an HTTP response from a PostCertificateRenewalWithResponse call
 func ParsePostCertificateRenewalResponse(rsp *http.Response) (*PostCertificateRenewalResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
@@ -523,6 +575,41 @@ func ParsePostCertificateRenewalResponse(rsp *http.Response) (*PostCertificateRe
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest N400BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest N401UnauthorizedError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest N404NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest N500InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest N503ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON503 = &dest
 
 	}
 

@@ -17,7 +17,7 @@ package trust
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 
 	"github.com/patrickmn/go-cache"
@@ -78,7 +78,7 @@ func (i DBInspector) trcAttrs(ctx context.Context, isd addr.ISD) (map[addr.IA]At
 		Serial: scrypto.LatestVer,
 	})
 	if err != nil {
-		return nil, serrors.WrapStr("failed to load TRC from DB", err)
+		return nil, serrors.Wrap("failed to load TRC from DB", err)
 	}
 	if sTRC.IsZero() {
 		return nil, serrors.New("TRC not found")
@@ -104,13 +104,13 @@ func (i DBInspector) trcAttrs(ctx context.Context, isd addr.ISD) (map[addr.IA]At
 func rootIAs(trc cppki.TRC) ([]addr.IA, error) {
 	roots, err := trc.RootCerts()
 	if err != nil {
-		return nil, serrors.WrapStr("failed to extract root certs", err)
+		return nil, serrors.Wrap("failed to extract root certs", err)
 	}
 	rootIAs := make([]addr.IA, 0, len(roots))
 	for _, c := range roots {
 		ia, err := cppki.ExtractIA(c.Subject)
 		if err != nil {
-			return nil, serrors.WrapStr("failed to extract IA from root cert", err)
+			return nil, serrors.Wrap("failed to extract IA from root cert", err)
 		}
 		rootIAs = append(rootIAs, ia)
 	}
@@ -167,7 +167,7 @@ func (i CachingInspector) HasAttributes(ctx context.Context, ia addr.IA,
 	return hasAttributes, nil
 }
 
-func (i CachingInspector) cacheGet(key string, reqType string) (interface{}, bool) {
+func (i CachingInspector) cacheGet(key string, reqType string) (any, bool) {
 	if i.Cache == nil {
 		return nil, false
 	}
@@ -185,11 +185,11 @@ func (i CachingInspector) cacheGet(key string, reqType string) (interface{}, boo
 	return result, ok
 }
 
-func (i CachingInspector) cacheAdd(key string, value interface{}, d time.Duration) {
+func (i CachingInspector) cacheAdd(key string, value any, d time.Duration) {
 	if i.Cache == nil {
 		return
 	}
-	i.Cache.Add(key, value, d)
+	i.Cache.Add(key, value, d) //nolint:errcheck // XXX(matzf): could use Set, subtle difference
 }
 
 func (i CachingInspector) cacheExpiration() time.Duration {
@@ -197,5 +197,5 @@ func (i CachingInspector) cacheExpiration() time.Duration {
 	if dur == 0 {
 		dur = defaultCacheExpiration
 	}
-	return time.Duration(rand.Int63n(int64(dur-(dur/2))) + int64(dur/2))
+	return time.Duration(rand.Int64N(int64(dur-(dur/2))) + int64(dur/2))
 }

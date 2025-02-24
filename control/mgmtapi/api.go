@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"net/http"
 	"sort"
 	"time"
@@ -41,10 +40,12 @@ import (
 	segapi "github.com/scionproto/scion/private/mgmtapi/segments/api"
 	"github.com/scionproto/scion/private/storage"
 	beaconstorage "github.com/scionproto/scion/private/storage/beacon"
+	"github.com/scionproto/scion/private/trust"
 )
 
 type BeaconStore interface {
 	GetBeacons(context.Context, *beaconstorage.QueryParams) ([]beaconstorage.Beacon, error)
+	DeleteBeacon(ctx context.Context, idPrefix string) error
 }
 
 type Healther interface {
@@ -90,22 +91,25 @@ type Server struct {
 	Topology       http.HandlerFunc
 	TrustDB        storage.TrustDB
 	Healther       Healther
+
+	// nowProvider can be set during tests to control the current time.
+	nowProvider func() time.Time
 }
 
 // UnpackBeaconUsages extracts the Usage's bits as snake case string constants for the API.
 func UnpackBeaconUsages(u beacon.Usage) []string {
 	var names []string
 	if u&beacon.UsageUpReg != 0 {
-		names = append(names, string(BeaconUsageUpRegistration))
+		names = append(names, string(UpRegistration))
 	}
 	if u&beacon.UsageDownReg != 0 {
-		names = append(names, string(BeaconUsageDownRegistration))
+		names = append(names, string(DownRegistration))
 	}
 	if u&beacon.UsageCoreReg != 0 {
-		names = append(names, string(BeaconUsageCoreRegistration))
+		names = append(names, string(CoreRegistration))
 	}
 	if u&beacon.UsageProp != 0 {
-		names = append(names, string(BeaconUsagePropagation))
+		names = append(names, string(Propagation))
 	}
 	return names
 }
@@ -115,23 +119,23 @@ func (s *Server) GetBeacons(w http.ResponseWriter, r *http.Request, params GetBe
 	q := beaconstorage.QueryParams{}
 	var errs serrors.List
 	if params.StartIsdAs != nil {
-		if ia, err := addr.ParseIA(string(*params.StartIsdAs)); err == nil {
+		if ia, err := addr.ParseIA(*params.StartIsdAs); err == nil {
 			q.StartsAt = []addr.IA{ia}
 		} else {
-			errs = append(errs, serrors.WrapStr("parsing start_isd_as", err))
+			errs = append(errs, serrors.Wrap("parsing start_isd_as", err))
 		}
 	}
 	if params.Usages != nil {
 		var usage beacon.Usage
 		for _, usageFlag := range *params.Usages {
 			switch usageFlag {
-			case BeaconUsageCoreRegistration:
+			case CoreRegistration:
 				usage |= beacon.UsageCoreReg
-			case BeaconUsageDownRegistration:
+			case DownRegistration:
 				usage |= beacon.UsageDownReg
-			case BeaconUsagePropagation:
+			case Propagation:
 				usage |= beacon.UsageProp
-			case BeaconUsageUpRegistration:
+			case UpRegistration:
 				usage |= beacon.UsageUpReg
 			default:
 				errs = append(errs, serrors.New(
@@ -168,7 +172,7 @@ func (s *Server) GetBeacons(w http.ResponseWriter, r *http.Request, params GetBe
 	}
 
 	if err := errs.ToError(); err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusBadRequest,
 			Title:  "malformed query parameters",
@@ -178,7 +182,7 @@ func (s *Server) GetBeacons(w http.ResponseWriter, r *http.Request, params GetBe
 	}
 	results, err := s.Beacons.GetBeacons(r.Context(), &q)
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "error getting beacons",
@@ -199,22 +203,22 @@ func (s *Server) GetBeacons(w http.ResponseWriter, r *http.Request, params GetBe
 			if i != 0 {
 				hops = append(hops, Hop{
 					Interface: int(as.HopEntry.HopField.ConsIngress),
-					IsdAs:     IsdAs(as.Local.String())})
+					IsdAs:     as.Local.String(),
+				})
 			}
 			hops = append(hops, Hop{
 				Interface: int(as.HopEntry.HopField.ConsEgress),
-				IsdAs:     IsdAs(as.Local.String())})
+				IsdAs:     as.Local.String(),
+			})
 		}
 		rep = append(rep, &Beacon{
 			Usages:           usage,
-			IngressInterface: int(result.Beacon.InIfId),
-			Segment: Segment{
-				Id:          SegmentID(segapi.SegID(s)),
-				LastUpdated: result.LastUpdated,
-				Timestamp:   s.Info.Timestamp.UTC(),
-				Expiration:  s.MinExpiry().UTC(),
-				Hops:        hops,
-			},
+			IngressInterface: int(result.Beacon.InIfID),
+			Id:               segapi.SegID(s),
+			LastUpdated:      result.LastUpdated,
+			Timestamp:        s.Info.Timestamp.UTC(),
+			Expiration:       s.MinExpiry().UTC(),
+			Hops:             hops,
 		})
 	}
 	// Sort the results.
@@ -226,7 +230,7 @@ func (s *Server) GetBeacons(w http.ResponseWriter, r *http.Request, params GetBe
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	if err := enc.Encode(map[string][]*Beacon{"beacons": rep}); err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "unable to marshal response",
@@ -257,18 +261,18 @@ func sortFactory(sortParam *GetBeaconsParamsSort) (func(b []*Beacon) sort.Interf
 	switch by {
 	case "expiration_time":
 		less = func(a, b *Beacon) bool {
-			return a.Segment.Expiration.Before(b.Segment.Expiration)
+			return a.Expiration.Before(b.Expiration)
 		}
 	case "info_time":
 		less = func(a, b *Beacon) bool {
-			return a.Segment.Timestamp.Before(b.Segment.Timestamp)
+			return a.Timestamp.Before(b.Timestamp)
 		}
 	case "start_isd_as":
 		less = func(a, b *Beacon) bool {
-			if len(a.Segment.Hops) == 0 || len(b.Segment.Hops) == 0 {
-				return len(a.Segment.Hops) < len(b.Segment.Hops)
+			if len(a.Hops) == 0 || len(b.Hops) == 0 {
+				return len(a.Hops) < len(b.Hops)
 			}
-			return a.Segment.Hops[0].IsdAs < b.Segment.Hops[0].IsdAs
+			return a.Hops[0].IsdAs < b.Hops[0].IsdAs
 		}
 	case "last_updated":
 		less = func(a, b *Beacon) bool {
@@ -289,9 +293,9 @@ func sortFactory(sortParam *GetBeaconsParamsSort) (func(b []*Beacon) sort.Interf
 	}, nil
 }
 func (s *Server) GetBeacon(w http.ResponseWriter, r *http.Request, segmentId SegmentID) {
-	id, err := hex.DecodeString(string(segmentId))
+	id, err := hex.DecodeString(segmentId)
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusBadRequest,
 			Title:  "error decoding segment id",
@@ -304,7 +308,7 @@ func (s *Server) GetBeacon(w http.ResponseWriter, r *http.Request, segmentId Seg
 	}
 	results, err := s.Beacons.GetBeacons(r.Context(), &q)
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "error getting beacons",
@@ -313,7 +317,7 @@ func (s *Server) GetBeacon(w http.ResponseWriter, r *http.Request, segmentId Seg
 		return
 	}
 	if len(results) == 0 {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(fmt.Sprintf(
 				"no beacon matched provided segment ID: %s",
 				segmentId,
@@ -325,7 +329,7 @@ func (s *Server) GetBeacon(w http.ResponseWriter, r *http.Request, segmentId Seg
 		return
 	}
 	if len(results) > 1 {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(fmt.Sprintf(
 				"%d beacons matched provided segment ID: %s",
 				len(results),
@@ -347,29 +351,29 @@ func (s *Server) GetBeacon(w http.ResponseWriter, r *http.Request, segmentId Seg
 		if i != 0 {
 			hops = append(hops, Hop{
 				Interface: int(as.HopEntry.HopField.ConsIngress),
-				IsdAs:     IsdAs(as.Local.String())})
+				IsdAs:     as.Local.String(),
+			})
 		}
 		hops = append(hops, Hop{
 			Interface: int(as.HopEntry.HopField.ConsEgress),
-			IsdAs:     IsdAs(as.Local.String())})
+			IsdAs:     as.Local.String(),
+		})
 	}
 	res := map[string]Beacon{
 		"beacon": {
 			Usages:           usage,
-			IngressInterface: int(results[0].Beacon.InIfId),
-			Segment: Segment{
-				Id:          SegmentID(segapi.SegID(seg)),
-				LastUpdated: results[0].LastUpdated,
-				Timestamp:   seg.Info.Timestamp.UTC(),
-				Expiration:  seg.MinExpiry().UTC(),
-				Hops:        hops,
-			},
+			IngressInterface: int(results[0].Beacon.InIfID),
+			Id:               segapi.SegID(seg),
+			LastUpdated:      results[0].LastUpdated,
+			Timestamp:        seg.Info.Timestamp.UTC(),
+			Expiration:       seg.MinExpiry().UTC(),
+			Hops:             hops,
 		},
 	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	if err := enc.Encode(res); err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "unable to marshal response",
@@ -379,12 +383,33 @@ func (s *Server) GetBeacon(w http.ResponseWriter, r *http.Request, segmentId Seg
 	}
 }
 
+func (s *Server) DeleteBeacon(w http.ResponseWriter, r *http.Request, segmentId SegmentID) {
+	if segmentId == "" {
+		ErrorResponse(w, Problem{
+			Status: http.StatusBadRequest,
+			Title:  "segment ID is required",
+			Type:   api.StringRef(api.BadRequest),
+		})
+		return
+	}
+	if err := s.Beacons.DeleteBeacon(r.Context(), segmentId); err != nil {
+		ErrorResponse(w, Problem{
+			Detail: api.StringRef(err.Error()),
+			Status: http.StatusInternalServerError,
+			Title:  "unable to delete beacon",
+			Type:   api.StringRef(api.InternalError),
+		})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) GetBeaconBlob(w http.ResponseWriter, r *http.Request, segmentId SegmentID) {
 	w.Header().Set("Content-Type", "application/x-pem-file")
 
-	id, err := hex.DecodeString(string(segmentId))
+	id, err := hex.DecodeString(segmentId)
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusBadRequest,
 			Title:  "error decoding segment id",
@@ -397,7 +422,7 @@ func (s *Server) GetBeaconBlob(w http.ResponseWriter, r *http.Request, segmentId
 	}
 	results, err := s.Beacons.GetBeacons(r.Context(), &q)
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "error getting beacons",
@@ -406,7 +431,7 @@ func (s *Server) GetBeaconBlob(w http.ResponseWriter, r *http.Request, segmentId
 		return
 	}
 	if len(results) == 0 {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(fmt.Sprintf(
 				"no beacon matched provided segment ID: %s",
 				segmentId,
@@ -418,7 +443,7 @@ func (s *Server) GetBeaconBlob(w http.ResponseWriter, r *http.Request, segmentId
 		return
 	}
 	if len(results) > 1 {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(fmt.Sprintf(
 				"%d beacons matched provided segment ID: %s",
 				len(results),
@@ -434,7 +459,7 @@ func (s *Server) GetBeaconBlob(w http.ResponseWriter, r *http.Request, segmentId
 	segment := results[0].Beacon.Segment
 	bytes, err := proto.Marshal(seg.PathSegmentToPB(segment))
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "unable to marshal beacon",
@@ -447,7 +472,7 @@ func (s *Server) GetBeaconBlob(w http.ResponseWriter, r *http.Request, segmentId
 		Bytes: bytes,
 	}
 	if err := pem.Encode(&buf, b); err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "unable to marshal response",
@@ -455,32 +480,36 @@ func (s *Server) GetBeaconBlob(w http.ResponseWriter, r *http.Request, segmentId
 		})
 		return
 	}
-	io.Copy(w, &buf)
+	_, _ = w.Write(buf.Bytes())
 }
 
 // GetSegments gets the stored in the PathDB.
 func (s *Server) GetSegments(w http.ResponseWriter,
 	r *http.Request, params GetSegmentsParams) {
 	p := segapi.GetSegmentsParams{
-		StartIsdAs: (*segapi.IsdAs)(params.StartIsdAs),
-		EndIsdAs:   (*segapi.IsdAs)(params.EndIsdAs),
+		StartIsdAs: params.StartIsdAs,
+		EndIsdAs:   params.EndIsdAs,
 	}
 	s.SegmentsServer.GetSegments(w, r, p)
 }
 
 func (s *Server) GetSegment(w http.ResponseWriter, r *http.Request, id SegmentID) {
-	s.SegmentsServer.GetSegment(w, r, segapi.SegmentID(id))
+	s.SegmentsServer.GetSegment(w, r, id)
+}
+
+func (s *Server) DeleteSegment(w http.ResponseWriter, r *http.Request, id SegmentID) {
+	s.SegmentsServer.DeleteSegment(w, r, id)
 }
 
 func (s *Server) GetSegmentBlob(w http.ResponseWriter, r *http.Request, id SegmentID) {
-	s.SegmentsServer.GetSegmentBlob(w, r, segapi.SegmentID(id))
+	s.SegmentsServer.GetSegmentBlob(w, r, id)
 }
 
 // GetCertificates lists the certificate chains.
 func (s *Server) GetCertificates(w http.ResponseWriter,
 	r *http.Request, params GetCertificatesParams) {
 	cppkiParams := cppkiapi.GetCertificatesParams{
-		IsdAs:   (*cppkiapi.IsdAs)(params.IsdAs),
+		IsdAs:   params.IsdAs,
 		ValidAt: params.ValidAt,
 		All:     params.All,
 	}
@@ -489,19 +518,19 @@ func (s *Server) GetCertificates(w http.ResponseWriter,
 
 // GetCertificate lists the certificate chain for a given ChainID.
 func (s *Server) GetCertificate(w http.ResponseWriter, r *http.Request, chainID ChainID) {
-	s.CPPKIServer.GetCertificate(w, r, cppkiapi.ChainID(chainID))
+	s.CPPKIServer.GetCertificate(w, r, chainID)
 }
 
 // GetCertificateBlob gnerates a certificate chain blob response encoded as PEM for a given chainId.
 func (s *Server) GetCertificateBlob(w http.ResponseWriter, r *http.Request, chainID ChainID) {
-	s.CPPKIServer.GetCertificateBlob(w, r, cppkiapi.ChainID(chainID))
+	s.CPPKIServer.GetCertificateBlob(w, r, chainID)
 }
 
 // GetCa gets the CA info.
 func (s *Server) GetCa(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if s.CA.PolicyGen == nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef("This instance is not configured with CA capability"),
 			Status: http.StatusNotImplemented,
 			Title:  "Not a CA",
@@ -512,7 +541,7 @@ func (s *Server) GetCa(w http.ResponseWriter, r *http.Request) {
 
 	p, err := s.CA.PolicyGen.Generate(r.Context())
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "No active signer",
@@ -522,7 +551,7 @@ func (s *Server) GetCa(w http.ResponseWriter, r *http.Request) {
 	}
 	ia, err := cppki.ExtractIA(p.Certificate.Subject)
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "Unable to extract ISD-AS",
@@ -539,14 +568,14 @@ func (s *Server) GetCa(w http.ResponseWriter, r *http.Request) {
 			ChainLifetime: p.Validity.String(),
 		},
 		Subject: Subject{
-			IsdAs: IsdAs(ia.String()),
+			IsdAs: ia.String(),
 		},
-		SubjectKeyId: SubjectKeyID(fmt.Sprintf("% X", p.Certificate.SubjectKeyId)),
+		SubjectKeyId: fmt.Sprintf("% X", p.Certificate.SubjectKeyId),
 	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	if err := enc.Encode(rep); err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "unable to marshal response",
@@ -557,22 +586,26 @@ func (s *Server) GetCa(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetTrcs gets the trcs specified by it's params.
-func (s *Server) GetTrcs(w http.ResponseWriter, r *http.Request, params GetTrcsParams) {
-	cppkiParams := cppkiapi.GetTrcsParams{
+func (s *Server) GetTrcs(
+	w http.ResponseWriter,
+	r *http.Request,
+	params GetTrcsParams, // nolint - name from published API
+) {
+	cppkiParams := cppkiapi.GetTrcsParams{ // nolint - name from published API
 		Isd: params.Isd,
 		All: params.All,
 	}
-	s.CPPKIServer.GetTrcs(w, r, cppkiParams)
+	s.CPPKIServer.GetTrcs(w, r, cppkiParams) // nolint - name from published API
 }
 
 // GetTrc gets the trc specified by it's isd base and serial.
 func (s *Server) GetTrc(w http.ResponseWriter, r *http.Request, isd int, base int, serial int) {
-	s.CPPKIServer.GetTrc(w, r, isd, base, serial)
+	s.CPPKIServer.GetTrc(w, r, isd, base, serial) // nolint - name from published API
 }
 
 // GetTrcBlob gets the trc encoded pem blob.
 func (s *Server) GetTrcBlob(w http.ResponseWriter, r *http.Request, isd int, base int, serial int) {
-	s.CPPKIServer.GetTrcBlob(w, r, isd, base, serial)
+	s.CPPKIServer.GetTrcBlob(w, r, isd, base, serial) // nolint - name from published API
 }
 
 // GetConfig is an indirection to the http handler.
@@ -598,9 +631,9 @@ func (s *Server) SetLogLevel(w http.ResponseWriter, r *http.Request) {
 // GetSigner generates the singer response content.
 func (s *Server) GetSigner(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	p, err := s.Signer.SignerGen.Generate(r.Context())
+	signers, err := s.Signer.SignerGen.Generate(r.Context())
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "Unable to get signer",
@@ -608,29 +641,43 @@ func (s *Server) GetSigner(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	now := s.now()
+	p, err := trust.LastExpiring(signers, cppki.Validity{
+		NotBefore: now,
+		NotAfter:  now,
+	})
+	if err != nil {
+		ErrorResponse(w, Problem{
+			Detail: api.StringRef(err.Error()),
+			Status: http.StatusInternalServerError,
+			Title:  "No signer currently valid",
+			Type:   api.StringRef(api.InternalError),
+		})
+		return
+	}
 	rep := Signer{
 		AsCertificate: Certificate{
 			DistinguishedName: p.Subject.String(),
-			IsdAs:             IsdAs(p.IA.String()),
+			IsdAs:             p.IA.String(),
 			SubjectKeyAlgo:    p.Algorithm.String(),
-			SubjectKeyId:      SubjectKeyID(fmt.Sprintf("% X", p.SubjectKeyID)),
+			SubjectKeyId:      fmt.Sprintf("% X", p.SubjectKeyID),
 			Validity: Validity{
 				NotAfter:  p.ChainValidity.NotAfter,
 				NotBefore: p.ChainValidity.NotBefore,
 			},
 		},
 		Expiration: p.Expiration,
-		TrcId: TRCID{
+		TrcId: TRCID{ // nolint - name from published API
 			BaseNumber:   int(p.TRCID.Base),
 			Isd:          int(p.TRCID.ISD),
 			SerialNumber: int(p.TRCID.Serial),
 		},
-		TrcInGracePeriod: p.InGrace,
+		TrcInGracePeriod: p.InGrace, // nolint - name from published API
 	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	if err := enc.Encode(rep); err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "unable to marshal response",
@@ -642,9 +689,9 @@ func (s *Server) GetSigner(w http.ResponseWriter, r *http.Request) {
 
 // GetSignerChain generates a certificate chain blob response encoded as PEM.
 func (s *Server) GetSignerChain(w http.ResponseWriter, r *http.Request) {
-	p, err := s.Signer.SignerGen.Generate(r.Context())
+	signers, err := s.Signer.SignerGen.Generate(r.Context())
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "unable to get signer",
@@ -652,9 +699,23 @@ func (s *Server) GetSignerChain(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	now := s.now()
+	p, err := trust.LastExpiring(signers, cppki.Validity{
+		NotBefore: now,
+		NotAfter:  now,
+	})
+	if err != nil {
+		ErrorResponse(w, Problem{
+			Detail: api.StringRef(err.Error()),
+			Status: http.StatusInternalServerError,
+			Title:  "no signer currently valid",
+			Type:   api.StringRef(api.InternalError),
+		})
+		return
+	}
 	var buf bytes.Buffer
 	if len(p.Chain) == 0 {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Status: http.StatusInternalServerError,
 			Title:  "no certificates available",
 			Type:   api.StringRef(api.InternalError),
@@ -663,7 +724,7 @@ func (s *Server) GetSignerChain(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, cert := range p.Chain {
 		if err := pem.Encode(&buf, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw}); err != nil {
-			Error(w, Problem{
+			ErrorResponse(w, Problem{
 				Detail: api.StringRef(err.Error()),
 				Status: http.StatusInternalServerError,
 				Title:  "unable to marshal response",
@@ -672,7 +733,7 @@ func (s *Server) GetSignerChain(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	io.Copy(w, &buf)
+	_, _ = w.Write(buf.Bytes())
 }
 
 // GetTopology is an indirection to the http handler.
@@ -686,52 +747,44 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 
 	signerHealth := s.Healther.GetSignerHealth(r.Context())
 	signerCheck := Check{
-		Status: StatusPassing,
+		Status: Passing,
 		Name:   "valid signer available",
 	}
 	switch {
 	case signerHealth.SignerMissing:
-		signerCheck.Status = StatusFailing
+		signerCheck.Status = Failing
 		if signerHealth.SignerMissingDetail != "" {
 			signerCheck.Detail = api.StringRef(signerHealth.SignerMissingDetail)
 		}
 	case time.Until(signerHealth.Expiration) <= 0:
-		signerCheck.Status = StatusFailing
+		signerCheck.Status = Failing
 		signerCheck.Detail = api.StringRef("signer certificate has expired")
 		signerCheck.Data = CheckData{
-			AdditionalProperties: map[string]interface{}{
-				"expires_at": signerHealth.Expiration.Format(time.RFC3339),
-			},
+			"expires_at": signerHealth.Expiration.Format(time.RFC3339),
 		}
 	case signerHealth.InGrace:
-		signerCheck.Status = StatusDegraded
+		signerCheck.Status = Degraded
 		signerCheck.Data = CheckData{
-			AdditionalProperties: map[string]interface{}{
-				"expires_at": signerHealth.Expiration.Format(time.RFC3339),
-				"in_grace":   true,
-			},
+			"expires_at": signerHealth.Expiration.Format(time.RFC3339),
+			"in_grace":   true,
 		}
 		signerCheck.Detail = api.StringRef(`signer certificate is authenticated
 		by TRC in grace period`)
 	case time.Until(signerHealth.Expiration) < 6*time.Hour:
-		signerCheck.Status = StatusDegraded
+		signerCheck.Status = Degraded
 		signerCheck.Data = CheckData{
-			AdditionalProperties: map[string]interface{}{
-				"expires_at": signerHealth.Expiration.Format(time.RFC3339),
-			},
+			"expires_at": signerHealth.Expiration.Format(time.RFC3339),
 		}
 		signerCheck.Detail = api.StringRef("signer certificate is close to expiration")
 	default:
 		signerCheck.Data = CheckData{
-			AdditionalProperties: map[string]interface{}{
-				"expires_at": signerHealth.Expiration.Format(time.RFC3339),
-			},
+			"expires_at": signerHealth.Expiration.Format(time.RFC3339),
 		}
 	}
 	checks = append(checks, signerCheck)
 
 	trcCheck := Check{
-		Status: StatusFailing,
+		Status: Failing,
 		Name:   "TRC for local ISD available",
 	}
 	trcHealthData := s.Healther.GetTRCHealth(r.Context())
@@ -739,29 +792,25 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 		trcCheck.Detail = api.StringRef(trcHealthData.TRCNotFoundDetail)
 	}
 	if !trcHealthData.TRCNotFound {
-		trcCheck.Status = StatusPassing
+		trcCheck.Status = Passing
 		trcCheck.Data = CheckData{
-			AdditionalProperties: map[string]interface{}{
-				"base_number":   trcHealthData.TRCID.Base,
-				"serial_number": trcHealthData.TRCID.Serial,
-				"isd":           trcHealthData.TRCID.ISD,
-			},
+			"base_number":   trcHealthData.TRCID.Base,
+			"serial_number": trcHealthData.TRCID.Serial,
+			"isd":           trcHealthData.TRCID.ISD,
 		}
 	}
 	checks = append(checks, trcCheck)
 
 	if status, ok := s.Healther.GetCAHealth(r.Context()); ok {
 		caCheck := Check{
-			Status: StatusDegraded,
+			Status: Degraded,
 			Name:   "CPPKI CA Connection",
 		}
 		if status == Available {
-			caCheck.Status = StatusPassing
+			caCheck.Status = Passing
 		}
 		caCheck.Data = CheckData{
-			AdditionalProperties: map[string]interface{}{
-				"status": status,
-			},
+			"status": status,
 		}
 		checks = append(checks, caCheck)
 	}
@@ -782,7 +831,7 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	if err := enc.Encode(rep); err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "unable to marshal response",
@@ -792,12 +841,19 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) now() time.Time {
+	if s.nowProvider != nil {
+		return s.nowProvider()
+	}
+	return time.Now()
+}
+
 // Error creates an detailed error response.
-func Error(w http.ResponseWriter, p Problem) {
+func ErrorResponse(w http.ResponseWriter, p Problem) {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(p.Status)
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	// no point in catching error here, there is nothing we can do about it anymore.
-	enc.Encode(p)
+	_ = enc.Encode(p)
 }

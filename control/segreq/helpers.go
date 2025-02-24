@@ -16,7 +16,7 @@ package segreq
 
 import (
 	"context"
-	"math/rand"
+	"math/rand/v2"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
@@ -30,7 +30,7 @@ import (
 
 // Pather computes the remote address with a path based on the provided segment.
 type Pather interface {
-	GetPath(svc addr.HostSVC, ps *seg.PathSegment) (*snet.SVCAddr, error)
+	GetPath(svc addr.SVC, ps *seg.PathSegment) (*snet.SVCAddr, error)
 }
 
 // CoreChecker checks whether a given ia is core.
@@ -66,12 +66,12 @@ func (s *SegSelector) SelectSeg(ctx context.Context,
 		return revcache.NoRevokedHopIntf(ctx, s.RevCache, ps)
 	})
 	if err != nil {
-		return nil, serrors.WrapStr("failed to filter segments", err)
+		return nil, serrors.Wrap("failed to filter segments", err)
 	}
 	if len(segs) < 1 {
 		return nil, serrors.New("no segments found")
 	}
-	seg := segs[rand.Intn(len(segs))]
+	seg := segs[rand.IntN(len(segs))]
 
 	svcaddr, err := s.Pather.GetPath(addr.SvcCS, seg)
 	// odd interface, builds address not path. Use GetPath to convert to snet.Path

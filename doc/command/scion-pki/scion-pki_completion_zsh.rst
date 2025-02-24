@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion-pki_completion_zsh:
 
 scion-pki completion zsh
@@ -16,6 +18,10 @@ to enable it.  You can execute the following once:
 
 	echo "autoload -U compinit; compinit" >> ~/.zshrc
 
+To load completions in your current shell session:
+
+	source <(scion-pki completion zsh)
+
 To load completions for every new session, execute once:
 
 #### Linux:
@@ -24,7 +30,7 @@ To load completions for every new session, execute once:
 
 #### macOS:
 
-	scion-pki completion zsh > /usr/local/share/zsh/site-functions/_scion-pki
+	scion-pki completion zsh > $(brew --prefix)/share/zsh/site-functions/_scion-pki
 
 You will need to start a new shell for this setup to take effect.
 
@@ -44,5 +50,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion-pki completion <scion-pki_completion.html>`_ 	 - Generate the autocompletion script for the specified shell
+* :ref:`scion-pki completion <scion-pki_completion>` 	 - Generate the autocompletion script for the specified shell
 

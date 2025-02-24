@@ -15,10 +15,9 @@
 package ifstate
 
 import (
+	"net/netip"
 	"sync"
 	"time"
-
-	"inet.af/netaddr"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/private/topology"
@@ -32,7 +31,7 @@ type InterfaceInfo struct {
 	LinkType topology.LinkType
 	// InternalAddr is the AS-internal address of the router that owns this
 	// interface.
-	InternalAddr netaddr.IPPort
+	InternalAddr netip.AddrPort
 	// RemoteID is the remote interface ID.
 	RemoteID uint16
 	// MTU is the SCION MTU supported on this interface.
@@ -87,12 +86,12 @@ func (intfs *Interfaces) Update(ifInfomap map[uint16]InterfaceInfo) {
 	intfs.mu.Lock()
 	defer intfs.mu.Unlock()
 	m := make(map[uint16]*Interface, len(intfs.intfs))
-	for ifid, info := range ifInfomap {
-		if intf, ok := intfs.intfs[ifid]; ok {
+	for ifID, info := range ifInfomap {
+		if intf, ok := intfs.intfs[ifID]; ok {
 			intf.updateTopoInfo(info)
-			m[ifid] = intf
+			m[ifID] = intf
 		} else {
-			m[ifid] = &Interface{
+			m[ifID] = &Interface{
 				topoInfo: info,
 				cfg:      intfs.cfg,
 			}
@@ -129,17 +128,17 @@ func (intfs *Interfaces) All() map[uint16]*Interface {
 	intfs.mu.RLock()
 	defer intfs.mu.RUnlock()
 	res := make(map[uint16]*Interface, len(intfs.intfs))
-	for ifid, intf := range intfs.intfs {
-		res[ifid] = intf
+	for ifID, intf := range intfs.intfs {
+		res[ifID] = intf
 	}
 	return res
 }
 
 // Get returns the interface for the specified id, or nil if not present.
-func (intfs *Interfaces) Get(ifid uint16) *Interface {
+func (intfs *Interfaces) Get(ifID uint16) *Interface {
 	intfs.mu.RLock()
 	defer intfs.mu.RUnlock()
-	return intfs.intfs[ifid]
+	return intfs.intfs[ifID]
 }
 
 // Interface keeps track of the interface state.

@@ -21,7 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"os"
 	"path/filepath"
@@ -35,7 +35,6 @@ import (
 	"github.com/scionproto/scion/pkg/log"
 	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/private/serrors"
-	"github.com/scionproto/scion/pkg/private/util"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/private/topology"
 )
@@ -55,8 +54,8 @@ const (
 )
 
 var (
-	// ASList exposes the loaded ASList.
-	ASList *util.ASList
+	// LoadedASList exposes the ASList loaded during Init
+	LoadedASList *ASList
 )
 
 type iaArgs []addr.IA
@@ -156,15 +155,15 @@ func validateFlags() error {
 		return err
 	}
 	var err error
-	ASList, err = util.LoadASList(GenFile("as_list.yml"))
+	LoadedASList, err = LoadASList(GenFile("as_list.yml"))
 	if err != nil {
 		return err
 	}
 	if len(srcIAs) == 0 {
-		srcIAs = ASList.AllASes()
+		srcIAs = LoadedASList.AllASes()
 	}
 	if len(dstIAs) == 0 {
-		dstIAs = ASList.AllASes()
+		dstIAs = LoadedASList.AllASes()
 	}
 	return nil
 }
@@ -219,12 +218,9 @@ func generateAllSrcDst(hostAddr HostAddr, unique bool) []IAPair {
 
 type HostAddr func(ia addr.IA) *snet.UDPAddr
 
-// DispAddr reads the CS host Addr from the topology for the specified IA. In general this
-// could be the IP of any service (PS/BS/CS) in that IA because they share the same dispatcher in
-// the dockerized topology.
-// The host IP is used as client or server address in the tests because the testing container is
-// connecting to the dispatcher of the services.
-var DispAddr HostAddr = func(ia addr.IA) *snet.UDPAddr {
+// CSAddr reads the tester host Addr from the topology for the specified IA.
+// If the address cannot be found, the CS address is returned.
+var CSAddr HostAddr = func(ia addr.IA) *snet.UDPAddr {
 	if a := loadAddr(ia); a != nil {
 		return a
 	}
@@ -271,7 +267,7 @@ func loadAddr(ia addr.IA) *snet.UDPAddr {
 // interface kept similar to go 1.10
 func shuffle(n int, swap func(i, j int)) {
 	for i := n - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
+		j := rand.IntN(i + 1)
 		swap(i, j)
 	}
 }
@@ -283,8 +279,7 @@ type serverStop struct {
 
 func (s *serverStop) Close() error {
 	s.cancel()
-	s.wait.Wait()
-	return nil
+	return s.wait.Wait()
 }
 
 // WithTimestamp returns s with the now timestamp prefixed.
@@ -314,16 +309,16 @@ func RunClient(in Integration, pair IAPair, timeout time.Duration,
 	defer cancel()
 	c, err := in.StartClient(ctx, pair.Src, pair.Dst)
 	if err != nil {
-		return serrors.WrapStr("starting client", err)
+		return serrors.Wrap("starting client", err)
 	}
 	if err = c.Wait(); err != nil {
-		return serrors.WrapStr("waiting for completion", err)
+		return serrors.Wrap("waiting for completion", err)
 	}
 	if checkOutput == nil {
 		return nil
 	}
 	if err := checkOutput(c.Output()); err != nil {
-		return serrors.WrapStr("checking output", err)
+		return serrors.Wrap("checking output", err)
 	}
 	return nil
 }

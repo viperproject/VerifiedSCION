@@ -24,7 +24,7 @@ import (
 )
 
 func TestSVCAddrInterface(t *testing.T) {
-	var x interface{} = &snet.SVCAddr{}
+	var x any = &snet.SVCAddr{}
 	_, ok := x.(net.Addr)
 	assert.True(t, ok, "should implement net interface")
 }
@@ -36,7 +36,7 @@ func TestSVCAddrString(t *testing.T) {
 	}{
 		"nil": {
 			input: &snet.SVCAddr{},
-			want:  "0-0,UNKNOWN A (0x0000)",
+			want:  "0-0,<SVC:0x0000>",
 		},
 	}
 	for n, tc := range tests {

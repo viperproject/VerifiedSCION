@@ -37,6 +37,7 @@ import (
 	"github.com/scionproto/scion/pkg/private/xtest/graph"
 	seg "github.com/scionproto/scion/pkg/segment"
 	"github.com/scionproto/scion/private/topology"
+	"github.com/scionproto/scion/private/trust"
 )
 
 func TestPropagatorRunNonCore(t *testing.T) {
@@ -64,7 +65,7 @@ func TestPropagatorRunNonCore(t *testing.T) {
 		Extender: &beaconing.DefaultExtender{
 			IA:         topo.IA(),
 			MTU:        topo.MTU(),
-			Signer:     testSigner(t, priv, topo.IA()),
+			SignerGen:  testSignerGen{Signers: []trust.Signer{testSigner(t, priv, topo.IA())}},
 			Intfs:      intfs,
 			MAC:        macFactory,
 			MaxExpTime: func() uint8 { return beacon.DefaultMaxExpTime },
@@ -82,7 +83,7 @@ func TestPropagatorRunNonCore(t *testing.T) {
 	}
 	g := graph.NewDefaultGraph(mctrl)
 	provider.EXPECT().BeaconsToPropagate(gomock.Any()).Times(1).DoAndReturn(
-		func(_ interface{}) ([]beacon.Beacon, error) {
+		func(_ any) ([]beacon.Beacon, error) {
 			res := make([]beacon.Beacon, 0, len(beacons))
 			for _, desc := range beacons {
 				res = append(res, testBeacon(g, desc))
@@ -94,13 +95,13 @@ func TestPropagatorRunNonCore(t *testing.T) {
 	senderFactory.EXPECT().NewSender(gomock.Any(), gomock.Any(), gomock.Any(),
 		gomock.Any()).Times(1).DoAndReturn(
 
-		func(_ context.Context, _ addr.IA, egIfId uint16,
+		func(_ context.Context, _ addr.IA, egIfID uint16,
 			nextHop *net.UDPAddr) (beaconing.Sender, error) {
 
 			sender := mock_beaconing.NewMockSender(mctrl)
 			sender.EXPECT().Send(gomock.Any(), gomock.Any()).Times(3).DoAndReturn(
 				func(_ context.Context, b *seg.PathSegment) error {
-					validateSend(t, b, egIfId, nextHop, pub, topo)
+					validateSend(t, b, egIfID, nextHop, pub, topo)
 					return nil
 				},
 			)
@@ -138,7 +139,7 @@ func TestPropagatorRunCore(t *testing.T) {
 		Extender: &beaconing.DefaultExtender{
 			IA:         topo.IA(),
 			MTU:        topo.MTU(),
-			Signer:     testSigner(t, priv, topo.IA()),
+			SignerGen:  testSignerGen{Signers: []trust.Signer{testSigner(t, priv, topo.IA())}},
 			Intfs:      intfs,
 			MAC:        macFactory,
 			MaxExpTime: func() uint8 { return beacon.DefaultMaxExpTime },
@@ -156,7 +157,7 @@ func TestPropagatorRunCore(t *testing.T) {
 	}
 	g := graph.NewDefaultGraph(mctrl)
 	provider.EXPECT().BeaconsToPropagate(gomock.Any()).Times(2).DoAndReturn(
-		func(_ interface{}) ([]beacon.Beacon, error) {
+		func(_ any) ([]beacon.Beacon, error) {
 			res := make([]beacon.Beacon, 0, len(beacons))
 			for _, desc := range beacons {
 				res = append(res, testBeacon(g, desc))
@@ -167,13 +168,13 @@ func TestPropagatorRunCore(t *testing.T) {
 
 	senderFactory.EXPECT().NewSender(gomock.Any(), gomock.Any(), uint16(1121),
 		gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ addr.IA, egIfId uint16,
+		func(_ context.Context, _ addr.IA, egIfID uint16,
 			nextHop *net.UDPAddr) (beaconing.Sender, error) {
 
 			sender := mock_beaconing.NewMockSender(mctrl)
 			sender.EXPECT().Send(gomock.Any(), gomock.Any()).Times(2).DoAndReturn(
 				func(_ context.Context, b *seg.PathSegment) error {
-					validateSend(t, b, egIfId, nextHop, pub, topo)
+					validateSend(t, b, egIfID, nextHop, pub, topo)
 					return nil
 				},
 			)
@@ -183,13 +184,13 @@ func TestPropagatorRunCore(t *testing.T) {
 	)
 	senderFactory.EXPECT().NewSender(gomock.Any(), gomock.Any(), uint16(1113),
 		gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ addr.IA, egIfId uint16,
+		func(_ context.Context, _ addr.IA, egIfID uint16,
 			nextHop *net.UDPAddr) (beaconing.Sender, error) {
 
 			sender := mock_beaconing.NewMockSender(mctrl)
 			sender.EXPECT().Send(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(
 				func(_ context.Context, b *seg.PathSegment) error {
-					validateSend(t, b, egIfId, nextHop, pub, topo)
+					validateSend(t, b, egIfID, nextHop, pub, topo)
 					return nil
 				},
 			)
@@ -226,7 +227,7 @@ func TestPropagatorFastRecovery(t *testing.T) {
 		Extender: &beaconing.DefaultExtender{
 			IA:         topo.IA(),
 			MTU:        topo.MTU(),
-			Signer:     testSigner(t, priv, topo.IA()),
+			SignerGen:  testSignerGen{Signers: []trust.Signer{testSigner(t, priv, topo.IA())}},
 			Intfs:      intfs,
 			MAC:        macFactory,
 			MaxExpTime: func() uint8 { return beacon.DefaultMaxExpTime },
@@ -247,7 +248,7 @@ func TestPropagatorFastRecovery(t *testing.T) {
 	// We call run 4 times in this test, since the interface to 1-ff00:0:120
 	// will never be beaconed on, because the beacons are filtered for loops.
 	provider.EXPECT().BeaconsToPropagate(gomock.Any()).Times(4).DoAndReturn(
-		func(_ interface{}) ([]beacon.Beacon, error) {
+		func(_ any) ([]beacon.Beacon, error) {
 			return []beacon.Beacon{testBeacon(g, beacons[0])}, nil
 		},
 	)
@@ -279,7 +280,7 @@ func TestPropagatorFastRecovery(t *testing.T) {
 func validateSend(
 	t *testing.T,
 	b *seg.PathSegment,
-	egIfId uint16,
+	egIfID uint16,
 	nextHop *net.UDPAddr,
 	pub crypto.PublicKey,
 	topo topology.Topology,
@@ -291,8 +292,8 @@ func validateSend(
 	// Extract the hop field from the current AS entry to compare.
 	hopF := b.ASEntries[b.MaxIdx()].HopEntry.HopField
 	// Check the interface matches.
-	assert.Equal(t, hopF.ConsEgress, egIfId)
+	assert.Equal(t, hopF.ConsEgress, egIfID)
 	// Check that the beacon is sent to the correct border router.
-	br := interfaceInfos(topo)[egIfId].InternalAddr.UDPAddr()
+	br := net.UDPAddrFromAddrPort(interfaceInfos(topo)[egIfID].InternalAddr)
 	assert.Equal(t, br, nextHop)
 }

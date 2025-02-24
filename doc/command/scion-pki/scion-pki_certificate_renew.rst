@@ -1,3 +1,5 @@
+:orphan:
+
 .. _scion-pki_certificate_renew:
 
 scion-pki certificate renew
@@ -118,14 +120,13 @@ Options
                                --ca is mutually exclusive with --remote
       --common-name string     The common name that replaces the common name in the subject template
       --curve string           The elliptic curve to use (P-256|P-384|P-521) (default "P-256")
-      --dispatcher string      Path to the dispatcher socket (default "/run/shm/dispatcher/default.sock")
       --expires-in string      Remaining time threshold for renewal
       --features strings       enable development features ()
       --force                  Force overwritting existing files
   -h, --help                   help for renew
   -i, --interactive            interactive mode
       --isd-as isd-as          The local ISD-AS to use. (default 0-0)
-  -l, --local ip               Local IP address to listen on. (default zero IP)
+  -l, --local ip               Local IP address to listen on. (default invalid IP)
       --log.level string       Console logging level verbosity (debug|info|error)
       --no-color               disable colored output
       --no-probe               do not probe paths for health
@@ -139,7 +140,7 @@ Options
                                and all specified remotes are tried in order until success or all of them failed.
                                --remote is mutually exclusive with --ca.
       --reuse-key              Reuse the provided private key instead of creating a fresh private key
-      --sciond string          SCION Deamon address. (default "127.0.0.1:30255")
+      --sciond string          SCION Daemon address. (default "127.0.0.1:30255")
       --sequence string        Space separated list of hop predicates
       --subject string         The path to the custom subject for the CSR
       --timeout duration       The timeout for the renewal request per CA (default 10s)
@@ -150,5 +151,5 @@ Options
 SEE ALSO
 ~~~~~~~~
 
-* `scion-pki certificate <scion-pki_certificate.html>`_ 	 - Manage certificates for the SCION control plane PKI.
+* :ref:`scion-pki certificate <scion-pki_certificate>` 	 - Manage certificates for the SCION control plane PKI.
 

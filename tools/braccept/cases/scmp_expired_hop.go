@@ -20,11 +20,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/util"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
@@ -101,15 +101,15 @@ func SCMPExpiredHop(artifactsDir string, mac hash.Hash) runner.Case {
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:3"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:3"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.3.1").To4()}
+	srcA := addr.MustParseHost("172.16.3.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -118,9 +118,9 @@ func SCMPExpiredHop(artifactsDir string, mac hash.Hash) runner.Case {
 	scionudp.DstPort = 40222
 	scionudp.SetNetworkLayerForChecksum(scionL)
 
-	payload := []byte("actualpayloadbytes")
 	pointer := slayers.CmnHdrLen + scionL.AddrHdrLen() +
 		(4 + 8*sp.NumINF + 12*int(sp.PathMeta.CurrHF))
+	payload := []byte("actualpayloadbytes")
 
 	// Prepare input packet
 	input := gopacket.NewSerializeBuffer()
@@ -142,11 +142,11 @@ func SCMPExpiredHop(artifactsDir string, mac hash.Hash) runner.Case {
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -159,7 +159,9 @@ func SCMPExpiredHop(artifactsDir string, mac hash.Hash) runner.Case {
 	if err := sp.IncPath(); err != nil {
 		panic(err)
 	}
-	scionL.NextHdr = slayers.L4SCMP
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodePathExpired),
@@ -173,23 +175,25 @@ func SCMPExpiredHop(artifactsDir string, mac hash.Hash) runner.Case {
 	quoteStart := 14 + 20 + 8
 	quote := input.Bytes()[quoteStart:]
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
 
 	return runner.Case{
-		Name:     "SCMPExpiredHop",
-		WriteTo:  "veth_131_host",
-		ReadFrom: "veth_131_host",
-		Input:    input.Bytes(),
-		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPExpiredHop"),
+		Name:            "SCMPExpiredHop",
+		WriteTo:         "veth_131_host",
+		ReadFrom:        "veth_131_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPExpiredHop"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }
 
 // SCMPExpiredHopAfterXover tests a packet with an expired hop field after an
-// x-over.
+// x-over. The relative timestamp can be encoded
+// in the SPAO header and sent back to the src.
 func SCMPExpiredHopAfterXover(artifactsDir string, mac hash.Hash) runner.Case {
 	options := gopacket.SerializeOptions{
 		FixLengths:       true,
@@ -242,7 +246,7 @@ func SCMPExpiredHopAfterXover(artifactsDir string, mac hash.Hash) runner.Case {
 			{
 				SegID:     0x222,
 				ConsDir:   false,
-				Timestamp: util.TimeToSecs(time.Now().AddDate(0, 0, -5)),
+				Timestamp: util.TimeToSecs(time.Now().Add(-6 * time.Minute)),
 			},
 		},
 		HopFields: []path.HopField{
@@ -262,16 +266,16 @@ func SCMPExpiredHopAfterXover(artifactsDir string, mac hash.Hash) runner.Case {
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:5"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:5"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
 
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.5.1").To4()}
+	srcA := addr.MustParseHost("172.16.5.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -314,11 +318,11 @@ func SCMPExpiredHopAfterXover(artifactsDir string, mac hash.Hash) runner.Case {
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -336,7 +340,9 @@ func SCMPExpiredHopAfterXover(artifactsDir string, mac hash.Hash) runner.Case {
 		panic(err)
 	}
 
-	scionL.NextHdr = slayers.L4SCMP
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodePathExpired),
@@ -348,23 +354,25 @@ func SCMPExpiredHopAfterXover(artifactsDir string, mac hash.Hash) runner.Case {
 	}
 
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
 
 	return runner.Case{
-		Name:     "SCMPExpiredHopAfterXover",
-		WriteTo:  "veth_151_host",
-		ReadFrom: "veth_151_host",
-		Input:    input.Bytes(),
-		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPExpiredHopAfterXover"),
+		Name:            "SCMPExpiredHopAfterXover",
+		WriteTo:         "veth_151_host",
+		ReadFrom:        "veth_151_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPExpiredHopAfterXover"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }
 
 // SCMPExpiredHopAfterXoverConsDir tests a packet with an expired hop field after an
-// x-over.
+// x-over. The relative timestamp can be encoded
+// in the SPAO header and sent back to the src.
 func SCMPExpiredHopAfterXoverConsDir(artifactsDir string, mac hash.Hash) runner.Case {
 	options := gopacket.SerializeOptions{
 		FixLengths:       true,
@@ -414,7 +422,7 @@ func SCMPExpiredHopAfterXoverConsDir(artifactsDir string, mac hash.Hash) runner.
 			{
 				SegID:     0x222,
 				ConsDir:   true,
-				Timestamp: util.TimeToSecs(time.Now().AddDate(0, 0, -5)),
+				Timestamp: util.TimeToSecs(time.Now().Add(-6 * time.Minute)),
 			},
 		},
 		HopFields: []path.HopField{
@@ -434,16 +442,16 @@ func SCMPExpiredHopAfterXoverConsDir(artifactsDir string, mac hash.Hash) runner.
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:5"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:5"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
 
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.5.1").To4()}
+	srcA := addr.MustParseHost("172.16.5.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -486,11 +494,11 @@ func SCMPExpiredHopAfterXoverConsDir(artifactsDir string, mac hash.Hash) runner.
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -508,7 +516,9 @@ func SCMPExpiredHopAfterXoverConsDir(artifactsDir string, mac hash.Hash) runner.
 		panic(err)
 	}
 
-	scionL.NextHdr = slayers.L4SCMP
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodePathExpired),
@@ -520,24 +530,26 @@ func SCMPExpiredHopAfterXoverConsDir(artifactsDir string, mac hash.Hash) runner.
 	}
 
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
 
 	return runner.Case{
-		Name:     "SCMPExpiredHopAfterXoverConsDir",
-		WriteTo:  "veth_151_host",
-		ReadFrom: "veth_151_host",
-		Input:    input.Bytes(),
-		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPExpiredHopAfterXoverConsDir"),
+		Name:            "SCMPExpiredHopAfterXoverConsDir",
+		WriteTo:         "veth_151_host",
+		ReadFrom:        "veth_151_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPExpiredHopAfterXoverConsDir"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }
 
 // SCMPExpiredHopAfterXoverInternal tests a packet with an expired hop
 // field after an x-over received from an internal router. The expired path
-// segment is against construction direction.
+// segment is against construction direction. The relative timestamp can be encoded
+// in the SPAO header and sent back to the src.
 func SCMPExpiredHopAfterXoverInternal(artifactsDir string, mac hash.Hash) runner.Case {
 	options := gopacket.SerializeOptions{
 		FixLengths:       true,
@@ -590,7 +602,7 @@ func SCMPExpiredHopAfterXoverInternal(artifactsDir string, mac hash.Hash) runner
 			{
 				SegID:     0x222,
 				ConsDir:   false,
-				Timestamp: util.TimeToSecs(time.Now().AddDate(0, 0, -5)),
+				Timestamp: util.TimeToSecs(time.Now().Add(-6 * time.Minute)),
 			},
 		},
 		HopFields: []path.HopField{
@@ -610,16 +622,16 @@ func SCMPExpiredHopAfterXoverInternal(artifactsDir string, mac hash.Hash) runner
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:8"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:8"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
 
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.5.1").To4()}
+	srcA := addr.MustParseHost("172.16.5.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -656,11 +668,11 @@ func SCMPExpiredHopAfterXoverInternal(artifactsDir string, mac hash.Hash) runner
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -674,7 +686,9 @@ func SCMPExpiredHopAfterXoverInternal(artifactsDir string, mac hash.Hash) runner
 		panic(err)
 	}
 
-	scionL.NextHdr = slayers.L4SCMP
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodePathExpired),
@@ -686,25 +700,31 @@ func SCMPExpiredHopAfterXoverInternal(artifactsDir string, mac hash.Hash) runner
 	}
 
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
 
 	return runner.Case{
-		Name:     "SCMPExpiredHopAfterXoverInternal",
-		WriteTo:  "veth_int_host",
-		ReadFrom: "veth_int_host",
-		Input:    input.Bytes(),
-		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPExpiredHopAfterXoverInternal"),
+		Name:            "SCMPExpiredHopAfterXoverInternal",
+		WriteTo:         "veth_int_host",
+		ReadFrom:        "veth_int_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPExpiredHopAfterXoverInternal"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }
 
 // SCMPExpiredHopAfterXoverInternalConsDir tests a packet with an expired hop
 // field after an x-over received from an internal router. The expired path
-// segment is in construction direction.
-func SCMPExpiredHopAfterXoverInternalConsDir(artifactsDir string, mac hash.Hash) runner.Case {
+// segment is in construction direction. The expired path
+// segment is against construction direction. The relative timestamp can be encoded
+// in the SPAO header and sent back to the src.
+func SCMPExpiredHopAfterXoverInternalConsDir(
+	artifactsDir string,
+	mac hash.Hash,
+) runner.Case {
 	options := gopacket.SerializeOptions{
 		FixLengths:       true,
 		ComputeChecksums: true,
@@ -753,7 +773,7 @@ func SCMPExpiredHopAfterXoverInternalConsDir(artifactsDir string, mac hash.Hash)
 			{
 				SegID:     0x222,
 				ConsDir:   true,
-				Timestamp: util.TimeToSecs(time.Now().AddDate(0, 0, -5)),
+				Timestamp: util.TimeToSecs(time.Now().Add(-6 * time.Minute)),
 			},
 		},
 		HopFields: []path.HopField{
@@ -773,16 +793,16 @@ func SCMPExpiredHopAfterXoverInternalConsDir(artifactsDir string, mac hash.Hash)
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:8"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:8"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
 
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.5.1").To4()}
+	srcA := addr.MustParseHost("172.16.5.1")
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1").To4()}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 
@@ -819,11 +839,11 @@ func SCMPExpiredHopAfterXoverInternalConsDir(artifactsDir string, mac hash.Hash)
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -837,7 +857,9 @@ func SCMPExpiredHopAfterXoverInternalConsDir(artifactsDir string, mac hash.Hash)
 		panic(err)
 	}
 
-	scionL.NextHdr = slayers.L4SCMP
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeParameterProblem,
 			slayers.SCMPCodePathExpired),
@@ -849,7 +871,7 @@ func SCMPExpiredHopAfterXoverInternalConsDir(artifactsDir string, mac hash.Hash)
 	}
 
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
@@ -860,6 +882,10 @@ func SCMPExpiredHopAfterXoverInternalConsDir(artifactsDir string, mac hash.Hash)
 		ReadFrom: "veth_int_host",
 		Input:    input.Bytes(),
 		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPExpiredHopAfterXoverInternalConsDir"),
+		StoreDir: filepath.Join(
+			artifactsDir,
+			"SCMPExpiredHopAfterXoverInternalConsDir",
+		),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }

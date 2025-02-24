@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/scrypto/cppki"
 	"github.com/scionproto/scion/scion-pki/testcrypto"
 	"github.com/scionproto/scion/scion-pki/trcs"
@@ -35,8 +34,7 @@ func TestCmd(t *testing.T) {
 	if _, bazel := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR"); bazel {
 		t.Skip("Test can't run through bazel because of symlinks and docker not playing nice")
 	}
-	outDir, cleanF := xtest.MustTempDir("", "testcrypto")
-	defer cleanF()
+	outDir := t.TempDir()
 	topo := "./testdata/test.topo"
 
 	var buf bytes.Buffer
@@ -44,31 +42,31 @@ func TestCmd(t *testing.T) {
 	require.NoError(t, err, buf.String())
 
 	allASes := []addr.IA{
-		xtest.MustParseIA("1-ff00:0:110"),
-		xtest.MustParseIA("1-ff00:0:120"),
-		xtest.MustParseIA("1-ff00:0:130"),
-		xtest.MustParseIA("1-ff00:0:111"),
-		xtest.MustParseIA("1-ff00:0:131"),
-		xtest.MustParseIA("2-ff00:0:210"),
-		xtest.MustParseIA("2-ff00:0:220"),
+		addr.MustParseIA("1-ff00:0:110"),
+		addr.MustParseIA("1-ff00:0:120"),
+		addr.MustParseIA("1-ff00:0:130"),
+		addr.MustParseIA("1-ff00:0:111"),
+		addr.MustParseIA("1-ff00:0:131"),
+		addr.MustParseIA("2-ff00:0:210"),
+		addr.MustParseIA("2-ff00:0:220"),
 	}
 	for _, as := range allASes {
 		checkAS(t, outDir, as)
 	}
 	issuers := []addr.IA{
-		xtest.MustParseIA("1-ff00:0:110"),
-		xtest.MustParseIA("1-ff00:0:111"),
-		xtest.MustParseIA("2-ff00:0:210"),
+		addr.MustParseIA("1-ff00:0:110"),
+		addr.MustParseIA("1-ff00:0:111"),
+		addr.MustParseIA("2-ff00:0:210"),
 	}
 	for _, issuer := range issuers {
 		checkIssuer(t, outDir, issuer)
 	}
 	voters := []addr.IA{
-		xtest.MustParseIA("1-ff00:0:120"),
-		xtest.MustParseIA("1-ff00:0:111"),
-		xtest.MustParseIA("1-ff00:0:131"),
-		xtest.MustParseIA("2-ff00:0:210"),
-		xtest.MustParseIA("2-ff00:0:220"),
+		addr.MustParseIA("1-ff00:0:120"),
+		addr.MustParseIA("1-ff00:0:111"),
+		addr.MustParseIA("1-ff00:0:131"),
+		addr.MustParseIA("2-ff00:0:210"),
+		addr.MustParseIA("2-ff00:0:220"),
 	}
 	for _, voter := range voters {
 		checkVoter(t, outDir, voter)

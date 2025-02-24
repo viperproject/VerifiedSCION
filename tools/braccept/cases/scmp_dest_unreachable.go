@@ -20,12 +20,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/util"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
@@ -91,12 +90,12 @@ func SCMPDestinationUnreachable(artifactsDir string, mac hash.Hash) runner.Case 
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:3"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:1"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:3"),
+		DstIA:        addr.MustParseIA("1-ff00:0:1"),
 		Path:         sp,
 	}
-	srcA := &net.IPAddr{IP: net.ParseIP("172.16.3.1")}
-	dstA := addr.HostSVC(15)
+	srcA := addr.MustParseHost("172.16.3.1")
+	dstA := addr.HostSVC(addr.SVC(15))
 	if err := scionL.SetSrcAddr(srcA); err != nil {
 		panic(err)
 	}
@@ -131,11 +130,11 @@ func SCMPDestinationUnreachable(artifactsDir string, mac hash.Hash) runner.Case 
 	udp.SrcPort, udp.DstPort = udp.DstPort, udp.SrcPort
 
 	scionL.DstIA = scionL.SrcIA
-	scionL.SrcIA = xtest.MustParseIA("1-ff00:0:1")
+	scionL.SrcIA = addr.MustParseIA("1-ff00:0:1")
 	if err := scionL.SetDstAddr(srcA); err != nil {
 		panic(err)
 	}
-	intlA := &net.IPAddr{IP: net.IP{192, 168, 0, 11}}
+	intlA := addr.MustParseHost("192.168.0.11")
 	if err := scionL.SetSrcAddr(intlA); err != nil {
 		panic(err)
 	}
@@ -148,7 +147,9 @@ func SCMPDestinationUnreachable(artifactsDir string, mac hash.Hash) runner.Case 
 	if err := sp.IncPath(); err != nil {
 		panic(err)
 	}
-	scionL.NextHdr = slayers.L4SCMP
+	scionL.NextHdr = slayers.End2EndClass
+	e2e := normalizedSCMPPacketAuthEndToEndExtn()
+	e2e.NextHdr = slayers.L4SCMP
 	scmpH := &slayers.SCMP{
 		TypeCode: slayers.CreateSCMPTypeCode(slayers.SCMPTypeDestinationUnreachable,
 			slayers.SCMPCodeNoRoute),
@@ -160,17 +161,18 @@ func SCMPDestinationUnreachable(artifactsDir string, mac hash.Hash) runner.Case 
 	quoteStart := 14 + 20 + 8
 	quote := input.Bytes()[quoteStart:]
 	if err := gopacket.SerializeLayers(want, options,
-		ethernet, ip, udp, scionL, scmpH, scmpP, gopacket.Payload(quote),
+		ethernet, ip, udp, scionL, e2e, scmpH, scmpP, gopacket.Payload(quote),
 	); err != nil {
 		panic(err)
 	}
 
 	return runner.Case{
-		Name:     "SCMPDestinationUnreachable",
-		WriteTo:  "veth_131_host",
-		ReadFrom: "veth_131_host",
-		Input:    input.Bytes(),
-		Want:     want.Bytes(),
-		StoreDir: filepath.Join(artifactsDir, "SCMPDestinationUnreachable"),
+		Name:            "SCMPDestinationUnreachable",
+		WriteTo:         "veth_131_host",
+		ReadFrom:        "veth_131_host",
+		Input:           input.Bytes(),
+		Want:            want.Bytes(),
+		StoreDir:        filepath.Join(artifactsDir, "SCMPDestinationUnreachable"),
+		NormalizePacket: scmpNormalizePacket,
 	}
 }

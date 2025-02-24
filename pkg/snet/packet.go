@@ -15,9 +15,9 @@
 package snet
 
 import (
-	"net"
+	"math/rand/v2"
 
-	"github.com/google/gopacket"
+	"github.com/gopacket/gopacket"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/common"
@@ -194,6 +194,30 @@ func (m SCMPInternalConnectivityDown) length() int {
 	return 28 + len(m.Payload)
 }
 
+const (
+	// SCMPIdentifierStart and SCMPIdentiferEnd define the range for Identifiers
+	// that should be used for SCMPEchoRequest and SCMPTracerouteRequest,
+	// in preparation for a dispatcher-less snet.
+	// This range corresponds to the port range used for SCION/UDP by the
+	// dispatcher. Using the same range for Identifiers in SCMP requests will
+	// allow a router to dispatch SCMP requests based on the Identifier,
+	// without risk of interfering with unaware endpoints.
+	//
+	// WARNING: transitional, this will be removed in the dispatcher-less snet.
+	SCMPIdentifierStart = 32768
+	SCMPIdentifierEnd   = 65535
+)
+
+// RandomSCMPIdentifier returns a random SCMP identifier in the range
+// [SCMPIdentifierStart, SCMPIdentifierEnd].
+//
+// WARNING: This is a transitional helper function, which will be removed
+// in the dispatcher-less snet; then, the underlay port must be used as identifier.
+func RandomSCMPIdentifer() uint16 {
+	id := SCMPIdentifierStart + rand.Int32N(SCMPIdentifierEnd-SCMPIdentifierStart+1)
+	return uint16(id)
+}
+
 // SCMPEchoRequest is the SCMP echo request payload.
 type SCMPEchoRequest struct {
 	Identifier uint16
@@ -368,22 +392,14 @@ func (p *Packet) Decode() error {
 	}
 	dstAddr, err := scionLayer.DstAddr()
 	if err != nil {
-		return serrors.WrapStr("extracting destination address", err)
-	}
-	dstHost, err := netAddrToHostAddr(dstAddr)
-	if err != nil {
-		return serrors.WrapStr("converting dst address to HostAddr", err)
+		return serrors.Wrap("extracting destination address", err)
 	}
 	srcAddr, err := scionLayer.SrcAddr()
 	if err != nil {
-		return serrors.WrapStr("extracting source address", err)
+		return serrors.Wrap("extracting source address", err)
 	}
-	srcHost, err := netAddrToHostAddr(srcAddr)
-	if err != nil {
-		return serrors.WrapStr("converting src address to HostAddr", err)
-	}
-	p.Destination = SCIONAddress{IA: scionLayer.DstIA, Host: dstHost}
-	p.Source = SCIONAddress{IA: scionLayer.SrcIA, Host: srcHost}
+	p.Destination = SCIONAddress{IA: scionLayer.DstIA, Host: dstAddr}
+	p.Source = SCIONAddress{IA: scionLayer.SrcIA, Host: srcAddr}
 
 	rpath := RawPath{
 		PathType: scionLayer.Path.Type(),
@@ -391,7 +407,7 @@ func (p *Packet) Decode() error {
 	if l := scionLayer.Path.Len(); l != 0 {
 		rpath.Raw = make([]byte, l)
 		if err := scionLayer.Path.SerializeTo(rpath.Raw); err != nil {
-			return serrors.WrapStr("extracting path", err)
+			return serrors.Wrap("extracting path", err)
 		}
 	}
 	p.Path = rpath
@@ -549,21 +565,11 @@ func (p *Packet) Serialize() error {
 	scionLayer.FlowID = 1
 	scionLayer.DstIA = p.Destination.IA
 	scionLayer.SrcIA = p.Source.IA
-	netDstAddr, err := hostAddrToNetAddr(p.Destination.Host)
-	if err != nil {
-		return serrors.WrapStr("converting destination addr.HostAddr to net.Addr", err,
-			"address", p.Destination.Host)
+	if err := scionLayer.SetDstAddr(p.Destination.Host); err != nil {
+		return serrors.Wrap("setting destination address", err)
 	}
-	if err := scionLayer.SetDstAddr(netDstAddr); err != nil {
-		return serrors.WrapStr("setting destination address", err)
-	}
-	netSrcAddr, err := hostAddrToNetAddr(p.Source.Host)
-	if err != nil {
-		return serrors.WrapStr("converting source addr.HostAddr to net.Addr", err,
-			"address", p.Source.Host)
-	}
-	if err := scionLayer.SetSrcAddr(netSrcAddr); err != nil {
-		return serrors.WrapStr("setting source address", err)
+	if err := scionLayer.SetSrcAddr(p.Source.Host); err != nil {
+		return serrors.Wrap("setting source address", err)
 	}
 
 	// XXX(roosd): Currently, this does not take the extension headers
@@ -573,7 +579,7 @@ func (p *Packet) Serialize() error {
 	// At this point all the fields in the SCION header apart from the path
 	// and path type must be set already.
 	if err := p.Path.SetPath(&scionLayer); err != nil {
-		return serrors.WrapStr("setting path", err)
+		return serrors.Wrap("setting path", err)
 	}
 
 	packetLayers = append(packetLayers, &scionLayer)
@@ -611,26 +617,4 @@ type PacketInfo struct {
 	Path DataplanePath
 	// Payload is the Payload of the message.
 	Payload Payload
-}
-
-func netAddrToHostAddr(a net.Addr) (addr.HostAddr, error) {
-	switch aImpl := a.(type) {
-	case *net.IPAddr:
-		return addr.HostFromIP(aImpl.IP), nil
-	case addr.HostSVC:
-		return aImpl, nil
-	default:
-		return nil, serrors.New("address not supported", "a", a)
-	}
-}
-
-func hostAddrToNetAddr(a addr.HostAddr) (net.Addr, error) {
-	switch aImpl := a.(type) {
-	case addr.HostSVC:
-		return aImpl, nil
-	case addr.HostIPv4, addr.HostIPv6:
-		return &net.IPAddr{IP: aImpl.IP()}, nil
-	default:
-		return nil, serrors.New("address not supported", "a", a)
-	}
 }

@@ -17,7 +17,7 @@ package main
 import (
 	"net"
 
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket/layers"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers"
@@ -45,11 +45,11 @@ type jsonConfig struct {
 func parseEthernet(cfg *jsonConfig) (*layers.Ethernet, error) {
 	src, err := net.ParseMAC(cfg.Ethernet.SrcMAC)
 	if err != nil {
-		return nil, serrors.WrapStr("parsing SrcMAC", err)
+		return nil, serrors.Wrap("parsing SrcMAC", err)
 	}
 	dst, err := net.ParseMAC(cfg.Ethernet.DstMAC)
 	if err != nil {
-		return nil, serrors.WrapStr("parsing DstMAC", err)
+		return nil, serrors.Wrap("parsing DstMAC", err)
 	}
 	return &layers.Ethernet{
 		SrcMAC:       src,

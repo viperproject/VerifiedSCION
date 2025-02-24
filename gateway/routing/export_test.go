@@ -15,12 +15,11 @@
 package routing
 
 import (
+	"net/netip"
 	"strings"
 	"testing"
 
-	"inet.af/netaddr"
-
-	"github.com/scionproto/scion/pkg/private/xtest"
+	"github.com/scionproto/scion/pkg/addr"
 )
 
 var (
@@ -34,12 +33,12 @@ func NewIAMatcher(t *testing.T, ia string) IAMatcher {
 	if strings.HasPrefix(ia, "!") {
 		return NegatedIAMatcher{
 			IAMatcher: SingleIAMatcher{
-				IA: xtest.MustParseIA(strings.TrimPrefix(ia, "!")),
+				IA: addr.MustParseIA(strings.TrimPrefix(ia, "!")),
 			},
 		}
 	}
 	return SingleIAMatcher{
-		IA: xtest.MustParseIA(ia),
+		IA: addr.MustParseIA(ia),
 	}
 }
 
@@ -50,7 +49,7 @@ func NewNetworkMatcher(t *testing.T, networks string) NetworkMatcher {
 	}
 	matcher := NetworkMatcher{Negated: negated}
 	for _, network := range strings.Split(networks, ",") {
-		matcher.Allowed = append(matcher.Allowed, netaddr.MustParseIPPrefix(network))
+		matcher.Allowed = append(matcher.Allowed, netip.MustParsePrefix(network))
 	}
 	return matcher
 }

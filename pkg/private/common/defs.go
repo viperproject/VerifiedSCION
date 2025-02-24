@@ -15,17 +15,11 @@
 
 package common
 
-import (
-	"reflect"
-	"strconv"
-	"strings"
-)
+import "reflect"
 
 const (
-	// LineLen is the number of bytes that all SCION headers are padded to a multiple of.
-	LineLen = 8
-	MinMTU  = 1280
-	MaxMTU  = (1 << 16) - 1
+	MinMTU = 1280
+	MaxMTU = (1 << 16) - 1
 	// SupportedMTU is the MTU supported by dispatcher/snet and router.
 	// Smaller than MaxMTU to avoid excessive overallocation for packet buffers.
 	// It's chosen as a common ethernet jumbo frame size minus IP/UDP headers.
@@ -34,36 +28,7 @@ const (
 	TimeFmtSecs  = "2006-01-02 15:04:05-0700"
 )
 
-const (
-	CPService = "Control Plane Service"
-)
-
-// IFIDType is the type for interface IDs.
-//
-// Deprecated: with version 2 of the SCION header, there is no interface ID type anymore.
-// Use the appropriate type depending on the path type.
-type IFIDType uint64
-
-func (ifid IFIDType) String() string {
-	return strconv.FormatUint(uint64(ifid), 10)
-}
-
-// UnmarshalJSON unmarshals the JSON data into the IfID.
-func (ifid *IFIDType) UnmarshalJSON(data []byte) error {
-	return ifid.UnmarshalText(data)
-}
-
-// UnmarshalText unmarshals the text into the IfID.
-func (ifid *IFIDType) UnmarshalText(text []byte) error {
-	i, err := strconv.ParseUint(strings.ReplaceAll(string(text), "\"", ""), 10, 64)
-	if err != nil {
-		return err
-	}
-	*ifid = IFIDType(i)
-	return nil
-}
-
-func TypeOf(v interface{}) string {
+func TypeOf(v any) string {
 	t := reflect.TypeOf(v)
 	if t != nil {
 		return t.String()

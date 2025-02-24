@@ -17,7 +17,7 @@ package segreq
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"net"
 	"time"
 
@@ -182,7 +182,7 @@ func (p *dstProvider) Dst(ctx context.Context, req segfetcher.Request) (net.Addr
 		// would then lead to an infinite recursion.
 		up, err := p.upPath(ctx, dst)
 		if err != nil {
-			return nil, serrors.Wrap(segfetcher.ErrNotReachable, err)
+			return nil, serrors.JoinNoStack(segfetcher.ErrNotReachable, err)
 		}
 		path = up
 	case seg.TypeDown:
@@ -191,12 +191,12 @@ func (p *dstProvider) Dst(ctx context.Context, req segfetcher.Request) (net.Addr
 		// allows clients to retry with possibly different path in case of failure.
 		paths, err := p.router.AllRoutes(ctx, dst)
 		if err != nil {
-			return nil, serrors.Wrap(segfetcher.ErrNotReachable, err)
+			return nil, serrors.JoinNoStack(segfetcher.ErrNotReachable, err)
 		}
 		if len(paths) == 0 {
 			return nil, segfetcher.ErrNotReachable
 		}
-		path = paths[rand.Intn(len(paths))]
+		path = paths[rand.IntN(len(paths))]
 	default:
 		panic(fmt.Errorf("Unsupported segment type for request forwarding. "+
 			"Up segment should have been resolved locally. SegType: %s", req.SegType))

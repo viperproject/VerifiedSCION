@@ -20,11 +20,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
+	"github.com/gopacket/gopacket"
+	"github.com/gopacket/gopacket/layers"
 
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/util"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
@@ -102,15 +102,15 @@ func ChildToChildXover(artifactsDir string, mac hash.Hash) runner.Case {
 		FlowID:       0xdead,
 		NextHdr:      slayers.L4UDP,
 		PathType:     scion.PathType,
-		SrcIA:        xtest.MustParseIA("1-ff00:0:5"),
-		DstIA:        xtest.MustParseIA("1-ff00:0:4"),
+		SrcIA:        addr.MustParseIA("1-ff00:0:5"),
+		DstIA:        addr.MustParseIA("1-ff00:0:4"),
 		Path:         sp,
 	}
 
-	if err := scionL.SetSrcAddr(&net.IPAddr{IP: net.ParseIP("172.16.5.1")}); err != nil {
+	if err := scionL.SetSrcAddr(addr.MustParseHost("172.16.5.1")); err != nil {
 		panic(err)
 	}
-	if err := scionL.SetDstAddr(&net.IPAddr{IP: net.ParseIP("174.16.4.1")}); err != nil {
+	if err := scionL.SetDstAddr(addr.MustParseHost("174.16.4.1")); err != nil {
 		panic(err)
 	}
 

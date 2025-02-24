@@ -85,7 +85,7 @@ func (d *Downloader) ArtifactsFromBuild(build *buildkite.Build) error {
 		jobGroup.Go(func() error {
 			artifacts, err := d.artifactsByURL(*job.ArtifactsURL)
 			if err != nil {
-				return serrors.WrapStr("fetching artifacts", err, "job", job.Name)
+				return serrors.Wrap("fetching artifacts", err, "job", job.Name)
 			}
 
 			artifactsGroup, _ := errgroup.WithContext(ctx)
@@ -109,7 +109,7 @@ func (d *Downloader) ArtifactsFromBuild(build *buildkite.Build) error {
 					file := filepath.Join(d.Dir, base+".tar.gz")
 					d.info("Start downloading: %s\n", file)
 					if err := d.downloadArtifact(a, file); err != nil {
-						return serrors.WrapStr("downloading artifact", err, "job", job.Name)
+						return serrors.Wrap("downloading artifact", err, "job", job.Name)
 					}
 					d.info("Done downloading: %s (%s)\n", file, time.Since(start))
 
@@ -121,7 +121,7 @@ func (d *Downloader) ArtifactsFromBuild(build *buildkite.Build) error {
 					}
 					cmd := exec.Command("tar", "-xf", file, "-C", dir, "--strip-components", "1")
 					if out, err := cmd.CombinedOutput(); err != nil {
-						d.error(string(out))
+						d.error("%s", string(out))
 						return err
 					}
 					d.info("Done unpacking: %s (%s)\n", dir, time.Since(start))
@@ -158,13 +158,13 @@ func (d *Downloader) downloadArtifact(artifact buildkite.Artifact, file string) 
 
 }
 
-func (d *Downloader) info(format string, ctx ...interface{}) {
+func (d *Downloader) info(format string, ctx ...any) {
 	if d.StdOut != nil {
 		fmt.Fprintf(d.StdOut, format, ctx...)
 	}
 }
 
-func (d *Downloader) error(format string, ctx ...interface{}) {
+func (d *Downloader) error(format string, ctx ...any) {
 	if d.StdErr != nil {
 		fmt.Fprintf(d.StdErr, format, ctx...)
 	}

@@ -15,14 +15,11 @@
 package snet
 
 import (
-	"fmt"
 	"net"
 	"net/netip"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"inet.af/netaddr"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
@@ -54,34 +51,17 @@ func ParseUDPAddr(s string) (*UDPAddr, error) {
 //   - [isd-as,ipv4]:port       (e.g., [1-ff00:0:110,192.0.2.1]:80)
 //   - [isd-as,ipv6%zone]:port  (e.g., [1-ff00:0:110,2001:DB8::1%zone]:80)
 func parseUDPAddr(s string) (*UDPAddr, error) {
-	host, port, err := net.SplitHostPort(s)
+	a, p, err := addr.ParseAddrPort(s)
 	if err != nil {
-		return nil, serrors.WrapStr("invalid address: split host:port", err, "addr", s)
-	}
-	parts := strings.Split(host, ",")
-	if len(parts) != 2 {
-		return nil, serrors.New("invalid address: host parts invalid",
-			"expected", 2, "actual", len(parts))
-	}
-	ia, err := addr.ParseIA(parts[0])
-	if err != nil {
-		return nil, serrors.WrapStr("invalid address: IA not parsable", err, "ia", ia)
-	}
-	ip, err := netip.ParseAddr(parts[1])
-	if err != nil {
-		return nil, serrors.WrapStr("invalid address: ip not parsable", err, "ip", parts[1])
-	}
-	p, err := strconv.Atoi(port)
-	if err != nil {
-		return nil, serrors.WrapStr("invalid address: port invalid", err, "port", port)
+		return nil, err
 	}
 	udp := &net.UDPAddr{
-		IP:   ip.AsSlice(),
-		Zone: ip.Zone(),
-		Port: p,
+		IP:   a.Host.IP().AsSlice(),
+		Zone: a.Host.IP().Zone(),
+		Port: int(p),
 	}
 
-	return &UDPAddr{IA: ia, Host: udp}, nil
+	return &UDPAddr{IA: a.IA, Host: udp}, nil
 }
 
 // The legacy format of the SCION address URI encoding allows multiple different encodings.
@@ -111,21 +91,21 @@ func parseUDPAddrLegacy(s string) (*UDPAddr, error) {
 	}
 	ia, err := addr.ParseIA(rawIA)
 	if err != nil {
-		return nil, serrors.WrapStr("invalid address: IA not parsable", err, "ia", ia)
+		return nil, serrors.Wrap("invalid address: IA not parsable", err, "ia", ia)
 	}
 	if ipOnly(rawHost) {
 		addr, err := net.ResolveIPAddr("ip", strings.Trim(rawHost, "[]"))
 		if err != nil {
-			return nil, serrors.WrapStr("invalid address: IP not resolvable", err)
+			return nil, serrors.Wrap("invalid address: IP not resolvable", err)
 		}
 		return &UDPAddr{IA: ia, Host: &net.UDPAddr{IP: addr.IP, Port: 0, Zone: addr.Zone}}, nil
 	}
 	udp, err := net.ResolveUDPAddr("udp", rawHost)
 	if err != nil {
-		return nil, serrors.WrapStr("invalid address: host not parsable", err, "host", rawHost)
+		return nil, serrors.Wrap("invalid address: host not parsable", err, "host", rawHost)
 	}
 	if udp.IP == nil {
-		return nil, serrors.WrapStr("invalid address: ip not specified", err, "host", rawHost)
+		return nil, serrors.Wrap("invalid address: ip not specified", err, "host", rawHost)
 	}
 	return &UDPAddr{IA: ia, Host: udp}, nil
 }
@@ -137,7 +117,15 @@ func (a *UDPAddr) Network() string {
 
 // String implements net.Addr interface.
 func (a *UDPAddr) String() string {
-	return fmt.Sprintf("%v,%s", a.IA, a.Host.String())
+	host, port, suffix := "<nil>", "0", ""
+	if a.Host != nil {
+		host = a.Host.IP.String()
+		port = strconv.Itoa(a.Host.Port)
+		if a.Host.Zone != "" {
+			suffix = "%" + a.Host.Zone
+		}
+	}
+	return net.JoinHostPort(a.IA.String()+","+host+suffix, port)
 }
 
 // GetPath returns a path with attached metadata.
@@ -191,8 +179,8 @@ func parseAddr(s string) (string, string, error) {
 }
 
 func ipOnly(s string) bool {
-	_, portErr := netaddr.ParseIPPort(s)
-	_, ipErr := netaddr.ParseIP(strings.Trim(s, "[]"))
+	_, portErr := netip.ParseAddrPort(s)
+	_, ipErr := netip.ParseAddr(strings.Trim(s, "[]"))
 	return portErr != nil && ipErr == nil
 }
 

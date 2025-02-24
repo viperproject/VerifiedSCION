@@ -38,8 +38,7 @@ var updateNonDeterministic = xtest.UpdateNonDeterminsticGoldenFiles()
 
 func TestCombine(t *testing.T) {
 	if *updateNonDeterministic {
-		dir, cleanF := xtest.MustTempDir("", "safedir")
-		defer cleanF()
+		dir := t.TempDir()
 
 		root, err := filepath.Abs("../../../")
 		require.NoError(t, err)
@@ -73,11 +72,10 @@ func TestCombine(t *testing.T) {
 		})
 		raw, err := signed.Encode()
 		require.NoError(t, err)
-		os.WriteFile("./testdata/admin/ISD1-B1-S1.trc", raw, 0644)
+		require.NoError(t, os.WriteFile("./testdata/admin/ISD1-B1-S1.trc", raw, 0644))
 	}
 
-	dir, clean := xtest.MustTempDir("", "scion-pki-trcs-combine")
-	defer clean()
+	dir := t.TempDir()
 	out := filepath.Join(dir, "combined.der")
 
 	parts := []string{

@@ -19,16 +19,15 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
-	"net"
+	"net/netip"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
-	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/private/serrors"
+	"github.com/scionproto/scion/pkg/segment/iface"
 	"github.com/scionproto/scion/pkg/snet"
 	"github.com/scionproto/scion/private/app/path"
 	"github.com/scionproto/scion/private/app/path/pathprobe"
@@ -54,13 +53,13 @@ type Path struct {
 	Latency     []time.Duration `json:"latency" yaml:"latency"`
 	Status      string          `json:"status,omitempty" yaml:"status,omitempty"`
 	StatusInfo  string          `json:"status_info,omitempty" yaml:"status_info,omitempty"`
-	Local       net.IP          `json:"local_ip,omitempty" yaml:"local_ip,omitempty"`
+	Local       netip.Addr      `json:"local_ip,omitempty" yaml:"local_ip,omitempty"`
 }
 
 // Hop represents an hop on the path.
 type Hop struct {
-	IfID common.IFIDType `json:"ifid"`
-	IA   addr.IA         `json:"isd_as"`
+	IfID iface.ID `json:"interface"`
+	IA   addr.IA  `json:"isd_as"`
 }
 
 // Human writes human readable output to the writer.
@@ -243,8 +242,8 @@ func humanInternalHops(p *snet.PathMetadata) string {
 		if numHops == 0 {
 			continue
 		}
-		interfaceIdx := 2*i + 1
-		ia := p.Interfaces[interfaceIdx].IA
+		interfaceIndex := 2*i + 1
+		ia := p.Interfaces[interfaceIndex].IA
 		internalHops = append(internalHops, fmt.Sprintf("%s: %d", ia, numHops))
 	}
 	if len(internalHops) == 0 {
@@ -261,11 +260,11 @@ func humanNotes(p *snet.PathMetadata) string {
 		if note == "" {
 			continue
 		}
-		interfaceIdx := 0
+		interfaceIndex := 0
 		if i > 0 {
-			interfaceIdx = 2*i - 1
+			interfaceIndex = 2*i - 1
 		}
-		ia := p.Interfaces[interfaceIdx].IA
+		ia := p.Interfaces[interfaceIndex].IA
 		notes = append(notes, fmt.Sprintf("%s: \"%s\"", ia, sanitizeString(note)))
 	}
 	if len(notes) == 0 {
@@ -307,13 +306,14 @@ func (r Result) Alive() int {
 func Run(ctx context.Context, dst addr.IA, cfg Config) (*Result, error) {
 	sdConn, err := daemon.NewService(cfg.Daemon).Connect(ctx)
 	if err != nil {
-		return nil, serrors.WrapStr("connecting to the SCION Daemon", err, "addr", cfg.Daemon)
+		return nil, serrors.Wrap("connecting to the SCION Daemon", err, "addr", cfg.Daemon)
 	}
 	defer sdConn.Close()
-	localIA, err := sdConn.LocalIA(ctx)
+	topo, err := daemon.LoadTopology(ctx, sdConn)
 	if err != nil {
-		return nil, serrors.WrapStr("determining local ISD-AS", err)
+		return nil, serrors.Wrap("loading topology", err)
 	}
+	localIA := topo.LocalIA
 	if dst == localIA {
 		return &Result{
 			LocalIA:     localIA,
@@ -327,7 +327,7 @@ func Run(ctx context.Context, dst addr.IA, cfg Config) (*Result, error) {
 	allPaths, err := sdConn.Paths(ctx, dst, 0,
 		daemon.PathReqFlags{Refresh: cfg.Refresh})
 	if err != nil {
-		return nil, serrors.WrapStr("retrieving paths from the SCION Daemon", err)
+		return nil, serrors.Wrap("retrieving paths from the SCION Daemon", err)
 	}
 	paths, err := path.Filter(cfg.Sequence, allPaths)
 	if err != nil {
@@ -353,14 +353,13 @@ func Run(ctx context.Context, dst addr.IA, cfg Config) (*Result, error) {
 	if !cfg.NoProbe {
 		p := pathprobe.FilterEmptyPaths(paths)
 		statuses, err = pathprobe.Prober{
-			DstIA:      dst,
-			LocalIA:    localIA,
-			LocalIP:    cfg.Local,
-			ID:         uint16(rand.Uint32()),
-			Dispatcher: cfg.Dispatcher,
+			DstIA:    dst,
+			LocalIA:  localIA,
+			LocalIP:  cfg.Local,
+			Topology: topo,
 		}.GetStatuses(ctx, p, pathprobe.WithEPIC(cfg.Epic))
 		if err != nil {
-			return nil, serrors.WrapStr("getting statuses", err)
+			return nil, serrors.Wrap("getting statuses", err)
 		}
 	}
 	path.Sort(paths)

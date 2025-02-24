@@ -21,7 +21,6 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
 	drkeypb "github.com/scionproto/scion/pkg/proto/drkey"
-	"github.com/scionproto/scion/pkg/scrypto/cppki"
 )
 
 func asHostMetaToProtoRequest(meta drkey.ASHostMeta) *cppb.DRKeyASHostRequest {
@@ -41,17 +40,15 @@ func getASHostKeyFromReply(
 
 	err := rep.EpochBegin.CheckValid()
 	if err != nil {
-		return drkey.ASHostKey{}, serrors.WrapStr("invalid EpochBegin from response", err)
+		return drkey.ASHostKey{}, serrors.Wrap("invalid EpochBegin from response", err)
 	}
 	err = rep.EpochEnd.CheckValid()
 	if err != nil {
-		return drkey.ASHostKey{}, serrors.WrapStr("invalid EpochEnd from response", err)
+		return drkey.ASHostKey{}, serrors.Wrap("invalid EpochEnd from response", err)
 	}
 	epoch := drkey.Epoch{
-		Validity: cppki.Validity{
-			NotBefore: rep.EpochBegin.AsTime(),
-			NotAfter:  rep.EpochEnd.AsTime(),
-		},
+		NotBefore: rep.EpochBegin.AsTime(),
+		NotAfter:  rep.EpochEnd.AsTime(),
 	}
 
 	returningKey := drkey.ASHostKey{
@@ -87,17 +84,15 @@ func getHostASKeyFromReply(
 
 	err := rep.EpochBegin.CheckValid()
 	if err != nil {
-		return drkey.HostASKey{}, serrors.WrapStr("invalid EpochBegin from response", err)
+		return drkey.HostASKey{}, serrors.Wrap("invalid EpochBegin from response", err)
 	}
 	err = rep.EpochEnd.CheckValid()
 	if err != nil {
-		return drkey.HostASKey{}, serrors.WrapStr("invalid EpochEnd from response", err)
+		return drkey.HostASKey{}, serrors.Wrap("invalid EpochEnd from response", err)
 	}
 	epoch := drkey.Epoch{
-		Validity: cppki.Validity{
-			NotBefore: rep.EpochBegin.AsTime(),
-			NotAfter:  rep.EpochEnd.AsTime(),
-		},
+		NotBefore: rep.EpochBegin.AsTime(),
+		NotAfter:  rep.EpochEnd.AsTime(),
 	}
 
 	returningKey := drkey.HostASKey{
@@ -133,17 +128,15 @@ func getHostHostKeyFromReply(
 
 	err := rep.EpochBegin.CheckValid()
 	if err != nil {
-		return drkey.HostHostKey{}, serrors.WrapStr("invalid EpochBegin from response", err)
+		return drkey.HostHostKey{}, serrors.Wrap("invalid EpochBegin from response", err)
 	}
 	err = rep.EpochEnd.CheckValid()
 	if err != nil {
-		return drkey.HostHostKey{}, serrors.WrapStr("invalid EpochEnd from response", err)
+		return drkey.HostHostKey{}, serrors.Wrap("invalid EpochEnd from response", err)
 	}
 	epoch := drkey.Epoch{
-		Validity: cppki.Validity{
-			NotBefore: rep.EpochBegin.AsTime(),
-			NotAfter:  rep.EpochEnd.AsTime(),
-		},
+		NotBefore: rep.EpochBegin.AsTime(),
+		NotAfter:  rep.EpochEnd.AsTime(),
 	}
 
 	returningKey := drkey.HostHostKey{

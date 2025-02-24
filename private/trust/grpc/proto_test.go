@@ -20,9 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/xtest"
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
 	"github.com/scionproto/scion/pkg/scrypto/cppki"
@@ -33,16 +33,20 @@ import (
 
 func TestChainQueryToReq(t *testing.T) {
 	query := trust.ChainQuery{
-		IA:           xtest.MustParseIA("1-ff00:0:110"),
-		Date:         time.Now().UTC().Truncate(time.Second),
+		IA: addr.MustParseIA("1-ff00:0:110"),
+		Validity: cppki.Validity{
+			NotBefore: time.Now().UTC().Truncate(time.Second),
+			NotAfter:  time.Now().UTC().Truncate(time.Second),
+		},
 		SubjectKeyID: []byte("frank"),
 	}
 	req := trustgrpc.ChainQueryToReq(query)
 	assert.Equal(t, uint64(query.IA), req.IsdAs)
 	assert.Equal(t, query.SubjectKeyID, req.SubjectKeyId)
-	ts, err := ptypes.Timestamp(req.Date)
-	assert.NoError(t, err)
-	assert.Equal(t, query.Date, ts)
+	validSince := req.AtLeastValidSince.AsTime()
+	assert.Equal(t, query.Validity.NotBefore, validSince)
+	validUntil := req.AtLeastValidUntil.AsTime()
+	assert.Equal(t, query.Validity.NotAfter, validUntil)
 }
 
 func TestIDToReq(t *testing.T) {

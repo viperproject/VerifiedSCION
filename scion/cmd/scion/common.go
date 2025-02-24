@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/private/common"
 	"github.com/scionproto/scion/pkg/private/serrors"
+	"github.com/scionproto/scion/pkg/segment/iface"
 	"github.com/scionproto/scion/pkg/snet"
 )
 
@@ -43,8 +43,8 @@ type Path struct {
 
 // Hop represents an hop on the path.
 type Hop struct {
-	ID common.IFIDType `json:"interface" yaml:"interface"`
-	IA addr.IA         `json:"isd_as" yaml:"isd_as"`
+	ID iface.ID `json:"interface" yaml:"interface"`
+	IA addr.IA  `json:"isd_as" yaml:"isd_as"`
 }
 
 // getHops constructs a list of snet path interfaces from an snet path
@@ -63,14 +63,14 @@ func getHops(path snet.Path) []Hop {
 
 // getPrintf returns a printf function for the "human" formatting flag and an empty one for machine
 // readable format flags
-func getPrintf(output string, writer io.Writer) (func(format string, ctx ...interface{}), error) {
+func getPrintf(output string, writer io.Writer) (func(format string, ctx ...any), error) {
 	switch output {
 	case "human":
-		return func(format string, ctx ...interface{}) {
+		return func(format string, ctx ...any) {
 			fmt.Fprintf(writer, format, ctx...)
 		}, nil
 	case "yaml", "json":
-		return func(format string, ctx ...interface{}) {}, nil
+		return func(format string, ctx ...any) {}, nil
 	default:
 		return nil, serrors.New("format not supported", "format", output)
 	}
@@ -86,7 +86,7 @@ func (d durationMillis) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.MillisRounded())
 }
 
-func (d durationMillis) MarshalYAML() (interface{}, error) {
+func (d durationMillis) MarshalYAML() (any, error) {
 	return d.MillisRounded(), nil
 }
 

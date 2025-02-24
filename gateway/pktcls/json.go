@@ -57,7 +57,7 @@ const (
 )
 
 // generic container for marshaling custom data
-type jsonContainer map[string]interface{}
+type jsonContainer map[string]any
 
 func marshalInterface(t Typer) ([]byte, error) {
 	return json.Marshal(jsonContainer{t.Type(): t})
@@ -234,8 +234,9 @@ func unmarshalUintField(b []byte, name, field string, width int) (uint64, error)
 	}
 	i, err := strconv.ParseUint(s, 0, width)
 	if err != nil {
-		return 0, serrors.WrapStr("Unable to parse uint field", err,
+		return 0, serrors.Wrap("Unable to parse uint field", err,
 			"name", name, "field", field)
+
 	}
 	return i, nil
 }

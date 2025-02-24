@@ -35,11 +35,11 @@ func ParseFormattedIA(ia string, opts ...FormatOption) (IA, error) {
 	}
 	isd, err := ParseFormattedISD(parts[0], opts...)
 	if err != nil {
-		return 0, serrors.WrapStr("parsing ISD part", err, "value", ia)
+		return 0, serrors.Wrap("parsing ISD part", err, "value", ia)
 	}
 	as_, err := ParseFormattedAS(parts[1], opts...)
 	if err != nil {
-		return 0, serrors.WrapStr("parsing AS part", err, "value", ia)
+		return 0, serrors.Wrap("parsing AS part", err, "value", ia)
 	}
 	return MustIAFrom(isd, as_), nil
 }

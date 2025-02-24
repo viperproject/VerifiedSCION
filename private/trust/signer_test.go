@@ -25,13 +25,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/scionproto/scion/pkg/addr"
-	"github.com/scionproto/scion/pkg/private/xtest"
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
 	"github.com/scionproto/scion/pkg/scrypto/cppki"
 	"github.com/scionproto/scion/pkg/scrypto/signed"
@@ -68,7 +67,7 @@ func TestSignerSign(t *testing.T) {
 				signer := trust.Signer{
 					PrivateKey: priv,
 					Algorithm:  signed.ECDSAWithSHA512,
-					IA:         xtest.MustParseIA("1-ff00:0:110"),
+					IA:         addr.MustParseIA("1-ff00:0:110"),
 					TRCID: cppki.TRCID{
 						ISD:    1,
 						Base:   1,
@@ -87,7 +86,7 @@ func TestSignerSign(t *testing.T) {
 				var keyID cppb.VerificationKeyID
 				require.NoError(t, proto.Unmarshal(hdr.VerificationKeyID, &keyID))
 
-				assert.Equal(t, xtest.MustParseIA("1-ff00:0:110"), addr.IA(keyID.IsdAs))
+				assert.Equal(t, addr.MustParseIA("1-ff00:0:110"), addr.IA(keyID.IsdAs))
 				assert.Equal(t, []byte{0, 1, 2, 3, 4, 5, 6, 7}, keyID.SubjectKeyId)
 
 				_, err = signed.Verify(signedMsg, signer.PrivateKey.Public())
@@ -113,7 +112,7 @@ func TestSignerSign(t *testing.T) {
 		signer := trust.Signer{
 			PrivateKey: priv,
 			Algorithm:  signed.ECDSAWithSHA512,
-			IA:         xtest.MustParseIA("1-ff00:0:110"),
+			IA:         addr.MustParseIA("1-ff00:0:110"),
 			TRCID: cppki.TRCID{
 				ISD:    1,
 				Base:   1,

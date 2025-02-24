@@ -23,16 +23,17 @@ import (
 
 	flag "github.com/spf13/pflag"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/daemon"
 	"github.com/scionproto/scion/pkg/drkey"
+	"github.com/scionproto/scion/pkg/drkey/generic"
 	"github.com/scionproto/scion/pkg/drkey/specific"
 	"github.com/scionproto/scion/pkg/private/serrors"
 	cppb "github.com/scionproto/scion/pkg/proto/control_plane"
 	dkpb "github.com/scionproto/scion/pkg/proto/drkey"
-	"github.com/scionproto/scion/pkg/scrypto/cppki"
 	"github.com/scionproto/scion/pkg/snet"
 	env "github.com/scionproto/scion/private/app/flag"
 )
@@ -44,13 +45,18 @@ func main() {
 func realMain() int {
 	var serverMode bool
 	var serverAddrStr, clientAddrStr string
+	var protocol uint16
+	var fetchSV bool
 	var scionEnv env.SCIONEnvironment
 
 	scionEnv.Register(flag.CommandLine)
-	flag.BoolVar(&serverMode, "server", false, "Demonstrate server-side key derivation"+
-		" (default: demonstrate client-side key fetching)")
+	flag.BoolVar(&serverMode, "server", false, "Demonstrate server-side key derivation."+
+		" (default demonstrate client-side key fetching)")
 	flag.StringVar(&serverAddrStr, "server-addr", "", "SCION address for the server-side.")
 	flag.StringVar(&clientAddrStr, "client-addr", "", "SCION address for the client-side.")
+	flag.Uint16Var(&protocol, "protocol", 1 /* SCMP */, "DRKey protocol identifier.")
+	flag.BoolVar(&fetchSV, "fetch-sv", false,
+		"Fetch protocol specific secret value to derive server-side keys.")
 	flag.Parse()
 	if err := scionEnv.LoadExternalVars(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error reading SCION environment:", err)
@@ -70,12 +76,17 @@ func realMain() int {
 		return 2
 	}
 
+	if !serverMode && fetchSV {
+		fmt.Fprintf(os.Stderr, "Invalid flag --fetch-sv for client-side key derivation\n")
+		return 2
+	}
+
 	ctx, cancelF := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelF()
 
 	// meta describes the key that both client and server derive
 	meta := drkey.HostHostMeta{
-		ProtoId: drkey.SCMP,
+		ProtoId: drkey.Protocol(protocol),
 		// Validity timestamp; both sides need to use a validity time stamp in the same epoch.
 		// Usually this is coordinated by means of a timestamp in the message.
 		Validity: time.Now(),
@@ -99,28 +110,55 @@ func realMain() int {
 		// Server: get the Secret Value (SV) for the protocol and derive all
 		// subsequent keys in-process
 		server := Server{daemon}
-		// Fetch the Secret Value (SV); in a real application, this is only done at
-		// startup and refreshed for each epoch.
-		sv, err := server.fetchSV(ctx, drkey.SecretValueMeta{
-			Validity: meta.Validity,
-			ProtoId:  meta.ProtoId,
-		})
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error fetching secret value:", err)
-			return 1
+		var serverKey drkey.HostHostKey
+		var t0, t1, t2 time.Time
+		if fetchSV {
+			// Fetch the Secret Value (SV); in a real application, this is only done at
+			// startup and refreshed for each epoch.
+			t0 = time.Now()
+			sv, err := server.FetchSV(ctx, drkey.SecretValueMeta{
+				ProtoId:  meta.ProtoId,
+				Validity: meta.Validity,
+			})
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Error fetching secret value:", err)
+				return 1
+			}
+			t1 = time.Now()
+			serverKey, err = server.DeriveHostHostKeySpecific(sv, meta)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Error deriving key:", err)
+				return 1
+			}
+			t2 = time.Now()
+		} else {
+			// Fetch host-AS key (Level 2). This key can be used to derive keys for
+			// all hosts in the destination AS. Depending on the application, it can
+			// be cached and refreshed for each epoch.
+			t0 = time.Now()
+			hostASKey, err := server.FetchHostASKey(ctx, drkey.HostASMeta{
+				ProtoId:  meta.ProtoId,
+				Validity: meta.Validity,
+				SrcIA:    meta.SrcIA,
+				DstIA:    meta.DstIA,
+				SrcHost:  meta.SrcHost,
+			})
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Error fetching host-AS key:", err)
+				return 1
+			}
+			t1 = time.Now()
+			serverKey, err = server.DeriveHostHostKeyGeneric(hostASKey, meta)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Error deriving key:", err)
+				return 1
+			}
+			t2 = time.Now()
 		}
-		t0 := time.Now()
-		serverKey, err := server.DeriveHostHostKey(sv, meta)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "Error deriving key:", err)
-			return 1
-		}
-		durationServer := time.Since(t0)
-
 		fmt.Printf(
-			"Server,\thost key = %s\tduration = %s\n",
-			hex.EncodeToString(serverKey.Key[:]),
-			durationServer,
+			"Server: host key = %s, protocol = %s, fetch-sv = %v"+
+				"\n\tduration without cache: %s\n\tduration with cache: %s\n",
+			hex.EncodeToString(serverKey.Key[:]), meta.ProtoId, fetchSV, t2.Sub(t0), t2.Sub(t1),
 		)
 	} else {
 		// Client: fetch key from daemon
@@ -128,18 +166,18 @@ func realMain() int {
 		// The CS will fetch the Lvl1 key from the CS in the SrcIA (the server's AS)
 		// and derive the Host key based on this.
 		client := Client{daemon}
-		t0 := time.Now()
+		var t0, t1 time.Time
+		t0 = time.Now()
 		clientKey, err := client.FetchHostHostKey(ctx, meta)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error fetching key:", err)
 			return 1
 		}
-		durationClient := time.Since(t0)
+		t1 = time.Now()
 
 		fmt.Printf(
-			"Client,\thost key = %s\tduration = %s\n",
-			hex.EncodeToString(clientKey.Key[:]),
-			durationClient,
+			"Client: host key = %s, protocol = %s\n\tduration: %s\n",
+			hex.EncodeToString(clientKey.Key[:]), meta.ProtoId, t1.Sub(t0),
 		)
 	}
 	return 0
@@ -152,7 +190,7 @@ type Client struct {
 func (c Client) FetchHostHostKey(
 	ctx context.Context, meta drkey.HostHostMeta) (drkey.HostHostKey, error) {
 
-	// get L2 key: (slow path)
+	// get level 3 key: (slow path)
 	return c.daemon.DRKeyGetHostHostKey(ctx, meta)
 }
 
@@ -160,7 +198,7 @@ type Server struct {
 	daemon daemon.Connector
 }
 
-func (s Server) DeriveHostHostKey(
+func (s Server) DeriveHostHostKeySpecific(
 	sv drkey.SecretValue,
 	meta drkey.HostHostMeta,
 ) (drkey.HostHostKey, error) {
@@ -168,15 +206,15 @@ func (s Server) DeriveHostHostKey(
 	var deriver specific.Deriver
 	lvl1, err := deriver.DeriveLevel1(meta.DstIA, sv.Key)
 	if err != nil {
-		return drkey.HostHostKey{}, serrors.WrapStr("deriving level 1 key", err)
+		return drkey.HostHostKey{}, serrors.Wrap("deriving level 1 key", err)
 	}
 	asHost, err := deriver.DeriveHostAS(meta.SrcHost, lvl1)
 	if err != nil {
-		return drkey.HostHostKey{}, serrors.WrapStr("deriving host-AS key", err)
+		return drkey.HostHostKey{}, serrors.Wrap("deriving host-AS key", err)
 	}
 	hosthost, err := deriver.DeriveHostHost(meta.DstHost, asHost)
 	if err != nil {
-		return drkey.HostHostKey{}, serrors.WrapStr("deriving host-host key", err)
+		return drkey.HostHostKey{}, serrors.Wrap("deriving host-host key", err)
 	}
 	return drkey.HostHostKey{
 		ProtoId: sv.ProtoId,
@@ -189,11 +227,34 @@ func (s Server) DeriveHostHostKey(
 	}, nil
 }
 
-// fetchSV obtains the Secret Value (SV) for the selected protocol/epoch.
+func (s Server) DeriveHostHostKeyGeneric(
+	hostAS drkey.HostASKey,
+	meta drkey.HostHostMeta,
+) (drkey.HostHostKey, error) {
+
+	deriver := generic.Deriver{
+		Proto: hostAS.ProtoId,
+	}
+	hosthost, err := deriver.DeriveHostHost(meta.DstHost, hostAS.Key)
+	if err != nil {
+		return drkey.HostHostKey{}, serrors.Wrap("deriving host-host key", err)
+	}
+	return drkey.HostHostKey{
+		ProtoId: hostAS.ProtoId,
+		Epoch:   hostAS.Epoch,
+		SrcIA:   meta.SrcIA,
+		DstIA:   meta.DstIA,
+		SrcHost: meta.SrcHost,
+		DstHost: meta.DstHost,
+		Key:     hosthost,
+	}, nil
+}
+
+// FetchSV obtains the Secret Value (SV) for the selected protocol/epoch.
 // From this SV, all keys for this protocol/epoch can be derived locally.
 // The IP address of the server must be explicitly allowed to abtain this SV
 // from the the control server.
-func (s Server) fetchSV(
+func (s Server) FetchSV(
 	ctx context.Context,
 	meta drkey.SecretValueMeta,
 ) (drkey.SecretValue, error) {
@@ -201,7 +262,7 @@ func (s Server) fetchSV(
 	// Obtain CS address from scion daemon
 	svcs, err := s.daemon.SVCInfo(ctx, nil)
 	if err != nil {
-		return drkey.SecretValue{}, serrors.WrapStr("obtaining control service address", err)
+		return drkey.SecretValue{}, serrors.Wrap("obtaining control service address", err)
 	}
 	cs := svcs[addr.SvcCS]
 	if len(cs) == 0 {
@@ -209,9 +270,11 @@ func (s Server) fetchSV(
 	}
 
 	// Contact CS directly for SV
-	conn, err := grpc.DialContext(ctx, cs[0], grpc.WithInsecure())
+	conn, err := grpc.DialContext(
+		ctx, cs[0], grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
-		return drkey.SecretValue{}, serrors.WrapStr("dialing control service", err)
+		return drkey.SecretValue{}, serrors.Wrap("dialing control service", err)
 	}
 	defer conn.Close()
 	client := cppb.NewDRKeyIntraServiceClient(conn)
@@ -221,12 +284,12 @@ func (s Server) fetchSV(
 		ProtocolId: dkpb.Protocol(meta.ProtoId),
 	})
 	if err != nil {
-		return drkey.SecretValue{}, serrors.WrapStr("requesting drkey secret value", err)
+		return drkey.SecretValue{}, serrors.Wrap("requesting drkey secret value", err)
 	}
 
 	key, err := getSecretFromReply(meta.ProtoId, rep)
 	if err != nil {
-		return drkey.SecretValue{}, serrors.WrapStr("validating drkey secret value reply", err)
+		return drkey.SecretValue{}, serrors.Wrap("validating drkey secret value reply", err)
 	}
 
 	return key, nil
@@ -244,10 +307,8 @@ func getSecretFromReply(
 		return drkey.SecretValue{}, err
 	}
 	epoch := drkey.Epoch{
-		Validity: cppki.Validity{
-			NotBefore: rep.EpochBegin.AsTime(),
-			NotAfter:  rep.EpochEnd.AsTime(),
-		},
+		NotBefore: rep.EpochBegin.AsTime(),
+		NotAfter:  rep.EpochEnd.AsTime(),
 	}
 	returningKey := drkey.SecretValue{
 		ProtoId: proto,
@@ -255,4 +316,11 @@ func getSecretFromReply(
 	}
 	copy(returningKey.Key[:], rep.Key)
 	return returningKey, nil
+}
+
+func (s Server) FetchHostASKey(
+	ctx context.Context, meta drkey.HostASMeta) (drkey.HostASKey, error) {
+
+	// get level 2 key: (fast path)
+	return s.daemon.DRKeyGetHostASKey(ctx, meta)
 }

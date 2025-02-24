@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package mgmtapi implements the http status API of the router.
 package mgmtapi
 
 import (
@@ -23,7 +24,7 @@ import (
 	"github.com/scionproto/scion/router/control"
 )
 
-// Server implements the Control Service API.
+// Server implements the http status API of the router.
 type Server struct {
 	Config    http.HandlerFunc
 	Info      http.HandlerFunc
@@ -55,7 +56,7 @@ func (s *Server) SetLogLevel(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetInterfaces(w http.ResponseWriter, r *http.Request) {
 	internalInterfaces, err := s.Dataplane.ListInternalInterfaces()
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "error getting internal interface",
@@ -65,7 +66,7 @@ func (s *Server) GetInterfaces(w http.ResponseWriter, r *http.Request) {
 	}
 	externalInterfaces, err := s.Dataplane.ListExternalInterfaces()
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "error getting external interfaces",
@@ -75,7 +76,7 @@ func (s *Server) GetInterfaces(w http.ResponseWriter, r *http.Request) {
 	}
 	siblingInterfaces, err := s.Dataplane.ListSiblingInterfaces()
 	if err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "error getting sibling interfaces",
@@ -99,17 +100,17 @@ func (s *Server) GetInterfaces(w http.ResponseWriter, r *http.Request) {
 			Bfd: BFD{
 				DesiredMinimumTxInterval: intf.Link.BFD.DesiredMinTxInterval.String(),
 				DetectionMultiplier:      int(intf.Link.BFD.DetectMult),
-				Enabled:                  !intf.Link.BFD.Disable,
+				Enabled:                  !*(intf.Link.BFD.Disable),
 				RequiredMinimumReceive:   intf.Link.BFD.RequiredMinRxInterval.String(),
 			},
-			InterfaceId:       int(intf.InterfaceID),
+			InterfaceId:       int(intf.IfID), // nolint - name from published API.
 			InternalInterface: findInternalInterface(intf.Link.Local.IA),
 			Neighbor: InterfaceNeighbor{
 				Address: intf.Link.Remote.Addr.String(),
-				IsdAs:   IsdAs(intf.Link.Remote.IA.String()),
+				IsdAs:   intf.Link.Remote.IA.String(),
 			},
 			Relationship: LinkRelationship(intf.Link.LinkTo.String()),
-			ScionMtu:     ScionMTU(intf.Link.MTU),
+			ScionMtu:     intf.Link.MTU,
 			State:        LinkState(intf.State),
 		}
 
@@ -118,13 +119,13 @@ func (s *Server) GetInterfaces(w http.ResponseWriter, r *http.Request) {
 
 	for _, intf := range siblingInterfaces {
 		siblingInterface := SiblingInterface{
-			InterfaceId:       int(intf.InterfaceID),
+			InterfaceId:       int(intf.IfID), // nolint - name from published API.
 			InternalInterface: intf.InternalInterface.String(),
 			Neighbor: SiblingNeighbor{
-				IsdAs: IsdAs(intf.NeighborIA.String()),
+				IsdAs: intf.NeighborIA.String(),
 			},
 			Relationship: LinkRelationship(intf.Relationship.String()),
-			ScionMtu:     ScionMTU(intf.MTU),
+			ScionMtu:     intf.MTU,
 			State:        LinkState(intf.State),
 		}
 
@@ -138,7 +139,7 @@ func (s *Server) GetInterfaces(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	if err := enc.Encode(rep); err != nil {
-		Error(w, Problem{
+		ErrorResponse(w, Problem{
 			Detail: api.StringRef(err.Error()),
 			Status: http.StatusInternalServerError,
 			Title:  "unable to marshal response",
@@ -149,11 +150,11 @@ func (s *Server) GetInterfaces(w http.ResponseWriter, r *http.Request) {
 }
 
 // Error creates an detailed error response.
-func Error(w http.ResponseWriter, p Problem) {
+func ErrorResponse(w http.ResponseWriter, p Problem) {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(p.Status)
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "    ")
 	// no point in catching error here, there is nothing we can do about it anymore.
-	enc.Encode(p)
+	_ = enc.Encode(p)
 }
