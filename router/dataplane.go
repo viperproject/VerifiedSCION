@@ -2869,8 +2869,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput /*@, dp.Asid() @*/)
 	// @ fold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
 	// @ sl.SplitRange_Bytes(fullMac, 0, path.MacLen, R21)
-	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen] /*@, R21 @*/) == 0 {
-		//  ghost defer sl.CombineRange_Bytes(fullMac, 0, path.MacLen, R21)
+	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen]) == 0 {
 		// @ defer unfold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
 		// @ ghost ubPath := p.scionLayer.UBPath(ubScionL)
 		// @ ghost start := p.scionLayer.PathStartIdx(ubScionL)
@@ -2902,54 +2901,24 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 		return tmpRes, tmpErr
 	}
 
-	//  sl.CombineRange_Bytes(fullMac, 0, path.MacLen, R21)
-	// @ unfold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
-	// @ unfold acc(sl.Bytes(fullMac[:path.MacLen], 0, path.MacLen), R21)
-
 	// Add the full MAC to the SCION packet processor,
 	// such that EPIC does not need to recalculate it.
 	p.cachedMac = fullMac
 	// @ reveal p.EqAbsInfoField(oldPkt)
 	// @ reveal p.EqAbsHopField(oldPkt)
 
-	// NOTE: taken out for now
-	// (VerifiedSCION) Assumptions for Cryptography:
-	//  absInf := p.infoField.ToAbsInfoField()
-	//  absHF := p.hopField.ToIO_HF()
-	//  AssumeForIO(dp.hf_valid(absInf.ConsDir, absInf.AInfo, absInf.UInfo, absHF))
-
 	// @ absHF := p.hopField.ToIO_HF()
 	// @ absInf := p.infoField.ToAbsInfoField()
 
-	// NOTE: After the `if`-statement, we should be able to get:
-	// This might need some additions to constant time compare, however
-	// TODO: Think about [:MacLen] vs. nothing vs. FromSliceToMacArray
-
-	// @ assert forall i int :: { &p.hopField.Mac[:path.MacLen][i] } { fullMac[:path.MacLen][i] } 0 <= i && i < path.MacLen ==> p.hopField.Mac[:path.MacLen][i] == fullMac[:path.MacLen][i]
-
-	// @ assert forall i int :: { &fullMac[i] } 0 <= i && i < path.MacLen ==> fullMac[i] == p.hopField.Mac[i]
-
+	// @ unfold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
+	// @ unfold acc(sl.Bytes(fullMac[:path.MacLen], 0, path.MacLen), R21)
 	// @ path.EqualBytesImplyEqualMac(fullMac, p.hopField.Mac)
-	// @ assert path.AbsMac(p.hopField.Mac) == path.AbsMac(path.FromSliceToMacArray(fullMac))
-
-	// NOTE: We know:
-	// absHF.HVF := path.AbsMac(p.hopField.Mac)
-
 	// ==> absHF.HVF := path.AbsMac(p.hopField.Mac)
-	// NOTE: by `AbsMacArrayCongruence` or `EqualBytesImplyEqualMac`
 	//  == path.AbsMac(FromSliceToMacArray(fullMac))
-	//  == io.nextMsgtermSpec(...)
 
-	// NOTE: From the postcondition of `FullMAC` we get:
-	// @ fold acc(sl.Bytes(fullMac[:path.MacLen], 0, path.MacLen), R21)
-	// @ sl.CombineRange_Bytes(fullMac, 0, path.MacLen, R21)
+	// Needed to "access" postcondition of `FullMAC`:
 	// @ unfold acc(sl.Bytes(fullMac, 0, len(fullMac)), R21)
-	// @ assert path.AbsMac(path.FromSliceToMacArray(fullMac)) == io.nextMsgtermSpec(dp.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo, absInf.UInfo)
-
-	// NOTE: ==>
-	// @ assert absHF.HVF == io.nextMsgtermSpec(dp.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
-	// @ assert io.hf_valid_impl(dp.Asid(), absInf.AInfo.V, absInf.UInfo, absHF)
-	// @ assert dp.hf_valid(absInf.ConsDir, absInf.AInfo.V, absInf.UInfo, absHF)
+	// ==> absHF.HVF == io.nextMsgtermSpec(...)
 
 	// @ reveal AbsVerifyCurrentMACConstraint(oldPkt, dp)
 	// @ fold p.d.validResult(processResult{}, false)
@@ -4173,7 +4142,7 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost dp io.DataPlaneSpec @*/ ) (
 		macCopy := mac
 		// @ fold acc(sl.Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), R56)
 		// @ fold acc(sl.Bytes(mac[:], 0, len(mac)), R56)
-		compRes := subtle.ConstantTimeCompare(ohp.FirstHop.Mac[:], mac[:] /*@, R56 @*/) == 0
+		compRes := subtle.ConstantTimeCompare(ohp.FirstHop.Mac[:], mac[:]) == 0
 		// @ unfold acc(sl.Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), R56)
 		// @ )
 		if compRes {

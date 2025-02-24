@@ -63,7 +63,7 @@ even branching based on layer type... it'll handle an (scn, e2e, udp) or (scn, h
 
 Note: Great care has been taken to only lazily parse the SCION header, however, HBH and E2E
 extensions are currently eagerly parsed (if they exist). Thus, handling packets containing these
-extensions will be much slower (see the Package benchmarks for reference).
+extensions will be much slower (see the package benchmarks for reference).
 When using the DecodingLayerParser, the extensions can be explicitly skipped by using the
 HopByHop/EndToEndExtnSkipper layer. The content of this Skipper-layer can be decoded into the full
 representation when necessary.

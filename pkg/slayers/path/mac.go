@@ -53,18 +53,12 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost as_ 
 //
 // @ ensures   len(res) == MACBufferSize && sl.Bytes(res, 0, MACBufferSize)
 //
-// NOTE: It might make sense to use `[:MacLen]` instead of `FromSliceToMacArray`,
-// as that is what is ultimately used in `verifyCurrentMAC`.
-// @ ensures unfolding sl.Bytes(res, 0, MACBufferSize) in
-// @		 let absInf := info.ToAbsInfoField() in
-// @		 let absHF := hf.ToIO_HF() in
-// @ 		 let absMac := AbsMac(FromSliceToMacArray(res)) in
-// @   		 absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo, absInf.UInfo)
+// @ ensures   unfolding sl.Bytes(res, 0, MACBufferSize) in
+// @	let absInf := info.ToAbsInfoField() in
+// @	let absHF := hf.ToIO_HF() in
+// @ 	let absMac := AbsMac(FromSliceToMacArray(res)) in
+// @   	absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
 // @ decreases
-// TODO: Test if underscore after as is really necessary
-// TODO: think about if it makes sense to have as_ here. In abstraction, we need
-// that information in order to get the correct key; in the concrete, the key
-// is already encapsulated in hash. Maybe there is a way to relate them
 func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost as_ io.IO_as @*/) (res []byte) {
 	if len(buffer) < MACBufferSize {
 		buffer = make([]byte, MACBufferSize)
@@ -84,18 +78,12 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost 
 	//@ assert h.Size() >= 16
 	res = h.Sum(buffer[:0])[:16]
 
-	// NOTE: We could potentially go even further and relate
-	// - `io.plaintextToMac` to `MACInput` and
-	// - `io.mac(io.macKey(io.asidToKey(as_)), -)` to `h.Write` and `h.Sum`,
-	// but that might get messy. In order to verify SIF, it suffices to relate
-	// the result here to `io.nextMsgtermSpec`.
-
-	// NOTE: This is our "MAC assumption", linking the abstraction of the
-	// concrete MAC tag to the abstract computation of the MAC tag.
+	// This is our "MAC assumption", linking the abstraction of the concrete 
+	// MAC tag to the abstract computation of the MAC tag.
 	//@ absInf := info.ToAbsInfoField()
 	//@ absHF := hf.ToIO_HF()
 	//@ absMac := AbsMac(FromSliceToMacArray(res))
-	//@ AssumeForIO(absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo, absInf. UInfo))
+	//@ AssumeForIO(absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo, absInf.UInfo))
 
 	//@ fold sl.Bytes(res, 0, MACBufferSize)
 	return res
