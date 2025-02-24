@@ -2947,9 +2947,9 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 	// @ assert path.AbsMac(path.FromSliceToMacArray(fullMac)) == io.nextMsgtermSpec(dp.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo, absInf.UInfo)
 
 	// NOTE: ==>
-	// @ assert absHF.HVF == io.nextMsgtermSpec(dp.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo, absInf.UInfo)
-	// @ assert io.hf_valid_impl(dp.Asid(), absInf.AInfo, absInf.UInfo, absHF)
-	// @ assert dp.hf_valid(absInf.ConsDir, absInf.AInfo, absInf.UInfo, absHF)
+	// @ assert absHF.HVF == io.nextMsgtermSpec(dp.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
+	// @ assert io.hf_valid_impl(dp.Asid(), absInf.AInfo.V, absInf.UInfo, absHF)
+	// @ assert dp.hf_valid(absInf.ConsDir, absInf.AInfo.V, absInf.UInfo, absHF)
 
 	// @ reveal AbsVerifyCurrentMACConstraint(oldPkt, dp)
 	// @ fold p.d.validResult(processResult{}, false)
