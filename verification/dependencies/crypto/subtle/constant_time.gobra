@@ -15,8 +15,11 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 // and 0 otherwise. The time taken is a function of the length of the slices and
 // is independent of the contents.
 trusted
-requires sl.Bytes(x, 0, len(x))
-requires sl.Bytes(y, 0, len(y))
+requires p > 0
+preserves acc(sl.Bytes(x, 0, len(x)), p)
+preserves acc(sl.Bytes(y, 0, len(y)), p)
 ensures  len(x) != len(y) ==> res == 0
+// TODO: maybe package this in sl.Bytes again 
+ensures res != 0 ==> unfolding acc(sl.Bytes(x, 0, len(x)), p) in unfolding acc(sl.Bytes(y, 0, len(y)), p) in forall i int :: { x[i] } { y[i] } 0 <= i && i < len(x) ==> x[i] == y[i] 
 decreases
-pure func ConstantTimeCompare(x, y []byte) (res int)
+func ConstantTimeCompare(x, y []byte, ghost p perm) (res int)

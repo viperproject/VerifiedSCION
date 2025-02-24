@@ -65,7 +65,7 @@ pure func FromSliceToMacArray(mac []byte) (res [MacLen]byte) {
 // }
 
 ghost
-requires len(mac1) == MacLen
+requires len(mac1) >= MacLen
 requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R50)
 requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> mac1[i] == mac2[i]
 ensures  forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R50)
