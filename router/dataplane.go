@@ -151,7 +151,7 @@ type BatchConn interface {
 	// And also used MultiReadBioIOI_val instead of MsgToAbsVal to match what is
 	// used in permissions.
 	// @ ensures err == nil ==>
-	// @ 	forall i int :: { MutliReadBioIO_val(place, n)[i] } 0 <= i && i < n ==>
+	// @ 	forall i int :: { MultiReadBioIO_val(place, n)[i] } 0 <= i && i < n ==>
 	// @		low(old(MultiReadBioIO_val(place, n)[i]))
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
