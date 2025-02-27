@@ -2,39 +2,40 @@
 package path
 
 import (
-	"encoding/binary"
-	"time"
-
-	"github.com/scionproto/scion/pkg/private/serrors"
-	"github.com/scionproto/scion/verification/utils/definitions"
-	"github.com/scionproto/scion/verification/utils/slices"
+    "github.com/scionproto/scion/verification/utils/definitions"
+    "github.com/scionproto/scion/verification/utils/slices"
 )
 
-// @ assert err1 == nil
-// @ assert err2 == nil
-// @ assert want == got
-// NO ERROR
-// doesn't verify
-func TestInfoSerializeDecode1() {
-	want := &InfoField{
-		Peer:      true,
-		ConsDir:   true,
-		SegID:     0x222,
-		Timestamp: 0x100,
-	}
-	b := make([]byte, InfoLen)
-	fold slices.Bytes(b, 0, InfoLen) // needs to be added manually
-	err1 := want.SerializeTo(b)
+// done
+// no error case
+// DOES NOT VERIFY
+func TestInfoSerializeDecode1(inf1 *InfoField, b []byte, inf2 *InfoField, raw []byte) {
+    tmpInf1 := &InfoField{Peer:true, ConsDir:true, SegID:0x222, Timestamp:0x100}
+    tmpB := []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}
 
-	got := &InfoField{}
-	err2 := got.DecodeFromBytes(b)
+    assume inf1 == tmpInf1
+    assume b === tmpB
 
-	assert err1 == nil
-	assert err2 == nil
-    assert want.Peer == got.Peer
-	assert want.ConsDir == got.ConsDir
-	assert want.Timestamp == got.Timestamp
-	assert want.SegID == got.SegID
+    inhale  len(b) >= InfoLen
+    inhale acc(inf1, definitions.R10)
+    inhale slices.Bytes(b, 0, len(b))
 
-	assert *want == *got
+    err1 := inf1.SerializeTo(b)
+
+    assert err1 == nil
+
+    tmpInf2 := &InfoField{Peer:false, ConsDir:false, SegID:0x0, Timestamp:0x0}
+    tmpRaw := []byte{0x3, 0x0, 0x2, 0x22, 0x0, 0x0, 0x1, 0x0}
+
+    assume inf2 == tmpInf2
+    assume raw === tmpRaw
+
+    inhale len(raw) >= InfoLen
+    inhale acc(inf2)
+    inhale acc(slices.Bytes(raw, 0, len(raw)), definitions.R45)
+
+    err2 := inf2.DecodeFromBytes(raw)
+
+    assert err2 == nil
+    assert *inf1 == *inf2
 }

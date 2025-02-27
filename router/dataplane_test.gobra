@@ -3,27 +3,95 @@
 package router
 
 import (
+    "github.com/scionproto/scion/pkg/addr"
+    "github.com/scionproto/scion/private/topology"
     "github.com/scionproto/scion/verification/utils/slices"
+    "hash"
     "net"
+    "sync"
 )
 
+// done
+// error case
 // fails after serve
-// doesn't verify
-requires conn != nil && conn.Mem()
-func TestDataPlaneAddInternalInterface1(conn BatchConn) { // mock passed as parameter
-	d := &DataPlane{}
-	d.running = true // inlined method body of d.FakeStart()
-	fold d.Mem() // has to be inserted to satisfy precondition
-	fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
-	d.mtx.SetInv(MutexInvariant!<d!>) // has to be inserted to satisfy precondition
+// VERIFIES
+func TestDataPlaneAddInternalInterface1(d *DataPlane, conn BatchConn, ip net.IP) { // mock passed as parameter
+	tmpD := &DataPlane{
+        external:          map[uint16]BatchConn(nil),
+        linkTypes:         map[uint16]topology.LinkType(nil),
+        neighborIAs:       map[uint16]addr.IA(nil),
+        internal:          BatchConn(nil),
+        internalIP:        net.IP(nil),
+        internalNextHops:  map[uint16]*net.UDPAddr(nil),
+        svc:               (*services)(nil),
+        //macFactory:        (func() hash.Hash)(nil),
+        bfdSessions:       map[uint16]bfdSession(nil),
+        localIA:           0x0,
+        mtx:               sync.Mutex{},
+        running:           true,
+        Metrics:           (*Metrics)(nil),
+        forwardingMetrics: map[uint16]forwardingMetrics(nil),
+    }
+	tmpIp := net.IP{}
 
-	ip := net.IP{}
-	fold ip.Mem() // has to be inserted to satisfy precondition, fails because len(ip) == IPv4len || len(ip) == IPv6len might not hold
+	assume d == tmpD
+    assume ip === tmpIp
 
-	err := d.AddInternalInterface(conn, ip) // precondition !d.IsRunning() might not hold
+    inhale acc(d.Mem(), OutMutexPerm)
+    inhale !d.IsRunning()
+    inhale !d.InternalConnIsSet()
+    inhale  conn != nil && conn.Mem()
+    inhale ip.Mem()
+    inhale d.mtx.LockP()
+    inhale d.mtx.LockInv() == MutexInvariant!<d!>
+
+	err := d.AddInternalInterface(conn, ip)
+
 	assert err != nil
 }
 
+// done
+// no error case
+// single set works
+// VERIFIES
+func TestDataPlaneAddInternalInterface3(d *DataPlane, conn BatchConn, ip net.IP) {
+    tmpD := &DataPlane{
+        external:          map[uint16]BatchConn(nil),
+        linkTypes:         map[uint16]topology.LinkType(nil),
+        neighborIAs:       map[uint16]addr.IA(nil),
+        internal:          BatchConn(nil),
+        internalIP:        net.IP(nil),
+        internalNextHops:  map[uint16]*net.UDPAddr(nil),
+        svc:               (*services)(nil),
+        //macFactory:        (func() hash.Hash)(nil),
+        bfdSessions:       map[uint16]bfdSession(nil),
+        localIA:           0x0,
+        mtx:               sync.Mutex{},
+        running:           false,
+        Metrics:           (*Metrics)(nil),
+        forwardingMetrics: map[uint16]forwardingMetrics(nil),
+    }
+    tmpIp := net.IP{}
+
+    assume d == tmpD
+    assume ip === tmpIp
+
+    inhale acc(d.Mem(), OutMutexPerm)
+    inhale !d.IsRunning()
+    inhale !d.InternalConnIsSet()
+    inhale  conn != nil && conn.Mem()
+    inhale ip.Mem()
+    inhale d.mtx.LockP()
+    inhale d.mtx.LockInv() == MutexInvariant!<d!>
+
+    //refute false
+
+    err := d.AddInternalInterface(conn, ip)
+
+    assert err == nil // ERROR: might not hold
+}
+
+// TODO
 // setting nil value is not allowed
 // doesn't verify
 func TestDataPlaneAddInternalInterface2() {
@@ -36,7 +104,7 @@ func TestDataPlaneAddInternalInterface2() {
 // single set works
 // doesn't verify
 requires conn != nil && conn.Mem() // has to be added to satisfy precondition
-func TestDataPlaneAddInternalInterface3(conn BatchConn) { // mock passed as parameter
+func TestDataPlaneAddInternalInterface3gr(conn BatchConn) { // mock passed as parameter
 	d := &DataPlane{}
     fold d.Mem() // has to be inserted to satisfy precondition
 	fold MutexInvariant!<d!>() // has to be inserted to satisfy precondition
