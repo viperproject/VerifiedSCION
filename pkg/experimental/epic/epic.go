@@ -205,7 +205,8 @@ func CoreFromPktCounter(counter uint32) (uint8, uint32) {
 
 // @ requires  len(key) == 16
 // @ preserves acc(sl.Bytes(key, 0, len(key)), R50)
-// @ ensures   reserr == nil ==> res != nil && res.Mem() && res.BlockSize() == 16
+// @ ensures   reserr == nil ==>
+// @ 	res != nil && res.Mem() && res.BlockSize() == 16
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {

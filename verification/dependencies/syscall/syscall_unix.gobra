@@ -34,8 +34,7 @@ func (e Errno) Error() string
 
 ghost
 decreases
-pure
-func (e Errno) IsDuplicableMem() (res bool) {
+pure func (e Errno) IsDuplicableMem() (res bool) {
 	return true
 }
 
@@ -65,16 +64,15 @@ func (s *Errno) Set(e error) {
 }
 
 ghost
-pure
-requires acc(s.Mem(), _)
+requires s.Mem()
 decreases
-func (s *Errno) Get() error {
-	return unfolding acc(s.Mem(), _) in *s
+pure func (s *Errno) Get() error {
+	return unfolding s.Mem() in
+		*s
 }
 
 ghost
-pure
 decreases
-func (s *Errno) CanSet(e error) bool {
+pure func (s *Errno) CanSet(e error) bool {
 	return typeOf(e) == type[Errno]
 }

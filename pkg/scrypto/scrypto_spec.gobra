@@ -27,7 +27,7 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 // calls to it will also succeed. This behaviour is abstracted using this
 // ghost function.
 ghost
-requires  acc(sl.Bytes(key, 0, len(key)), _)
+requires  sl.Bytes(key, 0, len(key))
 decreases _
 pure func ValidKeyForHash(key []byte) bool
 

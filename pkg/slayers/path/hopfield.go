@@ -96,8 +96,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	h.ConsEgress = binary.BigEndian.Uint16(raw[4:6])
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac[:]) ==>
 	//@     &h.Mac[i] == &h.Mac[:][i]
-	//@ assert forall i int :: { &raw[6:6+MacLen][i] } 0 <= i && i < len(raw[6:6+MacLen]) ==>
-	//@     &raw[6:6+MacLen][i] == &raw[i+6]
+	//@ sl.AssertSliceOverlap(raw, 6, 6+MacLen)
 	copy(h.Mac[:], raw[6:6+MacLen] /*@ , R47 @*/)
 	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == raw[6:6+MacLen][i]
 	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
@@ -137,9 +136,8 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	binary.BigEndian.PutUint16(b[4:6], h.ConsEgress)
 	//@ assert forall i int :: { &b[i] } 0 <= i && i < HopLen ==> acc(&b[i])
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac) ==>
-	//@     &h.Mac[i] == &h.Mac[:][i]
-	//@ assert forall i int :: { &b[6:6+MacLen][i] }{ &b[i+6] } 0 <= i && i < MacLen ==>
-	//@     &b[6:6+MacLen][i] == &b[i+6]
+	//@ 	&h.Mac[i] == &h.Mac[:][i]
+	//@ sl.AssertSliceOverlap(b, 6, 6+MacLen)
 	copy(b[6:6+MacLen], h.Mac[:] /*@, R47 @*/)
 	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == b[6:6+MacLen][i]
 	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]

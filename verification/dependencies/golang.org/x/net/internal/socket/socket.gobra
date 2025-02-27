@@ -60,54 +60,61 @@ pred (m *Message) Mem() {
 }
 
 ghost
-requires acc(m.Mem(), _)
+requires m.Mem()
 decreases
 pure func (m *Message) HasWildcardPermAddr() bool {
-	return unfolding acc(m.Mem(), _) in m.WildcardPerm
+	return unfolding m.Mem() in
+		m.WildcardPerm
 }
 
 ghost
-requires acc(m.Mem(), _)
+requires m.Mem()
 decreases
 pure func (m *Message) HasActiveAddr() bool {
-	return unfolding acc(m.Mem(), _) in m.IsActive
+	return unfolding m.Mem() in
+		m.IsActive
 }
 
 ghost
-requires acc(m.Mem(), _)
+requires m.Mem()
 decreases
 pure func (m *Message) GetAddr() net.Addr {
-	return unfolding acc(m.Mem(), _) in m.Addr
+	return unfolding m.Mem() in
+		m.Addr
 }
 
 ghost
-requires acc(m.Mem(), _)
+requires m.Mem()
 decreases
 pure func (m *Message) GetMessage() Message {
-	return unfolding acc(m.Mem(), _) in *m
+	return unfolding m.Mem() in
+		*m
 }
 
 
 ghost
-requires acc(m.Mem(), _)
+requires m.Mem()
 decreases
 pure func (m *Message) GetBuffer() []byte {
-	return unfolding acc(m.Mem(), _) in m.Buffers[0]
+	return unfolding m.Mem() in
+		m.Buffers[0]
 }
 
 ghost
-requires acc(m.Mem(), _)
+requires m.Mem()
 decreases
 pure func (m *Message) GetFstBuffer() []byte {
-	return unfolding acc(m.Mem(), _) in m.Buffers[0]
+	return unfolding m.Mem() in
+		m.Buffers[0]
 }
 
 ghost
-requires acc(m.Mem(), _)
+requires m.Mem()
 ensures  0 <= res
 decreases
 pure func (m *Message) GetN() (res int) {
-	return unfolding acc(m.Mem(), _) in m.N
+	return unfolding m.Mem() in
+		m.N
 }
 
 // This function establishes the injectivity of the underlying buffers across

@@ -93,7 +93,10 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error)
 preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 ensures   res != nil && res.ErrorMem()
 ensures   res.IsDuplicableMem()
-// SIF: TODO: capture (part of) this using a pure Boolean function
-ensures (low(msg) && low(len(errCtx)) && forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> low(errCtx[i])) ==> low(res)
+// TODO: Once Gobra issue #846 is resolved, capture the sensitivity of `errCtx`
+// using a pure Boolean function.
+ensures   (low(msg) && low(len(errCtx)) && 
+	forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> 
+	low(errCtx[i])) ==> low(res)
 decreases
 func New(msg string, errCtx ...interface{}) (res error)

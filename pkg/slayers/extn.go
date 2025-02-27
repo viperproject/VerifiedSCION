@@ -158,7 +158,7 @@ func serializeTLVOptionPadding(data []byte, padLength int) {
 // serializeTLVOptions serializes options to buf and returns the length of the serialized options.
 // Passing in a nil-buffer will treat the serialization as a dryrun that can be used to calculate
 // the length needed for the buffer.
-// @ requires Uncallable()
+// @ requires false
 func serializeTLVOptions(buf []byte, options []*tlvOption, fixLengths bool) (res int) {
 	dryrun := buf == nil
 	// length start at 2 since the padding needs to be calculated taking the first 2 bytes of the
@@ -326,7 +326,7 @@ func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ ,
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer.
-// @ requires Uncallable()
+// @ requires false
 func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -561,7 +561,7 @@ func checkEndToEndExtnNextHdr(t L4ProtocolType) (err error) {
 }
 
 // SerializeTo implementation according to gopacket.SerializableLayer
-// @ requires Uncallable()
+// @ requires false
 func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 	opts gopacket.SerializeOptions) error {
 
@@ -579,7 +579,7 @@ func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 // FindOption returns the first option entry of the given type if any exists,
 // or ErrOptionNotFound otherwise.
-// @ requires Uncallable()
+// @ requires false
 func (e *EndToEndExtn) FindOption(typ OptionType) (*EndToEndOption, error) {
 	for _, o := range e.Options {
 		if o.OptType == typ {

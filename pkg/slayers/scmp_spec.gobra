@@ -49,7 +49,7 @@ func (s *SCMP) DowngradePerm(ghost ub []byte) {
 	fold s.NonInitMem()
 }
 
-requires Uncallable()
+requires false
 func (b *SCMP) LayerContents() (res []byte) {
 	res = b.BaseLayer.LayerContents()
 	return res

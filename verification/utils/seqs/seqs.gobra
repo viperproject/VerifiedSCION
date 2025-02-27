@@ -19,12 +19,11 @@ package seqs
 import sl "verification/utils/slices"
 
 ghost
-pure
 requires 0 <= n
 ensures  len(res) == n
 ensures  forall i int :: { res[i] } 0 <= i && i < len(res) ==> !res[i]
 decreases _
-func NewSeqBool(n int) (res seq[bool])
+pure func NewSeqBool(n int) (res seq[bool])
 
 ghost
 requires size >= 0

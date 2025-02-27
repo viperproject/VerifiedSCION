@@ -86,7 +86,7 @@ func Fields(s string) (res []string)
 
 // Join concatenates the elements of its first argument to create a single string. The separator
 // string sep is placed between elements in the resulting string.
-requires forall i int :: { &elems[i] } 0 <= i && i < len(elems) ==> acc(&elems[i], _)
+requires forall i int :: { &elems[i] } 0 <= i && i < len(elems) ==> acc(&elems[i])
 ensures len(elems) == 0 ==> res == ""
 ensures len(elems) == 1 ==> res == elems[0]
 // (VerifiedSCION) Leads to precondition of call might not hold (permission to elems[i] might not suffice)
@@ -95,18 +95,14 @@ decreases _
 pure func Join(elems []string, sep string) (res string)
 
 // HasPrefix tests whether the string s begins with prefix.
-pure
-ensures ret == (len(s) >= len(prefix) && s[0:len(prefix)] == prefix)
 decreases
-func HasPrefix(s, prefix string) (ret bool) {
+pure func HasPrefix(s, prefix string) (ret bool) {
 	return len(s) >= len(prefix) && (s[0:len(prefix)] == prefix)
 }
 
 // HasSuffix tests whether the string s ends with suffix.
-pure
-ensures ret == (len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix)
 decreases
-func HasSuffix(s, suffix string) (ret bool) {
+pure func HasSuffix(s, suffix string) (ret bool) {
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
 }
 

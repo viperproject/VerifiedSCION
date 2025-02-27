@@ -35,16 +35,14 @@ func (e Path) DowngradePerm(buf []byte) {
 }
 
 ghost
-pure
 decreases
-func (p Path) IsValidResultOfDecoding(b []byte) bool {
+pure func (p Path) IsValidResultOfDecoding(b []byte) bool {
 	return true
 }
 
 ghost
-pure
 decreases
-func (p Path) LenSpec(ghost ub []byte) (l int) {
+pure func (p Path) LenSpec(ghost ub []byte) (l int) {
 	return PathLen
 }
 

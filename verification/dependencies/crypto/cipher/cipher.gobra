@@ -25,7 +25,7 @@ type Block interface {
 
 	// BlockSize returns the cipher's block size.
 	pure
-	requires acc(Mem(), _)
+	requires Mem()
 	ensures  0 <= n
 	decreases
 	BlockSize() (n int)
@@ -76,7 +76,7 @@ type BlockMode interface {
 
 	// BlockSize returns the mode's block size.
 	pure
-	requires acc(Mem(), _)
+	requires Mem()
 	ensures  0 <= n
 	decreases
 	BlockSize() (n int)

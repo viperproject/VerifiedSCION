@@ -225,7 +225,6 @@ func (p *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 
 // Type returns the EPIC path type identifier.
 // @ pure
-// @ requires acc(p.Mem(ubuf), _)
 // @ ensures  t == PathType
 // @ decreases
 func (p *Path) Type( /*@ ghost ubuf []byte @*/ ) (t path.Type) {

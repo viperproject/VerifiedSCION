@@ -19,7 +19,7 @@ type Layer interface {
 	LayerType() LayerType
 
 	// (VerifiedSCION) not used in the dataplane
-	requires Uncallable()
+	requires false
 	LayerContents() (res []byte)
 
 	preserves Mem(ub)
@@ -40,7 +40,7 @@ pure func (p Payload) LayerType() LayerType {
 	return LayerTypePayload
 }
 
-requires Uncallable()
+requires false
 func (p Payload) LayerContents() (res []byte) {
 	res = []byte(p)
 }
