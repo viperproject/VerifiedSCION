@@ -35,8 +35,7 @@ requires InfoFieldOffset(currINF, headerOffset) < len(raw)
 requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 decreases
 pure func ConsDir(raw []byte, currINF int, headerOffset int) bool {
-	return  
-		raw[InfoFieldOffset(currINF, headerOffset)] & 0x1 == 0x1
+	return raw[InfoFieldOffset(currINF, headerOffset)] & 0x1 == 0x1
 }
 
 ghost
@@ -45,8 +44,7 @@ requires InfoFieldOffset(currINF, headerOffset) < len(raw)
 requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 decreases
 pure func Peer(raw []byte, currINF int, headerOffset int) bool {
-	return  
-		raw[InfoFieldOffset(currINF, headerOffset)] & 0x2 == 0x2
+	return raw[InfoFieldOffset(currINF, headerOffset)] & 0x2 == 0x2
 }
 
 ghost
@@ -80,8 +78,7 @@ requires middle+InfoLen <= len(raw)
 requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 decreases
 pure func BytesToAbsInfoField(raw [] byte, middle int) (io.AbsInfoField) {
-	return  
-		BytesToAbsInfoFieldHelper(raw, middle)
+	return BytesToAbsInfoFieldHelper(raw, middle)
 }
 
 ghost

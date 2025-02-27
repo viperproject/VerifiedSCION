@@ -607,7 +607,7 @@ func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 // @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
 // @ ensures  err == nil ==>
 // @ 	let rawDstAddr := s.RawDstAddr in
-// @ 	(acc(res.Mem(), R15) --* 0 <= 0 && 0 <= len(rawDstAddr) && len(rawDstAddr) <= cap(rawDstAddr) && forall i int :: { &rawDstAddr[i] } 0 <= i && i < len(rawDstAddr) ==> acc(&rawDstAddr[i], R15))
+// @ (acc(res.Mem(), R15) --* (0 <= 0 && 0 <= len(rawDstAddr) && len(rawDstAddr) <= cap(rawDstAddr) && forall i int :: { &rawDstAddr[i] } 0 <= i && i < len(rawDstAddr) ==> acc(&rawDstAddr[i], R15)))
 // @ ensures  err != nil ==>
 // @ 	0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R15)
 // @ ensures  err != nil ==> err.ErrorMem()
@@ -628,7 +628,7 @@ func (s *SCION) DstAddr() (res net.Addr, err error) {
 // @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
 // @ ensures   err == nil ==>
 // @ 	let rawSrcAddr := s.RawSrcAddr in
-// @ 	(acc(res.Mem(), R15) --* 0 <= 0 && 0 <= len(rawSrcAddr) && len(rawSrcAddr) <= cap(rawSrcAddr) && forall i int :: { &rawSrcAddr[i] } 0 <= i && i < len(rawSrcAddr) ==> acc(&rawSrcAddr[i], R15))
+// @ 	(acc(res.Mem(), R15) --* (0 <= 0 && 0 <= len(rawSrcAddr) && len(rawSrcAddr) <= cap(rawSrcAddr) && forall i int :: { &rawSrcAddr[i] } 0 <= i && i < len(rawSrcAddr) ==> acc(&rawSrcAddr[i], R15)))
 // @ ensures   err != nil ==>
 // @ 	0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R15)
 // @ ensures   err != nil ==> err.ErrorMem()
@@ -716,7 +716,7 @@ func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error
 // @ ensures  err == nil ==> acc(res.Mem(), R15)
 // @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
 // @ ensures  err == nil ==>
-// @ 	(acc(res.Mem(), R15) --* 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R15))
+// @ 	(acc(res.Mem(), R15) --* (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R15)))
 // @ ensures  err != nil ==> 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R15)
 // @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases

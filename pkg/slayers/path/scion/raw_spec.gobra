@@ -402,9 +402,7 @@ requires MetaLen <= len(raw)
 requires 0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i])
 decreases
 pure func RawBytesToMetaHdr(raw []byte) MetaHdr {
-	return  
-		let hdr := binary.BigEndian.Uint32(raw[:MetaLen]) in
-		DecodedFrom(hdr)
+	return let hdr := binary.BigEndian.Uint32(raw[:MetaLen]) in DecodedFrom(hdr)
 }
 
 ghost

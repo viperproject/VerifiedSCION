@@ -537,8 +537,7 @@ requires 0 <= 0 && 0 <= length && length <= cap(ub) && forall i int :: { &ub[i] 
 requires CmnHdrLen <= length
 decreases
 pure func GetAddressOffsetWithinLength(ub []byte, length int) int {
-	return  
-		let dstAddrLen := AddrType(ub[9] >> 4 & 0x7).Length() in
+	return let dstAddrLen := AddrType(ub[9] >> 4 & 0x7).Length() in
 		let srcAddrLen := AddrType(ub[9] & 0x7).Length()      in
 		CmnHdrLen + 2*addr.IABytes + dstAddrLen + srcAddrLen
 }
@@ -556,8 +555,7 @@ requires 0 <= 0 && 0 <= length && length <= cap(ub) && forall i int :: { &ub[i] 
 requires CmnHdrLen <= length
 decreases
 pure func GetLengthWithinLength(ub []byte, length int) int {
-	return  
-		int(ub[5]) * LineLen
+	return int(ub[5]) * LineLen
 }
 
 ghost
@@ -565,8 +563,7 @@ requires 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i
 requires CmnHdrLen <= len(ub)
 decreases
 pure func GetPathType(ub []byte) int {
-	return  
-		int(ub[8])
+	return int(ub[8])
 }
 
 ghost
@@ -574,8 +571,7 @@ requires 0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i
 requires CmnHdrLen <= len(ub)
 decreases
 pure func GetNextHdr(ub []byte) int {
-	return  
-		int(ub[4])
+	return int(ub[4])
 }
 
 ghost
