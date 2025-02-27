@@ -270,7 +270,7 @@ pure func segment(raw []byte,
 	peer bool,
 	segLen int) (res io.IO_seg2) {
 	return let hopfields := hopFields(raw, offset, 0, segLen) in
-		io.IO_seg3_ {
+		io.IO_seg3 {
 			AInfo: ainfo,
 			UInfo: uinfo,
 			ConsDir: consDir,
@@ -389,7 +389,7 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 		let prevSegLen := segs.LengthOfPrevSeg(currHfIdx)        in
 		let numINF := segs.NumInfoFields() in
 		let offset := HopFieldOffset(numINF, prevSegLen, MetaLen) in
-		io.IO_Packet2 {
+		io.IO_pkt2 {
 			CurrSeg: CurrSeg(raw, offset, currInfIdx, currHfIdx - prevSegLen, segLen, MetaLen),
 			LeftSeg: LeftSeg(raw, currInfIdx + 1, segs, MetaLen),
 			MidSeg: MidSeg(raw, currInfIdx + 2, segs, MetaLen),
@@ -487,7 +487,7 @@ requires oldPkt.LeftSeg != none[io.IO_seg2]
 requires oldPkt.PathNotFullyTraversed()
 decreases
 pure func AbsXover(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
-	return io.IO_Packet2 {
+	return io.IO_pkt2 {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
@@ -499,7 +499,7 @@ ghost
 requires oldPkt.PathNotFullyTraversed()
 decreases
 pure func AbsIncPath(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
-	return io.IO_Packet2 {
+	return io.IO_pkt2 {
 		absIncPathSeg(oldPkt.CurrSeg),
 		oldPkt.LeftSeg,
 		oldPkt.MidSeg,
@@ -511,7 +511,7 @@ ghost
 requires len(currseg.Future) > 0
 decreases
 pure func absIncPathSeg(currseg io.IO_seg3) io.IO_seg3 {
-	return io.IO_seg3_ {
+	return io.IO_seg3 {
 		AInfo: currseg.AInfo,
 		UInfo: currseg.UInfo,
 		ConsDir: currseg.ConsDir,
