@@ -33,12 +33,21 @@ const MACBufferSize = 16
 // @ requires  h != nil && h.Mem()
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
 // @ ensures   h.Mem()
+// @ ensures   let absInf := info.ToAbsInfoField() in
+// @ 	let absHF := hf.ToIO_HF() in
+// @ 	let absMac := AbsMac(ret) in
+// @  	absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
 // @ decreases
-func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost as_ io.IO_as @*/) [MacLen]byte {
+func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost as_ io.IO_as @*/) (ret [MacLen]byte) {
 	mac := FullMAC(h, info, hf, buffer /*@, as_ @*/)
 	var res /*@ @ @*/ [MacLen]byte
-	//@ unfold sl.Bytes(mac, 0, MACBufferSize)
+	// @ unfold sl.Bytes(mac, 0, MACBufferSize)
+
 	copy(res[:], mac[:MacLen] /*@, R1 @*/)
+	
+	// @ assert forall i int :: { res[i] } 0 <= i && i < len(res[:]) ==> &res[:][i] == &res[i] 
+	// @ EqualBytesImplyEqualMac(mac, res)
+
 	return res
 }
 
@@ -83,7 +92,7 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost 
 	//@ absInf := info.ToAbsInfoField()
 	//@ absHF := hf.ToIO_HF()
 	//@ absMac := AbsMac(FromSliceToMacArray(res))
-	//@ AssumeForIO(absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo, absInf.UInfo))
+	//@ AssumeForIO(absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo))
 
 	//@ fold sl.Bytes(res, 0, MACBufferSize)
 	return res
