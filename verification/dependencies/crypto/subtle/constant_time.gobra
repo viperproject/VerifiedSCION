@@ -18,9 +18,8 @@ trusted
 requires sl.Bytes(x, 0, len(x))
 requires sl.Bytes(y, 0, len(y))
 ensures  len(x) != len(y) ==> res == 0
-ensures res != 0 ==> 
-    unfolding sl.Bytes(x, 0, len(x)) in 
-    unfolding sl.Bytes(y, 0, len(y)) in 
-    forall i int :: { x[i] } { y[i] } 0 <= i && i < len(x) ==> x[i] == y[i] 
+ensures res != 0 ==>
+    forall i int :: { sl.GetByte(x, 0, len(x), i) }{ sl.GetByte(y, 0, len(y), i) } 0 <= i && i < len(x) ==>
+    sl.GetByte(x, 0, len(x), i) == sl.GetByte(y, 0, len(y), i)
 decreases
 pure func ConstantTimeCompare(x, y []byte) (res int)

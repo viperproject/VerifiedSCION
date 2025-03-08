@@ -19,9 +19,9 @@ package path
 import (
 	"encoding/binary"
 	"hash"
-	//@ . "github.com/scionproto/scion/verification/utils/definitions"
-	//@ sl "github.com/scionproto/scion/verification/utils/slices"
-	//@ io "verification/io"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
+	// @ sl "github.com/scionproto/scion/verification/utils/slices"
+	// @ io "verification/io"
 )
 
 const MACBufferSize = 16
@@ -36,16 +36,16 @@ const MACBufferSize = 16
 // @ ensures   let absInf := info.ToAbsInfoField() in
 // @ 	let absHF := hf.ToIO_HF() in
 // @ 	let absMac := AbsMac(ret) in
-// @  	absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
+// @ 	absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
 // @ decreases
 func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost as_ io.IO_as @*/) (ret [MacLen]byte) {
 	mac := FullMAC(h, info, hf, buffer /*@, as_ @*/)
-	var res /*@ @ @*/ [MacLen]byte
+	var res /*@@@*/ [MacLen]byte
 	// @ unfold sl.Bytes(mac, 0, MACBufferSize)
 
 	copy(res[:], mac[:MacLen] /*@, R1 @*/)
-	
-	// @ assert forall i int :: { res[i] } 0 <= i && i < len(res[:]) ==> &res[:][i] == &res[i] 
+
+	// @ assert forall i int :: { res[i] } 0 <= i && i < len(res[:]) ==> &res[:][i] == &res[i]
 	// @ EqualBytesImplyEqualMac(mac, res)
 
 	return res
@@ -59,42 +59,41 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost as_ 
 // @ requires  h != nil && h.Mem()
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
 // @ ensures   h.Mem()
-//
 // @ ensures   len(res) == MACBufferSize && sl.Bytes(res, 0, MACBufferSize)
-//
 // @ ensures   unfolding sl.Bytes(res, 0, MACBufferSize) in
-// @	let absInf := info.ToAbsInfoField() in
-// @	let absHF := hf.ToIO_HF() in
+// @ 	let absInf := info.ToAbsInfoField() in
+// @ 	let absHF := hf.ToIO_HF() in
 // @ 	let absMac := AbsMac(FromSliceToMacArray(res)) in
-// @   	absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
+// @ 	absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
 // @ decreases
 func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost as_ io.IO_as @*/) (res []byte) {
 	if len(buffer) < MACBufferSize {
 		buffer = make([]byte, MACBufferSize)
-		//@ fold sl.Bytes(buffer, 0, len(buffer))
+		// @ fold sl.Bytes(buffer, 0, len(buffer))
 	}
 
 	h.Reset()
 	MACInput(info.SegID, info.Timestamp, hf.ExpTime,
 		hf.ConsIngress, hf.ConsEgress, buffer)
-	//@ unfold sl.Bytes(buffer, 0, len(buffer))
-	//@ defer fold sl.Bytes(buffer, 0, len(buffer))
+	// @ unfold sl.Bytes(buffer, 0, len(buffer))
+	// @ defer fold sl.Bytes(buffer, 0, len(buffer))
 	// Write must not return an error: https://godoc.org/hash#Hash
 	if _, err := h.Write(buffer); err != nil {
 		// @ Unreachable()
 		panic(err)
 	}
-	//@ assert h.Size() >= 16
+	// @ assert h.Size() >= 16
 	res = h.Sum(buffer[:0])[:16]
 
-	// This is our "MAC assumption", linking the abstraction of the concrete 
-	// MAC tag to the abstract computation of the MAC tag.
-	//@ absInf := info.ToAbsInfoField()
-	//@ absHF := hf.ToIO_HF()
-	//@ absMac := AbsMac(FromSliceToMacArray(res))
-	//@ AssumeForIO(absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo))
+	// @ absInf := info.ToAbsInfoField()
+	// @ absHF := hf.ToIO_HF()
+	// @ absMac := AbsMac(FromSliceToMacArray(res))
 
-	//@ fold sl.Bytes(res, 0, MACBufferSize)
+	// This is our "MAC assumption", linking the abstraction of the concrete MAC
+	// tag to the abstract computation of the MAC tag.
+	// @ AssumeForIO(absMac == io.nextMsgtermSpec(as_, absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo))
+
+	// @ fold sl.Bytes(res, 0, MACBufferSize)
 	return res
 }
 

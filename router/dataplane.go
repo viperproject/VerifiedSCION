@@ -2910,15 +2910,15 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 	// @ absHF := p.hopField.ToIO_HF()
 	// @ absInf := p.infoField.ToAbsInfoField()
 
+	// @ assert forall i int :: { sl.GetByte(fullMac[:path.MacLen], 0, path.MacLen, i) } 0 <= i && i < path.MacLen ==>
+	// @ 	sl.GetByte(fullMac[:path.MacLen], 0, path.MacLen, i) ==
+	// @ 	unfolding acc(sl.Bytes(fullMac[:path.MacLen], 0, path.MacLen), R21) in fullMac[i]
 	// @ unfold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
 	// @ unfold acc(sl.Bytes(fullMac[:path.MacLen], 0, path.MacLen), R21)
 	// @ path.EqualBytesImplyEqualMac(fullMac, p.hopField.Mac)
-	// ==> absHF.HVF := path.AbsMac(p.hopField.Mac)
-	//  == path.AbsMac(FromSliceToMacArray(fullMac))
 
-	// Needed to "access" postcondition of `FullMAC`:
 	// @ unfold acc(sl.Bytes(fullMac, 0, len(fullMac)), R21)
-	// ==> absHF.HVF == io.nextMsgtermSpec(...)
+	// @ assert absHF.HVF == io.nextMsgtermSpec(dp.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
 
 	// @ reveal AbsVerifyCurrentMACConstraint(oldPkt, dp)
 	// @ fold p.d.validResult(processResult{}, false)

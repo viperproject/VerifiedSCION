@@ -18,7 +18,7 @@ package path
 
 import (
 	"verification/io"
-	. "verification/utils/definitions"	
+	. "verification/utils/definitions"
 )
 
 // At the moment, we assume that all cryptographic operations performed at the code level
