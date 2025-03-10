@@ -53,11 +53,11 @@ ghost type IO_val adt {
 		IO_Internal_val2_3 IO_ifs
 	}
 
-	/* SIF: Output (to env.) for declassification action.
-	This consists of the segment identifier `beta`, the timestamp `ts, the 
-	ingress and egress interfaces `inif` and `egif` (resp.), and a hop 
-	authenticator `sigma`. 
-	Also see `router.gobra` for  types. */
+	// Output (to env.) for declassification action (SIF).
+	// This consists of the segment identifier `beta`, the timestamp `ts`, the
+	// ingress and egress interfaces `inif` and `egif` (resp.), and a hop
+	// authenticator `sigma`.
+	// See `router.gobra`, in particular `hf_valid`, for why we need these values.
 	IO_decl_val {
 		IO_decl_val_beta set[IO_msgterm]  // uinfo
 		IO_decl_val_ts uint

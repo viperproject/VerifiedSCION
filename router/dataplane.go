@@ -145,12 +145,14 @@ type BatchConn interface {
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
 	// @ 		MsgToAbsVal(&msgs[i], ingressID) == old(MultiReadBioIO_val(place, n)[i])
-	// SIF: classification spec
-	// NOTE: The postcondition for recv specifies that received messages are low.
-	// TODO: I have decided to mark the abstraction as low for now.
-	// And also used MultiReadBioIOI_val instead of MsgToAbsVal to match what is
-	// used in permissions.
-	// @ ensures err == nil ==>
+	// Classification spec for SIF.
+	// The received messages are low, i.e., observable by the attacker.
+	// TODO: Once Gobra issue 846 is resolved, mark `msgs` as low instead of the
+	// abstraction, as `msgs` contains the data actually received and we don't
+	// necessarily have low(abstraction) ==> low(concrete).
+	// Expressing this without pure Boolean functions is rather tedious and not
+	// worth the time at the moment, IMO.
+	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { MultiReadBioIO_val(place, n)[i] } 0 <= i && i < n ==>
 	// @		low(old(MultiReadBioIO_val(place, n)[i]))
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
@@ -159,7 +161,6 @@ type BatchConn interface {
 	// @ preserves acc(sl.Bytes(b, 0, len(b)), R10)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(b)
 	// @ ensures   err != nil ==> err.ErrorMem()
-	// SIF: add to classification spec later as well (bfdSend)
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
 	// (VerifiedSCION) opted for less reusable spec for WriteBatch for
@@ -170,10 +171,11 @@ type BatchConn interface {
 	// preconditions for IO-spec:
 	// @ requires  MsgToAbsVal(&msgs[0], egressID) == ioAbsPkts
 	// @ requires  io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
-	// SIF: classification spec
-	// NOTE: I mark `ioAbsPkts` instead of `MsgToAbsVal(...)` as low here to
-	// match variable used in send permission.
-	// @ requires low(ioAbsPkts)
+	// Classification spec for SIF.
+	// The messages to be sent need to be low, i.e., observable by the attacker.
+	// TODO: Once Gobra issue 846 is resolved, mark `msgs` as low instead of the
+	// abstraction. See comment on `ReadBatch` above for explanation.
+	// @ requires  low(ioAbsPkts)
 	// @ ensures   acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
 	// @ ensures   acc(sl.Bytes(msgs[0].GetFstBuffer(), 0, len(msgs[0].GetFstBuffer())), R50)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)

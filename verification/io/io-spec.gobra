@@ -34,8 +34,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_ordered(s IO_dp3s_state_local, t Place) {
 	dp.dp3s_iospec_bio3s_recv(s, t) &&
 	dp.dp3s_iospec_skip(s, t) &&
 	dp.dp3s_iospec_stop(s, t) &&
-	// SIF:
-	dp.dp4s_iospec_bio4s_decl(s, t)
+	dp.dp4s_iospec_bio4s_decl(s, t)  // SIF
 }
 
 type Place int
@@ -301,45 +300,39 @@ pred (dp DataPlaneSpec) dp3s_iospec_stop(s IO_dp3s_state_local, t Place) {
 	true
 }
 
-/* SIF: Declassification specification.
-I use "4s" to distinguish additions of the refined event system. */
+// Declassification specification for SIF.
+// Members whose id start with "dp4s" correspond to additions to the IO spec
+// related to SIF.
 pred CBio_IN_bio4s_decl(t Place, v IO_val)
 
-// SIF: Return next place
-ghost 
-// SIF: I left out `requires CBio_IN_bio4s_decl(t, v)` as we deem it not necessary.
+ghost
 decreases
 pure func dp4s_iospec_bio4s_decl_T(t Place, v IO_val) Place
 
 ghost
 requires v.isIO_decl_val
-// NOTE: Not sure I need this here
-// requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp4s_iospec_bio4s_decl_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	// SIF: cf. `hf_valid` in `router.gobra`
-	// NOTE: For some reason, formatting this differently leads to a parsing error.
+	// Cf. `router.gobra`, in particular `hf_valid`.
+	// NOTE: Formatting this differently leads to a parsing error.
 	return v.IO_decl_val_sigma == (nextMsgtermSpec(
-		dp.Asid(), 
-		v.IO_decl_val_inif, 
-		v.IO_decl_val_egif, 
-		v.IO_decl_val_ts, 
+		dp.Asid(),
+		v.IO_decl_val_inif,
+		v.IO_decl_val_egif,
+		v.IO_decl_val_ts,
 		v.IO_decl_val_beta))
 }
 
 pred (dp DataPlaneSpec) dp4s_iospec_bio4s_decl(s IO_dp3s_state_local, t Place) {
-	// SIF: just copying with `TriggerBodyIoEnter` for now.
-	// NOTE: here as well we need some specific formatting
+	// NOTE: Formatting this differently leads to a parsing error.
 	forall v IO_val :: { TriggerBodyIoDecl(v) } (
 		match v {
 			case IO_decl_val{?beta, ?ts, ?inif, ?egif, ?sigma}:
 				let _ignored := TriggerBodyIoDecl(v) in
-				// NOTE: Not sure I need this here
-				// (dp.Valid() && dp.dp4s_iospec_bio4s_decl_guard(s, t, v) ==>
 				(dp.dp4s_iospec_bio4s_decl_guard(s, t, v) ==>
 					(CBio_IN_bio4s_decl(t, v) &&
 					dp.dp3s_iospec_ordered(
-						s, 
+						s,
 						dp4s_iospec_bio4s_decl_T(t, v))))
 			default:
 				true
@@ -369,14 +362,14 @@ requires token(t) && CBio_IN_bio3s_exit(t, v)
 ensures  token(old(dp3s_iospec_bio3s_exit_T(t, v)))
 func Exit(ghost t Place, ghost v IO_val)
 
-// SIF: declassification action
-// TODO: maybe it's a good idea to split up sigma and p in IO_val
 ghost
 decreases
 requires token(t) && CBio_IN_bio4s_decl(t, v)
-requires v.isIO_decl_val && low(v.IO_decl_val_inif) && low(v.IO_decl_val_egif) && low(v.IO_decl_val_ts) && low(v.IO_decl_val_beta)
-ensures token(dp4s_iospec_bio4s_decl_T(t, v))
-ensures low(v.IO_decl_val_sigma)
+requires v.isIO_decl_val &&
+ 	low(v.IO_decl_val_inif) && low(v.IO_decl_val_egif) &&
+ 	low(v.IO_decl_val_ts) && low(v.IO_decl_val_beta)
+ensures  token(dp4s_iospec_bio4s_decl_T(t, v))
+ensures  low(v.IO_decl_val_sigma)
 func Decl(ghost t Place, ghost v IO_val)
 
-/** End of helper functions to perfrom BIO operations **/
+/** End of helper functions to perform BIO operations **/
