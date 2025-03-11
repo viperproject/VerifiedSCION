@@ -52,6 +52,8 @@ pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
 		len(p.raw)
 }
 
+pred (r *rawPath) LowReverse()
+
 (*rawPath) implements Path
 
 /** End of rawPath spec **/

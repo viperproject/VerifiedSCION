@@ -37,6 +37,8 @@ pred (s *Raw) Mem(buf []byte) {
 	s.Raw === buf[:len(s.Raw)] &&
 	len(s.Raw) == s.Base.Len()
 }
+
+pred (s *Raw) LowReverse()
 /**** End of Predicates ****/
 
 (*Raw) implements path.Path

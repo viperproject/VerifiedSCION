@@ -70,6 +70,7 @@ type Path interface {
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
+	//@ requires  low(len(b))
 	//@ preserves sl.Bytes(ub, 0, len(ub))
 	//@ preserves acc(Mem(ub), R1)
 	//@ preserves sl.Bytes(b, 0, len(b))
@@ -80,7 +81,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
-	//@ requires low(len(b))
+	//@ requires  low(len(b))
 	//@ preserves acc(sl.Bytes(b, 0, len(b)), R42)
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err == nil ==> IsValidResultOfDecoding(b)
@@ -88,6 +89,11 @@ type Path interface {
 	//@ ensures   err != nil ==> NonInitMem()
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
+	// TODO: Once Gobra issue 846 is resolved, rework this.
+	// Predicate encapsulating sensitivity. Intended to be implemented as an
+	// abstract predicate, in conjunction with an abstract function requiring
+	// LowReverse() and ensuring the corresponding sensitivity.
+	//@ pred LowReverse()
 	//@ ghost
 	//@ pure
 	//@ requires Mem(b)
@@ -97,6 +103,7 @@ type Path interface {
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires  Mem(ub)
+	//@ requires LowReverse()
 	//@ preserves sl.Bytes(ub, 0, len(ub))
 	//@ ensures   e == nil ==> p != nil
 	//@ ensures   e == nil ==> p.Mem(ub)

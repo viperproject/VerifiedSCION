@@ -47,6 +47,8 @@ pred (d *Decoded) Mem(ubuf []byte) {
 	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
+pred (d *Decoded) LowReverse()
+
 /**** End of Predicates ****/
 
 /**** Stubs ****/
@@ -112,6 +114,7 @@ ensures  e == nil ==> (
 	d.LenSpec(ubuf) == old(d.LenSpec(ubuf)) &&
 	(old(d.GetBase(ubuf).Valid()) ==> d.GetBase(ubuf).Valid()))
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
+ensures  low(e != nil)
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 	unfold d.Mem(ubuf)
