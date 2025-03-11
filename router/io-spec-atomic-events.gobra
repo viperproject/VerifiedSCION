@@ -27,6 +27,7 @@ import (
 	"sync"
 	io "verification/io"
 	gsync "verification/utils/ghost_sync"
+	"github.com/scionproto/scion/pkg/slayers/path"
 )
 
 ghost
@@ -161,25 +162,27 @@ func AtomicXover(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pk
 
 ghost
 requires  low(beta) && low(ts) && low(inif) && low(egif)
-requires  sigma == io.nextMsgtermSpec(dp.Asid(), inif, egif, ts, beta)
+requires  path.AbsMac(sigma) == io.nextMsgtermSpec(dp.Asid(), inif, egif, ts, beta)
 preserves acc(ioLock.LockP(), _)
 preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
-ensures   low(sigma)
+ensures   forall i int :: { sigma[i] } 0 <= i && i < len(sigma) ==> low(sigma[i])
 decreases _
-func AtomicDecl(beta set[io.IO_msgterm], ts uint, inif, egif option[io.IO_ifs], sigma io.IO_msgterm, ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
+func AtomicDecl(beta set[io.IO_msgterm], ts uint, inif, egif option[io.IO_ifs], sigma [path.MacLen]byte, ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
 	ghost ioLock.Lock()
 	unfold SharedInv!< dp, ioSharedArg !>()
 
 	t, s := *ioSharedArg.Place, *ioSharedArg.State
-	ghost tag := io.IO_val(io.IO_decl_val{beta, ts, inif, egif, sigma})
+	ghost decl_val := io.IO_val(io.IO_decl_val{beta, ts, inif, egif, sigma})
 
-	assert dp.dp4s_iospec_bio4s_decl_guard(s, t, tag)
+	// TODO: Remove this assumption
+	assume path.AbsMac(sigma) == io.AbsMac(sigma)
+	assert dp.dp4s_iospec_bio4s_decl_guard(s, t, decl_val)
 	unfold dp.dp3s_iospec_ordered(s, t)
 	unfold dp.dp4s_iospec_bio4s_decl(s, t)
 
-	io.TriggerBodyIoDecl(tag)
-	tN := io.dp4s_iospec_bio4s_decl_T(t, tag)
-	io.Decl(t, tag)
+	io.TriggerBodyIoDecl(decl_val)
+	tN := io.dp4s_iospec_bio4s_decl_T(t, decl_val)
+	io.Decl(t, decl_val)
 	ghost *ioSharedArg.Place = tN
 
 	fold SharedInv!< dp, ioSharedArg !>()

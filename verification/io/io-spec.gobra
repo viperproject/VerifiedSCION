@@ -315,7 +315,7 @@ decreases
 pure func (dp DataPlaneSpec) dp4s_iospec_bio4s_decl_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
 	// Cf. `router.gobra`, in particular `hf_valid`.
 	// NOTE: Formatting this differently leads to a parsing error.
-	return v.IO_decl_val_sigma == (nextMsgtermSpec(
+	return AbsMac(v.IO_decl_val_sigma) == (nextMsgtermSpec(
 		dp.Asid(),
 		v.IO_decl_val_inif,
 		v.IO_decl_val_egif,
@@ -369,7 +369,8 @@ requires v.isIO_decl_val &&
  	low(v.IO_decl_val_inif) && low(v.IO_decl_val_egif) &&
  	low(v.IO_decl_val_ts) && low(v.IO_decl_val_beta)
 ensures  token(dp4s_iospec_bio4s_decl_T(t, v))
-ensures  low(v.IO_decl_val_sigma)
+ensures  forall i int :: { v.IO_decl_val_sigma[i] } 0 <= i && i < len(v.IO_decl_val_sigma) ==> 
+	low(v.IO_decl_val_sigma[i])
 func Decl(ghost t Place, ghost v IO_val)
 
 /** End of helper functions to perform BIO operations **/
