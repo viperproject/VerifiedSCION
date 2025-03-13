@@ -409,20 +409,20 @@ requires sl.Bytes(ub, 0, len(ub))
 decreases
 pure func (s *SCION) EqAbsHeader(ub []byte) bool {
 	return unfolding s.Mem(ub) in
-		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
+		let low_ := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen in
-		GetAddressOffset(ub) == low  &&
+		GetAddressOffset(ub) == low_  &&
 		GetLength(ub) == int(high)   &&
 		// Might be worth introducing EqAbsHeader as an interface method on Path
 		// to avoid doing these casts, especially when we add support for EPIC.
 		typeOf(s.Path) == (*scion.Raw) &&
-		unfolding s.Path.Mem(ub[low:high]) in
+		unfolding s.Path.Mem(ub[low_:high]) in
 		unfolding sl.Bytes(ub, 0, len(ub)) in
-		let _ := Asserting(forall k int :: {&ub[low:high][k]} 0 <= k && k < high ==>
-			&ub[low:high][k] == &ub[low + k]) in
-		let _ := Asserting(forall k int :: {&ub[low:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
-			&ub[low:high][:scion.MetaLen][k] == &ub[low:high][k]) in
-		let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(ub[low:high][:scion.MetaLen])) in
+		let _ := Asserting(forall k int :: {&ub[low_:high][k]} 0 <= k && k < high ==>
+			&ub[low_:high][k] == &ub[low_ + k]) in
+		let _ := Asserting(forall k int :: {&ub[low_:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+			&ub[low_:high][:scion.MetaLen][k] == &ub[low_:high][k]) in
+		let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(ub[low_:high][:scion.MetaLen])) in
 		let seg1 := int(metaHdr.SegLen[0]) in
 		let seg2 := int(metaHdr.SegLen[1]) in
 		let seg3 := int(metaHdr.SegLen[2]) in
@@ -438,10 +438,10 @@ requires s.Mem(ub)
 decreases
 pure func (s *SCION) ValidScionInitSpec(ub []byte) bool {
 	return unfolding s.Mem(ub)                          in
-		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
+		let low_ := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen                    in
 		typeOf(s.Path) == (*scion.Raw) &&
-		s.Path.(*scion.Raw).GetBase(ub[low:high]).WeaklyValid()
+		s.Path.(*scion.Raw).GetBase(ub[low_:high]).WeaklyValid()
 }
 
 // Checks if the common path header is valid in the serialized scion packet.
