@@ -441,7 +441,7 @@ pure func (s *SCION) ValidScionInitSpec(ub []byte) bool {
 		let low_ := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen                    in
 		typeOf(s.Path) == (*scion.Raw) &&
-		s.Path.(*scion.Raw).GetBase(ub[low__:high]).WeaklyValid()
+		s.Path.(*scion.Raw).GetBase(ub[low_:high]).WeaklyValid()
 }
 
 // Checks if the common path header is valid in the serialized scion packet.
