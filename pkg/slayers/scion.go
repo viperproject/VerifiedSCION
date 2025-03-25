@@ -25,6 +25,9 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
 
+	// @ importRequires path.PkgMem()
+	// @ importRequires path.RegisteredTypes().DoesNotContain(0) && path.RegisteredTypes().DoesNotContain(1)
+	// @ importRequires path.RegisteredTypes().DoesNotContain(2) && path.RegisteredTypes().DoesNotContain(3)
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/empty"
 	"github.com/scionproto/scion/pkg/slayers/path/epic"
