@@ -72,12 +72,7 @@ pred PkgMem() {
 }
 
 ghost
-requires acc(PkgMem(), _)
-// TODO: drop these posts
-ensures  res == unfolding acc(PkgMem(), _) in
-	0 <= t && t < MaxLayerType ?
-		ltMeta[t].inUse :
-		(t in domain(ltMetaMap) && ltMetaMap[t].inUse)
+requires PkgMem()
 decreases
 pure func Registered(t LayerType) (res bool) {
 	return unfolding acc(PkgMem(), _) in
@@ -87,9 +82,11 @@ pure func Registered(t LayerType) (res bool) {
 }
 
 ghost
-requires acc(&ltMeta, _) && acc(&ltMetaMap, _) && acc(ltMetaMap, _)
-requires acc(&DecodersByLayerName, _) && acc(DecodersByLayerName, _)
-ensures  res == (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+requires acc(&ltMeta)         &&
+	acc(&ltMetaMap)           &&
+	acc(ltMetaMap)            &&
+	acc(&DecodersByLayerName) &&
+	acc(DecodersByLayerName)
 decreases
 pure func registeredDuringInit(t LayerType) (res bool) {
 	return (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
@@ -97,8 +94,11 @@ pure func registeredDuringInit(t LayerType) (res bool) {
 
 // cannot be made ghost, even though it is morally so
 mayInit
-requires acc(&ltMeta) && acc(&ltMetaMap) && acc(ltMetaMap)
-requires acc(&DecodersByLayerName, _) && acc(DecodersByLayerName)
+requires acc(&ltMeta) &&
+	acc(&ltMetaMap)   &&
+	acc(ltMetaMap)    &&
+	acc(&DecodersByLayerName, _) &&
+	acc(DecodersByLayerName)
 requires forall t LayerType :: { registeredDuringInit(t) } !registeredDuringInit(t)
 requires RegisteredTypes.Inv()
 requires RegisteredTypes.Start == AbsMinLayerType

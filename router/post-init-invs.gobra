@@ -127,10 +127,10 @@ func establishInvalidDstIA() {
 
 ghost
 trusted
-requires  acc(err.ErrorMem(), _)
+requires err.ErrorMem()
 decreases err.ErrorMem()
 pure func (err scmpError) IsDuplicableMem() bool {
-	return unfolding acc(err.ErrorMem(), _) in
+	return unfolding err.ErrorMem() in
 		err.Cause.IsDuplicableMem()
 }
 

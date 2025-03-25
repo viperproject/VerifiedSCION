@@ -43,8 +43,10 @@ var (
 // @ ghost var registeredKeys monoset.BoundedMonotonicSet = monoset.Alloc(0, int64(maxPathType))
 
 func init() {
-	// (VerifiedSCION) initialization code to establish the pkg invariant.
-	// @ ghost { fold PkgMem() }
+	// (VerifiedSCION) ghost initialization code to establish the PathPackageMem predicate.
+	// @ assert acc(&registeredPaths)
+	// @ assert acc(&strictDecoding)
+	// @ fold PkgMem()
 }
 
 // Type indicates the type of the path contained in the SCION header.
@@ -93,7 +95,7 @@ type Path interface {
 	//@ ghost
 	//@ pure
 	//@ requires Mem(b)
-	//@ requires acc(sl.Bytes(b, 0, len(b)), R42)
+	//@ requires sl.Bytes(b, 0, len(b))
 	//@ decreases
 	//@ IsValidResultOfDecoding(b []byte) bool
 	// Reverse reverses a path such that it can be used in the reversed direction.
@@ -107,7 +109,7 @@ type Path interface {
 	Reverse( /*@ ghost ub []byte @*/ ) (p Path, e error)
 	//@ ghost
 	//@ pure
-	//@ requires acc(Mem(ub), _)
+	//@ requires Mem(ub)
 	//@ ensures  0 <= l
 	//@ decreases
 	//@ LenSpec(ghost ub []byte) (l int)
@@ -119,7 +121,7 @@ type Path interface {
 	Len( /*@ ghost ub []byte @*/ ) (l int)
 	// Type returns the type of a path.
 	//@ pure
-	//@ requires acc(Mem(ub), _)
+	//@ requires Mem(ub)
 	//@ decreases
 	Type( /*@ ghost ub []byte @*/ ) Type
 	//@ ghost
@@ -260,8 +262,8 @@ func (p *rawPath) Len( /*@ ghost ub []byte @*/ ) (l int) {
 }
 
 // @ pure
-// @ requires acc(p.Mem(ub), _)
+// @ requires p.Mem(ub)
 // @ decreases
 func (p *rawPath) Type( /*@ ghost ub []byte @*/ ) Type {
-	return /*@ unfolding acc(p.Mem(ub), _) in @*/ p.pathType
+	return /*@ unfolding p.Mem(ub) in @*/ p.pathType
 }

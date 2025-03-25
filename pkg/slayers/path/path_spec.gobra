@@ -41,19 +41,18 @@ func (p *rawPath) DowngradePerm(ghost buf []byte) {
 }
 
 ghost
-pure
 decreases
-func (p *rawPath) IsValidResultOfDecoding(b []byte) bool {
+pure func (p *rawPath) IsValidResultOfDecoding(b []byte) bool {
 	return true
 }
 
 ghost
-pure
-requires acc(p.Mem(ub), _)
+requires p.Mem(ub)
 ensures  0 <= l
 decreases
-func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
-	return unfolding acc(p.Mem(ub), _) in len(p.raw)
+pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
+	return unfolding p.Mem(ub) in
+		len(p.raw)
 }
 
 (*rawPath) implements Path
@@ -83,27 +82,27 @@ pred PkgMem() {
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PkgMem(), _)
-ensures  res == unfolding acc(PkgMem(), _) in registeredPaths[t].inUse
+requires PkgMem()
 decreases
 pure func Registered(t Type) (res bool) {
-	return unfolding acc(PkgMem(), _) in registeredPaths[t].inUse
+	return unfolding PkgMem() in
+		registeredPaths[t].inUse
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PkgMem(), _)
+requires PkgMem()
 decreases
 pure func GetType(t Type) (res Metadata) {
-	return unfolding acc(PkgMem(), _) in registeredPaths[t].Metadata
+	return unfolding PkgMem() in
+		registeredPaths[t].Metadata
 }
 
 ghost
-requires acc(PkgMem(), _)
-ensures  b == unfolding acc(PkgMem(), _) in strictDecoding
+requires PkgMem()
 decreases
 pure func IsStrictDecoding() (b bool) {
-	return unfolding acc(PkgMem(), _) in strictDecoding
+	return unfolding PkgMem() in strictDecoding
 }
 
 // Tge following is a closure spec, not an assumed impl.
