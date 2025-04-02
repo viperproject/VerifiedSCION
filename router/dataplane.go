@@ -187,6 +187,9 @@ type DataPlane struct {
 	// (VerifiedSCION) This is stored in the dataplane in order to retain
 	// knowledge that macFactory will not fail.
 	// @ ghost key *[]byte
+	// TODO: See if there is a way to circumvent storing `asid`, considering
+	// that this can be generated from `localIA`.
+	// @ ghost asid gpointer[io.IO_as]
 	external          map[uint16]BatchConn
 	linkTypes         map[uint16]topology.LinkType
 	neighborIAs       map[uint16]addr.IA
@@ -194,7 +197,7 @@ type DataPlane struct {
 	internalIP        net.IP
 	internalNextHops  map[uint16]*net.UDPAddr
 	svc               *services
-	macFactory        func() hash.Hash
+	macFactory        func() (hash.Hash /*@, ghost hash.ScionHashSpec @*/)
 	bfdSessions       map[uint16]bfdSession
 	localIA           addr.IA
 	mtx               sync.Mutex
@@ -311,22 +314,28 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 		// @ Unreachable()
 		return alreadySet
 	}
+
+	// @ ghost asid@ := io.IO_as{uint(d.localIA)}
+
 	// First check for MAC creation errors.
-	if _, err := scrypto.InitMac(key); err != nil {
+	if _ /*@, macSpec @*/, err := scrypto.InitMac(key /*@, asid @*/); err != nil {
 		return err
 	}
 	// @ d.key = &key
+	// @ d.asid = &asid
 	verScionTemp :=
 		// @ requires acc(&key, _) && acc(sl.Bytes(key, 0, len(key)), _)
 		// @ requires scrypto.ValidKeyForHash(key)
+		// @ requires acc(&asid, _)
 		// @ ensures  acc(&key, _) && acc(sl.Bytes(key, 0, len(key)), _)
 		// @ ensures  h != nil && h.Mem()
+		// @ ensures  acc(&asid, _) && sh === h && sh.Asid() == asid
 		// @ decreases
-		func /*@ f @*/ () (h hash.Hash) {
-			mac, _ := scrypto.InitMac(key)
-			return mac
+		func /*@ f @*/ () (h hash.Hash /*@, ghost sh hash.ScionHashSpec @*/) {
+			mac /*@, macSpec @*/, _ := scrypto.InitMac(key /*@, asid @*/)
+			return mac /*@, macSpec @*/
 		}
-	// @ proof verScionTemp implements MacFactorySpec{d.key} {
+	// @ proof verScionTemp implements MacFactorySpec{d.key, d.asid} {
 	// @   return verScionTemp() as f
 	// @ }
 	d.macFactory = verScionTemp
@@ -515,6 +524,7 @@ func (d *DataPlane) AddExternalInterfaceBFD(ifID uint16, conn BatchConn,
 			PacketsReceived: d.Metrics.BFDPacketsReceived.With(labels),
 		}
 	}
+	// TODO: Now that macFactory returns two arguments, might want to move this out?
 	s := newBFDSend(conn, src.IA, dst.IA, src.Addr, dst.Addr, ifID, d.macFactory())
 	return d.addBFDController(ifID, s, cfg, m)
 }
@@ -734,6 +744,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 		}
 	}
 
+	// TODO: Now that macFactory returns two values, might want to move this call out?
 	s := newBFDSend(d.internal, d.localIA, d.localIA, src, dst, 0, d.macFactory())
 	return d.addBFDController(ifID, s, cfg, m)
 }
@@ -1407,16 +1418,20 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	// @ d.getNewPacketProcessorFootprint()
 	verScionTmp = gopacket.NewSerializeBuffer()
 	// @ sl.PermsImplyIneqWithWildcard(verScionTmp.UBuf(), *d.key)
+	mac /*@, macSpec @*/ := (d.macFactory() /*@ as MacFactorySpec{d.key, d.asid} @*/)
 	p := &scionPacketProcessor{
 		d:         d,
 		ingressID: ingressID,
 		buffer:    verScionTmp,
-		mac:       (d.macFactory() /*@ as MacFactorySpec{d.key} @ */),
+		mac:       mac,
 		macBuffers: macBuffersT{
 			scionInput: make([]byte, path.MACBufferSize),
 			epicInput:  make([]byte, libepic.MACBufferSize),
 		},
 	}
+	// TODO: Doing this "right in initialization" makes Gobra think `p` is a 
+	// `gpointer` and not "normal pointer".
+	// @ p.macSpec = macSpec
 	// @ fold sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
@@ -1607,7 +1622,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ unfold acc(p.d.Mem(), _)
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 		// @ assert !(reveal slayers.IsSupportedPkt(p.rawPkt))
-		v1, v2 /*@, aliasesPkt, newAbsPkt @*/ := p.processOHP( /*@ dp @*/ )
+		v1, v2 /*@, aliasesPkt, newAbsPkt @*/ := p.processOHP(/*@ dp @*/)
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
 		return v1, v2 /*@, aliasesPkt, newAbsPkt @*/
@@ -1889,6 +1904,9 @@ type scionPacketProcessor struct {
 	buffer gopacket.SerializeBuffer
 	// mac is the hasher for the MAC computation.
 	mac hash.Hash
+	// `macSpec` let's us access the AS identifier corresponding to the private key
+	// used by `mac`.
+	// @ ghost macSpec hash.ScionHashSpec
 
 	// scionLayer is the SCION gopacket layer.
 	scionLayer slayers.SCION
@@ -2826,6 +2844,7 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ requires  acc(&p.infoField, R20)
 // @ requires  acc(&p.hopField, R20)
 // @ preserves acc(&p.mac, R20) && p.mac != nil && p.mac.Mem()
+// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
 // @ preserves acc(&p.macBuffers.scionInput, R20)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
@@ -2866,7 +2885,9 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ decreases
 func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, ghost ubScionL []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	// @ ghost oldPkt := absPkt(ubScionL)
-	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput /*@, dp.Asid() @*/)
+	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput /*@, p.macSpec @*/)
+	// TODO: Remove assertion
+	// @ assert p.macSpec.Asid() == dp.Asid()
 	// @ fold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
 	// @ sl.SplitRange_Bytes(fullMac, 0, path.MacLen, R21)
 	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen]) == 0 {
@@ -2898,8 +2919,12 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 		// @ ghost if tmpErr != nil && tmpRes.OutPkt != nil {
 		// @ 	AbsUnsupportedPktIsUnsupportedVal(tmpRes.OutPkt, tmpRes.EgressID)
 		// @ }
+		// TODO: Remove assertion
+		// @ assert p.macSpec.Asid() == dp.Asid()
 		return tmpRes, tmpErr
 	}
+	// TODO: Remove assertion
+	// @ assert p.macSpec.Asid() == dp.Asid()
 
 	// Add the full MAC to the SCION packet processor,
 	// such that EPIC does not need to recalculate it.
@@ -2919,6 +2944,9 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 
 	// @ unfold acc(sl.Bytes(fullMac, 0, len(fullMac)), R21)
 	// @ assert absHF.HVF == io.nextMsgtermSpec(dp.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
+
+	// TODO: Remove assertion
+	// @ assert p.macSpec.Asid() == dp.Asid()
 
 	// @ reveal AbsVerifyCurrentMACConstraint(oldPkt, dp)
 	// @ fold p.d.validResult(processResult{}, false)
@@ -3806,6 +3834,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField)
 // @ preserves acc(&p.mac, R10) && p.mac != nil && p.mac.Mem()
+// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
@@ -4050,6 +4079,7 @@ func (p *scionPacketProcessor) process(
 // @ requires  sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.mac, R10)
 // @ preserves p.mac != nil && p.mac.Mem()
+// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
@@ -4070,12 +4100,14 @@ func (p *scionPacketProcessor) process(
 // contracts for IO-spec
 // @ requires p.scionLayer.EqPathType(p.rawPkt)
 // @ requires !slayers.IsSupportedPkt(p.rawPkt)
+// @ requires  p.d.DpAgreesWithSpec(dp)
+// TODO: Might also want to require dp.Valid()
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
 // @ ensures  respr.OutPkt != nil ==>
 // @ 	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID) &&
 // @ 	newAbsPkt.isIO_val_Unsupported
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (p *scionPacketProcessor) processOHP( /*@ ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@ , ghost addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
+func (p *scionPacketProcessor) processOHP(/*@ ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , ghost addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
 	// @ ghost ubScionL := p.rawPkt
 	// @ p.scionLayer.ExtractAcc(ubScionL)
 	s := p.scionLayer
@@ -4134,10 +4166,11 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost dp io.DataPlaneSpec @*/ ) (
 		// @ preserves acc(&ohp.Info, R55) && acc(&ohp.FirstHop, R55)
 		// @ preserves acc(&p.macBuffers.scionInput, R55)
 		// @ preserves acc(&p.mac, R55) && p.mac != nil && p.mac.Mem()
+		// @ preserves acc(&p.macSpec, R55) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
 		// @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 		// @ decreases
 		// @ outline (
-		mac /*@@@*/ := path.MAC(p.mac, ohp.Info, ohp.FirstHop, p.macBuffers.scionInput /*@, dp.Asid() @*/)
+		mac /*@@@*/ := path.MAC(p.mac, ohp.Info, ohp.FirstHop, p.macBuffers.scionInput /*@, p.macSpec @*/)
 		// (VerifiedSCION) introduced separate copy to avoid exposing quantified permissions outside the scope of this outline block.
 		macCopy := mac
 		// @ fold acc(sl.Bytes(ohp.FirstHop.Mac[:], 0, len(ohp.FirstHop.Mac[:])), R56)
@@ -4214,7 +4247,7 @@ func (p *scionPacketProcessor) processOHP( /*@ ghost dp io.DataPlaneSpec @*/ ) (
 	// XXX(roosd): Here we leak the buffer into the SCION packet header.
 	// This is okay because we do not operate on the buffer or the packet
 	// for the rest of processing.
-	ohp.SecondHop.Mac = path.MAC(p.mac, ohp.Info, ohp.SecondHop, p.macBuffers.scionInput /*@, dp.Asid() @*/)
+	ohp.SecondHop.Mac = path.MAC(p.mac, ohp.Info, ohp.SecondHop, p.macBuffers.scionInput /*@, p.macSpec @*/)
 	// @ fold ohp.SecondHop.Mem()
 	// @ fold s.Path.Mem(ubPath)
 	// @ fold acc(p.scionLayer.Mem(ubScionL), 1-R15)
