@@ -82,11 +82,12 @@ type ScionHashSpec interface {
     Hash
 
 	// TODO: Might want to open an issue regarding that repeating `Mem` is necessary here?
+	// TODO: explain why this is necessary
 	pred Mem()
 
     ghost
 	// TODO: If `Asid` depends on `Mem()`, then we don't know whether the result
-	// may change after call to `FullMAC`. It also shouldn't be necessary
+	// may change after call to `FullMAC`. 
     // requires Mem()
     decreases
     pure Asid() (ghost io.IO_as)

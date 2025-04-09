@@ -2844,7 +2844,8 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ requires  acc(&p.infoField, R20)
 // @ requires  acc(&p.hopField, R20)
 // @ preserves acc(&p.mac, R20) && p.mac != nil && p.mac.Mem()
-// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+//  preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+// @ preserves acc(&p.macSpec, R20) && ValidHashSpec(p.mac, p.macSpec, dp)
 // @ preserves acc(&p.macBuffers.scionInput, R20)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
@@ -2885,6 +2886,8 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ decreases
 func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, ghost ubScionL []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	// @ ghost oldPkt := absPkt(ubScionL)
+	// @ unfold ValidHashSpec(p.mac, p.macSpec, dp)
+	// @ defer fold ValidHashSpec(p.mac, p.macSpec, dp)
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput /*@, p.macSpec @*/)
 	// TODO: Remove assertion
 	// @ assert p.macSpec.Asid() == dp.Asid()
@@ -3833,8 +3836,14 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ 	!llIsNil && startLL == 0 && endLL == len(ub)
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField)
-// @ preserves acc(&p.mac, R10) && p.mac != nil && p.mac.Mem()
-// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+// @ requires  acc(&p.mac, R10) && p.mac != nil && p.mac.Mem()
+// @ ensures   acc(&p.mac, R10) && p.mac != nil && p.mac.Mem()
+//  preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+// NOTE: I think the problem isn't with any of these conjuncts directly; rather,
+// this precondition leads to satisfying the precondition of verifyCurrentMAC,
+// allowing the verification to proceed further, leading to the performance problems.
+//  requires  acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+// @ requires  acc(&p.macSpec, R20) && ValidHashSpec(p.mac, p.macSpec, dp)
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
@@ -4079,7 +4088,7 @@ func (p *scionPacketProcessor) process(
 // @ requires  sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.mac, R10)
 // @ preserves p.mac != nil && p.mac.Mem()
-// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+//  preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
@@ -4100,7 +4109,7 @@ func (p *scionPacketProcessor) process(
 // contracts for IO-spec
 // @ requires p.scionLayer.EqPathType(p.rawPkt)
 // @ requires !slayers.IsSupportedPkt(p.rawPkt)
-// @ requires  p.d.DpAgreesWithSpec(dp)
+//  requires  p.d.DpAgreesWithSpec(dp)
 // TODO: Might also want to require dp.Valid()
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
 // @ ensures  respr.OutPkt != nil ==>
@@ -4166,7 +4175,7 @@ func (p *scionPacketProcessor) processOHP(/*@ ghost dp io.DataPlaneSpec @*/) (re
 		// @ preserves acc(&ohp.Info, R55) && acc(&ohp.FirstHop, R55)
 		// @ preserves acc(&p.macBuffers.scionInput, R55)
 		// @ preserves acc(&p.mac, R55) && p.mac != nil && p.mac.Mem()
-		// @ preserves acc(&p.macSpec, R55) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+		//  preserves acc(&p.macSpec, R55) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
 		// @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 		// @ decreases
 		// @ outline (

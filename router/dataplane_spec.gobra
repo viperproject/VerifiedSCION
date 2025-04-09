@@ -742,3 +742,17 @@ pure func (d *DataPlane) DomainForwardingMetrics() set[uint16] {
 				domain(d.forwardingMetrics) :
 			set[uint16]{}
 }
+
+// pred (sh hash.ScionHashSpec) Valid(h hash.Hash, dp DataPlaneSpec) {
+// 	acc(sh) && h === sh && sh.Asid() == dp.Asid()
+// }
+
+// ghost
+// decreases
+// pure func Valid(h hash.Hash, sh hash.ScionHashSpec, dp io.DataPlaneSpec) bool {
+// 	h === sh && sh.Asid() == dp.Asid()
+// }
+
+pred ValidHashSpec(h hash.Hash, sh hash.ScionHashSpec, dp io.DataPlaneSpec) {
+	h === sh && sh != nil && sh.Asid() == dp.Asid()
+}
