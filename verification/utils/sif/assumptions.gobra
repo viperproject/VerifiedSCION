@@ -2,7 +2,7 @@
 
 package sif
 
-// SIF: See Gobra issue #832
+// TODO: Once Gobra issue #832 is resolved, introduce body and prove this.
 ghost
 requires p > 0 && acc(b, p)
 requires low(len(b)) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> low(b[i])
