@@ -30,7 +30,8 @@ pred (ia *IA) LowMem() { acc(ia) && low(*ia) }
 pred (ia *IA) LowSet(s string) { low(s) }
 
 pred (*IA) LowUnmarshalText(text []byte) {
-	low(len(text)) && sif.LowBytes(text, 0, len(text))
+	low(len(text)) && 
+	forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i]) && low(text[i])
 }
 
 (*IA) implements encoding.TextUnmarshaler {
@@ -60,7 +61,8 @@ IA implements fmt.Stringer {
 
 pred (_as *AS) Mem() { acc(_as) }
 pred (*AS) LowUnmarshalText(text []byte) {
-	low(len(text)) && sif.LowBytes(text, 0, len(text))
+	low(len(text)) && 
+	forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i]) && low(text[i])
 }
 
 (*AS) implements encoding.TextUnmarshaler {

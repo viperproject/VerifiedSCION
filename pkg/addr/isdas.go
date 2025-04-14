@@ -76,7 +76,7 @@ type AS uint64
 // space) or ipv6-style hex (in the case of SCION-only AS numbers) string.
 // @ requires low(_as)
 // @ ensures retErr == nil ==> retAs.inRange()
-// @ ensures low(retAs) && low(retErr)
+// @ ensures low(retAs) && low(retErr != nil)
 // @ decreases
 func ParseAS(_as string) (retAs AS, retErr error) {
 	return parseAS(_as, ":")
@@ -84,7 +84,7 @@ func ParseAS(_as string) (retAs AS, retErr error) {
 
 // @ requires low(_as) && low(sep)
 // @ ensures retErr == nil ==> retAs.inRange()
-// @ ensures low(retAs) && low(retErr)
+// @ ensures low(retAs) && low(retErr != nil)
 // @ decreases
 func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	parts := strings.Split(_as, sep)
@@ -185,14 +185,15 @@ func (_as AS) MarshalText() ([]byte, error) {
 	return []byte(_as.String()), nil
 }
 
-// @ requires sif.LowBytes(text, 0, len(text))
+// @ requires  forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
+// @ requires  low(len(text)) && 
+// @ 	forall i int :: { text[i] } 0 <= i && i < len(text) ==> low(text[i])
 // @ preserves acc(_as)
-// @ ensures forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
+// @ ensures   forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
 // @ decreases
 func (_as *AS) UnmarshalText(text []byte) error {
-	//@ unfold sif.LowBytes(text, 0, len(text))
 	// SIF: See Gobra issue #832
-	//@ assume low(string(text))
+	//@ sif.LowSliceImpliesLowString(text, 1/1)
 	parsed, err := ParseAS(string(text))
 	if err != nil {
 		return err
@@ -239,7 +240,7 @@ func IAFrom(isd ISD, _as AS) (ia IA, err error) {
 
 // ParseIA parses an IA from a string of the format 'isd-as'.
 // @ requires low(ia)
-// @ ensures low(retErr)
+// @ ensures low(retErr != nil)
 // @ decreases
 func ParseIA(ia string) (retIA IA, retErr error) {
 	parts := strings.Split(ia, "-")
@@ -280,14 +281,15 @@ func (ia IA) MarshalText() ([]byte, error) {
 	return []byte(ia.String()), nil
 }
 
-// @ requires low(len(b)) && sif.LowBytes(b, 0, len(b))
+// @ requires  forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
+// @ requires  low(len(b)) && 
+// @ 	forall i int :: { b[i] } 0 <= i && i < len(b) ==> low(b[i])
 // @ preserves acc(ia)
-// @ ensures forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
+// @ ensures   forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ decreases
 func (ia *IA) UnmarshalText(b []byte) error {
-	//@ unfold sif.LowBytes(b, 0, len(b))
 	// SIF: See Gobra issue #832
-	//@ assume low(string(b))
+	//@ sif.LowSliceImpliesLowString(b, 1/1)
 	parsed, err := ParseIA(string(b))
 	if err != nil {
 		return err
