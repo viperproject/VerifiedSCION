@@ -63,7 +63,7 @@ func (o Type) String() (res string) {
 }
 
 // @ requires low(s)
-// @ ensures  low(t) && low(err)
+// @ ensures  low(t) && low(err != nil)
 func TypeFromString(s string) (t Type, err error) {
 	switch strings.ToLower(s) {
 	case strings.ToLower(UDPIPv4Name):
