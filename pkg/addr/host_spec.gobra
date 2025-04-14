@@ -23,15 +23,12 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-// SIF: Asserting h.Mem() in LowMem doesn't work well.
-
 pred (h HostNone) Mem() { len(h) == HostLenNone }
 pred (h HostNone) LowMem() { true }
 
 HostNone implements HostAddr {
 	(h HostNone) String() (str string) {
 		unfold acc(h.Mem(), R13/2)
-		unfold acc(h.LowMem(), R13/2)
 		str = h.String()
 		fold acc(h.Mem(), R13)
 	}
@@ -58,8 +55,6 @@ pred (h HostSVC) LowMem() { low(h) }
 
 HostSVC implements HostAddr {
 	(h HostSVC) String() (str string) {
-		unfold acc(h.Mem(), R13/2)
-		unfold acc(h.LowMem(), R13/2)
 		str = h.String()
 		fold acc(h.Mem(), R13)
 	}

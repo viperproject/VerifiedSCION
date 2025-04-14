@@ -109,10 +109,7 @@ type HostAddr interface {
 	//@ decreases
 	Copy() (res HostAddr)
 
-	// SIF: I wanted to introduce an assertion `LowEqual(HostAddr)`, but that
-	// led to a strange exception. As every implementation of `Equal` needs to
-	// cast `o` anyway, I think it's fine to assert `low(typeOf(o))` directly.
-	//@ requires low(typeOf(o))
+	//@ requires  low(typeOf(o))
 	//@ preserves acc(Mem(), R13) && acc(o.Mem(), R13)
 	//@ decreases
 	Equal(o HostAddr) bool
@@ -163,7 +160,7 @@ func (h HostNone) Copy() (res HostAddr) {
 	return tmp
 }
 
-// SIF: The Viper encoding contains a non-low branch condition if not `low(typeOf(o))`
+// The Viper encoding branches on `typeOf(o)`.
 // @ requires low(typeOf(o))
 // @ ensures res == (typeOf(o) == type[HostNone])
 // @ decreases
@@ -240,10 +237,10 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 // @ ensures acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv4) String() string {
-	//@ assert unfolding acc(h.Mem(), R13/2) in len(h) == HostLenIPv4
 	//@ unfold acc(h.Mem(), R13/2)
 	//@ unfold acc(h.LowMem(), R13/2)
 	//@ fold acc(h.Mem(), R13)
+	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
 	//@ ghost defer fold acc(h.Mem(), R13)
 	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
 	return h.IP().String()
@@ -313,10 +310,10 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 // @ ensures acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv6) String() string {
-	//@ assert unfolding acc(h.Mem(), R13/2) in len(h) == HostLenIPv6
 	//@ unfold acc(h.Mem(), R13/2)
 	//@ unfold acc(h.LowMem(), R13/2)
 	//@ fold acc(h.Mem(), R13)
+	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv6
 	//@ ghost defer fold acc(h.Mem(), R13)
 	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
 	return h.IP().String()
@@ -425,7 +422,7 @@ func (h HostSVC) String() string {
 	if h.IsMulticast() {
 		cast = 'M'
 	}
-	// SIF: See Gobra issue #835 for why this assumption is currently necessary
+	// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
 	//@ assert low(name)
 	//@ assert low(cast)
 	//@ assert low(uint16(h))

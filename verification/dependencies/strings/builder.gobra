@@ -27,6 +27,7 @@ decreases _
 func (b *Builder) String(ghost isLow bool) (str string)
 
 requires  0 <= n
+requires  isLow ==> low(n)
 preserves acc(b.Mem(), 1/2) && acc(b.LowMem(isLow), 1/2)
 decreases _
 func (b *Builder) Grow(n int, ghost isLow bool)

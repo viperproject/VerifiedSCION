@@ -20,24 +20,15 @@ import (
 	"fmt"
 	"encoding"
 	"flag"
-
-	"github.com/scionproto/scion/verification/utils/sif"
 )
 
 pred (ia *IA) Mem() { acc(ia) }
 
 pred (ia *IA) LowMem() { acc(ia) && low(*ia) }
-pred (ia *IA) LowSet(s string) { low(s) }
-
-pred (*IA) LowUnmarshalText(text []byte) {
-	low(len(text)) && 
-	forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i]) && low(text[i])
-}
 
 (*IA) implements encoding.TextUnmarshaler {
 	(ia *IA) UnmarshalText(text []byte) (err error) {
 		unfold ia.Mem()
-		unfold ia.LowUnmarshalText(text)
 		err = ia.UnmarshalText(text)
 		fold ia.Mem()
 	}
@@ -60,15 +51,10 @@ IA implements fmt.Stringer {
 }
 
 pred (_as *AS) Mem() { acc(_as) }
-pred (*AS) LowUnmarshalText(text []byte) {
-	low(len(text)) && 
-	forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i]) && low(text[i])
-}
 
 (*AS) implements encoding.TextUnmarshaler {
 	(_as *AS) UnmarshalText(text []byte) (err error) {
 		unfold _as.Mem()
-		unfold _as.LowUnmarshalText(text)
 		err = _as.UnmarshalText(text)
 		fold _as.Mem()
 	}
@@ -84,7 +70,6 @@ pred (*AS) LowUnmarshalText(text []byte) {
 	
 	(ia *IA) Set(s string) (err error) {
 		unfold ia.Mem()
-		unfold ia.LowSet(s)
 		err = ia.Set(s)
 		fold ia.Mem()
 	}

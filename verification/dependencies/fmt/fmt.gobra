@@ -31,7 +31,7 @@ func Sprintf(format string, v ...interface{}) (res string)
 
 type Stringer interface {
 	pred Mem()
-	pred LowMem()  // SIF: allows specifying sensitivity (preconditions)
+	pred LowMem()
 
 	requires acc(Mem(), 1/2) && acc(LowMem(), 1/2)
 	ensures acc(Mem())
