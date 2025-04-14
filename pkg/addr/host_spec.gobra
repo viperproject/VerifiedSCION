@@ -19,7 +19,6 @@ package addr
 import (
 	"net"
 
-	. "github.com/scionproto/scion/verification/utils/definitions"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -63,6 +62,8 @@ requires h.Mem()
 decreases
 pure func (h HostSVC) IsLow() bool
 
+// "Reveal the body" of `h.IsLow` (necessary bc. we can't implement `h.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, remove this.
 ghost
 requires p > 0
 requires acc(h.Mem(), p) && h.IsLow()

@@ -19,6 +19,7 @@ type Builder struct {
 
 pred (b *Builder) Mem()
 
+// Return whether the underlying data is low.
 ghost
 requires b.Mem()
 decreases

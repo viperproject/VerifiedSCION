@@ -138,8 +138,8 @@ func fmtAS(as_ AS, sep string) (res string) {
 	var b /*@@@*/ strings.Builder
 	// @ b.ZeroBuilderIsReadyToUse()
 	b.Grow(maxLen)
-	// @ invariant b.Mem() && b.IsLow()
-	// @ invariant low(i)
+	// @ invariant b.Mem()
+	// @ invariant low(i) && b.IsLow()
 	// @ decreases asParts - i
 	for i := 0; i < asParts; i++ {
 		if i > 0 {
@@ -151,8 +151,7 @@ func fmtAS(as_ AS, sep string) (res string) {
 		// @ assume 0 <= uint64(as_>>shift)&asPartMask
 		b.WriteString(strconv.FormatUint(uint64(as_>>shift)&asPartMask, asPartBase))
 	}
-	ret := b.String()
-	return ret
+	return b.String()
 }
 
 // (VerifiedSCION) revert this change when Gobra is fixed.

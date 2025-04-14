@@ -24,7 +24,7 @@ type TextUnmarshaler interface {
 	requires  acc(text)
 	requires  low(len(text)) && 
 		forall i int :: { text[i] } 0 <= i && i < len(text) ==> low(text[i])
-	preserves Mem() && acc(text)
+	preserves Mem()
 	ensures   acc(text)
 	decreases
 	UnmarshalText(text []byte) error

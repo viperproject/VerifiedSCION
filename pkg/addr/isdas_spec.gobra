@@ -43,6 +43,10 @@ pure func (ia *IA) IsLowForValue() bool {
 // Issue: https://github.com/viperproject/gobra/issues/449
 pred MemForStringer(ia IA) { true }
 
+// Both `IA` (for `fmt.Stringer`) and `*IA` (for `flag.Value`) implement the same 
+// `String` function, which needs the underlying value to be low.
+// Sharing `IsLow` doesn't work, however, thus `IA` implements `IsLowForStringer`
+// and `*IA` implements `IsLowForValue`, which both just resolve to this `IsLow`.
 ghost
 decreases
 pure func (ia IA) IsLow() bool 
@@ -54,6 +58,8 @@ pure func (ia IA) IsLowForStringer() bool {
 	return ia.IsLow()
 }
 
+// "Reveal" the "body" of `ia.IsLow` (necessary bc. we can't implement `ia.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, remove this.
 ghost
 requires ia.IsLow()
 ensures  low(ia)

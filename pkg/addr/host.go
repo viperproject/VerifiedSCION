@@ -118,6 +118,10 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
+	// Return whether the underlying data (or at least the data relevant for 
+	// 'String') is low.
+	// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`;
+	// at the moment, this can just be an abstract function.
 	//@ ghost
 	//@ requires Mem()
 	//@ decreases
@@ -237,8 +241,7 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ requires acc(h.Mem(), R13)
-// @ ensures acc(h.Mem(), R13)
+// @ preserves acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
@@ -307,8 +310,7 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ requires acc(h.Mem(), R13)
-// @ ensures acc(h.Mem(), R13)
+// @ preserves acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv6) String() string {
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv6
