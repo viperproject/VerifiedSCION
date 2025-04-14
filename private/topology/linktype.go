@@ -132,7 +132,7 @@ func (l *LinkType) UnmarshalText(data []byte) (err error) {
 	//@ ghost defer fold acc(sl.Bytes(data, 0, len(data)), R15)
 	//@ assert forall i int :: { sl.GetByte(data, 0, len(data), i) } 0 <= i && i < len(data) ==>
 	//@ 	old[BeforeUnfold](sl.GetByte(data, 0, len(data), i)) == data[i]
-	//@ sif.AssumeLowSliceToLowString(data, R15)
+	//@ sif.LowSliceImpliesLowString(data, R15)
 	switch strings.ToLower(string(data)) {
 	case "core":
 		*l = Core

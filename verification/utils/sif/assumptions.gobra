@@ -8,4 +8,4 @@ requires p > 0 && acc(b, p)
 requires low(len(b)) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> low(b[i])
 ensures acc(b, p) && low(string(b))
 decreases
-func AssumeLowSliceToLowString(b []byte, p perm)
+func LowSliceImpliesLowString(b []byte, p perm)
