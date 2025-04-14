@@ -84,7 +84,6 @@ const (
 
 type HostAddr interface {
 	//@ pred Mem()
-	//@ pred LowMem()
 
 	//@ preserves acc(Mem(), R13)
 	//@ decreases
@@ -119,7 +118,12 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
-	//@ requires acc(Mem(), R13/2) && acc(LowMem(), R13/2)
+	//@ ghost
+	//@ requires Mem()
+	//@ decreases
+	//@ pure IsLow() bool
+
+	//@ requires acc(Mem(), R13) && IsLow()
 	//@ ensures acc(Mem(), R13)
 	//@ decreases
 	String() string
@@ -233,13 +237,10 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ requires acc(h.Mem(), R13/2) && acc(h.LowMem(), R13/2)
+// @ requires acc(h.Mem(), R13)
 // @ ensures acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv4) String() string {
-	//@ unfold acc(h.Mem(), R13/2)
-	//@ unfold acc(h.LowMem(), R13/2)
-	//@ fold acc(h.Mem(), R13)
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
 	//@ ghost defer fold acc(h.Mem(), R13)
 	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
@@ -306,13 +307,10 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ requires acc(h.Mem(), R13/2) && acc(h.LowMem(), R13/2)
+// @ requires acc(h.Mem(), R13)
 // @ ensures acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv6) String() string {
-	//@ unfold acc(h.Mem(), R13/2)
-	//@ unfold acc(h.LowMem(), R13/2)
-	//@ fold acc(h.Mem(), R13)
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv6
 	//@ ghost defer fold acc(h.Mem(), R13)
 	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
@@ -414,9 +412,11 @@ func (h HostSVC) Equal(o HostAddr) bool {
 	return ok && h == ha
 }
 
-// @ requires low(h)
+// @ requires acc(h.Mem(), R13) && h.IsLow()
+// @ ensures  acc(h.Mem(), R13)
 // @ decreases
 func (h HostSVC) String() string {
+	//@ h.RevealIsLow(R13)
 	name := h.BaseString()
 	cast := 'A'
 	if h.IsMulticast() {

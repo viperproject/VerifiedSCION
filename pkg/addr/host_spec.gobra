@@ -24,21 +24,23 @@ import (
 )
 
 pred (h HostNone) Mem() { len(h) == HostLenNone }
-pred (h HostNone) LowMem() { true }
 
-HostNone implements HostAddr {
-	(h HostNone) String() (str string) {
-		unfold acc(h.Mem(), R13/2)
-		str = h.String()
-		fold acc(h.Mem(), R13)
-	}
-}
+ghost
+requires h.Mem()
+decreases
+pure func (h HostNone) IsLow() bool
+
+HostNone implements HostAddr
 
 pred (h HostIPv4) Mem() {
 	len(h) == HostLenIPv4 &&
 	slices.Bytes(h, 0, len(h))
 }
-pred (h HostIPv4) LowMem() { slices.Bytes(h, 0, len(h)) }
+
+ghost
+requires h.Mem()
+decreases
+pure func (h HostIPv4) IsLow() bool
 
 HostIPv4 implements HostAddr
 
@@ -46,22 +48,31 @@ pred (h HostIPv6) Mem() {
 	len(h) == HostLenIPv6 &&
 	slices.Bytes(h, 0, len(h))
 }
-pred (h HostIPv6) LowMem() { slices.Bytes(h, 0, len(h)) }
+
+ghost
+requires h.Mem()
+decreases
+pure func (h HostIPv6) IsLow() bool
 
 HostIPv6 implements HostAddr
 
 pred (h HostSVC) Mem() { true }
-pred (h HostSVC) LowMem() { low(h) }
 
-HostSVC implements HostAddr {
-	(h HostSVC) String() (str string) {
-		str = h.String()
-		fold acc(h.Mem(), R13)
-	}
-}
+ghost
+requires h.Mem()
+decreases
+pure func (h HostSVC) IsLow() bool
+
+ghost
+requires p > 0
+requires acc(h.Mem(), p) && h.IsLow()
+ensures  acc(h.Mem(), p) && low(h)
+decreases
+func (h HostSVC) RevealIsLow(p perm)
+
+HostSVC implements HostAddr
 
 pred (h *HostSVC) Mem() { acc(h) }
-pred (h *HostSVC) LowMem() { acc(h) && low(*h) }
 
 (*HostSVC) implements HostAddr
 

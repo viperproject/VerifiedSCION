@@ -273,7 +273,7 @@ func (ia IA) AS() AS {
 	return AS(ia) & MaxAS
 }
 
-// @ requires low(ia)
+// @ requires ia.IsLow()
 // @ decreases
 func (ia IA) MarshalText() ([]byte, error) {
 	return []byte(ia.String()), nil
@@ -314,9 +314,10 @@ func (ia IA) IsWildcard() bool {
 	return ia.ISD() == 0 || ia.AS() == 0
 }
 
-// @ requires low(ia)
+// @ requires ia.IsLow()
 // @ decreases
 func (ia IA) String() string {
+	//@ ia.RevealIsLow()
 	// (VerifiedSCION) Added casts around ia.ISD() and ia.AS() to be able to pass them to 'fmt.Sprintf'
 	// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
 	//@ ghost v := []interface{}{ia.ISD(), ia.AS()}
