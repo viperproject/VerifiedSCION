@@ -90,13 +90,14 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error)
 // Elements of errCtx are limited to "primitive types" at the moment.
 // This is a safe but strict under-approximation of what can be done
 // with this method.
-preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
-ensures   res != nil && res.ErrorMem()
-ensures   res.IsDuplicableMem()
+requires forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 // TODO: Once Gobra issue #846 is resolved, capture the sensitivity of `errCtx`
 // using a pure Boolean function.
-ensures   (low(msg) && low(len(errCtx)) && 
-	forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> 
-	low(errCtx[i])) ==> low(res)
+requires low(msg) && low(len(errCtx)) && 
+	forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> low(errCtx[i])
+ensures  forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
+ensures  res != nil && res.ErrorMem()
+ensures  res.IsDuplicableMem()
+ensures  low(res != nil)
 decreases
 func New(msg string, errCtx ...interface{}) (res error)
