@@ -132,8 +132,7 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	// @ assert remote == nil ==> a == listen
 	// @ unfold acc(a.Mem(), R15/2)
 	// @ unfold acc(a.Low(), R15/2)
-	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15/2)
-	// @ unfold acc(sif.LowBytes(a.IP, 0, len(a.IP)), R15/2)
+	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15)
 	// @ assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], R15)
 	if a.IP.To4( /*@ false @*/ ) != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
@@ -305,7 +304,7 @@ type connUDPBase struct {
 // @ requires low(network) && low(laddr) && low(raddr)
 // @ ensures  errRet == nil ==> cc.Mem()
 // @ ensures  errRet != nil ==> errRet.ErrorMem()
-// @ ensures low(errRet)
+// @ ensures low(errRet != nil)
 // @ decreases
 func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cfg *Config) (errRet error) {
 	var c *net.UDPConn
@@ -315,7 +314,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 		//@ ghost errCtx := []interface{}{}
 		//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
 		reterr := serrors.New("listen address must be specified")
-		// @ assert low(reterr)
+		// @ assert low(reterr != nil)
 		return reterr
 		// return serrors.New("listen address must be specified")
 	}
@@ -329,7 +328,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
 			reterr := serrors.WrapStr("Error listening on socket", err,
 				"network", network, "listen", laddr)
-			// @ assert low(reterr)
+			// @ assert low(reterr != nil)
 			return reterr
 			// return serrors.WrapStr("Error listening on socket", err,
 			// 	"network", network, "listen", laddr)
@@ -345,7 +344,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
 			reterr := serrors.WrapStr("Error setting up connection", err,
 				"network", network, "listen", laddr, "remote", raddr)
-			// @ assert low(reterr)
+			// @ assert low(reterr != nil)
 			return reterr
 			// return serrors.WrapStr("Error setting up connection", err,
 			// 	"network", network, "listen", laddr, "remote", raddr)
@@ -368,7 +367,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr)
+			// @ assert low(reterr != nil)
 			return reterr
 			// return serrors.WrapStr("Error getting SO_SNDBUF socket option (before)", err,
 			// 	"listen", laddr,
@@ -387,7 +386,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr)
+			// @ assert low(reterr != nil)
 			return reterr
 			// return serrors.WrapStr("Error setting send buffer size", err,
 			// 	"listen", laddr,
@@ -406,7 +405,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr)
+			// @ assert low(reterr != nil)
 			return reterr
 			// return serrors.WrapStr("Error getting SO_SNDBUF socket option (after)", err,
 			// 	"listen", laddr,
@@ -438,7 +437,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr)
+			// @ assert low(reterr != nil)
 			return reterr
 			// return serrors.WrapStr("Error getting SO_RCVBUF socket option (before)", err,
 			// 	"listen", laddr,
@@ -457,7 +456,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr)
+			// @ assert low(reterr != nil)
 			return reterr
 			// return serrors.WrapStr("Error setting recv buffer size", err,
 			// 	"listen", laddr,
@@ -476,7 +475,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr)
+			// @ assert low(reterr != nil)
 			return reterr
 			// return serrors.WrapStr("Error getting SO_RCVBUF socket option (after)", err,
 			// 	"listen", laddr,

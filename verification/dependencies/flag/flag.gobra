@@ -18,19 +18,16 @@ package flag
 
 type Value interface {
 	pred Mem()
-	pred LowMem()  // SIF: allows specifying sensitivity (preconditions)
+	pred LowMem()
 	
-	// SIF: See `test10.gobra` for why I do it this way ATM.
 	requires acc(Mem(), 1/2) && acc(LowMem(), 1/2)
 	ensures acc(Mem())
 	decreases
 	String() string
 
-	pred LowSet(s string)
-
-	// SIF: This is necessary e.g. for `*IA` bc. `(*IA).Set` uses `s` in a 
-	// branch condition.
-	requires LowSet(s)
+	// TODO: It might make sense to abstract "low(s)" using either a predicate
+	// or a pure Boolean function, as not every implementation might require it.
+	requires  low(s)
 	preserves acc(Mem())
 	decreases
 	Set(s string) error

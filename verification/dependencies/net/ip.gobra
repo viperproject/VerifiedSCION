@@ -145,12 +145,6 @@ pure func (ip IP) Equal(x IP) bool
 // ParseIP parses s as an IP address, returning the result.
 ensures forall i int :: {&res[i]} 0 <= i && i < len(res) ==> acc(&res[i])
 ensures res != nil ==> len(res) == IPv4len || len(res) == IPv6len
-// SIF: Although `low(res)` would suffice to assert both of this, I don't think
-// it would be appropriate here. `low(res)` asserts that the returned references
-// are equal, which I don't think is sensible (every caller should get a new
-// slice).
-// TODO: Revisit this after talking to @jcp19 about what it means for two 
-// references to be equal in Viper.
 ensures low(s) ==> (low(res == nil) && low(len(res)))
 decreases _
 func ParseIP(s string) (res IP)

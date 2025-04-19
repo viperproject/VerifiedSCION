@@ -112,14 +112,12 @@ func FormatAS(as_ AS, opts ...FormatOption) string {
 }
 
 // @ requires as_.inRange()
-// @ requires low(as_)
-// SIF: Remove eventually maybe
-// @ requires low(sep)
-// @ ensures low(res)  // SIF: turn in to low(sep) ==> low(res) eventually maybe
+// @ requires low(as_) && low(sep)
+// @ ensures low(res)
 // @ decreases
 func fmtAS(as_ AS, sep string) (res string) {
 	if !as_.inRange() {
-		// SIF: See Gobra issue #835
+		// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
 		//@ assert low(as_)
 		//@ assert low(MaxAS)
 		//@ ghost v := []interface{}{as_, MaxAS}
@@ -140,11 +138,7 @@ func fmtAS(as_ AS, sep string) (res string) {
 	var b /*@@@*/ strings.Builder
 	// @ b.ZeroBuilderIsReadyToUse()
 	b.Grow(maxLen /*@, true @*/)
-	// SIF: While I do think assigning low(sep) to a ghost variable would make
-	// sense (here), at the moment it is simply replaced by `:= true`
-	//@ ghost isLowB := true
-	//@ ghost isLowSep := low(sep)
-	// @ invariant acc(b.Mem(), 1/2) && acc(b.LowMem(isLowB), 1/2)
+	// @ invariant acc(b.Mem(), 1/2) && acc(b.LowMem(true), 1/2)
 	// @ invariant low(i)
 	// @ decreases asParts - i
 	for i := 0; i < asParts; i++ {

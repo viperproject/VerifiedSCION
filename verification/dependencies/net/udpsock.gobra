@@ -29,7 +29,9 @@ pred (a *UDPAddr) Mem() {
 }
 
 pred (a *UDPAddr) Low() {
-	acc(a, R5) && low(len(a.IP)) && sif.LowBytes(a.IP, 0, len(a.IP))
+	acc(a, R5) && sl.Bytes(a.IP, 0, len(a.IP)) &&
+	low(len(a.IP)) && forall i int :: { sl.GetByte(a.IP, 0, len(a.IP), i) } 0 <= i && i < len(a.IP) ==>
+		low(sl.GetByte(a.IP, 0, len(a.IP), i))
 }
 
 (*UDPAddr) implements Addr {
