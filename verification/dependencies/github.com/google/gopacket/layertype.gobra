@@ -18,9 +18,9 @@ dup pkgInvariant LayerTypeZero == 0 &&
 
 package gopacket
 
-friendPkg "github.com/google/gopacket/layers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 10 <= t && t <= 146 ==>
+friendPkg "./layers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 10 <= t && t <= 146 ==>
 	RegisteredTypes.DoesNotContain(int64(t))
-friendPkg "github.com/scionproto/scion/pkg/slayers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 1000 <= t && t <= 1100 ==>
+friendPkg "../../../pkg/slayers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 1000 <= t && t <= 1100 ==>
 	RegisteredTypes.DoesNotContain(int64(t))
 
 import ms "github.com/scionproto/scion/verification/utils/monoset"

@@ -16,9 +16,9 @@
 
 package path
 
-// @ friendPkg "github.com/scionproto/scion/pkg/slayers" PkgMem()
+// @ friendPkg "../" PkgMem()
 // We have a non-quantified friendPkg clause below to avoid perf. issues.
-// @ friendPkg "github.com/scionproto/scion/pkg/slayers" RegisteredTypes().DoesNotContain(0) &&
+// @ friendPkg "../" RegisteredTypes().DoesNotContain(0) &&
 // @ 	RegisteredTypes().DoesNotContain(1) &&
 // @ 	RegisteredTypes().DoesNotContain(2) &&
 // @ 	RegisteredTypes().DoesNotContain(3)

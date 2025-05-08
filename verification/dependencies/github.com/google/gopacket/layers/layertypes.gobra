@@ -11,6 +11,7 @@ dup pkgInvariant acc(gopacket.RegisteredTypes.Contains(122), _)
 
 package layers
 
+importRequires gopacket.RegisteredTypes.DoesNotContain(int64(122))
 import "github.com/google/gopacket"
 
 var LayerTypeBFD = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: /* gopacket.DecodeFunc(decodeBFD)} */ generateDecoders()})
