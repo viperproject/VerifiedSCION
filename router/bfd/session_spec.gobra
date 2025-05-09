@@ -22,7 +22,8 @@
 
 dup pkgInvariant AlreadyRunning != nil &&
 	acc(AlreadyRunning.ErrorMem(), _)  &&
-	AlreadyRunning.IsDuplicableMem()
+	AlreadyRunning.IsDuplicableMem()   &&
+	isComparable(AlreadyRunning)
 package bfd
 
 import "github.com/scionproto/scion/pkg/private/serrors"
