@@ -13,12 +13,7 @@
 // limitations under the License.
 
 // +gobra
-
-// @ initEnsures acc(path.PathPackageMem(), _)
-// @ initEnsures path.Registered(empty.PathType)
-// @ initEnsures path.Registered(scion.PathType)
-// @ initEnsures path.Registered(onehop.PathType)
-// @ initEnsures path.Registered(epic.PathType)
+// @ dup pkgInvariant acc(path.PkgMem(), _)
 package slayers
 
 import (
@@ -30,9 +25,9 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
 
-	// @ importRequires path.PathPackageMem()
-	// @ importRequires !path.Registered(0) && !path.Registered(1)
-	// @ importRequires !path.Registered(2) && !path.Registered(3)
+	// @ importRequires path.PkgMem()
+	// @ importRequires path.RegisteredTypes().DoesNotContain(0) && path.RegisteredTypes().DoesNotContain(1)
+	// @ importRequires path.RegisteredTypes().DoesNotContain(2) && path.RegisteredTypes().DoesNotContain(3)
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/empty"
 	"github.com/scionproto/scion/pkg/slayers/path/epic"
