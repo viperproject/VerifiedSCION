@@ -34,7 +34,7 @@ env:
   enableFriendClauses: '1'
 
 jobs:
-  verify-verification-libs:
+  verify-third-party-libs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
@@ -63,6 +63,7 @@ jobs:
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
           enableFriendClauses: ${{ env.enableFriendClauses }}
+      # due to the bug mention above, we need to verify this package separately
       - name: Verify package 'dependencies/github.com/google/gopacket/layers'
         uses: viperproject/gobra-action@main
         with:
