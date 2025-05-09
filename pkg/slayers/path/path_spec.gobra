@@ -105,7 +105,7 @@ pure func IsStrictDecoding() (b bool) {
 	return unfolding PkgMem() in strictDecoding
 }
 
-// Tge following is a closure spec, not an assumed impl.
+// The following is a closure spec, not an assumed impl.
 // without passing `writePerm` explicitely below, we run into
 // exceptions when verifying method RegisterPath in package 'empty'
 ensures acc(p.NonInitMem(), writePerm)
