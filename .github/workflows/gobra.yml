@@ -213,7 +213,7 @@ jobs:
         with:
           projectLocation: 'VerifiedSCION/verification'
           recursive: 1
-          excludePackages: 'dependencies/github.com/google/gopacket/'
+          excludePackages: 'dependencies/github.com/google/gopacket/ dependencies/github.com/google/gopacket/layers'
           timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
