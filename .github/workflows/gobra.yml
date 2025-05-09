@@ -71,7 +71,7 @@ jobs:
           timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
-          includePaths: 'verification/dependencies/ ..' # relative to project location
+          includePaths: 'verification/dependencies/ verification' # relative to project location
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
           parallelizeBranches: ${{ env.parallelizeBranches }}
