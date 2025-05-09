@@ -64,10 +64,10 @@ jobs:
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
           enableFriendClauses: ${{ env.enableFriendClauses }}
       # due to the bug mention above, we need to verify this package separately
-      - name: Verify package 'dependencies/github.com/google/gopacket/layers'
+      - name: Verify package 'verification/dependencies/github.com/google/gopacket/layers'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'dependencies/github.com/google/gopacket/layers'
+          packages: 'verification/dependencies/github.com/google/gopacket/layers'
           timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
