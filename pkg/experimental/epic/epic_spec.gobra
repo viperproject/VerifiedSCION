@@ -27,7 +27,7 @@ pred postInitInvariant() {
 // learn the invariant established by init
 ghost
 ensures acc(postInitInvariant(), _)
-decreases _
+decreases
 func establishPostInitInvariant() {
 	openDupPkgInv
 }
