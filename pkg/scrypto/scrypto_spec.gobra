@@ -19,8 +19,11 @@
 
 package scrypto
 
-import "hash"
-import sl "github.com/scionproto/scion/verification/utils/slices"
+import (
+    "hash"
+    sl "github.com/scionproto/scion/verification/utils/slices"
+    "github.com/scionproto/scion/verification/io"
+)
 
 // The error returned by initMac is produced deterministically depending on the key.
 // If an initial call to initmac succeeds with a key, then any subsequent
@@ -33,7 +36,12 @@ pure func ValidKeyForHash(key []byte) bool
 
 preserves acc(sl.Bytes(key, 0, len(key)), _)
 ensures   old(ValidKeyForHash(key)) ==> e == nil
-ensures   e == nil ==> (h != nil && h.Mem() && ValidKeyForHash(key))
+ensures   e == nil ==> (
+    h != nil && 
+    h.Mem() && 
+    ValidKeyForHash(key) &&
+    h === sh &&
+    sh.Asid() == asid)
 ensures   e != nil ==> e.ErrorMem()
 decreases _
-func InitMac(key []byte) (h hash.Hash, e error)
+func InitMac(key []byte, ghost asid io.IO_as) (h hash.Hash, ghost sh hash.ScionHashSpec, e error)
