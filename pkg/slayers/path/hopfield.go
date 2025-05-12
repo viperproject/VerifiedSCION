@@ -80,7 +80,7 @@ type HopField struct {
 // @ ensures   h.Mem()
 // @ ensures   err == nil
 // @ ensures  BytesToIO_HF(raw, 0, 0, HopLen) ==
-// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF()
+// @ 	unfolding acc(h.Mem(), R10) in h.Abs()
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < HopLen {
@@ -101,7 +101,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == raw[6:6+MacLen][i]
 	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
 	//@ EqualBytesImplyEqualMac(raw[6:6+MacLen], h.Mac)
-	//@ assert BytesToIO_HF(raw, 0, 0, HopLen) == h.ToIO_HF()
+	//@ assert BytesToIO_HF(raw, 0, 0, HopLen) == h.Abs()
 	//@ fold acc(sl.Bytes(raw, 0, HopLen), R46)
 	//@ fold h.Mem()
 	return nil
@@ -114,7 +114,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // @ preserves sl.Bytes(b, 0, HopLen)
 // @ ensures   err == nil
 // @ ensures  BytesToIO_HF(b, 0, 0, HopLen) ==
-// @ 	unfolding acc(h.Mem(), R10) in h.ToIO_HF()
+// @ 	unfolding acc(h.Mem(), R10) in h.Abs()
 // @ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {
 	if len(b) < HopLen {
@@ -143,7 +143,7 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
 	//@ EqualBytesImplyEqualMac(b[6:6+MacLen], h.Mac)
 	//@ fold sl.Bytes(b, 0, HopLen)
-	//@ assert h.ToIO_HF() == BytesToIO_HF(b, 0, 0, HopLen)
+	//@ assert h.Abs() == BytesToIO_HF(b, 0, 0, HopLen)
 	//@ fold acc(h.Mem(), R11)
 	return nil
 }

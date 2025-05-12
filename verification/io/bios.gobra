@@ -36,7 +36,7 @@ ghost type IO_bio3s adt {
 	}
 
 	IO_bio3s_IO {
-		IO IO_bio3sIN
+		IO IO_bio3sIO
 	}
 
 	IO_bio3s_Skip{}
