@@ -142,7 +142,7 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 // @ ensures AbsUInfoFromUint16(inf.SegID) ==
 // @ 	old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf))
 // @ decreases
-func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte /* @, ghost hf io.IO_HF @ */) {
+func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte /* @, ghost hf io.HF @ */) {
 	//@ share hfMac
 	inf.SegID = inf.SegID ^ binary.BigEndian.Uint16(hfMac[:2])
 	// @ AssumeForIO(AbsUInfoFromUint16(inf.SegID) == old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf)))

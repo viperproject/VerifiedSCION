@@ -30,14 +30,14 @@ pred (h *HopField) Mem() {
 
 ghost
 decreases
-pure func ifsToIO_ifs(ifs uint16) option[io.IO_ifs] {
-	return ifs == 0 ? none[io.IO_ifs] : some(io.IO_ifs{ifs})
+pure func ifsToIO_ifs(ifs uint16) option[io.Ifs] {
+	return ifs == 0 ? none[io.Ifs] : some(io.Ifs{ifs})
 }
 
 ghost
 decreases
-pure func IO_ifsToIfs(ifs option[io.IO_ifs]) uint16 {
-	return ifs == none[io.IO_ifs] ? 0 : uint16(get(ifs).V)
+pure func IO_ifsToIfs(ifs option[io.Ifs]) uint16 {
+	return ifs == none[io.Ifs] ? 0 : uint16(get(ifs).V)
 }
 
 ghost
@@ -45,7 +45,7 @@ requires 0 <= start && start <= middle
 requires middle + HopLen <= end && end <= len(raw)
 requires sl.Bytes(raw, start, end)
 decreases
-pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
+pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.HF) {
 	return let _ := sl.AssertSliceOverlap(raw, middle+2, middle+4)     in
 		let _ := sl.AssertSliceOverlap(raw, middle+4, middle+6)        in
 		let _ := sl.AssertSliceOverlap(raw, middle+6, middle+6+MacLen) in
@@ -54,16 +54,16 @@ pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.IO_HF) {
 		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6])   in
 		let op_inif2 := ifsToIO_ifs(inif2)                             in
 		let op_egif2 := ifsToIO_ifs(egif2)                             in
-		io.IO_HF {
+		io.HF {
 			InIF2: op_inif2,
 			EgIF2: op_egif2,
 			HVF: AbsMac(FromSliceToMacArray(raw[middle+6:middle+6+MacLen])),
 		}
 }
 
-// WidenBytesHopField shows the equality between the IO_HF computed
+// WidenBytesHopField shows the equality between the HF computed
 // from raw bytes in slice 'raw' starting at position `offset` with
-// the IO_HF obtained from the slice 'raw[start:end]`.
+// the HF obtained from the slice 'raw[start:end]`.
 ghost
 requires  0 <= start && start <= offset
 requires  offset + HopLen <= end
@@ -90,9 +90,9 @@ func WidenBytesHopField(raw []byte, offset int, start int, end int) {
 	fold acc(sl.Bytes(raw[start:end], 0, len(raw[start:end])), R56)
 }
 
-// WidenBytesHopField shows the equality between the IO_HF computed
+// WidenBytesHopField shows the equality between the HF computed
 // from raw bytes in slice 'raw' starting at position `offset` with
-// the IO_HF obtained from the slice 'raw[offset:offset+HopLen]`.
+// the HF obtained from the slice 'raw[offset:offset+HopLen]`.
 // It is a special case of `WidenBytesHopField`.
 ghost
 requires  0 <= offset
@@ -108,8 +108,8 @@ func BytesToAbsHopFieldOffsetEq(raw [] byte, offset int) {
 
 ghost
 decreases
-pure func (h HopField) ToIO_HF() (io.IO_HF) {
-	return io.IO_HF {
+pure func (h HopField) Abs() (io.HF) {
+	return io.HF {
 		InIF2: ifsToIO_ifs(h.ConsIngress),
 		EgIF2: ifsToIO_ifs(h.ConsEgress),
 		HVF: AbsMac(h.Mac),
