@@ -56,7 +56,7 @@ ghost
 requires v.isValInternal1
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s Dp3sStateLocal, t Place, v Val) bool {
+pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s Dp3sStateLocal, v Val) bool {
 	return some(v.ValInternal1_2) in domain(s.ibuf) &&
 		(let ibuf_set := s.ibuf[some(v.ValInternal1_2)] in (v.ValInternal1_1 in ibuf_set)) &&
 		len(v.ValInternal1_1.CurrSeg.Future) > 0 &&
@@ -91,7 +91,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_enter(s Dp3sStateLocal, t Place) {
 				// We named the variable `_ignored` because using `_` here leads to a strange
 				// type error.
 				let _ignored := TriggerBodyIoEnter(v) in
-				(dp.Valid() && dp.dp3s_iospec_bio3s_enter_guard(s, t, v) ==>
+				(dp.Valid() && dp.dp3s_iospec_bio3s_enter_guard(s, v) ==>
 					(CBio_IN_bio3s_enter(t, v) &&
 					dp.dp3s_iospec_ordered(
 						dp3s_add_obuf(s, nextif, newpkt),
@@ -117,7 +117,7 @@ ghost
 requires v.isValInternal1
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_guard(s Dp3sStateLocal, t Place, v Val) bool {
+pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_guard(s Dp3sStateLocal, v Val) bool {
 	return let currseg := v.ValInternal1_1.CurrSeg in
 		match v.ValInternal1_1.LeftSeg{
 			case none[Seg]:
@@ -154,7 +154,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover(s Dp3sStateLocal, t Place) {
 				// We named the variable `_ignored` because using `_` here leads to a strange
 				// type error.
 				let _ignored := TriggerBodyIoXover(v) in
-				(dp.Valid() && dp.dp3s_iospec_bio3s_xover_guard(s, t, v) ==>
+				(dp.Valid() && dp.dp3s_iospec_bio3s_xover_guard(s, v) ==>
 					(CBio_IN_bio3s_xover(t, v) &&
 					dp.dp3s_iospec_ordered(
 						dp3s_add_obuf(s, nextif, newpkt),
@@ -180,7 +180,7 @@ ghost
 requires v.isValInternal2
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s Dp3sStateLocal, t Place, v Val) bool {
+pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s Dp3sStateLocal, v Val) bool {
 	return none[Ifs] in domain(s.ibuf) &&
 		(let ibuf_set := s.ibuf[none[Ifs]] in (v.ValInternal2_1 in ibuf_set)) &&
 		len(v.ValInternal2_1.CurrSeg.Future) > 0 &&
@@ -196,7 +196,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_exit(s Dp3sStateLocal, t Place) {
 				// We named the variable `_ignored` because using `_` here leads to a strange
 				// type error.
 				let _ignored := TriggerBodyIoExit(v) in
-				(dp.Valid() && dp.dp3s_iospec_bio3s_exit_guard(s, t, v) ==>
+				(dp.Valid() && dp.dp3s_iospec_bio3s_exit_guard(s, v) ==>
 					(CBio_IN_bio3s_exit(t, v) &&
 					dp.dp3s_iospec_ordered(
 						dp3s_add_obuf(s, some(nextif), newpkt),
@@ -222,7 +222,7 @@ ghost
 requires v.isValPkt
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_send_guard(s Dp3sStateLocal, t Place, v Val) bool {
+pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_send_guard(s Dp3sStateLocal, v Val) bool {
 	return v.ValPkt_1 in domain(s.obuf) &&
 		(let obuf_set := s.obuf[v.ValPkt_1] in (v.ValPkt_2 in obuf_set))
 }
@@ -236,7 +236,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_send(s Dp3sStateLocal, t Place) {
 				// We named the variable `_ignored` because using `_` here leads to a strange
 				// type error.
 				let _ignored := TriggerBodyIoSend(v) in
-				(dp.Valid() && dp.dp3s_iospec_bio3s_send_guard(s, t, v) ==>
+				(dp.Valid() && dp.dp3s_iospec_bio3s_send_guard(s, v) ==>
 					CBioIO_bio3s_send(t, v) &&
 					dp.dp3s_iospec_ordered(s, dp3s_iospec_bio3s_send_T(t, v)))
 			case ValUnsupported{_, _}:

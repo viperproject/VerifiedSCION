@@ -227,3 +227,11 @@ pure func (dp DataPlaneSpec) dp3s_xover_guard(
 			dp.dp2_xover_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, nextfut, dp.Asid(), recvif) &&
 			dp.dp3s_forward_xover(intermediatepkt, newpkt, nextif)
 }
+
+ghost
+requires dp.Valid()
+requires v.IsSupportedVal()
+decreases
+func (dp DataPlaneSpec) IsUpdatedPkg(oldpkt Pkt, newpkt Pkt) bool {
+	return true
+}

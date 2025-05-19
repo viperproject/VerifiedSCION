@@ -53,3 +53,9 @@ ghost type Val adt {
 		ValInternal2_3 Ifs
 	}
 }
+
+ghost
+decreases
+func (v Val) IsSupportedVal() bool {
+	return v.isValPkt || v.isValInternal1 || v.isValInternal2
+}
