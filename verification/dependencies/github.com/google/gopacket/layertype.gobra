@@ -34,7 +34,7 @@ ghost const MaxLayerType = maxLayerType
 // It is unlikely that this imposes any restriciton in practice.
 ghost const AbsMinLayerType int64 = -1000
 ghost const AbsMaxLayerType int64 = 5000
-ghost var RegisteredTypes = ms.Alloc(AbsMinLayerType, AbsMaxLayerType)
+ghost var RegisteredTypes ms.BoundedMonotonicSet
 
 /** End of Constants **/
 
