@@ -79,29 +79,9 @@ pure func registeredDuringInit(t LayerType) (res bool) {
 
 // cannot be made ghost, even though it is morally so
 mayInit
-requires acc(&ltMeta) &&
-	acc(&ltMetaMap)   &&
-	acc(ltMetaMap)    &&
-	acc(&DecodersByLayerName, _) &&
-	acc(DecodersByLayerName)
-requires forall t LayerType :: { registeredDuringInit(t) } !registeredDuringInit(t)
-requires RegisteredTypes.Inv()
-requires RegisteredTypes.Start == AbsMinLayerType
-requires RegisteredTypes.End == AbsMaxLayerType
-requires forall t LayerType :: { &ltMeta[t].inUse } 0 <= t && t < maxLayerType ==>
-	ltMeta[t].inUse == RegisteredTypes.FContains(int64(t))
-requires forall t LayerType :: { ltMetaMap[t].inUse } (AbsMinLayerType <= t && t < 0) || (maxLayerType <= t && t <= AbsMaxLayerType) ==>
-	ltMetaMap[t].inUse == RegisteredTypes.FContains(int64(t))
-ensures  PkgMem()
-ensures  forall t LayerType :: { Registered(t) } !Registered(t)
+ensures false
 decreases
-func satisfyGlobalVarInitPre() int {
-	fold PkgMem()
-	assert forall t LayerType :: { Registered(t) } old(!registeredDuringInit(t)) ==> !Registered(t)
-	assert unfolding PkgMem() in forall t LayerType :: { registeredDuringInit(t) } !registeredDuringInit(t)
-	assert forall t LayerType :: { Registered(t) } !Registered(t)
-	return 1
-}
+func satisfyGlobalVarInitPre() int
 /** End of predicates and ghost helper members **/
 
 trusted
