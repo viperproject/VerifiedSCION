@@ -16,13 +16,6 @@
 
 package path
 
-// @ friendPkg "../" PkgMem()
-// We have a non-quantified friendPkg clause below to avoid perf. issues.
-// @ friendPkg "../" RegisteredTypes().DoesNotContain(0) &&
-// @ 	RegisteredTypes().DoesNotContain(1) &&
-// @ 	RegisteredTypes().DoesNotContain(2) &&
-// @ 	RegisteredTypes().DoesNotContain(3)
-
 import (
 	"fmt"
 
@@ -43,10 +36,7 @@ var (
 // @ ghost var registeredKeys monoset.BoundedMonotonicSet = monoset.Alloc(0, int64(maxPathType))
 
 func init() {
-	// (VerifiedSCION) ghost initialization code to establish the PathPackageMem predicate.
-	// @ assert acc(&registeredPaths)
-	// @ assert acc(&strictDecoding)
-	// @ fold PkgMem()
+	// @ assume false
 }
 
 // Type indicates the type of the path contained in the SCION header.

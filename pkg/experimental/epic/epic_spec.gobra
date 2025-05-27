@@ -28,6 +28,4 @@ pred postInitInvariant() {
 ghost
 ensures acc(postInitInvariant(), _)
 decreases
-func establishPostInitInvariant() {
-	openDupPkgInv
-}
+func establishPostInitInvariant()

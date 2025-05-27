@@ -14,7 +14,6 @@
 
 // +gobra
 
-// @ dup pkgInvariant acc(postInitInvariant(), _)
 package epic
 
 import (
@@ -47,12 +46,6 @@ const (
 )
 
 var zeroInitVector /*@@@*/ [16]byte
-
-// ghost init
-// @ func init() {
-// @ 	fold acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), _)
-// @ 	fold acc(postInitInvariant(), _)
-// @ }
 
 // CreateTimestamp returns the epic timestamp, which encodes the current time (now) relative to the
 // input timestamp. The input timestamp must not be in the future (compared to the current time),

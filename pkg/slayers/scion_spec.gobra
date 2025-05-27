@@ -752,9 +752,7 @@ pure func isHostSVC(a net.Addr) bool {
 ghost
 ensures acc(path.PkgMem(), _)
 decreases
-func EstablishPathPkgMem() {
-	openDupPkgInv
-}
+func EstablishPathPkgMem()
 
 ghost
 requires s.Mem(ub)

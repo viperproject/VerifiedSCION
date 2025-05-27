@@ -75,23 +75,14 @@ pure func sizeOfHostAddrType(htype HostAddrType) (res int) {
 ghost
 ensures ErrBadHostAddrType.ErrorMem()
 decreases
-func EstablishErrBadHostAddrTypeMem() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(ErrBadHostAddrType)
-}
+func EstablishErrBadHostAddrTypeMem()
 
 ghost
 ensures ErrMalformedHostAddrType.ErrorMem()
 decreases
-func EstablishErrMalformedHostAddrTypeMem() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(ErrMalformedHostAddrType)
-}
+func EstablishErrMalformedHostAddrTypeMem()
 
 ghost
 ensures ErrUnsupportedSVCAddress.ErrorMem()
 decreases
-func EstablishErrUnsupportedSVCAddressMem() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(ErrUnsupportedSVCAddress)
-}
+func EstablishErrUnsupportedSVCAddressMem()

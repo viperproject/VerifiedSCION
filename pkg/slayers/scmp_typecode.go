@@ -14,7 +14,6 @@
 
 // +gobra
 
-// @ pkgInvariant SCMPTypeCodeMem()
 package slayers
 
 import (
