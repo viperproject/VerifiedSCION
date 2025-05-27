@@ -33,7 +33,7 @@ var (
 	strictDecoding/*@@@*/ bool = true
 )
 
-// @ ghost var registeredKeys monoset.BoundedMonotonicSet = monoset.Alloc(0, int64(maxPathType))
+// @ ghost var registeredKeys monoset.BoundedMonotonicSet
 
 func init() {
 	// @ assume false
