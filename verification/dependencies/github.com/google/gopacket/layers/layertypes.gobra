@@ -10,7 +10,7 @@ package layers
 
 import "github.com/google/gopacket"
 
-var LayerTypeBFD = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: /* gopacket.DecodeFunc(decodeBFD)} */ generateDecoders()})
+var LayerTypeBFD
 
 // This method just generates stubs for decoders so that we can avoid having to specify all 136 decoders
 mayInit

@@ -47,6 +47,7 @@ const (
 )
 
 func init() {
+	// @ assume false
 	empty.RegisterPath()
 	scion.RegisterPath()
 	onehop.RegisterPath()
