@@ -1,0 +1,67 @@
+// Copyright 2022 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slayers
+
+import . "github.com/scionproto/scion/verification/utils/definitions"
+
+pred (u *UDP) Mem(ub []byte) {
+	true
+}
+
+preserves u.Mem(ub)
+ensures   0 <= start && start <= end && end <= len(ub)
+ensures   len(res) == end - start
+ensures   len(res) != 0 ==> res === ub[start:end]
+ensures   len(res) == 0 ==> (res == nil || res === ub[start:end])
+decreases
+func (u *UDP) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
+    TODO()
+}
+
+
+/*
+
+type Layer interface {
+	pred Mem(ub []byte)
+
+	pure
+	decreases
+	LayerType() LayerType
+
+	// (VerifiedSCION) not used in the dataplane
+	requires false
+	LayerContents() (res []byte)
+
+	preserves Mem(ub)
+	ensures   0 <= start && start <= end && end <= len(ub)
+	ensures   len(res) == end - start
+	ensures   len(res) != 0 ==> res === ub[start:end]
+	ensures   len(res) == 0 ==> (res == nil || res === ub[start:end])
+	decreases
+	LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int)
+}
+
+
+type TransportLayer interface {
+	Layer
+
+	preserves acc(Mem(ub), R15)
+	decreases
+	TransportFlow(ghost ub []byte) Flow
+}
+
+*/

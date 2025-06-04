@@ -103,3 +103,45 @@ ensures NilDecodeFeedback != nil
 ensures NilDecodeFeedback.Mem()
 decreases
 func AssertInvariantNilDecodeFeedback()
+
+// TODO: explain why this is an alias instead of declaredT
+// DecodeFunc wraps a function to make it a Decoder.
+type DecodeFunc = func([]byte, PacketBuilder) error
+
+// TODO: explain why it is not ghost, add doc
+requires f implements TrivialDecode // put contract for f here
+ensures  r != nil
+ensures  r.Mem()
+decreases
+func PromoteDecodeFuncToDecoder(f DecodeFunc) (r Decoder) {
+	dec := TrivialDecoder{f}
+	fold dec.Mem()
+	return Decoder(dec)
+}
+
+type TrivialDecoder struct{
+	f DecodeFunc
+}
+
+pred (t TrivialDecoder) Mem() {
+	t.f implements TrivialDecode
+}
+requires acc(PkgMem(), _)
+requires sl.Bytes(b, 0, len(b))
+preserves t.Mem()
+preserves p.Mem()
+decreases
+func (t TrivialDecoder) Decode(b []byte, p PacketBuilder) error {
+	unfold t.Mem()
+	defer fold t.Mem()
+	return t.f(b, p) as TrivialDecode
+}
+
+TrivialDecoder implements Decoder
+
+// only acts as a closure spec, not a trusted method
+requires  acc(PkgMem(), _)
+requires  sl.Bytes(b, 0, len(b))
+preserves p.Mem()
+decreases
+func TrivialDecode(b []byte, p PacketBuilder) error

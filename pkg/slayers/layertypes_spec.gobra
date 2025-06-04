@@ -17,8 +17,6 @@
 
 // +gobra
 
-// To be added on a per-need basis
-dup pkgInvariant LayerTypeSCION == 1000
 package slayers
 
 import (
@@ -26,6 +24,7 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+/*
 var (
 	LayerTypeSCION = gopacket.LayerType(1000)
 	LayerClassSCION gopacket.LayerClass = LayerTypeSCION
@@ -51,7 +50,7 @@ var (
 	// against gopacket/layers and still allow easily parsing SCION/BFD packets
 	// where gopacket/layers is imported.
 	layerTypeBFD = gopacket.LayerType(122)
-)
+)*/
 
 // post init properties
 ghost

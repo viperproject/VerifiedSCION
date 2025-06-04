@@ -34,8 +34,12 @@ type layerTypeMetadata struct {
 	LayerTypeMetadata
 }
 
+// LayerTypeMetadata contains metadata associated with each LayerType.
 type LayerTypeMetadata struct {
+	// Name is the string returned by each layer type's String method.
 	Name string
+	// Decoder is the decoder to use when the layer type is passed in as a
+	// Decoder.
 	Decoder Decoder
 }
 

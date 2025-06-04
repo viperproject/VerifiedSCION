@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package slayers
 
 import (
@@ -21,6 +23,7 @@ import (
 	"github.com/google/gopacket"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 // UDP is the SCION/UDP header.
@@ -36,6 +39,8 @@ type UDP struct {
 	scn              *SCION
 }
 
+// @ pure
+// @ decreases
 func (u *UDP) LayerType() gopacket.LayerType {
 	return LayerTypeSCIONUDP
 }
@@ -48,7 +53,9 @@ func (u *UDP) NextLayerType() gopacket.LayerType {
 	return gopacket.LayerTypePayload
 }
 
-func (u *UDP) TransportFlow() gopacket.Flow {
+// @ preserves acc(u.Mem(ub), R15)
+// @ decreases
+func (u *UDP) TransportFlow( /*@ ghost ub []byte @*/ ) gopacket.Flow {
 	return gopacket.NewFlow(EndpointUDPPort, u.sPort, u.dPort)
 }
 

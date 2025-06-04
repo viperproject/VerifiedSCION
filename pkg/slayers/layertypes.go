@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
+// (VerifiedSCION) To be added on a per-need basis
+// @ dup pkgInvariant LayerTypeSCION == 1000
 package slayers
 
 import (
@@ -25,8 +29,8 @@ var (
 	LayerTypeSCION = gopacket.RegisterLayerType(
 		1000,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCION",
-			Decoder: gopacket.DecodeFunc(decodeSCION),
+			Name: "SCION",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCION /*@ ) @*/),
 		},
 	)
 	LayerClassSCION gopacket.LayerClass = LayerTypeSCION
@@ -34,8 +38,8 @@ var (
 	LayerTypeSCIONUDP = gopacket.RegisterLayerType(
 		1001,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCION/UDP",
-			Decoder: gopacket.DecodeFunc(decodeSCIONUDP),
+			Name: "SCION/UDP",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCIONUDP /*@ ) @*/),
 		},
 	)
 	LayerClassSCIONUDP gopacket.LayerClass = LayerTypeSCIONUDP
@@ -43,8 +47,8 @@ var (
 	LayerTypeSCMP = gopacket.RegisterLayerType(
 		1002,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCMP",
-			Decoder: gopacket.DecodeFunc(decodeSCMP),
+			Name: "SCMP",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCMP /*@ ) @*/),
 		},
 	)
 	LayerClassSCMP gopacket.LayerClass = LayerTypeSCMP
@@ -52,8 +56,8 @@ var (
 	LayerTypeHopByHopExtn = gopacket.RegisterLayerType(
 		1003,
 		gopacket.LayerTypeMetadata{
-			Name:    "HopByHopExtn",
-			Decoder: gopacket.DecodeFunc(decodeHopByHopExtn),
+			Name: "HopByHopExtn",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeHopByHopExtn /*@ ) @*/),
 		},
 	)
 	LayerClassHopByHopExtn gopacket.LayerClass = LayerTypeHopByHopExtn
@@ -61,8 +65,8 @@ var (
 	LayerTypeEndToEndExtn = gopacket.RegisterLayerType(
 		1004,
 		gopacket.LayerTypeMetadata{
-			Name:    "EndToEndExtn",
-			Decoder: gopacket.DecodeFunc(decodeEndToEndExtn),
+			Name: "EndToEndExtn",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeEndToEndExtn /*@ ) @*/),
 		},
 	)
 	LayerClassEndToEndExtn gopacket.LayerClass = LayerTypeEndToEndExtn
@@ -70,50 +74,50 @@ var (
 	LayerTypeSCMPExternalInterfaceDown = gopacket.RegisterLayerType(
 		1005,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCMPExternalInterfaceDown",
-			Decoder: gopacket.DecodeFunc(decodeSCMPExternalInterfaceDown),
+			Name: "SCMPExternalInterfaceDown",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCMPExternalInterfaceDown /*@ ) @*/),
 		},
 	)
 	LayerTypeSCMPInternalConnectivityDown = gopacket.RegisterLayerType(
 		1006,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCMPInternalConnectivityDown",
-			Decoder: gopacket.DecodeFunc(decodeSCMPInternalConnectivityDown),
+			Name: "SCMPInternalConnectivityDown",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCMPInternalConnectivityDown /*@ ) @*/),
 		},
 	)
 	LayerTypeSCMPParameterProblem = gopacket.RegisterLayerType(
 		1007,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCMPParameterProblem",
-			Decoder: gopacket.DecodeFunc(decodeSCMPParameterProblem),
+			Name: "SCMPParameterProblem",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCMPParameterProblem /*@ ) @*/),
 		},
 	)
 	LayerTypeSCMPDestinationUnreachable = gopacket.RegisterLayerType(
 		1008,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCMPDestinationUnreachable",
-			Decoder: gopacket.DecodeFunc(decodeSCMPDestinationUnreachable),
+			Name: "SCMPDestinationUnreachable",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCMPDestinationUnreachable /*@ ) @*/),
 		},
 	)
 	LayerTypeSCMPPacketTooBig = gopacket.RegisterLayerType(
 		1009,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCMPPacketTooBig",
-			Decoder: gopacket.DecodeFunc(decodeSCMPPacketTooBig),
+			Name: "SCMPPacketTooBig",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCMPPacketTooBig /*@ ) @*/),
 		},
 	)
 	LayerTypeSCMPEcho = gopacket.RegisterLayerType(
 		1128,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCMPEcho",
-			Decoder: gopacket.DecodeFunc(decodeSCMPEcho),
+			Name: "SCMPEcho",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCMPEcho /*@ ) @*/),
 		},
 	)
 	LayerTypeSCMPTraceroute = gopacket.RegisterLayerType(
 		1130,
 		gopacket.LayerTypeMetadata{
-			Name:    "SCMPTraceroute",
-			Decoder: gopacket.DecodeFunc(decodeSCMPTraceroute),
+			Name: "SCMPTraceroute",
+			Decoder:/*@ gopacket.PromoteDecodeFuncToDecoder( @*/ gopacket.DecodeFunc(decodeSCMPTraceroute /*@ ) @*/),
 		},
 	)
 

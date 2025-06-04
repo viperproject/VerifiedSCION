@@ -22,7 +22,7 @@ preserves forall i int :: { &v[i] } 0 <= i && i < len(v) ==> acc(&v[i], R55)
 // TODO:
 // The following precondition cannot be adequately captured in Gobra.
 // preserves forall i int :: 0 <= i && i < len(v) ==> definitions.IsOfPrimitiveType(v[i])
-decreases _
+decreases
 func Sprintf(format string, v ...interface{}) string
 
 type Stringer interface {
@@ -32,3 +32,8 @@ type Stringer interface {
 	decreases
 	String() string
 }
+
+preserves forall i int :: { &a[i] } 0 <= i && i < len(a) ==> acc(&a[i], R55)
+ensures   err != nil ==> err.ErrorMem()
+decreases
+func Errorf(format string, a ...interface{}) (err error)
