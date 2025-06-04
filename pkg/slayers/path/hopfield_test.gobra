@@ -15,7 +15,7 @@ import (
 // @ assert want == got
 // NO ERROR
 // doesn't verify
-func TestHopSerializeDecode() {
+func TestHopSerializeDecode1() {
 	want := &HopField{
 		IngressRouterAlert: true,
 		EgressRouterAlert:  true,
