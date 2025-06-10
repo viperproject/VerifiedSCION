@@ -1,6 +1,12 @@
 package addr
 
-func TestHostFromRaw() {}
+import (
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
+	// @ sl "github.com/scionproto/scion/verification/utils/slices"
+	"fmt"
+	"github.com/scionproto/scion/assertion"
+)
+
 func TestHostFromRaw_short_IPv6(b_HostFromRaw []byte, htype_HostFromRaw HostAddrType) {
 	var tmp_b_HostFromRaw []byte
 	var tmp_htype_HostFromRaw HostAddrType
@@ -11,7 +17,7 @@ func TestHostFromRaw_short_IPv6(b_HostFromRaw []byte, htype_HostFromRaw HostAddr
 	// @ inhale len(b_HostFromRaw) == sizeOfHostAddrType(htype_HostFromRaw)
 	// @ assume b_HostFromRaw === tmp_b_HostFromRaw
 	// @ assume htype_HostFromRaw == tmp_htype_HostFromRaw
-	res, err := HostFromRaw(tmp_b_HostFromRaw, tmp_htype_HostFromRaw)
+	res, err := HostFromRaw(b_HostFromRaw, htype_HostFromRaw)
 	// @ assert err != nil
 	// @ assert nil == res
 }
@@ -26,7 +32,7 @@ func TestHostFromRaw_valid_IPv6(b_HostFromRaw []byte, htype_HostFromRaw HostAddr
 	// @ assume b_HostFromRaw === tmp_b_HostFromRaw
 	// @ assume htype_HostFromRaw == tmp_htype_HostFromRaw
 	// @ refute false
-	res, err := HostFromRaw(tmp_b_HostFromRaw, tmp_htype_HostFromRaw)
+	res, err := HostFromRaw(b_HostFromRaw, htype_HostFromRaw)
 	// @ assert err == nil
 	expected := HostIPv6{0xde, 0xad, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xbe, 0xef}
 	equal := res.Equal(expected)
@@ -42,7 +48,7 @@ func TestHostFromRaw_nil_SVC(b_HostFromRaw []byte, htype_HostFromRaw HostAddrTyp
 	// @ inhale len(b_HostFromRaw) == sizeOfHostAddrType(htype_HostFromRaw)
 	// @ assume b_HostFromRaw === tmp_b_HostFromRaw
 	// @ assume htype_HostFromRaw == tmp_htype_HostFromRaw
-	res, err := HostFromRaw(tmp_b_HostFromRaw, tmp_htype_HostFromRaw)
+	res, err := HostFromRaw(b_HostFromRaw, htype_HostFromRaw)
 	// @ assert err != nil
 	// @ assert nil == res
 }
@@ -57,7 +63,7 @@ func TestHostFromRaw_valid_SVC(b_HostFromRaw []byte, htype_HostFromRaw HostAddrT
 	// @ assume b_HostFromRaw === tmp_b_HostFromRaw
 	// @ assume htype_HostFromRaw == tmp_htype_HostFromRaw
 	// @ refute false
-	res, err := HostFromRaw(tmp_b_HostFromRaw, tmp_htype_HostFromRaw)
+	res, err := HostFromRaw(b_HostFromRaw, htype_HostFromRaw)
 	// @ assert err == nil
 	var expected HostSVC = 0x1
 	equal := res.Equal(expected)
@@ -73,7 +79,7 @@ func TestHostFromRaw_nil_IPv4(b_HostFromRaw []byte, htype_HostFromRaw HostAddrTy
 	// @ inhale len(b_HostFromRaw) == sizeOfHostAddrType(htype_HostFromRaw)
 	// @ assume b_HostFromRaw === tmp_b_HostFromRaw
 	// @ assume htype_HostFromRaw == tmp_htype_HostFromRaw
-	res, err := HostFromRaw(tmp_b_HostFromRaw, tmp_htype_HostFromRaw)
+	res, err := HostFromRaw(b_HostFromRaw, htype_HostFromRaw)
 	// @ assert err != nil
 	// @ assert nil == res
 }
@@ -87,7 +93,7 @@ func TestHostFromRaw_short_IPv4(b_HostFromRaw []byte, htype_HostFromRaw HostAddr
 	// @ inhale len(b_HostFromRaw) == sizeOfHostAddrType(htype_HostFromRaw)
 	// @ assume b_HostFromRaw === tmp_b_HostFromRaw
 	// @ assume htype_HostFromRaw == tmp_htype_HostFromRaw
-	res, err := HostFromRaw(tmp_b_HostFromRaw, tmp_htype_HostFromRaw)
+	res, err := HostFromRaw(b_HostFromRaw, htype_HostFromRaw)
 	// @ assert err != nil
 	// @ assert nil == res
 }
@@ -102,7 +108,7 @@ func TestHostFromRaw_valid_IPv4(b_HostFromRaw []byte, htype_HostFromRaw HostAddr
 	// @ assume b_HostFromRaw === tmp_b_HostFromRaw
 	// @ assume htype_HostFromRaw == tmp_htype_HostFromRaw
 	// @ refute false
-	res, err := HostFromRaw(tmp_b_HostFromRaw, tmp_htype_HostFromRaw)
+	res, err := HostFromRaw(b_HostFromRaw, htype_HostFromRaw)
 	// @ assert err == nil
 	expected := HostIPv4{0x7f, 0x0, 0x0, 0x1}
 	equal := res.Equal(expected)
@@ -118,7 +124,7 @@ func TestHostFromRaw_nil_IPv6(b_HostFromRaw []byte, htype_HostFromRaw HostAddrTy
 	// @ inhale len(b_HostFromRaw) == sizeOfHostAddrType(htype_HostFromRaw)
 	// @ assume b_HostFromRaw === tmp_b_HostFromRaw
 	// @ assume htype_HostFromRaw == tmp_htype_HostFromRaw
-	res, err := HostFromRaw(tmp_b_HostFromRaw, tmp_htype_HostFromRaw)
+	res, err := HostFromRaw(b_HostFromRaw, htype_HostFromRaw)
 	// @ assert err != nil
 	// @ assert nil == res
 }
@@ -132,7 +138,7 @@ func TestHostFromRaw_short_SVC(b_HostFromRaw []byte, htype_HostFromRaw HostAddrT
 	// @ inhale len(b_HostFromRaw) == sizeOfHostAddrType(htype_HostFromRaw)
 	// @ assume b_HostFromRaw === tmp_b_HostFromRaw
 	// @ assume htype_HostFromRaw == tmp_htype_HostFromRaw
-	res, err := HostFromRaw(tmp_b_HostFromRaw, tmp_htype_HostFromRaw)
+	res, err := HostFromRaw(b_HostFromRaw, htype_HostFromRaw)
 	// @ assert err != nil
 	// @ assert nil == res
 }
