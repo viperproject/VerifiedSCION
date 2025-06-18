@@ -47,7 +47,9 @@ pred MemForStringer(ia IA) { true }
 // `String` function, which needs the underlying value to be low.
 // Sharing `IsLow` doesn't work, however, thus `IA` implements `IsLowForStringer`
 // and `*IA` implements `IsLowForValue`, which both just resolve to this `IsLow`.
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
+trusted
 decreases
 pure func (ia IA) IsLow() bool 
 
@@ -59,8 +61,9 @@ pure func (ia IA) IsLowForStringer() bool {
 }
 
 // "Reveal" the "body" of `ia.IsLow` (necessary bc. we can't implement `ia.IsLow` yet).
-// TODO: Once Gobra issue #846 is resolved, remove this.
+// TODO: Once Gobra issue #846 is resolved, implement this.
 ghost
+trusted
 requires ia.IsLow()
 ensures  low(ia)
 decreases

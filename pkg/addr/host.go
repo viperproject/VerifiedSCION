@@ -118,10 +118,8 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
-	// Return whether the underlying data (or at least the data relevant for 
-	// 'String') is low.
-	// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`;
-	// at the moment, this can just be an abstract function.
+	// Return whether all the underlying data used in the computation of
+	// `String` is low.
 	//@ ghost
 	//@ requires Mem()
 	//@ decreases

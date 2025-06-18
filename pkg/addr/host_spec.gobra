@@ -24,7 +24,9 @@ import (
 
 pred (h HostNone) Mem() { len(h) == HostLenNone }
 
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
+trusted
 requires h.Mem()
 decreases
 pure func (h HostNone) IsLow() bool
@@ -36,7 +38,9 @@ pred (h HostIPv4) Mem() {
 	slices.Bytes(h, 0, len(h))
 }
 
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
+trusted
 requires h.Mem()
 decreases
 pure func (h HostIPv4) IsLow() bool
@@ -48,7 +52,9 @@ pred (h HostIPv6) Mem() {
 	slices.Bytes(h, 0, len(h))
 }
 
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
+trusted
 requires h.Mem()
 decreases
 pure func (h HostIPv6) IsLow() bool
@@ -57,14 +63,17 @@ HostIPv6 implements HostAddr
 
 pred (h HostSVC) Mem() { true }
 
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
+trusted
 requires h.Mem()
 decreases
 pure func (h HostSVC) IsLow() bool
 
 // "Reveal the body" of `h.IsLow` (necessary bc. we can't implement `h.IsLow` yet).
-// TODO: Once Gobra issue #846 is resolved, remove this.
+// TODO: Once Gobra issue #846 is resolved, implement this.
 ghost
+trusted
 requires p > 0
 requires acc(h.Mem(), p) && h.IsLow()
 ensures  acc(h.Mem(), p) && low(h)

@@ -34,8 +34,6 @@ type Stringer interface {
 
 	// Return whether the underlying data (or at least the data relevant for 
 	// 'String') is low.
-	// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`;
-	// at the moment, this can just be an abstract function.
 	ghost
 	requires Mem()
 	decreases
