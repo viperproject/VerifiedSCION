@@ -32,8 +32,8 @@ func Sprintf(format string, v ...interface{}) (res string)
 type Stringer interface {
 	pred Mem()
 
-	// Return whether the underlying data (or at least the data relevant for 
-	// 'String') is low.
+	// Return whether all the underlying data used in the computation of
+	// `String` is low.
 	ghost
 	requires Mem()
 	decreases
