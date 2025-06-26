@@ -226,7 +226,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ requires validPktMetaHdr(ubuf)
 // @ requires s.absPkt(ubuf).PathNotFullyTraversed()
 // @ requires s.GetBase(ubuf).IsXoverSpec() ==>
-// @ 	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
+// @ 	s.absPkt(ubuf).LeftSeg != none[io.Seg]
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
 // @ 	s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
@@ -539,7 +539,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 // @	s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ ensures  r == nil && idx == int(old(s.GetCurrHF(ubuf))) ==>
 // @ 	let oldPkt := old(s.absPkt(ubuf)) in
-// @ 	let newPkt := oldPkt.UpdateHopField(hop.ToIO_HF()) in
+// @ 	let newPkt := oldPkt.UpdateHopField(hop.Abs()) in
 // @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
 // @ #backend[exhaleMode(1)]
@@ -609,7 +609,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
 	//@ 	reveal s.absPkt(ubuf)
 	//@ 	assert s.absPkt(ubuf).CurrSeg.Future ==
-	//@ 		seq[io.IO_HF]{tmpHopField.ToIO_HF()} ++ old(s.absPkt(ubuf).CurrSeg.Future[1:])
+	//@ 		seq[io.HF]{tmpHopField.Abs()} ++ old(s.absPkt(ubuf).CurrSeg.Future[1:])
 	//@ } else {
 	//@ 	sl.CombineRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
 	//@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)

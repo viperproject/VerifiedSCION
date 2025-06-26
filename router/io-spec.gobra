@@ -35,7 +35,7 @@ opaque
 requires sl.Bytes(raw, 0, len(raw))
 requires slayers.ValidPktMetaHdr(raw)
 decreases
-pure func absPkt(raw []byte) (res io.IO_pkt2) {
+pure func absPkt(raw []byte) (res io.Pkt) {
 	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetAddressOffset(raw) in
 		let headerOffsetWithMetaLen := headerOffset + scion.MetaLen in
@@ -52,7 +52,7 @@ pure func absPkt(raw []byte) (res io.IO_pkt2) {
 		let prevSegLen := segs.LengthOfPrevSeg(currHfIdx) in
 		let numINF := segs.NumInfoFields() in
 		let offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen) in
-		io.IO_pkt2 {
+		io.Pkt {
 			CurrSeg: scion.CurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen),
 			LeftSeg: scion.LeftSeg(raw, currInfIdx + 1, segs, headerOffsetWithMetaLen),
 			MidSeg: scion.MidSeg(raw, currInfIdx + 2, segs, headerOffsetWithMetaLen),
@@ -62,11 +62,11 @@ pure func absPkt(raw []byte) (res io.IO_pkt2) {
 
 ghost
 requires sl.Bytes(raw, 0, len(raw))
-ensures val.isIO_val_Unsupported
-ensures val.IO_val_Unsupported_1 == path.ifsToIO_ifs(ingressID)
+ensures val.isValUnsupported
+ensures val.ValUnsupported_1 == path.ifsToIO_ifs(ingressID)
 decreases
-pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val) {
-	return io.IO_val(io.IO_val_Unsupported {
+pure func absValUnsupported(raw []byte, ingressID uint16) (val io.Val) {
+	return io.Val(io.ValUnsupported {
 		path.ifsToIO_ifs(ingressID),
 		io.Unit{},
 	})
@@ -75,19 +75,19 @@ pure func absIO_val_Unsupported(raw []byte, ingressID uint16) (val io.IO_val) {
 ghost
 opaque
 requires sl.Bytes(raw, 0, len(raw))
-ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
+ensures val.isValPkt || val.isValUnsupported
 decreases
-pure func absIO_val(raw []byte, ingressID uint16) (val io.IO_val) {
+pure func absIO_val(raw []byte, ingressID uint16) (val io.Val) {
 	return (reveal slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)) ?
-		io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(raw)}) :
-		absIO_val_Unsupported(raw, ingressID)
+		io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw)}) :
+		absValUnsupported(raw, ingressID)
 }
 
 ghost
 requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 requires !slayers.IsSupportedPkt(raw)
 ensures  acc(sl.Bytes(raw, 0, len(raw)), R56)
-ensures  absIO_val(raw, ingressID).isIO_val_Unsupported
+ensures  absIO_val(raw, ingressID).isValUnsupported
 decreases
 func AbsUnsupportedPktIsUnsupportedVal(raw []byte, ingressID uint16) {
 	reveal absIO_val(raw, ingressID)
@@ -97,8 +97,8 @@ ghost
 requires respr.OutPkt != nil ==>
 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 decreases
-pure func absReturnErr(respr processResult) (val io.IO_val) {
-	return respr.OutPkt == nil ? io.IO_val_Unit{} :
+pure func absReturnErr(respr processResult) (val io.Val) {
+	return respr.OutPkt == nil ? io.ValUnit{} :
 		absIO_val(respr.OutPkt, respr.EgressID)
 }
 
@@ -106,7 +106,7 @@ ghost
 requires acc(&d.localIA)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLocalIA(dp io.DataPlaneSpec) bool {
-	return io.IO_as{uint(d.localIA)} == dp.Asid()
+	return io.AS{uint(d.localIA)} == dp.Asid()
 }
 
 ghost
@@ -115,18 +115,18 @@ requires d.neighborIAs != nil ==> acc(d.neighborIAs)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredNeighborIAs(dp io.DataPlaneSpec) bool {
 	return forall ifs uint16 :: {ifs in domain(d.neighborIAs)} ifs in domain(d.neighborIAs) ==>
-		io.IO_ifs{ifs} in domain(dp.GetNeighborIAs()) &&
-		io.IO_as{uint(d.neighborIAs[ifs])} == dp.GetNeighborIA(io.IO_ifs{ifs})
+		io.Ifs{ifs} in domain(dp.GetNeighborIAs()) &&
+		io.AS{uint(d.neighborIAs[ifs])} == dp.GetNeighborIA(io.Ifs{ifs})
 }
 
 ghost
 decreases
-pure func absLinktype(link topology.LinkType) io.IO_Link {
-	 return link == topology.Core ? io.IO_Link(io.IO_Core{}) :
-		link == topology.Parent ? io.IO_Link(io.IO_CustProv{}) :
-		link == topology.Child ? io.IO_Link(io.IO_ProvCust{}) :
-		link == topology.Peer ? io.IO_Link(io.IO_Core{}) :
-		io.IO_Link(io.IO_NoLink{})
+pure func absLinktype(link topology.LinkType) io.Link {
+	 return link == topology.Core ? io.Link(io.IO_Core{}) :
+		link == topology.Parent ? io.Link(io.IO_CustProv{}) :
+		link == topology.Child ? io.Link(io.IO_ProvCust{}) :
+		link == topology.Peer ? io.Link(io.IO_Core{}) :
+		io.Link(io.IO_NoLink{})
 }
 
 ghost
@@ -135,8 +135,8 @@ requires d.linkTypes != nil ==> acc(d.linkTypes)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool {
 	return forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
-		io.IO_ifs{ifs} in domain(dp.GetLinkTypes()) &&
-		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.IO_ifs{ifs})
+		io.Ifs{ifs} in domain(dp.GetLinkTypes()) &&
+		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.Ifs{ifs})
 }
 
 ghost
@@ -172,7 +172,7 @@ requires d.DpAgreesWithSpec(dp)
 requires d.WellConfigured()
 requires egressID in d.getDomExternal()
 ensures  egressID != 0
-ensures  io.IO_ifs{egressID} in domain(dp.GetNeighborIAs())
+ensures  io.Ifs{egressID} in domain(dp.GetNeighborIAs())
 decreases
 func (d *DataPlane) EgressIDNotZeroLemma(egressID uint16, dp io.DataPlaneSpec) {
 	reveal d.WellConfigured()
@@ -203,7 +203,7 @@ ghost
 requires msg.Mem()
 requires sl.Bytes(msg.GetFstBuffer(), 0, len(msg.GetFstBuffer()))
 decreases
-pure func MsgToAbsVal(msg *ipv4.Message, ingressID uint16) (res io.IO_val) {
+pure func MsgToAbsVal(msg *ipv4.Message, ingressID uint16) (res io.Val) {
 	return unfolding msg.Mem() in
 		absIO_val(msg.Buffers[0], ingressID)
 }

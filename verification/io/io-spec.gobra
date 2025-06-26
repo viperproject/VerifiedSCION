@@ -26,7 +26,7 @@ type BogusTrigger struct{}
 // for all the events (dp.Valid())
 
 // This is the main IO Specification.
-pred (dp DataPlaneSpec) dp3s_iospec_ordered(s IO_dp3s_state_local, t Place) {
+pred (dp DataPlaneSpec) dp3s_iospec_ordered(s Dp3sStateLocal, t Place) {
 	dp.dp3s_iospec_bio3s_enter(s, t) &&
 	dp.dp3s_iospec_bio3s_xover(s, t) &&
 	dp.dp3s_iospec_bio3s_exit(s, t) &&
@@ -43,50 +43,50 @@ pred token(t Place)
 
 ghost
 decreases
-pure func undefined() IO_dp3s_state_local
+pure func undefined() Dp3sStateLocal
 
-pred CBio_IN_bio3s_enter(t Place, v IO_val)
+pred CBio_IN_bio3s_enter(t Place, v Val)
 
 ghost
 requires CBio_IN_bio3s_enter(t, v)
 decreases
-pure func CBio_IN_bio3s_enter_T(t Place, v IO_val) Place
+pure func CBio_IN_bio3s_enter_T(t Place, v Val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for enter
 ghost
-requires v.isIO_Internal_val1
+requires v.isValInternal1
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return some(v.IO_Internal_val1_2) in domain(s.ibuf) &&
-		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 in ibuf_set)) &&
-		len(v.IO_Internal_val1_1.CurrSeg.Future) > 0 &&
-		let currseg := v.IO_Internal_val1_1.CurrSeg in
+pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s Dp3sStateLocal, t Place, v Val) bool {
+	return some(v.ValInternal1_2) in domain(s.ibuf) &&
+		(let ibuf_set := s.ibuf[some(v.ValInternal1_2)] in (v.ValInternal1_1 in ibuf_set)) &&
+		len(v.ValInternal1_1.CurrSeg.Future) > 0 &&
+		let currseg := v.ValInternal1_1.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := establishGuardTraversedseg(currseg, !currseg.ConsDir) in
 		dp.dp2_enter_guard(
-			v.IO_Internal_val1_1,
+			v.ValInternal1_1,
 			currseg,
 			traversedseg,
 			dp.Asid(),
 			hf1,
-			v.IO_Internal_val1_2,
+			v.ValInternal1_2,
 			fut) &&
 			dp.dp3s_forward(
-				IO_pkt2 {
+				Pkt {
 					traversedseg,
-					v.IO_Internal_val1_1.LeftSeg,
-					v.IO_Internal_val1_1.MidSeg,
-					v.IO_Internal_val1_1.RightSeg,
+					v.ValInternal1_1.LeftSeg,
+					v.ValInternal1_1.MidSeg,
+					v.ValInternal1_1.RightSeg,
 				},
-				v.IO_Internal_val1_3,
-				v.IO_Internal_val1_4)
+				v.ValInternal1_3,
+				v.ValInternal1_4)
 }
 
-pred (dp DataPlaneSpec) dp3s_iospec_bio3s_enter(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { TriggerBodyIoEnter(v) } (
+pred (dp DataPlaneSpec) dp3s_iospec_bio3s_enter(s Dp3sStateLocal, t Place) {
+	forall v Val :: { TriggerBodyIoEnter(v) } (
 		match v {
-			case IO_Internal_val1{_, _, ?newpkt, ?nextif}:
+			case ValInternal1{_, _, ?newpkt, ?nextif}:
 				// Gobra requires the triggering term to occur inside the qtfier body,
 				// otherwise we get an error in the call to CBio_IN_bio3s_enter_T.
 				// We named the variable `_ignored` because using `_` here leads to a strange
@@ -104,27 +104,27 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_enter(s IO_dp3s_state_local, t Place) 
 
 ghost
 decreases
-pure func TriggerBodyIoEnter(v IO_val) BogusTrigger { return BogusTrigger{} }
+pure func TriggerBodyIoEnter(v Val) BogusTrigger { return BogusTrigger{} }
 
-pred CBio_IN_bio3s_xover(t Place, v IO_val)
+pred CBio_IN_bio3s_xover(t Place, v Val)
 
 ghost
 requires CBio_IN_bio3s_xover(t, v)
 decreases
-pure func dp3s_iospec_bio3s_xover_T(t Place, v IO_val) Place
+pure func dp3s_iospec_bio3s_xover_T(t Place, v Val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for xover
 ghost
-requires v.isIO_Internal_val1
+requires v.isValInternal1
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return let currseg := v.IO_Internal_val1_1.CurrSeg in
-		match v.IO_Internal_val1_1.LeftSeg{
-			case none[IO_seg2]:
+pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_guard(s Dp3sStateLocal, t Place, v Val) bool {
+	return let currseg := v.ValInternal1_1.CurrSeg in
+		match v.ValInternal1_1.LeftSeg{
+			case none[Seg]:
 				false
 			default:
-				let nextseg := get(v.IO_Internal_val1_1.LeftSeg) in
+				let nextseg := get(v.ValInternal1_1.LeftSeg) in
 				(len(nextseg.Future) > 0 &&
 				len(currseg.Future) > 0 &&
 				let hf1, hf2 := currseg.Future[0], nextseg.Future[0] in
@@ -132,24 +132,24 @@ pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_xover_guard(s IO_dp3s_state_local
 				let nextfut := nextseg.Future[1:] in
 				dp.dp3s_xover_guard(
 					s,
-					v.IO_Internal_val1_1,
+					v.ValInternal1_1,
 					currseg,
 					nextseg,
 					traversedseg,
-					IO_pkt2 { nextseg, v.IO_Internal_val1_1.MidSeg, v.IO_Internal_val1_1.RightSeg, some(traversedseg) },
+					Pkt { nextseg, v.ValInternal1_1.MidSeg, v.ValInternal1_1.RightSeg, some(traversedseg) },
 					hf1,
 					hf2,
 					nextfut,
-					v.IO_Internal_val1_2,
-					v.IO_Internal_val1_3,
-					v.IO_Internal_val1_4,))
+					v.ValInternal1_2,
+					v.ValInternal1_3,
+					v.ValInternal1_4,))
 		}
 }
 
-pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { TriggerBodyIoXover(v) } (
+pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover(s Dp3sStateLocal, t Place) {
+	forall v Val :: { TriggerBodyIoXover(v) } (
 		match v {
-			case IO_Internal_val1{_, _, ?newpkt, ?nextif}:
+			case ValInternal1{_, _, ?newpkt, ?nextif}:
 				// Gobra requires the triggering term to occur inside the qtfier body,
 				// otherwise we get an error in the call to dp3s_iospec_bio3s_xover_T.
 				// We named the variable `_ignored` because using `_` here leads to a strange
@@ -167,31 +167,31 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_xover(s IO_dp3s_state_local, t Place) 
 
 ghost
 decreases
-pure func TriggerBodyIoXover(v IO_val) BogusTrigger { return BogusTrigger{} }
+pure func TriggerBodyIoXover(v Val) BogusTrigger { return BogusTrigger{} }
 
-pred CBio_IN_bio3s_exit(t Place, v IO_val)
+pred CBio_IN_bio3s_exit(t Place, v Val)
 
 ghost
 requires CBio_IN_bio3s_exit(t, v)
 decreases
-pure func dp3s_iospec_bio3s_exit_T(t Place, v IO_val) Place
+pure func dp3s_iospec_bio3s_exit_T(t Place, v Val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for exit
 ghost
-requires v.isIO_Internal_val2
+requires v.isValInternal2
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return none[IO_ifs] in domain(s.ibuf) &&
-		(let ibuf_set := s.ibuf[none[IO_ifs]] in (v.IO_Internal_val2_1 in ibuf_set)) &&
-		len(v.IO_Internal_val2_1.CurrSeg.Future) > 0 &&
-		dp.dp3s_forward_ext(v.IO_Internal_val2_1, v.IO_Internal_val2_2, v.IO_Internal_val2_3)
+pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s Dp3sStateLocal, t Place, v Val) bool {
+	return none[Ifs] in domain(s.ibuf) &&
+		(let ibuf_set := s.ibuf[none[Ifs]] in (v.ValInternal2_1 in ibuf_set)) &&
+		len(v.ValInternal2_1.CurrSeg.Future) > 0 &&
+		dp.dp3s_forward_ext(v.ValInternal2_1, v.ValInternal2_2, v.ValInternal2_3)
 }
 
-pred (dp DataPlaneSpec) dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { TriggerBodyIoExit(v) } (
+pred (dp DataPlaneSpec) dp3s_iospec_bio3s_exit(s Dp3sStateLocal, t Place) {
+	forall v Val :: { TriggerBodyIoExit(v) } (
 		match v {
-			case IO_Internal_val2{_, ?newpkt, ?nextif}:
+			case ValInternal2{_, ?newpkt, ?nextif}:
 				// Gobra requires the triggering term to occur inside the qtfier body,
 				// otherwise we get an error in the call to dp3s_iospec_bio3s_exit_T.
 				// We named the variable `_ignored` because using `_` here leads to a strange
@@ -209,29 +209,29 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_exit(s IO_dp3s_state_local, t Place) {
 
 ghost
 decreases
-pure func TriggerBodyIoExit(v IO_val) BogusTrigger { return BogusTrigger{} }
+pure func TriggerBodyIoExit(v Val) BogusTrigger { return BogusTrigger{} }
 
-pred CBioIO_bio3s_send(t Place, v IO_val)
+pred CBioIO_bio3s_send(t Place, v Val)
 
 ghost
 requires CBioIO_bio3s_send(t, v)
 decreases
-pure func dp3s_iospec_bio3s_send_T(t Place, v IO_val) Place
+pure func dp3s_iospec_bio3s_send_T(t Place, v Val) Place
 
 // This corresponds to the condition of the if statement in the io-spec case for send
 ghost
-requires v.isIO_val_Pkt2
+requires v.isValPkt
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_send_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return v.IO_val_Pkt2_1 in domain(s.obuf) &&
-		(let obuf_set := s.obuf[v.IO_val_Pkt2_1] in (v.IO_val_Pkt2_2 in obuf_set))
+pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_send_guard(s Dp3sStateLocal, t Place, v Val) bool {
+	return v.ValPkt_1 in domain(s.obuf) &&
+		(let obuf_set := s.obuf[v.ValPkt_1] in (v.ValPkt_2 in obuf_set))
 }
 
-pred (dp DataPlaneSpec) dp3s_iospec_bio3s_send(s IO_dp3s_state_local, t Place) {
-	forall v IO_val :: { TriggerBodyIoSend(v) } (
+pred (dp DataPlaneSpec) dp3s_iospec_bio3s_send(s Dp3sStateLocal, t Place) {
+	forall v Val :: { TriggerBodyIoSend(v) } (
 		match v {
-			case IO_val_Pkt2{_, _}:
+			case ValPkt{_, _}:
 				// Gobra requires the triggering term to occur inside the qtfier body,
 				// otherwise we get an error in the call to dp3s_iospec_bio3s_send_T.
 				// We named the variable `_ignored` because using `_` here leads to a strange
@@ -240,7 +240,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_send(s IO_dp3s_state_local, t Place) {
 				(dp.Valid() && dp.dp3s_iospec_bio3s_send_guard(s, t, v) ==>
 					CBioIO_bio3s_send(t, v) &&
 					dp.dp3s_iospec_ordered(s, dp3s_iospec_bio3s_send_T(t, v)))
-			case IO_val_Unsupported{_, _}:
+			case ValUnsupported{_, _}:
 				// Gobra requires the triggering term to occur inside the qtfier body,
 				// otherwise we get an error in the call to dp3s_iospec_bio3s_send_T.
 				// We named the variable `_ignored` because using `_` here leads to a strange
@@ -255,7 +255,7 @@ pred (dp DataPlaneSpec) dp3s_iospec_bio3s_send(s IO_dp3s_state_local, t Place) {
 
 ghost
 decreases
-pure func TriggerBodyIoSend(v IO_val) BogusTrigger { return BogusTrigger{} }
+pure func TriggerBodyIoSend(v Val) BogusTrigger { return BogusTrigger{} }
 
 pred CBioIO_bio3s_recv(t Place)
 
@@ -268,17 +268,17 @@ pure func dp3s_iospec_bio3s_recv_T(t Place) Place
 // receives the other IO values (Unit and Internal).
 ghost
 requires CBioIO_bio3s_recv(t)
-ensures val.isIO_val_Pkt2 || val.isIO_val_Unsupported
+ensures val.isValPkt || val.isValUnsupported
 decreases
-pure func dp3s_iospec_bio3s_recv_R(t Place) (val IO_val)
+pure func dp3s_iospec_bio3s_recv_R(t Place) (val Val)
 
-pred (dp DataPlaneSpec) dp3s_iospec_bio3s_recv(s IO_dp3s_state_local, t Place) {
+pred (dp DataPlaneSpec) dp3s_iospec_bio3s_recv(s Dp3sStateLocal, t Place) {
 	CBioIO_bio3s_recv(t) &&
 		(match dp3s_iospec_bio3s_recv_R(t) {
-			case IO_val_Pkt2{?recvif, ?pkt}:
+			case ValPkt{?recvif, ?pkt}:
 				dp.dp3s_iospec_ordered(
 					dp3s_add_ibuf(s, recvif, pkt), dp3s_iospec_bio3s_recv_T(t))
-			case IO_val_Unsupported{_, _}:
+			case ValUnsupported{_, _}:
 				dp.dp3s_iospec_ordered(s, dp3s_iospec_bio3s_recv_T(t))
 			default:
 				dp.dp3s_iospec_ordered(undefined(), dp3s_iospec_bio3s_recv_T(t))
@@ -292,27 +292,27 @@ requires CBio_Skip(t)
 decreases
 pure func dp3s_iospec_skip_T(t Place) Place
 
-pred (dp DataPlaneSpec) dp3s_iospec_skip(s IO_dp3s_state_local, t Place) {
+pred (dp DataPlaneSpec) dp3s_iospec_skip(s Dp3sStateLocal, t Place) {
 	CBio_Skip(t) && dp.dp3s_iospec_ordered(s, dp3s_iospec_skip_T(t))
 }
 
-pred (dp DataPlaneSpec) dp3s_iospec_stop(s IO_dp3s_state_local, t Place) {
+pred (dp DataPlaneSpec) dp3s_iospec_stop(s Dp3sStateLocal, t Place) {
 	true
 }
 
 // Declassification specification for SIF.
 // Members whose id start with "dp4s" correspond to additions to the IO spec
 // related to SIF.
-pred CBio_IN_bio4s_decl(t Place, v IO_val)
+pred CBio_IN_bio4s_decl(t Place, v Val)
 
 ghost
 decreases
-pure func dp4s_iospec_bio4s_decl_T(t Place, v IO_val) Place
+pure func dp4s_iospec_bio4s_decl_T(t Place, v Val) Place
 
 ghost
 requires v.isIO_decl_val
 decreases
-pure func (dp DataPlaneSpec) dp4s_iospec_bio4s_decl_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
+pure func (dp DataPlaneSpec) dp4s_iospec_bio4s_decl_guard(s Dp3sStateLocal, t Place, v Val) bool {
 	// Cf. `router.gobra`, in particular `hf_valid`.
 	// NOTE: Formatting this differently leads to a parsing error.
 	return AbsMac(v.IO_decl_val_sigma) == (nextMsgtermSpec(
@@ -323,9 +323,9 @@ pure func (dp DataPlaneSpec) dp4s_iospec_bio4s_decl_guard(s IO_dp3s_state_local,
 		v.IO_decl_val_beta))
 }
 
-pred (dp DataPlaneSpec) dp4s_iospec_bio4s_decl(s IO_dp3s_state_local, t Place) {
+pred (dp DataPlaneSpec) dp4s_iospec_bio4s_decl(s Dp3sStateLocal, t Place) {
 	// NOTE: Formatting this differently leads to a parsing error.
-	forall v IO_val :: { TriggerBodyIoDecl(v) } (
+	forall v Val :: { TriggerBodyIoDecl(v) } (
 		match v {
 			case IO_decl_val{?beta, ?ts, ?inif, ?egif, ?sigma}:
 				let _ignored := TriggerBodyIoDecl(v) in
@@ -341,26 +341,26 @@ pred (dp DataPlaneSpec) dp4s_iospec_bio4s_decl(s IO_dp3s_state_local, t Place) {
 
 ghost
 decreases
-pure func TriggerBodyIoDecl(v IO_val) BogusTrigger { return BogusTrigger{} }
+pure func TriggerBodyIoDecl(v Val) BogusTrigger { return BogusTrigger{} }
 
 /** BIO operations **/
 ghost
 decreases
 requires token(t) && CBio_IN_bio3s_enter(t, v)
 ensures  token(old(CBio_IN_bio3s_enter_T(t, v)))
-func Enter(ghost t Place, ghost v IO_val)
+func Enter(ghost t Place, ghost v Val)
 
 ghost
 decreases
 requires token(t) && CBio_IN_bio3s_xover(t, v)
 ensures  token(old(dp3s_iospec_bio3s_xover_T(t, v)))
-func Xover(ghost t Place, ghost v IO_val)
+func Xover(ghost t Place, ghost v Val)
 
 ghost
 decreases
 requires token(t) && CBio_IN_bio3s_exit(t, v)
 ensures  token(old(dp3s_iospec_bio3s_exit_T(t, v)))
-func Exit(ghost t Place, ghost v IO_val)
+func Exit(ghost t Place, ghost v Val)
 
 ghost
 decreases
@@ -371,6 +371,6 @@ requires v.isIO_decl_val &&
 ensures  token(dp4s_iospec_bio4s_decl_T(t, v))
 ensures  forall i int :: { v.IO_decl_val_sigma[i] } 0 <= i && i < len(v.IO_decl_val_sigma) ==> 
 	low(v.IO_decl_val_sigma[i])
-func Decl(ghost t Place, ghost v IO_val)
+func Decl(ghost t Place, ghost v Val)
 
 /** End of helper functions to perform BIO operations **/

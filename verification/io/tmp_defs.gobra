@@ -8,4 +8,4 @@ const MacLen = 6
 
 ghost
 decreases
-pure func AbsMac(mac [MacLen]byte) IO_msgterm
+pure func AbsMac(mac [MacLen]byte) MsgTerm
