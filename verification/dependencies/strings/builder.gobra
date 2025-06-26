@@ -21,6 +21,7 @@ pred (b *Builder) Mem()
 
 // Return whether the underlying data is low.
 ghost
+trusted
 requires b.Mem()
 decreases
 pure func (b *Builder) IsLow() bool
@@ -47,6 +48,6 @@ func (b *Builder) WriteString(s string) (n int, err error)
 ghost
 requires acc(b)
 requires *b === Builder{}
-ensures b.Mem() && b.IsLow()
+ensures  b.Mem() && b.IsLow()
 decreases _
 func (b *Builder) ZeroBuilderIsReadyToUse()
