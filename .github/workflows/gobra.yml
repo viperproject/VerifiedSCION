@@ -21,40 +21,31 @@ env:
   checkConsistency: '1'
   imageVersion: 'latest'
   mceMode: 'od'
-  requireTriggers: '1'
+  # disabled for now, as it is unclear which triggers to
+  # provide to monoset in a way that it does not severely
+  # affect perf.
+  requireTriggers: '0'
   useZ3API: '0'
   viperBackend: 'SILICON'
   disableNL: '0'
   unsafeWildcardOptimization: '0'
   overflow: '0'
   respectFunctionPrePermAmounts: '0'
+  enableFriendClauses: '1'
 
 jobs:
-  verify-deps:
+  verify-third-party-libs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      # Skip caching for now, the Github action right now is very limited.
-      # - name: Cache the verification results
-      #   uses: actions/cache@v3
-      #   env:
-      #     cache-name: gobra-cache
-      #   with:
-      #     path: ${{ runner.workspace }}/.gobra/cache.json
-      #     key: ${{ env.cache-name }}
-
-      # We split the verification of the entire repository into
-      # multiple steps. This provides a more fine-grained log in
-      # Github Workflow's interface and it allows more fine-grained
-      # control over the settings applied to each package (this last
-      # point could be also be solved by adapting the action to allow
-      # per package config).
       - name: Verify the packages in the 'verification' directory
         uses: viperproject/gobra-action@main
         with:
           projectLocation: 'VerifiedSCION/verification'
           recursive: 1
+          ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants.
+          excludePackages: 'layers'
           timeout: 5m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
@@ -71,6 +62,49 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
+      # due to the bug mention above, we need to verify this package separately
+      - name: Verify package 'verification/dependencies/github.com/google/gopacket/layers'
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'verification/dependencies/github.com/google/gopacket/layers'
+          timeout: 5m
+          headerOnly: ${{ env.headerOnly }}
+          module: ${{ env.module }}
+          includePaths: 'verification/dependencies/ .' # relative to project location
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
+          requireTriggers: ${{ env.requireTriggers }}
+          overflow: ${{ env.overflow }}
+          useZ3API: ${{ env.useZ3API }}
+          disableNL: ${{ env.disableNL }}
+          viperBackend: ${{ env.viperBackend }}
+          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
+          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
+  verify-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      # Skip caching for now, the Github action right now is very limited.
+      # - name: Cache the verification results
+      #   uses: actions/cache@v3
+      #   env:
+      #     cache-name: gobra-cache
+      #   with:
+      #     path: ${{ runner.workspace }}/.gobra/cache.json
+      #     key: ${{ env.cache-name }}
+    
+      # We split the verification of the entire repository into
+      # multiple steps. This provides a more fine-grained log in
+      # Github Workflow's interface and it allows more fine-grained
+      # control over the settings applied to each package (this last
+      # point could be also be solved by adapting the action to allow
+      # per package config).
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
@@ -92,6 +126,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/experimental/epic'
         uses: viperproject/gobra-action@main
         with:
@@ -112,6 +147,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/log'
         uses: viperproject/gobra-action@main
         with:
@@ -132,6 +168,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/private/serrors'
         uses: viperproject/gobra-action@main
         with:
@@ -152,6 +189,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/scrypto'
         uses: viperproject/gobra-action@main
         with:
@@ -172,6 +210,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers'
         uses: viperproject/gobra-action@main
         with:
@@ -192,6 +231,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
@@ -212,6 +252,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path/empty'
         uses: viperproject/gobra-action@main
         with:
@@ -232,6 +273,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path/epic'
         uses: viperproject/gobra-action@main
         with:
@@ -253,6 +295,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path/onehop'
         uses: viperproject/gobra-action@main
         with:
@@ -273,6 +316,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:
@@ -293,6 +337,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'private/topology'
         uses: viperproject/gobra-action@main
         with:
@@ -313,6 +358,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'private/topology/underlay'
         uses: viperproject/gobra-action@main
         with:
@@ -333,6 +379,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'private/underlay/conn'
         uses: viperproject/gobra-action@main
         with:
@@ -353,6 +400,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'private/underlay/sockctrl'
         uses: viperproject/gobra-action@main
         with:
@@ -373,6 +421,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'router/bfd'
         uses: viperproject/gobra-action@main
         with:
@@ -393,6 +442,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'router/control'
         uses: viperproject/gobra-action@main
         with:
@@ -413,6 +463,7 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Upload the verification report
         uses: actions/upload-artifact@v4
         with:
@@ -446,3 +497,4 @@ jobs:
           viperBackend: ${{ env.viperBackend }}
           unsafeWildcardOptimization: '0'
           respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
+          enableFriendClauses: ${{ env.enableFriendClauses }}

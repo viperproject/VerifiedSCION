@@ -227,27 +227,27 @@ pure func hopFields(
 	raw []byte,
 	offset int,
 	currHfIdx int,
-	segLen int) (res seq[io.IO_HF]) {
-	return currHfIdx == segLen ? seq[io.IO_HF]{} :
+	segLen int) (res seq[io.HF]) {
+	return currHfIdx == segLen ? seq[io.HF]{} :
 		let hf := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHfIdx, len(raw)) in
-		seq[io.IO_HF]{hf} ++ hopFields(raw, offset, currHfIdx + 1, segLen)
+		seq[io.HF]{hf} ++ hopFields(raw, offset, currHfIdx + 1, segLen)
 }
 
 ghost
 ensures len(res) == len(hopfields)
 decreases len(hopfields)
-pure func segPast(hopfields seq[io.IO_HF]) (res seq[io.IO_HF]) {
-	return len(hopfields) == 0 ? seq[io.IO_HF]{} :
-		seq[io.IO_HF]{hopfields[len(hopfields) - 1]} ++ segPast(
+pure func segPast(hopfields seq[io.HF]) (res seq[io.HF]) {
+	return len(hopfields) == 0 ? seq[io.HF]{} :
+		seq[io.HF]{hopfields[len(hopfields) - 1]} ++ segPast(
 			hopfields[:len(hopfields) - 1])
 }
 
 ghost
 ensures len(res) == len(hopfields)
 decreases len(hopfields)
-pure func segHistory(hopfields seq[io.IO_HF]) (res seq[io.IO_ahi]) {
-	return len(hopfields) == 0 ? seq[io.IO_ahi]{} :
-		seq[io.IO_ahi]{hopfields[len(hopfields) - 1].Toab()} ++ segHistory(
+pure func segHistory(hopfields seq[io.HF]) (res seq[io.AHI]) {
+	return len(hopfields) == 0 ? seq[io.AHI]{} :
+		seq[io.AHI]{hopfields[len(hopfields) - 1].Toab()} ++ segHistory(
 			hopfields[:len(hopfields) - 1])
 }
 
@@ -264,13 +264,13 @@ decreases
 pure func segment(raw []byte,
 	offset int,
 	currHfIdx int,
-	ainfo io.IO_ainfo,
-	uinfo set[io.IO_msgterm],
+	ainfo io.Ainfo,
+	uinfo set[io.MsgTerm],
 	consDir bool,
 	peer bool,
-	segLen int) (res io.IO_seg2) {
+	segLen int) (res io.Seg) {
 	return let hopfields := hopFields(raw, offset, 0, segLen) in
-		io.IO_seg3 {
+		io.Seg {
 			AInfo: ainfo,
 			UInfo: uinfo,
 			ConsDir: consDir,
@@ -299,7 +299,7 @@ pure func CurrSeg(raw []byte,
 	currInfIdx int,
 	currHfIdx int,
 	segLen int,
-	headerOffset int) (res io.IO_seg3) {
+	headerOffset int) (res io.Seg) {
 	return let ainfo := path.Timestamp(raw, currInfIdx, headerOffset) in
 		let consDir := path.ConsDir(raw, currInfIdx, headerOffset) in
 		let peer := path.Peer(raw, currInfIdx, headerOffset) in
@@ -319,13 +319,13 @@ pure func LeftSeg(
 	raw []byte,
 	currInfIdx int,
 	segs io.SegLens,
-	headerOffset int) option[io.IO_seg3] {
+	headerOffset int) option[io.Seg] {
 	return let offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset) in
 		(currInfIdx == 1 && segs.Seg2Len > 0) ?
 			some(CurrSeg(raw, offset + path.HopLen * segs.Seg1Len, currInfIdx, 0, segs.Seg2Len, headerOffset)) :
 			((currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
 				some(CurrSeg(raw, offset + path.HopLen * (segs.Seg1Len + segs.Seg2Len), currInfIdx, 0, segs.Seg3Len, headerOffset)) :
-				none[io.IO_seg3])
+				none[io.Seg])
 }
 
 ghost
@@ -340,13 +340,13 @@ pure func RightSeg(
 	raw []byte,
 	currInfIdx int,
 	segs io.SegLens,
-	headerOffset int) option[io.IO_seg3] {
+	headerOffset int) option[io.Seg] {
 	return let offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset) in
 		(currInfIdx == 1 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
 			some(CurrSeg(raw, offset + path.HopLen * segs.Seg1Len, currInfIdx, segs.Seg2Len, segs.Seg2Len, headerOffset)) :
 			(currInfIdx == 0 && segs.Seg2Len > 0) ?
 				some(CurrSeg(raw, offset, currInfIdx, segs.Seg1Len, segs.Seg1Len, headerOffset)) :
-				none[io.IO_seg3]
+				none[io.Seg]
 }
 
 ghost
@@ -361,13 +361,13 @@ pure func MidSeg(
 	raw []byte,
 	currInfIdx int,
 	segs io.SegLens,
-	headerOffset int) option[io.IO_seg3] {
+	headerOffset int) option[io.Seg] {
 	return let offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset) in
 		(currInfIdx == 4 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
 			some(CurrSeg(raw, offset, 0, segs.Seg1Len, segs.Seg1Len, headerOffset)) :
 			((currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0) ?
 				some(CurrSeg(raw, offset + path.HopLen * (segs.Seg1Len + segs.Seg2Len), currInfIdx, 0, segs.Seg3Len, headerOffset)) :
-				none[io.IO_seg3])
+				none[io.Seg])
 }
 
 ghost
@@ -376,7 +376,7 @@ requires sl.Bytes(raw, 0, len(raw))
 requires validPktMetaHdr(raw)
 decreases
 // TODO: rename this to View()
-pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
+pure func (s *Raw) absPkt(raw []byte) (res io.Pkt) {
 	return let _ := reveal validPktMetaHdr(raw) in
 		let metaHdr := RawBytesToMetaHdr(raw)  in
 		let currInfIdx := int(metaHdr.CurrINF) in
@@ -389,7 +389,7 @@ pure func (s *Raw) absPkt(raw []byte) (res io.IO_pkt2) {
 		let prevSegLen := segs.LengthOfPrevSeg(currHfIdx)        in
 		let numINF := segs.NumInfoFields() in
 		let offset := HopFieldOffset(numINF, prevSegLen, MetaLen) in
-		io.IO_pkt2 {
+		io.Pkt {
 			CurrSeg: CurrSeg(raw, offset, currInfIdx, currHfIdx - prevSegLen, segLen, MetaLen),
 			LeftSeg: LeftSeg(raw, currInfIdx + 1, segs, MetaLen),
 			MidSeg: MidSeg(raw, currInfIdx + 2, segs, MetaLen),
@@ -483,11 +483,11 @@ func (s *Raw) EstablishValidPktMetaHdr(ghost ub []byte) {
 }
 
 ghost
-requires oldPkt.LeftSeg != none[io.IO_seg2]
+requires oldPkt.LeftSeg != none[io.Seg]
 requires oldPkt.PathNotFullyTraversed()
 decreases
-pure func AbsXover(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
-	return io.IO_pkt2 {
+pure func AbsXover(oldPkt io.Pkt) (newPkt io.Pkt) {
+	return io.Pkt {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
@@ -498,8 +498,8 @@ pure func AbsXover(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
 ghost
 requires oldPkt.PathNotFullyTraversed()
 decreases
-pure func AbsIncPath(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
-	return io.IO_pkt2 {
+pure func AbsIncPath(oldPkt io.Pkt) (newPkt io.Pkt) {
+	return io.Pkt {
 		absIncPathSeg(oldPkt.CurrSeg),
 		oldPkt.LeftSeg,
 		oldPkt.MidSeg,
@@ -510,15 +510,15 @@ pure func AbsIncPath(oldPkt io.IO_pkt2) (newPkt io.IO_pkt2) {
 ghost
 requires len(currseg.Future) > 0
 decreases
-pure func absIncPathSeg(currseg io.IO_seg3) io.IO_seg3 {
-	return io.IO_seg3 {
+pure func absIncPathSeg(currseg io.Seg) io.Seg {
+	return io.Seg {
 		AInfo: currseg.AInfo,
 		UInfo: currseg.UInfo,
 		ConsDir: currseg.ConsDir,
 		Peer: currseg.Peer,
-		Past: seq[io.IO_HF]{currseg.Future[0]} ++ currseg.Past,
+		Past: seq[io.HF]{currseg.Future[0]} ++ currseg.Past,
 		Future: currseg.Future[1:],
-		History: seq[io.IO_ahi]{currseg.Future[0].Toab()} ++ currseg.History,
+		History: seq[io.AHI]{currseg.Future[0].Toab()} ++ currseg.History,
 	}
 }
 
@@ -572,7 +572,7 @@ pure func (s *Raw) CorrectlyDecodedHfWithIdx(ub []byte, idx int, hop path.HopFie
 		unfolding s.Base.Mem() in
 		let hopOffset := MetaLen + int(s.NumINF) * path.InfoLen + idx * path.HopLen in
 		hopOffset + path.HopLen <= len(ub) &&
-		hop.ToIO_HF() == path.BytesToIO_HF(ub, 0, hopOffset, len(ub))
+		hop.Abs() == path.BytesToIO_HF(ub, 0, hopOffset, len(ub))
 }
 
 ghost
@@ -587,7 +587,7 @@ pure func (s *Raw) CorrectlyDecodedHf(ub []byte, hop path.HopField) bool {
 		let hopOffset := MetaLen + int(s.NumINF) * path.InfoLen +
 			int(s.Base.PathMeta.CurrHF) * path.HopLen in
 		hopOffset + path.HopLen <= len(ub) &&
-		hop.ToIO_HF() == path.BytesToIO_HF(ub, 0, hopOffset, len(ub))
+		hop.Abs() == path.BytesToIO_HF(ub, 0, hopOffset, len(ub))
 }
 
 ghost
@@ -622,7 +622,7 @@ preserves s.GetBase(ubuf).IsXoverSpec()
 preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
 preserves validPktMetaHdr(ubuf)
 preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
-ensures   s.absPkt(ubuf).LeftSeg != none[io.IO_seg2]
+ensures   s.absPkt(ubuf).LeftSeg != none[io.Seg]
 ensures   len(s.absPkt(ubuf).CurrSeg.Future) == 1
 ensures   len(get(s.absPkt(ubuf).LeftSeg).Future) > 0
 ensures   len(get(s.absPkt(ubuf).LeftSeg).History) == 0
@@ -644,7 +644,7 @@ func (s *Raw) XoverLemma(ubuf []byte) {
 	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset, currInfIdx, currHfIdx - prevSegLen, segLen, MetaLen)
 	assert pkt.LeftSeg == reveal LeftSeg(ubuf, currInfIdx + 1, segs, MetaLen)
 	assert len(pkt.CurrSeg.Future) == 1
-	assert pkt.LeftSeg != none[io.IO_seg2]
+	assert pkt.LeftSeg != none[io.Seg]
 	assert len(get(s.absPkt(ubuf).LeftSeg).History) == 0
 	assert len(get(pkt.LeftSeg).Future) > 0
 }
@@ -653,7 +653,7 @@ ghost
 opaque
 requires pkt.PathNotFullyTraversed()
 decreases
-pure func (s *Raw) EqAbsHopField(pkt io.IO_pkt2, hop io.IO_HF) bool {
+pure func (s *Raw) EqAbsHopField(pkt io.Pkt, hop io.HF) bool {
 	return let currHF := pkt.CurrSeg.Future[0] in
 		hop == currHF
 }
@@ -661,7 +661,7 @@ pure func (s *Raw) EqAbsHopField(pkt io.IO_pkt2, hop io.IO_HF) bool {
 ghost
 opaque
 decreases
-pure func (s *Raw) EqAbsInfoField(pkt io.IO_pkt2, info io.AbsInfoField) bool {
+pure func (s *Raw) EqAbsInfoField(pkt io.Pkt, info io.AbsInfoField) bool {
 	return let currseg := pkt.CurrSeg in
 		info.AInfo == currseg.AInfo     &&
 		info.UInfo == currseg.UInfo     &&
@@ -680,7 +680,7 @@ preserves s.GetBase(ubuf).ValidCurrHfSpec()
 preserves s.CorrectlyDecodedInf(ubuf, info)
 preserves s.CorrectlyDecodedHf(ubuf, hop)
 ensures   s.EqAbsInfoField(s.absPkt(ubuf), info.ToAbsInfoField())
-ensures   s.EqAbsHopField(s.absPkt(ubuf), hop.ToIO_HF())
+ensures   s.EqAbsHopField(s.absPkt(ubuf), hop.Abs())
 decreases
 func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField) {
 	assert reveal validPktMetaHdr(ubuf)
@@ -720,7 +720,7 @@ func (s *Raw) DecodingLemma(ubuf []byte, info path.InfoField, hop path.HopField)
 	}
 
 	assert reveal s.EqAbsInfoField(pktView, infoView)
-	assert reveal s.EqAbsHopField(pktView, hop.ToIO_HF())
+	assert reveal s.EqAbsHopField(pktView, hop.Abs())
 }
 
 ghost
@@ -743,8 +743,8 @@ requires  PktLen(segs, 0) <= len(raw)
 requires  0 <= currInfIdx && currInfIdx < 2
 requires  1 <= currInfIdx ==> 0 < segs.Seg3Len
 preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
-ensures   LeftSeg(raw, currInfIdx + 1, segs, 0) != none[io.IO_seg3]
-ensures   RightSeg(raw, currInfIdx, segs, 0) != none[io.IO_seg3]
+ensures   LeftSeg(raw, currInfIdx + 1, segs, 0) != none[io.Seg]
+ensures   RightSeg(raw, currInfIdx, segs, 0) != none[io.Seg]
 decreases
 func XoverSegNotNone(raw []byte, currInfIdx int, segs io.SegLens) {
 	reveal LeftSeg(raw, currInfIdx + 1, segs, 0)
@@ -772,9 +772,9 @@ func IncCurrSeg(raw []byte, offset int, currInfIdx int, currHfIdx int, segLen in
 	assert currseg.UInfo == incseg.UInfo
 	assert currseg.ConsDir == incseg.ConsDir
 	assert currseg.Peer == incseg.Peer
-	assert seq[io.IO_HF]{currseg.Future[0]} ++ currseg.Past == incseg.Past
+	assert seq[io.HF]{currseg.Future[0]} ++ currseg.Past == incseg.Past
 	assert currseg.Future[1:] == incseg.Future
-	assert seq[io.IO_ahi]{currseg.Future[0].Toab()} ++ currseg.History == incseg.History
+	assert seq[io.AHI]{currseg.Future[0].Toab()} ++ currseg.History == incseg.History
 	assert incseg == absIncPathSeg(currseg)
 }
 
@@ -787,7 +787,7 @@ requires  1 == currInfIdx ==> currHfIdx + 1 == segs.Seg1Len
 requires  2 == currInfIdx ==> 0 < segs.Seg3Len && currHfIdx + 1 == segs.Seg1Len + segs.Seg2Len
 requires  PktLen(segs, 0) <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
-preserves LeftSeg(raw, currInfIdx, segs, 0) != none[io.IO_seg3]
+preserves LeftSeg(raw, currInfIdx, segs, 0) != none[io.Seg]
 ensures
 	let prevSegLen := segs.LengthOfPrevSeg(currHfIdx + 1) in
 	let segLen := segs.LengthOfCurrSeg(currHfIdx + 1) in
@@ -845,7 +845,7 @@ requires  0 == currInfIdx ==> currHfIdx + 1 == segs.Seg1Len
 requires  1 == currInfIdx ==> 0 < segs.Seg3Len && currHfIdx + 1 == segs.Seg1Len + segs.Seg2Len
 requires  PktLen(segs, 0) <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R56)
-preserves RightSeg(raw, currInfIdx, segs, 0) != none[io.IO_seg3]
+preserves RightSeg(raw, currInfIdx, segs, 0) != none[io.Seg]
 ensures
 	let prevSegLen := segs.LengthOfPrevSeg(currHfIdx) in
 	let segLen := segs.LengthOfCurrSeg(currHfIdx) in
