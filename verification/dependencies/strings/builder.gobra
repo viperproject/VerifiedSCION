@@ -22,7 +22,7 @@ pred (b *Builder) LowMem(ghost isLow bool)
 
 // String returns the accumulated string.
 preserves acc(b.Mem(), 1/2) && acc(b.LowMem(isLow), 1/2)
-ensures isLow ==> low(str)
+ensures   isLow ==> low(str)
 decreases _
 func (b *Builder) String(ghost isLow bool) (str string)
 
@@ -43,6 +43,6 @@ func (b *Builder) WriteString(s string, ghost isLowB, isLowS bool) (n int, err e
 ghost
 requires acc(b)
 requires *b === Builder{}
-ensures acc(b.Mem(), 1/2) && acc(b.LowMem(true), 1/2)
+ensures  acc(b.Mem(), 1/2) && acc(b.LowMem(true), 1/2)
 decreases _
 func (b *Builder) ZeroBuilderIsReadyToUse()

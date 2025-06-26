@@ -25,8 +25,6 @@ type Value interface {
 	decreases
 	String() string
 
-	// TODO: It might make sense to abstract "low(s)" using either a predicate
-	// or a pure Boolean function, as not every implementation might require it.
 	requires  low(s)
 	preserves acc(Mem())
 	decreases
