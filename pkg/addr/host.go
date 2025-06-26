@@ -503,9 +503,10 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 	}
 }
 
-// @ requires low(len(ip))
 // @ requires acc(ip)
 // @ requires len(ip) == HostLenIPv4 || len(ip) == HostLenIPv6
+// @ requires low(len(ip)) && (len(ip) == HostLenIPv6 ==> 
+// @ 	low(net.isZeros(ip[0:10])) && low(ip[10] == 255) && low(ip[11] == 255))
 // @ ensures res.Mem()
 // @ decreases
 func HostFromIP(ip net.IP) (res HostAddr) {
