@@ -132,8 +132,9 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	// @ assert remote == nil ==> a == listen
 	// @ unfold acc(a.Mem(), R15/2)
 	// @ unfold acc(a.Low(), R15/2)
-	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15)
-	// @ assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], R15)
+	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15/2)
+	// @ assert forall i int :: { a.IP[i] } 0 <= i && i < len(a.IP) ==> 
+	// @ 	a.IP[i] == sl.GetByte(a.IP, 0, len(a.IP), i)
 	if a.IP.To4( /*@ false @*/ ) != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
 	}

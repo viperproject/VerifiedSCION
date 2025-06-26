@@ -29,12 +29,10 @@ const PathLen = path.InfoLen + 2*path.HopLen
 
 const PathType path.Type = 2
 
-// @ requires path.PathPackageMem()
-// @ requires !path.Registered(PathType)
-// @ ensures  path.PathPackageMem()
-// @ ensures  forall t path.Type :: { old(path.Registered(t)) }{ path.Registered(t) } 0 <= t && t < path.MaxPathType ==>
-// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-// @ ensures  path.Registered(PathType)
+// @ requires path.PkgMem()
+// @ requires path.RegisteredTypes().DoesNotContain(int64(PathType))
+// @ ensures  path.PkgMem()
+// @ ensures  path.RegisteredTypes().Contains(int64(PathType))
 // @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
@@ -51,7 +49,7 @@ func RegisterPath() {
 		},
 	}
 	//@ proof tmp.New implements path.NewPathSpec {
-	//@		return tmp.New() as newPath
+	//@ 	return tmp.New() as newPath
 	//@ }
 	path.RegisterPath(tmp)
 }

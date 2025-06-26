@@ -21,8 +21,8 @@ package io
 // Abstract representation of an HopField
 // We consider 0 to be the ID of the internal network in HopField.
 // We consider None to be the ID of the internal network in HF.
-ghost type IO_HF ghost struct {
-	InIF2 option[IO_ifs]
-	EgIF2 option[IO_ifs]
-	HVF IO_msgterm
+ghost type HF ghost struct {
+	InIF2 option[Ifs]
+	EgIF2 option[Ifs]
+	HVF MsgTerm
 }

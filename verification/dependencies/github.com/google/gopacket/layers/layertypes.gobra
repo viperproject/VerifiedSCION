@@ -6,37 +6,19 @@
 
 // +gobra
 
-initEnsures gopacket.LayerTypesMem()
-initEnsures LayerTypeBFD == gopacket.LayerType(122)
-initEnsures gopacket.Registered(LayerTypeBFD)
-initEnsures forall t gopacket.LayerType :: { gopacket.Registered(t) } (0 <= t && t <= 3) ==>
-	gopacket.Registered(t)
-// The full postcondition cannot be proven because of performance reasons.
-// Postconditions must be added with care to maintain the code verifiable and to not introduce unsoundness.
-// Similarly, global variables declarations should be uncommented with care.
-// initEnsures forall t gopacket.LayerType :: (10 <= t && t <= 146) ==> gopacket.Registered(t)
-initEnsures forall t gopacket.LayerType :: { gopacket.Registered(t) } t < 0 ==>
-	!gopacket.Registered(t)
-initEnsures forall t gopacket.LayerType :: { gopacket.Registered(t) } 146 < t ==>
-	!gopacket.Registered(t)
+dup pkgInvariant LayerTypeBFD == 122
+dup pkgInvariant acc(gopacket.RegisteredTypes.Contains(122), _)
+
 package layers
 
-import (
-	importRequires gopacket.LayerTypesMem()
-	importRequires forall t gopacket.LayerType :: { gopacket.Registered(t) } 0 <= t && t <= 3 ==>
-		gopacket.Registered(t)
-	importRequires forall t gopacket.LayerType :: { gopacket.Registered(t) } t < 0 ==>
-		!gopacket.Registered(t)
-	importRequires forall t gopacket.LayerType :: { gopacket.Registered(t) } 3 < t ==>
-		!gopacket.Registered(t)
-	"github.com/google/gopacket"
-)
+importRequires gopacket.RegisteredTypes.DoesNotContain(int64(122))
+import "github.com/google/gopacket"
+
+var LayerTypeBFD = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: /* gopacket.DecodeFunc(decodeBFD)} */ generateDecoders()})
 
 // This method just generates stubs for decoders so that we can avoid having to specify all 136 decoders
+mayInit
 ensures d.Mem()
 decreases
 func generateDecoders() (d gopacket.Decoder)
 
-var (
-	LayerTypeBFD = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: /* gopacket.DecodeFunc(decodeBFD)} */ generateDecoders()})
-)

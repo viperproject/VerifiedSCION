@@ -30,8 +30,12 @@ pred (a *UDPAddr) Mem() {
 
 pred (a *UDPAddr) Low() {
 	acc(a, R5) && sl.Bytes(a.IP, 0, len(a.IP)) &&
-	low(len(a.IP)) && forall i int :: { sl.GetByte(a.IP, 0, len(a.IP), i) } 0 <= i && i < len(a.IP) ==>
-		low(sl.GetByte(a.IP, 0, len(a.IP), i))
+	low(len(a.IP)) && 
+	(forall i int :: { sl.GetByte(a.IP, 0, len(a.IP), i) } 0 <= i && i < len(a.IP) ==>
+		low(sl.GetByte(a.IP, 0, len(a.IP), i))) &&
+	// Given that all elements of `a.IP` are low, this should be implied;
+	// however, without a body for `isZeros`, we state it here explicitly.
+	(len(a.IP) == IPv6len ==> low(isZeros(a.IP[0:10])))
 }
 
 (*UDPAddr) implements Addr {

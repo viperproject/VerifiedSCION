@@ -15,9 +15,16 @@
 
 // +gobra
 
-// @ initEnsures ErrBadHostAddrType.ErrorMem()
-// @ initEnsures ErrMalformedHostAddrType.ErrorMem()
-// @ initEnsures ErrUnsupportedSVCAddress.ErrorMem()
+// @ dup pkgInvariant ErrBadHostAddrType != nil              &&
+// @ 	ErrMalformedHostAddrType != nil                      &&
+// @ 	ErrUnsupportedSVCAddress != nil                      &&
+// @ 	acc(ErrBadHostAddrType.ErrorMem(), _)                &&
+// @ 	acc(ErrMalformedHostAddrType.ErrorMem(), _)          &&
+// @ 	acc(ErrUnsupportedSVCAddress.ErrorMem(), _)          &&
+// @ 	ErrBadHostAddrType.IsDuplicableMem()                 &&
+// @ 	ErrMalformedHostAddrType.IsDuplicableMem()           &&
+// @ 	ErrUnsupportedSVCAddress.IsDuplicableMem()
+
 package addr
 
 import (
@@ -84,7 +91,6 @@ const (
 
 type HostAddr interface {
 	//@ pred Mem()
-	//@ pred LowMem()
 
 	//@ preserves acc(Mem(), R13)
 	//@ decreases
@@ -119,7 +125,14 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
-	//@ requires acc(Mem(), R13/2) && acc(LowMem(), R13/2)
+	// Return whether all the underlying data used in the computation of
+	// `String` is low.
+	//@ ghost
+	//@ requires Mem()
+	//@ decreases
+	//@ pure IsLow() bool
+
+	//@ requires acc(Mem(), R13) && IsLow()
 	//@ ensures acc(Mem(), R13)
 	//@ decreases
 	String() string
@@ -212,7 +225,7 @@ func (h HostIPv4) IP() (res net.IP) {
 func (h HostIPv4) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), R13)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
-	var tmp HostIPv4 = HostIPv4(append( /*@ R13, @*/ net.IP(nil), h...))
+	tmp := HostIPv4(append( /*@ R13, @*/ net.IP(nil), h...))
 	//@ fold acc(sl.Bytes(h, 0, len(h)), R13)
 	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	//@ fold acc(h.Mem(), R13)
@@ -233,13 +246,9 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ requires acc(h.Mem(), R13/2) && acc(h.LowMem(), R13/2)
-// @ ensures acc(h.Mem(), R13)
+// @ preserves acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv4) String() string {
-	//@ unfold acc(h.Mem(), R13/2)
-	//@ unfold acc(h.LowMem(), R13/2)
-	//@ fold acc(h.Mem(), R13)
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
 	//@ ghost defer fold acc(h.Mem(), R13)
 	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
@@ -285,7 +294,7 @@ func (h HostIPv6) IP() (res net.IP) {
 func (h HostIPv6) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), R13)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
-	var tmp HostIPv6 = HostIPv6(append( /*@ R13, @*/ net.IP(nil), h...))
+	tmp := HostIPv6(append( /*@ R13, @*/ net.IP(nil), h...))
 	//@ fold acc(sl.Bytes(h, 0, len(h)), R13)
 	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	//@ fold acc(h.Mem(), R13)
@@ -306,13 +315,9 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ requires acc(h.Mem(), R13/2) && acc(h.LowMem(), R13/2)
-// @ ensures acc(h.Mem(), R13)
+// @ preserves acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv6) String() string {
-	//@ unfold acc(h.Mem(), R13/2)
-	//@ unfold acc(h.LowMem(), R13/2)
-	//@ fold acc(h.Mem(), R13)
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv6
 	//@ ghost defer fold acc(h.Mem(), R13)
 	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
@@ -414,9 +419,11 @@ func (h HostSVC) Equal(o HostAddr) bool {
 	return ok && h == ha
 }
 
-// @ requires low(h)
+// @ requires acc(h.Mem(), R13) && h.IsLow()
+// @ ensures  acc(h.Mem(), R13)
 // @ decreases
 func (h HostSVC) String() string {
+	//@ h.RevealIsLow(R13)
 	name := h.BaseString()
 	cast := 'A'
 	if h.IsMulticast() {
@@ -496,9 +503,10 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 	}
 }
 
-// @ requires low(len(ip))
 // @ requires acc(ip)
 // @ requires len(ip) == HostLenIPv4 || len(ip) == HostLenIPv6
+// @ requires low(len(ip)) && (len(ip) == HostLenIPv6 ==> 
+// @ 	low(net.isZeros(ip[0:10])) && low(ip[10] == 255) && low(ip[11] == 255))
 // @ ensures res.Mem()
 // @ decreases
 func HostFromIP(ip net.IP) (res HostAddr) {

@@ -18,15 +18,19 @@ package flag
 
 type Value interface {
 	pred Mem()
-	pred LowMem()
+
+	// Return whether all the underlying data used in the computation of
+	// `String` is low.
+	ghost
+	requires Mem()
+	decreases
+	pure IsLowForValue() bool
 	
-	requires acc(Mem(), 1/2) && acc(LowMem(), 1/2)
-	ensures acc(Mem())
+	requires Mem() && IsLowForValue()
+	ensures  Mem()
 	decreases
 	String() string
 
-	// TODO: It might make sense to abstract "low(s)" using either a predicate
-	// or a pure Boolean function, as not every implementation might require it.
 	requires  low(s)
 	preserves acc(Mem())
 	decreases

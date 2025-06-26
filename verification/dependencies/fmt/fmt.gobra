@@ -31,10 +31,16 @@ func Sprintf(format string, v ...interface{}) (res string)
 
 type Stringer interface {
 	pred Mem()
-	pred LowMem()
 
-	requires acc(Mem(), 1/2) && acc(LowMem(), 1/2)
-	ensures acc(Mem())
+	// Return whether all the underlying data used in the computation of
+	// `String` is low.
+	ghost
+	requires Mem()
+	decreases
+	pure IsLowForStringer() bool
+
+	requires Mem() && IsLowForStringer()
+	ensures  Mem()
 	decreases
 	String() string
 }

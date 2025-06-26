@@ -118,10 +118,10 @@ func FormatAS(as_ AS, opts ...FormatOption) string {
 func fmtAS(as_ AS, sep string) (res string) {
 	if !as_.inRange() {
 		// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-		//@ assert low(as_)
-		//@ assert low(MaxAS)
-		//@ ghost v := []interface{}{as_, MaxAS}
-		//@ assume forall i int :: { &v[i] } 0 <= i && i < len(v) ==> acc(&v[i]) && low(v[i])
+		// @ assert low(as_)
+		// @ assert low(MaxAS)
+		// @ ghost v := []interface{}{as_, MaxAS}
+		// @ assume forall i int :: { &v[i] } 0 <= i && i < len(v) ==> acc(&v[i]) && low(v[i])
 		return fmt.Sprintf("%d [Illegal AS: larger than %d]", as_, MaxAS)
 	}
 	// Format BGP ASes as decimal
@@ -137,22 +137,21 @@ func fmtAS(as_ AS, sep string) (res string) {
 	var maxLen = len("ffff:ffff:ffff")
 	var b /*@@@*/ strings.Builder
 	// @ b.ZeroBuilderIsReadyToUse()
-	b.Grow(maxLen /*@, true @*/)
-	// @ invariant acc(b.Mem(), 1/2) && acc(b.LowMem(true), 1/2)
-	// @ invariant low(i)
+	b.Grow(maxLen)
+	// @ invariant b.Mem()
+	// @ invariant low(i) && b.IsLow()
 	// @ decreases asParts - i
 	for i := 0; i < asParts; i++ {
 		if i > 0 {
-			b.WriteString(sep /*@, true, true @*/)
+			b.WriteString(sep)
 		}
 		shift := uint(asPartBits * (asParts - i - 1))
 		// (VerifiedSCION) the following property is guaranteed by the type system,
 		// but Gobra cannot infer it yet
 		// @ assume 0 <= uint64(as_>>shift)&asPartMask
-		b.WriteString(strconv.FormatUint(uint64(as_>>shift)&asPartMask, asPartBase) /*@, true, true @*/)
+		b.WriteString(strconv.FormatUint(uint64(as_>>shift)&asPartMask, asPartBase))
 	}
-	ret := b.String( /*@ true @*/ )
-	return ret
+	return b.String()
 }
 
 // (VerifiedSCION) revert this change when Gobra is fixed.

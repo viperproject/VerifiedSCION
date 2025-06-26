@@ -22,11 +22,11 @@ package io
 ghost
 requires len(currseg.Future) > 0
 decreases
-pure func establishGuardTraversedseg(currseg IO_seg3, direction bool) IO_seg3 {
+pure func establishGuardTraversedseg(currseg Seg, direction bool) Seg {
 	return let uinfo := direction ?
 		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
-		IO_seg3 {
+		Seg {
 			AInfo: currseg.AInfo,
 			UInfo: uinfo,
 			ConsDir: currseg.ConsDir,
@@ -41,32 +41,32 @@ pure func establishGuardTraversedseg(currseg IO_seg3, direction bool) IO_seg3 {
 ghost
 requires len(currseg.Future) > 0
 decreases
-pure func establishGuardTraversedsegInc(currseg IO_seg3, direction bool) IO_seg3 {
+pure func establishGuardTraversedsegInc(currseg Seg, direction bool) Seg {
 	return let uinfo := direction ?
 		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
-		IO_seg3 {
+		Seg {
 			AInfo: currseg.AInfo,
 			UInfo: uinfo,
 			ConsDir: currseg.ConsDir,
 			Peer: currseg.Peer,
-			Past: seq[IO_HF]{currseg.Future[0]} ++ currseg.Past,
+			Past: seq[HF]{currseg.Future[0]} ++ currseg.Past,
 			Future: currseg.Future[1:],
-			History: seq[IO_ahi]{currseg.Future[0].Toab()} ++ currseg.History,
+			History: seq[AHI]{currseg.Future[0].Toab()} ++ currseg.History,
 		}
 }
 
 ghost
 requires len(seg.Future) > 0
 decreases
-pure func (seg IO_seg3) UpdateCurrHf(hf IO_HF) IO_seg3 {
-	return IO_seg3 {
+pure func (seg Seg) UpdateCurrHf(hf HF) Seg {
+	return Seg {
 		seg.AInfo,
 		seg.UInfo,
 		seg.ConsDir,
 		seg.Peer,
 		seg.Past,
-		seq[IO_HF]{hf} ++ seg.Future[1:],
+		seq[HF]{hf} ++ seg.Future[1:],
 		seg.History,
 	}
 }
@@ -74,15 +74,15 @@ pure func (seg IO_seg3) UpdateCurrHf(hf IO_HF) IO_seg3 {
 ghost
 requires pkt.PathNotFullyTraversed()
 decreases
-pure func (pkt IO_pkt2) UpdateHopField(hf IO_HF) IO_pkt2 {
+pure func (pkt Pkt) UpdateHopField(hf HF) Pkt {
 	return let newCurrSeg := pkt.CurrSeg.UpdateCurrHf(hf) in
-		IO_pkt2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
+		Pkt{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
 }
 
 ghost
 decreases
-pure func (seg IO_seg3) UpdateCurrSeg(info AbsInfoField) IO_seg3 {
-	return IO_seg3 {
+pure func (seg Seg) UpdateCurrSeg(info AbsInfoField) Seg {
+	return Seg {
 		info.AInfo,
 		info.UInfo,
 		info.ConsDir,
@@ -95,16 +95,16 @@ pure func (seg IO_seg3) UpdateCurrSeg(info AbsInfoField) IO_seg3 {
 
 ghost
 decreases
-pure func (pkt IO_pkt2) UpdateInfoField(info AbsInfoField) IO_pkt2 {
+pure func (pkt Pkt) UpdateInfoField(info AbsInfoField) Pkt {
 	return let newCurrSeg := pkt.CurrSeg.UpdateCurrSeg(info) in
-		IO_pkt2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
+		Pkt{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
 }
 
 // This type simplifies the infoField, making it easier
-// to use than the IO_seg3 from the IO-spec.
+// to use than the Seg from the IO-spec.
 ghost type AbsInfoField ghost struct {
-	AInfo IO_ainfo
-	UInfo set[IO_msgterm]
+	AInfo Ainfo
+	UInfo set[MsgTerm]
 	ConsDir bool
 	Peer bool
 }
@@ -164,6 +164,6 @@ pure func (s SegLens) LengthOfPrevSeg(currHF int) (res int) {
 
 ghost
 decreases
-pure func (pkt IO_pkt2) PathNotFullyTraversed() bool {
+pure func (pkt Pkt) PathNotFullyTraversed() bool {
 	return len(pkt.CurrSeg.Future) > 0
 }
