@@ -15,9 +15,16 @@
 
 // +gobra
 
-// @ initEnsures ErrBadHostAddrType.ErrorMem()
-// @ initEnsures ErrMalformedHostAddrType.ErrorMem()
-// @ initEnsures ErrUnsupportedSVCAddress.ErrorMem()
+// @ dup pkgInvariant ErrBadHostAddrType != nil              &&
+// @ 	ErrMalformedHostAddrType != nil                      &&
+// @ 	ErrUnsupportedSVCAddress != nil                      &&
+// @ 	acc(ErrBadHostAddrType.ErrorMem(), _)                &&
+// @ 	acc(ErrMalformedHostAddrType.ErrorMem(), _)          &&
+// @ 	acc(ErrUnsupportedSVCAddress.ErrorMem(), _)          &&
+// @ 	ErrBadHostAddrType.IsDuplicableMem()                 &&
+// @ 	ErrMalformedHostAddrType.IsDuplicableMem()           &&
+// @ 	ErrUnsupportedSVCAddress.IsDuplicableMem()
+
 package addr
 
 import (
@@ -218,7 +225,7 @@ func (h HostIPv4) IP() (res net.IP) {
 func (h HostIPv4) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), R13)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
-	var tmp HostIPv4 = HostIPv4(append( /*@ R13, @*/ net.IP(nil), h...))
+	tmp := HostIPv4(append( /*@ R13, @*/ net.IP(nil), h...))
 	//@ fold acc(sl.Bytes(h, 0, len(h)), R13)
 	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	//@ fold acc(h.Mem(), R13)
@@ -287,7 +294,7 @@ func (h HostIPv6) IP() (res net.IP) {
 func (h HostIPv6) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), R13)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
-	var tmp HostIPv6 = HostIPv6(append( /*@ R13, @*/ net.IP(nil), h...))
+	tmp := HostIPv6(append( /*@ R13, @*/ net.IP(nil), h...))
 	//@ fold acc(sl.Bytes(h, 0, len(h)), R13)
 	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	//@ fold acc(h.Mem(), R13)
@@ -496,9 +503,10 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 	}
 }
 
-// @ requires low(len(ip))
 // @ requires acc(ip)
 // @ requires len(ip) == HostLenIPv4 || len(ip) == HostLenIPv6
+// @ requires low(len(ip)) && (len(ip) == HostLenIPv6 ==> 
+// @ 	low(net.isZeros(ip[0:10])) && low(ip[10] == 255) && low(ip[11] == 255))
 // @ ensures res.Mem()
 // @ decreases
 func HostFromIP(ip net.IP) (res HostAddr) {
