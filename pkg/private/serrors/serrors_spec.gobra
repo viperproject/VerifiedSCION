@@ -98,6 +98,9 @@ requires low(msg) && low(len(errCtx)) &&
 ensures  forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 ensures  res != nil && res.ErrorMem()
 ensures  res.IsDuplicableMem()
+// New always returns a pointer to a basicError, thus it
+// only produces comparable values
+ensures   isComparable(res)
 ensures  low(res != nil)
 decreases
 func New(msg string, errCtx ...interface{}) (res error)

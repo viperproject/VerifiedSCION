@@ -19,6 +19,7 @@ package addr
 import (
 	"net"
 
+	"github.com/scionproto/scion/verification/utils/errors"
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -69,4 +70,28 @@ pure func sizeOfHostAddrType(htype HostAddrType) (res int) {
 		HostLenNone : htype == HostTypeIPv4 ?
 		HostLenIPv4 : htype == HostTypeIPv6 ?
 		HostLenIPv6 : HostLenSVC
+}
+
+ghost
+ensures ErrBadHostAddrType.ErrorMem()
+decreases
+func EstablishErrBadHostAddrTypeMem() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(ErrBadHostAddrType)
+}
+
+ghost
+ensures ErrMalformedHostAddrType.ErrorMem()
+decreases
+func EstablishErrMalformedHostAddrTypeMem() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(ErrMalformedHostAddrType)
+}
+
+ghost
+ensures ErrUnsupportedSVCAddress.ErrorMem()
+decreases
+func EstablishErrUnsupportedSVCAddressMem() {
+	openDupPkgInv
+	errors.DupErrorsCanBePromoted(ErrUnsupportedSVCAddress)
 }
