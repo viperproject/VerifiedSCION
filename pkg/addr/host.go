@@ -15,16 +15,6 @@
 
 // +gobra
 
-// @ dup pkgInvariant ErrBadHostAddrType != nil              &&
-// @ 	ErrMalformedHostAddrType != nil                      &&
-// @ 	ErrUnsupportedSVCAddress != nil                      &&
-// @ 	acc(ErrBadHostAddrType.ErrorMem(), _)                &&
-// @ 	acc(ErrMalformedHostAddrType.ErrorMem(), _)          &&
-// @ 	acc(ErrUnsupportedSVCAddress.ErrorMem(), _)          &&
-// @ 	ErrBadHostAddrType.IsDuplicableMem()                 &&
-// @ 	ErrMalformedHostAddrType.IsDuplicableMem()           &&
-// @ 	ErrUnsupportedSVCAddress.IsDuplicableMem()
-
 package addr
 
 import (

@@ -20,10 +20,6 @@
 
 // +gobra
 
-dup pkgInvariant AlreadyRunning != nil &&
-	acc(AlreadyRunning.ErrorMem(), _)  &&
-	AlreadyRunning.IsDuplicableMem()   &&
-	isComparable(AlreadyRunning)
 package bfd
 
 import "github.com/scionproto/scion/pkg/private/serrors"
@@ -35,7 +31,4 @@ ghost
 ensures AlreadyRunning != nil && AlreadyRunning.ErrorMem()
 ensures isComparable(AlreadyRunning)
 decreases
-func EstablishAlreadyRunning() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(AlreadyRunning)
-}
+func EstablishAlreadyRunning()

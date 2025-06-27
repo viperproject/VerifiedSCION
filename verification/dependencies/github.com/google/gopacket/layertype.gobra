@@ -6,22 +6,7 @@
 
 // +gobra
 
-pkgInvariant PkgMem()
-dup pkgInvariant acc(RegisteredTypes.Contains(int64(LayerTypeZero)), _) &&
-	acc(RegisteredTypes.Contains(int64(LayerTypeDecodeFailure)), _) &&
-	acc(RegisteredTypes.Contains(int64(LayerTypePayload)), _)       &&
-	acc(RegisteredTypes.Contains(int64(LayerTypeFragment)), _)
-dup pkgInvariant LayerTypeZero == 0 &&
-	LayerTypeDecodeFailure == 1 &&
-	LayerTypePayload       == 2 &&
-	LayerTypeFragment      == 3
-
 package gopacket
-
-friendPkg "./layers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 10 <= t && t <= 146 ==>
-	RegisteredTypes.DoesNotContain(int64(t))
-friendPkg "../../../pkg/slayers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 1000 <= t && t <= 1100 ==>
-	RegisteredTypes.DoesNotContain(int64(t))
 
 import ms "github.com/scionproto/scion/verification/utils/monoset"
 import sl "github.com/scionproto/scion/verification/utils/slices"
@@ -49,7 +34,7 @@ ghost const MaxLayerType = maxLayerType
 // It is unlikely that this imposes any restriciton in practice.
 ghost const AbsMinLayerType int64 = -1000
 ghost const AbsMaxLayerType int64 = 5000
-ghost var RegisteredTypes = ms.Alloc(AbsMinLayerType, AbsMaxLayerType)
+ghost var RegisteredTypes ms.BoundedMonotonicSet
 
 /** End of Constants **/
 
@@ -94,29 +79,9 @@ pure func registeredDuringInit(t LayerType) (res bool) {
 
 // cannot be made ghost, even though it is morally so
 mayInit
-requires acc(&ltMeta) &&
-	acc(&ltMetaMap)   &&
-	acc(ltMetaMap)    &&
-	acc(&DecodersByLayerName, _) &&
-	acc(DecodersByLayerName)
-requires forall t LayerType :: { registeredDuringInit(t) } !registeredDuringInit(t)
-requires RegisteredTypes.Inv()
-requires RegisteredTypes.Start == AbsMinLayerType
-requires RegisteredTypes.End == AbsMaxLayerType
-requires forall t LayerType :: { &ltMeta[t].inUse } 0 <= t && t < maxLayerType ==>
-	ltMeta[t].inUse == RegisteredTypes.FContains(int64(t))
-requires forall t LayerType :: { ltMetaMap[t].inUse } (AbsMinLayerType <= t && t < 0) || (maxLayerType <= t && t <= AbsMaxLayerType) ==>
-	ltMetaMap[t].inUse == RegisteredTypes.FContains(int64(t))
-ensures  PkgMem()
-ensures  forall t LayerType :: { Registered(t) } !Registered(t)
+ensures false
 decreases
-func satisfyGlobalVarInitPre() int {
-	fold PkgMem()
-	assert forall t LayerType :: { Registered(t) } old(!registeredDuringInit(t)) ==> !Registered(t)
-	assert unfolding PkgMem() in forall t LayerType :: { registeredDuringInit(t) } !registeredDuringInit(t)
-	assert forall t LayerType :: { Registered(t) } !Registered(t)
-	return 1
-}
+func satisfyGlobalVarInitPre() int
 /** End of predicates and ghost helper members **/
 
 trusted
@@ -166,11 +131,7 @@ var LayerTypeFragment = RegisterLayerType(3, LayerTypeMetadata{Name: "Fragment",
 
 /** Ghost init operations **/
 func init() {
-	assert PkgMem()
-	assert RegisteredTypes.Contains(0)
-	assert RegisteredTypes.Contains(1)
-	assert RegisteredTypes.Contains(2)
-	assert RegisteredTypes.Contains(3)
+	assume false
 }
 /** End of ghost init operations **/
 

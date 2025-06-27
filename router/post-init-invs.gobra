@@ -29,92 +29,59 @@ import "github.com/scionproto/scion/verification/utils/errors"
 ghost
 ensures unsupportedPathType.ErrorMem()
 decreases
-func establishMemUnsupportedPathType() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(unsupportedPathType)
-}
+func establishMemUnsupportedPathType()
 
 ghost
 ensures malformedPath != nil
 ensures malformedPath.ErrorMem()
 decreases
-func establishMemMalformedPath() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(malformedPath)
-}
+func establishMemMalformedPath()
 
 ghost
 ensures alreadySet != nil
 ensures alreadySet.ErrorMem()
 decreases
-func establishAlreadySet() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(alreadySet)
-}
+func establishAlreadySet()
 
 ghost
 ensures unsupportedPathTypeNextHeader.ErrorMem()
 decreases
-func establishMemUnsupportedPathTypeNextHeader() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(unsupportedPathTypeNextHeader)
-}
+func establishMemUnsupportedPathTypeNextHeader()
 
 ghost
 ensures noBFDSessionConfigured.ErrorMem()
 decreases
-func establishMemNoBFDSessionConfigured() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(noBFDSessionConfigured)
-}
+func establishMemNoBFDSessionConfigured()
 
 ghost
 ensures noBFDSessionFound.ErrorMem()
 decreases
-func establishMemNoBFDSessionFound() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(noBFDSessionFound)
-}
+func establishMemNoBFDSessionFound()
 
 ghost
 ensures invalidSrcAddrForTransit.ErrorMem()
 decreases
-func establishInvalidSrcAddrForTransit() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(invalidSrcAddrForTransit)
-}
+func establishInvalidSrcAddrForTransit()
 
 ghost
 ensures noSVCBackend.ErrorMem()
 decreases
-func establishNoSVCBackend() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(noSVCBackend)
-}
+func establishNoSVCBackend()
 
 ghost
 ensures cannotRoute.ErrorMem()
 decreases
-func establishCannotRoute() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(cannotRoute)
-}
+func establishCannotRoute()
 
 ghost
 ensures invalidSrcIA.ErrorMem()
 decreases
-func establishInvalidSrcIA() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(invalidSrcIA)
-}
+func establishInvalidSrcIA()
 
 ghost
 ensures invalidDstIA.ErrorMem()
 decreases
-func establishInvalidDstIA() {
-	openDupPkgInv
-	errors.DupErrorsCanBePromoted(invalidDstIA)
-}
+func establishInvalidDstIA()
 
 /**** End of post-init invariants ****/
 

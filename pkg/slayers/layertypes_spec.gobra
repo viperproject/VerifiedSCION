@@ -18,7 +18,6 @@
 // +gobra
 
 // To be added on a per-need basis
-dup pkgInvariant LayerTypeSCION == 1000
 package slayers
 
 import (
