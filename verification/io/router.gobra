@@ -14,7 +14,7 @@
 
 // +gobra
 
-/**** Definitions regarding a particular router’s event system ****/
+/**** Definitions regarding a particular router's event system ****/
 
 package io
 
