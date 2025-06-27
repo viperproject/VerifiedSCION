@@ -93,5 +93,8 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error)
 preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 ensures   res != nil && res.ErrorMem()
 ensures   res.IsDuplicableMem()
+// New always returns a pointer to a basicError, thus it
+// only produces comparable values
+ensures   isComparable(res)
 decreases
 func New(msg string, errCtx ...interface{}) (res error)

@@ -16,7 +16,10 @@
 
 package path
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"github.com/scionproto/scion/verification/utils/monoset"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
 
 /** rawPath spec **/
 pred (r *rawPath) Mem(underlyingBuf []byte) {
@@ -59,38 +62,50 @@ pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
 /** Global state of the package **/
 ghost const MaxPathType = maxPathType
 
-pred PathPackageMem() {
-	acc(&registeredPaths) &&
-	acc(&strictDecoding) &&
-	forall t Type :: { &registeredPaths[t].inUse } (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==> registeredPaths[t].Metadata.New implements NewPathSpec
+ghost
+decreases
+pure func RegisteredTypes() monoset.BoundedMonotonicSet {
+	return registeredKeys
+}
+
+pred PkgMem() {
+	acc(&registeredPaths)             &&
+	acc(&strictDecoding)              &&
+	registeredKeys.Inv()              &&
+	registeredKeys.Start == 0         &&
+	registeredKeys.End == maxPathType &&
+	(forall t Type :: { &registeredPaths[t].inUse } 0 <= t && t < maxPathType ==>
+		registeredPaths[t].inUse == registeredKeys.FContains(int64(t))) &&
+	(forall t Type :: { &registeredPaths[t].inUse } (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==>
+		registeredPaths[t].Metadata.New implements NewPathSpec)
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires PathPackageMem()
+requires PkgMem()
 decreases
 pure func Registered(t Type) (res bool) {
-	return unfolding PathPackageMem() in
+	return unfolding PkgMem() in
 		registeredPaths[t].inUse
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires PathPackageMem()
+requires PkgMem()
 decreases
 pure func GetType(t Type) (res Metadata) {
-	return unfolding PathPackageMem() in
+	return unfolding PkgMem() in
 		registeredPaths[t].Metadata
 }
 
 ghost
-requires PathPackageMem()
+requires PkgMem()
 decreases
 pure func IsStrictDecoding() (b bool) {
-	return unfolding PathPackageMem() in
-		strictDecoding
+	return unfolding PkgMem() in strictDecoding
 }
 
+// The following is a closure spec, not an assumed impl.
 // without passing `writePerm` explicitely below, we run into
 // exceptions when verifying method RegisterPath in package 'empty'
 ensures acc(p.NonInitMem(), writePerm)

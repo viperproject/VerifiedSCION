@@ -26,7 +26,8 @@ pred postInitInvariant() {
 
 // learn the invariant established by init
 ghost
-trusted // TODO: drop after init invs are added
 ensures acc(postInitInvariant(), _)
-decreases _
-func establishPostInitInvariant()
+decreases
+func establishPostInitInvariant() {
+	openDupPkgInv
+}
