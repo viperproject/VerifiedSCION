@@ -34,7 +34,7 @@ const MACBufferSize = 16
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
 // @ ensures   h.Mem() && sh === h
 // @ ensures   let absInf := info.ToAbsInfoField() in
-// @ 	let absHF := hf.ToIO_HF() in
+// @ 	let absHF := hf.Abs() in
 // @ 	let absMac := AbsMac(ret) in
 // @ 	absMac == io.nextMsgtermSpec(sh.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
 // @ decreases
@@ -62,7 +62,7 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost sh h
 // @ ensures   len(res) == MACBufferSize && sl.Bytes(res, 0, MACBufferSize)
 // @ ensures   unfolding sl.Bytes(res, 0, MACBufferSize) in
 // @ 	let absInf := info.ToAbsInfoField() in
-// @ 	let absHF := hf.ToIO_HF() in
+// @ 	let absHF := hf.Abs() in
 // @ 	let absMac := AbsMac(FromSliceToMacArray(res)) in
 // @ 	absMac == io.nextMsgtermSpec(sh.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
 // @ decreases
@@ -86,7 +86,7 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost 
 	res = h.Sum(buffer[:0])[:16]
 
 	// @ absInf := info.ToAbsInfoField()
-	// @ absHF := hf.ToIO_HF()
+	// @ absHF := hf.Abs()
 	// @ absMac := AbsMac(FromSliceToMacArray(res))
 
 	// This is our "MAC assumption", linking the abstraction of the concrete MAC

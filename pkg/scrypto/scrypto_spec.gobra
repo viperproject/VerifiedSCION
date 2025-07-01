@@ -44,4 +44,4 @@ ensures   e == nil ==> (
     sh.Asid() == asid)
 ensures   e != nil ==> e.ErrorMem()
 decreases _
-func InitMac(key []byte, ghost asid io.IO_as) (h hash.Hash, ghost sh hash.ScionHashSpec, e error)
+func InitMac(key []byte, ghost asid io.AS) (h hash.Hash, ghost sh hash.ScionHashSpec, e error)

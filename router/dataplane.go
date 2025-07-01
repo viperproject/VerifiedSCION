@@ -220,7 +220,7 @@ type DataPlane struct {
 	// @ ghost key *[]byte
 	// TODO: See if there is a way to circumvent storing `asid`, considering
 	// that this can be generated from `localIA`.
-	// @ ghost asid gpointer[io.IO_as]
+	// @ ghost asid gpointer[io.AS]
 	external          map[uint16]BatchConn
 	linkTypes         map[uint16]topology.LinkType
 	neighborIAs       map[uint16]addr.IA
@@ -346,7 +346,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 		return alreadySet
 	}
 
-	// @ ghost asid@ := io.IO_as{uint(d.localIA)}
+	// @ ghost asid@ := io.AS{uint(d.localIA)}
 
 	// First check for MAC creation errors.
 	if _ /*@, macSpec @*/, err := scrypto.InitMac(key /*@, asid @*/); err != nil {

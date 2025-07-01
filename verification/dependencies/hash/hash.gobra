@@ -90,5 +90,5 @@ type ScionHashSpec interface {
 	// may change after call to `FullMAC`. 
     // requires Mem()
     decreases
-    pure Asid() (ghost io.IO_as)
+    pure Asid() (ghost io.AS)
 }

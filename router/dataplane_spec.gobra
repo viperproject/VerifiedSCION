@@ -156,7 +156,7 @@ ensures  acc(key, _) && acc(sl.Bytes(*key, 0, len(*key)), _)
 ensures  h != nil && h.Mem()
 ensures  acc(asid, _) && sh === h && sh.Asid() == *asid
 decreases
-func MacFactorySpec(ghost key *[]byte, ghost asid gpointer[io.IO_as]) (h hash.Hash, ghost sh hash.ScionHashSpec)
+func MacFactorySpec(ghost key *[]byte, ghost asid gpointer[io.AS]) (h hash.Hash, ghost sh hash.ScionHashSpec)
 
 // useful to deal with incompletnesses
 pred hideLocalIA(p *addr.IA) {
