@@ -143,9 +143,6 @@ func (l *LinkType) UnmarshalText(data []byte) (err error) {
 	case "peer":
 		*l = Peer
 	default:
-		// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-		//@ ghost errCtx := []interface{}{"linkType", string(data)}
-		//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
 		return serrors.New("invalid link type", "linkType", string(data))
 	}
 	return nil
