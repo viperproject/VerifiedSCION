@@ -117,11 +117,6 @@ func FormatAS(as_ AS, opts ...FormatOption) string {
 // @ decreases
 func fmtAS(as_ AS, sep string) (res string) {
 	if !as_.inRange() {
-		// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-		// @ assert low(as_)
-		// @ assert low(MaxAS)
-		// @ ghost v := []interface{}{as_, MaxAS}
-		// @ assume forall i int :: { &v[i] } 0 <= i && i < len(v) ==> acc(&v[i]) && low(v[i])
 		return fmt.Sprintf("%d [Illegal AS: larger than %d]", as_, MaxAS)
 	}
 	// Format BGP ASes as decimal
