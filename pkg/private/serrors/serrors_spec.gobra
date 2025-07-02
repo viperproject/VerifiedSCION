@@ -96,17 +96,15 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error)
 // Elements of errCtx are limited to "primitive types" at the moment.
 // This is a safe but strict under-approximation of what can be done
 // with this method.
-requires forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
-// TODO: Once Gobra issue #846 is resolved, capture the sensitivity of `errCtx`
-// using a pure Boolean function.
-requires low(msg) && low(len(errCtx)) && 
-	forall i int :: { errCtx[i] } 0 <= i && i < len(errCtx) ==> low(errCtx[i])
-ensures  forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
-ensures  res != nil && res.ErrorMem()
-ensures  res.IsDuplicableMem()
+// TODO: For completeness, we need to require every value that influences 
+// control flow (in the implementation of `New`) to be low. This annotation is
+// likely not sufficient.
+requires  low(len(errCtx))
+preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
+ensures   res != nil && res.ErrorMem()
+ensures   res.IsDuplicableMem()
 // New always returns a pointer to a basicError, thus it
 // only produces comparable values
 ensures   isComparable(res)
-ensures  low(res != nil)
 decreases
 func New(msg string, errCtx ...interface{}) (res error)
