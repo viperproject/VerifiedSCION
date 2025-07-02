@@ -429,12 +429,6 @@ func (h HostSVC) String() string {
 	if h.IsMulticast() {
 		cast = 'M'
 	}
-	// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-	//@ assert low(name)
-	//@ assert low(cast)
-	//@ assert low(uint16(h))
-	//@ ghost v := []interface{}{name, cast, uint16(h)}
-	//@ assume forall i int :: { &v[i] } 0 <= i && i < len(v) ==> acc(&v[i]) && low(v[i])
 	return fmt.Sprintf("%v %c (0x%04x)", name, cast, uint16(h))
 }
 
