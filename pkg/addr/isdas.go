@@ -94,11 +94,6 @@ func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	}
 
 	if len(parts) != asParts {
-		// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-		//@ assert low(sep)
-		//@ assert low(_as)
-		//@ ghost errCtx := []interface{}{"sep", sep, "value", _as}
-		//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
 		return 0, serrors.New("wrong number of separators", "sep", sep, "value", _as)
 	}
 	var parsed AS
@@ -111,11 +106,6 @@ func parseAS(_as string, sep string) (retAs AS, retErr error) {
 		parsed <<= asPartBits
 		v, err := strconv.ParseUint(parts[i], asPartBase, asPartBits)
 		if err != nil {
-			// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-			//@ assert low(i)
-			//@ assert low(_as)
-			//@ ghost errCtx := []interface{}{"index", i, "value", _as}
-			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
 			return 0, serrors.WrapStr("parsing AS part", err, "index", i, "value", _as)
 		}
 		parsed |= AS(v)
@@ -124,11 +114,6 @@ func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	// against future refactor mistakes.
 	if !parsed.inRange() {
 		// (VerifiedSCION) Added cast around MaxAS to be able to call serrors.New
-		// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-		//@ assert low(uint64(MaxAS))
-		//@ assert low(_as)
-		//@ ghost errCtx := []interface{}{"max", uint64(MaxAS), "value", _as}
-		//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
 		return 0, serrors.New("AS out of range", "max", uint64(MaxAS), "value", _as)
 	}
 	return parsed, nil
@@ -175,11 +160,6 @@ func (_as AS) inRange() bool {
 func (_as AS) MarshalText() ([]byte, error) {
 	if !_as.inRange() {
 		// (VerifiedSCION) Added cast around MaxAS and as to be able to call serrors.New
-		// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-		//@ assert low(uint64(MaxAS))
-		//@ assert low(uint64(_as))
-		//@ ghost errCtx := []interface{}{"max", uint64(MaxAS), "value", uint64(_as)}
-		//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
 		return nil, serrors.New("AS out of range", "max", uint64(MaxAS), "value", uint64(_as))
 	}
 	return []byte(_as.String()), nil
@@ -244,10 +224,6 @@ func IAFrom(isd ISD, _as AS) (ia IA, err error) {
 func ParseIA(ia string) (retIA IA, retErr error) {
 	parts := strings.Split(ia, "-")
 	if len(parts) != 2 {
-		// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-		//@ assert low(ia)
-		//@ ghost errCtx := []interface{}{"value", ia}
-		//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
 		return 0, serrors.New("invalid ISD-AS", "value", ia)
 	}
 	isd, err := ParseISD(parts[0])
