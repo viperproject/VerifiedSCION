@@ -28,15 +28,40 @@ pred (a *UDPAddr) Mem() {
 	acc(a, R5) && sl.Bytes(a.IP, 0, len(a.IP))
 }
 
-pred (a *UDPAddr) Low() {
-	acc(a, R5) && sl.Bytes(a.IP, 0, len(a.IP)) &&
-	low(len(a.IP)) && 
-	(forall i int :: { sl.GetByte(a.IP, 0, len(a.IP), i) } 0 <= i && i < len(a.IP) ==>
-		low(sl.GetByte(a.IP, 0, len(a.IP), i))) &&
-	// Given that all elements of `a.IP` are low, this should be implied;
-	// however, without a body for `isZeros`, we state it here explicitly.
-	(len(a.IP) == IPv6len ==> low(isZeros(a.IP[0:10])))
+requires a.Mem()
+decreases
+pure func (a *UDPAddr) GetIP() IP {
+	return unfolding a.Mem() in a.IP
 }
+
+requires a.Mem() && 0 <= i && i < len(a.GetIP())
+decreases
+pure func (a *UDPAddr) GetIPByte(i int) byte {
+	return unfolding a.Mem() in sl.GetByte(a.IP, 0, len(a.IP), i)
+}
+
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+ghost
+trusted
+requires a.Mem()
+decreases
+pure func (a *UDPAddr) IsLow() bool
+
+// "Reveal the body" of `a.IsLow` (necessary bc. we can't implement `a.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+ghost
+trusted
+requires p > 0
+requires acc(a.Mem(), p) && a.IsLow()
+ensures  acc(a.Mem(), p)
+ensures  low(len(a.GetIP()))
+ensures  forall i int :: { a.GetIPByte(i) } 0 <= i && i < len(a.GetIP()) ==>
+	low(a.GetIPByte(i))
+// Given that all elements of `a.IP` are low, this should be implied; however, 
+// without a body for `isZeros`, we state it here explicitly.
+ensures  len(a.GetIP()) == IPv6len ==> low(isZeros(a.GetIP()[0:10]))
+decreases
+func (a *UDPAddr) RevealIsLow(p perm)
 
 (*UDPAddr) implements Addr {
 	(e *UDPAddr) Network() string {
@@ -67,9 +92,17 @@ pred (u *UDPConn) Mem() {
 	acc(u)
 }
 
-pred (u *UDPConn) Low() {
-	acc(u) && low(*u)
-}
+// TODO: remove
+// pred (u *UDPConn) Low() {
+// 	acc(u) && low(*u)
+// }
+
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+ghost
+trusted
+requires c.Mem()
+decreases
+pure func (c *UDPConn) IsLow() bool
 
 // ReadFromUDP acts like ReadFrom but returns a UDPAddr.
 preserves acc(c.Mem(), _)
@@ -127,33 +160,33 @@ ensures  err != nil ==> err.ErrorMem()
 decreases
 func (c *UDPConn) Close() (err error)
 
-requires acc(laddr.Mem(), _) && acc(laddr.Low(), _)
-requires low(network)
-ensures  err == nil ==> acc(conn.Mem(), 1/2) && acc(conn.Low(), 1/2)
+requires acc(laddr.Mem(), _)
+requires laddr.IsLow() && low(network)
+ensures  err == nil ==> conn.Mem() && conn.IsLow()
 ensures  err != nil ==> err.ErrorMem()
-ensures low(err)
+ensures  low(err)
 decreases _
 func ListenUDP(network string, laddr *UDPAddr) (conn *UDPConn, err error)
 
-requires low(network)
-requires acc(laddr.Mem(), _) && acc(laddr.Low(), _)
-requires acc(raddr.Mem(), _) && acc(raddr.Low(), _)
-ensures  err == nil ==> acc(conn.Mem(), 1/2) && acc(conn.Low(), 1/2)
+requires acc(laddr.Mem(), _)
+requires acc(raddr.Mem(), _)
+requires low(network) && laddr.IsLow() && raddr.IsLow()
+ensures  err == nil ==> conn.Mem() && conn.IsLow()
 ensures  err != nil ==> err.ErrorMem()
-ensures low(err)
+ensures  low(err)
 decreases _
 func DialUDP(network string, laddr, raddr *UDPAddr) (conn *UDPConn, err error)
 
-requires low(bytes)
-preserves acc(c.Mem(), 1/2) && acc(c.Low(), 1/2)
+requires  low(bytes)
+preserves c.Mem() && c.IsLow()
 ensures   err != nil ==> err.ErrorMem()
-ensures low(err)
+ensures   low(err)
 decreases _
 func (c *UDPConn) SetWriteBuffer(bytes int) (err error)
 
-requires low(bytes)
-preserves acc(c.Mem(), 1/2) && acc(c.Low(), 1/2)
-ensures low(err)
+requires  low(bytes)
+preserves c.Mem() && c.IsLow()
+ensures   low(err)
 ensures   err != nil ==> err.ErrorMem()
 decreases _
 func (c *UDPConn) SetReadBuffer(bytes int) (err error)

@@ -34,26 +34,69 @@ pred (c *connUDPBase) Mem() {
 	(c.Remote != nil ==> acc(c.Remote.Mem(), _))
 }
 
-pred (c *connUDPBase) Low() {
-	acc(c) && low(c.closed) &&
-	low(c.Remote) &&
-	c.conn.Mem() &&
-	(c.Listen != nil ==> acc(c.Listen.Mem(), _)) &&
-	(c.Remote != nil ==> acc(c.Remote.Mem(), _))
-}
-
 pred (c *connUDPBase) MemWithoutConn() {
 	acc(c) &&
 	(c.Listen != nil ==> acc(c.Listen.Mem(), _)) &&
 	(c.Remote != nil ==> acc(c.Remote.Mem(), _))
 }
 
-pred (c *connUDPBase) LowWithoutConn() {
-	acc(c) && low(c.closed) &&
-	low(c.Remote) &&
-	(c.Listen != nil ==> acc(c.Listen.Mem(), _)) &&
-	(c.Remote != nil ==> acc(c.Remote.Mem(), _))
+ghost
+requires withConn ==> c.Mem()
+requires !withConn ==> c.MemWithoutConn()
+decreases
+pure func (c *connUDPBase) GetClosed(withConn bool) bool {
+	// TODO: very unsure how to format this
+	return withConn ? (unfolding c.Mem() in c.closed) : (unfolding c.MemWithoutConn() in c.closed)
 }
+
+ghost
+requires withConn ==> c.Mem()
+requires !withConn ==> c.MemWithoutConn()
+decreases
+pure func (c *connUDPBase) GetRemote(withConn bool) *net.UDPAddr {
+	// TODO: very unsure how to format this
+	return withConn ? (unfolding c.Mem() in c.Remote) : (unfolding c.MemWithoutConn() in c.Remote)
+}
+
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+ghost
+trusted
+requires withConn ==> c.Mem()
+requires !withConn ==> c.MemWithoutConn()
+decreases
+pure func (c *connUDPBase) IsLow(withConn bool) bool
+
+// "Reveal the body" of `c.IsLow` (necessary bc. we can't implement `c.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+// TODO: could split IsLow and low(c.GetClosed) etc. on separate lines to avoid
+// repeating them
+// TODO: align wildcard probably (check if this is done elsewhere)
+ghost
+trusted
+requires p > 0
+requires wildcard && withConn ==> acc(c.Mem(), _) && c.IsLow(true)
+requires wildcard && !withConn ==> acc(c.MemWithoutConn(), _) && c.IsLow(false)
+requires !wildcard && withConn ==> acc(c.Mem(), p) && c.IsLow(true)
+requires !wildcard && !withConn ==> acc(c.MemWithoutConn(), p) && c.IsLow(false)
+ensures  wildcard && withConn ==> acc(c.Mem(), _) && low(c.GetClosed(true)) && low(c.GetRemote(true) != nil)
+ensures  wildcard && !withConn ==> acc(c.MemWithoutConn(), _) && low(c.GetClosed(false)) && low(c.GetRemote(false) != nil)
+ensures  !wildcard && withConn ==> acc(c.Mem(), p) && low(c.GetClosed(true)) && low(c.GetRemote(true) != nil)
+ensures  !wildcard && !withConn ==> acc(c.MemWithoutConn(), p) && low(c.GetClosed(false)) && low(c.GetRemote(false) != nil)
+decreases
+func (c *connUDPBase) RevealIsLow(wildcard bool, p perm, withConn bool)
+
+// Assert `c.IsLow` (necessary bc. we can't implement `c.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+// TODO: align wildcards, put lowness in separate ensures clauses
+ghost
+trusted
+requires p > 0
+requires wildcard ==> acc(c.Mem(), _) && low(c.GetClosed(true)) && low(c.GetRemote(true) != nil)
+requires !wildcard ==> acc(c.Mem(), p) && low(c.GetClosed(true)) && low(c.GetRemote(true) != nil)
+ensures  wildcard ==> acc(c.Mem(), _) && c.IsLow(true)
+ensures  !wildcard ==> acc(c.Mem(), p) && c.IsLow(true)
+decreases
+func (c *connUDPBase) AssertIsLow(wildcard bool, p perm)
 
 // Shown to be satisfiable in newConnUDPIPv4
 pred (c *connUDPIPv4) Mem() {
@@ -63,11 +106,26 @@ pred (c *connUDPIPv4) Mem() {
 	c.pconn.GetUnderlyingConn() == (unfolding c.connUDPBase.MemWithoutConn() in c.conn)
 }
 
-pred (c *connUDPIPv4) Low() {
-	acc(&c.pconn) &&
-	c.pconn.Mem() &&
-	c.connUDPBase.LowWithoutConn()
-}
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+ghost
+trusted
+requires c.Mem()
+decreases
+pure func (c *connUDPIPv4) IsLow() bool
+
+// "Reveal the body" of `c.IsLow` (necessary bc. we can't implement `c.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+// TODO: could consider using a "static" p in case this is only used in one place
+// TODO: try to move actual lowness into separate ensures to avoid repitition
+ghost
+trusted
+requires p > 0
+requires wildcard ==> acc(c.Mem(), _) && c.IsLow()
+requires !wildcard ==> acc(c.Mem(), p) && c.IsLow()
+ensures  wildcard ==> acc(c.Mem(), _) && unfolding acc(c.Mem(), _) in c.connUDPBase.IsLow(false)
+ensures  !wildcard ==> acc(c.Mem(), p) && unfolding acc(c.Mem(), _) in c.connUDPBase.IsLow(false)
+decreases
+func (c *connUDPIPv4) RevealIsLow(wildcard bool, p perm)
 
 // Shown to be satisfiable in newConnUDPIPv6
 pred (c *connUDPIPv6) Mem() {
@@ -77,11 +135,26 @@ pred (c *connUDPIPv6) Mem() {
 	c.pconn.GetUnderlyingConn() == (unfolding c.connUDPBase.MemWithoutConn() in c.conn)
 }
 
-pred (c *connUDPIPv6) Low() {
-	acc(&c.pconn) &&
-	c.pconn.Mem() &&
-	c.connUDPBase.LowWithoutConn()
-}
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+ghost
+trusted
+requires c.Mem()
+decreases
+pure func (c *connUDPIPv6) IsLow() bool
+
+// "Reveal the body" of `c.IsLow` (necessary bc. we can't implement `c.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+// TODO: could consider using a "static" p in case this is only used in one place
+// TODO: try to move actual lowness into separate ensures to avoid repitition
+ghost
+trusted
+requires p > 0
+requires wildcard ==> acc(c.Mem(), _) && c.IsLow()
+requires !wildcard ==> acc(c.Mem(), p) && c.IsLow()
+ensures  wildcard ==> acc(c.Mem(), _) && unfolding acc(c.Mem(), _) in c.connUDPBase.IsLow(false)
+ensures  !wildcard ==> acc(c.Mem(), p) && unfolding acc(c.Mem(), _) in c.connUDPBase.IsLow(false)
+decreases
+func (c *connUDPIPv6) RevealIsLow(wildcard bool, p perm)
 
 pred (c *Config) Mem() {
 	acc(c) &&
@@ -89,9 +162,28 @@ pred (c *Config) Mem() {
 	0 <= c.ReceiveBufferSize
 }
 
-pred (c *Config) Low() {
-	acc(c) && low(*c)
+requires c.Mem()
+decreases
+pure func (c *Config) Dereference() Config {
+	return unfolding c.Mem() in *c
 }
+
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+ghost
+trusted
+requires c.Mem()
+decreases
+pure func (c *Config) IsLow() bool
+
+// "Reveal the body" of `c.IsLow` (necessary bc. we can't implement `c.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+ghost
+trusted
+requires p > 0
+requires acc(c.Mem(), p) && c.IsLow()
+ensures  acc(c.Mem(), p) && low(c.Dereference())
+decreases
+func (c *Config) RevealIsLow(p perm)
 
 /** Lift methods in *connUDPBase to *connUDPIPv4 **/
 *connUDPIPv4 implements Conn
@@ -131,22 +223,22 @@ func (c *connUDPIPv4) Write(b []byte) (n int, err error) {
 }
 
 requires  acc(dst.Mem(), _)
-preserves acc(c.Mem(), _) && acc(c.Low(), _)
+preserves acc(c.Mem(), _) && c.IsLow()
 preserves acc(sl.Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
+	c.RevealIsLow(true, perm(1))
 	unfold acc(c.Mem(), _)
+	c.connUDPBase.RevealIsLow(true, perm(1), false)
 	unfold acc(c.connUDPBase.MemWithoutConn(), _)
-	unfold acc(c.Low(), _)
-	unfold acc(c.connUDPBase.LowWithoutConn(), _)
 	assert c.pconn.GetUnderlyingConn() == c.conn
 	tmpImpl := c.conn
 	tmpItf := c.pconn.ExchangeWildcardPerm()
 	var packetconn *ipv4.PacketConn = c.pconn
 	assert tmpItf == c.conn
 	fold acc(c.connUDPBase.Mem(), _)
-	fold acc(c.connUDPBase.Low(), _)
+	c.connUDPBase.AssertIsLow(true, perm(1))
 	n1, err1 := c.connUDPBase.WriteTo(b, dst, tmpImpl)
 	return n1, err1
 }
@@ -169,17 +261,17 @@ func (c *connUDPIPv4) RemoteAddr() (u *net.UDPAddr) {
 	return c.connUDPBase.RemoteAddr()
 }
 
-requires acc(c.Mem(), 1/2) && acc(c.Low(), 1/2)
+requires c.Mem() && c.IsLow()
 ensures  err != nil ==> err.ErrorMem()
 decreases
 func (c *connUDPIPv4) Close() (err error) {
-	unfold acc(c.Mem(), 1/2)
-	unfold acc(c.connUDPBase.MemWithoutConn(), 1/2)
-	unfold acc(c.Low(), 1/2)
-	unfold acc(c.connUDPBase.LowWithoutConn(), 1/2)
+	c.RevealIsLow(false, R1)
+	unfold c.Mem()
+	c.connUDPBase.RevealIsLow(false, R1, false)
+	unfold c.connUDPBase.MemWithoutConn()
 	c.pconn.ExchangePerm()
-	fold acc(c.connUDPBase.Mem(), 1/2)
-	fold acc(c.connUDPBase.Low(), 1/2)
+	fold c.connUDPBase.Mem()
+	c.connUDPBase.AssertIsLow(false, R1)
 	c.connUDPBase.Close()
 }
 /** End of Lift methods in *connUDPBase to *connUDPIPv4 **/
@@ -223,22 +315,22 @@ func (c *connUDPIPv6) Write(b []byte) (n int, err error) {
 }
 
 requires  acc(dst.Mem(), _)
-preserves acc(c.Mem(), _) && acc(c.Low(), _)
+preserves acc(c.Mem(), _) && c.IsLow()
 preserves acc(sl.Bytes(b, 0, len(b)), R15)
 ensures   err == nil ==> 0 <= n && n <= len(b)
 ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
+	c.RevealIsLow(true, perm(1))
 	unfold acc(c.Mem(), _)
+	c.connUDPBase.RevealIsLow(true, perm(1), false)
 	unfold acc(c.connUDPBase.MemWithoutConn(), _)
-	unfold acc(c.Low(), _)
-	unfold acc(c.connUDPBase.LowWithoutConn(), _)
 	assert c.pconn.GetUnderlyingConn() == c.conn
 	tmpImpl := c.conn
 	tmpItf := c.pconn.ExchangeWildcardPerm()
 	var packetconn *ipv6.PacketConn = c.pconn
 	assert tmpItf == c.conn
 	fold acc(c.connUDPBase.Mem(), _)
-	fold acc(c.connUDPBase.Low(), _)
+	c.connUDPBase.AssertIsLow(true, perm(1))
 	n1, err1 := c.connUDPBase.WriteTo(b, dst, tmpImpl)
 	return n1, err1
 }
@@ -261,17 +353,17 @@ func (c *connUDPIPv6) RemoteAddr() (u *net.UDPAddr) {
 	return c.connUDPBase.RemoteAddr()
 }
 
-requires acc(c.Mem(), 1/2) && acc(c.Low(), 1/2)
+requires c.Mem() && c.IsLow()
 ensures  err != nil ==> err.ErrorMem()
 decreases
 func (c *connUDPIPv6) Close() (err error) {
-	unfold acc(c.Mem(), 1/2)
-	unfold acc(c.connUDPBase.MemWithoutConn(), 1/2)
-	unfold acc(c.Low(), 1/2)
-	unfold acc(c.connUDPBase.LowWithoutConn(), 1/2)
+	c.RevealIsLow(false, R1)
+	unfold c.Mem()
+	c.connUDPBase.RevealIsLow(false, R1, false)
+	unfold c.connUDPBase.MemWithoutConn()
 	c.pconn.ExchangePerm()
-	fold acc(c.connUDPBase.Mem(), 1/2)
-	fold acc(c.connUDPBase.Low(), 1/2)
+	fold c.connUDPBase.Mem()
+	c.connUDPBase.AssertIsLow(false, R1)
 	c.connUDPBase.Close()
 }
 /** End of Lift methods in *connUDPBase to *connUDPIPv6 **/
