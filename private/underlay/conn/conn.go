@@ -133,7 +133,7 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	}
 	// @ assert remote != nil ==> a == remote
 	// @ assert remote == nil ==> a == listen
-	// @ a.RevealIsLow(R15)
+	// @ a.RevealIsLow()
 	// @ assert len(a.GetIP()) == net.IPv6len ==> 
 	// @ 	low(a.GetIPByte(10) == 255) && low(a.GetIPByte(11) == 255)
 	// @ unfold acc(a.Mem(), R15)
@@ -328,7 +328,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 		}
 	}
 
-	//@ cfg.RevealIsLow(perm(1))
+	//@ cfg.RevealIsLow()
 	//@ unfold cfg.Mem()
 	// Set and confirm send buffer size
 	if cfg.SendBufferSize != 0 {
@@ -433,7 +433,7 @@ func (c *connUDPBase) Write(b []byte /*@, ghost underlyingConn *net.UDPConn @*/)
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
-	//@ c.RevealIsLow(true, perm(1), true)
+	//@ c.RevealIsLow(true, anyPerm, true)
 	//@ unfold acc(c.Mem(), _)
 	if c.Remote != nil {
 		return c.conn.Write(b)
@@ -463,7 +463,7 @@ func (c *connUDPBase) RemoteAddr() (u *net.UDPAddr) {
 // @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
 func (c *connUDPBase) Close() (err error) {
-	//@ c.RevealIsLow(false, perm(1), true)
+	//@ c.RevealIsLow(false, writePerm, true)
 	//@ unfold c.Mem()
 	if c.closed {
 		return nil
@@ -472,9 +472,9 @@ func (c *connUDPBase) Close() (err error) {
 	return c.conn.Close()
 }
 
-// NOTE[henri]: the verification of this function seems to be very unstable
 // NewReadMessages allocates memory for reading IPv4 Linux network stack
 // messages.
+// NOTE: The verification of this function is unstable.
 // @ requires 0 < n
 // @ requires low(n)
 // @ ensures  len(res) == n
@@ -482,11 +482,11 @@ func (c *connUDPBase) Close() (err error) {
 // @ decreases
 func NewReadMessages(n int) (res Messages) {
 	m := make(Messages, n)
-	//@ invariant low(i0)
 	//@ invariant forall j int :: { &m[j] } (0 <= j && j < i0) ==> m[j].Mem() && m[j].GetAddr() == nil
 	//@ invariant forall j int :: { &m[j] } (i0 <= j && j < len(m)) ==> acc(&m[j]) && m[j].N == 0
 	//@ invariant forall j int :: { m[j].Addr } (i0 <= j && j < len(m)) ==> m[j].Addr == nil
 	//@ invariant forall j int :: { m[j].OOB } (i0 <= j && j < len(m)) ==> m[j].OOB == nil
+	//@ invariant low(i0)
 	//@ decreases len(m) - i
 	for i := range m /*@ with i0 @*/ {
 		// Allocate a single-element, to avoid allocations when setting the buffer.

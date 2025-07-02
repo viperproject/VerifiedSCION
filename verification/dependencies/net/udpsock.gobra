@@ -51,17 +51,16 @@ pure func (a *UDPAddr) IsLow() bool
 // TODO: Once Gobra issue #846 is resolved, implement this.
 ghost
 trusted
-requires p > 0
-requires acc(a.Mem(), p) && a.IsLow()
-ensures  acc(a.Mem(), p)
+requires acc(a.Mem(), R15) && a.IsLow()
+ensures  acc(a.Mem(), R15)
 ensures  low(len(a.GetIP()))
 ensures  forall i int :: { a.GetIPByte(i) } 0 <= i && i < len(a.GetIP()) ==>
 	low(a.GetIPByte(i))
-// Given that all elements of `a.IP` are low, this should be implied; however, 
-// without a body for `isZeros`, we state it here explicitly.
+// Given that all elements of `a.IP` are low, this should be implied; 
+// however, without a body for `isZeros`, we state it here explicitly.
 ensures  len(a.GetIP()) == IPv6len ==> low(isZeros(a.GetIP()[0:10]))
 decreases
-func (a *UDPAddr) RevealIsLow(p perm)
+func (a *UDPAddr) RevealIsLow()
 
 (*UDPAddr) implements Addr {
 	(e *UDPAddr) Network() string {
@@ -91,11 +90,6 @@ type UDPConn struct {
 pred (u *UDPConn) Mem() {
 	acc(u)
 }
-
-// TODO: remove
-// pred (u *UDPConn) Low() {
-// 	acc(u) && low(*u)
-// }
 
 // TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
