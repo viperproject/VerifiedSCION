@@ -44,7 +44,6 @@ type Messages []ipv4.Message
 // Conn describes the API for an underlay socket
 type Conn interface {
 	//@ pred Mem()
-	//   pred Low()
 	//@ ghost
 	//@ requires Mem()
 	//@ decreases
@@ -120,7 +119,7 @@ type Config struct {
 // @ requires listen != nil || remote != nil
 // @ requires listen != nil ==> acc(listen.Mem(), R10) && listen.IsLow()
 // @ requires remote != nil ==> acc(remote.Mem(), R10) && remote.IsLow()
-// @ requires low(listen) && low(remote) && cfg.IsLow()
+// @ requires low(listen != nil) && low(remote != nil) && cfg.IsLow()
 // @ ensures  e == nil ==> res.Mem()
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ decreases
@@ -153,7 +152,7 @@ type connUDPIPv4 struct {
 // @ requires cfg.Mem()
 // @ requires listen != nil ==> acc(listen.Mem(), _) && listen.IsLow()
 // @ requires remote != nil ==> acc(remote.Mem(), _) && remote.IsLow()
-// @ requires low(listen) && low(remote) && cfg.IsLow()
+// @ requires low(listen != nil) && low(remote != nil) && cfg.IsLow()
 // @ ensures  e == nil ==> res.Mem()
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ decreases
@@ -228,7 +227,7 @@ type connUDPIPv6 struct {
 // @ requires cfg.Mem()
 // @ requires listen != nil ==> acc(listen.Mem(), _) && listen.IsLow()
 // @ requires remote != nil ==> acc(remote.Mem(), _) && remote.IsLow()
-// @ requires low(listen) && low(remote) && cfg.IsLow()
+// @ requires low(listen != nil) && low(remote != nil) && cfg.IsLow()
 // @ ensures  e == nil ==> res.Mem()
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ decreases
@@ -306,7 +305,7 @@ type connUDPBase struct {
 // @ requires laddr != nil ==> acc(laddr.Mem(), _) && laddr.IsLow()
 // @ requires raddr != nil ==> acc(raddr.Mem(), _) && raddr.IsLow()
 // @ requires cfg.Mem()
-// @ requires low(network) && low(laddr) && low(raddr) && cfg.IsLow()
+// @ requires low(network) && low(laddr != nil) && low(raddr != nil) && cfg.IsLow()
 // @ ensures  errRet == nil ==> cc.Mem()
 // @ ensures  errRet != nil ==> errRet.ErrorMem()
 // @ ensures  low(errRet != nil)
@@ -315,44 +314,17 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 	var c *net.UDPConn
 	var err error
 	if laddr == nil {
-		// SIF: See Gobra issue #835 for why this assumption is currently necessary
-		//@ ghost errCtx := []interface{}{}
-		//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
-		reterr := serrors.New("listen address must be specified")
-		// @ assert low(reterr != nil)
-		return reterr
-		// return serrors.New("listen address must be specified")
+		return serrors.New("listen address must be specified")
 	}
 	if raddr == nil {
 		if c, err = net.ListenUDP(network, laddr); err != nil {
-			// @ assert low(err)
-			// @ assert low(network)
-			// @ assert low(laddr)
-			// SIF: See Gobra issue #835 for why this assumption is currently necessary
-			//@ ghost errCtx := []interface{}{"network", network, "listen", laddr}
-			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
-			reterr := serrors.WrapStr("Error listening on socket", err,
+			return serrors.WrapStr("Error listening on socket", err,
 				"network", network, "listen", laddr)
-			// @ assert low(reterr != nil)
-			return reterr
-			// return serrors.WrapStr("Error listening on socket", err,
-			// 	"network", network, "listen", laddr)
 		}
 	} else {
 		if c, err = net.DialUDP(network, laddr, raddr); err != nil {
-			// @ assert low(err)
-			// @ assert low(network)
-			// @ assert low(laddr)
-			// @ assert low(raddr)
-			// SIF: See Gobra issue #835 for why this assumption is currently necessary
-			//@ ghost errCtx := []interface{}{"network", network, "listen", laddr, "remote", raddr}
-			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
-			reterr := serrors.WrapStr("Error setting up connection", err,
+			return serrors.WrapStr("Error setting up connection", err,
 				"network", network, "listen", laddr, "remote", raddr)
-			// @ assert low(reterr != nil)
-			return reterr
-			// return serrors.WrapStr("Error setting up connection", err,
-			// 	"network", network, "listen", laddr, "remote", raddr)
 		}
 	}
 
@@ -362,60 +334,24 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 	if cfg.SendBufferSize != 0 {
 		beforeV, err := sockctrl.GetsockoptInt(c, syscall.SOL_SOCKET, syscall.SO_SNDBUF)
 		if err != nil {
-			// @ assert low(err)
-			// @ assert low(laddr)
-			// @ assert low(raddr)
-			// SIF: See Gobra issue #835 for why this assumption is currently necessary
-			//@ ghost errCtx := []interface{}{"listen", laddr, "remote", raddr}
-			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
-			reterr := serrors.WrapStr("Error getting SO_SNDBUF socket option (before)", err,
+			return serrors.WrapStr("Error getting SO_SNDBUF socket option (before)", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr != nil)
-			return reterr
-			// return serrors.WrapStr("Error getting SO_SNDBUF socket option (before)", err,
-			// 	"listen", laddr,
-			// 	"remote", raddr,
-			// )
 		}
 		target := cfg.SendBufferSize
 		if err = c.SetWriteBuffer(target); err != nil {
-			// @ assert low(err)
-			// @ assert low(laddr)
-			// @ assert low(raddr)
-			// SIF: See Gobra issue #835 for why this assumption is currently necessary
-			//@ ghost errCtx := []interface{}{"listen", laddr, "remote", raddr}
-			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
-			reterr := serrors.WrapStr("Error setting send buffer size", err,
+			return serrors.WrapStr("Error setting send buffer size", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr != nil)
-			return reterr
-			// return serrors.WrapStr("Error setting send buffer size", err,
-			// 	"listen", laddr,
-			// 	"remote", raddr,
-			// )
 		}
 		after, err := sockctrl.GetsockoptInt(c, syscall.SOL_SOCKET, syscall.SO_SNDBUF)
 		if err != nil {
-			// @ assert low(err)
-			// @ assert low(laddr)
-			// @ assert low(raddr)
-			// SIF: See Gobra issue #835 for why this assumption is currently necessary
-			//@ ghost errCtx := []interface{}{"listen", laddr, "remote", raddr}
-			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
-			reterr := serrors.WrapStr("Error getting SO_SNDBUF socket option (after)", err,
+			return serrors.WrapStr("Error getting SO_SNDBUF socket option (after)", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr != nil)
-			return reterr
-			// return serrors.WrapStr("Error getting SO_SNDBUF socket option (after)", err,
-			// 	"listen", laddr,
-			// 	"remote", raddr,
-			// )
 		}
 		if after/2 < target {
 			// Note: kernel doubles value passed in SetSendBuffer, value
@@ -432,60 +368,24 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 	{
 		beforeV, err := sockctrl.GetsockoptInt(c, syscall.SOL_SOCKET, syscall.SO_RCVBUF)
 		if err != nil {
-			// @ assert low(err)
-			// @ assert low(laddr)
-			// @ assert low(raddr)
-			// SIF: See Gobra issue #835 for why this assumption is currently necessary
-			//@ ghost errCtx := []interface{}{"listen", laddr, "remote", raddr}
-			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
-			reterr := serrors.WrapStr("Error getting SO_RCVBUF socket option (before)", err,
+			return serrors.WrapStr("Error getting SO_RCVBUF socket option (before)", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr != nil)
-			return reterr
-			// return serrors.WrapStr("Error getting SO_RCVBUF socket option (before)", err,
-			// 	"listen", laddr,
-			// 	"remote", raddr,
-			// )
 		}
 		target := cfg.ReceiveBufferSize
 		if err = c.SetReadBuffer(target); err != nil {
-			// @ assert low(err)
-			// @ assert low(laddr)
-			// @ assert low(raddr)
-			// SIF: See Gobra issue #835 for why this assumption is currently necessary
-			//@ ghost errCtx := []interface{}{"listen", laddr, "remote", raddr}
-			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
-			reterr := serrors.WrapStr("Error setting recv buffer size", err,
+			return serrors.WrapStr("Error setting recv buffer size", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr != nil)
-			return reterr
-			// return serrors.WrapStr("Error setting recv buffer size", err,
-			// 	"listen", laddr,
-			// 	"remote", raddr,
-			// )
 		}
 		after, err := sockctrl.GetsockoptInt(c, syscall.SOL_SOCKET, syscall.SO_RCVBUF)
 		if err != nil {
-			// @ assert low(err)
-			// @ assert low(laddr)
-			// @ assert low(raddr)
-			// SIF: See Gobra issue #835 for why this assumption is currently necessary
-			//@ ghost errCtx := []interface{}{"listen", laddr, "remote", raddr}
-			//@ assume forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i]) && low(errCtx[i])
-			reterr := serrors.WrapStr("Error getting SO_RCVBUF socket option (after)", err,
+			return serrors.WrapStr("Error getting SO_RCVBUF socket option (after)", err,
 				"listen", laddr,
 				"remote", raddr,
 			)
-			// @ assert low(reterr != nil)
-			return reterr
-			// return serrors.WrapStr("Error getting SO_RCVBUF socket option (after)", err,
-			// 	"listen", laddr,
-			// 	"remote", raddr,
-			// )
 		}
 		if after/2 < target {
 			// Note: kernel doubles value passed in SetReadBuffer, value

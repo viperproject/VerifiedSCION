@@ -164,7 +164,7 @@ requires acc(laddr.Mem(), _)
 requires laddr.IsLow() && low(network)
 ensures  err == nil ==> conn.Mem() && conn.IsLow()
 ensures  err != nil ==> err.ErrorMem()
-ensures  low(err)
+ensures  low(err != nil)
 decreases _
 func ListenUDP(network string, laddr *UDPAddr) (conn *UDPConn, err error)
 
@@ -173,20 +173,20 @@ requires acc(raddr.Mem(), _)
 requires low(network) && laddr.IsLow() && raddr.IsLow()
 ensures  err == nil ==> conn.Mem() && conn.IsLow()
 ensures  err != nil ==> err.ErrorMem()
-ensures  low(err)
+ensures  low(err != nil)
 decreases _
 func DialUDP(network string, laddr, raddr *UDPAddr) (conn *UDPConn, err error)
 
 requires  low(bytes)
 preserves c.Mem() && c.IsLow()
 ensures   err != nil ==> err.ErrorMem()
-ensures   low(err)
+ensures   low(err != nil)
 decreases _
 func (c *UDPConn) SetWriteBuffer(bytes int) (err error)
 
 requires  low(bytes)
 preserves c.Mem() && c.IsLow()
-ensures   low(err)
+ensures   low(err != nil)
 ensures   err != nil ==> err.ErrorMem()
 decreases _
 func (c *UDPConn) SetReadBuffer(bytes int) (err error)
