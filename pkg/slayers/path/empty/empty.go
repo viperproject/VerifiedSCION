@@ -26,14 +26,11 @@ const PathLen = 0
 
 const PathType path.Type = 0
 
-// TODO: Once Gobra issue 878 is resolved, remove `truested`.
-// @ trusted
-// @ requires path.PathPackageMem()
-// @ requires !path.Registered(PathType)
-// @ ensures  path.PathPackageMem()
-// @ ensures  forall t path.Type :: { old(path.Registered(t)) }{ path.Registered(t) } 0 <= t && t < path.MaxPathType ==>
-// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-// @ ensures  path.Registered(PathType)
+// TODO: Once Gobra issue 878 is resolved, remove `trusted`.
+// @ requires path.PkgMem()
+// @ requires path.RegisteredTypes().DoesNotContain(int64(PathType))
+// @ ensures  path.PkgMem()
+// @ ensures  path.RegisteredTypes().Contains(int64(PathType))
 // @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
@@ -50,7 +47,7 @@ func RegisterPath() {
 		},
 	}
 	//@ proof tmp.New implements path.NewPathSpec {
-	//@		return tmp.New() as newPath
+	//@ 	return tmp.New() as newPath
 	//@ }
 	path.RegisterPath(tmp)
 }

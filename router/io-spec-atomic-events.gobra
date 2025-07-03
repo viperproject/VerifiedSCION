@@ -27,11 +27,12 @@ import (
 	"sync"
 	io "verification/io"
 	gsync "verification/utils/ghost_sync"
+	"github.com/scionproto/scion/pkg/slayers/path"
 )
 
 ghost
 requires  dp.Valid()
-requires  ingressID != none[io.IO_ifs]
+requires  ingressID != none[io.Ifs]
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires  dp.dp2_enter_guard(
@@ -43,7 +44,7 @@ requires  dp.dp2_enter_guard(
 	get(ingressID),
 	oldPkt.CurrSeg.Future[1:])
 requires  dp.dp3s_forward(
-	io.IO_pkt2 {
+	io.Pkt {
 		io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
 		oldPkt.LeftSeg,
 		oldPkt.MidSeg,
@@ -55,12 +56,12 @@ preserves acc(ioLock.LockP(), _)
 preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases _
-func AtomicEnter(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
+func AtomicEnter(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
 	ghost ioLock.Lock()
 	unfold SharedInv!< dp, ioSharedArg !>()
 	t, s := *ioSharedArg.Place, *ioSharedArg.State
 	ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
-	ghost pkt_internal := io.IO_val(io.IO_Internal_val1{oldPkt, get(ingressID), newPkt, egressID})
+	ghost pkt_internal := io.Val(io.ValInternal1{oldPkt, get(ingressID), newPkt, egressID})
 	assert dp.dp3s_iospec_bio3s_enter_guard(s, t, pkt_internal)
 	unfold dp.dp3s_iospec_ordered(s, t)
 	unfold dp.dp3s_iospec_bio3s_enter(s, t)
@@ -76,8 +77,8 @@ func AtomicEnter(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pk
 
 ghost
 requires  dp.Valid()
-requires  ingressID == none[io.IO_ifs]
-requires  egressID != none[io.IO_ifs]
+requires  ingressID == none[io.Ifs]
+requires  egressID != none[io.Ifs]
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires  dp.dp3s_forward_ext(oldPkt, newPkt, get(egressID))
@@ -85,12 +86,12 @@ preserves acc(ioLock.LockP(), _)
 preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases _
-func AtomicExit(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
+func AtomicExit(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
 	ghost ioLock.Lock()
 	unfold SharedInv!< dp, ioSharedArg !>()
 	t, s := *ioSharedArg.Place, *ioSharedArg.State
 	ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
-	ghost pkt_internal := io.IO_val(io.IO_Internal_val2{oldPkt, newPkt, get(egressID)})
+	ghost pkt_internal := io.Val(io.ValInternal2{oldPkt, newPkt, get(egressID)})
 	assert dp.dp3s_iospec_bio3s_exit_guard(s, t, pkt_internal)
 	unfold dp.dp3s_iospec_ordered(s, t)
 	unfold dp.dp3s_iospec_bio3s_exit(s, t)
@@ -106,17 +107,17 @@ func AtomicExit(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt
 
 ghost
 requires  dp.Valid()
-requires  oldPkt.LeftSeg != none[io.IO_seg2]
+requires  oldPkt.LeftSeg != none[io.Seg]
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  len(get(oldPkt.LeftSeg).Future) > 0
-requires  ingressID != none[io.IO_ifs]
+requires  ingressID != none[io.Ifs]
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires  dp.dp2_xover_guard(
 	oldPkt,
 	oldPkt.CurrSeg,
 	get(oldPkt.LeftSeg),
 	io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
-	io.IO_pkt2 {
+	io.Pkt {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
@@ -128,7 +129,7 @@ requires  dp.dp2_xover_guard(
 	dp.Asid(),
 	get(ingressID))
 requires  dp.dp3s_forward_xover(
-	io.IO_pkt2 {
+	io.Pkt {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
@@ -140,12 +141,12 @@ preserves acc(ioLock.LockP(), _)
 preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases _
-func AtomicXover(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pkt2, egressID option[io.IO_ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
+func AtomicXover(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
 	ghost ioLock.Lock()
 	unfold SharedInv!< dp, ioSharedArg !>()
 	t, s := *ioSharedArg.Place, *ioSharedArg.State
 	ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
-	ghost pkt_internal := io.IO_val(io.IO_Internal_val1{oldPkt, get(ingressID), newPkt, egressID})
+	ghost pkt_internal := io.Val(io.ValInternal1{oldPkt, get(ingressID), newPkt, egressID})
 	assert dp.dp3s_iospec_bio3s_xover_guard(s, t, pkt_internal)
 	unfold dp.dp3s_iospec_ordered(s, t)
 	unfold dp.dp3s_iospec_bio3s_xover(s, t)
@@ -160,29 +161,28 @@ func AtomicXover(oldPkt io.IO_pkt2, ingressID option[io.IO_ifs], newPkt io.IO_pk
 }
 
 ghost
-// NOTE: I don't think I need this here
-// requires dp.Valid()
-requires low(beta) && low(ts) && low(inif) && low(egif)
-requires sigma == io.nextMsgtermSpec(dp.Asid(), inif, egif, ts, beta)
+requires  low(beta) && low(ts) && low(inif) && low(egif)
+requires  path.AbsMac(sigma) == io.nextMsgtermSpec(dp.Asid(), inif, egif, ts, beta)
 preserves acc(ioLock.LockP(), _)
 preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
-ensures low(sigma)
-// NOTE: Seems to be needed bc. lock might not terminate
+ensures   forall i int :: { sigma[i] } 0 <= i && i < len(sigma) ==> low(sigma[i])
 decreases _
-func AtomicDecl(beta set[io.IO_msgterm], ts uint, inif, egif option[io.IO_ifs], sigma io.IO_msgterm, ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
+func AtomicDecl(beta set[io.MsgTerm], ts uint, inif, egif option[io.Ifs], sigma [path.MacLen]byte, ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
 	ghost ioLock.Lock()
 	unfold SharedInv!< dp, ioSharedArg !>()
 
 	t, s := *ioSharedArg.Place, *ioSharedArg.State
-	ghost tag := io.IO_val(io.IO_decl_val{beta, ts, inif, egif, sigma})
+	ghost decl_val := io.Val(io.IO_decl_val{beta, ts, inif, egif, sigma})
 
-	assert dp.dp4s_iospec_bio4s_decl_guard(s, t, tag)
+	// TODO: Remove this assumption
+	assume path.AbsMac(sigma) == io.AbsMac(sigma)
+	assert dp.dp4s_iospec_bio4s_decl_guard(s, t, decl_val)
 	unfold dp.dp3s_iospec_ordered(s, t)
 	unfold dp.dp4s_iospec_bio4s_decl(s, t)
 
-	io.TriggerBodyIoDecl(tag)
-	tN := io.dp4s_iospec_bio4s_decl_T(t, tag)
-	io.Decl(t, tag)
+	io.TriggerBodyIoDecl(decl_val)
+	tN := io.dp4s_iospec_bio4s_decl_T(t, decl_val)
+	io.Decl(t, decl_val)
 	ghost *ioSharedArg.Place = tN
 
 	fold SharedInv!< dp, ioSharedArg !>()

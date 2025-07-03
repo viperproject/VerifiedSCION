@@ -28,11 +28,11 @@ import (
 
 ghost
 decreases
-pure func AbsUInfoFromUint16(SegID uint16) set[io.IO_msgterm]
+pure func AbsUInfoFromUint16(SegID uint16) set[io.MsgTerm]
 
 ghost
 decreases
-pure func AbsMac(mac [MacLen]byte) (io.IO_msgterm)
+pure func AbsMac(mac [MacLen]byte) (io.MsgTerm)
 
 // The following function converts a slice with at least `MacLen` elements into
 // an (exclusive) array containing the mac. Note that there are no permissions

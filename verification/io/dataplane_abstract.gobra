@@ -20,25 +20,25 @@ package io
 //     `links[(a1,x)] == (a2,y)` means that the interface x of AS a1 is connected
 //     to the interface y of AS a2.
 ghost type DataPlaneSpec ghost struct {
-	linkTypes   dict[IO_ifs]IO_Link
-	neighborIAs dict[IO_ifs]IO_as
-	localIA     IO_as
+	linkTypes   dict[Ifs]Link
+	neighborIAs dict[Ifs]AS
+	localIA     AS
 	links       dict[AsIfsPair]AsIfsPair
 }
 
 ghost type AsIfsPair ghost struct {
-	asid IO_as
-	ifs  IO_ifs
+	asid AS
+	ifs  Ifs
 }
 
 ghost
 opaque
 decreases
 pure func (dp DataPlaneSpec) Valid() bool {
-	return (forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==>
+	return (forall ifs Ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==>
 			(AsIfsPair{dp.localIA, ifs} in domain(dp.links) &&
 			dp.Lookup(AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])) &&
-		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
+		(forall ifs Ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
 			ifs in domain(dp.neighborIAs)) &&
 		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.links) ==>
 			let next_pair := dp.Lookup(pairs) in
@@ -49,33 +49,33 @@ pure func (dp DataPlaneSpec) Valid() bool {
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) GetLinkTypes() dict[IO_ifs]IO_Link {
+pure func (dp DataPlaneSpec) GetLinkTypes() dict[Ifs]Link {
 	return dp.linkTypes
 }
 
 ghost
 decreases
 requires ifs in domain(dp.linkTypes)
-pure func (dp DataPlaneSpec) GetLinkType(ifs IO_ifs) IO_Link {
+pure func (dp DataPlaneSpec) GetLinkType(ifs Ifs) Link {
 	return dp.linkTypes[ifs]
 }
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) GetNeighborIAs() dict[IO_ifs]IO_as {
+pure func (dp DataPlaneSpec) GetNeighborIAs() dict[Ifs]AS {
 	return dp.neighborIAs
 }
 
 ghost
 requires ifs in domain(dp.neighborIAs)
 decreases
-pure func (dp DataPlaneSpec) GetNeighborIA(ifs IO_ifs) IO_as {
+pure func (dp DataPlaneSpec) GetNeighborIA(ifs Ifs) AS {
 	return dp.neighborIAs[ifs]
 }
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) Asid() IO_as {
+pure func (dp DataPlaneSpec) Asid() AS {
 	return dp.localIA
 }
 

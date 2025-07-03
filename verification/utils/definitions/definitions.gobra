@@ -76,6 +76,10 @@ const (
 	R54
 	R55
 	R56
+	// Some functions have parameters `wildcard bool` and `p perm`, and consume
+	// a wildcard permission amount if `wildcard` is set, and amount `p` 
+	// otherwise. If `wildcard` is set, `p` should be set to `anyPerm`.
+	anyPerm
 )
 
 // To be used as a precondition of functions and methods that can never be called

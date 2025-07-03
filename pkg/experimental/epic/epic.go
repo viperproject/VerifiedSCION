@@ -14,7 +14,7 @@
 
 // +gobra
 
-// @ initEnsures acc(postInitInvariant(), _)
+// @ dup pkgInvariant acc(postInitInvariant(), _)
 package epic
 
 import (
