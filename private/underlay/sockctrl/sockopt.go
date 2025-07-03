@@ -21,7 +21,8 @@ import (
 	"syscall"
 )
 
-// TODO[henri]: How do I justify this annotation? / justify this annotation!
+// As the implementation of `GetsockoptInt` is a bit involved, we (possibly)
+// overspecify this function to recover low(inputs) ==> low(outputs).
 // @ trusted
 // @ requires  low(level) && low(opt)
 // @ preserves c.Mem() && c.IsLow()

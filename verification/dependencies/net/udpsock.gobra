@@ -41,6 +41,9 @@ pure func (a *UDPAddr) GetIPByte(i int) byte {
 }
 
 // TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+// - Here, `IsLow` will need to cover all fields (of `UDPAddr`), since we use 
+//   this information in `DialUDP` and `ListenUDP` to imply that all fields of 
+//   the resulting `UDPConn` object are low. 
 ghost
 trusted
 requires a.Mem()
@@ -92,6 +95,8 @@ pred (u *UDPConn) Mem() {
 }
 
 // TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+// - Here, `IsLow` will need to cover all fields (of `UDPConn`), since we use 
+//   this information in private/underlay/sockctrl/sockopt.go, GetsockoptInt.
 ghost
 trusted
 requires c.Mem()
@@ -155,7 +160,7 @@ decreases
 func (c *UDPConn) Close() (err error)
 
 requires acc(laddr.Mem(), _)
-requires laddr.IsLow() && low(network)
+requires low(network) && laddr.IsLow()
 ensures  err == nil ==> conn.Mem() && conn.IsLow()
 ensures  err != nil ==> err.ErrorMem()
 ensures  low(err != nil)
