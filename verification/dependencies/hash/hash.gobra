@@ -8,7 +8,13 @@
 
 package hash
 
-import "io"
+// TODO: Remove completely as this is not used here anymore.
+// import "io"
+
+// TODO: Maybe find a different solution s.t. we don't have to import that here;
+// note that we can't define `ScionHashSpec` elsewhere as Gobra doesn't support
+// embedding imported types yet.
+import "github.com/scionproto/scion/verification/io"
 
 // Hash is the common interface implemented by all hash functions.
 //
@@ -70,4 +76,19 @@ type Hash interface {
 	ensures  res >= 0
 	decreases
 	BlockSize() (res int)
+}
+
+type ScionHashSpec interface {
+    Hash
+
+	// TODO: Might want to open an issue regarding that repeating `Mem` is necessary here?
+	// TODO: explain why this is necessary
+	pred Mem()
+
+    ghost
+	// TODO: If `Asid` depends on `Mem()`, then we don't know whether the result
+	// may change after call to `FullMAC`. 
+    // requires Mem()
+    decreases
+    pure Asid() (ghost io.AS)
 }

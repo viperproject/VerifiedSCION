@@ -19,8 +19,9 @@ package path
 import (
 	"encoding/binary"
 	"hash"
-	//@ . "github.com/scionproto/scion/verification/utils/definitions"
-	//@ sl "github.com/scionproto/scion/verification/utils/slices"
+	// @ . "github.com/scionproto/scion/verification/utils/definitions"
+	// @ sl "github.com/scionproto/scion/verification/utils/slices"
+	// @ io "verification/io"
 )
 
 const MACBufferSize = 16
@@ -29,15 +30,24 @@ const MACBufferSize = 16
 // https://docs.scion.org/en/latest/protocols/scion-header.html#hop-field-mac-computation
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
-// @ requires  h != nil && h.Mem()
+// @ requires  h != nil && h.Mem() && sh === h
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
-// @ ensures   h.Mem()
+// @ ensures   h.Mem() && sh === h
+// @ ensures   let absInf := info.ToAbsInfoField() in
+// @ 	let absHF := hf.Abs() in
+// @ 	let absMac := AbsMac(ret) in
+// @ 	absMac == io.nextMsgtermSpec(sh.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
 // @ decreases
-func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
-	mac := FullMAC(h, info, hf, buffer)
-	var res /*@ @ @*/ [MacLen]byte
-	//@ unfold sl.Bytes(mac, 0, MACBufferSize)
+func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost sh hash.ScionHashSpec @*/) (ret [MacLen]byte) {
+	mac := FullMAC(h, info, hf, buffer /*@, sh @*/)
+	var res /*@@@*/ [MacLen]byte
+	// @ unfold sl.Bytes(mac, 0, MACBufferSize)
+
 	copy(res[:], mac[:MacLen] /*@, R1 @*/)
+
+	// @ assert forall i int :: { res[i] } 0 <= i && i < len(res[:]) ==> &res[:][i] == &res[i]
+	// @ EqualBytesImplyEqualMac(mac, res)
+
 	return res
 }
 
@@ -46,30 +56,44 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // In contrast to MAC(), FullMAC returns all the 16 bytes instead of only 6 bytes of the MAC.
-// @ requires  h != nil && h.Mem()
+// @ requires  h != nil && h.Mem() && sh === h
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
-// @ ensures   h.Mem()
+// @ ensures   h.Mem() && sh === h
 // @ ensures   len(res) == MACBufferSize && sl.Bytes(res, 0, MACBufferSize)
+// @ ensures   unfolding sl.Bytes(res, 0, MACBufferSize) in
+// @ 	let absInf := info.ToAbsInfoField() in
+// @ 	let absHF := hf.Abs() in
+// @ 	let absMac := AbsMac(FromSliceToMacArray(res)) in
+// @ 	absMac == io.nextMsgtermSpec(sh.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo)
 // @ decreases
-func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byte) {
+func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost sh hash.ScionHashSpec @*/) (res []byte) {
 	if len(buffer) < MACBufferSize {
 		buffer = make([]byte, MACBufferSize)
-		//@ fold sl.Bytes(buffer, 0, len(buffer))
+		// @ fold sl.Bytes(buffer, 0, len(buffer))
 	}
 
 	h.Reset()
 	MACInput(info.SegID, info.Timestamp, hf.ExpTime,
 		hf.ConsIngress, hf.ConsEgress, buffer)
-	//@ unfold sl.Bytes(buffer, 0, len(buffer))
-	//@ defer fold sl.Bytes(buffer, 0, len(buffer))
+	// @ unfold sl.Bytes(buffer, 0, len(buffer))
+	// @ defer fold sl.Bytes(buffer, 0, len(buffer))
 	// Write must not return an error: https://godoc.org/hash#Hash
 	if _, err := h.Write(buffer); err != nil {
 		// @ Unreachable()
 		panic(err)
 	}
-	//@ assert h.Size() >= 16
+	// @ assert h.Size() >= 16
 	res = h.Sum(buffer[:0])[:16]
-	//@ fold sl.Bytes(res, 0, MACBufferSize)
+
+	// @ absInf := info.ToAbsInfoField()
+	// @ absHF := hf.Abs()
+	// @ absMac := AbsMac(FromSliceToMacArray(res))
+
+	// This is our "MAC assumption", linking the abstraction of the concrete MAC
+	// tag to the abstract computation of the MAC tag.
+	// @ AssumeForIO(absMac == io.nextMsgtermSpec(sh.Asid(), absHF.InIF2, absHF.EgIF2, absInf.AInfo.V, absInf.UInfo))
+
+	// @ fold sl.Bytes(res, 0, MACBufferSize)
 	return res
 }
 
