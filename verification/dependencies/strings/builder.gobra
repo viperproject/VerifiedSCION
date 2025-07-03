@@ -18,30 +18,36 @@ type Builder struct {
 }
 
 pred (b *Builder) Mem()
-pred (b *Builder) LowMem(ghost isLow bool)
+
+// Return whether the underlying data is low.
+ghost
+trusted
+requires b.Mem()
+decreases
+pure func (b *Builder) IsLow() bool
 
 // String returns the accumulated string.
-preserves acc(b.Mem(), 1/2) && acc(b.LowMem(isLow), 1/2)
-ensures isLow ==> low(str)
+preserves b.Mem()
+ensures   old(b.IsLow()) == b.IsLow()
+ensures   b.IsLow() ==> low(str)
 decreases _
-func (b *Builder) String(ghost isLow bool) (str string)
+func (b *Builder) String() (str string)
 
 requires  0 <= n
-preserves acc(b.Mem(), 1/2) && acc(b.LowMem(isLow), 1/2)
+preserves b.Mem()
+ensures   old(b.IsLow()) && low(n) ==> b.IsLow()
 decreases _
-func (b *Builder) Grow(n int, ghost isLow bool)
+func (b *Builder) Grow(n int)
 
-requires acc(b.Mem(), 1/2) && acc(b.LowMem(isLowB), 1/2)
-requires isLowS ==> low(s)
+preserves b.Mem()
 ensures   err == nil
-ensures acc(b.Mem(), 1/2) && acc(b.LowMem(isLowS && isLowB), 1/2)
-ensures isLowS && isLowB ==> low(n)
+ensures   low(s) && old(b.IsLow()) ==> b.IsLow() && low(n)
 decreases _
-func (b *Builder) WriteString(s string, ghost isLowB, isLowS bool) (n int, err error)
+func (b *Builder) WriteString(s string) (n int, err error)
 
 ghost
 requires acc(b)
 requires *b === Builder{}
-ensures acc(b.Mem(), 1/2) && acc(b.LowMem(true), 1/2)
+ensures  b.Mem() && b.IsLow()
 decreases _
 func (b *Builder) ZeroBuilderIsReadyToUse()

@@ -18,13 +18,12 @@ package encoding
 
 type TextUnmarshaler interface {
 	pred Mem()
-
-	pred LowUnmarshalText([]byte)
 	
-	// SIF: Needed e.g. for `(*AS), (*IA).UnmarshalText`
-	requires LowUnmarshalText(text)
+	requires  acc(text)
+	requires  low(len(text)) && 
+		forall i int :: { text[i] } 0 <= i && i < len(text) ==> low(text[i])
 	preserves Mem()
-	ensures acc(text)
+	ensures   acc(text)
 	decreases
 	UnmarshalText(text []byte) error
 }

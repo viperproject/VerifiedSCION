@@ -21,11 +21,13 @@ import (
 	"syscall"
 )
 
+// As the implementation of `GetsockoptInt` is a bit involved, we (possibly)
+// overspecify this function to recover low(inputs) ==> low(outputs).
 // @ trusted
-// @ requires low(level) && low(opt)
-// @ preserves acc(c.Mem(), 1/2) && acc(c.Low(), 1/2)
+// @ requires  low(level) && low(opt)
+// @ preserves c.Mem() && c.IsLow()
 // @ ensures   e != nil ==> e.ErrorMem()
-// @ ensures low(r) && low(e)
+// @ ensures   low(r) && low(e)
 // @ decreases _
 func GetsockoptInt(c *net.UDPConn, level, opt int) (r int, e error) {
 	var val int
