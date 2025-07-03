@@ -750,10 +750,11 @@ pure func isHostSVC(a net.Addr) bool {
 
 // invariant established by initialization
 ghost
-trusted // TODO: drop this line after the static init PR
-ensures acc(path.PathPackageMem(), _)
+ensures acc(path.PkgMem(), _)
 decreases
-func EstablishPathPkgMem()
+func EstablishPathPkgMem() {
+	openDupPkgInv
+}
 
 ghost
 requires s.Mem(ub)
