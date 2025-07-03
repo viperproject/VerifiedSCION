@@ -26,7 +26,6 @@ const PathLen = 0
 
 const PathType path.Type = 0
 
-// TODO: Once Gobra issue 878 is resolved, remove `trusted`.
 // @ requires path.PkgMem()
 // @ requires path.RegisteredTypes().DoesNotContain(int64(PathType))
 // @ ensures  path.PkgMem()
