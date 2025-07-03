@@ -111,7 +111,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // path.HopLen.
 // @ requires  len(b) >= HopLen
 // @ requires  acc(h.Mem(), R10)
-// @ requires low(h.GetEgressRouterAlert()) && low(h.GetIngressRouterAlert())
+// @ requires  low(h.GetEgressRouterAlert()) && low(h.GetIngressRouterAlert())
 // @ preserves sl.Bytes(b, 0, HopLen)
 // @ ensures   acc(h.Mem(), R10)
 // @ ensures   err == nil

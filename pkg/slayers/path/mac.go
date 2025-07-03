@@ -30,7 +30,7 @@ const MACBufferSize = 16
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // @ requires  h != nil && h.Mem()
-// @ requires low(len(buffer) < MACBufferSize)
+// @ requires  low(len(buffer) < MACBufferSize)
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
 // @ ensures   h.Mem()
 // @ decreases
