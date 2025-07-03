@@ -18,19 +18,25 @@ package flag
 
 type Value interface {
 	pred Mem()
-	pred LowMem()  // SIF: allows specifying sensitivity (preconditions)
+
+	// Return whether all the underlying data used in the computation of
+	// `String` is low.
+	// NOTE: The reason we don't call this function `IsLow` is that in pkg/addr,
+	// `IA` implements `fmt.Stringer`, and `*IA` implements `flag.Value` - which 
+	// both require a function like `IsLow`. Currently, Gobra does not allow 
+	// "sharing" one definition of `IsLow`; Gobra issue #939 is related to this. 
+	// Consequently, we require separate definitions for each interface. 
+	ghost
+	requires Mem()
+	decreases
+	pure IsLowForValue() bool
 	
-	// SIF: See `test10.gobra` for why I do it this way ATM.
-	requires acc(Mem(), 1/2) && acc(LowMem(), 1/2)
-	ensures acc(Mem())
+	requires Mem() && IsLowForValue()
+	ensures  Mem()
 	decreases
 	String() string
 
-	pred LowSet(s string)
-
-	// SIF: This is necessary e.g. for `*IA` bc. `(*IA).Set` uses `s` in a 
-	// branch condition.
-	requires LowSet(s)
+	requires  low(s)
 	preserves acc(Mem())
 	decreases
 	Set(s string) error

@@ -1,0 +1,11 @@
+// +gobra
+
+package io
+
+// TODO: Remove this and link with actual definitions in "io_msgterm_spec.gobra"
+
+const MacLen = 6
+
+ghost
+decreases
+pure func AbsMac(mac [MacLen]byte) MsgTerm

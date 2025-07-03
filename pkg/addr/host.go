@@ -15,9 +15,16 @@
 
 // +gobra
 
-// @ initEnsures ErrBadHostAddrType.ErrorMem()
-// @ initEnsures ErrMalformedHostAddrType.ErrorMem()
-// @ initEnsures ErrUnsupportedSVCAddress.ErrorMem()
+// @ dup pkgInvariant ErrBadHostAddrType != nil              &&
+// @ 	ErrMalformedHostAddrType != nil                      &&
+// @ 	ErrUnsupportedSVCAddress != nil                      &&
+// @ 	acc(ErrBadHostAddrType.ErrorMem(), _)                &&
+// @ 	acc(ErrMalformedHostAddrType.ErrorMem(), _)          &&
+// @ 	acc(ErrUnsupportedSVCAddress.ErrorMem(), _)          &&
+// @ 	ErrBadHostAddrType.IsDuplicableMem()                 &&
+// @ 	ErrMalformedHostAddrType.IsDuplicableMem()           &&
+// @ 	ErrUnsupportedSVCAddress.IsDuplicableMem()
+
 package addr
 
 import (
@@ -84,7 +91,6 @@ const (
 
 type HostAddr interface {
 	//@ pred Mem()
-	//@ pred LowMem()
 
 	//@ preserves acc(Mem(), R13)
 	//@ decreases
@@ -109,10 +115,7 @@ type HostAddr interface {
 	//@ decreases
 	Copy() (res HostAddr)
 
-	// SIF: I wanted to introduce an assertion `LowEqual(HostAddr)`, but that
-	// led to a strange exception. As every implementation of `Equal` needs to
-	// cast `o` anyway, I think it's fine to assert `low(typeOf(o))` directly.
-	//@ requires low(typeOf(o))
+	//@ requires  low(typeOf(o))
 	//@ preserves acc(Mem(), R13) && acc(o.Mem(), R13)
 	//@ decreases
 	Equal(o HostAddr) bool
@@ -122,7 +125,14 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
-	//@ requires acc(Mem(), R13/2) && acc(LowMem(), R13/2)
+	// Return whether all the underlying data used in the computation of
+	// `String` is low.
+	//@ ghost
+	//@ requires Mem()
+	//@ decreases
+	//@ pure IsLow() bool
+
+	//@ requires acc(Mem(), R13) && IsLow()
 	//@ ensures acc(Mem(), R13)
 	//@ decreases
 	String() string
@@ -163,7 +173,7 @@ func (h HostNone) Copy() (res HostAddr) {
 	return tmp
 }
 
-// SIF: The Viper encoding contains a non-low branch condition if not `low(typeOf(o))`
+// The Viper encoding branches on `typeOf(o)`.
 // @ requires low(typeOf(o))
 // @ ensures res == (typeOf(o) == type[HostNone])
 // @ decreases
@@ -215,7 +225,7 @@ func (h HostIPv4) IP() (res net.IP) {
 func (h HostIPv4) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), R13)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
-	var tmp HostIPv4 = HostIPv4(append( /*@ R13, @*/ net.IP(nil), h...))
+	tmp := HostIPv4(append( /*@ R13, @*/ net.IP(nil), h...))
 	//@ fold acc(sl.Bytes(h, 0, len(h)), R13)
 	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	//@ fold acc(h.Mem(), R13)
@@ -236,14 +246,10 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ requires acc(h.Mem(), R13/2) && acc(h.LowMem(), R13/2)
-// @ ensures acc(h.Mem(), R13)
+// @ preserves acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv4) String() string {
-	//@ assert unfolding acc(h.Mem(), R13/2) in len(h) == HostLenIPv4
-	//@ unfold acc(h.Mem(), R13/2)
-	//@ unfold acc(h.LowMem(), R13/2)
-	//@ fold acc(h.Mem(), R13)
+	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
 	//@ ghost defer fold acc(h.Mem(), R13)
 	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
 	return h.IP().String()
@@ -288,7 +294,7 @@ func (h HostIPv6) IP() (res net.IP) {
 func (h HostIPv6) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), R13)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
-	var tmp HostIPv6 = HostIPv6(append( /*@ R13, @*/ net.IP(nil), h...))
+	tmp := HostIPv6(append( /*@ R13, @*/ net.IP(nil), h...))
 	//@ fold acc(sl.Bytes(h, 0, len(h)), R13)
 	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	//@ fold acc(h.Mem(), R13)
@@ -309,14 +315,10 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ requires acc(h.Mem(), R13/2) && acc(h.LowMem(), R13/2)
-// @ ensures acc(h.Mem(), R13)
+// @ preserves acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv6) String() string {
-	//@ assert unfolding acc(h.Mem(), R13/2) in len(h) == HostLenIPv6
-	//@ unfold acc(h.Mem(), R13/2)
-	//@ unfold acc(h.LowMem(), R13/2)
-	//@ fold acc(h.Mem(), R13)
+	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv6
 	//@ ghost defer fold acc(h.Mem(), R13)
 	//@ ghost defer fold acc(sl.Bytes(h, 0, len(h)), R13)
 	return h.IP().String()
@@ -417,20 +419,16 @@ func (h HostSVC) Equal(o HostAddr) bool {
 	return ok && h == ha
 }
 
-// @ requires low(h)
+// @ requires acc(h.Mem(), R13) && h.IsLow()
+// @ ensures  acc(h.Mem(), R13)
 // @ decreases
 func (h HostSVC) String() string {
+	//@ h.RevealIsLow(R13)
 	name := h.BaseString()
 	cast := 'A'
 	if h.IsMulticast() {
 		cast = 'M'
 	}
-	// SIF: See Gobra issue #835 for why this assumption is currently necessary
-	//@ assert low(name)
-	//@ assert low(cast)
-	//@ assert low(uint16(h))
-	//@ ghost v := []interface{}{name, cast, uint16(h)}
-	//@ assume forall i int :: { &v[i] } 0 <= i && i < len(v) ==> acc(&v[i]) && low(v[i])
 	return fmt.Sprintf("%v %c (0x%04x)", name, cast, uint16(h))
 }
 
@@ -499,9 +497,10 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 	}
 }
 
-// @ requires low(len(ip))
 // @ requires acc(ip)
 // @ requires len(ip) == HostLenIPv4 || len(ip) == HostLenIPv6
+// @ requires low(len(ip)) && (len(ip) == HostLenIPv6 ==> 
+// @ 	low(net.isZeros(ip[0:10])) && low(ip[10] == 255) && low(ip[11] == 255))
 // @ ensures res.Mem()
 // @ decreases
 func HostFromIP(ip net.IP) (res HostAddr) {
