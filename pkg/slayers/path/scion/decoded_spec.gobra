@@ -47,7 +47,12 @@ pred (d *Decoded) Mem(ubuf []byte) {
 	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
-pred (*Decoded) LowSerializeTo()
+// pred (*Decoded) LowSerializeTo()
+ghost
+trusted
+requires d.Mem(ub)
+decreases
+pure func (d *Decoded) IsLow(ub []byte) bool
 
 /**** End of Predicates ****/
 

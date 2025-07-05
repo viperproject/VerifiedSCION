@@ -31,7 +31,12 @@ pred (r *rawPath) NonInitMem() {
 	acc(r)
 }
 
-pred (*rawPath) LowSerializeTo()
+// pred (*rawPath) LowSerializeTo()
+ghost
+trusted
+requires r.Mem(ub)
+decreases
+pure func (r *rawPath) IsLow(ub []byte) bool
 
 ghost
 requires p.Mem(buf)

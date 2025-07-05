@@ -104,11 +104,24 @@ pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
 
 (*Path) implements path.Path
 
-pred (*Path) LowSerializeTo()
+// pred (*Path) LowSerializeTo()
+ghost
+trusted
+requires p.Mem(ub)
+decreases
+pure func (p *Path) IsLow(ub []byte) bool
+
+// ghost
+// requires  ep.LowSerializeTo() && p > 0
+// preserves acc(ep.Mem(buf), p)
+// ensures   low(ep.getPHVFLen(buf) != HVFLen) && low(ep.getLHVFLen(buf) != HVFLen)
+// decreases
+// func (ep *Path) GetLowSerializeTo(buf []byte, ghost p perm)
 
 ghost
-requires  ep.LowSerializeTo() && p > 0
-preserves acc(ep.Mem(buf), p)
-ensures   low(ep.getPHVFLen(buf) != HVFLen) && low(ep.getLHVFLen(buf) != HVFLen)
+trusted
+requires acc(p.Mem(ub), R2) && p.IsLow(ub)
+ensures  acc(p.Mem(ub), R2)
+ensures  low(p.getPHVFLen(ub) != HVFLen) && low(p.getLHVFLen(ub) != HVFLen)
 decreases
-func (ep *Path) GetLowSerializeTo(buf []byte, ghost p perm)
+func (p *Path) RevealIsLow(ub []byte)

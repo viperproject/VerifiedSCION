@@ -81,12 +81,22 @@ type Path interface {
 	// Predicate containing sensitivity information. Intended to be implemented
 	// as an abstract predicate, alongside an abstract function requiring
 	// `LowSerializeTo()`, and ensuring the corresponding sensitivity.
-	//@ pred LowSerializeTo()
-	//@ requires  LowSerializeTo()
+	// pred LowSerializeTo()
+	// TODO: add documentation/comment
+	// TODO: does it make sense to have separate IsLow* for each method here?
+	// TODO: at least in the future might need to add a parameter to this to
+	// distinguish between NonInitMem and Mem
+	//@ ghost
+	//@ requires Mem(ub)
+	//@ decreases
+	//@ pure IsLow(ghost ub []byte) bool
+	// requires  LowSerializeTo()
 	//@ requires  low(len(b))
+	//@ requires  acc(Mem(ub), R1)
+	//@ requires  IsLow(ub)
 	//@ preserves sl.Bytes(ub, 0, len(ub))
-	//@ preserves acc(Mem(ub), R1)
 	//@ preserves sl.Bytes(b, 0, len(b))
+	//@ ensures   acc(Mem(ub), R1)
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error)

@@ -38,7 +38,12 @@ pred (s *Raw) Mem(buf []byte) {
 	len(s.Raw) == s.Base.Len()
 }
 
-pred (s *Raw) LowSerializeTo()
+// pred (s *Raw) LowSerializeTo()
+ghost
+trusted
+requires s.Mem(ub)
+decreases
+pure func (s *Raw) IsLow(ub []byte) bool
 /**** End of Predicates ****/
 
 (*Raw) implements path.Path

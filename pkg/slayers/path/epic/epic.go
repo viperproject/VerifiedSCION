@@ -41,8 +41,6 @@ const (
 )
 
 // RegisterPath registers the EPIC path type globally.
-// TODO: Once Gobra issue 878 is resolved, remove `trusted`.
-// @ trusted
 // @ requires path.PkgMem()
 // @ requires path.RegisteredTypes().DoesNotContain(int64(PathType))
 // @ ensures  path.PkgMem()
@@ -80,11 +78,12 @@ type Path struct {
 
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
-// @ requires  p.LowSerializeTo()
 // @ requires  low(len(b))
-// @ preserves acc(p.Mem(ubuf), R1)
+// @ requires  acc(p.Mem(ubuf), R1)
+// @ requires  p.IsLow(ubuf)
 // @ preserves sl.Bytes(ubuf, 0, len(ubuf))
 // @ preserves sl.Bytes(b, 0, len(b))
+// @ ensures   acc(p.Mem(ubuf), R1)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ ensures   !old(p.hasScionPath(ubuf)) ==> r != nil
 // @ ensures   len(b) < old(p.LenSpec(ubuf)) ==> r != nil
@@ -92,7 +91,8 @@ type Path struct {
 // @ ensures   old(p.getLHVFLen(ubuf)) != HVFLen ==> r != nil
 // @ decreases
 func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
-	// @ p.GetLowSerializeTo(ubuf, R1/2)
+	//  p.GetLowSerializeTo(ubuf, R1/2)
+	//@ p.RevealIsLow(ubuf)
 	if len(b) < p.Len( /*@ ubuf @*/ ) {
 		return serrors.New("buffer too small to serialize path.", "expected", int(p.Len( /*@ ubuf @*/ )),
 			"actual", len(b))
