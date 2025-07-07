@@ -81,7 +81,6 @@ func Reslice_Bytes(s []byte, start int, end int, p perm) {
 ghost
 requires 0 < p
 requires 0 <= start && start <= end && end <= cap(s)
-requires len(s[start:end]) <= cap(s)
 requires acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 ensures  acc(Bytes(s, start, end), p)
 decreases
