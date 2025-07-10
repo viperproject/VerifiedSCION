@@ -32,6 +32,7 @@ import (
 
 	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
+	"github.com/scionproto/scion/verification/io"
 )
 
 ghost const MutexPerm perm = 1/4
@@ -59,6 +60,7 @@ pred (d *DataPlane) Mem() {
 	acc(&d.Metrics)                                               &&
 	acc(&d.forwardingMetrics)                                     &&
 	acc(&d.key)                                                   &&
+	acc(&d.asid)												  &&
 	(d.external    != nil       ==> accBatchConn(d.external))     &&
 	(d.linkTypes   != nil       ==> acc(d.linkTypes))             &&
 	(d.neighborIAs != nil       ==> acc(d.neighborIAs))           &&
@@ -71,7 +73,7 @@ pred (d *DataPlane) Mem() {
 		acc(sl.Bytes(*d.key, 0, len(*d.key)), _)        &&
 		len(*d.key) > 0                                 &&
 		scrypto.ValidKeyForHash(*d.key)                 &&
-		d.macFactory implements MacFactorySpec{d.key}))           &&
+		d.macFactory implements MacFactorySpec{d.key, d.asid}))           &&
 	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions)) &&
 	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))      &&
 	// The following permissions are enough to call all methods needed in fields
@@ -149,10 +151,12 @@ pred (p *scionPacketProcessor) initMem() {
 // This is used as a signature, not as an assumed function.
 requires acc(key, _) && acc(sl.Bytes(*key, 0, len(*key)), _)
 requires scrypto.ValidKeyForHash(*key)
+requires acc(asid, _)
 ensures  acc(key, _) && acc(sl.Bytes(*key, 0, len(*key)), _)
-ensures  res != nil && res.Mem()
+ensures  h != nil && h.Mem()
+ensures  acc(asid, _) && sh === h && sh.Asid() == *asid
 decreases
-func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
+func MacFactorySpec(ghost key *[]byte, ghost asid gpointer[io.AS]) (h hash.Hash, ghost sh hash.ScionHashSpec)
 
 // useful to deal with incompletnesses
 pred hideLocalIA(p *addr.IA) {
@@ -218,7 +222,7 @@ pure func (p *scionPacketProcessor) getIngressID() uint16 {
 ghost
 requires d.Mem()
 decreases
-pure func (d *DataPlane) getMacFactory() func() hash.Hash {
+pure func (d *DataPlane) getMacFactory() func() (hash.Hash, ghost hash.ScionHashSpec) {
 	return unfolding d.Mem() in
 		d.macFactory
 }
@@ -423,10 +427,11 @@ func (d *DataPlane) getMacFactoryMem() {
 ghost
 requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
+ensures  acc(&d.asid, _) && acc(d.asid, _)
 ensures  acc(sl.Bytes(*d.key, 0, len(*d.key)), _)
 ensures  scrypto.ValidKeyForHash(*d.key)
 ensures  len(*d.key) > 0
-ensures  d.macFactory implements MacFactorySpec{d.key}
+ensures  d.macFactory implements MacFactorySpec{d.key, d.asid}
 decreases
 func (d *DataPlane) getNewPacketProcessorFootprint() {
 	unfold acc(d.Mem(), _)
@@ -736,4 +741,18 @@ pure func (d *DataPlane) DomainForwardingMetrics() set[uint16] {
 			unfolding accForwardingMetrics(d.forwardingMetrics) in
 				domain(d.forwardingMetrics) :
 			set[uint16]{}
+}
+
+// pred (sh hash.ScionHashSpec) Valid(h hash.Hash, dp DataPlaneSpec) {
+// 	acc(sh) && h === sh && sh.Asid() == dp.Asid()
+// }
+
+// ghost
+// decreases
+// pure func Valid(h hash.Hash, sh hash.ScionHashSpec, dp io.DataPlaneSpec) bool {
+// 	h === sh && sh.Asid() == dp.Asid()
+// }
+
+pred ValidHashSpec(h hash.Hash, sh hash.ScionHashSpec, dp io.DataPlaneSpec) {
+	h === sh && sh != nil && sh.Asid() == dp.Asid()
 }
