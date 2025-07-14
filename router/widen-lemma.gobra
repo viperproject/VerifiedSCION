@@ -34,21 +34,12 @@ requires  acc(sl.Bytes(raw, 0, len(raw)), R49)
 requires  acc(sl.Bytes(raw[:length], 0, len(raw[:length])), R49)
 ensures   acc(sl.Bytes(raw, 0, len(raw)), R49)
 ensures   acc(sl.Bytes(raw[:length], 0, len(raw[:length])), R49)
-<<<<<<< HEAD
-ensures   absIO_val(raw[:length], ingressID).isIO_val_Pkt2 ==>
-	absIO_val(raw[:length], ingressID) == absIO_val(raw, ingressID)
-decreases
-func absIO_valWidenLemma(raw []byte, ingressID uint16, length int) {
-	var ret1 io.IO_val
-	var ret2 io.IO_val
-=======
 ensures   absIO_val(raw[:length], ingressID).isValPkt ==>
 	absIO_val(raw[:length], ingressID) == absIO_val(raw, ingressID)
 decreases
 func absIO_valWidenLemma(raw []byte, ingressID uint16, length int) {
 	var ret1 io.Val
 	var ret2 io.Val
->>>>>>> master
 
 	if (slayers.ValidPktMetaHdr(raw[:length]) && slayers.IsSupportedPkt(raw[:length])) {
 		ValidPktMetaHdrWidenLemma(raw, length)
@@ -57,17 +48,6 @@ func absIO_valWidenLemma(raw []byte, ingressID uint16, length int) {
 		assert slayers.IsSupportedPkt(raw)
 		absPktWidenLemma(raw, length)
 
-<<<<<<< HEAD
-		ret1 = io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(raw)})
-		ret2 = io.IO_val(io.IO_val_Pkt2{path.ifsToIO_ifs(ingressID), absPkt(raw[:length])})
-		assert ret1 == reveal absIO_val(raw, ingressID)
-		assert ret2 == reveal absIO_val(raw[:length], ingressID)
-		assert ret1 == ret2
-		assert absIO_val(raw[:length], ingressID).isIO_val_Pkt2 ==>
-			absIO_val(raw[:length], ingressID) == absIO_val(raw, ingressID)
-	} else {
-		assert !(reveal absIO_val(raw[:length], ingressID).isIO_val_Pkt2)
-=======
 		ret1 = io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw)})
 		ret2 = io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw[:length])})
 		assert ret1 == reveal absIO_val(raw, ingressID)
@@ -77,7 +57,6 @@ func absIO_valWidenLemma(raw []byte, ingressID uint16, length int) {
 			absIO_val(raw[:length], ingressID) == absIO_val(raw, ingressID)
 	} else {
 		assert !(reveal absIO_val(raw[:length], ingressID).isValPkt)
->>>>>>> master
 	}
 }
 

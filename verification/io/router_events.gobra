@@ -42,11 +42,7 @@ pure func (dp DataPlaneSpec) valid_link_types_in2(hf1 HF, a AS) bool {
 
 ghost
 decreases
-<<<<<<< HEAD
-pure func (dp DataPlaneSpec) dp2_enter_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
-=======
 pure func (dp DataPlaneSpec) dp2_enter_interface(d bool, asid AS, hf1 HF, recvif Ifs) bool {
->>>>>>> master
 	return (d && hf1.InIF2 === some(recvif)) || (!d && hf1.EgIF2 === some(recvif))
 }
 
@@ -71,11 +67,7 @@ requires dp.Asid() == asid
 decreases
 pure func (dp DataPlaneSpec) dp2_forward_ext_guard(asid AS, m Pkt, nextif Ifs, currseg, traversedseg Seg, newpkt Pkt, fut seq[HF], hf1 HF) bool {
 	return m.CurrSeg == currseg &&
-<<<<<<< HEAD
-		newpkt == IO_Packet2{traversedseg, m.LeftSeg, m.MidSeg, m.RightSeg} &&
-=======
 		newpkt == Pkt{traversedseg, m.LeftSeg, m.MidSeg, m.RightSeg} &&
->>>>>>> master
 		// The outgoing interface is correct:
 		dp2_exit_interface(currseg.ConsDir, asid, hf1, nextif) &&
 		// Next validate the current hop field with the *original* UInfo field):
@@ -97,15 +89,9 @@ requires asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) dp2_enter_guard(m Pkt, currseg Seg, traversedseg Seg, asid AS, hf1 HF, recvif Ifs, fut seq[HF]) bool {
 	return m.CurrSeg == currseg &&
-<<<<<<< HEAD
-		currseg.Future == seq[IO_HF]{hf1} ++ fut &&
-		dp.dp2_enter_interface(currseg.ConsDir, asid, hf1, recvif) &&
-		(dp.dp2_check_interface_top(currseg.ConsDir, asid, hf1) || fut == seq[IO_HF]{}) &&
-=======
 		currseg.Future == seq[HF]{hf1} ++ fut &&
 		dp.dp2_enter_interface(currseg.ConsDir, asid, hf1, recvif) &&
 		(dp.dp2_check_interface_top(currseg.ConsDir, asid, hf1) || fut == seq[HF]{}) &&
->>>>>>> master
 		update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
 		same_segment2(currseg, traversedseg) &&
 		same_other2(currseg, traversedseg) &&

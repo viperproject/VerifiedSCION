@@ -18,11 +18,7 @@
 
 package io
 
-<<<<<<< HEAD
-type Unit struct{}
-=======
 ghost type Unit ghost struct{}
->>>>>>> master
 
 // interface IDs
 ghost type Ifs ghost struct {
@@ -139,13 +135,8 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-<<<<<<< HEAD
-pure func (dp DataPlaneSpec) egif_core2(hf1 IO_HF, asid IO_as) bool{
-	return dp.egif2_type(hf1, asid, IO_Link(IO_Core{}))
-=======
 pure func (dp DataPlaneSpec) egif_core2(hf1 HF, asid AS) bool{
 	return dp.egif2_type(hf1, asid, Link(IO_Core{}))
->>>>>>> master
 }
 
 ghost
@@ -168,13 +159,8 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-<<<<<<< HEAD
-pure func (dp DataPlaneSpec) inif_core2(hf1 IO_HF, asid IO_as) bool{
-	return dp.inif2_type(hf1, asid, IO_Link(IO_Core{}))
-=======
 pure func (dp DataPlaneSpec) inif_core2(hf1 HF, asid AS) bool{
 	return dp.inif2_type(hf1, asid, Link(IO_Core{}))
->>>>>>> master
 }
 
 ghost
@@ -191,11 +177,7 @@ requires ifs != none[Ifs] ==> asid == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) if_type(asid AS, ifs option[Ifs], link Link) bool{
 	return match ifs {
-<<<<<<< HEAD
-		case none[IO_ifs]:
-=======
 		case none[Ifs]:
->>>>>>> master
 			false
 		default:
 			dp.link_type(asid, get(ifs)) == link

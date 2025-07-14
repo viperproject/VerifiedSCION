@@ -38,11 +38,6 @@ type SerializeOptions struct {
 
 type SerializeBuffer interface {
 	pred Mem()
-<<<<<<< HEAD
-	// morally, corresponds to sl.Bytes(ub, 0, len(ub)) --* (Mem() && UBuf() === ub)
-	pred MemWithoutUBuf(ub []byte)
-=======
->>>>>>> master
 
 	ghost
 	pure
@@ -53,41 +48,13 @@ type SerializeBuffer interface {
 	ghost
 	pure
 	requires acc(Mem(), _)
-<<<<<<< HEAD
-	decreases
-	View() (ghost res seq[byte])
-
-	ghost
-	requires Mem()
-	ensures  res === old(UBuf())
-	ensures  sl.Bytes(res, 0, len(res))
-	ensures  MemWithoutUBuf(res)
-	ensures  old(View()) == seqs.ToSeqByte(res)
-=======
 	requires acc(sl.Bytes(UBuf(), 0, len(UBuf())), _)
 	ensures  res == seqs.ToSeqByte(UBuf())
->>>>>>> master
 	decreases
 	View() (ghost res seq[byte])
 
-<<<<<<< HEAD
-	ghost
-	requires MemWithoutUBuf(ub)
-	requires sl.Bytes(ub, 0, len(ub))
-	ensures  Mem() && UBuf() === ub
-	ensures  View() == old(seqs.ToSeqByte(ub))
-	decreases
-	RestoreMem(ghost ub []byte)
-
-	requires Mem()
-	ensures  res === old(UBuf())
-	ensures  sl.Bytes(res, 0, len(res))
-	ensures  MemWithoutUBuf(res)
-	ensures  old(View()) == seqs.ToSeqByte(res)
-=======
 	preserves acc(Mem(), R50)
 	ensures   res === UBuf()
->>>>>>> master
 	decreases
 	Bytes() (res []byte)
 

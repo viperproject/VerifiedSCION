@@ -19,20 +19,6 @@ package io
 // links: representation of the network topology as a graph.
 //     `links[(a1,x)] == (a2,y)` means that the interface x of AS a1 is connected
 //     to the interface y of AS a2.
-<<<<<<< HEAD
-type DataPlaneSpec adt {
-	DataPlaneSpec_{
-		linkTypes   dict[IO_ifs]IO_Link
-		neighborIAs dict[IO_ifs]IO_as
-		localIA     IO_as
-		links       dict[AsIfsPair]AsIfsPair
-	}
-}
-
-type AsIfsPair struct {
-	asid IO_as
-	ifs  IO_ifs
-=======
 ghost type DataPlaneSpec ghost struct {
 	linkTypes   dict[Ifs]Link
 	neighborIAs dict[Ifs]AS
@@ -43,24 +29,16 @@ ghost type DataPlaneSpec ghost struct {
 ghost type AsIfsPair ghost struct {
 	asid AS
 	ifs  Ifs
->>>>>>> master
 }
 
 ghost
 opaque
 decreases
 pure func (dp DataPlaneSpec) Valid() bool {
-<<<<<<< HEAD
-	return (forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==>
-			(AsIfsPair{dp.localIA, ifs} in domain(dp.links) &&
-			dp.Lookup(AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])) &&
-		(forall ifs IO_ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
-=======
 	return (forall ifs Ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==>
 			(AsIfsPair{dp.localIA, ifs} in domain(dp.links) &&
 			dp.Lookup(AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])) &&
 		(forall ifs Ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
->>>>>>> master
 			ifs in domain(dp.neighborIAs)) &&
 		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.links) ==>
 			let next_pair := dp.Lookup(pairs) in

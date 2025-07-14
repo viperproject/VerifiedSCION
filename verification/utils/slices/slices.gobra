@@ -32,20 +32,11 @@ pred Bytes(s []byte, start int, end int) {
 	forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i])
 }
 
-<<<<<<< HEAD
-pure
-requires acc(Bytes(s, start, end), _)
-requires start <= i && i < end
-decreases
-func GetByte(s []byte, start int, end int, i int) byte {
-	return unfolding acc(Bytes(s, start, end), _) in s[i]
-=======
 requires Bytes(s, start, end)
 requires start <= i && i < end
 decreases
 pure func GetByte(s []byte, start int, end int, i int) byte {
 	return unfolding Bytes(s, start, end) in s[i]
->>>>>>> master
 }
 
 ghost
@@ -90,10 +81,6 @@ func Reslice_Bytes(s []byte, start int, end int, p perm) {
 ghost
 requires 0 < p
 requires 0 <= start && start <= end && end <= cap(s)
-<<<<<<< HEAD
-requires len(s[start:end]) <= cap(s)
-=======
->>>>>>> master
 requires acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 ensures  acc(Bytes(s, start, end), p)
 decreases
@@ -152,21 +139,6 @@ func NilAcc_Bytes() {
 	fold Bytes(nil, 0, 0)
 }
 
-<<<<<<< HEAD
-/** Auxiliar definitions Any **/
-ghost
-requires size >= 0
-ensures len(res) == size
-ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
-decreases _
-pure func NewSeq_Any(size int) (res seq[any])
-
-// TODO:
-// func ToSeq_Any
-// ResliceC_Any
-
-/** End of Auxiliar definitions Any **/
-=======
 ghost
 requires  len(s1) > 0 || len(s2) > 0
 preserves Bytes(s1, 0, len(s1))
@@ -218,4 +190,3 @@ decreases
 pure func AssertSliceOverlap(ghost s []byte, ghost subStart int, ghost subEnd int) Unit {
 	return Unit{}
 }
->>>>>>> master

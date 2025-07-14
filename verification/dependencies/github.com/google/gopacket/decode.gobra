@@ -89,11 +89,7 @@ type PacketBuilder interface {
 type Decoder interface {
 	pred Mem()
 
-<<<<<<< HEAD
-	requires acc(LayerTypesMem(), _)
-=======
 	requires acc(PkgMem(), _)
->>>>>>> master
 	requires sl.Bytes(b, 0, len(b))
 	preserves Mem()
 	preserves p.Mem()

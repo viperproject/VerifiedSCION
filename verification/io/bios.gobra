@@ -18,17 +18,10 @@
 
 package io
 
-<<<<<<< HEAD
-type IO_bio3sIN adt {
-	IO_bio3s_enter{}
-	IO_bio3s_xover{}
-	IO_bio3s_exit{}
-=======
 ghost type Bio3sIN adt {
 	Bio3s_enter{}
 	Bio3s_xover{}
 	Bio3s_exit{}
->>>>>>> master
 }
 
 ghost type Bio3sIO adt {

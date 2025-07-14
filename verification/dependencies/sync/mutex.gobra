@@ -28,17 +28,11 @@ decreases
 func (m *Mutex) SetInv(ghost inv pred())
 
 ghost
-<<<<<<< HEAD
-decreases _
-pure func IgnoreBlockingForTermination() bool
-
-=======
 trusted
 decreases
 pure func IgnoreBlockingForTermination() bool
 
 trusted
->>>>>>> master
 requires acc(m.LockP(), _)
 ensures  m.LockP() && m.UnlockP() && m.LockInv()()
 decreases _ if IgnoreBlockingForTermination()

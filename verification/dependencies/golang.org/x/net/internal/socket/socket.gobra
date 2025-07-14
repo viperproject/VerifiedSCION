@@ -52,10 +52,6 @@ pred (m *Message) Mem() {
 	acc(m) &&
 	len(m.Buffers) == 1 &&
 	acc(&m.Buffers[0]) &&
-<<<<<<< HEAD
-	sl.Bytes(m.Buffers[0], 0, len(m.Buffers[0])) &&
-=======
->>>>>>> master
 	sl.Bytes(m.OOB, 0, len(m.OOB)) &&
 	// typeOf(m.Addr) == type[*net.UDPAddr] &&
 	((m.Addr != nil && m.IsActive && !m.WildcardPerm) ==> m.Addr.Mem()) &&

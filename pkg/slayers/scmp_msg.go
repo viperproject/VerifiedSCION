@@ -381,12 +381,8 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
 	// @ unfold sl.Bytes(data, 2, 4)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &data[offset:offset+2][i] } 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
-=======
 	// @ assert &data[offset : offset+2][0] == &data[offset]
 	// @ assert &data[offset : offset+2][1] == &data[offset+1]
->>>>>>> master
 	i.SeqNumber = binary.BigEndian.Uint16(data[offset : offset+2])
 	// @ fold sl.Bytes(data, 2, 4)
 	// @ )
@@ -403,24 +399,15 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ sl.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
 	// @ unfold sl.Bytes(data, 0, 4)
 	// @ unfold sl.Bytes(data, 4, len(data))
-<<<<<<< HEAD
-	// @ assert forall i int :: { &data[offset:][i] } 0 <= i && i < len(data) - offset ==> &data[offset:][i] == &data[offset + i]
-=======
 	// @ sl.AssertSliceOverlap(data, offset, len(data))
->>>>>>> master
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
 		Payload:  data[offset:],
 	}
-<<<<<<< HEAD
-	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[offset+l] == &i.Payload[l]
-	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> acc(&i.Payload[l])
-=======
 	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==>
 	// @ 	&data[offset+l] == &i.Payload[l]
 	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==>
 	// @ 	acc(&i.Payload[l])
->>>>>>> master
 	// @ fold sl.Bytes(i.Contents, 0, len(i.Contents))
 	// @ fold sl.Bytes(i.Payload, 0, len(i.Payload))
 	// @ fold i.BaseLayer.Mem(data, 4)
@@ -455,12 +442,8 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ unfold sl.Bytes(underlyingBufRes, 2, 4)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &buf[offset:offset+2][i] } 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
-=======
 	// @ assert &buf[offset : offset+2][0] == &buf[offset]
 	// @ assert &buf[offset : offset+2][1] == &buf[offset+1]
->>>>>>> master
 	binary.BigEndian.PutUint16(buf[offset:offset+2], i.SeqNumber)
 	// @ fold sl.Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
@@ -534,12 +517,8 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
 	// @ unfold sl.Bytes(data, 2, 4)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &data[2:4][i] } 0 <= i && i < 2 ==> &data[2:4][i] == &data[2 + i]
-=======
 	// @ assert &data[2:4][0] == &data[2]
 	// @ assert &data[2:4][1] == &data[3]
->>>>>>> master
 	i.Pointer = binary.BigEndian.Uint16(data[2:4])
 	// @ fold sl.Bytes(data, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
@@ -552,21 +531,13 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 	// @ decreases
 	// @ outline (
 	// @ unfold sl.Bytes(data, 0, len(data))
-<<<<<<< HEAD
-	// @ assert forall i int :: { &data[4:][i] } 0 <= i && i < len(data) ==> &data[4:][i] == &data[4 + i]
-=======
 	// @ sl.AssertSliceOverlap(data, 4, len(data))
->>>>>>> master
 	i.BaseLayer = BaseLayer{
 		Contents: data[:4],
 		Payload:  data[4:],
 	}
-<<<<<<< HEAD
-	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[4+l] == &i.Payload[l]
-=======
 	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==>
 	// @ 	&data[4+l] == &i.Payload[l]
->>>>>>> master
 	// @ fold sl.Bytes(i.Contents, 0, len(i.Contents))
 	// @ fold sl.Bytes(i.Payload, 0, len(i.Payload))
 	// @ fold i.BaseLayer.Mem(data, 4)
@@ -600,12 +571,8 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ unfold sl.Bytes(underlyingBufRes, 2, 4)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &buf[2:4][i] } 0 <= i && i < 2 ==> &buf[2:4][i] == &buf[2 + i]
-=======
 	// @ assert &buf[2:4][0] == &buf[2]
 	// @ assert &buf[2:4][1] == &buf[3]
->>>>>>> master
 	binary.BigEndian.PutUint16(buf[2:4], i.Pointer)
 	// @ fold sl.Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
@@ -710,12 +677,8 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 2+2, R40)
 	// @ unfold acc(sl.Bytes(data, 2, 2+2), R40)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &data[offset:offset+2][i] } 0 <= i && i < 2 ==> &data[offset + i] == &data[offset : offset+2][i]
-=======
 	// @ assert &data[offset : offset+2][0] == &data[offset]
 	// @ assert &data[offset : offset+2][1] == &data[offset+1]
->>>>>>> master
 	i.Sequence = binary.BigEndian.Uint16(data[offset : offset+2])
 	// @ fold acc(sl.Bytes(data, 2, 2+2), R40)
 	// @ )
@@ -729,13 +692,8 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2+2, len(data), 2+2+addr.IABytes, R40)
-<<<<<<< HEAD
-	// @ unfold  acc(sl.Bytes(data, 2+2, 2+2+addr.IABytes), R40)
-	// @ assert forall i int :: { &data[offset:offset+addr.IABytes][i] } 0 <= i && i < addr.IABytes ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
-=======
 	// @ unfold acc(sl.Bytes(data, 2+2, 2+2+addr.IABytes), R40)
 	// @ sl.AssertSliceOverlap(data, offset, offset+addr.IABytes)
->>>>>>> master
 	i.IA = addr.IA(binary.BigEndian.Uint64(data[offset : offset+addr.IABytes]))
 	// @ fold acc(sl.Bytes(data, 2+2, 2+2+addr.IABytes), R40)
 	// @ )
@@ -750,11 +708,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2+2+addr.IABytes, len(data), 2+2+addr.IABytes+scmpRawInterfaceLen, R40)
 	// @ unfold acc(sl.Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen), R40)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &data[offset:offset+scmpRawInterfaceLen][i] } 0 <= i && i < scmpRawInterfaceLen ==> &data[offset + i] == &data[offset : offset+addr.IABytes][i]
-=======
 	// @ sl.AssertSliceOverlap(data, offset, offset+scmpRawInterfaceLen)
->>>>>>> master
 	i.Interface = binary.BigEndian.Uint64(data[offset : offset+scmpRawInterfaceLen])
 	// @ fold acc(sl.Bytes(data, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen), R40)
 	// @ )
@@ -799,12 +753,8 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
 	// @ unfold sl.Bytes(underlyingBufRes, 2, 2+2)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &buf[offset:offset+2][i] } 0 <= i && i < 2 ==> &buf[offset:offset+2][i] == &buf[offset + i]
-=======
 	// @ assert &buf[offset : offset+2][0] == &buf[offset]
 	// @ assert &buf[offset : offset+2][1] == &buf[offset+1]
->>>>>>> master
 	binary.BigEndian.PutUint16(buf[offset:offset+2], i.Sequence)
 	// @ fold sl.Bytes(underlyingBufRes, 2, 2+2)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 2+2, writePerm)
@@ -813,11 +763,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	// @ unfold sl.Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &buf[offset:offset+addr.IABytes][i] } 0 <= i && i < addr.IABytes ==> &buf[offset:offset+addr.IABytes][i] == &buf[offset + i]
-=======
 	// @ sl.AssertSliceOverlap(buf, offset, offset+addr.IABytes)
->>>>>>> master
 	binary.BigEndian.PutUint64(buf[offset:offset+addr.IABytes], uint64(i.IA))
 	// @ fold sl.Bytes(underlyingBufRes, 2+2, 2+2+addr.IABytes)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2+2, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
@@ -826,11 +772,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2+2+addr.IABytes, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
 	// @ unfold sl.Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &buf[offset:offset+scmpRawInterfaceLen][i] } 0 <= i && i < scmpRawInterfaceLen ==> &buf[offset:offset+scmpRawInterfaceLen][i] == &buf[offset + i]
-=======
 	// @ sl.AssertSliceOverlap(buf, offset, offset+scmpRawInterfaceLen)
->>>>>>> master
 	binary.BigEndian.PutUint64(buf[offset:offset+scmpRawInterfaceLen], i.Interface)
 	// @ fold sl.Bytes(underlyingBufRes, 2+2+addr.IABytes, 2+2+addr.IABytes+scmpRawInterfaceLen)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2+2+addr.IABytes, len(underlyingBufRes), 2+2+addr.IABytes+scmpRawInterfaceLen, writePerm)
@@ -902,21 +844,13 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 	// @ defer fold i.Mem(data)
 	// @ defer fold i.BaseLayer.Mem(data, minLength)
 	// @ unfold sl.Bytes(data, 0, len(data))
-<<<<<<< HEAD
-	// @ assert forall i int :: { &data[minLength:][i] } 0 <= i && i < len(data) - minLength ==> &data[minLength:][i] == &data[minLength + i]
-=======
 	// @ sl.AssertSliceOverlap(data, minLength, len(data))
->>>>>>> master
 	i.BaseLayer = BaseLayer{
 		Contents: data[:minLength],
 		Payload:  data[minLength:],
 	}
-<<<<<<< HEAD
-	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[minLength:][l] == &i.Payload[l]
-=======
 	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==>
 	// @ 	&data[minLength:][l] == &i.Payload[l]
->>>>>>> master
 	// @ fold sl.Bytes(i.Contents, 0, len(i.Contents))
 	// @ fold sl.Bytes(i.Payload, 0, len(i.Payload))
 	return nil
@@ -1014,12 +948,8 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
 	// @ unfold sl.Bytes(data, 2, 4)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &data[2:4][i] } 0 <= i && i < 2 ==> &data[2:4][i] == &data[2 + i]
-=======
 	// @ assert &data[2:4][0] == &data[2]
 	// @ assert &data[2:4][1] == &data[3]
->>>>>>> master
 	i.MTU = binary.BigEndian.Uint16(data[2:4])
 	// @ fold sl.Bytes(data, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
@@ -1032,21 +962,13 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 	// @ decreases
 	// @ outline (
 	// @ unfold sl.Bytes(data, 0, len(data))
-<<<<<<< HEAD
-	// @ assert forall i int :: { &data[4:][i] } 0 <= i && i < len(data) ==> &data[4:][i] == &data[4 + i]
-=======
 	// @ sl.AssertSliceOverlap(data, 4, len(data))
->>>>>>> master
 	i.BaseLayer = BaseLayer{
 		Contents: data[:4],
 		Payload:  data[4:],
 	}
-<<<<<<< HEAD
-	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==> &data[4+l] == &i.Payload[l]
-=======
 	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==>
 	// @ 	&data[4+l] == &i.Payload[l]
->>>>>>> master
 	// @ fold sl.Bytes(i.Contents, 0, len(i.Contents))
 	// @ fold sl.Bytes(i.Payload, 0, len(i.Payload))
 	// @ fold i.BaseLayer.Mem(data, 4)
@@ -1080,12 +1002,8 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)
 	// @ unfold sl.Bytes(underlyingBufRes, 2, 4)
-<<<<<<< HEAD
-	// @ assert forall i int :: { &buf[2:4][i] } 0 <= i && i < 2 ==> &buf[2:4][i] == &buf[2 + i]
-=======
 	// @ assert &buf[2:4][0] == &buf[2]
 	// @ assert &buf[2:4][1] == &buf[3]
->>>>>>> master
 	binary.BigEndian.PutUint16(buf[2:4], i.MTU)
 	// @ fold sl.Bytes(underlyingBufRes, 2, 4)
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 2, len(underlyingBufRes), 4, writePerm)

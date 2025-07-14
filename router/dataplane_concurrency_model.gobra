@@ -21,20 +21,11 @@ import (
 	io "verification/io"
 )
 
-<<<<<<< HEAD
-// Never use `==` for comparisons! Because this is a ghost structure, only the ghost comparison (`===`)
-// is meaningful.
-type SharedArg struct {
-	ghost Place gpointer[io.Place] // Existential for the current place
-	ghost State gpointer[io.IO_dp3s_state_local] // Existential for the current model state
-	ghost IBufY, OBufY ElemRA // Parameters of the algebra
-=======
 ghost type SharedArg ghost struct {
 	Place gpointer[io.Place] // Existential for the current place
 	State gpointer[io.Dp3sStateLocal] // Existential for the current model state
 	IBufY ElemRA // Parameter of the algebra
 	OBufY ElemRA // Parameter of the algebra
->>>>>>> master
 }
 
 pred SharedInv(ghost dp io.DataPlaneSpec, ghost y SharedArg) {
@@ -51,11 +42,7 @@ decreases
 func InitSharedInv(
 	dp io.DataPlaneSpec,
 	p io.Place,
-<<<<<<< HEAD
-	s io.IO_dp3s_state_local) (m gpointer[gsync.GhostMutex], y SharedArg) {
-=======
 	s io.Dp3sStateLocal) (m gpointer[gsync.GhostMutex], y SharedArg) {
->>>>>>> master
 	mV@ := gsync.GhostMutex{}
 	m = &mV
 	pE@ := p
@@ -236,17 +223,10 @@ func MultiElemWitnessConv(y ElemRA,k Key, es seq[io.Val]) {
 ghost
 requires 0 <= currIdx && currIdx < len(es)
 requires MultiElemWitnessWithIndex(y, k, es, currIdx)
-<<<<<<< HEAD
-ensures  es[currIdx].isIO_val_Pkt2 ==> ElemWitness(y, k, es[currIdx].IO_val_Pkt2_2)
-ensures  MultiElemWitnessWithIndex(y, k, es, currIdx + 1)
-decreases
-func MultiElemWitnessStep(y ElemRA, k Key, es seq[io.IO_val], currIdx int) {
-=======
 ensures  es[currIdx].isValPkt ==> ElemWitness(y, k, es[currIdx].ValPkt_2)
 ensures  MultiElemWitnessWithIndex(y, k, es, currIdx + 1)
 decreases
 func MultiElemWitnessStep(y ElemRA, k Key, es seq[io.Val], currIdx int) {
->>>>>>> master
 	unfold MultiElemWitnessWithIndex(y, k, es, currIdx)
 }
 

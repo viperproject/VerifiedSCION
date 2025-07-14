@@ -67,10 +67,7 @@ ensures 3 & 2 == 2
 decreases
 pure func InfoFieldFirstByteSerializationLemmas() bool
 
-<<<<<<< HEAD
-=======
 ghost
->>>>>>> master
 ensures csum > 0xffff ==>
 	let newCsum := (csum >> 16) + (csum & 0xffff) in
 	newCsum < csum

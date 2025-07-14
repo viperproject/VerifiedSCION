@@ -22,9 +22,3 @@ ensures d.Mem()
 decreases
 func generateDecoders() (d gopacket.Decoder)
 
-<<<<<<< HEAD
-var (
-	LayerTypeBFD = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: /* gopacket.DecodeFunc(decodeBFD)} */ generateDecoders()})
-)
-=======
->>>>>>> master

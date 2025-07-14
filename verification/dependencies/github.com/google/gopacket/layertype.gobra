@@ -18,15 +18,12 @@ dup pkgInvariant LayerTypeZero == 0 &&
 
 package gopacket
 
-<<<<<<< HEAD
-=======
 friendPkg "./layers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 10 <= t && t <= 146 ==>
 	RegisteredTypes.DoesNotContain(int64(t))
 friendPkg "../../../pkg/slayers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 1000 <= t && t <= 1100 ==>
 	RegisteredTypes.DoesNotContain(int64(t))
 
 import ms "github.com/scionproto/scion/verification/utils/monoset"
->>>>>>> master
 import sl "github.com/scionproto/scion/verification/utils/slices"
 
 /** Types **/
@@ -236,10 +233,6 @@ func OverrideLayerType(num int, meta LayerTypeMetadata) (res LayerType) {
 trusted
 preserves c.Mem()
 preserves sl.Bytes(data, 0, len(data))
-<<<<<<< HEAD
-ensures err != nil ==> err.ErrorMem()
-=======
 ensures   err != nil ==> err.ErrorMem()
->>>>>>> master
 decreases
 func (t LayerType) Decode(data []byte, c PacketBuilder) (err error)
