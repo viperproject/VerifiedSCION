@@ -68,7 +68,11 @@ ensures   len(ip) == IPv4len ==> ip === res
 ensures   (len(ip) == IPv6len && isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255) ==> res != nil
 ensures   (len(ip) == IPv6len && !(isZeros(ip[0:10]) && ip[10] == 255 && ip[11] == 255)) ==> res == nil
 ensures   (len(ip) == IPv6len && res != nil) ==>
-	(forall i int :: { &ip[12+i] }{ &res[i] } 0 <= i && i < IPv4len ==> &ip[12+i] == &res[i])
+	// even though it is technically unecessary,
+	// this assertion allows us to change this contract
+	// without breaking the clients atm.
+	let _ := sl.AssertSliceOverlap(ip, 12, 16) in
+	res === ip[12:16]
 ensures   len(ip) != IPv4len && len(ip) != IPv6len ==> res == nil
 decreases
 func (ip IP) To4(ghost wildcard bool) (res IP) {
@@ -84,10 +88,9 @@ func (ip IP) To4(ghost wildcard bool) (res IP) {
 	return nil
 }
 
-pure
-preserves forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], R55)
+requires forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i])
 decreases
-func isZeros(s []byte) bool
+pure func isZeros(s []byte) bool
 
 // To16 converts the IP address ip to a 16-byte representation.
 preserves forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R15)
@@ -132,11 +135,16 @@ func (ip *IP) UnmarshalText(text []byte) error
 // An IPv4 address and that same address in IPv6 form are
 // considered to be equal.
 // (VerifiedSCION) we consider this function to be morally pure
+<<<<<<< HEAD
 pure
 requires acc(sl.Bytes(ip, 0, len(ip)), _)
 requires acc(sl.Bytes(x, 0, len(x)), _)
+=======
+requires sl.Bytes(ip, 0, len(ip))
+requires sl.Bytes(x, 0, len(x))
+>>>>>>> master
 decreases _
-func (ip IP) Equal(x IP) bool
+pure func (ip IP) Equal(x IP) bool
 
 // ParseIP parses s as an IP address, returning the result.
 ensures forall i int :: {&res[i]} 0 <= i && i < len(res) ==> acc(&res[i])

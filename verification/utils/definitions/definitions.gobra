@@ -85,7 +85,9 @@ requires false
 decreases
 func Unreachable() {}
 
+// Kills the branches that reach this point.
 ghost
+<<<<<<< HEAD
 ensures !res
 decreases
 pure func Uncallable() (res bool) {
@@ -96,6 +98,9 @@ pure func Uncallable() (res bool) {
 
 // Kills the branches that reach this point.
 ghost
+=======
+trusted
+>>>>>>> master
 ensures false
 decreases _
 func TODO()
@@ -114,11 +119,10 @@ func ToDoAfterScionFix(url string)
 // third party libs
 type PrivateField *int
 
-// ghost
-pure
+ghost
 requires b
 decreases
-func Asserting(ghost b bool) bool {
+pure func Asserting(ghost b bool) bool {
 	return true
 }
 
@@ -129,8 +133,11 @@ ghost
 ensures b
 decreases
 func AssumeForIO(b bool)
+<<<<<<< HEAD
 
 ghost
 ensures b
 decreases
 func TemporaryAssumeForIO(b bool)
+=======
+>>>>>>> master

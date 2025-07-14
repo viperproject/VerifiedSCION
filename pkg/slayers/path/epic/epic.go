@@ -41,12 +41,10 @@ const (
 )
 
 // RegisterPath registers the EPIC path type globally.
-// @ requires path.PathPackageMem()
-// @ requires !path.Registered(PathType)
-// @ ensures  path.PathPackageMem()
-// @ ensures  forall t path.Type :: { old(path.Registered(t)) }{ path.Registered(t) } 0 <= t && t < path.MaxPathType ==>
-// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-// @ ensures  path.Registered(PathType)
+// @ requires path.PkgMem()
+// @ requires path.RegisteredTypes().DoesNotContain(int64(PathType))
+// @ ensures  path.PkgMem()
+// @ ensures  path.RegisteredTypes().Contains(int64(PathType))
 // @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
@@ -65,7 +63,7 @@ func RegisterPath() {
 		},
 	}
 	//@ proof tmp.New implements path.NewPathSpec {
-	//@		return tmp.New() as newPath
+	//@ 	return tmp.New() as newPath
 	//@ }
 	path.RegisterPath(tmp)
 }
@@ -225,7 +223,6 @@ func (p *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 
 // Type returns the EPIC path type identifier.
 // @ pure
-// @ requires acc(p.Mem(ubuf), _)
 // @ ensures  t == PathType
 // @ decreases
 func (p *Path) Type( /*@ ghost ubuf []byte @*/ ) (t path.Type) {

@@ -39,12 +39,10 @@ const (
 	PathType path.Type = 1
 )
 
-// @ requires path.PathPackageMem()
-// @ requires !path.Registered(PathType)
-// @ ensures  path.PathPackageMem()
-// @ ensures  forall t path.Type :: { old(path.Registered(t)) }{ path.Registered(t) } 0 <= t && t < path.MaxPathType ==>
-// @ 	t != PathType ==> old(path.Registered(t)) == path.Registered(t)
-// @ ensures  path.Registered(PathType)
+// @ requires path.PkgMem()
+// @ requires path.RegisteredTypes().DoesNotContain(int64(PathType))
+// @ ensures  path.PkgMem()
+// @ ensures  path.RegisteredTypes().Contains(int64(PathType))
 // @ decreases
 func RegisterPath() {
 	tmp := path.Metadata{
@@ -227,11 +225,11 @@ func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 // store it, based on the metadata. The actual number of bytes available to contain it
 // can be inferred from the common header field HdrLen. It may or may not be consistent.
 // @ pure
-// @ requires acc(s.Mem(), _)
+// @ requires s.Mem()
 // @ ensures  r >= MetaLen
 // @ decreases
 func (s *Base) Len() (r int) {
-	return /*@ unfolding acc(s.Mem(), _) in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
+	return /*@ unfolding s.Mem() in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
 }
 
 // Type returns the type of the path.

@@ -15,25 +15,36 @@ pred (m *Mutex) LockP()
 pred (m *Mutex) UnlockP()
 
 ghost
-requires acc(m.LockP(), _)
-decreases _
+trusted
+requires m.LockP()
+decreases
 pure func (m *Mutex) LockInv() pred()
 
 ghost
+trusted
 requires inv() && acc(m) && *m == Mutex{}
 ensures m.LockP() && m.LockInv() == inv
 decreases
 func (m *Mutex) SetInv(ghost inv pred())
 
 ghost
+<<<<<<< HEAD
 decreases _
 pure func IgnoreBlockingForTermination() bool
 
+=======
+trusted
+decreases
+pure func IgnoreBlockingForTermination() bool
+
+trusted
+>>>>>>> master
 requires acc(m.LockP(), _)
 ensures  m.LockP() && m.UnlockP() && m.LockInv()()
 decreases _ if IgnoreBlockingForTermination()
 func (m *Mutex) Lock()
 
+trusted
 requires acc(m.LockP(), _) && m.UnlockP() && m.LockInv()()
 ensures m.LockP()
 decreases _

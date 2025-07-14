@@ -18,6 +18,7 @@
 
 package io
 
+<<<<<<< HEAD
 // pkt2
 // Here, we already instantiated the type params, instead of
 // leaving them generic as done in Isabelle.
@@ -32,3 +33,14 @@ type IO_pkt2 adt {
 
 // pkt3 is the same as pkt2 instantiated with type parameters
 type IO_pkt3 = IO_pkt2
+=======
+// this type stands for the Isabelle type pkt2 instantiated with all its type paramenters, i.e., pkt3
+// Here, we already instantiated the type params, instead of
+// leaving them generic as done in Isabelle.
+ghost type Pkt ghost struct {
+	CurrSeg  Seg
+	LeftSeg  option[Seg]
+	MidSeg   option[Seg]
+	RightSeg option[Seg]
+}
+>>>>>>> master

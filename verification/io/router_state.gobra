@@ -18,9 +18,7 @@
 
 package io
 
-type IO_dp3s_state_local adt {
-	IO_dp3s_state_local_ {
-		ibuf dict[option[IO_ifs]](set[IO_pkt3])
-		obuf dict[option[IO_ifs]](set[IO_pkt3])
-	}
+ghost type Dp3sStateLocal ghost struct {
+	ibuf dict[option[Ifs]](set[Pkt])
+	obuf dict[option[Ifs]](set[Pkt])
 }

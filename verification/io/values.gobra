@@ -22,34 +22,34 @@ package io
 //       ideally, we would use always op_i for every field, but Gobra currently complains if
 //       there are two constructors with a parameter that shares the name.
 
-type IO_val adt {
+ghost type Val adt {
 	// Unit
-	IO_val_Unit{}
+	ValUnit{}
 
-	// Pkt2
-	IO_val_Pkt2 {
-		IO_val_Pkt2_1 option[IO_ifs]
-		IO_val_Pkt2_2 IO_pkt3
+	// Pkt (case pkt2 in Isabelle)
+	ValPkt {
+		ValPkt_1 option[Ifs]
+		ValPkt_2 Pkt
 	}
 
 	// Unsupported
-	IO_val_Unsupported {
-		IO_val_Unsupported_1 option[IO_ifs]
-		IO_val_Unsupported_2 Unit
+	ValUnsupported {
+		ValUnsupported_1 option[Ifs]
+		ValUnsupported_2 Unit
 	}
 
 	// Internal_val1
-	IO_Internal_val1 {
-		IO_Internal_val1_1 IO_pkt3
-		IO_Internal_val1_2 IO_ifs
-		IO_Internal_val1_3 IO_pkt3
-		IO_Internal_val1_4 option[IO_ifs]
+	ValInternal1 {
+		ValInternal1_1 Pkt
+		ValInternal1_2 Ifs
+		ValInternal1_3 Pkt
+		ValInternal1_4 option[Ifs]
 	}
 
 	// Internal_val2
-	IO_Internal_val2 {
-		IO_Internal_val2_1 IO_pkt3
-		IO_Internal_val2_2 IO_pkt3
-		IO_Internal_val2_3 IO_ifs
+	ValInternal2 {
+		ValInternal2_1 Pkt
+		ValInternal2_2 Pkt
+		ValInternal2_3 Ifs
 	}
 }

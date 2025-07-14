@@ -13,12 +13,7 @@
 // limitations under the License.
 
 // +gobra
-
-// @ initEnsures acc(path.PathPackageMem(), _)
-// @ initEnsures path.Registered(empty.PathType)
-// @ initEnsures path.Registered(scion.PathType)
-// @ initEnsures path.Registered(onehop.PathType)
-// @ initEnsures path.Registered(epic.PathType)
+// @ dup pkgInvariant acc(path.PkgMem(), _)
 package slayers
 
 import (
@@ -30,9 +25,9 @@ import (
 	"github.com/scionproto/scion/pkg/addr"
 	"github.com/scionproto/scion/pkg/private/serrors"
 
-	// @ importRequires path.PathPackageMem()
-	// @ importRequires !path.Registered(0) && !path.Registered(1)
-	// @ importRequires !path.Registered(2) && !path.Registered(3)
+	// @ importRequires path.PkgMem()
+	// @ importRequires path.RegisteredTypes().DoesNotContain(0) && path.RegisteredTypes().DoesNotContain(1)
+	// @ importRequires path.RegisteredTypes().DoesNotContain(2) && path.RegisteredTypes().DoesNotContain(3)
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/empty"
 	"github.com/scionproto/scion/pkg/slayers/path/epic"
@@ -101,7 +96,7 @@ type BaseLayer struct {
 }
 
 // LayerContents returns the bytes of the packet layer.
-// @ requires Uncallable()
+// @ requires false
 func (b *BaseLayer) LayerContents() (res []byte) {
 	res = b.Contents
 	return res
@@ -218,15 +213,13 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ requires  b != nil && b.Mem()
 // @ requires  acc(s.Mem(ubuf), R0)
 // @ requires  sl.Bytes(ubuf, 0, len(ubuf))
+// @ requires  sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 // @ ensures   b.Mem()
 // @ ensures   acc(s.Mem(ubuf), R0)
 // @ ensures   sl.Bytes(ubuf, 0, len(ubuf))
-// TODO: hide internal spec details
+// @ ensures   sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @	len(b.UBuf()) == old(len(b.UBuf())) + unfolding acc(s.Mem(ubuf), R55) in
-// @		(CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]))
-// @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @	(unfolding acc(s.Mem(ubuf), R55) in CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])) <= len(ubuf)
+// @ 	len(b.UBuf()) == old(len(b.UBuf())) + s.MinSizeOfUbufWithOneHop(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
 // post for IO:
 // @ ensures   e == nil && old(s.EqPathType(ubuf)) ==>
@@ -257,7 +250,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	}
 	// @ ghost uSerBufN := b.UBuf()
 	// @ assert buf === uSerBufN[:scnLen]
-	// @ b.ExchangePred()
 
 	// @ unfold acc(sl.Bytes(uSerBufN, 0, len(uSerBufN)), writePerm)
 	// Serialize common header.
@@ -287,7 +279,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 		// @ sl.Unslice_Bytes(uSerBufN, 0, CmnHdrLen, R54)
 		// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm)
 		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
-		// @ b.RestoreMem(uSerBufN)
 		return err
 	}
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
@@ -320,7 +311,6 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ sl.CombineRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
 	// @ sl.CombineRange_Bytes(ubuf, startP, endP, HalfPerm)
 	// @ reveal IsSupportedPkt(uSerBufN)
-	// @ b.RestoreMem(uSerBufN)
 	// @ reveal IsSupportedRawPkt(b.View())
 	return tmp
 }
@@ -796,17 +786,19 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 		// @ }
 		if ip := a.IP.To4( /*@ wildcard @*/ ); ip != nil {
 			// @ ghost if !wildcard && isIPv6(a) {
-			// @   assert isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &a.IP[12+i]
+			// @ 	assert isConvertibleToIPv4(hostAddr) ==>
+			// @ 		forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &a.IP[12+i]
 			// @ }
-			// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
+			// @ assert !wildcard && isIP(hostAddr) ==>
+			// @ 	(unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 			// @ ghost if wildcard {
-			// @   fold acc(sl.Bytes(ip, 0, len(ip)), _)
+			// @ 	fold acc(sl.Bytes(ip, 0, len(ip)), _)
 			// @ } else {
-			// @   fold acc(sl.Bytes(ip, 0, len(ip)), R20)
-			// @   package acc(sl.Bytes(ip, 0, len(ip)), R20) --* acc(hostAddr.Mem(), R20) {
-			// @     unfold acc(sl.Bytes(ip, 0, len(ip)), R20)
-			// @     fold acc(hostAddr.Mem(), R20)
-			// @   }
+			// @ 	fold acc(sl.Bytes(ip, 0, len(ip)), R20)
+			// @ 	package acc(sl.Bytes(ip, 0, len(ip)), R20) --* acc(hostAddr.Mem(), R20) {
+			// @ 		unfold acc(sl.Bytes(ip, 0, len(ip)), R20)
+			// @ 		fold acc(hostAddr.Mem(), R20)
+			// @ 	}
 			// @ }
 			return T4Ip, ip, nil
 		}

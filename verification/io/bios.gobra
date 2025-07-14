@@ -18,28 +18,35 @@
 
 package io
 
+<<<<<<< HEAD
 type IO_bio3sIN adt {
 	IO_bio3s_enter{}
 	IO_bio3s_xover{}
 	IO_bio3s_exit{}
+=======
+ghost type Bio3sIN adt {
+	Bio3s_enter{}
+	Bio3s_xover{}
+	Bio3s_exit{}
+>>>>>>> master
 }
 
-type IO_bio3sIO adt {
-	IO_bio3s_send{}
-	IO_bio3s_recv{}
+ghost type Bio3sIO adt {
+	Bio3s_send{}
+	Bio3s_recv{}
 }
 
 // defined in Isabelle as (bios3sIN, bios3sIO) events
-type IO_bio3s adt {
-	IO_bio3s_IN {
-		IN IO_bio3sIN
+ghost type Bio3s adt {
+	Bio3s_IN {
+		IN Bio3sIN
 	}
 
-	IO_bio3s_IO {
-		IO IO_bio3sIN
+	Bio3s_IO {
+		IO Bio3sIO
 	}
 
-	IO_bio3s_Skip{}
+	Bio3s_Skip{}
 
-	IO_bio3s_Stop{}
+	Bio3s_Stop{}
 }

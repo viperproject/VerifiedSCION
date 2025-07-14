@@ -67,9 +67,16 @@ pred (d *DataPlane) Mem() {
 	(d.internalNextHops != nil  ==> accAddr(d.internalNextHops))  &&
 	(d.svc != nil               ==> d.svc.Mem())                  &&
 	(d.macFactory != nil        ==> (
+<<<<<<< HEAD
 		acc(d.key)                                        &&
 		acc(sl.Bytes(*d.key, 0, len(*d.key)), _) &&
 		scrypto.ValidKeyForHash(*d.key)                   &&
+=======
+		acc(d.key)                                      &&
+		acc(sl.Bytes(*d.key, 0, len(*d.key)), _)        &&
+		len(*d.key) > 0                                 &&
+		scrypto.ValidKeyForHash(*d.key)                 &&
+>>>>>>> master
 		d.macFactory implements MacFactorySpec{d.key}))           &&
 	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions)) &&
 	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))      &&
@@ -199,13 +206,15 @@ func (d *DataPlane) getForwardingMetrics() {
 }
 
 ghost
-requires acc(d.Mem(), _)
+requires d.Mem()
 decreases
 pure func (d *DataPlane) getValForwardingMetrics() map[uint16]forwardingMetrics {
-	return unfolding acc(d.Mem(), _) in d.forwardingMetrics
+	return unfolding d.Mem() in
+		d.forwardingMetrics
 }
 
 ghost
+<<<<<<< HEAD
 pure
 requires acc(p.sInit(), _)
 decreases
@@ -222,39 +231,63 @@ pure func (d *DataPlane) getMacFactory() func() hash.Hash {
 
 ghost
 requires acc(d.Mem(), _)
+=======
+requires p.sInit()
+decreases
+pure func (p *scionPacketProcessor) getIngressID() uint16 {
+	return unfolding p.sInit() in
+		p.ingressID
+}
+
+ghost
+requires d.Mem()
+decreases
+pure func (d *DataPlane) getMacFactory() func() hash.Hash {
+	return unfolding d.Mem() in
+		d.macFactory
+}
+
+ghost
+requires d.Mem()
+>>>>>>> master
 decreases
 pure func (d *DataPlane) getDomForwardingMetrics() set[uint16] {
-	return unfolding acc(d.Mem(), _) in
+	return unfolding d.Mem() in
 		d.forwardingMetrics == nil ?
 			set[uint16]{} :
-			(unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
+			(unfolding accForwardingMetrics(d.forwardingMetrics) in
 				domain(d.forwardingMetrics))
 }
 
 ghost
-requires acc(d.Mem(), _)
+requires d.Mem()
 decreases
 pure func (d *DataPlane) GetDomInternalNextHops() set[uint16] {
-	return unfolding acc(d.Mem(), _) in
+	return unfolding d.Mem() in
 		d.internalNextHops == nil ?
 			set[uint16]{} :
-			(unfolding acc(accAddr(d.internalNextHops), _) in
+			(unfolding accAddr(d.internalNextHops) in
 				domain(d.internalNextHops))
 }
 
 ghost
 opaque
+<<<<<<< HEAD
 requires acc(d.Mem(), _)
+=======
+requires d.Mem()
+>>>>>>> master
 decreases
 pure func (d *DataPlane) getDomExternal() set[uint16] {
-	return unfolding acc(d.Mem(), _) in
+	return unfolding d.Mem() in
 		d.external == nil ?
 			set[uint16]{} :
-			(unfolding acc(accBatchConn(d.external), _) in
+			(unfolding accBatchConn(d.external) in
 				domain(d.external))
 }
 
 ghost
+<<<<<<< HEAD
 requires acc(d.Mem(), _)
 decreases
 pure func (d *DataPlane) getDomNeighborIAs() set[uint16] {
@@ -281,11 +314,39 @@ pure func (d *DataPlane) WellConfigured() bool {
 		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
 		!(0 in d.getDomNeighborIAs()) &&
 		d.getDomExternal() subset d.getDomForwardingMetrics()
+=======
+requires d.Mem()
+decreases
+pure func (d *DataPlane) getDomNeighborIAs() set[uint16] {
+	return unfolding d.Mem() in
+		d.neighborIAs == nil ?
+			set[uint16]{} : domain(d.neighborIAs)
+}
+
+ghost
+requires d.Mem()
+decreases
+pure func (d *DataPlane) getDomLinkTypes() set[uint16] {
+	return unfolding acc(d.Mem(), _) in
+		d.linkTypes == nil ?
+			set[uint16]{} : domain(d.linkTypes)
+>>>>>>> master
 }
 
 ghost
 opaque
-requires acc(d.Mem(), _)
+requires d.Mem()
+decreases
+pure func (d *DataPlane) WellConfigured() bool {
+	return d.getDomNeighborIAs() == d.getDomExternal() &&
+		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
+		!(0 in d.getDomNeighborIAs()) &&
+		d.getDomExternal() subset d.getDomForwardingMetrics()
+}
+
+ghost
+opaque
+requires d.Mem()
 decreases
 pure func (d *DataPlane) PreWellConfigured() bool {
 	return d.getDomNeighborIAs() == d.getDomExternal() &&
@@ -363,6 +424,7 @@ func (d *DataPlane) getSvcMem() {
 ghost
 requires acc(d.Mem(), _) && d.InternalConnIsSet()
 ensures  acc(&d.internal, _) && acc(d.internal.Mem(), _)
+<<<<<<< HEAD
 decreases
 func (d *DataPlane) getInternalMem() {
 	unfold acc(d.Mem(), _)
@@ -378,16 +440,35 @@ func (d *DataPlane) getRunningMem() {
 
 ghost
 requires acc(d.Mem(), _)
+=======
+>>>>>>> master
 decreases
-pure func (d *DataPlane) getValSvc() *services {
-	return unfolding acc(d.Mem(), _) in d.svc
+func (d *DataPlane) getInternalMem() {
+	unfold acc(d.Mem(), _)
 }
 
 ghost
 requires acc(d.Mem(), _)
+ensures  acc(&d.running, _)
+decreases
+func (d *DataPlane) getRunningMem() {
+	unfold acc(d.Mem(), _)
+}
+
+ghost
+requires d.Mem()
+decreases
+pure func (d *DataPlane) getValSvc() *services {
+	return unfolding d.Mem() in
+		d.svc
+}
+
+ghost
+requires d.Mem()
 decreases
 pure func (d *DataPlane) SvcsAreSet() bool {
-	return unfolding acc(d.Mem(), _) in d.svc != nil
+	return unfolding d.Mem() in
+		d.svc != nil
 }
 
 ghost
@@ -420,6 +501,7 @@ requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
 ensures  acc(sl.Bytes(*d.key, 0, len(*d.key)), _)
 ensures  scrypto.ValidKeyForHash(*d.key)
+ensures  len(*d.key) > 0
 ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
 func (d *DataPlane) getNewPacketProcessorFootprint() {
@@ -429,76 +511,76 @@ func (d *DataPlane) getNewPacketProcessorFootprint() {
 type Unit struct{}
 
 ghost
-pure
-requires acc(d.Mem(), _)
+requires d.Mem()
 decreases
-func (d *DataPlane) IsRunning() bool {
-	return unfolding acc(d.Mem(), _) in d.running
+pure func (d *DataPlane) IsRunning() bool {
+	return unfolding d.Mem() in
+		d.running
 }
 
 ghost
 opaque
-pure
-requires acc(d.Mem(), _)
-requires acc(&d.running, _)
+requires d.Mem()
+requires acc(&d.running)
 ensures  d.IsRunning() == d.running
 decreases
-func (d *DataPlane) isRunningEq() Unit {
-	return unfolding acc(d.Mem(), _) in Unit{}
+pure func (d *DataPlane) isRunningEq() Unit {
+	return unfolding d.Mem() in
+		Unit{}
 }
 
 ghost
-pure
-requires acc(d.Mem(), _)
+requires d.Mem()
 decreases
-func (d *DataPlane) InternalConnIsSet() bool {
-	return unfolding acc(d.Mem(), _) in d.internal != nil
+pure func (d *DataPlane) InternalConnIsSet() bool {
+	return unfolding d.Mem() in
+		d.internal != nil
 }
 
 ghost
-pure
-requires acc(d.Mem(), _)
+requires d.Mem()
 decreases
-func (d *DataPlane) MetricsAreSet() bool {
-	return unfolding acc(d.Mem(), _) in d.Metrics != nil
+pure func (d *DataPlane) MetricsAreSet() bool {
+	return unfolding d.Mem() in
+		d.Metrics != nil
 }
 
 ghost
 opaque
-pure
-requires acc(d.Mem(), _)
-requires acc(&d.internal, _)
+requires d.Mem()
+requires acc(&d.internal)
 ensures  d.InternalConnIsSet() == (d.internal != nil)
 decreases
-func (d *DataPlane) internalIsSetEq() Unit {
-	return unfolding acc(d.Mem(), _) in Unit{}
+pure func (d *DataPlane) internalIsSetEq() Unit {
+	return unfolding d.Mem() in
+		Unit{}
 }
 
 ghost
-pure
-requires acc(d.Mem(), _)
+requires d.Mem()
 decreases
-func (d *DataPlane) KeyIsSet() bool {
-	return unfolding acc(d.Mem(), _) in d.macFactory != nil
+pure func (d *DataPlane) KeyIsSet() bool {
+	return unfolding d.Mem() in
+		d.macFactory != nil
 }
 
 ghost
 opaque
-pure
-requires acc(d.Mem(), _)
-requires acc(&d.macFactory, _)
+requires d.Mem()
+requires acc(&d.macFactory)
 ensures  d.KeyIsSet() == (d.macFactory != nil)
 decreases
-func (d *DataPlane) keyIsSetEq() Unit {
-	return unfolding acc(d.Mem(), _) in Unit{}
+pure func (d *DataPlane) keyIsSetEq() Unit {
+	return unfolding d.Mem() in
+		Unit{}
 }
 
 ghost
-pure
-requires acc(d.Mem(), _)
+requires d.Mem()
 decreases
-func (d *DataPlane) LocalIA() addr.IA {
-	return unfolding acc(d.Mem(), _) in d.localIA
+pure func (d *DataPlane) LocalIA() addr.IA {
+	return unfolding d.Mem() in
+		d.localIA
 }
 
 /**** End of acessor methods to avoid unfolding the Mem predicate of the dataplane so much ****/
@@ -545,17 +627,16 @@ func (s *scmpError) Set(e error) {
 }
 
 ghost
-pure
-requires acc(s.Mem(), _)
+requires s.Mem()
 decreases
-func (s *scmpError) Get() error {
-	return unfolding acc(s.Mem(), _) in *s
+pure func (s *scmpError) Get() error {
+	return unfolding s.Mem() in
+		*s
 }
 
 ghost
-pure
 decreases
-func (s *scmpError) CanSet(e error) bool {
+pure func (s *scmpError) CanSet(e error) bool {
 	return typeOf(e) == type[scmpError]
 }
 
@@ -589,45 +670,59 @@ pred (s* scionPacketProcessor) sInit() {
 // each ghost method on *scionPacketProcessor has, in the name, the state in which it
 // expects to find the packet processor. In the case below, the state `Init` is expected.
 ghost
-requires acc(s.sInit(), _)
+requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitD() (res *DataPlane) {
-	return unfolding acc(s.sInit(), _) in s.d
+	return unfolding s.sInit() in
+		s.d
 }
 
 ghost
-requires acc(s.sInit(), _)
+requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitRawPkt() (res []byte) {
-	return unfolding acc(s.sInit(), _) in s.rawPkt
+	return unfolding s.sInit() in
+		s.rawPkt
 }
 
 ghost
-requires acc(s.sInit(), _)
+requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitPath() (res *scion.Raw) {
-	return unfolding acc(s.sInit(), _) in s.path
+	return unfolding s.sInit() in
+		s.path
 }
 
 ghost
-requires acc(s.sInit(), _)
+requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitHopField() (res path.HopField) {
-	return unfolding acc(s.sInit(), _) in s.hopField
+	return unfolding s.sInit() in
+		s.hopField
 }
 
 ghost
-requires acc(s.sInit(), _)
+requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitInfoField() (res path.InfoField) {
-	return unfolding acc(s.sInit(), _) in s.infoField
+	return unfolding s.sInit() in
+		s.infoField
 }
 
 ghost
-requires acc(s.sInit(), _)
+requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitSegmentChange() (res bool) {
-	return unfolding acc(s.sInit(), _) in s.segmentChange
+	return unfolding s.sInit() in
+		s.segmentChange
+}
+
+ghost
+requires s.sInit()
+decreases
+pure func (s* scionPacketProcessor) sInitBufferUBuf() (res []byte) {
+	return unfolding s.sInit() in
+		s.buffer.UBuf()
 }
 
 /** end spec for newPacketProcessor **/
@@ -700,21 +795,21 @@ func (d *DataPlane) InDomainExternalInForwardingMetrics3(id uint16) {
 }
 
 ghost
-requires acc(&d.forwardingMetrics, _)
-requires acc(accForwardingMetrics(d.forwardingMetrics), _)
+requires acc(&d.forwardingMetrics)
+requires accForwardingMetrics(d.forwardingMetrics)
 decreases
 pure func (d *DataPlane) domainForwardingMetrics() set[uint16] {
-	return unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
+	return unfolding accForwardingMetrics(d.forwardingMetrics) in
 		domain(d.forwardingMetrics)
 }
 
 ghost
-requires acc(d.Mem(), _)
+requires d.Mem()
 decreases
 pure func (d *DataPlane) DomainForwardingMetrics() set[uint16] {
-	return unfolding acc(d.Mem(), _) in
+	return unfolding d.Mem() in
 		d.forwardingMetrics != nil ?
-			unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
+			unfolding accForwardingMetrics(d.forwardingMetrics) in
 				domain(d.forwardingMetrics) :
 			set[uint16]{}
 }

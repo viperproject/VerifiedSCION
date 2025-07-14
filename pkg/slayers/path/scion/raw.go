@@ -226,7 +226,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ requires validPktMetaHdr(ubuf)
 // @ requires s.absPkt(ubuf).PathNotFullyTraversed()
 // @ requires s.GetBase(ubuf).IsXoverSpec() ==>
-// @ 	s.absPkt(ubuf).LeftSeg != none[io.IO_seg3]
+// @ 	s.absPkt(ubuf).LeftSeg != none[io.Seg]
 // @ ensures  sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
 // @ 	s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
@@ -234,11 +234,18 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 // @ ensures  r != nil ==> s.NonInitMem()
 // @ ensures  r != nil ==> r.ErrorMem()
 // post for IO:
-// @ ensures  r == nil ==> s.GetBase(ubuf).EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
+// @ ensures  r == nil ==>
+// @ 	s.GetBase(ubuf).EqAbsHeader(ubuf) && validPktMetaHdr(ubuf)
 // @ ensures  r == nil && old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsXover(old(s.absPkt(ubuf)))
 // @ ensures  r == nil && !old(s.GetBase(ubuf).IsXoverSpec()) ==>
 // @ 	s.absPkt(ubuf) == AbsIncPath(old(s.absPkt(ubuf)))
+// (VerifiedSCION) the following post is technically redundant,
+// as it conveys information that could, in principle, be conveyed
+// with the previous posts. We should at some point revisit all
+// abstractions we use for paths and potentially unify them.
+// @ ensures  r == nil ==>
+// @ 	s.GetBase(ubuf) == old(s.GetBase(ubuf).IncPathSpec())
 // @ decreases
 func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ unfold s.Mem(ubuf)
@@ -351,14 +358,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 		return path.InfoField{}, err
 	}
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
-	//@ unfold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ unfold acc(sl.Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
-	//@ assert reveal path.BytesToAbsInfoField(ubuf, infOffset) ==
-	//@ 	reveal path.BytesToAbsInfoField(ubuf[infOffset : infOffset+path.InfoLen], 0)
-	//@ assert info.ToAbsInfoField() ==
-	//@ 	reveal path.BytesToAbsInfoField(ubuf, infOffset)
-	//@ fold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ fold acc(sl.Bytes(ubuf[infOffset : infOffset+path.InfoLen], 0, path.InfoLen), R56)
+	//@ path.BytesToAbsInfoFieldOffsetEq(ubuf, infOffset)
 	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
 	//@ fold acc(s.Mem(ubuf), R11)
 	//@ assert reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, info)
@@ -493,12 +493,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 	}
 	//@ unfold hop.Mem()
 	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
-	//@ unfold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ unfold acc(sl.Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
-	//@ assert hop.ToIO_HF() ==
-	//@ 	path.BytesToIO_HF(ubuf, 0, hopOffset, len(ubuf))
-	//@ fold acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-	//@ fold acc(sl.Bytes(ubuf[hopOffset : hopOffset+path.HopLen], 0, path.HopLen), R56)
+	//@ path.BytesToAbsHopFieldOffsetEq(ubuf, hopOffset)
 	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
 	//@ fold acc(s.Mem(ubuf), R11)
 	//@ assert reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, hop)
@@ -544,7 +539,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 // @	s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ ensures  r == nil && idx == int(old(s.GetCurrHF(ubuf))) ==>
 // @ 	let oldPkt := old(s.absPkt(ubuf)) in
-// @ 	let newPkt := oldPkt.UpdateHopField(hop.ToIO_HF()) in
+// @ 	let newPkt := oldPkt.UpdateHopField(hop.Abs()) in
 // @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
 // @ #backend[exhaleMode(1)]
@@ -557,41 +552,81 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	// https://github.com/viperproject/gobra/issues/192
 	//@ assume 0 <= tmpHopField.ConsIngress && 0 <= tmpHopField.ConsEgress
 	//@ fold acc(tmpHopField.Mem(), R9)
-	//@ unfold acc(s.Mem(ubuf), R20)
-	//@ unfold acc(s.Base.Mem(), R20)
+	//@ reveal validPktMetaHdr(ubuf)
+	//@ unfold acc(s.Mem(ubuf), R50)
+	//@ unfold acc(s.Base.Mem(), R50)
+	//@ ghost currInfIdx := int(s.PathMeta.CurrINF)
+	//@ ghost currHfIdx := int(s.PathMeta.CurrHF)
+	//@ ghost seg1Len := int(s.PathMeta.SegLen[0])
+	//@ ghost seg2Len := int(s.PathMeta.SegLen[1])
+	//@ ghost seg3Len := int(s.PathMeta.SegLen[2])
+	//@ ghost segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
+	//@ ghost segLen := segLens.LengthOfCurrSeg(idx)
+	//@ ghost prevSegLen := segLens.LengthOfPrevSeg(idx)
+	//@ ghost offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
+	//@ ghost hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
 	if idx >= s.NumHops {
 		// (VerifiedSCION) introduced `err`
 		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R20)
-		//@ fold acc(s.Mem(ubuf), R20)
+		//@ fold acc(s.Base.Mem(), R50)
+		//@ fold acc(s.Mem(ubuf), R50)
 		return err
 	}
 	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ assert sl.Bytes(s.Raw, 0, len(s.Raw))
-	//@ sl.SplitRange_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
+
+	//@ SliceBytesIntoSegments(ubuf, segLens, HalfPerm)
+	//@ SliceBytesIntoInfoFields(ubuf[:hopfieldOffset], s.NumINF, segLens, R40)
+
+	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
+	//@ ghost inf := path.BytesToAbsInfoField(InfofieldByteSlice(ubuf, currInfIdx), 0)
+	//@ ghost hfIdxSeg := idx-prevSegLen
+	//@ ghost currHopfields := HopfieldsByteSlice(ubuf, currInfIdx, segLens)
+	//@ ghost if idx == currHfIdx {
+	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
+	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
+	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
+	//@ 	reveal s.absPkt(ubuf)
+	//@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
+	//@ 	EstablishBytesStoreCurrSeg(currHopfields, hfIdxSeg, segLen, inf)
+	//@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
+	//@ } else {
+	//@ 	sl.SplitRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
+	//@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)
+	//@ }
+	//@ sl.SplitRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, HalfPerm)
 	ret := tmpHopField.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
-	//@ sl.CombineRange_Bytes(s.Raw, hopOffset, hopOffset+path.HopLen, writePerm)
-	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ fold acc(s.Base.Mem(), R20)
-	//@ fold acc(s.Mem(ubuf), R20)
-	// (VerifiedSCION) The proof for these assumptions is provided in PR #361
-	// (https://github.com/viperproject/VerifiedSCION/pull/361), which will
-	// be merged once the performance issues are resolved.
-	//@ TemporaryAssumeForIO(validPktMetaHdr(ubuf) && s.GetBase(ubuf).EqAbsHeader(ubuf))
-	//@ TemporaryAssumeForIO(idx == int(old(s.GetCurrHF(ubuf))) ==>
-	//@  	let oldPkt := old(s.absPkt(ubuf)) in
-	//@  	let newPkt := oldPkt.UpdateHopField(hop.ToIO_HF()) in
-	//@  	s.absPkt(ubuf) == newPkt)
+	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, HalfPerm)
+	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
+	//@ assert reveal validPktMetaHdr(ubuf)
+	//@ ghost if idx == currHfIdx {
+	//@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
+	//@ 	EstablishBytesStoreCurrSeg(currHopfields, hfIdxSeg, segLen, inf)
+	//@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
+	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
+	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
+	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
+	//@ 	reveal s.absPkt(ubuf)
+	//@ 	assert s.absPkt(ubuf).CurrSeg.Future ==
+	//@ 		seq[io.HF]{tmpHopField.Abs()} ++ old(s.absPkt(ubuf).CurrSeg.Future[1:])
+	//@ } else {
+	//@ 	sl.CombineRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
+	//@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)
+	//@ }
+	//@ CombineBytesFromInfoFields(ubuf[:hopfieldOffset], s.NumINF, segLens, R40)
+	//@ CombineBytesFromSegments(ubuf, segLens, HalfPerm)
+	//@ fold acc(s.Base.Mem(), R50)
+	//@ fold acc(s.Mem(ubuf), R50)
 	return ret
 }
 
 // IsFirstHop returns whether the current hop is the first hop on the path.
 // @ pure
-// @ requires  acc(s.Mem(ubuf), _)
+// @ requires  s.Mem(ubuf)
 // @ decreases
 func (s *Raw) IsFirstHop( /*@ ghost ubuf []byte @*/ ) bool {
-	return /*@ unfolding acc(s.Mem(ubuf), _) in (unfolding acc(s.Base.Mem(), _) in @*/ s.PathMeta.CurrHF == 0 /*@ ) @*/
+	return /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.PathMeta.CurrHF == 0 /*@ ) @*/
 }
 
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.

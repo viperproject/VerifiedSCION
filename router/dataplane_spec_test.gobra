@@ -82,7 +82,12 @@ func canModifyRunning(d *DataPlane) {
 
 requires macFactory != nil                        &&
 	acc(key)                                      &&
+<<<<<<< HEAD
 	acc(sl.Bytes(*key, 0, len(*key)), _) &&
+=======
+	len(*key) > 0                                 &&
+	acc(sl.Bytes(*key, 0, len(*key)), _)          &&
+>>>>>>> master
 	scrypto.ValidKeyForHash(*key)                 &&
 	macFactory implements MacFactorySpec{key}
 requires metrics != nil && metrics.Mem()
@@ -92,8 +97,8 @@ func testRun(
 	key *[]byte,
 	metrics *Metrics,
 	ctx context.Context,
-	place io.Place,
-	state io.IO_dp3s_state_local) (d *DataPlane) {
+	ghost place io.Place,
+	ghost state io.Dp3sStateLocal) (d *DataPlane) {
 	// body similar to foldDataPlaneMem
 	d = &DataPlane{}
 
@@ -136,17 +141,29 @@ func testRun(
 	fold accForwardingMetrics(d.forwardingMetrics)
 
 	ensures dp.Valid()
+<<<<<<< HEAD
 	ensures dp === io.DataPlaneSpec_ {
 		linkTypes: dict[io.IO_ifs]io.IO_Link{
 			1: io.IO_ProvCust{},
 			2: io.IO_ProvCust{},
 			3: io.IO_ProvCust{},
+=======
+	// the following trivial assertion makes sure that `==` matches
+	// `===` for ghost structs
+	ensures dp != io.DataPlaneSpec{}
+	ensures dp == io.DataPlaneSpec {
+		linkTypes: dict[io.Ifs]io.Link{
+			io.Ifs{1}: io.IO_ProvCust{},
+			io.Ifs{2}: io.IO_ProvCust{},
+			io.Ifs{3}: io.IO_ProvCust{},
+>>>>>>> master
 		},
-		neighborIAs: dict[io.IO_ifs]io.IO_as{
-			1: 1001,
-			2: 1002,
-			3: 1000,
+		neighborIAs: dict[io.Ifs]io.AS{
+			io.Ifs{1}: io.AS{1001},
+			io.Ifs{2}: io.AS{1002},
+			io.Ifs{3}: io.AS{1000},
 		},
+<<<<<<< HEAD
 		localIA: 1000,
 		links:  dict[io.AsIfsPair]io.AsIfsPair {
 			io.AsIfsPair{1000, 1}: io.AsIfsPair{1001, 7},
@@ -154,25 +171,46 @@ func testRun(
 			io.AsIfsPair{1000, 3}: io.AsIfsPair{1000, 3},
 			io.AsIfsPair{1001, 7}: io.AsIfsPair{1000, 1},
 			io.AsIfsPair{1002, 8}: io.AsIfsPair{1000, 2}}}
+=======
+		localIA: io.AS{1000},
+		links:  dict[io.AsIfsPair]io.AsIfsPair {
+			io.AsIfsPair{io.AS{1000}, io.Ifs{1}}: io.AsIfsPair{io.AS{1001}, io.Ifs{7}},
+			io.AsIfsPair{io.AS{1000}, io.Ifs{2}}: io.AsIfsPair{io.AS{1002}, io.Ifs{8}},
+			io.AsIfsPair{io.AS{1000}, io.Ifs{3}}: io.AsIfsPair{io.AS{1000}, io.Ifs{3}},
+			io.AsIfsPair{io.AS{1001}, io.Ifs{7}}: io.AsIfsPair{io.AS{1000}, io.Ifs{1}},
+			io.AsIfsPair{io.AS{1002}, io.Ifs{8}}: io.AsIfsPair{io.AS{1000}, io.Ifs{2}}}}
+>>>>>>> master
 	outline(
-	pair1 := io.AsIfsPair{1000, 1}
-	pair2 := io.AsIfsPair{1000, 2}
-	pair3 := io.AsIfsPair{1000, 3}
-	pair4 := io.AsIfsPair{1001, 7}
-	pair5 := io.AsIfsPair{1002, 8}
+	pair1 := io.AsIfsPair{io.AS{1000}, io.Ifs{1}}
+	pair2 := io.AsIfsPair{io.AS{1000}, io.Ifs{2}}
+	pair3 := io.AsIfsPair{io.AS{1000}, io.Ifs{3}}
+	pair4 := io.AsIfsPair{io.AS{1001}, io.Ifs{7}}
+	pair5 := io.AsIfsPair{io.AS{1002}, io.Ifs{8}}
 
+<<<<<<< HEAD
 	dp := io.DataPlaneSpec_ {
 		linkTypes: dict[io.IO_ifs]io.IO_Link{
 			1: io.IO_ProvCust{},
 			2: io.IO_ProvCust{},
 			3: io.IO_ProvCust{},
+=======
+	dp := io.DataPlaneSpec {
+		linkTypes: dict[io.Ifs]io.Link{
+			io.Ifs{1}: io.IO_ProvCust{},
+			io.Ifs{2}: io.IO_ProvCust{},
+			io.Ifs{3}: io.IO_ProvCust{},
+>>>>>>> master
 		},
-		neighborIAs: dict[io.IO_ifs]io.IO_as{
-			1: 1001,
-			2: 1002,
-			3: 1000,
+		neighborIAs: dict[io.Ifs]io.AS{
+			io.Ifs{1}: io.AS{1001},
+			io.Ifs{2}: io.AS{1002},
+			io.Ifs{3}: io.AS{1000},
 		},
+<<<<<<< HEAD
 		localIA: 1000,
+=======
+		localIA: io.AS{1000},
+>>>>>>> master
 		links:  dict[io.AsIfsPair]io.AsIfsPair {
 			pair1: pair4,
 			pair2: pair5,
@@ -186,11 +224,19 @@ func testRun(
 	assert dp.Lookup(dp.Lookup(pair4)) == pair4
 	assert dp.Lookup(dp.Lookup(pair5)) == pair5
 
+<<<<<<< HEAD
 	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
 		io.AsIfsPair{dp.localIA, ifs} in domain(dp.links)
 	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
 		dp.Lookup(io.AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs]
 	assert forall ifs io.IO_ifs :: {ifs in domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
+=======
+	assert forall ifs io.Ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
+		io.AsIfsPair{dp.localIA, ifs} in domain(dp.links)
+	assert forall ifs io.Ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
+		dp.Lookup(io.AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs]
+	assert forall ifs io.Ifs :: {ifs in domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
+>>>>>>> master
 		ifs in domain(dp.neighborIAs)
 	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair in domain(dp.links) ==>
 			let next_pair := dp.Lookup(pair) in
@@ -200,7 +246,7 @@ func testRun(
 	assert reveal dp.Valid()
 	)
 
-	assert dp.Asid() == 1000
+	assert dp.Asid().V == 1000
 	assert d.localIA == 1000
 	assert d.dpSpecWellConfiguredLocalIA(dp)
 	assert d.dpSpecWellConfiguredNeighborIAs(dp)
@@ -237,3 +283,16 @@ func allocateBatchConn() (b BatchConn)
 
 ensures u != nil && u.Mem()
 func allocateUDPAddr() (u *net.UDPAddr)
+
+// the following trivial assertion makes sure that `==` matches
+// `===` for ghost structs
+func testEquals() {
+	assert forall d1 io.DataPlaneSpec, d2 io.DataPlaneSpec :: { dummyTrigger(d1), dummyTrigger(d2) } (d1 == d2) == (d1 === d2)
+}
+
+ghost
+pure
+decreases
+func dummyTrigger(d io.DataPlaneSpec) bool {
+	return true
+}

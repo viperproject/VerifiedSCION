@@ -22,11 +22,19 @@ package io
 ghost
 requires len(currseg.Future) > 0
 decreases
+<<<<<<< HEAD
 pure func establishGuardTraversedseg(currseg IO_seg3, direction bool) IO_seg3 {
 	return let uinfo := direction ?
 		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
 		IO_seg3_ {
+=======
+pure func establishGuardTraversedseg(currseg Seg, direction bool) Seg {
+	return let uinfo := direction ?
+		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
+		currseg.UInfo in
+		Seg {
+>>>>>>> master
 			AInfo: currseg.AInfo,
 			UInfo: uinfo,
 			ConsDir: currseg.ConsDir,
@@ -41,32 +49,55 @@ pure func establishGuardTraversedseg(currseg IO_seg3, direction bool) IO_seg3 {
 ghost
 requires len(currseg.Future) > 0
 decreases
+<<<<<<< HEAD
 pure func establishGuardTraversedsegInc(currseg IO_seg3, direction bool) IO_seg3 {
 	return let uinfo := direction ?
 		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
 		IO_seg3_ {
+=======
+pure func establishGuardTraversedsegInc(currseg Seg, direction bool) Seg {
+	return let uinfo := direction ?
+		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
+		currseg.UInfo in
+		Seg {
+>>>>>>> master
 			AInfo: currseg.AInfo,
 			UInfo: uinfo,
 			ConsDir: currseg.ConsDir,
 			Peer: currseg.Peer,
+<<<<<<< HEAD
 			Past: seq[IO_HF]{currseg.Future[0]} ++ currseg.Past,
 			Future: currseg.Future[1:],
 			History: seq[IO_ahi]{currseg.Future[0].Toab()} ++ currseg.History,
+=======
+			Past: seq[HF]{currseg.Future[0]} ++ currseg.Past,
+			Future: currseg.Future[1:],
+			History: seq[AHI]{currseg.Future[0].Toab()} ++ currseg.History,
+>>>>>>> master
 		}
 }
 
 ghost
 requires len(seg.Future) > 0
 decreases
+<<<<<<< HEAD
 pure func (seg IO_seg3) UpdateCurrHf(hf IO_HF) IO_seg3 {
 	return IO_seg3_ {
+=======
+pure func (seg Seg) UpdateCurrHf(hf HF) Seg {
+	return Seg {
+>>>>>>> master
 		seg.AInfo,
 		seg.UInfo,
 		seg.ConsDir,
 		seg.Peer,
 		seg.Past,
+<<<<<<< HEAD
 		seq[IO_HF]{hf} ++ seg.Future[1:],
+=======
+		seq[HF]{hf} ++ seg.Future[1:],
+>>>>>>> master
 		seg.History,
 	}
 }
@@ -74,15 +105,26 @@ pure func (seg IO_seg3) UpdateCurrHf(hf IO_HF) IO_seg3 {
 ghost
 requires pkt.PathNotFullyTraversed()
 decreases
+<<<<<<< HEAD
 pure func (pkt IO_pkt2) UpdateHopField(hf IO_HF) IO_pkt2 {
 	return let newCurrSeg := pkt.CurrSeg.UpdateCurrHf(hf) in
 		IO_Packet2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
+=======
+pure func (pkt Pkt) UpdateHopField(hf HF) Pkt {
+	return let newCurrSeg := pkt.CurrSeg.UpdateCurrHf(hf) in
+		Pkt{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
+>>>>>>> master
 }
 
 ghost
 decreases
+<<<<<<< HEAD
 pure func (seg IO_seg3) UpdateCurrSeg(info AbsInfoField) IO_seg3 {
 	return IO_seg3_ {
+=======
+pure func (seg Seg) UpdateCurrSeg(info AbsInfoField) Seg {
+	return Seg {
+>>>>>>> master
 		info.AInfo,
 		info.UInfo,
 		info.ConsDir,
@@ -95,6 +137,7 @@ pure func (seg IO_seg3) UpdateCurrSeg(info AbsInfoField) IO_seg3 {
 
 ghost
 decreases
+<<<<<<< HEAD
 pure func (pkt IO_pkt2) UpdateInfoField(info AbsInfoField) IO_pkt2 {
 	return let newCurrSeg := pkt.CurrSeg.UpdateCurrSeg(info) in
 		IO_Packet2{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
@@ -109,17 +152,38 @@ type AbsInfoField adt {
 		ConsDir bool
 		Peer bool
 	}
+=======
+pure func (pkt Pkt) UpdateInfoField(info AbsInfoField) Pkt {
+	return let newCurrSeg := pkt.CurrSeg.UpdateCurrSeg(info) in
+		Pkt{newCurrSeg, pkt.LeftSeg, pkt.MidSeg, pkt.RightSeg}
+}
+
+// This type simplifies the infoField, making it easier
+// to use than the Seg from the IO-spec.
+ghost type AbsInfoField ghost struct {
+	AInfo Ainfo
+	UInfo set[MsgTerm]
+	ConsDir bool
+	Peer bool
+>>>>>>> master
 }
 
 // The segment lengths of a packet are frequently used together.
 // This type combines them into a single structure to simplify
 // their specification.
+<<<<<<< HEAD
 type SegLens adt {
 	SegLens_ {
 		Seg1Len int
 		Seg2Len int
 		Seg3Len int
 	}
+=======
+ghost type SegLens ghost struct {
+	Seg1Len int
+	Seg2Len int
+	Seg3Len int
+>>>>>>> master
 }
 
 ghost
@@ -133,7 +197,11 @@ pure func (s SegLens) Valid() bool {
 ghost
 decreases
 pure func CombineSegLens(seg1Len int, seg2Len int, seg3Len int) SegLens {
+<<<<<<< HEAD
 	return SegLens_ {
+=======
+	return SegLens {
+>>>>>>> master
 			seg1Len,
 			seg2Len,
 			seg3Len,
@@ -168,6 +236,10 @@ pure func (s SegLens) LengthOfPrevSeg(currHF int) (res int) {
 
 ghost
 decreases
+<<<<<<< HEAD
 pure func (pkt IO_pkt2) PathNotFullyTraversed() bool {
+=======
+pure func (pkt Pkt) PathNotFullyTraversed() bool {
+>>>>>>> master
 	return len(pkt.CurrSeg.Future) > 0
 }

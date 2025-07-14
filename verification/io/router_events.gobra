@@ -23,7 +23,7 @@ ghost
 requires dp.Valid()
 requires a == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) valid_link_types2(hf1 IO_HF, a IO_as) bool {
+pure func (dp DataPlaneSpec) valid_link_types2(hf1 HF, a AS) bool {
 	return  (dp.egif_prov2(hf1, a) && dp.inif_cust2(hf1, a)) ||
 			(dp.egif_core2(hf1, a) && dp.inif_core2(hf1, a)) ||
 			(dp.egif_cust2(hf1, a) && dp.inif_prov2(hf1, a))
@@ -33,7 +33,7 @@ ghost
 requires dp.Valid()
 requires a == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
+pure func (dp DataPlaneSpec) valid_link_types_in2(hf1 HF, a AS) bool {
 	return  (dp.inif_prov2(hf1, a) && dp.egif_cust2(hf1, a)) ||
 			(dp.inif_core2(hf1, a) && dp.egif_core2(hf1, a)) ||
 			(dp.inif_cust2(hf1, a) && dp.egif_prov2(hf1, a))
@@ -42,7 +42,11 @@ pure func (dp DataPlaneSpec) valid_link_types_in2(hf1 IO_HF, a IO_as) bool {
 
 ghost
 decreases
+<<<<<<< HEAD
 pure func (dp DataPlaneSpec) dp2_enter_interface(d bool, asid IO_as, hf1 IO_HF, recvif IO_ifs) bool {
+=======
+pure func (dp DataPlaneSpec) dp2_enter_interface(d bool, asid AS, hf1 HF, recvif Ifs) bool {
+>>>>>>> master
 	return (d && hf1.InIF2 === some(recvif)) || (!d && hf1.EgIF2 === some(recvif))
 }
 
@@ -50,13 +54,13 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) dp2_check_interface_top(d bool, asid IO_as, hf1 IO_HF) bool {
+pure func (dp DataPlaneSpec) dp2_check_interface_top(d bool, asid AS, hf1 HF) bool {
 	return (d && dp.valid_link_types_in2(hf1, asid)) || (!d && dp.valid_link_types2(hf1, asid))
 }
 
 ghost
 decreases
-pure func dp2_exit_interface(d bool, asid IO_as, hf1 IO_HF, outif IO_ifs) bool {
+pure func dp2_exit_interface(d bool, asid AS, hf1 HF, outif Ifs) bool {
 	return (d && hf1.EgIF2 == some(outif)) || (!d && hf1.InIF2 == some(outif))
 }
 
@@ -65,13 +69,17 @@ ghost
 requires dp.Valid()
 requires dp.Asid() == asid
 decreases
-pure func (dp DataPlaneSpec) dp2_forward_ext_guard(asid IO_as, m IO_pkt2, nextif IO_ifs, currseg, traversedseg IO_seg2, newpkt IO_pkt2, fut seq[IO_HF], hf1 IO_HF) bool {
+pure func (dp DataPlaneSpec) dp2_forward_ext_guard(asid AS, m Pkt, nextif Ifs, currseg, traversedseg Seg, newpkt Pkt, fut seq[HF], hf1 HF) bool {
 	return m.CurrSeg == currseg &&
+<<<<<<< HEAD
 		newpkt == IO_Packet2{traversedseg, m.LeftSeg, m.MidSeg, m.RightSeg} &&
+=======
+		newpkt == Pkt{traversedseg, m.LeftSeg, m.MidSeg, m.RightSeg} &&
+>>>>>>> master
 		// The outgoing interface is correct:
 		dp2_exit_interface(currseg.ConsDir, asid, hf1, nextif) &&
 		// Next validate the current hop field with the *original* UInfo field):
-		dp.hf_valid(currseg.ConsDir, currseg.AInfo, currseg.UInfo, hf1) &&
+		dp.hf_valid(currseg.ConsDir, currseg.AInfo.V, currseg.UInfo, hf1) &&
 		hf1.extr_asid() == asid &&
 		// Segment update: push current hop field into the Past path and History:
 		inc_seg2(currseg, traversedseg, hf1, fut) &&
@@ -87,14 +95,20 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) dp2_enter_guard(m IO_pkt2, currseg IO_seg2, traversedseg IO_seg2, asid IO_as, hf1 IO_HF, recvif IO_ifs, fut seq[IO_HF]) bool {
+pure func (dp DataPlaneSpec) dp2_enter_guard(m Pkt, currseg Seg, traversedseg Seg, asid AS, hf1 HF, recvif Ifs, fut seq[HF]) bool {
 	return m.CurrSeg == currseg &&
+<<<<<<< HEAD
 		currseg.Future == seq[IO_HF]{hf1} ++ fut &&
 		dp.dp2_enter_interface(currseg.ConsDir, asid, hf1, recvif) &&
 		(dp.dp2_check_interface_top(currseg.ConsDir, asid, hf1) || fut == seq[IO_HF]{}) &&
+=======
+		currseg.Future == seq[HF]{hf1} ++ fut &&
+		dp.dp2_enter_interface(currseg.ConsDir, asid, hf1, recvif) &&
+		(dp.dp2_check_interface_top(currseg.ConsDir, asid, hf1) || fut == seq[HF]{}) &&
+>>>>>>> master
 		update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
 		same_segment2(currseg, traversedseg) &&
 		same_other2(currseg, traversedseg) &&
-		dp.hf_valid(currseg.ConsDir, currseg.AInfo, traversedseg.UInfo, hf1) &&
+		dp.hf_valid(currseg.ConsDir, currseg.AInfo.V, traversedseg.UInfo, hf1) &&
 		hf1.extr_asid() == asid
 }

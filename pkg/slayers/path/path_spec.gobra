@@ -16,7 +16,10 @@
 
 package path
 
-import "github.com/scionproto/scion/verification/utils/slices"
+import (
+	"github.com/scionproto/scion/verification/utils/monoset"
+	"github.com/scionproto/scion/verification/utils/slices"
+)
 
 /** rawPath spec **/
 pred (r *rawPath) Mem(underlyingBuf []byte) {
@@ -38,19 +41,18 @@ func (p *rawPath) DowngradePerm(ghost buf []byte) {
 }
 
 ghost
-pure
 decreases
-func (p *rawPath) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+pure func (p *rawPath) IsValidResultOfDecoding(b []byte) bool {
 	return true
 }
 
 ghost
-pure
-requires acc(p.Mem(ub), _)
+requires p.Mem(ub)
 ensures  0 <= l
 decreases
-func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
-	return unfolding acc(p.Mem(ub), _) in len(p.raw)
+pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
+	return unfolding p.Mem(ub) in
+		len(p.raw)
 }
 
 (*rawPath) implements Path
@@ -60,37 +62,50 @@ func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
 /** Global state of the package **/
 ghost const MaxPathType = maxPathType
 
-pred PathPackageMem() {
-	acc(&registeredPaths) &&
-	acc(&strictDecoding) &&
-	forall t Type :: { &registeredPaths[t].inUse } (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==> registeredPaths[t].Metadata.New implements NewPathSpec
+ghost
+decreases
+pure func RegisteredTypes() monoset.BoundedMonotonicSet {
+	return registeredKeys
+}
+
+pred PkgMem() {
+	acc(&registeredPaths)             &&
+	acc(&strictDecoding)              &&
+	registeredKeys.Inv()              &&
+	registeredKeys.Start == 0         &&
+	registeredKeys.End == maxPathType &&
+	(forall t Type :: { &registeredPaths[t].inUse } 0 <= t && t < maxPathType ==>
+		registeredPaths[t].inUse == registeredKeys.FContains(int64(t))) &&
+	(forall t Type :: { &registeredPaths[t].inUse } (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==>
+		registeredPaths[t].Metadata.New implements NewPathSpec)
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PathPackageMem(), _)
-ensures  res == unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
+requires PkgMem()
 decreases
 pure func Registered(t Type) (res bool) {
-	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
+	return unfolding PkgMem() in
+		registeredPaths[t].inUse
 }
 
 ghost
 requires 0 <= t && t < maxPathType
-requires acc(PathPackageMem(), _)
+requires PkgMem()
 decreases
 pure func GetType(t Type) (res Metadata) {
-	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].Metadata
+	return unfolding PkgMem() in
+		registeredPaths[t].Metadata
 }
 
 ghost
-requires acc(PathPackageMem(), _)
-ensures  b == unfolding acc(PathPackageMem(), _) in strictDecoding
+requires PkgMem()
 decreases
 pure func IsStrictDecoding() (b bool) {
-	return unfolding acc(PathPackageMem(), _) in strictDecoding
+	return unfolding PkgMem() in strictDecoding
 }
 
+// The following is a closure spec, not an assumed impl.
 // without passing `writePerm` explicitely below, we run into
 // exceptions when verifying method RegisterPath in package 'empty'
 ensures acc(p.NonInitMem(), writePerm)

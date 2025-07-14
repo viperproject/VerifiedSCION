@@ -23,9 +23,8 @@ import (
 )
 
 ghost
-pure
 decreases
-func (p *Decoded) IsValidResultOfDecoding(b []byte, err error) (res bool) {
+pure func (p *Decoded) IsValidResultOfDecoding(b []byte) bool {
 	return true
 }
 
@@ -66,12 +65,11 @@ func (d *Decoded) Len(ghost ubuf []byte) (l int) {
 }
 
 ghost
-pure
-requires acc(d.Mem(ub), _)
-ensures  unfolding acc(d.Mem(ub), _) in l == d.Base.Len()
+requires d.Mem(ub)
 decreases
-func (d *Decoded) LenSpec(ghost ub []byte) (l int) {
-	return unfolding acc(d.Mem(ub), _) in d.Base.Len()
+pure func (d *Decoded) LenSpec(ghost ub []byte) int {
+	return unfolding d.Mem(ub) in
+		d.Base.Len()
 }
 
 /**
@@ -80,12 +78,11 @@ func (d *Decoded) LenSpec(ghost ub []byte) (l int) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this method which acts as a wrapper.
   */
-pure
-requires acc(d.Mem(ubuf), _)
-ensures  unfolding acc(d.Mem(ubuf), _) in t == d.Base.Type()
+requires d.Mem(ubuf)
 decreases
-func (d *Decoded) Type(ghost ubuf []byte) (t path.Type) {
-	return unfolding acc(d.Mem(ubuf), _) in d.Base.Type()
+pure func (d *Decoded) Type(ghost ubuf []byte) path.Type {
+	return unfolding d.Mem(ubuf) in
+		d.Base.Type()
 }
 
 /**
@@ -128,48 +125,53 @@ func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 }
 
 ghost
-requires acc(d.Mem(ub), _)
+requires d.Mem(ub)
 decreases
-pure func (d *Decoded) GetNumINF(ub []byte) (res int) {
-	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumINF()
+pure func (d *Decoded) GetNumINF(ub []byte) int {
+	return unfolding d.Mem(ub) in
+		d.Base.GetNumINF()
 }
 
 ghost
-requires acc(d.Mem(ub), _)
+requires d.Mem(ub)
 decreases
-pure func (d *Decoded) GetNumHops(ub []byte) (res int) {
-	return unfolding acc(d.Mem(ub), _) in d.Base.GetNumHops()
+pure func (d *Decoded) GetNumHops(ub []byte) int {
+	return unfolding d.Mem(ub) in
+		d.Base.GetNumHops()
 }
 
 ghost
-requires acc(s.Mem(ub), _)
+requires s.Mem(ub)
 decreases
 pure func (s *Decoded) GetMetaHdr(ub []byte) MetaHdr {
-	return unfolding acc(s.Mem(ub), _) in s.Base.GetMetaHdr()
+	return unfolding s.Mem(ub) in
+		s.Base.GetMetaHdr()
 }
 
 /**** End of Stubs ****/
 
 /**** Auxiliary Functions ****/
 
-requires acc(d.Mem(ubuf), _)
+requires d.Mem(ubuf)
 decreases
 pure func (d *Decoded) getLenInfoFields(ubuf []byte) int {
-	return unfolding acc(d.Mem(ubuf), _) in len(d.InfoFields)
+	return unfolding d.Mem(ubuf) in
+		len(d.InfoFields)
 }
 
-requires acc(d.Mem(ubuf), _)
+requires d.Mem(ubuf)
 decreases
 pure func (d *Decoded) getLenHopFields(ubuf []byte) int {
-	return unfolding acc(d.Mem(ubuf), _) in len(d.HopFields)
+	return unfolding d.Mem(ubuf) in
+		len(d.HopFields)
 }
 
 ghost
-requires acc(d.Mem(ubuf), _)
+requires d.Mem(ubuf)
 decreases
 pure func (d *Decoded) GetBase(ubuf []byte) Base {
-	return unfolding acc(d.Mem(ubuf), _) in
-		(unfolding acc(d.Base.Mem(), _) in d.Base)
+	return unfolding d.Mem(ubuf) in
+		(unfolding d.Base.Mem() in d.Base)
 }
 
 /**** End of Auxiliary Functions ****/

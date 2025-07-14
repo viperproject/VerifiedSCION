@@ -18,8 +18,13 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 // are the same length and contain the same bytes.
 // A nil argument is equivalent to an empty slice.
 trusted
+<<<<<<< HEAD
 requires acc(sl.Bytes(a, 0, len(a)), _)
 requires acc(sl.Bytes(b, 0, len(b)), _)
+=======
+requires sl.Bytes(a, 0, len(a))
+requires sl.Bytes(b, 0, len(b))
+>>>>>>> master
 decreases
 pure func Equal(a, b []byte) bool {
 	return string(a) == string(b)

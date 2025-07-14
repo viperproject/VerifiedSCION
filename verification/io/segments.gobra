@@ -18,6 +18,7 @@
 
 package io
 
+<<<<<<< HEAD
 type IO_ainfo = uint
 
 // Here, we already instantiated the type params, contrary to what
@@ -32,7 +33,21 @@ type IO_seg2 adt {
 		Future seq[IO_HF]   // formalized originally as a seq of HF_scheme
 		History seq[IO_ahi] // formalized originally as a seq of ahi_scheme
 	}
+=======
+ghost type Ainfo ghost struct {
+	V uint
+>>>>>>> master
 }
 
-// seg3 is the same as seg2 instantiated with type parameters
-type IO_seg3 = IO_seg2
+// Here, we already instantiated the type params, contrary to what
+// is done in Isabelle, where they are left generic.
+//Ccorresponds to the isabelle types seg2 and seg3.
+ghost type Seg ghost struct {
+	AInfo Ainfo // nat in Isabelle
+	UInfo set[MsgTerm]
+	ConsDir bool
+	Peer bool
+	Past seq[HF]     // formalized originally as a seq of HF_scheme
+	Future seq[HF]   // formalized originally as a seq of HF_scheme
+	History seq[AHI] // formalized originally as a seq of ahi_scheme
+}

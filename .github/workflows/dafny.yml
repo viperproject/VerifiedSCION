@@ -14,7 +14,8 @@ on:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Dafny fails for ubuntu-24.04 with error "no libssl found".
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout the current repository
         uses: actions/checkout@v3

@@ -52,7 +52,7 @@ pred (h *HopByHopExtn) Mem(ubuf []byte) {
 
 // Gobra is not able to infer that HopByHopExtn is "inheriting"
 // the implementation of LayerContents from extnBase.
-requires Uncallable()
+requires false
 func (h *HopByHopExtn) LayerContents() (res []byte) {
 	res = h.BaseLayer.LayerContents()
 	return res
@@ -85,7 +85,7 @@ pred (h *HopByHopExtnSkipper) Mem(ubuf []byte) {
 
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
 // the implementation of LayerContents from extnBase.
-requires Uncallable()
+requires false
 func (h *HopByHopExtnSkipper) LayerContents() (res []byte) {
 	res = h.BaseLayer.LayerContents()
 	return res
@@ -140,7 +140,7 @@ pred (e *EndToEndExtn) Mem(ubuf []byte) {
 
 // Gobra is not able to infer that EndToEndExtn is "inheriting"
 // the implementation of LayerContents from extnBase.
-requires Uncallable()
+requires false
 func (e *EndToEndExtn) LayerContents() (res []byte) {
 	res = e.BaseLayer.LayerContents()
 	return res
@@ -175,7 +175,7 @@ pred (e *EndToEndExtnSkipper) Mem(ubuf []byte)  {
 
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
 // the implementation of LayerContents from extnBase.
-requires Uncallable()
+requires false
 func (e *EndToEndExtnSkipper) LayerContents() (res []byte) {
 	res = e.BaseLayer.LayerContents()
 	return res
