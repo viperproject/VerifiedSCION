@@ -102,11 +102,4 @@ pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
 	return true
 }
 
-ghost
-pure
-decreases
-func (p *Path) IsValidResultOfDecoding(b []byte, err error) (res bool) {
-	return true
-}
-
 (*Path) implements path.Path

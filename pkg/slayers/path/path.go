@@ -90,7 +90,6 @@ type Path interface {
 	//@ ensures   err == nil ==> IsValidResultOfDecoding(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ ensures   err != nil ==> NonInitMem()
-	//@ ensures   err == nil ==> IsValidResultOfDecoding(b, err)
 	//@ decreases
 	DecodeFromBytes(b []byte) (err error)
 	//@ ghost
