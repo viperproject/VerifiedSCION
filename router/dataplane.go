@@ -1909,12 +1909,12 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ requires  dp.Valid()
 // @ requires  acc(ioLock.LockP(), _)
 // @ requires  ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
-// @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.IO_val_Unit{})
+// @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.ValUnit{})
 // @ ensures  respr.OutPkt != nil ==>
 // @ 	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID) &&
-// @ 	newAbsPkt.isIO_val_Unsupported
+// @ 	newAbsPkt.isValUnsupported
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
-func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, ghost addrAliasesPkt bool, ghost newAbsPkt io.IO_val @*/) {
+func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, ghost addrAliasesPkt bool, ghost newAbsPkt io.Val @*/) {
 	// @ TODO()
 	// @ unfold acc(p.scionLayer.Mem(ub), R10)
 	epicPath, ok := p.scionLayer.Path.(*epic.Path)
@@ -1923,7 +1923,7 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 		// @ p.scionLayer.DowngradePerm(ub)
 		// @ establishMemMalformedPath()
 		// @ fold p.d.validResult(respr, false)
-		return processResult{}, malformedPath /*@ , false, io.IO_val_Unit{}  @*/
+		return processResult{}, malformedPath /*@ , false, io.ValUnit{} @*/
 	}
 
 	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
@@ -1937,7 +1937,7 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 		// @ p.scionLayer.DowngradePerm(ub)
 		// @ establishMemMalformedPath()
 		// @ fold p.d.validResult(respr, false)
-		return processResult{}, malformedPath /*@ , false, io.IO_val_Unit{} @*/
+		return processResult{}, malformedPath /*@ , false, io.ValUnit{} @*/
 	}
 
 	isPenultimate := p.path.IsPenultimateHop( /*@ ubPath[epic.MetadataLen:] @*/ )
@@ -1956,7 +1956,7 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 		if err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			// @ fold p.d.validResult(respr, false)
-			return processResult{}, err /*@ , false, io.IO_val_Unit{} @*/
+			return processResult{}, err /*@ , false, io.ValUnit{} @*/
 		}
 
 		timestamp := time.Unix(int64(firstInfo.Timestamp), 0)
@@ -1965,7 +1965,7 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 			// @ p.scionLayer.DowngradePerm(ub)
 			// @ fold p.d.validResult(respr, false)
 			// TODO(mawyss): Send back SCMP packet
-			return processResult{}, err /*@ , false, io.IO_val_Unit{} @*/
+			return processResult{}, err /*@ , false, io.ValUnit{} @*/
 		}
 
 		HVF := epicPath.PHVF
@@ -1977,11 +1977,11 @@ func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil b
 		if err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			// TODO(mawyss): Send back SCMP packet
-			return processResult{}, err /*@ , false, io.IO_val_Unit{} @*/
+			return processResult{}, err /*@ , false, io.ValUnit{} @*/
 		}
 	}
 
-	return result, nil /*@ , false, io.IO_val_Unit{} @*/
+	return result, nil /*@ , false, io.ValUnit{} @*/
 }
 
 // scionPacketProcessor processes packets. It contains pre-allocated per-packet
