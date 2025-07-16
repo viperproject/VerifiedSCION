@@ -23,5 +23,5 @@ func FoldNonInitMem_test() {
 
 func FoldMem_test() {
 	e := Path{}
-	fold e.Mem(nil)
+	fold e.Mem()
 }

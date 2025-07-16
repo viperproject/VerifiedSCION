@@ -404,11 +404,12 @@ func (s *SCION) ValidHeaderOffsetFromSubSliceLemma(ub []byte, length int) {
 
 ghost
 opaque
-requires s.Mem(ub)
-requires sl.Bytes(ub, 0, len(ub))
+requires s.Mem()
+requires sl.Bytes(s.UBytes(), 0, len(s.UBytes()))
 decreases
-pure func (s *SCION) EqAbsHeader(ub []byte) bool {
-	return unfolding s.Mem(ub) in
+pure func (s *SCION) EqAbsHeader() bool {
+	return let ub := s.UBytes() in
+		unfolding s.Mem()       in
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen in
 		GetAddressOffset(ub) == low  &&

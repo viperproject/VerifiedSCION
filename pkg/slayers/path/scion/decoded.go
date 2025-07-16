@@ -33,13 +33,14 @@ type Decoded struct {
 	InfoFields []path.InfoField
 	// HopFields contains all the HopFields of the path.
 	HopFields []path.HopField
+	// @ ghost ubytes []byte
 }
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
 // @ requires  s.NonInitMem()
 // @ preserves acc(sl.Bytes(data, 0, len(data)), R42)
 // @ ensures   r == nil ==> (
-// @ 	s.Mem(data) &&
+// @ 	s.Mem() && s.UBytes() === data &&
 // @ 	let lenD := len(data) in
 // @ 	MetaLen <= lenD &&
 // @ 	let b0 := sl.GetByte(data, 0, lenD, 0) in
@@ -48,12 +49,13 @@ type Decoded struct {
 // @ 	let b3 := sl.GetByte(data, 0, lenD, 3) in
 // @ 	let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
 // @ 	let metaHdr := DecodedFrom(line) in
-// @ 	metaHdr == s.GetMetaHdr(data))
-// @ ensures   r == nil ==> s.GetBase(data).WeaklyValid()
+// @ 	metaHdr == s.GetMetaHdr())
+// @ ensures   r == nil ==> s.GetBase().WeaklyValid()
 // @ ensures   r != nil ==> (r.ErrorMem() && s.NonInitMem())
 // @ decreases
 func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ unfold s.NonInitMem()
+	//@ s.ubytes = data
 	if err := s.Base.DecodeFromBytes(data); err != nil {
 		//@ fold s.NonInitMem()
 		return err
@@ -119,23 +121,25 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		offset += path.HopLen
 	}
 	//@ sl.CombineAtIndex_Bytes(data, 0, len(data), offset, R43)
-	//@ fold s.Mem(data)
+	//@ fold s.Mem()
 	return nil
 }
 
 // SerializeTo writePerms the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
-// @ preserves acc(s.Mem(ubuf), R1)
-// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
-// @ preserves b !== ubuf ==> sl.Bytes(b, 0, len(b))
+// @ preserves acc(s.Mem(), R1)
+// @ preserves sl.Bytes(s.UBytes(), 0, len(s.UBytes()))
+// @ preserves b !== s.UBytes() ==> sl.Bytes(b, 0, len(b))
+// @ ensures   s.UBytes() === old(s.UBytes())
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
-func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
-	if len(b) < s.Len( /*@ ubuf @*/ ) {
-		return serrors.New("buffer too small to serialize path.", "expected", s.Len( /*@ ubuf @*/ ),
+func (s *Decoded) SerializeTo(b []byte) (r error) {
+	if len(b) < s.Len() {
+		return serrors.New("buffer too small to serialize path.", "expected", s.Len(),
 			"actual", len(b))
 	}
-	//@ unfold acc(s.Mem(ubuf), R1)
+	//@ ghost ubuf := s.UBytes()
+	//@ unfold acc(s.Mem(), R1)
 	//@ assert sl.Bytes(b, 0, len(b))
 	//@ sl.SplitByIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
 	//@ sl.Reslice_Bytes(b, 0, MetaLen, writePerm)
@@ -147,21 +151,21 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ fold acc(s.Base.Mem(), R1)
 	//@ sl.Unslice_Bytes(b, 0, MetaLen, writePerm)
 	//@ sl.CombineAtIndex_Bytes(b, 0, len(b), MetaLen, writePerm)
-	//@ fold acc(s.Mem(ubuf), R1)
+	//@ fold acc(s.Mem(), R1)
 	offset := MetaLen
 
-	//@ invariant acc(s.Mem(ubuf), R1)
+	//@ invariant acc(s.Mem(), R1) && s.UBytes() === ubuf
 	//@ invariant sl.Bytes(ubuf, 0, len(ubuf))
 	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
-	//@ invariant s.LenSpec(ubuf) <= len(b)
-	//@ invariant 0 <= i && i <= s.getLenInfoFields(ubuf)
+	//@ invariant s.LenSpec() <= len(b)
+	//@ invariant 0 <= i && i <= s.getLenInfoFields()
 	//@ invariant offset == MetaLen + i * path.InfoLen
-	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
-	//@ decreases s.getLenInfoFields(ubuf) - i
+	//@ invariant MetaLen + s.getLenInfoFields() * path.InfoLen + s.getLenHopFields() * path.HopLen <= len(b)
+	//@ decreases s.getLenInfoFields() - i
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, info := range s.InfoFields {
-	for i := 0; i < /*@ unfolding acc(s.Mem(ubuf), _) in @*/ len(s.InfoFields); i++ {
-		//@ unfold acc(s.Mem(ubuf), R1)
+	for i := 0; i < /*@ unfolding acc(s.Mem(), _) in @*/ len(s.InfoFields); i++ {
+		//@ unfold acc(s.Mem(), R1)
 		info := &s.InfoFields[i]
 		//@ sl.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
 		//@ sl.SplitByIndex_Bytes(b, offset, len(b), offset + path.InfoLen, writePerm)
@@ -174,21 +178,21 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 		//@ sl.Unslice_Bytes(b, offset, offset + path.InfoLen, writePerm)
 		//@ sl.CombineAtIndex_Bytes(b, offset, len(b), offset + path.InfoLen, writePerm)
 		//@ sl.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
-		//@ fold acc(s.Mem(ubuf), R1)
+		//@ fold acc(s.Mem(), R1)
 		offset += path.InfoLen
 	}
-	//@ invariant acc(s.Mem(ubuf), R1)
+	//@ invariant acc(s.Mem(), R1) && s.UBytes() === ubuf
 	//@ invariant sl.Bytes(ubuf, 0, len(ubuf))
 	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
-	//@ invariant s.LenSpec(ubuf) <= len(b)
-	//@ invariant 0 <= i && i <= s.getLenHopFields(ubuf)
-	//@ invariant offset == MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + i * path.HopLen
-	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
-	//@ decreases s.getLenHopFields(ubuf)-i
+	//@ invariant s.LenSpec() <= len(b)
+	//@ invariant 0 <= i && i <= s.getLenHopFields()
+	//@ invariant offset == MetaLen + s.getLenInfoFields() * path.InfoLen + i * path.HopLen
+	//@ invariant MetaLen + s.getLenInfoFields() * path.InfoLen + s.getLenHopFields() * path.HopLen <= len(b)
+	//@ decreases s.getLenHopFields()-i
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, hop := range s.HopFields {
-	for i := 0; i < /*@ unfolding acc(s.Mem(ubuf), _) in @*/ len(s.HopFields); i++ {
-		//@ unfold acc(s.Mem(ubuf), R1)
+	for i := 0; i < /*@ unfolding acc(s.Mem(), _) in @*/ len(s.HopFields); i++ {
+		//@ unfold acc(s.Mem(), R1)
 		hop := &s.HopFields[i]
 		//@ sl.SplitByIndex_Bytes(b, 0, len(b), offset, writePerm)
 		//@ sl.SplitByIndex_Bytes(b, offset, len(b), offset + path.HopLen, writePerm)
@@ -200,25 +204,27 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 		//@ sl.Unslice_Bytes(b, offset, offset + path.HopLen, writePerm)
 		//@ sl.CombineAtIndex_Bytes(b, offset, len(b), offset + path.HopLen, writePerm)
 		//@ sl.CombineAtIndex_Bytes(b, 0, len(b), offset, writePerm)
-		//@ fold acc(s.Mem(ubuf), R1)
+		//@ fold acc(s.Mem(), R1)
 		offset += path.HopLen
 	}
 	return nil
 }
 
 // Reverse reverses a SCION path.
-// @ requires s.Mem(ubuf)
+// @ requires s.Mem()
 // @ ensures  r == nil ==> (
-// @	p != nil                    &&
-// @	p.Mem(ubuf)                 &&
-// @	p == s                      &&
-// @	typeOf(p) == type[*Decoded] &&
-// @	(old(s.GetBase(ubuf).Valid()) ==> s.GetBase(ubuf).Valid()))
-// @ ensures  r != nil ==> r.ErrorMem() && s.Mem(ubuf)
+// @ 	p != nil                       &&
+// @ 	p.Mem()                        &&
+// @ 	p == s                         &&
+// @ 	typeOf(p) == type[*Decoded]    &&
+// @ 	old(s.UBytes()) === s.UBytes() &&
+// @ 	(old(s.GetBase().Valid()) ==> s.GetBase().Valid()))
+// @ ensures  r != nil ==> r.ErrorMem() && s.Mem()
 // @ decreases
-func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
-	//@ ghost isValid := s.GetBase(ubuf).Valid()
-	//@ ghost base := s.GetBase(ubuf)
+func (s *Decoded) Reverse() (p path.Path, r error) {
+	//@ ghost ubuf := s.UBytes()
+	//@ ghost isValid := s.GetBase().Valid()
+	//@ ghost base := s.GetBase()
 	//@ ghost metaHdrAferReversingSegLen := MetaHdr {
 	//@ 	CurrINF: base.PathMeta.CurrINF,
 	//@ 	CurrHF:  base.PathMeta.CurrHF,
@@ -229,11 +235,11 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ 	NumINF:   base.NumINF,
 	//@ 	NumHops:  base.NumHops,
 	//@ }
-	//@ unfold s.Mem(ubuf)
+	//@ unfold s.Mem()
 	//@ unfold s.Base.Mem()
 	if s.NumINF == 0 {
 		//@ fold s.Base.Mem()
-		//@ fold s.Mem(ubuf)
+		//@ fold s.Mem()
 		return nil, serrors.New("empty decoded path is invalid and cannot be reversed")
 	}
 
@@ -256,16 +262,16 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		info := &s.InfoFields[i]
 		info.ConsDir = !info.ConsDir
 	}
-	//@ fold s.Mem(ubuf)
+	//@ fold s.Mem()
 
 	// Reverse order of hop fields
-	//@ invariant s.Mem(ubuf)
-	//@ invariant 0 <= i && i <= s.GetNumHops(ubuf)
-	//@ invariant -1 <= j && j < s.GetNumHops(ubuf)
-	//@ invariant s.GetBase(ubuf) == baseAfterReversingSegLen
+	//@ invariant s.Mem() && s.UBytes() === ubuf
+	//@ invariant 0 <= i && i <= s.GetNumHops()
+	//@ invariant -1 <= j && j < s.GetNumHops()
+	//@ invariant s.GetBase() == baseAfterReversingSegLen
 	//@ decreases j-i
-	for i, j := 0, ( /*@ unfolding s.Mem(ubuf) in (unfolding s.Base.Mem() in @*/ s.NumHops - 1 /*@ ) @*/); i < j; i, j = i+1, j-1 {
-		//@ unfold s.Mem(ubuf)
+	for i, j := 0, ( /*@ unfolding s.Mem() in (unfolding s.Base.Mem() in @*/ s.NumHops - 1 /*@ ) @*/); i < j; i, j = i+1, j-1 {
+		//@ unfold s.Mem()
 		//@ assert &s.HopFields[i] != &s.HopFields[j]
 		//@ unfold s.HopFields[i].Mem()
 		//@ unfold s.HopFields[j].Mem()
@@ -274,10 +280,10 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 		//@ assert acc(&s.HopFields[i]) && acc(&s.HopFields[j])
 		//@ fold s.HopFields[i].Mem()
 		//@ fold s.HopFields[j].Mem()
-		//@ fold s.Mem(ubuf)
+		//@ fold s.Mem()
 	}
 	// Update CurrINF and CurrHF and SegLens
-	//@ unfold s.Mem(ubuf)
+	//@ unfold s.Mem()
 	//@ unfold s.Base.Mem()
 	s.PathMeta.CurrINF = uint8(s.NumINF) - s.PathMeta.CurrINF - 1
 	s.PathMeta.CurrHF = uint8(s.NumHops) - s.PathMeta.CurrHF - 1
@@ -285,23 +291,24 @@ func (s *Decoded) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, r error) {
 	//@ ghost if isValid { base.ReversingBaseValidSegLenHasValidSegLen() }
 	//@ assert isValid ==> s.Base.Valid()
 	//@ fold s.Base.Mem()
-	//@ fold s.Mem(ubuf)
+	//@ fold s.Mem()
 	return s, nil
 }
 
 // ToRaw tranforms scion.Decoded into scion.Raw.
-// @ preserves s.Mem(ubuf1)
-// @ preserves sl.Bytes(ubuf1, 0, len(ubuf1))
-// @ ensures   err == nil ==> r.Mem(ubuf2)
+// @ preserves s.Mem()
+// @ preserves sl.Bytes(s.UBytes(), 0, len(s.UBytes()))
+// @ ensures   err == nil ==>
+// @ 	r.Mem() && r.UBytes() === newBytes
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (s *Decoded) ToRaw( /*@ ghost ubuf1 []byte @*/ ) (r *Raw, err error /*@, ghost ubuf2 []byte @*/) {
+func (s *Decoded) ToRaw() (r *Raw, err error /*@, ghost newBytes []byte @*/) {
 	// (VerifiedSCION) if `tmp` is not used, Gobra complains that
 	// make cannot contain ghost subexpressions
-	tmp := s.Len( /*@ ubuf1 @*/ )
+	tmp := s.Len()
 	b := make([]byte, tmp)
 	//@ fold sl.Bytes(b, 0, len(b))
-	if err := s.SerializeTo(b /*@, ubuf1 @*/); err != nil {
+	if err := s.SerializeTo(b); err != nil {
 		return nil, err /*@, b @*/
 	}
 	raw := &Raw{}

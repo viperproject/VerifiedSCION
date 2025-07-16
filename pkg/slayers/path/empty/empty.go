@@ -19,6 +19,7 @@ package empty
 import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
+	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
 // PathLen is the length of a serialized empty path in bytes.
@@ -55,42 +56,46 @@ func RegisterPath() {
 // bytes on the wire and is used for AS internal communication.
 type Path struct{}
 
-// @ ensures  len(r) == 0 ==> (e == nil && o.Mem(r))
-// @ ensures  len(r) != 0 ==> (e != nil && e.ErrorMem() && o.NonInitMem())
+// @ ensures  len(r) == 0 ==>
+// @ 	e == nil && o.Mem() && o.UBytes() == nil
+// @ ensures  len(r) != 0 ==>
+// @ 	e != nil && e.ErrorMem() && o.NonInitMem()
+// (VerifiedSCION) even though this post is trivial, it needs to be here to
+// be here to form a valid implementation proof.
+// @ ensures  sl.Bytes(nil, 0, 0)
 // @ decreases
 func (o Path) DecodeFromBytes(r []byte) (e error) {
+	// @ fold sl.Bytes(nil, 0, 0)
 	if len(r) != 0 {
 		//@ fold o.NonInitMem()
 		return serrors.New("decoding an empty path", "len", len(r))
 	}
-	//@ fold o.Mem(r)
+	//@ fold o.Mem()
 	return nil
 }
 
 // @ ensures e == nil
 // @ decreases
-func (o Path) SerializeTo(b []byte /*@, ub []byte @*/) (e error) {
+func (o Path) SerializeTo(b []byte) (e error) {
 	return nil
 }
 
-// @ requires o.Mem(ub)
 // @ ensures  p == o
-// @ ensures  p.Mem(ub)
 // @ ensures  e == nil
 // @ decreases
-func (o Path) Reverse( /*@ ub []byte @*/ ) (p path.Path, e error) {
+func (o Path) Reverse() (p path.Path, e error) {
 	return o, nil
 }
 
-// @ ensures r == o.LenSpec(ub)
+// @ ensures r == o.LenSpec()
 // @ decreases
-func (o Path) Len( /*@ ub []byte @*/ ) (r int) {
+func (o Path) Len() (r int) {
 	return PathLen
 }
 
 // @ pure
 // @ ensures r == PathType
 // @ decreases
-func (o Path) Type( /*@ ub []byte @*/ ) (r path.Type) {
+func (o Path) Type() (r path.Type) {
 	return PathType
 }

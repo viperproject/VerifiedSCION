@@ -22,9 +22,15 @@ import (
 )
 
 /** rawPath spec **/
-pred (r *rawPath) Mem(underlyingBuf []byte) {
-	acc(r) &&
-	r.raw === underlyingBuf
+pred (r *rawPath) Mem() {
+	acc(r)
+}
+
+ghost
+requires r.Mem()
+decreases
+pure func (r *rawPath) UBytes() []byte {
+	return unfolding r.Mem() in r.raw
 }
 
 pred (r *rawPath) NonInitMem() {
@@ -32,26 +38,26 @@ pred (r *rawPath) NonInitMem() {
 }
 
 ghost
-requires p.Mem(buf)
+requires p.Mem()
 ensures  p.NonInitMem()
 decreases
-func (p *rawPath) DowngradePerm(ghost buf []byte) {
-	unfold p.Mem(buf)
+func (p *rawPath) DowngradePerm() {
+	unfold p.Mem()
 	fold p.NonInitMem()
 }
 
 ghost
 decreases
-pure func (p *rawPath) IsValidResultOfDecoding(b []byte) bool {
+pure func (p *rawPath) IsValidResultOfDecoding() bool {
 	return true
 }
 
 ghost
-requires p.Mem(ub)
+requires p.Mem()
 ensures  0 <= l
 decreases
-pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
-	return unfolding p.Mem(ub) in
+pure func (p *rawPath) LenSpec() (l int) {
+	return unfolding p.Mem() in
 		len(p.raw)
 }
 
