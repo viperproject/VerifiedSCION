@@ -120,6 +120,7 @@ requires d.Mem()
 ensures  e == nil ==> (
 	d.Mem() &&
 	d.LenSpec() == old(d.LenSpec()) &&
+	d.UBytes() === old(d.UBytes())  &&
 	(old(d.GetBase().Valid()) ==> d.GetBase().Valid()))
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
 decreases
@@ -195,20 +196,5 @@ func (d *Decoded) DowngradePerm() {
 	fold d.Base.NonInitMem()
 	fold d.NonInitMem()
 }
-
-/*
-// TODO: what to do about this?
-
-ghost
-requires d.Mem(ubuf1)
-requires len(ubuf1) <= len(ubuf2)
-requires ubuf1 === ubuf2[:len(ubuf1)]
-ensures  d.Mem(ubuf2)
-decreases
-func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
-	unfold d.Mem(ubuf1)
-	fold d.Mem(ubuf2)
-}
-*/
 
 /**** End of Lemmas ****/

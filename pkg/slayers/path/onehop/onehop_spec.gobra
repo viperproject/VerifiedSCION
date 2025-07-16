@@ -25,42 +25,51 @@ pred (o *Path) NonInitMem() {
 	acc(o)
 }
 
-pred (o *Path) Mem(ubuf []byte) {
-	acc(&o.Info) &&
-	o.FirstHop.Mem() &&
+pred (o *Path) Mem() {
+	acc(&o.Info)      &&
+	o.FirstHop.Mem()  &&
 	o.SecondHop.Mem() &&
-	PathLen <= len(ubuf)
+	acc(&o.ubytes)    &&
+	PathLen <= len(o.ubytes)
 }
 
 ghost
-requires p.Mem(buf)
+requires o.Mem()
+decreases
+pure func (o *Path) UBytes() []byte {
+	return unfolding o.Mem() in o.ubytes
+}
+
+ghost
+requires p.Mem()
 ensures  p.NonInitMem()
 decreases
-func (p *Path) DowngradePerm(buf []byte) {
-	unfold p.Mem(buf)
+func (p *Path) DowngradePerm() {
+	unfold p.Mem()
 	unfold p.FirstHop.Mem()
 	unfold p.SecondHop.Mem()
 	fold  p.NonInitMem()
 }
 
 ghost
-requires o.Mem(ub)
+requires o.Mem()
 ensures  b
 decreases
-pure func (o *Path) InferSizeUb(ghost ub []byte) (b bool) {
-	return unfolding o.Mem(ub) in
-		o.LenSpec(ub) <= len(ub)
+pure func (o *Path) InferSizeUb() (b bool) {
+	return let ub := o.UBytes() in
+		unfolding o.Mem()       in
+		o.LenSpec() <= len(ub)
 }
 
 ghost
 decreases
-pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
+pure func (p *Path) IsValidResultOfDecoding() (res bool) {
 	return true
 }
 
 ghost
 decreases
-pure func (p *Path) LenSpec(ghost ub []byte) int {
+pure func (p *Path) LenSpec() int {
 	return PathLen
 }
 

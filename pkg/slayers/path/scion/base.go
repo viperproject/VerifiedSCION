@@ -163,7 +163,7 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 // @ ensures  e == nil ==> (
 // @ 	s.Mem() &&
 // @ 	let oldBase := old(s.GetBase()) in
-// @ 	let newBase := s.GetBase() in
+// @ 	let newBase := s.GetBase()      in
 // @ 	newBase == oldBase.IncPathSpec())
 // @ ensures  e != nil ==> (s.NonInitMem() && e.ErrorMem())
 // @ decreases

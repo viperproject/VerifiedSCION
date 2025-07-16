@@ -61,12 +61,13 @@ type Path struct {
 	Info      path.InfoField
 	FirstHop  path.HopField
 	SecondHop path.HopField
+	// @ ghost ubytes []byte
 }
 
 // @ requires  o.NonInitMem()
 // @ preserves acc(sl.Bytes(data, 0, len(data)), R42)
 // @ ensures   (len(data) >= PathLen) == (r == nil)
-// @ ensures   r == nil ==> o.Mem(data)
+// @ ensures   r == nil ==> o.Mem() && o.UBytes() === data
 // @ ensures   r != nil ==> o.NonInitMem()
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
@@ -94,24 +95,26 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	//@ sl.SplitRange_Bytes(data, offset, offset+path.HopLen, R42)
 	r = o.SecondHop.DecodeFromBytes(data[offset : offset+path.HopLen])
 	//@ sl.CombineRange_Bytes(data, offset, offset+path.HopLen, R42)
-	//@ ghost if r == nil { fold o.Mem(data) } else { fold o.NonInitMem() }
+	//@ ghost if r == nil { o.ubytes = data; fold o.Mem() } else { fold o.NonInitMem() }
 	return r
 }
 
-// @ preserves acc(o.Mem(ubuf), R1)
-// @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R1)
+// @ preserves acc(o.Mem(), R1)
+// @ preserves let ub := o.UBytes() in
+// @ 	acc(sl.Bytes(ub, 0, len(ub)), R1)
 // @ preserves sl.Bytes(b, 0, len(b))
+// @ ensures   old(o.UBytes()) === o.UBytes()
 // @ ensures   (len(b) >= PathLen) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
-// @ ensures   err == nil ==> o.LenSpec(ubuf) <= len(b)
+// @ ensures   err == nil ==> o.LenSpec() <= len(b)
 // @ decreases
-func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
+func (o *Path) SerializeTo(b []byte) (err error) {
 	if len(b) < PathLen {
 		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
 			int(len(b)))
 	}
 	offset := 0
-	//@ unfold acc(o.Mem(ubuf), R1)
+	//@ unfold acc(o.Mem(), R1)
 	//@ sl.SplitRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 	if err := o.Info.SerializeTo(b[:offset+path.InfoLen]); err != nil {
 		//@ sl.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
@@ -129,23 +132,28 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	//@ sl.SplitRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	err = o.SecondHop.SerializeTo(b[offset : offset+path.HopLen])
 	//@ sl.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
-	//@ fold acc(o.Mem(ubuf), R1)
+	//@ fold acc(o.Mem(), R1)
 	return err
 }
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
-// @ preserves o.Mem(ubuf)
-// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
-// @ ensures   err == nil ==> (sd != nil && sd.Mem(ubuf))
+// @ preserves o.Mem()
+// @ preserves let ub := o.UBytes() in
+// @ 	sl.Bytes(ub, 0, len(ub))
+// @ ensures   err == nil ==>
+// @ 	sd != nil && sd.Mem()          &&
+// @ 	o.UBytes() === old(o.UBytes()) &&
+// @ 	sd.UBytes() === o.UBytes()
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, err error) {
-	//@ unfold acc(o.Mem(ubuf), R1)
+func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
+	//@ ghost ubuf:= o.UBytes()
+	//@ unfold acc(o.Mem(), R1)
 	//@ unfold acc(o.SecondHop.Mem(), R10)
 	if o.SecondHop.ConsIngress == 0 {
 		//@ fold acc(o.SecondHop.Mem(), R10)
-		//@ fold acc(o.Mem(ubuf), R1)
+		//@ fold acc(o.Mem(), R1)
 		return nil, serrors.New("incomplete path can't be converted")
 	}
 	//@ unfold acc(o.FirstHop.Mem(), R10)
@@ -183,9 +191,10 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 			},
 		},
 	}
+	//@ p.ubytes = ubuf
 	//@ fold acc(o.FirstHop.Mem(), R10)
 	//@ fold acc(o.SecondHop.Mem(), R10)
-	//@ fold acc(o.Mem(ubuf), R1)
+	//@ fold acc(o.Mem(), R1)
 	//@ assert forall i int :: { &p.InfoFields[i] } 0 <= i && i < len(p.InfoFields) ==> acc(&p.InfoFields[i])
 	//@ assert forall i int :: { &p.HopFields[i] } 0 <= i && i < len(p.HopFields) ==> acc(&p.HopFields[i])
 	//@ fold p.Base.Mem()
@@ -193,39 +202,42 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 	//@ fold p.HopFields[1].Mem()
 	//@ assert forall i int :: { &p.InfoFields[i] } 0 <= i && i < len(p.InfoFields) ==> acc(&p.InfoFields[i])
 	//@ assert forall i int :: { &p.HopFields[i] } 0 <= i && i < len(p.HopFields) ==> p.HopFields[i].Mem()
-	//@ fold p.Mem(ubuf)
+	//@ fold p.Mem()
 	return p, nil
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
-// @ requires o.Mem(ubuf)
-// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
-// @ ensures err == nil ==> p != nil
-// @ ensures err == nil ==> p.Mem(ubuf)
-// @ ensures err == nil ==> typeOf(p) == type[*scion.Decoded]
-// @ ensures err != nil ==> err.ErrorMem()
+// @ requires  o.Mem()
+// @ requires  let ub := o.UBytes() in
+// @ 	sl.Bytes(ub, 0, len(ub))
+// @ ensures   let ub := old(o.UBytes()) in
+// @ 	sl.Bytes(ub, 0, len(ub))
+// @ ensures   err == nil ==> p != nil
+// @ ensures   err == nil ==> p.Mem() && p.UBytes() === old(o.UBytes())
+// @ ensures   err == nil ==> typeOf(p) == type[*scion.Decoded]
+// @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (o *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
-	sp, err := o.ToSCIONDecoded( /*@ ubuf @*/ )
+func (o *Path) Reverse() (p path.Path, err error) {
+	sp, err := o.ToSCIONDecoded()
 	if err != nil {
 		return nil, serrors.WrapStr("converting to scion path", err)
 	}
 	// increment the path, since we are at the receiver side.
-	if err := sp.IncPath( /*@ ubuf @*/ ); err != nil {
+	if err := sp.IncPath(); err != nil {
 		return nil, serrors.WrapStr("incrementing path", err)
 	}
-	return sp.Reverse( /*@ ubuf @*/ )
+	return sp.Reverse()
 }
 
-// @ ensures l == o.LenSpec(ubuf)
+// @ ensures l == o.LenSpec()
 // @ decreases
-func (o *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
+func (o *Path) Len() (l int) {
 	return PathLen
 }
 
 // @ pure
 // @ ensures t == PathType
 // @ decreases
-func (o *Path) Type( /*@ ghost ubuf []byte @*/ ) (t path.Type) {
+func (o *Path) Type() (t path.Type) {
 	return PathType
 }
