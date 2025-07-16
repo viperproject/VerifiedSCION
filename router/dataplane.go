@@ -1654,10 +1654,16 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ fold p.sInit()
 		return v1, v2 /*@, addrAliasesPkt, newAbsPkt @*/
 	case epic.PathType:
-		// @ TODO()
-		v1, v2 := p.processEPIC()
+		// @ sl.CombineRange_Bytes(ub, start, end, HalfPerm)
+		// @ ghost if lastLayerIdx >= 0 && !offsets[lastLayerIdx].isNil {
+		// @ 	o := offsets[lastLayerIdx]
+		// @ 	sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, HalfPerm)
+		// @ }
+		// @ assert sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
+		v1, v2 /*@ , addrAliasesPkt, newAbsPkt @*/ := p.processEPIC( /*@ p.rawPkt, ub == nil, llStart, llEnd, ioLock, ioSharedArg, dp @*/ )
+		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, v2 == nil, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
-		return v1, v2 /*@, false, io.ValUnit{} @*/
+		return v1, v2 /*@, addrAliasesPkt, newAbsPkt @*/
 	default:
 		// @ ghost if mustCombineRanges { ghost defer sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, HalfPerm) }
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
@@ -1853,39 +1859,101 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 	return p.process( /*@ ub, llIsNil, startLL, endLL , ioLock, ioSharedArg, dp @*/ )
 }
 
-// @ trusted
-// @ requires false
-func (p *scionPacketProcessor) processEPIC() (processResult, error) {
+// @ requires  0 <= startLL && startLL <= endLL && endLL <= len(ub)
+// @ requires  acc(&p.d, R5) && acc(p.d.Mem(), _) && p.d.WellConfigured()
+// @ requires  p.d.getValSvc() != nil
+// The ghost param ub here allows us to introduce a bound variable to p.rawPkt,
+// which slightly simplifies the spec
+// @ requires  acc(&p.rawPkt, R1) && ub === p.rawPkt
+// @ requires  acc(&p.path)
+// @ requires  p.scionLayer.Mem(ub)
+// @ requires  sl.Bytes(ub, 0, len(ub))
+// @ requires  acc(&p.segmentChange) && !p.segmentChange
+// @ requires  acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
+// @ requires  sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
+// @ requires  acc(&p.ingressID, R10)
+// @ preserves acc(&p.srcAddr, R10) && acc(p.srcAddr.Mem(), _)
+// @ preserves acc(&p.lastLayer, R10)
+// @ preserves p.lastLayer != nil
+// @ preserves (p.lastLayer !== &p.scionLayer && llIsNil) ==>
+// @ 	acc(p.lastLayer.Mem(nil), R10)
+// @ preserves (p.lastLayer !== &p.scionLayer && !llIsNil) ==>
+// @ 	acc(p.lastLayer.Mem(ub[startLL:endLL]), R10)
+// @ preserves &p.scionLayer === p.lastLayer ==>
+// @ 	!llIsNil && startLL == 0 && endLL == len(ub)
+// @ preserves acc(&p.infoField)
+// @ preserves acc(&p.hopField)
+// @ preserves acc(&p.mac, R10) && p.mac != nil && p.mac.Mem()
+// @ preserves acc(&p.macBuffers.scionInput, R10)
+// @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+// @ preserves acc(&p.cachedMac)
+// @ ensures   acc(&p.segmentChange)
+// @ ensures   acc(&p.ingressID, R10)
+// @ ensures   acc(&p.d, R5)
+// @ ensures   acc(&p.path)
+// @ ensures   acc(&p.rawPkt, R1)
+// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), 1 - R15)
+// @ ensures   p.d.validResult(respr, addrAliasesPkt)
+// @ ensures   addrAliasesPkt ==> (
+// @ 	respr.OutAddr != nil &&
+// @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.Bytes(ub, 0, len(ub)), R15)))
+// @ ensures   !addrAliasesPkt ==> acc(sl.Bytes(ub, 0, len(ub)), R15)
+// @ ensures   acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
+// @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
+// @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
+// @ ensures   sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
+// @ ensures respr.OutPkt != nil ==>
+// @ 	(respr.OutPkt === ub || respr.OutPkt === p.buffer.UBuf())
+// @ ensures   reserr != nil ==> reserr.ErrorMem()
+// contracts for IO-spec
+// @ requires  p.d.DpAgreesWithSpec(dp)
+// @ requires  dp.Valid()
+// @ requires  (typeOf(p.scionLayer.GetPath(ub)) == *scion.Raw) ==>
+// @ 	p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidScionInitSpec(ub)
+// @ requires  p.scionLayer.EqPathType(ub)
+// @ requires  acc(ioLock.LockP(), _)
+// @ requires  ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+// @ requires  let absPkt := absIO_val(p.rawPkt, p.ingressID) in
+// @ 	absPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.ValPkt_2)
+// @ ensures   reserr == nil && newAbsPkt.isValPkt ==>
+// @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.ValPkt_1, newAbsPkt.ValPkt_2)
+// @ ensures   respr.OutPkt != nil ==>
+// @ 	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID)
+// @ ensures   reserr != nil && respr.OutPkt != nil ==>
+// @ 	newAbsPkt.isValUnsupported
+// @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.ValUnit{})
+// @ decreases 0 if sync.IgnoreBlockingForTermination()
+func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@ , ghost addrAliasesPkt bool, ghost newAbsPkt io.Val @*/) {
 
 	epicPath, ok := p.scionLayer.Path.(*epic.Path)
 	if !ok {
-		return processResult{}, malformedPath
+		return processResult{}, malformedPath /*@ , false, io.ValUnit{} @*/ // TODO: check
 	}
 
 	p.path = epicPath.ScionPath
 	if p.path == nil {
-		return processResult{}, malformedPath
+		return processResult{}, malformedPath /*@ , false, io.ValUnit{} @*/ // TODO: check
 	}
 
-	isPenultimate := p.path.IsPenultimateHop()
-	isLast := p.path.IsLastHop()
+	isPenultimate := p.path.IsPenultimateHop( /*@ nil @*/ ) // TODO: check
+	isLast := p.path.IsLastHop( /*@ nil @*/ )               // TODO: check
 
-	result, err := p.process()
+	result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := p.process( /*@ ub, llIsNil, startLL, endLL , ioLock, ioSharedArg, dp @*/ )
 	if err != nil {
-		return result, err
+		return result, err /*@ , false, io.ValUnit{} @*/ // TODO: check
 	}
 
 	if isPenultimate || isLast {
-		firstInfo, err := p.path.GetInfoField(0)
+		firstInfo, err := p.path.GetInfoField(0 /*@ , nil @*/) // TODO: check
 		if err != nil {
-			return processResult{}, err
+			return processResult{}, err /*@ , false, io.ValUnit{} @*/ // TODO: check
 		}
 
 		timestamp := time.Unix(int64(firstInfo.Timestamp), 0)
 		err = libepic.VerifyTimestamp(timestamp, epicPath.PktID.Timestamp, time.Now())
 		if err != nil {
 			// TODO(mawyss): Send back SCMP packet
-			return processResult{}, err
+			return processResult{}, err /*@ , false, io.ValUnit{} @*/ // TODO: check
 		}
 
 		HVF := epicPath.PHVF
@@ -1893,14 +1961,14 @@ func (p *scionPacketProcessor) processEPIC() (processResult, error) {
 			HVF = epicPath.LHVF
 		}
 		err = libepic.VerifyHVF(p.cachedMac, epicPath.PktID,
-			&p.scionLayer, firstInfo.Timestamp, HVF, p.macBuffers.epicInput)
+			&p.scionLayer, firstInfo.Timestamp, HVF, p.macBuffers.epicInput /*@ , nil @*/)
 		if err != nil {
 			// TODO(mawyss): Send back SCMP packet
-			return processResult{}, err
+			return processResult{}, err /*@ , false, io.ValUnit{} @*/ // TODO: check
 		}
 	}
 
-	return result, nil
+	return result, nil /*@ , false, io.ValUnit{} @*/ // TODO: check
 }
 
 // scionPacketProcessor processes packets. It contains pre-allocated per-packet
