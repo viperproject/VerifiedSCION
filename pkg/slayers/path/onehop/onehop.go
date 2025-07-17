@@ -138,14 +138,17 @@ func (o *Path) SerializeTo(b []byte) (err error) {
 
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
-// @ preserves o.Mem()
-// @ preserves let ub := o.UBytes() in
+// @ requires o.Mem()
+// @ requires let ub := o.UBytes() in
 // @ 	sl.Bytes(ub, 0, len(ub))
-// @ ensures   err == nil ==>
+// @ ensures  o.Mem()
+// @ ensures  let ub := old(o.UBytes()) in
+// @ 	sl.Bytes(ub, 0, len(ub))
+// @ ensures  err == nil ==>
 // @ 	sd != nil && sd.Mem()          &&
 // @ 	o.UBytes() === old(o.UBytes()) &&
 // @ 	sd.UBytes() === o.UBytes()
-// @ ensures   err != nil ==> err.ErrorMem()
+// @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
 func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 	//@ ghost ubuf:= o.UBytes()
@@ -207,15 +210,15 @@ func (o *Path) ToSCIONDecoded() (sd *scion.Decoded, err error) {
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
-// @ requires  o.Mem()
-// @ requires  let ub := o.UBytes() in
+// @ requires o.Mem()
+// @ requires let ub := o.UBytes() in
 // @ 	sl.Bytes(ub, 0, len(ub))
-// @ ensures   let ub := old(o.UBytes()) in
+// @ ensures  let ub := old(o.UBytes()) in
 // @ 	sl.Bytes(ub, 0, len(ub))
-// @ ensures   err == nil ==> p != nil
-// @ ensures   err == nil ==> p.Mem() && p.UBytes() === old(o.UBytes())
-// @ ensures   err == nil ==> typeOf(p) == type[*scion.Decoded]
-// @ ensures   err != nil ==> err.ErrorMem()
+// @ ensures  err == nil ==> p != nil
+// @ ensures  err == nil ==> p.Mem() && p.UBytes() === old(o.UBytes())
+// @ ensures  err == nil ==> typeOf(p) == type[*scion.Decoded]
+// @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
 func (o *Path) Reverse() (p path.Path, err error) {
 	sp, err := o.ToSCIONDecoded()
