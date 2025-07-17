@@ -70,6 +70,7 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 // @ preserves acc(s.Mem(), R1)
 // @ preserves sl.Bytes(s.UBytes(), 0, len(s.UBytes()))
 // @ preserves sl.Bytes(b, 0, len(b))
+// @ ensures   old(s.UBytes()) === s.UBytes()
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) SerializeTo(b []byte) (r error) {

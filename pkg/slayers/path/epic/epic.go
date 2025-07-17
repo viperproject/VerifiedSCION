@@ -74,26 +74,29 @@ type Path struct {
 	PHVF      []byte
 	LHVF      []byte
 	ScionPath *scion.Raw
+	//@ ghost ubytes []byte
 }
 
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
-// @ preserves acc(p.Mem(ubuf), R1)
-// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
+// @ preserves acc(p.Mem(), R1)
+// @ preserves let ub := p.UBytes() in
+// @ 	sl.Bytes(ub, 0, len(ub))
 // @ preserves sl.Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
-// @ ensures   !old(p.hasScionPath(ubuf)) ==> r != nil
-// @ ensures   len(b) < old(p.LenSpec(ubuf)) ==> r != nil
-// @ ensures   old(p.getPHVFLen(ubuf)) != HVFLen ==> r != nil
-// @ ensures   old(p.getLHVFLen(ubuf)) != HVFLen ==> r != nil
+// @ ensures   !old(p.HasScionPath()) ==> r != nil
+// @ ensures   len(b) < old(p.LenSpec()) ==> r != nil
+// @ ensures   old(p.GetPHVFLen()) != HVFLen ==> r != nil
+// @ ensures   old(p.GetLHVFLen()) != HVFLen ==> r != nil
 // @ decreases
-func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
-	if len(b) < p.Len( /*@ ubuf @*/ ) {
-		return serrors.New("buffer too small to serialize path.", "expected", int(p.Len( /*@ ubuf @*/ )),
+func (p *Path) SerializeTo(b []byte) (r error) {
+	if len(b) < p.Len() {
+		return serrors.New("buffer too small to serialize path.", "expected", int(p.Len()),
 			"actual", len(b))
 	}
-	//@ unfold acc(p.Mem(ubuf), R1)
-	//@ defer fold acc(p.Mem(ubuf), R1)
+	//@ ghost ubuf := p.UBytes()
+	//@ unfold acc(p.Mem(), R1)
+	//@ defer fold acc(p.Mem(), R1)
 	if len(p.PHVF) != HVFLen {
 		return serrors.New("invalid length of PHVF", "expected", int(HVFLen), "actual", int(len(p.PHVF)))
 	}
@@ -130,7 +133,7 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ ghost defer sl.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
 	//@ sl.SplitRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	//@ ghost defer sl.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
-	return p.ScionPath.SerializeTo(b[MetadataLen:] /*@, ubuf[MetadataLen:] @*/)
+	return p.ScionPath.SerializeTo(b[MetadataLen:])
 }
 
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
@@ -138,7 +141,7 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ requires  p.NonInitMem()
 // @ preserves acc(sl.Bytes(b, 0, len(b)), R42)
 // @ ensures   len(b) < MetadataLen ==> r != nil
-// @ ensures   r == nil ==> p.Mem(b)
+// @ ensures   r == nil ==> p.Mem() && p.UBytes() === b
 // @ ensures   r != nil ==> p.NonInitMem() && r.ErrorMem()
 // @ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
@@ -153,13 +156,13 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	p.PHVF = make([]byte, HVFLen)
 	p.LHVF = make([]byte, HVFLen)
 	//@ assert forall i int :: { &b[PktIDLen:(PktIDLen+HVFLen)][i] } 0 <= i &&
-	//@		i < len(b[PktIDLen:(PktIDLen+HVFLen)]) ==>
-	//@     &b[PktIDLen:(PktIDLen+HVFLen)][i] == &b[PktIDLen+i]
+	//@ 	i < len(b[PktIDLen:(PktIDLen+HVFLen)]) ==>
+	//@ 		&b[PktIDLen:(PktIDLen+HVFLen)][i] == &b[PktIDLen+i]
 	copy(p.PHVF, b[PktIDLen:(PktIDLen+HVFLen)] /*@, R42 @*/)
 	//@ fold sl.Bytes(p.PHVF, 0, len(p.PHVF))
 	//@ assert forall i int :: { &b[(PktIDLen+HVFLen):MetadataLen][i] } 0 <= i &&
-	//@		i < len(b[(PktIDLen+HVFLen):MetadataLen]) ==>
-	//@     &b[(PktIDLen+HVFLen):MetadataLen][i] == &b[(PktIDLen+HVFLen)+i]
+	//@ 	i < len(b[(PktIDLen+HVFLen):MetadataLen]) ==>
+	//@ 		&b[(PktIDLen+HVFLen):MetadataLen][i] == &b[(PktIDLen+HVFLen)+i]
 	copy(p.LHVF, b[(PktIDLen+HVFLen):MetadataLen] /*@, R42 @*/)
 	//@ fold sl.Bytes(p.LHVF, 0, len(p.LHVF))
 	p.ScionPath = &scion.Raw{}
@@ -169,7 +172,8 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ sl.SplitRange_Bytes(b, MetadataLen, len(b), R42)
 	ret := p.ScionPath.DecodeFromBytes(b[MetadataLen:])
 	//@ ghost if ret == nil {
-	//@ 	fold p.Mem(b)
+	//@ 	p.ubytes = b
+	//@ 	fold p.Mem()
 	//@ } else {
 	//@ 	fold p.NonInitMem()
 	//@ }
@@ -179,21 +183,26 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 
 // Reverse reverses the EPIC path. In particular, this means that the SCION path type subheader
 // is reversed.
-// @ requires p.Mem(ubuf)
-// @ preserves sl.Bytes(ubuf, 0, len(ubuf))
+// @ requires p.Mem()
+// @ requires let ub := p.UBytes() in
+// @ 	sl.Bytes(ub, 0, len(ub))
+// @ ensures  let ub := old(p.UBytes()) in
+// @ 	sl.Bytes(ub, 0, len(ub))
 // @ ensures  r == nil ==> ret != nil
-// @ ensures  r == nil ==> ret.Mem(ubuf)
+// @ ensures  r == nil ==>
+// @ 	ret.Mem() && ret.UBytes() === old(p.UBytes())
 // @ ensures  r == nil ==> ret != nil
 // @ ensures  r != nil ==> r.ErrorMem()
 // @ decreases
-func (p *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (ret path.Path, r error) {
-	//@ unfold p.Mem(ubuf)
+func (p *Path) Reverse() (ret path.Path, r error) {
+	//@ ghost ubuf := p.UBytes()
+	//@ unfold p.Mem()
 	if p.ScionPath == nil {
-		//@ fold p.Mem(ubuf)
+		//@ fold p.Mem()
 		return nil, serrors.New("scion subpath must not be nil")
 	}
 	//@ sl.SplitRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
-	revScion, err := p.ScionPath.Reverse( /*@ ubuf[MetadataLen:] @*/ )
+	revScion, err := p.ScionPath.Reverse()
 	if err != nil {
 		// @ sl.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 		return nil, err
@@ -204,28 +213,28 @@ func (p *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (ret path.Path, r error) {
 		return nil, serrors.New("reversed path of type scion.Raw must not change type")
 	}
 	p.ScionPath = ScionPath
-	//@ fold p.Mem(ubuf)
+	//@ fold p.Mem()
 	return p, nil
 }
 
 // Len returns the length of the EPIC path in bytes.
-// @ preserves acc(p.Mem(ubuf), R50)
-// @ ensures   l == p.LenSpec(ubuf)
+// @ preserves acc(p.Mem(), R50)
+// @ ensures   l == p.LenSpec()
 // @ decreases
-func (p *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
-	// @ unfold acc(p.Mem(ubuf), R50)
-	// @ defer fold acc(p.Mem(ubuf), R50)
+func (p *Path) Len() (l int) {
+	// @ unfold acc(p.Mem(), R50)
+	// @ defer fold acc(p.Mem(), R50)
 	if p.ScionPath == nil {
 		return MetadataLen
 	}
-	return MetadataLen + p.ScionPath.Len( /*@ ubuf[MetadataLen:] @*/ )
+	return MetadataLen + p.ScionPath.Len()
 }
 
 // Type returns the EPIC path type identifier.
 // @ pure
 // @ ensures  t == PathType
 // @ decreases
-func (p *Path) Type( /*@ ghost ubuf []byte @*/ ) (t path.Type) {
+func (p *Path) Type() (t path.Type) {
 	return PathType
 }
 

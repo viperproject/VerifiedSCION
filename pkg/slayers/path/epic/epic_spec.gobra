@@ -27,78 +27,82 @@ pred (p *Path) NonInitMem() {
 	acc(p)
 }
 
-pred (p *Path) Mem(ubuf []byte) {
+pred (p *Path) Mem() {
 	acc(&p.PktID) &&
 	acc(&p.PHVF) && sl.Bytes(p.PHVF, 0, len(p.PHVF)) &&
 	acc(&p.LHVF) && sl.Bytes(p.LHVF, 0, len(p.LHVF)) &&
-	acc(&p.ScionPath) &&
+	acc(&p.ScionPath)  &&
+	acc(&p.ubytes)     &&
 	p.ScionPath != nil &&
-	MetadataLen <= len(ubuf) &&
-	p.ScionPath.Mem(ubuf[MetadataLen:])
+	p.ScionPath.Mem()  &&
+	MetadataLen <= len(p.ubytes) &&
+	p.ScionPath.UBytes() === p.ubytes[MetadataLen:]
 }
 
 ghost
-requires p.Mem(ub)
+requires p.Mem()
 decreases
-pure func (p *Path) LenSpec(ghost ub []byte) (l int) {
-	return unfolding p.Mem(ub) in
+pure func (p *Path) UBytes() []byte {
+	return unfolding p.Mem() in p.ubytes
+}
+
+ghost
+requires p.Mem()
+decreases
+pure func (p *Path) LenSpec() (l int) {
+	return unfolding p.Mem() in
 		(p.ScionPath == nil ?
 			MetadataLen :
-			MetadataLen + p.ScionPath.LenSpec(ub[MetadataLen:]))
+			MetadataLen + p.ScionPath.LenSpec())
 }
 
 ghost
-requires p.Mem(buf)
+requires p.Mem()
 ensures  p.NonInitMem()
 decreases
-func (p *Path) DowngradePerm(buf []byte) {
-	unfold p.Mem(buf)
+func (p *Path) DowngradePerm() {
+	unfold p.Mem()
 	fold  p.NonInitMem()
 }
 
 ghost
-requires r.Mem(ub)
+requires r.Mem()
 decreases
-pure func (r *Path) GetBase(ub []byte) scion.Base {
-	return unfolding r.Mem(ub) in
-		r.ScionPath.GetBase(ub[MetadataLen:])
+pure func (r *Path) GetBase() scion.Base {
+	return unfolding r.Mem() in r.ScionPath.GetBase()
 }
 
 ghost
-requires p.Mem(buf)
+requires p.Mem()
 decreases
-pure func (p *Path) getPHVFLen(buf []byte) (l int) {
-	return unfolding p.Mem(buf) in
-		len(p.PHVF)
+pure func (p *Path) GetPHVFLen() (l int) {
+	return unfolding p.Mem() in len(p.PHVF)
 }
 
 ghost
-requires p.Mem(buf)
+requires p.Mem()
 decreases
-pure func (p *Path) getLHVFLen(buf []byte) (l int) {
-	return unfolding p.Mem(buf) in
-		len(p.LHVF)
+pure func (p *Path) GetLHVFLen() (l int) {
+	return unfolding p.Mem() in len(p.LHVF)
 }
 
 ghost
-requires p.Mem(buf)
+requires p.Mem()
 decreases
-pure func (p *Path) hasScionPath(buf []byte) (r bool) {
-	return unfolding p.Mem(buf) in
-		p.ScionPath != nil
+pure func (p *Path) HasScionPath() (r bool) {
+	return unfolding p.Mem() in p.ScionPath != nil
 }
 
 ghost
-requires p.Mem(buf)
+requires p.Mem()
 decreases
-pure func (p *Path) GetUnderlyingScionPathBuf(buf []byte) []byte {
-	return unfolding p.Mem(buf) in
-		buf[MetadataLen:]
+pure func (p *Path) GetUnderlyingScionPathBuf() []byte {
+	return unfolding p.Mem() in p.ScionPath.UBytes()
 }
 
 ghost
 decreases
-pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
+pure func (p *Path) IsValidResultOfDecoding() (res bool) {
 	return true
 }
 

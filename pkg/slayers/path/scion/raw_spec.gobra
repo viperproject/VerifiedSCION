@@ -80,7 +80,7 @@ pure func (s *Raw) Type() path.Type {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(), R50)
+preserves acc(s.Mem(), R55)
 ensures   l == s.LenSpec()
 decreases
 func (s *Raw) Len() (l int) {
