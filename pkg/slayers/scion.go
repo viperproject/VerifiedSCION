@@ -229,7 +229,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ unfold acc(s.Mem(ubuf), R1)
 	// @ defer fold acc(s.Mem(ubuf), R1)
 	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), R10)
-	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
+	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len()
 	// @ sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLenSpecInternal()), int(s.HdrLen*LineLen), R10)
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
@@ -301,7 +301,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ IsSupportedPktSubslice(ubuf, startP)
 	// @ sl.SplitRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
 	// @ sl.SplitRange_Bytes(ubuf, startP, endP, HalfPerm)
-	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
+	tmp := s.Path.SerializeTo(buf[offset:])
 	// @ sl.CombineRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
 	// @ sl.CombineRange_Bytes(ubuf, startP, endP, HalfPerm)
 	// @ IsSupportedPktSubslice(uSerBufN, offset)
@@ -387,7 +387,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), R41)
 	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
 	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
-	//                 is set to nil. As such, we pick the easiest possible value as a placeholder.
+	// 	is set to nil. As such, we pick the easiest possible value as a placeholder.
 	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
 	offset := CmnHdrLen + addrHdrLen
 
@@ -425,9 +425,9 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return err
 	}
 	// @ ghost if typeOf(s.Path) == type[*onehop.Path] {
-	// @ 	s.Path.(*onehop.Path).InferSizeUb(data[offset : offset+pathLen])
-	// @ 	assert s.Path.LenSpec(data[offset : offset+pathLen]) <= len(data[offset : offset+pathLen])
-	// @ 	assert CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec(data[offset : offset+pathLen]) <= len(data)
+	// @ 	s.Path.(*onehop.Path).InferSizeUb()
+	// @ 	assert s.Path.LenSpec() <= len(data[offset : offset+pathLen])
+	// @ 	assert CmnHdrLen + s.AddrHdrLenSpecInternal() + s.Path.LenSpec() <= len(data)
 	// @ }
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
@@ -435,10 +435,10 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ ghost if(typeOf(s.GetPath(data)) == (*scion.Raw)) {
 	// @ 	unfold acc(sl.Bytes(data, 0, len(data)), R56)
 	// @ 	unfold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
-	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(data[offset : offset+pathLen]), R55)
+	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(), R55)
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	assert reveal s.ValidScionInitSpec(data)
-	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
+	// @ 	fold acc(s.Path.Mem(), R55)
 	// @ 	fold acc(sl.Bytes(data, 0, len(data)), R56)
 	// @ 	fold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ }

@@ -31,5 +31,6 @@ func testAllocateRaw() {
 	s := make([]byte, MetaLen)
 	fold sl.Bytes(s, 0, len(s))
 	r.Raw = s
+	r.ubytes = s
 	fold r.Mem()
 }

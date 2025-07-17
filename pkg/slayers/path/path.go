@@ -91,8 +91,8 @@ type Path interface {
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
 	//@ requires  acc(sl.Bytes(b, 0, len(b)), R42)
-	//@ ensures   err == nil ==>
-	//@ 	Mem() && (UBytes() === b || UBytes() == nil)
+	//@ ensures   err == nil ==> Mem()
+	//@ ensures   err == nil && 0 < len(b) ==> UBytes() === b
 	//@ ensures   err == nil ==>
 	//@ 	acc(sl.Bytes(UBytes(), 0, len(UBytes())), R42)
 	//@ ensures   err == nil ==> IsValidResultOfDecoding()

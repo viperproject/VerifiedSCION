@@ -162,9 +162,10 @@ pred (s *SCION) Mem(ubuf []byte) {
 	s.HdrLen * LineLen <= len(ubuf) &&
 	CmnHdrLen + s.AddrHdrLenSpecInternal() <= s.HdrLen * LineLen &&
 	// end of len of ubuf
-	acc(&s.Path) &&
+	acc(&s.Path)  &&
 	s.Path != nil &&
-	s.Path.Mem(ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen]) &&
+	s.Path.Mem()  &&
+	s.Path.UBytes() === ubuf[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] &&
 	acc(&s.BaseLayer) &&
 	// base layer fields:
 	s.Contents === ubuf[:s.HdrLen*LineLen] &&
@@ -191,11 +192,10 @@ requires s.Mem(ub)
 decreases
 pure func (s *SCION) ValidPathMetaData(ghost ub []byte) bool {
 	return unfolding s.Mem(ub) in
-		let ubPath := s.UBPath(ub) in
 		(typeOf(s.Path) == type[*scion.Raw] ==>
-			s.Path.(*scion.Raw).GetBase(ubPath).Valid()) &&
+			s.Path.(*scion.Raw).GetBase().Valid()) &&
 		(typeOf(s.Path) == type[*epic.Path] ==>
-			s.Path.(*epic.Path).GetBase(ubPath).Valid())
+			s.Path.(*epic.Path).GetBase().Valid())
 }
 
 // TODO: simplify the body of the predicate when let expressions
@@ -228,7 +228,7 @@ decreases
 func (s *SCION) DowngradePerm(ghost ub []byte) {
 	unfold s.Mem(ub)
 	unfold s.HeaderMem(ub[CmnHdrLen:])
-	s.Path.DowngradePerm(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])
+	s.Path.DowngradePerm()
 	s.PathPoolMemExchange(s.PathType, s.Path)
 	fold s.NonInitMem()
 }
@@ -292,7 +292,7 @@ pure func (s *SCION) UBScionPath(ub []byte) []byte {
 	return unfolding s.Mem(ub) in
 		let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
 		typeOf(s.Path) == *epic.Path ?
-			unfolding s.Path.Mem(ubPath) in ubPath[epic.MetadataLen:] :
+			unfolding s.Path.Mem() in ubPath[epic.MetadataLen:] :
 			ubPath
 }
 
@@ -404,12 +404,11 @@ func (s *SCION) ValidHeaderOffsetFromSubSliceLemma(ub []byte, length int) {
 
 ghost
 opaque
-requires s.Mem()
-requires sl.Bytes(s.UBytes(), 0, len(s.UBytes()))
+requires s.Mem(ub)
+requires sl.Bytes(ub, 0, len(ub))
 decreases
-pure func (s *SCION) EqAbsHeader() bool {
-	return let ub := s.UBytes() in
-		unfolding s.Mem()       in
+pure func (s *SCION) EqAbsHeader(ub []byte) bool {
+	return unfolding s.Mem(ub)       in
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen in
 		GetAddressOffset(ub) == low  &&
@@ -417,7 +416,7 @@ pure func (s *SCION) EqAbsHeader() bool {
 		// Might be worth introducing EqAbsHeader as an interface method on Path
 		// to avoid doing these casts, especially when we add support for EPIC.
 		typeOf(s.Path) == (*scion.Raw) &&
-		unfolding s.Path.Mem(ub[low:high]) in
+		unfolding s.Path.Mem() in
 		unfolding sl.Bytes(ub, 0, len(ub)) in
 		let _ := Asserting(forall k int :: {&ub[low:high][k]} 0 <= k && k < high ==>
 			&ub[low:high][k] == &ub[low + k]) in
@@ -442,7 +441,7 @@ pure func (s *SCION) ValidScionInitSpec(ub []byte) bool {
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen                    in
 		typeOf(s.Path) == (*scion.Raw) &&
-		s.Path.(*scion.Raw).GetBase(ub[low:high]).WeaklyValid()
+		s.Path.(*scion.Raw).GetBase().WeaklyValid()
 }
 
 // Checks if the common path header is valid in the serialized scion packet.
@@ -607,7 +606,7 @@ pure func (s *SCION) GetScionPath(ub []byte) path.Path {
 	return unfolding s.Mem(ub) in (
 	typeOf(s.Path) == *epic.Path ?
 		(let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
-			unfolding s.Path.Mem(ubPath) in
+			unfolding s.Path.Mem() in
 			(path.Path)(s.Path.(*epic.Path).ScionPath)) :
 		s.Path)
 }
@@ -774,11 +773,10 @@ requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 requires 0 <= CmnHdrLen+s.AddrHdrLenSpecInternal() &&
 	CmnHdrLen+s.AddrHdrLenSpecInternal() <= s.HdrLen*LineLen &&
 	s.HdrLen*LineLen <= len(ub)
-requires s.Path != nil && s.Path.Mem(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])
+requires s.Path != nil && s.Path.Mem()
 decreases
 pure func (s *SCION) MinSizeOfUbufWithOneHopOpenInv(ub []byte) int {
-	return let pathSlice := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
-		let pathLen := s.Path.LenSpec(pathSlice) in
+	return let pathLen := s.Path.LenSpec() in
 		CmnHdrLen + s.AddrHdrLenSpecInternal() + pathLen
 }
 
@@ -799,7 +797,7 @@ requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 requires 0 <= CmnHdrLen+s.AddrHdrLenSpecInternal() &&
 	CmnHdrLen+s.AddrHdrLenSpecInternal() <= s.HdrLen*LineLen &&
 	s.HdrLen*LineLen <= len(ub)
-requires s.Path != nil && s.Path.Mem(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])
+requires s.Path != nil && s.Path.Mem()
 decreases
 pure func (s *SCION) ValidSizeOhpUbOpenInv(ub []byte) (b bool) {
 	return s.MinSizeOfUbufWithOneHopOpenInv(ub) <= len(ub)
