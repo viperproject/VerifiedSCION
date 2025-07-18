@@ -604,11 +604,11 @@ requires s.Mem(ub)
 decreases
 pure func (s *SCION) GetScionPath(ub []byte) path.Path {
 	return unfolding s.Mem(ub) in (
-	typeOf(s.Path) == *epic.Path ?
-		(let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
-			unfolding s.Path.Mem(ubPath) in
-			(path.Path)(s.Path.(*epic.Path).ScionPath)) :
-		s.Path)
+		typeOf(s.Path) == *epic.Path ?
+			(let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
+				unfolding s.Path.Mem(ubPath) in
+				(path.Path)(s.Path.(*epic.Path).ScionPath)) :
+			s.Path)
 }
 
 ghost
