@@ -61,7 +61,7 @@ ensures  forall i int :: { a.GetIPByte(i) } 0 <= i && i < len(a.GetIP()) ==>
 	low(a.GetIPByte(i))
 // Given that all elements of `a.IP` are low, this should be implied; 
 // however, without a body for `isZeros`, we state it here explicitly.
-ensures  len(a.GetIP()) == IPv6len ==> low(isZeros(a.GetIP()[0:10]))
+// ensures  len(a.GetIP()) == IPv6len ==> low(isZeros(a.GetIP()[0:10]))
 decreases
 func (a *UDPAddr) RevealIsLow()
 
