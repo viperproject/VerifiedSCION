@@ -190,15 +190,15 @@ func testRun(
 	assert dp.Lookup(dp.Lookup(pair4)) == pair4
 	assert dp.Lookup(dp.Lookup(pair5)) == pair5
 
-	assert forall ifs io.Ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
-		io.AsIfsPair{dp.localIA, ifs} in domain(dp.links)
-	assert forall ifs io.Ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs) ==>
+	assert forall ifs io.Ifs :: {ifs elem domain(dp.neighborIAs)} ifs elem domain(dp.neighborIAs) ==>
+		io.AsIfsPair{dp.localIA, ifs} elem domain(dp.links)
+	assert forall ifs io.Ifs :: {ifs elem domain(dp.neighborIAs)} ifs elem domain(dp.neighborIAs) ==>
 		dp.Lookup(io.AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs]
-	assert forall ifs io.Ifs :: {ifs in domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
-		ifs in domain(dp.neighborIAs)
-	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair in domain(dp.links) ==>
+	assert forall ifs io.Ifs :: {ifs elem domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} elem domain(dp.links) ==>
+		ifs elem domain(dp.neighborIAs)
+	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair elem domain(dp.links) ==>
 			let next_pair := dp.Lookup(pair) in
-			(next_pair in domain(dp.links)) &&
+			(next_pair elem domain(dp.links)) &&
 			dp.Lookup(next_pair) == pair
 	assert domain(dp.linkTypes) == domain(dp.neighborIAs)
 	assert reveal dp.Valid()
@@ -213,7 +213,7 @@ func testRun(
 	fold d.Mem()
 	assert d.getDomNeighborIAs() == reveal d.getDomExternal()
 	assert d.getDomNeighborIAs() == d.getDomLinkTypes()
-	assert !(0 in d.getDomNeighborIAs())
+	assert !(0 elem d.getDomNeighborIAs())
 	assert reveal d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 	assert reveal d.DpAgreesWithSpec(dp)
 

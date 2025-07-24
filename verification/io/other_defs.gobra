@@ -119,7 +119,7 @@ requires dp.Valid()
 requires p1 == dp.Asid()
 decreases
 pure func (dp DataPlaneSpec) link_type(p1 AS, p2 Ifs) Link{
-	return p2 in domain(dp.GetLinkTypes()) ? dp.GetLinkType(p2) : IO_NoLink{}
+	return p2 elem domain(dp.GetLinkTypes()) ? dp.GetLinkType(p2) : IO_NoLink{}
 }
 
 ghost

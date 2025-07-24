@@ -780,9 +780,9 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 	switch a := hostAddr.(type) {
 	case *net.IPAddr:
 		// @ ghost if wildcard {
-		// @     unfold acc(hostAddr.Mem(), _)
+		// @ 	unfold acc(hostAddr.Mem(), _)
 		// @ } else {
-		// @ 	 unfold acc(hostAddr.Mem(), R20)
+		// @ 	unfold acc(hostAddr.Mem(), R20)
 		// @ }
 		if ip := a.IP.To4( /*@ wildcard @*/ ); ip != nil {
 			// @ ghost if !wildcard && isIPv6(a) {
@@ -805,13 +805,13 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 		// @ assert !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 		verScionTmp := a.IP
 		// @ ghost if wildcard {
-		// @   fold acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), _)
+		// @ 	fold acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), _)
 		// @ } else {
-		// @   fold acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20)
-		// @   package acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(hostAddr.Mem(), R20) {
-		// @     unfold acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20)
-		// @     fold acc(hostAddr.Mem(), R20)
-		// @   }
+		// @ 	fold acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20)
+		// @ 	package acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(hostAddr.Mem(), R20) {
+		// @ 		unfold acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20)
+		// @ 		fold acc(hostAddr.Mem(), R20)
+		// @ 	}
 		// @ }
 		return T16Ip, verScionTmp, nil
 	case addr.HostSVC:
