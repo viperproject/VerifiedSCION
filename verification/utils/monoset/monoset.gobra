@@ -29,7 +29,7 @@ type BoundedMonotonicSet struct {
 pred (b BoundedMonotonicSet) Inv() {
 	(b.Start <= b.End) &&
 	forall i int64 :: b.Start <= i && i <= b.End ==>
-		(i in domain(b.valuesMap) && acc(b.valuesMap[i], 1/2))
+		(i elem domain(b.valuesMap) && acc(b.valuesMap[i], 1/2))
 }
 
 ghost
@@ -44,7 +44,7 @@ pure func (b BoundedMonotonicSet) FContains(i int64) bool {
 
 ghost
 requires forall i int64 :: b.Start <= i && i <= b.End ==>
-	(i in domain(b.valuesMap) && acc(b.valuesMap[i], _))
+	(i elem domain(b.valuesMap) && acc(b.valuesMap[i], _))
 requires b.Start <= i && i <= b.End
 decreases
 pure func (b BoundedMonotonicSet) fcontainshelper(i int64) bool {
@@ -54,7 +54,7 @@ pure func (b BoundedMonotonicSet) fcontainshelper(i int64) bool {
 
 pred (b BoundedMonotonicSet) Contains(i int64) {
 	b.Start <= i && i <= b.End &&
-	i in domain(b.valuesMap) &&
+	i elem domain(b.valuesMap) &&
 	acc(b.valuesMap[i], _)   &&
 	*b.valuesMap[i]
 }
@@ -80,7 +80,7 @@ func (b BoundedMonotonicSet) PromoteContains(i int64) {
 
 pred (b BoundedMonotonicSet) DoesNotContain(i int64) {
 	b.Start <= i && i <= b.End &&
-	i in domain(b.valuesMap) &&
+	i elem domain(b.valuesMap) &&
 	acc(b.valuesMap[i], 1/2) &&
 	!(*b.valuesMap[i])
 }
@@ -128,7 +128,7 @@ func Alloc(start, end int64) (res BoundedMonotonicSet) {
 	invariant start <= i && i <= end
 	invariant b.Start == start && b.End == end
 	invariant forall j int64 :: start <= j && j < i ==>
-		j in domain(b.valuesMap)
+		j elem domain(b.valuesMap)
 	// injectivity requirement
 	invariant forall j1, j2 int64 :: start <= j1 && j1 < j2 && j2 < i ==>
 		b.valuesMap[j1] != b.valuesMap[j2]
@@ -147,7 +147,7 @@ func Alloc(start, end int64) (res BoundedMonotonicSet) {
 	invariant start <= i && i <= end
 	invariant b.Start == start && b.End == end
 	invariant forall j int64 :: start <= j && j <= end ==>
-		j in domain(b.valuesMap)
+		j elem domain(b.valuesMap)
 	// injectivity requirement
 	invariant forall j1, j2 int64 :: start <= j1 && j1 < j2 && j2 < i ==>
 		b.valuesMap[j1] != b.valuesMap[j2]
@@ -195,7 +195,7 @@ requires 0 < p
 requires acc(b.Inv(), p)
 requires b.Contains(v)
 ensures  acc(b.Inv(), p)
-ensures  v in b.ToSet()
+ensures  v elem b.ToSet()
 decreases
 func (b BoundedMonotonicSet) ContainsImpliesAbstractContains(v int64, p perm) {
 	found := false
@@ -209,7 +209,7 @@ func (b BoundedMonotonicSet) ContainsImpliesAbstractContains(v int64, p perm) {
 	invariant b.Contains(v)
 	invariant b.Start <= i && i <= b.End
 	invariant v < i ==> found
-	invariant found ==> v in b.ToSet()
+	invariant found ==> v elem b.ToSet()
 	invariant part1 union part2 == b.ToSet()
 	invariant i <= b.End ==>
 		part2 == unfolding acc(b.Inv(), _) in ((*b.valuesMap[i] ? set[int64]{i} : set[int64]{}) union (i < b.End ? b.toSetAux(i+1) : set[int64]{}))
@@ -222,8 +222,8 @@ func (b BoundedMonotonicSet) ContainsImpliesAbstractContains(v int64, p perm) {
 			found = true
 			assert *b.valuesMap[i]
 			assert newpart1 union newpart2 == b.ToSet()
-			assert v in (unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{}))
-			assert v in newpart1
+			assert v elem (unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{}))
+			assert v elem newpart1
 			fold b.Contains(v)
 		}
 		part1 = newpart1
@@ -235,7 +235,7 @@ func (b BoundedMonotonicSet) ContainsImpliesAbstractContains(v int64, p perm) {
 			unfold b.Contains(v)
 			found = true
 			assert *b.valuesMap[i]
-			assert v in (unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{}))
+			assert v elem (unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{}))
 			fold b.Contains(v)
 	}
 }
@@ -244,7 +244,7 @@ ghost
 requires  0 < p
 preserves acc(b.Inv(), p)
 preserves b.DoesNotContain(v)
-ensures   !(v in b.ToSet())
+ensures   !(v elem b.ToSet())
 decreases
 func (b BoundedMonotonicSet) DoesNotContainsImpliesAbstractDoesNotContain(v int64, p perm) {
 	found := false
@@ -258,7 +258,7 @@ func (b BoundedMonotonicSet) DoesNotContainsImpliesAbstractDoesNotContain(v int6
 	invariant b.DoesNotContain(v)
 	invariant b.Start <= i && i <= b.End
 	invariant !found
-	invariant found == v in part1
+	invariant found == v elem part1
 	invariant part1 union part2 == b.ToSet()
 	invariant i <= b.End ==>
 		part2 == unfolding acc(b.Inv(), _) in ((*b.valuesMap[i] ? set[int64]{i} : set[int64]{}) union (i < b.End ? b.toSetAux(i+1) : set[int64]{}))
@@ -272,8 +272,8 @@ func (b BoundedMonotonicSet) DoesNotContainsImpliesAbstractDoesNotContain(v int6
 			unfold b.DoesNotContain(v)
 			assert !(*b.valuesMap[i])
 			assert newpart1 union newpart2 == b.ToSet()
-			assert !(v in (unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{})))
-			assert !(v in newpart1)
+			assert !(v elem (unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{})))
+			assert !(v elem newpart1)
 			fold b.DoesNotContain(v)
 		}
 		part1 = newpart1
@@ -284,7 +284,7 @@ func (b BoundedMonotonicSet) DoesNotContainsImpliesAbstractDoesNotContain(v int6
 	if i == v {
 		unfold b.DoesNotContain(v)
 		assert !(*b.valuesMap[i])
-		assert !(v in (unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{})))
+		assert !(v elem (unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{})))
 		fold b.DoesNotContain(v)
 	}
 }

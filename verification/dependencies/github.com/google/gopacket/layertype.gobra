@@ -78,7 +78,7 @@ pure func Registered(t LayerType) (res bool) {
 	return unfolding acc(PkgMem(), _) in
 		0 <= t && t < MaxLayerType?
 			ltMeta[t].inUse :
-			(t in domain(ltMetaMap) && ltMetaMap[t].inUse)
+			(t elem domain(ltMetaMap) && ltMetaMap[t].inUse)
 }
 
 ghost
@@ -89,7 +89,7 @@ requires acc(&ltMeta)         &&
 	acc(DecodersByLayerName)
 decreases
 pure func registeredDuringInit(t LayerType) (res bool) {
-	return (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+	return (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t elem domain(ltMetaMap) && ltMetaMap[t].inUse))
 }
 
 // cannot be made ghost, even though it is morally so
