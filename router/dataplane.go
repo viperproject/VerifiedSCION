@@ -579,8 +579,8 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	// @ 	defer fold acc(accBfdSession(d.bfdSessions), R20)
 	// @ }
 	if bfdSession, ok := bfdSessions[interfaceID]; ok {
-		// @ assert interfaceID in domain(d.bfdSessions)
-		// @ assert bfdSession in range(d.bfdSessions)
+		// @ assert interfaceID elem domain(d.bfdSessions)
+		// @ assert bfdSession elem range(d.bfdSessions)
 		// @ assert bfdSession != nil
 		// (VerifiedSCION) This checked used to be conjoined with 'ok' in the condition
 		// of the if stmt above. We broke it down to perform intermediate asserts.
@@ -850,12 +850,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// dPtr as an helper parameter. It always receives the value &d.
 		// @ requires acc(dPtr, _)
 		// @ requires let d := *dPtr in
-		// @ 	acc(d.Mem(), _)                            &&
-		// @ 	d.WellConfigured()                         &&
-		// @ 	d.getValSvc() != nil                       &&
-		// @ 	d.getValForwardingMetrics() != nil         &&
-		// @ 	(0 in d.getDomForwardingMetrics())         &&
-		// @ 	(ingressID in d.getDomForwardingMetrics()) &&
+		// @ 	acc(d.Mem(), _)                              &&
+		// @ 	d.WellConfigured()                           &&
+		// @ 	d.getValSvc() != nil                         &&
+		// @ 	d.getValForwardingMetrics() != nil           &&
+		// @ 	(0 elem d.getDomForwardingMetrics())         &&
+		// @ 	(ingressID elem d.getDomForwardingMetrics()) &&
 		// @ 	d.getMacFactory() != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// contracts for IO-spec
@@ -934,8 +934,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 			// @ invariant d.getValSvc() != nil
 			// @ invariant d.getValForwardingMetrics() != nil
-			// @ invariant 0 in d.getDomForwardingMetrics()
-			// @ invariant ingressID in d.getDomForwardingMetrics()
+			// @ invariant 0 elem d.getDomForwardingMetrics()
+			// @ invariant ingressID elem d.getDomForwardingMetrics()
 			// @ invariant acc(rd.Mem(), _)
 			// @ invariant processor.sInit() && processor.sInitD() === d
 			// @ invariant let ubuf := processor.sInitBufferUBuf() in
@@ -1006,8 +1006,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 				// @ invariant d.getValSvc() != nil
 				// @ invariant d.getValForwardingMetrics() != nil
-				// @ invariant 0 in d.getDomForwardingMetrics()
-				// @ invariant ingressID in d.getDomForwardingMetrics()
+				// @ invariant 0 elem d.getDomForwardingMetrics()
+				// @ invariant ingressID elem d.getDomForwardingMetrics()
 				// @ invariant acc(rd.Mem(), _)
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
@@ -1162,7 +1162,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
 					// @ ghost if(newAbsPkt.isValPkt) {
 					// @ 	ApplyElemWitness(s.obuf, ioSharedArg.OBufY, newAbsPkt.ValPkt_1, newAbsPkt.ValPkt_2)
-					// @ 	assert newAbsPkt.ValPkt_2 in AsSet(s.obuf[newAbsPkt.ValPkt_1])
+					// @ 	assert newAbsPkt.ValPkt_2 elem AsSet(s.obuf[newAbsPkt.ValPkt_1])
 					// @ 	assert dp.dp3s_iospec_bio3s_send_guard(s, t, newAbsPkt)
 					// @ } else { assert newAbsPkt.isValUnsupported }
 					// @ unfold dp.dp3s_iospec_ordered(s, t)
@@ -1203,7 +1203,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					}
 					// @ requires acc(dPtr, _) && *dPtr === d
 					// @ requires acc(d.Mem(), _)
-					// @ requires result.EgressID in d.getDomForwardingMetrics()
+					// @ requires result.EgressID elem d.getDomForwardingMetrics()
 					// @ decreases
 					// @ outline(
 					// ok metric
@@ -1223,7 +1223,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		}
 	// @ unfold acc(d.Mem(), R1)
 	// @ assert d.WellConfigured()
-	// @ assert 0 in d.getDomForwardingMetrics()
+	// @ assert 0 elem d.getDomForwardingMetrics()
 	// @ ghost if d.bfdSessions != nil { unfold acc(accBfdSession(d.bfdSessions), R2) }
 
 	// (VerifiedSCION) we introduce this to avoid problems with the invariants that
@@ -1272,7 +1272,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant d.getValSvc() != nil
 	// @ invariant d.getValForwardingMetrics() != nil
-	// @ invariant 0 in d.getDomForwardingMetrics()
+	// @ invariant 0 elem d.getDomForwardingMetrics()
 	// @ invariant d.getMacFactory() != nil
 	// @ invariant dp.Valid()
 	// @ invariant d.DpAgreesWithSpec(dp)
@@ -1286,8 +1286,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ requires acc(d.Mem(), _) && d.WellConfigured()
 			// @ requires d.getValSvc() != nil
 			// @ requires d.getValForwardingMetrics() != nil
-			// @ requires 0 in d.getDomForwardingMetrics()
-			// @ requires i in d.getDomForwardingMetrics()
+			// @ requires 0 elem d.getDomForwardingMetrics()
+			// @ requires i elem d.getDomForwardingMetrics()
 			// @ requires d.getMacFactory() != nil
 			// @ requires c != nil && acc(c.Mem(), _)
 			// contracts for IO-spec
@@ -1300,7 +1300,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				read(i, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
 			}
 		// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R50) }
-		// @ assert v in range(d.external)
+		// @ assert v elem range(d.external)
 		// @ assert acc(v.Mem(), _)
 		// @ d.InDomainExternalInForwardingMetrics3(ifID)
 		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), R50) }
@@ -1312,7 +1312,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// @ requires acc(d.Mem(), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
-		// @ requires 0 in d.getDomForwardingMetrics()
+		// @ requires 0 elem d.getDomForwardingMetrics()
 		// @ requires d.getMacFactory() != nil
 		// @ requires c != nil && acc(c.Mem(), _)
 		// contracts for IO-spec
@@ -1349,7 +1349,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // @ ensures   d.Mem()
 // @ ensures   d.MetricsAreSet()
 // @ ensures   d.WellConfigured()
-// @ ensures   0 in d.DomainForwardingMetrics()
+// @ ensures   0 elem d.DomainForwardingMetrics()
 // @ ensures   d.InternalConnIsSet()
 // @ ensures   d.KeyIsSet()
 // @ ensures   d.SvcsAreSet()
@@ -1401,14 +1401,14 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ invariant d.external === dExternal
 	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
 	// @ invariant domain(d.forwardingMetrics) == set[uint16]{0} union visitedSet
-	// @ invariant 0 in domain(d.forwardingMetrics)
+	// @ invariant 0 elem domain(d.forwardingMetrics)
 	// @ invariant acc(&d.internalNextHops, R15)
 	// @ invariant d.internalNextHops === dInternalNextHops
 	// @ invariant d.internalNextHops != nil ==> acc(d.internalNextHops, R20)
 	// @ invariant domain(d.internalNextHops) intersection domain(d.external) == set[uint16]{}
 	// @ invariant acc(&d.neighborIAs, R15)
 	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, R15)
-	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i in domain(d.forwardingMetrics) ==>
+	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i elem domain(d.forwardingMetrics) ==>
 	// @ 	acc(forwardingMetricsMem(d.forwardingMetrics[i], i), _)
 	// @ invariant acc(&d.Metrics, R15)
 	// @ invariant acc(d.Metrics.Mem(), _)
@@ -1709,7 +1709,7 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 	}
 
 	if v, ok := p.d.bfdSessions[p.ingressID]; ok {
-		// @ assert v in range(p.d.bfdSessions)
+		// @ assert v elem range(p.d.bfdSessions)
 		v.ReceiveMessage(bfd /*@ , data @*/)
 		return nil
 	}
@@ -1757,12 +1757,12 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ invariant acc(&p.d.internalNextHops, _)
 	// @ invariant m === p.d.internalNextHops
 	// @ invariant m != nil ==> acc(m, R20)
-	// @ invariant m != nil ==> forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
+	// @ invariant m != nil ==> forall a *net.UDPAddr :: { a elem range(m) } a elem range(m) ==> acc(a.Mem(), _)
 	// @ invariant acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 	// @ decreases len(p.d.internalNextHops) - len(keys)
 	for k, v := range p.d.internalNextHops /*@ with keys @*/ {
 		// @ assert acc(&p.d.internalNextHops, _)
-		// @ assert forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
+		// @ assert forall a *net.UDPAddr :: { a elem range(m) } a elem range(m) ==> acc(a.Mem(), _)
 		// @ assert acc(v.Mem(), _)
 		// @ unfold acc(v.Mem(), _)
 		// @ unfold acc(p.srcAddr.Mem(), _)
@@ -1778,7 +1778,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ assert acc(&p.d.bfdSessions, _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if v, ok := p.d.bfdSessions[ifID]; ok {
-		// @ assert v in range(p.d.bfdSessions)
+		// @ assert v elem range(p.d.bfdSessions)
 		v.ReceiveMessage(bfd /*@ , data @*/)
 		return nil
 	}
@@ -2559,8 +2559,8 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	expectedSrc, ok := p.d.internalNextHops[pktIngressID]
 	// @ ghost if ok {
-	// @ 	assert expectedSrc in range(p.d.internalNextHops)
-	// @    unfold acc(expectedSrc.Mem(), _)
+	// @ 	assert expectedSrc elem range(p.d.internalNextHops)
+	// @ 	unfold acc(expectedSrc.Mem(), _)
 	// @ }
 	// @ unfold acc(p.srcAddr.Mem(), _)
 	if !ok || !expectedSrc.IP.Equal(p.srcAddr.IP) {
@@ -4206,7 +4206,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 		// @ ghost if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
 			// @ p.d.getDomExternalLemma()
-			// @ assert ohp.FirstHop.ConsEgress in p.d.getDomExternal()
+			// @ assert ohp.FirstHop.ConsEgress elem p.d.getDomExternal()
 			// @ p.d.InDomainExternalInForwardingMetrics(ohp.FirstHop.ConsEgress)
 			// @ fold p.d.validResult(processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt}, false)
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
