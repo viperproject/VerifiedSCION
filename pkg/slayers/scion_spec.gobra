@@ -409,15 +409,17 @@ requires sl.Bytes(ub, 0, len(ub))
 decreases
 pure func (s *SCION) EqAbsHeader(ub []byte) bool {
 	return unfolding s.Mem(ub) in
+		// the '_' in the identifier below is now necessary to avoid
+		// parsing errors (since the SIF PR in Gobra, low is a keyword).
 		let low_ := CmnHdrLen+s.AddrHdrLenSpecInternal() in
-		let high := s.HdrLen*LineLen in
+		let high := s.HdrLen*LineLen  in
 		GetAddressOffset(ub) == low_  &&
-		GetLength(ub) == int(high)   &&
+		GetLength(ub) == int(high)    &&
 		// Might be worth introducing EqAbsHeader as an interface method on Path
 		// to avoid doing these casts, especially when we add support for EPIC.
 		typeOf(s.Path) == (*scion.Raw) &&
 		unfolding s.Path.Mem(ub[low_:high]) in
-		unfolding sl.Bytes(ub, 0, len(ub)) in
+		unfolding sl.Bytes(ub, 0, len(ub))  in
 		let _ := Asserting(forall k int :: {&ub[low_:high][k]} 0 <= k && k < high ==>
 			&ub[low_:high][k] == &ub[low_ + k]) in
 		let _ := Asserting(forall k int :: {&ub[low_:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
@@ -437,9 +439,11 @@ opaque
 requires s.Mem(ub)
 decreases
 pure func (s *SCION) ValidScionInitSpec(ub []byte) bool {
-	return unfolding s.Mem(ub)                          in
+	return unfolding s.Mem(ub)                           in
+		// the '_' in the identifier below is now necessary to avoid
+		// parsing errors (since the SIF PR in Gobra, low is a keyword).
 		let low_ := CmnHdrLen+s.AddrHdrLenSpecInternal() in
-		let high := s.HdrLen*LineLen                    in
+		let high := s.HdrLen*LineLen                     in
 		typeOf(s.Path) == (*scion.Raw) &&
 		s.Path.(*scion.Raw).GetBase(ub[low_:high]).WeaklyValid()
 }
@@ -604,11 +608,11 @@ requires s.Mem(ub)
 decreases
 pure func (s *SCION) GetScionPath(ub []byte) path.Path {
 	return unfolding s.Mem(ub) in (
-	typeOf(s.Path) == *epic.Path ?
-		(let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
-			unfolding s.Path.Mem(ubPath) in
-			(path.Path)(s.Path.(*epic.Path).ScionPath)) :
-		s.Path)
+		typeOf(s.Path) == *epic.Path ?
+			(let ubPath := ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen] in
+				unfolding s.Path.Mem(ubPath) in
+				(path.Path)(s.Path.(*epic.Path).ScionPath)) :
+			s.Path)
 }
 
 ghost

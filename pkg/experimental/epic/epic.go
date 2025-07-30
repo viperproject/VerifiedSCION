@@ -304,7 +304,7 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	// @ establishPostInitInvariant()
 	// @ unfold acc(postInitInvariant(), _)
 	// @ assert acc(sl.Bytes(zeroInitVector[:], 0, 16), _)
-	// (VerifiedSCION) From the package invariant, we learn that we have a wildcard access to zeroInitVector.
+	// (VerifiedSCION) From the pkg invariant, we learn that we have a wildcard access to zeroInitVector.
 	// Unfortunately, it is not possible to call `copy` with a wildcard amount, even though
 	// that would be perfectly fine. The spec of `copy` would need to be adapted to allow for that case.
 	// @ inhale acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), R55)

@@ -258,7 +258,7 @@ pred ElemWitness(ghost y ElemRA, ghost k Key, ghost e Elem)
 ghost
 decreases
 requires ElemAuth(m, y) && ElemWitness(y, k, e)
-ensures  ElemAuth(m, y) && ElemWitness(y, k, e) && k in domain(m) && e in AsSet(m[k])
+ensures  ElemAuth(m, y) && ElemWitness(y, k, e) && k elem domain(m) && e elem AsSet(m[k])
 func ApplyElemWitness(m dict[Key]Val, y ElemRA, k Key, e Elem)
 
 ghost
