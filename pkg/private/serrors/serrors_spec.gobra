@@ -94,10 +94,6 @@ func WrapStr(msg string, cause error, errCtx ...interface{}) (res error)
 // Elements of errCtx are limited to "primitive types" at the moment.
 // This is a safe but strict under-approximation of what can be done
 // with this method.
-// TODO: For completeness, we need to require every value that influences 
-// control flow (in the implementation of `New`) to be low. This annotation is
-// likely not sufficient.
-requires  low(len(errCtx))
 preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 ensures   res != nil && res.ErrorMem()
 ensures   res.IsDuplicableMem()

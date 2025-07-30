@@ -81,24 +81,24 @@ pred (d *DataPlane) Mem() {
 
 pred accAddr(addrs map[uint16]*net.UDPAddr) {
 	acc(addrs) &&
-	forall a *net.UDPAddr :: { a in range(addrs) } a in range(addrs) ==> acc(a.Mem(), _)
+	forall a *net.UDPAddr :: { a elem range(addrs) } a elem range(addrs) ==> acc(a.Mem(), _)
 }
 
 pred accBatchConn(batchConns map[uint16]BatchConn) {
 	acc(batchConns) &&
-	forall b BatchConn :: { b in range(batchConns) }{ b.Mem() } b in range(batchConns) ==>
+	forall b BatchConn :: { b elem range(batchConns) }{ b.Mem() } b elem range(batchConns) ==>
 		b!= nil && acc(b.Mem(), _)
 }
 
 pred accBfdSession(bfdSessions map[uint16]bfdSession) {
 	acc(bfdSessions) &&
-	(forall bfd bfdSession :: { bfd in range(bfdSessions) }{ bfd.Mem() } bfd in range(bfdSessions) ==>
+	(forall bfd bfdSession :: { bfd elem range(bfdSessions) }{ bfd.Mem() } bfd elem range(bfdSessions) ==>
 		(bfd != nil && acc(bfd.Mem(), _)))
 }
 
 pred accForwardingMetrics(metrics map[uint16]forwardingMetrics) {
 	acc(metrics) &&
-	forall id uint16 :: { metrics[id] } id in domain(metrics) ==>
+	forall id uint16 :: { metrics[id] } id elem domain(metrics) ==>
 		acc(forwardingMetricsMem(metrics[id], id), _)
 }
 
@@ -270,7 +270,7 @@ ghost
 requires d.Mem()
 decreases
 pure func (d *DataPlane) getDomLinkTypes() set[uint16] {
-	return unfolding acc(d.Mem(), _) in
+	return unfolding d.Mem() in
 		d.linkTypes == nil ?
 			set[uint16]{} : domain(d.linkTypes)
 }
@@ -282,7 +282,7 @@ decreases
 pure func (d *DataPlane) WellConfigured() bool {
 	return d.getDomNeighborIAs() == d.getDomExternal() &&
 		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
-		!(0 in d.getDomNeighborIAs()) &&
+		!(0 elem d.getDomNeighborIAs()) &&
 		d.getDomExternal() subset d.getDomForwardingMetrics()
 }
 
@@ -293,30 +293,30 @@ decreases
 pure func (d *DataPlane) PreWellConfigured() bool {
 	return d.getDomNeighborIAs() == d.getDomExternal() &&
 		d.getDomExternal() == d.getDomLinkTypes() &&
-		!(0 in d.getDomNeighborIAs()) &&
+		!(0 elem d.getDomNeighborIAs()) &&
 		d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 }
 
 ghost
 requires acc(d.Mem(), _)
-requires id in d.getDomForwardingMetrics()
+requires id elem d.getDomForwardingMetrics()
 ensures  acc(&d.forwardingMetrics, _)
 ensures  acc(d.forwardingMetrics, _)
 ensures  acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 decreases
 func (d *DataPlane) getForwardingMetricsMem(id uint16) {
 	unfold acc(d.Mem(), _)
-	assert id in d.getDomForwardingMetrics()
+	assert id elem d.getDomForwardingMetrics()
 	assert d.getDomForwardingMetrics() == (d.forwardingMetrics == nil ?
 		set[uint16]{} :
 		(unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
 				domain(d.forwardingMetrics)))
-	assert id in (d.forwardingMetrics == nil ?
+	assert id elem (d.forwardingMetrics == nil ?
 		set[uint16]{} :
 		(unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
 				domain(d.forwardingMetrics)))
 	unfold acc(accForwardingMetrics(d.forwardingMetrics), _)
-	assert id in domain(d.forwardingMetrics)
+	assert id elem domain(d.forwardingMetrics)
 }
 
 ghost
@@ -511,7 +511,7 @@ pure func (d *DataPlane) LocalIA() addr.IA {
 
 ghost
 requires bfdSessions != nil ==> acc(bfdSessions, R50)
-requires v in range(bfdSessions)
+requires v elem range(bfdSessions)
 requires acc(accBfdSession(bfdSessions), R50)
 ensures  bfdSessions != nil ==> acc(bfdSessions, R50)
 ensures  acc(accBfdSession(bfdSessions), R50)
@@ -554,8 +554,7 @@ ghost
 requires s.Mem()
 decreases
 pure func (s *scmpError) Get() error {
-	return unfolding s.Mem() in
-		*s
+	return unfolding s.Mem() in *s
 }
 
 ghost
@@ -597,56 +596,49 @@ ghost
 requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitD() (res *DataPlane) {
-	return unfolding s.sInit() in
-		s.d
+	return unfolding s.sInit() in s.d
 }
 
 ghost
 requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitRawPkt() (res []byte) {
-	return unfolding s.sInit() in
-		s.rawPkt
+	return unfolding s.sInit() in s.rawPkt
 }
 
 ghost
 requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitPath() (res *scion.Raw) {
-	return unfolding s.sInit() in
-		s.path
+	return unfolding s.sInit() in s.path
 }
 
 ghost
 requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitHopField() (res path.HopField) {
-	return unfolding s.sInit() in
-		s.hopField
+	return unfolding s.sInit() in s.hopField
 }
 
 ghost
 requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitInfoField() (res path.InfoField) {
-	return unfolding s.sInit() in
-		s.infoField
+	return unfolding s.sInit() in s.infoField
 }
 
 ghost
 requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitSegmentChange() (res bool) {
-	return unfolding s.sInit() in
-		s.segmentChange
+	return unfolding s.sInit() in s.segmentChange
 }
 
 ghost
 requires s.sInit()
 decreases
 pure func (s* scionPacketProcessor) sInitBufferUBuf() (res []byte) {
-	return unfolding s.sInit() in
-		s.buffer.UBuf()
+	return unfolding s.sInit() in s.buffer.UBuf()
 }
 
 /** end spec for newPacketProcessor **/
@@ -684,7 +676,7 @@ func ResetDecodingLayers(
 pred (d *DataPlane) validResult(result processResult, addrAliasesPkt bool) {
 	acc(d.Mem(), _)    &&
 	// EgressID
-	(result.EgressID != 0 ==> result.EgressID in d.getDomForwardingMetrics()) &&
+	(result.EgressID != 0 ==> result.EgressID elem d.getDomForwardingMetrics()) &&
 	// OutConn
 	(result.OutConn != nil ==> acc(result.OutConn.Mem(), _)) &&
 	// OutAddr
@@ -695,9 +687,9 @@ pred (d *DataPlane) validResult(result processResult, addrAliasesPkt bool) {
 
 ghost
 requires acc(d.Mem(), _) && d.WellConfigured()
-requires id in d.getDomExternal()
+requires id elem d.getDomExternal()
 ensures  acc(d.Mem(), _)
-ensures  id in d.getDomForwardingMetrics()
+ensures  id elem d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
 	reveal d.WellConfigured()
@@ -706,10 +698,10 @@ func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
 ghost
 requires acc(d.Mem(), _) && d.WellConfigured()
 requires acc(&d.external, _) && acc(d.external, R55)
-requires id in domain(d.external)
+requires id elem domain(d.external)
 ensures  acc(d.Mem(), _)
 ensures  acc(&d.external, _) && acc(d.external, R55)
-ensures  id in d.getDomForwardingMetrics()
+ensures  id elem d.getDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics3(id uint16) {
 	reveal d.WellConfigured()
