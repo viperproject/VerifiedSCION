@@ -130,7 +130,7 @@ requires  pkt.RightSeg != none[io.Seg]
 requires  len(get(pkt.RightSeg).Past) > 0
 decreases
 pure func AbsValidateEgressIDConstraintXover(pkt io.Pkt, dp io.DataPlaneSpec) bool {
-	return let currseg := pkt.CurrSeg in
+	return let currseg := pkt.CurrSeg     in
 		let rightseg := get(pkt.RightSeg) in
 		dp.xover2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
 			currseg.ConsDir, currseg.Future[0])
@@ -142,10 +142,10 @@ requires pkt.PathNotFullyTraversed()
 decreases
 pure func AbsVerifyCurrentMACConstraint(pkt io.Pkt, dp io.DataPlaneSpec) bool {
 	return let currseg := pkt.CurrSeg in
-		let d := currseg.ConsDir in
-		let ts := currseg.AInfo in
-		let hf := currseg.Future[0] in
-		let uinfo := currseg.UInfo in
+		let d := currseg.ConsDir      in
+		let ts := currseg.AInfo       in
+		let hf := currseg.Future[0]   in
+		let uinfo := currseg.UInfo    in
 		dp.hf_valid(d, ts.V, uinfo, hf)
 }
 
@@ -185,7 +185,7 @@ func InternalEnterEvent(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, 
 ghost
 requires  dp.Valid()
 requires  egressID != none[io.Ifs]
-requires  get(egressID) in domain(dp.GetNeighborIAs())
+requires  get(egressID) elem domain(dp.GetNeighborIAs())
 requires  oldPkt.PathNotFullyTraversed()
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires  AbsValidateIngressIDConstraint(oldPkt, ingressID)
@@ -228,7 +228,7 @@ requires  len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).Fu
 requires  len(get(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID).LeftSeg).History) == 0
 requires  AbsVerifyCurrentMACConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
 requires  AbsValidateEgressIDConstraintXover(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), dp)
-requires  egressID != none[io.Ifs] ==> get(egressID) in domain(dp.GetNeighborIAs())
+requires  egressID != none[io.Ifs] ==> get(egressID) elem domain(dp.GetNeighborIAs())
 requires  egressID != none[io.Ifs] ==> AbsEgressInterfaceConstraint(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)), egressID)
 requires  egressID == none[io.Ifs] ==>
 	newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))

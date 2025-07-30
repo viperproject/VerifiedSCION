@@ -136,8 +136,21 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	// @ a.RevealIsLow()
 	// @ assert len(a.GetIP()) == net.IPv6len ==> 
 	// @ 	low(a.GetIPByte(10) == 255) && low(a.GetIPByte(11) == 255)
+	// @ ghost if len(a.GetIP()) == net.IPv6len {
+	// @ 	ghost a.GetIPByte(0)
+	// @ 	ghost a.GetIPByte(1)
+	// @ 	ghost a.GetIPByte(2)
+	// @ 	ghost a.GetIPByte(3)
+	// @ 	ghost a.GetIPByte(4)
+	// @ 	ghost a.GetIPByte(5)
+	// @ 	ghost a.GetIPByte(6)
+	// @ 	ghost a.GetIPByte(7)
+	// @ 	ghost a.GetIPByte(8)
+	// @ 	ghost a.GetIPByte(9)
+	// @ }
 	// @ unfold acc(a.Mem(), R15)
 	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15)
+	// @ assert len(a.GetIP()) == net.IPv6len ==> low(net.isZeros(a.IP[0:10]))
 	if a.IP.To4( /*@ false @*/ ) != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
 	}
@@ -482,10 +495,12 @@ func (c *connUDPBase) Close() (err error) {
 // @ decreases
 func NewReadMessages(n int) (res Messages) {
 	m := make(Messages, n)
-	//@ invariant forall j int :: { &m[j] } (0 <= j && j < i0) ==> m[j].Mem() && m[j].GetAddr() == nil
-	//@ invariant forall j int :: { &m[j] } (i0 <= j && j < len(m)) ==> acc(&m[j]) && m[j].N == 0
-	//@ invariant forall j int :: { m[j].Addr } (i0 <= j && j < len(m)) ==> m[j].Addr == nil
-	//@ invariant forall j int :: { m[j].OOB } (i0 <= j && j < len(m)) ==> m[j].OOB == nil
+	//@ invariant forall j int :: { &m[j] } (0 <= j && j < i0) ==> m[j].Mem()
+	//@ invariant forall j int :: { m[j].GetAddr() } (0 <= j && j < i0) ==> m[j].GetAddr() == nil
+	//@ invariant forall j int :: { &m[j] } (i0 <= j && j < len(m)) ==> acc(&m[j])
+	//@ invariant forall j int :: { &m[j].N } (i0 <= j && j < len(m)) ==> m[j].N == 0
+	//@ invariant forall j int :: { &m[j].Addr } (i0 <= j && j < len(m)) ==> m[j].Addr == nil
+	//@ invariant forall j int :: { &m[j].OOB } (i0 <= j && j < len(m)) ==> m[j].OOB == nil
 	//@ invariant low(i0)
 	//@ decreases len(m) - i
 	for i := range m /*@ with i0 @*/ {
@@ -493,7 +508,9 @@ func NewReadMessages(n int) (res Messages) {
 		m[i].Buffers = make([][]byte, 1)
 		//@ fold sl.Bytes(m[i].Buffers[0], 0, len(m[i].Buffers[0]))
 		//@ fold sl.Bytes(m[i].OOB, 0, len(m[i].OOB))
+		//@ BeforeFold:
 		//@ fold m[i].Mem()
+		//@ assert forall j int :: { m[j].GetAddr() } 0 <= j && j < i0 ==> old[BeforeFold](m[j].GetAddr()) == nil
 	}
 	return m
 }

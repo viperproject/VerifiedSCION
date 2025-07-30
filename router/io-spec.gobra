@@ -41,15 +41,15 @@ pure func absPkt(raw []byte) (res io.Pkt) {
 		let headerOffsetWithMetaLen := headerOffset + scion.MetaLen in
 		let hdr := (unfolding sl.Bytes(raw, 0, len(raw)) in
 			binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen])) in
-		let metaHdr := scion.DecodedFrom(hdr) in
+		let metaHdr := scion.DecodedFrom(hdr)  in
 		let currInfIdx := int(metaHdr.CurrINF) in
-		let currHfIdx := int(metaHdr.CurrHF) in
-		let seg1Len := int(metaHdr.SegLen[0]) in
-		let seg2Len := int(metaHdr.SegLen[1]) in
-		let seg3Len := int(metaHdr.SegLen[2]) in
+		let currHfIdx := int(metaHdr.CurrHF)   in
+		let seg1Len := int(metaHdr.SegLen[0])  in
+		let seg2Len := int(metaHdr.SegLen[1])  in
+		let seg3Len := int(metaHdr.SegLen[2])  in
 		let segs := io.CombineSegLens(seg1Len, seg2Len, seg3Len) in
-		let segLen := segs.LengthOfCurrSeg(currHfIdx) in
-		let prevSegLen := segs.LengthOfPrevSeg(currHfIdx) in
+		let segLen := segs.LengthOfCurrSeg(currHfIdx)            in
+		let prevSegLen := segs.LengthOfPrevSeg(currHfIdx)        in
 		let numINF := segs.NumInfoFields() in
 		let offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen) in
 		io.Pkt {
@@ -114,8 +114,8 @@ requires acc(&d.neighborIAs)
 requires d.neighborIAs != nil ==> acc(d.neighborIAs)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredNeighborIAs(dp io.DataPlaneSpec) bool {
-	return forall ifs uint16 :: {ifs in domain(d.neighborIAs)} ifs in domain(d.neighborIAs) ==>
-		io.Ifs{ifs} in domain(dp.GetNeighborIAs()) &&
+	return forall ifs uint16 :: {ifs elem domain(d.neighborIAs)} ifs elem domain(d.neighborIAs) ==>
+		io.Ifs{ifs} elem domain(dp.GetNeighborIAs()) &&
 		io.AS{uint(d.neighborIAs[ifs])} == dp.GetNeighborIA(io.Ifs{ifs})
 }
 
@@ -134,8 +134,8 @@ requires acc(&d.linkTypes)
 requires d.linkTypes != nil ==> acc(d.linkTypes)
 decreases
 pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool {
-	return forall ifs uint16 :: {ifs in domain(d.linkTypes)} ifs in domain(d.linkTypes) ==>
-		io.Ifs{ifs} in domain(dp.GetLinkTypes()) &&
+	return forall ifs uint16 :: {ifs elem domain(d.linkTypes)} ifs elem domain(d.linkTypes) ==>
+		io.Ifs{ifs} elem domain(dp.GetLinkTypes()) &&
 		absLinktype(d.linkTypes[ifs]) == dp.GetLinkType(io.Ifs{ifs})
 }
 
@@ -155,24 +155,24 @@ requires acc(d.Mem(), _)
 requires d.DpAgreesWithSpec(dp)
 requires d.WellConfigured()
 ensures  acc(&d.linkTypes, _)
-ensures  d.linkTypes != nil ==> acc(d.linkTypes, _) && !(0 in domain(d.linkTypes))
+ensures  d.linkTypes != nil ==> acc(d.linkTypes, _) && !(0 elem domain(d.linkTypes))
 ensures  d.dpSpecWellConfiguredLinkTypes(dp)
 decreases
 func (d *DataPlane) LinkTypesLemma(dp io.DataPlaneSpec) {
 	reveal d.WellConfigured()
 	reveal d.DpAgreesWithSpec(dp)
-	assert !(0 in d.getDomLinkTypes())
+	assert !(0 elem d.getDomLinkTypes())
 	unfold acc(d.Mem(), _)
-	assert !(0 in domain(d.linkTypes))
+	assert !(0 elem domain(d.linkTypes))
 }
 
 ghost
 requires acc(d.Mem(), _)
 requires d.DpAgreesWithSpec(dp)
 requires d.WellConfigured()
-requires egressID in d.getDomExternal()
+requires egressID elem d.getDomExternal()
 ensures  egressID != 0
-ensures  io.Ifs{egressID} in domain(dp.GetNeighborIAs())
+ensures  io.Ifs{egressID} elem domain(dp.GetNeighborIAs())
 decreases
 func (d *DataPlane) EgressIDNotZeroLemma(egressID uint16, dp io.DataPlaneSpec) {
 	reveal d.WellConfigured()
