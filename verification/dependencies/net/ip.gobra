@@ -93,9 +93,17 @@ func (ip IP) To4(ghost wildcard bool) (res IP) {
 	return nil
 }
 
-preserves forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i])
+ghost
+requires forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i])
 decreases
-pure func isZeros(s []byte) bool
+pure func isZerosSpec(s []byte) bool {
+	return forall i int :: { &s[i] } 0 <= i && i < len(s) ==> s[i] == 0
+}
+
+requires forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i])
+ensures  res == isZerosSpec(s)
+decreases
+pure func isZeros(s []byte) (res bool)
 
 // To16 converts the IP address ip to a 16-byte representation.
 requires  low(len(ip))
