@@ -26,6 +26,8 @@ type Value interface {
 	// both require a function like `IsLow`. Currently, Gobra does not allow 
 	// "sharing" one definition of `IsLow`; Gobra issue #939 is related to this. 
 	// Consequently, we require separate definitions for each interface. 
+	// (However, these definitions can then call a common `IsLow` function, as
+	// exemplified in `pkg/addr/isdas_spec.gobra`).
 	ghost
 	requires Mem()
 	decreases
