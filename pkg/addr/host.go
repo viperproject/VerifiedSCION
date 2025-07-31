@@ -526,7 +526,7 @@ func HostFromIPStr(s string) (res HostAddr) {
 		//@ fold tmp.Mem()
 		return tmp
 	}
-	assert len(ip) > 0 ==> low(ip[0])
+	//@ assert len(ip) > 0 ==> low(ip[0])
 	return HostFromIP(ip)
 }
 
