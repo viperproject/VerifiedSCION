@@ -76,10 +76,9 @@ func Wrap(msg, cause error, errCtx ...interface{}) (res error)
 // Elements of errCtx are limited to "primitive types" at the moment.
 // This is a safe but strict under-approximation of what can be done
 // with this method.
-// TODO: For completeness, we need to require every value that influences 
-// control flow (in the implementation of `WrapStr`) to be low. This annotation 
-// is not sufficient.
-requires  low(len(errCtx))
+// NOTE[henri]: As discussed, I took out annotations such as `low(len(errCtx))` 
+// that were intended to satisfy the technical requirement of the simple 
+// encoding that control flow has to be low.
 requires  cause != nil ==> cause.ErrorMem()
 preserves forall i int :: { &errCtx[i] } 0 <= i && i < len(errCtx) ==> acc(&errCtx[i], R15)
 // The following precondition cannot be adequately captured in Gobra.
