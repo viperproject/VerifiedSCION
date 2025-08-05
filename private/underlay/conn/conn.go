@@ -134,29 +134,11 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	}
 	// @ assert remote != nil ==> a == remote
 	// @ assert remote == nil ==> a == listen
-	// NOTE[henri]: It seems that we have to call `a.GetIPByte(i)` for all of 
-	// these `i`. I could make this (somewhat) cleaner by replacing the 
-	// individual calls with assertions that contain multiple calls, such as
-	// `assert low(a.GetIPByte(0)) && low(a.GetIPByte(1)) && ...`, and/or
-	// by introducing an auxiliary function which gives us 
-	// `(forall i int :: low(a.GetIPByte(i))) ==> low(isZeros(ip[0:10])) && low(ip[10] == 255) && ...`
 	// @ a.RevealIsLow()
-	// @ ghost if len(a.GetIP()) == net.IPv6len {
-	// @ 	ghost a.GetIPByte(0)
-	// @ 	ghost a.GetIPByte(1)
-	// @ 	ghost a.GetIPByte(2)
-	// @ 	ghost a.GetIPByte(3)
-	// @ 	ghost a.GetIPByte(4)
-	// @ 	ghost a.GetIPByte(5)
-	// @ 	ghost a.GetIPByte(6)
-	// @ 	ghost a.GetIPByte(7)
-	// @ 	ghost a.GetIPByte(8)
-	// @ 	ghost a.GetIPByte(9)
-	// @ 	ghost a.GetIPByte(10)
-	// @ 	ghost a.GetIPByte(11)
-	// @ }
 	// @ unfold acc(a.Mem(), R15)
 	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15)
+	// @ assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==>
+	// @ 	a.GetIPByte(i) == a.IP[i]
 	if a.IP.To4( /*@ false @*/ ) != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
 	}
