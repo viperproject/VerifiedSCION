@@ -13,7 +13,6 @@ import "time"
 
 import . "github.com/scionproto/scion/verification/utils/definitions"
 import sl "github.com/scionproto/scion/verification/utils/slices"
-import "github.com/scionproto/scion/verification/utils/sif"
 
 // UDPAddr represents the address of a UDP end point.
 type UDPAddr struct {
@@ -28,6 +27,10 @@ pred (a *UDPAddr) Mem() {
 	acc(a, R5) && sl.Bytes(a.IP, 0, len(a.IP))
 }
 
+// NOTE[henri]: Once Gobra issue #883 is resolved, we could remove `GetIP`
+// etc. in favor of unfolding `Mem` in the contract of `RevealIsLow` directly.
+// However, I'm not sure whether that is preferrable. If it is, add a 
+// corresponding TODO here.
 requires a.Mem()
 decreases
 pure func (a *UDPAddr) GetIP() IP {
@@ -59,9 +62,6 @@ ensures  acc(a.Mem(), R15)
 ensures  low(len(a.GetIP()))
 ensures  forall i int :: { a.GetIPByte(i) } 0 <= i && i < len(a.GetIP()) ==>
 	low(a.GetIPByte(i))
-// Given that all elements of `a.IP` are low, this should be implied; 
-// however, without a body for `isZeros`, we state it here explicitly.
-// ensures  len(a.GetIP()) == IPv6len ==> low(isZeros(a.GetIP()[0:10]))
 decreases
 func (a *UDPAddr) RevealIsLow()
 
@@ -96,7 +96,7 @@ pred (u *UDPConn) Mem() {
 
 // TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 // - Here, `IsLow` will need to cover all fields (of `UDPConn`), since we use 
-//   this information in private/underlay/sockctrl/sockopt.go, GetsockoptInt.
+//   this information in private/underlay/sockctrl/sockopt.go, `GetsockoptInt`.
 ghost
 trusted
 requires c.Mem()

@@ -24,13 +24,6 @@ import (
 
 pred (ia *IA) Mem() { acc(ia) }
 
-ghost
-requires ia.Mem()
-decreases
-pure func (ia *IA) IsLowForValue() bool {
-	return unfolding ia.Mem() in ia.IsLow()
-}
-
 (*IA) implements encoding.TextUnmarshaler {
 	(ia *IA) UnmarshalText(text []byte) (err error) {
 		unfold ia.Mem()
@@ -42,28 +35,6 @@ pure func (ia *IA) IsLowForValue() bool {
 // Implementation proof would confuse the two predicates named Mem for IA and *IA
 // Issue: https://github.com/viperproject/gobra/issues/449
 pred MemForStringer(ia IA) { true }
-
-// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
-ghost
-trusted
-decreases
-pure func (ia IA) IsLow() bool 
-
-ghost
-requires MemForStringer(ia)
-decreases
-pure func (ia IA) IsLowForStringer() bool {
-	return ia.IsLow()
-}
-
-// "Reveal" the "body" of `ia.IsLow` (necessary bc. we can't implement `ia.IsLow` yet).
-// TODO: Once Gobra issue #846 is resolved, implement this.
-ghost
-trusted
-requires ia.IsLow()
-ensures  low(ia)
-decreases
-func (ia IA) RevealIsLow() 
 
 IA implements fmt.Stringer {
 	pred Mem := MemForStringer
