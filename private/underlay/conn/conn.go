@@ -34,7 +34,6 @@ import (
 	"github.com/scionproto/scion/private/underlay/sockctrl"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ sl "github.com/scionproto/scion/verification/utils/slices"
-	//@ "github.com/scionproto/scion/verification/utils/sif"
 )
 
 // Messages is a list of ipX.Messages. It is necessary to hide the type alias
@@ -44,10 +43,12 @@ type Messages []ipv4.Message
 // Conn describes the API for an underlay socket
 type Conn interface {
 	//@ pred Mem()
+
 	//@ ghost
 	//@ requires Mem()
 	//@ decreases
 	//@ pure IsLow() bool
+
 	// (VerifiedSCION) Reads a message to b. Returns the number of read bytes.
 	//@ requires  acc(Mem(), _)
 	//@ preserves sl.Bytes(b, 0, len(b))
@@ -133,9 +134,13 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	}
 	// @ assert remote != nil ==> a == remote
 	// @ assert remote == nil ==> a == listen
+	// NOTE[henri]: It seems that we have to call `a.GetIPByte(i)` for all of 
+	// these `i`. I could make this (somewhat) cleaner by replacing the 
+	// individual calls with assertions that contain multiple calls, such as
+	// `assert low(a.GetIPByte(0)) && low(a.GetIPByte(1)) && ...`, and/or
+	// by introducing an auxiliary function which gives us 
+	// `(forall i int :: low(a.GetIPByte(i))) ==> low(isZeros(ip[0:10])) && low(ip[10] == 255) && ...`
 	// @ a.RevealIsLow()
-	// @ assert len(a.GetIP()) == net.IPv6len ==> 
-	// @ 	low(a.GetIPByte(10) == 255) && low(a.GetIPByte(11) == 255)
 	// @ ghost if len(a.GetIP()) == net.IPv6len {
 	// @ 	ghost a.GetIPByte(0)
 	// @ 	ghost a.GetIPByte(1)
@@ -147,10 +152,11 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	// @ 	ghost a.GetIPByte(7)
 	// @ 	ghost a.GetIPByte(8)
 	// @ 	ghost a.GetIPByte(9)
+	// @ 	ghost a.GetIPByte(10)
+	// @ 	ghost a.GetIPByte(11)
 	// @ }
 	// @ unfold acc(a.Mem(), R15)
 	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15)
-	// @ assert len(a.GetIP()) == net.IPv6len ==> low(net.isZeros(a.IP[0:10]))
 	if a.IP.To4( /*@ false @*/ ) != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
 	}
@@ -487,7 +493,10 @@ func (c *connUDPBase) Close() (err error) {
 
 // NewReadMessages allocates memory for reading IPv4 Linux network stack
 // messages.
-// NOTE: The verification of this function is unstable.
+// NOTE[henri]: The verification of this function is still somewhat unstable, 
+// although adjusting the triggers made it significantly more stable and it now
+// verifies successfully the majority of the time. I'm not sure how to improve
+// this further.
 // @ requires 0 < n
 // @ requires low(n)
 // @ ensures  len(res) == n
@@ -497,7 +506,17 @@ func NewReadMessages(n int) (res Messages) {
 	m := make(Messages, n)
 	//@ invariant forall j int :: { &m[j] } (0 <= j && j < i0) ==> m[j].Mem()
 	//@ invariant forall j int :: { m[j].GetAddr() } (0 <= j && j < i0) ==> m[j].GetAddr() == nil
-	//@ invariant forall j int :: { &m[j] } (i0 <= j && j < len(m)) ==> acc(&m[j])
+	// NOTE[henri]: Splitting up the following invariant has only marginally
+	// improved stability (if at all), thus we could consider undoing this.
+	// invariant forall j int :: { &m[j] } (i0 <= j && j < len(m)) ==> acc(&m[j])
+	//@ invariant forall j int :: { &m[j].Buffers } (i0 <= j && j < len(m)) ==> acc(&m[j].Buffers)
+	//@ invariant forall j int :: { &m[j].OOB } (i0 <= j && j < len(m)) ==> acc(&m[j].OOB)
+	//@ invariant forall j int :: { &m[j].Addr } (i0 <= j && j < len(m)) ==> acc(&m[j].Addr)
+	//@ invariant forall j int :: { &m[j].N } (i0 <= j && j < len(m)) ==> acc(&m[j].N)
+	//@ invariant forall j int :: { &m[j].NN } (i0 <= j && j < len(m)) ==> acc(&m[j].NN)
+	//@ invariant forall j int :: { &m[j].Flags } (i0 <= j && j < len(m)) ==> acc(&m[j].Flags)
+	//@ invariant forall j int :: { &m[j].IsActive } (i0 <= j && j < len(m)) ==> acc(&m[j].IsActive)
+	//@ invariant forall j int :: { &m[j].WildcardPerm } (i0 <= j && j < len(m)) ==> acc(&m[j].WildcardPerm)
 	//@ invariant forall j int :: { &m[j].N } (i0 <= j && j < len(m)) ==> m[j].N == 0
 	//@ invariant forall j int :: { &m[j].Addr } (i0 <= j && j < len(m)) ==> m[j].Addr == nil
 	//@ invariant forall j int :: { &m[j].OOB } (i0 <= j && j < len(m)) ==> m[j].OOB == nil

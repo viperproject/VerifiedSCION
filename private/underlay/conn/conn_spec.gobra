@@ -40,6 +40,10 @@ pred (c *connUDPBase) MemWithoutConn() {
 	(c.Remote != nil ==> acc(c.Remote.Mem(), _))
 }
 
+// NOTE[henri]: Once Gobra issue #883 is resolved, we could remove `GetClosed`
+// etc. in favor of unfolding `Mem` in the contract of `RevealIsLow` etc.
+// directly. However, I'm not sure whether that is preferrable. If it is, add
+// a corresponding TODO here.
 ghost
 requires  withConn ==> c.Mem()
 requires !withConn ==> c.MemWithoutConn()
