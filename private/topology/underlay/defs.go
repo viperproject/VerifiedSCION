@@ -48,6 +48,7 @@ const (
 )
 
 // @ requires low(o)
+// @ requires o == UDPIPv4 || o == UDPIPv6 || o == UDPIPv46
 // @ ensures  low(res)
 func (o Type) String() (res string) {
 	switch o {
@@ -58,6 +59,7 @@ func (o Type) String() (res string) {
 	case UDPIPv46:
 		return UDPIPv46Name
 	default:
+		// @ Unreachable()
 		return fmt.Sprintf("UNKNOWN (%d)", o)
 	}
 }

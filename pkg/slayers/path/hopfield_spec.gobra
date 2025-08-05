@@ -115,8 +115,8 @@ pure func (h HopField) Abs() (io.HF) {
 		HVF: AbsMac(h.Mac),
 	}
 }
-// TODO: Once Gobra issue 883 is resolved, these could be removed in favor of 
-// unfolding permissions directly in the contract.
+// NOTE[henri]: Once Gobra issue 883 is resolved, these could be removed in 
+// favor of unfolding permissions directly in the contract.
 // - We might prefer such getter functions anyway, though.
 // - Alternatively, we could also have a "`Dereference`" function returning 
 //   the underlying `HopField` which we could then access.

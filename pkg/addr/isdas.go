@@ -50,7 +50,7 @@ type ISD uint16
 // ParseISD parses an ISD from a decimal string. Note that ISD 0 is parsed
 // without any errors.
 // @ requires low(s)
-// @ ensures low(retISD) && low(retErr != nil)
+// @ ensures  low(retISD) && low(retErr != nil)
 // @ decreases
 func ParseISD(s string) (retISD ISD, retErr error) {
 	isd, err := strconv.ParseUint(s, 10, ISDBits)
@@ -75,16 +75,16 @@ type AS uint64
 // ParseAS parses an AS from a decimal (in the case of the 32bit BGP AS number
 // space) or ipv6-style hex (in the case of SCION-only AS numbers) string.
 // @ requires low(_as)
-// @ ensures retErr == nil ==> retAs.inRange()
-// @ ensures low(retAs) && low(retErr != nil)
+// @ ensures  retErr == nil ==> retAs.inRange()
+// @ ensures  low(retAs) && low(retErr != nil)
 // @ decreases
 func ParseAS(_as string) (retAs AS, retErr error) {
 	return parseAS(_as, ":")
 }
 
 // @ requires low(_as) && low(sep)
-// @ ensures retErr == nil ==> retAs.inRange()
-// @ ensures low(retAs) && low(retErr != nil)
+// @ ensures  retErr == nil ==> retAs.inRange()
+// @ ensures  low(retAs) && low(retErr != nil)
 // @ decreases
 func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	parts := strings.Split(_as, sep)
@@ -120,8 +120,8 @@ func parseAS(_as string, sep string) (retAs AS, retErr error) {
 }
 
 // @ requires low(s)
-// @ ensures retErr == nil ==> retAs.inRange()
-// @ ensures low(retAs) && low(retErr != nil)
+// @ ensures  retErr == nil ==> retAs.inRange()
+// @ ensures  low(retAs) && low(retErr != nil)
 // @ decreases
 func asParseBGP(s string) (retAs AS, retErr error) {
 	_as, err := strconv.ParseUint(s, 10, BGPASBits)
@@ -172,7 +172,7 @@ func (_as AS) MarshalText() ([]byte, error) {
 // @ ensures   forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
 // @ decreases
 func (_as *AS) UnmarshalText(text []byte) error {
-	//@ sif.LowSliceImpliesLowString(text, 1/1)
+	//@ sif.LowSliceImpliesLowString(text, writePerm)
 	parsed, err := ParseAS(string(text))
 	if err != nil {
 		return err
@@ -193,8 +193,7 @@ type IA uint64
 // is encountered. Callers must ensure that the values passed to this function
 // are valid.
 // @ requires _as.inRange()
-// @ requires low(_as.inRange())
-// @ ensures low(isd) && low(_as) ==> low(res)
+// @ ensures  low(isd) && low(_as) ==> low(res)
 // @ decreases
 func MustIAFrom(isd ISD, _as AS) (res IA) {
 	ia, err := IAFrom(isd, _as)
@@ -206,9 +205,8 @@ func MustIAFrom(isd ISD, _as AS) (res IA) {
 
 // IAFrom creates an IA from the ISD and AS number.
 // @ requires _as.inRange()
-// @ requires low(_as.inRange())
-// @ ensures err == nil
-// @ ensures low(isd) && low(_as) ==> low(ia)
+// @ ensures  err == nil
+// @ ensures  low(isd) && low(_as) ==> low(ia)
 // @ decreases
 func IAFrom(isd ISD, _as AS) (ia IA, err error) {
 	if !_as.inRange() {
@@ -219,7 +217,7 @@ func IAFrom(isd ISD, _as AS) (ia IA, err error) {
 
 // ParseIA parses an IA from a string of the format 'isd-as'.
 // @ requires low(ia)
-// @ ensures low(retErr != nil)
+// @ ensures  low(retErr != nil)
 // @ decreases
 func ParseIA(ia string) (retIA IA, retErr error) {
 	parts := strings.Split(ia, "-")
@@ -249,7 +247,6 @@ func (ia IA) AS() AS {
 	return AS(ia) & MaxAS
 }
 
-// @ requires ia.IsLow()
 // @ decreases
 func (ia IA) MarshalText() ([]byte, error) {
 	return []byte(ia.String()), nil
@@ -262,7 +259,7 @@ func (ia IA) MarshalText() ([]byte, error) {
 // @ ensures   forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ decreases
 func (ia *IA) UnmarshalText(b []byte) error {
-	//@ sif.LowSliceImpliesLowString(b, 1/1)
+	//@ sif.LowSliceImpliesLowString(b, writePerm)
 	parsed, err := ParseIA(string(b))
 	if err != nil {
 		return err
@@ -290,21 +287,14 @@ func (ia IA) IsWildcard() bool {
 	return ia.ISD() == 0 || ia.AS() == 0
 }
 
-// @ requires ia.IsLow()
 // @ decreases
 func (ia IA) String() string {
-	//@ ia.RevealIsLow()
 	// (VerifiedSCION) Added casts around ia.ISD() and ia.AS() to be able to pass them to 'fmt.Sprintf'
-	// TODO: Once Gobra issue #835/#890 is resolved, remove this assumption.
-	//@ ghost v := []interface{}{ia.ISD(), ia.AS()}
-	//@ assert low(v[0])
-	//@ assert low(v[1])
-	//@ assume forall i int :: { &v[i] } 0 <= i && i < len(v) ==> acc(&v[i]) && low(v[i])
 	return fmt.Sprintf("%d-%s", ia.ISD(), ia.AS())
 }
 
 // Set implements flag.Value interface
-// @ requires low(s)
+// @ requires  low(s)
 // @ preserves acc(ia)
 // @ decreases
 func (ia *IA) Set(s string) error {

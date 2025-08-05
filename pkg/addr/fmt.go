@@ -112,10 +112,9 @@ func FormatAS(as_ AS, opts ...FormatOption) string {
 }
 
 // @ requires as_.inRange()
-// @ requires low(as_) && low(sep)
-// @ ensures low(res)
+// @ requires low(as_)
 // @ decreases
-func fmtAS(as_ AS, sep string) (res string) {
+func fmtAS(as_ AS, sep string) string {
 	if !as_.inRange() {
 		return fmt.Sprintf("%d [Illegal AS: larger than %d]", as_, MaxAS)
 	}
@@ -134,7 +133,7 @@ func fmtAS(as_ AS, sep string) (res string) {
 	// @ b.ZeroBuilderIsReadyToUse()
 	b.Grow(maxLen)
 	// @ invariant b.Mem()
-	// @ invariant low(i) && b.IsLow()
+	// @ invariant low(i)
 	// @ decreases asParts - i
 	for i := 0; i < asParts; i++ {
 		if i > 0 {
