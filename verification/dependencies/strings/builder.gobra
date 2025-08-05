@@ -19,35 +19,24 @@ type Builder struct {
 
 pred (b *Builder) Mem()
 
-// Return whether the underlying data is low.
-ghost
-trusted
-requires b.Mem()
-decreases
-pure func (b *Builder) IsLow() bool
-
 // String returns the accumulated string.
 preserves b.Mem()
-ensures   old(b.IsLow()) == b.IsLow()
-ensures   b.IsLow() ==> low(str)
 decreases _
-func (b *Builder) String() (str string)
+func (b *Builder) String() string
 
 requires  0 <= n
 preserves b.Mem()
-ensures   old(b.IsLow()) && low(n) ==> b.IsLow()
 decreases _
 func (b *Builder) Grow(n int)
 
 preserves b.Mem()
 ensures   err == nil
-ensures   low(s) && old(b.IsLow()) ==> b.IsLow() && low(n)
 decreases _
 func (b *Builder) WriteString(s string) (n int, err error)
 
 ghost
 requires acc(b)
 requires *b === Builder{}
-ensures  b.Mem() && b.IsLow()
+ensures  b.Mem()
 decreases _
 func (b *Builder) ZeroBuilderIsReadyToUse()

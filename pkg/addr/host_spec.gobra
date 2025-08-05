@@ -25,12 +25,14 @@ import (
 
 pred (h HostNone) Mem() { len(h) == HostLenNone }
 
-// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+// NOTE[henri]: As `HostNone.String` doesn't need anything to be low, I 
+// implemented it trivially already.
 ghost
-trusted
 requires h.Mem()
 decreases
-pure func (h HostNone) IsLow() bool
+pure func (h HostNone) IsLow() bool {
+	return true
+}
 
 HostNone implements HostAddr
 
@@ -39,12 +41,14 @@ pred (h HostIPv4) Mem() {
 	slices.Bytes(h, 0, len(h))
 }
 
-// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+// NOTE[henri]: As `HostIPv4.String` doesn't need anything to be low, I 
+// implemented it trivially already.
 ghost
-trusted
 requires h.Mem()
 decreases
-pure func (h HostIPv4) IsLow() bool
+pure func (h HostIPv4) IsLow() bool {
+	return true
+}
 
 HostIPv4 implements HostAddr
 
@@ -53,12 +57,14 @@ pred (h HostIPv6) Mem() {
 	slices.Bytes(h, 0, len(h))
 }
 
-// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+// NOTE[henri]: As `HostIPv6.String` doesn't need anything to be low, I 
+// implemented it trivially already.
 ghost
-trusted
 requires h.Mem()
 decreases
-pure func (h HostIPv6) IsLow() bool
+pure func (h HostIPv6) IsLow() bool { 
+	return true
+}
 
 HostIPv6 implements HostAddr
 
