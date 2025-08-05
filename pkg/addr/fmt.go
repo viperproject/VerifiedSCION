@@ -112,7 +112,7 @@ func FormatAS(as_ AS, opts ...FormatOption) string {
 }
 
 // @ requires as_.inRange()
-// @ requires low(as_) && low(sep)
+// @ requires low(as_)
 // @ decreases
 func fmtAS(as_ AS, sep string) string {
 	if !as_.inRange() {
