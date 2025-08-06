@@ -31,7 +31,7 @@ pred (r *rawPath) NonInitMem() {
 	acc(r)
 }
 
-// pred (*rawPath) LowSerializeTo()
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
 trusted
 requires r.Mem(ub)

@@ -38,7 +38,7 @@ pred (s *Raw) Mem(buf []byte) {
 	len(s.Raw) == s.Base.Len()
 }
 
-// pred (s *Raw) LowSerializeTo()
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
 trusted
 requires s.Mem(ub)

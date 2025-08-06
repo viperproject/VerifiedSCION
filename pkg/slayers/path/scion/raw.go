@@ -41,7 +41,7 @@ type Raw struct {
 // @ 	s.GetBase(data).WeaklyValid() &&
 // @ 	s.GetBase(data).EqAbsHeader(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
-// @ ensures low(res == nil)
+// @ ensures   low(res == nil)
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()

@@ -91,7 +91,6 @@ type Path struct {
 // @ ensures   old(p.getLHVFLen(ubuf)) != HVFLen ==> r != nil
 // @ decreases
 func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
-	//  p.GetLowSerializeTo(ubuf, R1/2)
 	//@ p.RevealIsLow(ubuf)
 	if len(b) < p.Len( /*@ ubuf @*/ ) {
 		return serrors.New("buffer too small to serialize path.", "expected", int(p.Len( /*@ ubuf @*/ )),

@@ -47,7 +47,7 @@ pred (d *Decoded) Mem(ubuf []byte) {
 	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
-// pred (*Decoded) LowSerializeTo()
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
 trusted
 requires d.Mem(ub)

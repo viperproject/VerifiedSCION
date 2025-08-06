@@ -74,23 +74,15 @@ type Path interface {
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
 	//@ pred NonInitMem()
-	// SerializeTo serializes the path into the provided buffer.
-	// (VerifiedSCION) There are implementations of this interface that modify the underlying
-	// structure when serializing (e.g. scion.Raw)
-	// TODO: Once Gobra issue 846 is resolved, rework this.
-	// Predicate containing sensitivity information. Intended to be implemented
-	// as an abstract predicate, alongside an abstract function requiring
-	// `LowSerializeTo()`, and ensuring the corresponding sensitivity.
-	// pred LowSerializeTo()
-	// TODO: add documentation/comment
-	// TODO: does it make sense to have separate IsLow* for each method here?
-	// TODO: at least in the future might need to add a parameter to this to
-	// distinguish between NonInitMem and Mem
+
 	//@ ghost
 	//@ requires Mem(ub)
 	//@ decreases
 	//@ pure IsLow(ghost ub []byte) bool
-	// requires  LowSerializeTo()
+
+	// SerializeTo serializes the path into the provided buffer.
+	// (VerifiedSCION) There are implementations of this interface that modify the underlying
+	// structure when serializing (e.g. scion.Raw)
 	//@ requires  low(len(b))
 	//@ requires  acc(Mem(ub), R1)
 	//@ requires  IsLow(ub)

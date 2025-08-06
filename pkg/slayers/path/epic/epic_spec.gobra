@@ -104,20 +104,14 @@ pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
 
 (*Path) implements path.Path
 
-// pred (*Path) LowSerializeTo()
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
 trusted
 requires p.Mem(ub)
 decreases
 pure func (p *Path) IsLow(ub []byte) bool
 
-// ghost
-// requires  ep.LowSerializeTo() && p > 0
-// preserves acc(ep.Mem(buf), p)
-// ensures   low(ep.getPHVFLen(buf) != HVFLen) && low(ep.getLHVFLen(buf) != HVFLen)
-// decreases
-// func (ep *Path) GetLowSerializeTo(buf []byte, ghost p perm)
-
+// TODO: Once Gobra issue #846 is resolved, actually implement this.
 ghost
 trusted
 requires acc(p.Mem(ub), R2) && p.IsLow(ub)
