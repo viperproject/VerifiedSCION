@@ -116,6 +116,6 @@ ghost
 trusted
 requires acc(p.Mem(ub), R2) && p.IsLow(ub)
 ensures  acc(p.Mem(ub), R2)
-ensures  low(p.getPHVFLen(ub) != HVFLen) && low(p.getLHVFLen(ub) != HVFLen)
+ensures  low(p.getPHVFLen(ub)) && low(p.getLHVFLen(ub))
 decreases
 func (p *Path) RevealIsLow(ub []byte)

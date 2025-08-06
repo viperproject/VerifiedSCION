@@ -31,12 +31,12 @@ pred (r *rawPath) NonInitMem() {
 	acc(r)
 }
 
-// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
-trusted
 requires r.Mem(ub)
 decreases
-pure func (r *rawPath) IsLow(ub []byte) bool
+pure func (r *rawPath) IsLow(ub []byte) bool {
+	return true
+}
 
 ghost
 requires p.Mem(buf)
