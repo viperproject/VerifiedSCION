@@ -389,15 +389,15 @@ func (h HostSVC) IP() (res net.IP) {
 	return nil
 }
 
+// @ ensures low(h) ==> low(res)
 // @ decreases
-// @ pure
-func (h HostSVC) IsMulticast() bool {
+func (h HostSVC) IsMulticast() (res bool) {
 	return (h & SVCMcast) != 0
 }
 
+// @ ensures low(h) ==> low(res)
 // @ decreases
-// @ pure
-func (h HostSVC) Base() HostSVC {
+func (h HostSVC) Base() (res HostSVC) {
 	return h & ^SVCMcast
 }
 
