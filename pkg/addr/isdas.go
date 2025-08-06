@@ -235,15 +235,15 @@ func ParseIA(ia string) (retIA IA, retErr error) {
 	return MustIAFrom(isd, _as), nil
 }
 
+// @ ensures low(ia) ==> low(res)
 // @ decreases
-// @ pure
-func (ia IA) ISD() ISD {
+func (ia IA) ISD() (res ISD) {
 	return ISD(ia >> ASBits)
 }
 
+// @ ensures low(ia) ==> low(res)
 // @ decreases
-// @ pure
-func (ia IA) AS() AS {
+func (ia IA) AS() (res AS) {
 	return AS(ia) & MaxAS
 }
 
