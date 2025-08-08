@@ -4217,6 +4217,10 @@ func (p *scionPacketProcessor) processOHP(/*@ ghost dp io.DataPlaneSpec @*/) (re
 		// @ preserves acc(&ohp.Info, R55) && acc(&ohp.FirstHop, R55)
 		// @ preserves acc(&p.macBuffers.scionInput, R55)
 		// @ preserves acc(&p.mac, R55) && p.mac != nil && p.mac.Mem()
+		// NOTE[henri]: We don't need `p.macSpec.Asid() == dp.Asid()` *yet*, 
+		// however we definitely will eventually (to be able to declassify `mac`
+		// s.t. `compRes` / the branch condition is low). 
+		// Should I keep this in already anyway?
 		// @ preserves acc(&p.macSpec, R55) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
 		// @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 		// @ decreases
