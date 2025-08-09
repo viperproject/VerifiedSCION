@@ -83,6 +83,7 @@ type Path struct {
 // @ preserves let ub := p.UBytes() in
 // @ 	sl.Bytes(ub, 0, len(ub))
 // @ preserves sl.Bytes(b, 0, len(b))
+// @ ensures   old(p.UBytes()) === p.UBytes()
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ ensures   !old(p.HasScionPath()) ==> r != nil
 // @ ensures   len(b) < old(p.LenSpec()) ==> r != nil

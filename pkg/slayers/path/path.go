@@ -83,6 +83,7 @@ type Path interface {
 	//@ preserves acc(Mem(), R1)
 	//@ preserves sl.Bytes(UBytes(), 0, len(UBytes()))
 	//@ preserves sl.Bytes(b, 0, len(b))
+	//@ ensures   UBytes() === old(UBytes())
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	SerializeTo(b []byte) (e error)
@@ -92,7 +93,10 @@ type Path interface {
 	//@ requires  NonInitMem()
 	//@ requires  acc(sl.Bytes(b, 0, len(b)), R42)
 	//@ ensures   err == nil ==> Mem()
+	// The following post contains the conjunct 0 < len(b) on the LHS
+	// specifically to support the implementation proof for the empty path.
 	//@ ensures   err == nil && 0 < len(b) ==> UBytes() === b
+	//@ ensures   err == nil && 0 == len(b) ==> UBytes() === b || UBytes() == nil
 	//@ ensures   err == nil ==>
 	//@ 	acc(sl.Bytes(UBytes(), 0, len(UBytes())), R42)
 	//@ ensures   err == nil ==> IsValidResultOfDecoding()
