@@ -115,7 +115,7 @@ func (l LinkType) MarshalText() (res []byte, err error) {
 func (l *LinkType) UnmarshalText(data []byte) (err error) {
 	//@ unfold acc(sl.Bytes(data, 0, len(data)), R16)
 	//@ ghost defer fold acc(sl.Bytes(data, 0, len(data)), R16)
-	//@ assert forall i int :: { &data[i] } 0 <= i && i < len(data) && low(i) ==>
+	//@ assert forall i int :: { &data[i] } 0 <= i && i < len(data) ==>
 	//@ 	sl.GetByte(data, 0, len(data), i) == data[i]
 	//@ sif.LowSliceImpliesLowString(data, R16)
 	switch strings.ToLower(string(data)) {
