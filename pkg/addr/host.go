@@ -217,11 +217,11 @@ func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
 	//@ h.RevealIsLow(R13)
 	//@ unfold acc(h.Mem(), R13/2)
-	//@ assert forall i int :: { h.GetByte(i) } 0 <= i && i < len(h) &&
-	//@ 	low(i) ==> sl.GetByte(h, 0, len(h), i) == h.GetByte(i)
+	//@ assert forall i int :: { h.GetByte(i) } 0 <= i && i < len(h) ==>
+	//@ 	sl.GetByte(h, 0, len(h), i) == h.GetByte(i)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13/2)
-	//@ assert forall i int :: { &h[i] } 0 <= i && i < len(h) && 
-	//@ 	low(i) ==> h.GetByte(i) == h[i]
+	//@ assert forall i int :: { &h[i] } 0 <= i && i < len(h) ==> 
+	//@ 	h.GetByte(i) == h[i]
 	//@ unfold acc(h.Mem(), R13/2)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13/2)
 	return net.IP(h).To4( /*@ false @*/ )
