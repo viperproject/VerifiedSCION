@@ -217,11 +217,11 @@ func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
 	//@ h.RevealIsLow(R13)
 	//@ unfold acc(h.Mem(), R13/2)
-	//@ assert forall i int :: { sl.GetByte(h, 0, len(h), i) }{ h.GetByte(i) } 0 <= i && i < len(h) ==>
-	//@ 	sl.GetByte(h, 0, len(h), i) == h.GetByte(i)
+	//@ assert forall i int :: { sl.GetByte(h, 0, len(h), i) }{ h.GetByte(i) } 0 <= i && i < len(h) &&
+	//@ 	low(i) ==> sl.GetByte(h, 0, len(h), i) == h.GetByte(i)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13/2)
-	//@ assert forall i int :: { h.GetByte(i) }{ &h[i] } 0 <= i && i < len(h) ==> 
-	//@ 	h.GetByte(i) == h[i]
+	//@ assert forall i int :: { h.GetByte(i) }{ &h[i] } 0 <= i && i < len(h) && 
+	//@ 	low(i) ==> h.GetByte(i) == h[i]
 	//@ unfold acc(h.Mem(), R13/2)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13/2)
 	return net.IP(h).To4( /*@ false @*/ )
@@ -254,7 +254,8 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ preserves acc(h.Mem(), R13) && h.IsLow()
+// @ requires acc(h.Mem(), R13) && h.IsLow()
+// @ ensures  acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
@@ -506,8 +507,8 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 
 // @ requires acc(ip)
 // @ requires len(ip) == HostLenIPv4 || len(ip) == HostLenIPv6
-// @ requires low(len(ip)) && 
-// @ 	forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> low(ip[i])
+// @ requires low(len(ip)) && forall i int :: { &ip[i] } 0 <= i && i < len(ip) &&
+// @ 	low(i) ==> low(ip[i])
 // @ ensures  res.Mem()
 // @ decreases
 func HostFromIP(ip net.IP) (res HostAddr) {
@@ -533,7 +534,6 @@ func HostFromIPStr(s string) (res HostAddr) {
 		//@ fold tmp.Mem()
 		return tmp
 	}
-	//@ assert len(ip) > 0 ==> low(ip[0])
 	return HostFromIP(ip)
 }
 

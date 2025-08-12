@@ -63,8 +63,8 @@ trusted
 requires p > 0
 requires acc(h.Mem(), p) && h.IsLow()
 ensures  acc(h.Mem(), p)
-ensures  low(len(h)) && 
-	forall i int :: { h.GetByte(i) } 0 <= i && i < len(h) ==> low(h.GetByte(i))
+ensures  low(len(h)) && forall i int :: { h.GetByte(i) } 0 <= i && i < len(h) &&
+	low(i) ==> low(h.GetByte(i))
 decreases
 func (h HostIPv4) RevealIsLow(p perm)
 
