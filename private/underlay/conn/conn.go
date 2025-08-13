@@ -477,9 +477,8 @@ func (c *connUDPBase) Close() (err error) {
 
 // NewReadMessages allocates memory for reading IPv4 Linux network stack
 // messages.
-// NOTE[henri]: The verification of this function is still somewhat unstable, 
-// although adjusting the triggers made it significantly more stable and it now
-// verifies successfully the majority of the time. I'm not sure how to improve
+// NOTE: The verification of this function is somewhat unstable.
+// See Gobra issue #957.
 // this further.
 // @ requires 0 < n
 // @ requires low(n)
