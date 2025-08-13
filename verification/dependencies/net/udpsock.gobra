@@ -57,7 +57,7 @@ requires acc(a.Mem(), R15) && a.IsLow()
 ensures  acc(a.Mem(), R15)
 ensures  low(len(a.GetIP()))
 ensures  forall i int :: { a.GetIPByte(i) } 0 <= i && i < len(a.GetIP()) ==>
-	low(a.GetIPByte(i))
+	low(i) ==> low(a.GetIPByte(i))
 decreases
 func (a *UDPAddr) RevealIsLow()
 
