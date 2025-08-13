@@ -92,6 +92,14 @@ const (
 type HostAddr interface {
 	//@ pred Mem()
 
+	// NOTE[henri]: I rewrote this comment to be more accurate
+	// Return whether all the underlying data that needs to be low for the
+	// computation of `Pack`, `IP`, `String` is low.
+	//@ ghost
+	//@ requires Mem()
+	//@ decreases
+	//@ pure IsLow() bool
+
 	//@ preserves acc(Mem(), R13)
 	//@ decreases
 	Size() int
@@ -100,12 +108,12 @@ type HostAddr interface {
 	//@ decreases
 	Type() HostAddrType
 
-	//@ requires acc(Mem(), R13)
+	//@ requires acc(Mem(), R13) && IsLow()
 	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 	//@ decreases
 	Pack() (res []byte)
 
-	//@ requires acc(Mem(), R13)
+	//@ requires acc(Mem(), R13) && IsLow()
 	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 	//@ decreases
 	IP() (res net.IP)
@@ -124,14 +132,6 @@ type HostAddr interface {
 	// Issue: https://github.com/viperproject/gobra/issues/461
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
-
-	// NOTE[henri]: I rewrote this comment to be more accurate
-	// Return whether all the underlying data that needs to be low for the
-	// computation of `String` is low.
-	//@ ghost
-	//@ requires Mem()
-	//@ decreases
-	//@ pure IsLow() bool
 
 	//@ requires acc(Mem(), R13) && IsLow()
 	//@ ensures  acc(Mem(), R13)
@@ -202,21 +202,28 @@ func (h HostIPv4) Type() HostAddrType {
 	return HostTypeIPv4
 }
 
-// @ requires acc(h.Mem(), R13)
+// @ requires acc(h.Mem(), R13) && h.IsLow()
 // @ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 // @ decreases
 func (h HostIPv4) Pack() (res []byte) {
 	return []byte(h.IP())
 }
 
-// @ requires acc(h.Mem(), R13)
+// @ requires acc(h.Mem(), R13) && h.IsLow()
 // @ ensures forall i int :: { &res[i] }{ &h[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13) && &res[i] == &h[i]
 // @ ensures len(res) == HostLenIPv4
 // @ decreases
 func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
-	//@ unfold acc(h.Mem(), R13)
-	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
+	//@ h.RevealIsLow(R13)
+	//@ unfold acc(h.Mem(), R13/2)
+	//@ assert forall i int :: { h.GetByte(i) } 0 <= i && i < len(h) ==>
+	//@ 	sl.GetByte(h, 0, len(h), i) == h.GetByte(i)
+	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13/2)
+	//@ assert forall i int :: { &h[i] } 0 <= i && i < len(h) ==> 
+	//@ 	h.GetByte(i) == h[i]
+	//@ unfold acc(h.Mem(), R13/2)
+	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13/2)
 	return net.IP(h).To4( /*@ false @*/ )
 }
 
@@ -247,7 +254,8 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ preserves acc(h.Mem(), R13)
+// @ requires acc(h.Mem(), R13) && h.IsLow()
+// @ ensures  acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
@@ -389,15 +397,15 @@ func (h HostSVC) IP() (res net.IP) {
 	return nil
 }
 
+// @ ensures low(h) ==> low(res)
 // @ decreases
-// @ pure
-func (h HostSVC) IsMulticast() bool {
+func (h HostSVC) IsMulticast() (res bool) {
 	return (h & SVCMcast) != 0
 }
 
+// @ ensures low(h) ==> low(res)
 // @ decreases
-// @ pure
-func (h HostSVC) Base() HostSVC {
+func (h HostSVC) Base() (res HostSVC) {
 	return h & ^SVCMcast
 }
 
@@ -499,8 +507,8 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 
 // @ requires acc(ip)
 // @ requires len(ip) == HostLenIPv4 || len(ip) == HostLenIPv6
-// @ requires low(len(ip)) && (len(ip) == HostLenIPv6 ==>
-// @ 	forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> low(ip[i]))
+// @ requires low(len(ip)) && forall i int :: { &ip[i] } 0 <= i && i < len(ip) &&
+// @ 	low(i) ==> low(ip[i])
 // @ ensures  res.Mem()
 // @ decreases
 func HostFromIP(ip net.IP) (res HostAddr) {
@@ -526,7 +534,6 @@ func HostFromIPStr(s string) (res HostAddr) {
 		//@ fold tmp.Mem()
 		return tmp
 	}
-	//@ assert len(ip) > 0 ==> low(ip[0])
 	return HostFromIP(ip)
 }
 

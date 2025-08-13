@@ -5,7 +5,7 @@ package sif
 // TODO: Once Gobra issue #832 is resolved, introduce body and prove this.
 ghost
 requires p > 0 && acc(b, p)
-requires low(len(b)) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> low(b[i])
+requires low(len(b)) && forall i int :: { &b[i] } 0 <= i && i < len(b) && low(i) ==> low(b[i])
 ensures acc(b, p) && low(string(b))
 decreases
 func LowSliceImpliesLowString(b []byte, p perm)
