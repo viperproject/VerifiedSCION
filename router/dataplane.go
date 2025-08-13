@@ -149,6 +149,9 @@ type bfdSession interface {
 type BatchConn interface {
 	// @ pred Mem()
 	
+	// Return whether all the underlying data that needs to be low for the
+	// computation of `WriteTo`, `Close` is low.
+	// We add this here to match the `Conn` interface in `private/underlay/conn`.
 	// @ ghost
 	// @ requires Mem()
 	// @ decreases

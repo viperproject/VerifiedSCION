@@ -40,10 +40,6 @@ pred (c *connUDPBase) MemWithoutConn() {
 	(c.Remote != nil ==> acc(c.Remote.Mem(), _))
 }
 
-// NOTE[henri]: Once Gobra issue #883 is resolved, we could remove `GetClosed`
-// etc. in favor of unfolding `Mem` in the contract of `RevealIsLow` etc.
-// directly. However, I'm not sure whether that is preferrable. If it is, add
-// a corresponding TODO here.
 ghost
 requires  withConn ==> c.Mem()
 requires !withConn ==> c.MemWithoutConn()
@@ -165,7 +161,7 @@ pred (c *Config) Mem() {
 
 requires c.Mem()
 decreases
-pure func (c *Config) Dereference() Config {
+pure func (c *Config) Deref() Config {
 	return unfolding c.Mem() in *c
 }
 
@@ -181,7 +177,7 @@ pure func (c *Config) IsLow() bool
 ghost
 trusted
 requires acc(c.Mem(), R1) && c.IsLow()
-ensures  acc(c.Mem(), R1) && low(c.Dereference())
+ensures  acc(c.Mem(), R1) && low(c.Deref())
 decreases
 func (c *Config) RevealIsLow()
 
