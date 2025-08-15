@@ -413,13 +413,6 @@ func (d *DataPlane) getInternal() {
 	unfold acc(d.Mem(), _)
 }
 
-requires acc(d.Mem(), _)
-ensures  acc(&d.macFactory, _)
-decreases
-func (d *DataPlane) getMacFactoryMem() {
-	unfold acc(d.Mem(), _)
-}
-
 ghost
 requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
