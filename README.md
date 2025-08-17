@@ -115,7 +115,7 @@ java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./private/underlay/conn -I . 
 java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./router -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=on --parallelizeBranches --moreJoins impure
 ```
 
-Note that verifying the first 11 packages combined should take up to 15 minutes. Verifying the package `router` may take multiple hours. On our machine (a Macbook Pro 16' 2023 with an Apple M2 Max), it takes up to 3 hours.
+Note that verifying the first 11 packages combined should take up to 15 minutes. Verifying the package `router` may take much longer. On our machine (a Macbook Pro 16' 2023 with an Apple M2 Max), it takes up to 45 minutes.
 
 Note: on lower-end or older machines, you may experience spurious errors when verifying the dataplane. If that happens, please re-execute the command.
 
