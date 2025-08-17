@@ -1,9 +1,6 @@
-Protocols to Code: Formal Verification of a Secure Next-Generation Internet Router
-README file accompanying sources of paper submission
-================================================================================
+# Protocols to Code: Formal Verification of a Secure Next-Generation Internet Router
 
-authors:
-          Anonymous Author(s)
+## README file accompanying sources of paper submission
 
 description: Annotated codebase of SCION
   This folder contains an annotated version of the SCION repository. Below, we list the main packages, containing most of the annotations, and we give details on how to reproduce the verification of these packages.
@@ -13,7 +10,7 @@ Assuming the acceptance of the paper, we will provide a fully set-up environment
 
 Installing Gobra
 --------------------------------------------------------------------------------
-  The provided code-base can be verified using Gobra. We provide a pre-built file `./gobra.jar` that can be used already. You can also build Gobra from source. Instructions on how to obtain and install Gobra are available on the project's Github page: [https://github.com/viperproject/gobra](https://github.com/viperproject/gobra).
+  The provided code-base can be verified using Gobra. We provide a pre-built file `/artifact/bin/gobra.jar` that can be used already. You can also build Gobra from source. Instructions on how to obtain and install Gobra are available on the project's Github page: [https://github.com/viperproject/gobra](https://github.com/viperproject/gobra).
 
   Besides the `gobra.jar` file, you need the following dependencies to run Gobra:
   1. A valid installation of Java 64-bit Version 11
@@ -21,7 +18,7 @@ Installing Gobra
 
 **Note 1: Please make sure that you have the correct versions of the dependencies, otherwise you may run into issues when running the commands below.**
 
-**Note 2: If you opt to build Gobra yourself, please fetch the commit `74d12a3` of Gobra.**
+**Note 2: If you opt to build Gobra yourself, please fetch the commit `9a386be` of Gobra.**
 
 Structure of the codebase
 --------------------------------------------------------------------------------
@@ -56,7 +53,7 @@ Note: For navigating the codebase, we recommend using the Gobra IDE extension fo
 
 Verifying the code base
 --------------------------------------------------------------------------------
-To verify each of the packages that we listed, you need a file `gobra.jar` ready to be executed. You may use the one we provided, or the one that you built yourself. 
+To verify each of the packages that we listed, you need a file `gobra.jar` ready to be executed. You may use the one we provided, or the one that you built yourself.
 You also need the correct version of the dependencies (Java and Z3) installed.
 
 As a final step before running the commands, you need to define an environment variable named `Z3_EXE` that contains the absolute path for your z3 executable. In Unix-based operating systems, you can do this using the following command, where `PATH_TO_Z3` is a placeholder for your z3 binary:
@@ -69,51 +66,51 @@ To verify each package, use the respective command listed below.
 
 1. `pkg/addr`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./pkg/addr -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./pkg/addr -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 2. `pkg/experimental/epic`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./pkg/experimental/epic -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./pkg/experimental/epic -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 3. `pkg/slayers`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./pkg/slayers -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./pkg/slayers -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 4. `pkg/slayers/path`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./pkg/slayers/path -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./pkg/slayers/path -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 5. `pkg/slayers/path/empty`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./pkg/slayers/path/empty -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./pkg/slayers/path/empty -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 6. `pkg/slayers/path/epic`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./pkg/slayers/path/epic -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./pkg/slayers/path/epic -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 7. `pkg/slayers/path/onehop`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./pkg/slayers/path/onehop -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./pkg/slayers/path/onehop -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 8. `pkg/slayers/path/scion`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./pkg/slayers/path/scion -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./pkg/slayers/path/scion -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 9. `private/topology`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./private/topology -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./private/topology -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 10. `private/topology/underlay`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./private/topology/underlay -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./private/topology/underlay -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 11. `private/underlay/conn`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./private/underlay/conn -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./private/underlay/conn -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=od
 ```
 12. `router`
 ```sh
-java -Xss1g -Xmx4g -jar gobra.jar -p ./router -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=on --parallelizeBranches --moreJoins impure
+java -Xss1g -Xmx4g -jar /artifact/bin/gobra.jar -p ./router -I . ./verification/dependencies --onlyFilesWithHeader -m github.com/scionproto/scion --mceMode=on --parallelizeBranches --moreJoins impure
 ```
 
 Note that verifying the first 11 packages combined should take up to 15 minutes. Verifying the package `router` may take multiple hours. On our machine (a Macbook Pro 16' 2023 with an Apple M2 Max), it takes up to 3 hours.
