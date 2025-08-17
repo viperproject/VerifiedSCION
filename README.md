@@ -3,7 +3,8 @@
 ## README file accompanying sources of paper submission
 
 description: Annotated codebase of SCION
-  This folder contains an annotated version of the SCION repository. Below, we list the main packages, containing most of the annotations, and we give details on how to reproduce the verification of these packages.
+
+This folder contains an annotated version of the SCION repository. Below, we list the main packages, containing most of the annotations, and we give details on how to reproduce the verification of these packages.
 
 In this README, we (1) explain how to install and use Gobra, (2) explain how the verified codebase of SCION is organized, and (3) explain how to verify these files in the command line.
 Assuming the acceptance of the paper, we will provide a fully set-up environment ready to verify the entire project for the artifact evaluation.
