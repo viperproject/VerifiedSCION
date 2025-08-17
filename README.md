@@ -17,7 +17,8 @@ Installing Gobra
   1. A valid installation of Java 64-bit Version 11
   2. A valid installation of the Z3 theorem prover, version `4.8.7`. Instructions on how to install it can be found [here](https://github.com/Z3Prover/z3), and you can also download pre-built binaries for your platform [here](https://github.com/Z3Prover/z3/releases).
 
-**Note 1: Please make sure that you have the correct versions of the dependencies, otherwise you may run into issues when running the commands below.**
+**Note 1: The provided docker image comes pre-installed with the correct versions of the dependencies. If you are reproducing these instructions elsewhere,
+make sure that you have the correct versions of the dependencies, otherwise you may run into issues when running the commands below.**
 
 **Note 2: If you opt to build Gobra yourself, please fetch the commit `9a386be` of Gobra.**
 
@@ -122,11 +123,7 @@ The output of Gobra has the following shape:
 ```
 (c) Copyright ETH Zurich 2012 - 2022
 22:42:49.847 [main] INFO viper.gobra.Gobra - Verifying package ./pkg/addr - addr [22:42:49]
-22:43:02.556 [thread-9] INFO viper.gobra.Gobra - Gobra found no errors
-22:43:02.556 [main] INFO viper.gobra.Gobra - Gobra has found 9 warning(s)
-22:43:02.556 [main] INFO viper.gobra.Gobra - Gobra has found 0 error(s)
-22:43:02.572 [Thread-0] INFO viper.gobra.Gobra - Writing report to .gobra/stats.json
-22:43:02.572 [Thread-0] ERROR viper.gobra.Gobra - Could not write to the file .gobra/stats.json. Check whether the permissions to the file allow writing to it.
+22:43:02.556 [main] INFO viper.gobra.Gobra - Gobra found 0 errors
 ```
-Note that the line that matters here is `22:43:02.556 [main] INFO viper.gobra.Gobra - Gobra has found 0 error(s)`, which confirms a successful verification. The last line (`22:43:02.572 [Thread-0] ERROR viper.gobra.Gobra - Could not write to the file .gobra/stats.json. Check whether the permissions to the file allow writing to it.`) indicates a problem of Gobra while trying to record the stats of Gobra. **It does not report a verification error**.
+Note that the line that matters here is `22:43:02.556 [main] INFO viper.gobra.Gobra - Gobra found 0 errors`, which confirms a successful verification.
 
