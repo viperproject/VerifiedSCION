@@ -13,7 +13,6 @@ import "time"
 
 import . "github.com/scionproto/scion/verification/utils/definitions"
 import sl "github.com/scionproto/scion/verification/utils/slices"
-import "github.com/scionproto/scion/verification/utils/sif"
 
 // UDPAddr represents the address of a UDP end point.
 type UDPAddr struct {
@@ -28,9 +27,39 @@ pred (a *UDPAddr) Mem() {
 	acc(a, R5) && sl.Bytes(a.IP, 0, len(a.IP))
 }
 
-pred (a *UDPAddr) Low() {
-	acc(a, R5) && low(len(a.IP)) && sif.LowBytes(a.IP, 0, len(a.IP))
+requires a.Mem()
+decreases
+pure func (a *UDPAddr) GetIP() IP {
+	return unfolding a.Mem() in a.IP
 }
+
+requires a.Mem() && 0 <= i && i < len(a.GetIP())
+decreases
+pure func (a *UDPAddr) GetIPByte(i int) byte {
+	return unfolding a.Mem() in sl.GetByte(a.IP, 0, len(a.IP), i)
+}
+
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+// - Here, `IsLow` will need to cover all fields (of `UDPAddr`), since we use 
+//   this information in `DialUDP` and `ListenUDP` to imply that all fields of 
+//   the resulting `UDPConn` object are low. 
+ghost
+trusted
+requires a.Mem()
+decreases
+pure func (a *UDPAddr) IsLow() bool
+
+// "Reveal the body" of `a.IsLow` (necessary bc. we can't implement `a.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+ghost
+trusted
+requires acc(a.Mem(), R15) && a.IsLow()
+ensures  acc(a.Mem(), R15)
+ensures  low(len(a.GetIP()))
+ensures  forall i int :: { a.GetIPByte(i) } 0 <= i && i < len(a.GetIP()) ==>
+	low(i) ==> low(a.GetIPByte(i))
+decreases
+func (a *UDPAddr) RevealIsLow()
 
 (*UDPAddr) implements Addr {
 	(e *UDPAddr) Network() string {
@@ -61,9 +90,14 @@ pred (u *UDPConn) Mem() {
 	acc(u)
 }
 
-pred (u *UDPConn) Low() {
-	acc(u) && low(*u)
-}
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+// - Here, `IsLow` will need to cover all fields (of `UDPConn`), since we use 
+//   this information in private/underlay/sockctrl/sockopt.go, `GetsockoptInt`.
+ghost
+trusted
+requires c.Mem()
+decreases
+pure func (c *UDPConn) IsLow() bool
 
 // ReadFromUDP acts like ReadFrom but returns a UDPAddr.
 preserves acc(c.Mem(), _)
@@ -121,33 +155,33 @@ ensures  err != nil ==> err.ErrorMem()
 decreases
 func (c *UDPConn) Close() (err error)
 
-requires acc(laddr.Mem(), _) && acc(laddr.Low(), _)
-requires low(network)
-ensures  err == nil ==> acc(conn.Mem(), 1/2) && acc(conn.Low(), 1/2)
+requires acc(laddr.Mem(), _)
+requires low(network) && laddr.IsLow()
+ensures  err == nil ==> conn.Mem() && conn.IsLow()
 ensures  err != nil ==> err.ErrorMem()
-ensures low(err)
+ensures  low(err != nil)
 decreases _
 func ListenUDP(network string, laddr *UDPAddr) (conn *UDPConn, err error)
 
-requires low(network)
-requires acc(laddr.Mem(), _) && acc(laddr.Low(), _)
-requires acc(raddr.Mem(), _) && acc(raddr.Low(), _)
-ensures  err == nil ==> acc(conn.Mem(), 1/2) && acc(conn.Low(), 1/2)
+requires acc(laddr.Mem(), _)
+requires acc(raddr.Mem(), _)
+requires low(network) && laddr.IsLow() && raddr.IsLow()
+ensures  err == nil ==> conn.Mem() && conn.IsLow()
 ensures  err != nil ==> err.ErrorMem()
-ensures low(err)
+ensures  low(err != nil)
 decreases _
 func DialUDP(network string, laddr, raddr *UDPAddr) (conn *UDPConn, err error)
 
-requires low(bytes)
-preserves acc(c.Mem(), 1/2) && acc(c.Low(), 1/2)
+requires  low(bytes)
+preserves c.Mem() && c.IsLow()
 ensures   err != nil ==> err.ErrorMem()
-ensures low(err)
+ensures   low(err != nil)
 decreases _
 func (c *UDPConn) SetWriteBuffer(bytes int) (err error)
 
-requires low(bytes)
-preserves acc(c.Mem(), 1/2) && acc(c.Low(), 1/2)
-ensures low(err)
+requires  low(bytes)
+preserves c.Mem() && c.IsLow()
+ensures   low(err != nil)
 ensures   err != nil ==> err.ErrorMem()
 decreases _
 func (c *UDPConn) SetReadBuffer(bytes int) (err error)

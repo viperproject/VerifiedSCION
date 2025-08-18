@@ -66,7 +66,8 @@ func SplitAfterN(s, sep string, n int) (res []string)
 
 // Split slices s into all substrings separated by sep and returns a slice of
 // the substrings between those separators.
-ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]) && ((low(s) && low(sep)) ==> low(res[i]))
+ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> 
+	acc(&res[i]) && ((low(s) && low(sep)) ==> low(i) ==> low(res[i]))
 ensures (low(s) && low(sep)) ==> low(len(res))
 decreases _
 func Split(s, sep string) (res []string) //{ return genSplit(s, sep, 0, -1) }
