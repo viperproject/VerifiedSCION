@@ -99,7 +99,8 @@ func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	var parsed AS
 	//@ invariant 0 <= i && i <= asParts
 	//@ invariant acc(parts)
-	//@ invariant forall i int :: { parts[i] } 0 <= i && i < len(parts) ==> low(parts[i])
+	//@ invariant forall i int :: { parts[i] } 0 <= i && i < len(parts) && 
+	//@ 	low(i) ==> low(parts[i])
 	//@ invariant low(i) && low(_as) && low(parsed)
 	//@ decreases asParts - i
 	for i := 0; i < asParts; i++ {
@@ -166,8 +167,8 @@ func (_as AS) MarshalText() ([]byte, error) {
 }
 
 // @ requires  forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
-// @ requires  low(len(text)) && 
-// @ 	forall i int :: { text[i] } 0 <= i && i < len(text) ==> low(text[i])
+// @ requires  low(len(text)) && forall i int :: { text[i] } 0 <= i && i < len(text) &&
+// @ 	low(i) ==> low(text[i])
 // @ preserves acc(_as)
 // @ ensures   forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
 // @ decreases
@@ -235,15 +236,15 @@ func ParseIA(ia string) (retIA IA, retErr error) {
 	return MustIAFrom(isd, _as), nil
 }
 
+// @ ensures low(ia) ==> low(res)
 // @ decreases
-// @ pure
-func (ia IA) ISD() ISD {
+func (ia IA) ISD() (res ISD) {
 	return ISD(ia >> ASBits)
 }
 
+// @ ensures low(ia) ==> low(res)
 // @ decreases
-// @ pure
-func (ia IA) AS() AS {
+func (ia IA) AS() (res AS) {
 	return AS(ia) & MaxAS
 }
 
@@ -253,8 +254,8 @@ func (ia IA) MarshalText() ([]byte, error) {
 }
 
 // @ requires  forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
-// @ requires  low(len(b)) && 
-// @ 	forall i int :: { b[i] } 0 <= i && i < len(b) ==> low(b[i])
+// @ requires  low(len(b)) && forall i int :: { b[i] } 0 <= i && i < len(b) &&
+// @ 	low(i) ==> low(b[i])
 // @ preserves acc(ia)
 // @ ensures   forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ decreases
