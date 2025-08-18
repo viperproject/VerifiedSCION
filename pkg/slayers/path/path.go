@@ -75,6 +75,7 @@ type Path interface {
 	// a new instance of a predicate.
 	//@ pred NonInitMem()
 
+	// TODO: Once Gobra issue #955 is resolved, mark as `hyper`.
 	//@ ghost
 	//@ requires Mem(ub)
 	//@ decreases
