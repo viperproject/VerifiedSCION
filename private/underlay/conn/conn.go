@@ -46,6 +46,7 @@ type Conn interface {
 
 	// Return whether all the underlying data that needs to be low for the
 	// computation of `WriteTo`, `Close` is low.
+	// TODO: Once Gobra issue #955 is resolved, mark as `hyper`.
 	//@ ghost
 	//@ requires Mem()
 	//@ decreases
