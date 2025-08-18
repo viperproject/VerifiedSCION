@@ -66,8 +66,6 @@ func (l LinkType) String() string {
 func LinkTypeFromString(s string) (res LinkType) {
 	var l /*@@@*/ LinkType
 	tmp := []byte(s)
-	// TODO: Once Gobra issue #831 is resolved, remove this assumption.
-	//@ assume forall i int :: { &tmp[i] } 0 <= i && i < len(tmp) && low(i) ==> low(tmp[i])
 	//@ fold sl.Bytes(tmp, 0, len(tmp))
 	if err := l.UnmarshalText(tmp); err != nil {
 		return Unset
