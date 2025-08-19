@@ -361,7 +361,8 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 		// @ requires acc(&asid, _)
 		// @ ensures  acc(&key, _) && acc(sl.Bytes(key, 0, len(key)), _)
 		// @ ensures  h != nil && h.Mem()
-		// @ ensures  acc(&asid, _) && sh === h && sh.Asid() == asid
+		// @ ensures  acc(&asid, _) && sh === h && sh.AsidMem() && sh.Asid() == asid
+		//  ensures  acc(&asid, _) && sh === h && sh.Asid() == asid
 		// @ decreases
 		func /*@ f @*/ () (h hash.Hash /*@, ghost sh hash.ScionHashSpec @*/) {
 			mac /*@, macSpec @*/, _ := scrypto.InitMac(key /*@, asid @*/)
@@ -1843,7 +1844,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField)
 // @ preserves acc(&p.mac, R10) && p.mac != nil && p.mac.Mem()
-// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.AsidMem() && p.macSpec.Asid() == dp.Asid()
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
@@ -2906,7 +2907,7 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ requires  acc(&p.infoField, R20)
 // @ requires  acc(&p.hopField, R20)
 // @ preserves acc(&p.mac, R20) && p.mac != nil && p.mac.Mem()
-// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.AsidMem() && p.macSpec.Asid() == dp.Asid()
 // @ preserves acc(&p.macBuffers.scionInput, R20)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
@@ -2948,6 +2949,7 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, ghost ubScionL []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	// @ ghost oldPkt := absPkt(ubScionL)
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput /*@, p.macSpec @*/)
+	// @ assert p.macSpec.Asid() == old(p.macSpec.Asid())
 	// @ fold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
 	// @ sl.SplitRange_Bytes(fullMac, 0, path.MacLen, R21)
 	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen]) == 0 {
@@ -3887,7 +3889,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ preserves acc(&p.infoField)
 // @ preserves acc(&p.hopField)
 // @ preserves acc(&p.mac, R10) && p.mac != nil && p.mac.Mem()
-// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.AsidMem() && p.macSpec.Asid() == dp.Asid()
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
@@ -4132,7 +4134,7 @@ func (p *scionPacketProcessor) process(
 // @ requires  sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
 // @ preserves acc(&p.mac, R10)
 // @ preserves p.mac != nil && p.mac.Mem()
-// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+// @ preserves acc(&p.macSpec, R20) && p.mac === p.macSpec && p.macSpec.AsidMem() && p.macSpec.Asid() == dp.Asid()
 // @ preserves acc(&p.macBuffers.scionInput, R10)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
@@ -4221,7 +4223,7 @@ func (p *scionPacketProcessor) processOHP(/*@ ghost dp io.DataPlaneSpec @*/) (re
 		// however we definitely will eventually (to be able to declassify `mac`
 		// s.t. `compRes` / the branch condition is low). 
 		// Should I keep this in already anyway?
-		// @ preserves acc(&p.macSpec, R55) && p.mac === p.macSpec && p.macSpec.Asid() == dp.Asid()
+		// @ preserves acc(&p.macSpec, R55) && p.mac === p.macSpec && p.macSpec.AsidMem() && p.macSpec.Asid() == dp.Asid()
 		// @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 		// @ decreases
 		// @ outline (

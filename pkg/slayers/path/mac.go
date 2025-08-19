@@ -30,9 +30,11 @@ const MACBufferSize = 16
 // https://docs.scion.org/en/latest/protocols/scion-header.html#hop-field-mac-computation
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
-// @ requires  h != nil && h.Mem() && sh === h
+// @ requires  h != nil && h.Mem() && sh === h && acc(sh.AsidMem(), 1/2)
+//  requires  h != nil && h.Mem() && sh === h
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
-// @ ensures   h.Mem() && sh === h
+// @ ensures   h.Mem() && sh === h && sh.AsidMem()
+//  ensures   h.Mem() && sh === h
 // @ ensures   let absInf := info.ToAbsInfoField() in
 // @ 	let absHF := hf.Abs() in
 // @ 	let absMac := AbsMac(ret) in
@@ -56,9 +58,11 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost sh h
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // In contrast to MAC(), FullMAC returns all the 16 bytes instead of only 6 bytes of the MAC.
-// @ requires  h != nil && h.Mem() && sh === h
+// @ requires  h != nil && h.Mem() && sh === h && acc(sh.AsidMem(), 1/2)
+//  requires  h != nil && h.Mem() && sh === h
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
-// @ ensures   h.Mem() && sh === h
+// @ ensures   h.Mem() && sh === h && sh.AsidMem()
+//  ensures   h.Mem() && sh === h
 // @ ensures   len(res) == MACBufferSize && sl.Bytes(res, 0, MACBufferSize)
 // @ ensures   unfolding sl.Bytes(res, 0, MACBufferSize) in
 // @ 	let absInf := info.ToAbsInfoField() in

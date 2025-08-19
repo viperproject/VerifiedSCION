@@ -156,7 +156,8 @@ requires scrypto.ValidKeyForHash(*key)
 requires acc(asid, _)
 ensures  acc(key, _) && acc(sl.Bytes(*key, 0, len(*key)), _)
 ensures  h != nil && h.Mem() 
-ensures  acc(asid, _) && sh === h && sh.Asid() == *asid
+ensures  acc(asid, _) && sh === h && sh.AsidMem() && sh.Asid() == *asid
+// ensures  acc(asid, _) && sh === h && sh.Asid() == *asid
 decreases
 func MacFactorySpec(ghost key *[]byte, ghost asid gpointer[io.AS]) (h hash.Hash, ghost sh hash.ScionHashSpec)
 
@@ -584,7 +585,7 @@ pred (s* scionPacketProcessor) sInit() {
 	// TODO: see if there is a more sensible place for this
 	acc(&s.macSpec) && acc(&s.d.asid, _) && acc(s.d.asid, _) &&
 	s.mac === s.macSpec                          && 
-	s.macSpec.Asid() == *s.d.asid                &&
+	s.macSpec.AsidMem() && s.macSpec.Asid() == *s.d.asid &&
 	// TODO: Problem: We don't have access to *s.d, only s.d
 	// We can only access it together with access to the DataPlane
 	// (and the fact that it is the same as s.d), so we have to
