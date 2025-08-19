@@ -47,7 +47,12 @@ pred (d *Decoded) Mem(ubuf []byte) {
 	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
-pred (d *Decoded) LowReverse()
+ghost
+requires d.Mem(ub)
+decreases
+pure func (d *Decoded) IsLow(ub []byte) bool {
+	return true
+}
 
 /**** End of Predicates ****/
 

@@ -32,6 +32,13 @@ pred (r *rawPath) NonInitMem() {
 }
 
 ghost
+requires r.Mem(ub)
+decreases
+pure func (r *rawPath) IsLow(ub []byte) bool {
+	return true
+}
+
+ghost
 requires p.Mem(buf)
 ensures  p.NonInitMem()
 decreases
@@ -54,8 +61,6 @@ pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
 	return unfolding p.Mem(ub) in
 		len(p.raw)
 }
-
-pred (r *rawPath) LowReverse()
 
 (*rawPath) implements Path
 

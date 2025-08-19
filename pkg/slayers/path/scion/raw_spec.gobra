@@ -38,7 +38,13 @@ pred (s *Raw) Mem(buf []byte) {
 	len(s.Raw) == s.Base.Len()
 }
 
-pred (s *Raw) LowReverse()
+ghost
+requires s.Mem(ub)
+decreases
+pure func (s *Raw) IsLow(ub []byte) bool {
+	return true
+}
+
 /**** End of Predicates ****/
 
 (*Raw) implements path.Path

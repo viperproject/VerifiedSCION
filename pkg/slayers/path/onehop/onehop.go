@@ -29,8 +29,6 @@ const PathLen = path.InfoLen + 2*path.HopLen
 
 const PathType path.Type = 2
 
-// TODO: Once Gobra issue 878 is resolved, remove `truested`.
-// @ trusted
 // @ requires path.PkgMem()
 // @ requires path.RegisteredTypes().DoesNotContain(int64(PathType))
 // @ ensures  path.PkgMem()
@@ -66,7 +64,7 @@ type Path struct {
 }
 
 // @ requires  o.NonInitMem()
-// @ requires low(len(data) < PathLen)
+// @ requires  low(len(data))
 // @ preserves acc(sl.Bytes(data, 0, len(data)), R42)
 // @ ensures   (len(data) >= PathLen) == (r == nil)
 // @ ensures   r == nil ==> o.Mem(data)
@@ -101,7 +99,7 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	return r
 }
 
-// @ requires  low(len(b) < PathLen)
+// @ requires  low(len(b))
 // @ preserves acc(o.Mem(ubuf), R1)
 // @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R1)
 // @ preserves sl.Bytes(b, 0, len(b))
@@ -140,7 +138,7 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 // ToSCIONDecoded converts the one hop path in to a normal SCION path in the
 // decoded format.
 // @ requires  o.Mem(ubuf)
-// @ requires  low(o.GetSecondHopConsIngress(ubuf) == 0)
+// @ requires  low(o.GetSecondHopConsIngress(ubuf))
 // @ preserves sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures   o.Mem(ubuf)
 // @ ensures   err == nil ==> (sd != nil && sd.Mem(ubuf))
@@ -205,9 +203,7 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 }
 
 // Reverse a OneHop path that returns a reversed SCION path.
-// @ requires  o.Mem(ubuf)
-//  requires   low(o.GetSecondHopConsIngress(ubuf) == 0)
-// @ requires  o.LowReverse()
+// @ requires  o.Mem(ubuf) && o.IsLow(ubuf)
 // @ preserves sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures   err == nil ==> p != nil
 // @ ensures   err == nil ==> p.Mem(ubuf)
@@ -215,7 +211,7 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (o *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
-	// @ o.GetLowReverse(ubuf, 1/2)
+	//@ o.RevealIsLow(ubuf, writePerm)
 	sp, err := o.ToSCIONDecoded( /*@ ubuf @*/ )
 	if err != nil {
 		return nil, serrors.WrapStr("converting to scion path", err)
