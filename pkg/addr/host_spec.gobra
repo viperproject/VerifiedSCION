@@ -25,12 +25,46 @@ import (
 
 pred (h HostNone) Mem() { len(h) == HostLenNone }
 
+ghost
+requires h.Mem()
+decreases
+pure func (h HostNone) IsLow() bool {
+	return true
+}
+
 HostNone implements HostAddr
 
 pred (h HostIPv4) Mem() {
 	len(h) == HostLenIPv4 &&
 	slices.Bytes(h, 0, len(h))
 }
+
+ghost
+requires h.Mem()
+requires 0 <= i && i < len(h)
+decreases
+pure func (h HostIPv4) GetByte(i int) byte {
+	return unfolding h.Mem() in slices.GetByte(h, 0, len(h), i)
+}
+
+// TODO: Once Gobra issue #846 is resolved, implement this.
+ghost
+trusted
+requires h.Mem()
+decreases
+pure func (h HostIPv4) IsLow() bool
+
+// "Reveal the body" of `h.IsLow` (necessary bc. we can't implement `h.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+ghost
+trusted
+requires p > 0
+requires acc(h.Mem(), p) && h.IsLow()
+ensures  acc(h.Mem(), p)
+ensures  low(len(h)) && forall i int :: { h.GetByte(i) } 0 <= i && i < len(h) &&
+	low(i) ==> low(h.GetByte(i))
+decreases
+func (h HostIPv4) RevealIsLow(p perm)
 
 HostIPv4 implements HostAddr
 
@@ -39,9 +73,33 @@ pred (h HostIPv6) Mem() {
 	slices.Bytes(h, 0, len(h))
 }
 
+ghost
+requires h.Mem()
+decreases
+pure func (h HostIPv6) IsLow() bool { 
+	return true
+}
+
 HostIPv6 implements HostAddr
 
 pred (h HostSVC) Mem() { true }
+
+// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
+ghost
+trusted
+requires h.Mem()
+decreases
+pure func (h HostSVC) IsLow() bool
+
+// "Reveal the body" of `h.IsLow` (necessary bc. we can't implement `h.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+ghost
+trusted
+requires p > 0
+requires acc(h.Mem(), p) && h.IsLow()
+ensures  acc(h.Mem(), p) && low(h)
+decreases
+func (h HostSVC) RevealIsLow(p perm)
 
 HostSVC implements HostAddr
 

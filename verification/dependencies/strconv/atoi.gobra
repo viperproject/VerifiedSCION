@@ -39,6 +39,7 @@ requires base == 0 || (2 <= base && base <= 36)
 requires bitSize > 0 && bitSize <= 64
 ensures retErr == nil ==> (ret >= 0 && ret < Exp(2, bitSize))
 ensures retErr != nil ==> retErr.ErrorMem()
+ensures (low(s) && low(base) && low(bitSize)) ==> (low(ret) && low(retErr))
 decreases _
 func ParseUint(s string, base int, bitSize int) (ret uint64, retErr error)
 
