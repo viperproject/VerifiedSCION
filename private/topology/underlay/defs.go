@@ -47,7 +47,10 @@ const (
 	EndhostPort = 30041
 )
 
-func (o Type) String() string {
+// @ requires low(o)
+// @ requires o == UDPIPv4 || o == UDPIPv6 || o == UDPIPv46
+// @ ensures  low(res)
+func (o Type) String() (res string) {
 	switch o {
 	case UDPIPv4:
 		return UDPIPv4Name
@@ -56,11 +59,14 @@ func (o Type) String() string {
 	case UDPIPv46:
 		return UDPIPv46Name
 	default:
+		// @ Unreachable()
 		return fmt.Sprintf("UNKNOWN (%d)", o)
 	}
 }
 
-func TypeFromString(s string) (Type, error) {
+// @ requires low(s)
+// @ ensures  low(t) && low(err != nil)
+func TypeFromString(s string) (t Type, err error) {
 	switch strings.ToLower(s) {
 	case strings.ToLower(UDPIPv4Name):
 		return UDPIPv4, nil
@@ -94,7 +100,9 @@ func (ot Type) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ot.String())
 }
 
-func (ot Type) IsUDP() bool {
+// @ requires low(ot)
+// @ ensures  low(res)
+func (ot Type) IsUDP() (res bool) {
 	switch ot {
 	case UDPIPv4, UDPIPv6, UDPIPv46:
 		return true
