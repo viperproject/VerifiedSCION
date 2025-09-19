@@ -437,7 +437,7 @@ func (c *connUDPBase) Write(b []byte /*@, ghost underlyingConn *net.UDPConn @*/)
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
-	//@ c.RevealIsLow(true, anyPerm, true)
+	//@ c.RevealIsLow(true, R56, true)
 	//@ unfold acc(c.Mem(), _)
 	if c.Remote != nil {
 		return c.conn.Write(b)
