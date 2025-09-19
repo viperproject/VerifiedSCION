@@ -101,14 +101,14 @@ func (l LinkType) MarshalText() (res []byte, err error) {
 	}
 }
 
-// @ requires acc(sl.Bytes(data, 0, len(data)), R15)
-// @ requires low(len(data)) && 
+// @ requires  acc(sl.Bytes(data, 0, len(data)), R15)
+// @ requires  low(len(data)) && 
 // @ 	forall i int :: { sl.GetByte(data, 0, len(data), i) } 0 <= i && i < len(data) && low(i) ==>
 // @ 		low(sl.GetByte(data, 0, len(data), i))
 // @ preserves acc(l)
-// @ ensures acc(sl.Bytes(data, 0, len(data)), R15)
-// @ ensures err != nil ==> err.ErrorMem()
-// @ ensures low(err != nil)
+// @ ensures   acc(sl.Bytes(data, 0, len(data)), R15)
+// @ ensures   err != nil ==> err.ErrorMem()
+// @ ensures   low(err != nil)
 // @ decreases
 func (l *LinkType) UnmarshalText(data []byte) (err error) {
 	//@ unfold acc(sl.Bytes(data, 0, len(data)), R16)
