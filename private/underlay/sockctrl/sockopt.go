@@ -27,7 +27,7 @@ import (
 // @ requires  low(level) && low(opt)
 // @ preserves c.Mem() && c.IsLow()
 // @ ensures   e != nil ==> e.ErrorMem()
-// @ ensures   low(r) && low(e)
+// @ ensures   low(r) && low(e != nil)
 // @ decreases _
 func GetsockoptInt(c *net.UDPConn, level, opt int) (r int, e error) {
 	var val int

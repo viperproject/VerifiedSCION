@@ -226,7 +226,7 @@ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv4) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
 	c.RevealIsLow(true)
 	unfold acc(c.Mem(), _)
-	c.connUDPBase.RevealIsLow(true, anyPerm, false)
+	c.connUDPBase.RevealIsLow(true, R56, false)
 	unfold acc(c.connUDPBase.MemWithoutConn(), _)
 	assert c.pconn.GetUnderlyingConn() == c.conn
 	tmpImpl := c.conn
@@ -318,7 +318,7 @@ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPIPv6) WriteTo(b []byte, dst *net.UDPAddr) (n int, err error) {
 	c.RevealIsLow(true)
 	unfold acc(c.Mem(), _)
-	c.connUDPBase.RevealIsLow(true, anyPerm, false)
+	c.connUDPBase.RevealIsLow(true, R56, false)
 	unfold acc(c.connUDPBase.MemWithoutConn(), _)
 	assert c.pconn.GetUnderlyingConn() == c.conn
 	tmpImpl := c.conn
