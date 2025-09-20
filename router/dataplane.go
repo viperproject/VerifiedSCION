@@ -148,6 +148,15 @@ type bfdSession interface {
 // with the same name in private/underlay/conn/Conn.
 type BatchConn interface {
 	// @ pred Mem()
+	
+	// Return whether all the underlying data that needs to be low for the
+	// computation of `WriteTo`, `Close` is low.
+	// We add this here to match the `Conn` interface in `private/underlay/conn`.
+	// TODO: Once Gobra issue #955 is resolved, mark as `hyper`.
+	// @ ghost
+	// @ requires Mem()
+	// @ decreases
+	// @ pure IsLow() bool
 
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
@@ -188,7 +197,7 @@ type BatchConn interface {
 	// @		low(old(MultiReadBioIO_val(place, n)[i]))
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
-	// @ requires  acc(Mem(), _)
+	// @ requires  acc(Mem(), _) && IsLow()
 	// @ preserves acc(sl.Bytes(b, 0, len(b)), R10)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(b)
 	// @ ensures   err != nil ==> err.ErrorMem()
@@ -216,7 +225,7 @@ type BatchConn interface {
 	// otherwise the router cannot continue after failing to send a packet.
 	// @ ensures   io.token(old(io.dp3s_iospec_bio3s_send_T(place, ioAbsPkts)))
 	WriteBatch(msgs underlayconn.Messages, flags int /*@, ghost egressID uint16, ghost place io.Place, ghost ioAbsPkts io.Val @*/) (n int, err error)
-	// @ requires Mem()
+	// @ requires Mem() && IsLow()
 	// @ ensures  err != nil ==> err.ErrorMem()
 	// @ decreases
 	Close() (err error)
