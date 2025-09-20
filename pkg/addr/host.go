@@ -92,7 +92,6 @@ const (
 type HostAddr interface {
 	//@ pred Mem()
 
-	// NOTE[henri]: I rewrote this comment to be more accurate
 	// Return whether all the underlying data that needs to be low for the
 	// computation of `Pack`, `IP`, `String` is low.
 	// TODO: Once Gobra issue #955 is resolved, mark as `hyper`.
