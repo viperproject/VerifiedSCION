@@ -85,6 +85,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
+	//@ requires  low(len(b))
 	//@ preserves acc(sl.Bytes(b, 0, len(b)), R42)
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err == nil ==> IsValidResultOfDecoding(b)
