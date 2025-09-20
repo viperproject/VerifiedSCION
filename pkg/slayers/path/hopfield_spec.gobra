@@ -115,3 +115,17 @@ pure func (h HopField) Abs() (io.HF) {
 		HVF: AbsMac(h.Mac),
 	}
 }
+
+ghost
+requires h.Mem()
+decreases
+pure func (h *HopField) GetEgressRouterAlert() bool {
+	return unfolding h.Mem() in h.EgressRouterAlert
+}
+
+ghost
+requires h.Mem()
+decreases
+pure func (h *HopField) GetIngressRouterAlert() bool {
+	return unfolding h.Mem() in h.IngressRouterAlert
+}

@@ -30,6 +30,7 @@ const MACBufferSize = 16
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // @ requires  h != nil && h.Mem()
+// @ requires  low(len(buffer))
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
 // @ ensures   h.Mem()
 // @ decreases
@@ -47,6 +48,7 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // In contrast to MAC(), FullMAC returns all the 16 bytes instead of only 6 bytes of the MAC.
 // @ requires  h != nil && h.Mem()
+// @ requires  low(len(buffer))
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
 // @ ensures   h.Mem()
 // @ ensures   len(res) == MACBufferSize && sl.Bytes(res, 0, MACBufferSize)
