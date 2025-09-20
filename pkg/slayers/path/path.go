@@ -74,12 +74,22 @@ type Path interface {
 	// (VerifiedSCION) Must imply the resources required to initialize
 	// a new instance of a predicate.
 	//@ pred NonInitMem()
+
+	// TODO: Once Gobra issue #955 is resolved, mark as `hyper`.
+	//@ ghost
+	//@ requires Mem(ub)
+	//@ decreases
+	//@ pure IsLow(ghost ub []byte) bool
+
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
+	//@ requires  low(len(b))
+	//@ requires  acc(Mem(ub), R1)
+	//@ requires  IsLow(ub)
 	//@ preserves sl.Bytes(ub, 0, len(ub))
-	//@ preserves acc(Mem(ub), R1)
 	//@ preserves sl.Bytes(b, 0, len(b))
+	//@ ensures   acc(Mem(ub), R1)
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error)
