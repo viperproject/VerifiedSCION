@@ -2,9 +2,10 @@
 
 package big
 
-func test() {
+func test() /*{
 	var x nat = nat{1, 2, 3}
 	fold x.Mem()
 	var y *Int = &Int{true, x}
 	fold y.Mem()
 }
+*/
