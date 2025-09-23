@@ -26,13 +26,6 @@ pred (e Path) Mem(buf []byte) { len(buf) == 0 }
 pred (e Path) NonInitMem() { true }
 
 ghost
-requires e.Mem(ub)
-decreases
-pure func (e Path) IsLow(ub []byte) bool {
-	return true
-}
-
-ghost
 requires e.Mem(buf)
 ensures  e.NonInitMem()
 decreases
@@ -51,6 +44,13 @@ ghost
 decreases
 pure func (p Path) LenSpec(ghost ub []byte) (l int) {
 	return PathLen
+}
+
+ghost
+requires p.Mem(ub)
+decreases
+pure func (p Path) IsLow(ub []byte) bool {
+	return true
 }
 
 Path implements path.Path

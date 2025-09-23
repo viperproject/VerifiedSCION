@@ -53,7 +53,9 @@ func init() {
 type Type uint8
 
 // @ requires 0 <= t && t < maxPathType
-// @ preserves acc(PkgMem(), R20)
+// @ requires acc(PkgMem(), R20)
+// @ requires low(Registered(t))
+// @ ensures  acc(PkgMem(), R20)
 // @ decreases
 func (t Type) String() string {
 	//@ unfold acc(PkgMem(), R20)
@@ -77,15 +79,17 @@ type Path interface {
 	//@ ghost
 	//@ requires Mem(ub)
 	//@ decreases
-	//@ pure IsLow(ub []byte) bool
+	//@ pure IsLow(ghost ub []byte) bool
 
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
 	//@ requires  low(len(b))
+	//@ requires  acc(Mem(ub), R1)
+	//@ requires  IsLow(ub)
 	//@ preserves sl.Bytes(ub, 0, len(ub))
-	//@ preserves acc(Mem(ub), R1)
 	//@ preserves sl.Bytes(b, 0, len(b))
+	//@ ensures   acc(Mem(ub), R1)
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error)
@@ -197,6 +201,7 @@ func StrictDecoding(strict bool) {
 // NewPath returns a new path object of pathType.
 // @ requires 0 <= pathType && pathType < maxPathType
 // @ requires acc(PkgMem(), _)
+// @ requires low(Registered(pathType)) && low(IsStrictDecoding())
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ ensures  e == nil ==> p != nil && p.NonInitMem()
 // @ decreases

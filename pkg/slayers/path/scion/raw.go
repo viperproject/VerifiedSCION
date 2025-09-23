@@ -41,6 +41,7 @@ type Raw struct {
 // @ 	s.GetBase(data).WeaklyValid() &&
 // @ 	s.GetBase(data).EqAbsHeader(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
+// @ ensures   low(res == nil)
 // @ decreases
 func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 	//@ unfold s.NonInitMem()
@@ -105,6 +106,7 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ ensures   err == nil ==> p != nil && p != (*Raw)(nil)
 // @ ensures   err == nil ==> p.Mem(ubuf)
 // @ ensures   err != nil ==> err.ErrorMem()
+// @ ensures   low(err != nil)
 // @ decreases
 func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 	// XXX(shitz): The current implementation is not the most performant, since it parses the entire

@@ -40,6 +40,28 @@ pure func (o *Path) GetSecondHopConsIngress(ghost ub []byte) uint16 {
 		unfolding o.SecondHop.Mem() in o.SecondHop.ConsIngress
 }
 
+ghost
+requires o.Mem(ub)
+decreases
+pure func (o *Path) GetInfo(ghost ub []byte) path.InfoField {
+	return unfolding o.Mem(ub) in o.Info
+}
+
+// TODO: really unsure whether this is the best way to handle this
+ghost
+requires o.Mem(ub)
+decreases
+pure func (o *Path) FirstHopIsLow(ghost ub []byte) bool {
+	return unfolding o.Mem(ub) in o.FirstHop.IsLow()
+}
+
+ghost
+requires o.Mem(ub)
+decreases
+pure func (o *Path) SecondHopIsLow(ghost ub []byte) bool {
+	return unfolding o.Mem(ub) in o.SecondHop.IsLow()
+}
+
 // TODO: Once Gobra issue #846 is resolved, implement `IsLow`.
 ghost
 trusted
@@ -52,7 +74,9 @@ trusted
 requires p > 0
 requires acc(o.Mem(ub), p) && o.IsLow(ub)
 ensures  acc(o.Mem(ub), p)
-ensures  low(o.GetSecondHopConsIngress(ub))
+ensures  low(o.GetSecondHopConsIngress(ub)) &&
+	low(o.GetInfo(ub).ConsDir) && low(o.GetInfo(ub).Peer) &&
+	o.FirstHopIsLow(ub) && o.SecondHopIsLow(ub)
 decreases
 func (o *Path) RevealIsLow(ub []byte, p perm)
 

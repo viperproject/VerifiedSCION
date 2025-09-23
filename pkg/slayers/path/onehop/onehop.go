@@ -100,20 +100,24 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 }
 
 // @ requires  low(len(b))
-// @ preserves acc(o.Mem(ubuf), R1)
+// @ requires  acc(o.Mem(ubuf), R1) && o.IsLow(ubuf)
 // @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R1)
 // @ preserves sl.Bytes(b, 0, len(b))
+// @ ensures   acc(o.Mem(ubuf), R1)
 // @ ensures   (len(b) >= PathLen) == (err == nil)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ ensures   err == nil ==> o.LenSpec(ubuf) <= len(b)
 // @ decreases
 func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
+	//@ o.RevealIsLow(ubuf, R1)
 	if len(b) < PathLen {
 		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
 			int(len(b)))
 	}
 	offset := 0
 	//@ unfold acc(o.Mem(ubuf), R1)
+	//@ o.FirstHop.RevealIsLow(R2)
+	//@ o.SecondHop.RevealIsLow(R2)
 	//@ sl.SplitRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 	if err := o.Info.SerializeTo(b[:offset+path.InfoLen]); err != nil {
 		//@ sl.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)

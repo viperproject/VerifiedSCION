@@ -90,11 +90,10 @@ pred (u *UDPConn) Mem() {
 	acc(u)
 }
 
-// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
-// - Here, `IsLow` will need to cover all fields (of `UDPConn`), since we use 
-//   this information in private/underlay/sockctrl/sockopt.go, `GetsockoptInt`.
+// TODO: Once Gobra issue #846 is resolved, mark as `hyper`.
+// We assume that `IsLow` covers all fields of `UDPConn`, since we use this
+// information in `private/underlay/sockctrl/sockopt.go`, `GetsocketoptInt`
 ghost
-trusted
 requires c.Mem()
 decreases
 pure func (c *UDPConn) IsLow() bool
