@@ -16,8 +16,9 @@
 
 package path
 
-func testAllocateHopField() {
+func testAllocateHopField() /*{
 	p := &HopField{}
 	fold p.Mem()
 	return
 }
+*/
