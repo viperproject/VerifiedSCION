@@ -100,12 +100,14 @@ type HostAddr interface {
 	Type() HostAddrType
 
 	//@ requires acc(Mem(), R13)
-	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
+	//@ ensures forall i int :: { &res[i] } int(0) <= i && i < len(res) ==>
+	//@ 	acc(&res[i], R13)
 	//@ decreases
 	Pack() (res []byte)
 
 	//@ requires acc(Mem(), R13)
-	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
+	//@ ensures forall i int :: { &res[i] } int(0) <= i && i < len(res) ==>
+	//@ 	acc(&res[i], R13)
 	//@ decreases
 	IP() (res net.IP)
 
@@ -281,6 +283,7 @@ func (h HostIPv6) IP() (res net.IP) {
 func (h HostIPv6) Copy() (res HostAddr) {
 	//@ unfold acc(h.Mem(), R13)
 	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
+	//@ assert len(net.IP(nil)) + len(h) <= MAX_INT
 	tmp := HostIPv6(append( /*@ R13, @*/ net.IP(nil), h...))
 	//@ fold acc(sl.Bytes(h, 0, len(h)), R13)
 	//@ fold sl.Bytes(tmp, 0, len(tmp))
@@ -358,7 +361,7 @@ func (h HostSVC) Pack() (res []byte) {
 	return out
 }
 
-// @ requires pad >= 0
+// @ requires 0 <= pad && pad <= 1000
 // @ ensures acc(res)
 // @ decreases
 func (h HostSVC) PackWithPad(pad int) (res []byte) {

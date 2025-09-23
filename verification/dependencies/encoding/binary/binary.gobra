@@ -12,32 +12,32 @@ package binary
 // A ByteOrder specifies how to convert byte sequences into
 // 16-, 32-, or 64-bit unsigned integers.
 type ByteOrder interface {
-	requires acc(&b[0]) && acc(&b[1])
-	ensures res >= 0
+	requires acc(&b[int(0)]) && acc(&b[int(1)])
+	ensures res >= uint16(0)
 	decreases
 	pure Uint16(b []byte) (res uint16)
 
-	requires acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
+	requires acc(&b[int(0)]) && acc(&b[int(1)]) && acc(&b[int(2)]) && acc(&b[int(3)])
 	ensures res >= 0
 	decreases
 	pure Uint32(b []byte) (res uint32)
 
-	requires acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
-	requires acc(&b[4]) && acc(&b[5]) && acc(&b[6]) && acc(&b[7])
+	requires acc(&b[int(0)]) && acc(&b[int(1)]) && acc(&b[int(2)]) && acc(&b[int(3)])
+	requires acc(&b[int(4)]) && acc(&b[int(5)]) && acc(&b[int(6)]) && acc(&b[int(7)])
 	ensures res >= 0
 	decreases
 	pure Uint64(b []byte) (res uint64)
 
-	preserves acc(&b[0]) && acc(&b[1])
+	preserves acc(&b[int(0)]) && acc(&b[int(1)])
 	decreases
 	PutUint16(b []byte, uint16)
 
-	preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
+	preserves acc(&b[int(0)]) && acc(&b[int(1)]) && acc(&b[int(2)]) && acc(&b[int(3)])
 	decreases
 	PutUint32(b []byte, uint32)
 
-	preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
-	preserves acc(&b[4]) && acc(&b[5]) && acc(&b[6]) && acc(&b[7])
+	preserves acc(&b[int(0)]) && acc(&b[int(1)]) && acc(&b[int(2)]) && acc(&b[int(3)])
+	preserves acc(&b[int(4)]) && acc(&b[int(5)]) && acc(&b[int(6)]) && acc(&b[int(7)])
 	decreases
 	PutUint64(b []byte, uint64)
 
@@ -62,13 +62,14 @@ type bigEndian int
 (bigEndian) implements ByteOrder
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
-requires acc(&b[0]) && acc(&b[1])
+requires acc(&b[int(0)]) && acc(&b[int(1)])
 ensures res >= 0
 decreases
 pure func (e littleEndian) Uint16(b []byte) (res uint16) {
-	return uint16(b[0]) | uint16(b[1])<<8
+	return uint16(b[int(0)]) | uint16(b[int(1)])<<8
 }
 
+trusted // there is actually overflows here
 preserves acc(&b[0]) && acc(&b[1])
 decreases
 func (e littleEndian) PutUint16(b []byte, v uint16) {
@@ -85,6 +86,7 @@ pure func (e littleEndian) Uint32(b []byte) (res uint32) {
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 }
 
+trusted // there are actually overflows here
 preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
 decreases
 func (e littleEndian) PutUint32(b []byte, v uint32) {
@@ -104,6 +106,7 @@ pure func (e littleEndian) Uint64(b []byte) (res uint64) {
 		uint64(b[4])<<32 | uint64(b[5])<<40 | uint64(b[6])<<48 | uint64(b[7])<<56
 }
 
+trusted // there are overflows here
 preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
 preserves acc(&b[4]) && acc(&b[5]) && acc(&b[6]) && acc(&b[7])
 decreases
@@ -134,14 +137,15 @@ pure func (e bigEndian) Uint16Spec(b0, b1 byte) (res uint16) {
 }
 
 trusted // related to https://github.com/viperproject/gobra/issues/192
-requires acc(&b[0]) && acc(&b[1])
-ensures  res >= 0
-ensures  res == BigEndian.Uint16Spec(b[0], b[1])
+requires acc(&b[int(0)]) && acc(&b[int(1)])
+ensures  res >= uint16(0)
+ensures  res == BigEndian.Uint16Spec(b[int(0)], b[int(1)])
 decreases
 pure func (e bigEndian) Uint16(b []byte) (res uint16) {
-	return uint16(b[1]) | uint16(b[0])<<8
+	return uint16(b[int(1)]) | uint16(b[int(0)])<<int(8)
 }
 
+trusted // there are overflows here
 decreases
 pure func (e bigEndian) PutUint16Spec(b0, b1 byte, v uint16) bool {
 	return b0 == byte(v >> 8) &&
@@ -175,6 +179,7 @@ pure func (e bigEndian) Uint32(b []byte) (res uint32) {
 	return uint32(b[3]) | uint32(b[2])<<8 | uint32(b[1])<<16 | uint32(b[0])<<24
 }
 
+trusted // there are overflows here
 decreases
 pure func (e bigEndian) PutUint32Spec(b0, b1, b2, b3 byte, v uint32) bool {
 	return b0 == byte(v >> 24) &&
@@ -206,6 +211,7 @@ pure func (e bigEndian) Uint64(b []byte) (res uint64) {
 		uint64(b[3])<<32 | uint64(b[2])<<40 | uint64(b[1])<<48 | uint64(b[0])<<56
 }
 
+trusted // there are overflows here
 preserves acc(&b[0]) && acc(&b[1]) && acc(&b[2]) && acc(&b[3])
 preserves acc(&b[4]) && acc(&b[5]) && acc(&b[6]) && acc(&b[7])
 decreases

@@ -135,6 +135,7 @@ pred (b *BFDAuthHeader) Mem() {
 	acc(b) && sl.Bytes(b.Data, 0, len(b.Data))
 }
 
+trusted  // overflow checks here // find a better way of preventing overflows
 preserves acc(h, 1/10000)
 decreases
 func (h *BFDAuthHeader) Length() int {

@@ -13,7 +13,7 @@ import . "github.com/scionproto/scion/verification/utils/definitions"
 type LayerClass interface {
 	pred Mem()
 
-	requires acc(Mem(), _)
+	requires Mem()
 	decreases
 	pure Contains(LayerType) bool
 

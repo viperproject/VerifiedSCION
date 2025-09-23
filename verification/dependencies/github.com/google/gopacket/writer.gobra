@@ -17,11 +17,11 @@ type SerializableLayer interface {
 
 	requires  !opts.FixLengths
 	requires  b != nil && b.Mem()
-	requires  sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+	requires  sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 	requires  Mem(ubuf)
-	preserves sl.Bytes(ubuf, 0, len(ubuf))
+	preserves sl.Bytes(ubuf, int(0), len(ubuf))
 	ensures   err == nil ==> (Mem(ubuf) && b.Mem())
-	ensures   err == nil ==> sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+	ensures   err == nil ==> sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 	ensures   err != nil ==> err.ErrorMem()
 	decreases
 	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)
@@ -48,7 +48,7 @@ type SerializeBuffer interface {
 	ghost
 	pure
 	requires acc(Mem(), _)
-	requires acc(sl.Bytes(UBuf(), 0, len(UBuf())), _)
+	requires acc(sl.Bytes(UBuf(), int(0), len(UBuf())), _)
 	ensures  res == seqs.ToSeqByte(UBuf())
 	decreases
 	View() (ghost res seq[byte])
@@ -59,9 +59,10 @@ type SerializeBuffer interface {
 	Bytes() (res []byte)
 
 	preserves Mem()
-	requires  num >= 0
-	preserves sl.Bytes(UBuf(), 0, len(UBuf()))
-	ensures   err == nil ==> len(UBuf()) == len(old(UBuf())) + num
+	requires  num >= int(0)
+	preserves sl.Bytes(UBuf(), int(0), len(UBuf()))
+	ensures   err == nil ==>
+		integer(len(UBuf())) == integer(len(old(UBuf()))) + integer(num)
 	ensures   err == nil ==> len(res) == num
 	ensures   err == nil ==> res === UBuf()[:num]
 	ensures   err == nil ==> old(View()) == View()[num:]
@@ -71,9 +72,10 @@ type SerializeBuffer interface {
 	PrependBytes(num int) (res []byte, err error)
 
 	preserves Mem()
-	requires  num >= 0
-	preserves sl.Bytes(UBuf(), 0, len(UBuf()))
-	ensures   err == nil ==> len(UBuf()) == len(old(UBuf())) + num
+	requires  num >= int(0)
+	preserves sl.Bytes(UBuf(), int(0), len(UBuf()))
+	ensures   err == nil ==>
+		integer(len(UBuf())) == integer(len(old(UBuf()))) + integer(num)
 	ensures   err == nil ==> len(res) == num
 	ensures   err == nil ==> res === UBuf()[len(UBuf()) - num:]
 	ensures   err != nil ==> UBuf() === old(UBuf())
@@ -82,9 +84,9 @@ type SerializeBuffer interface {
 	AppendBytes(num int) (res []byte, err error)
 
 	preserves Mem()
-	preserves sl.Bytes(UBuf(), 0, len(UBuf()))
+	preserves sl.Bytes(UBuf(), int(0), len(UBuf()))
 	ensures   err != nil ==> err.ErrorMem()
-	ensures   err == nil ==> len(UBuf()) == 0
+	ensures   err == nil ==> len(UBuf()) == int(0)
 	decreases
 	Clear() (err error)
 
@@ -98,7 +100,7 @@ type SerializeBuffer interface {
 }
 
 ensures res != nil && res.Mem()
-ensures sl.Bytes(res.UBuf(), 0, len(res.UBuf()))
+ensures sl.Bytes(res.UBuf(), int(0), len(res.UBuf()))
 decreases
 func NewSerializeBuffer() (res SerializeBuffer)
 
@@ -107,6 +109,7 @@ requires  false
 requires  len(layerBufs) == len(layers)
 preserves w.Mem()
 preserves acc(layerBufs, R20)
-preserves forall i int :: {&layers[i]} 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem(layerBufs[i])
+preserves forall i int :: {&layers[i]} int(0) <= i && i < len(layers) ==>
+	acc(&layers[i]) && layers[i].Mem(layerBufs[i])
 decreases
 func SerializeLayers(w SerializeBuffer, opts SerializeOptions, ghost layerBufs []([]byte), layers ...SerializableLayer) error

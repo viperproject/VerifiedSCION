@@ -48,6 +48,10 @@ lemma And3fAtMost64(b: bv8)
 		0 <= res < 64
 {}
 
+lemma ShiftRight48Bits(v: bv64)
+	ensures 0 <= (v >> 48) <= 65535
+{}
+
 datatype MetaHdr = MetaHdr(
 	CurrINF: bv8,
 	CurrHF:  bv8,

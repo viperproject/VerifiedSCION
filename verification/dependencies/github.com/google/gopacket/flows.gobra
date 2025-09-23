@@ -29,7 +29,8 @@ type Flow struct {
 	src, dst   [MaxEndpointSize]byte
 }
 
-preserves acc(sl.Bytes(src, 0, len(src)), 1/10000) && acc(sl.Bytes(dst, 0, len(dst)), 1/10000)
+preserves acc(sl.Bytes(src, int(0), len(src)), 1/10000) &&
+	acc(sl.Bytes(dst, int(0), len(dst)), 1/10000)
 requires len(src) <= MaxEndpointSize && len(dst) <= MaxEndpointSize
 ensures f.slen == len(src)
 ensures f.dlen == len(dst)
