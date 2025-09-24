@@ -52,7 +52,7 @@ func init() {
 // Type indicates the type of the path contained in the SCION header.
 type Type uint8
 
-// @ requires 0 <= t && t < maxPathType
+// @ requires 0 <= int(t) && int(t) < maxPathType
 // @ preserves acc(PkgMem(), R20)
 // @ decreases
 func (t Type) String() string {
@@ -75,9 +75,9 @@ type Path interface {
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
-	//@ preserves sl.Bytes(ub, 0, len(ub))
+	//@ preserves sl.Bytes(ub, int(0), len(ub))
 	//@ preserves acc(Mem(ub), R1)
-	//@ preserves sl.Bytes(b, 0, len(b))
+	//@ preserves sl.Bytes(b, int(0), len(b))
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error)
@@ -85,7 +85,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
-	//@ preserves acc(sl.Bytes(b, 0, len(b)), R42)
+	//@ preserves acc(sl.Bytes(b, int(0), len(b)), R42)
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err == nil ==> IsValidResultOfDecoding(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
@@ -95,13 +95,13 @@ type Path interface {
 	//@ ghost
 	//@ pure
 	//@ requires Mem(b)
-	//@ requires sl.Bytes(b, 0, len(b))
+	//@ requires sl.Bytes(b, int(0), len(b))
 	//@ decreases
 	//@ IsValidResultOfDecoding(b []byte) bool
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires  Mem(ub)
-	//@ preserves sl.Bytes(ub, 0, len(ub))
+	//@ preserves sl.Bytes(ub, int(0), len(ub))
 	//@ ensures   e == nil ==> p != nil
 	//@ ensures   e == nil ==> p.Mem(ub)
 	//@ ensures   e != nil ==> e.ErrorMem()
@@ -110,7 +110,7 @@ type Path interface {
 	//@ ghost
 	//@ pure
 	//@ requires Mem(ub)
-	//@ ensures  0 <= l
+	//@ ensures  int(0) <= l
 	//@ decreases
 	//@ LenSpec(ghost ub []byte) (l int)
 
@@ -148,7 +148,7 @@ type Metadata struct {
 
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
-// @ requires 0 <= pathMeta.Type && pathMeta.Type < maxPathType
+// @ requires 0 <= pathMeta.Type && int(pathMeta.Type) < maxPathType
 // @ requires PkgMem()
 // @ requires RegisteredTypes().DoesNotContain(int64(pathMeta.Type))
 // @ requires pathMeta.New implements NewPathSpec
@@ -186,7 +186,7 @@ func StrictDecoding(strict bool) {
 }
 
 // NewPath returns a new path object of pathType.
-// @ requires 0 <= pathType && pathType < maxPathType
+// @ requires 0 <= int(pathType) && int(pathType) < maxPathType
 // @ requires acc(PkgMem(), _)
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ ensures  e == nil ==> p != nil && p.NonInitMem()
@@ -221,8 +221,8 @@ type rawPath struct {
 }
 
 // @ preserves acc(p.Mem(ub), R10)
-// @ preserves acc(sl.Bytes(ub, 0, len(ub)), R10)
-// @ preserves sl.Bytes(b, 0, len(b))
+// @ preserves acc(sl.Bytes(ub, int(0), len(ub)), R10)
+// @ preserves sl.Bytes(b, int(0), len(b))
 // @ ensures   e == nil
 // @ decreases
 func (p *rawPath) SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error) {
