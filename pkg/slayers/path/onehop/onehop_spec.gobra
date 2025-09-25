@@ -47,7 +47,6 @@ pure func (o *Path) GetInfo(ghost ub []byte) path.InfoField {
 	return unfolding o.Mem(ub) in o.Info
 }
 
-// TODO: really unsure whether this is the best way to handle this
 ghost
 requires o.Mem(ub)
 decreases
@@ -69,6 +68,8 @@ requires o.Mem(ub)
 decreases
 pure func (o *Path) IsLow(ub []byte) bool
 
+// "Reveal the body" of `o.IsLow` (necessary bc. we can't implement `o.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
 ghost
 trusted
 requires p > 0

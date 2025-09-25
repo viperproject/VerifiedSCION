@@ -41,13 +41,15 @@ pure func (h *HopField) GetIngressRouterAlert() bool {
 	return unfolding h.Mem() in h.IngressRouterAlert
 }
 
-// TODO: add TODO comment
+// TODO: Once Gobra issue #846 is resolved, implement this.
 ghost
 trusted
 requires h.Mem()
 decreases
 pure func (h *HopField) IsLow() bool
 
+// "Reveal the body" of `h.IsLow` (necessary bc. we can't implement `h.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
 ghost
 trusted
 requires p > 0

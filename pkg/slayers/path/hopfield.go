@@ -110,7 +110,6 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.HopLen.
 // @ requires  len(b) >= HopLen
-// TODO: is this part of some interface?
 // @ requires  acc(h.Mem(), R10) && h.IsLow()
 // @ preserves sl.Bytes(b, 0, HopLen)
 // @ ensures   acc(h.Mem(), R10)
