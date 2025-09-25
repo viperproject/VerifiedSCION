@@ -237,7 +237,7 @@ func (s *Base) Len() (r int) {
 // @ ensures t == PathType
 // @ decreases
 func (s *Base) Type() (t path.Type) {
-	return PathType
+	return path.Type(PathType)
 }
 
 // MetaHdr is the PathMetaHdr of a SCION (data-plane) path type.

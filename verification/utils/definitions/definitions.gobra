@@ -113,3 +113,5 @@ func AssumeForIO(b bool)
 
 const MIN_INT int = -9223372036854775808
 const MAX_INT int = 9223372036854775807
+
+const MAX_UINT8 uint8 = 255

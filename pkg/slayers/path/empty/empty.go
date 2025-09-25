@@ -85,12 +85,12 @@ func (o Path) Reverse( /*@ ub []byte @*/ ) (p path.Path, e error) {
 // @ ensures r == o.LenSpec(ub)
 // @ decreases
 func (o Path) Len( /*@ ub []byte @*/ ) (r int) {
-	return PathLen
+	return int(PathLen)
 }
 
 // @ pure
 // @ ensures r == PathType
 // @ decreases
 func (o Path) Type( /*@ ub []byte @*/ ) (r path.Type) {
-	return PathType
+	return path.Type(PathType)
 }

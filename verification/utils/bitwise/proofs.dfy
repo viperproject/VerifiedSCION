@@ -12,6 +12,7 @@ lemma ByteValue(b: bv8)
 	ensures 0 <= (b as int) && (b as int) < 256
 {}
 
+
 lemma BitAnd3_32bit(b: bv32)
 	ensures var res := b & 0x3;
 		0 <= res && res <= 3  &&

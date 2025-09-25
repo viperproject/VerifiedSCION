@@ -436,7 +436,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ oldInfo := path.BytesToAbsInfoField(ubuf[infOffset : infOffset+path.InfoLen], 0)
 	//@ newInfo := info.ToAbsInfoField()
 	//@ hfIdxSeg := currHfIdx-prevSegLen
-	//@ hopfields := ubuf[offset:offset + segLen*path.HopLen]
+	//@ hopfields := ubuf[int(offset):int(offset + segLen*path.HopLen)]
 	//@ ghost if idx == currInfIdx {
 	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
 	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
@@ -591,7 +591,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ 	EstablishBytesStoreCurrSeg(currHopfields, hfIdxSeg, segLen, inf)
 	//@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
 	//@ } else {
-	//@ 	sl.SplitRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
+	//@ 	sl.SplitRange_Bytes(ubuf[int(offset):int(offset+segLen*path.HopLen)], hfIdxSeg*path.HopLen,
 	//@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)
 	//@ }
 	//@ sl.SplitRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, HalfPerm)
@@ -611,7 +611,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ 	assert s.absPkt(ubuf).CurrSeg.Future ==
 	//@ 		seq[io.HF]{tmpHopField.Abs()} ++ old(s.absPkt(ubuf).CurrSeg.Future[1:])
 	//@ } else {
-	//@ 	sl.CombineRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
+	//@ 	sl.CombineRange_Bytes(ubuf[int(offset):int(offset+segLen*path.HopLen)], hfIdxSeg*path.HopLen,
 	//@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)
 	//@ }
 	//@ CombineBytesFromInfoFields(ubuf[:hopfieldOffset], s.NumINF, segLens, R40)
