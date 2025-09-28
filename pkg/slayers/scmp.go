@@ -69,7 +69,7 @@ type SCMP struct {
 // @ pure
 // @ decreases
 func (s *SCMP) LayerType() gopacket.LayerType {
-	return LayerTypeSCMP
+	return gopacket.LayerType(LayerTypeSCMP)
 }
 
 // CanDecode returns the set of layer types that this DecodingLayer can decode.
@@ -78,7 +78,7 @@ func (s *SCMP) LayerType() gopacket.LayerType {
 // @ decreases
 func (s *SCMP) CanDecode() (res gopacket.LayerClass) {
 	// @ LayerClassSCMPIsLayerType()
-	return LayerClassSCMP
+	return gopacket.LayerClass(LayerClassSCMP)
 }
 
 // NextLayerType use the typecode to select the right next decoder.
@@ -111,7 +111,7 @@ func (s *SCMP) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 // @ requires  b != nil
 // @ requires  s.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+// @ preserves sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 // @ ensures   err == nil ==> s.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -122,14 +122,14 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		return err
 	}
 	// @ unfold s.Mem(ubufMem)
-	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ unfold sl.Bytes(underlyingBufRes, 0, 2)
-	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 2 ==> &bytes[i] == &underlyingBufRes[i]
-	// @ fold sl.Bytes(bytes, 0, 2)
+	// @ sl.SplitByIndex_Bytes(underlyingBufRes, int(0), len(underlyingBufRes), int(2), writePerm)
+	// @ unfold sl.Bytes(underlyingBufRes, int(0), int(2))
+	// @ assert forall i int :: { &bytes[i] } int(0) <= i && i < int(2) ==> &bytes[i] == &underlyingBufRes[i]
+	// @ fold sl.Bytes(bytes, int(0), int(2))
 	s.TypeCode.SerializeTo(bytes)
-	// @ unfold sl.Bytes(bytes, 0, 2)
-	// @ fold sl.Bytes(underlyingBufRes, 0, 2)
-	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	// @ unfold sl.Bytes(bytes, int(0), int(2))
+	// @ fold sl.Bytes(underlyingBufRes, int(0), int(2))
+	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, int(0), len(underlyingBufRes), int(2), writePerm)
 
 	if opts.ComputeChecksums {
 		if s.scn == nil {
@@ -137,13 +137,13 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 			return serrors.New("can not calculate checksum without SCION header")
 		}
 		// zero out checksum bytes
-		// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-		// @ unfold sl.Bytes(underlyingBufRes, 0, 4)
+		// @ sl.SplitByIndex_Bytes(underlyingBufRes, int(0), len(underlyingBufRes), int(4), writePerm)
+		// @ unfold sl.Bytes(underlyingBufRes, int(0), int(4))
 		// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
 		bytes[2] = 0
 		bytes[3] = 0
-		// @ fold sl.Bytes(underlyingBufRes, 0, 4)
-		// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
+		// @ fold sl.Bytes(underlyingBufRes, int(0), int(4))
+		// @ sl.CombineAtIndex_Bytes(underlyingBufRes, int(0), len(underlyingBufRes), int(4), writePerm)
 		verScionTmp := b.Bytes()
 		// @ unfold s.scn.ChecksumMem()
 		s.Checksum, err = s.scn.computeChecksum(verScionTmp, uint8(L4SCMP))
@@ -154,20 +154,22 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		}
 
 	}
-	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-	// @ unfold sl.Bytes(underlyingBufRes, 0, 4)
-	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
-	// @ assert forall i int :: { &bytes[2:][i] } 0 <= i && i < 2 ==> &bytes[2:][i] == &bytes[i + 2]
+	// @ sl.SplitByIndex_Bytes(underlyingBufRes, int(0), len(underlyingBufRes), int(4), writePerm)
+	// @ unfold sl.Bytes(underlyingBufRes, int(0), int(4))
+	// @ assert forall i int :: { &bytes[i] } int(0) <= i && i < int(4) ==>
+	// @ 	&bytes[i] == &underlyingBufRes[i]
+	// @ assert forall i int :: { &bytes[int(2):][i] } int(0) <= i && i < int(2) ==>
+	// @ 	&bytes[int(2):][i] == &bytes[i + int(2)]
 	binary.BigEndian.PutUint16(bytes[2:], s.Checksum)
-	// @ fold sl.Bytes(underlyingBufRes, 0, 4)
-	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
+	// @ fold sl.Bytes(underlyingBufRes, int(0), int(4))
+	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, int(0), len(underlyingBufRes), int(4), writePerm)
 	// @ fold s.Mem(ubufMem)
 	return nil
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
-// @ preserves acc(sl.Bytes(data, 0, len(data)), R40)
+// @ preserves acc(sl.Bytes(data, int(0), len(data)), R40)
 // @ requires  s.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
@@ -229,7 +231,7 @@ func (s *SCMP) SetNetworkLayerForChecksum(scn *SCION) {
 }
 
 // @ requires  pb != nil
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ preserves pb.Mem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases

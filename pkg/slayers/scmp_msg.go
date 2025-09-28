@@ -64,10 +64,10 @@ func (i *SCMPExternalInterfaceDown) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
-// @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
+// @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, int(0), len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
@@ -110,7 +110,7 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+// @ preserves sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -143,7 +143,7 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 
 // @ requires pb != nil
 // @ preserves pb.Mem()
-// @ requires sl.Bytes(data, 0, len(data))
+// @ requires sl.Bytes(data, int(0), len(data))
 // @ ensures res != nil ==> res.ErrorMem()
 // @ decreases
 func decodeSCMPExternalInterfaceDown(data []byte, pb gopacket.PacketBuilder) (res error) {
@@ -189,19 +189,19 @@ type SCMPInternalConnectivityDown struct {
 // @ decreases
 // @ pure
 func (i *SCMPInternalConnectivityDown) LayerType() gopacket.LayerType {
-	return LayerTypeSCMPInternalConnectivityDown
+	return gopacket.LayerType(LayerTypeSCMPInternalConnectivityDown)
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
 // @ decreases
 // @ pure
 func (*SCMPInternalConnectivityDown) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
+	return gopacket.LayerType(gopacket.LayerTypePayload)
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ requires  i.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
@@ -255,7 +255,7 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+// @ preserves sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -296,7 +296,7 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 
 // @ requires pb != nil
 // @ preserves pb.Mem()
-// @ requires sl.Bytes(data, 0, len(data))
+// @ requires sl.Bytes(data, int(0), len(data))
 // @ ensures err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPInternalConnectivityDown(data []byte, pb gopacket.PacketBuilder) (err error) {
@@ -329,20 +329,20 @@ type SCMPEcho struct {
 // @ decreases
 // @ pure
 func (i *SCMPEcho) LayerType() gopacket.LayerType {
-	return LayerTypeSCMPEcho
+	return gopacket.LayerType(LayerTypeSCMPEcho)
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
 // @ decreases
 // @ pure
 func (*SCMPEcho) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
+	return gopacket.LayerType(gopacket.LayerTypePayload)
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
@@ -357,12 +357,12 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ unfold i.NonInitMem()
 	// @ defer fold i.Mem(data)
 	offset := 0
-	// @ requires offset == 0
+	// @ requires offset == int(0)
 	// @ preserves acc(&i.Identifier)
-	// @ requires len(data) >= 4
-	// @ requires sl.Bytes(data, 0, len(data))
-	// @ ensures sl.Bytes(data, 2, len(data))
-	// @ ensures sl.Bytes(data, 0, 2)
+	// @ requires len(data) >= int(4)
+	// @ requires sl.Bytes(data, int(0), len(data))
+	// @ ensures sl.Bytes(data, int(2), len(data))
+	// @ ensures sl.Bytes(data, int(0), int(2))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
@@ -371,12 +371,12 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ fold sl.Bytes(data, 0, 2)
 	// @ )
 	offset += 2
-	// @ requires offset == 2
+	// @ requires offset == int(2)
 	// @ preserves acc(&i.SeqNumber)
-	// @ requires len(data) >= 4
-	// @ requires sl.Bytes(data, 2, len(data))
-	// @ ensures sl.Bytes(data, 2, 4)
-	// @ ensures sl.Bytes(data, 4, len(data))
+	// @ requires len(data) >= int(4)
+	// @ requires sl.Bytes(data, int(2), len(data))
+	// @ ensures sl.Bytes(data, int(2), int(4))
+	// @ ensures sl.Bytes(data, int(4), len(data))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
@@ -384,21 +384,21 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ assert &data[offset : offset+2][0] == &data[offset]
 	// @ assert &data[offset : offset+2][1] == &data[offset+1]
 	i.SeqNumber = binary.BigEndian.Uint16(data[offset : offset+2])
-	// @ fold sl.Bytes(data, 2, 4)
+	// @ fold sl.Bytes(data, int(2), int(4))
 	// @ )
 	offset += 2
-	// @ requires offset == 4
-	// @ requires len(data) >= 4
+	// @ requires offset == int(4)
+	// @ requires len(data) >= int(4)
 	// @ requires acc(&i.BaseLayer)
-	// @ requires sl.Bytes(data, 0, 2)
-	// @ requires sl.Bytes(data, 2, 4)
-	// @ requires sl.Bytes(data, 4, len(data))
-	// @ ensures  acc(i.BaseLayer.Mem(data, 4))
+	// @ requires sl.Bytes(data, int(0), int(2))
+	// @ requires sl.Bytes(data, int(2), int(4))
+	// @ requires sl.Bytes(data, int(4), len(data))
+	// @ ensures  acc(i.BaseLayer.Mem(data, int(4)))
 	// @ decreases
 	// @ outline (
-	// @ sl.CombineAtIndex_Bytes(data, 0, 4, 2, writePerm)
-	// @ unfold sl.Bytes(data, 0, 4)
-	// @ unfold sl.Bytes(data, 4, len(data))
+	// @ sl.CombineAtIndex_Bytes(data, int(0), int(4), int(2), writePerm)
+	// @ unfold sl.Bytes(data, int(0), int(4))
+	// @ unfold sl.Bytes(data, int(4), len(data))
 	// @ sl.AssertSliceOverlap(data, offset, len(data))
 	i.BaseLayer = BaseLayer{
 		Contents: data[:offset],
@@ -408,9 +408,9 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ 	&data[offset+l] == &i.Payload[l]
 	// @ assert forall l int :: { &i.Payload[l] } 0 <= l && l < len(i.Payload) ==>
 	// @ 	acc(&i.Payload[l])
-	// @ fold sl.Bytes(i.Contents, 0, len(i.Contents))
-	// @ fold sl.Bytes(i.Payload, 0, len(i.Payload))
-	// @ fold i.BaseLayer.Mem(data, 4)
+	// @ fold sl.Bytes(i.Contents, int(0), len(i.Contents))
+	// @ fold sl.Bytes(i.Payload, int(0), len(i.Payload))
+	// @ fold i.BaseLayer.Mem(data, int(4))
 	// @ )
 	return nil
 }
@@ -420,7 +420,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+// @ preserves sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -453,7 +453,7 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 
 // @ requires pb != nil
 // @ preserves pb.Mem()
-// @ requires sl.Bytes(data, 0, len(data))
+// @ requires sl.Bytes(data, int(0), len(data))
 // @ ensures err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPEcho(data []byte, pb gopacket.PacketBuilder) (err error) {
@@ -495,7 +495,7 @@ func (*SCMPParameterProblem) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
@@ -550,7 +550,7 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+// @ preserves sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -582,7 +582,7 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 
 // @ requires  pb != nil
 // @ preserves pb.Mem()
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPParameterProblem(data []byte, pb gopacket.PacketBuilder) (err error) {
@@ -638,7 +638,7 @@ func (*SCMPTraceroute) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ preserves acc(sl.Bytes(data, 0, len(data)), R40)
+// @ preserves acc(sl.Bytes(data, int(0), len(data)), R40)
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
 // @ ensures   res != nil ==> i.NonInitMem()
@@ -730,7 +730,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+// @ preserves sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -782,7 +782,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 
 // @ requires  pb != nil
 // @ preserves pb.Mem()
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPTraceroute(data []byte, pb gopacket.PacketBuilder) (err error) {
@@ -813,20 +813,20 @@ type SCMPDestinationUnreachable struct {
 // @ decreases
 // @ pure
 func (i *SCMPDestinationUnreachable) LayerType() gopacket.LayerType {
-	return LayerTypeSCMPDestinationUnreachable
+	return gopacket.LayerType(LayerTypeSCMPDestinationUnreachable)
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
 // @ decreases
 // @ pure
 func (*SCMPDestinationUnreachable) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
+	return gopacket.LayerType(gopacket.LayerTypePayload)
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
@@ -861,7 +861,7 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+// @ preserves sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -882,7 +882,7 @@ func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opt
 }
 
 // @ requires  pb != nil
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ preserves pb.Mem()
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -913,19 +913,19 @@ type SCMPPacketTooBig struct {
 // @ decreases
 // @ pure
 func (i *SCMPPacketTooBig) LayerType() gopacket.LayerType {
-	return LayerTypeSCMPPacketTooBig
+	return gopacket.LayerType(LayerTypeSCMPPacketTooBig)
 }
 
 // NextLayerType returns the layer type contained by this DecodingLayer.
 // @ decreases
 // @ pure
 func (*SCMPPacketTooBig) NextLayerType() gopacket.LayerType {
-	return gopacket.LayerTypePayload
+	return gopacket.LayerType(gopacket.LayerTypePayload)
 }
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ requires  i.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
@@ -981,7 +981,7 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+// @ preserves sl.Bytes(b.UBuf(), int(0), len(b.UBuf()))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -1013,7 +1013,7 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 
 // @ requires  pb != nil
 // @ preserves pb.Mem()
-// @ requires  sl.Bytes(data, 0, len(data))
+// @ requires  sl.Bytes(data, int(0), len(data))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPPacketTooBig(data []byte, pb gopacket.PacketBuilder) (err error) {

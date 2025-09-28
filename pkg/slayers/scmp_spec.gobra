@@ -34,7 +34,7 @@ pred (s *SCMP) NonInitMem() {
 pred (s *SCMP) Mem(ub []byte) {
 	acc(&s.TypeCode) &&
 	acc(&s.Checksum) &&
-	s.BaseLayer.Mem(ub, 4) &&
+	s.BaseLayer.Mem(ub, int(4)) &&
 	acc(&s.scn) &&
 	(s.scn != nil ==> s.scn.ChecksumMem())
 }
@@ -45,7 +45,7 @@ ensures  s.NonInitMem()
 decreases
 func (s *SCMP) DowngradePerm(ghost ub []byte) {
 	unfold s.Mem(ub)
-	unfold s.BaseLayer.Mem(ub, 4)
+	unfold s.BaseLayer.Mem(ub, int(4))
 	fold s.NonInitMem()
 }
 
@@ -56,7 +56,7 @@ func (b *SCMP) LayerContents() (res []byte) {
 }
 
 preserves acc(b.Mem(ub), R20)
-ensures   0 <= start && start <= end && end <= len(ub)
+ensures   int(0) <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
 ensures   res === ub[start:end]
 decreases
