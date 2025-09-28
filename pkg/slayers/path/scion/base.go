@@ -137,9 +137,7 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		if s.PathMeta.SegLen[i] > 0 && s.NumINF == 0 {
 			s.NumINF = i + 1
 		}
-		// (VerifiedSCION) Cannot assert bounds of uint:
-		// https://github.com/viperproject/gobra/issues/192
-		//@ assume int(s.PathMeta.SegLen[i]) >= 0
+		//@ assert 0 <= int(s.PathMeta.SegLen[i])
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
 	// We must check the validity of NumHops. It is possible to fit more than 64 hops in
