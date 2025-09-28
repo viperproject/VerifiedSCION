@@ -24,7 +24,7 @@ import (
 )
 
 pred (h *HopField) Mem() {
-	acc(h) && h.ConsIngress >= uint16(0) && h.ConsEgress >= uint16(0)
+	acc(h)
 }
 
 

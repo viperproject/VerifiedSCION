@@ -36,7 +36,7 @@ pred (b *Base) Mem() {
 	// This requires a bit of refactoring to pass around the
 	// knowledge that WeaklyValid holds between methods.
 	int(0) <= b.NumINF  && b.NumINF <= int(MaxINFs)  &&
-	int(0) <= b.NumHops && b.NumHops <= MaxHops &&
+	int(0) <= b.NumHops && b.NumHops <= MaxHops      &&
 	(int(0) < b.NumINF ==> int(0) < b.NumHops)
 }
 
@@ -188,7 +188,7 @@ decreases
 func (s Base) NotIsXoverAfterIncPath() {}
 
 ghost
-requires b.WeaklyValid()
+// requires b.WeaklyValid()
 requires b.ValidCurrFieldsSpec()
 decreases
 pure func (b Base) ReverseSpec() Base {
@@ -200,7 +200,7 @@ pure func (b Base) ReverseSpec() Base {
 }
 
 ghost
-requires b.WeaklyValid()
+// requires b.WeaklyValid()
 requires b.ValidCurrFieldsSpec()
 decreases
 pure func (b Base) ReverseMetaHdrSpec() MetaHdr {

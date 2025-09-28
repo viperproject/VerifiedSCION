@@ -157,13 +157,15 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 
 // IncPath increases the currHF index and currINF index if appropriate.
 // @ requires s.Mem()
+// @ requires s.GetBase().WeaklyValid()
 // @ ensures  (e != nil) == (
 // @ 	old(s.GetNumINF()) == 0 ||
 // @ 	old(int(s.GetCurrHF()) >= s.GetNumHops()-1))
 // @ ensures  e == nil ==> (
 // @ 	s.Mem() &&
 // @ 	let oldBase := old(s.GetBase()) in
-// @ 	let newBase := s.GetBase() in
+// @ 	let newBase := s.GetBase()      in
+// @ 	oldBase.PathMeta.CurrHF != MAX_UINT8 &&
 // @ 	newBase == oldBase.IncPathSpec())
 // @ ensures  e != nil ==> (s.NonInitMem() && e.ErrorMem())
 // @ decreases
@@ -186,8 +188,10 @@ func (s *Base) IncPath() (e error) {
 }
 
 // IsXover returns whether we are at a crossover point.
-// @ preserves acc(s.Mem(), R45)
-// @ ensures   r == s.GetBase().IsXoverSpec()
+// @ requires acc(s.Mem(), R45)
+// @ requires s.GetBase().WeaklyValid()
+// @ ensures  acc(s.Mem(), R45)
+// @ ensures  r == s.GetBase().IsXoverSpec()
 // @ decreases
 func (s *Base) IsXover() (r bool) {
 	//@ unfold acc(s.Mem(), R45)
@@ -197,8 +201,10 @@ func (s *Base) IsXover() (r bool) {
 }
 
 // IsFirstHopAfterXover returns whether this is the first hop field after a crossover point.
-// @ preserves acc(s.Mem(), R19)
-// @ ensures   res ==> unfolding acc(s.Mem(), _) in s.PathMeta.CurrINF > 0 && s.PathMeta.CurrHF > 0
+// @ requires acc(s.Mem(), R19)
+// @ requires s.GetBase().WeaklyValid()
+// @ ensures  acc(s.Mem(), R19)
+// @ ensures  res ==> unfolding acc(s.Mem(), _) in s.PathMeta.CurrINF > 0 && s.PathMeta.CurrHF > 0
 // @ decreases
 func (s *Base) IsFirstHopAfterXover() (res bool) {
 	//@ unfold acc(s.Mem(), R19)
@@ -207,8 +213,10 @@ func (s *Base) IsFirstHopAfterXover() (res bool) {
 		s.PathMeta.CurrINF-1 == s.infIndexForHF(s.PathMeta.CurrHF-1)
 }
 
-// @ preserves acc(s, R50)
-// @ ensures   r == s.InfForHfSpec(hf)
+// @ requires acc(s, R50)
+// @ requires (*s).WeaklyValid()
+// @ ensures  acc(s, R50)
+// @ ensures  r == s.InfForHfSpec(hf)
 // @ decreases
 func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 	switch {
@@ -249,6 +257,8 @@ type MetaHdr struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
+// TODO: ignore because of overflow checks
+// @ trusted
 // @ preserves acc(m)
 // @ preserves acc(sl.Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)

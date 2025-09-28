@@ -2531,9 +2531,7 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	// @ ghost ubPath := ub[startP:endP]
 	// @ sl.SplitRange_Bytes(ub, startP, endP, R5)
 	// @ ghost defer sl.CombineRange_Bytes(ub, startP, endP, R5)
-	// (VerifiedSCION) Gobra cannot prove this property yet, even though it follows
-	// from the type system
-	// @ assume 0 <= p.path.GetCurrHF(ubPath) // TODO: drop assumptions like this
+	// @ assert 0 <= p.path.GetCurrHF(ubPath)
 	if p.path.IsFirstHop( /*@ ubPath @*/ ) || p.ingressID != 0 {
 		// not a transit packet, nothing to check
 		// @ fold p.d.validResult(processResult{}, false)
@@ -2775,8 +2773,7 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		// @ reveal p.LastHopLen(ub)
 		// @ assert path.AbsUInfoFromUint16(p.infoField.SegID) ==
 		// @ 	old(io.upd_uinfo(path.AbsUInfoFromUint16(p.infoField.SegID), p.hopField.Abs()))
-		// (VerifiedSCION) the following property is guaranteed by the type system, but Gobra cannot infer it yet
-		// @ assume 0 <= p.path.GetCurrINF(ubPath)
+		// @ assert 0 <= p.path.GetCurrINF(ubPath)
 		// @ sl.SplitRange_Bytes(ub, start, end, HalfPerm)
 		// @ sl.SplitByIndex_Bytes(ub, 0, start, slayers.CmnHdrLen, R54)
 		// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
@@ -3067,7 +3064,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 		p.infoField.UpdateSegID(p.hopField.Mac /*@, p.hopField.Abs() @*/)
 		// @ assert path.AbsUInfoFromUint16(p.infoField.SegID) ==
 		// @ 	old(io.upd_uinfo(path.AbsUInfoFromUint16(p.infoField.SegID), p.hopField.Abs()))
-		// @ assume 0 <= p.path.GetCurrINF(ubPath)
+		// @ assert 0 <= p.path.GetCurrINF(ubPath)
 		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
 			// TODO parameter problem invalid path
 			// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
@@ -3457,8 +3454,7 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	}
 	*alert = false
 	// @ unfold acc(p.scionLayer.Mem(ub), R20)
-	// (VerifiedSCION) the following is guaranteed by the type system, but Gobra cannot prove it yet
-	// @ assume 0 <= p.path.GetCurrHF(ubPath)
+	// @ assert 0 <= p.path.GetCurrHF(ubPath)
 	// @ reveal p.LastHopLen(ub)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ sl.SplitByIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
@@ -3574,9 +3570,7 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	}
 	*alert = false
 	// @ unfold acc(p.scionLayer.Mem(ub), R20)
-	// (VerifiedSCION) the following is guaranteed by the type system,
-	// but Gobra cannot prove it yet
-	// @ assume 0 <= p.path.GetCurrHF(ubPath)
+	// @ assert 0 <= p.path.GetCurrHF(ubPath)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ sl.SplitByIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
 	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
@@ -4229,9 +4223,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 		ConsIngress: p.ingressID,
 		ExpTime:/*@ unfolding acc(ohp.FirstHop.Mem(), R55) in @*/ ohp.FirstHop.ExpTime,
 	}
-	// (VerifiedSCION) the following property follows from the type system, but
-	// Gobra cannot prove it yet.
-	// @ assume 0 <= p.ingressID
+	// @ assert 0 <= p.ingressID
 	// XXX(roosd): Here we leak the buffer into the SCION packet header.
 	// This is okay because we do not operate on the buffer or the packet
 	// for the rest of processing.
@@ -4915,9 +4907,7 @@ func initForwardingMetrics(metrics *Metrics, labels prometheus.Labels) (res forw
 // @ decreases
 func interfaceToMetricLabels(id uint16, localIA addr.IA,
 	neighbors map[uint16]addr.IA) (res prometheus.Labels) {
-	// (VerifiedSCION) Gobra cannot prove this, even though it is obvious from the
-	// type of id.
-	// @ assume 0 <= id
+	// @ assert 0 <= id
 
 	if id == 0 {
 		return prometheus.Labels{

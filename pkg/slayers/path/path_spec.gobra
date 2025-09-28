@@ -55,6 +55,13 @@ pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
 		len(p.raw)
 }
 
+ghost
+requires p.Mem(b)
+decreases
+pure func (p *rawPath) MayReversePath(b []byte) bool {
+	return true
+}
+
 (*rawPath) implements Path
 
 /** End of rawPath spec **/

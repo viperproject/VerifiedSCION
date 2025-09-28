@@ -28,7 +28,7 @@ ghost
 requires  0 <= start && start <= headerOffset
 requires  path.InfoFieldOffset(currInfIdx, headerOffset) + integer(path.InfoLen) <= integer(offset)
 requires  0 < segLen
-requires  offset + path.HopLen * segLen <= length
+requires  integer(offset) + integer(path.HopLen) * integer(segLen) <= integer(length)
 requires  length <= len(raw)
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  0 <= currInfIdx && currInfIdx < 3
@@ -81,7 +81,7 @@ requires 0 <= start && start <= offset
 requires 0 < segLen
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires length <= len(raw)
-requires offset + path.HopLen * segLen <= length
+requires integer(offset) + integer(path.HopLen) * integer(segLen) <= integer(length)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R52)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R52)
 ensures  segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ==
@@ -105,7 +105,7 @@ ghost
 requires  R53 < p
 requires  0 <= start && start <= offset
 requires  0 <= currHfIdx && currHfIdx <= segLen
-requires  offset + path.HopLen * segLen <= length
+requires  integer(offset) + integer(path.HopLen) * integer(segLen) <= integer(length)
 requires  length <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), p)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), p)
@@ -126,7 +126,7 @@ ghost
 requires  0 <= start && start <= headerOffset
 requires  segs.Valid()
 requires  0 <= length && length <= len(raw)
-requires  PktLen(segs, headerOffset) <= length
+requires  PktLen(segs, headerOffset) <= integer(length)
 requires  1 <= currInfIdx && currInfIdx < 4
 preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
@@ -155,7 +155,7 @@ ghost
 requires  0 <= start && start <= headerOffset
 requires  segs.Valid()
 requires  0 <= length && length <= len(raw)
-requires  PktLen(segs, headerOffset) <= length
+requires  PktLen(segs, headerOffset) <= integer(length)
 requires  -1 <= currInfIdx && currInfIdx < 2
 preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
@@ -184,7 +184,7 @@ requires  0 <= start && start <= headerOffset
 requires  segs.Valid()
 requires  2 <= currInfIdx && currInfIdx < 5
 requires  0 <= length && length <= len(raw)
-requires  PktLen(segs, headerOffset) <= length
+requires  PktLen(segs, headerOffset) <= integer(length)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
 ensures   MidSeg(raw, currInfIdx, segs, headerOffset) ==

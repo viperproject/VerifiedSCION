@@ -31,9 +31,10 @@ pred (s *Raw) NonInitMem() {
 }
 
 pred (s *Raw) Mem(buf []byte) {
-	s.Base.Mem() &&
-	acc(&s.Raw) &&
-	len(s.Raw) <= len(buf) &&
+	s.Base.Mem()               &&
+	// s.Base.WeaklyValid()  &&
+	acc(&s.Raw)                &&
+	len(s.Raw) <= len(buf)     &&
 	s.Raw === buf[:len(s.Raw)] &&
 	len(s.Raw) == s.Base.Len()
 }
@@ -86,13 +87,22 @@ pure func (s *Raw) LenSpec(ghost ub []byte) int {
 		s.Base.Len()
 }
 
+ghost
+requires s.Mem(b)
+decreases
+pure func (s *Raw) MayReversePath(b []byte) bool {
+	return s.GetBase(b).ValidCurrFieldsSpec()
+}
+
 /**
   * This method is not part of the original SCION codebase.
   * Instead, `IsFirstHopAfterXover` was defined in `*Base` via embedded structs.
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(ub), R18)
+requires  acc(s.Mem(ub), R18)
+requires  s.GetBase(ub).WeaklyValid()
+ensures   acc(s.Mem(ub), R18)
 ensures   res ==> 0 < s.GetCurrINF(ub) && 0 < s.GetCurrHF(ub)
 decreases
 func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
@@ -107,8 +117,10 @@ func (s *Raw) IsFirstHopAfterXover(ghost ub []byte) (res bool) {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this wrapper method which acts as a wrapper.
   */
-preserves acc(s.Mem(ub), R9)
-ensures res == s.GetBase(ub).IsXoverSpec()
+requires acc(s.Mem(ub), R9)
+requires s.GetBase(ub).WeaklyValid()
+ensures  acc(s.Mem(ub), R9)
+ensures  res == s.GetBase(ub).IsXoverSpec()
 decreases
 func (s *Raw) IsXover(ghost ub []byte) (res bool) {
 	unfold acc(s.Mem(ub), R9)

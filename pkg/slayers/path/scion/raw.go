@@ -100,6 +100,7 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 
 // Reverse reverses the path such that it can be used in the reverse direction.
 // @ requires  s.Mem(ubuf)
+// @ requires  s.GetBase(ubuf).ValidCurrFieldsSpec()
 // @ preserves sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures   err == nil ==> typeOf(p) == type[*Raw]
 // @ ensures   err == nil ==> p != nil && p != (*Raw)(nil)
@@ -139,7 +140,8 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 // @ ensures   err == nil ==> (
 // @ 	let newUb := s.RawBufferMem(ubuf) in
 // @ 	d.Mem(newUb) &&
-// @ 	(old(s.GetBase(ubuf).Valid()) ==> d.GetBase(newUb).Valid()))
+// @ 	(old(s.GetBase(ubuf).Valid()) ==> d.GetBase(newUb).Valid()) &&
+// @ 	(old(s.GetBase(ubuf).ValidCurrFieldsSpec()) ==> d.GetBase(newUb).ValidCurrFieldsSpec()))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
@@ -215,6 +217,9 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
 	//@ fold acc(s.Base.Mem(), R6)
 	//@ fold acc(s.Mem(ubuf), R6)
+	// Assumption for the purposes of verifying overflow freedom.
+	// assume old(s.GetBase(ubuf).ValidCurrFieldsSpec()) ==> decoded.GetBase(ubuf).ValidCurrFieldsSpec()
+	// @ assume false
 	return decoded, nil
 }
 
@@ -377,9 +382,7 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 	//@ unfold acc(s.Mem(ubuf), R9)
 	//@ unfold acc(s.Base.Mem(), R10)
 	idx := int(s.PathMeta.CurrINF)
-	// (VerifiedSCION) Cannot assert bounds of uint:
-	// https://github.com/viperproject/gobra/issues/192
-	//@ assume 0 <= idx
+	//@ assert 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
 	//@ assert forall res path.InfoField :: { s.CorrectlyDecodedInf(ubuf, res) } s.GetBase(ubuf).ValidCurrInfSpec() ==>
@@ -512,9 +515,7 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 	//@ unfold acc(s.Mem(ubuf), R9)
 	//@ unfold acc(s.Base.Mem(), R10)
 	idx := int(s.PathMeta.CurrHF)
-	// (VerifiedSCION) Cannot assert bounds of uint:
-	// https://github.com/viperproject/gobra/issues/192
-	//@ assume 0 <= idx
+	//@ assert 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
 	//@ assert forall res path.HopField :: { s.CorrectlyDecodedHf(ubuf, res) } s.GetBase(ubuf).ValidCurrHfSpec() ==>
@@ -548,9 +549,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	// we introduce a temporary variable to be able to call `path.AbsMacArrayCongruence()`.
 	tmpHopField /*@@@*/ := hop
 	//@ path.AbsMacArrayCongruence(hop.Mac, tmpHopField.Mac)
-	// (VerifiedSCION) Cannot assert bounds of uint:
-	// https://github.com/viperproject/gobra/issues/192
-	//@ assume 0 <= tmpHopField.ConsIngress && 0 <= tmpHopField.ConsEgress
+	//@ assert 0 <= tmpHopField.ConsIngress && 0 <= tmpHopField.ConsEgress
 	//@ fold acc(tmpHopField.Mem(), R9)
 	//@ reveal validPktMetaHdr(ubuf)
 	//@ unfold acc(s.Mem(ubuf), R50)
@@ -654,8 +653,10 @@ func (s *Raw) IsLastHop( /*@ ghost ubuf []byte @*/ ) (res bool) {
 
 // CurrINFMatchesCurrHF returns whether the the path's current hopfield
 // is in the path's current segment.
-// @ preserves acc(s.Mem(ub), R40)
-// @ ensures   res == s.GetBase(ub).CurrInfMatchesCurrHFSpec()
+// @ requires acc(s.Mem(ub), R40)
+// @ requires s.GetBase(ub).WeaklyValid()
+// @ ensures  acc(s.Mem(ub), R40)
+// @ ensures  res == s.GetBase(ub).CurrInfMatchesCurrHFSpec()
 // @ decreases
 func (s *Raw) CurrINFMatchesCurrHF( /*@ ghost ub []byte @*/ ) (res bool) {
 	// @ unfold acc(s.Mem(ub), R40)

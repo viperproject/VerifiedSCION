@@ -62,9 +62,7 @@ func (o *tlvOption) length(fixLengths bool) (res int) {
 	if fixLengths {
 		return len(o.OptData) + 2
 	}
-	// (VerifiedSCION) gobra cannot prove this yet, even though it must hold
-	//                 as the type of o.OptDataLen is uint8
-	// @ assume 0 <= o.OptDataLen
+	// @ assert 0 <= o.OptDataLen
 	return int(o.OptDataLen) + 2
 }
 
@@ -118,8 +116,7 @@ func decodeTLVOption(data []byte) (res *tlvOption, err error) {
 		return nil, serrors.New("buffer too short", "expected", 2, "actual", len(data))
 	}
 	o.OptDataLen = data[1]
-	// (VerifiedSCION) Gobra cannot prove this even though it must hold, given the type of o.OptDataLen
-	// @ assume 0 <= o.OptDataLen
+	// @ assert 0 <= o.OptDataLen
 	o.ActualLength = int(o.OptDataLen) + 2
 	if len(data) < o.ActualLength {
 		return nil, serrors.New("buffer too short", "expected", o.ActualLength, "actual", len(data))
@@ -268,9 +265,7 @@ func decodeExtnBase(data []byte, df gopacket.DecodeFeedback) (res extnBase, resE
 		return extnBase{}, serrors.New(fmt.Sprintf("invalid extension header. "+
 			"Length %d less than specified length %d", len(data), e.ActualLen))
 	}
-	// (VerifiedSCION) assumed because of Gobra's limitations. Nonetheless, we should know from the the type
-	// of e.ExtLen that this property always holds.
-	// @ assume 0 <= e.ExtLen
+	// @ assert 0 <= e.ExtLen
 	// @ assert 0 <= e.ActualLen
 	e. /*@ BaseLayer. @*/ Contents = data[:e.ActualLen]
 	e. /*@ BaseLayer. @*/ Payload = data[e.ActualLen:]
