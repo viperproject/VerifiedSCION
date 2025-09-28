@@ -19,7 +19,7 @@ env:
   assumeInjectivityOnInhale: '1'
   parallelizeBranches: '0'
   checkConsistency: '1'
-  imageVersion: 'fix-overflow-checks'
+  imageVersion: 'v25.09-overflowchecks-alpha'
   mceMode: 'od'
   # disabled for now, as it is unclear which triggers to
   # provide to monoset in a way that it does not severely
