@@ -232,7 +232,7 @@ func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 // can be inferred from the common header field HdrLen. It may or may not be consistent.
 // @ pure
 // @ requires s.Mem()
-// @ ensures  r >= MetaLen
+// @ ensures  MetaLen <= r && r <= MAX_INT - 16
 // @ decreases
 func (s *Base) Len() (r int) {
 	return /*@ unfolding s.Mem() in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
