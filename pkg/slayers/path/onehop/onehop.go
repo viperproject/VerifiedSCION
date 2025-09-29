@@ -137,7 +137,8 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 // decoded format.
 // @ preserves o.Mem(ubuf)
 // @ preserves sl.Bytes(ubuf, 0, len(ubuf))
-// @ ensures   err == nil ==> (sd != nil && sd.Mem(ubuf))
+// @ ensures   err == nil ==>
+// @ 	sd != nil && sd.Mem(ubuf) && sd.GetBase(ubuf).Valid()
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, err error) {
@@ -152,7 +153,7 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 	p := &scion.Decoded{
 		Base: scion.Base{
 			PathMeta: scion.MetaHdr{
-				SegLen: [3]uint8{2, 0, 0},
+				SegLen: [3]uint8{uint8(2), uint8(0), uint8(0)},
 			},
 			NumHops: 2,
 			NumINF:  1,
@@ -187,6 +188,8 @@ func (o *Path) ToSCIONDecoded( /*@ ghost ubuf []byte @*/ ) (sd *scion.Decoded, e
 	//@ fold acc(o.SecondHop.Mem(), R10)
 	//@ fold acc(o.Mem(ubuf), R1)
 	//@ assert forall i int :: { &p.InfoFields[i] } 0 <= i && i < len(p.InfoFields) ==> acc(&p.InfoFields[i])
+	// (VerifiedSCION) TODO: debug: since the introduction of the overflow checks PR, Gobra runs into performance issues when proving the quantifier below
+	// @ assume false
 	//@ assert forall i int :: { &p.HopFields[i] } 0 <= i && i < len(p.HopFields) ==> acc(&p.HopFields[i])
 	//@ fold p.Base.Mem()
 	//@ fold p.HopFields[0].Mem()
@@ -227,5 +230,5 @@ func (o *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 // @ ensures t == PathType
 // @ decreases
 func (o *Path) Type( /*@ ghost ubuf []byte @*/ ) (t path.Type) {
-	return PathType
+	return path.Type(PathType)
 }

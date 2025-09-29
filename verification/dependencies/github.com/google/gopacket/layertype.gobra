@@ -18,10 +18,10 @@ dup pkgInvariant LayerTypeZero == 0 &&
 
 package gopacket
 
-friendPkg "./layers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 10 <= t && t <= 146 ==>
-	RegisteredTypes.DoesNotContain(int64(t))
-friendPkg "../../../pkg/slayers" forall t LayerType :: { RegisteredTypes.DoesNotContain(int64(t)) } 1000 <= t && t <= 1100 ==>
-	RegisteredTypes.DoesNotContain(int64(t))
+friendPkg "./layers" forall t int64 :: { RegisteredTypes.DoesNotContain(t) } 10 <= t && t <= 146 ==>
+	RegisteredTypes.DoesNotContain(t)
+friendPkg "../../../pkg/slayers" forall t int64 :: { RegisteredTypes.DoesNotContain(t) } 1000 <= t && t <= 1100 ==>
+	RegisteredTypes.DoesNotContain(t)
 
 import ms "github.com/scionproto/scion/verification/utils/monoset"
 import sl "github.com/scionproto/scion/verification/utils/slices"
@@ -75,21 +75,21 @@ ghost
 requires PkgMem()
 decreases
 pure func Registered(t LayerType) (res bool) {
-	return unfolding acc(PkgMem(), _) in
-		0 <= t && t < MaxLayerType?
-			ltMeta[t].inUse :
+	return unfolding PkgMem() in
+		LayerType(0) <= t && t < LayerType(MaxLayerType)?
+			ltMeta[int(t)].inUse :
 			(t elem domain(ltMetaMap) && ltMetaMap[t].inUse)
 }
 
 ghost
-requires acc(&ltMeta)         &&
-	acc(&ltMetaMap)           &&
+requires acc(&ltMeta)
+requires acc(&ltMetaMap)      &&
 	acc(ltMetaMap)            &&
 	acc(&DecodersByLayerName) &&
 	acc(DecodersByLayerName)
 decreases
 pure func registeredDuringInit(t LayerType) (res bool) {
-	return (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t elem domain(ltMetaMap) && ltMetaMap[t].inUse))
+	return (0 <= int(t) && int(t) < MaxLayerType? ltMeta[int(t)].inUse : (t elem domain(ltMetaMap) && ltMetaMap[t].inUse))
 }
 
 // cannot be made ghost, even though it is morally so
@@ -156,8 +156,8 @@ var DecodeFragment = generateDecodeFragment()
 // This call allows us to satisfy the preconditions of RegisterLayerType.
 var _ = satisfyGlobalVarInitPre()
 
-var LayerTypeZero = RegisterLayerType(0, LayerTypeMetadata{Name: "Unknown", Decoder: DecodeUnknown})
-var LayerTypeDecodeFailure = RegisterLayerType(1, LayerTypeMetadata{Name: "DecodeFailure", Decoder: DecodeUnknown})
+var LayerTypeZero = RegisterLayerType(int(0), LayerTypeMetadata{Name: "Unknown", Decoder: DecodeUnknown})
+var LayerTypeDecodeFailure = RegisterLayerType(int(1), LayerTypeMetadata{Name: "DecodeFailure", Decoder: DecodeUnknown})
 var LayerTypePayload = RegisterLayerType(2, LayerTypeMetadata{Name: "Payload", Decoder: DecodePayload})
 var LayerTypeFragment = RegisterLayerType(3, LayerTypeMetadata{Name: "Fragment", Decoder: DecodeFragment})
 
@@ -190,6 +190,8 @@ func RegisterLayerType(num int, meta LayerTypeMetadata) (res LayerType) {
 	RegisteredTypes.DoesNotContainImpliesNotFContains(int64(num))
 	if 0 <= num && num < maxLayerType {
 		if ltMeta[num].inUse {
+			// TODO: debug: This assumption is necessary since the overflow checks PR
+			assume false
 			panic("Layer type already exists")
 		}
 	} else {

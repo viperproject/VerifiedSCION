@@ -74,8 +74,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant acc(s.Base.Mem(), R1)
 	//@ invariant len(s.InfoFields) == s.Base.GetNumINF()
 	//@ invariant 0 <= i && i <= s.Base.GetNumINF()
-	//@ invariant len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.GetNumHops() * path.HopLen
-	//@ invariant offset == MetaLen + i * path.InfoLen
+	//@ invariant integer(len(data)) >= integer(MetaLen) + integer(s.Base.GetNumINF()) * integer(path.InfoLen) + integer(s.Base.GetNumHops()) * integer(path.HopLen)
+	//@ invariant integer(offset) == integer(MetaLen) + integer(i) * integer(path.InfoLen)
 	//@ invariant forall j int :: { &s.InfoFields[j] } 0 <= j && j < s.Base.GetNumINF() ==> acc(&s.InfoFields[j])
 	//@ invariant acc(sl.Bytes(data, 0, offset), R43)
 	//@ invariant acc(sl.Bytes(data, offset, len(data)), R43)
@@ -100,11 +100,11 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant 0 <= i && i <= s.Base.GetNumHops()
 	//@ invariant forall j int :: { &s.HopFields[j] } i <= j && j < s.Base.GetNumHops() ==> acc(&s.HopFields[j])
 	//@ invariant forall j int :: { &s.HopFields[j] } 0 <= j && j < i ==> s.HopFields[j].Mem()
-	//@ invariant len(data) >= MetaLen + s.Base.GetNumINF() * path.InfoLen + s.Base.GetNumHops() * path.HopLen
-	//@ invariant offset == MetaLen + s.Base.GetNumINF() * path.InfoLen + i * path.HopLen
+	//@ invariant integer(len(data)) >= integer(MetaLen) + integer(s.Base.GetNumINF()) * integer(path.InfoLen) + integer(s.Base.GetNumHops()) * integer(path.HopLen)
+	//@ invariant integer(offset) == integer(MetaLen) + integer(s.Base.GetNumINF()) * integer(path.InfoLen) + integer(i) * integer(path.HopLen)
 	//@ invariant acc(sl.Bytes(data, 0, offset), R43)
 	//@ invariant acc(sl.Bytes(data, offset, len(data)), R43)
-	//@ decreases s.Base.GetNumHops() - i
+	//@ decreases integer(s.Base.GetNumHops()) - integer(i)
 	for i := 0; i < /*@ unfolding acc(s.Base.Mem(), R2) in @*/ s.NumHops; i++ {
 		//@ sl.SplitByIndex_Bytes(data, offset, len(data), offset + path.HopLen, R43)
 		//@ sl.Reslice_Bytes(data, offset, offset + path.HopLen, R43)
@@ -155,8 +155,8 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
 	//@ invariant s.LenSpec(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenInfoFields(ubuf)
-	//@ invariant offset == MetaLen + i * path.InfoLen
-	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
+	//@ invariant integer(offset) == integer(MetaLen) + integer(i) * integer(path.InfoLen)
+	//@ invariant integer(MetaLen) + integer(s.getLenInfoFields(ubuf)) * integer(path.InfoLen) + integer(s.getLenHopFields(ubuf)) * integer(path.HopLen) <= integer(len(b))
 	//@ decreases s.getLenInfoFields(ubuf) - i
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, info := range s.InfoFields {
@@ -182,9 +182,9 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
 	//@ invariant s.LenSpec(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenHopFields(ubuf)
-	//@ invariant offset == MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + i * path.HopLen
-	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
-	//@ decreases s.getLenHopFields(ubuf)-i
+	//@ invariant integer(offset) == integer(MetaLen) + integer(s.getLenInfoFields(ubuf)) * integer(path.InfoLen) + integer(i) * integer(path.HopLen)
+	//@ invariant integer(MetaLen) + integer(s.getLenInfoFields(ubuf)) * integer(path.InfoLen) + integer(s.getLenHopFields(ubuf)) * integer(path.HopLen) <= integer(len(b))
+	//@ decreases integer(s.getLenHopFields(ubuf))-integer(i)
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, hop := range s.HopFields {
 	for i := 0; i < /*@ unfolding acc(s.Mem(ubuf), _) in @*/ len(s.HopFields); i++ {
@@ -208,6 +208,7 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 
 // Reverse reverses a SCION path.
 // @ requires s.Mem(ubuf)
+// @ requires s.GetBase(ubuf).ValidCurrFieldsSpec()
 // @ ensures  r == nil ==> (
 // @	p != nil                    &&
 // @	p.Mem(ubuf)                 &&

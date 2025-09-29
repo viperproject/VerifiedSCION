@@ -29,8 +29,8 @@ pred (p *Path) NonInitMem() {
 
 pred (p *Path) Mem(ubuf []byte) {
 	acc(&p.PktID) &&
-	acc(&p.PHVF) && sl.Bytes(p.PHVF, 0, len(p.PHVF)) &&
-	acc(&p.LHVF) && sl.Bytes(p.LHVF, 0, len(p.LHVF)) &&
+	acc(&p.PHVF) && sl.Bytes(p.PHVF, int(0), len(p.PHVF)) &&
+	acc(&p.LHVF) && sl.Bytes(p.LHVF, int(0), len(p.LHVF)) &&
 	acc(&p.ScionPath) &&
 	p.ScionPath != nil &&
 	MetadataLen <= len(ubuf) &&
@@ -43,8 +43,16 @@ decreases
 pure func (p *Path) LenSpec(ghost ub []byte) (l int) {
 	return unfolding p.Mem(ub) in
 		(p.ScionPath == nil ?
-			MetadataLen :
-			MetadataLen + p.ScionPath.LenSpec(ub[MetadataLen:]))
+			int(MetadataLen) :
+			int(MetadataLen) + p.ScionPath.LenSpec(ub[MetadataLen:]))
+}
+
+ghost
+requires p.Mem(b)
+decreases
+pure func (p *Path) MayReversePath(b []byte) bool {
+	return unfolding p.Mem(b) in
+		p.ScionPath.MayReversePath(b[MetadataLen:])
 }
 
 ghost

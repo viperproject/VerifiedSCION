@@ -21,7 +21,7 @@
 package bitwise
 
 ghost
-ensures 0 <= b && b < 256
+ensures 0 <= b && b <= 255
 decreases
 func ByteValue(b byte)
 
@@ -53,6 +53,12 @@ decreases
 pure func And3fAtMost64(b uint8) (res uint8)
 
 ghost
+ensures res == b >> 48
+ensures 0 <= res && res <= 65535
+decreases
+pure func ShiftRight48Bits(b uint64) (res uint64)
+
+ghost
 ensures 0 | 1 == 1
 ensures 0 | 2 == 2
 ensures 1 | 2 == 3
@@ -69,7 +75,7 @@ pure func InfoFieldFirstByteSerializationLemmas() bool
 
 ghost
 ensures csum > 0xffff ==>
-	let newCsum := (csum >> 16) + (csum & 0xffff) in
-	newCsum < csum
+	let newCsum := integer(csum >> 16) + integer(csum & 0xffff) in
+	newCsum < integer(csum)
 decreases
 pure func FoldChecksumLemma(csum uint32) struct{}

@@ -12,6 +12,7 @@ lemma ByteValue(b: bv8)
 	ensures 0 <= (b as int) && (b as int) < 256
 {}
 
+
 lemma BitAnd3_32bit(b: bv32)
 	ensures var res := b & 0x3;
 		0 <= res && res <= 3  &&
@@ -46,6 +47,10 @@ lemma Shift30LessThan4(b: bv32)
 lemma And3fAtMost64(b: bv8)
 	ensures var res := b & 0x3F;
 		0 <= res < 64
+{}
+
+lemma ShiftRight48Bits(v: bv64)
+	ensures 0 <= (v >> 48) <= 65535
 {}
 
 datatype MetaHdr = MetaHdr(

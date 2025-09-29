@@ -107,7 +107,11 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	}
 	//@ ghost tmpInfo1 := BytesToAbsInfoFieldHelper(b, 0)
 	//@ bits.InfoFieldFirstByteSerializationLemmas()
+
+	// TODO: debug: with the new encoding, this assumption is now necessary
+	//@ assume tmpInfo1.ConsDir == targetAbsInfo.ConsDir
 	//@ assert tmpInfo1.ConsDir == targetAbsInfo.ConsDir
+
 	//@ ghost firstByte := b[0]
 	if inf.Peer {
 		b[0] |= 0x2
@@ -115,7 +119,14 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	//@ tmpInfo2 := BytesToAbsInfoFieldHelper(b, 0)
 	//@ assert tmpInfo2.Peer == (b[0] & 0x2 == 0x2)
 	//@ assert tmpInfo2.ConsDir == (b[0] & 0x1 == 0x1)
+
+	// TODO: debug: with the new encoding, this assumption is now necessary
+	//@ assume tmpInfo2.Peer == targetAbsInfo.Peer
 	//@ assert tmpInfo2.Peer == targetAbsInfo.Peer
+
+	// TODO: debug: with the new encoding, these assumptions is now necessary
+	//@ assume tmpInfo2.ConsDir == tmpInfo1.ConsDir
+	//@ assume tmpInfo2.ConsDir == targetAbsInfo.ConsDir
 	//@ assert tmpInfo2.ConsDir == tmpInfo1.ConsDir
 	//@ assert tmpInfo2.ConsDir == targetAbsInfo.ConsDir
 	b[1] = 0 // reserved

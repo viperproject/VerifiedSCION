@@ -180,6 +180,7 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 // Reverse reverses the EPIC path. In particular, this means that the SCION path type subheader
 // is reversed.
 // @ requires p.Mem(ubuf)
+// @ requires p.MayReversePath(ubuf)
 // @ preserves sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures  r == nil ==> ret != nil
 // @ ensures  r == nil ==> ret.Mem(ubuf)
@@ -218,6 +219,7 @@ func (p *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 	if p.ScionPath == nil {
 		return MetadataLen
 	}
+	// @ assert p.ScionPath.LenSpec(ubuf[MetadataLen:]) + MetadataLen <= MAX_INT
 	return MetadataLen + p.ScionPath.Len( /*@ ubuf[MetadataLen:] @*/ )
 }
 
@@ -226,7 +228,7 @@ func (p *Path) Len( /*@ ghost ubuf []byte @*/ ) (l int) {
 // @ ensures  t == PathType
 // @ decreases
 func (p *Path) Type( /*@ ghost ubuf []byte @*/ ) (t path.Type) {
-	return PathType
+	return path.Type(PathType)
 }
 
 // PktID denotes the EPIC packet ID.
@@ -258,9 +260,9 @@ func (i *PktID) DecodeFromBytes(raw []byte) {
 // @ decreases
 func (i *PktID) SerializeTo(b []byte) {
 	//@ unfold sl.Bytes(b, 0, len(b))
-	//@ assert forall j int :: { &b[:4][j] } 0 <= 4 ==> &b[:4][j] == &b[j]
+	//@ assert forall j int :: { &b[:4][j] } 0 <= j && j < 4 ==> &b[:4][j] == &b[j]
 	binary.BigEndian.PutUint32(b[:4], i.Timestamp)
-	//@ assert forall j int :: { &b[4:8][j] } 0 <= 4 ==> &b[4:8][j] == &b[4 + j]
+	//@ assert forall j int :: { &b[4:8][j] } 0 <= 4 && j < 4 ==> &b[4:8][j] == &b[4 + j]
 	binary.BigEndian.PutUint32(b[4:8], i.Counter)
 	//@ fold sl.Bytes(b, 0, len(b))
 }

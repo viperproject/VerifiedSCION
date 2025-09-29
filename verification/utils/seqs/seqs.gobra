@@ -21,28 +21,30 @@ import sl "verification/utils/slices"
 ghost
 requires 0 <= n
 ensures  len(res) == n
-ensures  forall i int :: { res[i] } 0 <= i && i < len(res) ==> !res[i]
+ensures  forall i integer :: { res[i] } integer(0) <= i && i < len(res) ==> !res[i]
 decreases _
-pure func NewSeqBool(n int) (res seq[bool])
+pure func NewSeqBool(n integer) (res seq[bool])
+
+ghost
+requires size >= 0
+ensures len(res) == integer(size)
+ensures forall i integer :: { res[i] } integer(0) <= i && i < size ==>
+	res[i] == byte(0)
+decreases _
+pure func NewSeqByte(size integer) (res seq[byte])
 
 ghost
 requires size >= 0
 ensures len(res) == size
-ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == byte(0)
+ensures forall i integer :: { res[i] } 0 <= i && i < size ==>
+	res[i] == nil
 decreases _
-pure func NewSeqByte(size int) (res seq[byte])
-
-ghost
-requires size >= 0
-ensures len(res) == size
-ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
-decreases _
-pure func NewSeqByteSlice(size int) (res seq[[]byte])
+pure func NewSeqByteSlice(size integer) (res seq[[]byte])
 
 ghost
 requires acc(sl.Bytes(ub, 0, len(ub)), _)
-ensures len(res) == len(ub)
+ensures len(res) == integer(len(ub))
 ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
-    res[i] == sl.GetByte(ub, 0, len(ub), i)
+	res[i] == sl.GetByte(ub, 0, len(ub), i)
 decreases _
 pure func ToSeqByte(ub []byte) (res seq[byte])

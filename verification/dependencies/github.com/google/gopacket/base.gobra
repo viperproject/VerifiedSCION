@@ -23,10 +23,10 @@ type Layer interface {
 	LayerContents() (res []byte)
 
 	preserves Mem(ub)
-	ensures   0 <= start && start <= end && end <= len(ub)
+	ensures   int(0) <= start && start <= end && end <= len(ub)
 	ensures   len(res) == end - start
-	ensures   len(res) != 0 ==> res === ub[start:end]
-	ensures   len(res) == 0 ==> (res == nil || res === ub[start:end])
+	ensures   len(res) != int(0) ==> res === ub[start:end]
+	ensures   len(res) == int(0) ==> (res == nil || res === ub[start:end])
 	decreases
 	LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int)
 }
@@ -105,9 +105,9 @@ type ApplicationLayer interface {
 	Layer
 
 	preserves Mem(ub)
-	ensures   0 <= start && start <= end && end <= len(ub)
+	ensures   int(0) <= start && start <= end && end <= len(ub)
 	ensures   len(res) == end - start
-	ensures   len(res) != 0 ==> res === ub[start:end]
+	ensures   len(res) != int(0) ==> res === ub[start:end]
 	decreases
 	Payload(ghost ub []byte) (res []byte, ghost start int, ghost end int)
 }

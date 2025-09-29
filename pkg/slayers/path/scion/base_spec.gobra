@@ -35,9 +35,9 @@ pred (b *Base) Mem() {
 	// below, as they are already present in WeaklyValid.
 	// This requires a bit of refactoring to pass around the
 	// knowledge that WeaklyValid holds between methods.
-	0 <= b.NumINF  && b.NumINF <= MaxINFs  &&
-	0 <= b.NumHops && b.NumHops <= MaxHops &&
-	(0 < b.NumINF ==> 0 < b.NumHops)
+	int(0) <= b.NumINF  && b.NumINF <= int(MaxINFs)  &&
+	int(0) <= b.NumHops && b.NumHops <= MaxHops      &&
+	(int(0) < b.NumINF ==> int(0) < b.NumHops)
 }
 
 ghost
@@ -101,8 +101,8 @@ decreases
 pure func (b Base) NumsCompatibleWithSegLen() bool {
 	return 0 <= b.NumINF && b.NumINF <= 3 &&
 		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
-		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
-		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
+		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0]) + int(b.PathMeta.SegLen[1])) &&
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0]) + int(b.PathMeta.SegLen[1]) + int(b.PathMeta.SegLen[2])) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
@@ -153,28 +153,29 @@ pure func (s *Base) GetCurrHF() uint8 {
 ghost
 ensures  0 <= r && r < 3
 decreases
-pure func (s Base) InfForHfSpec(hf uint8) (r uint8) {
-	return hf < s.PathMeta.SegLen[0] ?
-		0 :
-		(hf < s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1] ? 1 : 2)
+pure func (s Base) InfForHfSpec(hf integer) (r uint8) {
+	return hf < integer(s.PathMeta.SegLen[int(0)]) ?
+		uint8(0) :
+		(hf < integer(s.PathMeta.SegLen[int(0)]) + integer(s.PathMeta.SegLen[int(1)]) ? uint8(1) : uint8(2))
 }
 
 ghost
 decreases
 pure func (s Base) IsXoverSpec() bool {
-	return s.PathMeta.CurrHF+1 < uint8(s.NumHops) &&
-		s.PathMeta.CurrINF != s.InfForHfSpec(s.PathMeta.CurrHF+1)
+	return int(s.PathMeta.CurrHF)+1 < s.NumHops &&
+		s.PathMeta.CurrINF != s.InfForHfSpec(integer(s.PathMeta.CurrHF)+integer(1))
 }
 
 ghost
 requires s.NumINF != 0
-requires int(s.PathMeta.CurrHF) < s.NumHops-1
+requires s.PathMeta.CurrHF != MAX_UINT8
+requires integer(s.PathMeta.CurrHF) < integer(s.NumHops)-1
 ensures  s.WeaklyValid() ==> res.WeaklyValid()
 ensures  s.Valid() ==> res.Valid()
 decreases
 pure func (s Base) IncPathSpec() (res Base) {
 	return Base {
-		PathMeta: MetaHdr{s.InfForHfSpec(s.PathMeta.CurrHF+1), s.PathMeta.CurrHF+1, s.PathMeta.SegLen},
+		PathMeta: MetaHdr{s.InfForHfSpec(integer(s.PathMeta.CurrHF)+integer(1)), s.PathMeta.CurrHF+1, s.PathMeta.SegLen},
 		NumINF: s.NumINF,
 		NumHops: s.NumHops,
 	}
@@ -187,6 +188,8 @@ decreases
 func (s Base) NotIsXoverAfterIncPath() {}
 
 ghost
+// requires b.WeaklyValid()
+requires b.ValidCurrFieldsSpec()
 decreases
 pure func (b Base) ReverseSpec() Base {
 	return Base {
@@ -197,6 +200,8 @@ pure func (b Base) ReverseSpec() Base {
 }
 
 ghost
+// requires b.WeaklyValid()
+requires b.ValidCurrFieldsSpec()
 decreases
 pure func (b Base) ReverseMetaHdrSpec() MetaHdr {
 	return MetaHdr {
@@ -210,8 +215,8 @@ ghost
 decreases
 pure func (b Base) ReverseSegLen() [3]uint8 {
 	return (match b.NumINF {
-		case 2: [3]uint8{ b.PathMeta.SegLen[1], b.PathMeta.SegLen[0], b.PathMeta.SegLen[2] }
-		case 3: [3]uint8{ b.PathMeta.SegLen[2], b.PathMeta.SegLen[1], b.PathMeta.SegLen[0] }
+		case int(2): [3]uint8{ b.PathMeta.SegLen[1], b.PathMeta.SegLen[0], b.PathMeta.SegLen[2] }
+		case int(3): [3]uint8{ b.PathMeta.SegLen[2], b.PathMeta.SegLen[1], b.PathMeta.SegLen[0] }
 		default: b.PathMeta.SegLen
 	})
 }
@@ -232,6 +237,8 @@ func (b *Base) DowngradePerm() {
 }
 
 ghost
+// need to mark this as trusted now, there are intended overflows
+trusted
 decreases
 pure func DecodedFrom(line uint32) MetaHdr {
 	return MetaHdr {

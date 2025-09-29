@@ -72,6 +72,14 @@ pure func (d *Decoded) LenSpec(ghost ub []byte) int {
 		d.Base.Len()
 }
 
+ghost
+requires d.Mem(b)
+decreases
+pure func (d *Decoded) MayReversePath(b []byte) bool {
+	return d.GetBase(b).ValidCurrFieldsSpec()
+}
+
+
 /**
   * This method is not part of the original SCION codebase.
   * Instead, `Len` was defined in `*Decoded` via embedded structs.
@@ -91,7 +99,9 @@ pure func (d *Decoded) Type(ghost ubuf []byte) path.Type {
   * Unfortunately, Gobra does not fully support them yet, so we
   * introduced this method which acts as a wrapper.
   */
-preserves acc(d.Mem(ubuf), R19)
+requires acc(d.Mem(ubuf), R19)
+requires d.GetBase(ubuf).WeaklyValid()
+ensures  acc(d.Mem(ubuf), R19)
 decreases
 func (d *Decoded) IsXover(ghost ubuf []byte) bool {
 	unfold acc(d.Mem(ubuf), R19)
@@ -107,6 +117,7 @@ func (d *Decoded) IsXover(ghost ubuf []byte) bool {
   * which can be extremely cumbersome.
   */
 requires d.Mem(ubuf)
+requires d.GetBase(ubuf).WeaklyValid()
 ensures  e == nil ==> (
 	d.Mem(ubuf) &&
 	d.LenSpec(ubuf) == old(d.LenSpec(ubuf)) &&

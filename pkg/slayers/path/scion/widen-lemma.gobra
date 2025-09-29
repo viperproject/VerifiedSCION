@@ -26,9 +26,9 @@ import (
 
 ghost
 requires  0 <= start && start <= headerOffset
-requires  path.InfoFieldOffset(currInfIdx, headerOffset) + path.InfoLen <= offset
+requires  path.InfoFieldOffset(currInfIdx, headerOffset) + integer(path.InfoLen) <= integer(offset)
 requires  0 < segLen
-requires  offset + path.HopLen * segLen <= length
+requires  integer(offset) + integer(path.HopLen) * integer(segLen) <= integer(length)
 requires  length <= len(raw)
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  0 <= currInfIdx && currInfIdx < 3
@@ -51,13 +51,13 @@ func WidenCurrSeg(raw []byte,
 	ainfo1 := path.Timestamp(raw, currInfIdx, headerOffset)
 	ainfo2 := path.Timestamp(raw[start:length], currInfIdx, headerOffset-start)
 	sl.AssertSliceOverlap(raw, start, length)
-	idxTimestamp := path.InfoFieldOffset(currInfIdx, headerOffset-start)+4
+	idxTimestamp := int(path.InfoFieldOffset(currInfIdx, headerOffset-start)+4)
 	sl.AssertSliceOverlap(raw[start:length], idxTimestamp, idxTimestamp+4)
 	assert ainfo1 == ainfo2
 
 	uinfo1 := path.AbsUinfo(raw, currInfIdx, headerOffset)
 	uinfo2 := path.AbsUinfo(raw[start:length], currInfIdx, headerOffset-start)
-	idxUinfo := path.InfoFieldOffset(currInfIdx, headerOffset-start)+2
+	idxUinfo := int(path.InfoFieldOffset(currInfIdx, headerOffset-start)+2)
 	sl.AssertSliceOverlap(raw[start:length], idxUinfo, idxUinfo+2)
 	assert uinfo1 == uinfo2
 
@@ -81,7 +81,7 @@ requires 0 <= start && start <= offset
 requires 0 < segLen
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires length <= len(raw)
-requires offset + path.HopLen * segLen <= length
+requires integer(offset) + integer(path.HopLen) * integer(segLen) <= integer(length)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R52)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R52)
 ensures  segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ==
@@ -105,7 +105,7 @@ ghost
 requires  R53 < p
 requires  0 <= start && start <= offset
 requires  0 <= currHfIdx && currHfIdx <= segLen
-requires  offset + path.HopLen * segLen <= length
+requires  integer(offset) + integer(path.HopLen) * integer(segLen) <= integer(length)
 requires  length <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), p)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), p)
@@ -126,7 +126,7 @@ ghost
 requires  0 <= start && start <= headerOffset
 requires  segs.Valid()
 requires  0 <= length && length <= len(raw)
-requires  PktLen(segs, headerOffset) <= length
+requires  PktLen(segs, headerOffset) <= integer(length)
 requires  1 <= currInfIdx && currInfIdx < 4
 preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
@@ -139,7 +139,7 @@ func WidenLeftSeg(raw []byte,
 	headerOffset int,
 	start int,
 	length int) {
-	offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset)
+	offset := int(HopFieldOffset(segs.NumInfoFields(), 0, headerOffset))
 	if currInfIdx == 1 && segs.Seg2Len > 0 {
 		offsetWithHopfields := offset + path.HopLen * segs.Seg1Len
 		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, 0, segs.Seg2Len, headerOffset, start, length)
@@ -155,7 +155,7 @@ ghost
 requires  0 <= start && start <= headerOffset
 requires  segs.Valid()
 requires  0 <= length && length <= len(raw)
-requires  PktLen(segs, headerOffset) <= length
+requires  PktLen(segs, headerOffset) <= integer(length)
 requires  -1 <= currInfIdx && currInfIdx < 2
 preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
@@ -168,7 +168,7 @@ func WidenRightSeg(raw []byte,
 	headerOffset int,
 	start int,
 	length int) {
-	offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset)
+	offset := int(HopFieldOffset(segs.NumInfoFields(), 0, headerOffset))
 	if currInfIdx == 1 && segs.Seg2Len > 0 && segs.Seg3Len > 0 {
 		offsetWithHopfields := offset + path.HopLen * segs.Seg1Len
 		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, segs.Seg2Len, segs.Seg2Len, headerOffset, start, length)
@@ -184,7 +184,7 @@ requires  0 <= start && start <= headerOffset
 requires  segs.Valid()
 requires  2 <= currInfIdx && currInfIdx < 5
 requires  0 <= length && length <= len(raw)
-requires  PktLen(segs, headerOffset) <= length
+requires  PktLen(segs, headerOffset) <= integer(length)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
 ensures   MidSeg(raw, currInfIdx, segs, headerOffset) ==
@@ -196,7 +196,7 @@ func WidenMidSeg(raw []byte,
 	headerOffset int,
 	start int,
 	length int) {
-	offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset)
+	offset := int(HopFieldOffset(segs.NumInfoFields(), 0, headerOffset))
 	if currInfIdx == 4 && segs.Seg2Len > 0 {
 		WidenCurrSeg(raw, offset, 0, segs.Seg1Len, segs.Seg1Len, headerOffset, start, length)
 	} else if currInfIdx == 2 && segs.Seg2Len > 0 && segs.Seg3Len > 0 {

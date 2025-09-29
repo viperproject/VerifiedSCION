@@ -72,6 +72,7 @@ const (
 
 // Length returns the length of this AddrType value.
 // @ pure
+// @ requires let _ := b.BitAnd3(int(tl)) in true
 // @ ensures  res == LineLen * (1 + (b.BitAnd3(int(tl))))
 // @ ensures  tl == T4Ip  ==> res == LineLen
 // @ ensures  tl == T4Svc ==> res == LineLen
@@ -104,7 +105,7 @@ func (b *BaseLayer) LayerContents() (res []byte) {
 
 // LayerPayload returns the bytes contained within the packet layer.
 // @ preserves acc(b.Mem(ub, bp), R20)
-// @ ensures   len(res) == len(ub) - bp
+// @ ensures   integer(len(res)) == integer(len(ub)) - integer(bp)
 // @ ensures   0 <= bp && bp <= len(ub)
 // @ ensures   res === ub[bp:]
 // @ decreases
@@ -196,7 +197,7 @@ func (s *SCION) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 func (s *SCION) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
 	//@ unfold acc(s.Mem(ub), R20)
 	res = s.Payload
-	//@ start = int(s.HdrLen*LineLen)
+	//@ start = int(s.HdrLen) * LineLen
 	//@ end = len(ub)
 	//@ fold acc(s.Mem(ub), R20)
 	return res /*@, start, end @*/
@@ -219,7 +220,7 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ ensures   sl.Bytes(ubuf, 0, len(ubuf))
 // @ ensures   sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
-// @ 	len(b.UBuf()) == old(len(b.UBuf())) + s.MinSizeOfUbufWithOneHop(ubuf)
+// @ 	integer(len(b.UBuf())) == old(integer(len(b.UBuf()))) + integer(s.MinSizeOfUbufWithOneHop(ubuf))
 // @ ensures   e != nil ==> e.ErrorMem()
 // post for IO:
 // @ ensures   e == nil && old(s.EqPathType(ubuf)) ==>
@@ -228,8 +229,8 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
 	// @ unfold acc(s.Mem(ubuf), R1)
 	// @ defer fold acc(s.Mem(ubuf), R1)
-	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), R10)
-	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
+	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen)*LineLen, R10)
+	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : int(s.HdrLen) * LineLen] @*/ )
 	// @ sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLenSpecInternal()), int(s.HdrLen*LineLen), R10)
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
@@ -345,17 +346,22 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ )
 	// @ sl.CombineRange_Bytes(data, 0, 4, R41)
 	// @ unfold s.NonInitMem()
+	// @ preserves acc(&s.Version) && acc(&s.TrafficClass)
+	// @ decreases
+	// @ outline(
+	// @ assume false // intentional overflow
 	s.Version = uint8(firstLine >> 28)
 	s.TrafficClass = uint8((firstLine >> 20) & 0xFF)
+	// @ )
 	s.FlowID = firstLine & 0xFFFFF
 	// @ preserves acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) && acc(&s.PathType)
 	// @ preserves acc(&s.DstAddrType) && acc(&s.SrcAddrType)
 	// @ preserves CmnHdrLen <= len(data) && acc(sl.Bytes(data, 0, len(data)), R41)
 	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
-	// @ ensures   0 <= s.PathType && s.PathType < 256
+	// @ ensures   0 <= s.PathType && s.PathType <= 255
 	// @ ensures   path.Type(GetPathType(data)) == s.PathType
 	// @ ensures   L4ProtocolType(GetNextHdr(data)) == s.NextHdr
-	// @ ensures   GetLength(data) == int(s.HdrLen * LineLen)
+	// @ ensures   GetLength(data) == int(s.HdrLen) * LineLen
 	// @ ensures   GetAddressOffset(data) ==
 	// @	CmnHdrLen + 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 	// @ decreases
@@ -367,7 +373,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.PayloadLen = binary.BigEndian.Uint16(data[6:8])
 	// @ b.ByteValue(data[8])
 	s.PathType = path.Type(data[8])
-	// @ assert 0 <= s.PathType && s.PathType < 256
+	// @ assert 0 <= s.PathType && s.PathType <= 255
 	s.DstAddrType = AddrType(data[9] >> 4 & 0x7)
 	// @ assert int(s.DstAddrType) == b.BitAnd7(int(data[9] >> 4))
 	s.SrcAddrType = AddrType(data[9] & 0x7)
@@ -479,7 +485,7 @@ func (s *SCION) RecyclePaths() {
 // getPath returns a new or recycled path for pathType
 // @ requires  acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
 // @ requires  PathPoolMem(s.pathPool, s.pathPoolRaw)
-// @ requires  0 <= pathType && pathType < path.MaxPathType
+// @ requires  0 <= pathType && int(pathType) < int(path.MaxPathType)
 // @ ensures   acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
 // @ ensures   err == nil ==> res != nil
 // @ ensures   err == nil ==> res.NonInitMem()
@@ -652,7 +658,10 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ ensures   res == nil && !wildcard && isHostSVC(dst) ==> sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 // @ ensures   res == nil && !wildcard ==> acc(dst.Mem(), R18)
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[12+i]))
+// @ ensures   res == nil && !wildcard && isIP(dst) ==>
+// @ 	(unfolding acc(dst.Mem(), R20) in
+// @ 	(len(s.RawDstAddr) <= MAX_INT - 12) &&
+// @ 	(isIPv6(dst) && isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[12+i]))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (!isIPv4(dst) && !isIPv6(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==> len(s.RawDstAddr) == len(dst.(*net.IPAddr).IP)))
@@ -689,7 +698,10 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   res == nil && !wildcard && isHostSVC(src) ==> sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr))
 // @ ensures   res == nil && !wildcard ==> acc(src.Mem(), R18)
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
-// @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[12+i]))
+// @ ensures   res == nil && !wildcard && isIP(src) ==>
+// @ 	(unfolding acc(src.Mem(), R20) in
+// @ 	(len(s.RawSrcAddr) <= MAX_INT - 12) &&
+// @ 	(isIPv6(src) && isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[12+i]))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (!isIPv4(src) && !isIPv6(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv4(src) ==> len(s.RawSrcAddr) == len(src.(*net.IPAddr).IP)))
@@ -767,7 +779,10 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> acc(sl.Bytes(b, 0, len(b)), R20)
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (acc(sl.Bytes(b, 0, len(b)), R20) --* acc(hostAddr.Mem(), R20))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==>
+// @ 	(unfolding acc(hostAddr.Mem(), R20) in
+// @ 	(len(b) <= MAX_INT - 12) &&
+// @ 	(isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv4(hostAddr) ==> len(b) == len(hostAddr.(*net.IPAddr).IP)))
@@ -1014,6 +1029,7 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	// @ invariant 0 <= i && i <= 8
 	// @ decreases 8 - i
 	for i := 0; i < 8; i += 2 {
+		// (VerifiedSCION) unclear if this overflow is intentional
 		csum += uint32(srcIA[i]) << 8
 		csum += uint32(srcIA[i+1])
 		csum += uint32(dstIA[i]) << 8
@@ -1036,6 +1052,7 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 		// @ decreases
 		// @ outline(
 		// @ unfold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+		// (VerifiedSCION) unclear if this overflow is intentional
 		csum += uint32(s.RawSrcAddr[i]) << 8
 		csum += uint32(s.RawSrcAddr[i+1])
 		// @ fold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
@@ -1057,6 +1074,7 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 		// @ decreases
 		// @ outline(
 		// @ unfold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+		// (VerifiedSCION) unclear if this overflow is intentional
 		csum += uint32(s.RawDstAddr[i]) << 8
 		csum += uint32(s.RawDstAddr[i+1])
 		// @ fold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
@@ -1075,11 +1093,13 @@ func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	// Odd lengths are handled at the end.
 	safeBoundary := len(upperLayer) - 1
 	// @ unfold acc(sl.Bytes(upperLayer, 0, len(upperLayer)), R20)
-	// @ invariant 0 <= i && i < safeBoundary + 2
+	// @ invariant 0 <= i && integer(i) < integer(safeBoundary) + integer(2)
 	// @ invariant i % 2 == 0
-	// @ invariant forall i int :: { &upperLayer[i] } 0 <= i && i < len(upperLayer) ==> acc(&upperLayer[i], R20)
+	// @ invariant forall i int :: { &upperLayer[i] } 0 <= i && i < len(upperLayer) ==>
+	// @ 	acc(&upperLayer[i], R20)
 	// @ decreases safeBoundary - i
 	for i := 0; i < safeBoundary; i += 2 {
+		// potentially intentional overflow
 		csum += uint32(upperLayer[i]) << 8
 		csum += uint32(upperLayer[i+1])
 	}

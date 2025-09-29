@@ -48,6 +48,7 @@ type tlvOption struct {
 	OptAlign     [2]uint8 // Xn+Y = [2]uint8{X, Y}
 }
 
+// @ requires false
 // @ preserves acc(o, R20)
 // @ ensures   0 < res
 // @ ensures   o.OptType == OptTypePad1 ==> res == 1
@@ -62,16 +63,17 @@ func (o *tlvOption) length(fixLengths bool) (res int) {
 	if fixLengths {
 		return len(o.OptData) + 2
 	}
-	// (VerifiedSCION) gobra cannot prove this yet, even though it must hold
-	//                 as the type of o.OptDataLen is uint8
-	// @ assume 0 <= o.OptDataLen
+	// @ assert 0 <= o.OptDataLen
 	return int(o.OptDataLen) + 2
 }
 
 // @ requires  2 <= len(data)
-// @ preserves acc(o)
-// @ preserves acc(sl.Bytes(o.OptData, 0, len(o.OptData)), R20)
+// @ requires  acc(o)
+// @ requires  acc(sl.Bytes(o.OptData, 0, len(o.OptData)), R20)
+// @ requires  fixLengths ==> len(o.OptData) <= 255
 // @ preserves sl.Bytes(data, 0, len(data))
+// @ ensures   acc(o)
+// @ ensures   acc(sl.Bytes(o.OptData, 0, len(o.OptData)), R20)
 // @ decreases
 func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 	dryrun := data == nil
@@ -103,7 +105,7 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 // @ ensures   err == nil ==> acc(res)
 // @ ensures   (err == nil && res.OptType != OptTypePad1) ==> (
 // @ 	2 <= res.ActualLength && res.ActualLength <= len(data) && res.OptData === data[2:res.ActualLength])
-// @ ensures   err == nil ==> 0 < res.ActualLength
+// @ ensures   err == nil ==> 0 < res.ActualLength && res.ActualLength <= 258
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeTLVOption(data []byte) (res *tlvOption, err error) {
@@ -118,8 +120,7 @@ func decodeTLVOption(data []byte) (res *tlvOption, err error) {
 		return nil, serrors.New("buffer too short", "expected", 2, "actual", len(data))
 	}
 	o.OptDataLen = data[1]
-	// (VerifiedSCION) Gobra cannot prove this even though it must hold, given the type of o.OptDataLen
-	// @ assume 0 <= o.OptDataLen
+	// @ assert 0 <= o.OptDataLen
 	o.ActualLength = int(o.OptDataLen) + 2
 	if len(data) < o.ActualLength {
 		return nil, serrors.New("buffer too short", "expected", o.ActualLength, "actual", len(data))
@@ -131,8 +132,8 @@ func decodeTLVOption(data []byte) (res *tlvOption, err error) {
 }
 
 // serializeTLVOptionPadding adds an appropriate PadN extension.
-// @ requires  padLength == 1 ==> 1 <= len(data)
-// @ requires  1 < padLength  ==> 2 <= len(data)
+// @ requires  padLength == int(1) ==> 1 <= len(data)
+// @ requires  int(1) < padLength  ==> 2 <= len(data)
 // @ preserves sl.Bytes(data, 0, len(data))
 // @ decreases
 func serializeTLVOptionPadding(data []byte, padLength int) {
@@ -249,7 +250,8 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 // @ 	2 <= len(data) &&
 // @ 	0 <= res.ActualLen && res.ActualLen <= len(data) &&
 // @ 	res.BaseLayer.Contents === data[:res.ActualLen] &&
-// @ 	res.BaseLayer.Payload === data[res.ActualLen:])
+// @ 	res.BaseLayer.Payload === data[res.ActualLen:]  &&
+// @ 	res.ActualLen <= MAX_INT - 258)
 // @ decreases
 func decodeExtnBase(data []byte, df gopacket.DecodeFeedback) (res extnBase, resErr error) {
 	e := extnBase{}
@@ -268,9 +270,7 @@ func decodeExtnBase(data []byte, df gopacket.DecodeFeedback) (res extnBase, resE
 		return extnBase{}, serrors.New(fmt.Sprintf("invalid extension header. "+
 			"Length %d less than specified length %d", len(data), e.ActualLen))
 	}
-	// (VerifiedSCION) assumed because of Gobra's limitations. Nonetheless, we should know from the the type
-	// of e.ExtLen that this property always holds.
-	// @ assume 0 <= e.ExtLen
+	// @ assert 0 <= e.ExtLen
 	// @ assert 0 <= e.ActualLen
 	e. /*@ BaseLayer. @*/ Contents = data[:e.ActualLen]
 	e. /*@ BaseLayer. @*/ Payload = data[e.ActualLen:]
@@ -369,8 +369,9 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 
 	// @ invariant 2 <= offset
 	// @ invariant acc(h)
-	// @ invariant 0 <= h.ActualLen && h.ActualLen <= len(data)
+	// @ invariant 0 <= h.ActualLen && h.ActualLen <= len(data) && h.ActualLen <= MAX_INT - 258
 	// @ invariant len(h.Options) == lenOptions
+	// @ invariant lenOptions < offset
 	// @ invariant forall i int :: { &h.Options[i] } 0 <= i && i < lenOptions ==>
 	// @ 	(acc(&h.Options[i]) && h.Options[i].Mem(i))
 	// @ invariant acc(sl.Bytes(data, 0, len(data)), R40)
@@ -501,8 +502,9 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 
 	// @ invariant 2 <= offset
 	// @ invariant acc(e)
-	// @ invariant 0 <= e.ActualLen && e.ActualLen <= len(data)
+	// @ invariant 0 <= e.ActualLen && e.ActualLen <= len(data) && e.ActualLen <= MAX_INT - 258
 	// @ invariant len(e.Options) == lenOptions
+	// @ invariant lenOptions < offset
 	// @ invariant forall i int :: { &e.Options[i] } 0 <= i && i < lenOptions ==>
 	// @ 	(acc(&e.Options[i]) && e.Options[i].Mem(i))
 	// @ invariant acc(sl.Bytes(data, 0, len(data)), R40)

@@ -91,13 +91,15 @@ const (
 type SCMPTypeCode uint16
 
 // Type returns the SCMP type field.
+// @ trusted // intentional overflow
 // @ decreases
 // @ pure
 func (a SCMPTypeCode) Type() SCMPType {
-	return SCMPType(a >> 8)
+	return SCMPType(a >> int(8))
 }
 
 // Code returns the SCMP code field.
+// @ trusted // intentional overflow
 // @ decreases
 // @ pure
 func (a SCMPTypeCode) Code() SCMPCode {
@@ -132,8 +134,8 @@ func (a SCMPTypeCode) String() string {
 }
 
 // SerializeTo writes the SCMPTypeCode value to the buffer.
-// @ requires len(bytes) >= 2
-// @ preserves sl.Bytes(bytes, 0, 2)
+// @ requires  int(2) <= len(bytes)
+// @ preserves sl.Bytes(bytes, int(0), int(2))
 // @ decreases
 func (a SCMPTypeCode) SerializeTo(bytes []byte) {
 	//@ unfold sl.Bytes(bytes, 0, 2)

@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	// @ "github.com/scionproto/scion/verification/utils/bitwise"
 )
 
 const (
@@ -54,6 +55,15 @@ func ParseISD(s string) (ISD, error) {
 	if err != nil {
 		return 0, serrors.WrapStr("parsing ISD", err)
 	}
+	// @ strconv.Exp2to10(16)
+	// @ assert strconv.Exp(2, 16) == 1024 * strconv.Exp(2, 6)
+	// @ assert strconv.Exp(2, 6) == 2 * strconv.Exp(2, 5)
+	// @ assert strconv.Exp(2, 5) == 2 * strconv.Exp(2, 4)
+	// @ assert strconv.Exp(2, 4) == 2 * strconv.Exp(2, 3)
+	// @ assert strconv.Exp(2, 3) == 2 * strconv.Exp(2, 2)
+	// @ assert strconv.Exp(2, 2) == 2 * strconv.Exp(2, 1)
+	// @ assert strconv.Exp(2, 1) == 2 * strconv.Exp(2, 0)
+	// @ assert 0 <= isd && isd < strconv.Exp(2, 16)
 	return ISD(isd), nil
 }
 
@@ -216,6 +226,7 @@ func ParseIA(ia string) (IA, error) {
 
 // @ decreases
 func (ia IA) ISD() ISD {
+	// @ bitwise.ShiftRight48Bits(uint64(ia))
 	return ISD(ia >> ASBits)
 }
 

@@ -23,20 +23,20 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
-pred (h HostNone) Mem() { len(h) == HostLenNone }
+pred (h HostNone) Mem() { len(h) == int(HostLenNone) }
 
 HostNone implements HostAddr
 
 pred (h HostIPv4) Mem() {
-	len(h) == HostLenIPv4 &&
-	slices.Bytes(h, 0, len(h))
+	len(h) == int(HostLenIPv4) &&
+	slices.Bytes(h, int(0), len(h))
 }
 
 HostIPv4 implements HostAddr
 
 pred (h HostIPv6) Mem() {
-	len(h) == HostLenIPv6 &&
-	slices.Bytes(h, 0, len(h))
+	len(h) == int(HostLenIPv6) &&
+	slices.Bytes(h, int(0), len(h))
 }
 
 HostIPv6 implements HostAddr

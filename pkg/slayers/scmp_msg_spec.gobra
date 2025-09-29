@@ -28,7 +28,7 @@ pred (s *SCMPExternalInterfaceDown) NonInitMem() {
 }
 
 pred (s *SCMPExternalInterfaceDown) Mem(ub []byte) {
-	acc(&s.IA) && acc(&s.IfID) && s.BaseLayer.Mem(ub, addr.IABytes+scmpRawInterfaceLen)
+	acc(&s.IA) && acc(&s.IfID) && s.BaseLayer.Mem(ub, int(addr.IABytes) + int(scmpRawInterfaceLen))
 }
 
 requires false
@@ -60,7 +60,7 @@ pred (s *SCMPInternalConnectivityDown) NonInitMem() {
 }
 
 pred (s *SCMPInternalConnectivityDown) Mem(ub []byte) {
-	acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && s.BaseLayer.Mem(ub, addr.IABytes+2*scmpRawInterfaceLen)
+	acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && s.BaseLayer.Mem(ub, int(addr.IABytes) + int(2) * int(scmpRawInterfaceLen))
 }
 
 requires false
@@ -91,7 +91,7 @@ pred (s *SCMPEcho) NonInitMem() {
 }
 
 pred (s *SCMPEcho) Mem(ub []byte) {
-	acc(&s.Identifier) && acc(&s.SeqNumber) && s.BaseLayer.Mem(ub, 4)
+	acc(&s.Identifier) && acc(&s.SeqNumber) && s.BaseLayer.Mem(ub, int(4))
 }
 
 requires false
@@ -122,7 +122,7 @@ pred (s *SCMPParameterProblem) NonInitMem() {
 }
 
 pred (s *SCMPParameterProblem) Mem(ub []byte) {
-	acc(&s.Pointer) && s.BaseLayer.Mem(ub, 4)
+	acc(&s.Pointer) && s.BaseLayer.Mem(ub, int(4))
 }
 
 requires false
@@ -157,7 +157,7 @@ pred (s *SCMPTraceroute) Mem(ub []byte) {
 	acc(&s.Sequence) &&
 	acc(&s.IA) &&
 	acc(&s.Interface) &&
-	s.BaseLayer.Mem(ub, 4+addr.IABytes+scmpRawInterfaceLen)
+	s.BaseLayer.Mem(ub, int(4) + int(addr.IABytes) + int(scmpRawInterfaceLen))
 }
 
 requires false
@@ -190,7 +190,7 @@ pred (s *SCMPDestinationUnreachable) NonInitMem() {
 }
 
 pred (s *SCMPDestinationUnreachable) Mem(ub []byte) {
-	s.BaseLayer.Mem(ub, 4)
+	s.BaseLayer.Mem(ub, int(4))
 }
 
 requires false
@@ -221,7 +221,7 @@ pred (s *SCMPPacketTooBig) NonInitMem() {
 }
 
 pred (s *SCMPPacketTooBig) Mem(ub []byte) {
-	acc(&s.MTU) && s.BaseLayer.Mem(ub, 4)
+	acc(&s.MTU) && s.BaseLayer.Mem(ub, int(4))
 }
 
 requires false

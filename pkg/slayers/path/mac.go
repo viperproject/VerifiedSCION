@@ -37,7 +37,7 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 	mac := FullMAC(h, info, hf, buffer)
 	var res /*@ @ @*/ [MacLen]byte
 	//@ unfold sl.Bytes(mac, 0, MACBufferSize)
-	copy(res[:], mac[:MacLen] /*@, R1 @*/)
+	copy(res[int(0):len(res)], mac[int(0):MacLen] /*@, R1 @*/)
 	return res
 }
 

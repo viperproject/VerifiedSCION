@@ -61,7 +61,13 @@ pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
 ghost
 decreases
 pure func (p *Path) LenSpec(ghost ub []byte) int {
-	return PathLen
+	return int(PathLen)
+}
+
+ghost
+decreases
+pure func (p *Path) MayReversePath(b []byte) bool {
+	return true
 }
 
 (*Path) implements path.Path

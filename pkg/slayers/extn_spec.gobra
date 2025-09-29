@@ -46,7 +46,7 @@ pred (h *HopByHopExtn) NonInitMem() {
 pred (h *HopByHopExtn) Mem(ubuf []byte) {
 	h.extnBase.Mem(ubuf) &&
 	acc(&h.Options) &&
-	forall i int :: { &h.Options[i] } 0 <= i && i < len(h.Options) ==>
+	forall i int :: { &h.Options[i] } int(0) <= i && i < len(h.Options) ==>
 		(acc(&h.Options[i]) && h.Options[i].Mem(i))
 }
 
@@ -94,8 +94,8 @@ func (h *HopByHopExtnSkipper) LayerContents() (res []byte) {
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
 preserves acc(h.Mem(ub), R20)
-ensures   0 <= start && start <= end && end <= len(ub)
-ensures   len(res) == end - start
+ensures   int(0) <= start && start <= end && end <= len(ub)
+ensures   integer(len(res)) == integer(end - start)
 ensures   res === ub[start:end]
 decreases
 func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
@@ -134,7 +134,7 @@ pred (e *EndToEndExtn) NonInitMem() {
 pred (e *EndToEndExtn) Mem(ubuf []byte) {
 	e.extnBase.Mem(ubuf) &&
 	acc(&e.Options) &&
-	forall i int :: { &e.Options[i] } 0 <= i && i < len(e.Options) ==>
+	forall i int :: { &e.Options[i] } int(0) <= i && i < len(e.Options) ==>
 		(acc(&e.Options[i]) && e.Options[i].Mem(i))
 }
 
@@ -184,7 +184,7 @@ func (e *EndToEndExtnSkipper) LayerContents() (res []byte) {
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
 // the implementation of LayerPayload from extnBase.
 preserves acc(e.Mem(ub), R20)
-ensures   0 <= start && start <= end && end <= len(ub)
+ensures   int(0) <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
 ensures   res === ub[start:end]
 decreases

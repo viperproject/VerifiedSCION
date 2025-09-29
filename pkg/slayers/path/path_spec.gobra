@@ -55,12 +55,19 @@ pure func (p *rawPath) LenSpec(ghost ub []byte) (l int) {
 		len(p.raw)
 }
 
+ghost
+requires p.Mem(b)
+decreases
+pure func (p *rawPath) MayReversePath(b []byte) bool {
+	return true
+}
+
 (*rawPath) implements Path
 
 /** End of rawPath spec **/
 
 /** Global state of the package **/
-ghost const MaxPathType = maxPathType
+ghost const MaxPathType int = maxPathType
 
 ghost
 decreases
@@ -74,14 +81,14 @@ pred PkgMem() {
 	registeredKeys.Inv()              &&
 	registeredKeys.Start == 0         &&
 	registeredKeys.End == maxPathType &&
-	(forall t Type :: { &registeredPaths[t].inUse } 0 <= t && t < maxPathType ==>
+	(forall t Type :: { &registeredPaths[t].inUse } 0 <= int(t) && int(t) < maxPathType ==>
 		registeredPaths[t].inUse == registeredKeys.FContains(int64(t))) &&
-	(forall t Type :: { &registeredPaths[t].inUse } (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==>
+	(forall t Type :: { &registeredPaths[t].inUse } (0 <= int(t) && int(t) < maxPathType && registeredPaths[t].inUse) ==>
 		registeredPaths[t].Metadata.New implements NewPathSpec)
 }
 
 ghost
-requires 0 <= t && t < maxPathType
+requires 0 <= int(t) && int(t) < maxPathType
 requires PkgMem()
 decreases
 pure func Registered(t Type) (res bool) {
@@ -90,7 +97,7 @@ pure func Registered(t Type) (res bool) {
 }
 
 ghost
-requires 0 <= t && t < maxPathType
+requires 0 <= int(t) && int(t) < maxPathType
 requires PkgMem()
 decreases
 pure func GetType(t Type) (res Metadata) {

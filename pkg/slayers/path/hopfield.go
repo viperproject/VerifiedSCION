@@ -76,10 +76,10 @@ type HopField struct {
 // path.HopLen.
 // @ requires  acc(h)
 // @ requires  len(raw) >= HopLen
-// @ preserves acc(sl.Bytes(raw, 0, HopLen), R45)
+// @ preserves acc(sl.Bytes(raw, int(0), HopLen), R45)
 // @ ensures   h.Mem()
 // @ ensures   err == nil
-// @ ensures  BytesToIO_HF(raw, 0, 0, HopLen) ==
+// @ ensures  BytesToIO_HF(raw, int(0), int(0), HopLen) ==
 // @ 	unfolding acc(h.Mem(), R10) in h.Abs()
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
@@ -87,19 +87,19 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 		return serrors.New("HopField raw too short", "expected", HopLen, "actual", len(raw))
 	}
 	//@ unfold acc(sl.Bytes(raw, 0, HopLen), R46)
-	h.EgressRouterAlert = raw[0]&0x1 == 0x1
-	h.IngressRouterAlert = raw[0]&0x2 == 0x2
+	h.EgressRouterAlert = raw[int(0)]&0x1 == 0x1
+	h.IngressRouterAlert = raw[int(0)]&0x2 == 0x2
 	h.ExpTime = raw[1]
 	//@ assert &raw[2:4][0] == &raw[2] && &raw[2:4][1] == &raw[3]
 	h.ConsIngress = binary.BigEndian.Uint16(raw[2:4])
 	//@ assert &raw[4:6][0] == &raw[4] && &raw[4:6][1] == &raw[5]
 	h.ConsEgress = binary.BigEndian.Uint16(raw[4:6])
-	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac[:]) ==>
-	//@     &h.Mac[i] == &h.Mac[:][i]
+	//@ assert forall i int :: { &h.Mac[:][i] } int(0) <= i && i < len(h.Mac[:]) ==>
+	//@ 	&h.Mac[i] == &h.Mac[:][i]
 	//@ sl.AssertSliceOverlap(raw, 6, 6+MacLen)
 	copy(h.Mac[:], raw[6:6+MacLen] /*@ , R47 @*/)
-	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == raw[6:6+MacLen][i]
-	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
+	//@ assert forall i int :: {&h.Mac[:][i]} int(0) <= i && i < MacLen ==> h.Mac[:][i] == raw[6:6+MacLen][i]
+	//@ assert forall i int :: {&h.Mac[i]} int(0) <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
 	//@ EqualBytesImplyEqualMac(raw[6:6+MacLen], h.Mac)
 	//@ assert BytesToIO_HF(raw, 0, 0, HopLen) == h.Abs()
 	//@ fold acc(sl.Bytes(raw, 0, HopLen), R46)
