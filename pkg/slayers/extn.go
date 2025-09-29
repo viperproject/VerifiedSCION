@@ -105,7 +105,7 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 // @ ensures   err == nil ==> acc(res)
 // @ ensures   (err == nil && res.OptType != OptTypePad1) ==> (
 // @ 	2 <= res.ActualLength && res.ActualLength <= len(data) && res.OptData === data[2:res.ActualLength])
-// @ ensures   err == nil ==> 0 < res.ActualLength
+// @ ensures   err == nil ==> 0 < res.ActualLength && res.ActualLength <= 258
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeTLVOption(data []byte) (res *tlvOption, err error) {
@@ -250,7 +250,8 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 // @ 	2 <= len(data) &&
 // @ 	0 <= res.ActualLen && res.ActualLen <= len(data) &&
 // @ 	res.BaseLayer.Contents === data[:res.ActualLen] &&
-// @ 	res.BaseLayer.Payload === data[res.ActualLen:])
+// @ 	res.BaseLayer.Payload === data[res.ActualLen:]  &&
+// @ 	res.ActualLen <= MAX_INT - 258)
 // @ decreases
 func decodeExtnBase(data []byte, df gopacket.DecodeFeedback) (res extnBase, resErr error) {
 	e := extnBase{}
@@ -368,8 +369,9 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 
 	// @ invariant 2 <= offset
 	// @ invariant acc(h)
-	// @ invariant 0 <= h.ActualLen && h.ActualLen <= len(data)
+	// @ invariant 0 <= h.ActualLen && h.ActualLen <= len(data) && h.ActualLen <= MAX_INT - 258
 	// @ invariant len(h.Options) == lenOptions
+	// @ invariant lenOptions < offset
 	// @ invariant forall i int :: { &h.Options[i] } 0 <= i && i < lenOptions ==>
 	// @ 	(acc(&h.Options[i]) && h.Options[i].Mem(i))
 	// @ invariant acc(sl.Bytes(data, 0, len(data)), R40)
@@ -385,7 +387,6 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 			return err
 		}
 		// @ ghost tmp := (*HopByHopOption)(opt)
-		// @ assume false // TODO: debug: can't prove proof obligation after overflow PR
 		h.Options = append( /*@ perm(1/2), @*/ h.Options, (*HopByHopOption)(opt))
 		offset += opt.ActualLength
 		// @ assert h.Options[lenOptions] === tmp
@@ -501,8 +502,9 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 
 	// @ invariant 2 <= offset
 	// @ invariant acc(e)
-	// @ invariant 0 <= e.ActualLen && e.ActualLen <= len(data)
+	// @ invariant 0 <= e.ActualLen && e.ActualLen <= len(data) && e.ActualLen <= MAX_INT - 258
 	// @ invariant len(e.Options) == lenOptions
+	// @ invariant lenOptions < offset
 	// @ invariant forall i int :: { &e.Options[i] } 0 <= i && i < lenOptions ==>
 	// @ 	(acc(&e.Options[i]) && e.Options[i].Mem(i))
 	// @ invariant acc(sl.Bytes(data, 0, len(data)), R40)
@@ -518,7 +520,6 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 			return err
 		}
 		// @ ghost tmp := (*EndToEndOption)(opt)
-		// @ assume false // TODO: debug: can't prove proof obligation after overflow PR
 		e.Options = append( /*@ perm(1/2), @*/ e.Options, (*EndToEndOption)(opt))
 		offset += opt.ActualLength
 		// @ assert e.Options[lenOptions] === tmp
