@@ -110,8 +110,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.HopLen.
 // @ requires  len(b) >= HopLen
-// @ requires  acc(h.Mem(), R10)
-// @ requires  low(h.GetEgressRouterAlert()) && low(h.GetIngressRouterAlert())
+// @ requires  acc(h.Mem(), R10) && h.IsLow()
 // @ preserves sl.Bytes(b, 0, HopLen)
 // @ ensures   acc(h.Mem(), R10)
 // @ ensures   err == nil
@@ -119,6 +118,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // @ 	unfolding acc(h.Mem(), R10) in h.Abs()
 // @ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {
+	//@ h.RevealIsLow(R10)
 	if len(b) < HopLen {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
 	}

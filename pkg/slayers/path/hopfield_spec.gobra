@@ -27,6 +27,37 @@ pred (h *HopField) Mem() {
 	acc(h) && h.ConsIngress >= 0 && h.ConsEgress >= 0
 }
 
+ghost
+requires h.Mem()
+decreases
+pure func (h *HopField) GetEgressRouterAlert() bool {
+	return unfolding h.Mem() in h.EgressRouterAlert
+}
+
+ghost
+requires h.Mem()
+decreases
+pure func (h *HopField) GetIngressRouterAlert() bool {
+	return unfolding h.Mem() in h.IngressRouterAlert
+}
+
+// TODO: Once Gobra issue #846 is resolved, implement this.
+ghost
+trusted
+requires h.Mem()
+decreases
+pure func (h *HopField) IsLow() bool
+
+// "Reveal the body" of `h.IsLow` (necessary bc. we can't implement `h.IsLow` yet).
+// TODO: Once Gobra issue #846 is resolved, implement this.
+ghost
+trusted
+requires p > 0
+requires acc(h.Mem(), p) && h.IsLow()
+ensures  acc(h.Mem(), p)
+ensures  low(h.GetEgressRouterAlert()) && low(h.GetIngressRouterAlert())
+decreases
+func (h *HopField) RevealIsLow(p perm)
 
 ghost
 decreases
@@ -114,18 +145,4 @@ pure func (h HopField) Abs() (io.HF) {
 		EgIF2: ifsToIO_ifs(h.ConsEgress),
 		HVF: AbsMac(h.Mac),
 	}
-}
-
-ghost
-requires h.Mem()
-decreases
-pure func (h *HopField) GetEgressRouterAlert() bool {
-	return unfolding h.Mem() in h.EgressRouterAlert
-}
-
-ghost
-requires h.Mem()
-decreases
-pure func (h *HopField) GetIngressRouterAlert() bool {
-	return unfolding h.Mem() in h.IngressRouterAlert
 }

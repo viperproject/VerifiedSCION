@@ -113,7 +113,7 @@ type Path interface {
 	//@ IsValidResultOfDecoding(b []byte) bool
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
-	//@ requires  Mem(ub)
+	//@ requires  Mem(ub) && IsLow(ub)
 	//@ preserves sl.Bytes(ub, 0, len(ub))
 	//@ ensures   e == nil ==> p != nil
 	//@ ensures   e == nil ==> p.Mem(ub)

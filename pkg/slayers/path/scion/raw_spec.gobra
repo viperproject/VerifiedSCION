@@ -38,12 +38,13 @@ pred (s *Raw) Mem(buf []byte) {
 	len(s.Raw) == s.Base.Len()
 }
 
-// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
-trusted
 requires s.Mem(ub)
 decreases
-pure func (s *Raw) IsLow(ub []byte) bool
+pure func (s *Raw) IsLow(ub []byte) bool {
+	return true
+}
+
 /**** End of Predicates ****/
 
 (*Raw) implements path.Path

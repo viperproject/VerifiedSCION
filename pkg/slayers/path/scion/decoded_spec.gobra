@@ -47,12 +47,12 @@ pred (d *Decoded) Mem(ubuf []byte) {
 	(forall i int :: { &d.HopFields[i] } 0 <= i && i < len(d.HopFields) ==> d.HopFields[i].Mem())
 }
 
-// TODO: Once Gobra issue #846 is resolved, actually implement `IsLow`.
 ghost
-trusted
 requires d.Mem(ub)
 decreases
-pure func (d *Decoded) IsLow(ub []byte) bool
+pure func (d *Decoded) IsLow(ub []byte) bool {
+	return true
+}
 
 /**** End of Predicates ****/
 
@@ -119,6 +119,7 @@ ensures  e == nil ==> (
 	d.LenSpec(ubuf) == old(d.LenSpec(ubuf)) &&
 	(old(d.GetBase(ubuf).Valid()) ==> d.GetBase(ubuf).Valid()))
 ensures  e != nil ==> d.NonInitMem() && e.ErrorMem()
+ensures  low(e != nil)
 decreases
 func (d *Decoded) IncPath(ghost ubuf []byte) (e error) {
 	unfold d.Mem(ubuf)

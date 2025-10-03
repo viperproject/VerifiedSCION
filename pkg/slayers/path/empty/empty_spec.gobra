@@ -58,4 +58,5 @@ Path implements path.Path
 // Definitions to allow *Path to be treated as a path.Path
 pred (e *Path) Mem(buf []byte) { acc(e) && len(buf) == 0 }
 pred (e *Path) NonInitMem() { true }
+
 (*Path) implements path.Path
