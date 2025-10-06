@@ -88,7 +88,7 @@ func (ip IP) To4(ghost wildcard bool) (res IP) {
 	return nil
 }
 
-preserves forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i])
+requires forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i])
 decreases
 pure func isZeros(s []byte) bool
 

@@ -114,7 +114,7 @@ ghost
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) is_target(asid AS, nextif Ifs, a2 AS, i2 Ifs) bool {
-	return AsIfsPair{asid, nextif} in domain(dp.GetLinks()) &&
+	return AsIfsPair{asid, nextif} elem domain(dp.GetLinks()) &&
 		dp.Lookup(AsIfsPair{asid, nextif}) == AsIfsPair{a2, i2}
 }
 
@@ -140,7 +140,7 @@ pure func dp3s_add_obuf(s Dp3sStateLocal, i option[Ifs], pkt Pkt) Dp3sStateLocal
 ghost
 decreases
 pure func insert(buf dict[option[Ifs]](set[Pkt]), k option[Ifs], v Pkt) dict[option[Ifs]](set[Pkt]) {
-	return let newSet := (k in domain(buf) ? (let pre := buf[k] in pre union set[Pkt]{v}) : set[Pkt]{v}) in
+	return let newSet := (k elem domain(buf) ? (let pre := buf[k] in pre union set[Pkt]{v}) : set[Pkt]{v}) in
 		buf[k = newSet]
 }
 
@@ -154,7 +154,7 @@ pure func (dp DataPlaneSpec) dp3s_forward_ext(m Pkt, newpkt Pkt, nextif Ifs) boo
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in
 		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
-		(nextif in domain(dp.GetNeighborIAs())) &&
+		(nextif elem domain(dp.GetNeighborIAs())) &&
 		let a2 := dp.GetNeighborIA(nextif) in
 		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
 		dp.is_target(dp.Asid(), nextif, a2, i2)
@@ -170,7 +170,7 @@ pure func (dp DataPlaneSpec) dp3s_forward_ext_xover(m Pkt, newpkt Pkt, nextif If
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in
 		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
-		(nextif in domain(dp.GetNeighborIAs())) &&
+		(nextif elem domain(dp.GetNeighborIAs())) &&
 		let a2 := dp.GetNeighborIA(nextif) in
 		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
 		dp.is_target(dp.Asid(), nextif, a2, i2)
@@ -222,8 +222,8 @@ pure func (dp DataPlaneSpec) dp3s_xover_guard(
 	) bool {
 		// the first conjunct was added to Gobra, even though it was not in the original isabelle spec.
 		// this is because of the way math. maps are implemented, we can only obtain a key that is in the map before.
-		return some(recvif) in domain(s.ibuf) &&
-			(let lookupRes := s.ibuf[some(recvif)] in (m in lookupRes)) &&
+		return some(recvif) elem domain(s.ibuf) &&
+			(let lookupRes := s.ibuf[some(recvif)] in (m elem lookupRes)) &&
 			dp.dp2_xover_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, nextfut, dp.Asid(), recvif) &&
 			dp.dp3s_forward_xover(intermediatepkt, newpkt, nextif)
 }

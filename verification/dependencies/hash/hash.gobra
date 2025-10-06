@@ -56,7 +56,7 @@ type Hash interface {
 	// It does not change the underlying hash state.
 	preserves acc(Mem(), 1/1000)
 	requires acc(b)
-	ensures  acc(res) && len(res) == Size()
+	ensures  acc(res) && len(res) == len(b) + Size()
 	decreases
 	Sum(b []byte) (res []byte)
 
