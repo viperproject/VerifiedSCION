@@ -1521,7 +1521,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ 	d.getValSvc() != nil      &&
 // @ 	d.getValForwardingMetrics() != nil &&
 // @ 	d.DpAgreesWithSpec(dp)    &&
-// @    d.KeyIsSet()
+// @ 	d.KeyIsSet()
 // @ requires let ubuf := p.sInitBufferUBuf() in
 // @ 	acc(sl.Bytes(ubuf, 0, len(ubuf)), writePerm)
 // @ ensures  p.sInit()

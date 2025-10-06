@@ -33,7 +33,7 @@ const MACBufferSize = 16
 // @ requires  h != nil && h.Mem() && sh === h && acc(sh.AsidMem(), 1/2)
 //  requires  h != nil && h.Mem() && sh === h
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
-// @ ensures   h.Mem() && sh === h && sh.AsidMem()
+// @ ensures   h.Mem() && sh === h && acc(sh.AsidMem(), 1/2)
 //  ensures   h.Mem() && sh === h
 // @ ensures   let absInf := info.ToAbsInfoField() in
 // @ 	let absHF := hf.Abs() in
@@ -61,7 +61,7 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte /*@, ghost sh h
 // @ requires  h != nil && h.Mem() && sh === h && acc(sh.AsidMem(), 1/2)
 //  requires  h != nil && h.Mem() && sh === h
 // @ preserves len(buffer) >= MACBufferSize ==> sl.Bytes(buffer, 0, len(buffer))
-// @ ensures   h.Mem() && sh === h && sh.AsidMem()
+// @ ensures   h.Mem() && sh === h && acc(sh.AsidMem(), 1/2)
 //  ensures   h.Mem() && sh === h
 // @ ensures   len(res) == MACBufferSize && sl.Bytes(res, 0, MACBufferSize)
 // @ ensures   unfolding sl.Bytes(res, 0, MACBufferSize) in
