@@ -38,7 +38,6 @@ preserves acc(sl.Bytes(key, 0, len(key)), _)
 ensures   old(ValidKeyForHash(key)) ==> e == nil
 ensures   e == nil ==> (
     h != nil && h.Mem() && ValidKeyForHash(key) &&
-    // h === sh && sh.Asid() == asid)
     h === sh && sh.AsidMem() && sh.Asid() == asid)
 ensures   e != nil ==> e.ErrorMem()
 decreases _

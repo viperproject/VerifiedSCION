@@ -8,12 +8,8 @@
 
 package hash
 
-// TODO: Remove as this is not used here anymore (and clashes with our `io`)
-// import "io"
-
-// TODO: Maybe find a different solution s.t. we don't have to import that here;
-// note that we can't define `ScionHashSpec` elsewhere as Gobra doesn't support
-// embedding imported types yet.
+// As Gobra doesn't support embedding imported types yet, we have to define
+// `ScionHashSpec` here; consequently, there is no way around importing `io`.
 import "github.com/scionproto/scion/verification/io"
 
 // Hash is the common interface implemented by all hash functions.
