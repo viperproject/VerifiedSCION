@@ -1648,18 +1648,9 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ }
 		// @ assert sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
 		// @ unfold acc(p.d.Mem(), _)
-		// TODO[henri]: minimize assertions
-		// @ assert p.d.macFactory != nil
-		// @ assert *p.d.asid == io.AS{uint(p.d.localIA)}
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 		// @ assert !(reveal slayers.IsSupportedPkt(p.rawPkt))
 		// @ reveal p.d.DpAgreesWithSpec(dp)
-		// @ assert p.d.dpSpecWellConfiguredLocalIA(dp)
-		// @ assert dp.Asid() == io.AS{uint(p.d.localIA)}
-		// @ assert *p.d.asid == io.AS{uint(p.d.localIA)}
-		// @ assert dp.Asid() == *p.d.asid
-		// @ assert p.macSpec.Asid() == *p.d.asid
-		// @ assert p.macSpec.Asid() == dp.Asid()
 		v1, v2 /*@, aliasesPkt, newAbsPkt @*/ := p.processOHP(/*@ dp @*/)
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
@@ -1671,17 +1662,9 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ 	sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, HalfPerm)
 		// @ }
 		// @ assert sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
-		// TODO[henri]: minimize assertions
 		// @ unfold acc(p.d.Mem(), _)
-		// @ assert p.d.macFactory != nil
-		// @ assert *p.d.asid == io.AS{uint(p.d.localIA)}
 		// @ reveal p.d.DpAgreesWithSpec(dp)
 		// @ assert p.d.dpSpecWellConfiguredLocalIA(dp)
-		// @ assert dp.Asid() == io.AS{uint(p.d.localIA)}
-		// @ assert *p.d.asid == io.AS{uint(p.d.localIA)}
-		// @ assert dp.Asid() == *p.d.asid
-		// @ assert p.macSpec.Asid() == *p.d.asid
-		// @ assert p.macSpec.Asid() == dp.Asid()
 		v1, v2 /*@ , addrAliasesPkt, newAbsPkt @*/ := p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd, ioLock, ioSharedArg, dp @*/ )
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, v2 == nil, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
@@ -2938,8 +2921,6 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, ghost ubScionL []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	// @ ghost oldPkt := absPkt(ubScionL)
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput /*@, p.macSpec @*/)
-	// TODO[henri]: might be able to remove this assertion
-	// @ assert p.macSpec.Asid() == old(p.macSpec.Asid())
 	// @ fold acc(sl.Bytes(p.hopField.Mac[:path.MacLen], 0, path.MacLen), R21)
 	// @ sl.SplitRange_Bytes(fullMac, 0, path.MacLen, R21)
 	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen]) == 0 {
