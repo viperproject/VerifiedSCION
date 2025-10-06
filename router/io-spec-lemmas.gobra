@@ -274,6 +274,17 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	assert reveal scion.validPktMetaHdr(ub[start:end])
 	unfold acc(p.scionLayer.Mem(ub), R56)
 	reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
+	// TODO: remove
+	assert scion.MetaLen <= len(ub)
+	metaHdr := scion.RawBytesToMetaHdr(ub[start:end])
+	seg1 := int(metaHdr.SegLen[0])
+	seg2 := int(metaHdr.SegLen[1])
+	seg3 := int(metaHdr.SegLen[2])
+	segs := io.CombineSegLens(seg1, seg2, seg3)
+	assert p.path.GetBase(ub[start:end]).PathMeta == metaHdr
+	assert p.path.GetBase(ub[start:end]).NumINF == segs.NumInfoFields()
+	assert p.path.GetBase(ub[start:end]).NumHops == segs.TotalHops()
+	assert p.path.GetBase(ub[start:end]) == scion.RawBytesToBase(ub[start:end])
 	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.scionLayer.Mem(ub), R56)
 	assert start == slayers.GetAddressOffset(ub)
