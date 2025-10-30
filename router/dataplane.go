@@ -4648,8 +4648,11 @@ func (p *scionPacketProcessor) prepareSCMP(
 			return nil, serrors.Wrap(cannotRoute, err, "details", "incrementing path for SCMP")
 		}
 	}
-	// @ TODO()
 
+	// @ ensures scionL.Mem(nil)
+	// @ ensures   err != nil ==> err.ErrorMem()
+	// @ decreases
+	// @ outline (
 	// create new SCION header for reply.
 	var scionL /*@@@*/ slayers.SCION
 	// (VerifiedSCION) TODO: adapt *SCION.Mem(...)
@@ -4660,28 +4663,60 @@ func (p *scionPacketProcessor) prepareSCMP(
 	scionL.DstIA = p.scionLayer.SrcIA
 	scionL.SrcIA = p.d.localIA
 	srcA, err := p.scionLayer.SrcAddr()
+	// @ )
 	if err != nil {
+		// @ assert path.Mem(ubPath)
+		// @ fold acc(p.scionLayer.Mem(ub), R4)
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "extracting src addr")
 	}
-	if err := scionL.SetDstAddr(srcA /*@ , false @*/); err != nil {
-		return nil, serrors.Wrap(cannotRoute, err, "details", "setting dest addr")
+	{
+		// @ preserves scionL.Mem(nil)
+		// @ ensures   err != nil ==> err.ErrorMem()
+		// @ decreases
+		// @ outline (
+		err := scionL.SetDstAddr(srcA /*@ , false @*/)
+		// @ )
+		if err != nil {
+			// @ fold acc(p.scionLayer.Mem(ub), R4)
+			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+			return nil, serrors.Wrap(cannotRoute, err, "details", "setting dest addr")
+		}
 	}
-	if err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP} /*@ , false @*/); err != nil {
-		return nil, serrors.Wrap(cannotRoute, err, "details", "setting src addr")
+	{
+		// @ preserves scionL.Mem(nil)
+		// @ ensures   err != nil ==> err.ErrorMem()
+		// @ decreases
+		// @ outline (
+		err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP} /*@ , false @*/)
+		// @ )
+		if err != nil {
+			// @ fold acc(p.scionLayer.Mem(ub), R4)
+			// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+			return nil, serrors.Wrap(cannotRoute, err, "details", "setting src addr")
+		}
 	}
+	// @ fold acc(p.scionLayer.Mem(ub), R4)
+
+	// @ preserves scionL.Mem(nil)
+	// @ decreases
+	// @ outline (
 	scionL.NextHdr = slayers.L4SCMP
+	// @ )
 
 	typeCode := slayers.CreateSCMPTypeCode(typ, code)
 	scmpH /*@@@*/ := slayers.SCMP{TypeCode: typeCode}
 	scmpH.SetNetworkLayerForChecksum(&scionL)
 
 	if err := p.buffer.Clear(); err != nil {
+		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
 		return nil, err
 	}
 	sopts := gopacket.SerializeOptions{
 		ComputeChecksums: true,
 		FixLengths:       true,
 	}
+	// @ TODO()
 	scmpLayers := []gopacket.SerializableLayer{&scionL, &scmpH, scmpP}
 	if cause != nil {
 		// add quote for errors.
