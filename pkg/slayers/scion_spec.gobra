@@ -92,7 +92,7 @@ pred PathPoolMemExceptOne(pathPool []path.Path, pathPoolRaw path.Path, pathType 
 	(pathType != epic.PathType ==> pathPool[epic.PathType].NonInitMem()) &&
 	// raw path
 	pathPoolRaw != nil &&
-	(pathType < len(pathPool) ==> pathPoolRaw.NonInitMem())
+	(int(pathType) < len(pathPool) ==> pathPoolRaw.NonInitMem())
 }
 
 ghost
@@ -159,8 +159,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 	// len of ubuf:
 	0 <= s.HdrLen &&
 	0 <= CmnHdrLen + s.AddrHdrLenSpecInternal() &&
-	s.HdrLen * LineLen <= len(ubuf) &&
-	CmnHdrLen + s.AddrHdrLenSpecInternal() <= s.HdrLen * LineLen &&
+	int(s.HdrLen) * LineLen <= len(ubuf) &&
+	CmnHdrLen + s.AddrHdrLenSpecInternal() <= int(s.HdrLen) * LineLen &&
 	// end of len of ubuf
 	acc(&s.Path) &&
 	s.Path != nil &&
@@ -412,7 +412,7 @@ pure func (s *SCION) EqAbsHeader(ub []byte) bool {
 		// the '_' in the identifier below is now necessary to avoid
 		// parsing errors (since the SIF PR in Gobra, low is a keyword).
 		let low_ := CmnHdrLen+s.AddrHdrLenSpecInternal() in
-		let high := s.HdrLen*LineLen  in
+		let high := int(s.HdrLen) * LineLen  in
 		GetAddressOffset(ub) == low_  &&
 		GetLength(ub) == int(high)    &&
 		// Might be worth introducing EqAbsHeader as an interface method on Path
@@ -775,8 +775,8 @@ requires acc(&s.DstAddrType) &&
 	acc(&s.Path)
 requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 requires 0 <= CmnHdrLen+s.AddrHdrLenSpecInternal() &&
-	CmnHdrLen+s.AddrHdrLenSpecInternal() <= s.HdrLen*LineLen &&
-	s.HdrLen*LineLen <= len(ub)
+	CmnHdrLen+s.AddrHdrLenSpecInternal() <= int(s.HdrLen)*LineLen &&
+	int(s.HdrLen)*LineLen <= len(ub)
 requires s.Path != nil && s.Path.Mem(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])
 decreases
 pure func (s *SCION) MinSizeOfUbufWithOneHopOpenInv(ub []byte) int {
@@ -800,8 +800,8 @@ requires acc(&s.DstAddrType) &&
 	acc(&s.Path)
 requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 requires 0 <= CmnHdrLen+s.AddrHdrLenSpecInternal() &&
-	CmnHdrLen+s.AddrHdrLenSpecInternal() <= s.HdrLen*LineLen &&
-	s.HdrLen*LineLen <= len(ub)
+	CmnHdrLen+s.AddrHdrLenSpecInternal() <= int(s.HdrLen)*LineLen &&
+	int(s.HdrLen)*LineLen <= len(ub)
 requires s.Path != nil && s.Path.Mem(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : s.HdrLen*LineLen])
 decreases
 pure func (s *SCION) ValidSizeOhpUbOpenInv(ub []byte) (b bool) {

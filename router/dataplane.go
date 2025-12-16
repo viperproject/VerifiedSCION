@@ -2505,10 +2505,10 @@ func (p *scionPacketProcessor) invalidDstIA(
 // @ requires  acc(&p.infoField, R4) && acc(&p.hopField, R4)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
 // @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @ 	p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ 	int(p.path.GetCurrHF(ubPath)) <= p.path.GetNumHops(ubPath)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
 // @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @ 	p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
+// @ 	int(p.path.GetCurrINF(ubPath)) <= p.path.GetNumINF(ubPath)
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires  acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(sl.Bytes(ub, 0, len(ub)), R4)
@@ -3250,8 +3250,8 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.path.Mem(ubPath), R5)
 // @ requires  acc(&p.infoField, R5) && acc(&p.hopField, R5)
-// @ requires  p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
-// @ requires  p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ requires  int(p.path.GetCurrINF(ubPath)) <= p.path.GetNumINF(ubPath)
+// @ requires  int(p.path.GetCurrHF(ubPath)) <= p.path.GetNumHops(ubPath)
 // @ preserves acc(sl.Bytes(ubPath, 0, len(ubPath)), R5)
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(p.path.Mem(ubPath), R5)
