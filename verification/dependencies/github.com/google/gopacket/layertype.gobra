@@ -67,7 +67,7 @@ pred PkgMem() {
 	RegisteredTypes.End == AbsMaxLayerType     &&
 	(forall t LayerType :: { &ltMeta[t].inUse } 0 <= t && t < maxLayerType ==>
 		ltMeta[t].inUse == RegisteredTypes.FContains(int64(t))) &&
-	(forall t LayerType :: { ltMetaMap[t].inUse } ((AbsMinLayerType <= t && t < 0) || (maxLayerType <= t && t <= AbsMaxLayerType)) ==>
+	(forall t LayerType :: { ltMetaMap[t].inUse } ((AbsMinLayerType <= int64(t) && t < 0) || (maxLayerType <= t && int64(t) <= AbsMaxLayerType)) ==>
 		ltMetaMap[t].inUse == RegisteredTypes.FContains(int64(t)))
 }
 
@@ -105,7 +105,7 @@ requires RegisteredTypes.Start == AbsMinLayerType
 requires RegisteredTypes.End == AbsMaxLayerType
 requires forall t LayerType :: { &ltMeta[t].inUse } 0 <= t && t < maxLayerType ==>
 	ltMeta[t].inUse == RegisteredTypes.FContains(int64(t))
-requires forall t LayerType :: { ltMetaMap[t].inUse } (AbsMinLayerType <= t && t < 0) || (maxLayerType <= t && t <= AbsMaxLayerType) ==>
+requires forall t LayerType :: { ltMetaMap[t].inUse } (AbsMinLayerType <= int64(t) && t < 0) || (maxLayerType <= t && int64(t) <= AbsMaxLayerType) ==>
 	ltMetaMap[t].inUse == RegisteredTypes.FContains(int64(t))
 ensures  PkgMem()
 ensures  forall t LayerType :: { Registered(t) } !Registered(t)
@@ -176,7 +176,7 @@ func init() {
 
 /** Actual Methods **/
 mayInit
-requires AbsMinLayerType <= num && num <= AbsMaxLayerType
+requires AbsMinLayerType <= int64(num) && int64(num) <= AbsMaxLayerType
 requires PkgMem()
 requires RegisteredTypes.DoesNotContain(int64(num))
 requires meta.Decoder != nil ==> meta.Decoder.Mem()

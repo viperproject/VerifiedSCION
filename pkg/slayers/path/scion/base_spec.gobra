@@ -43,13 +43,15 @@ pred (b *Base) Mem() {
 ghost
 decreases
 pure func (b Base) ValidCurrInfSpec() bool {
-	return 0 <= b.PathMeta.CurrINF && b.PathMeta.CurrINF < b.NumINF
+	return 0 <= b.PathMeta.CurrINF &&
+		int(b.PathMeta.CurrINF) < b.NumINF
 }
 
 ghost
 decreases
 pure func (b Base) ValidCurrHfSpec() bool {
-	return 0 <= b.PathMeta.CurrHF && b.PathMeta.CurrHF < b.NumHops
+	return 0 <= b.PathMeta.CurrHF &&
+		int(b.PathMeta.CurrHF) < b.NumHops
 }
 
 ghost

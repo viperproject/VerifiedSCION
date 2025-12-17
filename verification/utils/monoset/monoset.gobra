@@ -28,12 +28,15 @@ type BoundedMonotonicSet struct {
 
 pred (b BoundedMonotonicSet) Inv() {
 	(b.Start <= b.End) &&
-	forall i int64 :: b.Start <= i && i <= b.End ==>
-		(i elem domain(b.valuesMap) && acc(b.valuesMap[i], 1/2))
+	(forall i int64 :: b.Start <= i && i <= b.End ==>
+		(i elem domain(b.valuesMap) && acc(b.valuesMap[i], 1/2))) &&
+	// injectivity requirement
+	(forall j1, j2 int64 :: b.Start <= j1 && j1 <= b.End && b.Start <= j2 && j2 <= b.End && j1 != j2 ==>
+		b.valuesMap[j1] != b.valuesMap[j2])
 }
 
 ghost
-requires acc(b.Inv(), _)
+requires b.Inv()
 requires b.Start <= i && i <= b.End
 decreases
 pure func (b BoundedMonotonicSet) FContains(i int64) bool {
@@ -43,8 +46,7 @@ pure func (b BoundedMonotonicSet) FContains(i int64) bool {
 }
 
 ghost
-requires forall i int64 :: b.Start <= i && i <= b.End ==>
-	(i elem domain(b.valuesMap) && acc(b.valuesMap[i], _))
+requires i elem domain(b.valuesMap) && acc(b.valuesMap[i])
 requires b.Start <= i && i <= b.End
 decreases
 pure func (b BoundedMonotonicSet) fcontainshelper(i int64) bool {
@@ -55,7 +57,7 @@ pure func (b BoundedMonotonicSet) fcontainshelper(i int64) bool {
 pred (b BoundedMonotonicSet) Contains(i int64) {
 	b.Start <= i && i <= b.End &&
 	i elem domain(b.valuesMap) &&
-	acc(b.valuesMap[i], _)   &&
+	acc(b.valuesMap[i], _)     &&
 	*b.valuesMap[i]
 }
 
@@ -149,9 +151,9 @@ func Alloc(start, end int64) (res BoundedMonotonicSet) {
 	invariant forall j int64 :: start <= j && j <= end ==>
 		j elem domain(b.valuesMap)
 	// injectivity requirement
-	invariant forall j1, j2 int64 :: start <= j1 && j1 < j2 && j2 < i ==>
+	invariant forall j1, j2 int64 :: start <= j1 && j1 < j2 && j2 <= end ==>
 		b.valuesMap[j1] != b.valuesMap[j2]
-	invariant forall j int64 :: i <= j && j <= end ==>
+	invariant forall j int64 :: {b.valuesMap[j]} {*b.valuesMap[j]} i <= j && j <= end ==>
 		acc(b.valuesMap[j]) && !(*b.valuesMap[j])
 	invariant forall j int64 :: start <= j && j < i ==>
 		acc(b.valuesMap[j], 1/2)
@@ -172,19 +174,19 @@ func Alloc(start, end int64) (res BoundedMonotonicSet) {
 
 ghost
 opaque // make this closed when that is supported
-requires acc(b.Inv(), _)
+requires b.Inv()
 decreases
 pure func (b BoundedMonotonicSet) ToSet() set[int64] {
-	return unfolding acc(b.Inv(), _) in
+	return unfolding b.Inv() in
 		b.toSetAux(b.Start)
 }
 
 ghost
-requires acc(b.Inv(), _)
+requires b.Inv()
 requires b.Start <= start && start <= b.End
 decreases b.End - start
 pure func (b BoundedMonotonicSet) toSetAux(start int64) set[int64] {
-	return unfolding acc(b.Inv(), _) in
+	return unfolding b.Inv() in
 		let part1 := (*b.valuesMap[start] ? set[int64]{start} : set[int64]{}) in
 		let part2 := (start < b.End ? b.toSetAux(start+1) : set[int64]{}) in
 		part1 union part2
