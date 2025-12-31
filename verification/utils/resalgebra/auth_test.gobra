@@ -1,0 +1,78 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package resalgebra
+
+import "sync"
+
+type MonoCounter struct {
+	val int
+	ghost authRes AuthCarrier
+	ghost loc LocName
+}
+
+pred (c *MonoCounter) Mem() {
+	acc(c) &&
+	c.authRes === AuthView(c.val)  &&
+	AuthRA.IsElem(c.authRes)       &&
+	AuthRA.IsValid(c.authRes)      &&
+	GhostLocation(c.loc, AuthRA, c.authRes)
+}
+
+ghost
+requires c.Mem()
+decreases
+pure func (c *MonoCounter) GetLocName() LocName {
+	return unfolding c.Mem() in c.loc
+}
+
+ensures c.Mem()
+decreases
+func AllocMonotonicCounter() (c *MonoCounter) {
+	c = new(MonoCounter)
+	c.loc = Alloc(AuthRA, AuthView(0))
+	c.authRes = AuthView(0).(AuthCarrier)
+	fold c.Mem()
+}
+
+requires c.Mem()
+ensures  c.Mem()
+ensures  GhostLocation(c.GetLocName(), AuthRA, FragView(res))
+func (c *MonoCounter) ReadVal() (res int) {
+	unfold c.Mem()
+	defer fold c.Mem()
+	ghost auth := c.authRes
+	ghost frag := FragView(c.val).(AuthCarrier)
+	ghost comp := AuthRA.Compose(auth, frag).(AuthCarrier)
+	GhostUpdate(c.loc, AuthRA, auth, comp)
+	assert GhostLocation(c.loc, AuthRA, comp)
+	assert AuthRA.Core(comp) === some(Elem(frag))
+	GhostOp1(c.loc, AuthRA, comp, frag)
+	assert GhostLocation(c.loc, AuthRA, comp) && GhostLocation(c.loc, AuthRA, frag)
+	GhostOp1(c.loc, AuthRA, auth, frag)
+	assert GhostLocation(c.loc, AuthRA, auth) && GhostLocation(c.loc, AuthRA, frag) && GhostLocation(c.loc, AuthRA, frag)
+	return c.val
+}
+
+requires c.Mem()
+requires GhostLocation(c.GetLocName(), AuthRA, FragView(10))
+func test(c *MonoCounter) {
+	unfold c.Mem()
+	ghost v := AuthRA.Compose(c.authRes, FragView(10))
+	GhostOp2(c.loc, AuthRA, c.authRes, FragView(10))
+	GhostValid(c.loc, AuthRA, v)
+	assert c.val >= 10
+}

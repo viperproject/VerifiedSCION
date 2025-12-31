@@ -1,0 +1,91 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package resalgebra
+
+type Elem interface{}
+
+type RA interface {
+	// defines the set of elements of the RA
+	ghost
+	decreases
+	pure IsElem(e Elem) (res bool)
+
+	ghost
+	requires IsElem(e)
+	decreases
+	pure IsValid(e Elem) bool
+
+	ghost
+	requires IsElem(e)
+	ensures  res !== none[Elem] ==> IsElem(get(res))
+	decreases
+	pure Core(e Elem) (ghost res option[Elem])
+
+	ghost
+	requires IsElem(e1) && IsElem(e2)
+	ensures  IsElem(res)
+	decreases
+	pure Compose(e1 Elem, e2 Elem) (res Elem)
+
+	// Lemmas
+
+	ghost
+	requires IsElem(e1) && IsElem(e2) && IsElem(e3)
+	ensures  Compose(Compose(e1, e2), e3) === Compose(e1, Compose(e2, e3))
+	decreases
+	ComposeAssoc(e1 Elem, e2 Elem, e3 Elem)
+
+	ghost
+	requires IsElem(e1) && IsElem(e2)
+	ensures  Compose(e1, e2) === Compose(e2, e1)
+	decreases
+	ComposeComm(e1 Elem, e2 Elem)
+
+	ghost
+	requires IsElem(e)
+	ensures  let c := Core(e) in
+		c !== none[Elem] ==> Compose(get(c), e) === e
+	decreases
+	CoreId(e Elem)
+
+	ghost
+	requires IsElem(e)
+	requires Core(e) !== none[Elem]
+	ensures  let c := Core(e) in
+		let cc := Core(get(c)) in
+		cc !== none[Elem] &&
+		get(cc) === get(c)
+	decreases
+	CoreIdem(e Elem)
+
+	ghost
+	requires IsElem(e1) && IsElem(e2)
+	requires Core(e1) !== none[Elem]
+	// fully expanded version of <= due to Gobra's lack of `Self` in interface specs
+	requires exists e3 Elem :: { IsElem(e3) } IsElem(e3) && e2 === Compose(e1, e3)
+	ensures  Core(e2) !== none[Elem]
+	ensures  exists e4 Elem :: { IsElem(e4) } IsElem(e4) && get(Core(e2)) === Compose(get(Core(e1)), e4)
+	decreases
+	CoreMono(e1 Elem, e2 Elem)
+
+	ghost
+	requires IsElem(e1) && IsElem(e2)
+	requires IsValid(Compose(e1, e2))
+	ensures  IsValid(e1)
+	decreases
+	ValidOp(e1 Elem, e2 Elem)
+}

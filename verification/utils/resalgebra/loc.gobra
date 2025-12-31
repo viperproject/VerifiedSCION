@@ -1,0 +1,103 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package resalgebra
+
+// At the moment, all of these definitions are trusted, and this,
+// prone to mistakes. If possible, we should find a model for the
+// predicate GhostLocation and for all lemmas.
+
+ghost type LocName gpointer[int]
+
+pred GhostLocation(l LocName, ra RA, e Elem)
+
+ghost
+requires ra != nil
+requires ra.IsElem(e) && ra.IsValid(e)
+ensures  l != nil
+ensures  GhostLocation(l, ra, e)
+decreases
+func Alloc(ra RA, e Elem) (l LocName)
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires GhostLocation(l, ra, ra.Compose(e1, e2))
+ensures  GhostLocation(l, ra, e1) && GhostLocation(l, ra, e2)
+decreases
+func GhostOp1(l LocName, ra RA, e1 Elem, e2 Elem)
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires GhostLocation(l, ra, e1) && GhostLocation(l, ra, e2)
+ensures  GhostLocation(l, ra, ra.Compose(e1, e2))
+decreases
+func GhostOp2(l LocName, ra RA, e1 Elem, e2 Elem)
+
+ghost
+requires ra != nil
+requires GhostLocation(l, ra, e)
+ensures  GhostLocation(l, ra, e)
+ensures  ra.IsElem(e) && ra.IsValid(e)
+decreases
+func GhostValid(l LocName, ra RA, e Elem)
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+decreases
+pure func IsFramePreservingUpdate(ra RA, e1 Elem, e2 Elem) bool {
+	return forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c !== none[Elem] ==> ra.IsElem(get(c))) ==>
+		(LiftedIsValid(ra, LiftedCompose(ra, some(e1), c)) ==> LiftedIsValid(ra, LiftedCompose(ra, some(e2), c)))
+}
+
+ghost
+requires ra != nil
+requires e1 !== none[Elem] ==> ra.IsElem(get(e1))
+requires e2 !== none[Elem] ==> ra.IsElem(get(e2))
+decreases
+pure func LiftedCompose(ra RA, e1 option[Elem], e2 option[Elem]) option[Elem] {
+	return e1 === none[Elem] ?
+		e2 :
+		(e2 === none[Elem] ?
+			e1 :
+			some(ra.Compose(get(e1), get(e2))))
+}
+
+ghost
+requires ra != nil
+requires e !== none[Elem] ==> ra.IsElem(get(e))
+decreases
+pure func LiftedIsValid(ra RA, e option[Elem]) bool {
+	return e !== none[Elem] ?
+		ra.IsValid(get(e)) :
+		true
+}
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires GhostLocation(l, ra, e1)
+requires IsFramePreservingUpdate(ra, e1, e2)
+ensures  GhostLocation(l, ra, e2)
+decreases
+// slightly different from paper, improve
+func GhostUpdate(l LocName, ra RA, e1 Elem, e2 Elem)
