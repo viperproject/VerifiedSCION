@@ -416,15 +416,27 @@ func dictMaxAssocLemma2(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
 
 ghost
 requires domain(d1) === domain(d2) // requirement necessary, as some keys might point to an empty set
-requires forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v)
+requires forall k Key, v io.Pkt :: { keyInDict(d1, k, v) }{ keyInDict(d2, k, v) } keyInDict(d1, k, v) == keyInDict(d2, k, v)
 ensures  d1 === d2
 decreases
 func dictExtensionality(d1 dict[Key]Val, d2 dict[Key]Val) {
 	assert (d1 === d2) ==> (forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v))
-	assume false
-	// TODO
-	// assert forall k Key :: (k elem domain(d1) && forall v io.Pkt :: !keyInDict(d1, k, v)) ==> AsSet(d1[k]) == set[io.Pkt]{}
-	// assert forall k Key :: k elem domain(d1) && AsSet(d1[k]) == set[io.Pkt]{} ==> AsSet(d2[k]) == set[io.Pkt]{}
+	assert forall k Key :: k elem domain(d1) ==> forall e io.Pkt :: e elem AsSet(d1[k]) == keyInDict(d1, k, e)
+	assert forall k Key :: k elem domain(d1) ==> forall e io.Pkt :: e elem AsSet(d1[k]) ==> e elem AsSet(d2[k])
+	assert forall k Key :: k elem domain(d2) ==> forall e io.Pkt :: e elem AsSet(d2[k]) ==> e elem AsSet(d1[k])
+	lemmaSubSet()
+	assert forall k Key :: k elem domain(d1) ==> AsSet(d1[k]) union AsSet(d2[k]) == AsSet(d2[k])
+	assert forall k Key :: k elem domain(d2) ==> AsSet(d2[k]) union AsSet(d1[k]) == AsSet(d1[k])
+	assert DictLessThan(d1, d2)
+	assert DictLessThan(d2, d1)
+	DictLessEq(d1, d2)
+}
+
+ghost
+ensures forall s1 Val, s2 Val :: {s1 union s2} (forall e io.Pkt :: e elem s1 ==> e elem s2) ==> s1 union s2 == s2
+decreases
+func lemmaSubSet() {
+	// proven
 }
 
 ghost
