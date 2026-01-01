@@ -323,7 +323,14 @@ ensures  DictLessThan(d1, d3)
 ensures  !DictLessThan(d3, d1)
 decreases
 func StrictDictLessThanTransitive(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
-	assume false
+	DictLessThanTransitive(d1, d2, d3)
+	assert DictLessThan(d1, d3)
+	assert d1 !== d3
+
+	if DictLessThan(d3, d1) {
+		DictLessEq(d1, d3)
+		assert false // Unreachable
+	}
 }
 
 ghost
@@ -367,53 +374,63 @@ func DictLessEq(d1 dict[Key]Val, d2 dict[Key]Val) {
 }
 
 ghost
+decreases
+pure func keyInDict(d dict[Key]Val, k Key, v io.Pkt) bool {
+	return k elem domain(d) && v elem AsSet(d[k])
+}
+
+ghost
+ensures let d := DictMax(d1, d2) in
+	forall k Key, v io.Pkt :: !keyInDict(d, k, v) == !(keyInDict(d1, k, v) || keyInDict(d2, k, v))
+decreases
+func dictMaxAssocLemma0(d1 dict[Key]Val, d2 dict[Key]Val) {
+	reveal DictUnion(d1, d2)
+}
+
+ghost
+ensures let d := DictMax(d1, DictMax(d2, d3)) in
+	forall k Key, v io.Pkt :: keyInDict(d, k, v) == (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
+decreases
+func dictMaxAssocLemma1(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
+	d := DictMax(d1, DictMax(d2, d3))
+	assert forall k Key, v io.Pkt :: (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v)) ==> keyInDict(d, k, v)
+	dictMaxAssocLemma0(d2, d3)
+	dictMaxAssocLemma0(d1, DictMax(d2, d3))
+	assert forall k Key, v io.Pkt :: keyInDict(d, k, v) ==> (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
+}
+
+ghost
+ensures let d := DictMax(DictMax(d1, d2), d3) in
+	forall k Key, v io.Pkt :: keyInDict(d, k, v) == (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
+decreases
+func dictMaxAssocLemma2(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
+	d := DictMax(DictMax(d1, d2), d3)
+	assert forall k Key, v io.Pkt :: (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v)) ==> keyInDict(d, k, v)
+	dictMaxAssocLemma0(d1, d2)
+	dictMaxAssocLemma0(DictMax(d1, d2), d3)
+	assert forall k Key, v io.Pkt :: keyInDict(d, k, v) ==> (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
+}
+
+ghost
+ensures (forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v)) == (d1 === d2)
+decreases
+func dictMaxExtensionality(d1 dict[Key]Val, d2 dict[Key]Val) {
+	assert (d1 === d2) ==> (forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v))
+	assume false
+	assert forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v) ==>
+		domain(d1) == domain(d2)
+	// assert forall k Key :: k elem domain(d1) ==>
+	// 	((forall v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v)) == 
+	// 		(k elem domain(d2) && d1[k] == d2[k]))
+}
+
+ghost
 ensures  DictMax(d1, DictMax(d2, d3)) === DictMax(DictMax(d1, d2), d3)
 decreases
 func DictMaxAssoc(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
-	m1 := DictMax(d1, DictMax(d2, d3))
-	m2 := DictMax(DictMax(d1, d2), d3)
-	assert m1 === d1 || m1 === DictMax(d2, d3) || m1 === DictUnion(d1, DictMax(d2, d3))
-
-	if DictLessThan(d1, d2) {
-		DictLessThanTransitive(d1, d2, DictMax(d2, d3))
-		assert DictMax(d1, DictMax(d2, d3)) === DictMax(d2, d3)
-		assert DictMax(DictMax(d1, d2), d3) === DictMax(d2, d3)
-	} else if DictLessThan(d2, d1) {
-		assert DictMax(DictMax(d1, d2), d3) === DictMax(d1, d3)
-		if DictLessThan(d2, d3) {
-			// proven
-		} else if DictLessThan(d3, d2) {
-			assert DictMax(d2, d3) === d2
-			assert DictMax(d1, DictMax(d2, d3)) === DictMax(d1, d2)
-			assert DictMax(d1, d2) === d1
-			assert DictMax(DictMax(d1, d2), d3) === DictMax(d1, d3)
-			StrictDictLessThanTransitive(d3, d2, d1)
-			assert DictLessThan(d3, d1)
-			assert DictMax(d1, d3) === d1 || DictMax(d1, d3) === d3
-			assert !DictLessThan(d1, d3)
-			assert DictMax(d1, d3) === d1
-		} else {
-			assert DictMax(d2, d3) === DictUnion(d2, d3)
-			assert DictLessThan(d1, DictMax(d1, d3))
-			if DictLessThan(d1, d3) {
-				// d1 <= d3 && d2 <= d1 && !(d2 <= d3) && !(d3 <= d2)
-				assert DictMax(DictMax(d1, d2), d3) === DictMax(d1, d3)
-				assert DictMax(d1, d3) === d3
-				DictLessThanTransitive(d2, d1, d3) // Shows contradiction
-				assert false // Unreachable
-			} else if DictLessThan(d3, d1) {
-				// d3 <= d1 && !(d1 <= d3) && d2 <= d1 && !(d2 <= d3) && !(d3 <= d2)
-				assert DictMax(DictMax(d1, d2), d3) === d1
-				DictMaxIsLessThan(d2, d3, d1)
-				DictMaxIsComm(d1, DictMax(d2, d3))
-				assert DictMax(d1, DictMax(d2, d3)) === d1
-			} else {
-				assume false
-			}
-		}
-	} else {
-		assume false
-	}
+	dictMaxAssocLemma1(d1, d2, d3)
+	dictMaxAssocLemma2(d1, d2, d3)
+	dictMaxExtensionality(DictMax(d1, DictMax(d2, d3)), DictMax(DictMax(d1, d2), d3))
 }
 
 ghost
@@ -425,7 +442,6 @@ func DictMaxIsComm(d1 dict[Key]Val, d2 dict[Key]Val) {
 	}
 	assert d1 != d2 && DictLessThan(d1, d2) ==> !DictLessThan(d2, d1)
 	assert DictLessThan(d1, d2) ==> DictMax(d1, d2) == d2
-	//assert DictMax(d2, d1) === DictLessThan(d2, d1) ? d1 : DictLessThan(d2, d1) ? d1 : DictUnion(d1, d2)
 	assert DictLessThan(d1, d2) ==> DictMax(d2, d1) == d2
 	assert DictLessThan(d2, d1) ==> DictMax(d1, d2) == d1
 	assert DictLessThan(d2, d1) ==> DictMax(d2, d1) == d1
@@ -648,13 +664,6 @@ func DictUnionIsComm(d1 dict[Key]Val, d2 dict[Key]Val) {
 	u2 := reveal DictUnion(d2, d1)
 	assert domain(u1) === domain(u2)
 	assert forall k Key :: k elem domain(u1) ==> u1[k] == u2[k]
-}
-
-ghost
-ensures DictUnion(DictUnion(d1, d2), d3) === DictUnion(d1, DictUnion(d2, d3))
-decreases
-func DictUnionIsAssoc(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
-	assume false
 }
 
 // DictUnion(d1, d2) is the smallest dict that is bigger than both d1 and d2
