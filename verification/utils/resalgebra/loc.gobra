@@ -17,14 +17,16 @@
 package resalgebra
 
 // At the moment, all of these definitions are trusted, and this,
-// prone to mistakes. If possible, we should find a model for the
-// predicate GhostLocation and for all lemmas.
+// prone to mistakes. If at all possible, we should find a model for the
+// predicate GhostLocation and for all lemmas, but it is not clear that
+// this can be done in Gobra itself.
 
 ghost type LocName gpointer[int]
 
 pred GhostLocation(l LocName, ra RA, e Elem)
 
 ghost
+trusted
 requires ra != nil
 requires ra.IsElem(e) && ra.IsValid(e)
 ensures  l != nil
@@ -33,6 +35,7 @@ decreases
 func Alloc(ra RA, e Elem) (l LocName)
 
 ghost
+trusted
 requires ra != nil
 requires ra.IsElem(e1)
 requires ra.IsElem(e2)
@@ -42,6 +45,7 @@ decreases
 func GhostOp1(l LocName, ra RA, e1 Elem, e2 Elem)
 
 ghost
+trusted
 requires ra != nil
 requires ra.IsElem(e1)
 requires ra.IsElem(e2)
@@ -51,6 +55,7 @@ decreases
 func GhostOp2(l LocName, ra RA, e1 Elem, e2 Elem)
 
 ghost
+trusted
 requires ra != nil
 requires GhostLocation(l, ra, e)
 ensures  GhostLocation(l, ra, e)
@@ -92,6 +97,7 @@ pure func LiftedIsValid(ra RA, e option[Elem]) bool {
 }
 
 ghost
+trusted
 requires ra != nil
 requires ra.IsElem(e1)
 requires ra.IsElem(e2)

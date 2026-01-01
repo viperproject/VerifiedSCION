@@ -380,6 +380,7 @@ pure func keyInDict(d dict[Key]Val, k Key, v io.Pkt) bool {
 }
 
 ghost
+ensures domain(DictMax(d1, d2)) == domain(d1) union domain(d2)
 ensures let d := DictMax(d1, d2) in
 	forall k Key, v io.Pkt :: !keyInDict(d, k, v) == !(keyInDict(d1, k, v) || keyInDict(d2, k, v))
 decreases
@@ -388,6 +389,7 @@ func dictMaxAssocLemma0(d1 dict[Key]Val, d2 dict[Key]Val) {
 }
 
 ghost
+ensures domain(DictMax(d1, DictMax(d2, d3))) == domain(d1) union domain(d2) union domain(d3)
 ensures let d := DictMax(d1, DictMax(d2, d3)) in
 	forall k Key, v io.Pkt :: keyInDict(d, k, v) == (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
 decreases
@@ -400,6 +402,7 @@ func dictMaxAssocLemma1(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
 }
 
 ghost
+ensures domain(DictMax(DictMax(d1, d2), d3)) == domain(d1) union domain(d2) union domain(d3)
 ensures let d := DictMax(DictMax(d1, d2), d3) in
 	forall k Key, v io.Pkt :: keyInDict(d, k, v) == (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
 decreases
@@ -412,16 +415,16 @@ func dictMaxAssocLemma2(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
 }
 
 ghost
-ensures (forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v)) == (d1 === d2)
+requires domain(d1) === domain(d2) // requirement necessary, as some keys might point to an empty set
+requires forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v)
+ensures  d1 === d2
 decreases
-func dictMaxExtensionality(d1 dict[Key]Val, d2 dict[Key]Val) {
+func dictExtensionality(d1 dict[Key]Val, d2 dict[Key]Val) {
 	assert (d1 === d2) ==> (forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v))
 	assume false
-	assert forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v) ==>
-		domain(d1) == domain(d2)
-	// assert forall k Key :: k elem domain(d1) ==>
-	// 	((forall v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v)) == 
-	// 		(k elem domain(d2) && d1[k] == d2[k]))
+	// TODO
+	// assert forall k Key :: (k elem domain(d1) && forall v io.Pkt :: !keyInDict(d1, k, v)) ==> AsSet(d1[k]) == set[io.Pkt]{}
+	// assert forall k Key :: k elem domain(d1) && AsSet(d1[k]) == set[io.Pkt]{} ==> AsSet(d2[k]) == set[io.Pkt]{}
 }
 
 ghost
@@ -430,7 +433,7 @@ decreases
 func DictMaxAssoc(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
 	dictMaxAssocLemma1(d1, d2, d3)
 	dictMaxAssocLemma2(d1, d2, d3)
-	dictMaxExtensionality(DictMax(d1, DictMax(d2, d3)), DictMax(DictMax(d1, d2), d3))
+	dictExtensionality(DictMax(d1, DictMax(d2, d3)), DictMax(DictMax(d1, d2), d3))
 }
 
 ghost
