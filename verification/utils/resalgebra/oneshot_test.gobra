@@ -1,0 +1,102 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package resalgebra
+
+import "sync"
+
+type oneshot struct {
+	V int
+	isInit bool
+	ghost e Elem
+}
+
+pred oneshotInv(o *oneshot, l LocName) {
+	acc(o) &&
+	GhostLocation(l, OneShotRA, o.e) &&
+	(!o.isInit ==> o.e == Pending{} && o.V == 0) &&
+	(o.isInit ==> o.e == Shot{o.V})
+}
+
+ensures oneshotInv(o, l)
+decreases
+func mkOneShot() (o *oneshot, ghost l LocName) {
+	o = new(oneshot)
+	l = Alloc(OneShotRA, Pending{})
+	o.e = Pending{}
+	fold oneshotInv(o, l)
+	return o, l
+}
+
+requires m.LockP()
+requires m.LockInv() == oneshotInv!<o, l!>
+requires n != 0
+func (o *oneshot) trySet(n int, m *sync.Mutex, ghost l LocName) bool {
+	m.Lock()
+	defer m.Unlock()
+	unfold oneshotInv!<o, l!>()
+	defer fold oneshotInv!<o, l!>()
+	if o.isInit {
+		return false
+	}
+	GhostUpdate(l, OneShotRA, Pending{}, Shot{n})
+	o.V = n
+	o.isInit = true
+	ghost o.e = Shot{n}
+	return true
+}
+
+requires m.LockP()
+requires m.LockInv() == oneshotInv!<o, l!>
+func (o *oneshot) check(m *sync.Mutex, ghost l LocName) {
+	m.Lock()
+	unfold oneshotInv!<o, l!>()
+	y1 := o.V
+	ghost e1 := o.e
+	ghost isInit1 := o.isInit
+	ghost if isInit1 {
+		assert e1 == Shot{y1}
+		assert OneShotRA.Compose(e1, e1) == e1
+		assert GhostLocation(l, OneShotRA, e1)
+		GhostOp1(l, OneShotRA, e1, e1)
+		assert GhostLocation(l, OneShotRA, e1) && GhostLocation(l, OneShotRA, e1)
+	}
+	fold oneshotInv!<o, l!>()
+	m.Unlock()
+
+	m.Lock()
+	unfold oneshotInv!<o, l!>()
+	y2 := o.V
+	ghost e2 := o.e
+	ghost isInit2 := o.isInit
+	ghost if isInit1 && !isInit2 {
+		assert GhostLocation(l, OneShotRA, Shot{y1})
+		assert GhostLocation(l, OneShotRA, Pending{})
+		GhostOp2(l, OneShotRA, Shot{y1}, Pending{})
+		GhostValid(l, OneShotRA, OneShotRA.Compose(Shot{y1}, Pending{}))
+		assert false // Unreachable
+	}
+	ghost if isInit1 && isInit2 {
+		assert GhostLocation(l, OneShotRA, e1) && GhostLocation(l, OneShotRA, e2)
+		GhostValid(l, OneShotRA, e1)
+		GhostValid(l, OneShotRA, e2)
+		GhostOp2(l, OneShotRA, e1, e2)
+		GhostValid(l, OneShotRA, OneShotRA.Compose(e1, e2))
+		assert e1 == e2
+	}
+	fold oneshotInv!<o, l!>()
+	m.Unlock()
+}

@@ -18,6 +18,7 @@ package router
 
 import (
 	gsync "verification/utils/ghost_sync"
+	"verification/utils/resalgebra"
 	io "verification/io"
 )
 
@@ -245,32 +246,439 @@ func multiElemWitnessConvAux(y ElemRA, k Key, es seq[io.Val], i int) {
 /**** End of MultiElemWitness helper functions ****/
 
 /////////////////////////////////////// RA definitions ///////////////////////////////////////
+
 ghost type Key = option[io.Ifs]
 ghost type Val = set[io.Pkt]
 ghost type Elem = io.Pkt
 
-ghost type ElemRA domain{}
+type DictWithTopBot interface {}
+ghost type Top ghost struct{}
+ghost type Bottom ghost struct{}
+ghost type Dict ghost struct {
+	V dict[Key]Val
+}
 
-pred ElemAuth(ghost m dict[Key]Val, ghost y ElemRA)
+Dict implements DictWithTopBot
 
-pred ElemWitness(ghost y ElemRA, ghost k Key, ghost e Elem)
+ghost type TypeAuthRA ghost struct{}
+
+ghost type AuthCarrier ghost struct {
+	fst DictWithTopBot
+	snd Dict
+}
 
 ghost
 decreases
+pure func AuthView(m Dict) resalgebra.Elem {
+	return AuthCarrier{m, Dict{}}
+}
+
+ghost
+decreases
+pure func FragView(m Dict) resalgebra.Elem {
+	return AuthCarrier{Bottom{}, m}
+}
+
+TypeAuthRA implements resalgebra.RA
+
+ghost
+decreases
+pure func (ra TypeAuthRA) IsElem(e resalgebra.Elem) (res bool) {
+	return typeOf(e) == type[AuthCarrier] &&
+		let c := e.(AuthCarrier) in
+		c.fst === Bottom{} ||
+		c.fst === Top{}    ||
+		typeOf(c.fst) == type[Dict]
+}
+
+ghost
+requires ra.IsElem(e)
+decreases
+pure func (ra TypeAuthRA) IsValid(e resalgebra.Elem) bool {
+	return let x := e.(AuthCarrier) in
+		x.fst === Bottom{} ||
+		(typeOf(x.fst) == type[Dict] && dictLessThan(x.snd.V, x.fst.(Dict).V))
+}
+
+ghost
+decreases
+pure func dictLessThan(d1 dict[Key]Val, d2 dict[Key]Val) bool {
+	return (forall k Key :: k elem domain(d1) ==> k elem domain(d2) && AsSet(d1[k]) union AsSet(d2[k]) == AsSet(d2[k]))
+}
+
+ghost
+ensures forall d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val :: {dictLessThan(d1, d2), dictLessThan(d2, d3)} dictLessThan(d1, d2) && dictLessThan(d2, d3) ==>
+	dictLessThan(d1, d3)
+decreases
+func dictLessThanTransitiveQ() {
+	// proven
+}
+
+ghost
+ensures  dictLessThan(d1, d3) && dictLessThan(d2, d3) ==> dictLessThan(dictMax(d1, d2), d3)
+decreases
+pure func dictMaxIsLessThan(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) U {
+	return dictUnionIsLessThan(d1, d2, d3)
+}
+
+ghost
+decreases
+pure func dictMax(d1 dict[Key]Val, d2 dict[Key]Val) dict[Key]Val {
+	// logically redundant but it simplifies automated reasoning when
+	// either dictLessThan(d1, d2) or dictLessThan(d2, d1) is known.
+	return dictLessThan(d1, d2) ? d2 : dictLessThan(d2, d1) ? d1 : dictUnion(d1, d2)
+}
+
+ghost
+requires dictLessThan(d1, d2) && dictLessThan(d2, d1)
+ensures  d1 === d2
+decreases
+func dictLessEq(d1 dict[Key]Val, d2 dict[Key]Val) {
+	assert forall k Key :: k elem domain(d1) ==> k elem domain(d2) && AsSet(d1[k]) union AsSet(d2[k]) == AsSet(d2[k])
+	assert forall k Key :: k elem domain(d2) ==> k elem domain(d1) && AsSet(d1[k]) union AsSet(d2[k]) == AsSet(d1[k])
+	assert domain(d1) == domain(d2)
+}
+
+ghost
+decreases
+pure func keyInDict(d dict[Key]Val, k Key, v io.Pkt) bool {
+	return k elem domain(d) && v elem AsSet(d[k])
+}
+
+ghost
+ensures domain(dictMax(d1, d2)) == domain(d1) union domain(d2)
+ensures let d := dictMax(d1, d2) in
+	forall k Key, v io.Pkt :: !keyInDict(d, k, v) == !(keyInDict(d1, k, v) || keyInDict(d2, k, v))
+decreases
+func dictMaxAssocLemma0(d1 dict[Key]Val, d2 dict[Key]Val) {
+	reveal dictUnion(d1, d2)
+}
+
+ghost
+ensures domain(dictMax(d1, dictMax(d2, d3))) == domain(d1) union domain(d2) union domain(d3)
+ensures let d := dictMax(d1, dictMax(d2, d3)) in
+	forall k Key, v io.Pkt :: keyInDict(d, k, v) == (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
+decreases
+func dictMaxAssocLemma1(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
+	d := dictMax(d1, dictMax(d2, d3))
+	assert forall k Key, v io.Pkt :: (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v)) ==> keyInDict(d, k, v)
+	dictMaxAssocLemma0(d2, d3)
+	dictMaxAssocLemma0(d1, dictMax(d2, d3))
+	assert forall k Key, v io.Pkt :: keyInDict(d, k, v) ==> (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
+}
+
+ghost
+ensures domain(dictMax(dictMax(d1, d2), d3)) == domain(d1) union domain(d2) union domain(d3)
+ensures let d := dictMax(dictMax(d1, d2), d3) in
+	forall k Key, v io.Pkt :: keyInDict(d, k, v) == (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
+decreases
+func dictMaxAssocLemma2(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
+	d := dictMax(dictMax(d1, d2), d3)
+	assert forall k Key, v io.Pkt :: (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v)) ==> keyInDict(d, k, v)
+	dictMaxAssocLemma0(d1, d2)
+	dictMaxAssocLemma0(dictMax(d1, d2), d3)
+	assert forall k Key, v io.Pkt :: keyInDict(d, k, v) ==> (keyInDict(d1, k, v) || keyInDict(d2, k, v) || keyInDict(d3, k, v))
+}
+
+ghost
+requires domain(d1) === domain(d2) // requirement necessary, as some keys might point to an empty set
+requires forall k Key, v io.Pkt :: { keyInDict(d1, k, v) }{ keyInDict(d2, k, v) } keyInDict(d1, k, v) == keyInDict(d2, k, v)
+ensures  d1 === d2
+decreases
+func dictExtensionality(d1 dict[Key]Val, d2 dict[Key]Val) {
+	assert (d1 === d2) ==> (forall k Key, v io.Pkt :: keyInDict(d1, k, v) == keyInDict(d2, k, v))
+	assert forall k Key :: k elem domain(d1) ==> forall e io.Pkt :: e elem AsSet(d1[k]) == keyInDict(d1, k, e)
+	assert forall k Key :: k elem domain(d1) ==> forall e io.Pkt :: e elem AsSet(d1[k]) ==> e elem AsSet(d2[k])
+	assert forall k Key :: k elem domain(d2) ==> forall e io.Pkt :: e elem AsSet(d2[k]) ==> e elem AsSet(d1[k])
+	lemmaSubSet()
+	assert forall k Key :: k elem domain(d1) ==> AsSet(d1[k]) union AsSet(d2[k]) == AsSet(d2[k])
+	assert forall k Key :: k elem domain(d2) ==> AsSet(d2[k]) union AsSet(d1[k]) == AsSet(d1[k])
+	assert dictLessThan(d1, d2)
+	assert dictLessThan(d2, d1)
+	dictLessEq(d1, d2)
+}
+
+ghost
+ensures forall s1 Val, s2 Val :: {s1 union s2} (forall e io.Pkt :: e elem s1 ==> e elem s2) ==> s1 union s2 == s2
+decreases
+func lemmaSubSet() {
+	// proven
+}
+
+ghost
+ensures  dictMax(d1, dictMax(d2, d3)) === dictMax(dictMax(d1, d2), d3)
+decreases
+func dictMaxAssoc(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) {
+	dictMaxAssocLemma1(d1, d2, d3)
+	dictMaxAssocLemma2(d1, d2, d3)
+	dictExtensionality(dictMax(d1, dictMax(d2, d3)), dictMax(dictMax(d1, d2), d3))
+}
+
+ghost
+ensures dictMax(d1, d2) == dictMax(d2, d1)
+decreases
+func dictMaxIsComm(d1 dict[Key]Val, d2 dict[Key]Val) {
+	if dictLessThan(d1, d2) && dictLessThan(d2, d1) {
+		dictLessEq(d1, d2)
+	}
+	assert d1 != d2 && dictLessThan(d1, d2) ==> !dictLessThan(d2, d1)
+	assert dictLessThan(d1, d2) ==> dictMax(d1, d2) == d2
+	assert dictLessThan(d1, d2) ==> dictMax(d2, d1) == d2
+	assert dictLessThan(d2, d1) ==> dictMax(d1, d2) == d1
+	assert dictLessThan(d2, d1) ==> dictMax(d2, d1) == d1
+	dictUnionIsComm(d1, d2)
+}
+
+ghost
+requires ra.IsElem(e)
+ensures  res !== none[resalgebra.Elem] ==> ra.IsElem(get(res))
+decreases
+pure func (ra TypeAuthRA) Core(e resalgebra.Elem) (ghost res option[resalgebra.Elem]) {
+	return let x := e.(AuthCarrier) in
+		some(resalgebra.Elem(AuthCarrier{Bottom{}, x.snd}))
+}
+
+ghost
+requires ra.IsElem(e1) && ra.IsElem(e2)
+ensures  ra.IsElem(res)
+decreases
+pure func (ra TypeAuthRA) Compose(e1 resalgebra.Elem, e2 resalgebra.Elem) (res resalgebra.Elem) {
+	return let c1 := e1.(AuthCarrier) in
+		let c2 := e2.(AuthCarrier)    in
+		(c1.fst === Bottom{} ?
+			AuthCarrier{c2.fst, Dict{dictMax(c1.snd.V, c2.snd.V)}} :
+			(c2.fst === Bottom{} ?
+				AuthCarrier{c1.fst, Dict{dictMax(c1.snd.V, c2.snd.V)}} :
+				AuthCarrier{Top{}, Dict{dictMax(c1.snd.V, c2.snd.V)}}))
+}
+
+ghost
+requires ra.IsElem(e1) && ra.IsElem(e2) && ra.IsElem(e3)
+ensures  ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3))
+decreases
+func (ra TypeAuthRA) ComposeAssoc(e1 resalgebra.Elem, e2 resalgebra.Elem, e3 resalgebra.Elem) {
+	c1 := e1.(AuthCarrier)
+	c2 := e2.(AuthCarrier)
+	c3 := e3.(AuthCarrier)
+
+	comp1 := ra.Compose(ra.Compose(e1, e2), e3).(AuthCarrier)
+	comp2 := ra.Compose(e1, ra.Compose(e2, e3)).(AuthCarrier)
+
+	assert comp1.fst === comp2.fst
+	dictMaxAssoc(c1.snd.V, c2.snd.V, c3.snd.V)
+}
+
+ghost
+requires ra.IsElem(e1) && ra.IsElem(e2)
+ensures  ra.Compose(e1, e2) === ra.Compose(e2, e1)
+decreases
+func (ra TypeAuthRA) ComposeComm(e1 resalgebra.Elem, e2 resalgebra.Elem) {
+	c1 := e1.(AuthCarrier)
+	c2 := e2.(AuthCarrier)
+	dictMaxIsComm(c1.snd.V, c2.snd.V)
+}
+
+ghost
+requires ra.IsElem(e)
+ensures  let c := ra.Core(e) in
+	c !== none[resalgebra.Elem] ==> ra.Compose(get(c), e) === e
+decreases
+func (ra TypeAuthRA) CoreId(e resalgebra.Elem) {
+	// proven
+}
+
+ghost
+requires ra.IsElem(e)
+requires ra.Core(e) !== none[resalgebra.Elem]
+ensures  let c := ra.Core(e) in
+	let cc := ra.Core(get(c)) in
+	cc !== none[resalgebra.Elem] &&
+	get(cc) === get(c)
+decreases
+func (ra TypeAuthRA) CoreIdem(e resalgebra.Elem) {
+	// proven
+}
+
+ghost
+requires ra.IsElem(e1) && ra.IsElem(e2)
+requires ra.Core(e1) !== none[resalgebra.Elem]
+// fully expanded version of <= due to Gobra's lack of `Self` in interface specs
+requires exists e3 resalgebra.Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 === ra.Compose(e1, e3)
+ensures  ra.Core(e2) !== none[resalgebra.Elem]
+ensures  exists e4 resalgebra.Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) === ra.Compose(get(ra.Core(e1)), e4)
+decreases
+func (ra TypeAuthRA) CoreMono(e1 resalgebra.Elem, e2 resalgebra.Elem) {
+	// proven
+}
+
+ghost
+requires ra.IsElem(e1) && ra.IsElem(e2)
+requires ra.IsValid(ra.Compose(e1, e2))
+ensures  ra.IsValid(e1)
+decreases
+func (ra TypeAuthRA) ValidOp(e1 resalgebra.Elem, e2 resalgebra.Elem) {
+	c := ra.Compose(e1, e2).(AuthCarrier)
+	c1 := e1.(AuthCarrier)
+	c2 := e2.(AuthCarrier)
+	if (c1.fst !== Bottom{}) {
+		fst := c.fst.(Dict).V
+		snd := c.snd.V
+		assert dictLessThan(snd, fst)
+		assert snd === dictMax(c1.snd.V, c2.snd.V)
+	}
+}
+
+ghost type ElemRA = resalgebra.LocName
+
+pred ElemAuth(ghost m dict[Key]Val, ghost y ElemRA) {
+	resalgebra.GhostLocation(y, TypeAuthRA{}, AuthView(Dict{m}))
+}
+
+pred ElemWitness(ghost y ElemRA, ghost k Key, ghost e Elem) {
+	let d := Dict{dict[Key]Val{k: set[io.Pkt]{e}}} in
+	resalgebra.GhostLocation(y, TypeAuthRA{}, FragView(d))
+}
+
+ghost
 requires ElemAuth(m, y) && ElemWitness(y, k, e)
 ensures  ElemAuth(m, y) && ElemWitness(y, k, e) && k elem domain(m) && e elem AsSet(m[k])
-func ApplyElemWitness(m dict[Key]Val, y ElemRA, k Key, e Elem)
+decreases
+func ApplyElemWitness(m dict[Key]Val, y ElemRA, k Key, e Elem) {
+	unfold ElemAuth(m, y)
+	unfold ElemWitness(y, k, e)
+	d := Dict{dict[Key]Val{k: set[io.Pkt]{e}}}
+	resalgebra.GhostOp2(y, TypeAuthRA{}, AuthView(Dict{m}), FragView(d))
+	c := (TypeAuthRA{}).Compose(AuthView(Dict{m}), FragView(d))
+	resalgebra.GhostValid(y, TypeAuthRA{}, c)
+	// The composition must be valid, which implies the element of the FragView must be in m
+	resalgebra.GhostOp1(y, TypeAuthRA{}, AuthView(Dict{m}), FragView(d))
+	fold ElemAuth(m, y)
+	fold ElemWitness(y, k, e)
+}
 
 ghost
-decreases
 requires ElemAuth(m, y)
-ensures  ElemAuth(io.insert(m, k, e), y) && ElemWitness(y, k, e)
-func UpdateElemWitness(m dict[Key]Val, y ElemRA, k Key, e Elem)
+ensures  ElemAuth(io.insert(m, k, e), y)
+ensures  ElemWitness(y, k, e)
+decreases
+func UpdateElemWitness(m dict[Key]Val, y ElemRA, k Key, e Elem) {
+	unfold ElemAuth(m, y)
+	d := Dict{dict[Key]Val{k: set[io.Pkt]{e}}}
+	c := (TypeAuthRA{}).Compose(AuthView(Dict{io.insert(m, k, e)}), FragView(d))
+	updateElemWitnessAuxLemma(m, k, e)
+	assert resalgebra.IsFramePreservingUpdate(TypeAuthRA{}, AuthView(Dict{m}), c)
+	resalgebra.GhostUpdate(y, TypeAuthRA{}, AuthView(Dict{m}), c)
+	assert resalgebra.GhostLocation(y, TypeAuthRA{}, c)
+	resalgebra.GhostOp1(y, TypeAuthRA{}, AuthView(Dict{io.insert(m, k, e)}), FragView(d))
+	fold ElemAuth(io.insert(m, k, e), y)
+	fold ElemWitness(y, k, e)
+}
+
+// by far, the slowest lemma to prove atm
+ghost
+ensures let d := Dict{dict[Key]Val{k: set[io.Pkt]{e}}} in
+	let c := (TypeAuthRA{}).Compose(AuthView(Dict{io.insert(m, k, e)}), FragView(d)) in
+	resalgebra.IsFramePreservingUpdate(TypeAuthRA{}, AuthView(Dict{m}), c)
+decreases
+func updateElemWitnessAuxLemma(m dict[Key]Val, k Key, e Elem) {
+	ra := TypeAuthRA{}
+	a := AuthView(Dict{m})
+	d := Dict{dict[Key]Val{k: set[io.Pkt]{e}}}
+	c := ra.Compose(AuthView(Dict{io.insert(m, k, e)}), FragView(d))
+	assert ra.IsValid(a) ==> ra.IsValid(c)
+	assert forall ee resalgebra.Elem :: ra.IsElem(ee) && ra.IsValid(ra.Compose(a, ee)) ==>
+		(let ae := ra.Compose(a, ee).(AuthCarrier) in
+			(ae.fst == Bottom{} || dictLessThan(ae.snd.V, m)))
+	dictLessThanTransitiveQ()
+	assert forall ee resalgebra.Elem :: ra.IsElem(ee) && ra.IsValid(ra.Compose(a, ee)) ==>
+		ee.(AuthCarrier).fst === Bottom{}       &&
+		dictLessThan(ee.(AuthCarrier).snd.V, m) &&
+		dictLessThan(m, io.insert(m, k, e))     &&
+		dictLessThan(ee.(AuthCarrier).snd.V, io.insert(m, k, e))
+	assert forall ee resalgebra.Elem :: ra.IsElem(ee) && ra.IsValid(ra.Compose(a, ee)) ==>
+		ee.(AuthCarrier).fst === Bottom{}         &&
+		let ce := ra.Compose(c, ee).(AuthCarrier) in
+		ce.fst.(Dict).V === io.insert(m, k, e)
+	assert forall ee resalgebra.Elem :: ra.IsElem(ee) && ra.IsValid(ra.Compose(a, ee)) ==>
+		ee.(AuthCarrier).fst === Bottom{}         &&
+		let ce := ra.Compose(c, ee).(AuthCarrier) in
+		ce.snd.V == dictMax(d.V, ee.(AuthCarrier).snd.V) &&
+		dictLessThan(d.V, io.insert(m, k, e)) &&
+		dictLessThan(ee.(AuthCarrier).snd.V, io.insert(m, k, e)) &&
+		let _ := dictMaxIsLessThan(d.V, ee.(AuthCarrier).snd.V, io.insert(m, k, e)) in
+		true
+}
 
 ghost
-decreases
 ensures ElemAuth(m, y)
-func InitElemAuth(m dict[Key]Val) (y ElemRA)
+decreases
+func InitElemAuth(m dict[Key]Val) (y ElemRA) {
+	l := resalgebra.Alloc(TypeAuthRA{}, AuthView(Dict{m}))
+	fold ElemAuth(m, l)
+	return l
+}
+
+/////////////////////////////////////// Dict Ops ///////////////////////////////////////
+
+ghost
+opaque
+ensures dictLessThan(d1, res) && dictLessThan(d2, res)
+decreases
+pure func dictUnion(d1 dict[Key]Val, d2 dict[Key]Val) (res dict[Key]Val) {
+	return dictUnionAux(d1, d2)
+}
+
+ghost
+ensures domain(res) == domain(d1) union domain(d2)
+ensures forall k Key :: k elem domain(d1) && k elem domain(d2) ==> k elem domain(res) && res[k] == AsSet(d1[k]) union AsSet(d2[k])
+ensures forall k Key :: k elem domain(d1) && !(k elem domain(d2)) ==> k elem domain(res) && res[k] == d1[k]
+ensures forall k Key :: !(k elem domain(d1)) && (k elem domain(d2)) ==> k elem domain(res) && res[k] == d2[k]
+ensures forall k Key :: !(k elem domain(d1)) && !(k elem domain(d2)) ==> !(k elem domain(res))
+decreases
+pure func dictUnionAux(d1 dict[Key]Val, d2 dict[Key]Val) (res dict[Key]Val) {
+	return dictUnionAuxIter(d1, d2, set[Key]{})
+}
+
+ghost
+opaque
+requires visitedKeys union (domain(d1) union domain(d2)) === (domain(d1) union domain(d2))
+ensures  domain(res) === (domain(d1) union domain(d2)) setminus visitedKeys
+ensures  forall k Key :: k elem domain(res) && k elem domain(d1) && k elem domain(d2) ==> k elem domain(res) && res[k] == AsSet(d1[k]) union AsSet(d2[k])
+ensures  forall k Key :: k elem domain(res) && k elem domain(d1) && !(k elem domain(d2)) ==> k elem domain(res) && res[k] == d1[k]
+ensures  forall k Key :: k elem domain(res) && !(k elem domain(d1)) && (k elem domain(d2)) ==> k elem domain(res) && res[k] == d2[k]
+ensures  forall k Key :: !(k elem domain(d1)) && !(k elem domain(d2)) ==> !(k elem domain(res))
+decreases len((domain(d1) union domain(d2)) setminus visitedKeys)
+pure func dictUnionAuxIter(d1 dict[Key]Val, d2 dict[Key]Val, visitedKeys set[Key]) (res dict[Key]Val) {
+	return visitedKeys === (domain(d1) union domain(d2)) ?
+		dict[Key]Val{} :
+		let _ := lemmaSetInclusion(visitedKeys, domain(d1) union domain(d2)) in
+		let c := choose((domain(d1) union domain(d2)) setminus visitedKeys) in
+		let v := (c elem domain(d1) && c elem domain(d2) ? AsSet(d1[c]) union AsSet(d2[c]) : (c elem domain(d1) ? d1[c] : d2[c])) in
+		let d := dictUnionAuxIter(d1, d2, visitedKeys union set[Key]{c}) in
+		d[c = v]
+}
+
+ghost
+ensures dictUnion(d1, d2) === dictUnion(d2, d1)
+decreases
+func dictUnionIsComm(d1 dict[Key]Val, d2 dict[Key]Val) {
+	u1 := reveal dictUnion(d1, d2)
+	u2 := reveal dictUnion(d2, d1)
+	assert domain(u1) === domain(u2)
+	assert forall k Key :: k elem domain(u1) ==> u1[k] == u2[k]
+}
+
+// dictUnion(d1, d2) is the smallest dict that is bigger than both d1 and d2
+ghost
+ensures  dictLessThan(d1, d3) && dictLessThan(d2, d3) ==> dictLessThan(dictUnion(d1, d2), d3)
+decreases
+pure func dictUnionIsLessThan(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) U {
+	return let u1 := reveal dictUnion(d1, d2) in
+		let u2 := reveal dictUnion(d2, d1) in
+		let _ := domain(u1) === domain(u2) in
+		let _ := forall k Key :: k elem domain(u1) ==> u1[k] == u2[k] in
+		U{}
+}
 
 /////////////////////////////////////// Utility ///////////////////////////////////////
 // needed for typechecking
@@ -279,3 +687,22 @@ decreases
 pure func AsSet(s set[Elem]) set[Elem] {
 	return s
 }
+
+type U struct{}
+
+ghost
+requires (s1 union s2) === s2 && s1 !== s2
+ensures  0 < len(s2 setminus s1)
+decreases
+pure func lemmaSetInclusion(s1 set[Key], s2 set[Key]) U {
+	return U{}
+}
+
+
+// Hilbert's choice operator, cannot be proven in Gobra yet.
+ghost
+trusted
+requires 0 < len(s)
+ensures  res elem s
+decreases
+pure func choose(s set[Key]) (res Key)
