@@ -14,12 +14,16 @@
 
 // +gobra
 
+// Rules for resource algebras as presented in the paper "Iris from the ground up" (pp. 9)
+// (https://people.mpi-sws.org/~dreyer/papers/iris-ground-up/paper.pdf).
+
 package resalgebra
 
 type Elem interface{}
 
 type RA interface {
-	// defines the set of elements of the RA
+	// Defines the set of elements of the RA. This overcomes
+	// Go's and Gobra's limitations with generics.
 	ghost
 	decreases
 	pure IsElem(e Elem) (res bool)

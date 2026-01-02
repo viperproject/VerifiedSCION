@@ -14,12 +14,13 @@
 
 // +gobra
 
-package resalgebra
+// Rules for ghost locations as presented in the paper "Iris from the ground up" (pp. 10)
+// (https://people.mpi-sws.org/~dreyer/papers/iris-ground-up/paper.pdf).
+// At the moment, the rules for manipulating ghost locations are trusted.
+// If at all possible, we should find a model for the predicate GhostLocation and for
+// all lemmas, but it is not clear that this can be done in Gobra itself.
 
-// At the moment, all of these definitions are trusted, and this,
-// prone to mistakes. If at all possible, we should find a model for the
-// predicate GhostLocation and for all lemmas, but it is not clear that
-// this can be done in Gobra itself.
+package resalgebra
 
 ghost type LocName gpointer[int]
 
@@ -105,5 +106,6 @@ requires GhostLocation(l, ra, e1)
 requires IsFramePreservingUpdate(ra, e1, e2)
 ensures  GhostLocation(l, ra, e2)
 decreases
-// slightly different from paper, improve
+// this rule is less powerful than the one presented in the paper, here we
+// only have a deterministic update.
 func GhostUpdate(l LocName, ra RA, e1 Elem, e2 Elem)
