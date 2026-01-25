@@ -17,7 +17,6 @@
 package router
 
 import (
-	gsync "verification/utils/ghost_sync"
 	"verification/utils/resalgebra"
 	io "verification/io"
 )
@@ -38,21 +37,20 @@ pred SharedInv(ghost dp io.DataPlaneSpec, ghost y SharedArg) {
 // initialize the shared invariant:
 ghost
 requires io.token(p) && dp.dp3s_iospec_ordered(s, p)
-ensures  m.LockP() && m.LockInv() == SharedInv!< dp, y !>
+ensures  Invariant(SharedInv!<dp, y!>)
 decreases
 func InitSharedInv(
 	dp io.DataPlaneSpec,
 	p io.Place,
-	s io.Dp3sStateLocal) (m gpointer[gsync.GhostMutex], y SharedArg) {
-	mV@ := gsync.GhostMutex{}
-	m = &mV
+	s io.Dp3sStateLocal) (y SharedArg) {
 	pE@ := p
 	sE@ := s
 	yI := InitElemAuth(s.ibuf)
 	yO := InitElemAuth(s.obuf)
 	y := SharedArg{&pE, &sE, yI, yO}
-	fold SharedInv!< dp, y !>()
-	m.SetInv(SharedInv!< dp, y !>)
+	fold SharedInv!<dp, y!>()
+	EstablishInvariant(SharedInv!<dp, y!>)
+	return y
 }
 
 /////////////////////////////////////// Prophecies ///////////////////////////////////////
