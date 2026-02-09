@@ -149,6 +149,10 @@ type bfdSession interface {
 type BatchConn interface {
 	// @ pred Mem()
 
+	// @ requires Mem()
+	// @ decreases
+	// @ pure Id() uint16
+
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].Mem()
@@ -179,11 +183,14 @@ type BatchConn interface {
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
-	// @ preserves acc(sl.Bytes(b, 0, len(b)), R10)
+	// @ requires  acc(sl.Bytes(b, 0, len(b)), R10)
+	// @ requires  absIO_val(b, Id()).isValUnsupported
+	// @ ensures   acc(sl.Bytes(b, 0, len(b)), R10)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(b)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
 	// @ requires  acc(Mem(), _)
+	// @ requires  Id() == egressID
 	// (VerifiedSCION) opted for less reusable spec for WriteBatch for
 	// performance reasons.
 	// @ requires  len(msgs) == 1
@@ -410,6 +417,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
 // @ requires  conn != nil && conn.Mem()
+// @ requires  conn.Id() == ifID
 // @ preserves acc(d.Mem(), OutMutexPerm)
 // @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
