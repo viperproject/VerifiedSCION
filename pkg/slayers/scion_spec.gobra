@@ -249,6 +249,7 @@ pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
 }
 
 ghost
+trusted // for dep analysis
 requires acc(s.Mem(ub), R15)
 ensures  acc(s, R16)
 ensures  s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC

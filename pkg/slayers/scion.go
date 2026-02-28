@@ -858,6 +858,7 @@ func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ 
 // SerializeAddrHdr serializes destination and source ISD-AS-Host address triples into the provided
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
+// @ trusted
 // @ preserves acc(s.HeaderMem(ubuf), R10)
 // @ preserves sl.Bytes(buf, 0, len(buf))
 // @ preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R10)
