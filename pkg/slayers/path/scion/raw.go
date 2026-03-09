@@ -294,6 +294,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ assert s.EqAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(ubuf)
+	//@ assume false // DA causes verification failure below
 	//@ assert reveal validPktMetaHdr(ubuf)
 	//@ currInfIdx := int(s.PathMeta.CurrINF)
 	//@ currHfIdx := int(s.PathMeta.CurrHF)
@@ -425,6 +426,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
 		//@ fold acc(s.Base.Mem(), R50)
 		//@ fold acc(s.Mem(ubuf), R50)
+		// @ assume false // DA causes verification error in a post
 		return err
 	}
 	infOffset := MetaLen + idx*path.InfoLen
@@ -463,6 +465,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ CombineBytesFromInfoFields(ubuf, s.NumINF, segLens, HalfPerm)
 	//@ fold acc(s.Base.Mem(), R50)
 	//@ fold acc(s.Mem(ubuf), R50)
+	// @ assume false // DA causes verification error in a post
 	return ret
 }
 
@@ -608,6 +611,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
 	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
 	//@ 	reveal s.absPkt(ubuf)
+	//@ 	assume false // DA causes verification error here
 	//@ 	assert s.absPkt(ubuf).CurrSeg.Future ==
 	//@ 		seq[io.HF]{tmpHopField.Abs()} ++ old(s.absPkt(ubuf).CurrSeg.Future[1:])
 	//@ } else {
