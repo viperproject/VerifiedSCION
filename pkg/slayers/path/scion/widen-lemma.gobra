@@ -152,6 +152,7 @@ func WidenLeftSeg(raw []byte,
 }
 
 ghost
+trusted
 requires  0 <= start && start <= headerOffset
 requires  segs.Valid()
 requires  0 <= length && length <= len(raw)
