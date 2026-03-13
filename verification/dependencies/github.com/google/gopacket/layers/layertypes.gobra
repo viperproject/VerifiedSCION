@@ -1,0 +1,24 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+dup pkgInvariant LayerTypeBFD == 122
+dup pkgInvariant acc(gopacket.RegisteredTypes.Contains(122), _)
+
+package layers
+
+importRequires gopacket.RegisteredTypes.DoesNotContain(int64(122))
+import "github.com/google/gopacket"
+
+var LayerTypeBFD = gopacket.RegisterLayerType(122, gopacket.LayerTypeMetadata{Name: "BFD", Decoder: /* gopacket.DecodeFunc(decodeBFD)} */ generateDecoders()})
+
+// This method just generates stubs for decoders so that we can avoid having to specify all 136 decoders
+mayInit
+ensures d.Mem()
+decreases
+func generateDecoders() (d gopacket.Decoder)
+

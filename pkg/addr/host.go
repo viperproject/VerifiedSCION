@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package addr
 
 import (
@@ -33,6 +35,8 @@ const (
 	HostTypeSVC
 )
 
+// @ trusted
+// @ requires false
 func (t HostAddrType) String() string {
 	switch t {
 	case HostTypeNone:
@@ -73,44 +77,65 @@ const (
 )
 
 type HostAddr interface {
+	// @ requires false
 	Size() int
+	// @ requires false
 	Type() HostAddrType
+	// @ requires false
 	Pack() []byte
+	// @ requires false
 	IP() net.IP
+	// @ requires false
 	Copy() HostAddr
+	// @ requires false
 	Equal(HostAddr) bool
-	fmt.Stringer
+	// @ requires false
+	String() string
 }
 
 var _ HostAddr = (HostNone)(nil)
 
 type HostNone net.IP
 
+// @ trusted
+// @ requires false
 func (h HostNone) Size() int {
 	return HostLenNone
 }
 
+// @ trusted
+// @ requires false
 func (h HostNone) Type() HostAddrType {
 	return HostTypeNone
 }
 
+// @ trusted
+// @ requires false
 func (h HostNone) Pack() []byte {
 	return []byte{}
 }
 
+// @ trusted
+// @ requires false
 func (h HostNone) IP() net.IP {
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func (h HostNone) Copy() HostAddr {
 	return HostNone{}
 }
 
+// @ trusted
+// @ requires false
 func (h HostNone) Equal(o HostAddr) bool {
 	_, ok := o.(HostNone)
 	return ok
 }
 
+// @ trusted
+// @ requires false
 func (h HostNone) String() string {
 	return "<None>"
 }
@@ -119,32 +144,46 @@ var _ HostAddr = (HostIPv4)(nil)
 
 type HostIPv4 net.IP
 
+// @ trusted
+// @ requires false
 func (h HostIPv4) Size() int {
 	return HostLenIPv4
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv4) Type() HostAddrType {
 	return HostTypeIPv4
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv4) Pack() []byte {
 	return []byte(h.IP())
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv4) IP() net.IP {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
 	return net.IP(h).To4()
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv4) Copy() HostAddr {
 	return HostIPv4(append(net.IP(nil), h...))
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv4) Equal(o HostAddr) bool {
 	ha, ok := o.(HostIPv4)
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv4) String() string {
 	return h.IP().String()
 }
@@ -153,31 +192,45 @@ var _ HostAddr = (HostIPv6)(nil)
 
 type HostIPv6 net.IP
 
+// @ trusted
+// @ requires false
 func (h HostIPv6) Size() int {
 	return HostLenIPv6
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv6) Type() HostAddrType {
 	return HostTypeIPv6
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv6) Pack() []byte {
 	return []byte(h)[:HostLenIPv6]
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv6) IP() net.IP {
 	return net.IP(h)
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv6) Copy() HostAddr {
 	return HostIPv6(append(net.IP(nil), h...))
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv6) Equal(o HostAddr) bool {
 	ha, ok := o.(HostIPv6)
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
+// @ trusted
+// @ requires false
 func (h HostIPv6) String() string {
 	return h.IP().String()
 }
@@ -190,6 +243,8 @@ type HostSVC uint16
 // SVC addresses, use BS_A, PS_A, CS_A, and SB_A; shorthand versions without
 // the _A suffix (e.g., PS) also return anycast SVC addresses. For multicast,
 // use BS_M, PS_M, CS_M, and SB_M.
+// @ trusted
+// @ requires false
 func HostSVCFromString(str string) HostSVC {
 	var m HostSVC
 	switch {
@@ -211,51 +266,73 @@ func HostSVCFromString(str string) HostSVC {
 	}
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) Size() int {
 	return HostLenSVC
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) Type() HostAddrType {
 	return HostTypeSVC
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) Pack() []byte {
 	out := make([]byte, HostLenSVC)
 	binary.BigEndian.PutUint16(out, uint16(h))
 	return out
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) PackWithPad(pad int) []byte {
 	out := make([]byte, HostLenSVC+pad)
 	binary.BigEndian.PutUint16(out, uint16(h))
 	return out
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) IP() net.IP {
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) IsMulticast() bool {
 	return (h & SVCMcast) != 0
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) Base() HostSVC {
 	return h & ^SVCMcast
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) Multicast() HostSVC {
 	return h | SVCMcast
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) Copy() HostAddr {
 	return h
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) Equal(o HostAddr) bool {
 	ha, ok := o.(HostSVC)
 	return ok && h == ha
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) String() string {
 	name := h.BaseString()
 	cast := 'A'
@@ -267,6 +344,8 @@ func (h HostSVC) String() string {
 
 // BaseString returns the upper case name of the service. For hosts or unrecognized services, it
 // returns UNKNOWN.
+// @ trusted
+// @ requires false
 func (h HostSVC) BaseString() string {
 	switch h.Base() {
 	case SvcDS:
@@ -280,10 +359,14 @@ func (h HostSVC) BaseString() string {
 	}
 }
 
+// @ trusted
+// @ requires false
 func (h HostSVC) Network() string {
 	return ""
 }
 
+// @ trusted
+// @ requires false
 func HostFromRaw(b []byte, htype HostAddrType) (HostAddr, error) {
 	switch htype {
 	case HostTypeNone:
@@ -308,6 +391,8 @@ func HostFromRaw(b []byte, htype HostAddrType) (HostAddr, error) {
 	}
 }
 
+// @ trusted
+// @ requires false
 func HostFromIP(ip net.IP) HostAddr {
 	if ip4 := ip.To4(); ip4 != nil {
 		return HostIPv4(ip4)
@@ -315,6 +400,8 @@ func HostFromIP(ip net.IP) HostAddr {
 	return HostIPv6(ip)
 }
 
+// @ trusted
+// @ requires false
 func HostFromIPStr(s string) HostAddr {
 	ip := net.ParseIP(s)
 	if ip == nil {
@@ -323,6 +410,8 @@ func HostFromIPStr(s string) HostAddr {
 	return HostFromIP(ip)
 }
 
+// @ trusted
+// @ requires false
 func HostLen(htype HostAddrType) (uint8, error) {
 	var length uint8
 	switch htype {
@@ -340,6 +429,8 @@ func HostLen(htype HostAddrType) (uint8, error) {
 	return length, nil
 }
 
+// @ trusted
+// @ requires false
 func HostTypeCheck(t HostAddrType) bool {
 	switch t {
 	case HostTypeIPv6, HostTypeIPv4, HostTypeSVC:

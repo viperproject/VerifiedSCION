@@ -88,3 +88,18 @@ _build
 # node modules
 ##############
 node_modules
+
+# gobra
+#######
+logger.log
+tmp/
+*.vpr
+*.debugType
+target
+*.unparsed
+*.gobrafied
+*.internal
+.devcontainer
+.metals
+.bazelbsp
+.bazel

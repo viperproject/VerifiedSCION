@@ -1,0 +1,171 @@
+// Specification for package "golang.org/x/net/ipv4"
+// Based on file https://github.com/golang/net/blob/master/ipv4/endpoint.go
+
+// +gobra
+
+package ipv4
+
+import (
+	"net"
+	"time"
+	"golang.org/x/net/internal/socket"
+	. "github.com/scionproto/scion/verification/utils/definitions"
+)
+
+pred (p *PacketConn) Mem()
+
+pred (c *Conn) Mem() {
+	acc(c)
+}
+
+pred (r *RawConn) Mem() {
+	acc(r)
+}
+
+// A Conn represents a network endpoint that uses the IPv4 transport.
+// It is used to control basic IP-level socket options such as TOS and
+// TTL.
+type Conn struct {
+	privateFields PrivateField
+}
+
+// NewConn returns a new Conn.
+requires c.Mem()
+ensures  conn.Mem()
+decreases _
+func NewConn(c net.Conn) (conn *Conn)
+
+// A PacketConn represents a packet network endpoint that uses the
+// IPv4 transport. It is used to control several IP-level socket
+// options including multicasting. It also provides datagram based
+// network I/O methods specific to the IPv4 and higher layer protocols
+// such as UDP.
+type PacketConn struct {
+	privateFields PrivateField
+}
+
+// SetDeadline sets the read and write deadlines associated with the
+// endpoint.
+preserves c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
+decreases _
+func (c *PacketConn) SetDeadline(t time.Time) (e error)
+
+// SetReadDeadline sets the read deadline associated with the
+// endpoint.
+preserves c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
+decreases _
+func (c *PacketConn) SetReadDeadline(t time.Time) (e error)
+
+// SetWriteDeadline sets the write deadline associated with the
+// endpoint.
+preserves c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
+decreases _
+func (c *PacketConn) SetWriteDeadline(t time.Time) (e error)
+
+// Close closes the endpoint.
+requires c.Mem()
+ensures  e != nil ==> e.ErrorMem()
+decreases _
+func (c *PacketConn) Close() (e error)
+
+// NewPacketConn returns a new PacketConn using c as its underlying
+// transport.
+requires c != nil && c.Mem()
+ensures  p != nil && p.Mem()
+ensures  p.GetUnderlyingConn() === c
+decreases _
+func NewPacketConn(c net.PacketConn) (p *PacketConn)
+
+ghost
+trusted
+requires p.Mem()
+decreases
+pure func (p *PacketConn) GetUnderlyingConn() (c net.PacketConn)
+
+ghost
+requires acc(p.Mem(), _)
+ensures  c === old(p.GetUnderlyingConn())
+ensures  c.Mem()
+ensures  c.Mem() --* (p.Mem() && p.GetUnderlyingConn() === c)
+decreases _
+func (p *PacketConn) ExchangePerm() (c net.PacketConn)
+
+ghost
+requires acc(p.Mem(), _)
+ensures  c === old(p.GetUnderlyingConn())
+ensures  acc(c.Mem(), _)
+decreases _
+func (p *PacketConn) ExchangeWildcardPerm() (c net.PacketConn)
+
+// A RawConn represents a packet network endpoint that uses the IPv4
+// transport. It is used to control several IP-level socket options
+// including IPv4 header manipulation. It also provides datagram
+// based network I/O methods specific to the IPv4 and higher layer
+// protocols that handle IPv4 datagram directly such as OSPF, GRE.
+type RawConn struct {
+	privateFields PrivateField
+}
+
+// SetDeadline sets the read and write deadlines associated with the
+// endpoint.
+preserves c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+decreases _
+func (c *RawConn) SetDeadline(t time.Time) (e error)
+
+// SetReadDeadline sets the read deadline associated with the
+// endpoint.
+preserves c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+decreases _
+func (c *RawConn) SetReadDeadline(t time.Time) (e error)
+
+// SetWriteDeadline sets the write deadline associated with the
+// endpoint.
+preserves c.Mem()
+ensures   e != nil ==> e.ErrorMem()
+decreases _
+func (c *RawConn) SetWriteDeadline(t time.Time) (e error)
+
+// Close closes the endpoint.
+requires c.Mem()
+ensures  e != nil ==> e.ErrorMem()
+decreases _
+func (c *RawConn) Close() (e error)
+
+// NewRawConn returns a new RawConn using c as its underlying
+// transport.
+requires c.Mem()
+ensures err == nil ==> r.Mem()
+ensures err != nil ==> err.ErrorMem()
+decreases _
+func NewRawConn(c net.PacketConn) (r *RawConn, err error)
+
+// (VerifiedSCION) Promote method from payloadHandler to PacketConn.
+// ReadBatch reads a batch of messages.
+// On a successful read it returns the number of messages received, up
+// to len(ms).
+preserves acc(c.Mem(), _)
+preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==>
+	(&ms[i]).Mem()
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
+ensures   err == nil ==> (0 <= n && n <= len(ms))
+ensures   err != nil ==> err.ErrorMem()
+func (c *PacketConn) ReadBatch(ms []socket.Message, flags int) (n int, err error)
+
+// (VerifiedSCION) Promote method from payloadHandler to PacketConn.
+// WriteBatch writes a batch of messages.
+// It returns the number of messages written on a successful write.
+preserves forall i int :: { &ms[i] } 0 <= i && i < len(ms) ==>
+	acc((&ms[i]).Mem(), R10)
+preserves acc(c.Mem(), _)
+ensures   c.GetUnderlyingConn() === old(c.GetUnderlyingConn())
+ensures   err == nil ==> 0 <= n && n <= len(ms)
+ensures   err != nil ==> err.ErrorMem()
+func (c *PacketConn) WriteBatch(ms []socket.Message, flags int) (n int, err error)

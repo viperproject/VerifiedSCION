@@ -1,0 +1,31 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Originally taken from https://github.com/golang/go/blob/master/src/crypto/aes/cipher.go
+
+// +gobra
+
+package aes
+
+import "crypto/cipher"
+import "github.com/scionproto/scion/verification/utils/slices"
+import . "github.com/scionproto/scion/verification/utils/definitions"
+
+// The AES block size in bytes.
+const BlockSize = 16
+
+// NewCipher creates and returns a new cipher.Block.
+// The key argument should be the AES key,
+// either 16, 24, or 32 bytes to select
+// AES-128, AES-192, or AES-256.
+preserves acc(slices.Bytes(key, 0, len(key)), R50)
+ensures   err == nil ==>
+	len(key) == 16 || len(key) == 24 || len(key) == 32
+ensures   err == nil ==>
+	(result != nil &&
+	result.Mem()   &&
+	result.BlockSize() == BlockSize)
+ensures   err != nil ==> err.ErrorMem()
+decreases
+func NewCipher(key []byte) (result cipher.Block, err error)
