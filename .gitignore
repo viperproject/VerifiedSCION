@@ -94,3 +94,12 @@ node_modules
 logger.log
 tmp/
 *.vpr
+*.debugType
+target
+*.unparsed
+*.gobrafied
+*.internal
+.devcontainer
+.metals
+.bazelbsp
+.bazel
