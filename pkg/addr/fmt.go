@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package addr
 
 import (
@@ -24,6 +26,8 @@ import (
 
 // ParseFormattedIA parses an IA that was formatted with the FormatIA function.
 // The same options must be provided to successfully parse.
+// @ trusted
+// @ requires false
 func ParseFormattedIA(ia string, opts ...FormatOption) (IA, error) {
 	parts := strings.Split(ia, "-")
 	if len(parts) != 2 {
@@ -42,6 +46,8 @@ func ParseFormattedIA(ia string, opts ...FormatOption) (IA, error) {
 
 // ParseFormattedISD parses an ISD number that was formatted with the FormatISD
 // function. The same options must be provided to successfully parse.
+// @ trusted
+// @ requires false
 func ParseFormattedISD(isd string, opts ...FormatOption) (ISD, error) {
 	o := applyFormatOptions(opts)
 	if o.defaultPrefix {
@@ -56,6 +62,8 @@ func ParseFormattedISD(isd string, opts ...FormatOption) (ISD, error) {
 
 // ParseFormattedAS parses an AS number that was formatted with the FormatAS
 // function. The same options must be provided to successfully parse.
+// @ trusted
+// @ requires false
 func ParseFormattedAS(as_ string, opts ...FormatOption) (AS, error) {
 	o := applyFormatOptions(opts)
 	if o.defaultPrefix {
@@ -69,6 +77,8 @@ func ParseFormattedAS(as_ string, opts ...FormatOption) (AS, error) {
 }
 
 // FormatIA formats the ISD-AS.
+// @ trusted
+// @ requires false
 func FormatIA(ia IA, opts ...FormatOption) string {
 	o := applyFormatOptions(opts)
 	as_ := fmtAS(ia.AS(), o.separator)
@@ -79,6 +89,8 @@ func FormatIA(ia IA, opts ...FormatOption) string {
 }
 
 // FormatISD formats the ISD number.
+// @ trusted
+// @ requires false
 func FormatISD(isd ISD, opts ...FormatOption) string {
 	o := applyFormatOptions(opts)
 	if o.defaultPrefix {
@@ -88,6 +100,8 @@ func FormatISD(isd ISD, opts ...FormatOption) string {
 }
 
 // FormatAS formats the AS number.
+// @ trusted
+// @ requires false
 func FormatAS(as_ AS, opts ...FormatOption) string {
 	o := applyFormatOptions(opts)
 	s := fmtAS(as_, o.separator)
@@ -97,6 +111,8 @@ func FormatAS(as_ AS, opts ...FormatOption) string {
 	return s
 }
 
+// @ trusted
+// @ requires as_.inRange()
 func fmtAS(as_ AS, sep string) string {
 	if !as_.inRange() {
 		return fmt.Sprintf("%d [Illegal AS: larger than %d]", as_, MaxAS)
@@ -119,13 +135,15 @@ func fmtAS(as_ AS, sep string) string {
 	return b.String()
 }
 
-type FormatOption func(*formatOptions)
+type FormatOption = func(*formatOptions)
 
 type formatOptions struct {
 	defaultPrefix bool
 	separator     string
 }
 
+// @ trusted
+// @ requires false
 func applyFormatOptions(opts []FormatOption) formatOptions {
 	o := formatOptions{
 		defaultPrefix: false,
@@ -139,6 +157,8 @@ func applyFormatOptions(opts []FormatOption) formatOptions {
 
 // WithDefaultPrefix enables the default prefix which depends on the type. For
 // the AS number, the prefix is 'AS'. For the ISD number, the prefix is 'ISD'.
+// @ trusted
+// @ requires false
 func WithDefaultPrefix() FormatOption {
 	return func(o *formatOptions) {
 		o.defaultPrefix = true
@@ -147,6 +167,8 @@ func WithDefaultPrefix() FormatOption {
 
 // WithSeparator sets the separator to use for formatting AS numbers. In case of
 // the empty string, the ':' is used.
+// @ trusted
+// @ requires false
 func WithSeparator(separator string) FormatOption {
 	return func(o *formatOptions) {
 		o.separator = separator
@@ -154,6 +176,8 @@ func WithSeparator(separator string) FormatOption {
 }
 
 // WithFileSeparator returns an option that sets the separator to underscore.
+// @ trusted
+// @ requires false
 func WithFileSeparator() FormatOption {
 	return WithSeparator("_")
 }
