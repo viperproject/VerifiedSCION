@@ -1,0 +1,78 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Specification for file in
+// https://cs.opensource.google/go/go/+/master:src/syscall/syscall_unix.go
+
+// +gobra
+
+package syscall
+
+import "errors"
+
+// An Errno is an unsigned number describing an error condition.
+// It implements the error interface. The zero Errno is by convention
+// a non-error, so code to convert from Errno to error should use:
+//
+//	err = nil
+//	if errno != 0 {
+//		err = errno
+//	}
+
+type Errno uintptr
+
+Errno implements error
+*Errno implements errors.ErrorCell
+
+pred (e Errno) ErrorMem() { e != 0 }
+
+preserves e.ErrorMem()
+ensures   old(e.IsDuplicableMem()) == e.IsDuplicableMem()
+decreases
+func (e Errno) Error() string
+
+ghost
+decreases
+pure func (e Errno) IsDuplicableMem() (res bool) {
+	return true
+}
+
+ghost
+preserves e.ErrorMem()
+ensures   e.ErrorMem()
+ensures   old(e.IsDuplicableMem()) == e.IsDuplicableMem()
+decreases
+func (e Errno) Duplicate() {
+	assert unfolding e.ErrorMem() in true
+	fold e.ErrorMem()
+}
+
+/** ErrorCell **/
+pred (s *Errno) Mem() {
+	acc(s)
+}
+
+preserves s.Mem() && s.CanSet(e)
+ensures   s.Get() === e
+decreases
+func (s *Errno) Set(e error) {
+	unfold s.Mem()
+	defer fold s.Mem()
+	newErr := e.(Errno)
+	*s = newErr
+}
+
+ghost
+requires s.Mem()
+decreases
+pure func (s *Errno) Get() error {
+	return unfolding s.Mem() in
+		*s
+}
+
+ghost
+decreases
+pure func (s *Errno) CanSet(e error) bool {
+	return typeOf(e) == type[Errno]
+}

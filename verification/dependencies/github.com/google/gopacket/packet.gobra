@@ -1,0 +1,140 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import (
+	"time"
+	sl "github.com/scionproto/scion/verification/utils/slices"
+)
+
+type CaptureInfo struct {
+	Timestamp time.Time
+	CaptureLength int
+	Length int
+	InterfaceIndex int
+	AncillaryData []interface{}
+}
+
+pred ValidCaptureInfo(c CaptureInfo) {
+	c.Length >= c.CaptureLength && acc(c.AncillaryData)
+}
+
+type PacketMetadata struct {
+	CaptureInfo
+	Truncated bool
+}
+
+pred ValidPacketMetadata(p PacketMetadata) {
+	p.Length >= p.CaptureLength && acc(p.AncillaryData)
+}
+
+type Packet interface {
+	pred Mem()
+
+	preserves Mem()
+	decreases
+	String() string
+
+	preserves Mem()
+	decreases
+	Dump() string
+
+	requires Mem()
+	ensures  acc(res)
+	// (VerifiedSCION) not sure if we need this
+	// ensures forall i int :: 0 <= i && i < len(res) ==> res[i].Mem()
+	// ensures forall i int :: 0 <= i && i < len(res) ==> (res[i].Mem()) --* Mem()
+	ensures  forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])
+	decreases
+	Layers() (res []Layer)
+
+	requires Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
+	decreases
+	Layer(LayerType) (res Layer)
+
+	requires Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
+	decreases
+	LayerClass(LayerClass) (res Layer)
+
+	requires Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
+	decreases
+	LinkLayer() (res LinkLayer)
+
+	requires Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
+	decreases
+	NetworkLayer() (res NetworkLayer)
+
+	requires Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
+	decreases
+	TransportLayer() (res TransportLayer)
+
+	requires Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
+	decreases
+	ApplicationLayer() (res ApplicationLayer)
+
+	requires Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures res.Mem()
+	// ensures res.Mem() --* Mem()
+	decreases
+	ErrorLayer() (res ErrorLayer)
+
+	requires Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures sl.Bytes(res, 0, len(res))
+	// ensures sl.Bytes(res, 0, len(res)) --* Mem()
+	decreases
+	Data() (res []byte)
+	
+	requires Mem()
+	// (VerifiedSCION) not sure if we need this
+	// ensures acc(res)
+	// ensures acc(res) --* Mem()
+	decreases
+	Metadata() (res *PacketMetadata)
+}
+
+preserves acc(l.Mem(ub), _)
+decreases
+func LayerString(l Layer, ghost ub []byte) string
+
+type DecodeOptions struct {
+	Lazy bool
+	NoCopy bool
+	SkipDecodeRecovery bool
+	DecodeStreamsAsDatagrams bool
+}
+
+decreases
+pure func Default() DecodeOptions { return DecodeOptions{} }
+
+requires acc(data)
+requires firstLayerDecoder.Mem()
+ensures !options.NoCopy ==> acc(data)
+ensures res.Mem()
+decreases
+func NewPacket(data []byte, firstLayerDecoder Decoder, options DecodeOptions) (res Packet)
