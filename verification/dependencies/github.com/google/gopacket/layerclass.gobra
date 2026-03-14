@@ -1,0 +1,55 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import . "github.com/scionproto/scion/verification/utils/definitions"
+
+type LayerClass interface {
+	pred Mem()
+
+	requires acc(Mem(), _)
+	decreases
+	pure Contains(LayerType) bool
+
+	preserves acc(Mem(), R10)
+	ensures acc(res)
+	// TODO: we can also ensure that the elements in res are exactly
+	// those for which 'Contains' returns true.
+	decreases
+	LayerTypes() (res []LayerType)
+}
+
+LayerType implements LayerClass
+
+pred (l LayerType) Mem() { true }
+
+// Contains implements LayerClass.
+ensures res == (l == a)
+decreases
+pure func (l LayerType) Contains(a LayerType) (res bool) {
+	return l == a
+}
+
+// LayerTypes implements LayerClass.
+ensures acc(res) && len(res) == 1
+ensures res[0] == l
+decreases
+func (l LayerType) LayerTypes() (res []LayerType) {
+	return []LayerType{l}
+}
+
+preserves acc(types, R20)
+// NewLayerClass creates a LayerClass, attempting to be smart about which type
+// it creates based on which types are passed in.
+ensures res.Mem()
+// TODO: the following conditions may also be desirable
+// ensures   forall i LayerType :: i in types ==> res.Contains(i)
+// ensures   forall i LayerType :: !i in types ==> !res.Contains(i)
+decreases
+func NewLayerClass(types []LayerType) (res LayerClass)

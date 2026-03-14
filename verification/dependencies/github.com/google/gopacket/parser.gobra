@@ -1,0 +1,60 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import (
+	sl "github.com/scionproto/scion/verification/utils/slices"
+	. "github.com/scionproto/scion/verification/utils/definitions"
+)
+
+// DecodingLayerFunc decodes given packet and stores decoded LayerType
+// values into specified slice. Returns either first encountered
+// unsupported LayerType value or decoding error. In case of success,
+// returns (LayerTypeZero, nil).
+preserves acc(sl.Bytes(b, 0, len(b)), R13)
+preserves acc(ltypes, R13) && acc(*ltypes, R13)
+ensures err != nil ==> err.ErrorMem()
+func decodingLayerFunc_spec(b []byte, ltypes *[]LayerType) (l LayerType, err error)
+
+type DecodingLayer interface {
+	pred NonInitMem()
+	pred Mem(ubuf []byte)
+
+	requires  NonInitMem()
+	requires  df != nil
+	preserves acc(sl.Bytes(data, 0, len(data)), R40)
+	preserves df.Mem()
+	ensures   res == nil ==> Mem(data)
+	ensures   res != nil ==> (NonInitMem() && res.ErrorMem())
+	decreases
+	DecodeFromBytes(data []byte, df DecodeFeedback) (res error)
+
+	ensures res != nil
+	ensures typeOf(res) == LayerType
+	decreases
+	CanDecode() (res LayerClass)
+
+	preserves acc(Mem(ubuf), R20)
+	decreases
+	NextLayerType(ghost ubuf []byte) LayerType
+
+	preserves acc(Mem(ubuf), R15)
+	ensures   0 <= start && start <= end && end <= len(ubuf)
+	ensures   len(res) == end - start
+	ensures   len(res) != 0 ==> res === ubuf[start:end]
+	ensures   len(res) == 0 ==> (res == nil || res === ubuf[start:end])
+	decreases
+	LayerPayload(ghost ubuf []byte) (res []byte, ghost start int, ghost end int)
+
+	ghost
+	requires Mem(ub)
+	ensures  NonInitMem()
+	decreases
+	DowngradePerm(ghost ub []byte)
+}
