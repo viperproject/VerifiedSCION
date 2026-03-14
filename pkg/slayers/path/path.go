@@ -14,7 +14,6 @@
 
 // +gobra
 
-//@ initEnsures PathPackageMem()
 package path
 
 import (
@@ -29,8 +28,8 @@ import (
 const maxPathType = 256
 
 var (
-	registeredPaths [maxPathType]metadata
-	strictDecoding  bool = true
+	registeredPaths/*@@@*/ [maxPathType]metadata
+	strictDecoding/*@@@*/ bool = true
 )
 
 // Ghost initialization code to establish the PathPackageMem predicate.
@@ -46,9 +45,9 @@ func init() {
 // Type indicates the type of the path contained in the SCION header.
 type Type uint8
 
-//@ requires 0 <= t && t < maxPathType
-//@ preserves acc(PathPackageMem(), definitions.ReadL20)
-//@ decreases
+// @ requires 0 <= t && t < maxPathType
+// @ preserves acc(PathPackageMem(), definitions.ReadL20)
+// @ decreases
 func (t Type) String() string {
 	//@ unfold acc(PathPackageMem(), definitions.ReadL20)
 	//@ ghost defer fold acc(PathPackageMem(), definitions.ReadL20)
@@ -127,15 +126,15 @@ type Metadata struct {
 
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
-//@ requires 0 <= pathMeta.Type && pathMeta.Type < maxPathType
-//@ requires PathPackageMem()
-//@ requires !Registered(pathMeta.Type)
-//@ requires pathMeta.New implements NewPathSpec
-//@ ensures  PathPackageMem()
-//@ ensures  forall t Type :: 0 <= t && t < maxPathType ==>
-//@ 	t != pathMeta.Type ==> old(Registered(t)) == Registered(t)
-//@ ensures  Registered(pathMeta.Type)
-//@ decreases
+// @ requires 0 <= pathMeta.Type && pathMeta.Type < maxPathType
+// @ requires PathPackageMem()
+// @ requires !Registered(pathMeta.Type)
+// @ requires pathMeta.New implements NewPathSpec
+// @ ensures  PathPackageMem()
+// @ ensures  forall t Type :: 0 <= t && t < maxPathType ==>
+// @ 	t != pathMeta.Type ==> old(Registered(t)) == Registered(t)
+// @ ensures  Registered(pathMeta.Type)
+// @ decreases
 func RegisterPath(pathMeta Metadata) {
 	//@ unfold PathPackageMem()
 	pm := registeredPaths[pathMeta.Type]
@@ -154,9 +153,9 @@ func RegisterPath(pathMeta Metadata) {
 // Strict parsing is enabled by default.
 //
 // Experimental: This function is experimental and might be subject to change.
-//@ requires PathPackageMem()
-//@ ensures  PathPackageMem()
-//@ decreases
+// @ requires PathPackageMem()
+// @ ensures  PathPackageMem()
+// @ decreases
 func StrictDecoding(strict bool) {
 	//@ unfold PathPackageMem()
 	strictDecoding = strict
@@ -164,13 +163,13 @@ func StrictDecoding(strict bool) {
 }
 
 // NewPath returns a new path object of pathType.
-//@ requires 0 <= pathType && pathType < maxPathType
-//@ requires acc(PathPackageMem(), definitions.ReadL20)
-//@ ensures  acc(PathPackageMem(), definitions.ReadL20)
-//@ ensures  (!Registered(pathType) && IsStrictDecoding()) ==> e.ErrorMem()
-//@ ensures  (!Registered(pathType) && !IsStrictDecoding()) ==> p.Mem()
-//@ ensures  Registered(pathType) ==> p.NonInitMem()
-//@ decreases
+// @ requires 0 <= pathType && pathType < maxPathType
+// @ requires acc(PathPackageMem(), definitions.ReadL20)
+// @ ensures  acc(PathPackageMem(), definitions.ReadL20)
+// @ ensures  (!Registered(pathType) && IsStrictDecoding()) ==> e.ErrorMem()
+// @ ensures  (!Registered(pathType) && !IsStrictDecoding()) ==> p.Mem()
+// @ ensures  Registered(pathType) ==> p.NonInitMem()
+// @ decreases
 func NewPath(pathType Type) (p Path, e error) {
 	//@ unfold acc(PathPackageMem(), definitions.ReadL20)
 	//@ defer fold acc(PathPackageMem(), definitions.ReadL20)
@@ -197,10 +196,10 @@ type rawPath struct {
 	pathType Type
 }
 
-//@ preserves acc(p.Mem(), definitions.ReadL10)
-//@ preserves slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures   e == nil
-//@ decreases
+// @ preserves acc(p.Mem(), definitions.ReadL10)
+// @ preserves slices.AbsSlice_Bytes(b, 0, len(b))
+// @ ensures   e == nil
+// @ decreases
 func (p *rawPath) SerializeTo(b []byte) (e error) {
 	//@ unfold slices.AbsSlice_Bytes(b, 0, len(b))
 	//@ unfold acc(p.Mem(), definitions.ReadL10)
@@ -212,10 +211,10 @@ func (p *rawPath) SerializeTo(b []byte) (e error) {
 	return nil
 }
 
-//@ requires p.NonInitMem() && slices.AbsSlice_Bytes(b, 0, len(b))
-//@ ensures  p.Mem()
-//@ ensures  e == nil
-//@ decreases
+// @ requires p.NonInitMem() && slices.AbsSlice_Bytes(b, 0, len(b))
+// @ ensures  p.Mem()
+// @ ensures  e == nil
+// @ decreases
 func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
 	//@ unfold p.NonInitMem()
 	p.raw = b
@@ -223,24 +222,24 @@ func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
 	return nil
 }
 
-//@ requires p.Mem()
-//@ ensures  e != nil && e.ErrorMem()
-//@ decreases
+// @ requires p.Mem()
+// @ ensures  e != nil && e.ErrorMem()
+// @ decreases
 func (p *rawPath) Reverse() (r Path, e error) {
 	return nil, serrors.New("not supported")
 }
 
-//@ pure
-//@ requires acc(p.Mem(), _)
-//@ ensures l >= 0
-//@ decreases
+// @ pure
+// @ requires acc(p.Mem(), _)
+// @ ensures l >= 0
+// @ decreases
 func (p *rawPath) Len() (l int) {
 	return /*@ unfolding acc(p.Mem(), _) in @*/ len(p.raw)
 }
 
-//@ pure
-//@ requires acc(p.Mem(), _)
-//@ decreases
+// @ pure
+// @ requires acc(p.Mem(), _)
+// @ decreases
 func (p *rawPath) Type() Type {
 	return /*@ unfolding acc(p.Mem(), _) in @*/ p.pathType
 }
