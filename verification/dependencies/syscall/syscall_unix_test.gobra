@@ -1,0 +1,8 @@
+// +gobra
+
+package syscall
+
+func test() {
+	e := EAGAIN
+	fold(e.ErrorMem())
+}
