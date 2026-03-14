@@ -1,0 +1,23 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import "time"
+
+type dummyAncillaryData struct {
+	data []byte
+}
+
+func test() {
+	var c CaptureInfo = CaptureInfo{time.Now(), 1, 1, 1, []interface{}{dummyAncillaryData{[]byte{1,2,3}}}}
+	fold ValidCaptureInfo(c)
+	unfold ValidCaptureInfo(c)
+	var p PacketMetadata = PacketMetadata{c, false}
+	fold ValidPacketMetadata(p)
+}

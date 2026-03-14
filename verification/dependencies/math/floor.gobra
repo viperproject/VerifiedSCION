@@ -1,0 +1,17 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// +gobra
+
+package math
+
+// Floor returns the greatest integer value less than or equal to x.
+ensures res <= x
+decreases
+func Floor(x float64) (res float64)
+
+// Ceil returns the least integer value greater than or equal to x.
+ensures x <= res
+decreases
+func Ceil(x float64) (res float64)

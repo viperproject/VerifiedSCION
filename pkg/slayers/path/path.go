@@ -17,28 +17,26 @@
 package path
 
 import (
-	// "fmt" // no support for globals yet
 
 	//@ "github.com/scionproto/scion/verification/utils/definitions"
+	"fmt"
+
 	"github.com/scionproto/scion/pkg/private/serrors"
 )
 
 // PathType is uint8 so 256 values max.
 const maxPathType = 256
 
-// No support for globals yet
-/*
 var (
 	registeredPaths [maxPathType]metadata
 	strictDecoding  bool = true
 )
-*/
 
 // Type indicates the type of the path contained in the SCION header.
 type Type uint8
 
-// No support for globals yet
-/*
+// @ trusted
+// @ requires false
 func (t Type) String() string {
 	pm := registeredPaths[t]
 	if !pm.inUse {
@@ -46,7 +44,6 @@ func (t Type) String() string {
 	}
 	return fmt.Sprintf("%v (%d)", pm.Desc, t)
 }
-*/
 
 // TODO:
 // - make the functions in Path non partial if possible, make them require
@@ -94,8 +91,6 @@ type Path interface {
 	Type() Type
 }
 
-// (verifiedscion) no support for closures yet
-/*
 type metadata struct {
 	inUse bool
 	Metadata
@@ -110,12 +105,11 @@ type Metadata struct {
 	// New is a path constructor function.
 	New func() Path
 }
-*/
 
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
-// No support for globals yet
-/*
+// @ trusted
+// @ requires false
 func RegisterPath(pathMeta Metadata) {
 	pm := registeredPaths[pathMeta.Type]
 	if pm.inUse {
@@ -124,7 +118,6 @@ func RegisterPath(pathMeta Metadata) {
 	registeredPaths[pathMeta.Type].inUse = true
 	registeredPaths[pathMeta.Type].Metadata = pathMeta
 }
-*/
 
 // StrictDecoding enables or disables strict path decoding. If enabled, unknown
 // path types fail to decode. If disabled, unknown path types are decoded into a
@@ -133,12 +126,15 @@ func RegisterPath(pathMeta Metadata) {
 // Strict parsing is enabled by default.
 //
 // Experimental: This function is experimental and might be subject to change.
-/*
+// @ trusted
+// @ requires false
 func StrictDecoding(strict bool) {
 	strictDecoding = strict
 }
 
 // NewPath returns a new path object of pathType.
+// @ trusted
+// @ requires false
 func NewPath(pathType Type) (Path, error) {
 	pm := registeredPaths[pathType]
 	if !pm.inUse {
@@ -149,7 +145,6 @@ func NewPath(pathType Type) (Path, error) {
 	}
 	return pm.New(), nil
 }
-*/
 
 // NewRawPath returns a new raw path that can hold any path type.
 func NewRawPath() Path {
@@ -161,9 +156,9 @@ type rawPath struct {
 	pathType Type
 }
 
-//@ preserves acc(p.Mem(), definitions.ReadL10) && acc(b)
-//@ ensures   e == nil
-//@ decreases
+// @ preserves acc(p.Mem(), definitions.ReadL10) && acc(b)
+// @ ensures   e == nil
+// @ decreases
 func (p *rawPath) SerializeTo(b []byte) (e error) {
 	//@ unfold acc(p.Mem(), definitions.ReadL10)
 	copy(b, p.raw /*@, definitions.ReadL10 @*/)
@@ -171,11 +166,11 @@ func (p *rawPath) SerializeTo(b []byte) (e error) {
 	return nil
 }
 
-//@ requires p.NonInitMem() && acc(b)
-//@ ensures  p.Mem()
-//@ ensures  p.Mem() --* p.NonInitMem()
-//@ ensures  e == nil
-//@ decreases
+// @ requires p.NonInitMem() && acc(b)
+// @ ensures  p.Mem()
+// @ ensures  p.Mem() --* p.NonInitMem()
+// @ ensures  e == nil
+// @ decreases
 func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
 	//@ unfold p.NonInitMem()
 	p.raw = b
@@ -187,24 +182,24 @@ func (p *rawPath) DecodeFromBytes(b []byte) (e error) {
 	return nil
 }
 
-//@ requires p.Mem()
-//@ ensures e != nil && e.ErrorMem()
-//@ decreases
+// @ requires p.Mem()
+// @ ensures e != nil && e.ErrorMem()
+// @ decreases
 func (p *rawPath) Reverse() (r Path, e error) {
 	return nil, serrors.New("not supported")
 }
 
-//@ pure
-//@ requires acc(p.Mem(), _)
-//@ ensures l >= 0
-//@ decreases
+// @ pure
+// @ requires acc(p.Mem(), _)
+// @ ensures l >= 0
+// @ decreases
 func (p *rawPath) Len() (l int) {
 	return /*@ unfolding p.Mem() in @*/ len(p.raw)
 }
 
-//@ pure
-//@ requires acc(p.Mem(), _)
-//@ decreases
+// @ pure
+// @ requires acc(p.Mem(), _)
+// @ decreases
 func (p *rawPath) Type() Type {
 	return /*@ unfolding p.Mem() in @*/ p.pathType
 }
