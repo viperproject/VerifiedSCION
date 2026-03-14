@@ -31,6 +31,8 @@ var (
 // Type indicates the type of the path contained in the SCION header.
 type Type uint8
 
+// @ trusted
+// @ requires false
 func (t Type) String() string {
 	pm := registeredPaths[t]
 	if !pm.inUse {
@@ -42,16 +44,21 @@ func (t Type) String() string {
 // Path is the path contained in the SCION header.
 type Path interface {
 	// SerializeTo serializes the path into the provided buffer.
+	// @ requires false
 	SerializeTo(b []byte) error
 	// DecodesFromBytes decodes the path from the provided buffer.
+	// @ requires false
 	DecodeFromBytes(b []byte) error
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	//
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
+	// @ requires false
 	Reverse() (Path, error)
 	// Len returns the length of a path in bytes.
+	// @ requires false
 	Len() int
 	// Type returns the type of a path.
+	// @ requires false
 	Type() Type
 }
 
@@ -72,6 +79,8 @@ type Metadata struct {
 
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
+// @ trusted
+// @ requires false
 func RegisterPath(pathMeta Metadata) {
 	pm := registeredPaths[pathMeta.Type]
 	if pm.inUse {
@@ -88,11 +97,15 @@ func RegisterPath(pathMeta Metadata) {
 // Strict parsing is enabled by default.
 //
 // Experimental: This function is experimental and might be subject to change.
+// @ trusted
+// @ requires false
 func StrictDecoding(strict bool) {
 	strictDecoding = strict
 }
 
 // NewPath returns a new path object of pathType.
+// @ trusted
+// @ requires false
 func NewPath(pathType Type) (Path, error) {
 	pm := registeredPaths[pathType]
 	if !pm.inUse {
@@ -105,6 +118,8 @@ func NewPath(pathType Type) (Path, error) {
 }
 
 // NewRawPath returns a new raw path that can hold any path type.
+// @ trusted
+// @ requires false
 func NewRawPath() Path {
 	return &rawPath{}
 }
@@ -114,24 +129,34 @@ type rawPath struct {
 	pathType Type
 }
 
+// @ trusted
+// @ requires false
 func (p *rawPath) SerializeTo(b []byte) error {
 	copy(b, p.raw)
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func (p *rawPath) DecodeFromBytes(b []byte) error {
 	p.raw = b
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func (p *rawPath) Reverse() (Path, error) {
 	return nil, serrors.New("not supported")
 }
 
+// @ trusted
+// @ requires false
 func (p *rawPath) Len() int {
 	return len(p.raw)
 }
 
+// @ trusted
+// @ requires false
 func (p *rawPath) Type() Type {
 	return p.pathType
 }

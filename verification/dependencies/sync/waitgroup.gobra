@@ -1,0 +1,136 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in https://golang.org/LICENSE
+
+// +gobra
+
+package sync
+
+// Definition according to https://github.com/golang/go/blob/master/src/sync/waitgroup.go
+type WaitGroup struct {
+	// noCopy noCopy
+	state1 [3]uint32
+}
+
+pred (wg *WaitGroup) WaitGroupP()
+pred (wg *WaitGroup) WaitGroupStarted()
+pred (wg *WaitGroup) UnitDebt(p pred())
+pred (wg *WaitGroup) Token(t pred())
+
+ghost
+requires acc(g.WaitGroupP(), _)
+pure func (g *WaitGroup) WaitMode() bool
+
+ghost
+requires acc(g) && *g == WaitGroup{}
+ensures g.WaitGroupP() && !g.WaitMode()
+decreases
+func (g *WaitGroup) Init()
+
+ghost
+requires g.WaitGroupP()
+ensures g.WaitGroupP() && !g.WaitMode()
+func (g *WaitGroup) UnsetWaitMode()
+
+ghost
+requires p > 0
+requires acc(g.WaitGroupP(), p)
+requires !g.WaitMode() && g.UnitDebt(P)
+ensures g.UnitDebt(P) && acc(g.WaitGroupStarted(), p)
+decreases
+func (g *WaitGroup) Start(ghost p perm, ghost P pred())
+
+ghost
+requires p >= 0
+requires q > 0
+requires p + q == 1
+requires acc(g.WaitGroupP(), p)
+requires acc(g.WaitGroupStarted(), q)
+ensures g.WaitGroupP() && g.WaitMode()
+decreases
+func (g *WaitGroup) SetWaitMode(ghost p perm, ghost q perm)
+
+// Simplified version of the debt redistribution rule. The most general version cannot be written in Gobra
+// without support for magic wands. This corresponds to the first viewshift introduced in remark 8 of Martin's
+// latest proposal for WaitGroups (as of 21/01/2021)
+ghost
+requires P() && g.UnitDebt(P)
+ensures g.UnitDebt(PredTrue!<!>)
+decreases
+func (g *WaitGroup) PayDebt(ghost P pred())
+
+// Simplified version of the debt redistribution rule, instantiated with P == { PredTrue!<!> } and Q == { R }.
+// This is the only rule that generates a Token.
+ghost
+requires g.UnitDebt(PredTrue!<!>)
+ensures g.UnitDebt(R) && g.Token(R)
+decreases
+func (g *WaitGroup) GenerateTokenAndDebt(ghost R pred())
+
+ghost
+requires R()
+ensures g.Token(R)
+func (g *WaitGroup) GenerateToken(ghost R pred())
+
+// Simplified version of Add as proposed in page 8 of Martin's latest document (as of 21/01/2021)
+requires p >= 0
+requires n > 0 && p > 0 ==> acc(g.WaitGroupP(), p) && !g.WaitMode()
+requires (n > 0 && p == 0) ==> g.UnitDebt(P)
+requires n < 0 ==> acc(g.UnitDebt(PredTrue!<!>), -n/1)
+ensures (n > 0 && p > 0) ==> acc(g.WaitGroupP(), p)
+ensures (n > 0 && p == 0) ==> g.UnitDebt(P)
+ensures n > 0 ==> acc(g.UnitDebt(PredTrue!<!>), n/1)
+// this is actually necessary, otherwise Gobra cannot prove that Add does not modify the wait mode
+ensures (n > 0 && p > 0) ==> g.WaitMode() == old(g.WaitMode())
+decreases
+func (g *WaitGroup) Add(n int, ghost p perm, ghost P pred())
+
+requires g.UnitDebt(PredTrue!<!>)
+decreases
+func (g *WaitGroup) Done()
+
+requires p > 0
+requires acc(g.WaitGroupP(), p)
+requires g.WaitMode()
+requires forall i int :: 0 <= i && i < len(P) ==> g.TokenById(P[i], i) 
+ensures forall i int :: 0 <= i && i < len(P) ==> InjEval(P[i], i)
+ensures acc(g.WaitGroupP(), p)
+func (g *WaitGroup) Wait(ghost p perm, ghost P seq[pred()])
+
+pred (g *WaitGroup) TokenById(ghost P pred(), ghost i int) {
+	g.Token(P)
+}
+
+pred InjEval(ghost P pred(), ghost i int) {
+	P()
+}
+
+pred CollectFractions(ghost P seq[pred()], ghost perms seq[perm]) {
+	len(P) == len(perms) &&
+	// P is injective:
+	(forall i, j int :: 0 <= i && i < j && j < len(P) ==> P[i] != P[j]) &&
+	(forall i int :: 0 <= i && i < len(P) ==> perms[i] >= 0 && acc(P[i](), perms[i]))
+}
+
+// Special case of the debt redistribution rule
+ghost
+requires len(P) == len(permsP)
+requires len(Q) == len(permsQ)
+requires g.UnitDebt(CollectFractions!<P ++ Q, permsP ++ permsQ!>)
+requires g.UnitDebt(PredTrue!<!>)
+ensures g.UnitDebt(CollectFractions!<P, permsP!>) && g.UnitDebt(CollectFractions!<Q, permsQ!>)
+func (g *WaitGroup) SplitSequence(ghost P seq[pred()], ghost Q seq[pred()], ghost permsP seq[perm], ghost permsQ seq[perm])
+
+// Special case of the debt redistribution rule
+ghost
+requires len(P) == len(permsP)
+requires len(P) == len(permsQ)
+requires len(P) == len(permsR)
+requires forall i int :: 0 <= i && i < len(P) ==> permsP[i] >= 0
+requires forall i int :: 0 <= i && i < len(P) ==> permsQ[i] >= 0
+requires g.UnitDebt(CollectFractions!<P, permsR!>)
+requires g.UnitDebt(PredTrue!<!>)
+requires forall i int :: 0 <= i && i < len(P) ==> permsP[i] + permsQ[i] == permsR[i]
+ensures g.UnitDebt(CollectFractions!<P, permsP!>)
+ensures g.UnitDebt(CollectFractions!<P, permsQ!>)
+func (g *WaitGroup) SplitFractions(ghost P seq[pred()], ghost permsP seq[perm], ghost permsQ seq[perm], ghost permsR seq[perm])

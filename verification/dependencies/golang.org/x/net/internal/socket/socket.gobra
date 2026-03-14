@@ -1,0 +1,164 @@
+// Specification for package "golang.org/x/net/internal/socket"
+// Based on file https://github.com/golang/net/blob/master/internal/socket/socket.go
+
+// This file is specialized for the case where all instances m of message
+// satisfy the property len(m.Buffers) == 1, which is the case in the router.
+// The old file (socket.gobra.old) contains more general definitions,
+// but this is unnecessary for the SCION router and requires us proving
+// many additional lemmas, e.g., that the following is injective:
+// 	forall i int :: { &m.Buffers[i] } 0 <= i && i < len(m.Buffers) ==> acc(&m.Buffers[i])
+
+// +gobra
+
+package socket
+
+import (
+	"net"
+	. "verification/utils/definitions"
+	sl "verification/utils/slices"
+)
+
+
+// A Message represents an IO message.
+type Message struct {
+	// When writing, the Buffers field must contain at least one
+	// byte to write.
+	// When reading, the Buffers field will always contain a byte
+	// to read.
+	Buffers [][]byte
+
+	// OOB contains protocol-specific control or miscellaneous
+	// ancillary data known as out-of-band data.
+	OOB []byte
+
+	// Addr specifies a destination address when writing.
+	// It can be nil when the underlying protocol of the raw
+	// connection uses connection-oriented communication.
+	// After a successful read, it may contain the source address
+	// on the received packet.
+	Addr net.Addr
+
+	N     int // # of bytes read or written from/to Buffers
+	NN    int // # of bytes read or written from/to OOB
+	Flags int // protocol-specific information on the received message
+
+	// is it still ok to read the Addr of the Message?
+	ghost IsActive bool
+	// do we have a fixed amount of perms to the Addr or a wildcard amount?
+	ghost WildcardPerm bool
+}
+
+pred (m *Message) Mem() {
+	acc(m) &&
+	len(m.Buffers) == 1 &&
+	acc(&m.Buffers[0]) &&
+	sl.Bytes(m.OOB, 0, len(m.OOB)) &&
+	// typeOf(m.Addr) == type[*net.UDPAddr] &&
+	((m.Addr != nil && m.IsActive && !m.WildcardPerm) ==> m.Addr.Mem()) &&
+	((m.Addr != nil && m.IsActive && m.WildcardPerm) ==> acc(m.Addr.Mem(), _)) &&
+	0 <= m.N
+}
+
+ghost
+requires m.Mem()
+decreases
+pure func (m *Message) HasWildcardPermAddr() bool {
+	return unfolding m.Mem() in
+		m.WildcardPerm
+}
+
+ghost
+requires m.Mem()
+decreases
+pure func (m *Message) HasActiveAddr() bool {
+	return unfolding m.Mem() in
+		m.IsActive
+}
+
+ghost
+requires m.Mem()
+decreases
+pure func (m *Message) GetAddr() net.Addr {
+	return unfolding m.Mem() in
+		m.Addr
+}
+
+ghost
+requires m.Mem()
+decreases
+pure func (m *Message) GetMessage() Message {
+	return unfolding m.Mem() in
+		*m
+}
+
+
+ghost
+requires m.Mem()
+decreases
+pure func (m *Message) GetBuffer() []byte {
+	return unfolding m.Mem() in
+		m.Buffers[0]
+}
+
+ghost
+requires m.Mem()
+decreases
+pure func (m *Message) GetFstBuffer() []byte {
+	return unfolding m.Mem() in
+		m.Buffers[0]
+}
+
+ghost
+requires m.Mem()
+ensures  0 <= res
+decreases
+pure func (m *Message) GetN() (res int) {
+	return unfolding m.Mem() in
+		m.N
+}
+
+// This function establishes the injectivity of the underlying buffers across
+// a list of messages. Specifically, it ensures that for any given message `m`
+// and any message in the list `msgs` up to index `k`, their buffers are not
+// pointing to the same memory location.
+//
+// The challenge arises when initializing buffers for each message in `msgs`,
+// as Gobra cannot automatically infer that these buffers are located in distinct
+// memory regions. Consequently, the property
+// `forall i int :: 0 <= i && i <= k ==> msgs[i].GetFstBuffer() !== m.GetFstBuffer()`
+// does not hold automatically. To address this, the function uses a proof by
+// recursion, ensuring that the buffer of a new message `m` is distinct from the
+// buffers of all messages in the list.
+ghost
+requires  0 <= k && k < len(msgs)
+preserves acc(m.Mem(), R55)
+preserves len(m.GetFstBuffer()) > 0
+preserves sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(), R55)
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	 acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), R55)
+ensures   forall i int :: { &msgs[i] } 0 <= i && i <= k ==>
+	msgs[i].GetFstBuffer() !== m.GetFstBuffer()
+decreases k
+func (m *Message) ensureBufferInjectivityAgainstList(msgs []Message, k int) {
+	if k != 0 {
+		m.ensureBufferInjectivityAgainstList(msgs, k-1)
+	}
+	sl.PermsImplyIneq(m.GetFstBuffer(), msgs[k].GetFstBuffer(), R55)
+}
+
+ghost
+preserves acc(m.Mem(), R55)
+preserves len(m.GetFstBuffer()) > 0
+preserves sl.Bytes(m.GetFstBuffer(), 0, len(m.GetFstBuffer()))
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> acc(msgs[i].Mem(), R55)
+preserves forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	 acc(sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer())), R55)
+ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+	msgs[i].GetFstBuffer() !== m.GetFstBuffer()
+decreases
+func (m *Message) EnsureBufferInjectivityAgainstList(msgs []Message) {
+	if len(msgs) != 0 {
+		m.ensureBufferInjectivityAgainstList(msgs, len(msgs)-1)
+	}
+}

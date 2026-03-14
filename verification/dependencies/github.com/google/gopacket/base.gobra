@@ -1,0 +1,121 @@
+// Copyright 2012 Google, Inc. All rights reserved.
+//
+// Use of this source code is governed by a BSD-style license
+// that can be found in the LICENSE file in the root of the source
+// tree.
+
+// +gobra
+
+package gopacket
+
+import . "github.com/scionproto/scion/verification/utils/definitions"
+import "github.com/scionproto/scion/verification/utils/slices"
+
+type Layer interface {
+	pred Mem(ub []byte)
+
+	pure
+	decreases
+	LayerType() LayerType
+
+	// (VerifiedSCION) not used in the dataplane
+	requires false
+	LayerContents() (res []byte)
+
+	preserves Mem(ub)
+	ensures   0 <= start && start <= end && end <= len(ub)
+	ensures   len(res) == end - start
+	ensures   len(res) != 0 ==> res === ub[start:end]
+	ensures   len(res) == 0 ==> (res == nil || res === ub[start:end])
+	decreases
+	LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int)
+}
+
+type Payload []byte
+
+pred (p Payload) Mem(ub []byte) { ub === p }
+
+decreases
+pure func (p Payload) LayerType() LayerType {
+	return LayerTypePayload
+}
+
+requires false
+func (p Payload) LayerContents() (res []byte) {
+	res = []byte(p)
+}
+
+ensures  start == 0 && end == 0
+ensures  res == nil
+decreases
+func (p Payload) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
+	res = nil
+}
+
+preserves acc(p.Mem(ub), R20)
+ensures   start == 0 && end == len(p) && len(p) == len(ub)
+ensures   res === []byte(p)
+ensures   len(res) == end - start
+ensures   len(res) != 0 ==> res === ub[start:end]
+decreases
+func (p Payload) Payload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
+	res = []byte(p)
+	assert unfolding acc(p.Mem(ub), R20) in true
+	return res, 0, len(p)
+}
+
+requires b != nil && b.Mem()
+requires p.Mem(ubuf)
+requires slices.Bytes(b.UBuf(), 0, len(b.UBuf()))
+ensures  err == nil ==> (p.Mem(ubuf) && b.Mem())
+ensures  err == nil ==> slices.Bytes(b.UBuf(), 0, len(b.UBuf()))
+ensures  err != nil ==> err.ErrorMem()
+decreases
+func (p Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)
+
+Payload implements Layer
+Payload implements ApplicationLayer
+Payload implements SerializableLayer
+
+type LinkLayer interface {
+	Layer
+
+	requires false
+	decreases
+	LinkFlow() Flow
+}
+
+type NetworkLayer interface {
+	Layer
+
+	requires false
+	decreases
+	NetworkFlow() Flow
+}
+
+type TransportLayer interface {
+	Layer
+
+	preserves acc(Mem(ub), R15)
+	decreases
+	TransportFlow(ghost ub []byte) Flow
+}
+
+type ApplicationLayer interface {
+	Layer
+
+	preserves Mem(ub)
+	ensures   0 <= start && start <= end && end <= len(ub)
+	ensures   len(res) == end - start
+	ensures   len(res) != 0 ==> res === ub[start:end]
+	decreases
+	Payload(ghost ub []byte) (res []byte, ghost start int, ghost end int)
+}
+
+type ErrorLayer interface {
+	Layer
+
+	preserves Mem(ub)
+	decreases
+	Error(ghost ub []byte) error
+}
