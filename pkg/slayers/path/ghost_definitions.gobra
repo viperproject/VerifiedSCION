@@ -19,10 +19,10 @@ package path
 // interface IDs
 type IF uint16
 // terms in the term algebra
-type MsgTerm seq[byte]
+ghost type MsgTerm seq[byte]
 
 // Abstract representation of an HopField
-type HF domain {
+ghost type HF domain {
     func inIF2(h HF) option[IF]
     func egIF2(h HF) option[IF]
     func HVF(h HF) MsgTerm
