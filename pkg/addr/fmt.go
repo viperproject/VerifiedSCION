@@ -112,7 +112,7 @@ func FormatAS(as_ AS, opts ...FormatOption) string {
 }
 
 // @ trusted
-// @ requires false
+// @ requires as_.inRange()
 func fmtAS(as_ AS, sep string) string {
 	if !as_.inRange() {
 		return fmt.Sprintf("%d [Illegal AS: larger than %d]", as_, MaxAS)
