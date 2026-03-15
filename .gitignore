@@ -101,3 +101,5 @@ target
 *.internal
 .devcontainer
 .metals
+.bazelbsp
+.bazel
