@@ -127,7 +127,7 @@ func asParseBGP(s string) (retAs AS, retErr error) {
 	// @ strconv.Exp2to10(30)
 	// @ strconv.Exp2to10(20)
 	// @ strconv.Exp2to10(10)
-	// @ assert _as < strconv.Exp(2, BGPASBits)
+	// @ assert _as < uint64(strconv.Exp(2, BGPASBits))
 	return AS(_as), nil
 }
 
