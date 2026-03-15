@@ -16,6 +16,3 @@
 
 package addr
 
-requires as_.inRange()
-decreases
-func fmtAS(as_ AS, sep string) string
