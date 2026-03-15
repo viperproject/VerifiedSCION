@@ -20,7 +20,7 @@ package io
 
 type IO_ainfo = uint
 
-type IO_seg2 adt {
+ghost type IO_seg2 adt {
 	// Here, we already instantiated the type params
 	IO_seg3_ {
 		AInfo IO_ainfo // nat in Isabelle
@@ -34,4 +34,4 @@ type IO_seg2 adt {
 }
 
 // seg3 is the same as seg2 instantiated with type parameters
-type IO_seg3 = IO_seg2
+ghost type IO_seg3 = IO_seg2
