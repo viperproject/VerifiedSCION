@@ -84,7 +84,7 @@ func (ip IP) To4(ghost wildcard bool) (res IP) {
 }
 
 pure
-preserves forall i int :: 0 <= i && i < len(s) ==> acc(&s[i], definitions.ReadL16)
+requires forall i int :: 0 <= i && i < len(s) ==> acc(&s[i], definitions.ReadL16)
 func isZeros(s []byte) bool
 
 // To16 converts the IP address ip to a 16-byte representation.

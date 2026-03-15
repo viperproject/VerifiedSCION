@@ -99,3 +99,7 @@ target
 *.unparsed
 *.gobrafied
 *.internal
+.devcontainer
+.metals
+.bazelbsp
+.bazel
