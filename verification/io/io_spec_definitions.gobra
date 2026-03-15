@@ -102,7 +102,7 @@ pure func (pkt IO_pkt2) UpdateInfoField(info AbsInfoField) IO_pkt2 {
 
 // This type simplifies the infoField, making it easier
 // to use than the IO_seg3 from the IO-spec.
-type AbsInfoField adt {
+ghost type AbsInfoField adt {
 	AbsInfoField_ {
 		AInfo IO_ainfo
 		UInfo set[IO_msgterm]
@@ -114,7 +114,7 @@ type AbsInfoField adt {
 // The segment lengths of a packet are frequently used together.
 // This type combines them into a single structure to simplify
 // their specification.
-type SegLens adt {
+ghost type SegLens adt {
 	SegLens_ {
 		Seg1Len int
 		Seg2Len int
