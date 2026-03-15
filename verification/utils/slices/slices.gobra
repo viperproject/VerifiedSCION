@@ -68,7 +68,7 @@ func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires acc(AbsSlice_Bytes(s, start, end), p)
 // the following precondition convinces Gobra that
 // the slice operation is well-formed
@@ -194,7 +194,7 @@ func CombineAtIndex_Any(s []any, start int, end int, idx int, p perm) {
 }
 
 ghost
-requires 0 <= p
+requires 0 < p
 requires acc(AbsSlice_Any(s, start, end), p)
 // the following precondition convinces Gobra that
 // the slice operation is well-formed
