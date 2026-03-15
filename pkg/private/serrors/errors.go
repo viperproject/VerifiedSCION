@@ -164,6 +164,15 @@ func IsTemporary(err error) bool {
 // The returned error implements Is and Is(err) returns true.
 // Deprecated: use WrapStr or New instead.
 func WithCtx(err error, errCtx ...interface{}) error {
+	if top, ok := err.(basicError); ok {
+		return basicError{
+			msg:    top.msg,
+			fields: combineFields(top.fields, errCtxToFields(errCtx)),
+			cause:  top.cause,
+			stack:  top.stack,
+		}
+	}
+
 	return basicError{
 		msg:    errOrMsg{err: err},
 		fields: errCtxToFields(errCtx),
@@ -254,6 +263,28 @@ func (e List) MarshalLogArray(ae zapcore.ArrayEncoder) error {
 	return nil
 }
 
+// Join returns an error that wraps the given errors in a List error.
+// Any nil error values are discarded.
+// Join returns nil if errs contains no non-nil values.
+func Join(errs ...error) error {
+	n := 0
+	for _, err := range errs {
+		if err != nil {
+			n++
+		}
+	}
+	if n == 0 {
+		return nil
+	}
+	l := make(List, 0, n)
+	for _, err := range errs {
+		if err != nil {
+			l = append(l, err)
+		}
+	}
+	return l
+}
+
 func errCtxToFields(errCtx []interface{}) map[string]interface{} {
 	if len(errCtx) == 0 {
 		return nil
@@ -261,6 +292,17 @@ func errCtxToFields(errCtx []interface{}) map[string]interface{} {
 	fields := make(map[string]interface{}, len(errCtx)/2)
 	for i := 0; i < len(errCtx)-1; i += 2 {
 		fields[fmt.Sprint(errCtx[i])] = errCtx[i+1]
+	}
+	return fields
+}
+
+func combineFields(a, b map[string]interface{}) map[string]interface{} {
+	fields := make(map[string]interface{}, len(a)+len(b))
+	for k, v := range a {
+		fields[k] = v
+	}
+	for k, v := range b {
+		fields[k] = v
 	}
 	return fields
 }
