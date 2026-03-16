@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package scion
 
 import (
@@ -28,6 +30,8 @@ type Raw struct {
 
 // DecodeFromBytes only decodes the PathMetaHeader. Otherwise the nothing is decoded and simply kept
 // as raw bytes.
+// @ trusted
+// @ requires false
 func (s *Raw) DecodeFromBytes(data []byte) error {
 	if err := s.Base.DecodeFromBytes(data); err != nil {
 		return err
@@ -42,6 +46,8 @@ func (s *Raw) DecodeFromBytes(data []byte) error {
 
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
+// @ trusted
+// @ requires false
 func (s *Raw) SerializeTo(b []byte) error {
 	if s.Raw == nil {
 		return serrors.New("raw is nil")
@@ -59,6 +65,8 @@ func (s *Raw) SerializeTo(b []byte) error {
 }
 
 // Reverse reverses the path such that it can be used in the reverse direction.
+// @ trusted
+// @ requires false
 func (s *Raw) Reverse() (path.Path, error) {
 	// XXX(shitz): The current implementation is not the most performant, since it parses the entire
 	// path first. If this becomes a performance bottleneck, the implementation should be changed to
@@ -80,6 +88,8 @@ func (s *Raw) Reverse() (path.Path, error) {
 }
 
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
+// @ trusted
+// @ requires false
 func (s *Raw) ToDecoded() (*Decoded, error) {
 	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
@@ -93,6 +103,8 @@ func (s *Raw) ToDecoded() (*Decoded, error) {
 }
 
 // IncPath increments the path and writes it to the buffer.
+// @ trusted
+// @ requires false
 func (s *Raw) IncPath() error {
 	if err := s.Base.IncPath(); err != nil {
 		return err
@@ -101,6 +113,8 @@ func (s *Raw) IncPath() error {
 }
 
 // GetInfoField returns the InfoField at a given index.
+// @ trusted
+// @ requires false
 func (s *Raw) GetInfoField(idx int) (path.InfoField, error) {
 	if idx >= s.NumINF {
 		return path.InfoField{},
@@ -116,11 +130,15 @@ func (s *Raw) GetInfoField(idx int) (path.InfoField, error) {
 
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
+// @ trusted
+// @ requires false
 func (s *Raw) GetCurrentInfoField() (path.InfoField, error) {
 	return s.GetInfoField(int(s.PathMeta.CurrINF))
 }
 
 // SetInfoField updates the InfoField at a given index.
+// @ trusted
+// @ requires false
 func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
 	if idx >= s.NumINF {
 		return serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
@@ -130,6 +148,8 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int) error {
 }
 
 // GetHopField returns the HopField at a given index.
+// @ trusted
+// @ requires false
 func (s *Raw) GetHopField(idx int) (path.HopField, error) {
 	if idx >= s.NumHops {
 		return path.HopField{},
@@ -145,11 +165,15 @@ func (s *Raw) GetHopField(idx int) (path.HopField, error) {
 
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
+// @ trusted
+// @ requires false
 func (s *Raw) GetCurrentHopField() (path.HopField, error) {
 	return s.GetHopField(int(s.PathMeta.CurrHF))
 }
 
 // SetHopField updates the HopField at a given index.
+// @ trusted
+// @ requires false
 func (s *Raw) SetHopField(hop path.HopField, idx int) error {
 	if idx >= s.NumHops {
 		return serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
@@ -159,6 +183,8 @@ func (s *Raw) SetHopField(hop path.HopField, idx int) error {
 }
 
 // IsPenultimateHop returns whether the current hop is the penultimate hop on the path.
+// @ trusted
+// @ requires false
 func (s *Raw) IsPenultimateHop() bool {
 	numberHops := s.NumHops
 	currentHop := int(s.PathMeta.CurrHF)
@@ -166,6 +192,8 @@ func (s *Raw) IsPenultimateHop() bool {
 }
 
 // IsLastHop returns whether the current hop is the last hop on the path.
+// @ trusted
+// @ requires false
 func (s *Raw) IsLastHop() bool {
 	numberHops := s.NumHops
 	currentHop := int(s.PathMeta.CurrHF)

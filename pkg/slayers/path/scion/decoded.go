@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package scion
 
 import (
@@ -38,6 +40,8 @@ type Decoded struct {
 }
 
 // DecodeFromBytes fully decodes the SCION path into the corresponding fields.
+// @ trusted
+// @ requires false
 func (s *Decoded) DecodeFromBytes(data []byte) error {
 	if err := s.Base.DecodeFromBytes(data); err != nil {
 		return err
@@ -66,6 +70,8 @@ func (s *Decoded) DecodeFromBytes(data []byte) error {
 
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
+// @ trusted
+// @ requires false
 func (s *Decoded) SerializeTo(b []byte) error {
 	if len(b) < s.Len() {
 		return serrors.New("buffer too small to serialize path.", "expected", s.Len(),
@@ -91,6 +97,8 @@ func (s *Decoded) SerializeTo(b []byte) error {
 }
 
 // Reverse reverses a SCION path.
+// @ trusted
+// @ requires false
 func (s *Decoded) Reverse() (path.Path, error) {
 	if s.NumINF == 0 {
 		// Empty path doesn't need reversal.
@@ -118,6 +126,8 @@ func (s *Decoded) Reverse() (path.Path, error) {
 }
 
 // ToRaw tranforms scion.Decoded into scion.Raw.
+// @ trusted
+// @ requires false
 func (s *Decoded) ToRaw() (*Raw, error) {
 	b := make([]byte, s.Len())
 	if err := s.SerializeTo(b); err != nil {

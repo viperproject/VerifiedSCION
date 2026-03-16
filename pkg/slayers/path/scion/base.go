@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +gobra
+
 package scion
 
 import (
@@ -27,6 +29,8 @@ const MetaLen = 4
 
 const PathType path.Type = 1
 
+// @ trusted
+// @ requires false
 func RegisterPath() {
 	path.RegisterPath(path.Metadata{
 		Type: PathType,
@@ -48,6 +52,8 @@ type Base struct {
 	NumHops int
 }
 
+// @ trusted
+// @ requires false
 func (s *Base) DecodeFromBytes(data []byte) error {
 	// PathMeta takes care of bounds check.
 	err := s.PathMeta.DecodeFromBytes(data)
@@ -70,6 +76,8 @@ func (s *Base) DecodeFromBytes(data []byte) error {
 }
 
 // IncPath increases the currHF index and currINF index if appropriate.
+// @ trusted
+// @ requires false
 func (s *Base) IncPath() error {
 	if s.NumINF == 0 {
 		return serrors.New("empty path cannot be increased")
@@ -85,10 +93,14 @@ func (s *Base) IncPath() error {
 }
 
 // IsXover returns whether we are at a crossover point.
+// @ trusted
+// @ requires false
 func (s *Base) IsXover() bool {
 	return s.PathMeta.CurrINF != s.infIndexForHF(s.PathMeta.CurrHF+1)
 }
 
+// @ trusted
+// @ requires false
 func (s *Base) infIndexForHF(hf uint8) uint8 {
 	left := uint8(0)
 	for i := 0; i < s.NumINF; i++ {
@@ -104,11 +116,15 @@ func (s *Base) infIndexForHF(hf uint8) uint8 {
 }
 
 // Len returns the length of the path in bytes.
+// @ trusted
+// @ requires false
 func (s *Base) Len() int {
 	return MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen
 }
 
 // Type returns the type of the path.
+// @ trusted
+// @ requires false
 func (s *Base) Type() path.Type {
 	return PathType
 }
@@ -122,6 +138,8 @@ type MetaHdr struct {
 
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
+// @ trusted
+// @ requires false
 func (m *MetaHdr) DecodeFromBytes(raw []byte) error {
 	if len(raw) < MetaLen {
 		return serrors.New("MetaHdr raw too short", "expected", MetaLen, "actual", len(raw))
@@ -138,6 +156,8 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) error {
 
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // scion.MetaLen.
+// @ trusted
+// @ requires false
 func (m *MetaHdr) SerializeTo(b []byte) error {
 	if len(b) < MetaLen {
 		return serrors.New("buffer for MetaHdr too short", "expected", MetaLen, "actual", len(b))
@@ -151,6 +171,8 @@ func (m *MetaHdr) SerializeTo(b []byte) error {
 	return nil
 }
 
+// @ trusted
+// @ requires false
 func (m MetaHdr) String() string {
 	return fmt.Sprintf("{CurrInf: %d, CurrHF: %d, SegLen: %v}", m.CurrINF, m.CurrHF, m.SegLen)
 }
