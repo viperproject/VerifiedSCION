@@ -12,6 +12,7 @@ on:
     - master
   pull_request: # run this workflow on every pull_request
 
+
 env:
   headerOnly: 1
   module: 'github.com/scionproto/scion'
