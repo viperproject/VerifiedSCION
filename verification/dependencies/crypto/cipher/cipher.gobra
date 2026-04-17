@@ -94,7 +94,7 @@ type BlockMode interface {
 	// maintains state and does not reset at each CryptBlocks call.
 	requires  len(src) <= len(dst)
 	preserves Mem()
-	preserves acc(sl.Bytes(dst, 0, len(dst)), 1 - R10)
+	preserves acc(sl.Bytes(dst, 0, len(dst)), writePerm - R10)
 	preserves dst !== src ==> acc(sl.Bytes(dst, 0, len(dst)), R10)
 	preserves acc(sl.Bytes(src, 0, len(src)), R10)
 	ensures   BlockSize() == old(BlockSize())

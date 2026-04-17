@@ -21,7 +21,7 @@
 package bitwise
 
 ghost
-ensures 0 <= b && b < 256
+ensures 0 <= b && b <= 255
 decreases
 func ByteValue(b byte)
 

@@ -325,9 +325,9 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ unfold MutexInvariant!<d!>()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
-	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold acc(d.Mem(), perm(1, 2))
 	// @ d.keyIsSetEq()
-	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold acc(d.Mem(), perm(1, 2))
 	// @ defer fold MutexInvariant!<d!>()
 	// @ defer fold d.Mem()
 	if d.running {
@@ -384,9 +384,9 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	// @ unfold MutexInvariant!<d!>()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
-	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold acc(d.Mem(), perm(1, 2))
 	// @ d.internalIsSetEq()
-	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold acc(d.Mem(), perm(1, 2))
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -430,15 +430,15 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 		// @ Unreachable()
 		return emptyValue
 	}
-	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), 1/2) }
+	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), perm(1, 2)) }
 	if _, existsB := d.external[ifID]; existsB {
 		// @ establishAlreadySet()
-		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
+		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), perm(1, 2)) }
 		// @ fold d.Mem()
 		// @ fold MutexInvariant!<d!>()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
-	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
+	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), perm(1, 2)) }
 	if d.external == nil {
 		d.external = make(map[uint16]BatchConn)
 		// @ fold accBatchConn(d.external)
@@ -1504,7 +1504,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  p.sInitD() == old(p.sInitD())
 // @ ensures  p.getIngressID() == old(p.getIngressID())
 // @ ensures  p.sInitD().validResult(respr, addrAliasesPkt)
-// @ ensures  acc(sl.Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
+// @ ensures  acc(sl.Bytes(rawPkt, 0, len(rawPkt)), writePerm - R15)
 // @ ensures  addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.Bytes(rawPkt, 0, len(rawPkt)), R15)))
@@ -1806,7 +1806,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ ensures   acc(&p.d, R5)
 // @ ensures   acc(&p.path)
 // @ ensures   acc(&p.rawPkt, R1)
-// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), 1 - R15)
+// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), writePerm - R15)
 // @ ensures   p.d.validResult(respr, addrAliasesPkt)
 // @ ensures   addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
@@ -2976,7 +2976,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 // @ ensures   reserr != nil ==> !addrAliasesUb
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R3)
-// @ ensures   acc(sl.Bytes(ubScionL, 0, len(ubScionL)), 1-R15)
+// @ ensures   acc(sl.Bytes(ubScionL, 0, len(ubScionL)), writePerm - R15)
 // @ ensures   acc(&p.buffer, R50) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
 // @ ensures   respr !== processResult{} ==>
@@ -3049,7 +3049,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ ghost endP   := p.scionLayer.PathEndIdx(ub)
 	// @ assert ub[startP:endP] === ubPath
 
-	// @ unfold acc(p.scionLayer.Mem(ub), 1-R55)
+	// @ unfold acc(p.scionLayer.Mem(ub), writePerm - R55)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ sl.SplitByIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
 	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
@@ -3101,7 +3101,7 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ absPktFutureLemma(ub)
 	// @ assert absPkt(ub) == reveal AbsProcessEgress(old(absPkt(ub)))
-	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
+	// @ fold acc(p.scionLayer.Mem(ub), writePerm - R55)
 	return nil
 }
 
@@ -3157,7 +3157,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ ghost  endP   := p.scionLayer.PathEndIdx(ub)
 	// @ ghost  ubPath := ub[startP:endP]
 
-	// @ unfold acc(p.scionLayer.Mem(ub), 1-R55)
+	// @ unfold acc(p.scionLayer.Mem(ub), writePerm - R55)
 	// @ sl.SplitRange_Bytes(ub, startP, endP, HalfPerm)
 	// @ sl.SplitByIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
 	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
@@ -3214,7 +3214,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	var tmpHopField path.HopField
 	if tmpHopField, err = p.path.GetCurrentHopField( /*@ ubPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
-		// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
+		// @ fold acc(p.scionLayer.Mem(ub), writePerm - R55)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
@@ -3227,7 +3227,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ assert reveal p.path.CorrectlyDecodedHf(ubPath, p.hopField)
 	if p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
-		// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
+		// @ fold acc(p.scionLayer.Mem(ub), writePerm - R55)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
@@ -3242,7 +3242,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ assert reveal p.EqAbsHopField(absPkt(ub))
 	// @ assert reveal p.EqAbsInfoField(absPkt(ub))
 	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm/2)
-	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
+	// @ fold acc(p.scionLayer.Mem(ub), writePerm - R55)
 	// @ assert currBase.IncPathSpec().Valid()
 	return processResult{}, nil
 }
@@ -3835,7 +3835,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ ensures   acc(&p.d, R5)
 // @ ensures   acc(&p.path, R10)
 // @ ensures   acc(&p.rawPkt, R1)
-// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), 1 - R15)
+// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), writePerm - R15)
 // @ ensures   p.d.validResult(respr, addrAliasesPkt)
 // @ ensures   addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
@@ -4080,7 +4080,7 @@ func (p *scionPacketProcessor) process(
 // @ ensures   acc(&p.ingressID,  R15)
 // @ ensures   acc(&p.d,          R15)
 // @ ensures   p.d.validResult(respr, addrAliasesPkt)
-// @ ensures   acc(sl.Bytes(p.rawPkt, 0, len(p.rawPkt)), 1 - R15)
+// @ ensures   acc(sl.Bytes(p.rawPkt, 0, len(p.rawPkt)), writePerm - R15)
 // @ ensures   addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
 // @ 	let rawPkt := p.rawPkt in
@@ -4173,11 +4173,11 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 				"actual", fmt.Sprintf("%x", ohp.FirstHop.Mac), "type", "ohp") /*@ , false, absReturnErr(processResult{}) @*/
 		}
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
-		// @ unfold acc(p.scionLayer.Mem(ubScionL), 1-R15)
-		// @ unfold acc(s.Path.Mem(ubPath), 1-R50)
+		// @ unfold acc(p.scionLayer.Mem(ubScionL), writePerm - R15)
+		// @ unfold acc(s.Path.Mem(ubPath), writePerm - R50)
 		ohp.Info.UpdateSegID(ohp.FirstHop.Mac /*@, ohp.FirstHop.Abs() @*/)
-		// @ fold acc(s.Path.Mem(ubPath), 1-R50)
-		// @ fold acc(p.scionLayer.Mem(ubScionL), 1-R15)
+		// @ fold acc(s.Path.Mem(ubPath), writePerm - R50)
+		// @ fold acc(p.scionLayer.Mem(ubScionL), writePerm - R15)
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 
 		// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
@@ -4222,7 +4222,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 			"neighborIA", neighborIA, "srcIA", s.SrcIA) /*@ , false, absReturnErr(processResult{}) @*/
 	}
 	// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
-	// @ unfold acc(p.scionLayer.Mem(ubScionL), 1-R15)
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), writePerm - R15)
 	// @ unfold s.Path.Mem(ubPath)
 	// @ unfold ohp.SecondHop.Mem()
 	ohp.SecondHop = path.HopField{
@@ -4238,7 +4238,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	ohp.SecondHop.Mac = path.MAC(p.mac, ohp.Info, ohp.SecondHop, p.macBuffers.scionInput)
 	// @ fold ohp.SecondHop.Mem()
 	// @ fold s.Path.Mem(ubPath)
-	// @ fold acc(p.scionLayer.Mem(ubScionL), 1-R15)
+	// @ fold acc(p.scionLayer.Mem(ubScionL), writePerm - R15)
 	// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 
 	// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the

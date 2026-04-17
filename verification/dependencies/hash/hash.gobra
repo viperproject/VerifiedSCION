@@ -35,7 +35,7 @@ type Hash interface {
 	// io.Writer // (gobra) Fix: this was changed to be able to re-specify method Write with a stronger spec
 
 	preserves Mem() 
-	preserves acc(p, 1/1000)
+	preserves acc(p, perm(1, 1000))
 	ensures   0 <= n && n <= len(p)
 	// the last conjunct comes from the spec of io.Writer
 	ensures   err == nil && n == len(p)
@@ -45,7 +45,7 @@ type Hash interface {
 
 	// Sum appends the current hash to b and returns the resulting slice.
 	// It does not change the underlying hash state.
-	preserves acc(Mem(), 1/1000)
+	preserves acc(Mem(), perm(1, 1000))
 	requires acc(b)
 	ensures  acc(res) && len(res) == len(b) + Size()
 	decreases

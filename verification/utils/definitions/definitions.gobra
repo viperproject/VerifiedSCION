@@ -16,9 +16,9 @@
 
 package definitions
 
-const HalfPerm perm = 1/2
+const HalfPerm perm = perm(1, 2)
 const (
-	R00 perm = 1/(2 << iota)
+	R00 perm = perm(1, (2 << iota))
 	R0
 	R1
 	R2

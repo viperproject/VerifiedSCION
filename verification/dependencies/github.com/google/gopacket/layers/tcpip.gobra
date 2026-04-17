@@ -18,7 +18,7 @@ type tcpipchecksum struct {
 type tcpipPseudoHeader interface {
 	pred Mem()
 
-	preserves acc(Mem(), 1/10000)
+	preserves acc(Mem(), perm(1, 10000))
 	decreases
 	pseudoheaderChecksum() (uint32, error)
 }

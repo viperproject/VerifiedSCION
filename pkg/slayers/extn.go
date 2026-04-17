@@ -336,7 +336,7 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 	o := make([]*tlvOption, 0, len(h.Options))
 	for _, v := range h.Options {
-		o = append( /*@ perm(0/1), @*/ o, (*tlvOption)(v))
+		o = append( /*@ noPerm, @*/ o, (*tlvOption)(v))
 	}
 
 	return h.extnBase.serializeToWithTLVOptions(b, opts, o)
@@ -386,7 +386,7 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 			return err
 		}
 		// @ ghost tmp := (*HopByHopOption)(opt)
-		h.Options = append( /*@ perm(1/2), @*/ h.Options, (*HopByHopOption)(opt))
+		h.Options = append( /*@ perm(1, 2), @*/ h.Options, (*HopByHopOption)(opt))
 		offset += opt.ActualLength
 		// @ assert h.Options[lenOptions] === tmp
 		// @ fold tmp.Mem(lenOptions)
@@ -518,7 +518,7 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 			return err
 		}
 		// @ ghost tmp := (*EndToEndOption)(opt)
-		e.Options = append( /*@ perm(1/2), @*/ e.Options, (*EndToEndOption)(opt))
+		e.Options = append( /*@ perm(1, 2), @*/ e.Options, (*EndToEndOption)(opt))
 		offset += opt.ActualLength
 		// @ assert e.Options[lenOptions] === tmp
 		// @ fold tmp.Mem(lenOptions)
@@ -571,7 +571,7 @@ func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 	o := make([]*tlvOption, 0, len(e.Options))
 	for _, v := range e.Options {
-		o = append( /*@ perm(0/1), @*/ o, (*tlvOption)(v))
+		o = append( /*@ noPerm, @*/ o, (*tlvOption)(v))
 	}
 
 	return e.extnBase.serializeToWithTLVOptions(b, opts, o)

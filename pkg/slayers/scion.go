@@ -445,7 +445,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R41)
 	// @ assert typeOf(s.GetPath(data)) == *scion.Raw ==> s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
 	// @ assert reveal s.EqPathType(data)
-	// @ fold acc(s.Mem(data), 1-R54)
+	// @ fold acc(s.Mem(data), writePerm - R54)
 	return nil
 }
 

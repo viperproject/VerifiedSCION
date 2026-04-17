@@ -20,12 +20,12 @@ import (
 type Addr interface {
 	pred Mem()
 
-	requires acc(Mem(), 1/1000)
-	ensures acc(Mem(), 1/1000)
+	requires acc(Mem(), perm(1, 1000))
+	ensures acc(Mem(), perm(1, 1000))
 	Network() string
 
-	requires acc(Mem(), 1/1000)
-	ensures acc(Mem(), 1/1000)
+	requires acc(Mem(), perm(1, 1000))
+	ensures acc(Mem(), perm(1, 1000))
 	String() string
 }
 

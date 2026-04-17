@@ -72,7 +72,7 @@ type Writer interface {
 	pred Mem()
 
 	preserves Mem() 
-	preserves acc(p, 1/1000)
+	preserves acc(p, perm(1, 1000))
 	ensures 0 <= n && n <= len(p)
 	ensures (n < len(p)) == (err != nil)
 	Write(p []byte) (n int, err error)

@@ -35,5 +35,5 @@ pred (a *IPAddr) Mem() {
 ensures res == "ip"
 func (a *IPAddr) Network() (res string) { return "ip" }
 
-preserves a != nil ==> acc(a.Mem(), 1/1000)
+preserves a != nil ==> acc(a.Mem(), perm(1, 1000))
 func (a *IPAddr) String() string

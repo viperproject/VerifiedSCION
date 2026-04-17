@@ -34,9 +34,9 @@ import (
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
-ghost const MutexPerm perm = 1/4
-ghost const OutMutexPerm perm = 3/4
-ghost const runningPerm perm = 1/2
+ghost const MutexPerm perm = perm(1, 4)
+ghost const OutMutexPerm perm = perm(3, 4)
+ghost const runningPerm perm = perm(1, 2)
 
 pred MutexInvariant(d *DataPlane) {
 	acc(&d.running, runningPerm) &&
@@ -55,7 +55,7 @@ pred (d *DataPlane) Mem() {
 	acc(&d.macFactory)                                            &&
 	acc(&d.bfdSessions)                                           &&
 	acc(&d.localIA)                                               &&
-	acc(&d.running, 1/2)                                          &&
+	acc(&d.running, perm(1, 2))                                          &&
 	acc(&d.Metrics)                                               &&
 	acc(&d.forwardingMetrics)                                     &&
 	acc(&d.key)                                                   &&
