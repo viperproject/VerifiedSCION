@@ -44,13 +44,13 @@ pure func (m gpointer[GhostMutex]) LockInv() pred()
 ghost
 requires inv() && acc(m) && *m == GhostMutex{}
 ensures  m.LockP() && m.LockInv() == inv
-decreases
+decreases _
 func (m gpointer[GhostMutex]) SetInv(inv pred())
 
 ghost
 requires acc(m.LockP(), _)
 ensures  m.LockP() && m.UnlockP() && m.LockInv()()
-decreases _ if sync.IgnoreBlockingForTermination()
+decreases _
 func (m gpointer[GhostMutex]) Lock()
 
 ghost
