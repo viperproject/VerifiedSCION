@@ -489,7 +489,7 @@ jobs:
           conditionalizePermissions: '1'
           moreJoins: 'impure'
           imageVersion: ${{ env.imageVersion }}
-          mceMode: 'on'
+          mceMode: 'on' # maybe change to od
           requireTriggers: ${{ env.requireTriggers }}
           overflow: ${{ env.overflow }}
           useZ3API: ${{ env.useZ3API }}
