@@ -32,7 +32,7 @@ pred Bytes(s []byte, start int, end int) {
 	forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i])
 }
 
-requires Bytes(s, start, end)
+requires (0 <= start && start <= end && end <= cap(s) && forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i]))
 requires start <= i && i < end
 decreases
 pure func GetByte(s []byte, start int, end int, i int) byte {
@@ -41,10 +41,10 @@ pure func GetByte(s []byte, start int, end int, i int) byte {
 
 ghost
 requires 0 < p
-requires acc(Bytes(s, start, end), p)
+requires (0 <= start && start <= end && end <= cap(s) && forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i], p))
 requires start <= idx && idx <= end
-ensures  acc(Bytes(s, start, idx), p)
-ensures  acc(Bytes(s, idx, end), p)
+ensures  (0 <= start && start <= idx && idx <= cap(s) && forall i int :: { &s[i] } start <= i && i < idx ==> acc(&s[i], p))
+ensures  (0 <= idx && idx <= end && end <= cap(s) && forall i int :: { &s[i] } idx <= i && i < end ==> acc(&s[i], p))
 decreases
 func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 	unfold acc(Bytes(s, start, end), p)
@@ -54,9 +54,9 @@ func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 
 ghost
 requires 0 < p
-requires acc(Bytes(s, start, idx), p)
-requires acc(Bytes(s, idx,   end), p)
-ensures  acc(Bytes(s, start, end), p)
+requires (0 <= start && start <= idx && idx <= cap(s) && forall i int :: { &s[i] } start <= i && i < idx ==> acc(&s[i], p))
+requires (0 <= idx && idx <= end && end <= cap(s) && forall i int :: { &s[i] } idx <= i && i < end ==> acc(&s[i], p))
+ensures  (0 <= start && start <= end && end <= cap(s) && forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i], p))
 decreases
 func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 	unfold acc(Bytes(s, start, idx), p)
@@ -66,11 +66,11 @@ func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 
 ghost
 requires 0 < p
-requires acc(Bytes(s, start, end), p)
+requires (0 <= start && start <= end && end <= cap(s) && forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i], p))
 // the following precondition convinces Gobra that
 // the slice operation is well-formed
-requires unfolding acc(Bytes(s, start, end), p) in true
-ensures  acc(Bytes(s[start:end], 0, len(s[start:end])), p)
+requires true
+ensures  (0 <= 0 && 0 <= len(s[start:end]) && len(s[start:end]) <= cap(s[start:end]) && forall i int :: { &(s[start:end])[i] } 0 <= i && i < len(s[start:end]) ==> acc(&(s[start:end])[i], p))
 decreases
 func Reslice_Bytes(s []byte, start int, end int, p perm) {
 	unfold acc(Bytes(s, start, end), p)
@@ -81,8 +81,8 @@ func Reslice_Bytes(s []byte, start int, end int, p perm) {
 ghost
 requires 0 < p
 requires 0 <= start && start <= end && end <= cap(s)
-requires acc(Bytes(s[start:end], 0, len(s[start:end])), p)
-ensures  acc(Bytes(s, start, end), p)
+requires (0 <= 0 && 0 <= len(s[start:end]) && len(s[start:end]) <= cap(s[start:end]) && forall i int :: { &(s[start:end])[i] } 0 <= i && i < len(s[start:end]) ==> acc(&(s[start:end])[i], p))
+ensures  (0 <= start && start <= end && end <= cap(s) && forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i], p))
 decreases
 func Unslice_Bytes(s []byte, start int, end int, p perm) {
 	unfold acc(Bytes(s[start:end], 0, len(s[start:end])), p)
@@ -107,10 +107,10 @@ func Unslice_Bytes(s []byte, start int, end int, p perm) {
 ghost
 requires 0 < p
 requires 0 <= start && start <= end && end <= len(s)
-requires acc(Bytes(s, 0, len(s)), p)
-ensures  acc(Bytes(s[start:end], 0, end-start), p)
-ensures  acc(Bytes(s, 0, start), p)
-ensures  acc(Bytes(s, end, len(s)), p)
+requires (0 <= 0 && 0 <= len(s) && len(s) <= cap(s) && forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], p))
+ensures  (0 <= 0 && 0 <= end-start && end-start <= cap(s[start:end]) && forall i int :: { &(s[start:end])[i] } 0 <= i && i < end-start ==> acc(&(s[start:end])[i], p))
+ensures  (0 <= 0 && 0 <= start && start <= cap(s) && forall i int :: { &s[i] } 0 <= i && i < start ==> acc(&s[i], p))
+ensures  (0 <= end && end <= len(s) && len(s) <= cap(s) && forall i int :: { &s[i] } end <= i && i < len(s) ==> acc(&s[i], p))
 decreases
 func SplitRange_Bytes(s []byte, start int, end int, p perm) {
 	SplitByIndex_Bytes(s, 0, len(s), start, p)
@@ -121,10 +121,10 @@ func SplitRange_Bytes(s []byte, start int, end int, p perm) {
 ghost
 requires 0 < p
 requires 0 <= start && start <= end && end <= len(s)
-requires acc(Bytes(s[start:end], 0, end-start), p)
-requires acc(Bytes(s, 0, start), p)
-requires acc(Bytes(s, end, len(s)), p)
-ensures  acc(Bytes(s, 0, len(s)), p)
+requires (0 <= 0 && 0 <= end-start && end-start <= cap(s[start:end]) && forall i int :: { &(s[start:end])[i] } 0 <= i && i < end-start ==> acc(&(s[start:end])[i], p))
+requires (0 <= 0 && 0 <= start && start <= cap(s) && forall i int :: { &s[i] } 0 <= i && i < start ==> acc(&s[i], p))
+requires (0 <= end && end <= len(s) && len(s) <= cap(s) && forall i int :: { &s[i] } end <= i && i < len(s) ==> acc(&s[i], p))
+ensures  (0 <= 0 && 0 <= len(s) && len(s) <= cap(s) && forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], p))
 decreases
 func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 	Unslice_Bytes(s, start, end, p)
@@ -133,7 +133,7 @@ func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 }
 
 ghost
-ensures Bytes(nil, 0, 0)
+ensures (0 <= 0 && 0 <= 0 && 0 <= cap(nil) && forall i int :: { &nil[i] } 0 <= i && i < 0 ==> acc(&nil[i]))
 decreases
 func NilAcc_Bytes() {
 	fold Bytes(nil, 0, 0)
@@ -141,8 +141,8 @@ func NilAcc_Bytes() {
 
 ghost
 requires  len(s1) > 0 || len(s2) > 0
-preserves Bytes(s1, 0, len(s1))
-preserves acc(Bytes(s2, 0, len(s2)), _)
+preserves (0 <= 0 && 0 <= len(s1) && len(s1) <= cap(s1) && forall i int :: { &s1[i] } 0 <= i && i < len(s1) ==> acc(&s1[i]))
+preserves (0 <= 0 && 0 <= len(s2) && len(s2) <= cap(s2) && forall i int :: { &s2[i] } 0 <= i && i < len(s2) ==> acc(&s2[i], _))
 ensures   s1 !== s2
 decreases
 func PermsImplyIneqWithWildcard(s1 []byte, s2 []byte) {
@@ -161,8 +161,8 @@ func PermsImplyIneqWithWildcard(s1 []byte, s2 []byte) {
 ghost
 requires  0 < p
 requires  len(s1) > 0 || len(s2) > 0
-preserves Bytes(s1, 0, len(s1))
-preserves acc(Bytes(s2, 0, len(s2)), p)
+preserves (0 <= 0 && 0 <= len(s1) && len(s1) <= cap(s1) && forall i int :: { &s1[i] } 0 <= i && i < len(s1) ==> acc(&s1[i]))
+preserves (0 <= 0 && 0 <= len(s2) && len(s2) <= cap(s2) && forall i int :: { &s2[i] } 0 <= i && i < len(s2) ==> acc(&s2[i], p))
 ensures   s1 !== s2
 decreases
 func PermsImplyIneq(s1 []byte, s2 []byte, p perm) {

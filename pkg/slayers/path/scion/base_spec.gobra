@@ -244,7 +244,7 @@ pure func DecodedFrom(line uint32) MetaHdr {
 }
 
 ghost
-requires sl.Bytes(b, 0, len(b))
+requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
 decreases
 pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
 	return MetaLen <= len(b)             &&
@@ -262,7 +262,7 @@ pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
 
 ghost
 requires s.Mem()
-requires sl.Bytes(b, 0, len(b))
+requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
 decreases
 pure func (s *Base) DecodeFromBytesSpec(b []byte) bool {
 	return unfolding s.Mem() in
@@ -296,7 +296,7 @@ pure func (m MetaHdr) SerializedToLine() uint32 {
 }
 
 ghost
-requires sl.Bytes(b, 0, len(b))
+requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
 decreases
 pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
 	return MetaLen <= len(b)                &&
@@ -310,7 +310,7 @@ pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
 }
 
 ghost
-requires sl.Bytes(ub, 0, len(ub))
+requires (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i]))
 decreases
 pure func (s Base) EqAbsHeader(ub []byte) bool {
 	// we compute the sublice ub[:MetaLen] inside this function instead
@@ -322,11 +322,11 @@ pure func (s Base) EqAbsHeader(ub []byte) bool {
 }
 
 ghost
-requires sl.Bytes(ub, 0, len(ub))
+requires (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i]))
 decreases
 pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
 	return MetaLen <= len(ub) &&
-		unfolding sl.Bytes(ub, 0, len(ub)) in
+		
 		s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen]))
 }
 
