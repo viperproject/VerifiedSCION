@@ -897,7 +897,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ outline (
 			writeMsgs := make(underlayconn.Messages, 1)
 			writeMsgs[0].Buffers = make([][]byte, 1)
-			// @ sl.NilAcc_Bytes()
 			// @ fold writeMsgInv(writeMsgs)
 			// @ )
 
@@ -1134,7 +1133,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					if result.OutAddr != nil { // don't assign directly to net.Addr, typed nil!
 						writeMsgs[0].Addr = result.OutAddr
 					}
-					// @ sl.NilAcc_Bytes()
 					// @ assert absIO_val(result.OutPkt, result.EgressID) ==
 					// @ 	absIO_val(writeMsgs[0].Buffers[0], result.EgressID)
 					// @ assert result.OutPkt != nil ==> newAbsPkt ==
@@ -1564,7 +1562,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	// @ } else {
 	// @ 	if offsets[lastLayerIdx].isNil {
 	// @ 		ub = nil
-	// @ 		sl.NilAcc_Bytes()
 	// @ 	} else {
 	// @ 		o = offsets[lastLayerIdx]
 	// @ 		ub = p.rawPkt[o.start:o.end]
@@ -1584,7 +1581,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	// @ assert (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], HalfPerm))
 	pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ub @*/ )
 	// @ sl.SplitRange_Bytes(ub, start, end, HalfPerm)
-	// @ sl.NilAcc_Bytes()
 	pathType := /*@ unfolding p.scionLayer.Mem(rawPkt) in @*/ p.scionLayer.PathType
 	switch pathType {
 	case empty.PathType:
@@ -3680,7 +3676,6 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 	// @ maybeEndPld = end
 	// @ if scionPld == nil {
 	// @ 	scionPldIsNil = true
-	// @ 	sl.NilAcc_Bytes()
 	// @ } else {
 	// @ 	sl.SplitRange_Bytes(ubLL, start, end, R1)
 	// @ }
@@ -4798,7 +4793,6 @@ func decodeLayers(data []byte, base *slayers.SCION, opts ...gopacket.DecodingLay
 			// @ oldEnd   = pos.start + end
 			// @ oldStart = pos.start + start
 			// @ ghost if data == nil {
-			// @ 	sl.NilAcc_Bytes()
 			// @ } else {
 			// @ 	sl.SplitRange_Bytes(oldData, oldStart, oldEnd, R40)
 			// @ }

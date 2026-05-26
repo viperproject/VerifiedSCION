@@ -133,13 +133,6 @@ func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 }
 
 ghost
-ensures (0 <= 0 && 0 <= 0 && 0 <= cap(nil) && forall i int :: { &nil[i] } 0 <= i && i < 0 ==> acc(&nil[i]))
-decreases
-func NilAcc_Bytes() {
-	fold Bytes(nil, 0, 0)
-}
-
-ghost
 requires  len(s1) > 0 || len(s2) > 0
 preserves (0 <= 0 && 0 <= len(s1) && len(s1) <= cap(s1) && forall i int :: { &s1[i] } 0 <= i && i < len(s1) ==> acc(&s1[i]))
 preserves (0 <= 0 && 0 <= len(s2) && len(s2) <= cap(s2) && forall i int :: { &s2[i] } 0 <= i && i < len(s2) ==> acc(&s2[i], _))
