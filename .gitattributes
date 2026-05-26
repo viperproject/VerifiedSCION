@@ -1,1 +1,9 @@
 * text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.bat text eol=crlf
+licenses/** -text
