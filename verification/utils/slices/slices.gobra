@@ -36,7 +36,7 @@ requires (0 <= start && start <= end && end <= cap(s) && forall i int :: { &s[i]
 requires start <= i && i < end
 decreases
 pure func GetByte(s []byte, start int, end int, i int) byte {
-	return unfolding Bytes(s, start, end) in s[i]
+	return s[i]
 }
 
 ghost
@@ -47,9 +47,6 @@ ensures  (0 <= start && start <= idx && idx <= cap(s) && forall i int :: { &s[i]
 ensures  (0 <= idx && idx <= end && end <= cap(s) && forall i int :: { &s[i] } idx <= i && i < end ==> acc(&s[i], p))
 decreases
 func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
-	unfold acc(Bytes(s, start, end), p)
-	fold   acc(Bytes(s, start, idx), p)
-	fold   acc(Bytes(s, idx, end), p)
 }
 
 ghost
@@ -59,9 +56,6 @@ requires (0 <= idx && idx <= end && end <= cap(s) && forall i int :: { &s[i] } i
 ensures  (0 <= start && start <= end && end <= cap(s) && forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i], p))
 decreases
 func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
-	unfold acc(Bytes(s, start, idx), p)
-	unfold acc(Bytes(s, idx,   end), p)
-	fold   acc(Bytes(s, start, end), p)
 }
 
 ghost
@@ -73,9 +67,7 @@ requires true
 ensures  (0 <= 0 && 0 <= len(s[start:end]) && len(s[start:end]) <= cap(s[start:end]) && forall i int :: { &(s[start:end])[i] } 0 <= i && i < len(s[start:end]) ==> acc(&(s[start:end])[i], p))
 decreases
 func Reslice_Bytes(s []byte, start int, end int, p perm) {
-	unfold acc(Bytes(s, start, end), p)
 	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
-	fold  acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 }
 
 ghost
@@ -85,7 +77,6 @@ requires (0 <= 0 && 0 <= len(s[start:end]) && len(s[start:end]) <= cap(s[start:e
 ensures  (0 <= start && start <= end && end <= cap(s) && forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i], p))
 decreases
 func Unslice_Bytes(s []byte, start int, end int, p perm) {
-	unfold acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 	assert 0 <= start && start <= end && end <= cap(s)
 	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
 	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
@@ -101,7 +92,6 @@ func Unslice_Bytes(s []byte, start int, end int, p perm) {
 		assert acc(&s[start + j], p)
 		assert forall i int :: { &s[i] } start <= i && i <= start+j ==> acc(&s[i], p)
 	}
-	fold acc(Bytes(s, start, end), p)
 }
 
 ghost
@@ -139,16 +129,12 @@ preserves (0 <= 0 && 0 <= len(s2) && len(s2) <= cap(s2) && forall i int :: { &s2
 ensures   s1 !== s2
 decreases
 func PermsImplyIneqWithWildcard(s1 []byte, s2 []byte) {
-	unfold Bytes(s1, 0, len(s1))
-	unfold acc(Bytes(s2, 0, len(s2)), _)
 	if len(s1) > 0 && len(s2) > 0 {
 		// This assertion checks that the memory addresses of the first elements
 		// in s1 and s2 are different. By doing so, we instantiate the triggers in
 		// the quantifier bodies to prove the required inequality for non-empty slices.
 		assert &s1[0] != &s2[0]
 	}
-	fold Bytes(s1, 0, len(s1))
-	fold acc(Bytes(s2, 0, len(s2)), _)
 }
 
 ghost
@@ -159,16 +145,12 @@ preserves (0 <= 0 && 0 <= len(s2) && len(s2) <= cap(s2) && forall i int :: { &s2
 ensures   s1 !== s2
 decreases
 func PermsImplyIneq(s1 []byte, s2 []byte, p perm) {
-	unfold Bytes(s1, 0, len(s1))
-	unfold acc(Bytes(s2, 0, len(s2)), p)
 	if len(s1) > 0 && len(s2) > 0 {
 		// This assertion checks that the memory addresses of the first elements
 		// in s1 and s2 are different. By doing so, we instantiate the triggers in
 		// the quantifier bodies to prove the required inequality for non-empty slices.
 		assert &s1[0] != &s2[0]
 	}
-	fold Bytes(s1, 0, len(s1))
-	fold acc(Bytes(s2, 0, len(s2)), p)
 }
 
 type Unit struct{}

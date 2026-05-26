@@ -20,6 +20,5 @@ package slices
 
 func Bytes_test() {
 	s := make([]byte, 10)
-	fold Bytes(s, 0, 10)
 	// assert false // fails
 }
