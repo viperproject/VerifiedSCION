@@ -58,7 +58,6 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byt
 	h.Reset()
 	MACInput(info.SegID, info.Timestamp, hf.ExpTime,
 		hf.ConsIngress, hf.ConsEgress, buffer)
-	//@ defer fold (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i]))
 	// Write must not return an error: https://godoc.org/hash#Hash
 	if _, err := h.Write(buffer); err != nil {
 		// @ Unreachable()

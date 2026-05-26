@@ -2894,7 +2894,6 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, ghost ubScionL []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	// @ ghost oldPkt := absPkt(ubScionL)
 	fullMac := path.FullMAC(p.mac, p.infoField, p.hopField, p.macBuffers.scionInput)
-	// @ defer unfold (0 <= 0 && 0 <= path.MacLen && path.MacLen <= cap(p.hopField.Mac[:path.MacLen]) && forall i int :: { &(p.hopField.Mac[:path.MacLen])[i] } 0 <= i && i < path.MacLen ==> acc(&(p.hopField.Mac[:path.MacLen])[i], R21))
 	// @ sl.SplitRange_Bytes(fullMac, 0, path.MacLen, R21)
 	// @ ghost defer sl.CombineRange_Bytes(fullMac, 0, path.MacLen, R21)
 	if subtle.ConstantTimeCompare(p.hopField.Mac[:path.MacLen], fullMac[:path.MacLen]) == 0 {

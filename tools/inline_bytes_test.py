@@ -59,6 +59,26 @@ class GobraTests(unittest.TestCase):
         src = 'a := 1\n\tunfold acc(sl.Bytes(s, 0, n), R10)\nb := 2\n'
         self.assertEqual(self.rewrite(src), 'a := 1\nb := 2\n')
 
+    def test_defer_fold_line(self):
+        src = 'a := 1\n\tdefer fold sl.Bytes(s, 0, n)\nb := 2\n'
+        self.assertEqual(self.rewrite(src), 'a := 1\nb := 2\n')
+
+    def test_ghost_defer_fold_line(self):
+        src = 'a := 1\n\tghost defer fold sl.Bytes(s, 0, n)\nb := 2\n'
+        self.assertEqual(self.rewrite(src), 'a := 1\nb := 2\n')
+
+    def test_ghost_defer_unfold_line(self):
+        src = 'a := 1\n\tghost defer unfold acc(sl.Bytes(s, 0, n), R10)\nb := 2\n'
+        self.assertEqual(self.rewrite(src), 'a := 1\nb := 2\n')
+
+    def test_defer_unfold_in_go_annotation(self):
+        src = 'pre\n\t// @ defer unfold sl.Bytes(s, 0, n)\npost\n'
+        out = rewrite_text(src, 'go')
+        self.assertNotIn('Bytes(', out)
+        self.assertNotIn('unfold', out)
+        self.assertIn('pre\n', out)
+        self.assertIn('post\n', out)
+
     def test_slice_expr_arg(self):
         src = 'requires acc(sl.Bytes(s[a:b], 0, len(s[a:b])), R10)\n'
         out = self.rewrite(src)

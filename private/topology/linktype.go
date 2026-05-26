@@ -96,7 +96,6 @@ func (l LinkType) MarshalText() (res []byte, err error) {
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (l *LinkType) UnmarshalText(data []byte) (err error) {
-	//@ ghost defer fold (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R15))
 	switch strings.ToLower(string(data)) {
 	case "core":
 		*l = Core

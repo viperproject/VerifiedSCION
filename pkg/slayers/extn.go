@@ -101,7 +101,6 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeTLVOption(data []byte) (res *tlvOption, err error) {
-	// @ defer fold (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R41))
 	o := &tlvOption{OptType: OptionType(data[0])}
 	if OptionType(data[0]) == OptTypePad1 {
 		o.ActualLength = 1

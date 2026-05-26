@@ -234,7 +234,6 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
 	//@ ghost defer fold acc(h.Mem(), R13)
-	//@ ghost defer fold (0 <= 0 && 0 <= len(h) && len(h) <= cap(h) && forall i int :: { &h[i] } 0 <= i && i < len(h) ==> acc(&h[i], R13))
 	return h.IP().String()
 }
 
@@ -297,7 +296,6 @@ func (h HostIPv6) Equal(o HostAddr) bool {
 func (h HostIPv6) String() string {
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv6
 	//@ ghost defer fold acc(h.Mem(), R13)
-	//@ ghost defer fold (0 <= 0 && 0 <= len(h) && len(h) <= cap(h) && forall i int :: { &h[i] } 0 <= i && i < len(h) ==> acc(&h[i], R13))
 	return h.IP().String()
 }
 

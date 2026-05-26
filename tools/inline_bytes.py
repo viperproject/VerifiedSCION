@@ -497,20 +497,31 @@ def _classify_context(text: str, m: Match, region_end: int) -> None:
             p += 1
         while p < m.pred_start and text[p] in ' \t\n':
             p += 1
-    # Now look for fold/unfold keyword.
+    # Now look for fold/unfold keyword, optionally preceded by `ghost` / `defer`.
     keyword = None
-    if text[p:p + 7] == 'unfold ' or text[p:p + 7] == 'unfold\t':
-        keyword = 'unfold'
-        kw_end = p + 6
-    elif text[p:p + 5] == 'fold ' or text[p:p + 5] == 'fold\t':
-        keyword = 'fold'
-        kw_end = p + 4
-    if keyword is not None:
-        # Skip ws between keyword and predicate/acc.
-        q = kw_end
+    q = p
+    # Skip optional `ghost ` prefix.
+    if text[q:q + 5] == 'ghost' and q + 5 < len(text) and text[q + 5] in ' \t':
+        q += 5
         while q < m.pred_start and text[q] in ' \t':
             q += 1
-        if q == span_start:
+    # Skip optional `defer ` prefix.
+    if text[q:q + 5] == 'defer' and q + 5 < len(text) and text[q + 5] in ' \t':
+        q += 5
+        while q < m.pred_start and text[q] in ' \t':
+            q += 1
+    if text[q:q + 7] == 'unfold ' or text[q:q + 7] == 'unfold\t':
+        keyword = 'unfold'
+        kw_end = q + 6
+    elif text[q:q + 5] == 'fold ' or text[q:q + 5] == 'fold\t':
+        keyword = 'fold'
+        kw_end = q + 4
+    if keyword is not None:
+        # Skip ws between keyword and predicate/acc.
+        r = kw_end
+        while r < m.pred_start and text[r] in ' \t':
+            r += 1
+        if r == span_start:
             # The keyword is immediately followed by the predicate (or acc).
             # Find end of physical line.
             nl = text.find('\n', span_end)

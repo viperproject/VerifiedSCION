@@ -136,7 +136,6 @@ func (a SCMPTypeCode) String() string {
 // @ preserves (0 <= 0 && 0 <= 2 && 2 <= cap(bytes) && forall i int :: { &bytes[i] } 0 <= i && i < 2 ==> acc(&bytes[i]))
 // @ decreases
 func (a SCMPTypeCode) SerializeTo(bytes []byte) {
-	//@ defer fold (0 <= 0 && 0 <= 2 && 2 <= cap(bytes) && forall i int :: { &bytes[i] } 0 <= i && i < 2 ==> acc(&bytes[i]))
 	binary.BigEndian.PutUint16(bytes, uint16(a))
 }
 
