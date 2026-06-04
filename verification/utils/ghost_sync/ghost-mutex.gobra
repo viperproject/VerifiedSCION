@@ -50,7 +50,7 @@ func (m gpointer[GhostMutex]) SetInv(inv pred())
 ghost
 requires acc(m.LockP(), _)
 ensures  m.LockP() && m.UnlockP() && m.LockInv()()
-decreases _ if sync.IgnoreBlockingForTermination()
+decreases _
 func (m gpointer[GhostMutex]) Lock()
 
 ghost
