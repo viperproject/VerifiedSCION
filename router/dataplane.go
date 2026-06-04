@@ -794,26 +794,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
 
-	// @ requires  acc(&d, R50)
-	// @ requires  acc(&d.running, runningPerm)
-	// @ requires  d.Mem() && !d.IsRunning()
-	// @ requires  d.InternalConnIsSet()
-	// @ requires  d.KeyIsSet()
-	// @ requires  d.SvcsAreSet()
-	// @ requires  d.MetricsAreSet()
-	// @ requires  d.PreWellConfigured()
-	// @ requires  d.DpAgreesWithSpec(dp)
-	// @ ensures   acc(&d, R50)
-	// @ ensures   MutexInvariant!<d!>()
-	// @ ensures   d.Mem() && d.IsRunning()
-	// @ ensures   d.InternalConnIsSet()
-	// @ ensures   d.KeyIsSet()
-	// @ ensures   d.SvcsAreSet()
-	// @ ensures   d.MetricsAreSet()
-	// @ ensures   d.PreWellConfigured()
-	// @ ensures   d.DpAgreesWithSpec(dp)
-	// @ decreases
-	// @ outline (
 	// @ reveal d.PreWellConfigured()
 	// @ reveal d.getDomExternal()
 	// @ reveal d.DpAgreesWithSpec(dp)
@@ -824,7 +804,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ reveal d.getDomExternal()
 	// @ reveal d.PreWellConfigured()
 	// @ reveal d.DpAgreesWithSpec(dp)
-	// @ )
+
 	// @ ghost ioLockRun, ioSharedArgRun := InitSharedInv(dp, place, state)
 	d.initMetrics( /*@ dp @*/ )
 
@@ -853,16 +833,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane /*@, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			d := *dPtr
 			msgs := conn.NewReadMessages(inputBatchCnt)
-			// @ requires forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
-			// @ ensures  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
-			// @ 	msgs[i].Mem() &&
-			// @ 	msgs[i].HasActiveAddr() &&
-			// @ 	msgs[i].GetAddr() == nil
-			// @ ensures forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
-			// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
-			// @ decreases
-			// @ outline(
 			// @ invariant 0 <= i0 && i0 <= len(msgs)
 			// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
 			// @ 	msgs[i].Mem() && msgs[i].GetAddr() == nil
@@ -878,30 +848,21 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// to be able to perform this unfold.
 				// @ unfold msgs[i0].Mem()
 				msg := msgs[i0]
-				// @ ensures sl.Bytes(tmp, 0, len(tmp))
-				// @ ensures len(tmp) > 0
-				// @ decreases
-				// @ outline(
 				tmp := make([]byte, bufSize)
 				// @ assert forall i int :: { &tmp[i] } 0 <= i && i < len(tmp) ==> acc(&tmp[i])
 				// @ fold sl.Bytes(tmp, 0, len(tmp))
-				// @ )
 				// @ assert msgs[i0] === msg
 				msg.Buffers[0] = tmp
 				// @ msgs[i0].IsActive = true
 				// @ fold msgs[i0].Mem()
 				// @ msgs[i0].EnsureBufferInjectivityAgainstList(msgs[:i0])
 			}
-			// @ )
-			// @ ensures writeMsgInv(writeMsgs)
-			// @ decreases
-			// @ outline (
+
 			writeMsgs := make(underlayconn.Messages, 1)
 			writeMsgs[0].Buffers = make([][]byte, 1)
 			// @ fold sl.Bytes(writeMsgs[0].OOB, 0, len(writeMsgs[0].OOB))
 			// @ sl.NilAcc_Bytes()
 			// @ fold writeMsgInv(writeMsgs)
-			// @ )
 
 			processor := newPacketProcessor(d, ingressID)
 			var scmpErr /*@@@*/ scmpError
@@ -1018,15 +979,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ decreases pkts - i0
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
-					// @ preserves 0 <= i0 && i0 < pkts && pkts <= len(msgs)
-					// @ preserves acc(msgs[i0].Mem(), R1)
-					// @ ensures   p === msgs[:pkts][i0].GetMessage()
-					// @ decreases
-					// @ outline(
+
 					// @ unfold acc(msgs[i0].Mem(), R1)
 					p := msgs[:pkts][i0]
 					// @ fold acc(msgs[i0].Mem(), R1)
-					// @ )
+
 					// @ assert msgs[i0].GetN() <= len(msgs[i0].GetFstBuffer())
 					// @ d.getForwardingMetricsMem(ingressID)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[ingressID], ingressID), _)
@@ -1167,9 +1124,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ fold msgs[:pkts][i0].Mem()
 					// @ fold writeMsgInv(writeMsgs)
 					if err != nil {
-						// @ requires err != nil && err.ErrorMem()
-						// @ decreases
-						// @ outline (
 						var errno /*@@@*/ syscall.Errno
 						// @ assert acc(&errno)
 						// @ fold errno.Mem()
@@ -1180,17 +1134,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 							log.Debug("Error writing packet", "err", err)
 							// error metric
 						}
-						// @ )
 						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
 						// @ prometheus.CounterMemImpliesNonNil(inputCounters.DroppedPacketsTotal)
 						inputCounters.DroppedPacketsTotal.Inc()
 						continue
 					}
-					// @ requires acc(dPtr, _) && *dPtr === d
-					// @ requires acc(d.Mem(), _)
-					// @ requires result.EgressID elem d.getDomForwardingMetrics()
-					// @ decreases
-					// @ outline(
 					// ok metric
 					// @ d.getForwardingMetricsMem(result.EgressID)
 					// @ unfold acc(forwardingMetricsMem(d.forwardingMetrics[result.EgressID], result.EgressID), _)
@@ -1202,7 +1150,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ prometheus.CounterMemImpliesNonNil(outputCounters.OutputBytesTotal)
 					// @ fl.CastPreservesOrder64(0, len(result.OutPkt))
 					outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
-					// @ )
 				}
 			}
 		}
