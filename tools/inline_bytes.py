@@ -614,12 +614,28 @@ def build_edits(text: str, matches: list[Match]) -> list[Edit]:
             edits.append(Edit(m.line_start, m.line_end, ''))
             continue
         if m.enclosing_unfolding is not None:
-            # Replace [unfolding ... in ] with ''
+            # Replace [unfolding ... in ] with ''.
+            # Also consume trailing whitespace, including a newline plus the
+            # following line's leading indentation, so a multi-line form like
+            #   return unfolding sl.Bytes(...) in
+            #       expr
+            # collapses to `return expr` (otherwise Gobra parses the `return`
+            # as a bare statement before the expression).
             uf_start, in_end = m.enclosing_unfolding
-            # Also consume one trailing whitespace char if any
             consume_end = in_end
             while consume_end < len(text) and text[consume_end] in ' \t':
                 consume_end += 1
+            if consume_end < len(text) and text[consume_end] == '\n':
+                consume_end += 1
+                while consume_end < len(text) and text[consume_end] in ' \t':
+                    consume_end += 1
+                # If the next line is a Gobra annotation prefix (`//@` / `// @`
+                # in a .go file, or just indentation in a .gobra file), keep it.
+                if text[consume_end:consume_end + 3] in ('//@', '/*@'):
+                    pass  # leave annotation prefix
+                elif text[consume_end:consume_end + 2] == '//':
+                    # Plain comment; preserve.
+                    pass
             edits.append(Edit(uf_start, consume_end, ''))
             continue
         if m.enclosing_acc is not None:
