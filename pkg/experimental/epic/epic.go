@@ -105,14 +105,14 @@ func VerifyTimestamp(timestamp time.Time, epicTS uint32, now time.Time) (err err
 // EPIC MAC may get overwritten. Only the most recently returned EPIC MAC is guaranteed to be
 // valid.
 // @ requires  len(auth) == 16
-// @ requires  (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i]))
+// @ requires  (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall iBytes int :: { &buffer[iBytes] } 0 <= iBytes && iBytes < len(buffer) ==> acc(&buffer[iBytes]))
 // @ preserves acc(s.Mem(ub), R20)
-// @ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], R20))
-// @ preserves (0 <= 0 && 0 <= len(auth) && len(auth) <= cap(auth) && forall i int :: { &auth[i] } 0 <= i && i < len(auth) ==> acc(&auth[i], R30))
-// @ ensures   reserr == nil ==> (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]))
-// @ ensures   reserr == nil ==> ((0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])) --* (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i])))
+// @ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall iBytes int :: { &ub[iBytes] } 0 <= iBytes && iBytes < len(ub) ==> acc(&ub[iBytes], R20))
+// @ preserves (0 <= 0 && 0 <= len(auth) && len(auth) <= cap(auth) && forall iBytes int :: { &auth[iBytes] } 0 <= iBytes && iBytes < len(auth) ==> acc(&auth[iBytes], R30))
+// @ ensures   reserr == nil ==> (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < len(res) ==> acc(&res[iBytes]))
+// @ ensures   reserr == nil ==> ((0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < len(res) ==> acc(&res[iBytes])) --* (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall iBytes int :: { &buffer[iBytes] } 0 <= iBytes && iBytes < len(buffer) ==> acc(&buffer[iBytes])))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
-// @ ensures   reserr != nil ==> (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i]))
+// @ ensures   reserr != nil ==> (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall iBytes int :: { &buffer[iBytes] } 0 <= iBytes && iBytes < len(buffer) ==> acc(&buffer[iBytes]))
 // @ decreases
 func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	timestamp uint32, buffer []byte /*@ , ghost ub []byte @*/) (res []byte, reserr error) {
@@ -143,14 +143,14 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	// @ ghost end   := start + 4
 	result := input[len(input)-f.BlockSize() : len(input)-f.BlockSize()+4]
 	// @ sl.SplitRange_Bytes(input, start, end, writePerm)
-	// @ package ((0 <= 0 && 0 <= len(result) && len(result) <= cap(result) && forall i int :: { &result[i] } 0 <= i && i < len(result) ==> acc(&result[i])) --* (0 <= 0 && 0 <= len(oldBuffer) && len(oldBuffer) <= cap(oldBuffer) && forall i int :: { &oldBuffer[i] } 0 <= i && i < len(oldBuffer) ==> acc(&oldBuffer[i]))) {
+	// @ package ((0 <= 0 && 0 <= len(result) && len(result) <= cap(result) && forall iBytes int :: { &result[iBytes] } 0 <= iBytes && iBytes < len(result) ==> acc(&result[iBytes])) --* (0 <= 0 && 0 <= len(oldBuffer) && len(oldBuffer) <= cap(oldBuffer) && forall iBytes int :: { &oldBuffer[iBytes] } 0 <= iBytes && iBytes < len(oldBuffer) ==> acc(&oldBuffer[iBytes]))) {
 	// @ 	ghost if !allocatesNewBuffer {
 	// @ 		assert oldBuffer === buffer
 	// @ 		sl.CombineRange_Bytes(input, start, end, writePerm)
 	// @ 		sl.CombineRange_Bytes(oldBuffer, 0, inputLength, writePerm)
 	// @ 	}
 	// @ }
-	// @ assert ((0 <= 0 && 0 <= len(result) && len(result) <= cap(result) && forall i int :: { &result[i] } 0 <= i && i < len(result) ==> acc(&result[i])) --* (0 <= 0 && 0 <= len(oldBuffer) && len(oldBuffer) <= cap(oldBuffer) && forall i int :: { &oldBuffer[i] } 0 <= i && i < len(oldBuffer) ==> acc(&oldBuffer[i])))
+	// @ assert ((0 <= 0 && 0 <= len(result) && len(result) <= cap(result) && forall iBytes int :: { &result[iBytes] } 0 <= iBytes && iBytes < len(result) ==> acc(&result[iBytes])) --* (0 <= 0 && 0 <= len(oldBuffer) && len(oldBuffer) <= cap(oldBuffer) && forall iBytes int :: { &oldBuffer[iBytes] } 0 <= iBytes && iBytes < len(oldBuffer) ==> acc(&oldBuffer[iBytes])))
 	return result, nil
 }
 
@@ -159,11 +159,11 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 // bytes of the SCION path type MAC, has invalid length, or if the MAC calculation gives an error,
 // also VerifyHVF returns an error. The verification was successful if and only if VerifyHVF
 // returns nil.
-// @ preserves (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i]))
+// @ preserves (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall iBytes int :: { &buffer[iBytes] } 0 <= iBytes && iBytes < len(buffer) ==> acc(&buffer[iBytes]))
 // @ preserves acc(s.Mem(ub), R20)
-// @ preserves (0 <= 0 && 0 <= len(hvf) && len(hvf) <= cap(hvf) && forall i int :: { &hvf[i] } 0 <= i && i < len(hvf) ==> acc(&hvf[i], R50))
-// @ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], R20))
-// @ preserves (0 <= 0 && 0 <= len(auth) && len(auth) <= cap(auth) && forall i int :: { &auth[i] } 0 <= i && i < len(auth) ==> acc(&auth[i], R30))
+// @ preserves (0 <= 0 && 0 <= len(hvf) && len(hvf) <= cap(hvf) && forall iBytes int :: { &hvf[iBytes] } 0 <= iBytes && iBytes < len(hvf) ==> acc(&hvf[iBytes], R50))
+// @ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall iBytes int :: { &ub[iBytes] } 0 <= iBytes && iBytes < len(ub) ==> acc(&ub[iBytes], R20))
+// @ preserves (0 <= 0 && 0 <= len(auth) && len(auth) <= cap(auth) && forall iBytes int :: { &auth[iBytes] } 0 <= iBytes && iBytes < len(auth) ==> acc(&auth[iBytes], R30))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
 func VerifyHVF(auth []byte, pktID epic.PktID, s *slayers.SCION,
@@ -179,11 +179,11 @@ func VerifyHVF(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	}
 
 	if subtle.ConstantTimeCompare(hvf, mac) == 0 {
-		// @ apply (0 <= 0 && 0 <= len(mac) && len(mac) <= cap(mac) && forall i int :: { &mac[i] } 0 <= i && i < len(mac) ==> acc(&mac[i])) --* (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i]))
+		// @ apply (0 <= 0 && 0 <= len(mac) && len(mac) <= cap(mac) && forall iBytes int :: { &mac[iBytes] } 0 <= iBytes && iBytes < len(mac) ==> acc(&mac[iBytes])) --* (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall iBytes int :: { &buffer[iBytes] } 0 <= iBytes && iBytes < len(buffer) ==> acc(&buffer[iBytes]))
 		return serrors.New("epic hop validation field verification failed",
 			"hvf in packet", hvf, "calculated mac", mac, "auth", auth)
 	}
-	// @ apply (0 <= 0 && 0 <= len(mac) && len(mac) <= cap(mac) && forall i int :: { &mac[i] } 0 <= i && i < len(mac) ==> acc(&mac[i])) --* (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i]))
+	// @ apply (0 <= 0 && 0 <= len(mac) && len(mac) <= cap(mac) && forall iBytes int :: { &mac[iBytes] } 0 <= iBytes && iBytes < len(mac) ==> acc(&mac[iBytes])) --* (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall iBytes int :: { &buffer[iBytes] } 0 <= iBytes && iBytes < len(buffer) ==> acc(&buffer[iBytes]))
 	return nil
 }
 
@@ -202,7 +202,7 @@ func CoreFromPktCounter(counter uint32) (uint8, uint32) {
 }
 
 // @ requires  len(key) == 16
-// @ preserves (0 <= 0 && 0 <= len(key) && len(key) <= cap(key) && forall i int :: { &key[i] } 0 <= i && i < len(key) ==> acc(&key[i], R50))
+// @ preserves (0 <= 0 && 0 <= len(key) && len(key) <= cap(key) && forall iBytes int :: { &key[iBytes] } 0 <= iBytes && iBytes < len(key) ==> acc(&key[iBytes], R50))
 // @ ensures   reserr == nil ==>
 // @ 	res != nil && res.Mem() && res.BlockSize() == 16
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
@@ -222,8 +222,8 @@ func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 
 // @ requires  MACBufferSize <= len(inputBuffer)
 // @ preserves acc(s.Mem(ub), R20)
-// @ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], R20))
-// @ preserves (0 <= 0 && 0 <= len(inputBuffer) && len(inputBuffer) <= cap(inputBuffer) && forall i int :: { &inputBuffer[i] } 0 <= i && i < len(inputBuffer) ==> acc(&inputBuffer[i]))
+// @ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall iBytes int :: { &ub[iBytes] } 0 <= iBytes && iBytes < len(ub) ==> acc(&ub[iBytes], R20))
+// @ preserves (0 <= 0 && 0 <= len(inputBuffer) && len(inputBuffer) <= cap(inputBuffer) && forall iBytes int :: { &inputBuffer[iBytes] } 0 <= iBytes && iBytes < len(inputBuffer) ==> acc(&inputBuffer[iBytes]))
 // @ ensures   reserr == nil ==> 16 <= res && res <= len(inputBuffer)
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ decreases
@@ -296,11 +296,11 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	// @ 	acc(&inputBuffer[offset:inputLength][i])
 	// @ establishPostInitInvariant()
 	// @ unfold acc(postInitInvariant(), _)
-	// @ assert (0 <= 0 && 0 <= 16 && 16 <= cap(zeroInitVector[:]) && forall i int :: { &(zeroInitVector[:])[i] } 0 <= i && i < 16 ==> acc(&(zeroInitVector[:])[i], _))
+	// @ assert (0 <= 0 && 0 <= 16 && 16 <= cap(zeroInitVector[:]) && forall iBytes int :: { &(zeroInitVector[:])[iBytes] } 0 <= iBytes && iBytes < 16 ==> acc(&(zeroInitVector[:])[iBytes], _))
 	// (VerifiedSCION) From the pkg invariant, we learn that we have a wildcard access to zeroInitVector.
 	// Unfortunately, it is not possible to call `copy` with a wildcard amount, even though
 	// that would be perfectly fine. The spec of `copy` would need to be adapted to allow for that case.
-	// @ inhale (0 <= 0 && 0 <= len(zeroInitVector[:]) && len(zeroInitVector[:]) <= cap(zeroInitVector[:]) && forall i int :: { &(zeroInitVector[:])[i] } 0 <= i && i < len(zeroInitVector[:]) ==> acc(&(zeroInitVector[:])[i], R55))
+	// @ inhale (0 <= 0 && 0 <= len(zeroInitVector[:]) && len(zeroInitVector[:]) <= cap(zeroInitVector[:]) && forall iBytes int :: { &(zeroInitVector[:])[iBytes] } 0 <= iBytes && iBytes < len(zeroInitVector[:]) ==> acc(&(zeroInitVector[:])[iBytes], R55))
 	// @ assert forall i int :: { &zeroInitVector[:][i] } 0 <= i && i < len(zeroInitVector[:]) ==>
 	// @ 	&zeroInitVector[:][i] == &zeroInitVector[i]
 	copy(inputBuffer[offset:inputLength], zeroInitVector[:] /*@ , R55 @*/)

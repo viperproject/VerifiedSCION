@@ -32,8 +32,8 @@ requires  offset + path.HopLen * segLen <= length
 requires  length <= len(raw)
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  0 <= currInfIdx && currInfIdx < 3
-preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R51))
-preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall i int :: { &(raw[start:length])[i] } 0 <= i && i < len(raw[start:length]) ==> acc(&(raw[start:length])[i], R51))
+preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R51))
+preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall iBytes int :: { &(raw[start:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[start:length]) ==> acc(&(raw[start:length])[iBytes], R51))
 ensures   CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset) ==
 	CurrSeg(raw[start:length], offset-start, currInfIdx, currHfIdx, segLen, headerOffset-start)
 decreases
@@ -78,8 +78,8 @@ requires 0 < segLen
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires length <= len(raw)
 requires offset + path.HopLen * segLen <= length
-preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R52))
-preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall i int :: { &(raw[start:length])[i] } 0 <= i && i < len(raw[start:length]) ==> acc(&(raw[start:length])[i], R52))
+preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R52))
+preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall iBytes int :: { &(raw[start:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[start:length]) ==> acc(&(raw[start:length])[iBytes], R52))
 ensures  segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ==
 	segment(raw[start:length], offset-start, currHfIdx, ainfo, uinfo, consDir, peer, segLen)
 decreases
@@ -103,8 +103,8 @@ requires  0 <= start && start <= offset
 requires  0 <= currHfIdx && currHfIdx <= segLen
 requires  offset + path.HopLen * segLen <= length
 requires  length <= len(raw)
-preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], p))
-preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall i int :: { &(raw[start:length])[i] } 0 <= i && i < len(raw[start:length]) ==> acc(&(raw[start:length])[i], p))
+preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], p))
+preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall iBytes int :: { &(raw[start:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[start:length]) ==> acc(&(raw[start:length])[iBytes], p))
 ensures   hopFields(raw, offset, currHfIdx, segLen) ==
 	hopFields(raw[start:length], offset-start, currHfIdx, segLen)
 decreases segLen - currHfIdx
@@ -124,8 +124,8 @@ requires  segs.Valid()
 requires  0 <= length && length <= len(raw)
 requires  PktLen(segs, headerOffset) <= length
 requires  1 <= currInfIdx && currInfIdx < 4
-preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R51))
-preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall i int :: { &(raw[start:length])[i] } 0 <= i && i < len(raw[start:length]) ==> acc(&(raw[start:length])[i], R51))
+preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R51))
+preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall iBytes int :: { &(raw[start:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[start:length]) ==> acc(&(raw[start:length])[iBytes], R51))
 ensures   LeftSeg(raw, currInfIdx, segs, headerOffset) ==
 	LeftSeg(raw[start:length], currInfIdx, segs, headerOffset-start)
 decreases
@@ -153,8 +153,8 @@ requires  segs.Valid()
 requires  0 <= length && length <= len(raw)
 requires  PktLen(segs, headerOffset) <= length
 requires  -1 <= currInfIdx && currInfIdx < 2
-preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R51))
-preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall i int :: { &(raw[start:length])[i] } 0 <= i && i < len(raw[start:length]) ==> acc(&(raw[start:length])[i], R51))
+preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R51))
+preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall iBytes int :: { &(raw[start:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[start:length]) ==> acc(&(raw[start:length])[iBytes], R51))
 ensures   RightSeg(raw, currInfIdx, segs, headerOffset) ==
 	RightSeg(raw[start:length], currInfIdx, segs, headerOffset-start)
 decreases
@@ -181,8 +181,8 @@ requires  segs.Valid()
 requires  2 <= currInfIdx && currInfIdx < 5
 requires  0 <= length && length <= len(raw)
 requires  PktLen(segs, headerOffset) <= length
-preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R51))
-preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall i int :: { &(raw[start:length])[i] } 0 <= i && i < len(raw[start:length]) ==> acc(&(raw[start:length])[i], R51))
+preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R51))
+preserves (0 <= 0 && 0 <= len(raw[start:length]) && len(raw[start:length]) <= cap(raw[start:length]) && forall iBytes int :: { &(raw[start:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[start:length]) ==> acc(&(raw[start:length])[iBytes], R51))
 ensures   MidSeg(raw, currInfIdx, segs, headerOffset) ==
 	MidSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
 decreases

@@ -76,7 +76,7 @@ type HopField struct {
 // path.HopLen.
 // @ requires  acc(h)
 // @ requires  len(raw) >= HopLen
-// @ preserves (0 <= 0 && 0 <= HopLen && HopLen <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < HopLen ==> acc(&raw[i], R45))
+// @ preserves (0 <= 0 && 0 <= HopLen && HopLen <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < HopLen ==> acc(&raw[iBytes], R45))
 // @ ensures   h.Mem()
 // @ ensures   err == nil
 // @ ensures  BytesToIO_HF(raw, 0, 0, HopLen) ==
@@ -109,7 +109,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // path.HopLen.
 // @ requires  len(b) >= HopLen
 // @ preserves acc(h.Mem(), R10)
-// @ preserves (0 <= 0 && 0 <= HopLen && HopLen <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < HopLen ==> acc(&b[i]))
+// @ preserves (0 <= 0 && 0 <= HopLen && HopLen <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < HopLen ==> acc(&b[iBytes]))
 // @ ensures   err == nil
 // @ ensures  BytesToIO_HF(b, 0, 0, HopLen) ==
 // @ 	unfolding acc(h.Mem(), R10) in h.Abs()

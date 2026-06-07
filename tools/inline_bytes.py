@@ -579,26 +579,30 @@ def _find_in_keyword(text: str, start: int, region_end: int) -> int:
 def render_body(s_expr: str, start_expr: str, end_expr: str, perm: str | None) -> str:
     """Return the inlined body string, wrapped in parens.
 
+    The forall index uses `iBytes` (not `i`) so the body can be inlined inside
+    another `forall i int :: ...` without variable capture (every callsite
+    quantifies over its own outer `i`, e.g. `forall i :: msgs[i]`...).
+
     Special-cases:
       - if s is non-atomic, wrap as (s)
-      - if perm is None, emit acc(&s[i]); else acc(&s[i], perm)
+      - if perm is None, emit acc(&s[iBytes]); else acc(&s[iBytes], perm)
     """
     s = s_expr.strip()
     se = start_expr.strip()
     ee = end_expr.strip()
     if expr_is_atomic(s) or expr_is_wrapped(s):
-        s_in_brackets = f'&{s}[i]'
+        s_in_brackets = f'&{s}[iBytes]'
         s_in_cap = f'cap({s})'
     else:
-        s_in_brackets = f'&({s})[i]'
+        s_in_brackets = f'&({s})[iBytes]'
         s_in_cap = f'cap({s})'
     if perm is None:
         inner_acc = f'acc({s_in_brackets})'
     else:
         inner_acc = f'acc({s_in_brackets}, {perm.strip()})'
     return (f'(0 <= {se} && {se} <= {ee} && {ee} <= {s_in_cap} && '
-            f'forall i int :: {{ {s_in_brackets} }} '
-            f'{se} <= i && i < {ee} ==> {inner_acc})')
+            f'forall iBytes int :: {{ {s_in_brackets} }} '
+            f'{se} <= iBytes && iBytes < {ee} ==> {inner_acc})')
 
 
 @dataclass

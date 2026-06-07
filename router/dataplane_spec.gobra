@@ -68,7 +68,7 @@ pred (d *DataPlane) Mem() {
 	(d.svc != nil               ==> d.svc.Mem())                  &&
 	(d.macFactory != nil        ==> (
 		acc(d.key)                                      &&
-		(0 <= 0 && 0 <= len(*d.key) && len(*d.key) <= cap(*d.key) && forall i int :: { &(*d.key)[i] } 0 <= i && i < len(*d.key) ==> acc(&(*d.key)[i], _))        &&
+		(0 <= 0 && 0 <= len(*d.key) && len(*d.key) <= cap(*d.key) && forall iBytes int :: { &(*d.key)[iBytes] } 0 <= iBytes && iBytes < len(*d.key) ==> acc(&(*d.key)[iBytes], _))        &&
 		len(*d.key) > 0                                 &&
 		scrypto.ValidKeyForHash(*d.key)                 &&
 		d.macFactory implements MacFactorySpec{d.key}))           &&
@@ -147,9 +147,9 @@ pred (p *scionPacketProcessor) initMem() {
 }
 
 // This is used as a signature, not as an assumed function.
-requires acc(key, _) && (0 <= 0 && 0 <= len(*key) && len(*key) <= cap(*key) && forall i int :: { &(*key)[i] } 0 <= i && i < len(*key) ==> acc(&(*key)[i], _))
+requires acc(key, _) && (0 <= 0 && 0 <= len(*key) && len(*key) <= cap(*key) && forall iBytes int :: { &(*key)[iBytes] } 0 <= iBytes && iBytes < len(*key) ==> acc(&(*key)[iBytes], _))
 requires scrypto.ValidKeyForHash(*key)
-ensures  acc(key, _) && (0 <= 0 && 0 <= len(*key) && len(*key) <= cap(*key) && forall i int :: { &(*key)[i] } 0 <= i && i < len(*key) ==> acc(&(*key)[i], _))
+ensures  acc(key, _) && (0 <= 0 && 0 <= len(*key) && len(*key) <= cap(*key) && forall iBytes int :: { &(*key)[iBytes] } 0 <= iBytes && iBytes < len(*key) ==> acc(&(*key)[iBytes], _))
 ensures  res != nil && res.Mem()
 decreases
 func MacFactorySpec(ghost key *[]byte) (res hash.Hash)
@@ -416,7 +416,7 @@ func (d *DataPlane) getInternal() {
 ghost
 requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
-ensures  (0 <= 0 && 0 <= len(*d.key) && len(*d.key) <= cap(*d.key) && forall i int :: { &(*d.key)[i] } 0 <= i && i < len(*d.key) ==> acc(&(*d.key)[i], _))
+ensures  (0 <= 0 && 0 <= len(*d.key) && len(*d.key) <= cap(*d.key) && forall iBytes int :: { &(*d.key)[iBytes] } 0 <= iBytes && iBytes < len(*d.key) ==> acc(&(*d.key)[iBytes], _))
 ensures  scrypto.ValidKeyForHash(*d.key)
 ensures  len(*d.key) > 0
 ensures  d.macFactory implements MacFactorySpec{d.key}
@@ -523,7 +523,7 @@ pred writeMsgInv(writeMsgs underlayconn.Messages) {
 	len(writeMsgs[0].Buffers) == 1 &&
 	acc(&writeMsgs[0].Buffers[0]) &&
 	// sl.Bytes(writeMsgs[0].Buffers[0], 0, len(writeMsgs[0].Buffers[0])) &&
-	(0 <= 0 && 0 <= len(writeMsgs[0].OOB) && len(writeMsgs[0].OOB) <= cap(writeMsgs[0].OOB) && forall i int :: { &(writeMsgs[0].OOB)[i] } 0 <= i && i < len(writeMsgs[0].OOB) ==> acc(&(writeMsgs[0].OOB)[i])) &&
+	(0 <= 0 && 0 <= len(writeMsgs[0].OOB) && len(writeMsgs[0].OOB) <= cap(writeMsgs[0].OOB) && forall iBytes int :: { &(writeMsgs[0].OOB)[iBytes] } 0 <= iBytes && iBytes < len(writeMsgs[0].OOB) ==> acc(&(writeMsgs[0].OOB)[iBytes])) &&
 	0 <= writeMsgs[0].N
 }
 /** end of definitions used internally for the proof of Run **/
@@ -577,7 +577,7 @@ pred (s* scionPacketProcessor) sInit() {
 	acc(&s.segmentChange)                        &&
 	acc(&s.cachedMac)                            &&
 	acc(&s.macBuffers)                           &&
-	(0 <= 0 && 0 <= len(s.macBuffers.scionInput) && len(s.macBuffers.scionInput) <= cap(s.macBuffers.scionInput) && forall i int :: { &s.macBuffers.scionInput[i] } 0 <= i && i < len(s.macBuffers.scionInput) ==> acc(&s.macBuffers.scionInput[i])) &&
+	(0 <= 0 && 0 <= len(s.macBuffers.scionInput) && len(s.macBuffers.scionInput) <= cap(s.macBuffers.scionInput) && forall iBytes int :: { &s.macBuffers.scionInput[iBytes] } 0 <= iBytes && iBytes < len(s.macBuffers.scionInput) ==> acc(&s.macBuffers.scionInput[iBytes])) &&
 	s.bfdLayer.NonInitMem()                      &&
 	acc(&s.srcAddr)                              &&
 	acc(&s.rawPkt)

@@ -75,9 +75,9 @@ type Path interface {
 	// SerializeTo serializes the path into the provided buffer.
 	// (VerifiedSCION) There are implementations of this interface that modify the underlying
 	// structure when serializing (e.g. scion.Raw)
-	//@ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i]))
+	//@ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall iBytes int :: { &ub[iBytes] } 0 <= iBytes && iBytes < len(ub) ==> acc(&ub[iBytes]))
 	//@ preserves acc(Mem(ub), R1)
-	//@ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+	//@ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 	//@ ensures   e != nil ==> e.ErrorMem()
 	//@ decreases
 	SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error)
@@ -85,7 +85,7 @@ type Path interface {
 	// (VerifiedSCION) There are implementations of this interface (e.g., scion.Raw) that
 	// store b and use it as internal data.
 	//@ requires  NonInitMem()
-	//@ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R42))
+	//@ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes], R42))
 	//@ ensures   err == nil ==> Mem(b)
 	//@ ensures   err == nil ==> IsValidResultOfDecoding(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
@@ -95,13 +95,13 @@ type Path interface {
 	//@ ghost
 	//@ pure
 	//@ requires Mem(b)
-	//@ requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+	//@ requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 	//@ decreases
 	//@ IsValidResultOfDecoding(b []byte) bool
 	// Reverse reverses a path such that it can be used in the reversed direction.
 	// XXX(shitz): This method should possibly be moved to a higher-level path manipulation package.
 	//@ requires  Mem(ub)
-	//@ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i]))
+	//@ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall iBytes int :: { &ub[iBytes] } 0 <= iBytes && iBytes < len(ub) ==> acc(&ub[iBytes]))
 	//@ ensures   e == nil ==> p != nil
 	//@ ensures   e == nil ==> p.Mem(ub)
 	//@ ensures   e != nil ==> e.ErrorMem()
@@ -221,8 +221,8 @@ type rawPath struct {
 }
 
 // @ preserves acc(p.Mem(ub), R10)
-// @ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], R10))
-// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+// @ preserves (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall iBytes int :: { &ub[iBytes] } 0 <= iBytes && iBytes < len(ub) ==> acc(&ub[iBytes], R10))
+// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 // @ ensures   e == nil
 // @ decreases
 func (p *rawPath) SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error) {
@@ -233,7 +233,7 @@ func (p *rawPath) SerializeTo(b []byte /*@, ghost ub []byte @*/) (e error) {
 }
 
 // @ requires  p.NonInitMem()
-// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R42))
+// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes], R42))
 // @ ensures   p.Mem(b)
 // @ ensures   e == nil
 // @ decreases

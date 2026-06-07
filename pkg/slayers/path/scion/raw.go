@@ -35,7 +35,7 @@ type Raw struct {
 // DecodeFromBytes only decodes the PathMetaHeader. Otherwise the nothing is decoded and simply kept
 // as raw bytes.
 // @ requires  s.NonInitMem()
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R42))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R42))
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res == nil ==>
 // @ 	s.GetBase(data).WeaklyValid() &&
@@ -64,8 +64,8 @@ func (s *Raw) DecodeFromBytes(data []byte) (res error) {
 // SerializeTo writes the path to a slice. The slice must be big enough to hold the entire data,
 // otherwise an error is returned.
 // @ preserves acc(s.Mem(ubuf), R1)
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
-// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
+// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
@@ -80,7 +80,7 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	// directly.
 	//@ unfold acc(s.Base.Mem(), R1)
 	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
-	//@ assert (0 <= 0 && 0 <= len(s.Raw) && len(s.Raw) <= cap(s.Raw) && forall i int :: { &s.Raw[i] } 0 <= i && i < len(s.Raw) ==> acc(&s.Raw[i]))
+	//@ assert (0 <= 0 && 0 <= len(s.Raw) && len(s.Raw) <= cap(s.Raw) && forall iBytes int :: { &s.Raw[iBytes] } 0 <= iBytes && iBytes < len(s.Raw) ==> acc(&s.Raw[iBytes]))
 	//@ sl.SplitRange_Bytes(s.Raw, 0, MetaLen, writePerm)
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		// @ Unreachable()
@@ -96,7 +96,7 @@ func (s *Raw) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 
 // Reverse reverses the path such that it can be used in the reverse direction.
 // @ requires  s.Mem(ubuf)
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
 // @ ensures   err == nil ==> typeOf(p) == type[*Raw]
 // @ ensures   err == nil ==> p != nil && p != (*Raw)(nil)
 // @ ensures   err == nil ==> p.Mem(ubuf)
@@ -131,7 +131,7 @@ func (s *Raw) Reverse( /*@ ghost ubuf []byte @*/ ) (p path.Path, err error) {
 
 // ToDecoded transforms a scion.Raw to a scion.Decoded.
 // @ preserves acc(s.Mem(ubuf), R5)
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
 // @ ensures   err == nil ==> (
 // @ 	let newUb := s.RawBufferMem(ubuf) in
 // @ 	d.Mem(newUb) &&
@@ -216,14 +216,14 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 
 // IncPath increments the path and writes it to the buffer.
 // @ requires s.Mem(ubuf)
-// @ requires (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
+// @ requires (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
 // pres for IO:
 // @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ requires validPktMetaHdr(ubuf)
 // @ requires s.absPkt(ubuf).PathNotFullyTraversed()
 // @ requires s.GetBase(ubuf).IsXoverSpec() ==>
 // @ 	s.absPkt(ubuf).LeftSeg != none[io.Seg]
-// @ ensures  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
+// @ ensures  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
 // @ ensures  old(unfolding s.Mem(ubuf) in unfolding
 // @ 	s.Base.Mem() in (s.NumINF <= 0 || int(s.PathMeta.CurrHF) >= s.NumHops-1)) ==> r != nil
 // @ ensures  r == nil ==> s.Mem(ubuf)
@@ -328,7 +328,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 
 // GetInfoField returns the InfoField at a given index.
 // @ requires  0 <= idx
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i], R10))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes], R10))
 // @ preserves acc(s.Mem(ubuf), R10)
 // @ ensures   (idx < s.GetNumINF(ubuf)) == (err == nil)
 // @ ensures   err == nil ==> s.CorrectlyDecodedInfWithIdx(ubuf, idx, ifield)
@@ -362,7 +362,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i], R9))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes], R9))
 // @ ensures   (r == nil) == s.GetBase(ubuf).ValidCurrInfSpec()
 // @ ensures   r == nil ==> s.CorrectlyDecodedInf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
@@ -383,13 +383,13 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 
 // SetInfoField updates the InfoField at a given index.
 // @ requires 0 <= idx
-// @ requires (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
+// @ requires (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
 // @ requires acc(s.Mem(ubuf), R20)
 // pres for IO:
 // @ requires validPktMetaHdr(ubuf)
 // @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ ensures  acc(s.Mem(ubuf), R20)
-// @ ensures  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
+// @ ensures  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
 // @ ensures  r != nil ==> r.ErrorMem()
 // posts for IO:
 // @ ensures  r == nil ==>
@@ -462,7 +462,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 
 // GetHopField returns the HopField at a given index.
 // @ requires  0 <= idx
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i], R10))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes], R10))
 // @ preserves acc(s.Mem(ubuf), R10)
 // @ ensures   (idx < s.GetNumHops(ubuf)) == (r == nil)
 // @ ensures   r == nil ==> s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
@@ -497,7 +497,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i], R9))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes], R9))
 // @ ensures   (r == nil) == s.GetBase(ubuf).ValidCurrHfSpec()
 // @ ensures   r == nil ==> s.CorrectlyDecodedHf(ubuf, res)
 // @ ensures   r != nil ==> r.ErrorMem()
@@ -519,13 +519,13 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 // SetHopField updates the HopField at a given index.
 // @ requires  0 <= idx
 // @ requires  acc(s.Mem(ubuf), R20)
-// @ requires  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
+// @ requires  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
 // pres for IO:
 // @ requires validPktMetaHdr(ubuf)
 // @ requires s.GetBase(ubuf).EqAbsHeader(ubuf)
 // @ requires s.absPkt(ubuf).PathNotFullyTraversed()
 // @ ensures  acc(s.Mem(ubuf), R20)
-// @ ensures  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
+// @ ensures  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
 // @ ensures  r != nil ==> r.ErrorMem()
 // posts for IO:
 // @ ensures  r == nil ==>

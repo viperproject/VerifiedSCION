@@ -212,12 +212,12 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ requires  !opts.FixLengths
 // @ requires  b != nil && b.Mem()
 // @ requires  acc(s.Mem(ubuf), R0)
-// @ requires  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
-// @ requires  (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ requires  (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
+// @ requires  (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   b.Mem()
 // @ ensures   acc(s.Mem(ubuf), R0)
-// @ ensures   (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
-// @ ensures   (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ ensures   (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
+// @ ensures   (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   e == nil && s.HasOneHopPath(ubuf) ==>
 // @ 	len(b.UBuf()) == old(len(b.UBuf())) + s.MinSizeOfUbufWithOneHop(ubuf)
 // @ ensures   e != nil ==> e.ErrorMem()
@@ -318,7 +318,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // data, so care should be taken to copy it first should later modification of data be required
 // before the SCION layer is discarded.
 // @ requires  s.NonInitMem()
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res == nil && typeOf(s.GetPath(data)) == *scion.Raw ==>
@@ -334,7 +334,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 			"min", CmnHdrLen, "actual", len(data))
 	}
 	// @ sl.SplitRange_Bytes(data, 0, 4, R41)
-	// @ preserves 4 <= len(data) && (0 <= 0 && 0 <= 4 && 4 <= cap(data[:4]) && forall i int :: { &(data[:4])[i] } 0 <= i && i < 4 ==> acc(&(data[:4])[i], R41))
+	// @ preserves 4 <= len(data) && (0 <= 0 && 0 <= 4 && 4 <= cap(data[:4]) && forall iBytes int :: { &(data[:4])[iBytes] } 0 <= iBytes && iBytes < 4 ==> acc(&(data[:4])[iBytes], R41))
 	// @ decreases
 	// @ outline(
 	firstLine := binary.BigEndian.Uint32(data[:4])
@@ -346,7 +346,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.FlowID = firstLine & 0xFFFFF
 	// @ preserves acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) && acc(&s.PathType)
 	// @ preserves acc(&s.DstAddrType) && acc(&s.SrcAddrType)
-	// @ preserves CmnHdrLen <= len(data) && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R41))
+	// @ preserves CmnHdrLen <= len(data) && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R41))
 	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 	// @ ensures   0 <= s.PathType && s.PathType < 256
 	// @ ensures   path.Type(GetPathType(data)) == s.PathType
@@ -504,7 +504,7 @@ func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 }
 
 // @ requires  pb != nil
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ preserves pb.Mem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -589,15 +589,15 @@ func scionNextLayerTypeL4(t L4ProtocolType) gopacket.LayerType {
 // the destination address.
 // @ requires acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
 // @ requires s.DstAddrType == T4Svc ==> len(s.RawDstAddr) >= addr.HostLenSVC
-// @ requires (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R15))
+// @ requires (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], R15))
 // @ ensures  acc(&s.DstAddrType, R20) && acc(&s.RawDstAddr, R20)
 // @ ensures  err == nil ==> acc(res.Mem(), R15)
 // @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
 // @ ensures  err == nil ==>
 // @ 	let rawDstAddr := s.RawDstAddr in
-// @ 	(acc(res.Mem(), R15) --* (0 <= 0 && 0 <= len(rawDstAddr) && len(rawDstAddr) <= cap(rawDstAddr) && forall i int :: { &rawDstAddr[i] } 0 <= i && i < len(rawDstAddr) ==> acc(&rawDstAddr[i], R15)))
+// @ 	(acc(res.Mem(), R15) --* (0 <= 0 && 0 <= len(rawDstAddr) && len(rawDstAddr) <= cap(rawDstAddr) && forall iBytes int :: { &rawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(rawDstAddr) ==> acc(&rawDstAddr[iBytes], R15)))
 // @ ensures  err != nil ==>
-// @ 	(0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R15))
+// @ 	(0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], R15))
 // @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCION) DstAddr() (res net.Addr, err error) {
@@ -610,15 +610,15 @@ func (s *SCION) DstAddr() (res net.Addr, err error) {
 // address.
 // @ requires  acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
 // @ requires  s.SrcAddrType == T4Svc ==> len(s.RawSrcAddr) >= addr.HostLenSVC
-// @ requires  (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R15))
+// @ requires  (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], R15))
 // @ ensures   acc(&s.SrcAddrType, R20) && acc(&s.RawSrcAddr, R20)
 // @ ensures   err == nil ==> acc(res.Mem(), R15)
 // @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
 // @ ensures   err == nil ==>
 // @ 	let rawSrcAddr := s.RawSrcAddr in
-// @ 	(acc(res.Mem(), R15) --* (0 <= 0 && 0 <= len(rawSrcAddr) && len(rawSrcAddr) <= cap(rawSrcAddr) && forall i int :: { &rawSrcAddr[i] } 0 <= i && i < len(rawSrcAddr) ==> acc(&rawSrcAddr[i], R15)))
+// @ 	(acc(res.Mem(), R15) --* (0 <= 0 && 0 <= len(rawSrcAddr) && len(rawSrcAddr) <= cap(rawSrcAddr) && forall iBytes int :: { &rawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(rawSrcAddr) ==> acc(&rawSrcAddr[iBytes], R15)))
 // @ ensures   err != nil ==>
-// @ 	(0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R15))
+// @ 	(0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], R15))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCION) SrcAddr() (res net.Addr, err error) {
@@ -637,9 +637,9 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ ensures   acc(&s.RawDstAddr) && acc(&s.DstAddrType)
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res == nil ==> isIP(dst) || isHostSVC(dst)
-// @ ensures   res == nil && wildcard && isIP(dst) ==> (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], _))
-// @ ensures   res == nil && wildcard && isHostSVC(dst) ==> (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i]))
-// @ ensures   res == nil && !wildcard && isHostSVC(dst) ==> (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i]))
+// @ ensures   res == nil && wildcard && isIP(dst) ==> (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], _))
+// @ ensures   res == nil && wildcard && isHostSVC(dst) ==> (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes]))
+// @ ensures   res == nil && !wildcard && isHostSVC(dst) ==> (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes]))
 // @ ensures   res == nil && !wildcard ==> acc(dst.Mem(), R18)
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[12+i]))
@@ -656,7 +656,7 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 	var verScionTmp []byte
 	s.DstAddrType, verScionTmp, err = packAddr(dst /*@ , wildcard @*/)
 	// @ ghost if !wildcard && err == nil && isIP(dst) {
-	// @   apply (0 <= 0 && 0 <= len(verScionTmp) && len(verScionTmp) <= cap(verScionTmp) && forall i int :: { &verScionTmp[i] } 0 <= i && i < len(verScionTmp) ==> acc(&verScionTmp[i], R20)) --* acc(dst.Mem(), R20)
+	// @   apply (0 <= 0 && 0 <= len(verScionTmp) && len(verScionTmp) <= cap(verScionTmp) && forall iBytes int :: { &verScionTmp[iBytes] } 0 <= iBytes && iBytes < len(verScionTmp) ==> acc(&verScionTmp[iBytes], R20)) --* acc(dst.Mem(), R20)
 	// @ }
 	s.RawDstAddr = verScionTmp
 	return err
@@ -674,9 +674,9 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   acc(&s.RawSrcAddr) && acc(&s.SrcAddrType)
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res == nil ==> isIP(src) || isHostSVC(src)
-// @ ensures   res == nil && wildcard && isIP(src) ==> (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], _))
-// @ ensures   res == nil && wildcard && isHostSVC(src) ==> (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i]))
-// @ ensures   res == nil && !wildcard && isHostSVC(src) ==> (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i]))
+// @ ensures   res == nil && wildcard && isIP(src) ==> (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], _))
+// @ ensures   res == nil && wildcard && isHostSVC(src) ==> (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes]))
+// @ ensures   res == nil && !wildcard && isHostSVC(src) ==> (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes]))
 // @ ensures   res == nil && !wildcard ==> acc(src.Mem(), R18)
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && isConvertibleToIPv4(src) ==> forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> &s.RawSrcAddr[i] == &src.(*net.IPAddr).IP[12+i]))
@@ -693,19 +693,19 @@ func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error
 	var verScionTmp []byte
 	s.SrcAddrType, verScionTmp, err = packAddr(src /*@ , wildcard @*/)
 	// @ ghost if !wildcard && err == nil && isIP(src) {
-	// @   apply (0 <= 0 && 0 <= len(verScionTmp) && len(verScionTmp) <= cap(verScionTmp) && forall i int :: { &verScionTmp[i] } 0 <= i && i < len(verScionTmp) ==> acc(&verScionTmp[i], R20)) --* acc(src.Mem(), R20)
+	// @   apply (0 <= 0 && 0 <= len(verScionTmp) && len(verScionTmp) <= cap(verScionTmp) && forall iBytes int :: { &verScionTmp[iBytes] } 0 <= iBytes && iBytes < len(verScionTmp) ==> acc(&verScionTmp[iBytes], R20)) --* acc(src.Mem(), R20)
 	// @ }
 	s.RawSrcAddr = verScionTmp
 	return err
 }
 
 // @ requires addrType == T4Svc ==> len(raw) >= addr.HostLenSVC
-// @ requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R15))
+// @ requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R15))
 // @ ensures  err == nil ==> acc(res.Mem(), R15)
 // @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
 // @ ensures  err == nil ==>
-// @ 	(acc(res.Mem(), R15) --* (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R15)))
-// @ ensures  err != nil ==> (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R15))
+// @ 	(acc(res.Mem(), R15) --* (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R15)))
+// @ ensures  err != nil ==> (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R15))
 // @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
 func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
@@ -713,7 +713,7 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 	case T4Ip:
 		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
 		// @ fold acc(verScionTmp.Mem(), R15)
-		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R15))) {
+		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R15))) {
 		// @ 	assert acc(&verScionTmp.IP, R50) && verScionTmp.IP === raw
 		// @ 	unfold acc(verScionTmp.Mem(), R15)
 		// @ }
@@ -721,12 +721,12 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 	case T4Svc:
 		verScionTmp := addr.HostSVC(binary.BigEndian.Uint16(raw[:addr.HostLenSVC]))
 		// @ fold acc(verScionTmp.Mem(), R15)
-		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R15))) { }
+		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R15))) { }
 		return verScionTmp, nil
 	case T16Ip:
 		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
 		// @ fold acc(verScionTmp.Mem(), R15)
-		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R15))) {
+		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R15))) {
 		// @ 	assert acc(&verScionTmp.IP, R50) && verScionTmp.IP === raw
 		// @ 	unfold acc(verScionTmp.Mem(), R15)
 		// @ }
@@ -744,12 +744,12 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 // @ ensures   isHostSVC(hostAddr) ==> err == nil
 // @ ensures   err == nil ==> isIP(hostAddr) || isHostSVC(hostAddr)
 // @ ensures   err != nil ==> err.ErrorMem()
-// @ ensures   err == nil && wildcard && isIP(hostAddr) ==> (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], _))
-// @ ensures   err == nil && wildcard && isHostSVC(hostAddr) ==> (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
-// @ ensures   err == nil && !wildcard && isHostSVC(hostAddr) ==> (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+// @ ensures   err == nil && wildcard && isIP(hostAddr) ==> (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes], _))
+// @ ensures   err == nil && wildcard && isHostSVC(hostAddr) ==> (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
+// @ ensures   err == nil && !wildcard && isHostSVC(hostAddr) ==> (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 // @ ensures   err == nil && !wildcard && isHostSVC(hostAddr) ==> acc(hostAddr.Mem(), R20)
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R20))
-// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> ((0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R20)) --* acc(hostAddr.Mem(), R20))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes], R20))
+// @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> ((0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes], R20)) --* acc(hostAddr.Mem(), R20))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[i]))
@@ -777,7 +777,7 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 			// @ 	(unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && isConvertibleToIPv4(hostAddr) ==> forall i int :: { &b[i] } 0 <= i && i < len(b) ==> &b[i] == &hostAddr.(*net.IPAddr).IP[12+i]))
 			// @ ghost if wildcard {
 			// @ } else {
-			// @ 	package (0 <= 0 && 0 <= len(ip) && len(ip) <= cap(ip) && forall i int :: { &ip[i] } 0 <= i && i < len(ip) ==> acc(&ip[i], R20)) --* acc(hostAddr.Mem(), R20) {
+			// @ 	package (0 <= 0 && 0 <= len(ip) && len(ip) <= cap(ip) && forall iBytes int :: { &ip[iBytes] } 0 <= iBytes && iBytes < len(ip) ==> acc(&ip[iBytes], R20)) --* acc(hostAddr.Mem(), R20) {
 			// @ 		fold acc(hostAddr.Mem(), R20)
 			// @ 	}
 			// @ }
@@ -787,7 +787,7 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 		verScionTmp := a.IP
 		// @ ghost if wildcard {
 		// @ } else {
-		// @ 	package (0 <= 0 && 0 <= len(verScionTmp) && len(verScionTmp) <= cap(verScionTmp) && forall i int :: { &verScionTmp[i] } 0 <= i && i < len(verScionTmp) ==> acc(&verScionTmp[i], R20)) --* acc(hostAddr.Mem(), R20) {
+		// @ 	package (0 <= 0 && 0 <= len(verScionTmp) && len(verScionTmp) <= cap(verScionTmp) && forall iBytes int :: { &verScionTmp[iBytes] } 0 <= iBytes && iBytes < len(verScionTmp) ==> acc(&verScionTmp[iBytes], R20)) --* acc(hostAddr.Mem(), R20) {
 		// @ 		fold acc(hostAddr.Mem(), R20)
 		// @ 	}
 		// @ }
@@ -836,8 +836,8 @@ func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ 
 // buffer. The caller must ensure that the correct address types and lengths are set in the SCION
 // layer, otherwise the results of this method are undefined.
 // @ preserves acc(s.HeaderMem(ubuf), R10)
-// @ preserves (0 <= 0 && 0 <= len(buf) && len(buf) <= cap(buf) && forall i int :: { &buf[i] } 0 <= i && i < len(buf) ==> acc(&buf[i]))
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i], R10))
+// @ preserves (0 <= 0 && 0 <= len(buf) && len(buf) <= cap(buf) && forall iBytes int :: { &buf[iBytes] } 0 <= iBytes && iBytes < len(buf) ==> acc(&buf[iBytes]))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes], R10))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err error) {
@@ -885,7 +885,7 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err er
 // @ requires  acc(&s.SrcAddrType, HalfPerm) && s.SrcAddrType.Has3Bits()
 // @ requires  acc(&s.DstAddrType, HalfPerm) && s.DstAddrType.Has3Bits()
 // @ requires  acc(&s.RawSrcAddr) && acc(&s.RawDstAddr)
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R41))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R41))
 // @ ensures   res == nil ==> s.HeaderMem(data)
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ ensures   res != nil ==> (
@@ -920,13 +920,13 @@ func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 // @ requires  acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
 // @ requires  len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
 // @ requires  acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ requires  (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R20))
-// @ requires  (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R20))
-// @ preserves (0 <= 0 && 0 <= len(upperLayer) && len(upperLayer) <= cap(upperLayer) && forall i int :: { &upperLayer[i] } 0 <= i && i < len(upperLayer) ==> acc(&upperLayer[i], R20))
+// @ requires  (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], R20))
+// @ requires  (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], R20))
+// @ preserves (0 <= 0 && 0 <= len(upperLayer) && len(upperLayer) <= cap(upperLayer) && forall iBytes int :: { &upperLayer[iBytes] } 0 <= iBytes && iBytes < len(upperLayer) ==> acc(&upperLayer[iBytes], R20))
 // @ ensures   acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
 // @ ensures   acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ ensures   (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R20))
-// @ ensures   (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R20))
+// @ ensures   (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], R20))
+// @ ensures   (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], R20))
 // @ ensures   s == nil ==> err != nil
 // @ ensures   len(s.RawDstAddr) == 0 ==> err != nil
 // @ ensures   len(s.RawSrcAddr) == 0 ==> err != nil
@@ -949,12 +949,12 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (res uint16, 
 // @ requires acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
 // @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
 // @ requires acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ requires (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R20))
-// @ requires (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R20))
+// @ requires (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], R20))
+// @ requires (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], R20))
 // @ ensures  acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
 // @ ensures  acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ ensures  (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R20))
-// @ ensures  (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R20))
+// @ ensures  (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], R20))
+// @ ensures  (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], R20))
 // @ ensures  len(s.RawDstAddr) == 0 ==> err != nil
 // @ ensures  len(s.RawSrcAddr) == 0 ==> err != nil
 // @ ensures  err != nil ==> err.ErrorMem()
@@ -984,16 +984,16 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	}
 	// Address length is guaranteed to be a multiple of 2 by the protocol.
 	// @ ghost var rawSrcAddrLen int = len(s.RawSrcAddr)
-	// @ invariant acc(&s.RawSrcAddr, R20) && (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R20))
+	// @ invariant acc(&s.RawSrcAddr, R20) && (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], R20))
 	// @ invariant len(s.RawSrcAddr) == rawSrcAddrLen
 	// @ invariant len(s.RawSrcAddr) % 2 == 0
 	// @ invariant i % 2 == 0
 	// @ invariant 0 <= i && i <= len(s.RawSrcAddr)
 	// @ decreases len(s.RawSrcAddr) - i
 	for i := 0; i < len(s.RawSrcAddr); i += 2 {
-		// @ requires acc(&s.RawSrcAddr, R20) && (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R20))
+		// @ requires acc(&s.RawSrcAddr, R20) && (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], R20))
 		// @ requires 0 <= i && i < len(s.RawSrcAddr) && i % 2 == 0 && len(s.RawSrcAddr) % 2 == 0
-		// @ ensures acc(&s.RawSrcAddr, R20) && (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], R20))
+		// @ ensures acc(&s.RawSrcAddr, R20) && (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], R20))
 		// @ ensures s.RawSrcAddr === before(s.RawSrcAddr)
 		// @ decreases
 		// @ outline(
@@ -1002,16 +1002,16 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 		// @ )
 	}
 	// @ ghost var rawDstAddrLen int = len(s.RawDstAddr)
-	// @ invariant acc(&s.RawDstAddr, R20) && (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R20))
+	// @ invariant acc(&s.RawDstAddr, R20) && (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], R20))
 	// @ invariant len(s.RawDstAddr) == rawDstAddrLen
 	// @ invariant len(s.RawDstAddr) % 2 == 0
 	// @ invariant i % 2 == 0
 	// @ invariant 0 <= i && i <= len(s.RawDstAddr)
 	// @ decreases len(s.RawDstAddr) - i
 	for i := 0; i < len(s.RawDstAddr); i += 2 {
-		// @ requires acc(&s.RawDstAddr, R20) && (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R20))
+		// @ requires acc(&s.RawDstAddr, R20) && (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], R20))
 		// @ requires 0 <= i && i < len(s.RawDstAddr) && i % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-		// @ ensures acc(&s.RawDstAddr, R20) && (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], R20))
+		// @ ensures acc(&s.RawDstAddr, R20) && (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], R20))
 		// @ ensures s.RawDstAddr === before(s.RawDstAddr)
 		// @ decreases
 		// @ outline(
@@ -1025,7 +1025,7 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	return csum, nil
 }
 
-// @ preserves (0 <= 0 && 0 <= len(upperLayer) && len(upperLayer) <= cap(upperLayer) && forall i int :: { &upperLayer[i] } 0 <= i && i < len(upperLayer) ==> acc(&upperLayer[i], R20))
+// @ preserves (0 <= 0 && 0 <= len(upperLayer) && len(upperLayer) <= cap(upperLayer) && forall iBytes int :: { &upperLayer[iBytes] } 0 <= iBytes && iBytes < len(upperLayer) ==> acc(&upperLayer[iBytes], R20))
 // @ decreases
 func (s *SCION) upperLayerChecksum(upperLayer []byte, csum uint32) uint32 {
 	// Compute safe boundary to ensure we do not access out of bounds.

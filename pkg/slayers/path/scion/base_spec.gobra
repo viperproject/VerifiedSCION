@@ -244,7 +244,7 @@ pure func DecodedFrom(line uint32) MetaHdr {
 }
 
 ghost
-requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 decreases
 pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
 	return MetaLen <= len(b)             &&
@@ -262,7 +262,7 @@ pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
 
 ghost
 requires s.Mem()
-requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 decreases
 pure func (s *Base) DecodeFromBytesSpec(b []byte) bool {
 	return unfolding s.Mem() in
@@ -296,7 +296,7 @@ pure func (m MetaHdr) SerializedToLine() uint32 {
 }
 
 ghost
-requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 decreases
 pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
 	return MetaLen <= len(b)                &&
@@ -310,7 +310,7 @@ pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
 }
 
 ghost
-requires (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i]))
+requires (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall iBytes int :: { &ub[iBytes] } 0 <= iBytes && iBytes < len(ub) ==> acc(&ub[iBytes]))
 decreases
 pure func (s Base) EqAbsHeader(ub []byte) bool {
 	// we compute the sublice ub[:MetaLen] inside this function instead
@@ -322,7 +322,7 @@ pure func (s Base) EqAbsHeader(ub []byte) bool {
 }
 
 ghost
-requires (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i]))
+requires (0 <= 0 && 0 <= len(ub) && len(ub) <= cap(ub) && forall iBytes int :: { &ub[iBytes] } 0 <= iBytes && iBytes < len(ub) ==> acc(&ub[iBytes]))
 decreases
 pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
 	return MetaLen <= len(ub) &&

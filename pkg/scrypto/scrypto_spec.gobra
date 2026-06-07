@@ -27,11 +27,11 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 // calls to it will also succeed. This behaviour is abstracted using this
 // ghost function.
 ghost
-requires  (0 <= 0 && 0 <= len(key) && len(key) <= cap(key) && forall i int :: { &key[i] } 0 <= i && i < len(key) ==> acc(&key[i]))
+requires  (0 <= 0 && 0 <= len(key) && len(key) <= cap(key) && forall iBytes int :: { &key[iBytes] } 0 <= iBytes && iBytes < len(key) ==> acc(&key[iBytes]))
 decreases _
 pure func ValidKeyForHash(key []byte) bool
 
-preserves (0 <= 0 && 0 <= len(key) && len(key) <= cap(key) && forall i int :: { &key[i] } 0 <= i && i < len(key) ==> acc(&key[i], _))
+preserves (0 <= 0 && 0 <= len(key) && len(key) <= cap(key) && forall iBytes int :: { &key[iBytes] } 0 <= iBytes && iBytes < len(key) ==> acc(&key[iBytes], _))
 ensures   old(ValidKeyForHash(key)) ==> e == nil
 ensures   e == nil ==> (h != nil && h.Mem() && ValidKeyForHash(key))
 ensures   e != nil ==> e.ErrorMem()

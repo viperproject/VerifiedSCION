@@ -79,8 +79,8 @@ type Path struct {
 // SerializeTo serializes the Path into buffer b. On failure, an error is returned, otherwise
 // SerializeTo will return nil.
 // @ preserves acc(p.Mem(ubuf), R1)
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
-// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
+// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ ensures   !old(p.hasScionPath(ubuf)) ==> r != nil
 // @ ensures   len(b) < old(p.LenSpec(ubuf)) ==> r != nil
@@ -128,7 +128,7 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // DecodeFromBytes deserializes the buffer b into the Path. On failure, an error is returned,
 // otherwise SerializeTo will return nil.
 // @ requires  p.NonInitMem()
-// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i], R42))
+// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes], R42))
 // @ ensures   len(b) < MetadataLen ==> r != nil
 // @ ensures   r == nil ==> p.Mem(b)
 // @ ensures   r != nil ==> p.NonInitMem() && r.ErrorMem()
@@ -168,7 +168,7 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 // Reverse reverses the EPIC path. In particular, this means that the SCION path type subheader
 // is reversed.
 // @ requires p.Mem(ubuf)
-// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall i int :: { &ubuf[i] } 0 <= i && i < len(ubuf) ==> acc(&ubuf[i]))
+// @ preserves (0 <= 0 && 0 <= len(ubuf) && len(ubuf) <= cap(ubuf) && forall iBytes int :: { &ubuf[iBytes] } 0 <= iBytes && iBytes < len(ubuf) ==> acc(&ubuf[iBytes]))
 // @ ensures  r == nil ==> ret != nil
 // @ ensures  r == nil ==> ret.Mem(ubuf)
 // @ ensures  r == nil ==> ret != nil
@@ -226,7 +226,7 @@ type PktID struct {
 // DecodeFromBytes deserializes the buffer (raw) into the PktID.
 // @ requires  len(raw) >= PktIDLen
 // @ preserves acc(i)
-// @ preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R42))
+// @ preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R42))
 // @ ensures   0 <= i.Timestamp
 // @ ensures   0 <= i.Counter
 // @ decreases
@@ -240,7 +240,7 @@ func (i *PktID) DecodeFromBytes(raw []byte) {
 // SerializeTo serializes the PktID into the buffer (b).
 // @ requires  len(b) >= PktIDLen
 // @ preserves acc(i, R1)
-// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 // @ decreases
 func (i *PktID) SerializeTo(b []byte) {
 	//@ assert forall j int :: { &b[:4][j] } 0 <= 4 ==> &b[:4][j] == &b[j]

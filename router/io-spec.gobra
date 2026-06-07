@@ -32,7 +32,7 @@ import (
 
 ghost
 opaque
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i]))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes]))
 requires slayers.ValidPktMetaHdr(raw)
 decreases
 pure func absPkt(raw []byte) (res io.Pkt) {
@@ -61,7 +61,7 @@ pure func absPkt(raw []byte) (res io.Pkt) {
 }
 
 ghost
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i]))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes]))
 ensures val.isValUnsupported
 ensures val.ValUnsupported_1 == path.ifsToIO_ifs(ingressID)
 decreases
@@ -74,7 +74,7 @@ pure func absValUnsupported(raw []byte, ingressID uint16) (val io.Val) {
 
 ghost
 opaque
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i]))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes]))
 ensures val.isValPkt || val.isValUnsupported
 decreases
 pure func absIO_val(raw []byte, ingressID uint16) (val io.Val) {
@@ -84,9 +84,9 @@ pure func absIO_val(raw []byte, ingressID uint16) (val io.Val) {
 }
 
 ghost
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R56))
 requires !slayers.IsSupportedPkt(raw)
-ensures  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R56))
+ensures  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R56))
 ensures  absIO_val(raw, ingressID).isValUnsupported
 decreases
 func AbsUnsupportedPktIsUnsupportedVal(raw []byte, ingressID uint16) {
@@ -95,7 +95,7 @@ func AbsUnsupportedPktIsUnsupportedVal(raw []byte, ingressID uint16) {
 
 ghost
 requires respr.OutPkt != nil ==>
-	(0 <= 0 && 0 <= len(respr.OutPkt) && len(respr.OutPkt) <= cap(respr.OutPkt) && forall i int :: { &respr.OutPkt[i] } 0 <= i && i < len(respr.OutPkt) ==> acc(&respr.OutPkt[i]))
+	(0 <= 0 && 0 <= len(respr.OutPkt) && len(respr.OutPkt) <= cap(respr.OutPkt) && forall iBytes int :: { &respr.OutPkt[iBytes] } 0 <= iBytes && iBytes < len(respr.OutPkt) ==> acc(&respr.OutPkt[iBytes]))
 decreases
 pure func absReturnErr(respr processResult) (val io.Val) {
 	return respr.OutPkt == nil ? io.ValUnit{} :
@@ -201,7 +201,7 @@ func (d *DataPlane) getDomExternalLemma() {
 
 ghost
 requires msg.Mem()
-requires (0 <= 0 && 0 <= len(msg.GetFstBuffer()) && len(msg.GetFstBuffer()) <= cap(msg.GetFstBuffer()) && forall i int :: { &(msg.GetFstBuffer())[i] } 0 <= i && i < len(msg.GetFstBuffer()) ==> acc(&(msg.GetFstBuffer())[i]))
+requires (0 <= 0 && 0 <= len(msg.GetFstBuffer()) && len(msg.GetFstBuffer()) <= cap(msg.GetFstBuffer()) && forall iBytes int :: { &(msg.GetFstBuffer())[iBytes] } 0 <= iBytes && iBytes < len(msg.GetFstBuffer()) ==> acc(&(msg.GetFstBuffer())[iBytes]))
 decreases
 pure func MsgToAbsVal(msg *ipv4.Message, ingressID uint16) (res io.Val) {
 	return unfolding msg.Mem() in

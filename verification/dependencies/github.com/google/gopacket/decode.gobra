@@ -90,7 +90,7 @@ type Decoder interface {
 	pred Mem()
 
 	requires acc(PkgMem(), _)
-	requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+	requires (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 	preserves Mem()
 	preserves p.Mem()
 	decreases

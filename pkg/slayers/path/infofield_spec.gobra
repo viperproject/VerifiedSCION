@@ -32,7 +32,7 @@ pure func InfoFieldOffset(currINF, headerOffset int) int {
 ghost
 requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) < len(raw)
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i]))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes]))
 decreases
 pure func ConsDir(raw []byte, currINF int, headerOffset int) bool {
 	return raw[InfoFieldOffset(currINF, headerOffset)] & 0x1 == 0x1
@@ -41,7 +41,7 @@ pure func ConsDir(raw []byte, currINF int, headerOffset int) bool {
 ghost
 requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) < len(raw)
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i]))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes]))
 decreases
 pure func Peer(raw []byte, currINF int, headerOffset int) bool {
 	return raw[InfoFieldOffset(currINF, headerOffset)] & 0x2 == 0x2
@@ -50,7 +50,7 @@ pure func Peer(raw []byte, currINF int, headerOffset int) bool {
 ghost
 requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) + InfoLen < len(raw)
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i]))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes]))
 decreases
 pure func Timestamp(raw []byte, currINF int, headerOffset int) io.Ainfo {
 	return let idx := InfoFieldOffset(currINF, headerOffset)+4 in
@@ -62,7 +62,7 @@ pure func Timestamp(raw []byte, currINF int, headerOffset int) io.Ainfo {
 ghost
 requires 0 <= currINF && 0 <= headerOffset
 requires InfoFieldOffset(currINF, headerOffset) + InfoLen < len(raw)
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i]))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes]))
 decreases
 pure func AbsUinfo(raw []byte, currINF int, headerOffset int) set[io.MsgTerm] {
 	return let idx := InfoFieldOffset(currINF, headerOffset)+2 in
@@ -75,7 +75,7 @@ ghost
 opaque
 requires 0 <= middle
 requires middle+InfoLen <= len(raw)
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i]))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes]))
 decreases
 pure func BytesToAbsInfoField(raw [] byte, middle int) (io.AbsInfoField) {
 	return BytesToAbsInfoFieldHelper(raw, middle)
@@ -101,8 +101,8 @@ pure func BytesToAbsInfoFieldHelper(raw [] byte, middle int) (io.AbsInfoField) {
 ghost
 requires  0 <= middle
 requires  middle+InfoLen <= len(raw)
-preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R55))
-preserves (0 <= 0 && 0 <= InfoLen && InfoLen <= cap(raw[middle:middle+InfoLen]) && forall i int :: { &(raw[middle:middle+InfoLen])[i] } 0 <= i && i < InfoLen ==> acc(&(raw[middle:middle+InfoLen])[i], R55))
+preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R55))
+preserves (0 <= 0 && 0 <= InfoLen && InfoLen <= cap(raw[middle:middle+InfoLen]) && forall iBytes int :: { &(raw[middle:middle+InfoLen])[iBytes] } 0 <= iBytes && iBytes < InfoLen ==> acc(&(raw[middle:middle+InfoLen])[iBytes], R55))
 ensures   BytesToAbsInfoField(raw, middle) ==
 	BytesToAbsInfoField(raw[middle:middle+InfoLen], 0)
 decreases

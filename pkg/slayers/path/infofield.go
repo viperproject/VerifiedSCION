@@ -62,7 +62,7 @@ type InfoField struct {
 // path.InfoLen.
 // @ requires  len(raw) >= InfoLen
 // @ preserves acc(inf)
-// @ preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R45))
+// @ preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R45))
 // @ ensures   err == nil
 // @ ensures   BytesToAbsInfoField(raw, 0) ==
 // @	inf.ToAbsInfoField()
@@ -87,7 +87,7 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // path.InfoLen.
 // @ requires  len(b) >= InfoLen
 // @ preserves acc(inf, R10)
-// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 // @ ensures   err == nil
 // @ ensures   inf.ToAbsInfoField() ==
 // @ 	BytesToAbsInfoField(b, 0)

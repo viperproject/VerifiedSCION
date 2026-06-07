@@ -39,7 +39,7 @@ requires acc(src.Mem(), _)
 func testSrcSetterWildcard(s *SCION, src *net.IPAddr) {
 	res := s.SetSrcAddr(src, true)
 	// in the wildcard case we have wildcard access to the address in the SCION struct
-	assert (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall i int :: { &s.RawSrcAddr[i] } 0 <= i && i < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[i], _))
+	assert (0 <= 0 && 0 <= len(s.RawSrcAddr) && len(s.RawSrcAddr) <= cap(s.RawSrcAddr) && forall iBytes int :: { &s.RawSrcAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawSrcAddr) ==> acc(&s.RawSrcAddr[iBytes], _))
 }
 
 // These tests show the behavior of SetSrcAddr when an HostSVC is passed
@@ -80,7 +80,7 @@ requires acc(dst.Mem(), _)
 func testDstSetterWildcard(s *SCION, dst *net.IPAddr) {
 	res := s.SetDstAddr(dst, true)
 	// in the wildcard case we have wildcard access to the address in the SCION struct
-	assert (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i], _))
+	assert (0 <= 0 && 0 <= len(s.RawDstAddr) && len(s.RawDstAddr) <= cap(s.RawDstAddr) && forall iBytes int :: { &s.RawDstAddr[iBytes] } 0 <= iBytes && iBytes < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[iBytes], _))
 }
 
 // These tests show the behavior of SetDstAddr when an HostSVC is passed

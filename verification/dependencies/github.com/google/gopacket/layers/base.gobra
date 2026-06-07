@@ -28,25 +28,25 @@ pred (b *BaseLayer) PayloadMem() {
 }
 
 requires b.LayerMem()
-ensures (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]))
-ensures (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])) --* b.LayerMem()
+ensures (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < len(res) ==> acc(&res[iBytes]))
+ensures (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < len(res) ==> acc(&res[iBytes])) --* b.LayerMem()
 decreases
 func (b *BaseLayer) LayerContents() (res []byte) {
 	unfold b.LayerMem()
 	res = b.Contents
-	package (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])) --* b.LayerMem() {
+	package (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < len(res) ==> acc(&res[iBytes])) --* b.LayerMem() {
 		fold b.LayerMem()
 	}
 }
 
 requires b.PayloadMem()
-ensures (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]))
-ensures (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])) --* b.PayloadMem()
+ensures (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < len(res) ==> acc(&res[iBytes]))
+ensures (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < len(res) ==> acc(&res[iBytes])) --* b.PayloadMem()
 decreases
 func (b *BaseLayer) LayerPayload() (res []byte) {
 	unfold b.PayloadMem()
 	res = b.Payload
-	package (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i])) --* b.PayloadMem() {
+	package (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < len(res) ==> acc(&res[iBytes])) --* b.PayloadMem() {
 		fold b.PayloadMem()
 	}
 }

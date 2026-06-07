@@ -64,10 +64,10 @@ func (i *SCMPExternalInterfaceDown) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
-// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i])))
+// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes])))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
@@ -106,7 +106,7 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -122,7 +122,7 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 	// @ defer fold i.Mem(ubufMem)
 	// @ assert buf === underlyingBufRes[:addr.IABytes+scmpRawInterfaceLen]
 	// @ sl.SplitRange_Bytes(underlyingBufRes, 0, len(buf), writePerm)
-	// @ assert (0 <= 0 && 0 <= len(buf) && len(buf) <= cap(buf) && forall i int :: { &buf[i] } 0 <= i && i < len(buf) ==> acc(&buf[i]))
+	// @ assert (0 <= 0 && 0 <= len(buf) && len(buf) <= cap(buf) && forall iBytes int :: { &buf[iBytes] } 0 <= iBytes && iBytes < len(buf) ==> acc(&buf[iBytes]))
 	binary.BigEndian.PutUint64(buf[offset:], uint64(i.IA))
 	offset += addr.IABytes
 	// @ sl.SplitRange_Bytes(buf, offset, offset+scmpRawInterfaceLen, writePerm)
@@ -135,7 +135,7 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 
 // @ requires pb != nil
 // @ preserves pb.Mem()
-// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ ensures res != nil ==> res.ErrorMem()
 // @ decreases
 func decodeSCMPExternalInterfaceDown(data []byte, pb gopacket.PacketBuilder) (res error) {
@@ -193,11 +193,11 @@ func (*SCMPInternalConnectivityDown) NextLayerType() gopacket.LayerType {
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ requires  i.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
-// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i])))
+// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes])))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
@@ -241,7 +241,7 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -256,7 +256,7 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 	// @ unfold i.Mem(ubufMem)
 	// @ defer fold i.Mem(ubufMem)
 	// @ sl.SplitRange_Bytes(underlyingBufRes, 0, len(buf), writePerm)
-	// @ assert (0 <= 0 && 0 <= len(buf) && len(buf) <= cap(buf) && forall i int :: { &buf[i] } 0 <= i && i < len(buf) ==> acc(&buf[i]))
+	// @ assert (0 <= 0 && 0 <= len(buf) && len(buf) <= cap(buf) && forall iBytes int :: { &buf[iBytes] } 0 <= iBytes && iBytes < len(buf) ==> acc(&buf[iBytes]))
 	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
 	binary.BigEndian.PutUint64(buf[offset:], uint64(i.IA))
 	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
@@ -276,7 +276,7 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 
 // @ requires pb != nil
 // @ preserves pb.Mem()
-// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ ensures err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPInternalConnectivityDown(data []byte, pb gopacket.PacketBuilder) (err error) {
@@ -322,10 +322,10 @@ func (*SCMPEcho) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
-// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i])))
+// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes])))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
@@ -340,9 +340,9 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ requires offset == 0
 	// @ preserves acc(&i.Identifier)
 	// @ requires len(data) >= 4
-	// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
-	// @ ensures (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2 <= i && i < len(data) ==> acc(&data[i]))
-	// @ ensures (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < 2 ==> acc(&data[i]))
+	// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
+	// @ ensures (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
+	// @ ensures (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < 2 ==> acc(&data[iBytes]))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
@@ -352,9 +352,9 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ requires offset == 2
 	// @ preserves acc(&i.SeqNumber)
 	// @ requires len(data) >= 4
-	// @ requires (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2 <= i && i < len(data) ==> acc(&data[i]))
-	// @ ensures (0 <= 2 && 2 <= 4 && 4 <= cap(data) && forall i int :: { &data[i] } 2 <= i && i < 4 ==> acc(&data[i]))
-	// @ ensures (0 <= 4 && 4 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 4 <= i && i < len(data) ==> acc(&data[i]))
+	// @ requires (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
+	// @ ensures (0 <= 2 && 2 <= 4 && 4 <= cap(data) && forall iBytes int :: { &data[iBytes] } 2 <= iBytes && iBytes < 4 ==> acc(&data[iBytes]))
+	// @ ensures (0 <= 4 && 4 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 4 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 4, writePerm)
@@ -366,9 +366,9 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 	// @ requires offset == 4
 	// @ requires len(data) >= 4
 	// @ requires acc(&i.BaseLayer)
-	// @ requires (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < 2 ==> acc(&data[i]))
-	// @ requires (0 <= 2 && 2 <= 4 && 4 <= cap(data) && forall i int :: { &data[i] } 2 <= i && i < 4 ==> acc(&data[i]))
-	// @ requires (0 <= 4 && 4 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 4 <= i && i < len(data) ==> acc(&data[i]))
+	// @ requires (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < 2 ==> acc(&data[iBytes]))
+	// @ requires (0 <= 2 && 2 <= 4 && 4 <= cap(data) && forall iBytes int :: { &data[iBytes] } 2 <= iBytes && iBytes < 4 ==> acc(&data[iBytes]))
+	// @ requires (0 <= 4 && 4 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 4 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 	// @ ensures  acc(i.BaseLayer.Mem(data, 4))
 	// @ decreases
 	// @ outline (
@@ -392,7 +392,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -421,7 +421,7 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 
 // @ requires pb != nil
 // @ preserves pb.Mem()
-// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ ensures err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPEcho(data []byte, pb gopacket.PacketBuilder) (err error) {
@@ -463,10 +463,10 @@ func (*SCMPParameterProblem) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
-// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i])))
+// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes])))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
@@ -479,7 +479,7 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 	// @ defer fold i.Mem(data)
 	// @ preserves acc(&i.Pointer)
 	// @ requires len(data) >= 4
-	// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+	// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
@@ -493,7 +493,7 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 	// @ requires len(data) >= 4
 	// @ requires acc(&i.BaseLayer)
 	// @ ensures  i.BaseLayer.Mem(data, 4)
-	// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+	// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 	// @ decreases
 	// @ outline (
 	// @ sl.AssertSliceOverlap(data, 4, len(data))
@@ -513,7 +513,7 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -541,7 +541,7 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 
 // @ requires  pb != nil
 // @ preserves pb.Mem()
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPParameterProblem(data []byte, pb gopacket.PacketBuilder) (err error) {
@@ -597,7 +597,7 @@ func (*SCMPTraceroute) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
 // @ ensures   res != nil ==> i.NonInitMem()
@@ -615,9 +615,9 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ requires offset == 0
 	// @ preserves acc(&i.Identifier)
 	// @ requires len(data) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
-	// @ ensures   (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < 2 ==> acc(&data[i], R40))
-	// @ ensures   (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2 <= i && i < len(data) ==> acc(&data[i], R40))
+	// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
+	// @ ensures   (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < 2 ==> acc(&data[iBytes], R40))
+	// @ ensures   (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, R40)
@@ -627,9 +627,9 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ requires offset == 2
 	// @ preserves acc(&i.Sequence)
 	// @ requires len(data) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2 <= i && i < len(data) ==> acc(&data[i], R40))
-	// @ ensures (0 <= 2 && 2 <= 2+2 && 2+2 <= cap(data) && forall i int :: { &data[i] } 2 <= i && i < 2+2 ==> acc(&data[i], R40))
-	// @ ensures (0 <= 2+2 && 2+2 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2+2 <= i && i < len(data) ==> acc(&data[i], R40))
+	// @ requires (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
+	// @ ensures (0 <= 2 && 2 <= 2+2 && 2+2 <= cap(data) && forall iBytes int :: { &data[iBytes] } 2 <= iBytes && iBytes < 2+2 ==> acc(&data[iBytes], R40))
+	// @ ensures (0 <= 2+2 && 2+2 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2+2 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 2+2, R40)
@@ -641,9 +641,9 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ requires offset == 2 + 2
 	// @ preserves acc(&i.IA)
 	// @ requires len(data) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires (0 <= 2+2 && 2+2 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2+2 <= i && i < len(data) ==> acc(&data[i], R40))
-	// @ ensures (0 <= 2+2 && 2+2 <= 2+2+addr.IABytes && 2+2+addr.IABytes <= cap(data) && forall i int :: { &data[i] } 2+2 <= i && i < 2+2+addr.IABytes ==> acc(&data[i], R40))
-	// @ ensures (0 <= 2+2+addr.IABytes && 2+2+addr.IABytes <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2+2+addr.IABytes <= i && i < len(data) ==> acc(&data[i], R40))
+	// @ requires (0 <= 2+2 && 2+2 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2+2 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
+	// @ ensures (0 <= 2+2 && 2+2 <= 2+2+addr.IABytes && 2+2+addr.IABytes <= cap(data) && forall iBytes int :: { &data[iBytes] } 2+2 <= iBytes && iBytes < 2+2+addr.IABytes ==> acc(&data[iBytes], R40))
+	// @ ensures (0 <= 2+2+addr.IABytes && 2+2+addr.IABytes <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2+2+addr.IABytes <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2+2, len(data), 2+2+addr.IABytes, R40)
@@ -654,9 +654,9 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 	// @ requires offset == 2 + 2 + addr.IABytes
 	// @ preserves acc(&i.Interface)
 	// @ requires len(data) >= 2 + 2 + addr.IABytes + scmpRawInterfaceLen
-	// @ requires  (0 <= 2+2+addr.IABytes && 2+2+addr.IABytes <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2+2+addr.IABytes <= i && i < len(data) ==> acc(&data[i], R40))
-	// @ ensures  (0 <= 2+2+addr.IABytes && 2+2+addr.IABytes <= 2+2+addr.IABytes+scmpRawInterfaceLen && 2+2+addr.IABytes+scmpRawInterfaceLen <= cap(data) && forall i int :: { &data[i] } 2+2+addr.IABytes <= i && i < 2+2+addr.IABytes+scmpRawInterfaceLen ==> acc(&data[i], R40))
-	// @ ensures  (0 <= 2+2+addr.IABytes+scmpRawInterfaceLen && 2+2+addr.IABytes+scmpRawInterfaceLen <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2+2+addr.IABytes+scmpRawInterfaceLen <= i && i < len(data) ==> acc(&data[i], R40))
+	// @ requires  (0 <= 2+2+addr.IABytes && 2+2+addr.IABytes <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2+2+addr.IABytes <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
+	// @ ensures  (0 <= 2+2+addr.IABytes && 2+2+addr.IABytes <= 2+2+addr.IABytes+scmpRawInterfaceLen && 2+2+addr.IABytes+scmpRawInterfaceLen <= cap(data) && forall iBytes int :: { &data[iBytes] } 2+2+addr.IABytes <= iBytes && iBytes < 2+2+addr.IABytes+scmpRawInterfaceLen ==> acc(&data[iBytes], R40))
+	// @ ensures  (0 <= 2+2+addr.IABytes+scmpRawInterfaceLen && 2+2+addr.IABytes+scmpRawInterfaceLen <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2+2+addr.IABytes+scmpRawInterfaceLen <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2+2+addr.IABytes, len(data), 2+2+addr.IABytes+scmpRawInterfaceLen, R40)
@@ -681,7 +681,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -725,7 +725,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 
 // @ requires  pb != nil
 // @ preserves pb.Mem()
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPTraceroute(data []byte, pb gopacket.PacketBuilder) (err error) {
@@ -769,10 +769,10 @@ func (*SCMPDestinationUnreachable) NextLayerType() gopacket.LayerType {
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
 // @ requires  i.NonInitMem()
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
-// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i])))
+// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes])))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
@@ -801,7 +801,7 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -820,7 +820,7 @@ func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opt
 }
 
 // @ requires  pb != nil
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ preserves pb.Mem()
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -863,11 +863,11 @@ func (*SCMPPacketTooBig) NextLayerType() gopacket.LayerType {
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ requires  i.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
-// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i])))
+// @ ensures   res != nil ==> (i.NonInitMem() && (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes])))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
 func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
@@ -880,7 +880,7 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 	// @ defer fold i.Mem(data)
 	// @ preserves acc(&i.MTU)
 	// @ requires len(data) >= 4
-	// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+	// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, writePerm)
@@ -893,7 +893,7 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 	// @ )
 	// @ requires len(data) >= 4
 	// @ requires acc(&i.BaseLayer)
-	// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+	// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 	// @ ensures  i.BaseLayer.Mem(data, 4)
 	// @ decreases
 	// @ outline (
@@ -914,7 +914,7 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 // @ requires  b != nil
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   err == nil ==> i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -942,7 +942,7 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 
 // @ requires  pb != nil
 // @ preserves pb.Mem()
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeSCMPPacketTooBig(data []byte, pb gopacket.PacketBuilder) (err error) {

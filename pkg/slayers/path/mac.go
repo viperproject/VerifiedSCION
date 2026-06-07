@@ -30,7 +30,7 @@ const MACBufferSize = 16
 // this method does not modify info or hf.
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // @ requires  h != nil && h.Mem()
-// @ preserves len(buffer) >= MACBufferSize ==> (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i]))
+// @ preserves len(buffer) >= MACBufferSize ==> (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall iBytes int :: { &buffer[iBytes] } 0 <= iBytes && iBytes < len(buffer) ==> acc(&buffer[iBytes]))
 // @ ensures   h.Mem()
 // @ decreases
 func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
@@ -46,9 +46,9 @@ func MAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) [MacLen]byte {
 // Modifying the provided buffer after calling this function may change the returned HopField MAC.
 // In contrast to MAC(), FullMAC returns all the 16 bytes instead of only 6 bytes of the MAC.
 // @ requires  h != nil && h.Mem()
-// @ preserves len(buffer) >= MACBufferSize ==> (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i]))
+// @ preserves len(buffer) >= MACBufferSize ==> (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall iBytes int :: { &buffer[iBytes] } 0 <= iBytes && iBytes < len(buffer) ==> acc(&buffer[iBytes]))
 // @ ensures   h.Mem()
-// @ ensures   len(res) == MACBufferSize && (0 <= 0 && 0 <= MACBufferSize && MACBufferSize <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < MACBufferSize ==> acc(&res[i]))
+// @ ensures   len(res) == MACBufferSize && (0 <= 0 && 0 <= MACBufferSize && MACBufferSize <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < MACBufferSize ==> acc(&res[iBytes]))
 // @ decreases
 func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byte) {
 	if len(buffer) < MACBufferSize {
@@ -83,7 +83,7 @@ func FullMAC(h hash.Hash, info InfoField, hf HopField, buffer []byte) (res []byt
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //
 // @ requires  len(buffer) >= MACBufferSize
-// @ preserves (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall i int :: { &buffer[i] } 0 <= i && i < len(buffer) ==> acc(&buffer[i]))
+// @ preserves (0 <= 0 && 0 <= len(buffer) && len(buffer) <= cap(buffer) && forall iBytes int :: { &buffer[iBytes] } 0 <= iBytes && iBytes < len(buffer) ==> acc(&buffer[iBytes]))
 // @ decreases
 func MACInput(segID uint16, timestamp uint32, expTime uint8,
 	consIngress, consEgress uint16, buffer []byte) {

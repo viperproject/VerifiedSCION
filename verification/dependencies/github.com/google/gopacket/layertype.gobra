@@ -232,7 +232,7 @@ func OverrideLayerType(num int, meta LayerTypeMetadata) (res LayerType) {
 
 trusted
 preserves c.Mem()
-preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 ensures   err != nil ==> err.ErrorMem()
 decreases
 func (t LayerType) Decode(data []byte, c PacketBuilder) (err error)

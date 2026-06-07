@@ -133,7 +133,7 @@ func (a SCMPTypeCode) String() string {
 
 // SerializeTo writes the SCMPTypeCode value to the buffer.
 // @ requires len(bytes) >= 2
-// @ preserves (0 <= 0 && 0 <= 2 && 2 <= cap(bytes) && forall i int :: { &bytes[i] } 0 <= i && i < 2 ==> acc(&bytes[i]))
+// @ preserves (0 <= 0 && 0 <= 2 && 2 <= cap(bytes) && forall iBytes int :: { &bytes[iBytes] } 0 <= iBytes && iBytes < 2 ==> acc(&bytes[iBytes]))
 // @ decreases
 func (a SCMPTypeCode) SerializeTo(bytes []byte) {
 	binary.BigEndian.PutUint16(bytes, uint16(a))

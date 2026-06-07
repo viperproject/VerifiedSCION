@@ -12,13 +12,13 @@ from inline_bytes import rewrite_text  # noqa: E402
 
 
 BODY = ('(0 <= 0 && 0 <= len(s) && len(s) <= cap(s) && '
-        'forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i]))')
+        'forall iBytes int :: { &s[iBytes] } 0 <= iBytes && iBytes < len(s) ==> acc(&s[iBytes]))')
 
 BODY_R10 = ('(0 <= 0 && 0 <= len(s) && len(s) <= cap(s) && '
-            'forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], R10))')
+            'forall iBytes int :: { &s[iBytes] } 0 <= iBytes && iBytes < len(s) ==> acc(&s[iBytes], R10))')
 
 BODY_WILD = ('(0 <= 0 && 0 <= len(s) && len(s) <= cap(s) && '
-             'forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i], _))')
+             'forall iBytes int :: { &s[iBytes] } 0 <= iBytes && iBytes < len(s) ==> acc(&s[iBytes], _))')
 
 
 class GobraTests(unittest.TestCase):
@@ -90,7 +90,7 @@ class GobraTests(unittest.TestCase):
     def test_slice_expr_arg(self):
         src = 'requires acc(sl.Bytes(s[a:b], 0, len(s[a:b])), R10)\n'
         out = self.rewrite(src)
-        self.assertIn('&(s[a:b])[i]', out)
+        self.assertIn('&(s[a:b])[iBytes]', out)
         self.assertIn('cap(s[a:b])', out)
         self.assertIn(', R10)', out)
 
@@ -107,7 +107,7 @@ class GobraTests(unittest.TestCase):
         src = 'requires Bytes(s, 0, n)\n'
         out = self.rewrite(src, allow_bare=True)
         self.assertNotIn('Bytes(', out)
-        self.assertIn('forall i int', out)
+        self.assertIn('forall iBytes int', out)
 
     def test_string_literal_untouched(self):
         src = 'foo := "sl.Bytes(s, 0, n)"\n'
@@ -126,7 +126,7 @@ class GobraTests(unittest.TestCase):
         )
         out = self.rewrite(src, specs_only=True)
         # Spec line rewritten:
-        self.assertIn('forall i int', out.splitlines()[0])
+        self.assertIn('forall iBytes int', out.splitlines()[0])
         # Body unchanged:
         self.assertIn('\tfold sl.Bytes(s, 0, n)\n', out)
 
@@ -134,13 +134,13 @@ class GobraTests(unittest.TestCase):
         src = 'requires sl.Bytes(\n\ts, 0, len(s))\n'
         out = self.rewrite(src)
         self.assertNotIn('Bytes(', out)
-        self.assertIn('forall i int', out)
+        self.assertIn('forall iBytes int', out)
 
     def test_slices_dot_bytes(self):
         src = 'requires slices.Bytes(h, 0, len(h))\n'
         out = self.rewrite(src)
         self.assertNotIn('slices.Bytes', out)
-        self.assertIn('forall i int', out)
+        self.assertIn('forall iBytes int', out)
 
     def test_preserves_form(self):
         src = 'preserves sl.Bytes(s, 0, len(s))\n'
@@ -168,7 +168,7 @@ class GoFileTests(unittest.TestCase):
         src = '/*@\nrequires sl.Bytes(s, 0, len(s))\n@*/\n'
         out = self.rewrite(src)
         self.assertNotIn('Bytes(', out)
-        self.assertIn('forall i int', out)
+        self.assertIn('forall iBytes int', out)
 
     def test_plain_comment_untouched(self):
         src = '// regular: sl.Bytes(s, 0, n)\n'

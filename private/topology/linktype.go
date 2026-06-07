@@ -69,7 +69,7 @@ func LinkTypeFromString(s string) (res LinkType) {
 }
 
 // @ ensures (l == Core || l == Parent || l == Child || l == Peer) == (err == nil)
-// @ ensures err == nil ==> (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i]))
+// @ ensures err == nil ==> (0 <= 0 && 0 <= len(res) && len(res) <= cap(res) && forall iBytes int :: { &res[iBytes] } 0 <= iBytes && iBytes < len(res) ==> acc(&res[iBytes]))
 // @ ensures err != nil ==> err.ErrorMem()
 // @ decreases
 func (l LinkType) MarshalText() (res []byte, err error) {
@@ -92,7 +92,7 @@ func (l LinkType) MarshalText() (res []byte, err error) {
 }
 
 // @ preserves acc(l)
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R15))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R15))
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (l *LinkType) UnmarshalText(data []byte) (err error) {

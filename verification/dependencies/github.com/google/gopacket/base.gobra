@@ -66,9 +66,9 @@ func (p Payload) Payload(ghost ub []byte) (res []byte, ghost start int, ghost en
 
 requires b != nil && b.Mem()
 requires p.Mem(ubuf)
-requires (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+requires (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 ensures  err == nil ==> (p.Mem(ubuf) && b.Mem())
-ensures  err == nil ==> (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+ensures  err == nil ==> (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 ensures  err != nil ==> err.ErrorMem()
 decreases
 func (p Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)

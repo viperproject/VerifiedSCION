@@ -132,7 +132,7 @@ type BFDAuthHeader struct {
 }
 
 pred (b *BFDAuthHeader) Mem() {
-	acc(b) && (0 <= 0 && 0 <= len(b.Data) && len(b.Data) <= cap(b.Data) && forall i int :: { &b.Data[i] } 0 <= i && i < len(b.Data) ==> acc(&b.Data[i]))
+	acc(b) && (0 <= 0 && 0 <= len(b.Data) && len(b.Data) <= cap(b.Data) && forall iBytes int :: { &b.Data[iBytes] } 0 <= iBytes && iBytes < len(b.Data) ==> acc(&b.Data[iBytes]))
 }
 
 preserves acc(h, 1/10000)
@@ -185,7 +185,7 @@ pure func (d *BFD) LayerType() gopacket.LayerType
 
 requires  d.NonInitMem()
 preserves df.Mem()
-preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 ensures   err == nil ==> d.Mem(data)
 ensures   err != nil ==> err.ErrorMem() && d.NonInitMem()
 decreases
@@ -193,9 +193,9 @@ func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err erro
 
 requires d.Mem(ub)
 requires b != nil && b.Mem()
-requires (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+requires (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 ensures  err == nil ==> d.Mem(ub) && b.Mem()
-ensures  err == nil ==> (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+ensures  err == nil ==> (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 ensures  err != nil ==> err.ErrorMem()
 decreases
 func (d *BFD) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions, ghost ub []byte) (err error)

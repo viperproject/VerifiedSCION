@@ -77,7 +77,7 @@ type Base struct {
 }
 
 // @ requires  s.NonInitMem()
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R50))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R50))
 // @ ensures   r != nil ==>
 // @ 	s.NonInitMem() && r.ErrorMem()
 // @ ensures   r == nil ==>
@@ -250,7 +250,7 @@ type MetaHdr struct {
 // DecodeFromBytes populates the fields from a raw buffer. The buffer must be of length >=
 // scion.MetaLen.
 // @ preserves acc(m)
-// @ preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R50))
+// @ preserves (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R50))
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
 // @ ensures   e == nil ==> m.InBounds()
 // @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
@@ -279,7 +279,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 // scion.MetaLen.
 // @ requires  len(b) >= MetaLen
 // @ preserves acc(m, R50)
-// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i]))
+// @ preserves (0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall iBytes int :: { &b[iBytes] } 0 <= iBytes && iBytes < len(b) ==> acc(&b[iBytes]))
 // @ ensures   e == nil
 // @ ensures   m.SerializeToSpec(b)
 // @ decreases

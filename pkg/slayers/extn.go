@@ -70,8 +70,8 @@ func (o *tlvOption) length(fixLengths bool) (res int) {
 
 // @ requires  2 <= len(data)
 // @ preserves acc(o)
-// @ preserves (0 <= 0 && 0 <= len(o.OptData) && len(o.OptData) <= cap(o.OptData) && forall i int :: { &o.OptData[i] } 0 <= i && i < len(o.OptData) ==> acc(&o.OptData[i], R20))
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ preserves (0 <= 0 && 0 <= len(o.OptData) && len(o.OptData) <= cap(o.OptData) && forall iBytes int :: { &o.OptData[iBytes] } 0 <= iBytes && iBytes < len(o.OptData) ==> acc(&o.OptData[iBytes], R20))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ decreases
 func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 	dryrun := data == nil
@@ -93,7 +93,7 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 }
 
 // @ requires  1 <= len(data)
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R41))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R41))
 // @ ensures   err == nil ==> acc(res)
 // @ ensures   (err == nil && res.OptType != OptTypePad1) ==> (
 // @ 	2 <= res.ActualLength && res.ActualLength <= len(data) && res.OptData === data[2:res.ActualLength])
@@ -125,7 +125,7 @@ func decodeTLVOption(data []byte) (res *tlvOption, err error) {
 // serializeTLVOptionPadding adds an appropriate PadN extension.
 // @ requires  padLength == 1 ==> 1 <= len(data)
 // @ requires  1 < padLength  ==> 2 <= len(data)
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ decreases
 func serializeTLVOptionPadding(data []byte, padLength int) {
 	if padLength <= 0 {
@@ -230,7 +230,7 @@ func (e *extnBase) serializeToWithTLVOptions(b gopacket.SerializeBuffer,
 
 // @ requires  df != nil
 // @ preserves df.Mem()
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 // @ ensures   resErr != nil ==> resErr.ErrorMem()
 // The following poscondition is more a lot more complicated than it would be if the return type
 // was *extnBase instead of extnBase
@@ -333,7 +333,7 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 // @ requires  h.NonInitMem()
 // @ requires  df != nil
 // @ preserves df.Mem()
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 // @ ensures   res == nil ==> h.Mem(data)
 // @ ensures   res != nil ==> (h.NonInitMem() && res.ErrorMem())
 // @ decreases
@@ -360,7 +360,7 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	// @ invariant len(h.Options) == lenOptions
 	// @ invariant forall i int :: { &h.Options[i] } 0 <= i && i < lenOptions ==>
 	// @ 	(acc(&h.Options[i]) && h.Options[i].Mem(i))
-	// @ invariant (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+	// @ invariant (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 	// @ invariant h.BaseLayer.Contents === data[:h.ActualLen]
 	// @ invariant h.BaseLayer.Payload === data[h.ActualLen:]
 	// @ decreases h.ActualLen - offset
@@ -386,7 +386,7 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 }
 
 // @ requires  p != nil
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ preserves p.Mem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -465,7 +465,7 @@ func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ ,
 // @ requires  e.NonInitMem()
 // @ requires  df != nil
 // @ preserves df.Mem()
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 // @ ensures   res == nil ==> e.Mem(data)
 // @ ensures   res != nil ==> (e.NonInitMem() && res.ErrorMem())
 // @ decreases
@@ -492,7 +492,7 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	// @ invariant len(e.Options) == lenOptions
 	// @ invariant forall i int :: { &e.Options[i] } 0 <= i && i < lenOptions ==>
 	// @ 	(acc(&e.Options[i]) && e.Options[i].Mem(i))
-	// @ invariant (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+	// @ invariant (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 	// @ invariant e.BaseLayer.Contents === data[:e.ActualLen]
 	// @ invariant e.BaseLayer.Payload === data[e.ActualLen:]
 	// @ decreases e.ActualLen - offset
@@ -518,7 +518,7 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 }
 
 // @ requires  p != nil
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ preserves p.Mem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -587,7 +587,7 @@ type HopByHopExtnSkipper struct {
 // DecodeFromBytes implementation according to gopacket.DecodingLayer
 // @ requires  s.NonInitMem()
 // @ requires  df != nil
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
@@ -643,7 +643,7 @@ type EndToEndExtnSkipper struct {
 // @ requires  s.NonInitMem()
 // @ requires  df != nil
 // @ preserves df.Mem()
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
 // @ decreases

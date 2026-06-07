@@ -29,7 +29,7 @@ type Flow struct {
 	src, dst   [MaxEndpointSize]byte
 }
 
-preserves (0 <= 0 && 0 <= len(src) && len(src) <= cap(src) && forall i int :: { &src[i] } 0 <= i && i < len(src) ==> acc(&src[i], 1/10000)) && (0 <= 0 && 0 <= len(dst) && len(dst) <= cap(dst) && forall i int :: { &dst[i] } 0 <= i && i < len(dst) ==> acc(&dst[i], 1/10000))
+preserves (0 <= 0 && 0 <= len(src) && len(src) <= cap(src) && forall iBytes int :: { &src[iBytes] } 0 <= iBytes && iBytes < len(src) ==> acc(&src[iBytes], 1/10000)) && (0 <= 0 && 0 <= len(dst) && len(dst) <= cap(dst) && forall iBytes int :: { &dst[iBytes] } 0 <= iBytes && iBytes < len(dst) ==> acc(&dst[iBytes], 1/10000))
 requires len(src) <= MaxEndpointSize && len(dst) <= MaxEndpointSize
 ensures f.slen == len(src)
 ensures f.dlen == len(dst)

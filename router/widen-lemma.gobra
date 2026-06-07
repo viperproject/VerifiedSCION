@@ -30,10 +30,10 @@ import (
 // is absIO_valWidenLemma. Everything else can be seen as an implementation detail.
 ghost
 requires  0 <= length && length <= len(raw)
-requires  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R49))
-requires  (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall i int :: { &(raw[:length])[i] } 0 <= i && i < len(raw[:length]) ==> acc(&(raw[:length])[i], R49))
-ensures   (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R49))
-ensures   (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall i int :: { &(raw[:length])[i] } 0 <= i && i < len(raw[:length]) ==> acc(&(raw[:length])[i], R49))
+requires  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R49))
+requires  (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall iBytes int :: { &(raw[:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[:length]) ==> acc(&(raw[:length])[iBytes], R49))
+ensures   (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R49))
+ensures   (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall iBytes int :: { &(raw[:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[:length]) ==> acc(&(raw[:length])[iBytes], R49))
 ensures   absIO_val(raw[:length], ingressID).isValPkt ==>
 	absIO_val(raw[:length], ingressID) == absIO_val(raw, ingressID)
 decreases
@@ -62,11 +62,11 @@ func absIO_valWidenLemma(raw []byte, ingressID uint16, length int) {
 
 ghost
 requires 0 <= length && length <= len(raw)
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R51))
-requires (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall i int :: { &(raw[:length])[i] } 0 <= i && i < len(raw[:length]) ==> acc(&(raw[:length])[i], R51))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R51))
+requires (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall iBytes int :: { &(raw[:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[:length]) ==> acc(&(raw[:length])[iBytes], R51))
 requires slayers.ValidPktMetaHdr(raw[:length])
-ensures  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R51))
-ensures  (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall i int :: { &(raw[:length])[i] } 0 <= i && i < len(raw[:length]) ==> acc(&(raw[:length])[i], R51))
+ensures  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R51))
+ensures  (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall iBytes int :: { &(raw[:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[:length]) ==> acc(&(raw[:length])[iBytes], R51))
 ensures  slayers.ValidPktMetaHdr(raw)
 decreases
 func ValidPktMetaHdrWidenLemma(raw []byte, length int) {
@@ -78,11 +78,11 @@ func ValidPktMetaHdrWidenLemma(raw []byte, length int) {
 
 ghost
 requires 0 <= length && length <= len(raw)
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R51))
-requires (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall i int :: { &(raw[:length])[i] } 0 <= i && i < len(raw[:length]) ==> acc(&(raw[:length])[i], R51))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R51))
+requires (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall iBytes int :: { &(raw[:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[:length]) ==> acc(&(raw[:length])[iBytes], R51))
 requires slayers.IsSupportedPkt(raw[:length])
-ensures  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R51))
-ensures  (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall i int :: { &(raw[:length])[i] } 0 <= i && i < len(raw[:length]) ==> acc(&(raw[:length])[i], R51))
+ensures  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R51))
+ensures  (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall iBytes int :: { &(raw[:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[:length]) ==> acc(&(raw[:length])[iBytes], R51))
 ensures  slayers.IsSupportedPkt(raw)
 decreases
 func IsSupportedPktWidenLemma(raw []byte, length int) {
@@ -94,12 +94,12 @@ func IsSupportedPktWidenLemma(raw []byte, length int) {
 
 ghost
 requires  0 <= length && length <= len(raw)
-requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R50))
-requires (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall i int :: { &(raw[:length])[i] } 0 <= i && i < len(raw[:length]) ==> acc(&(raw[:length])[i], R50))
+requires (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R50))
+requires (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall iBytes int :: { &(raw[:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[:length]) ==> acc(&(raw[:length])[iBytes], R50))
 requires slayers.ValidPktMetaHdr(raw)
 requires slayers.ValidPktMetaHdr(raw[:length])
-ensures  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R50))
-ensures  (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall i int :: { &(raw[:length])[i] } 0 <= i && i < len(raw[:length]) ==> acc(&(raw[:length])[i], R50))
+ensures  (0 <= 0 && 0 <= len(raw) && len(raw) <= cap(raw) && forall iBytes int :: { &raw[iBytes] } 0 <= iBytes && iBytes < len(raw) ==> acc(&raw[iBytes], R50))
+ensures  (0 <= 0 && 0 <= len(raw[:length]) && len(raw[:length]) <= cap(raw[:length]) && forall iBytes int :: { &(raw[:length])[iBytes] } 0 <= iBytes && iBytes < len(raw[:length]) ==> acc(&(raw[:length])[iBytes], R50))
 ensures  slayers.ValidPktMetaHdr(raw)
 ensures  slayers.ValidPktMetaHdr(raw[:length])
 ensures  absPkt(raw) == absPkt(raw[:length])

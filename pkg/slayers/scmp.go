@@ -111,7 +111,7 @@ func (s *SCMP) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 // @ requires  b != nil
 // @ requires  s.Mem(ubufMem)
 // @ preserves b.Mem()
-// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall i int :: { &(b.UBuf())[i] } 0 <= i && i < len(b.UBuf()) ==> acc(&(b.UBuf())[i]))
+// @ preserves (0 <= 0 && 0 <= len(b.UBuf()) && len(b.UBuf()) <= cap(b.UBuf()) && forall iBytes int :: { &(b.UBuf())[iBytes] } 0 <= iBytes && iBytes < len(b.UBuf()) ==> acc(&(b.UBuf())[iBytes]))
 // @ ensures   err == nil ==> s.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
@@ -159,7 +159,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 
 // DecodeFromBytes decodes the given bytes into this layer.
 // @ requires  df != nil
-// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+// @ preserves (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 // @ requires  s.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
@@ -172,20 +172,20 @@ func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res err
 	}
 	// @ unfold s.NonInitMem()
 	// @ requires len(data) >= 4
-	// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+	// @ requires (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 	// @ preserves acc(&s.TypeCode)
-	// @ ensures (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2 <= i && i < len(data) ==> acc(&data[i], R40))
-	// @ ensures (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < 2 ==> acc(&data[i], R40))
+	// @ ensures (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
+	// @ ensures (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < 2 ==> acc(&data[iBytes], R40))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, R40)
 	s.TypeCode = CreateSCMPTypeCode(SCMPType(data[0]), SCMPCode(data[1]))
 	// @ )
 	// @ requires len(data) >= 4
-	// @ requires (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < 2 ==> acc(&data[i], R40))
-	// @ requires (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 2 <= i && i < len(data) ==> acc(&data[i], R40))
+	// @ requires (0 <= 0 && 0 <= 2 && 2 <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < 2 ==> acc(&data[iBytes], R40))
+	// @ requires (0 <= 2 && 2 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 2 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 	// @ preserves acc(&s.Checksum)
-	// @ ensures (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i], R40))
+	// @ ensures (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes], R40))
 	// @ decreases
 	// @ outline (
 	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 4, R40)
@@ -217,7 +217,7 @@ func (s *SCMP) SetNetworkLayerForChecksum(scn *SCION) {
 }
 
 // @ requires  pb != nil
-// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall i int :: { &data[i] } 0 <= i && i < len(data) ==> acc(&data[i]))
+// @ requires  (0 <= 0 && 0 <= len(data) && len(data) <= cap(data) && forall iBytes int :: { &data[iBytes] } 0 <= iBytes && iBytes < len(data) ==> acc(&data[iBytes]))
 // @ preserves pb.Mem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases

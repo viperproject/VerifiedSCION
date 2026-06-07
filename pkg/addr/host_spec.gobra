@@ -29,14 +29,14 @@ HostNone implements HostAddr
 
 pred (h HostIPv4) Mem() {
 	len(h) == HostLenIPv4 &&
-	(0 <= 0 && 0 <= len(h) && len(h) <= cap(h) && forall i int :: { &h[i] } 0 <= i && i < len(h) ==> acc(&h[i]))
+	(0 <= 0 && 0 <= len(h) && len(h) <= cap(h) && forall iBytes int :: { &h[iBytes] } 0 <= iBytes && iBytes < len(h) ==> acc(&h[iBytes]))
 }
 
 HostIPv4 implements HostAddr
 
 pred (h HostIPv6) Mem() {
 	len(h) == HostLenIPv6 &&
-	(0 <= 0 && 0 <= len(h) && len(h) <= cap(h) && forall i int :: { &h[i] } 0 <= i && i < len(h) ==> acc(&h[i]))
+	(0 <= 0 && 0 <= len(h) && len(h) <= cap(h) && forall iBytes int :: { &h[iBytes] } 0 <= iBytes && iBytes < len(h) ==> acc(&h[iBytes]))
 }
 
 HostIPv6 implements HostAddr
