@@ -35,6 +35,14 @@ class GobraTests(unittest.TestCase):
         src = 'requires acc(sl.Bytes(s, 0, len(s)), R10)\n'
         self.assertEqual(self.rewrite(src), f'requires {BODY_R10}\n')
 
+    def test_acc_no_fraction(self):
+        src = 'inhale acc(sl.Bytes(s, 0, len(s)))\n'
+        out = self.rewrite(src)
+        # acc(P) is sugar for acc(P, write); body emits acc(&s[i]) with
+        # default write permission, so we drop the outer acc() entirely.
+        self.assertEqual(out, f'inhale {BODY}\n')
+        self.assertNotIn('acc((', out)
+
     def test_wildcard(self):
         src = 'requires acc(sl.Bytes(s, 0, len(s)), _)\n'
         self.assertEqual(self.rewrite(src), f'requires {BODY_WILD}\n')

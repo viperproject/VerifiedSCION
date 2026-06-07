@@ -460,6 +460,12 @@ def _classify_context(text: str, m: Match, region_end: int) -> None:
                 if len(acc_args) == 2:
                     # First arg is the predicate; second is the fraction.
                     m.enclosing_acc = (acc_start, acc_close, acc_args[1].strip())
+                elif len(acc_args) == 1:
+                    # acc(P) is sugar for acc(P, write). The inlined body
+                    # uses `acc(&s[i])` (also write by default), so we just
+                    # drop the outer acc(...). Mark with sentinel None to
+                    # indicate "no fraction to propagate."
+                    m.enclosing_acc = (acc_start, acc_close, '')
 
     # 2) Look left for `unfolding` (possibly with acc-wrapped predicate).
     span_start = m.enclosing_acc[0] if m.enclosing_acc else m.pred_start
@@ -640,7 +646,8 @@ def build_edits(text: str, matches: list[Match]) -> list[Edit]:
             continue
         if m.enclosing_acc is not None:
             acc_start, acc_close, frac = m.enclosing_acc
-            new = render_body(m.args[0], m.args[1], m.args[2], frac)
+            # Empty string sentinel = no explicit fraction (acc(P) = acc(P, write)).
+            new = render_body(m.args[0], m.args[1], m.args[2], frac or None)
             edits.append(Edit(acc_start, acc_close + 1, new))
             continue
         new = render_body(m.args[0], m.args[1], m.args[2], None)

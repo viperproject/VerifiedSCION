@@ -292,9 +292,7 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	line |= uint32(m.SegLen[0]&0x3F) << 12
 	line |= uint32(m.SegLen[1]&0x3F) << 6
 	line |= uint32(m.SegLen[2] & 0x3F)
-	//@ unfold acc((0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])))
 	binary.BigEndian.PutUint32(b, line)
-	//@ fold acc((0 <= 0 && 0 <= len(b) && len(b) <= cap(b) && forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])))
 	return nil
 }
 
