@@ -480,6 +480,7 @@ jobs:
         with:
           packages: 'router/'
           timeout: 6h
+          chop: 10
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}
