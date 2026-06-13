@@ -43,6 +43,15 @@ type Messages []ipv4.Message
 // Conn describes the API for an underlay socket
 type Conn interface {
 	//@ pred Mem()
+
+	// Return whether all the underlying data that needs to be low for the
+	// computation of `WriteTo`, `Close` is low.
+	// TODO: Once Gobra issue #955 is resolved, mark as `hyper`.
+	//@ ghost
+	//@ requires Mem()
+	//@ decreases
+	//@ pure IsLow() bool
+
 	// (VerifiedSCION) Reads a message to b. Returns the number of read bytes.
 	//@ requires  acc(Mem(), _)
 	//@ preserves sl.Bytes(b, 0, len(b))
@@ -61,7 +70,7 @@ type Conn interface {
 	//@ ensures   err != nil ==> err.ErrorMem()
 	Write(b []byte) (n int, err error)
 	//@ requires  acc(u.Mem(), _)
-	//@ requires  acc(Mem(), _)
+	//@ requires  acc(Mem(), _) && IsLow()
 	//@ preserves acc(sl.Bytes(b, 0, len(b)), R10)
 	//@ ensures   err == nil ==> 0 <= n && n <= len(b)
 	//@ ensures   err != nil ==> err.ErrorMem()
@@ -91,7 +100,7 @@ type Conn interface {
 	//@ ensures   err != nil ==> err.ErrorMem()
 	//@ decreases
 	SetDeadline(time.Time) (err error)
-	//@ requires Mem()
+	//@ requires Mem() && IsLow()
 	//@ ensures  err != nil ==> err.ErrorMem()
 	//@ decreases
 	Close() (err error)
@@ -112,8 +121,9 @@ type Config struct {
 // The config can be used to customize socket behavior.
 // @ requires cfg.Mem()
 // @ requires listen != nil || remote != nil
-// @ requires listen != nil ==> acc(listen.Mem(), R10)
-// @ requires remote != nil ==> acc(remote.Mem(), R10)
+// @ requires listen != nil ==> acc(listen.Mem(), R10) && listen.IsLow()
+// @ requires remote != nil ==> acc(remote.Mem(), R10) && remote.IsLow()
+// @ requires low(listen != nil) && low(remote != nil) && cfg.IsLow()
 // @ ensures  e == nil ==> res.Mem()
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ decreases
@@ -127,9 +137,11 @@ func New(listen, remote *net.UDPAddr, cfg *Config) (res Conn, e error) {
 	}
 	// @ assert remote != nil ==> a == remote
 	// @ assert remote == nil ==> a == listen
+	// @ a.RevealIsLow()
 	// @ unfold acc(a.Mem(), R15)
 	// @ unfold acc(sl.Bytes(a.IP, 0, len(a.IP)), R15)
-	// @ assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==> acc(&a.IP[i], R15)
+	// @ assert forall i int :: { &a.IP[i] } 0 <= i && i < len(a.IP) ==>
+	// @ 	a.GetIPByte(i) == a.IP[i]
 	if a.IP.To4( /*@ false @*/ ) != nil {
 		return newConnUDPIPv4(listen, remote, cfg)
 	}
@@ -142,8 +154,9 @@ type connUDPIPv4 struct {
 }
 
 // @ requires cfg.Mem()
-// @ requires listen != nil ==> acc(listen.Mem(), _)
-// @ requires remote != nil ==> acc(remote.Mem(), _)
+// @ requires listen != nil ==> acc(listen.Mem(), _) && listen.IsLow()
+// @ requires remote != nil ==> acc(remote.Mem(), _) && remote.IsLow()
+// @ requires low(listen != nil) && low(remote != nil) && cfg.IsLow()
 // @ ensures  e == nil ==> res.Mem()
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ decreases
@@ -216,8 +229,9 @@ type connUDPIPv6 struct {
 }
 
 // @ requires cfg.Mem()
-// @ requires listen != nil ==> acc(listen.Mem(), _)
-// @ requires remote != nil ==> acc(remote.Mem(), _)
+// @ requires listen != nil ==> acc(listen.Mem(), _) && listen.IsLow()
+// @ requires remote != nil ==> acc(remote.Mem(), _) && remote.IsLow()
+// @ requires low(listen != nil) && low(remote != nil) && cfg.IsLow()
 // @ ensures  e == nil ==> res.Mem()
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ decreases
@@ -292,11 +306,13 @@ type connUDPBase struct {
 }
 
 // @ requires acc(cc)
-// @ requires laddr != nil ==> acc(laddr.Mem(), _)
-// @ requires raddr != nil ==> acc(raddr.Mem(), _)
+// @ requires laddr != nil ==> acc(laddr.Mem(), _) && laddr.IsLow()
+// @ requires raddr != nil ==> acc(raddr.Mem(), _) && raddr.IsLow()
 // @ requires cfg.Mem()
+// @ requires low(network) && low(laddr != nil) && low(raddr != nil) && cfg.IsLow()
 // @ ensures  errRet == nil ==> cc.Mem()
 // @ ensures  errRet != nil ==> errRet.ErrorMem()
+// @ ensures  low(errRet != nil)
 // @ decreases
 func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cfg *Config) (errRet error) {
 	var c *net.UDPConn
@@ -316,6 +332,7 @@ func (cc *connUDPBase) initConnUDP(network string, laddr, raddr *net.UDPAddr, cf
 		}
 	}
 
+	//@ cfg.RevealIsLow()
 	//@ unfold cfg.Mem()
 	// Set and confirm send buffer size
 	if cfg.SendBufferSize != 0 {
@@ -414,12 +431,13 @@ func (c *connUDPBase) Write(b []byte /*@, ghost underlyingConn *net.UDPConn @*/)
 }
 
 // @ requires  acc(dst.Mem(), _)
-// @ preserves acc(c.Mem(), _)
+// @ preserves acc(c.Mem(), _) && c.IsLow(true)
 // @ preserves unfolding acc(c.Mem(), _) in c.conn == underlyingConn
 // @ preserves acc(sl.Bytes(b, 0, len(b)), R15)
 // @ ensures   err == nil ==> 0 <= n && n <= len(b)
 // @ ensures   err != nil ==> err.ErrorMem()
 func (c *connUDPBase) WriteTo(b []byte, dst *net.UDPAddr /*@, ghost underlyingConn *net.UDPConn @*/) (n int, err error) {
+	//@ c.RevealIsLow(true, R56, true)
 	//@ unfold acc(c.Mem(), _)
 	if c.Remote != nil {
 		return c.conn.Write(b)
@@ -445,10 +463,11 @@ func (c *connUDPBase) RemoteAddr() (u *net.UDPAddr) {
 	return c.Remote
 }
 
-// @ requires c.Mem()
+// @ requires c.Mem() && c.IsLow(true)
 // @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
 func (c *connUDPBase) Close() (err error) {
+	//@ c.RevealIsLow(false, writePerm, true)
 	//@ unfold c.Mem()
 	if c.closed {
 		return nil
@@ -459,23 +478,31 @@ func (c *connUDPBase) Close() (err error) {
 
 // NewReadMessages allocates memory for reading IPv4 Linux network stack
 // messages.
+// NOTE: The verification of this function is somewhat unstable.
+// Gobra issue #957 tracks this instability.
 // @ requires 0 < n
+// @ requires low(n)
 // @ ensures  len(res) == n
 // @ ensures  forall i int :: { &res[i] } 0 <= i && i < n ==> res[i].Mem() && res[i].GetAddr() == nil
 // @ decreases
 func NewReadMessages(n int) (res Messages) {
 	m := make(Messages, n)
-	//@ invariant forall j int :: { &m[j] } (0 <= j && j < i0) ==> m[j].Mem() && m[j].GetAddr() == nil
-	//@ invariant forall j int :: { &m[j] } (i0 <= j && j < len(m)) ==> acc(&m[j]) && m[j].N == 0
-	//@ invariant forall j int :: { m[j].Addr } (i0 <= j && j < len(m)) ==> m[j].Addr == nil
-	//@ invariant forall j int :: { m[j].OOB } (i0 <= j && j < len(m)) ==> m[j].OOB == nil
+	//@ invariant forall j int :: { &m[j] } (0 <= j && j < i0) ==> m[j].Mem()
+	//@ invariant forall j int :: { m[j].GetAddr() } (0 <= j && j < i0) ==> m[j].GetAddr() == nil
+	//@ invariant forall j int :: { &m[j] } (i0 <= j && j < len(m)) ==> acc(&m[j])
+	//@ invariant forall j int :: { &m[j].N } (i0 <= j && j < len(m)) ==> m[j].N == 0
+	//@ invariant forall j int :: { &m[j].Addr } (i0 <= j && j < len(m)) ==> m[j].Addr == nil
+	//@ invariant forall j int :: { &m[j].OOB } (i0 <= j && j < len(m)) ==> m[j].OOB == nil
+	//@ invariant low(i0)
 	//@ decreases len(m) - i
 	for i := range m /*@ with i0 @*/ {
 		// Allocate a single-element, to avoid allocations when setting the buffer.
 		m[i].Buffers = make([][]byte, 1)
 		//@ fold sl.Bytes(m[i].Buffers[0], 0, len(m[i].Buffers[0]))
 		//@ fold sl.Bytes(m[i].OOB, 0, len(m[i].OOB))
+		//@ BeforeFold:
 		//@ fold m[i].Mem()
+		//@ assert forall j int :: { m[j].GetAddr() } 0 <= j && j < i0 ==> old[BeforeFold](m[j].GetAddr()) == nil
 	}
 	return m
 }

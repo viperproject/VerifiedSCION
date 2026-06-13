@@ -88,8 +88,10 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.InfoLen.
 // @ requires  len(b) >= InfoLen
-// @ preserves acc(inf, R10)
+// @ requires  acc(inf, R10)
+// @ requires  low(inf.ConsDir) && low(inf.Peer)
 // @ preserves slices.Bytes(b, 0, len(b))
+// @ ensures   acc(inf, R10)
 // @ ensures   err == nil
 // @ ensures   inf.ToAbsInfoField() ==
 // @ 	BytesToAbsInfoField(b, 0)

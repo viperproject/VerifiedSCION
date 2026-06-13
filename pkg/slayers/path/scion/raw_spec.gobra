@@ -37,6 +37,14 @@ pred (s *Raw) Mem(buf []byte) {
 	s.Raw === buf[:len(s.Raw)] &&
 	len(s.Raw) == s.Base.Len()
 }
+
+ghost
+requires s.Mem(ub)
+decreases
+pure func (s *Raw) IsLow(ub []byte) bool {
+	return true
+}
+
 /**** End of Predicates ****/
 
 (*Raw) implements path.Path
@@ -73,6 +81,7 @@ pure func (s *Raw) Type(ghost buf []byte) path.Type {
   */
 preserves acc(s.Mem(buf), R50)
 ensures   l == s.LenSpec(buf)
+ensures   low(l)
 decreases
 func (s *Raw) Len(ghost buf []byte) (l int) {
 	return unfolding acc(s.Mem(buf), _) in s.Base.Len()

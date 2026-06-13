@@ -148,6 +148,15 @@ type bfdSession interface {
 // with the same name in private/underlay/conn/Conn.
 type BatchConn interface {
 	// @ pred Mem()
+	
+	// Return whether all the underlying data that needs to be low for the
+	// computation of `WriteTo`, `Close` is low.
+	// We add this here to match the `Conn` interface in `private/underlay/conn`.
+	// TODO: Once Gobra issue #955 is resolved, mark as `hyper`.
+	// @ ghost
+	// @ requires Mem()
+	// @ decreases
+	// @ pure IsLow() bool
 
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
@@ -176,9 +185,19 @@ type BatchConn interface {
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
 	// @ 		MsgToAbsVal(&msgs[i], ingressID) == old(MultiReadBioIO_val(place, n)[i])
+	// Classification spec for SIF.
+	// The received messages are low, i.e., observable by the attacker.
+	// TODO: Once Gobra issue 846 is resolved, mark `msgs` as low instead of the
+	// abstraction, as `msgs` contains the data actually received and we don't
+	// necessarily have low(abstraction) ==> low(concrete).
+	// Expressing this without pure Boolean functions is rather tedious and not
+	// worth the time at the moment, IMO.
+	// @ ensures   err == nil ==>
+	// @ 	forall i int :: { MultiReadBioIO_val(place, n)[i] } 0 <= i && i < n ==>
+	// @		low(old(MultiReadBioIO_val(place, n)[i]))
 	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
 	// @ requires  acc(addr.Mem(), _)
-	// @ requires  acc(Mem(), _)
+	// @ requires  acc(Mem(), _) && IsLow()
 	// @ preserves acc(sl.Bytes(b, 0, len(b)), R10)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(b)
 	// @ ensures   err != nil ==> err.ErrorMem()
@@ -192,6 +211,11 @@ type BatchConn interface {
 	// preconditions for IO-spec:
 	// @ requires  MsgToAbsVal(&msgs[0], egressID) == ioAbsPkts
 	// @ requires  io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
+	// Classification spec for SIF.
+	// The messages to be sent need to be low, i.e., observable by the attacker.
+	// TODO: Once Gobra issue 846 is resolved, mark `msgs` as low instead of the
+	// abstraction. See comment on `ReadBatch` above for explanation.
+	// @ requires  low(ioAbsPkts)
 	// @ ensures   acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
 	// @ ensures   acc(sl.Bytes(msgs[0].GetFstBuffer(), 0, len(msgs[0].GetFstBuffer())), R50)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
@@ -201,7 +225,7 @@ type BatchConn interface {
 	// otherwise the router cannot continue after failing to send a packet.
 	// @ ensures   io.token(old(io.dp3s_iospec_bio3s_send_T(place, ioAbsPkts)))
 	WriteBatch(msgs underlayconn.Messages, flags int /*@, ghost egressID uint16, ghost place io.Place, ghost ioAbsPkts io.Val @*/) (n int, err error)
-	// @ requires Mem()
+	// @ requires Mem() && IsLow()
 	// @ ensures  err != nil ==> err.ErrorMem()
 	// @ decreases
 	Close() (err error)

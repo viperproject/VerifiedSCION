@@ -79,7 +79,7 @@ type HopField struct {
 // @ preserves acc(sl.Bytes(raw, 0, HopLen), R45)
 // @ ensures   h.Mem()
 // @ ensures   err == nil
-// @ ensures  BytesToIO_HF(raw, 0, 0, HopLen) ==
+// @ ensures   BytesToIO_HF(raw, 0, 0, HopLen) ==
 // @ 	unfolding acc(h.Mem(), R10) in h.Abs()
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
@@ -110,13 +110,15 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // SerializeTo writes the fields into the provided buffer. The buffer must be of length >=
 // path.HopLen.
 // @ requires  len(b) >= HopLen
-// @ preserves acc(h.Mem(), R10)
+// @ requires  acc(h.Mem(), R10) && h.IsLow()
 // @ preserves sl.Bytes(b, 0, HopLen)
+// @ ensures   acc(h.Mem(), R10)
 // @ ensures   err == nil
-// @ ensures  BytesToIO_HF(b, 0, 0, HopLen) ==
+// @ ensures   BytesToIO_HF(b, 0, 0, HopLen) ==
 // @ 	unfolding acc(h.Mem(), R10) in h.Abs()
 // @ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {
+	//@ h.RevealIsLow(R10)
 	if len(b) < HopLen {
 		return serrors.New("buffer for HopField too short", "expected", MacLen, "actual", len(b))
 	}

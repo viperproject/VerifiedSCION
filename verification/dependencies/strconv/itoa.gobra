@@ -16,8 +16,9 @@ const fastSmalls = true // enable fast path for small integers
 // for digit values >= 10.
 requires i >= 0
 requires 2 <= base && base <= 36
+ensures low(i) && low(base) ==> low(res)
 decreases
-func FormatUint(i uint64, base int) string
+func FormatUint(i uint64, base int) (res string)
 
 // FormatInt returns the string representation of i in the given base,
 // for 2 <= base <= 36. The result uses the lower-case letters 'a' to 'z'

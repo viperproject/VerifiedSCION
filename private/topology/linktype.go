@@ -23,6 +23,7 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ sl "github.com/scionproto/scion/verification/utils/slices"
+	//@ "github.com/scionproto/scion/verification/utils/sif"
 )
 
 // LinkType describes inter-AS links.
@@ -44,6 +45,7 @@ const (
 	Peer LinkType = 4
 )
 
+// @ requires low(l)
 // @ decreases
 func (l LinkType) String() string {
 	if l == Unset {
@@ -59,6 +61,7 @@ func (l LinkType) String() string {
 
 // LinkTypeFromString returns the numerical link type associated with a string description. If the
 // string is not recognized, an Unset link type is returned. The matching is case-insensitive.
+// @ requires low(s)
 // @ decreases
 func LinkTypeFromString(s string) (res LinkType) {
 	var l /*@@@*/ LinkType
@@ -70,6 +73,7 @@ func LinkTypeFromString(s string) (res LinkType) {
 	return l
 }
 
+// @ requires low(l)
 // @ ensures (l == Core || l == Parent || l == Child || l == Peer) == (err == nil)
 // @ ensures err == nil ==> sl.Bytes(res, 0, len(res))
 // @ ensures err != nil ==> err.ErrorMem()
@@ -97,13 +101,21 @@ func (l LinkType) MarshalText() (res []byte, err error) {
 	}
 }
 
+// @ requires  acc(sl.Bytes(data, 0, len(data)), R15)
+// @ requires  low(len(data)) && 
+// @ 	forall i int :: { sl.GetByte(data, 0, len(data), i) } 0 <= i && i < len(data) && low(i) ==>
+// @ 		low(sl.GetByte(data, 0, len(data), i))
 // @ preserves acc(l)
-// @ preserves acc(sl.Bytes(data, 0, len(data)), R15)
+// @ ensures   acc(sl.Bytes(data, 0, len(data)), R15)
 // @ ensures   err != nil ==> err.ErrorMem()
+// @ ensures   low(err != nil)
 // @ decreases
 func (l *LinkType) UnmarshalText(data []byte) (err error) {
-	//@ unfold acc(sl.Bytes(data, 0, len(data)), R15)
-	//@ ghost defer fold acc(sl.Bytes(data, 0, len(data)), R15)
+	//@ unfold acc(sl.Bytes(data, 0, len(data)), R16)
+	//@ ghost defer fold acc(sl.Bytes(data, 0, len(data)), R16)
+	//@ assert forall i int :: { &data[i] } 0 <= i && i < len(data) ==>
+	//@ 	sl.GetByte(data, 0, len(data), i) == data[i]
+	//@ sif.LowSliceImpliesLowString(data, R16)
 	switch strings.ToLower(string(data)) {
 	case "core":
 		*l = Core

@@ -47,6 +47,7 @@ const (
 	HostTypeSVC
 )
 
+// @ requires low(t)
 // @ requires isValidHostAddrType(t)
 // @ decreases
 func (t HostAddrType) String() string {
@@ -91,6 +92,14 @@ const (
 type HostAddr interface {
 	//@ pred Mem()
 
+	// Return whether all the underlying data that needs to be low for the
+	// computation of `Pack`, `IP`, `String` is low.
+	// TODO: Once Gobra issue #955 is resolved, mark as `hyper`.
+	//@ ghost
+	//@ requires Mem()
+	//@ decreases
+	//@ pure IsLow() bool
+
 	//@ preserves acc(Mem(), R13)
 	//@ decreases
 	Size() int
@@ -99,12 +108,12 @@ type HostAddr interface {
 	//@ decreases
 	Type() HostAddrType
 
-	//@ requires acc(Mem(), R13)
+	//@ requires acc(Mem(), R13) && IsLow()
 	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 	//@ decreases
 	Pack() (res []byte)
 
-	//@ requires acc(Mem(), R13)
+	//@ requires acc(Mem(), R13) && IsLow()
 	//@ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 	//@ decreases
 	IP() (res net.IP)
@@ -114,6 +123,7 @@ type HostAddr interface {
 	//@ decreases
 	Copy() (res HostAddr)
 
+	//@ requires  low(typeOf(o))
 	//@ preserves acc(Mem(), R13) && acc(o.Mem(), R13)
 	//@ decreases
 	Equal(o HostAddr) bool
@@ -123,7 +133,8 @@ type HostAddr interface {
 	// replaced by the String() method which is the one that should be implemented
 	//fmt.Stringer
 
-	//@ preserves acc(Mem(), R13)
+	//@ requires acc(Mem(), R13) && IsLow()
+	//@ ensures  acc(Mem(), R13)
 	//@ decreases
 	String() string
 }
@@ -163,14 +174,16 @@ func (h HostNone) Copy() (res HostAddr) {
 	return tmp
 }
 
-// @ ensures res == (typeOf(o) == type[HostNone])
+// The Viper encoding branches on `typeOf(o)`.
+// @ requires low(typeOf(o))
+// @ ensures  res == (typeOf(o) == type[HostNone])
 // @ decreases
 func (h HostNone) Equal(o HostAddr) (res bool) {
 	_, ok := o.(HostNone)
 	return ok
 }
 
-// @decreases
+// @ decreases
 func (h HostNone) String() string {
 	return "<None>"
 }
@@ -189,21 +202,28 @@ func (h HostIPv4) Type() HostAddrType {
 	return HostTypeIPv4
 }
 
-// @ requires acc(h.Mem(), R13)
+// @ requires acc(h.Mem(), R13) && h.IsLow()
 // @ ensures forall i int :: { &res[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13)
 // @ decreases
 func (h HostIPv4) Pack() (res []byte) {
 	return []byte(h.IP())
 }
 
-// @ requires acc(h.Mem(), R13)
+// @ requires acc(h.Mem(), R13) && h.IsLow()
 // @ ensures forall i int :: { &res[i] }{ &h[i] } 0 <= i && i < len(res) ==> acc(&res[i], R13) && &res[i] == &h[i]
 // @ ensures len(res) == HostLenIPv4
 // @ decreases
 func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
-	//@ unfold acc(h.Mem(), R13)
-	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13)
+	//@ h.RevealIsLow(R13)
+	//@ unfold acc(h.Mem(), R13/2)
+	//@ assert forall i int :: { h.GetByte(i) } 0 <= i && i < len(h) ==>
+	//@ 	sl.GetByte(h, 0, len(h), i) == h.GetByte(i)
+	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13/2)
+	//@ assert forall i int :: { &h[i] } 0 <= i && i < len(h) ==> 
+	//@ 	h.GetByte(i) == h[i]
+	//@ unfold acc(h.Mem(), R13/2)
+	//@ unfold acc(sl.Bytes(h, 0, len(h)), R13/2)
 	return net.IP(h).To4( /*@ false @*/ )
 }
 
@@ -221,6 +241,7 @@ func (h HostIPv4) Copy() (res HostAddr) {
 	return tmp
 }
 
+// @ requires  low(typeOf(o))
 // @ preserves acc(h.Mem(), R13)
 // @ preserves acc(o.Mem(), R13)
 // @ decreases
@@ -233,7 +254,8 @@ func (h HostIPv4) Equal(o HostAddr) bool {
 	return ok && net.IP(h).Equal(net.IP(ha))
 }
 
-// @ preserves acc(h.Mem(), R13)
+// @ requires acc(h.Mem(), R13) && h.IsLow()
+// @ ensures  acc(h.Mem(), R13)
 // @ decreases
 func (h HostIPv4) String() string {
 	//@ assert unfolding acc(h.Mem(), R13) in len(h) == HostLenIPv4
@@ -289,6 +311,7 @@ func (h HostIPv6) Copy() (res HostAddr) {
 	return tmp
 }
 
+// @ requires  low(typeOf(o))
 // @ preserves acc(h.Mem(), R13)
 // @ preserves acc(o.Mem(), R13)
 // @ decreases
@@ -318,6 +341,7 @@ type HostSVC uint16
 // SVC addresses, use BS_A, PS_A, CS_A, and SB_A; shorthand versions without
 // the _A suffix (e.g., PS) also return anycast SVC addresses. For multicast,
 // use BS_M, PS_M, CS_M, and SB_M.
+// @ requires low(str)
 // @ decreases
 func HostSVCFromString(str string) HostSVC {
 	var m HostSVC
@@ -373,13 +397,15 @@ func (h HostSVC) IP() (res net.IP) {
 	return nil
 }
 
+// @ ensures low(h) ==> low(res)
 // @ decreases
-func (h HostSVC) IsMulticast() bool {
+func (h HostSVC) IsMulticast() (res bool) {
 	return (h & SVCMcast) != 0
 }
 
+// @ ensures low(h) ==> low(res)
 // @ decreases
-func (h HostSVC) Base() HostSVC {
+func (h HostSVC) Base() (res HostSVC) {
 	return h & ^SVCMcast
 }
 
@@ -395,14 +421,18 @@ func (h HostSVC) Copy() (res HostAddr) {
 	return h
 }
 
+// @ requires low(typeOf(o))
 // @ decreases
 func (h HostSVC) Equal(o HostAddr) bool {
 	ha, ok := o.(HostSVC)
 	return ok && h == ha
 }
 
+// @ requires acc(h.Mem(), R13) && h.IsLow()
+// @ ensures  acc(h.Mem(), R13)
 // @ decreases
 func (h HostSVC) String() string {
+	//@ h.RevealIsLow(R13)
 	name := h.BaseString()
 	cast := 'A'
 	if h.IsMulticast() {
@@ -413,6 +443,7 @@ func (h HostSVC) String() string {
 
 // BaseString returns the upper case name of the service. For hosts or unrecognized services, it
 // returns UNKNOWN.
+// @ requires low(h)
 // @ decreases
 func (h HostSVC) BaseString() string {
 	switch h.Base() {
@@ -432,6 +463,7 @@ func (h HostSVC) Network() string {
 	return ""
 }
 
+// @ requires low(htype)
 // @ requires acc(b)
 // @ requires isValidHostAddrType(htype)
 // @ requires len(b) == sizeOfHostAddrType(htype)
@@ -475,7 +507,9 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 
 // @ requires acc(ip)
 // @ requires len(ip) == HostLenIPv4 || len(ip) == HostLenIPv6
-// @ ensures res.Mem()
+// @ requires low(len(ip)) && forall i int :: { &ip[i] } 0 <= i && i < len(ip) &&
+// @ 	low(i) ==> low(ip[i])
+// @ ensures  res.Mem()
 // @ decreases
 func HostFromIP(ip net.IP) (res HostAddr) {
 	if ip4 := ip.To4( /*@ false @*/ ); ip4 != nil {
@@ -490,7 +524,8 @@ func HostFromIP(ip net.IP) (res HostAddr) {
 	return tmp
 }
 
-// @ ensures res.Mem()
+// @ requires low(s)
+// @ ensures  res.Mem()
 // @ decreases
 func HostFromIPStr(s string) (res HostAddr) {
 	ip := net.ParseIP(s)
@@ -502,6 +537,7 @@ func HostFromIPStr(s string) (res HostAddr) {
 	return HostFromIP(ip)
 }
 
+// @ requires low(htype)
 // @ requires isValidHostAddrType(htype)
 // @ decreases
 func HostLen(htype HostAddrType) (uint8, error) {
@@ -521,6 +557,7 @@ func HostLen(htype HostAddrType) (uint8, error) {
 	return length, nil
 }
 
+// @ requires low(t)
 // @ decreases
 func HostTypeCheck(t HostAddrType) bool {
 	switch t {

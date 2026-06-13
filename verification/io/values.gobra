@@ -52,4 +52,23 @@ ghost type Val adt {
 		ValInternal2_2 Pkt
 		ValInternal2_3 Ifs
 	}
+
+	// Output (to env.) for declassification action (SIF).
+	// The actual value to declassify is the hop authenticator (MAC tag) `sigma`;
+	// the other values act as the "tag" p to make the allowed declassifications
+	// deterministic in the low data (i.e., to make the IOD spec well-defined;
+	// see "Verifiable Security Policies for Distributed Systems" by Wolf et al.).
+	// `beta` is a segment identifier, `ts` a timestamp, and `inif` and `egif`
+	// the ingress and egress interfaces (resp.).
+	// See `hf_valid`, for why we need these values in particular.
+	// TODO: We might want to use the concrete instead of the abstract values for p.
+	IO_decl_val {
+		IO_decl_val_beta set[MsgTerm]  // uinfo
+		IO_decl_val_ts uint
+		IO_decl_val_inif option[Ifs]
+		IO_decl_val_egif option[Ifs]
+		// TODO: Relate to `path.MacLen`
+		IO_decl_val_sigma [MacLen]byte
+	}
+
 }

@@ -55,6 +55,7 @@ func RegisterPath() {
 // bytes on the wire and is used for AS internal communication.
 type Path struct{}
 
+// @ requires low(len(r))
 // @ ensures  len(r) == 0 ==> (e == nil && o.Mem(r))
 // @ ensures  len(r) != 0 ==> (e != nil && e.ErrorMem() && o.NonInitMem())
 // @ decreases

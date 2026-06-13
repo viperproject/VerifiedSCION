@@ -33,7 +33,8 @@ pred (dp DataPlaneSpec) dp3s_iospec_ordered(s Dp3sStateLocal, t Place) {
 	dp.dp3s_iospec_bio3s_send(s, t) &&
 	dp.dp3s_iospec_bio3s_recv(s, t) &&
 	dp.dp3s_iospec_skip(s, t) &&
-	dp.dp3s_iospec_stop(s, t)
+	dp.dp3s_iospec_stop(s, t) &&
+	dp.dp4s_iospec_bio4s_decl(s, t)  // SIF
 }
 
 type Place int
@@ -299,6 +300,49 @@ pred (dp DataPlaneSpec) dp3s_iospec_stop(s Dp3sStateLocal, t Place) {
 	true
 }
 
+// Declassification specification for SIF.
+// Members whose id start with "dp4s" correspond to additions to the IO spec
+// related to SIF.
+pred CBio_IN_bio4s_decl(t Place, v Val)
+
+ghost
+decreases
+pure func dp4s_iospec_bio4s_decl_T(t Place, v Val) Place
+
+ghost
+requires v.isIO_decl_val
+decreases
+pure func (dp DataPlaneSpec) dp4s_iospec_bio4s_decl_guard(s Dp3sStateLocal, t Place, v Val) bool {
+	// Cf. `router.gobra`, in particular `hf_valid`.
+	// NOTE: Formatting this differently leads to a parsing error.
+	return AbsMac(v.IO_decl_val_sigma) == (nextMsgtermSpec(
+		dp.Asid(),
+		v.IO_decl_val_inif,
+		v.IO_decl_val_egif,
+		v.IO_decl_val_ts,
+		v.IO_decl_val_beta))
+}
+
+pred (dp DataPlaneSpec) dp4s_iospec_bio4s_decl(s Dp3sStateLocal, t Place) {
+	// NOTE: Formatting this differently leads to a parsing error.
+	forall v Val :: { TriggerBodyIoDecl(v) } (
+		match v {
+			case IO_decl_val{?beta, ?ts, ?inif, ?egif, ?sigma}:
+				let _ignored := TriggerBodyIoDecl(v) in
+				(dp.dp4s_iospec_bio4s_decl_guard(s, t, v) ==>
+					(CBio_IN_bio4s_decl(t, v) &&
+					dp.dp3s_iospec_ordered(
+						s,
+						dp4s_iospec_bio4s_decl_T(t, v))))
+			default:
+				true
+		})
+}
+
+ghost
+decreases
+pure func TriggerBodyIoDecl(v Val) BogusTrigger { return BogusTrigger{} }
+
 /** BIO operations **/
 ghost
 decreases
@@ -318,4 +362,15 @@ requires token(t) && CBio_IN_bio3s_exit(t, v)
 ensures  token(old(dp3s_iospec_bio3s_exit_T(t, v)))
 func Exit(ghost t Place, ghost v Val)
 
-/** End of helper functions to perfrom BIO operations **/
+ghost
+decreases
+requires token(t) && CBio_IN_bio4s_decl(t, v)
+requires v.isIO_decl_val &&
+ 	low(v.IO_decl_val_inif) && low(v.IO_decl_val_egif) &&
+ 	low(v.IO_decl_val_ts) && low(v.IO_decl_val_beta)
+ensures  token(dp4s_iospec_bio4s_decl_T(t, v))
+ensures  forall i int :: { v.IO_decl_val_sigma[i] } 0 <= i && i < len(v.IO_decl_val_sigma) ==> 
+	low(v.IO_decl_val_sigma[i])
+func Decl(ghost t Place, ghost v Val)
+
+/** End of helper functions to perform BIO operations **/

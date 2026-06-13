@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	//@ "github.com/scionproto/scion/verification/utils/sif"
 )
 
 const (
@@ -48,8 +49,10 @@ type ISD uint16
 
 // ParseISD parses an ISD from a decimal string. Note that ISD 0 is parsed
 // without any errors.
+// @ requires low(s)
+// @ ensures  low(retISD) && low(retErr != nil)
 // @ decreases
-func ParseISD(s string) (ISD, error) {
+func ParseISD(s string) (retISD ISD, retErr error) {
 	isd, err := strconv.ParseUint(s, 10, ISDBits)
 	if err != nil {
 		return 0, serrors.WrapStr("parsing ISD", err)
@@ -71,13 +74,17 @@ type AS uint64
 
 // ParseAS parses an AS from a decimal (in the case of the 32bit BGP AS number
 // space) or ipv6-style hex (in the case of SCION-only AS numbers) string.
-// @ ensures retErr == nil ==> retAs.inRange()
+// @ requires low(_as)
+// @ ensures  retErr == nil ==> retAs.inRange()
+// @ ensures  low(retAs) && low(retErr != nil)
 // @ decreases
 func ParseAS(_as string) (retAs AS, retErr error) {
 	return parseAS(_as, ":")
 }
 
-// @ ensures retErr == nil ==> retAs.inRange()
+// @ requires low(_as) && low(sep)
+// @ ensures  retErr == nil ==> retAs.inRange()
+// @ ensures  low(retAs) && low(retErr != nil)
 // @ decreases
 func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	parts := strings.Split(_as, sep)
@@ -92,6 +99,9 @@ func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	var parsed AS
 	//@ invariant 0 <= i && i <= asParts
 	//@ invariant acc(parts)
+	//@ invariant forall i int :: { parts[i] } 0 <= i && i < len(parts) && 
+	//@ 	low(i) ==> low(parts[i])
+	//@ invariant low(i) && low(_as) && low(parsed)
 	//@ decreases asParts - i
 	for i := 0; i < asParts; i++ {
 		parsed <<= asPartBits
@@ -110,7 +120,9 @@ func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	return parsed, nil
 }
 
-// @ ensures retErr == nil ==> retAs.inRange()
+// @ requires low(s)
+// @ ensures  retErr == nil ==> retAs.inRange()
+// @ ensures  low(retAs) && low(retErr != nil)
 // @ decreases
 func asParseBGP(s string) (retAs AS, retErr error) {
 	_as, err := strconv.ParseUint(s, 10, BGPASBits)
@@ -132,6 +144,7 @@ func asParseBGP(s string) (retAs AS, retErr error) {
 }
 
 // @ requires _as.inRange()
+// @ requires low(_as)
 // @ decreases
 func (_as AS) String() string {
 	return fmtAS(_as, ":")
@@ -143,6 +156,7 @@ func (_as AS) inRange() bool {
 	return _as <= MaxAS
 }
 
+// @ requires low(_as)
 // @ decreases
 func (_as AS) MarshalText() ([]byte, error) {
 	if !_as.inRange() {
@@ -152,10 +166,14 @@ func (_as AS) MarshalText() ([]byte, error) {
 	return []byte(_as.String()), nil
 }
 
+// @ requires  forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
+// @ requires  low(len(text)) && forall i int :: { text[i] } 0 <= i && i < len(text) &&
+// @ 	low(i) ==> low(text[i])
 // @ preserves acc(_as)
-// @ preserves forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
+// @ ensures   forall i int :: { &text[i] } 0 <= i && i < len(text) ==> acc(&text[i])
 // @ decreases
 func (_as *AS) UnmarshalText(text []byte) error {
+	//@ sif.LowSliceImpliesLowString(text, writePerm)
 	parsed, err := ParseAS(string(text))
 	if err != nil {
 		return err
@@ -176,8 +194,9 @@ type IA uint64
 // is encountered. Callers must ensure that the values passed to this function
 // are valid.
 // @ requires _as.inRange()
+// @ ensures  low(isd) && low(_as) ==> low(res)
 // @ decreases
-func MustIAFrom(isd ISD, _as AS) IA {
+func MustIAFrom(isd ISD, _as AS) (res IA) {
 	ia, err := IAFrom(isd, _as)
 	if err != nil {
 		panic(fmt.Sprintf("parsing ISD-AS: %s", err))
@@ -187,7 +206,8 @@ func MustIAFrom(isd ISD, _as AS) IA {
 
 // IAFrom creates an IA from the ISD and AS number.
 // @ requires _as.inRange()
-// @ ensures err == nil
+// @ ensures  err == nil
+// @ ensures  low(isd) && low(_as) ==> low(ia)
 // @ decreases
 func IAFrom(isd ISD, _as AS) (ia IA, err error) {
 	if !_as.inRange() {
@@ -197,8 +217,10 @@ func IAFrom(isd ISD, _as AS) (ia IA, err error) {
 }
 
 // ParseIA parses an IA from a string of the format 'isd-as'.
+// @ requires low(ia)
+// @ ensures  low(retErr != nil)
 // @ decreases
-func ParseIA(ia string) (IA, error) {
+func ParseIA(ia string) (retIA IA, retErr error) {
 	parts := strings.Split(ia, "-")
 	if len(parts) != 2 {
 		return 0, serrors.New("invalid ISD-AS", "value", ia)
@@ -214,13 +236,15 @@ func ParseIA(ia string) (IA, error) {
 	return MustIAFrom(isd, _as), nil
 }
 
+// @ ensures low(ia) ==> low(res)
 // @ decreases
-func (ia IA) ISD() ISD {
+func (ia IA) ISD() (res ISD) {
 	return ISD(ia >> ASBits)
 }
 
+// @ ensures low(ia) ==> low(res)
 // @ decreases
-func (ia IA) AS() AS {
+func (ia IA) AS() (res AS) {
 	return AS(ia) & MaxAS
 }
 
@@ -229,10 +253,14 @@ func (ia IA) MarshalText() ([]byte, error) {
 	return []byte(ia.String()), nil
 }
 
+// @ requires  forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
+// @ requires  low(len(b)) && forall i int :: { b[i] } 0 <= i && i < len(b) &&
+// @ 	low(i) ==> low(b[i])
 // @ preserves acc(ia)
-// @ preserves forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
+// @ ensures   forall i int :: { &b[i] } 0 <= i && i < len(b) ==> acc(&b[i])
 // @ decreases
 func (ia *IA) UnmarshalText(b []byte) error {
+	//@ sif.LowSliceImpliesLowString(b, writePerm)
 	parsed, err := ParseIA(string(b))
 	if err != nil {
 		return err
@@ -253,6 +281,8 @@ func (ia IA) Equal(other IA) bool {
 }
 
 // IsWildcard returns whether the ia has a wildcard part (isd or as).
+// Due to short-circuit evaluation, this branches on `ia.ISD() == 0`.
+// @ requires low(ia)
 // @ decreases
 func (ia IA) IsWildcard() bool {
 	return ia.ISD() == 0 || ia.AS() == 0
@@ -265,6 +295,7 @@ func (ia IA) String() string {
 }
 
 // Set implements flag.Value interface
+// @ requires  low(s)
 // @ preserves acc(ia)
 // @ decreases
 func (ia *IA) Set(s string) error {
