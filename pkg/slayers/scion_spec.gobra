@@ -420,9 +420,9 @@ pure func (s *SCION) EqAbsHeader(ub []byte) bool {
 		typeOf(s.Path) == (*scion.Raw) &&
 		unfolding s.Path.Mem(ub[low_:high]) in
 		unfolding sl.Bytes(ub, 0, len(ub))  in
-		let _ := Asserting(forall k int :: {&ub[low_:high][k]} 0 <= k && k < high ==>
+		asserting (forall k int :: {&ub[low_:high][k]} 0 <= k && k < high ==>
 			&ub[low_:high][k] == &ub[low_ + k]) in
-		let _ := Asserting(forall k int :: {&ub[low_:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+		asserting (forall k int :: {&ub[low_:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
 			&ub[low_:high][:scion.MetaLen][k] == &ub[low_:high][k]) in
 		let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(ub[low_:high][:scion.MetaLen])) in
 		let seg1 := int(metaHdr.SegLen[0]) in
@@ -462,7 +462,7 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 		let length := GetLength(raw) in
 		length <= len(raw) &&
 		unfolding sl.Bytes(raw, 0, len(raw))       in
-		let _ := Asserting(forall k int :: {&rawHdr[k]} 0 <= k && k < scion.MetaLen ==> &rawHdr[k] == &raw[start + k]) in
+		asserting (forall k int :: {&rawHdr[k]} 0 <= k && k < scion.MetaLen ==> &rawHdr[k] == &raw[start + k]) in
 		let hdr := binary.BigEndian.Uint32(rawHdr) in
 		let metaHdr := scion.DecodedFrom(hdr)      in
 		let seg1 := int(metaHdr.SegLen[0])         in
