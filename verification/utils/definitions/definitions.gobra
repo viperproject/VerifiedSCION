@@ -96,13 +96,6 @@ func TODO()
 // third party libs
 type PrivateField *int
 
-ghost
-requires b
-decreases
-pure func Asserting(ghost b bool) bool {
-	return true
-}
-
 type Lemma struct{}
 
 // Assumption for IO-Specification
