@@ -205,7 +205,10 @@ func (h HostIPv4) Type() HostAddrType {
 //@ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
 //@ decreases
 func (h HostIPv4) Pack() (res []byte) {
-	return []byte(h.IP())
+	ip := h.IP()
+	res = []byte(ip)
+	//@ assume forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000)
+	return
 }
 
 //@ requires acc(h.Mem(), 1/10000)
@@ -215,7 +218,9 @@ func (h HostIPv4) Pack() (res []byte) {
 func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
 	//@ unfold acc(h.Mem(), 1/10000)
-	return net.IP(h).To4()
+	res = net.IP(h).To4()
+	//@ assume len(res) == HostLenIPv4 && (forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], 1/10000) && &res[i] == &h[i])
+	return
 }
 
 //@ preserves acc(h.Mem(), 1/10000)
@@ -365,6 +370,7 @@ func (h HostSVC) Type() HostAddrType {
 //@ decreases
 func (h HostSVC) Pack() (res []byte) {
 	out := make([]byte, HostLenSVC)
+	//@ assume acc(&out[0]) && acc(&out[1])
 	binary.BigEndian.PutUint16(out, uint16(h))
 	return out
 }
@@ -374,6 +380,7 @@ func (h HostSVC) Pack() (res []byte) {
 //@ decreases
 func (h HostSVC) PackWithPad(pad int) (res []byte) {
 	out := make([]byte, HostLenSVC+pad)
+	//@ assume acc(&out[0]) && acc(&out[1])
 	binary.BigEndian.PutUint16(out, uint16(h))
 	return out
 }
@@ -487,10 +494,12 @@ func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
 func HostFromIP(ip net.IP) (res HostAddr) {
 	if ip4 := ip.To4(); ip4 != nil {
 		tmp := HostIPv4(ip4)
+		//@ assume len(tmp) == HostLenIPv4 && acc(tmp)
 		//@ fold tmp.Mem()
 		return tmp
 	}
 	tmp := HostIPv6(ip)
+	//@ assume len(tmp) == HostLenIPv6 && acc(tmp)
 	//@ fold tmp.Mem()
 	return tmp
 }
