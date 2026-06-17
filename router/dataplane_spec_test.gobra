@@ -85,12 +85,14 @@ requires macFactory != nil                        &&
 	len(*key) > 0                                 &&
 	acc(sl.Bytes(*key, 0, len(*key)), _)          &&
 	scrypto.ValidKeyForHash(*key)                 &&
-	macFactory implements MacFactorySpec{key}
+	acc(asid) && asid.V == 1000                   &&
+	macFactory implements MacFactorySpec{key, asid}
 requires metrics != nil && metrics.Mem()
 requires ctx != nil && ctx.Mem()
 func testRun(
-	macFactory func() hash.Hash,
+	macFactory func() (hash.Hash, ghost hash.ScionHashSpec),
 	key *[]byte,
+	ghost asid gpointer[io.AS],
 	metrics *Metrics,
 	ctx context.Context,
 	ghost place io.Place,
@@ -129,6 +131,7 @@ func testRun(
 	d.svc = newServices()
 	d.macFactory = macFactory
 	d.key = key
+	d.asid = asid
 	d.localIA = 1000
 	d.Metrics = metrics
 	d.bfdSessions = make(map[uint16]bfdSession)
