@@ -86,8 +86,10 @@ pred accAddr(addrs map[uint16]*net.UDPAddr) {
 
 pred accBatchConn(batchConns map[uint16]BatchConn) {
 	acc(batchConns) &&
-	forall b BatchConn :: { b elem range(batchConns) }{ b.Mem() } b elem range(batchConns) ==>
-		b!= nil && acc(b.Mem(), _)
+	(forall b BatchConn :: { b elem range(batchConns) }{ b.Mem() } b elem range(batchConns) ==>
+		b != nil && acc(b.Mem(), _)) &&
+	(forall i uint16 :: { i elem domain(batchConns) }{ batchConns[i] } i elem domain(batchConns) ==>
+		BatchConn(batchConns[i]) != nil && BatchConn(batchConns[i]).Id() == i)
 }
 
 pred accBfdSession(bfdSessions map[uint16]bfdSession) {
@@ -671,6 +673,7 @@ pred (d *DataPlane) validResult(result processResult, addrAliasesPkt bool) {
 	// EgressID
 	(result.EgressID != 0 ==> result.EgressID elem d.getDomForwardingMetrics()) &&
 	// OutConn
+	// TODO: strengthen here for new cond
 	(result.OutConn != nil ==> acc(result.OutConn.Mem(), _)) &&
 	// OutAddr
 	(addrAliasesPkt  && result.OutAddr != nil ==> acc(result.OutAddr.Mem(), R15)) &&
