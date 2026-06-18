@@ -183,7 +183,9 @@ func (h HostIPv4) Type() HostAddrType {
 // @ ensures forall i int :: 0 <= i && i < len(res) ==> acc(&res[i], definitions.ReadL13)
 // @ decreases
 func (h HostIPv4) Pack() (res []byte) {
-	return []byte(h.IP())
+	ip := h.IP()
+	res = []byte(ip)
+	return
 }
 
 // @ requires acc(h.Mem(), definitions.ReadL13)
@@ -194,7 +196,8 @@ func (h HostIPv4) IP() (res net.IP) {
 	// XXX(kormat): ensure the reply is the 4-byte representation.
 	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
-	return net.IP(h).To4()
+	res = net.IP(h).To4()
+	return
 }
 
 // @ preserves acc(h.Mem(), definitions.ReadL13)
@@ -215,12 +218,19 @@ func (h HostIPv4) Copy() (res HostAddr) {
 // @ preserves acc(o.Mem(), definitions.ReadL13)
 // @ decreases
 func (h HostIPv4) Equal(o HostAddr) bool {
-	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv4)
-	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	if !ok {
+		return false
+	}
+	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
-	return ok && net.IP(h).Equal(net.IP(ha))
+	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ ghost defer fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ unfold acc(o.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	//@ unfold acc(slices.AbsSlice_Bytes(ha, 0, len(ha)), definitions.ReadL13)
+	//@ ghost defer fold acc(slices.AbsSlice_Bytes(ha, 0, len(ha)), definitions.ReadL13)
+	return net.IP(h).Equal(net.IP(ha))
 }
 
 // @ preserves acc(h.Mem(), definitions.ReadL13)
@@ -283,12 +293,19 @@ func (h HostIPv6) Copy() (res HostAddr) {
 // @ preserves acc(o.Mem(), definitions.ReadL13)
 // @ decreases
 func (h HostIPv6) Equal(o HostAddr) bool {
-	//@ unfold acc(h.Mem(), definitions.ReadL13)
-	//@ unfold acc(o.Mem(), definitions.ReadL13)
 	ha, ok := o.(HostIPv6)
-	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	if !ok {
+		return false
+	}
+	//@ unfold acc(h.Mem(), definitions.ReadL13)
 	//@ ghost defer fold acc(h.Mem(), definitions.ReadL13)
-	return ok && net.IP(h).Equal(net.IP(ha))
+	//@ unfold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ ghost defer fold acc(slices.AbsSlice_Bytes(h, 0, len(h)), definitions.ReadL13)
+	//@ unfold acc(o.Mem(), definitions.ReadL13)
+	//@ ghost defer fold acc(o.Mem(), definitions.ReadL13)
+	//@ unfold acc(slices.AbsSlice_Bytes(ha, 0, len(ha)), definitions.ReadL13)
+	//@ ghost defer fold acc(slices.AbsSlice_Bytes(ha, 0, len(ha)), definitions.ReadL13)
+	return net.IP(h).Equal(net.IP(ha))
 }
 
 // @ preserves acc(h.Mem(), definitions.ReadL13)
@@ -344,7 +361,8 @@ func (h HostSVC) Type() HostAddrType {
 // @ decreases
 func (h HostSVC) Pack() (res []byte) {
 	out := make([]byte, HostLenSVC)
-	binary.BigEndian.PutUint16(out, uint16(h))
+	out[0] = byte(uint16(h) >> 8)
+	out[1] = byte(uint16(h))
 	return out
 }
 
@@ -353,7 +371,8 @@ func (h HostSVC) Pack() (res []byte) {
 // @ decreases
 func (h HostSVC) PackWithPad(pad int) (res []byte) {
 	out := make([]byte, HostLenSVC+pad)
-	binary.BigEndian.PutUint16(out, uint16(h))
+	out[0] = byte(uint16(h) >> 8)
+	out[1] = byte(uint16(h))
 	return out
 }
 
