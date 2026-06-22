@@ -31,12 +31,11 @@ import (
 )
 
 ghost
-opaque
 requires sl.Bytes(raw, 0, len(raw))
 requires slayers.ValidPktMetaHdr(raw)
 decreases
 pure func absPkt(raw []byte) (res io.Pkt) {
-	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
+	return let _ := slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetAddressOffset(raw) in
 		let headerOffsetWithMetaLen := headerOffset + scion.MetaLen in
 		let hdr := (unfolding sl.Bytes(raw, 0, len(raw)) in
@@ -73,12 +72,11 @@ pure func absValUnsupported(raw []byte, ingressID uint16) (val io.Val) {
 }
 
 ghost
-opaque
 requires sl.Bytes(raw, 0, len(raw))
 ensures val.isValPkt || val.isValUnsupported
 decreases
 pure func absIO_val(raw []byte, ingressID uint16) (val io.Val) {
-	return (reveal slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)) ?
+	return (slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)) ?
 		io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw)}) :
 		absValUnsupported(raw, ingressID)
 }
@@ -90,7 +88,7 @@ ensures  acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures  absIO_val(raw, ingressID).isValUnsupported
 decreases
 func AbsUnsupportedPktIsUnsupportedVal(raw []byte, ingressID uint16) {
-	reveal absIO_val(raw, ingressID)
+	absIO_val(raw, ingressID)
 }
 
 ghost
@@ -140,7 +138,6 @@ pure func (d *DataPlane) dpSpecWellConfiguredLinkTypes(dp io.DataPlaneSpec) bool
 }
 
 ghost
-opaque
 requires d.Mem()
 decreases
 pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
@@ -159,8 +156,8 @@ ensures  d.linkTypes != nil ==> acc(d.linkTypes, _) && !(0 elem domain(d.linkTyp
 ensures  d.dpSpecWellConfiguredLinkTypes(dp)
 decreases
 func (d *DataPlane) LinkTypesLemma(dp io.DataPlaneSpec) {
-	reveal d.WellConfigured()
-	reveal d.DpAgreesWithSpec(dp)
+	d.WellConfigured()
+	d.DpAgreesWithSpec(dp)
 	assert !(0 elem d.getDomLinkTypes())
 	unfold acc(d.Mem(), _)
 	assert !(0 elem domain(d.linkTypes))
@@ -175,8 +172,8 @@ ensures  egressID != 0
 ensures  io.Ifs{egressID} elem domain(dp.GetNeighborIAs())
 decreases
 func (d *DataPlane) EgressIDNotZeroLemma(egressID uint16, dp io.DataPlaneSpec) {
-	reveal d.WellConfigured()
-	reveal d.DpAgreesWithSpec(dp)
+	d.WellConfigured()
+	d.DpAgreesWithSpec(dp)
 }
 
 ghost
@@ -190,11 +187,11 @@ ensures  d.getDomExternal() == domain(d.external)
 decreases
 func (d *DataPlane) getDomExternalLemma() {
 	if (d.external != nil) {
-		assert reveal d.getDomExternal() == unfolding acc(d.Mem(), _) in
+		assert d.getDomExternal() == unfolding acc(d.Mem(), _) in
 			(unfolding acc(accBatchConn(d.external), _) in
 					domain(d.external))
 	} else {
-		assert reveal d.getDomExternal() ==
+		assert d.getDomExternal() ==
 			unfolding acc(d.Mem(), _) in set[uint16]{}
 	}
 }

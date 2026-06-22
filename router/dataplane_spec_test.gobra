@@ -201,7 +201,7 @@ func testRun(
 			(next_pair elem domain(dp.links)) &&
 			dp.Lookup(next_pair) == pair
 	assert domain(dp.linkTypes) == domain(dp.neighborIAs)
-	assert reveal dp.Valid()
+	assert dp.Valid()
 	)
 
 	assert dp.Asid().V == 1000
@@ -211,13 +211,13 @@ func testRun(
 	assert d.dpSpecWellConfiguredLinkTypes(dp)
 
 	fold d.Mem()
-	assert d.getDomNeighborIAs() == reveal d.getDomExternal()
+	assert d.getDomNeighborIAs() == d.getDomExternal()
 	assert d.getDomNeighborIAs() == d.getDomLinkTypes()
 	assert !(0 elem d.getDomNeighborIAs())
-	assert reveal d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
-	assert reveal d.DpAgreesWithSpec(dp)
+	assert d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
+	assert d.DpAgreesWithSpec(dp)
 
-	assert reveal d.PreWellConfigured()
+	assert d.PreWellConfigured()
 	fold MutexInvariant!< d !>()
 	// end of foldDataPlaneMem
 	assert !d.IsRunning()

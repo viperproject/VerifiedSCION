@@ -32,7 +32,6 @@ ghost type AsIfsPair ghost struct {
 }
 
 ghost
-opaque
 decreases
 pure func (dp DataPlaneSpec) Valid() bool {
 	return (forall ifs Ifs :: {ifs elem domain(dp.neighborIAs)} ifs elem domain(dp.neighborIAs)  ==>

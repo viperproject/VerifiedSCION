@@ -50,13 +50,13 @@ func absIO_valWidenLemma(raw []byte, ingressID uint16, length int) {
 
 		ret1 = io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw)})
 		ret2 = io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw[:length])})
-		assert ret1 == reveal absIO_val(raw, ingressID)
-		assert ret2 == reveal absIO_val(raw[:length], ingressID)
+		assert ret1 == absIO_val(raw, ingressID)
+		assert ret2 == absIO_val(raw[:length], ingressID)
 		assert ret1 == ret2
 		assert absIO_val(raw[:length], ingressID).isValPkt ==>
 			absIO_val(raw[:length], ingressID) == absIO_val(raw, ingressID)
 	} else {
-		assert !(reveal absIO_val(raw[:length], ingressID).isValPkt)
+		assert !(absIO_val(raw[:length], ingressID).isValPkt)
 	}
 }
 
@@ -72,9 +72,9 @@ decreases
 func ValidPktMetaHdrWidenLemma(raw []byte, length int) {
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.Bytes(raw[:length], 0, len(raw[:length])), R56)
-	reveal slayers.ValidPktMetaHdr(raw[:length])
-	ret1 := reveal slayers.ValidPktMetaHdr(raw)
-	ret2 := reveal slayers.ValidPktMetaHdr(raw[:length])
+	slayers.ValidPktMetaHdr(raw[:length])
+	ret1 := slayers.ValidPktMetaHdr(raw)
+	ret2 := slayers.ValidPktMetaHdr(raw[:length])
 	assert ret1 == ret2
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	fold acc(sl.Bytes(raw[:length], 0, len(raw[:length])), R56)
@@ -92,9 +92,9 @@ decreases
 func IsSupportedPktWidenLemma(raw []byte, length int) {
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.Bytes(raw[:length], 0, len(raw[:length])), R56)
-	reveal slayers.IsSupportedPkt(raw[:length])
-	ret1 := reveal slayers.IsSupportedPkt(raw)
-	ret2 := reveal slayers.IsSupportedPkt(raw[:length])
+	slayers.IsSupportedPkt(raw[:length])
+	ret1 := slayers.IsSupportedPkt(raw)
+	ret2 := slayers.IsSupportedPkt(raw[:length])
 	assert ret1 == ret2
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	fold acc(sl.Bytes(raw[:length], 0, len(raw[:length])), R56)
@@ -114,8 +114,8 @@ ensures  absPkt(raw) == absPkt(raw[:length])
 decreases
 func absPktWidenLemma(raw []byte, length int) {
 
-	reveal slayers.ValidPktMetaHdr(raw)
-	reveal slayers.ValidPktMetaHdr(raw[:length])
+	slayers.ValidPktMetaHdr(raw)
+	slayers.ValidPktMetaHdr(raw[:length])
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R51)
 	unfold acc(sl.Bytes(raw[:length], 0, len(raw[:length])), R51)
 	headerOffset1 := slayers.GetAddressOffset(raw)
@@ -147,5 +147,5 @@ func absPktWidenLemma(raw []byte, length int) {
 	scion.WidenMidSeg(raw, currInfIdx + 2, segs, headerOffsetWithMetaLen, 0, length)
 	scion.WidenRightSeg(raw, currInfIdx - 1, segs, headerOffsetWithMetaLen, 0, length)
 
-	assert reveal absPkt(raw) == reveal absPkt(raw[:length])
+	assert absPkt(raw) == absPkt(raw[:length])
 }

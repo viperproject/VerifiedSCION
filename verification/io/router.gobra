@@ -48,13 +48,12 @@ pure func hf_valid_impl(asid AS, ts uint, uinfo set[MsgTerm], hf HF) bool {
 }
 
 ghost
-opaque
 ensures result.extract_asid() == asid
 decreases
 pure func nextMsgtermSpec(asid AS, inif option[Ifs], egif option[Ifs], ts uint, uinfo set[MsgTerm]) (result MsgTerm) {
 	return let l := plaintextToMac(inif, egif, ts, uinfo) in
 		let res := mac(macKey(asidToKey(asid)), l) in
-		let _ := reveal res.extract_asid() in
+		let _ := res.extract_asid() in
 		res
 }
 
@@ -149,7 +148,7 @@ requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward_ext(m Pkt, newpkt Pkt, nextif Ifs) bool {
-	return let _ := reveal dp.Valid() in
+	return let _ := dp.Valid() in
 		let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in
@@ -165,7 +164,7 @@ requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_forward_ext_xover(m Pkt, newpkt Pkt, nextif Ifs) bool {
-	return let _ := reveal dp.Valid() in
+	return let _ := dp.Valid() in
 		let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in

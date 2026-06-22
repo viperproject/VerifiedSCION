@@ -185,7 +185,6 @@ pure func (dp DataPlaneSpec) if_type(asid AS, ifs option[Ifs], link Link) bool{
 }
 
 ghost
-opaque
 decreases
 pure func (m MsgTerm) extract_asid() AS {
 	return m.MsgTerm_Hash_.MsgTerm_MPair_1.MsgTerm_Key_.Key_macK_

@@ -74,7 +74,6 @@ pure func AbsUinfo(raw []byte, currINF int, headerOffset int) set[io.MsgTerm] {
 }
 
 ghost
-opaque
 requires 0 <= middle
 requires middle+InfoLen <= len(raw)
 requires sl.Bytes(raw, 0, len(raw))
@@ -114,8 +113,8 @@ func BytesToAbsInfoFieldOffsetEq(raw [] byte, middle int) {
 	end := middle+InfoLen
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.Bytes(raw[start:end], 0, InfoLen), R56)
-	absInfo1 := reveal BytesToAbsInfoField(raw, start)
-	absInfo2 := reveal BytesToAbsInfoField(raw[start:end], 0)
+	absInfo1 := BytesToAbsInfoField(raw, start)
+	absInfo2 := BytesToAbsInfoField(raw[start:end], 0)
 
 	assert absInfo1.ConsDir == absInfo2.ConsDir
 	assert absInfo1.Peer == absInfo2.Peer

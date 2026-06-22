@@ -70,8 +70,8 @@ func WidenCurrSeg(raw []byte,
 	assert peer1 == peer2
 
 	widenSegment(raw, offset, currHfIdx, ainfo1, uinfo1, consDir1, peer1, segLen, start, length)
-	reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset)
-	reveal CurrSeg(raw[start:length], offset-start, currInfIdx, currHfIdx, segLen, headerOffset-start)
+	CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset)
+	CurrSeg(raw[start:length], offset-start, currInfIdx, currHfIdx, segLen, headerOffset-start)
 	fold acc(sl.Bytes(raw, 0, len(raw)), R53)
 	fold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R53)
 }
@@ -147,8 +147,8 @@ func WidenLeftSeg(raw []byte,
 		offsetWithHopfields := offset + path.HopLen * (segs.Seg1Len + segs.Seg2Len)
 		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, 0, segs.Seg3Len, headerOffset, start, length)
 	}
-	reveal LeftSeg(raw, currInfIdx, segs, headerOffset)
-	reveal LeftSeg(raw[start:length], currInfIdx, segs, headerOffset- start)
+	LeftSeg(raw, currInfIdx, segs, headerOffset)
+	LeftSeg(raw[start:length], currInfIdx, segs, headerOffset- start)
 }
 
 ghost
@@ -175,8 +175,8 @@ func WidenRightSeg(raw []byte,
 	} else if currInfIdx == 0 && segs.Seg2Len > 0 {
 		WidenCurrSeg(raw, offset, currInfIdx, segs.Seg1Len, segs.Seg1Len, headerOffset, start, length)
 	}
-	reveal RightSeg(raw, currInfIdx, segs, headerOffset)
-	reveal RightSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
+	RightSeg(raw, currInfIdx, segs, headerOffset)
+	RightSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
 }
 
 ghost
@@ -203,6 +203,6 @@ func WidenMidSeg(raw []byte,
 		offsetWithHopfields := offset + path.HopLen * (segs.Seg1Len + segs.Seg2Len)
 		WidenCurrSeg(raw, offsetWithHopfields, currInfIdx, 0, segs.Seg3Len, headerOffset, start, length)
 	}
-	reveal MidSeg(raw, currInfIdx, segs, headerOffset)
-	reveal MidSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
+	MidSeg(raw, currInfIdx, segs, headerOffset)
+	MidSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
 }

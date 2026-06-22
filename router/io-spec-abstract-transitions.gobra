@@ -35,7 +35,6 @@ pure func CurrSegIO_ifs(pkt io.Pkt, dir bool) option[io.Ifs] {
 }
 
 ghost
-opaque
 requires oldPkt.PathNotFullyTraversed()
 ensures  newPkt.PathNotFullyTraversed()
 ensures  len(newPkt.CurrSeg.Future) == len(oldPkt.CurrSeg.Future)
@@ -50,7 +49,6 @@ pure func AbsUpdateNonConsDirIngressSegID(oldPkt io.Pkt, ingressID option[io.Ifs
 }
 
 ghost
-opaque
 requires pkt.PathNotFullyTraversed()
 decreases
 pure func AbsValidateIngressIDConstraint(pkt io.Pkt, ingressID option[io.Ifs]) bool {
@@ -60,7 +58,6 @@ pure func AbsValidateIngressIDConstraint(pkt io.Pkt, ingressID option[io.Ifs]) b
 }
 
 ghost
-opaque
 requires pkt.RightSeg != none[io.Seg]
 requires len(get(pkt.RightSeg).Past) > 0
 decreases
@@ -71,7 +68,6 @@ pure func AbsValidateIngressIDConstraintXover(pkt io.Pkt, ingressID option[io.If
 }
 
 ghost
-opaque
 requires pkt.PathNotFullyTraversed()
 decreases
 pure func AbsEgressInterfaceConstraint(pkt io.Pkt, egressID option[io.Ifs]) bool {
@@ -80,7 +76,6 @@ pure func AbsEgressInterfaceConstraint(pkt io.Pkt, egressID option[io.Ifs]) bool
 }
 
 ghost
-opaque
 requires dp.Valid()
 requires pkt.PathNotFullyTraversed()
 decreases
@@ -90,7 +85,6 @@ pure func AbsValidateEgressIDConstraint(pkt io.Pkt, enter bool, dp io.DataPlaneS
 }
 
 ghost
-opaque
 requires oldPkt.PathNotFullyTraversed()
 ensures  len(newPkt.CurrSeg.Future) >= 0
 decreases
@@ -104,7 +98,6 @@ pure func AbsProcessEgress(oldPkt io.Pkt) (newPkt io.Pkt) {
 }
 
 ghost
-opaque
 requires oldPkt.LeftSeg != none[io.Seg]
 requires len(oldPkt.CurrSeg.Future) == 1
 requires len(get(oldPkt.LeftSeg).Future) > 0
@@ -123,7 +116,6 @@ pure func AbsDoXover(oldPkt io.Pkt) (newPkt io.Pkt) {
 }
 
 ghost
-opaque
 requires  dp.Valid()
 requires  pkt.PathNotFullyTraversed()
 requires  pkt.RightSeg != none[io.Seg]
@@ -137,7 +129,6 @@ pure func AbsValidateEgressIDConstraintXover(pkt io.Pkt, dp io.DataPlaneSpec) bo
 }
 
 ghost
-opaque
 requires pkt.PathNotFullyTraversed()
 decreases
 pure func AbsVerifyCurrentMACConstraint(pkt io.Pkt, dp io.DataPlaneSpec) bool {
@@ -167,11 +158,11 @@ preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func InternalEnterEvent(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-	reveal AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
-	reveal AbsValidateIngressIDConstraint(oldPkt, ingressID)
-	reveal AbsVerifyCurrentMACConstraint(newPkt, dp)
+	AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
+	AbsValidateIngressIDConstraint(oldPkt, ingressID)
+	AbsVerifyCurrentMACConstraint(newPkt, dp)
 	if(len(newPkt.CurrSeg.Future) != 1) {
-		reveal AbsValidateEgressIDConstraint(newPkt, true, dp)
+		AbsValidateEgressIDConstraint(newPkt, true, dp)
 	}
 	AtomicEnter(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 }
@@ -198,13 +189,13 @@ preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func ExternalEnterOrExitEvent(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-	reveal dp.Valid()
-	nextPkt := reveal AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
-	reveal AbsValidateIngressIDConstraint(oldPkt, ingressID)
-	reveal AbsVerifyCurrentMACConstraint(nextPkt, dp)
-	reveal AbsEgressInterfaceConstraint(nextPkt, egressID)
-	reveal AbsValidateEgressIDConstraint(nextPkt, (ingressID != none[io.Ifs]), dp)
-	reveal AbsProcessEgress(nextPkt)
+	dp.Valid()
+	nextPkt := AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
+	AbsValidateIngressIDConstraint(oldPkt, ingressID)
+	AbsVerifyCurrentMACConstraint(nextPkt, dp)
+	AbsEgressInterfaceConstraint(nextPkt, egressID)
+	AbsValidateEgressIDConstraint(nextPkt, (ingressID != none[io.Ifs]), dp)
+	AbsProcessEgress(nextPkt)
 	if(ingressID == none[io.Ifs]){
 		AtomicExit(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 	} else {
@@ -239,16 +230,16 @@ preserves ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func XoverEvent(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioLock gpointer[gsync.GhostMutex], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-	reveal dp.Valid()
-	intermediatePkt1 := reveal AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
-	intermediatePkt2 := reveal AbsDoXover(intermediatePkt1)
-	reveal AbsValidateIngressIDConstraint(oldPkt, ingressID)
-	reveal AbsVerifyCurrentMACConstraint(intermediatePkt1, dp)
-	reveal AbsVerifyCurrentMACConstraint(intermediatePkt2, dp)
-	reveal AbsValidateEgressIDConstraintXover(intermediatePkt2, dp)
+	dp.Valid()
+	intermediatePkt1 := AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
+	intermediatePkt2 := AbsDoXover(intermediatePkt1)
+	AbsValidateIngressIDConstraint(oldPkt, ingressID)
+	AbsVerifyCurrentMACConstraint(intermediatePkt1, dp)
+	AbsVerifyCurrentMACConstraint(intermediatePkt2, dp)
+	AbsValidateEgressIDConstraintXover(intermediatePkt2, dp)
 	if(egressID != none[io.Ifs]){
-		reveal AbsEgressInterfaceConstraint(intermediatePkt2, egressID)
-		reveal AbsProcessEgress(intermediatePkt2)
+		AbsEgressInterfaceConstraint(intermediatePkt2, egressID)
+		AbsProcessEgress(intermediatePkt2)
 	}
 	AtomicXover(oldPkt, ingressID, newPkt, egressID, ioLock, ioSharedArg, dp)
 }

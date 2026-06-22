@@ -173,7 +173,6 @@ func Alloc(start, end int64) (res BoundedMonotonicSet) {
 }
 
 ghost
-opaque // make this closed when that is supported
 requires b.Inv()
 decreases
 pure func (b BoundedMonotonicSet) ToSet() set[int64] {
@@ -203,7 +202,7 @@ func (b BoundedMonotonicSet) ContainsImpliesAbstractContains(v int64, p perm) {
 	found := false
 	i := b.Start
 	part1 := set[int64]{}
-	part2 := reveal b.ToSet()
+	part2 := b.ToSet()
 
 	assert unfolding b.Contains(v) in b.Start <= v && v <= b.End
 
@@ -252,7 +251,7 @@ func (b BoundedMonotonicSet) DoesNotContainsImpliesAbstractDoesNotContain(v int6
 	found := false
 	i := int64(0)
 	part1 := set[int64]{}
-	part2 := reveal b.ToSet()
+	part2 := b.ToSet()
 
 	assert unfolding b.DoesNotContain(v) in b.Start <= v && v <= b.End
 

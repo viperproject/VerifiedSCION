@@ -352,7 +352,6 @@ pure func (s *SCION) GetPath(ub []byte) path.Path {
 }
 
 ghost
-opaque
 requires s.Mem(ub)
 requires sl.Bytes(ub, 0, length)
 requires CmnHdrLen <= length
@@ -374,10 +373,10 @@ ensures  acc(sl.Bytes(ub, 0, length), R55)
 ensures  s.ValidHeaderOffset(ub, length)
 decreases
 func (s *SCION) ValidHeaderOffsetToSubSliceLemma(ub []byte, length int) {
-	reveal s.ValidHeaderOffset(ub, len(ub))
+	s.ValidHeaderOffset(ub, len(ub))
 	unfold acc(sl.Bytes(ub, 0, len(ub)), R56)
 	unfold acc(sl.Bytes(ub, 0, length), R56)
-	assert reveal s.ValidHeaderOffset(ub, length)
+	assert s.ValidHeaderOffset(ub, length)
 	fold acc(sl.Bytes(ub, 0, len(ub)), R56)
 	fold acc(sl.Bytes(ub, 0, length), R56)
 }
@@ -394,16 +393,15 @@ ensures  acc(sl.Bytes(ub, 0, length), R55)
 ensures  s.ValidHeaderOffset(ub, len(ub))
 decreases
 func (s *SCION) ValidHeaderOffsetFromSubSliceLemma(ub []byte, length int) {
-	reveal s.ValidHeaderOffset(ub, len(ub))
+	s.ValidHeaderOffset(ub, len(ub))
 	unfold acc(sl.Bytes(ub, 0, len(ub)), R56)
 	unfold acc(sl.Bytes(ub, 0, length), R56)
-	assert reveal s.ValidHeaderOffset(ub, length)
+	assert s.ValidHeaderOffset(ub, length)
 	fold acc(sl.Bytes(ub, 0, len(ub)), R56)
 	fold acc(sl.Bytes(ub, 0, length), R56)
 }
 
 ghost
-opaque
 requires s.Mem(ub)
 requires sl.Bytes(ub, 0, len(ub))
 decreases
@@ -435,7 +433,6 @@ pure func (s *SCION) EqAbsHeader(ub []byte) bool {
 
 // Describes a SCION packet that was successfully decoded by `DecodeFromBytes`.
 ghost
-opaque
 requires s.Mem(ub)
 decreases
 pure func (s *SCION) ValidScionInitSpec(ub []byte) bool {
@@ -450,7 +447,6 @@ pure func (s *SCION) ValidScionInitSpec(ub []byte) bool {
 
 // Checks if the common path header is valid in the serialized scion packet.
 ghost
-opaque
 requires sl.Bytes(raw, 0, len(raw))
 decreases
 pure func ValidPktMetaHdr(raw []byte) bool {
@@ -476,7 +472,6 @@ pure func ValidPktMetaHdr(raw []byte) bool {
 }
 
 ghost
-opaque
 requires sl.Bytes(raw, 0, len(raw))
 decreases
 pure func IsSupportedPkt(raw []byte) bool {
@@ -488,7 +483,6 @@ pure func IsSupportedPkt(raw []byte) bool {
 }
 
 ghost
-opaque
 decreases
 pure func IsSupportedRawPkt(raw seq[byte]) bool {
 	return CmnHdrLen <= len(raw) &&
@@ -507,8 +501,8 @@ decreases
 func IsSupportedPktSubslice(raw []byte, idx int) {
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.Bytes(raw[:idx], 0, idx), R56)
-	reveal IsSupportedPkt(raw)
-	reveal IsSupportedPkt(raw[:idx])
+	IsSupportedPkt(raw)
+	IsSupportedPkt(raw[:idx])
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	fold acc(sl.Bytes(raw[:idx], 0, idx), R56)
 }
@@ -522,10 +516,10 @@ preserves s.EqPathTypeWithBuffer(ub, buffer)
 ensures   IsSupportedPkt(ub) == IsSupportedPkt(buffer)
 decreases
 func (s *SCION) IsSupportedPktLemma(ub []byte, buffer []byte) {
-	reveal s.EqPathType(ub)
-	reveal s.EqPathTypeWithBuffer(ub, buffer)
-	reveal IsSupportedPkt(ub)
-	reveal IsSupportedPkt(buffer)
+	s.EqPathType(ub)
+	s.EqPathTypeWithBuffer(ub, buffer)
+	IsSupportedPkt(ub)
+	IsSupportedPkt(buffer)
 }
 
 ghost
@@ -583,16 +577,14 @@ pure func GetNextHdr(ub []byte) int {
 }
 
 ghost
-opaque
 requires s.Mem(ub)
 requires sl.Bytes(ub, 0, len(ub))
 decreases
 pure func (s *SCION) EqPathType(ub []byte) bool {
-	return reveal s.EqPathTypeWithBuffer(ub, ub)
+	return s.EqPathTypeWithBuffer(ub, ub)
 }
 
 ghost
-opaque
 requires s.Mem(ub)
 requires sl.Bytes(buffer, 0, len(buffer))
 decreases
