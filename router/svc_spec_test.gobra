@@ -24,8 +24,8 @@ import (
 
 func foldInternalLockInvAndMem_test() {
 	s := &services{m: make(map[addr.HostSVC][]*net.UDPAddr)}
-	fold internalLockInv!<s!>()
-	s.mtx.SetInv(internalLockInv!<s!>)
+	fold internalLockInv{s}()
+	s.mtx.SetInv(internalLockInv{s})
 	fold s.Mem()
 }
 

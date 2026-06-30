@@ -34,7 +34,7 @@ type Context interface {
 
 	preserves acc(Mem(), _)
 	ensures   acc(c.RecvChannel(), _)
-	ensures   c.RecvGivenPerm() == PredTrue!<!>
+	ensures   c.RecvGivenPerm() == PredTrue{}
 	decreases
 	Done() (c <-chan struct{})
 
