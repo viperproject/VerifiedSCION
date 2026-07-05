@@ -57,8 +57,8 @@ requires v.isValInternal1
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s Dp3sStateLocal, t Place, v Val) bool {
-	return some(v.ValInternal1_2) in domain(s.ibuf) &&
-		(let ibuf_set := s.ibuf[some(v.ValInternal1_2)] in (v.ValInternal1_1 in ibuf_set)) &&
+	return some(v.ValInternal1_2) elem domain(s.ibuf) &&
+		(let ibuf_set := s.ibuf[some(v.ValInternal1_2)] in (v.ValInternal1_1 elem ibuf_set)) &&
 		len(v.ValInternal1_1.CurrSeg.Future) > 0 &&
 		let currseg := v.ValInternal1_1.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
@@ -181,8 +181,8 @@ requires v.isValInternal2
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s Dp3sStateLocal, t Place, v Val) bool {
-	return none[Ifs] in domain(s.ibuf) &&
-		(let ibuf_set := s.ibuf[none[Ifs]] in (v.ValInternal2_1 in ibuf_set)) &&
+	return none[Ifs] elem domain(s.ibuf) &&
+		(let ibuf_set := s.ibuf[none[Ifs]] in (v.ValInternal2_1 elem ibuf_set)) &&
 		len(v.ValInternal2_1.CurrSeg.Future) > 0 &&
 		dp.dp3s_forward_ext(v.ValInternal2_1, v.ValInternal2_2, v.ValInternal2_3)
 }
@@ -223,8 +223,8 @@ requires v.isValPkt
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_send_guard(s Dp3sStateLocal, t Place, v Val) bool {
-	return v.ValPkt_1 in domain(s.obuf) &&
-		(let obuf_set := s.obuf[v.ValPkt_1] in (v.ValPkt_2 in obuf_set))
+	return v.ValPkt_1 elem domain(s.obuf) &&
+		(let obuf_set := s.obuf[v.ValPkt_1] in (v.ValPkt_2 elem obuf_set))
 }
 
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_send(s Dp3sStateLocal, t Place) {

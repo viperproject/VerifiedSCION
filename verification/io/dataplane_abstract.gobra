@@ -35,14 +35,14 @@ ghost
 opaque
 decreases
 pure func (dp DataPlaneSpec) Valid() bool {
-	return (forall ifs Ifs :: {ifs in domain(dp.neighborIAs)} ifs in domain(dp.neighborIAs)  ==>
-			(AsIfsPair{dp.localIA, ifs} in domain(dp.links) &&
+	return (forall ifs Ifs :: {ifs elem domain(dp.neighborIAs)} ifs elem domain(dp.neighborIAs)  ==>
+			(AsIfsPair{dp.localIA, ifs} elem domain(dp.links) &&
 			dp.Lookup(AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs])) &&
-		(forall ifs Ifs :: {ifs in domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} in domain(dp.links) ==>
-			ifs in domain(dp.neighborIAs)) &&
-		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs in domain(dp.links) ==>
+		(forall ifs Ifs :: {ifs elem domain(dp.neighborIAs)} AsIfsPair{dp.localIA, ifs} elem domain(dp.links) ==>
+			ifs elem domain(dp.neighborIAs)) &&
+		(forall pairs AsIfsPair :: {dp.Lookup(pairs)} pairs elem domain(dp.links) ==>
 			let next_pair := dp.Lookup(pairs) in
-			(next_pair in domain(dp.links)) &&
+			(next_pair elem domain(dp.links)) &&
 			dp.Lookup(next_pair) == pairs) &&
 			domain(dp.linkTypes) == domain(dp.neighborIAs)
 }
@@ -55,7 +55,7 @@ pure func (dp DataPlaneSpec) GetLinkTypes() dict[Ifs]Link {
 
 ghost
 decreases
-requires ifs in domain(dp.linkTypes)
+requires ifs elem domain(dp.linkTypes)
 pure func (dp DataPlaneSpec) GetLinkType(ifs Ifs) Link {
 	return dp.linkTypes[ifs]
 }
@@ -67,7 +67,7 @@ pure func (dp DataPlaneSpec) GetNeighborIAs() dict[Ifs]AS {
 }
 
 ghost
-requires ifs in domain(dp.neighborIAs)
+requires ifs elem domain(dp.neighborIAs)
 decreases
 pure func (dp DataPlaneSpec) GetNeighborIA(ifs Ifs) AS {
 	return dp.neighborIAs[ifs]
@@ -86,7 +86,7 @@ pure func (dp DataPlaneSpec) GetLinks() dict[AsIfsPair]AsIfsPair {
 }
 
 ghost
-requires pair in domain(dp.links)
+requires pair elem domain(dp.links)
 decreases
 pure func(dp DataPlaneSpec) Lookup(pair AsIfsPair) AsIfsPair {
 	return dp.links[pair]

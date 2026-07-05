@@ -34,8 +34,8 @@ type services struct {
 // @ decreases
 func newServices() (s *services) {
 	tmp := &services{m: make(map[addr.HostSVC][]*net.UDPAddr)}
-	//@ fold internalLockInv!<tmp!>()
-	//@ ghost tmp.mtx.SetInv(internalLockInv!<tmp!>)
+	//@ fold internalLockInv{tmp}()
+	//@ ghost tmp.mtx.SetInv(internalLockInv{tmp})
 	//@ fold tmp.Mem()
 	return tmp
 }
@@ -48,13 +48,13 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	//@ unfold internalLockInv!<s!>()
+	//@ unfold internalLockInv{s}()
 	addrs := s.m[svc]
 	//@ ghost if addrs == nil { fold validMapValue(svc, addrs) }
 	//@ unfold acc(validMapValue(svc, addrs), R10)
 	if _, ok := s.index(a, addrs /*@, svc @*/); ok {
 		//@ fold acc(validMapValue(svc, addrs), R10)
-		//@ fold internalLockInv!<s!>()
+		//@ fold internalLockInv{s}()
 		//@ fold acc(s.Mem(), R50)
 		return
 	}
@@ -64,7 +64,7 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ ghost tmp := s.m[svc]
 	//@ fold InjectiveMem(tmp[len(tmp)-1], len(tmp)-1)
 	//@ fold validMapValue(svc, s.m[svc])
-	//@ fold internalLockInv!<s!>()
+	//@ fold internalLockInv{s}()
 	//@ fold acc(s.Mem(), R50)
 }
 
@@ -76,13 +76,13 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	//@ unfold internalLockInv!<s!>()
+	//@ unfold internalLockInv{s}()
 	addrs := s.m[svc]
 	//@ ghost if addrs == nil { fold validMapValue(svc, addrs) }
 	//@ assert validMapValue(svc, addrs)
 	index, ok := s.index(a, addrs /*@, svc @*/)
 	if !ok {
-		//@ fold internalLockInv!<s!>()
+		//@ fold internalLockInv{s}()
 		//@ fold acc(s.Mem(), R50)
 		return
 	}
@@ -97,7 +97,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ assert forall i int :: { &addrs[:len(addrs)-1][i] }{ &addrs[i] } 0 <= i && i < len(addrs)-1 ==> &addrs[:len(addrs)-1][i] == &addrs[i]
 	s.m[svc] = addrs[:len(addrs)-1]
 	//@ fold validMapValue(svc, s.m[svc])
-	//@ fold internalLockInv!<s!>()
+	//@ fold internalLockInv{s}()
 	//@ fold acc(s.Mem(), R50)
 }
 
@@ -110,15 +110,15 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	//@ unfold internalLockInv!<s!>()
+	//@ unfold internalLockInv{s}()
 	addrs := s.m[svc]
 	if len(addrs) == 0 {
-		//@ fold internalLockInv!<s!>()
+		//@ fold internalLockInv{s}()
 		return nil, false
 	}
 	//@ assert validMapValue(svc, addrs)
 	//@ unfold acc(validMapValue(svc, addrs))
-	//@ defer fold internalLockInv!<s!>()
+	//@ defer fold internalLockInv{s}()
 	//@ defer fold acc(validMapValue(svc, addrs))
 	tmpIdx := mrand.Intn(len(addrs))
 	tmpAddr := addrs[tmpIdx]

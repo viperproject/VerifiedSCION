@@ -275,7 +275,7 @@ func (e scmpError) Error() string {
 // @ requires  d.LocalIA().IsZero()
 // @ requires  !ia.IsZero()
 // @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>
+// @ preserves d.mtx.LockInv() == MutexInvariant{d}
 // @ ensures   acc(d.Mem(), OutMutexPerm)
 // @ ensures   !d.IsRunning()
 // @ ensures   e == nil
@@ -283,11 +283,11 @@ func (e scmpError) Error() string {
 func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant{d}()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
 	// @ unfold d.Mem()
-	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant{d}()
 	// @ defer fold d.Mem()
 	if d.running {
 		// @ Unreachable()
@@ -313,7 +313,7 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 // @ requires  len(key) > 0
 // @ requires  sl.Bytes(key, 0, len(key))
 // @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>
+// @ preserves d.mtx.LockInv() == MutexInvariant{d}
 // @ ensures   acc(d.Mem(), OutMutexPerm)
 // @ ensures   !d.IsRunning()
 // @ ensures   res == nil ==> d.KeyIsSet()
@@ -322,13 +322,13 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ share key
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant{d}()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
 	// @ unfold acc(d.Mem(), 1/2)
 	// @ d.keyIsSetEq()
 	// @ unfold acc(d.Mem(), 1/2)
-	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant{d}()
 	// @ defer fold d.Mem()
 	if d.running {
 		// @ Unreachable()
@@ -374,14 +374,14 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 // @ requires  conn != nil && conn.Mem()
 // @ requires  ip.Mem()
 // @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>
+// @ preserves d.mtx.LockInv() == MutexInvariant{d}
 // @ ensures   acc(d.Mem(), OutMutexPerm)
 // @ ensures   !d.IsRunning()
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant{d}()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
 	// @ unfold acc(d.Mem(), 1/2)
@@ -402,7 +402,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	d.internal = conn
 	d.internalIP = ip
 	// @ fold d.Mem()
-	// @ fold MutexInvariant!<d!>()
+	// @ fold MutexInvariant{d}()
 	return nil
 }
 
@@ -413,12 +413,12 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // @ preserves acc(d.Mem(), OutMutexPerm)
 // @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>
+// @ preserves d.mtx.LockInv() == MutexInvariant{d}
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant{d}()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
 	// @ unfold d.Mem()
@@ -435,7 +435,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 		// @ establishAlreadySet()
 		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
 		// @ fold d.Mem()
-		// @ fold MutexInvariant!<d!>()
+		// @ fold MutexInvariant{d}()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
@@ -447,7 +447,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	d.external[ifID] = conn
 	// @ fold accBatchConn(d.external)
 	// @ fold d.Mem()
-	// @ fold MutexInvariant!<d!>()
+	// @ fold MutexInvariant{d}()
 	return nil
 }
 
@@ -458,12 +458,12 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 // @ preserves acc(d.Mem(), OutMutexPerm)
 // @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>
+// @ preserves d.mtx.LockInv() == MutexInvariant{d}
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant{d}()
 	// @ d.isRunningEq()
 	// @ unfold d.Mem()
 	if d.running {
@@ -477,7 +477,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	if _, existsB := d.neighborIAs[ifID]; existsB {
 		// @ establishAlreadySet()
 		// @ fold d.Mem()
-		// @ fold MutexInvariant!<d!>()
+		// @ fold MutexInvariant{d}()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	if d.neighborIAs == nil {
@@ -485,7 +485,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	}
 	d.neighborIAs[ifID] = remote
 	// @ fold d.Mem()
-	// @ fold MutexInvariant!<d!>()
+	// @ fold MutexInvariant{d}()
 	return nil
 }
 
@@ -496,7 +496,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // @ preserves !d.IsRunning()
 // (VerifiedSCION) unlike all other setter methods, this does not lock d.mtx.
 // This was reported in https://github.com/scionproto/scion/issues/4282.
-// @ preserves MutexInvariant!<d!>()
+// @ preserves MutexInvariant{d}()
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	// @ unfold acc(d.Mem(), OutMutexPerm)
@@ -506,10 +506,10 @@ func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	// @ fold acc(d.Mem(), OutMutexPerm)
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant{d}()
 	// @ d.isRunningEq()
 	// @ unfold d.Mem()
-	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant{d}()
 	// @ defer fold d.Mem()
 	if d.linkTypes == nil {
 		d.linkTypes = make(map[uint16]topology.LinkType)
@@ -564,8 +564,8 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	// @ 	defer fold acc(accBfdSession(d.bfdSessions), R20)
 	// @ }
 	if bfdSession, ok := bfdSessions[interfaceID]; ok {
-		// @ assert interfaceID in domain(d.bfdSessions)
-		// @ assert bfdSession in range(d.bfdSessions)
+		// @ assert interfaceID elem domain(d.bfdSessions)
+		// @ assert bfdSession elem range(d.bfdSessions)
 		// @ assert bfdSession != nil
 		// (VerifiedSCION) This checked used to be conjoined with 'ok' in the condition
 		// of the if stmt above. We broke it down to perform intermediate asserts.
@@ -614,11 +614,11 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // @ preserves acc(d.Mem(), OutMutexPerm)
 // @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>
+// @ preserves d.mtx.LockInv() == MutexInvariant{d}
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	d.mtx.Lock()
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant{d}()
 	// @ d.isRunningEq()
 	defer d.mtx.Unlock()
 	if a == nil {
@@ -654,7 +654,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 		// @ )
 	}
 	// @ fold acc(d.Mem(), R15)
-	// @ fold MutexInvariant!<d!>()
+	// @ fold MutexInvariant{d}()
 	return nil
 }
 
@@ -698,15 +698,15 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // @ preserves acc(d.Mem(), OutMutexPerm)
 // @ preserves !d.IsRunning()
 // @ preserves d.mtx.LockP()
-// @ preserves d.mtx.LockInv() == MutexInvariant!<d!>
+// @ preserves d.mtx.LockInv() == MutexInvariant{d}
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant{d}()
 	// @ d.isRunningEq()
 	// @ unfold d.Mem()
-	// @ defer fold MutexInvariant!<d!>()
+	// @ defer fold MutexInvariant{d}()
 	// @ defer fold d.Mem()
 	if d.running {
 		return modifyExisting
@@ -780,7 +780,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 // @ requires  d.PreWellConfigured()
 // (VerifiedSCION) here, the spec still uses a private field.
 // @ requires  d.mtx.LockP()
-// @ requires  d.mtx.LockInv() == MutexInvariant!<d!>
+// @ requires  d.mtx.LockInv() == MutexInvariant{d}
 // @ requires  ctx != nil && ctx.Mem()
 // contracts for IO-spec
 // @ requires dp.Valid()
@@ -790,7 +790,7 @@ func (d *DataPlane) AddNextHopBFD(ifID uint16, src, dst *net.UDPAddr, cfg contro
 func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost state io.Dp3sStateLocal, ghost dp io.DataPlaneSpec @*/) error {
 	// @ share d, ctx
 	d.mtx.Lock()
-	// @ unfold MutexInvariant!<d!>()
+	// @ unfold MutexInvariant{d}()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
 
@@ -804,7 +804,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ requires  d.PreWellConfigured()
 	// @ requires  d.DpAgreesWithSpec(dp)
 	// @ ensures   acc(&d, R50)
-	// @ ensures   MutexInvariant!<d!>()
+	// @ ensures   MutexInvariant{d}()
 	// @ ensures   d.Mem() && d.IsRunning()
 	// @ ensures   d.InternalConnIsSet()
 	// @ ensures   d.KeyIsSet()
@@ -819,7 +819,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ reveal d.DpAgreesWithSpec(dp)
 	// @ unfold d.Mem()
 	d.running = true
-	// @ fold MutexInvariant!<d!>()
+	// @ fold MutexInvariant{d}()
 	// @ fold d.Mem()
 	// @ reveal d.getDomExternal()
 	// @ reveal d.PreWellConfigured()
@@ -835,12 +835,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// dPtr as an helper parameter. It always receives the value &d.
 		// @ requires acc(dPtr, _)
 		// @ requires let d := *dPtr in
-		// @ 	acc(d.Mem(), _)                            &&
-		// @ 	d.WellConfigured()                         &&
-		// @ 	d.getValSvc() != nil                       &&
-		// @ 	d.getValForwardingMetrics() != nil         &&
-		// @ 	(0 in d.getDomForwardingMetrics())         &&
-		// @ 	(ingressID in d.getDomForwardingMetrics()) &&
+		// @ 	acc(d.Mem(), _)                              &&
+		// @ 	d.WellConfigured()                           &&
+		// @ 	d.getValSvc() != nil                         &&
+		// @ 	d.getValForwardingMetrics() != nil           &&
+		// @ 	(0 elem d.getDomForwardingMetrics())         &&
+		// @ 	(ingressID elem d.getDomForwardingMetrics()) &&
 		// @ 	d.getMacFactory() != nil
 		// @ requires rd != nil && acc(rd.Mem(), _)
 		// contracts for IO-spec
@@ -848,7 +848,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// @ requires let d := *dPtr in
 		// @ 	d.DpAgreesWithSpec(dp)
 		// @ requires acc(ioLock.LockP(), _)
-		// @ requires ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+		// @ requires ioLock.LockInv() == SharedInv{dp, ioSharedArg}
 		// @ #backend[moreJoins()]
 		func /*@ rc @*/ (ingressID uint16, rd BatchConn, dPtr **DataPlane /*@, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			d := *dPtr
@@ -919,21 +919,21 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 			// @ invariant d.getValSvc() != nil
 			// @ invariant d.getValForwardingMetrics() != nil
-			// @ invariant 0 in d.getDomForwardingMetrics()
-			// @ invariant ingressID in d.getDomForwardingMetrics()
+			// @ invariant 0 elem d.getDomForwardingMetrics()
+			// @ invariant ingressID elem d.getDomForwardingMetrics()
 			// @ invariant acc(rd.Mem(), _)
 			// @ invariant processor.sInit() && processor.sInitD() === d
 			// @ invariant let ubuf := processor.sInitBufferUBuf() in
 			// @ 	acc(sl.Bytes(ubuf, 0, len(ubuf)), writePerm)
 			// @ invariant processor.getIngressID() == ingressID
 			// @ invariant acc(ioLock.LockP(), _)
-			// @ invariant ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+			// @ invariant ioLock.LockInv() == SharedInv{dp, ioSharedArg}
 			// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
 			for d.running {
 				// @ ghost ioIngressID := path.ifsToIO_ifs(ingressID)
 				// Multi recv event
 				// @ ghost ioLock.Lock()
-				// @ unfold SharedInv!< dp, ioSharedArg !>()
+				// @ unfold SharedInv{dp, ioSharedArg}()
 				// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
 				// @ ghost numberOfReceivedPacketsProphecy := AllocProphecy()
 				// @ ExtractMultiReadBio(dp, t, numberOfReceivedPacketsProphecy, s)
@@ -957,7 +957,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 		MsgToAbsVal(&msgs[i], ingressID) == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
 				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
-				// @ fold SharedInv!< dp, ioSharedArg !>()
+				// @ fold SharedInv{dp, ioSharedArg}()
 				// @ ioLock.Unlock()
 				// End of multi recv event
 
@@ -991,8 +991,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 				// @ invariant d.getValSvc() != nil
 				// @ invariant d.getValForwardingMetrics() != nil
-				// @ invariant 0 in d.getDomForwardingMetrics()
-				// @ invariant ingressID in d.getDomForwardingMetrics()
+				// @ invariant 0 elem d.getDomForwardingMetrics()
+				// @ invariant ingressID elem d.getDomForwardingMetrics()
 				// @ invariant acc(rd.Mem(), _)
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
@@ -1011,7 +1011,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
 				// @ invariant ioIngressID == path.ifsToIO_ifs(ingressID)
 				// @ invariant acc(ioLock.LockP(), _)
-				// @ invariant ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+				// @ invariant ioLock.LockInv() == SharedInv{dp, ioSharedArg}
 				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
 				// @ 	MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]
 				// @ invariant MultiElemWitnessWithIndex(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
@@ -1143,11 +1143,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ 	absIO_val(writeMsgs[0].Buffers[0], result.EgressID)
 					// @ fold acc(writeMsgs[0].Mem(), R50)
 					// @ ghost ioLock.Lock()
-					// @ unfold SharedInv!< dp, ioSharedArg !>()
+					// @ unfold SharedInv{dp, ioSharedArg}()
 					// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
 					// @ ghost if(newAbsPkt.isValPkt) {
 					// @ 	ApplyElemWitness(s.obuf, ioSharedArg.OBufY, newAbsPkt.ValPkt_1, newAbsPkt.ValPkt_2)
-					// @ 	assert newAbsPkt.ValPkt_2 in AsSet(s.obuf[newAbsPkt.ValPkt_1])
+					// @ 	assert newAbsPkt.ValPkt_2 elem AsSet(s.obuf[newAbsPkt.ValPkt_1])
 					// @ 	assert dp.dp3s_iospec_bio3s_send_guard(s, t, newAbsPkt)
 					// @ } else { assert newAbsPkt.isValUnsupported }
 					// @ unfold dp.dp3s_iospec_ordered(s, t)
@@ -1156,7 +1156,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ ghost tN := io.dp3s_iospec_bio3s_send_T(t, newAbsPkt)
 					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@, result.EgressID, t, newAbsPkt @*/)
 					// @ ghost *ioSharedArg.Place = tN
-					// @ fold SharedInv!< dp, ioSharedArg !>()
+					// @ fold SharedInv{dp, ioSharedArg}()
 					// @ ghost ioLock.Unlock()
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
 					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
@@ -1188,7 +1188,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					}
 					// @ requires acc(dPtr, _) && *dPtr === d
 					// @ requires acc(d.Mem(), _)
-					// @ requires result.EgressID in d.getDomForwardingMetrics()
+					// @ requires result.EgressID elem d.getDomForwardingMetrics()
 					// @ decreases
 					// @ outline(
 					// ok metric
@@ -1208,7 +1208,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		}
 	// @ unfold acc(d.Mem(), R1)
 	// @ assert d.WellConfigured()
-	// @ assert 0 in d.getDomForwardingMetrics()
+	// @ assert 0 elem d.getDomForwardingMetrics()
 	// @ ghost if d.bfdSessions != nil { unfold acc(accBfdSession(d.bfdSessions), R2) }
 
 	// (VerifiedSCION) we introduce this to avoid problems with the invariants that
@@ -1257,12 +1257,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	// @ invariant acc(d.Mem(), _) && d.WellConfigured()
 	// @ invariant d.getValSvc() != nil
 	// @ invariant d.getValForwardingMetrics() != nil
-	// @ invariant 0 in d.getDomForwardingMetrics()
+	// @ invariant 0 elem d.getDomForwardingMetrics()
 	// @ invariant d.getMacFactory() != nil
 	// @ invariant dp.Valid()
 	// @ invariant d.DpAgreesWithSpec(dp)
 	// @ invariant acc(ioLockRun.LockP(), _)
-	// @ invariant ioLockRun.LockInv() == SharedInv!< dp, ioSharedArgRun !>
+	// @ invariant ioLockRun.LockInv() == SharedInv{dp, ioSharedArgRun}
 	// @ decreases len(externals) - len(visited)
 	for ifID, v := range externals /*@ with visited @*/ {
 		cl :=
@@ -1271,21 +1271,21 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ requires acc(d.Mem(), _) && d.WellConfigured()
 			// @ requires d.getValSvc() != nil
 			// @ requires d.getValForwardingMetrics() != nil
-			// @ requires 0 in d.getDomForwardingMetrics()
-			// @ requires i in d.getDomForwardingMetrics()
+			// @ requires 0 elem d.getDomForwardingMetrics()
+			// @ requires i elem d.getDomForwardingMetrics()
 			// @ requires d.getMacFactory() != nil
 			// @ requires c != nil && acc(c.Mem(), _)
 			// contracts for IO-spec
 			// @ requires dp.Valid()
 			// @ requires d.DpAgreesWithSpec(dp)
 			// @ requires acc(ioLock.LockP(), _)
-			// @ requires ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+			// @ requires ioLock.LockInv() == SharedInv{dp, ioSharedArg}
 			func /*@ closure2 @*/ (i uint16, c BatchConn /*@, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 				defer log.HandlePanic()
 				read(i, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
 			}
 		// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R50) }
-		// @ assert v in range(d.external)
+		// @ assert v elem range(d.external)
 		// @ assert acc(v.Mem(), _)
 		// @ d.InDomainExternalInForwardingMetrics3(ifID)
 		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), R50) }
@@ -1297,14 +1297,14 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		// @ requires acc(d.Mem(), _) && d.WellConfigured()
 		// @ requires d.getValSvc() != nil
 		// @ requires d.getValForwardingMetrics() != nil
-		// @ requires 0 in d.getDomForwardingMetrics()
+		// @ requires 0 elem d.getDomForwardingMetrics()
 		// @ requires d.getMacFactory() != nil
 		// @ requires c != nil && acc(c.Mem(), _)
 		// contracts for IO-spec
 		// @ requires dp.Valid()
 		// @ requires d.DpAgreesWithSpec(dp)
 		// @ requires acc(ioLock.LockP(), _)
-		// @ requires ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+		// @ requires ioLock.LockInv() == SharedInv{dp, ioSharedArg}
 		func /*@ closure3 @*/ (c BatchConn /*@, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) {
 			defer log.HandlePanic()
 			read(0, c, &d /*@, ioLock, ioSharedArg, dp @*/) //@ as rc
@@ -1315,8 +1315,8 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 	d.mtx.Unlock()
 	// @ assert acc(ctx.Mem(), _)
 	c := ctx.Done()
-	// @ fold PredTrue!<!>()
-	// @ assert c.RecvGivenPerm() == PredTrue!<!>
+	// @ fold PredTrue{}()
+	// @ assert c.RecvGivenPerm() == PredTrue{}
 	<-c
 	return nil
 }
@@ -1334,7 +1334,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // @ ensures   d.Mem()
 // @ ensures   d.MetricsAreSet()
 // @ ensures   d.WellConfigured()
-// @ ensures   0 in d.DomainForwardingMetrics()
+// @ ensures   0 elem d.DomainForwardingMetrics()
 // @ ensures   d.InternalConnIsSet()
 // @ ensures   d.KeyIsSet()
 // @ ensures   d.SvcsAreSet()
@@ -1386,14 +1386,14 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ invariant d.external === dExternal
 	// @ invariant acc(&d.forwardingMetrics) && acc(d.forwardingMetrics)
 	// @ invariant domain(d.forwardingMetrics) == set[uint16]{0} union visitedSet
-	// @ invariant 0 in domain(d.forwardingMetrics)
+	// @ invariant 0 elem domain(d.forwardingMetrics)
 	// @ invariant acc(&d.internalNextHops, R15)
 	// @ invariant d.internalNextHops === dInternalNextHops
 	// @ invariant d.internalNextHops != nil ==> acc(d.internalNextHops, R20)
 	// @ invariant domain(d.internalNextHops) intersection domain(d.external) == set[uint16]{}
 	// @ invariant acc(&d.neighborIAs, R15)
 	// @ invariant d.neighborIAs != nil ==> acc(d.neighborIAs, R15)
-	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i in domain(d.forwardingMetrics) ==>
+	// @ invariant forall i uint16 :: { d.forwardingMetrics[i] } i elem domain(d.forwardingMetrics) ==>
 	// @ 	acc(forwardingMetricsMem(d.forwardingMetrics[i], i), _)
 	// @ invariant acc(&d.Metrics, R15)
 	// @ invariant acc(d.Metrics.Mem(), _)
@@ -1517,7 +1517,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // contracts for IO-spec
 // @ requires dp.Valid()
 // @ requires acc(ioLock.LockP(), _)
-// @ requires ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+// @ requires ioLock.LockInv() == SharedInv{dp, ioSharedArg}
 // @ requires let absPkt := absIO_val(rawPkt, p.getIngressID()) in
 // @ 	absPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.getIngressID()), absPkt.ValPkt_2)
 // @ ensures  respr.OutPkt != nil ==>
@@ -1705,7 +1705,7 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 	}
 
 	if v, ok := p.d.bfdSessions[p.ingressID]; ok {
-		// @ assert v in range(p.d.bfdSessions)
+		// @ assert v elem range(p.d.bfdSessions)
 		v.ReceiveMessage(bfd /*@ , data @*/)
 		return nil
 	}
@@ -1753,12 +1753,12 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ invariant acc(&p.d.internalNextHops, _)
 	// @ invariant m === p.d.internalNextHops
 	// @ invariant m != nil ==> acc(m, R20)
-	// @ invariant m != nil ==> forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
+	// @ invariant m != nil ==> forall a *net.UDPAddr :: { a elem range(m) } a elem range(m) ==> acc(a.Mem(), _)
 	// @ invariant acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 	// @ decreases len(p.d.internalNextHops) - len(keys)
 	for k, v := range p.d.internalNextHops /*@ with keys @*/ {
 		// @ assert acc(&p.d.internalNextHops, _)
-		// @ assert forall a *net.UDPAddr :: { a in range(m) } a in range(m) ==> acc(a.Mem(), _)
+		// @ assert forall a *net.UDPAddr :: { a elem range(m) } a elem range(m) ==> acc(a.Mem(), _)
 		// @ assert acc(v.Mem(), _)
 		// @ unfold acc(v.Mem(), _)
 		// @ unfold acc(p.srcAddr.Mem(), _)
@@ -1774,7 +1774,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ assert acc(&p.d.bfdSessions, _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if v, ok := p.d.bfdSessions[ifID]; ok {
-		// @ assert v in range(p.d.bfdSessions)
+		// @ assert v elem range(p.d.bfdSessions)
 		v.ReceiveMessage(bfd /*@ , data @*/)
 		return nil
 	}
@@ -1837,7 +1837,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ 	p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidScionInitSpec(ub)
 // @ requires  p.scionLayer.EqPathType(ub)
 // @ requires  acc(ioLock.LockP(), _)
-// @ requires  ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+// @ requires  ioLock.LockInv() == SharedInv{dp, ioSharedArg}
 // @ requires  let absPkt := absIO_val(p.rawPkt, p.ingressID) in
 // @ 	absPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.ValPkt_2)
 // @ ensures   reserr == nil && newAbsPkt.isValPkt ==>
@@ -2586,10 +2586,10 @@ func (p *scionPacketProcessor) invalidDstIA(
 // @ requires  acc(&p.infoField, R4) && acc(&p.hopField, R4)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
 // @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @ 	p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ 	int(p.path.GetCurrHF(ubPath)) <= p.path.GetNumHops(ubPath)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
 // @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @ 	p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
+// @ 	int(p.path.GetCurrINF(ubPath)) <= p.path.GetNumINF(ubPath)
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires  acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(sl.Bytes(ub, 0, len(ub)), R4)
@@ -2633,8 +2633,8 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 	expectedSrc, ok := p.d.internalNextHops[pktIngressID]
 	// @ ghost if ok {
-	// @ 	assert expectedSrc in range(p.d.internalNextHops)
-	// @    unfold acc(expectedSrc.Mem(), _)
+	// @ 	assert expectedSrc elem range(p.d.internalNextHops)
+	// @ 	unfold acc(expectedSrc.Mem(), _)
 	// @ }
 	// @ unfold acc(p.srcAddr.Mem(), _)
 	if !ok || !expectedSrc.IP.Equal(p.srcAddr.IP) {
@@ -3346,8 +3346,8 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.path.Mem(ubPath), R5)
 // @ requires  acc(&p.infoField, R5) && acc(&p.hopField, R5)
-// @ requires  p.path.GetCurrINF(ubPath) <= p.path.GetNumINF(ubPath)
-// @ requires  p.path.GetCurrHF(ubPath) <= p.path.GetNumHops(ubPath)
+// @ requires  int(p.path.GetCurrINF(ubPath)) <= p.path.GetNumINF(ubPath)
+// @ requires  int(p.path.GetCurrHF(ubPath)) <= p.path.GetNumHops(ubPath)
 // @ preserves acc(sl.Bytes(ubPath, 0, len(ubPath)), R5)
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(p.path.Mem(ubPath), R5)
@@ -3953,7 +3953,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ requires  dp.Valid()
 // @ requires  p.scionLayer.EqAbsHeader(ub) && p.scionLayer.EqPathType(ub) && p.scionLayer.ValidScionInitSpec(ub)
 // @ requires  acc(ioLock.LockP(), _)
-// @ requires  ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+// @ requires  ioLock.LockInv() == SharedInv{dp, ioSharedArg}
 // @ requires  let absPkt := absIO_val(ub, p.ingressID) in
 // @ 	absPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.ValPkt_2)
 // @ ensures   reserr == nil && newAbsPkt.isValPkt ==>
@@ -4291,7 +4291,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 		// @ ghost if p.d.external != nil { unfold acc(accBatchConn(p.d.external), _) }
 		if c, ok := p.d.external[ohp.FirstHop.ConsEgress]; ok {
 			// @ p.d.getDomExternalLemma()
-			// @ assert ohp.FirstHop.ConsEgress in p.d.getDomExternal()
+			// @ assert ohp.FirstHop.ConsEgress elem p.d.getDomExternal()
 			// @ p.d.InDomainExternalInForwardingMetrics(ohp.FirstHop.ConsEgress)
 			// @ fold p.d.validResult(processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt}, false)
 			return processResult{EgressID: ohp.FirstHop.ConsEgress, OutConn: c, OutPkt: p.rawPkt},
