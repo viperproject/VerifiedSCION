@@ -1908,7 +1908,7 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
 // @ requires  acc(ioLock.LockP(), _)
-// @ requires  ioLock.LockInv() == SharedInv!< dp, ioSharedArg !>
+// @ requires  ioLock.LockInv() == SharedInv{dp, ioSharedArg}
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.ValUnit{})
 // @ ensures  respr.OutPkt != nil ==>
 // @ 	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID) &&
