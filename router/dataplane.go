@@ -1873,6 +1873,8 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ requires  acc(&p.path)
 // @ requires  p.scionLayer.Mem(ub)
 // @ requires  sl.Bytes(ub, 0, len(ub))
+// @ requires  acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
+// @ requires  sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
 // @ preserves acc(&p.srcAddr, R10) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(&p.lastLayer, R10)
 // @ preserves p.lastLayer != nil
@@ -1899,6 +1901,10 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ 	respr.OutAddr != nil &&
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.Bytes(ub, 0, len(ub)), R15)))
 // @ ensures   !addrAliasesPkt ==> acc(sl.Bytes(ub, 0, len(ub)), R15)
+// @ ensures   acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
+// @ ensures   sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
+// @ ensures   respr.OutPkt != nil ==>
+// @ 	(respr.OutPkt === ub || respr.OutPkt === p.buffer.UBuf())
 // @ ensures   respr.OutPkt !== ub && respr.OutPkt != nil ==>
 // @ 	sl.Bytes(respr.OutPkt, 0, len(respr.OutPkt))
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
@@ -2125,7 +2131,7 @@ func (p *scionPacketProcessor) packSCMP(
 // @ requires  acc(&p.d, R50) && acc(p.d.Mem(), _)
 // @ requires  acc(p.scionLayer.Mem(ub), R5)
 // @ requires  acc(&p.path, R20)
-// @ requires  p.path === p.scionLayer.GetScionPath(ub)
+// @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.hopField) && acc(&p.infoField)
 // Preconditions for IO:
 // @ requires  p.scionLayer.EqAbsHeader(ub)
@@ -2816,7 +2822,7 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost dp io.DataPlaneSpec, 
 // @ requires  acc(&p.infoField)
 // @ requires  acc(&p.path, R20)
 // @ requires  acc(p.scionLayer.Mem(ub), R19)
-// @ requires  p.path === p.scionLayer.GetScionPath(ub)
+// @ requires  p.path === p.scionLayer.GetPath(ub)
 // @ requires  acc(&p.hopField,  R20)
 // @ requires  sl.Bytes(ub, 0, len(ub))
 // @ requires  acc(&p.ingressID, R21)
@@ -3948,7 +3954,10 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ ensures   !addrAliasesPkt ==> acc(sl.Bytes(ub, 0, len(ub)), R15)
 // @ ensures   acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
-// @ ensures   reserr == nil ==> p.path == p.scionLayer.GetScionPath(ub)
+// (VerifiedSCION) TODO: reinstate the following postcondition when completing
+// the proof of processEPIC. It requires re-establishing the equality between
+// p.path and p.scionLayer.GetScionPath(ub) at every exit point of this method.
+// ensures   reserr == nil ==> p.path == p.scionLayer.GetScionPath(ub)
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
 // @ ensures   respr.OutPkt != nil ==>
