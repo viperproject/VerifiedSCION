@@ -2177,7 +2177,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
 	}
-	p.infoField, err = p.path.GetCurrentInfoField( /*@ ubScionPath @*/ )
+	p.infoField, err = p.path.GetCurrentInfoField( /*@ ubPath @*/ )
 	if err != nil {
 		// TODO(lukedirtwalker) parameter problem invalid path?
 		return processResult{}, err
@@ -2847,6 +2847,9 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost dp io.DataPlaneSpec, 
 // @ decreases
 func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte @*/ ) (err error) {
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
+	// @ ghost start := p.scionLayer.PathStartIdx(ub)
+	// @ ghost end   := p.scionLayer.PathEndIdx(ub)
+	// @ assert ub[start:end] === ubPath
 	// @ ghost ubScionPath := p.scionLayer.UBScionPath(ub)
 	// @ ghost startScionP := p.scionLayer.PathScionStartIdx(ub)
 	// @ ghost endScionP   := p.scionLayer.PathScionEndIdx(ub)
@@ -3655,6 +3658,9 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	// @ assert let fut := absPkt(ub).CurrSeg.Future in
 	// @ 	fut == seq[io.HF]{p.hopField.Abs()} ++ fut[1:]
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
+	// @ ghost startP := p.scionLayer.PathStartIdx(ub)
+	// @ ghost endP   := p.scionLayer.PathEndIdx(ub)
+	// @ assert ub[startP:endP] === ubPath
 	// @ ghost ubScionPath := p.scionLayer.UBScionPath(ub)
 	// @ ghost startScionP := p.scionLayer.PathScionStartIdx(ub)
 	// @ ghost endScionP   := p.scionLayer.PathScionEndIdx(ub)
