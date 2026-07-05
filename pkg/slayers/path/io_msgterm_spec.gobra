@@ -18,7 +18,6 @@ package path
 
 import (
 	"verification/io"
-	. "verification/utils/definitions"
 )
 
 // At the moment, we assume that all cryptographic operations performed at the code level
@@ -34,28 +33,25 @@ ghost
 decreases
 pure func AbsMac(mac [MacLen]byte) (io.MsgTerm)
 
-// The following function converts a slice with at least `MacLen` elements into
-// an (exclusive) array containing the mac. Note that there are no permissions
-// involved for accessing exclusive arrays.
+// The following function converts a sequence with exactly `MacLen` elements
+// into an (exclusive) array containing the mac. Note that there are no
+// permissions involved for accessing exclusive arrays or sequences.
 ghost
-requires MacLen <= len(mac)
-requires forall i int :: { &mac[i] } 0 <= i && i < MacLen ==> acc(&mac[i])
+requires len(mac) == MacLen
 ensures  len(res) == MacLen
 ensures  forall i int :: { res[i] } 0 <= i && i < MacLen ==> mac[i] == res[i]
 decreases
-pure func FromSliceToMacArray(mac []byte) (res [MacLen]byte) {
+pure func FromSeqToMacArray(mac seq[byte]) (res [MacLen]byte) {
 	return [MacLen]byte{ mac[0], mac[1], mac[2], mac[3], mac[4], mac[5] }
 }
 
 ghost
 requires len(mac1) == MacLen
-requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R50)
-requires forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> mac1[i] == mac2[i]
-ensures  forall i int :: { &mac1[i] } 0 <= i && i < MacLen ==> acc(&mac1[i], R50)
-ensures  AbsMac(FromSliceToMacArray(mac1)) == AbsMac(mac2)
+requires forall i int :: { mac2[i] } 0 <= i && i < MacLen ==> mac1[i] == mac2[i]
+ensures  AbsMac(FromSeqToMacArray(mac1)) == AbsMac(mac2)
 decreases
-func EqualBytesImplyEqualMac(mac1 []byte, mac2 [MacLen]byte) {
-	mac1Arr := FromSliceToMacArray(mac1)
+func EqualSeqImplyEqualMac(mac1 seq[byte], mac2 [MacLen]byte) {
+	mac1Arr := FromSeqToMacArray(mac1)
 	assert mac1Arr == mac2
 	assert mac1Arr[0] == mac2[0] &&
 		mac1Arr[1] == mac2[1]    &&
