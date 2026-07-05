@@ -148,8 +148,8 @@ func CalcMac(auth []byte, pktID epic.PktID, s *slayers.SCION,
 	// @ package (sl.Bytes(result, 0, len(result)) --* sl.Bytes(oldBuffer, 0, len(oldBuffer))) {
 	// @ 	ghost if !allocatesNewBuffer {
 	// @ 		assert oldBuffer === buffer
-	// @ 		sl.CombineRange_Bytes(input, start, end, writePerm)
-	// @ 		sl.CombineRange_Bytes(oldBuffer, 0, inputLength, writePerm)
+	// @ 		sl.CombineRangeNoView_Bytes(input, start, end, writePerm)
+	// @ 		sl.CombineRangeNoView_Bytes(oldBuffer, 0, inputLength, writePerm)
 	// @ 	}
 	// @ }
 	// @ assert (sl.Bytes(result, 0, len(result)) --* sl.Bytes(oldBuffer, 0, len(oldBuffer)))

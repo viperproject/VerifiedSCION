@@ -240,10 +240,10 @@ pure func DecodedFrom(line uint32) MetaHdr {
 }
 
 ghost
-requires MetaLen <= len(raw)
 decreases
 pure func (m MetaHdr) DecodeFromBytesSpec(raw seq[byte]) bool {
-	return 0 <= m.CurrINF && m.CurrINF <= 3 &&
+	return MetaLen <= len(raw)           &&
+		0 <= m.CurrINF && m.CurrINF <= 3 &&
 		0 <= m.CurrHF  && m.CurrHF < 64  &&
 		m.SegsInBounds() &&
 		let line := binary.BigEndian.Uint32Spec(raw[0], raw[1], raw[2], raw[3]) in
@@ -252,7 +252,6 @@ pure func (m MetaHdr) DecodeFromBytesSpec(raw seq[byte]) bool {
 
 ghost
 requires s.Mem()
-requires MetaLen <= len(raw)
 decreases
 pure func (s *Base) DecodeFromBytesSpec(raw seq[byte]) bool {
 	return unfolding s.Mem() in
@@ -286,10 +285,10 @@ pure func (m MetaHdr) SerializedToLine() uint32 {
 }
 
 ghost
-requires MetaLen <= len(raw)
 decreases
 pure func (m MetaHdr) SerializeToSpec(raw seq[byte]) bool {
-	return let v := m.SerializedToLine() in
+	return MetaLen <= len(raw) &&
+		let v := m.SerializedToLine() in
 		binary.BigEndian.PutUint32Spec(raw[0], raw[1], raw[2], raw[3], v)
 }
 

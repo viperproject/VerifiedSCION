@@ -264,7 +264,7 @@ requires acc(Bytes(s, 0, start), p)
 requires acc(Bytes(s, end, len(s)), p)
 ensures  acc(Bytes(s, 0, len(s)), p)
 ensures  View(s, 0, len(s)) ==
-	old(View(s, 0, start)) ++ old(View(s[start:end], 0, end-start)) ++ old(View(s, end, len(s)))
+	old(View(s, 0, start) ++ View(s[start:end], 0, end-start) ++ View(s, end, len(s)))
 decreases
 func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 	vLeft  := View(s, 0, start)
@@ -275,6 +275,24 @@ func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 	CombineAtIndex_Bytes(s, 0, len(s), start, p)
 	assert View(s, 0, len(s)) == vLeft ++ (vMid ++ vRight)
 	assert vLeft ++ (vMid ++ vRight) == vLeft ++ vMid ++ vRight
+}
+
+// CombineRangeNoView_Bytes behaves like CombineRange_Bytes, but does not
+// relate the views of the combined predicate instances. Use this variant
+// in contexts where heap-dependent functions cannot be evaluated in the
+// old state of the call, e.g., when packaging magic wands.
+ghost
+requires 0 < p
+requires 0 <= start && start <= end && end <= len(s)
+requires acc(Bytes(s[start:end], 0, end-start), p)
+requires acc(Bytes(s, 0, start), p)
+requires acc(Bytes(s, end, len(s)), p)
+ensures  acc(Bytes(s, 0, len(s)), p)
+decreases
+func CombineRangeNoView_Bytes(s []byte, start int, end int, p perm) {
+	Unslice_Bytes(s, start, end, p)
+	CombineAtIndex_Bytes(s, start, len(s), end, p)
+	CombineAtIndex_Bytes(s, 0, len(s), start, p)
 }
 
 ghost
