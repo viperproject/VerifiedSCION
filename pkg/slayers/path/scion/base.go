@@ -83,10 +83,10 @@ type Base struct {
 // @ ensures   r == nil ==>
 // @ 	s.Mem() &&
 // @ 	s.GetBase().WeaklyValid() &&
-// @ 	s.DecodeFromBytesSpec(data)
+// @ 	s.DecodeFromBytesSpec(sl.View(data, 0, len(data)))
 // @ ensures   len(data) < MetaLen ==> r != nil
 // posts for IO:
-// @ ensures   r == nil ==> s.GetBase().EqAbsHeader(data)
+// @ ensures   r == nil ==> s.GetBase().EqAbsHeader(sl.View(data, 0, len(data)))
 // @ decreases
 func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	// PathMeta takes care of bounds check.
@@ -149,8 +149,8 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		//@ defer fold s.NonInitMem()
 		return serrors.New("NumHops too large", "NumHops", s.NumHops, "Maximum", MaxHops)
 	}
-	//@ assert s.PathMeta.EqAbsHeader(data)
-	//@ assert s.EqAbsHeader(data)
+	//@ assert s.PathMeta.EqAbsHeader(sl.View(data, 0, len(data)))
+	//@ assert s.EqAbsHeader(sl.View(data, 0, len(data)))
 	//@ fold s.Mem()
 	return nil
 }
@@ -253,7 +253,7 @@ type MetaHdr struct {
 // @ preserves acc(sl.Bytes(raw, 0, len(raw)), R50)
 // @ ensures   (len(raw) >= MetaLen) == (e == nil)
 // @ ensures   e == nil ==> m.InBounds()
-// @ ensures   e == nil ==> m.DecodeFromBytesSpec(raw)
+// @ ensures   e == nil ==> m.DecodeFromBytesSpec(sl.View(raw, 0, len(raw)))
 // @ ensures   e != nil ==> e.ErrorMem()
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
@@ -261,6 +261,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
 		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
+	//@ ghost v := sl.View(raw, 0, len(raw))
 	//@ unfold acc(sl.Bytes(raw, 0, len(raw)), R50)
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
@@ -273,7 +274,9 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	//@ bit.And3fAtMost64(uint8(line>>12))
 	//@ bit.And3fAtMost64(uint8(line>>6))
 	//@ bit.And3fAtMost64(uint8(line))
+	//@ assert v[0] == raw[0] && v[1] == raw[1] && v[2] == raw[2] && v[3] == raw[3]
 	//@ fold acc(sl.Bytes(raw, 0, len(raw)), R50)
+	//@ assert line == binary.BigEndian.Uint32Spec(v[0], v[1], v[2], v[3])
 	return nil
 }
 
@@ -283,7 +286,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 // @ preserves acc(m, R50)
 // @ preserves sl.Bytes(b, 0, len(b))
 // @ ensures   e == nil
-// @ ensures   m.SerializeToSpec(b)
+// @ ensures   m.SerializeToSpec(sl.View(b, 0, len(b)))
 // @ decreases
 func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	if len(b) < MetaLen {
@@ -296,7 +299,14 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	line |= uint32(m.SegLen[2] & 0x3F)
 	//@ unfold acc(sl.Bytes(b, 0, len(b)))
 	binary.BigEndian.PutUint32(b, line)
+	//@ ghost b0 := b[0]
+	//@ ghost b1 := b[1]
+	//@ ghost b2 := b[2]
+	//@ ghost b3 := b[3]
 	//@ fold acc(sl.Bytes(b, 0, len(b)))
+	//@ ghost v := sl.View(b, 0, len(b))
+	//@ assert v[0] == b0 && v[1] == b1 && v[2] == b2 && v[3] == b3
+	//@ assert binary.BigEndian.PutUint32Spec(v[0], v[1], v[2], v[3], line)
 	return nil
 }
 

@@ -18,10 +18,6 @@ package scion
 
 import (
 	"encoding/binary"
-	"github.com/scionproto/scion/pkg/slayers/path"
-	sl "github.com/scionproto/scion/verification/utils/slices"
-
-	. "github.com/scionproto/scion/verification/utils/definitions"
 )
 
 pred (b *Base) NonInitMem() {
@@ -244,29 +240,23 @@ pure func DecodedFrom(line uint32) MetaHdr {
 }
 
 ghost
-requires sl.Bytes(b, 0, len(b))
+requires MetaLen <= len(raw)
 decreases
-pure func (m MetaHdr) DecodeFromBytesSpec(b []byte) bool {
-	return MetaLen <= len(b)             &&
-		0 <= m.CurrINF && m.CurrINF <= 3 &&
+pure func (m MetaHdr) DecodeFromBytesSpec(raw seq[byte]) bool {
+	return 0 <= m.CurrINF && m.CurrINF <= 3 &&
 		0 <= m.CurrHF  && m.CurrHF < 64  &&
 		m.SegsInBounds() &&
-		let lenR := len(b) in
-		let b0 := sl.GetByte(b, 0, lenR, 0) in
-		let b1 := sl.GetByte(b, 0, lenR, 1) in
-		let b2 := sl.GetByte(b, 0, lenR, 2) in
-		let b3 := sl.GetByte(b, 0, lenR, 3) in
-		let line := binary.BigEndian.Uint32Spec(b0, b1, b2, b3) in
+		let line := binary.BigEndian.Uint32Spec(raw[0], raw[1], raw[2], raw[3]) in
 		DecodedFrom(line) == m
 }
 
 ghost
 requires s.Mem()
-requires sl.Bytes(b, 0, len(b))
+requires MetaLen <= len(raw)
 decreases
-pure func (s *Base) DecodeFromBytesSpec(b []byte) bool {
+pure func (s *Base) DecodeFromBytesSpec(raw seq[byte]) bool {
 	return unfolding s.Mem() in
-		s.PathMeta.DecodeFromBytesSpec(b)
+		s.PathMeta.DecodeFromBytesSpec(raw)
 }
 
 ghost
@@ -296,38 +286,29 @@ pure func (m MetaHdr) SerializedToLine() uint32 {
 }
 
 ghost
-requires sl.Bytes(b, 0, len(b))
+requires MetaLen <= len(raw)
 decreases
-pure func (m MetaHdr) SerializeToSpec(b []byte) bool {
-	return MetaLen <= len(b)                &&
-		let lenR := len(b)                  in
-		let b0 := sl.GetByte(b, 0, lenR, 0) in
-		let b1 := sl.GetByte(b, 0, lenR, 1) in
-		let b2 := sl.GetByte(b, 0, lenR, 2) in
-		let b3 := sl.GetByte(b, 0, lenR, 3) in
-		let v  := m.SerializedToLine()      in
-		binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, v)
+pure func (m MetaHdr) SerializeToSpec(raw seq[byte]) bool {
+	return let v := m.SerializedToLine() in
+		binary.BigEndian.PutUint32Spec(raw[0], raw[1], raw[2], raw[3], v)
 }
 
 ghost
-requires sl.Bytes(ub, 0, len(ub))
 decreases
-pure func (s Base) EqAbsHeader(ub []byte) bool {
-	// we compute the sublice ub[:MetaLen] inside this function instead
-	// of expecting the correct subslice to be passed, otherwise this function
-	// becomes too cumbersome to use in calls from (*Raw).EqAbsHeader due to the
-	// lack of a folding expression. Same goes for MetaHdr.EqAbsHeader.
-	return MetaLen <= len(ub) &&
-		s == RawBytesToBase(ub)
+pure func (s Base) EqAbsHeader(raw seq[byte]) bool {
+	// we take the whole view of the packet instead of expecting the
+	// subsequence raw[:MetaLen] to be passed, otherwise this function
+	// becomes too cumbersome to use in calls from (*Raw).EqAbsHeader.
+	// Same goes for MetaHdr.EqAbsHeader.
+	return MetaLen <= len(raw) &&
+		s == RawBytesToBase(raw)
 }
 
 ghost
-requires sl.Bytes(ub, 0, len(ub))
 decreases
-pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
-	return MetaLen <= len(ub) &&
-		unfolding sl.Bytes(ub, 0, len(ub)) in
-		s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen]))
+pure func (s MetaHdr) EqAbsHeader(raw seq[byte]) bool {
+	return MetaLen <= len(raw) &&
+		s == DecodedFrom(binary.BigEndian.Uint32Spec(raw[0], raw[1], raw[2], raw[3]))
 }
 
 /** Lemma proven in /VerifiedSCION/verification/utils/bitwise/proofs.dfy **/

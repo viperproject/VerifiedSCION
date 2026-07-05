@@ -39,6 +39,27 @@ ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
 decreases _
 pure func NewSeqByteSlice(size int) (res seq[[]byte])
 
+// SubSeqOfSubSeq proves that reslicing a subsequence yields the same
+// sequence as directly slicing the original sequence with the composed
+// indices.
+ghost
+requires 0 <= start && start <= a
+requires a <= b && b <= length && length <= len(raw)
+ensures  raw[a:b] == raw[start:length][a - start : b - start]
+decreases
+func SubSeqOfSubSeq(raw seq[byte], a int, b int, start int, length int) {
+    s1 := raw[a:b]
+    s2 := raw[start:length][a - start : b - start]
+    assert len(s1) == len(s2)
+    assert forall i int :: { s1[i] } 0 <= i && i < b - a ==>
+        s1[i] == raw[a + i]
+    assert forall i int :: { s2[i] } 0 <= i && i < b - a ==>
+        s2[i] == raw[start:length][a - start + i]
+    assert forall i int :: { s2[i] } 0 <= i && i < b - a ==>
+        s2[i] == raw[a + i]
+    assert s1 == s2
+}
+
 // Deprecated: use sl.View directly. ToSeqByte is kept as an alias for
 // the view of a whole slice while its remaining clients are migrated.
 ghost
