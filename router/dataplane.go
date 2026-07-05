@@ -2134,7 +2134,7 @@ func (p *scionPacketProcessor) packSCMP(
 // @ ensures   acc(&p.d, R50)
 // @ ensures   acc(p.scionLayer.Mem(ub), R5)
 // @ ensures   acc(&p.path, R20)
-// @ ensures   p.path === p.scionLayer.GetScionPath(ub)
+// @ ensures   p.path === p.scionLayer.GetPath(ub)
 // @ ensures   acc(&p.hopField) && acc(&p.infoField)
 // @ ensures   respr === processResult{}
 // @ ensures   reserr == nil ==>
