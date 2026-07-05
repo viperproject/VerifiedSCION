@@ -24,7 +24,7 @@ import (
 
 pred (s *services) Mem() {
 	s.mtx.LockP() &&
-	s.mtx.LockInv() == internalLockInv!<s!>;
+	s.mtx.LockInv() == internalLockInv{s};
 }
 
 pred internalLockInv(s *services) {

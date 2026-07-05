@@ -33,9 +33,9 @@ import (
 func foldMem_test() {
 	d@ := DataPlane{}
 	fold d.Mem()
-	fold MutexInvariant!<&d!>()
+	fold MutexInvariant{&d}()
 	// testing initialization with the operations from dataplane
-	d.mtx.SetInv(MutexInvariant!<&d!>)
+	d.mtx.SetInv(MutexInvariant{&d})
 	d.AddNeighborIA(uint16(1), addr.IA(10))
 	d.AddNeighborIA(uint16(2), addr.IA(11))
 }
@@ -218,16 +218,16 @@ func testRun(
 	assert reveal d.DpAgreesWithSpec(dp)
 
 	assert reveal d.PreWellConfigured()
-	fold MutexInvariant!< d !>()
+	fold MutexInvariant{d}()
 	// end of foldDataPlaneMem
 	assert !d.IsRunning()
 	assert d.InternalConnIsSet()
 	assert d.KeyIsSet()
 	assert d.SvcsAreSet()
 	assert d.MetricsAreSet()
-	d.mtx.SetInv(MutexInvariant!<d!>)
+	d.mtx.SetInv(MutexInvariant{d})
 	assert d.mtx.LockP()
-	assert d.mtx.LockInv() == MutexInvariant!<d!>
+	assert d.mtx.LockInv() == MutexInvariant{d}
 
 	// io-spec needs to be inhaled
 	inhale io.token(place)
