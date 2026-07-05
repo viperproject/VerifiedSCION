@@ -23,3 +23,25 @@ func Bytes_test() {
 	fold Bytes(s, 0, 10)
 	// assert false // fails
 }
+
+func View_test() {
+	s := make([]byte, 10)
+	fold Bytes(s, 0, 10)
+	v := View(s, 0, 10)
+	assert len(v) == 10
+	assert v[3] == GetByte(s, 0, 10, 3)
+
+	// splitting preserves the contents of the views
+	SplitByIndex_Bytes(s, 0, 10, 4, writePerm)
+	assert View(s, 0, 4) == v[:4]
+	assert View(s, 4, 10) == v[4:]
+	assert View(s, 0, 4)[2] == v[2]
+	CombineAtIndex_Bytes(s, 0, 10, 4, writePerm)
+	assert View(s, 0, 10) == v
+
+	// reslicing preserves the contents of the views
+	SplitRange_Bytes(s, 2, 8, writePerm)
+	assert View(s[2:8], 0, 6) == v[2:8]
+	CombineRange_Bytes(s, 2, 8, writePerm)
+	assert View(s, 0, 10) == v
+}

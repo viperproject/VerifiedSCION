@@ -39,10 +39,14 @@ ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
 decreases _
 pure func NewSeqByteSlice(size int) (res seq[[]byte])
 
+// Deprecated: use sl.View directly. ToSeqByte is kept as an alias for
+// the view of a whole slice while its remaining clients are migrated.
 ghost
 requires acc(sl.Bytes(ub, 0, len(ub)), _)
 ensures len(res) == len(ub)
 ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
     res[i] == sl.GetByte(ub, 0, len(ub), i)
-decreases _
-pure func ToSeqByte(ub []byte) (res seq[byte])
+decreases
+pure func ToSeqByte(ub []byte) (res seq[byte]) {
+    return sl.View(ub, 0, len(ub))
+}
