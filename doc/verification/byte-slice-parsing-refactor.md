@@ -1,5 +1,19 @@
 # Plan: parsing packet bytes through `seq[byte]` views instead of slices + permissions
 
+> **Status: implemented on this branch** (commits following this document).
+> All four steps below are executed: `View` and the strengthened slice lemmas
+> are in `verification/utils/slices`, the parsers in `pkg/slayers/path`,
+> `pkg/slayers/path/scion`, `pkg/slayers` and `router` operate on views, and
+> the OffsetEq/Widen/Subslice scaffolding is deleted or reduced to pure
+> sequence lemmas. Deviations from the letter of the plan: `CurrSeg` keeps its
+> packet-relative signature (offsets into the view) rather than taking
+> field-exact arguments, the `*WithInfo` family is kept (seq-based) instead of
+> merged, and heap-boundary predicates (`(*SCION).EqAbsHeader`,
+> `CorrectlyDecoded*`, `ValidHeaderOffset`) keep a buffer argument for `Mem`
+> while their contents-reasoning goes through views. The proofs have not yet
+> been run through Gobra; CI is the arbiter for the proof scaffolding
+> (asserts/triggers), which may need iteration.
+
 ## Problem
 
 Ghost pure functions that parse packet fields currently take a `[]byte` plus offsets and
