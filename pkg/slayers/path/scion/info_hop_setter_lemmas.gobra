@@ -679,9 +679,7 @@ ensures  acc(sl.Bytes(hopfields, 0, len(hopfields)), p)
 ensures  let currHfStart := currHfIdx * path.HopLen in
 	let currHfEnd := currHfStart + path.HopLen in
 	sl.View(hopfields, 0, len(hopfields)) ==
-		old(sl.View(hopfields[:currHfStart], 0, currHfStart)) ++
-		old(sl.View(hopfields[currHfStart:currHfEnd], 0, path.HopLen)) ++
-		old(sl.View(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen))
+		old(sl.View(hopfields[:currHfStart], 0, currHfStart)) ++ old(sl.View(hopfields[currHfStart:currHfEnd], 0, path.HopLen)) ++ old(sl.View(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen))
 decreases
 func CombineHopfields(hopfields []byte, currHfIdx int, segLen int, p perm) {
 	currHfStart := currHfIdx * path.HopLen

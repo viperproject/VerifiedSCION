@@ -263,8 +263,8 @@ requires acc(Bytes(s[start:end], 0, end-start), p)
 requires acc(Bytes(s, 0, start), p)
 requires acc(Bytes(s, end, len(s)), p)
 ensures  acc(Bytes(s, 0, len(s)), p)
-ensures  View(s, 0, len(s)) == old(View(s, 0, start)) ++
-	old(View(s[start:end], 0, end-start)) ++ old(View(s, end, len(s)))
+ensures  View(s, 0, len(s)) ==
+	old(View(s, 0, start)) ++ old(View(s[start:end], 0, end-start)) ++ old(View(s, end, len(s)))
 decreases
 func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 	vLeft  := View(s, 0, start)
