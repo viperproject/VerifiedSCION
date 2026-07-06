@@ -96,6 +96,43 @@ pure func ViewAux(s []byte, i int, end int) (res seq[byte]) {
 		seq[byte]{s[i]} ++ ViewAux(s, i + 1, end)
 }
 
+// ViewAuxSplit shows that the contents of the range [start, end) are
+// the concatenation of the contents of [start, idx) and [idx, end).
+// The proof is by recursion, so that no quantified facts about the
+// contents are ever introduced.
+ghost
+requires 0 <= start && start <= idx && idx <= end && end <= cap(s)
+requires forall k int :: { &s[k] } start <= k && k < end ==> acc(&s[k], _)
+ensures  ViewAux(s, start, end) == ViewAux(s, start, idx) ++ ViewAux(s, idx, end)
+decreases idx - start
+func ViewAuxSplit(s []byte, start int, idx int, end int) {
+	if start == idx {
+		assert ViewAux(s, start, idx) == seq[byte]{}
+	} else {
+		ViewAuxSplit(s, start + 1, idx, end)
+		assert ViewAux(s, start, end) ==
+			seq[byte]{s[start]} ++ (ViewAux(s, start + 1, idx) ++ ViewAux(s, idx, end))
+		assert ViewAux(s, start, idx) == seq[byte]{s[start]} ++ ViewAux(s, start + 1, idx)
+	}
+}
+
+// ViewAuxReslice shows that the contents of the range [i, end) of s
+// coincide with the contents of the range [i - start, end - start) of
+// the subslice s[start:length]. The proof is by recursion, so that no
+// quantified facts about the contents are ever introduced.
+ghost
+requires 0 <= start && start <= i && i <= end && end <= length && length <= cap(s)
+requires forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], _)
+ensures  ViewAux(s, i, end) == ViewAux(s[start:length], i - start, end - start)
+decreases end - i
+func ViewAuxReslice(s []byte, start int, length int, i int, end int) {
+	AssertSliceOverlap(s, start, length)
+	if i != end {
+		assert &s[start:length][i - start] == &s[i]
+		ViewAuxReslice(s, start, length, i + 1, end)
+	}
+}
+
 // ViewEqFromElements derives an equality between View(s, start, end)
 // and a sequence known to be elementwise equal to it. This is the
 // extensionality principle used to reconstruct views after predicate
@@ -132,24 +169,22 @@ preserves acc(Bytes(s[start:end], 0, end - start), p)
 ensures   View(s[start:end], 0, end - start) == View(s, 0, len(s))[start:end]
 decreases
 func ViewOfSubslice(s []byte, start int, end int, p perm) {
-	ViewElems(s, 0, len(s), p/2)
-	ViewElems(s[start:end], 0, end - start, p/2)
-	vFull := View(s, 0, len(s))
-	vSub  := View(s[start:end], 0, end - start)
+	vFull := reveal View(s, 0, len(s))
+	vSub  := reveal View(s[start:end], 0, end - start)
 	unfold acc(Bytes(s, 0, len(s)), p/2)
 	unfold acc(Bytes(s[start:end], 0, end - start), p/2)
 	AssertSliceOverlap(s, start, end)
-	assert forall i int :: { &s[start:end][i] } 0 <= i && i < end - start ==>
-		s[start:end][i] == s[start + i]
-	assert forall i int :: { &s[start:end][i] } 0 <= i && i < end - start ==>
-		vSub[i] == s[start:end][i]
-	assert forall i int :: { &s[i] } start <= i && i < end ==>
-		vFull[i] == s[i]
+	ViewAuxSplit(s, 0, start, len(s))
+	ViewAuxSplit(s, start, end, len(s))
+	ViewAuxReslice(s, start, end, start, end)
+	assert vSub == ViewAux(s, start, end)
+	assert vFull == ViewAux(s, 0, start) ++ (ViewAux(s, start, end) ++ ViewAux(s, end, len(s)))
+	assert len(ViewAux(s, 0, start)) == start
+	assert vFull[start:] == ViewAux(s, start, end) ++ ViewAux(s, end, len(s))
+	assert vFull[start:][:end - start] == ViewAux(s, start, end)
+	assert vFull[start:end] == vFull[start:][:end - start]
 	fold acc(Bytes(s[start:end], 0, end - start), p/2)
 	fold acc(Bytes(s, 0, len(s)), p/2)
-	assert forall i int :: { vSub[i] } 0 <= i && i < end - start ==>
-		vSub[i] == vFull[start + i]
-	assert vSub == vFull[start:end]
 }
 
 ghost
@@ -162,19 +197,17 @@ ensures  View(s, start, idx) == old(View(s, start, end))[:idx - start]
 ensures  View(s, idx, end)   == old(View(s, start, end))[idx - start:]
 decreases
 func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
-	ViewElems(s, start, end, p)
-	v := View(s, start, end)
+	v := reveal View(s, start, end)
 	unfold acc(Bytes(s, start, end), p)
-	assert forall i int :: { &s[i] } start <= i && i < end ==>
-		s[i] == v[i - start]
+	ViewAuxSplit(s, start, idx, end)
+	assert v == ViewAux(s, start, idx) ++ ViewAux(s, idx, end)
+	assert len(ViewAux(s, start, idx)) == idx - start
 	fold   acc(Bytes(s, start, idx), p)
 	fold   acc(Bytes(s, idx, end), p)
-	assert forall i int :: { GetByte(s, start, idx, i) } start <= i && i < idx ==>
-		GetByte(s, start, idx, i) == v[i - start]
-	assert forall i int :: { GetByte(s, idx, end, i) } idx <= i && i < end ==>
-		GetByte(s, idx, end, i) == v[i - start]
-	ViewEqFromElements(s, start, idx, v[:idx - start], p)
-	ViewEqFromElements(s, idx, end, v[idx - start:], p)
+	assert reveal View(s, start, idx) == ViewAux(s, start, idx)
+	assert reveal View(s, idx, end) == ViewAux(s, idx, end)
+	assert View(s, start, idx) == v[:idx - start]
+	assert View(s, idx, end) == v[idx - start:]
 }
 
 ghost
@@ -186,22 +219,16 @@ ensures  View(s, start, end) ==
 	old(View(s, start, idx)) ++ old(View(s, idx, end))
 decreases
 func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
-	ViewElems(s, start, idx, p)
-	ViewElems(s, idx, end, p)
-	v1 := View(s, start, idx)
-	v2 := View(s, idx, end)
+	v1 := reveal View(s, start, idx)
+	v2 := reveal View(s, idx, end)
 	unfold acc(Bytes(s, start, idx), p)
 	unfold acc(Bytes(s, idx,   end), p)
-	assert forall i int :: { &s[i] } start <= i && i < idx ==>
-		s[i] == v1[i - start]
-	assert forall i int :: { &s[i] } idx <= i && i < end ==>
-		s[i] == v2[i - idx]
+	ViewAuxSplit(s, start, idx, end)
+	assert v1 == ViewAux(s, start, idx)
+	assert v2 == ViewAux(s, idx, end)
 	fold   acc(Bytes(s, start, end), p)
-	assert forall i int :: { GetByte(s, start, end, i) } start <= i && i < end ==>
-		GetByte(s, start, end, i) == (i < idx ? v1[i - start] : v2[i - idx])
-	assert forall i int :: { (v1 ++ v2)[i] } 0 <= i && i < end - start ==>
-		(v1 ++ v2)[i] == (i < idx - start ? v1[i] : v2[i - (idx - start)])
-	ViewEqFromElements(s, start, end, v1 ++ v2, p)
+	assert reveal View(s, start, end) == ViewAux(s, start, end)
+	assert View(s, start, end) == v1 ++ v2
 }
 
 ghost
@@ -214,18 +241,13 @@ ensures  acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 ensures  View(s[start:end], 0, end - start) == old(View(s, start, end))
 decreases
 func Reslice_Bytes(s []byte, start int, end int, p perm) {
-	ViewElems(s, start, end, p)
-	v := View(s, start, end)
+	v := reveal View(s, start, end)
 	unfold acc(Bytes(s, start, end), p)
 	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
-	assert forall i int :: { &s[start + i] } 0 <= i && i < (end-start) ==>
-		s[start + i] == v[i]
-	assert forall i int :: { &s[start:end][i] } 0 <= i && i < (end-start) ==>
-		s[start:end][i] == v[i]
+	ViewAuxReslice(s, start, end, start, end)
+	assert v == ViewAux(s[start:end], 0, end - start)
 	fold  acc(Bytes(s[start:end], 0, len(s[start:end])), p)
-	assert forall i int :: { GetByte(s[start:end], 0, end - start, i) } 0 <= i && i < (end-start) ==>
-		GetByte(s[start:end], 0, end - start, i) == v[i]
-	ViewEqFromElements(s[start:end], 0, end - start, v, p)
+	assert reveal View(s[start:end], 0, end - start) == ViewAux(s[start:end], 0, end - start)
 }
 
 ghost
@@ -236,32 +258,27 @@ ensures  acc(Bytes(s, start, end), p)
 ensures  View(s, start, end) == old(View(s[start:end], 0, end - start))
 decreases
 func Unslice_Bytes(s []byte, start int, end int, p perm) {
-	ViewElems(s[start:end], 0, len(s[start:end]), p)
-	v := View(s[start:end], 0, end - start)
+	v := reveal View(s[start:end], 0, end - start)
 	unfold acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 	assert 0 <= start && start <= end && end <= cap(s)
 	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
 	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> s[start:end][i] == v[i]
 
 	invariant 0 <= j && j <= len(s[start:end])
 	invariant forall i int :: { &s[start:end][i] } j <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
 	invariant forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	invariant forall i int :: { &s[start:end][i] } j <= i && i < len(s[start:end]) ==> s[start:end][i] == v[i]
 	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
-	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> s[i] == v[i - start]
 	decreases len(s[start:end]) - j
 	for j := 0; j < len(s[start:end]); j++ {
 		assert forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
 		assert &s[start:end][j] == &s[start + j]
 		assert acc(&s[start + j], p)
-		assert s[start + j] == v[j]
 		assert forall i int :: { &s[i] } start <= i && i <= start+j ==> acc(&s[i], p)
 	}
+	ViewAuxReslice(s, start, end, start, end)
+	assert v == ViewAux(s, start, end)
 	fold acc(Bytes(s, start, end), p)
-	assert forall i int :: { GetByte(s, start, end, i) } start <= i && i < end ==>
-		GetByte(s, start, end, i) == v[i - start]
-	ViewEqFromElements(s, start, end, v, p)
+	assert reveal View(s, start, end) == ViewAux(s, start, end)
 }
 
 ghost
