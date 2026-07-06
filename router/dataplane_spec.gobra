@@ -28,6 +28,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
+	"github.com/scionproto/scion/private/topology"
 	underlayconn "github.com/scionproto/scion/private/underlay/conn"
 
 	. "github.com/scionproto/scion/verification/utils/definitions"
@@ -43,40 +44,101 @@ pred MutexInvariant(d *DataPlane) {
 	(!d.running ==> acc(d.Mem(), MutexPerm))
 }
 
+// (VerifiedSCION) The conditional resources held by the dataplane (i.e., the
+// implications with resources on their right-hand side) were factored out into
+// the dedicated per-field '...Inv' predicates below. Every impure implication
+// doubles the number of paths that the verifier explores whenever 'Mem' is
+// unfolded, so keeping them in 'Mem' was very expensive. By wrapping each of
+// them in its own predicate, unfolding 'Mem' no longer branches; callers that
+// need a particular conditional resource unfold the corresponding '...Inv'
+// predicate on demand, paying for that single branch only where it is required.
+// Note that the '...Inv' predicates take the relevant field by value, which
+// keeps them self-framing without holding the permission to the field itself
+// (that permission remains in 'Mem').
 pred (d *DataPlane) Mem() {
 	// access to the field 'mtx' ommited
-	acc(&d.external)                                              &&
-	acc(&d.linkTypes)                                             &&
-	acc(&d.neighborIAs)                                           &&
-	acc(&d.internal)                                              &&
-	acc(&d.internalIP)                                            &&
-	acc(&d.internalNextHops)                                      &&
-	acc(&d.svc)                                                   &&
-	acc(&d.macFactory)                                            &&
-	acc(&d.bfdSessions)                                           &&
-	acc(&d.localIA)                                               &&
-	acc(&d.running, 1/2)                                          &&
-	acc(&d.Metrics)                                               &&
-	acc(&d.forwardingMetrics)                                     &&
-	acc(&d.key)                                                   &&
-	(d.external    != nil       ==> accBatchConn(d.external))     &&
-	(d.linkTypes   != nil       ==> acc(d.linkTypes))             &&
-	(d.neighborIAs != nil       ==> acc(d.neighborIAs))           &&
-	(d.internal != nil          ==> d.internal.Mem())             &&
-	(d.internalIP != nil        ==> d.internalIP.Mem())           &&
-	(d.internalNextHops != nil  ==> accAddr(d.internalNextHops))  &&
-	(d.svc != nil               ==> d.svc.Mem())                  &&
-	(d.macFactory != nil        ==> (
-		acc(d.key)                                      &&
-		acc(sl.Bytes(*d.key, 0, len(*d.key)), _)        &&
-		len(*d.key) > 0                                 &&
-		scrypto.ValidKeyForHash(*d.key)                 &&
-		d.macFactory implements MacFactorySpec{d.key}))           &&
-	(d.bfdSessions != nil       ==> accBfdSession(d.bfdSessions)) &&
-	(d.Metrics != nil           ==> acc(d.Metrics.Mem(), _))      &&
+	acc(&d.external)                          &&
+	acc(&d.linkTypes)                         &&
+	acc(&d.neighborIAs)                       &&
+	acc(&d.internal)                          &&
+	acc(&d.internalIP)                        &&
+	acc(&d.internalNextHops)                  &&
+	acc(&d.svc)                               &&
+	acc(&d.macFactory)                        &&
+	acc(&d.bfdSessions)                       &&
+	acc(&d.localIA)                           &&
+	acc(&d.running, 1/2)                      &&
+	acc(&d.Metrics)                           &&
+	acc(&d.forwardingMetrics)                 &&
+	acc(&d.key)                               &&
+	externalInv(d.external)                   &&
+	linkTypesInv(d.linkTypes)                 &&
+	neighborIAsInv(d.neighborIAs)             &&
+	internalInv(d.internal)                   &&
+	internalIPInv(d.internalIP)               &&
+	internalNextHopsInv(d.internalNextHops)   &&
+	svcInv(d.svc)                             &&
+	macFactoryInv(d.macFactory, d.key)        &&
+	bfdSessionsInv(d.bfdSessions)             &&
+	metricsInv(d.Metrics)                     &&
 	// The following permissions are enough to call all methods needed in fields
 	// of forwardingMetrics
-	(d.forwardingMetrics != nil ==> accForwardingMetrics(d.forwardingMetrics))
+	forwardingMetricsInv(d.forwardingMetrics)
+}
+
+// (VerifiedSCION) Each of the following predicates captures one of the
+// conditional resources that used to be held directly by 'Mem'. They take the
+// relevant field by value so that they are self-framing without owning the
+// permission to the field (which stays in 'Mem'). This lets 'Mem' be unfolded
+// without branching; the branch is paid only when one of these predicates is
+// unfolded.
+pred externalInv(batchConns map[uint16]BatchConn) {
+	batchConns != nil ==> accBatchConn(batchConns)
+}
+
+pred linkTypesInv(linkTypes map[uint16]topology.LinkType) {
+	linkTypes != nil ==> acc(linkTypes)
+}
+
+pred neighborIAsInv(neighborIAs map[uint16]addr.IA) {
+	neighborIAs != nil ==> acc(neighborIAs)
+}
+
+pred internalInv(internal BatchConn) {
+	internal != nil ==> internal.Mem()
+}
+
+pred internalIPInv(internalIP net.IP) {
+	internalIP != nil ==> internalIP.Mem()
+}
+
+pred internalNextHopsInv(internalNextHops map[uint16]*net.UDPAddr) {
+	internalNextHops != nil ==> accAddr(internalNextHops)
+}
+
+pred svcInv(svc *services) {
+	svc != nil ==> svc.Mem()
+}
+
+pred macFactoryInv(macFactory func() hash.Hash, key *[]byte) {
+	macFactory != nil ==> (
+		acc(key)                                 &&
+		acc(sl.Bytes(*key, 0, len(*key)), _)     &&
+		len(*key) > 0                            &&
+		scrypto.ValidKeyForHash(*key)            &&
+		macFactory implements MacFactorySpec{key})
+}
+
+pred bfdSessionsInv(bfdSessions map[uint16]bfdSession) {
+	bfdSessions != nil ==> accBfdSession(bfdSessions)
+}
+
+pred metricsInv(metrics *Metrics) {
+	metrics != nil ==> acc(metrics.Mem(), _)
+}
+
+pred forwardingMetricsInv(fwMetrics map[uint16]forwardingMetrics) {
+	fwMetrics != nil ==> accForwardingMetrics(fwMetrics)
 }
 
 pred accAddr(addrs map[uint16]*net.UDPAddr) {
@@ -187,6 +249,7 @@ ensures  d.internalNextHops != nil ==> acc(accAddr(d.internalNextHops), _)
 decreases
 func (d *DataPlane) getInternalNextHops() {
 	unfold acc(d.Mem(), _)
+	unfold acc(internalNextHopsInv(d.internalNextHops), _)
 }
 
 ghost
@@ -197,6 +260,7 @@ ensures  d.forwardingMetrics != nil ==>
 decreases
 func (d *DataPlane) getForwardingMetrics() {
 	unfold acc(d.Mem(), _)
+	unfold acc(forwardingMetricsInv(d.forwardingMetrics), _)
 }
 
 ghost
@@ -228,6 +292,7 @@ requires d.Mem()
 decreases
 pure func (d *DataPlane) getDomForwardingMetrics() set[uint16] {
 	return unfolding d.Mem() in
+		unfolding forwardingMetricsInv(d.forwardingMetrics) in
 		d.forwardingMetrics == nil ?
 			set[uint16]{} :
 			(unfolding accForwardingMetrics(d.forwardingMetrics) in
@@ -239,6 +304,7 @@ requires d.Mem()
 decreases
 pure func (d *DataPlane) GetDomInternalNextHops() set[uint16] {
 	return unfolding d.Mem() in
+		unfolding internalNextHopsInv(d.internalNextHops) in
 		d.internalNextHops == nil ?
 			set[uint16]{} :
 			(unfolding accAddr(d.internalNextHops) in
@@ -251,6 +317,7 @@ requires d.Mem()
 decreases
 pure func (d *DataPlane) getDomExternal() set[uint16] {
 	return unfolding d.Mem() in
+		unfolding externalInv(d.external) in
 		d.external == nil ?
 			set[uint16]{} :
 			(unfolding accBatchConn(d.external) in
@@ -262,6 +329,7 @@ requires d.Mem()
 decreases
 pure func (d *DataPlane) getDomNeighborIAs() set[uint16] {
 	return unfolding d.Mem() in
+		unfolding neighborIAsInv(d.neighborIAs) in
 		d.neighborIAs == nil ?
 			set[uint16]{} : domain(d.neighborIAs)
 }
@@ -271,6 +339,7 @@ requires d.Mem()
 decreases
 pure func (d *DataPlane) getDomLinkTypes() set[uint16] {
 	return unfolding d.Mem() in
+		unfolding linkTypesInv(d.linkTypes) in
 		d.linkTypes == nil ?
 			set[uint16]{} : domain(d.linkTypes)
 }
@@ -306,6 +375,7 @@ ensures  acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 decreases
 func (d *DataPlane) getForwardingMetricsMem(id uint16) {
 	unfold acc(d.Mem(), _)
+	unfold acc(forwardingMetricsInv(d.forwardingMetrics), _)
 	assert id elem d.getDomForwardingMetrics()
 	assert d.getDomForwardingMetrics() == (d.forwardingMetrics == nil ?
 		set[uint16]{} :
@@ -326,6 +396,7 @@ ensures  d.external != nil ==> acc(accBatchConn(d.external), _)
 decreases
 func (d *DataPlane) getExternalMem() {
 	unfold acc(d.Mem(), _)
+	unfold acc(externalInv(d.external), _)
 }
 
 ghost
@@ -335,6 +406,7 @@ ensures  d.linkTypes != nil ==> acc(d.linkTypes, _)
 decreases
 func (d *DataPlane) getLinkTypesMem() {
 	unfold acc(d.Mem(), _)
+	unfold acc(linkTypesInv(d.linkTypes), _)
 }
 
 ghost
@@ -352,6 +424,7 @@ ensures  d.neighborIAs != nil ==> acc(d.neighborIAs, _)
 decreases
 func (d *DataPlane) getNeighborIAs() {
 	unfold acc(d.Mem(), _)
+	unfold acc(neighborIAsInv(d.neighborIAs), _)
 }
 
 ghost
@@ -361,6 +434,7 @@ ensures  d.svc != nil && acc(d.svc.Mem(), _)
 decreases
 func (d *DataPlane) getSvcMem() {
 	unfold acc(d.Mem(), _)
+	unfold acc(svcInv(d.svc), _)
 }
 
 ghost
@@ -369,6 +443,7 @@ ensures  acc(&d.internal, _) && acc(d.internal.Mem(), _)
 decreases
 func (d *DataPlane) getInternalMem() {
 	unfold acc(d.Mem(), _)
+	unfold acc(internalInv(d.internal), _)
 }
 
 ghost
@@ -402,6 +477,7 @@ ensures  d.bfdSessions != nil ==> acc(accBfdSession(d.bfdSessions), _)
 decreases
 func (d *DataPlane) getBfdSessionsMem() {
 	unfold acc(d.Mem(), _)
+	unfold acc(bfdSessionsInv(d.bfdSessions), _)
 }
 
 ghost
@@ -411,6 +487,7 @@ ensures  d.internal != nil ==> acc(d.internal.Mem(), _)
 decreases
 func (d *DataPlane) getInternal() {
 	unfold acc(d.Mem(), _)
+	unfold acc(internalInv(d.internal), _)
 }
 
 ghost
@@ -423,6 +500,7 @@ ensures  d.macFactory implements MacFactorySpec{d.key}
 decreases
 func (d *DataPlane) getNewPacketProcessorFootprint() {
 	unfold acc(d.Mem(), _)
+	unfold acc(macFactoryInv(d.macFactory, d.key), _)
 }
 
 type Unit struct{}
@@ -700,7 +778,8 @@ func (d *DataPlane) InDomainExternalInForwardingMetrics3(id uint16) {
 	reveal d.WellConfigured()
 	reveal d.getDomExternal()
 	assert unfolding acc(d.Mem(), _) in
-		(unfolding acc(accBatchConn(d.external), _) in true)
+		(unfolding acc(externalInv(d.external), _) in
+			(unfolding acc(accBatchConn(d.external), _) in true))
 }
 
 ghost
@@ -717,6 +796,7 @@ requires d.Mem()
 decreases
 pure func (d *DataPlane) DomainForwardingMetrics() set[uint16] {
 	return unfolding d.Mem() in
+		unfolding forwardingMetricsInv(d.forwardingMetrics) in
 		d.forwardingMetrics != nil ?
 			unfolding accForwardingMetrics(d.forwardingMetrics) in
 				domain(d.forwardingMetrics) :
