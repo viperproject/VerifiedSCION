@@ -74,7 +74,7 @@ decreases
 func ViewElems(s []byte, start int, end int, p perm) {
 	v := reveal View(s, start, end)
 	unfold acc(Bytes(s, start, end), p/2)
-	ViewAuxElems(s, start, end)
+	ViewAuxElems(s, start, end, p/2)
 	assert forall i int :: { v[i] } 0 <= i && i < end - start ==>
 		v[i] == s[start + i]
 	fold acc(Bytes(s, start, end), p/2)
@@ -103,15 +103,16 @@ pure func ViewAux(s []byte, i int, end int) (res seq[byte]) {
 // ViewAux(s, i, end): it contains exactly the bytes of s in the
 // range [i, end).
 ghost
+requires  0 < p
 requires  0 <= i && i <= end && end <= cap(s)
-preserves forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], _)
+preserves forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], p)
 ensures   forall k int :: { ViewAux(s, i, end)[k] } 0 <= k && k < end - i ==>
 	ViewAux(s, i, end)[k] == s[i + k]
 decreases end - i
-func ViewAuxElems(s []byte, i int, end int) {
+func ViewAuxElems(s []byte, i int, end int, p perm) {
 	reveal ViewAux(s, i, end)
 	if i != end {
-		ViewAuxElems(s, i + 1, end)
+		ViewAuxElems(s, i + 1, end, p)
 		assert ViewAux(s, i, end) == seq[byte]{s[i]} ++ ViewAux(s, i + 1, end)
 	}
 }
@@ -121,16 +122,17 @@ func ViewAuxElems(s []byte, i int, end int) {
 // The proof is by recursion, so that no quantified facts about the
 // contents are ever introduced.
 ghost
+requires  0 < p
 requires  0 <= start && start <= idx && idx <= end && end <= cap(s)
-preserves forall k int :: { &s[k] } start <= k && k < end ==> acc(&s[k], _)
+preserves forall k int :: { &s[k] } start <= k && k < end ==> acc(&s[k], p)
 ensures   ViewAux(s, start, end) == ViewAux(s, start, idx) ++ ViewAux(s, idx, end)
 decreases idx - start
-func ViewAuxSplit(s []byte, start int, idx int, end int) {
+func ViewAuxSplit(s []byte, start int, idx int, end int, p perm) {
 	if start == idx {
 		assert reveal ViewAux(s, start, idx) == seq[byte]{}
 		assert ViewAux(s, start, end) == ViewAux(s, idx, end)
 	} else {
-		ViewAuxSplit(s, start + 1, idx, end)
+		ViewAuxSplit(s, start + 1, idx, end, p)
 		assert reveal ViewAux(s, start, end) ==
 			seq[byte]{s[start]} ++ ViewAux(s, start + 1, end)
 		assert reveal ViewAux(s, start, idx) ==
@@ -145,19 +147,20 @@ func ViewAuxSplit(s []byte, start int, idx int, end int) {
 // the subslice s[start:length]. The proof is by recursion, so that no
 // quantified facts about the contents are ever introduced.
 ghost
+requires  0 < p
 requires  0 <= start && start <= i && i <= end && end <= length && length <= cap(s)
-preserves forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], _)
+preserves forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], p)
 ensures   let _ := AssertSliceOverlap(s, start, length) in
 	ViewAux(s, i, end) == ViewAux(s[start:length], i - start, end - start)
 decreases end - i
-func ViewAuxReslice(s []byte, start int, length int, i int, end int) {
+func ViewAuxReslice(s []byte, start int, length int, i int, end int, p perm) {
 	AssertSliceOverlap(s, start, length)
 	if i == end {
 		assert reveal ViewAux(s, i, end) == seq[byte]{}
 		assert reveal ViewAux(s[start:length], i - start, end - start) == seq[byte]{}
 	} else {
 		assert &s[start:length][i - start] == &s[i]
-		ViewAuxReslice(s, start, length, i + 1, end)
+		ViewAuxReslice(s, start, length, i + 1, end, p)
 		assert reveal ViewAux(s, i, end) == seq[byte]{s[i]} ++ ViewAux(s, i + 1, end)
 		assert reveal ViewAux(s[start:length], i - start, end - start) ==
 			seq[byte]{s[start:length][i - start]} ++ ViewAux(s[start:length], i - start + 1, end - start)
@@ -182,7 +185,7 @@ func ViewEqFromElements(s []byte, start int, end int, other seq[byte], p perm) {
 	v := View(s, start, end)
 	assert forall i int :: { v[i] } 0 <= i && i < end - start ==>
 		v[i] == GetByte(s, start, end, start + i)
-	assert forall i int :: { v[i] } 0 <= i && i < end - start ==>
+	assert forall i int :: { other[i] } 0 <= i && i < end - start ==>
 		v[i] == other[i]
 	assert v == other
 }
@@ -205,9 +208,9 @@ func ViewOfSubslice(s []byte, start int, end int, p perm) {
 	unfold acc(Bytes(s, 0, len(s)), p/2)
 	unfold acc(Bytes(s[start:end], 0, end - start), p/2)
 	AssertSliceOverlap(s, start, end)
-	ViewAuxSplit(s, 0, start, len(s))
-	ViewAuxSplit(s, start, end, len(s))
-	ViewAuxReslice(s, start, end, start, end)
+	ViewAuxSplit(s, 0, start, len(s), p/2)
+	ViewAuxSplit(s, start, end, len(s), p/2)
+	ViewAuxReslice(s, start, end, start, end, p/2)
 	assert vSub == ViewAux(s, start, end)
 	assert vFull == ViewAux(s, 0, start) ++ (ViewAux(s, start, end) ++ ViewAux(s, end, len(s)))
 	assert len(ViewAux(s, 0, start)) == start
@@ -230,7 +233,7 @@ decreases
 func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 	v := reveal View(s, start, end)
 	unfold acc(Bytes(s, start, end), p)
-	ViewAuxSplit(s, start, idx, end)
+	ViewAuxSplit(s, start, idx, end, p)
 	assert v == ViewAux(s, start, idx) ++ ViewAux(s, idx, end)
 	assert len(ViewAux(s, start, idx)) == idx - start
 	fold   acc(Bytes(s, start, idx), p)
@@ -254,7 +257,7 @@ func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 	v2 := reveal View(s, idx, end)
 	unfold acc(Bytes(s, start, idx), p)
 	unfold acc(Bytes(s, idx,   end), p)
-	ViewAuxSplit(s, start, idx, end)
+	ViewAuxSplit(s, start, idx, end, p)
 	assert v1 == ViewAux(s, start, idx)
 	assert v2 == ViewAux(s, idx, end)
 	fold   acc(Bytes(s, start, end), p)
@@ -275,7 +278,7 @@ func Reslice_Bytes(s []byte, start int, end int, p perm) {
 	v := reveal View(s, start, end)
 	unfold acc(Bytes(s, start, end), p)
 	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
-	ViewAuxReslice(s, start, end, start, end)
+	ViewAuxReslice(s, start, end, start, end, p)
 	assert v == ViewAux(s[start:end], 0, end - start)
 	fold  acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 	assert reveal View(s[start:end], 0, end - start) == ViewAux(s[start:end], 0, end - start)
@@ -294,19 +297,27 @@ func Unslice_Bytes(s []byte, start int, end int, p perm) {
 	assert 0 <= start && start <= end && end <= cap(s)
 	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
 	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+	ViewAuxElems(s[start:end], 0, end - start, p)
+	assert v == ViewAux(s[start:end], 0, end - start)
+	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> s[start:end][i] == v[i]
 
 	invariant 0 <= j && j <= len(s[start:end])
 	invariant forall i int :: { &s[start:end][i] } j <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
 	invariant forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
+	invariant forall i int :: { &s[start:end][i] } j <= i && i < len(s[start:end]) ==> s[start:end][i] == v[i]
 	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
+	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> s[i] == v[i - start]
 	decreases len(s[start:end]) - j
 	for j := 0; j < len(s[start:end]); j++ {
 		assert forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
 		assert &s[start:end][j] == &s[start + j]
 		assert acc(&s[start + j], p)
+		assert s[start + j] == v[j]
 		assert forall i int :: { &s[i] } start <= i && i <= start+j ==> acc(&s[i], p)
 	}
-	ViewAuxReslice(s, start, end, start, end)
+	ViewAuxElems(s, start, end, p)
+	assert forall k int :: { ViewAux(s, start, end)[k] } 0 <= k && k < end - start ==>
+		ViewAux(s, start, end)[k] == v[k]
 	assert v == ViewAux(s, start, end)
 	fold acc(Bytes(s, start, end), p)
 	assert reveal View(s, start, end) == ViewAux(s, start, end)

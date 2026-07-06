@@ -30,6 +30,7 @@ func View_test() {
 	v := View(s, 0, 10)
 	assert len(v) == 10
 	ViewElems(s, 0, 10, writePerm)
+	assert View(s, 0, 10)[3] == GetByte(s, 0, 10, 3)
 	assert v[3] == GetByte(s, 0, 10, 3)
 
 	// splitting preserves the contents of the views
