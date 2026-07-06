@@ -531,10 +531,8 @@ func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	if d.linkTypes == nil {
 		d.linkTypes = make(map[uint16]topology.LinkType)
 	}
-	// (VerifiedSCION) registered after the map has been (re)assigned so that the
-	// deferred fold captures the right map; it runs before the deferred fold of Mem.
-	// @ defer fold linkTypesInv(d.linkTypes)
 	d.linkTypes[ifID] = linkTo
+	// @ fold linkTypesInv(d.linkTypes)
 	return nil
 }
 
@@ -757,12 +755,9 @@ func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	if d.internalNextHops == nil {
 		d.internalNextHops = make(map[uint16]*net.UDPAddr)
 	}
-	// (VerifiedSCION) both deferred folds capture d.internalNextHops at this point
-	// (after the map has been (re)assigned), so internalNextHopsInv wraps the right map. The
-	// internalNextHopsInv fold is registered first so that it runs after accAddr is folded.
-	// @ defer fold internalNextHopsInv(d.internalNextHops)
-	// @ defer fold accAddr(d.internalNextHops)
 	d.internalNextHops[ifID] = a
+	// @ fold accAddr(d.internalNextHops)
+	// @ fold internalNextHopsInv(d.internalNextHops)
 	return nil
 }
 
