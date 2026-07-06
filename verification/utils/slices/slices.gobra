@@ -238,10 +238,13 @@ ensures  acc(Bytes(s, start, end), p)
 ensures  View(s, start, end) == other
 decreases
 func ViewEqFromElements(s []byte, start int, end int, other seq[byte], p perm) {
-	ViewElems(s, start, end, p)
+	// calling ViewElems with half of the held fraction retains a
+	// positive fraction of the predicate instance, which pins its
+	// snapshot: the GetByte and View applications before and after the
+	// call are then the same terms, and the precondition characterizes
+	// the current state directly
+	ViewElems(s, start, end, p/2)
 	v := View(s, start, end)
-	assert forall i int :: { other[i] } 0 <= i && i < end - start ==>
-		other[i] == old(GetByte(s, start, end, start + i))
 	assert forall i int :: { other[i] } 0 <= i && i < end - start ==>
 		other[i] == GetByte(s, start, end, start + i)
 	assert forall i int :: { v[i] } 0 <= i && i < end - start ==>

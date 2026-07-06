@@ -140,7 +140,7 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	//@ assert slices.GetByte(b, 0, len(b), 2) == b2 && slices.GetByte(b, 0, len(b), 3) == b3
 	//@ assert slices.GetByte(b, 0, len(b), 4) == b4 && slices.GetByte(b, 0, len(b), 5) == b5
 	//@ assert slices.GetByte(b, 0, len(b), 6) == b6 && slices.GetByte(b, 0, len(b), 7) == b7
-	//@ slices.ViewElems(b, 0, len(b), writePerm)
+	//@ slices.ViewElems(b, 0, len(b), writePerm/2)
 	//@ ghost v := slices.View(b, 0, len(b))
 	//@ assert v[0] == slices.GetByte(b, 0, len(b), 0)
 	//@ assert v[2] == slices.GetByte(b, 0, len(b), 2) && v[3] == slices.GetByte(b, 0, len(b), 3)
