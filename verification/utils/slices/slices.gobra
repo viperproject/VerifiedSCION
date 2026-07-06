@@ -138,7 +138,6 @@ ghost
 requires  0 < p
 requires  0 <= start && start <= idx && idx <= end && end <= cap(s)
 preserves forall k int :: { &s[k] } start <= k && k < end ==> acc(&s[k], p)
-ensures   forall k int :: { &s[k] } start <= k && k < end ==> s[k] == old(s[k])
 ensures   ViewAux(s, start, end) == old(ViewAux(s, start, end))
 ensures   ViewAux(s, start, idx) == old(ViewAux(s, start, idx))
 ensures   ViewAux(s, idx, end)   == old(ViewAux(s, idx, end))
@@ -151,8 +150,6 @@ func ViewAuxSplit(s []byte, start int, idx int, end int, p perm) {
 	} else {
 		ViewAuxSplit(s, start + 1, idx, end, p)
 		assert s[start] == old(s[start])
-		assert ViewAux(s, start + 1, end) == old(ViewAux(s, start + 1, end))
-		assert ViewAux(s, start + 1, idx) == old(ViewAux(s, start + 1, idx))
 		assert ViewAux(s, start, end) ==
 			seq[byte]{s[start]} ++ ViewAux(s, start + 1, end)
 		assert old(ViewAux(s, start, end)) ==
@@ -271,10 +268,15 @@ func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 	assert v == ViewAux(s, start, end)
 	assert v == ViewAux(s, start, idx) ++ ViewAux(s, idx, end)
 	assert len(ViewAux(s, start, idx)) == idx - start
-	fold   acc(Bytes(s, start, idx), p)
-	fold   acc(Bytes(s, idx, end), p)
+	// fold in two halves: the views of the freshly folded instances are
+	// related to ViewAux while the remaining half of the element
+	// permissions still makes ViewAux well-defined
+	fold   acc(Bytes(s, start, idx), p/2)
+	fold   acc(Bytes(s, idx, end), p/2)
 	assert reveal View(s, start, idx) == ViewAux(s, start, idx)
 	assert reveal View(s, idx, end) == ViewAux(s, idx, end)
+	fold   acc(Bytes(s, start, idx), p/2)
+	fold   acc(Bytes(s, idx, end), p/2)
 	assert View(s, start, idx) == v[:idx - start]
 	assert View(s, idx, end) == v[idx - start:]
 }
@@ -297,8 +299,9 @@ func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
 	ViewAuxSplit(s, start, idx, end, p)
 	assert v1 == ViewAux(s, start, idx)
 	assert v2 == ViewAux(s, idx, end)
-	fold   acc(Bytes(s, start, end), p)
+	fold   acc(Bytes(s, start, end), p/2)
 	assert reveal View(s, start, end) == ViewAux(s, start, end)
+	fold   acc(Bytes(s, start, end), p/2)
 	assert View(s, start, end) == v1 ++ v2
 }
 
@@ -319,8 +322,9 @@ func Reslice_Bytes(s []byte, start int, end int, p perm) {
 	ViewAuxReslice(s, start, end, start, end, p)
 	assert v == ViewAux(s, start, end)
 	assert v == ViewAux(s[start:end], 0, end - start)
-	fold  acc(Bytes(s[start:end], 0, len(s[start:end])), p)
+	fold  acc(Bytes(s[start:end], 0, len(s[start:end])), p/2)
 	assert reveal View(s[start:end], 0, end - start) == ViewAux(s[start:end], 0, end - start)
+	fold  acc(Bytes(s[start:end], 0, len(s[start:end])), p/2)
 }
 
 ghost
@@ -359,8 +363,9 @@ func Unslice_Bytes(s []byte, start int, end int, p perm) {
 	assert forall k int :: { ViewAux(s, start, end)[k] } 0 <= k && k < end - start ==>
 		ViewAux(s, start, end)[k] == v[k]
 	assert v == ViewAux(s, start, end)
-	fold acc(Bytes(s, start, end), p)
+	fold acc(Bytes(s, start, end), p/2)
 	assert reveal View(s, start, end) == ViewAux(s, start, end)
+	fold acc(Bytes(s, start, end), p/2)
 }
 
 ghost

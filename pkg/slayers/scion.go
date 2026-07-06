@@ -267,8 +267,15 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ ghost b4 := buf[4]
 	// @ ghost b8 := buf[8]
 	// @ fold acc(sl.Bytes(uSerBufN, 0, len(uSerBufN)), writePerm)
+	// the GetByte terms below instantiate the preservation
+	// postconditions of ViewElems, which carry the byte values of the
+	// buffer across the lemma call
+	// @ assert sl.GetByte(uSerBufN, 0, len(uSerBufN), 4) == b4
+	// @ assert sl.GetByte(uSerBufN, 0, len(uSerBufN), 8) == b8
 	// @ sl.ViewElems(uSerBufN, 0, len(uSerBufN), writePerm)
 	// @ ghost vSer0 := sl.View(uSerBufN, 0, len(uSerBufN))
+	// @ assert vSer0[4] == sl.GetByte(uSerBufN, 0, len(uSerBufN), 4)
+	// @ assert vSer0[8] == sl.GetByte(uSerBufN, 0, len(uSerBufN), 8)
 	// @ assert vSer0[4] == b4 && vSer0[8] == b8
 	// @ ghost if s.EqPathType(ubuf) {
 	// @ 	assert reveal s.EqPathTypeWithBuffer(ubuf, vSer0)
@@ -326,6 +333,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // @ ensures   res == nil ==> s.EqPathType(data)
 // @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
 // @ decreases
+// @ #backend[exhaleMode(1)]
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	// Decode common header.
 	if len(data) < CmnHdrLen {
@@ -360,7 +368,10 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ outline(
 	// @ ghost v := sl.View(data, 0, len(data))
 	// @ sl.ViewElems(data, 0, len(data), R42)
-	// @ unfold acc(sl.Bytes(data, 0, len(data)), R41)
+	// unfolding only part of the held fraction pins the view of data:
+	// the retained instance is untouched, so the view after refolding
+	// is the same as the captured one
+	// @ unfold acc(sl.Bytes(data, 0, len(data)), R42)
 	s.NextHdr = L4ProtocolType(data[4])
 	s.HdrLen = data[5]
 	// @ assert &data[6:8][0] == &data[6] && &data[6:8][1] == &data[7]
@@ -373,7 +384,8 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.SrcAddrType = AddrType(data[9] & 0x7)
 	// @ assert int(s.SrcAddrType) == b.BitAnd7(int(data[9]))
 	// @ assert v[4] == data[4] && v[5] == data[5] && v[8] == data[8] && v[9] == data[9]
-	// @ fold acc(sl.Bytes(data, 0, len(data)), R41)
+	// @ fold acc(sl.Bytes(data, 0, len(data)), R42)
+	// @ assert sl.View(data, 0, len(data)) == v
 	// @ )
 	// Decode address header.
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
