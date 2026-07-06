@@ -19,6 +19,7 @@ package router
 import (
 	"sync"
 	"github.com/scionproto/scion/pkg/slayers/path"
+	"github.com/scionproto/scion/pkg/slayers/path/epic"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
 	"github.com/scionproto/scion/pkg/slayers"
 	"verification/dependencies/encoding/binary"
@@ -52,7 +53,7 @@ ensures  absPkt(raw).PathNotFullyTraversed()
 decreases
 func absPktFutureLemma(raw []byte) {
 	reveal slayers.ValidPktMetaHdr(raw)
-	headerOffset := slayers.GetAddressOffset(raw)
+	headerOffset := slayers.GetScionPathOffset(raw)
 	headerOffsetWithMetaLen := headerOffset + scion.MetaLen
 	assert forall k int :: {&raw[headerOffset:headerOffset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==> &raw[headerOffset:headerOffset+scion.MetaLen][k] == &raw[headerOffset + k]
 	hdr := (unfolding acc(sl.Bytes(raw, 0, len(raw)), R56) in
@@ -277,6 +278,8 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.scionLayer.Mem(ub), R56)
 	assert start == slayers.GetAddressOffset(ub)
+	assert typeOf(p.scionLayer.GetPath(ub)) == *scion.Raw
+	assert start == slayers.GetScionPathOffset(ub)
 
 	hdr1 := binary.BigEndian.Uint32(ub[start:start+scion.MetaLen])
 	hdr2 := binary.BigEndian.Uint32(ub[start:end][:scion.MetaLen])
@@ -316,6 +319,8 @@ requires start == p.scionLayer.PathStartIdx(ub)
 requires end == p.scionLayer.PathEndIdx(ub)
 requires p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 requires p.scionLayer.ValidHeaderOffset(ub, len(ub))
+requires slayers.CmnHdrLen <= len(ub)
+requires path.Type(slayers.GetPathType(ub)) != epic.PathType
 ensures  acc(sl.Bytes(ub, 0, len(ub)), R50)
 ensures  acc(p.scionLayer.Mem(ub), R55)
 ensures  acc(sl.Bytes(ub[start:end], 0, len(ub[start:end])), R50)
@@ -339,8 +344,9 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	fold acc(p.scionLayer.Path.Mem(ub[start:end]), R56)
 	fold acc(p.scionLayer.Mem(ub), R56)
 	reveal scion.validPktMetaHdr(ub[start:end])
-	assert reveal slayers.ValidPktMetaHdr(ub)
 	assert start == slayers.GetAddressOffset(ub)
+	assert start == slayers.GetScionPathOffset(ub)
+	assert reveal slayers.ValidPktMetaHdr(ub)
 	headerOffsetWithMetaLen := start + scion.MetaLen
 	hdr1 := binary.BigEndian.Uint32(ub[start:start+scion.MetaLen])
 	hdr2 := binary.BigEndian.Uint32(ub[start:end][:scion.MetaLen])
