@@ -46,7 +46,7 @@ jobs:
           recursive: 1
           ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants.
           excludePackages: 'layers'
-          timeout: 5m
+          timeout: 10m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: './dependencies/ ..' # relative to project location

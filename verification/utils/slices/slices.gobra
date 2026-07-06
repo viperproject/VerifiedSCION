@@ -74,6 +74,7 @@ decreases
 func ViewElems(s []byte, start int, end int, p perm) {
 	v := reveal View(s, start, end)
 	unfold acc(Bytes(s, start, end), p/2)
+	ViewAuxElems(s, start, end)
 	assert forall i int :: { v[i] } 0 <= i && i < end - start ==>
 		v[i] == s[start + i]
 	fold acc(Bytes(s, start, end), p/2)
@@ -83,17 +84,36 @@ func ViewElems(s []byte, start int, end int, p perm) {
 
 // ViewAux computes the contents of the range [i, end) of s directly
 // from the elementwise access permissions, so that the recursion does
-// not require a predicate instance per subrange.
+// not require a predicate instance per subrange. Like View, it is
+// opaque and only exposes the length of its result: its definition is
+// unrolled in a controlled way, with reveal, by the lemmas below, and
+// its elementwise characterization is established by ViewAuxElems.
 ghost
+opaque
 requires 0 <= i && i <= end && end <= cap(s)
 requires forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], _)
 ensures  len(res) == end - i
-ensures  forall k int :: { res[k] } 0 <= k && k < end - i ==>
-	res[k] == s[i + k]
 decreases end - i
 pure func ViewAux(s []byte, i int, end int) (res seq[byte]) {
 	return i == end ? seq[byte]{} :
 		seq[byte]{s[i]} ++ ViewAux(s, i + 1, end)
+}
+
+// ViewAuxElems establishes the elementwise characterization of
+// ViewAux(s, i, end): it contains exactly the bytes of s in the
+// range [i, end).
+ghost
+requires  0 <= i && i <= end && end <= cap(s)
+preserves forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], _)
+ensures   forall k int :: { ViewAux(s, i, end)[k] } 0 <= k && k < end - i ==>
+	ViewAux(s, i, end)[k] == s[i + k]
+decreases end - i
+func ViewAuxElems(s []byte, i int, end int) {
+	reveal ViewAux(s, i, end)
+	if i != end {
+		ViewAuxElems(s, i + 1, end)
+		assert ViewAux(s, i, end) == seq[byte]{s[i]} ++ ViewAux(s, i + 1, end)
+	}
 }
 
 // ViewAuxSplit shows that the contents of the range [start, end) are
@@ -107,12 +127,16 @@ ensures   ViewAux(s, start, end) == ViewAux(s, start, idx) ++ ViewAux(s, idx, en
 decreases idx - start
 func ViewAuxSplit(s []byte, start int, idx int, end int) {
 	if start == idx {
-		assert ViewAux(s, start, idx) == seq[byte]{}
+		assert reveal ViewAux(s, start, idx) == seq[byte]{}
+		assert ViewAux(s, start, end) == ViewAux(s, idx, end)
 	} else {
 		ViewAuxSplit(s, start + 1, idx, end)
+		assert reveal ViewAux(s, start, end) ==
+			seq[byte]{s[start]} ++ ViewAux(s, start + 1, end)
+		assert reveal ViewAux(s, start, idx) ==
+			seq[byte]{s[start]} ++ ViewAux(s, start + 1, idx)
 		assert ViewAux(s, start, end) ==
 			seq[byte]{s[start]} ++ (ViewAux(s, start + 1, idx) ++ ViewAux(s, idx, end))
-		assert ViewAux(s, start, idx) == seq[byte]{s[start]} ++ ViewAux(s, start + 1, idx)
 	}
 }
 
@@ -128,9 +152,15 @@ ensures   let _ := AssertSliceOverlap(s, start, length) in
 decreases end - i
 func ViewAuxReslice(s []byte, start int, length int, i int, end int) {
 	AssertSliceOverlap(s, start, length)
-	if i != end {
+	if i == end {
+		assert reveal ViewAux(s, i, end) == seq[byte]{}
+		assert reveal ViewAux(s[start:length], i - start, end - start) == seq[byte]{}
+	} else {
 		assert &s[start:length][i - start] == &s[i]
 		ViewAuxReslice(s, start, length, i + 1, end)
+		assert reveal ViewAux(s, i, end) == seq[byte]{s[i]} ++ ViewAux(s, i + 1, end)
+		assert reveal ViewAux(s[start:length], i - start, end - start) ==
+			seq[byte]{s[start:length][i - start]} ++ ViewAux(s[start:length], i - start + 1, end - start)
 	}
 }
 
