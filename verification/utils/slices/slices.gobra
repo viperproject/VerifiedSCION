@@ -123,7 +123,8 @@ func ViewAuxSplit(s []byte, start int, idx int, end int) {
 ghost
 requires  0 <= start && start <= i && i <= end && end <= length && length <= cap(s)
 preserves forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], _)
-ensures   ViewAux(s, i, end) == ViewAux(s[start:length], i - start, end - start)
+ensures   let _ := AssertSliceOverlap(s, start, length) in
+	ViewAux(s, i, end) == ViewAux(s[start:length], i - start, end - start)
 decreases end - i
 func ViewAuxReslice(s []byte, start int, length int, i int, end int) {
 	AssertSliceOverlap(s, start, length)
