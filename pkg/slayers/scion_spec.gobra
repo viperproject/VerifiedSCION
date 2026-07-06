@@ -420,20 +420,36 @@ pure func (s *SCION) EqAbsHeader(ub []byte) bool {
 			(path.Type(GetPathType(ub)) == epic.PathType)) &&
 		// The SCION path starts at the path offset, except for packets with
 		// an EPIC path, where it is prefixed by the EPIC metadata.
-		let scionLow_ := (typeOf(s.Path) == (*epic.Path) ? low_ + epic.MetadataLen : low_) in
-		scionLow_ + scion.MetaLen <= high &&
-		let base := (typeOf(s.Path) == (*epic.Path) ?
-			s.Path.(*epic.Path).GetBase(ub[low_:high]) :
-			s.Path.(*scion.Raw).GetBase(ub[low_:high])) in
-		unfolding sl.Bytes(ub, 0, len(ub))  in
-		let _ := Asserting(forall k int :: {&ub[scionLow_:scionLow_+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
-			&ub[scionLow_:scionLow_+scion.MetaLen][k] == &ub[scionLow_ + k]) in
-		let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(ub[scionLow_:scionLow_+scion.MetaLen])) in
-		let seg1 := int(metaHdr.SegLen[0]) in
-		let seg2 := int(metaHdr.SegLen[1]) in
-		let seg3 := int(metaHdr.SegLen[2]) in
-		let segs := io.CombineSegLens(seg1, seg2, seg3) in
-		base == scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()}
+		(typeOf(s.Path) == (*epic.Path) ?
+			(unfolding s.Path.Mem(ub[low_:high]) in
+			unfolding s.Path.(*epic.Path).ScionPath.Mem(ub[low_:high][epic.MetadataLen:]) in
+			unfolding sl.Bytes(ub, 0, len(ub))  in
+			let _ := Asserting(forall k int :: {&ub[low_:high][k]} 0 <= k && k < high ==>
+				&ub[low_:high][k] == &ub[low_ + k]) in
+			let _ := Asserting(forall k int :: {&ub[low_:high][epic.MetadataLen:][k]} 0 <= k && k < high-low_-epic.MetadataLen ==>
+				&ub[low_:high][epic.MetadataLen:][k] == &ub[low_:high][epic.MetadataLen + k]) in
+			let _ := Asserting(forall k int :: {&ub[low_:high][epic.MetadataLen:][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+				&ub[low_:high][epic.MetadataLen:][:scion.MetaLen][k] == &ub[low_:high][epic.MetadataLen:][k]) in
+			let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(ub[low_:high][epic.MetadataLen:][:scion.MetaLen])) in
+			let seg1 := int(metaHdr.SegLen[0]) in
+			let seg2 := int(metaHdr.SegLen[1]) in
+			let seg3 := int(metaHdr.SegLen[2]) in
+			let segs := io.CombineSegLens(seg1, seg2, seg3) in
+			s.Path.(*epic.Path).ScionPath.Base.GetBase() ==
+				scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()}) :
+			(unfolding s.Path.Mem(ub[low_:high]) in
+			unfolding sl.Bytes(ub, 0, len(ub))  in
+			let _ := Asserting(forall k int :: {&ub[low_:high][k]} 0 <= k && k < high ==>
+				&ub[low_:high][k] == &ub[low_ + k]) in
+			let _ := Asserting(forall k int :: {&ub[low_:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+				&ub[low_:high][:scion.MetaLen][k] == &ub[low_:high][k]) in
+			let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(ub[low_:high][:scion.MetaLen])) in
+			let seg1 := int(metaHdr.SegLen[0]) in
+			let seg2 := int(metaHdr.SegLen[1]) in
+			let seg3 := int(metaHdr.SegLen[2]) in
+			let segs := io.CombineSegLens(seg1, seg2, seg3) in
+			s.Path.(*scion.Raw).Base.GetBase() ==
+				scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()}))
 }
 
 // Describes a SCION packet that was successfully decoded by `DecodeFromBytes`.
