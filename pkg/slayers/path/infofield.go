@@ -134,8 +134,18 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	//@ ghost b6 := b[6]
 	//@ ghost b7 := b[7]
 	//@ fold slices.Bytes(b, 0, len(b))
+	// the GetByte terms instantiate the preservation postconditions of
+	// ViewElems, which carry the byte values across the lemma call
+	//@ assert slices.GetByte(b, 0, len(b), 0) == b0
+	//@ assert slices.GetByte(b, 0, len(b), 2) == b2 && slices.GetByte(b, 0, len(b), 3) == b3
+	//@ assert slices.GetByte(b, 0, len(b), 4) == b4 && slices.GetByte(b, 0, len(b), 5) == b5
+	//@ assert slices.GetByte(b, 0, len(b), 6) == b6 && slices.GetByte(b, 0, len(b), 7) == b7
 	//@ slices.ViewElems(b, 0, len(b), writePerm)
 	//@ ghost v := slices.View(b, 0, len(b))
+	//@ assert v[0] == slices.GetByte(b, 0, len(b), 0)
+	//@ assert v[2] == slices.GetByte(b, 0, len(b), 2) && v[3] == slices.GetByte(b, 0, len(b), 3)
+	//@ assert v[4] == slices.GetByte(b, 0, len(b), 4) && v[5] == slices.GetByte(b, 0, len(b), 5)
+	//@ assert v[6] == slices.GetByte(b, 0, len(b), 6) && v[7] == slices.GetByte(b, 0, len(b), 7)
 	//@ assert v[0] == b0 && v[2] == b2 && v[3] == b3
 	//@ assert v[4] == b4 && v[5] == b5 && v[6] == b6 && v[7] == b7
 	//@ assert inf.ToAbsInfoField() ==

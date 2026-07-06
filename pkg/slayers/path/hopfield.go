@@ -159,8 +159,19 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	//@ ghost mac := seq[byte]{b[6], b[7], b[8], b[9], b[10], b[11]}
 	//@ assert forall i int :: { mac[i] } 0 <= i && i < MacLen ==> mac[i] == h.Mac[i]
 	//@ fold sl.Bytes(b, 0, HopLen)
+	// the GetByte terms instantiate the preservation postconditions of
+	// ViewElems, which carry the byte values across the lemma call
+	//@ assert sl.GetByte(b, 0, HopLen, 2) == b2 && sl.GetByte(b, 0, HopLen, 3) == b3
+	//@ assert sl.GetByte(b, 0, HopLen, 4) == b4 && sl.GetByte(b, 0, HopLen, 5) == b5
+	//@ assert sl.GetByte(b, 0, HopLen, 6) == mac[0] && sl.GetByte(b, 0, HopLen, 7) == mac[1]
+	//@ assert sl.GetByte(b, 0, HopLen, 8) == mac[2] && sl.GetByte(b, 0, HopLen, 9) == mac[3]
+	//@ assert sl.GetByte(b, 0, HopLen, 10) == mac[4] && sl.GetByte(b, 0, HopLen, 11) == mac[5]
 	//@ sl.ViewElems(b, 0, HopLen, writePerm)
 	//@ ghost v := sl.View(b, 0, HopLen)
+	//@ assert v[2] == sl.GetByte(b, 0, HopLen, 2) && v[3] == sl.GetByte(b, 0, HopLen, 3)
+	//@ assert v[4] == sl.GetByte(b, 0, HopLen, 4) && v[5] == sl.GetByte(b, 0, HopLen, 5)
+	//@ assert v[6] == mac[0] && v[7] == mac[1] && v[8] == mac[2]
+	//@ assert v[9] == mac[3] && v[10] == mac[4] && v[11] == mac[5]
 	//@ assert v[2] == b2 && v[3] == b3 && v[4] == b4 && v[5] == b5
 	//@ assert forall j int :: { v[j] } 6 <= j && j < 6+MacLen ==> v[j] == mac[j-6]
 	//@ assert forall i int :: { v[6:6+MacLen][i] } 0 <= i && i < MacLen ==>
