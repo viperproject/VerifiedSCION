@@ -72,6 +72,7 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 		return serrors.New("InfoField raw too short", "expected", InfoLen, "actual", len(raw))
 	}
 	//@ ghost v := slices.View(raw, 0, len(raw))
+	//@ slices.ViewElems(raw, 0, len(raw), R50)
 	//@ unfold acc(slices.Bytes(raw, 0, len(raw)), R50)
 	inf.ConsDir = raw[0]&0x1 == 0x1
 	inf.Peer = raw[0]&0x2 == 0x2
@@ -133,6 +134,7 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	//@ ghost b6 := b[6]
 	//@ ghost b7 := b[7]
 	//@ fold slices.Bytes(b, 0, len(b))
+	//@ slices.ViewElems(b, 0, len(b), writePerm)
 	//@ ghost v := slices.View(b, 0, len(b))
 	//@ assert v[0] == b0 && v[2] == b2 && v[3] == b3
 	//@ assert v[4] == b4 && v[5] == b5 && v[6] == b6 && v[7] == b7

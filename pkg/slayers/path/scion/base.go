@@ -262,6 +262,7 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
 	}
 	//@ ghost v := sl.View(raw, 0, len(raw))
+	//@ sl.ViewElems(raw, 0, len(raw), R51)
 	//@ unfold acc(sl.Bytes(raw, 0, len(raw)), R50)
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
@@ -304,6 +305,7 @@ func (m *MetaHdr) SerializeTo(b []byte) (e error) {
 	//@ ghost b2 := b[2]
 	//@ ghost b3 := b[3]
 	//@ fold acc(sl.Bytes(b, 0, len(b)))
+	//@ sl.ViewElems(b, 0, len(b), writePerm)
 	//@ ghost v := sl.View(b, 0, len(b))
 	//@ assert v[0] == b0 && v[1] == b1 && v[2] == b2 && v[3] == b3
 	//@ assert binary.BigEndian.PutUint32Spec(v[0], v[1], v[2], v[3], line)

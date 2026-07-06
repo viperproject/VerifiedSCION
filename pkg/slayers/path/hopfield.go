@@ -87,6 +87,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 		return serrors.New("HopField raw too short", "expected", HopLen, "actual", len(raw))
 	}
 	//@ ghost v := sl.View(raw, 0, HopLen)
+	//@ sl.ViewElems(raw, 0, HopLen, R46)
 	//@ unfold acc(sl.Bytes(raw, 0, HopLen), R46)
 	h.EgressRouterAlert = raw[0]&0x1 == 0x1
 	h.IngressRouterAlert = raw[0]&0x2 == 0x2
@@ -158,6 +159,7 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	//@ ghost mac := seq[byte]{b[6], b[7], b[8], b[9], b[10], b[11]}
 	//@ assert forall i int :: { mac[i] } 0 <= i && i < MacLen ==> mac[i] == h.Mac[i]
 	//@ fold sl.Bytes(b, 0, HopLen)
+	//@ sl.ViewElems(b, 0, HopLen, writePerm)
 	//@ ghost v := sl.View(b, 0, HopLen)
 	//@ assert v[2] == b2 && v[3] == b3 && v[4] == b4 && v[5] == b5
 	//@ assert forall j int :: { v[j] } 6 <= j && j < 6+MacLen ==> v[j] == mac[j-6]

@@ -267,6 +267,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ ghost b4 := buf[4]
 	// @ ghost b8 := buf[8]
 	// @ fold acc(sl.Bytes(uSerBufN, 0, len(uSerBufN)), writePerm)
+	// @ sl.ViewElems(uSerBufN, 0, len(uSerBufN), writePerm)
 	// @ ghost vSer0 := sl.View(uSerBufN, 0, len(uSerBufN))
 	// @ assert vSer0[4] == b4 && vSer0[8] == b8
 	// @ ghost if s.EqPathType(ubuf) {
@@ -358,6 +359,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ decreases
 	// @ outline(
 	// @ ghost v := sl.View(data, 0, len(data))
+	// @ sl.ViewElems(data, 0, len(data), R42)
 	// @ unfold acc(sl.Bytes(data, 0, len(data)), R41)
 	s.NextHdr = L4ProtocolType(data[4])
 	s.HdrLen = data[5]

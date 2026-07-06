@@ -65,8 +65,6 @@ func SubSeqOfSubSeq(raw seq[byte], a int, b int, start int, length int) {
 ghost
 requires acc(sl.Bytes(ub, 0, len(ub)), _)
 ensures len(res) == len(ub)
-ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
-    res[i] == sl.GetByte(ub, 0, len(ub), i)
 decreases
 pure func ToSeqByte(ub []byte) (res seq[byte]) {
     return sl.View(ub, 0, len(ub))

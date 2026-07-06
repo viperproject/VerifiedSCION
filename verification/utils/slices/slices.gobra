@@ -45,18 +45,40 @@ pure func GetByte(s []byte, start int, end int, i int) byte {
 // should be performed on views: given a view of the predicate
 // instance one holds, the bytes of any subrange are obtained by
 // (pure) sequence slicing, instead of by manipulating predicate
-// instances, which cannot be done in pure contexts. The elementwise
-// characterization below is exposed as a postcondition, so clients
-// never need to reveal View.
+// instances, which cannot be done in pure contexts.
+// In the same way that Bytes hides the quantified permissions to the
+// elements of a slice, View deliberately hides the quantified
+// relation between the sequence and the contents of the slice: its
+// only visible property is the length of the result. The elementwise
+// characterization is established explicitly, where needed, by
+// calling ViewElems.
 ghost
 opaque
 requires acc(Bytes(s, start, end), _)
 ensures  len(res) == end - start
-ensures  forall i int :: { res[i] } 0 <= i && i < end - start ==>
-	res[i] == GetByte(s, start, end, start + i)
 decreases
 pure func View(s []byte, start int, end int) (res seq[byte]) {
 	return unfolding acc(Bytes(s, start, end), _) in ViewAux(s, start, end)
+}
+
+// ViewElems establishes the elementwise characterization of
+// View(s, start, end): it contains exactly the bytes of s in the
+// range [start, end).
+ghost
+requires 0 < p
+requires acc(Bytes(s, start, end), p)
+ensures  acc(Bytes(s, start, end), p)
+ensures  forall i int :: { View(s, start, end)[i] } 0 <= i && i < end - start ==>
+	View(s, start, end)[i] == GetByte(s, start, end, start + i)
+decreases
+func ViewElems(s []byte, start int, end int, p perm) {
+	v := reveal View(s, start, end)
+	unfold acc(Bytes(s, start, end), p/2)
+	assert forall i int :: { v[i] } 0 <= i && i < end - start ==>
+		v[i] == s[start + i]
+	fold acc(Bytes(s, start, end), p/2)
+	assert forall i int :: { v[i] } 0 <= i && i < end - start ==>
+		v[i] == GetByte(s, start, end, start + i)
 }
 
 // ViewAux computes the contents of the range [i, end) of s directly
@@ -88,6 +110,7 @@ ensures  acc(Bytes(s, start, end), p)
 ensures  View(s, start, end) == other
 decreases
 func ViewEqFromElements(s []byte, start int, end int, other seq[byte], p perm) {
+	ViewElems(s, start, end, p)
 	v := View(s, start, end)
 	assert forall i int :: { v[i] } 0 <= i && i < end - start ==>
 		v[i] == GetByte(s, start, end, start + i)
@@ -109,6 +132,8 @@ preserves acc(Bytes(s[start:end], 0, end - start), p)
 ensures   View(s[start:end], 0, end - start) == View(s, 0, len(s))[start:end]
 decreases
 func ViewOfSubslice(s []byte, start int, end int, p perm) {
+	ViewElems(s, 0, len(s), p/2)
+	ViewElems(s[start:end], 0, end - start, p/2)
 	vFull := View(s, 0, len(s))
 	vSub  := View(s[start:end], 0, end - start)
 	unfold acc(Bytes(s, 0, len(s)), p/2)
@@ -137,6 +162,7 @@ ensures  View(s, start, idx) == old(View(s, start, end))[:idx - start]
 ensures  View(s, idx, end)   == old(View(s, start, end))[idx - start:]
 decreases
 func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
+	ViewElems(s, start, end, p)
 	v := View(s, start, end)
 	unfold acc(Bytes(s, start, end), p)
 	assert forall i int :: { &s[i] } start <= i && i < end ==>
@@ -160,6 +186,8 @@ ensures  View(s, start, end) ==
 	old(View(s, start, idx)) ++ old(View(s, idx, end))
 decreases
 func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
+	ViewElems(s, start, idx, p)
+	ViewElems(s, idx, end, p)
 	v1 := View(s, start, idx)
 	v2 := View(s, idx, end)
 	unfold acc(Bytes(s, start, idx), p)
@@ -186,6 +214,7 @@ ensures  acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 ensures  View(s[start:end], 0, end - start) == old(View(s, start, end))
 decreases
 func Reslice_Bytes(s []byte, start int, end int, p perm) {
+	ViewElems(s, start, end, p)
 	v := View(s, start, end)
 	unfold acc(Bytes(s, start, end), p)
 	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
@@ -207,6 +236,7 @@ ensures  acc(Bytes(s, start, end), p)
 ensures  View(s, start, end) == old(View(s[start:end], 0, end - start))
 decreases
 func Unslice_Bytes(s []byte, start int, end int, p perm) {
+	ViewElems(s[start:end], 0, len(s[start:end]), p)
 	v := View(s[start:end], 0, end - start)
 	unfold acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 	assert 0 <= start && start <= end && end <= cap(s)
