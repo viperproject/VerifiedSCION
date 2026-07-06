@@ -143,6 +143,7 @@ ensures   ViewAux(s, start, idx) == old(ViewAux(s, start, idx))
 ensures   ViewAux(s, idx, end)   == old(ViewAux(s, idx, end))
 ensures   ViewAux(s, start, end) == ViewAux(s, start, idx) ++ ViewAux(s, idx, end)
 decreases idx - start
+#backend[exhaleMode(1)]
 func ViewAuxSplit(s []byte, start int, idx int, end int, p perm) {
 	if start == idx {
 		assert ViewAux(s, start, idx) == seq[byte]{}
@@ -397,8 +398,9 @@ requires acc(Bytes(s[start:end], 0, end-start), p)
 requires acc(Bytes(s, 0, start), p)
 requires acc(Bytes(s, end, len(s)), p)
 ensures  acc(Bytes(s, 0, len(s)), p)
-ensures  View(s, 0, len(s)) ==
-	old(View(s, 0, start)) ++ old(View(s[start:end], 0, end-start)) ++ old(View(s, end, len(s)))
+ensures  View(s, 0, len(s))[:start]      == old(View(s, 0, start))
+ensures  View(s, 0, len(s))[end:]        == old(View(s, end, len(s)))
+ensures  View(s, 0, len(s))[start:end]   == old(View(s[start:end], 0, end-start))
 decreases
 func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 	vLeft  := View(s, 0, start)
@@ -408,7 +410,13 @@ func CombineRange_Bytes(s []byte, start int, end int, p perm) {
 	CombineAtIndex_Bytes(s, start, len(s), end, p)
 	CombineAtIndex_Bytes(s, 0, len(s), start, p)
 	assert View(s, 0, len(s)) == vLeft ++ (vMid ++ vRight)
-	assert vLeft ++ (vMid ++ vRight) == vLeft ++ vMid ++ vRight
+	assert len(vLeft) == start && len(vMid) == end - start
+	assert View(s, 0, len(s))[:start] == vLeft
+	assert View(s, 0, len(s))[start:] == vMid ++ vRight
+	assert View(s, 0, len(s))[start:][:end - start] == vMid
+	assert View(s, 0, len(s))[start:end] == View(s, 0, len(s))[start:][:end - start]
+	assert View(s, 0, len(s))[start:][end - start:] == vRight
+	assert View(s, 0, len(s))[end:] == View(s, 0, len(s))[start:][end - start:]
 }
 
 // CombineRangeNoView_Bytes behaves like CombineRange_Bytes, but does not
