@@ -438,6 +438,16 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	unfold acc(sl.Bytes(data, 0, len(data)), R56)
 	// @ 	unfold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(data[offset : offset+pathLen]), R55)
+	// @ 	assert s.Path.(*scion.Raw).GetBase(data[offset : offset+pathLen]).EqAbsHeader(data[offset : offset+pathLen])
+	// @ 	assert scion.MetaLen <= pathLen
+	// @ 	assert forall k int :: {&data[offset : offset+pathLen][k]} 0 <= k && k < pathLen ==>
+	// @ 		&data[offset : offset+pathLen][k] == &data[offset + k]
+	// @ 	assert forall k int :: {&data[offset : offset+pathLen][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+	// @ 		&data[offset : offset+pathLen][:scion.MetaLen][k] == &data[offset : offset+pathLen][k]
+	// @ 	assert forall k int :: {&data[offset : offset+scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+	// @ 		&data[offset : offset+scion.MetaLen][k] == &data[offset + k]
+	// @ 	assert binary.BigEndian.Uint32(data[offset : offset+pathLen][:scion.MetaLen]) ==
+	// @ 		binary.BigEndian.Uint32(data[offset : offset+scion.MetaLen])
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
