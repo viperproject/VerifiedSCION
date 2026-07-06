@@ -145,8 +145,8 @@ requires d.Mem()
 decreases
 pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 	return unfolding d.Mem() in
-		unfolding accNeighborIAsOpt(d.neighborIAs) in
-		unfolding accLinkTypesOpt(d.linkTypes) in
+		unfolding neighborIAsInv(d.neighborIAs) in
+		unfolding linkTypesInv(d.linkTypes) in
 		d.dpSpecWellConfiguredLocalIA(dp)     &&
 		d.dpSpecWellConfiguredNeighborIAs(dp) &&
 		d.dpSpecWellConfiguredLinkTypes(dp)
@@ -165,7 +165,7 @@ func (d *DataPlane) LinkTypesLemma(dp io.DataPlaneSpec) {
 	reveal d.DpAgreesWithSpec(dp)
 	assert !(0 elem d.getDomLinkTypes())
 	unfold acc(d.Mem(), _)
-	unfold acc(accLinkTypesOpt(d.linkTypes), _)
+	unfold acc(linkTypesInv(d.linkTypes), _)
 	assert !(0 elem domain(d.linkTypes))
 }
 
@@ -194,13 +194,13 @@ decreases
 func (d *DataPlane) getDomExternalLemma() {
 	if (d.external != nil) {
 		assert reveal d.getDomExternal() == unfolding acc(d.Mem(), _) in
-			(unfolding acc(accBatchConnOpt(d.external), _) in
+			(unfolding acc(externalInv(d.external), _) in
 				(unfolding acc(accBatchConn(d.external), _) in
 					domain(d.external)))
 	} else {
 		assert reveal d.getDomExternal() ==
 			unfolding acc(d.Mem(), _) in
-				(unfolding acc(accBatchConnOpt(d.external), _) in set[uint16]{})
+				(unfolding acc(externalInv(d.external), _) in set[uint16]{})
 	}
 }
 
