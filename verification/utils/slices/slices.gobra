@@ -101,9 +101,9 @@ pure func ViewAux(s []byte, i int, end int) (res seq[byte]) {
 // The proof is by recursion, so that no quantified facts about the
 // contents are ever introduced.
 ghost
-requires 0 <= start && start <= idx && idx <= end && end <= cap(s)
-requires forall k int :: { &s[k] } start <= k && k < end ==> acc(&s[k], _)
-ensures  ViewAux(s, start, end) == ViewAux(s, start, idx) ++ ViewAux(s, idx, end)
+requires  0 <= start && start <= idx && idx <= end && end <= cap(s)
+preserves forall k int :: { &s[k] } start <= k && k < end ==> acc(&s[k], _)
+ensures   ViewAux(s, start, end) == ViewAux(s, start, idx) ++ ViewAux(s, idx, end)
 decreases idx - start
 func ViewAuxSplit(s []byte, start int, idx int, end int) {
 	if start == idx {
@@ -121,9 +121,9 @@ func ViewAuxSplit(s []byte, start int, idx int, end int) {
 // the subslice s[start:length]. The proof is by recursion, so that no
 // quantified facts about the contents are ever introduced.
 ghost
-requires 0 <= start && start <= i && i <= end && end <= length && length <= cap(s)
-requires forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], _)
-ensures  ViewAux(s, i, end) == ViewAux(s[start:length], i - start, end - start)
+requires  0 <= start && start <= i && i <= end && end <= length && length <= cap(s)
+preserves forall k int :: { &s[k] } i <= k && k < end ==> acc(&s[k], _)
+ensures   ViewAux(s, i, end) == ViewAux(s[start:length], i - start, end - start)
 decreases end - i
 func ViewAuxReslice(s []byte, start int, length int, i int, end int) {
 	AssertSliceOverlap(s, start, length)
