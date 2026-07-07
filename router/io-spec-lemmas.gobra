@@ -154,12 +154,16 @@ func (p* scionPacketProcessor) LocalDstLemma(ub []byte) {
 
 ghost
 requires p.scionLayer.Mem(ub)
-requires acc(&p.path) && p.path == p.scionLayer.GetPath(ub)
+requires acc(&p.path) && p.path === p.scionLayer.GetScionPath(ub)
 decreases
 pure func (p* scionPacketProcessor) GetIsXoverSpec(ub []byte) bool {
-	return let ubPath := p.scionLayer.UBPath(ub) in
-		unfolding p.scionLayer.Mem(ub)           in
-		p.path.GetBase(ubPath).IsXoverSpec()
+	return let ubPath := p.scionLayer.UBPath(ub)           in
+		let ubScionPath := p.scionLayer.UBScionPath(ub)    in
+		unfolding p.scionLayer.Mem(ub)                     in
+		(typeOf(p.scionLayer.Path) == (*epic.Path) ?
+			unfolding p.scionLayer.Path.Mem(ubPath) in
+			p.path.GetBase(ubScionPath).IsXoverSpec() :
+			p.path.GetBase(ubScionPath).IsXoverSpec())
 }
 
 ghost
