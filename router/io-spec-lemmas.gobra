@@ -223,6 +223,8 @@ ensures  acc(sl.Bytes(ub[start:end], 0, len(ub[start:end])), R50)
 ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 ensures  start == p.scionLayer.PathScionStartIdx(ub)
 ensures  end == p.scionLayer.PathScionEndIdx(ub)
+ensures  typeOf(p.scionLayer.GetPath(ub)) != (*epic.Path) ==>
+	p.path === p.scionLayer.GetPath(ub)
 ensures  p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 ensures  p.path.GetBase(ub[start:end]).WeaklyValid()
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
@@ -237,11 +239,18 @@ func (p* scionPacketProcessor) EstablishEqAbsHeader(ub []byte, start int, end in
 	assert reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
 	if typeOf(p.scionLayer.Path) == *epic.Path {
 		startP := p.scionLayer.PathStartIdx(ub)
+		unfold acc(p.scionLayer.Path.Mem(ub[startP:end]), R56)
+		assert p.path === p.scionLayer.Path.(*epic.Path).ScionPath
 		assert ub[startP:end][epic.MetadataLen:] === ub[start:end]
 		assert forall k int :: {&ub[startP:end][epic.MetadataLen:][k]} 0 <= k && k < end-start ==>
 			&ub[startP:end][epic.MetadataLen:][k] == &ub[start + k]
 		assert forall k int :: {&ub[start:end][k]} 0 <= k && k < end-start ==>
 			&ub[start:end][k] == &ub[start + k]
+		fold acc(p.scionLayer.Path.Mem(ub[startP:end]), R56)
+	} else {
+		assert p.path === p.scionLayer.Path
+		assert start == p.scionLayer.PathStartIdx(ub)
+		assert end == p.scionLayer.PathEndIdx(ub)
 	}
 	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.path.Mem(ub[start:end]), R56)
@@ -269,6 +278,8 @@ ensures  slayers.ValidPktMetaHdr(ub)
 ensures  p.scionLayer.EqAbsHeader(ub)
 ensures  start == p.scionLayer.PathScionStartIdx(ub)
 ensures  end == p.scionLayer.PathScionEndIdx(ub)
+ensures  typeOf(p.scionLayer.GetPath(ub)) != (*epic.Path) ==>
+	p.path === p.scionLayer.GetPath(ub)
 ensures  scion.validPktMetaHdr(ub[start:end])
 ensures  p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
@@ -285,11 +296,18 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
 	if typeOf(p.scionLayer.Path) == *epic.Path {
 		startP := p.scionLayer.PathStartIdx(ub)
+		unfold acc(p.scionLayer.Path.Mem(ub[startP:end]), R56)
+		assert p.path === p.scionLayer.Path.(*epic.Path).ScionPath
 		assert ub[startP:end][epic.MetadataLen:] === ub[start:end]
 		assert forall k int :: {&ub[startP:end][epic.MetadataLen:][k]} 0 <= k && k < end-start ==>
 			&ub[startP:end][epic.MetadataLen:][k] == &ub[start + k]
 		assert forall k int :: {&ub[start:end][k]} 0 <= k && k < end-start ==>
 			&ub[start:end][k] == &ub[start + k]
+		fold acc(p.scionLayer.Path.Mem(ub[startP:end]), R56)
+	} else {
+		assert p.path === p.scionLayer.Path
+		assert start == p.scionLayer.PathStartIdx(ub)
+		assert end == p.scionLayer.PathEndIdx(ub)
 	}
 	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.scionLayer.Mem(ub), R56)
@@ -343,6 +361,8 @@ ensures  acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 ensures  slayers.ValidPktMetaHdr(ub)
 ensures  start == p.scionLayer.PathScionStartIdx(ub)
 ensures  end == p.scionLayer.PathScionEndIdx(ub)
+ensures  typeOf(p.scionLayer.GetPath(ub)) != (*epic.Path) ==>
+	p.path === p.scionLayer.GetPath(ub)
 ensures  scion.validPktMetaHdr(ub[start:end])
 ensures  p.scionLayer.EqAbsHeader(ub)
 ensures  p.path === p.scionLayer.GetScionPath(ub)
@@ -358,11 +378,18 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	reveal scion.validPktMetaHdr(ub[start:end])
 	if typeOf(p.scionLayer.Path) == *epic.Path {
 		startP := p.scionLayer.PathStartIdx(ub)
+		unfold acc(p.scionLayer.Path.Mem(ub[startP:end]), R56)
+		assert p.path === p.scionLayer.Path.(*epic.Path).ScionPath
 		assert ub[startP:end][epic.MetadataLen:] === ub[start:end]
 		assert forall k int :: {&ub[startP:end][epic.MetadataLen:][k]} 0 <= k && k < end-start ==>
 			&ub[startP:end][epic.MetadataLen:][k] == &ub[start + k]
 		assert forall k int :: {&ub[start:end][k]} 0 <= k && k < end-start ==>
 			&ub[start:end][k] == &ub[start + k]
+		fold acc(p.scionLayer.Path.Mem(ub[startP:end]), R56)
+	} else {
+		assert p.path === p.scionLayer.Path
+		assert start == p.scionLayer.PathStartIdx(ub)
+		assert end == p.scionLayer.PathEndIdx(ub)
 	}
 	assert reveal p.scionLayer.EqAbsHeader(ub)
 	fold acc(p.path.Mem(ub[start:end]), R56)
