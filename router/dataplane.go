@@ -1449,6 +1449,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 		},
 	}
 	// @ fold sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
+	// @ fold sl.Bytes(p.macBuffers.epicInput, 0, len(p.macBuffers.epicInput))
 	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
 	p.scionLayer.RecyclePaths()
 	// @ fold p.scionLayer.NonInitMem()
@@ -3048,6 +3049,7 @@ func (p *scionPacketProcessor) currentHopPointer( /*@ ghost ubScionL []byte @*/ 
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // @ ensures   reserr == nil ==>
 // @ 	respr === processResult{}
+// @ ensures   reserr == nil ==> sl.Bytes(p.cachedMac, 0, len(p.cachedMac))
 // contracts for IO-spec
 // @ requires  slayers.ValidPktMetaHdr(ubScionL) && p.scionLayer.EqAbsHeader(ubScionL)
 // @ requires  absPkt(ubScionL).PathNotFullyTraversed()
@@ -4114,6 +4116,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ ensures   acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
 // @ ensures   reserr == nil ==> p.path === p.scionLayer.GetScionPath(ub)
+// @ ensures   reserr == nil ==> sl.Bytes(p.cachedMac, 0, len(p.cachedMac))
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
 // @ ensures   respr.OutPkt != nil ==>
@@ -5027,6 +5030,10 @@ func (p *scionPacketProcessor) prepareSCMP(
 // @ 	typeOf(base.GetPath(data)) == *scion.Raw &&
 // @ 	path.Type(slayers.GetPathType(data)) != epic.PathType ==>
 // @ 	base.EqAbsHeader(data) && base.ValidScionInitSpec(data)
+// @ ensures   reterr == nil && slayers.CmnHdrLen <= len(data) &&
+// @ 	typeOf(base.GetPath(data)) == *epic.Path &&
+// @ 	path.Type(slayers.GetPathType(data)) == epic.PathType ==>
+// @ 	base.EqAbsHeader(data) && base.ValidScionInitSpec(data)
 // @ ensures   reterr == nil ==> base.EqPathType(data)
 // @ ensures   forall i int :: {&opts[i]}{processed[i]} 0 <= i && i < len(opts) ==>
 // @ 	(processed[i] ==> (0 <= offsets[i].start && offsets[i].start <= offsets[i].end && offsets[i].end <= len(data)))
@@ -5068,6 +5075,10 @@ func decodeLayers(data []byte, base *slayers.SCION, opts ...gopacket.DecodingLay
 	// @ invariant slayers.CmnHdrLen <= len(oldData) &&
 	// @ 	typeOf(base.GetPath(oldData)) == *scion.Raw &&
 	// @ 	path.Type(slayers.GetPathType(oldData)) != epic.PathType ==>
+	// @ 	base.EqAbsHeader(oldData) && base.ValidScionInitSpec(oldData)
+	// @ invariant slayers.CmnHdrLen <= len(oldData) &&
+	// @ 	typeOf(base.GetPath(oldData)) == *epic.Path &&
+	// @ 	path.Type(slayers.GetPathType(oldData)) == epic.PathType ==>
 	// @ 	base.EqAbsHeader(oldData) && base.ValidScionInitSpec(oldData)
 	// @ invariant base.EqPathType(oldData)
 	// @ invariant 0 < len(opts) ==> 0 <= i0 && i0 <= len(opts)

@@ -327,6 +327,10 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // @ 	typeOf(s.GetPath(data)) == *scion.Raw &&
 // @ 	path.Type(GetPathType(data)) != epic.PathType ==>
 // @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
+// @ ensures   res == nil && CmnHdrLen <= len(data) &&
+// @ 	typeOf(s.GetPath(data)) == *epic.Path &&
+// @ 	path.Type(GetPathType(data)) == epic.PathType ==>
+// @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
 // @ ensures   res == nil ==> s.EqPathType(data)
 // @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
 // @ decreases
@@ -444,9 +448,24 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	fold acc(sl.Bytes(data, 0, len(data)), R56)
 	// @ 	fold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ }
+	// @ ghost if typeOf(s.GetPath(data)) == (*epic.Path) && path.Type(GetPathType(data)) == epic.PathType {
+	// @ 	unfold acc(sl.Bytes(data, 0, len(data)), R56)
+	// @ 	unfold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
+	// @ 	unfold acc(s.Path.(*epic.Path).Mem(data[offset : offset+pathLen]), R55)
+	// @ 	unfold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
+	// @ 	assert reveal s.EqAbsHeader(data)
+	// @ 	assert reveal s.ValidScionInitSpec(data)
+	// @ 	fold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
+	// @ 	fold acc(s.Path.(*epic.Path).Mem(data[offset : offset+pathLen]), R55)
+	// @ 	fold acc(sl.Bytes(data, 0, len(data)), R56)
+	// @ 	fold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
+	// @ }
 	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R41)
 	// @ assert CmnHdrLen <= len(data) && typeOf(s.GetPath(data)) == *scion.Raw &&
 	// @ 	path.Type(GetPathType(data)) != epic.PathType ==>
+	// @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
+	// @ assert CmnHdrLen <= len(data) && typeOf(s.GetPath(data)) == *epic.Path &&
+	// @ 	path.Type(GetPathType(data)) == epic.PathType ==>
 	// @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
 	// @ assert reveal s.EqPathType(data)
 	// @ fold acc(s.Mem(data), 1-R54)

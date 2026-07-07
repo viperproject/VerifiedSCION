@@ -139,6 +139,7 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ preserves acc(sl.Bytes(b, 0, len(b)), R42)
 // @ ensures   len(b) < MetadataLen ==> r != nil
 // @ ensures   r == nil ==> p.Mem(b)
+// @ ensures   r == nil ==> p.IsValidResultOfDecoding(b)
 // @ ensures   r != nil ==> p.NonInitMem() && r.ErrorMem()
 // @ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
@@ -169,11 +170,26 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ sl.SplitRange_Bytes(b, MetadataLen, len(b), R42)
 	ret := p.ScionPath.DecodeFromBytes(b[MetadataLen:])
 	//@ ghost if ret == nil {
+	//@ 	assert p.ScionPath.GetBase(b[MetadataLen:]).EqAbsHeader(b[MetadataLen:])
+	//@ 	assert p.ScionPath.GetBase(b[MetadataLen:]).WeaklyValid()
 	//@ 	fold p.Mem(b)
 	//@ } else {
 	//@ 	fold p.NonInitMem()
 	//@ }
 	//@ sl.CombineRange_Bytes(b, MetadataLen, len(b), R42)
+	//@ ghost if ret == nil {
+	//@ 	unfold acc(p.Mem(b), R56)
+	//@ 	unfold acc(p.ScionPath.Mem(b[MetadataLen:]), R56)
+	//@ 	unfold acc(sl.Bytes(b, 0, len(b)), R56)
+	//@ 	assert forall k int :: {&b[MetadataLen:][k]} 0 <= k && k < len(b)-MetadataLen ==>
+	//@ 		&b[MetadataLen:][k] == &b[MetadataLen + k]
+	//@ 	assert forall k int :: {&b[MetadataLen:][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+	//@ 		&b[MetadataLen:][:scion.MetaLen][k] == &b[MetadataLen:][k]
+	//@ 	fold acc(sl.Bytes(b, 0, len(b)), R56)
+	//@ 	fold acc(p.ScionPath.Mem(b[MetadataLen:]), R56)
+	//@ 	fold acc(p.Mem(b), R56)
+	//@ 	assert p.IsValidResultOfDecoding(b)
+	//@ }
 	return ret
 }
 

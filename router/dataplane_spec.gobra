@@ -578,6 +578,7 @@ pred (s* scionPacketProcessor) sInit() {
 	acc(&s.cachedMac)                            &&
 	acc(&s.macBuffers)                           &&
 	sl.Bytes(s.macBuffers.scionInput, 0, len(s.macBuffers.scionInput)) &&
+	sl.Bytes(s.macBuffers.epicInput, 0, len(s.macBuffers.epicInput)) &&
 	s.bfdLayer.NonInitMem()                      &&
 	acc(&s.srcAddr)                              &&
 	acc(&s.rawPkt)
