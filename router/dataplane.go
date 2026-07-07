@@ -3320,8 +3320,10 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, startP)
 	// @ assert p.scionLayer.ValidHeaderOffset(ub, len(ub))
 	// @ assert p.path == p.scionLayer.GetPath(ub)
+	// @ assert typeOf(p.scionLayer.GetPath(ub)) != (*epic.Path)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
 	// @ assert p.scionLayer.ValidHeaderOffset(ub, len(ub))
+	// @ assert typeOf(p.scionLayer.GetPath(ub)) != (*epic.Path)
 	// @ assert p.path == p.scionLayer.GetPath(ub)
 	// @ assert p.path.GetBase(ubPath) == nextBase
 	// @ assert len(get(old(absPkt(ub)).LeftSeg).Future) > 0
