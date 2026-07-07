@@ -235,8 +235,8 @@ func (p* scionPacketProcessor) EstablishEqAbsHeader(ub []byte, start int, end in
 	reveal p.scionLayer.EqAbsHeader(ub)
 	reveal p.scionLayer.ValidScionInitSpec(ub)
 	assert reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
-	ghost if typeOf(p.scionLayer.Path) == *epic.Path {
-		ghost startP := p.scionLayer.PathStartIdx(ub)
+	if typeOf(p.scionLayer.Path) == *epic.Path {
+		startP := p.scionLayer.PathStartIdx(ub)
 		assert ub[startP:end][epic.MetadataLen:] === ub[start:end]
 		assert forall k int :: {&ub[startP:end][epic.MetadataLen:][k]} 0 <= k && k < end-start ==>
 			&ub[startP:end][epic.MetadataLen:][k] == &ub[start + k]
@@ -283,8 +283,8 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	assert reveal scion.validPktMetaHdr(ub[start:end])
 	unfold acc(p.scionLayer.Mem(ub), R56)
 	reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
-	ghost if typeOf(p.scionLayer.Path) == *epic.Path {
-		ghost startP := p.scionLayer.PathStartIdx(ub)
+	if typeOf(p.scionLayer.Path) == *epic.Path {
+		startP := p.scionLayer.PathStartIdx(ub)
 		assert ub[startP:end][epic.MetadataLen:] === ub[start:end]
 		assert forall k int :: {&ub[startP:end][epic.MetadataLen:][k]} 0 <= k && k < end-start ==>
 			&ub[startP:end][epic.MetadataLen:][k] == &ub[start + k]
@@ -356,8 +356,8 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	unfold acc(p.path.Mem(ub[start:end]), R56)
 	reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
 	reveal scion.validPktMetaHdr(ub[start:end])
-	ghost if typeOf(p.scionLayer.Path) == *epic.Path {
-		ghost startP := p.scionLayer.PathStartIdx(ub)
+	if typeOf(p.scionLayer.Path) == *epic.Path {
+		startP := p.scionLayer.PathStartIdx(ub)
 		assert ub[startP:end][epic.MetadataLen:] === ub[start:end]
 		assert forall k int :: {&ub[startP:end][epic.MetadataLen:][k]} 0 <= k && k < end-start ==>
 			&ub[startP:end][epic.MetadataLen:][k] == &ub[start + k]
