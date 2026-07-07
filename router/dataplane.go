@@ -1863,6 +1863,7 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, malformedPath /*@ , false, io.ValUnit{} @*/
 	}
+	// @ assert p.path === p.scionLayer.GetScionPath(ub)
 	return p.process( /*@ ub, llIsNil, startLL, endLL , ioLock, ioSharedArg, dp @*/ )
 }
 
@@ -3207,6 +3208,7 @@ func (p *scionPacketProcessor) resolveInbound( /*@ ghost ubScionL []byte, ghost 
 // @ ensures  sl.Bytes(ub, 0, len(ub))
 // @ ensures  acc(&p.path, R20)
 // @ ensures  reserr == nil ==> p.scionLayer.Mem(ub)
+// @ ensures  reserr == nil ==> p.path === p.scionLayer.GetScionPath(ub)
 // @ ensures  reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures  reserr != nil ==> reserr.ErrorMem()
 // Postconditions for IO:
@@ -4078,7 +4080,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ requires  acc(&p.rawPkt, R1) && ub === p.rawPkt
 // @ requires  acc(&p.path, R10)
 // @ requires  p.scionLayer.Mem(ub)
-// @ requires  p.path == p.scionLayer.GetPath(ub)
+// @ requires  p.path === p.scionLayer.GetScionPath(ub)
 // @ requires  sl.Bytes(ub, 0, len(ub))
 // @ requires  acc(&p.ingressID, R15)
 // @ requires  acc(&p.segmentChange) && !p.segmentChange
@@ -4111,10 +4113,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ ensures   !addrAliasesPkt ==> acc(sl.Bytes(ub, 0, len(ub)), R15)
 // @ ensures   acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   reserr == nil ==> p.scionLayer.Mem(ub)
-// (VerifiedSCION) TODO: reinstate the following postcondition when completing
-// the proof of processEPIC. It requires re-establishing the equality between
-// p.path and p.scionLayer.GetScionPath(ub) at every exit point of this method.
-// ensures   reserr == nil ==> p.path == p.scionLayer.GetScionPath(ub)
+// @ ensures   reserr == nil ==> p.path === p.scionLayer.GetScionPath(ub)
 // @ ensures   reserr != nil ==> p.scionLayer.NonInitMem()
 // @ ensures   sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
 // @ ensures   respr.OutPkt != nil ==>
@@ -4152,8 +4151,7 @@ func (p *scionPacketProcessor) process(
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, absReturnErr(r) @*/
 	}
-	// @ assert typeOf(p.scionLayer.GetPath(ub)) != (*epic.Path)
-	// @ assert p.path === p.scionLayer.GetPath(ub)
+	// @ assert p.path === p.scionLayer.GetScionPath(ub)
 	// @ ghost var oldPkt io.Pkt
 	// @ ghost if(slayers.IsSupportedPkt(ub)) {
 	// @ 	absIO_valLemma(ub, p.ingressID)
@@ -4232,18 +4230,26 @@ func (p *scionPacketProcessor) process(
 	// BRTransit: pkts leaving from the same BR different interface.
 	// @ unfold acc(p.scionLayer.Mem(ub), R3)
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
+	// @ ghost ubScionPath := p.scionLayer.UBScionPath(ub)
 	// @ assert p.path === p.scionLayer.GetScionPath(ub)
-	// @ assert p.scionLayer.UBScionPath(ub) === ubPath
-	if p.path.IsXover( /*@ ubPath @*/ ) {
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), R3)
+	// @ 	assert p.path === p.scionLayer.Path.(*epic.Path).ScionPath
+	// @ 	assert ubPath[epic.MetadataLen:] === ubScionPath
+	// @ }
+	if p.path.IsXover( /*@ ubScionPath @*/ ) {
 		// @ assert p.GetIsXoverSpec(ub)
-		// @ ghost currBase := p.path.GetBase(ubPath)
+		// @ ghost currBase := p.path.GetBase(ubScionPath)
+		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+		// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), R3)
+		// @ }
 		// @ fold acc(p.scionLayer.Mem(ub), R3)
 		if r, err := p.doXover( /*@ ub, currBase @*/ ); err != nil {
 			// @ fold p.d.validResult(processResult{}, false)
 			return r, err /*@, false, absReturnErr(r) @*/
 		}
-		// @ assert p.path === p.scionLayer.GetPath(ub)
-		// @ assert p.scionLayer.UBScionPath(ub) === p.scionLayer.UBPath(ub)
+		// @ assert p.path === p.scionLayer.GetScionPath(ub)
+		// @ assert p.scionLayer.UBScionPath(ub) === ubScionPath
 		// @ assert absPkt(ub) == AbsDoXover(nextPkt)
 		// @ AbsValidateIngressIDXoverLemma(nextPkt, AbsDoXover(nextPkt), path.ifsToIO_ifs(p.ingressID))
 		// @ nextPkt = absPkt(ub)
@@ -4258,10 +4264,15 @@ func (p *scionPacketProcessor) process(
 		}
 		// @ assert AbsVerifyCurrentMACConstraint(nextPkt, dp)
 		// @ unfold acc(p.scionLayer.Mem(ub), R3)
+		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+		// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), R3)
+		// @ }
 	}
-	// @ assert p.scionLayer.UBScionPath(ub) === ubPath
-	// @ assert p.path.GetBase(ubPath).Valid()
-	// @ p.path.GetBase(ubPath).NotIsXoverAfterIncPath()
+	// @ assert p.path.GetBase(ubScionPath).Valid()
+	// @ p.path.GetBase(ubScionPath).NotIsXoverAfterIncPath()
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), R3)
+	// @ }
 	// @ fold acc(p.scionLayer.Mem(ub), R3)
 	// @ assert p.segmentChange ==> nextPkt.RightSeg != none[io.Seg]
 	if r, err := p.validateEgressID( /*@ dp, ub, ubLL, startLL, endLL @*/ ); err != nil {
