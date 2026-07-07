@@ -2606,15 +2606,23 @@ func (p *scionPacketProcessor) invalidDstIA(
 // SrcIA checks by disguising packets as transit traffic.
 // @ requires  acc(&p.path, R15)
 // @ requires  acc(p.scionLayer.Mem(ub), R4)
-// @ requires  p.path === p.scionLayer.GetPath(ub)
+// @ requires  p.path === p.scionLayer.GetScionPath(ub)
 // @ requires  acc(&p.ingressID, R21)
 // @ requires  acc(&p.infoField, R4) && acc(&p.hopField, R4)
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
+// @ 	let ubScionPath := p.scionLayer.UBScionPath(ub) in
 // @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @ 	int(p.path.GetCurrHF(ubPath)) <= p.path.GetNumHops(ubPath)
+// @ 	(typeOf(p.scionLayer.Path) == (*epic.Path) ?
+// @ 		unfolding acc(p.scionLayer.Path.Mem(ubPath), R10) in
+// @ 		int(p.path.GetCurrHF(ubScionPath)) <= p.path.GetNumHops(ubScionPath) :
+// @ 		int(p.path.GetCurrHF(ubScionPath)) <= p.path.GetNumHops(ubScionPath))
 // @ requires  let ubPath := p.scionLayer.UBPath(ub) in
+// @ 	let ubScionPath := p.scionLayer.UBScionPath(ub) in
 // @ 	unfolding acc(p.scionLayer.Mem(ub), R10) in
-// @ 	int(p.path.GetCurrINF(ubPath)) <= p.path.GetNumINF(ubPath)
+// @ 	(typeOf(p.scionLayer.Path) == (*epic.Path) ?
+// @ 		unfolding acc(p.scionLayer.Path.Mem(ubPath), R10) in
+// @ 		int(p.path.GetCurrINF(ubScionPath)) <= p.path.GetNumINF(ubScionPath) :
+// @ 		int(p.path.GetCurrINF(ubScionPath)) <= p.path.GetNumINF(ubScionPath))
 // @ requires  acc(&p.d, R20) && acc(p.d.Mem(), _)
 // @ requires  acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 // @ preserves acc(sl.Bytes(ub, 0, len(ub)), R4)
@@ -2642,6 +2650,8 @@ func (p *scionPacketProcessor) validateTransitUnderlaySrc( /*@ ghost ub []byte @
 	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
 	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), R5)
 	// @ 	defer fold acc(p.scionLayer.Path.Mem(ubPath), R5)
+	// @ 	assert p.path === p.scionLayer.Path.(*epic.Path).ScionPath
+	// @ 	assert ubPath[epic.MetadataLen:] === ubScionPath
 	// @ }
 	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, R5)
 	// @ ghost defer sl.CombineRange_Bytes(ub, startScionP, endScionP, R5)
@@ -4068,6 +4078,7 @@ func (p *scionPacketProcessor) process(
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, absReturnErr(r) @*/
 	}
+	// @ assert p.path === p.scionLayer.GetScionPath(ub)
 	if r, err := p.validateTransitUnderlaySrc( /*@ ub @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, absReturnErr(r) @*/
