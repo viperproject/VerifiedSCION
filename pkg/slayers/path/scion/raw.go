@@ -196,6 +196,19 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 		return nil, err
 	}
 	//@ ghost lenR := len(s.Raw) // TODO: move to the top and rewrite body
+	// the postcondition of decoded.DecodeFromBytes characterizes the
+	// meta header through GetByte; ViewElems bridges those terms to the
+	// view elements, which the asserts before the call related to the
+	// serialized bytes
+	//@ sl.ViewElems(s.Raw, 0, len(s.Raw), R43)
+	//@ assert sl.View(s.Raw, 0, len(s.Raw))[0] == sl.GetByte(s.Raw, 0, len(s.Raw), 0)
+	//@ assert sl.View(s.Raw, 0, len(s.Raw))[1] == sl.GetByte(s.Raw, 0, len(s.Raw), 1)
+	//@ assert sl.View(s.Raw, 0, len(s.Raw))[2] == sl.GetByte(s.Raw, 0, len(s.Raw), 2)
+	//@ assert sl.View(s.Raw, 0, len(s.Raw))[3] == sl.GetByte(s.Raw, 0, len(s.Raw), 3)
+	//@ assert sl.GetByte(s.Raw, 0, len(s.Raw), 0) == b0
+	//@ assert sl.GetByte(s.Raw, 0, len(s.Raw), 1) == b1
+	//@ assert sl.GetByte(s.Raw, 0, len(s.Raw), 2) == b2
+	//@ assert sl.GetByte(s.Raw, 0, len(s.Raw), 3) == b3
 	//@ ghost if validIdxs {
 	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ 	assert pathMeta == decoded.GetMetaHdr(s.Raw)
