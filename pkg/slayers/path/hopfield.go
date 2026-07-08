@@ -166,7 +166,7 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	//@ assert sl.GetByte(b, 0, HopLen, 6) == mac[0] && sl.GetByte(b, 0, HopLen, 7) == mac[1]
 	//@ assert sl.GetByte(b, 0, HopLen, 8) == mac[2] && sl.GetByte(b, 0, HopLen, 9) == mac[3]
 	//@ assert sl.GetByte(b, 0, HopLen, 10) == mac[4] && sl.GetByte(b, 0, HopLen, 11) == mac[5]
-	//@ sl.ViewElems(b, 0, HopLen, writePerm/2)
+	//@ sl.ViewElems(b, 0, HopLen, writePerm)
 	//@ ghost v := sl.View(b, 0, HopLen)
 	//@ assert v[2] == sl.GetByte(b, 0, HopLen, 2) && v[3] == sl.GetByte(b, 0, HopLen, 3)
 	//@ assert v[4] == sl.GetByte(b, 0, HopLen, 4) && v[5] == sl.GetByte(b, 0, HopLen, 5)
