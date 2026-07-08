@@ -1681,7 +1681,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ sl.CombineRange_Bytes(ub, start, end, HalfPerm)
 		// @ ghost if lastLayerIdx >= 0 && !offsets[lastLayerIdx].isNil {
 		// @ 	o := offsets[lastLayerIdx]
-		// @ 	sl.CombineRange_Bytes(p.rawPkt, o.start, o.end, HalfPerm)
+		// @ 	sl.CombineRangeWithViews_Bytes(p.rawPkt, o.start, o.end, HalfPerm, sl.View(p.rawPkt, 0, o.start), sl.View(p.rawPkt[o.start:o.end], 0, (o.end)-(o.start)), sl.View(p.rawPkt, o.end, len(p.rawPkt)))
 		// @ }
 		// @ assert sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
 		// @ unfold acc(p.d.Mem(), _)
@@ -2423,7 +2423,7 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghos
 			return p.invalidSrcIA( /*@ ubScionL, ubLL, startLL, endLL @*/ )
 		}
 		if p.path.IsLastHop( /*@ ubPath @*/ ) != dstIsLocal {
-			// @ ghost sl.CombineRange_Bytes(ubScionL, startP, endP, R50)
+			// @ ghost sl.CombineRangeWithViews_Bytes(ubScionL, startP, endP, R50, sl.View(ubScionL, 0, startP), sl.View(ubScionL[startP:endP], 0, (endP)-(startP)), sl.View(ubScionL, endP, len(ubScionL)))
 			return p.invalidDstIA( /*@ ubScionL, ubLL, startLL, endLL @*/ )
 		}
 		// @ ghost if(p.path.IsLastHopSpec(ubPath)) {
@@ -2842,17 +2842,17 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF) /*@ ) , ubPath, @*/); err != nil {
 			// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 			// @ sl.CombineAtIndex_Bytes(ub, 0, start, slayers.CmnHdrLen, R54)
-			// @ ghost sl.CombineRange_Bytes(ub, start, end, writePerm)
+			// @ ghost sl.CombineRangeWithViews_Bytes(ub, start, end, writePerm, sl.View(ub, 0, start), sl.View(ub[start:end], 0, (end)-(start)), sl.View(ub, end, len(ub)))
 			return serrors.WrapStr("update info field", err)
 		}
-		// @ ghost sl.CombineRange_Bytes(ub, start, end, HalfPerm)
+		// @ ghost sl.CombineRangeWithViews_Bytes(ub, start, end, HalfPerm, sl.View(ub, 0, start), sl.View(ub[start:end], 0, (end)-(start)), sl.View(ub, end, len(ub)))
 		// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 		// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 		// @ sl.CombineAtIndex_Bytes(ub, 0, start, slayers.CmnHdrLen, R54)
 		// @ assert sl.View(ub, 0, len(ub))[:start] == sl.View(ub, 0, start)
 		// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, sl.View(ub, 0, len(ub)), start)
 		// @ p.SubSliceAbsPktToAbsPkt(ub, start, end)
-		// @ ghost sl.CombineRange_Bytes(ub, start, end, HalfPerm)
+		// @ ghost sl.CombineRangeWithViews_Bytes(ub, start, end, HalfPerm, sl.View(ub, 0, start), sl.View(ub[start:end], 0, (end)-(start)), sl.View(ub, end, len(ub)))
 		// @ absPktFutureLemma(sl.View(ub, 0, len(ub)))
 		// @ assert absPkt(sl.View(ub, 0, len(ub))).CurrSeg.UInfo ==
 		// @ 	old(io.upd_uinfo(path.AbsUInfoFromUint16(p.infoField.SegID), p.hopField.Abs()))
@@ -3149,14 +3149,14 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	}
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
 	// @ assert reveal p.scionLayer.ValidHeaderOffset(ub, sl.View(ub, 0, startP))
-	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ ghost sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
 	// @ assert sl.View(ub, 0, len(ub))[:startP] == sl.View(ub, 0, startP)
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, sl.View(ub, 0, len(ub)), startP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
-	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ ghost sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
 	// @ absPktFutureLemma(sl.View(ub, 0, len(ub)))
 	// @ assert absPkt(sl.View(ub, 0, len(ub))) == reveal AbsProcessEgress(old(absPkt(sl.View(ub, 0, len(ub)))))
 	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
@@ -3249,7 +3249,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ assert p.path.absPkt(sl.View(ubPath, 0, len(ubPath))) == scion.AbsXover(preAbsPkt)
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
 	// @ assert reveal p.scionLayer.ValidHeaderOffset(ub, sl.View(ub, 0, startP))
-	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ ghost sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
@@ -3294,7 +3294,7 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	}
 	// @ assert p.path.GetBase(ubPath) == nextBase
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startP, endP)
-	// @ ghost sl.CombineRange_Bytes(ub, startP, endP, HalfPerm/2)
+	// @ ghost sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm/2, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
 	// @ absPktFutureLemma(sl.View(ub, 0, len(ub)))
 	// @ p.path.DecodingLemma(ubPath, p.infoField, p.hopField)
 	// @ assert reveal p.path.EqAbsInfoField(p.path.absPkt(sl.View(ubPath, 0, len(ubPath))), p.infoField.ToAbsInfoField())
@@ -3531,12 +3531,12 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
 		// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 		// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ sl.CombineRangeWithViews_Bytes(ub, startP, endP, writePerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
 		// @ fold acc(p.scionLayer.Mem(ub), R20)
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
-	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
@@ -3650,12 +3650,12 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubPath @*/); err != nil {
 		// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 		// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
-		// @ sl.CombineRange_Bytes(ub, startP, endP, writePerm)
+		// @ sl.CombineRangeWithViews_Bytes(ub, startP, endP, writePerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
 		// @ fold acc(p.scionLayer.Mem(ub), R20)
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
-	// @ sl.CombineRange_Bytes(ub, startP, endP, HalfPerm)
+	// @ sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
@@ -3796,9 +3796,9 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 	}
 	// @ ghost sl.CombineRange_Bytes(scionPld, 4, len(scionPld), R1)
 	// @ ghost if !scionPldIsNil {
-	// @ 	sl.CombineRange_Bytes(ubLL, maybeStartPld, maybeEndPld, R1)
+	// @ 	sl.CombineRangeWithViews_Bytes(ubLL, maybeStartPld, maybeEndPld, R1, sl.View(ubLL, 0, maybeStartPld), sl.View(ubLL[maybeStartPld:maybeEndPld], 0, (maybeEndPld)-(maybeStartPld)), sl.View(ubLL, maybeEndPld, len(ubLL)))
 	// @ }
-	// @ sl.CombineRange_Bytes(ubScionL, startLL, endLL, R1)
+	// @ sl.CombineRangeWithViews_Bytes(ubScionL, startLL, endLL, R1, sl.View(ubScionL, 0, startLL), sl.View(ubScionL[startLL:endLL], 0, (endLL)-(startLL)), sl.View(ubScionL, endLL, len(ubScionL)))
 	tmpRes, tmpErr := p.packSCMP(slayers.SCMPTypeTracerouteReply, 0, &scmpP, (error)(nil) /*@ ,ubScionL, ubLL, startLL, endLL, @*/)
 	// @ ghost if tmpErr != nil && tmpRes.OutPkt != nil {
 	// @ 	AbsUnsupportedPktIsUnsupportedVal(sl.View(tmpRes.OutPkt, 0, len(tmpRes.OutPkt)), tmpRes.EgressID)

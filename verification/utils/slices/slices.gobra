@@ -429,24 +429,49 @@ requires acc(Bytes(s[start:end], 0, end-start), p)
 requires acc(Bytes(s, 0, start), p)
 requires acc(Bytes(s, end, len(s)), p)
 ensures  acc(Bytes(s, 0, len(s)), p)
-ensures  View(s, 0, len(s))[:start]      == old(View(s, 0, start))
-ensures  View(s, 0, len(s))[end:]        == old(View(s, end, len(s)))
-ensures  View(s, 0, len(s))[start:end]   == old(View(s[start:end], 0, end-start))
 decreases
 func CombineRange_Bytes(s []byte, start int, end int, p perm) {
-	vLeft  := View(s, 0, start)
-	vMid   := View(s[start:end], 0, end-start)
-	vRight := View(s, end, len(s))
 	Unslice_Bytes(s, start, end, p)
 	CombineAtIndex_Bytes(s, start, len(s), end, p)
 	CombineAtIndex_Bytes(s, 0, len(s), start, p)
-	assert View(s, 0, len(s)) == vLeft ++ (vMid ++ vRight)
-	assert len(vLeft) == start && len(vMid) == end - start
-	assert View(s, 0, len(s))[:start] == vLeft
-	assert View(s, 0, len(s))[start:] == vMid ++ vRight
-	assert View(s, 0, len(s))[start:][:end - start] == vMid
+}
+
+// CombineRangeWithViews_Bytes behaves like CombineRange_Bytes and
+// additionally relates the view of the combined instance with the
+// views of the three instances that are combined. The views of the
+// pieces are passed as ghost parameters, bound by the preconditions
+// in the state before the call: the postconditions then need no old()
+// expressions, which do not re-check reliably under all verification
+// configurations when the instances they depend on are consumed by
+// the call. At call sites, passing View(s, 0, start),
+// View(s[start:end], 0, end-start) and View(s, end, len(s)) satisfies
+// the bindings trivially.
+ghost
+requires 0 < p
+requires 0 <= start && start <= end && end <= len(s)
+requires acc(Bytes(s[start:end], 0, end-start), p)
+requires acc(Bytes(s, 0, start), p)
+requires acc(Bytes(s, end, len(s)), p)
+requires vl == View(s, 0, start)
+requires vm == View(s[start:end], 0, end - start)
+requires vr == View(s, end, len(s))
+ensures  acc(Bytes(s, 0, len(s)), p)
+ensures  View(s, 0, len(s)) == vl ++ vm ++ vr
+ensures  View(s, 0, len(s))[:start]    == vl
+ensures  View(s, 0, len(s))[start:end] == vm
+ensures  View(s, 0, len(s))[end:]      == vr
+decreases
+func CombineRangeWithViews_Bytes(s []byte, start int, end int, p perm, ghost vl seq[byte], ghost vm seq[byte], ghost vr seq[byte]) {
+	Unslice_Bytes(s, start, end, p)
+	CombineAtIndex_Bytes(s, start, len(s), end, p)
+	CombineAtIndex_Bytes(s, 0, len(s), start, p)
+	assert View(s, 0, len(s)) == vl ++ (vm ++ vr)
+	assert len(vl) == start && len(vm) == end - start
+	assert View(s, 0, len(s))[:start] == vl
+	assert View(s, 0, len(s))[start:] == vm ++ vr
+	assert View(s, 0, len(s))[start:][:end - start] == vm
 	assert View(s, 0, len(s))[start:end] == View(s, 0, len(s))[start:][:end - start]
-	assert View(s, 0, len(s))[start:][end - start:] == vRight
+	assert View(s, 0, len(s))[start:][end - start:] == vr
 	assert View(s, 0, len(s))[end:] == View(s, 0, len(s))[start:][end - start:]
 }
 

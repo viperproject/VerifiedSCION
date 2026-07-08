@@ -289,7 +289,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ b3 := metaView[3]
 	//@ s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
 	//@ assert s.PathMeta.EqAbsHeader(metaView)
-	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, writePerm)
+	//@ sl.CombineRangeWithViews_Bytes(ubuf, 0, MetaLen, writePerm, sl.View(ubuf, 0, 0), sl.View(ubuf[0:MetaLen], 0, (MetaLen)-(0)), sl.View(ubuf, MetaLen, len(ubuf)))
 	//@ ghost newView := sl.View(ubuf, 0, len(ubuf))
 	//@ assert newView[:MetaLen] == metaView
 	//@ assert newView[MetaLen:] == tail
@@ -364,7 +364,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 	//@ ghost infoView := sl.View(s.Raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen)
 	//@ assert infoView[:path.InfoLen] == infoView
 	//@ assert infoView == v[infOffset:infOffset+path.InfoLen]
-	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R20)
+	//@ sl.CombineRangeWithViews_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R20, sl.View(ubuf, 0, infOffset), sl.View(ubuf[infOffset:infOffset+path.InfoLen], 0, (infOffset+path.InfoLen)-(infOffset)), sl.View(ubuf, infOffset+path.InfoLen, len(ubuf)))
 	//@ assert sl.View(ubuf, 0, len(ubuf)) == v
 	//@ fold acc(s.Mem(ubuf), R11)
 	//@ assert reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, info)
@@ -453,7 +453,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	//@ ghost newInfoView := sl.View(s.Raw[infOffset:infOffset+path.InfoLen], 0, path.InfoLen)
 	//@ assert newInfoView[:path.InfoLen] == newInfoView
 	//@ assert path.BytesToAbsInfoField(newInfoView) == newInfo
-	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, writePerm)
+	//@ sl.CombineRangeWithViews_Bytes(ubuf, infOffset, infOffset+path.InfoLen, writePerm, sl.View(ubuf, 0, infOffset), sl.View(ubuf[infOffset:infOffset+path.InfoLen], 0, (infOffset+path.InfoLen)-(infOffset)), sl.View(ubuf, infOffset+path.InfoLen, len(ubuf)))
 	//@ ghost newView := sl.View(ubuf, 0, len(ubuf))
 	//@ assert newView[:infOffset] == oldView[:infOffset]
 	//@ assert newView[infOffset:infOffset+path.InfoLen] == newInfoView
@@ -528,7 +528,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 	//@ unfold hop.Mem()
 	//@ ghost hopView := sl.View(s.Raw[hopOffset:hopOffset+path.HopLen], 0, path.HopLen)
 	//@ assert hopView == v[hopOffset:hopOffset+path.HopLen]
-	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R20)
+	//@ sl.CombineRangeWithViews_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R20, sl.View(ubuf, 0, hopOffset), sl.View(ubuf[hopOffset:hopOffset+path.HopLen], 0, (hopOffset+path.HopLen)-(hopOffset)), sl.View(ubuf, hopOffset+path.HopLen, len(ubuf)))
 	//@ assert sl.View(ubuf, 0, len(ubuf)) == v
 	//@ fold acc(s.Mem(ubuf), R11)
 	//@ assert reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, hop)
@@ -626,7 +626,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	ret := tmpHopField.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
 	//@ ghost newHopView := sl.View(s.Raw[hopOffset:hopOffset+path.HopLen], 0, path.HopLen)
 	//@ assert path.BytesToIO_HF(newHopView) == tmpHopField.Abs()
-	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, writePerm)
+	//@ sl.CombineRangeWithViews_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, writePerm, sl.View(ubuf, 0, hopOffset), sl.View(ubuf[hopOffset:hopOffset+path.HopLen], 0, (hopOffset+path.HopLen)-(hopOffset)), sl.View(ubuf, hopOffset+path.HopLen, len(ubuf)))
 	//@ ghost newView := sl.View(ubuf, 0, len(ubuf))
 	//@ assert newView[:hopOffset] == oldView[:hopOffset]
 	//@ assert newView[hopOffset:hopOffset+path.HopLen] == newHopView

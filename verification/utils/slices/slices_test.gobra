@@ -44,6 +44,7 @@ func View_test() {
 	// reslicing preserves the contents of the views
 	SplitRange_Bytes(s, 2, 8, writePerm)
 	assert View(s[2:8], 0, 6) == v[2:8]
-	CombineRange_Bytes(s, 2, 8, writePerm)
+	CombineRangeWithViews_Bytes(s, 2, 8, writePerm,
+		View(s, 0, 2), View(s[2:8], 0, 6), View(s, 8, 10))
 	assert View(s, 0, 10) == v
 }

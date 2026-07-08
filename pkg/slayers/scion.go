@@ -293,7 +293,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	}
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
 
-	// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm)
+	// @ sl.CombineRangeWithViews_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm, sl.View(uSerBufN, 0, CmnHdrLen), sl.View(uSerBufN[CmnHdrLen:scnLen], 0, (scnLen)-(CmnHdrLen)), sl.View(uSerBufN, scnLen, len(uSerBufN)))
 	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
 	// @ ghost vSerA := sl.View(uSerBufN, 0, len(uSerBufN))
 	// @ assert vSerA[:CmnHdrLen] == vSer0[:CmnHdrLen]
@@ -308,7 +308,7 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ sl.SplitRange_Bytes(uSerBufN, offset, scnLen, writePerm)
 	// @ sl.SplitRange_Bytes(ubuf, startP, endP, writePerm)
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
-	// @ sl.CombineRange_Bytes(uSerBufN, offset, scnLen, writePerm)
+	// @ sl.CombineRangeWithViews_Bytes(uSerBufN, offset, scnLen, writePerm, sl.View(uSerBufN, 0, offset), sl.View(uSerBufN[offset:scnLen], 0, (scnLen)-(offset)), sl.View(uSerBufN, scnLen, len(uSerBufN)))
 	// @ sl.CombineRange_Bytes(ubuf, startP, endP, writePerm)
 	// @ ghost vSer1 := sl.View(uSerBufN, 0, len(uSerBufN))
 	// @ assert vSer1[:offset] == vSerA[:offset]
