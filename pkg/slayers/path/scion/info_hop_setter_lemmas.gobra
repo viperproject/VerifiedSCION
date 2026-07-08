@@ -622,24 +622,59 @@ func EstablishBytesStoreCurrSeg(hopfields seq[byte], currHfIdx int, segLen int, 
 	currHfStart := currHfIdx * path.HopLen
 	currHfEnd := currHfStart + path.HopLen
 
-	ghost hf := hopFields(hopfields, 0, 0, segLen)
-	HopsFromSuffixOfRawMatchSuffixOfHops(hopfields, 0, 0, segLen, currHfIdx)
-	AlignHopsOfRawWithOffsetAndIndex(hopfields, 0, currHfIdx + 1, segLen, currHfIdx + 1)
-	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx + 1)
-	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx)
-	widenHopFields(hopfields, 0, 0, currHfIdx, 0, currHfStart)
-	widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, currHfEnd, segLen * path.HopLen)
-	// the asserts below spell out the chain from the facts established by
-	// the lemma calls above to the conjuncts of BytesStoreCurrSeg
-	assert currseg.Future == hf[currHfIdx:]
-	assert currseg.Future == hopFields(hopfields, 0, currHfIdx, segLen)
-	assert currseg.Future[0] == path.BytesToIO_HF(hopfields[currHfStart:currHfEnd])
-	assert hf[currHfIdx:][1:] == hf[currHfIdx + 1:]
-	assert currseg.Future[1:] == hopFields(hopfields, 0, currHfIdx + 1, segLen)
-	assert hopfields[currHfEnd:] == hopfields[currHfEnd:segLen * path.HopLen]
-	assert currseg.Future[1:] == hopFields(hopfields[currHfEnd:], 0, 0, segLen - currHfIdx - 1)
+	establishCurrSegFutureHead(hopfields, currHfIdx, segLen)
+	establishCurrSegFutureTail(hopfields, currHfIdx, segLen)
+	establishCurrSegPast(hopfields, currHfIdx, segLen)
+	assert currseg.Future == hopFields(hopfields, 0, 0, segLen)[currHfIdx:]
 	assert currseg.Past == segPast(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx))
 	assert currseg.History == segHistory(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx))
+}
+
+// establishCurrSegFutureHead relates the head of the future hopfields
+// of the current segment to the serialization of the current hopfield.
+ghost
+requires 0 <= currHfIdx && currHfIdx < segLen
+requires segLen * path.HopLen == len(hopfields)
+ensures  hopFields(hopfields, 0, 0, segLen)[currHfIdx:] ==
+	hopFields(hopfields, 0, currHfIdx, segLen)
+ensures  hopFields(hopfields, 0, 0, segLen)[currHfIdx:][0] ==
+	path.BytesToIO_HF(hopfields[currHfIdx * path.HopLen : currHfIdx * path.HopLen + path.HopLen])
+decreases
+func establishCurrSegFutureHead(hopfields seq[byte], currHfIdx int, segLen int) {
+	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx)
+	assert hopFields(hopfields, 0, currHfIdx, segLen)[0] ==
+		path.BytesToIO_HF(hopfields[currHfIdx * path.HopLen : currHfIdx * path.HopLen + path.HopLen])
+}
+
+// establishCurrSegFutureTail relates the tail of the future hopfields
+// of the current segment to the bytes that follow the current hopfield.
+ghost
+requires 0 <= currHfIdx && currHfIdx < segLen
+requires segLen * path.HopLen == len(hopfields)
+ensures  hopFields(hopfields, 0, 0, segLen)[currHfIdx:][1:] ==
+	hopFields(hopfields[currHfIdx * path.HopLen + path.HopLen:], 0, 0, segLen - currHfIdx - 1)
+decreases
+func establishCurrSegFutureTail(hopfields seq[byte], currHfIdx int, segLen int) {
+	currHfEnd := currHfIdx * path.HopLen + path.HopLen
+	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx + 1)
+	assert hopFields(hopfields, 0, 0, segLen)[currHfIdx:][1:] ==
+		hopFields(hopfields, 0, 0, segLen)[currHfIdx + 1:]
+	AlignHopsOfRawWithOffsetAndIndex(hopfields, 0, currHfIdx + 1, segLen, currHfIdx + 1)
+	widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, currHfEnd, segLen * path.HopLen)
+	assert hopfields[currHfEnd:] == hopfields[currHfEnd:segLen * path.HopLen]
+}
+
+// establishCurrSegPast relates the past hopfields of the current
+// segment to the bytes that precede the current hopfield.
+ghost
+requires 0 <= currHfIdx && currHfIdx < segLen
+requires segLen * path.HopLen == len(hopfields)
+ensures  hopFields(hopfields, 0, 0, segLen)[:currHfIdx] ==
+	hopFields(hopfields[:currHfIdx * path.HopLen], 0, 0, currHfIdx)
+decreases
+func establishCurrSegPast(hopfields seq[byte], currHfIdx int, segLen int) {
+	HopsFromSuffixOfRawMatchSuffixOfHops(hopfields, 0, 0, segLen, currHfIdx)
+	widenHopFields(hopfields, 0, 0, currHfIdx, 0, currHfIdx * path.HopLen)
 }
 
 // `SplitHopfields` splits the permission to the raw bytes of a segment into the permission
