@@ -4483,17 +4483,34 @@ func updateSCIONLayer(rawPkt []byte, s *slayers.SCION, buffer gopacket.Serialize
 	// https://fsnets.slack.com/archives/C8ADBBG0J/p1592805884250700
 	rawContents := buffer.Bytes()
 	// @ assert !(reveal slayers.IsSupportedPkt(sl.View(rawContents, 0, len(rawContents))))
+	// IsSupportedPkt only depends on bytes 4 and 8 of the packet; the
+	// ground facts below carry them from the serialization buffer's view
+	// to the view of rawPkt after the copy
+	// @ sl.ViewElems(rawContents, 0, len(rawContents), R21)
+	// @ ghost vC := sl.View(rawContents, 0, len(rawContents))
+	// @ ghost c4 := sl.GetByte(rawContents, 0, len(rawContents), 4)
+	// @ ghost c8 := sl.GetByte(rawContents, 0, len(rawContents), 8)
+	// @ assert vC[4] == c4 && vC[8] == c8
 	// @ s.ValidSizeOhpUb(rawPkt)
 	// @ assert len(rawContents) <= len(rawPkt)
 	// @ unfold sl.Bytes(rawPkt, 0, len(rawPkt))
 	// @ unfold acc(sl.Bytes(rawContents, 0, len(rawContents)), R20)
+	// @ assert rawContents[4] == c4 && rawContents[8] == c8
 	// (VerifiedSCION) proving that the reslicing operation below is safe
 	// was tricky and required enriching (non-modularly) the invariants of *onehop.Path
 	// and *slayers.SCION.
 	// @ assert forall i int :: { &rawPkt[:len(rawContents)][i] }{ &rawPkt[i] } 0 <= i && i < len(rawContents) ==>
 	// @ 	 &rawPkt[i] == &rawPkt[:len(rawContents)][i]
 	copy(rawPkt[:len(rawContents)], rawContents /*@ , R20 @*/)
+	// @ assert rawPkt[4] == c4 && rawPkt[8] == c8
 	// @ fold sl.Bytes(rawPkt, 0, len(rawPkt))
+	// @ assert sl.GetByte(rawPkt, 0, len(rawPkt), 4) == c4
+	// @ assert sl.GetByte(rawPkt, 0, len(rawPkt), 8) == c8
+	// @ sl.ViewElems(rawPkt, 0, len(rawPkt), writePerm)
+	// @ ghost vP := sl.View(rawPkt, 0, len(rawPkt))
+	// @ assert vP[4] == sl.GetByte(rawPkt, 0, len(rawPkt), 4)
+	// @ assert vP[8] == sl.GetByte(rawPkt, 0, len(rawPkt), 8)
+	// @ assert vP[4] == vC[4] && vP[8] == vC[8]
 	// @ fold acc(sl.Bytes(rawContents, 0, len(rawContents)), R20)
 	// @ assert !(reveal slayers.IsSupportedPkt(sl.View(rawPkt, 0, len(rawPkt))))
 	return nil
