@@ -622,27 +622,22 @@ func EstablishBytesStoreCurrSeg(hopfields seq[byte], currHfIdx int, segLen int, 
 	currHfStart := currHfIdx * path.HopLen
 	currHfEnd := currHfStart + path.HopLen
 
+	ghost hf := hopFields(hopfields, 0, 0, segLen)
 	HopsFromSuffixOfRawMatchSuffixOfHops(hopfields, 0, 0, segLen, currHfIdx)
 	AlignHopsOfRawWithOffsetAndIndex(hopfields, 0, currHfIdx + 1, segLen, currHfIdx + 1)
 	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx + 1)
 	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx)
 	widenHopFields(hopfields, 0, 0, currHfIdx, 0, currHfStart)
 	widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, currHfEnd, segLen * path.HopLen)
-	widenHopFields(hopfields, currHfStart, 0, 1, currHfStart, currHfEnd)
 	// the asserts below spell out the chain from the facts established by
 	// the lemma calls above to the conjuncts of BytesStoreCurrSeg
+	assert currseg.Future == hf[currHfIdx:]
 	assert currseg.Future == hopFields(hopfields, 0, currHfIdx, segLen)
 	assert currseg.Future[0] == path.BytesToIO_HF(hopfields[currHfStart:currHfEnd])
-	assert currseg.Future == hopFields(hopfields, 0, 0, segLen)[currHfIdx:]
-	assert currseg.Future[1:] == hopFields(hopfields, 0, 0, segLen)[currHfIdx:][1:]
-	assert hopFields(hopfields, 0, 0, segLen)[currHfIdx:][1:] ==
-		hopFields(hopfields, 0, 0, segLen)[currHfIdx + 1:]
+	assert hf[currHfIdx:][1:] == hf[currHfIdx + 1:]
 	assert currseg.Future[1:] == hopFields(hopfields, 0, currHfIdx + 1, segLen)
-	assert hopFields(hopfields, 0, currHfIdx + 1, segLen) ==
-		hopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1)
 	assert hopfields[currHfEnd:] == hopfields[currHfEnd:segLen * path.HopLen]
 	assert currseg.Future[1:] == hopFields(hopfields[currHfEnd:], 0, 0, segLen - currHfIdx - 1)
-	assert hopFields(hopfields, 0, 0, currHfIdx) == hopFields(hopfields[:currHfStart], 0, 0, currHfIdx)
 	assert currseg.Past == segPast(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx))
 	assert currseg.History == segHistory(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx))
 }
