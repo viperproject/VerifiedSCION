@@ -47,7 +47,11 @@ pure func FromSeqToMacArray(mac seq[byte]) (res [MacLen]byte) {
 
 ghost
 requires len(mac1) == MacLen
-requires forall i int :: { mac2[i] } 0 <= i && i < MacLen ==> mac1[i] == mac2[i]
+// the elementwise premises are stated for each index instead of with a
+// quantifier: all callers have the ground facts at hand, and the ground
+// form keeps the instantiation surface of the serializer proofs small
+requires mac1[0] == mac2[0] && mac1[1] == mac2[1] && mac1[2] == mac2[2]
+requires mac1[3] == mac2[3] && mac1[4] == mac2[4] && mac1[5] == mac2[5]
 ensures  AbsMac(FromSeqToMacArray(mac1)) == AbsMac(mac2)
 decreases
 func EqualSeqImplyEqualMac(mac1 seq[byte], mac2 [MacLen]byte) {

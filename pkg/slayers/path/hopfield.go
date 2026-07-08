@@ -173,11 +173,10 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	//@ assert v[6] == mac[0] && v[7] == mac[1] && v[8] == mac[2]
 	//@ assert v[9] == mac[3] && v[10] == mac[4] && v[11] == mac[5]
 	//@ assert v[2] == b2 && v[3] == b3 && v[4] == b4 && v[5] == b5
-	//@ assert forall j int :: { v[j] } 6 <= j && j < 6+MacLen ==> v[j] == mac[j-6]
-	//@ assert forall i int :: { v[6:6+MacLen][i] } 0 <= i && i < MacLen ==>
-	//@ 	v[6:6+MacLen][i] == v[6+i]
-	//@ assert forall i int :: { h.Mac[i] } 0 <= i && i < MacLen ==>
-	//@ 	v[6:6+MacLen][i] == h.Mac[i]
+	//@ assert mac[0] == h.Mac[0] && mac[1] == h.Mac[1] && mac[2] == h.Mac[2]
+	//@ assert mac[3] == h.Mac[3] && mac[4] == h.Mac[4] && mac[5] == h.Mac[5]
+	//@ assert v[6:6+MacLen][0] == v[6] && v[6:6+MacLen][1] == v[7] && v[6:6+MacLen][2] == v[8]
+	//@ assert v[6:6+MacLen][3] == v[9] && v[6:6+MacLen][4] == v[10] && v[6:6+MacLen][5] == v[11]
 	//@ EqualSeqImplyEqualMac(v[6:6+MacLen], h.Mac)
 	//@ assert h.Abs() == BytesToIO_HF(v)
 	//@ fold acc(h.Mem(), R11)
