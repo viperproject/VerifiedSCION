@@ -328,6 +328,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ unfold acc(d.Mem(), 1/2)
 	// @ d.keyIsSetEq()
 	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold macFactoryInv(d.macFactory, d.key)
 	// @ defer fold MutexInvariant{d}()
 	// @ defer fold d.Mem()
 	if d.running {
@@ -344,6 +345,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	}
 	// First check for MAC creation errors.
 	if _, err := scrypto.InitMac(key); err != nil {
+		// @ fold macFactoryInv(d.macFactory, d.key)
 		return err
 	}
 	// @ d.key = &key
@@ -361,6 +363,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @   return verScionTemp() as f
 	// @ }
 	d.macFactory = verScionTemp
+	// @ fold macFactoryInv(d.macFactory, d.key)
 	return nil
 }
 
@@ -387,6 +390,8 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	// @ unfold acc(d.Mem(), 1/2)
 	// @ d.internalIsSetEq()
 	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold internalInv(d.internal)
+	// @ unfold internalIPInv(d.internalIP)
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -401,6 +406,8 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	}
 	d.internal = conn
 	d.internalIP = ip
+	// @ fold internalInv(d.internal)
+	// @ fold internalIPInv(d.internalIP)
 	// @ fold d.Mem()
 	// @ fold MutexInvariant{d}()
 	return nil
@@ -422,6 +429,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
 	// @ unfold d.Mem()
+	// @ unfold externalInv(d.external)
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -434,6 +442,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	if _, existsB := d.external[ifID]; existsB {
 		// @ establishAlreadySet()
 		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
+		// @ fold externalInv(d.external)
 		// @ fold d.Mem()
 		// @ fold MutexInvariant{d}()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
@@ -446,6 +455,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 	// @ unfold accBatchConn(d.external)
 	d.external[ifID] = conn
 	// @ fold accBatchConn(d.external)
+	// @ fold externalInv(d.external)
 	// @ fold d.Mem()
 	// @ fold MutexInvariant{d}()
 	return nil
@@ -466,6 +476,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	// @ unfold MutexInvariant{d}()
 	// @ d.isRunningEq()
 	// @ unfold d.Mem()
+	// @ unfold neighborIAsInv(d.neighborIAs)
 	if d.running {
 		// @ Unreachable()
 		return modifyExisting
@@ -476,6 +487,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 	}
 	if _, existsB := d.neighborIAs[ifID]; existsB {
 		// @ establishAlreadySet()
+		// @ fold neighborIAsInv(d.neighborIAs)
 		// @ fold d.Mem()
 		// @ fold MutexInvariant{d}()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
@@ -484,6 +496,7 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 		d.neighborIAs = make(map[uint16]addr.IA)
 	}
 	d.neighborIAs[ifID] = remote
+	// @ fold neighborIAsInv(d.neighborIAs)
 	// @ fold d.Mem()
 	// @ fold MutexInvariant{d}()
 	return nil
@@ -500,21 +513,26 @@ func (d *DataPlane) AddNeighborIA(ifID uint16, remote addr.IA) error {
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (d *DataPlane) AddLinkType(ifID uint16, linkTo topology.LinkType) error {
 	// @ unfold acc(d.Mem(), OutMutexPerm)
+	// @ unfold acc(linkTypesInv(d.linkTypes), OutMutexPerm)
 	if _, existsB := d.linkTypes[ifID]; existsB {
 		// @ establishAlreadySet()
+		// @ fold acc(linkTypesInv(d.linkTypes), OutMutexPerm)
 		// @ fold acc(d.Mem(), OutMutexPerm)
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
+	// @ fold acc(linkTypesInv(d.linkTypes), OutMutexPerm)
 	// @ fold acc(d.Mem(), OutMutexPerm)
 	// @ unfold MutexInvariant{d}()
 	// @ d.isRunningEq()
 	// @ unfold d.Mem()
+	// @ unfold linkTypesInv(d.linkTypes)
 	// @ defer fold MutexInvariant{d}()
 	// @ defer fold d.Mem()
 	if d.linkTypes == nil {
 		d.linkTypes = make(map[uint16]topology.LinkType)
 	}
 	d.linkTypes[ifID] = linkTo
+	// @ fold linkTypesInv(d.linkTypes)
 	return nil
 }
 
@@ -559,6 +577,8 @@ func (d *DataPlane) getInterfaceState(interfaceID uint16) control.InterfaceState
 	// @ unfold acc(d.Mem(), R5)
 	// @ defer fold acc(d.Mem(), R5)
 	bfdSessions := d.bfdSessions
+	// @ unfold acc(bfdSessionsInv(d.bfdSessions), R5)
+	// @ defer fold acc(bfdSessionsInv(d.bfdSessions), R5)
 	// @ ghost if bfdSessions != nil {
 	// @ 	unfold acc(accBfdSession(d.bfdSessions), R20)
 	// @ 	defer fold acc(accBfdSession(d.bfdSessions), R20)
@@ -629,12 +649,16 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	// @ decreases
 	// @ outline(
 	// @ unfold d.Mem()
+	// @ unfold svcInv(d.svc)
 	if d.svc == nil {
 		d.svc = newServices()
 	}
+	// @ fold svcInv(d.svc)
 	// @ fold d.Mem()
 	// @ )
 	// @ unfold acc(d.Mem(), R15)
+	// @ unfold acc(svcInv(d.svc), R15)
+	// @ unfold acc(metricsInv(d.Metrics), R15)
 	// @ assert acc(d.svc.Mem(), _)
 	d.svc.AddSvc(svc, a)
 	if d.Metrics != nil {
@@ -653,6 +677,8 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 		d.Metrics.ServiceInstanceCount.With(labels).Add(float64(1))
 		// @ )
 	}
+	// @ fold acc(metricsInv(d.Metrics), R15)
+	// @ fold acc(svcInv(d.svc), R15)
 	// @ fold acc(d.Mem(), R15)
 	// @ fold MutexInvariant{d}()
 	return nil
@@ -677,6 +703,10 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 	}
 	// @ unfold acc(d.Mem(), R40)
 	// @ ghost defer fold acc(d.Mem(), R40)
+	// @ unfold acc(svcInv(d.svc), R40)
+	// @ ghost defer fold acc(svcInv(d.svc), R40)
+	// @ unfold acc(metricsInv(d.Metrics), R40)
+	// @ ghost defer fold acc(metricsInv(d.Metrics), R40)
 	if d.svc == nil {
 		return nil
 	}
@@ -706,6 +736,7 @@ func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	// @ unfold MutexInvariant{d}()
 	// @ d.isRunningEq()
 	// @ unfold d.Mem()
+	// @ unfold internalNextHopsInv(d.internalNextHops)
 	// @ defer fold MutexInvariant{d}()
 	// @ defer fold d.Mem()
 	if d.running {
@@ -717,14 +748,16 @@ func (d *DataPlane) AddNextHop(ifID uint16, a *net.UDPAddr) error {
 	// @ ghost if d.internalNextHops != nil { unfold accAddr(d.internalNextHops) }
 	if _, existsB := d.internalNextHops[ifID]; existsB {
 		// @ fold accAddr(d.internalNextHops)
+		// @ fold internalNextHopsInv(d.internalNextHops)
 		// @ establishAlreadySet()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
 	if d.internalNextHops == nil {
 		d.internalNextHops = make(map[uint16]*net.UDPAddr)
 	}
-	// @ defer fold accAddr(d.internalNextHops)
 	d.internalNextHops[ifID] = a
+	// @ fold accAddr(d.internalNextHops)
+	// @ fold internalNextHopsInv(d.internalNextHops)
 	return nil
 }
 
@@ -1207,6 +1240,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			}
 		}
 	// @ unfold acc(d.Mem(), R1)
+	// @ unfold acc(bfdSessionsInv(d.bfdSessions), R1)
 	// @ assert d.WellConfigured()
 	// @ assert 0 elem d.getDomForwardingMetrics()
 	// @ ghost if d.bfdSessions != nil { unfold acc(accBfdSession(d.bfdSessions), R2) }
@@ -1238,6 +1272,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 		go cl(k, v) // @ as closure1
 	}
 
+	// @ unfold acc(externalInv(d.external), R1)
 	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), R2) }
 
 	// (VerifiedSCION) we introduce this to avoid problems with the invariants that
@@ -1346,10 +1381,18 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ reveal d.getDomExternal()
 	// @ assert reveal d.DpAgreesWithSpec(dp)
 	// @ assert unfolding acc(d.Mem(), _) in
+	// @ 	unfolding acc(neighborIAsInv(d.neighborIAs), _) in
+	// @ 	unfolding acc(linkTypesInv(d.linkTypes), _) in
 	// @ 	d.dpSpecWellConfiguredLocalIA(dp)     &&
 	// @ 	d.dpSpecWellConfiguredNeighborIAs(dp) &&
 	// @ 	d.dpSpecWellConfiguredLinkTypes(dp)
 	// @ unfold d.Mem()
+	// @ unfold neighborIAsInv(d.neighborIAs)
+	// @ unfold linkTypesInv(d.linkTypes)
+	// @ unfold forwardingMetricsInv(d.forwardingMetrics)
+	// @ unfold externalInv(d.external)
+	// @ unfold internalNextHopsInv(d.internalNextHops)
+	// @ unfold metricsInv(d.Metrics)
 	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
 	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
 	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
@@ -1415,6 +1458,12 @@ func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ assert d.dpSpecWellConfiguredLocalIA(dp)
 	// @ assert d.dpSpecWellConfiguredNeighborIAs(dp)
 	// @ assert d.dpSpecWellConfiguredLinkTypes(dp)
+	// @ fold forwardingMetricsInv(d.forwardingMetrics)
+	// @ fold externalInv(d.external)
+	// @ fold internalNextHopsInv(d.internalNextHops)
+	// @ fold metricsInv(d.Metrics)
+	// @ fold neighborIAsInv(d.neighborIAs)
+	// @ fold linkTypesInv(d.linkTypes)
 	// @ fold d.Mem()
 	// @ reveal d.getDomExternal()
 	// @ reveal d.WellConfigured()
@@ -1699,6 +1748,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (err error) {
 	// @ unfold acc(p.d.Mem(), _)
+	// @ unfold acc(bfdSessionsInv(p.d.bfdSessions), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		// @ establishMemNoBFDSessionConfigured()
@@ -1735,6 +1785,8 @@ func (p *scionPacketProcessor) processInterBFD(oh *onehop.Path, data []byte) (er
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	// @ unfold acc(p.d.Mem(), _)
+	// @ unfold acc(bfdSessionsInv(p.d.bfdSessions), _)
+	// @ unfold acc(internalNextHopsInv(p.d.internalNextHops), _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
 	if len(p.d.bfdSessions) == 0 {
 		// @ establishMemNoBFDSessionConfigured()
