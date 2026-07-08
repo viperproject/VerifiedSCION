@@ -200,11 +200,15 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ } else {
 	//@ 	fold p.NonInitMem()
 	//@ }
-	//@ sl.CombineRange_Bytes(b, MetadataLen, len(b), R42)
 	//@ ghost if ret == nil {
+	// Combine only half of the permissions to the subslice, so that the
+	// retained half pins the byte values while both views of the buffer
+	// coexist below.
+	//@ 	sl.CombineRange_Bytes(b, MetadataLen, len(b), R42/2)
 	//@ 	unfold acc(p.Mem(b), R56)
 	//@ 	unfold acc(p.ScionPath.Mem(b[MetadataLen:]), R56)
 	//@ 	unfold acc(sl.Bytes(b, 0, len(b)), R56)
+	//@ 	unfold acc(sl.Bytes(b[MetadataLen:], 0, len(b)-MetadataLen), R56)
 	//@ 	assert forall k int :: {&b[MetadataLen:][k]} 0 <= k && k < len(b)-MetadataLen ==>
 	//@ 		&b[MetadataLen:][k] == &b[MetadataLen + k]
 	//@ 	assert forall k int :: {&b[MetadataLen:][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
@@ -215,10 +219,14 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ 	assert b[MetadataLen:][3] == b3
 	//@ 	assert binary.BigEndian.Uint32(b[MetadataLen:][:scion.MetaLen]) == hdr0
 	//@ 	assert p.ScionPath.Base.GetBase() == base0
+	//@ 	fold acc(sl.Bytes(b[MetadataLen:], 0, len(b)-MetadataLen), R56)
 	//@ 	fold acc(sl.Bytes(b, 0, len(b)), R56)
 	//@ 	fold acc(p.ScionPath.Mem(b[MetadataLen:]), R56)
 	//@ 	fold acc(p.Mem(b), R56)
 	//@ 	assert p.IsValidResultOfDecoding(b)
+	//@ 	sl.CombineRange_Bytes(b, MetadataLen, len(b), R42/2)
+	//@ } else {
+	//@ 	sl.CombineRange_Bytes(b, MetadataLen, len(b), R42)
 	//@ }
 	return ret
 }
