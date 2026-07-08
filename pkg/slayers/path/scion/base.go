@@ -263,7 +263,10 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	}
 	//@ ghost v := sl.View(raw, 0, len(raw))
 	//@ sl.ViewElems(raw, 0, len(raw), R51)
-	//@ unfold acc(sl.Bytes(raw, 0, len(raw)), R50)
+	// unfolding only part of the held fraction pins the view of raw:
+	// the retained instance is untouched, so the view after refolding
+	// is the same as the captured one
+	//@ unfold acc(sl.Bytes(raw, 0, len(raw)), R51)
 	line := binary.BigEndian.Uint32(raw)
 	m.CurrINF = uint8(line >> 30)
 	m.CurrHF = uint8(line>>24) & 0x3F
@@ -276,7 +279,8 @@ func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	//@ bit.And3fAtMost64(uint8(line>>6))
 	//@ bit.And3fAtMost64(uint8(line))
 	//@ assert v[0] == raw[0] && v[1] == raw[1] && v[2] == raw[2] && v[3] == raw[3]
-	//@ fold acc(sl.Bytes(raw, 0, len(raw)), R50)
+	//@ fold acc(sl.Bytes(raw, 0, len(raw)), R51)
+	//@ assert sl.View(raw, 0, len(raw)) == v
 	//@ assert line == binary.BigEndian.Uint32Spec(v[0], v[1], v[2], v[3])
 	return nil
 }
