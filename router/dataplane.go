@@ -2835,6 +2835,12 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		// @ sl.SplitByIndex_Bytes(ub, 0, start, slayers.CmnHdrLen, R54)
 		// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 		// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
+		// the view of the left piece is pinned across the modification of
+		// the path slice; the prefix asserts carry the common-header bytes,
+		// and with them IsSupportedPkt, from the state before to the state after
+		// @ ghost vHdrPre := sl.View(ub, 0, start)
+		// @ assert sl.View(ub, 0, len(ub))[:start] == vHdrPre
+		// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 		// @ p.AbsPktToSubSliceAbsPkt(ub, start, end)
 		// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, sl.View(ub, 0, len(ub)), start)
 		// @ assert sl.View(ub, 0, len(ub))[:start] == sl.View(ub, 0, start)
@@ -2846,6 +2852,9 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 			return serrors.WrapStr("update info field", err)
 		}
 		// @ ghost sl.CombineRangeWithViews_Bytes(ub, start, end, HalfPerm, sl.View(ub, 0, start), sl.View(ub[start:end], 0, (end)-(start)), sl.View(ub, end, len(ub)))
+		// @ assert sl.View(ub, 0, start) == vHdrPre
+		// @ assert sl.View(ub, 0, len(ub))[:start] == vHdrPre
+		// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 		// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 		// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 		// @ sl.CombineAtIndex_Bytes(ub, 0, start, slayers.CmnHdrLen, R54)
@@ -3110,6 +3119,12 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ sl.SplitByIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
 	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
+	// the view of the left piece is pinned across the modification of
+	// the path slice; the prefix asserts carry the common-header bytes,
+	// and with them IsSupportedPkt, from the state before to the state after
+	// @ ghost vHdrPre := sl.View(ub, 0, startP)
+	// @ assert sl.View(ub, 0, len(ub))[:startP] == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP)
 	// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, sl.View(ub, 0, len(ub)), startP)
 	// @ assert sl.View(ub, 0, len(ub))[:startP] == sl.View(ub, 0, startP)
@@ -3150,6 +3165,9 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
 	// @ assert reveal p.scionLayer.ValidHeaderOffset(ub, sl.View(ub, 0, startP))
 	// @ ghost sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
+	// @ assert sl.View(ub, 0, startP) == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:startP] == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
@@ -3220,6 +3238,12 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ sl.SplitByIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
 	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
+	// the view of the left piece is pinned across the modification of
+	// the path slice; the prefix asserts carry the common-header bytes,
+	// and with them IsSupportedPkt, from the state before to the state after
+	// @ ghost vHdrPre := sl.View(ub, 0, startP)
+	// @ assert sl.View(ub, 0, len(ub))[:startP] == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ assert p.path == p.scionLayer.GetPath(ub)
 	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP)
 	// @ assert p.path == p.scionLayer.GetPath(ub)
@@ -3250,6 +3274,9 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ fold acc(p.scionLayer.Mem(ub), R55)
 	// @ assert reveal p.scionLayer.ValidHeaderOffset(ub, sl.View(ub, 0, startP))
 	// @ ghost sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
+	// @ assert sl.View(ub, 0, startP) == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:startP] == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
@@ -3524,6 +3551,12 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ sl.SplitByIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
 	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
+	// the view of the left piece is pinned across the modification of
+	// the path slice; the prefix asserts carry the common-header bytes,
+	// and with them IsSupportedPkt, from the state before to the state after
+	// @ ghost vHdrPre := sl.View(ub, 0, startP)
+	// @ assert sl.View(ub, 0, len(ub))[:startP] == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP)
 	// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, sl.View(ub, 0, len(ub)), startP)
 	// @ assert sl.View(ub, 0, len(ub))[:startP] == sl.View(ub, 0, startP)
@@ -3537,6 +3570,9 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
 	// @ sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
+	// @ assert sl.View(ub, 0, startP) == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:startP] == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
@@ -3643,6 +3679,12 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	// @ sl.SplitByIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
 	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
+	// the view of the left piece is pinned across the modification of
+	// the path slice; the prefix asserts carry the common-header bytes,
+	// and with them IsSupportedPkt, from the state before to the state after
+	// @ ghost vHdrPre := sl.View(ub, 0, startP)
+	// @ assert sl.View(ub, 0, len(ub))[:startP] == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ p.AbsPktToSubSliceAbsPkt(ub, startP, endP)
 	// @ p.scionLayer.ValidHeaderOffsetToSubSliceLemma(ub, sl.View(ub, 0, len(ub)), startP)
 	// @ assert sl.View(ub, 0, len(ub))[:startP] == sl.View(ub, 0, startP)
@@ -3656,6 +3698,9 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 		return processResult{}, serrors.WrapStr("update hop field", err)
 	}
 	// @ sl.CombineRangeWithViews_Bytes(ub, startP, endP, HalfPerm, sl.View(ub, 0, startP), sl.View(ub[startP:endP], 0, (endP)-(startP)), sl.View(ub, endP, len(ub)))
+	// @ assert sl.View(ub, 0, startP) == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:startP] == vHdrPre
+	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ sl.CombineAtIndex_Bytes(ub, 0, startP, slayers.CmnHdrLen, R54)
