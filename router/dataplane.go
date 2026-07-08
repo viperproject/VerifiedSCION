@@ -3701,6 +3701,7 @@ func (p *scionPacketProcessor) validateEgressUp(
 // @ preserves acc(&p.macBuffers.scionInput, R20)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
+// @ ensures   p.cachedMac === old(p.cachedMac)
 // @ preserves ubLL == nil || ubLL === ub[startLL:endLL]
 // @ preserves acc(&p.lastLayer, R55) && p.lastLayer != nil
 // @ preserves &p.scionLayer !== p.lastLayer ==>
@@ -3832,6 +3833,7 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ preserves acc(&p.macBuffers.scionInput, R20)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
+// @ ensures   p.cachedMac === old(p.cachedMac)
 // @ preserves ubLL == nil || ubLL === ub[startLL:endLL]
 // @ preserves acc(&p.lastLayer, R55) && p.lastLayer != nil
 // @ preserves &p.scionLayer !== p.lastLayer ==>
@@ -3968,6 +3970,7 @@ func (p *scionPacketProcessor) egressRouterAlertFlag() (res *bool) {
 // @ preserves acc(&p.macBuffers.scionInput, R20)
 // @ preserves sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 // @ preserves acc(&p.cachedMac)
+// @ ensures   p.cachedMac === old(p.cachedMac)
 // @ preserves ubLL == nil || ubLL === ubScionL[startLL:endLL]
 // @ preserves acc(&p.lastLayer, R55) && p.lastLayer != nil
 // @ preserves &p.scionLayer !== p.lastLayer ==>
