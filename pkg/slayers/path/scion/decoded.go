@@ -119,6 +119,17 @@ func (s *Decoded) DecodeFromBytes(data []byte) (r error) {
 		offset += path.HopLen
 	}
 	//@ sl.CombineAtIndex_Bytes(data, 0, len(data), offset, R43)
+	// the retained fraction of Bytes(data) pins its view, so the view
+	// here is the one Base.DecodeFromBytes's postcondition speaks
+	// about; ViewElems bridges its elements to the GetByte terms of
+	// the postcondition
+	//@ sl.ViewElems(data, 0, len(data), R43)
+	//@ ghost vD := sl.View(data, 0, len(data))
+	//@ assert vD[0] == sl.GetByte(data, 0, len(data), 0)
+	//@ assert vD[1] == sl.GetByte(data, 0, len(data), 1)
+	//@ assert vD[2] == sl.GetByte(data, 0, len(data), 2)
+	//@ assert vD[3] == sl.GetByte(data, 0, len(data), 3)
+	//@ assert s.Base.DecodeFromBytesSpec(vD)
 	//@ fold s.Mem(data)
 	return nil
 }

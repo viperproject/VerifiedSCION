@@ -161,41 +161,33 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 		// @ Unreachable()
 		return nil, err
 	}
-	//@ ghost b0 := (unfolding acc(sl.Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in s.Raw[0])
-	//@ ghost b1 := (unfolding acc(sl.Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in s.Raw[1])
-	//@ ghost b2 := (unfolding acc(sl.Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in s.Raw[2])
-	//@ ghost b3 := (unfolding acc(sl.Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in s.Raw[3])
+	// The postcondition of SerializeTo speaks about the view of the
+	// serialized buffer, so the serialized bytes are captured from that
+	// view; the split and combine lemmas below relate it to the views
+	// of the other instances, with no reasoning about raw byte values.
+	//@ ghost vMeta := sl.View(s.Raw[:MetaLen], 0, MetaLen)
+	//@ ghost b0 := vMeta[0]
+	//@ ghost b1 := vMeta[1]
+	//@ ghost b2 := vMeta[2]
+	//@ ghost b3 := vMeta[3]
 	//@ assert let line := s.PathMeta.SerializedToLine() in binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, line)
-	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
-	//@ assert &ubuf[0] == &s.Raw[:MetaLen][0]
-	//@ assert &ubuf[1] == &s.Raw[:MetaLen][1]
-	//@ assert &ubuf[2] == &s.Raw[:MetaLen][2]
-	//@ assert &ubuf[3] == &s.Raw[:MetaLen][3]
-	//@ assert b0 == (unfolding acc(sl.Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in ubuf[0])
-	//  (VerifiedSCION): for some reason, silicon requires the following line to be able to prove
-	//  bX == ubuf[X].
-	//@ assert unfolding acc(sl.Bytes(s.Raw[:MetaLen], 0, MetaLen), _) in
-	//@ 	(ubuf[0] == (unfolding acc(sl.Bytes(ubuf, 0, len(ubuf)), _) in ubuf[0]))
-	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
+	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
+	//@ sl.CombineRangeWithViews_Bytes(ubuf, 0, MetaLen, HalfPerm, sl.View(ubuf, 0, 0), vMeta, sl.View(ubuf, MetaLen, len(ubuf)))
+	//@ assert sl.View(ubuf, 0, len(ubuf))[0:MetaLen] == vMeta
+	//@ sl.CombineRangeWithViews_Bytes(ubuf, 0, MetaLen, HalfPerm, sl.View(ubuf, 0, 0), vMeta, sl.View(ubuf, MetaLen, len(ubuf)))
+	//@ assert sl.View(ubuf, 0, len(ubuf))[0:MetaLen] == vMeta
 	decoded := &Decoded{}
 	//@ fold decoded.Base.NonInitMem()
 	//@ fold decoded.NonInitMem()
 	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
-	//@ assert unfolding acc(sl.Bytes(ubuf, 0, len(ubuf)), _) in
-	//@ 	(ubuf[0] == (unfolding acc(sl.Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[0]))
+	//@ assert sl.View(ubuf, 0, len(s.Raw))[0:MetaLen] == vMeta
 	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
 	//@ sl.Reslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
-	//@ assert &ubuf[0] == &ubuf[:len(s.Raw)][0]
-	//@ assert &ubuf[1] == &ubuf[:len(s.Raw)][1]
-	//@ assert &ubuf[2] == &ubuf[:len(s.Raw)][2]
-	//@ assert &ubuf[3] == &ubuf[:len(s.Raw)][3]
-	//@ assert unfolding acc(sl.Bytes(ubuf[:len(s.Raw)], 0, len(s.Raw)), _) in
-	//@ 	(ubuf[0] == (unfolding acc(sl.Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[0]))
-	//@ assert b0 == (unfolding acc(sl.Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[0])
-	//@ assert b1 == (unfolding acc(sl.Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[1])
-	//@ assert b2 == (unfolding acc(sl.Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[2])
-	//@ assert b3 == (unfolding acc(sl.Bytes(ubuf, 0, len(s.Raw)), _) in ubuf[3])
+	//@ assert sl.View(ubuf[:len(s.Raw)], 0, len(s.Raw))[0:MetaLen] == vMeta
 	//@ sl.Reslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ assert s.Raw === ubuf[:len(s.Raw)]
+	//@ assert sl.View(s.Raw, 0, len(s.Raw))[0] == b0 && sl.View(s.Raw, 0, len(s.Raw))[1] == b1
+	//@ assert sl.View(s.Raw, 0, len(s.Raw))[2] == b2 && sl.View(s.Raw, 0, len(s.Raw))[3] == b3
 	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
 		//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
 		//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
