@@ -171,6 +171,7 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ sl.SplitRange_Bytes(b, MetadataLen, len(b), R42)
 	ret := p.ScionPath.DecodeFromBytes(b[MetadataLen:])
 	//@ ghost var hdr0 uint32
+	//@ ghost var b0, b1, b2, b3 byte
 	//@ ghost var base0 scion.Base
 	//@ ghost if ret == nil {
 	//@ 	base0 = p.ScionPath.GetBase(b[MetadataLen:])
@@ -178,8 +179,14 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ 	assert base0.WeaklyValid()
 	//@ 	assert scion.MetaLen <= len(b) - MetadataLen
 	//@ 	unfold acc(sl.Bytes(b[MetadataLen:], 0, len(b)-MetadataLen), R56)
+	//@ 	assert forall k int :: {&b[MetadataLen:][k]} 0 <= k && k < len(b)-MetadataLen ==>
+	//@ 		&b[MetadataLen:][k] == &b[MetadataLen + k]
 	//@ 	assert forall k int :: {&b[MetadataLen:][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
 	//@ 		&b[MetadataLen:][:scion.MetaLen][k] == &b[MetadataLen:][k]
+	//@ 	b0 = b[MetadataLen:][0]
+	//@ 	b1 = b[MetadataLen:][1]
+	//@ 	b2 = b[MetadataLen:][2]
+	//@ 	b3 = b[MetadataLen:][3]
 	//@ 	hdr0 = binary.BigEndian.Uint32(b[MetadataLen:][:scion.MetaLen])
 	//@ 	assert scion.RawBytesToMetaHdr(b[MetadataLen:]) == scion.DecodedFrom(hdr0)
 	//@ 	assert base0 == scion.RawBytesToBase(b[MetadataLen:])
@@ -202,6 +209,10 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ 		&b[MetadataLen:][k] == &b[MetadataLen + k]
 	//@ 	assert forall k int :: {&b[MetadataLen:][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
 	//@ 		&b[MetadataLen:][:scion.MetaLen][k] == &b[MetadataLen:][k]
+	//@ 	assert b[MetadataLen:][0] == b0
+	//@ 	assert b[MetadataLen:][1] == b1
+	//@ 	assert b[MetadataLen:][2] == b2
+	//@ 	assert b[MetadataLen:][3] == b3
 	//@ 	assert binary.BigEndian.Uint32(b[MetadataLen:][:scion.MetaLen]) == hdr0
 	//@ 	assert p.ScionPath.Base.GetBase() == base0
 	//@ 	fold acc(sl.Bytes(b, 0, len(b)), R56)
