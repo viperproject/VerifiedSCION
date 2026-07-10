@@ -285,6 +285,36 @@ pure func (s *SCION) IsSupportedSerialization() bool {
 		s.PathType == scion.PathType && s.NextHdr != L4SCMP
 }
 
+// Folds MemSerialize together with a coexisting ChecksumMem instance for a
+// freshly constructed (i.e., not decoded) SCION header, from the resources
+// that the router's prepareSCMP holds after constructing the SCMP reply
+// header: full permissions to the header's own fields, the reversed path
+// re-associated with a nil buffer (cf. (*Decoded).Widen), an R20 fraction
+// of the destination address bytes (cf. SetDstAddr), and a wildcard
+// fraction of the source address bytes (cf. SetSrcAddr in wildcard mode).
+// This lemma is the machine-checked witness that the fraction accounting
+// of the two predicates works out.
+ghost
+requires acc(&s.Version) && acc(&s.TrafficClass) && acc(&s.FlowID)
+requires acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen)
+requires acc(&s.PathType) && 0 <= s.PathType && s.PathType < path.MaxPathType
+requires acc(&s.DstAddrType) && acc(&s.SrcAddrType)
+requires acc(&s.Path) && s.Path != nil && s.Path.Mem(nil)
+requires acc(&s.BaseLayer)
+requires acc(&s.DstIA, R20) && acc(&s.SrcIA, R20)
+requires acc(&s.RawDstAddr, R20) && acc(&s.RawSrcAddr, R20)
+requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+requires acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
+requires acc(&s.pathPool) && acc(&s.pathPoolRaw)
+requires PathPoolMem(s.pathPool, s.pathPoolRaw)
+ensures  s.MemSerialize() && s.ChecksumMem()
+decreases
+func (s *SCION) FoldFreshMemSerializeWithChecksumMem() {
+	fold s.MemSerialize()
+	fold s.ChecksumMem()
+}
+
 // A BaseLayer predicate instance is in one of two modes:
 //   - decoded mode (ub != nil): the layer was obtained via DecodeFromBytes
 //     and Contents and Payload alias the underlying buffer ub around

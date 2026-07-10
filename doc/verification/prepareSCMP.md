@@ -655,12 +655,29 @@ budget accordingly; perf regressions in `dataplane.go` are a real risk).
      bridge. No verified caller of `SerializeLayers` exists yet
      (`bfdSend.Send` is trusted, `prepareSCMP`'s call is behind the
      `TODO()`), so this lands without new obligations.
-   Still open from §4.3 (now M5 prerequisites): `SetDstAddr`'s
-   postcondition must expose a fraction of `sl.Bytes(s.RawDstAddr, ...)`
-   (with a wand to restore `dst.Mem()`), and `SetSrcAddr`'s wildcard mode
-   needs (a) a component-wise precondition (folding `net.IPAddr.Mem()` at
-   wildcard amount is not possible) and (b) length postconditions
-   (`len(s.RawSrcAddr)` even) also in wildcard mode.
+   The §4.3 items are also resolved on this branch:
+   * `SetDstAddr` (IP case) no longer applies packAddr's magic wand
+     internally; it exposes `acc(sl.Bytes(s.RawDstAddr, ...), R20)` plus
+     the wand `... --* acc(dst.Mem(), R20)` to the caller (its only
+     verified caller is prepareSCMP's currently-dead code, so the
+     post-shape change is safe), alongside `acc(dst.Mem(), R19+R20)`;
+   * `SetSrcAddr`'s wildcard mode needs **no** component-wise
+     precondition after all: folding `net.IPAddr.Mem()` at wildcard
+     amount is legal (precedent: the wildcard branches inside `packAddr`
+     itself, e.g. `fold acc(sl.Bytes(ip, ...), _)`), and its wildcard
+     postcondition already returns the wildcard bytes of `RawSrcAddr`;
+   * `packAddr`/`SetDstAddr`/`SetSrcAddr` gained `T4Ip ==> len == 4`
+     postconditions (from `To4`'s contract);
+   * `FoldFreshMemSerializeWithChecksumMem` is the machine-checked
+     witness that `MemSerialize` and `ChecksumMem` fold together from
+     prepareSCMP's resources (fraction accounting: 2 × R25 ⊆ R20).
+   Remaining genuine gap for M5: the evenness of `len(s.RawSrcAddr)` when
+   the source is the data-plane's `internalIP` and the `T16Ip` fallback is
+   taken — `internalIPInv` (`router/dataplane_spec.gobra:111`) does not
+   constrain the IP's length, so it must be strengthened to
+   `len ∈ {4, 16}` (dischargeable at the config boundary
+   `dataplane.go:408`, possibly with a justified assumption like the
+   existing `assume 0 <= e.ExtLen` precedent).
 3. **M3 (optional hardening) — `(*SCION).SerializeTo` fresh mode**: verify
    the `FixLengths` branch and the byte-level hook postcondition of §4.6
    (step 3) against `MemSerialize`, then shrink the trusted

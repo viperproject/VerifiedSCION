@@ -674,7 +674,16 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ ensures   res == nil && wildcard && isIP(dst) ==> acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), _)
 // @ ensures   res == nil && wildcard && isHostSVC(dst) ==> sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 // @ ensures   res == nil && !wildcard && isHostSVC(dst) ==> sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
-// @ ensures   res == nil && !wildcard ==> acc(dst.Mem(), R18)
+// @ ensures   res == nil && !wildcard && isHostSVC(dst) ==> acc(dst.Mem(), R18)
+// (VerifiedSCION) In the IP case, a fraction of the bytes underlying
+// RawDstAddr is exposed to the caller (together with a magic wand to give
+// it back), instead of returning acc(dst.Mem(), R18) in one piece. This is
+// needed by the router's prepareSCMP, which must store that fraction in
+// the fresh header's MemSerialize/ChecksumMem predicates while serializing.
+// @ ensures   res == nil && !wildcard && isIP(dst) ==> acc(dst.Mem(), R19) && acc(dst.Mem(), R20)
+// @ ensures   res == nil && !wildcard && isIP(dst) ==>
+// @ 	acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20) &&
+// @ 	(acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20) --* acc(dst.Mem(), R20))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[12+i]))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (!isIPv4(dst) && !isIPv6(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
@@ -684,14 +693,16 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (!isIPv4(dst) && !isIPv6(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
 // @ ensures   (res == nil) == (typeOf(dst) == type[*net.IPAddr] || typeOf(dst) == type[addr.HostSVC])
+// @ ensures   res == nil && isIP(dst) && s.DstAddrType == T4Ip ==> len(s.RawDstAddr) == 4
 // @ decreases
 func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res error) {
 	var err error
 	var verScionTmp []byte
 	s.DstAddrType, verScionTmp, err = packAddr(dst /*@ , wildcard @*/)
-	// @ ghost if !wildcard && err == nil && isIP(dst) {
-	// @   apply acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(dst.Mem(), R20)
-	// @ }
+	// (VerifiedSCION) The magic wand returned by packAddr is deliberately
+	// not applied here: it is passed on to the caller (cf. the
+	// postconditions), so that the byte fraction of the raw address
+	// remains directly available during serialization.
 	s.RawDstAddr = verScionTmp
 	return err
 }
@@ -721,6 +732,7 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (!isIPv4(src) && !isIPv6(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
 // @ ensures   (res == nil) == (typeOf(src) == type[*net.IPAddr] || typeOf(src) == type[addr.HostSVC])
+// @ ensures   res == nil && isIP(src) && s.SrcAddrType == T4Ip ==> len(s.RawSrcAddr) == 4
 // @ decreases
 func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error) {
 	var err error
@@ -799,6 +811,7 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
 // @ ensures   (err == nil) == (typeOf(hostAddr) == type[*net.IPAddr] || typeOf(hostAddr) == type[addr.HostSVC])
+// @ ensures   err == nil && isIP(hostAddr) && addrtyp == T4Ip ==> len(b) == 4
 // @ decreases
 func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType, b []byte, err error) {
 	switch a := hostAddr.(type) {
