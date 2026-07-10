@@ -40,12 +40,13 @@ func (b *SCMPExternalInterfaceDown) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPExternalInterfaceDown) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, addr.IABytes+scmpRawInterfaceLen)
-	start = addr.IABytes+scmpRawInterfaceLen
+	start = ub == nil ? 0 : addr.IABytes+scmpRawInterfaceLen
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
@@ -54,6 +55,20 @@ func (b *SCMPExternalInterfaceDown) LayerPayload(ghost ub []byte) (res []byte, g
 
 (*SCMPExternalInterfaceDown) implements gopacket.Layer
 (*SCMPExternalInterfaceDown) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPExternalInterfaceDown layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.IA) && acc(&s.IfID) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPExternalInterfaceDown) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, addr.IABytes+scmpRawInterfaceLen)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPInternalConnectivityDown) NonInitMem() {
 	acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && acc(&s.BaseLayer)
@@ -72,12 +87,13 @@ func (b *SCMPInternalConnectivityDown) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPInternalConnectivityDown) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, addr.IABytes+2*scmpRawInterfaceLen)
-	start = addr.IABytes+2*scmpRawInterfaceLen
+	start = ub == nil ? 0 : addr.IABytes+2*scmpRawInterfaceLen
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
@@ -85,6 +101,20 @@ func (b *SCMPInternalConnectivityDown) LayerPayload(ghost ub []byte) (res []byte
 
 (*SCMPInternalConnectivityDown) implements gopacket.Layer
 (*SCMPInternalConnectivityDown) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPInternalConnectivityDown layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPInternalConnectivityDown) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, addr.IABytes+2*scmpRawInterfaceLen)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPEcho) NonInitMem() {
 	acc(&s.Identifier) && acc(&s.SeqNumber) && acc(&s.BaseLayer)
@@ -103,12 +133,13 @@ func (b *SCMPEcho) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPEcho) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
@@ -116,6 +147,20 @@ func (b *SCMPEcho) LayerPayload(ghost ub []byte) (res []byte, ghost start int, g
 
 (*SCMPEcho) implements gopacket.Layer
 (*SCMPEcho) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPEcho layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.Identifier) && acc(&s.SeqNumber) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPEcho) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPParameterProblem) NonInitMem() {
 	acc(&s.Pointer) && acc(&s.BaseLayer)
@@ -134,12 +179,13 @@ func (b *SCMPParameterProblem) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPParameterProblem) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
@@ -147,6 +193,20 @@ func (b *SCMPParameterProblem) LayerPayload(ghost ub []byte) (res []byte, ghost 
 
 (*SCMPParameterProblem) implements gopacket.Layer
 (*SCMPParameterProblem) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPParameterProblem layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.Pointer) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPParameterProblem) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPTraceroute) NonInitMem() {
 	acc(&s.Identifier) && acc(&s.Sequence) && acc(&s.IA) && acc(&s.Interface) && acc(&s.BaseLayer)
@@ -170,12 +230,13 @@ func (b *SCMPTraceroute) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPTraceroute) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4+addr.IABytes+scmpRawInterfaceLen)
-	start = 4+addr.IABytes+scmpRawInterfaceLen
+	start = ub == nil ? 0 : 4+addr.IABytes+scmpRawInterfaceLen
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
@@ -183,6 +244,20 @@ func (b *SCMPTraceroute) LayerPayload(ghost ub []byte) (res []byte, ghost start 
 
 (*SCMPTraceroute) implements gopacket.Layer
 (*SCMPTraceroute) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPTraceroute layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.Identifier) && acc(&s.Sequence) && acc(&s.IA) && acc(&s.Interface) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPTraceroute) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4+addr.IABytes+scmpRawInterfaceLen)
+	fold s.Mem(nil)
+}
 
 
 pred (s *SCMPDestinationUnreachable) NonInitMem() {
@@ -202,12 +277,13 @@ func (b *SCMPDestinationUnreachable) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPDestinationUnreachable) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
@@ -215,6 +291,20 @@ func (b *SCMPDestinationUnreachable) LayerPayload(ghost ub []byte) (res []byte, 
 
 (*SCMPDestinationUnreachable) implements gopacket.Layer
 (*SCMPDestinationUnreachable) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPDestinationUnreachable layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPDestinationUnreachable) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPPacketTooBig) NonInitMem() {
 	acc(&s.MTU) && acc(&s.BaseLayer)
@@ -233,12 +323,13 @@ func (b *SCMPPacketTooBig) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPPacketTooBig) LayerPayload(ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
@@ -246,3 +337,17 @@ func (b *SCMPPacketTooBig) LayerPayload(ub []byte) (res []byte, ghost start int,
 
 (*SCMPPacketTooBig) implements gopacket.Layer
 (*SCMPPacketTooBig) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPPacketTooBig layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.MTU) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPPacketTooBig) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
+}

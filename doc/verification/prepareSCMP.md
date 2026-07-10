@@ -117,10 +117,13 @@ unfold revPath.Mem(rawPath)         // OK: *scion.Decoded's Mem body
 fold   revPath.Mem(nil)             //     never mentions ubuf (see §3)
 ```
 
-(These snippets cannot live in a `*_test.gobra` file in-tree, because the
-failing folds would fail CI; run them ad hoc when validating this plan.
-Note that `pkg/slayers` CI verification takes ~25 min per run,
-`.github/workflows/gobra.yml:214-234`.)
+(The failing snippets cannot live in a `*_test.gobra` file in-tree, because
+they would fail CI; run them ad hoc when validating this plan. Note that
+`pkg/slayers` CI verification takes ~25 min per run,
+`.github/workflows/gobra.yml:214-234`. The *positive* counterparts are
+committed in-tree as `FoldFreshMem` witness lemmas — see the M1 status note
+in §6 — so CI machine-checks that fresh layers satisfy `Mem(nil)` under the
+reworked predicates.)
 
 ---
 
@@ -574,6 +577,23 @@ budget accordingly; perf regressions in `dataplane.go` are a real risk).
 1. **M1 — `BaseLayer.Mem` nil-mode** (§4.1) + adapt `SCMP`/message-type
    proofs and `LayerPayload` specs. Small/medium; contained in
    `pkg/slayers`.
+   **Status: implemented on this branch** (pending a CI/Gobra run):
+   * `BaseLayer.Mem` fresh mode, with `Contents == nil && Payload == nil`
+     in the `ub == nil` branch so the `gopacket.Layer` interface's
+     `LayerPayload` contract stays satisfiable;
+   * `extnBase.Mem` additionally pins `ActualLen == 0` in fresh mode,
+     preserving every fact the old definition yielded for a nil buffer;
+   * all `LayerPayload` specs over `BaseLayer` (SCMP, the 7 SCMP messages,
+     both extensions and both skippers, and `BaseLayer.LayerPayload`
+     itself) conditionalized on `ub != nil`;
+   * `FoldFreshMem` witness lemmas for `SCMP` and all 7 message types —
+     the machine-checked form of §1.2's positive experiments;
+   * `DecodeFromBytes` of `SCMP` + the 7 message types now ensure their
+     minimum length on success, so decoded-mode call sites (e.g. the
+     traceroute handler's unfolds, `router/dataplane.go:4100-4120`) can
+     derive `data != nil` and keep using the aliasing facts;
+   * §4.6 step 1 done early (it is additive): `gopacket.IsSupportedRawPkt`
+     twin + `slayers.IsSupportedRawPktEqGopacket` bridging lemma.
 2. **M2 — serialize-mode `*SCION.Mem`** (§4.2) + `ChecksumMem`
    re-fractioning, the asymmetric address-byte amounts, and the
    `SetDstAddr`/`SetSrcAddr` postcondition strengthening (§4.3). Medium;

@@ -104,9 +104,10 @@ func (b *BaseLayer) LayerContents() (res []byte) {
 
 // LayerPayload returns the bytes contained within the packet layer.
 // @ preserves acc(b.Mem(ub, bp), R20)
-// @ ensures   len(res) == len(ub) - bp
-// @ ensures   0 <= bp && bp <= len(ub)
-// @ ensures   res === ub[bp:]
+// @ ensures   ub != nil ==> len(res) == len(ub) - bp
+// @ ensures   ub != nil ==> (0 <= bp && bp <= len(ub))
+// @ ensures   ub != nil ==> res === ub[bp:]
+// @ ensures   ub == nil ==> res == nil
 // @ decreases
 func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte, ghost bp int @*/ ) (res []byte) {
 	// @ unfold acc(b.Mem(ub, bp), R20)

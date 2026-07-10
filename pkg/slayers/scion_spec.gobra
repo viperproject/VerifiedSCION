@@ -241,11 +241,21 @@ pred (s *SCION) ChecksumMem() {
 	sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 }
 
+// A BaseLayer predicate instance is in one of two modes:
+//   - decoded mode (ub != nil): the layer was obtained via DecodeFromBytes
+//     and Contents and Payload alias the underlying buffer ub around
+//     breakPoint (this is the original meaning of this predicate);
+//   - fresh mode (ub == nil): the layer was freshly constructed (e.g. to be
+//     serialized, cf. prepareSCMP in the router) and has no underlying
+//     buffer; Contents and Payload are still zero-valued.
+// The fresh mode is what makes Mem(nil) foldable for freshly constructed
+// layers, which is impossible in decoded mode whenever breakPoint > 0.
 pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
-	0 <= breakPoint && breakPoint <= len(ub) &&
 	acc(b) &&
-	b.Contents === ub[:breakPoint] &&
-	b.Payload  === ub[breakPoint:]
+	(ub == nil ==> (b.Contents == nil && b.Payload == nil)) &&
+	(ub != nil ==> (0 <= breakPoint && breakPoint <= len(ub) &&
+		b.Contents === ub[:breakPoint] &&
+		b.Payload  === ub[breakPoint:]))
 }
 
 ghost
@@ -517,6 +527,22 @@ pure func IsSupportedRawPkt(raw seq[byte]) bool {
 		let nextHdr  := L4ProtocolType(raw[4]) in
 		pathType == scion.PathType &&
 		nextHdr != L4SCMP
+}
+
+// gopacket.IsSupportedRawPkt is a twin of IsSupportedRawPkt, defined in the
+// gopacket stubs because gopacket cannot import slayers. This lemma keeps
+// the two definitions in sync; it is the bridge through which
+// supportedness facts established by (trusted) gopacket-level specs (e.g.
+// SerializeLayers) become available in terms of the slayers definitions.
+ghost
+ensures gopacket.IsSupportedRawPkt(raw) == IsSupportedRawPkt(raw)
+decreases
+func IsSupportedRawPktEqGopacket(raw seq[byte]) {
+	reveal gopacket.IsSupportedRawPkt(raw)
+	reveal IsSupportedRawPkt(raw)
+	assert scion.PathType == path.Type(1)
+	assert L4SCMP == L4ProtocolType(202)
+	assert CmnHdrLen == 12
 }
 
 ghost

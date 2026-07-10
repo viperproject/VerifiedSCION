@@ -33,6 +33,10 @@ pred (e *extnBase) Mem(ubuf []byte) {
 	acc(&e.NextHdr)   &&
 	acc(&e.ExtLen)    &&
 	acc(&e.ActualLen) &&
+	// In fresh mode (ubuf == nil, cf. BaseLayer.Mem), ActualLen must be 0.
+	// This preserves the facts that were derivable from BaseLayer.Mem's
+	// old definition (breakPoint <= len(ubuf)) for a nil buffer.
+	(ubuf == nil ==> e.ActualLen == 0) &&
 	e.BaseLayer.Mem(ubuf, e.ActualLen)
 }
 
@@ -96,7 +100,8 @@ func (h *HopByHopExtnSkipper) LayerContents() (res []byte) {
 preserves acc(h.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(h.Mem(ub), R20)
@@ -186,7 +191,8 @@ func (e *EndToEndExtnSkipper) LayerContents() (res []byte) {
 preserves acc(e.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(e.Mem(ub), R20)

@@ -58,15 +58,30 @@ func (b *SCMP) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
+}
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMP layer with a nil underlying buffer. This is the witness that fresh
+// layers, as constructed by the router's prepareSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.TypeCode) && acc(&s.Checksum) && acc(&s.BaseLayer) && acc(&s.scn)
+requires s.Contents == nil && s.Payload == nil
+requires s.scn != nil ==> s.scn.ChecksumMem()
+ensures  s.Mem(nil)
+decreases
+func (s *SCMP) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
 }
 
 (*SCMP) implements gopacket.Layer

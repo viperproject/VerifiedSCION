@@ -67,6 +67,7 @@ func (i *SCMPExternalInterfaceDown) NextLayerType() gopacket.LayerType {
 // @ requires  sl.Bytes(data, 0, len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> addr.IABytes+scmpRawInterfaceLen <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -205,6 +206,7 @@ func (*SCMPInternalConnectivityDown) NextLayerType() gopacket.LayerType {
 // @ requires  i.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> addr.IABytes+2*scmpRawInterfaceLen <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -345,6 +347,7 @@ func (*SCMPEcho) NextLayerType() gopacket.LayerType {
 // @ requires  sl.Bytes(data, 0, len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 4 <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -498,6 +501,7 @@ func (*SCMPParameterProblem) NextLayerType() gopacket.LayerType {
 // @ requires  sl.Bytes(data, 0, len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 2+2 <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -641,6 +645,7 @@ func (*SCMPTraceroute) NextLayerType() gopacket.LayerType {
 // @ preserves acc(sl.Bytes(data, 0, len(data)), R40)
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 2+2+addr.IABytes+scmpRawInterfaceLen <= len(data)
 // @ ensures   res != nil ==> i.NonInitMem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -829,6 +834,7 @@ func (*SCMPDestinationUnreachable) NextLayerType() gopacket.LayerType {
 // @ requires  sl.Bytes(data, 0, len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 4 <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -929,6 +935,7 @@ func (*SCMPPacketTooBig) NextLayerType() gopacket.LayerType {
 // @ requires  i.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 2+2 <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases

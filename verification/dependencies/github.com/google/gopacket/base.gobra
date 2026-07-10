@@ -119,3 +119,19 @@ type ErrorLayer interface {
 	decreases
 	Error(ghost ub []byte) error
 }
+
+// (VerifiedSCION) Twin of slayers.IsSupportedRawPkt. It must be defined
+// here (rather than reusing the slayers definition) because gopacket is a
+// dependency of slayers and cannot import it. The numeric literals pin
+// down the relevant slayers constants: 12 is slayers.CmnHdrLen, 1 is
+// scion.PathType, and 202 is slayers.L4SCMP. The lemma
+// slayers.IsSupportedRawPktEqGopacket proves that the two definitions
+// agree, keeping them in sync.
+ghost
+opaque
+decreases
+pure func IsSupportedRawPkt(raw seq[byte]) bool {
+	return 12 <= len(raw) &&
+		raw[8] == 1 &&  // the path type is scion.PathType
+		raw[4] != 202   // the next header is not slayers.L4SCMP
+}

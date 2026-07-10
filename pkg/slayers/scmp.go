@@ -171,6 +171,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 // @ requires  s.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
+// @ ensures   res == nil ==> 4 <= len(data)
 // @ ensures   res != nil ==> (s.NonInitMem() && res.ErrorMem())
 // @ decreases
 func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {

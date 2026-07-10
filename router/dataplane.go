@@ -4097,6 +4097,9 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 	}
 	var scmpP /*@@@*/ slayers.SCMPTraceroute
 	// @ fold scmpP.NonInitMem()
+	// scionPld is non-nil (and thus scmpH is in decoded mode) because
+	// DecodeFromBytes succeeded, which requires at least 4 bytes.
+	// @ assert scionPld != nil
 	// @ unfold scmpH.Mem(scionPld)
 	// @ unfold scmpH.BaseLayer.Mem(scionPld, 4)
 	// @ sl.SplitRange_Bytes(scionPld, 4, len(scionPld), R1)
@@ -4108,6 +4111,10 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 		// @ fold p.d.validResult(processResult{}, false)
 		return processResult{}, nil
 	}
+	// scmpH.Payload is non-nil (and thus scmpP is in decoded mode) because
+	// DecodeFromBytes succeeded, which requires at least the traceroute's
+	// minimum length.
+	// @ assert scmpH.Payload != nil
 	// @ unfold scmpP.Mem(scmpH.Payload)
 	// @ unfold scmpP.BaseLayer.Mem(scmpH.Payload, 4+addr.IABytes+slayers.scmpRawInterfaceLen)
 	// @ p.d.getLocalIA()
