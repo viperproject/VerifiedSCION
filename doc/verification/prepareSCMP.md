@@ -204,8 +204,9 @@ Removing `TODO()` requires all of the following, not just the `Mem` folds:
 1. **`(*scion.Decoded).Mem(ubuf)` never mentions `ubuf`**
    (`pkg/slayers/path/scion/decoded_spec.gobra:39-48`): it holds
    `Base.Mem()`, `InfoFields`, `HopFields` — all struct-internal. Hence
-   `revPath.Mem(rawPath)` can be re-folded as `revPath.Mem(nil)` by a
-   trivial (un)fold pair, and `(*Decoded).SerializeTo(b, ubuf)`
+   `revPath.Mem(rawPath)` can be re-folded as `revPath.Mem(nil)` — the
+   lemma for this already exists (`(*Decoded).Widen`, at the end of
+   `decoded_spec.gobra`) — and `(*Decoded).SerializeTo(b, ubuf)`
    (`decoded.go:128-133`) as well as `Len(ubuf)` already work fine with
    `ubuf = nil` (`sl.Bytes(nil, 0, 0)` is trivially foldable — precedent in
    `packSCMP`, `dataplane.go:2206`). **The reversed path is already fully
@@ -610,6 +611,15 @@ budget accordingly; perf regressions in `dataplane.go` are a real risk).
    `IsSupportedRawPkt` twin + bridging lemma, and the quantified trusted
    `SerializeLayers` spec; re-verify the closed set of implementers;
    adjust the `Payload`/`BFD` trusted stubs. Medium.
+   **Status: partially implemented on this branch** (pending a CI/Gobra
+   run): the error-case postconditions of `SerializableLayer.SerializeTo`
+   and all implementations (`SCMP` + the 7 message types re-fold `Mem`
+   before every error return, so their strengthened specs remain provable;
+   `Payload`/`BFD` stubs adjusted textually; `SCION` was already
+   unconditional), plus the `IsSupportedRawPkt` twin + bridging lemma.
+   Deliberately *not* yet done: the `FixLengths` relaxation (it would
+   break `*SCION`'s implementation proof until M3 verifies the
+   `FixLengths` branch), the ghost hook, and the `SerializeLayers` spec.
 5. **M5 — `prepareSCMP` itself** (§5): spec extensions, call-site folds,
    ghost `layerBufs`, drop the `TODO()`. Large, but mostly mechanical once
    M1–M4 are in; expect iteration on router CI time.

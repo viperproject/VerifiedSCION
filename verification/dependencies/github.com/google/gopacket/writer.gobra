@@ -20,8 +20,12 @@ type SerializableLayer interface {
 	requires  sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 	requires  Mem(ubuf)
 	preserves sl.Bytes(ubuf, 0, len(ubuf))
-	ensures   err == nil ==> (Mem(ubuf) && b.Mem())
-	ensures   err == nil ==> sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+	// The layer and the buffer survive also on error: all implementations
+	// fail without giving up Mem(ubuf) or the buffer resources. This is
+	// relied upon by callers that must restore their resources on the
+	// error path (e.g. the router's prepareSCMP).
+	ensures   Mem(ubuf) && b.Mem()
+	ensures   sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 	ensures   err != nil ==> err.ErrorMem()
 	decreases
 	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)

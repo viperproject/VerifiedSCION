@@ -112,7 +112,7 @@ func (s *SCMP) NextLayerType( /*@ ghost ub []byte @*/ ) gopacket.LayerType {
 // @ requires  s.Mem(ubufMem)
 // @ preserves b.Mem()
 // @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-// @ ensures   err == nil ==> s.Mem(ubufMem)
+// @ ensures   s.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
