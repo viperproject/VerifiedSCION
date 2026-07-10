@@ -53,6 +53,18 @@ func (b *SCMPExternalInterfaceDown) LayerPayload(ghost ub []byte) (res []byte, g
 }
 
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPExternalInterfaceDown they are trivial.
+pred (s *SCMPExternalInterfaceDown) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPExternalInterfaceDown) IsSupportedSerialization() bool {
+	return false
+}
+
 (*SCMPExternalInterfaceDown) implements gopacket.Layer
 (*SCMPExternalInterfaceDown) implements gopacket.SerializableLayer
 
@@ -97,6 +109,18 @@ func (b *SCMPInternalConnectivityDown) LayerPayload(ghost ub []byte) (res []byte
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
+}
+
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPInternalConnectivityDown they are trivial.
+pred (s *SCMPInternalConnectivityDown) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPInternalConnectivityDown) IsSupportedSerialization() bool {
+	return false
 }
 
 (*SCMPInternalConnectivityDown) implements gopacket.Layer
@@ -145,6 +169,18 @@ func (b *SCMPEcho) LayerPayload(ghost ub []byte) (res []byte, ghost start int, g
 	return res, start, end
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPEcho they are trivial.
+pred (s *SCMPEcho) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPEcho) IsSupportedSerialization() bool {
+	return false
+}
+
 (*SCMPEcho) implements gopacket.Layer
 (*SCMPEcho) implements gopacket.SerializableLayer
 
@@ -189,6 +225,18 @@ func (b *SCMPParameterProblem) LayerPayload(ghost ub []byte) (res []byte, ghost 
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
+}
+
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPParameterProblem they are trivial.
+pred (s *SCMPParameterProblem) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPParameterProblem) IsSupportedSerialization() bool {
+	return false
 }
 
 (*SCMPParameterProblem) implements gopacket.Layer
@@ -242,6 +290,18 @@ func (b *SCMPTraceroute) LayerPayload(ghost ub []byte) (res []byte, ghost start 
 	return res, start, end
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPTraceroute they are trivial.
+pred (s *SCMPTraceroute) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPTraceroute) IsSupportedSerialization() bool {
+	return false
+}
+
 (*SCMPTraceroute) implements gopacket.Layer
 (*SCMPTraceroute) implements gopacket.SerializableLayer
 
@@ -289,6 +349,18 @@ func (b *SCMPDestinationUnreachable) LayerPayload(ghost ub []byte) (res []byte, 
 	return res, start, end
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPDestinationUnreachable they are trivial.
+pred (s *SCMPDestinationUnreachable) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPDestinationUnreachable) IsSupportedSerialization() bool {
+	return false
+}
+
 (*SCMPDestinationUnreachable) implements gopacket.Layer
 (*SCMPDestinationUnreachable) implements gopacket.SerializableLayer
 
@@ -333,6 +405,18 @@ func (b *SCMPPacketTooBig) LayerPayload(ub []byte) (res []byte, ghost start int,
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
+}
+
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPPacketTooBig they are trivial.
+pred (s *SCMPPacketTooBig) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPPacketTooBig) IsSupportedSerialization() bool {
+	return false
 }
 
 (*SCMPPacketTooBig) implements gopacket.Layer

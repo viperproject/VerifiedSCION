@@ -84,6 +84,18 @@ func (s *SCMP) FoldFreshMem() {
 	fold s.Mem(nil)
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMP they are trivial.
+pred (s *SCMP) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMP) IsSupportedSerialization() bool {
+	return false
+}
+
 (*SCMP) implements gopacket.Layer
 (*SCMP) implements gopacket.SerializableLayer
 (*SCMP) implements gopacket.DecodingLayer

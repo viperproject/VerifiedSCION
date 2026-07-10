@@ -73,6 +73,18 @@ ensures  err != nil ==> err.ErrorMem()
 decreases
 func (p Payload) SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)
 
+// (VerifiedSCION) MemSerialize and IsSupportedSerialization are only
+// meaningful for network-header layers serialized as the outermost layer
+// of a packet (cf. SerializableLayer); for Payload they are trivial.
+pred (p Payload) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (p Payload) IsSupportedSerialization() bool {
+	return false
+}
+
 Payload implements Layer
 Payload implements ApplicationLayer
 Payload implements SerializableLayer

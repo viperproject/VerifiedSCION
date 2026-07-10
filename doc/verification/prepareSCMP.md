@@ -231,6 +231,47 @@ Removing `TODO()` requires all of the following, not just the `Mem` folds:
 
 ## 4. Proposed design
 
+> **Design revision (v2), applied on this branch.** While implementing M2,
+> a blocking property of the original §4.2 design surfaced: making
+> `SCION.Mem(nil)` *satisfiable* forces nil-cases into every pure function
+> and lemma that `unfolding`s the predicate (~21 sites in `pkg/slayers`
+> alone, plus the router). Today those bodies verify for `ub == nil`
+> vacuously — the precondition `Mem(nil)` is contradictory — but under the
+> §4.2 rewrite each `ub[a:b]` slice inside them would need its own
+> `ub != nil` guard or conditional, a large, error-prone ripple.
+>
+> The revised design instead leaves `SCION.Mem` **untouched** and gives the
+> fresh SCION header a *separate* predicate:
+>
+> * `pred (s *SCION) MemSerialize()` (`scion_spec.gobra`) — field
+>   permissions, `Path.Mem(nil)` (satisfied by `(*Decoded).Widen`), the
+>   asymmetric fractional address-byte permissions of §4.3, and the path
+>   pool; deliberately nothing about `HdrLen`/`PayloadLen`.
+> * `SerializableLayer` gains `pred MemSerialize()` and the ghost pure hook
+>   `IsSupportedSerialization()` (§4.6); all non-header layers implement
+>   them trivially (`true`/`false`).
+> * The trusted `SerializeLayers` contract consumes
+>   `layers[0].MemSerialize()` for the header layer and
+>   `layers[i].Mem(layerBufs[i])` for `i ≥ 1` (the M1 `nil`-mode covers the
+>   fresh `scmpH`/`scmpP`; `Payload` uses the quote).
+>
+> Knock-on simplifications: the `FixLengths` relaxation of §4.4 is **no
+> longer needed at all** — the interface `SerializeTo` spec is never
+> invoked for the fresh flow (the only verified direct `SerializeTo` call,
+> `updateSCIONLayer`, uses `FixLengths: false`), and `*SCION` keeps
+> implementing the interface because its `Mem(nil)` stays unsatisfiable,
+> making the nil-case of the implementation proof vacuous. Verifying
+> `SCION.SerializeTo`'s `FixLengths` branch (old M3) is thereby demoted
+> from a prerequisite to *optional hardening*: until it is done, the
+> behavior of the fresh-flow serialization (including the `FixLengths`
+> branch and the checksum computation) is axiomatized by the trusted
+> `SerializeLayers` contract — a larger trusted surface, in exchange for a
+> dramatically smaller and safer proof effort.
+>
+> §§4.1, 4.3, 4.5, 4.6 below remain accurate (4.5/4.6 modulo
+> `MemSerialize` replacing "serialize-mode `Mem(nil)`" for the header
+> layer); §4.2 and the `FixLengths` part of §4.4 are superseded.
+
 ### 4.1 `nil`-mode `BaseLayer.Mem` (one change, many beneficiaries)
 
 Redefine (`scion_spec.gobra:244`):
@@ -595,31 +636,45 @@ budget accordingly; perf regressions in `dataplane.go` are a real risk).
      derive `data != nil` and keep using the aliasing facts;
    * §4.6 step 1 done early (it is additive): `gopacket.IsSupportedRawPkt`
      twin + `slayers.IsSupportedRawPktEqGopacket` bridging lemma.
-2. **M2 — serialize-mode `*SCION.Mem`** (§4.2) + `ChecksumMem`
-   re-fractioning, the asymmetric address-byte amounts, and the
-   `SetDstAddr`/`SetSrcAddr` postcondition strengthening (§4.3). Medium;
-   touches many `SCION` lemmas' guards (`ub != nil`). Start with a smoke
-   test that a wildcard conjunct inside a predicate body folds/unfolds as
-   expected.
-3. **M3 — `(*SCION).SerializeTo`**: mode-split spec, `SerializeAddrHdr`
-   serialize-mode, verify the `FixLengths` branch, prove the
-   hook postcondition of §4.6 (step 3). This is the hardest single item.
-   Large.
+2. **M2 — fresh-header predicate + checksum permission accounting**
+   (design revision v2, §4 preamble; supersedes the old serialize-mode
+   `*SCION.Mem` item).
+   **Status: implemented on this branch** (pending a CI/Gobra run):
+   * `SCION.MemSerialize` + the `IsSupportedSerialization` hook
+     (`scion_spec.gobra`); `SCION.Mem` untouched — zero ripple;
+   * `ChecksumMem` re-fractioned (R25, wildcard for `RawSrcAddr`'s bytes)
+     with `computeChecksum`/`pseudoHeaderChecksum` weakened accordingly
+     (R30 / wildcard; their only verified caller is `SCMP.SerializeTo`,
+     whose unfold/refold of `ChecksumMem` still balances);
+   * `SerializableLayer` extended with `MemSerialize` +
+     `IsSupportedSerialization`; trivial implementations for `SCMP`, the
+     7 message types, `Payload`, and `BFD`;
+   * the trusted quantified `SerializeLayers` contract (§4.5, §4.6 step 4)
+     replacing `requires false` — including the
+     `IsSupportedRawPkt(w.View()) == old(layers[0].IsSupportedSerialization())`
+     bridge. No verified caller of `SerializeLayers` exists yet
+     (`bfdSend.Send` is trusted, `prepareSCMP`'s call is behind the
+     `TODO()`), so this lands without new obligations.
+   Still open from §4.3 (now M5 prerequisites): `SetDstAddr`'s
+   postcondition must expose a fraction of `sl.Bytes(s.RawDstAddr, ...)`
+   (with a wand to restore `dst.Mem()`), and `SetSrcAddr`'s wildcard mode
+   needs (a) a component-wise precondition (folding `net.IPAddr.Mem()` at
+   wildcard amount is not possible) and (b) length postconditions
+   (`len(s.RawSrcAddr)` even) also in wildcard mode.
+3. **M3 (optional hardening) — `(*SCION).SerializeTo` fresh mode**: verify
+   the `FixLengths` branch and the byte-level hook postcondition of §4.6
+   (step 3) against `MemSerialize`, then shrink the trusted
+   `SerializeLayers` contract to something justified per-layer. No longer
+   a prerequisite for removing the `TODO()` (see the §4 preamble). Large.
 4. **M4 — interface + `SerializeLayers` spec updates** in `writer.gobra`
-   (§4.4, §4.5, §4.6 steps 1–2, 4): relax `FixLengths`, strengthen error
-   postconditions, add the ghost hook, the gopacket-level
-   `IsSupportedRawPkt` twin + bridging lemma, and the quantified trusted
-   `SerializeLayers` spec; re-verify the closed set of implementers;
-   adjust the `Payload`/`BFD` trusted stubs. Medium.
-   **Status: partially implemented on this branch** (pending a CI/Gobra
-   run): the error-case postconditions of `SerializableLayer.SerializeTo`
-   and all implementations (`SCMP` + the 7 message types re-fold `Mem`
-   before every error return, so their strengthened specs remain provable;
-   `Payload`/`BFD` stubs adjusted textually; `SCION` was already
-   unconditional), plus the `IsSupportedRawPkt` twin + bridging lemma.
-   Deliberately *not* yet done: the `FixLengths` relaxation (it would
-   break `*SCION`'s implementation proof until M3 verifies the
-   `FixLengths` branch), the ghost hook, and the `SerializeLayers` spec.
+   (§4.5, §4.6 steps 1–2, 4).
+   **Status: implemented on this branch** (pending a CI/Gobra run),
+   split across M2/M4 commits: error-case postconditions of
+   `SerializableLayer.SerializeTo` and all implementations strengthened
+   to unconditional; `IsSupportedRawPkt` twin + bridging lemma; the
+   `MemSerialize`/`IsSupportedSerialization` interface members; the
+   trusted `SerializeLayers` contract. The `FixLengths` relaxation
+   originally planned here is not needed under design v2.
 5. **M5 — `prepareSCMP` itself** (§5): spec extensions, call-site folds,
    ghost `layerBufs`, drop the `TODO()`. Large, but mostly mechanical once
    M1–M4 are in; expect iteration on router CI time.
@@ -631,25 +686,29 @@ budget accordingly; perf regressions in `dataplane.go` are a real risk).
 * **Verification time** of `dataplane.go` (already the 6 h/`chop 10`
   package). Mitigate with `outline(...)` blocks and `opaque` helper
   functions for the new fold-heavy regions.
-* **Wildcard permission amounts inside predicate bodies** (§4.3) and
-  wildcard-mode folds of `net.IPAddr.Mem()` are less-trodden Gobra
-  territory; validate with a small experiment before building M2 on them.
-  Fallback: keep the `RawSrcAddr` bytes *outside* the predicates entirely
-  and weaken `SerializeAddrHdr`/`computeChecksum`'s specs to take them as
-  separate wildcard clauses — workable because those specs are on concrete
-  methods, but it makes the serialize-mode `SCION.Mem` non-self-contained,
-  which conflicts with interface dispatch (§4.5); in that case the src
-  bytes would have to ride in a second, `slayers`-internal predicate
-  referenced from `Mem`'s serialize branch.
-* **Gobra interface-implementation proofs** with mode-split permission
-  amounts (`ubuf == nil ? full : R0`) and ghost pure interface methods are
-  unusual; unlike in a design where the SCION call is concrete, `*SCION`
-  **must** remain a `SerializableLayer` implementer here, so brittleness
-  in the implementation proof has no cheap fallback — prototype early
-  (M4 before M3 completion is fine, the two are independent).
-* **The trusted `SerializeLayers` IO clause** (§4.6 step 4) is a genuine
-  (if small) soundness assumption about which layer is outermost; gate it
-  with the `IsNetworkHeaderLayer()` hook to keep it honest.
+* **Wildcard permission amounts inside predicate bodies**
+  (`ChecksumMem`/`MemSerialize`, §4.3) have precedent in the codebase
+  (`fold acc(sl.Bytes(ip, ...), _)` in `scion.go`'s address helpers,
+  wildcard folds in `pkg/experimental/epic`), but the combination with
+  loop invariants in `pseudoHeaderChecksum` should be watched in the
+  first CI run. Fallback: keep the `RawSrcAddr` bytes outside the
+  predicates and thread them as separate wildcard clauses through
+  `computeChecksum` (concrete-method spec, no interface constraint).
+* **Ghost pure interface methods with predicate-based preconditions**
+  (`IsSupportedSerialization` requiring `acc(MemSerialize(), _)`) follow
+  the `SerializeBuffer.UBuf()` pattern but are less common on
+  implementation-proved interfaces; if the implementation proofs are
+  brittle, the hook can move out of the interface into a
+  `*SCION`-specific pure function, at the cost of expressing the trusted
+  `SerializeLayers` IO clause via a type assertion on `layers[0]`.
+* **The trusted `SerializeLayers` contract is now the load-bearing trusted
+  assumption**: it axiomatizes the fresh-flow serialization behavior
+  (including `SCION.SerializeTo`'s unverified `FixLengths` branch and the
+  checksum computation) and asserts the IO clause for whatever layer is
+  passed first. It is documented as such in `writer.gobra`; M3 exists to
+  shrink it. The IO clause could additionally be gated by an
+  `IsNetworkHeaderLayer()`-style hook to keep it honest against misuse
+  with a non-header first layer.
 * **`SrcAddr()`/`SetDstAddr` aliasing**: the `RawDstAddr` fraction
   originates from `acc(p.scionLayer.Mem(ub), R4)`-governed memory via a
   magic wand; getting the fraction arithmetic right (so that the wand can

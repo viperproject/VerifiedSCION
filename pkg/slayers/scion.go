@@ -978,16 +978,19 @@ func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 }
 
 // computeChecksum computes the checksum with the SCION pseudo header.
-// @ requires  acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
+// (VerifiedSCION) The permission amounts for the raw addresses are chosen
+// so that they can be supplied from an unfolded ChecksumMem instance (which
+// holds them at R25, resp. at wildcard amount for RawSrcAddr's bytes).
+// @ requires  acc(&s.RawSrcAddr, R30) && acc(&s.RawDstAddr, R30)
 // @ requires  len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-// @ requires  acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ requires  acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
-// @ requires  acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// @ requires  acc(&s.SrcIA, R30) && acc(&s.DstIA, R30)
+// @ requires  acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ requires  acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 // @ preserves acc(sl.Bytes(upperLayer, 0, len(upperLayer)), R20)
-// @ ensures   acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
-// @ ensures   acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ ensures   acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
-// @ ensures   acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// @ ensures   acc(&s.RawSrcAddr, R30) && acc(&s.RawDstAddr, R30)
+// @ ensures   acc(&s.SrcIA, R30) && acc(&s.DstIA, R30)
+// @ ensures   acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ ensures   acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 // @ ensures   s == nil ==> err != nil
 // @ ensures   len(s.RawDstAddr) == 0 ==> err != nil
 // @ ensures   len(s.RawSrcAddr) == 0 ==> err != nil
@@ -1007,15 +1010,15 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (res uint16, 
 	return folded, nil
 }
 
-// @ requires acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
+// @ requires acc(&s.RawSrcAddr, R30) && acc(&s.RawDstAddr, R30)
 // @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-// @ requires acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ requires acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
-// @ requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
-// @ ensures  acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
-// @ ensures  acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ ensures  acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
-// @ ensures  acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// @ requires acc(&s.SrcIA, R30) && acc(&s.DstIA, R30)
+// @ requires acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
+// @ ensures  acc(&s.RawSrcAddr, R30) && acc(&s.RawDstAddr, R30)
+// @ ensures  acc(&s.SrcIA, R30) && acc(&s.DstIA, R30)
+// @ ensures  acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ ensures  acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 // @ ensures  len(s.RawDstAddr) == 0 ==> err != nil
 // @ ensures  len(s.RawSrcAddr) == 0 ==> err != nil
 // @ ensures  err != nil ==> err.ErrorMem()
@@ -1045,43 +1048,43 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	}
 	// Address length is guaranteed to be a multiple of 2 by the protocol.
 	// @ ghost var rawSrcAddrLen int = len(s.RawSrcAddr)
-	// @ invariant acc(&s.RawSrcAddr, R20) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+	// @ invariant acc(&s.RawSrcAddr, R30) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 	// @ invariant len(s.RawSrcAddr) == rawSrcAddrLen
 	// @ invariant len(s.RawSrcAddr) % 2 == 0
 	// @ invariant i % 2 == 0
 	// @ invariant 0 <= i && i <= len(s.RawSrcAddr)
 	// @ decreases len(s.RawSrcAddr) - i
 	for i := 0; i < len(s.RawSrcAddr); i += 2 {
-		// @ requires acc(&s.RawSrcAddr, R20) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+		// @ requires acc(&s.RawSrcAddr, R30) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 		// @ requires 0 <= i && i < len(s.RawSrcAddr) && i % 2 == 0 && len(s.RawSrcAddr) % 2 == 0
-		// @ ensures acc(&s.RawSrcAddr, R20) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+		// @ ensures acc(&s.RawSrcAddr, R30) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 		// @ ensures s.RawSrcAddr === before(s.RawSrcAddr)
 		// @ decreases
 		// @ outline(
-		// @ unfold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+		// @ unfold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 		csum += uint32(s.RawSrcAddr[i]) << 8
 		csum += uint32(s.RawSrcAddr[i+1])
-		// @ fold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+		// @ fold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 		// @ )
 	}
 	// @ ghost var rawDstAddrLen int = len(s.RawDstAddr)
-	// @ invariant acc(&s.RawDstAddr, R20) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+	// @ invariant acc(&s.RawDstAddr, R30) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 	// @ invariant len(s.RawDstAddr) == rawDstAddrLen
 	// @ invariant len(s.RawDstAddr) % 2 == 0
 	// @ invariant i % 2 == 0
 	// @ invariant 0 <= i && i <= len(s.RawDstAddr)
 	// @ decreases len(s.RawDstAddr) - i
 	for i := 0; i < len(s.RawDstAddr); i += 2 {
-		// @ requires acc(&s.RawDstAddr, R20) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+		// @ requires acc(&s.RawDstAddr, R30) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 		// @ requires 0 <= i && i < len(s.RawDstAddr) && i % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-		// @ ensures acc(&s.RawDstAddr, R20) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+		// @ ensures acc(&s.RawDstAddr, R30) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 		// @ ensures s.RawDstAddr === before(s.RawDstAddr)
 		// @ decreases
 		// @ outline(
-		// @ unfold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+		// @ unfold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 		csum += uint32(s.RawDstAddr[i]) << 8
 		csum += uint32(s.RawDstAddr[i+1])
-		// @ fold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+		// @ fold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 		// @ )
 	}
 	l := uint32(length)

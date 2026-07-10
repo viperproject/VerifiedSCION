@@ -15,6 +15,13 @@ import "verification/utils/seqs"
 type SerializableLayer interface {
 	pred Mem(ubuf []byte)
 
+	// (VerifiedSCION) Resources of a freshly constructed (i.e., not
+	// decoded) instance that is about to be serialized without an
+	// underlying buffer. Only meaningful for layers that SerializeLayers
+	// serializes as the outermost header of a packet (cf. slayers.SCION);
+	// all other layers may define it as true.
+	pred MemSerialize()
+
 	requires  !opts.FixLengths
 	requires  b != nil && b.Mem()
 	requires  sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
@@ -29,6 +36,17 @@ type SerializableLayer interface {
 	ensures   err != nil ==> err.ErrorMem()
 	decreases
 	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)
+
+	// (VerifiedSCION) Whether serializing this (freshly constructed)
+	// instance as the outermost header of a packet yields a supported
+	// packet in the sense of IsSupportedRawPkt. Only meaningful for
+	// network-header layers (cf. slayers.SCION); all other layers may
+	// define it as false.
+	ghost
+	pure
+	requires acc(MemSerialize(), _)
+	decreases
+	IsSupportedSerialization() bool
 
 	pure
 	decreases
@@ -106,11 +124,51 @@ ensures sl.Bytes(res.UBuf(), 0, len(res.UBuf()))
 decreases
 func NewSerializeBuffer() (res SerializeBuffer)
 
-// TODO: requires changes to provide access to the underlying layers
-requires  false
+// SerializeLayers clears the given write buffer, then writes all layers
+// into it so they correctly wrap each other.
+//
+// (VerifiedSCION) This specification is trusted. It is justified against
+// the (unverified) implementation, which calls w.Clear() and then
+// layers[i].SerializeTo(w, opts) from the last layer to the first,
+// returning on the first error (plus PushLayer bookkeeping that is
+// unobservable through this package's specifications). It is specialized
+// to the call shape of the verified router: layers[0] is the freshly
+// constructed network-header layer of the packet (a *slayers.SCION), whose
+// resources are given by MemSerialize; all later layers are either freshly
+// constructed layers with a nil underlying buffer or a raw payload
+// aliasing layerBufs[i], with resources given by Mem(layerBufs[i]).
+//
+// The last postcondition is the trusted bridge for the router's
+// IO-level property that SCMP replies are unsupported packets: the header
+// layer is serialized last and prepended at the front of the buffer, so
+// the bytes inspected by IsSupportedRawPkt are exactly the ones it wrote,
+// and they are determined by the fields captured in the old state of its
+// MemSerialize (serialization does not change them; FixLengths only
+// assigns the header/payload lengths).
+requires  w != nil && w.Mem()
+requires  sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
 requires  len(layerBufs) == len(layers)
-preserves w.Mem()
-preserves acc(layerBufs, R20)
-preserves forall i int :: {&layers[i]} 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem(layerBufs[i])
+requires  0 < len(layers)
+requires  acc(layerBufs, R50)
+requires  forall i, j int :: { &layers[i], &layers[j] } 0 <= i && i < j && j < len(layers) ==>
+	layers[i] !== layers[j]
+requires  forall i int :: { &layers[i] } 0 <= i && i < len(layers) ==>
+	(acc(&layers[i], R50) && layers[i] != nil)
+requires  layers[0].MemSerialize()
+requires  forall i int :: { &layers[i] } 1 <= i && i < len(layers) ==>
+	layers[i].Mem(layerBufs[i])
+requires  forall i int :: { &layers[i] } 1 <= i && i < len(layers) ==>
+	sl.Bytes(layerBufs[i], 0, len(layerBufs[i]))
+ensures   w.Mem() && sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
+ensures   acc(layerBufs, R50)
+ensures   forall i int :: { &layers[i] } 0 <= i && i < len(layers) ==> acc(&layers[i], R50)
+ensures   layers[0].MemSerialize()
+ensures   forall i int :: { &layers[i] } 1 <= i && i < len(layers) ==>
+	layers[i].Mem(layerBufs[i])
+ensures   forall i int :: { &layers[i] } 1 <= i && i < len(layers) ==>
+	sl.Bytes(layerBufs[i], 0, len(layerBufs[i]))
+ensures   err == nil ==>
+	IsSupportedRawPkt(w.View()) == old(layers[0].IsSupportedSerialization())
+ensures   err != nil ==> err.ErrorMem()
 decreases
-func SerializeLayers(w SerializeBuffer, opts SerializeOptions, ghost layerBufs []([]byte), layers ...SerializableLayer) error
+func SerializeLayers(w SerializeBuffer, opts SerializeOptions, ghost layerBufs []([]byte), layers ...SerializableLayer) (err error)

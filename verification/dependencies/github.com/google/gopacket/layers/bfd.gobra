@@ -218,4 +218,16 @@ ensures  d.NonInitMem()
 decreases
 func (d *BFD) DowngradePerm(ghost ub []byte)
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for BFD they are trivial.
+pred (d *BFD) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (d *BFD) IsSupportedSerialization() bool {
+	return false
+}
+
 (*BFD) implements gopacket.SerializableLayer
