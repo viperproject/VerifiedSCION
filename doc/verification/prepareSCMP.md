@@ -1,5 +1,13 @@
 # Plan: verifying `prepareSCMP` completely (dropping the `TODO()`)
 
+**Ground rule for this plan: the executable Go code cannot be changed.**
+Everything below is confined to specifications, predicates, ghost
+annotations/arguments (including those embedded in `.go` files as `// @`
+comments), `.gobra` files, and the trusted stubs under
+`verification/dependencies`. In particular, the
+`gopacket.SerializeLayers` call stays, and `p.d.internalIP` is passed to
+`SetSrcAddr` as-is.
+
 This document analyzes what it takes to remove the `TODO()` at
 `router/dataplane.go:5064` and verify the remainder of
 `scionPacketProcessor.prepareSCMP`, i.e., the construction of the SCMP reply
@@ -130,8 +138,11 @@ Removing `TODO()` requires all of the following, not just the `Mem` folds:
    Correspondingly, `(*SCION).SerializeTo`'s `FixLengths` branch is marked
    `Unreachable()` (`scion.go:246-250`) and must now be verified: it *writes*
    `s.HdrLen` and `s.PayloadLen`, so it needs write permission to those
-   fields (the current spec takes only `acc(s.Mem(ubuf), R0)`), and the
-   `uint8`/`uint16` casts need justified bounds.
+   fields (the current spec takes only `acc(s.Mem(ubuf), R0)`). (The
+   `uint8`/`uint16` casts in that branch generate no proof obligations —
+   CI runs with `overflow: '0'`, `.github/workflows/gobra.yml:32` — so no
+   buffer-size bound needs to be threaded through the trusted
+   `SerializeBuffer` interface.)
 3. **`SerializeTo` loses `Mem` on error** (interface post:
    `err == nil ==> Mem(ubuf) && b.Mem()`). `prepareSCMP`'s error path must
    still restore `sl.Bytes(ub, ...)` and `p.buffer.Mem()` to satisfy its own
@@ -283,28 +294,66 @@ Constraints discovered in §2 (items 4, 5):
   wildcard** (`acc(p.d.Mem(), _)`), so no concrete fraction of them can
   ever be folded.
 
-Two workable resolutions:
+Since the code cannot change (no copying of `p.d.internalIP`), the
+**asymmetric-fractions design is the only option**: the serialize-mode
+predicates must hold the two address-byte resources at *different* amounts,
+matching where they come from:
 
-* **(a) Copy the internal IP (recommended).** Change
-  `dataplane.go:5082` to pass a fresh copy of `p.d.internalIP` (a marked
-  `(VerifiedSCION)` deviation; one small allocation on the SCMP error
-  path — cf. the precedent of changed signatures at `dataplane.go:4774-4777`).
-  Then both raw addresses are backed by permissions `prepareSCMP` fully
-  controls, and the design is symmetric: give `ChecksumMem` and the
-  serialize-mode branch of `SCION.Mem` complementary concrete fractions
-  (e.g. `R50` each) of `sl.Bytes(RawSrcAddr)/sl.Bytes(RawDstAddr)`.
-  `ChecksumMem`'s only verified users are `prepareSCMP`,
+* `RawDstAddr` (aliases the request packet / `srcA`): **concrete
+  fraction** (e.g. `R50`), because `prepareSCMP` must hand back
+  `sl.Bytes(ub, 0, len(ub))` at full permission and wildcards are
+  unrecoverable.
+* `RawSrcAddr` (aliases `p.d.internalIP`): **wildcard** (`acc(..., _)`),
+  because wildcard is all the processor ever has of `d`'s state.
+
+Concretely:
+
+* Serialize-mode branch of `SCION.Mem(nil)` (§4.2) holds
+  `acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R50)` and
+  `acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)`;
+  `ChecksumMem` is re-declared with complementary amounts (e.g. the
+  other `R50` half for dst, another wildcard for src, and *fractional*
+  `acc(&s.RawSrcAddr, ...)`/`acc(&s.RawDstAddr, ...)` field permissions
+  instead of today's full ones). Both users only read, so fractions
+  suffice. `ChecksumMem`'s only verified users are `prepareSCMP`,
   `SCMP.SerializeTo`/`computeChecksum`, and the `SCMP` predicates
   (`SetNetworkLayerForChecksum` is called nowhere else in verified code),
-  so re-fractioning it is low-ripple. Its `len % 2 == 0` conjuncts follow
+  so re-fractioning is low-ripple. Its `len % 2 == 0` conjuncts follow
   from `AddrType.Length() ∈ {4, 8, 12, 16}` (small lemma).
-* **(b) Asymmetric predicates.** Keep the code unchanged and bake the
-  asymmetry in: serialize-mode holds
-  `acc(sl.Bytes(s.RawDstAddr, ...), R50)` but
-  `acc(sl.Bytes(s.RawSrcAddr, ...), _)`. Works, but hard-codes
-  `prepareSCMP`'s aliasing situation into `pkg/slayers` and will not fit
-  the BFD sender (§8) whose source address has yet another origin. Not
-  recommended.
+  Wildcard amounts inside predicate bodies should be confirmed early with
+  a smoke test (see risk §7).
+* **`SetSrcAddr` must be called in wildcard mode**: the ghost argument at
+  `dataplane.go:5082` changes from `false` to `true` (a ghost-only edit).
+  Its wildcard-mode postcondition
+  (`scion.go:710`: `acc(sl.Bytes(s.RawSrcAddr, ...), _)`) is exactly what
+  the predicate above needs. Two sub-issues to resolve on the way:
+  * the wildcard-mode *pre*condition currently demands `acc(src.Mem(), _)`
+    — folding `(&net.IPAddr{IP: p.d.internalIP}).Mem()` requires byte
+    permissions for `internalIP`, which are only available at wildcard;
+    check whether the fold at a wildcard amount goes through, and if not,
+    weaken `SetSrcAddr`'s wildcard-mode precondition to take the raw
+    components (`acc(&src.IP, R18)` + `acc(sl.Bytes(src.IP, ...), _)`)
+    instead of a folded `Mem()`;
+  * access to `p.d.internalIP` itself should follow the existing
+    dup-invariant getter idiom (`getExternalMem()` at
+    `dataplane.go:5029`), i.e., add a `getInternalIPMem()`-style ghost
+    getter to `DataPlane` if none exists.
+* **`SetDstAddr`'s postconditions are too weak today**: for the
+  `!wildcard`, IP-typed case it returns `acc(dst.Mem(), R18)` and says
+  nothing about `s.RawDstAddr`'s bytes — the aliasing postconditions are
+  commented out (`scion.go:677-680`). To fold the serialize-mode
+  predicate we need the `R50` fraction of `sl.Bytes(s.RawDstAddr, ...)`.
+  Strengthen the spec (spec-only) to return that fraction directly,
+  plus a magic wand restoring `acc(dst.Mem(), R18)` from it, or
+  re-enable (a weakened form of) the commented-out aliasing
+  postconditions so the caller can carve the fraction out of
+  `sl.Bytes(ub, ...)` itself.
+
+The asymmetry does bake `prepareSCMP`'s aliasing situation into
+`pkg/slayers`' serialize-mode predicates. That is acceptable: serialize
+mode is new (no existing clients), and the BFD sender (§8) — whose source
+address has a different origin — can be accommodated later by
+generalizing the amounts, not the shape.
 
 ### 4.4 `SerializeTo` spec changes (interface + implementations)
 
@@ -337,80 +386,148 @@ ensures   err != nil ==> err.ErrorMem()
     `nil`, §3.1);
   * a serialize-mode variant of `SerializeAddrHdr`'s spec (address bytes
     from the predicate instead of `ubuf`);
-  * verification of the `FixLengths` branch: `uint8(scnLen/LineLen)` is
-    bounded by the existing `scnLen <= MaxHdrLen` check;
-    `uint16(len(b.Bytes()) - scnLen)` needs a precondition bounding the
-    buffer contents (e.g. `ubuf == nil ==> len(b.UBuf()) + scnLen <= 0xffff`),
-    dischargeable at the call site because the buffer was `Clear()`ed and
-    the prepends are bounded by `MaxSCMPPacketLen` (1232) via the quote
-    truncation (`dataplane.go:5111-5114`);
+  * verification of the `FixLengths` branch: the field writes need the
+    full-permission serialize-mode `Mem` (above); the `uint8`/`uint16`
+    casts produce no obligations since CI disables overflow checking
+    (`overflow: '0'`), and serialize mode leaves `HdrLen`/`PayloadLen`
+    unconstrained, so no buffer-size bound is required;
   * the new IO postcondition (§4.6).
 
-### 4.5 `SerializeLayers`: trusted quantified spec vs. direct calls
+### 4.5 The trusted `SerializeLayers` spec
 
-**Option A — keep the call, write a trusted quantified spec** (fill in the
-existing skeleton in `writer.gobra:105-112` with per-layer `layerBufs`,
-pairwise-distinctness like `decodeLayers`, `Mem(layerBufs[i])` +
-`sl.Bytes(layerBufs[i], ...)` preserved for all `i`). This is sound and
-straightforward, **but it cannot deliver item 7 (§2)**: `gopacket` cannot
-import `slayers` (dependency direction), so no `SerializeLayers` post can
-mention `NextHdr`/`IsSupportedPkt`, and the `SerializableLayer` interface
-has no abstraction through which the output bytes' provenance can be
-stated generically. The IO fact would need a localized `assume` — i.e., the
-`TODO()` merely shrinks instead of disappearing.
-
-**Option B — inline the serialization in `prepareSCMP` (recommended).**
-Replace the single call with the equivalent reverse-order sequence (a
-marked `(VerifiedSCION)` change; `p.buffer.Clear()` already happens at
-`dataplane.go:5091`, and the skipped `PushLayer` bookkeeping is
-unobservable — `Layers()` is never called in the router and is
-`requires false` in the spec):
-
-```go
-// gopacket.SerializeLayers(p.buffer, sopts, scmpLayers...) is equivalent to:
-for i := len(scmpLayers) - 1; i >= 0; i-- {   // or fully unrolled
-    if err := scmpLayers[i].SerializeTo(p.buffer, sopts /*@, layerBuf(i) @*/); err != nil { ... }
-}
-```
-
-Unrolling fully is preferable for the proof: the `&scionL` and `&scmpH`
-calls become *concrete* method calls (using `(*SCION).SerializeTo`'s
-own, richer spec — including the IO postcondition and the mode-split
-permission amounts, neither of which fits through the interface),
-while `scmpP` and the payload still go through the interface with
-`Mem(nil)` / `Mem(quote)`. As a bonus, `*SCION` no longer *needs* to
-satisfy the (relaxed) `SerializableLayer` interface, though with the
-mode-split spec of §4.4 it still can.
-
-`bfdSend.Send` (`dataplane.go:4891`) can later adopt the same pattern (§8).
-
-### 4.6 Deriving `!IsSupportedPkt(result)`
-
-Add to `(*SCION).SerializeTo` a serialize-mode postcondition, e.g.:
+Since the call must stay, `writer.gobra:105-112` gets a real (trusted)
+quantified specification. Sketch:
 
 ```gobra
-ensures e == nil && ubuf == nil ==>
-    IsSupportedRawPkt(b.View()) ==
-        (s.PathType == scion.PathType && s.NextHdr != L4SCMP)
+requires  len(layerBufs) == len(layers)
+requires  w != nil && w.Mem()
+requires  sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
+requires  opts.FixLengths ==> forall i int :: { &layers[i] } 0 <= i && i < len(layers) ==>
+              layerBufs[i] == nil                       // cf. §4.4
+requires  forall i, j int :: { &layers[i], &layers[j] } 0 <= i && i < j && j < len(layers) ==>
+              layers[i] !== layers[j]                    // injectivity, cf. decodeLayers
+requires  acc(layerBufs, R20)
+requires  forall i int :: { &layers[i] } 0 <= i && i < len(layers) ==>
+              (acc(&layers[i], R20) && layers[i] != nil && layers[i].Mem(layerBufs[i]))
+requires  forall i int :: { &layers[i] } 0 <= i && i < len(layers) ==>
+              sl.Bytes(layerBufs[i], 0, len(layerBufs[i]))
+ensures   w.Mem() && sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
+ensures   acc(layerBufs, R20)
+ensures   forall i int :: { &layers[i] } 0 <= i && i < len(layers) ==>
+              (acc(&layers[i], R20) && layers[i].Mem(layerBufs[i]) &&
+               sl.Bytes(layerBufs[i], 0, len(layerBufs[i])))       // also on error, cf. §4.4
+ensures   err != nil ==> err.ErrorMem()
+ensures   err == nil && 0 < len(layers) ==> /* IO clause, §4.6 */
 ```
 
-This is provable in the body: the common-header write
-(`buf[4] = uint8(s.NextHdr)`, `buf[8] = uint8(s.PathType)`,
-`scion.go:258-262`) determines exactly the two bytes `IsSupportedRawPkt`
-inspects, and the subsequent `SerializeAddrHdr`/`Path.SerializeTo` calls only
-touch offsets ≥ `CmnHdrLen` (the existing `IsSupportedPktSubslice` lemma
-machinery, `scion_spec.gobra:522-534`, already frames this).
+Notes:
 
-In `prepareSCMP`: since SCION is serialized **last** (prepended at the
-front), the buffer state at its return *is* the final state;
-`scionL.NextHdr == L4SCMP` gives `!IsSupportedRawPkt(b.View())`; a small
-lemma `IsSupportedRawPkt(b.View()) == IsSupportedPkt(b.UBuf())`
-(`View() == seqs.ToSeqByte(UBuf())` by the `SerializeBuffer` spec,
-`writer.gobra:48-54`; both functions read bytes 4 and 8) transports it to
-`!IsSupportedPkt(p.buffer.UBuf())`, and `Bytes()` (`writer.gobra:56-59`)
-gives `result === p.buffer.UBuf()`. This mirrors the existing pattern in
-`updateSCIONLayer` (`dataplane.go:4784-4789`), just sourced from field
-values instead of `old(IsSupportedPkt(rawPkt))`.
+* In `prepareSCMP`, `layerBufs` becomes a real ghost sequence built
+  alongside `scmpLayers` — `[nil, nil, nil]`, extended with `quote` in the
+  `cause != nil` branch — replacing today's `nil` placeholder at
+  `dataplane.go:5118`.
+* Three layers share the buffer `nil`, so the quantified
+  `sl.Bytes(layerBufs[i], 0, 0)` demands three instances of
+  `sl.Bytes(nil, 0, 0)`. That is fine: the predicate body quantifies over
+  zero locations, so arbitrarily many full instances can be folded
+  (precedent: `fold sl.Bytes(nil, 0, 0)` in `packSCMP`,
+  `dataplane.go:2206`).
+* The spec is justified against the (unverified) gopacket implementation:
+  it calls `w.Clear()` and then `layers[i].SerializeTo(w, opts)` from last
+  to first, returning on the first error; with the strengthened interface
+  postconditions of §4.4 (unconditional `Mem`), every quantified resource
+  is restored on both success and failure. The `PushLayer` bookkeeping it
+  also performs is unobservable to the router (`Layers()` is
+  `requires false` and never called).
+* Since *all four* layers — including `&scionL` — are now dispatched
+  through the `SerializableLayer` interface, everything
+  `(*SCION).SerializeTo` needs must fit through the interface footprint:
+  full `Mem(ubuf)` (which the interface provides) plus
+  `sl.Bytes(ubuf, ...)`. This is precisely why the serialize-mode
+  `SCION.Mem(nil)` (§4.2/§4.3) must be *self-contained* (path resources,
+  address bytes, field permissions all inside), and `*SCION` must keep
+  satisfying the (relaxed) interface via its mode-split implementation
+  spec.
+
+### 4.6 Deriving `!IsSupportedPkt(result)` through the interface
+
+This is the delicate part under the no-code-change constraint: the fact
+"byte 4 of the output is `L4SCMP`" must flow from `(*SCION).SerializeTo`
+through two abstraction boundaries that cannot name SCION concepts —
+the `SerializableLayer` interface and the generic `SerializeLayers` spec
+(`gopacket` cannot import `slayers`). The route:
+
+1. **A gopacket-level twin of `IsSupportedRawPkt`.** Define in the
+   `gopacket` stubs a ghost, opaque
+   `pure func IsSupportedRawPkt(raw seq[byte]) bool` with the same body as
+   `slayers.IsSupportedRawPkt` (`scion_spec.gobra:514-520`) — it only
+   reads `raw[4]`/`raw[8]` against numeric constants, so no `slayers`
+   import is needed — plus a one-line bridging lemma in `slayers`
+   (`reveal` both) equating the two.
+2. **An abstraction hook on the interface.** Extend `SerializableLayer`
+   with a ghost pure method, e.g.
+
+   ```gobra
+   ghost
+   requires acc(Mem(ubuf), _)
+   decreases
+   pure SerializesToSupportedPkt(ghost ubuf []byte) bool
+   ```
+
+   with the documented meaning "if this layer serializes *outermost*, the
+   resulting packet is supported". Implementations:
+   `*SCION` returns, in serialize mode (`ubuf == nil`),
+   `s.PathType == scion.PathType && s.NextHdr != L4SCMP` over its fields,
+   and in decoded mode `IsSupportedPkt(ubuf)`; the SCMP message types,
+   `Payload`, and the BFD stub return `false` (they never serialize
+   outermost in verified code — see the caveat below).
+3. **Interface postconditions on `SerializeTo`**:
+   * *stability*: `err == nil ==> SerializesToSupportedPkt(ubuf) ==
+     old(SerializesToSupportedPkt(ubuf))` — provable for `*SCION` because
+     serialization never writes `NextHdr`/`PathType` (the `FixLengths`
+     branch only writes `HdrLen`/`PayloadLen`); trivial for layers with a
+     constant hook. Without this clause the hook's value would be unknown
+     after the call (the caller only gets `Mem(ubuf)` back, not field
+     equalities).
+   * *on `*SCION` only* (implementation spec, used for the implementation
+     proof): `err == nil ==> gopacket.IsSupportedRawPkt(b.View()) ==
+     SerializesToSupportedPkt(ubuf)`. This is provable in the body: the
+     common-header write (`buf[4] = uint8(s.NextHdr)`,
+     `buf[8] = uint8(s.PathType)`, `scion.go:258-262`) determines exactly
+     the two inspected bytes, and the later
+     `SerializeAddrHdr`/`Path.SerializeTo` calls only touch offsets
+     ≥ `CmnHdrLen` (the existing `IsSupportedPktSubslice` machinery,
+     `scion_spec.gobra:522-534`, and the serialize-mode analog of
+     `IsSupportedPktLemma`, `scion.go:267-270`, frame this).
+4. **Forwarding through `SerializeLayers`** (trusted):
+
+   ```gobra
+   ensures err == nil && 0 < len(layers) ==>
+       IsSupportedRawPkt(w.View()) == layers[0].SerializesToSupportedPkt(layerBufs[0])
+   ```
+
+   Justification: the implementation serializes `layers[0]` *last*, so the
+   buffer state at that call's return is the final state, and for the
+   network-header layer the clause is exactly its per-implementation
+   postcondition from step 3. **Caveat**: as stated, the trusted clause
+   asserts this for *any* first layer, including ones (e.g. `Payload`)
+   whose hook cannot truthfully describe the final bytes. Since the spec
+   is trusted either way, this is a documented soundness assumption
+   ("only meaningful when `layers[0]` is the outermost network-header
+   layer"); it can be made self-guarding by adding a second hook
+   (`ghost pure IsNetworkHeaderLayer() bool`, `true` only for `*SCION`)
+   and conditioning the clause on it.
+5. **Back in `prepareSCMP`**: `scionL.NextHdr == L4SCMP` (set at
+   `dataplane.go:5085`, stable by step 3) makes the hook `false`, so
+   `!gopacket.IsSupportedRawPkt(p.buffer.View())`; the bridging lemma and
+   a small `View`/`UBuf` lemma
+   (`View() == seqs.ToSeqByte(UBuf())`, `writer.gobra:48-54`; both
+   functions read bytes 4 and 8) yield
+   `!slayers.IsSupportedPkt(p.buffer.UBuf())`, and `Bytes()`
+   (`writer.gobra:56-59`) gives `result === p.buffer.UBuf()` — closing
+   postcondition `dataplane.go:4917-4918`. This mirrors the pattern in
+   `updateSCIONLayer` (`dataplane.go:4784-4789`), sourced from field
+   values instead of `old(IsSupportedPkt(rawPkt))`.
 
 ---
 
@@ -428,15 +545,17 @@ values instead of `old(IsSupportedPkt(rawPkt))`.
 * **Proof work in the body (post-`TODO()` region)**:
   1. re-fold `revPath.Mem(rawPath)` → `revPath.Mem(nil)`;
   2. fold serialize-mode `scionL.Mem(nil)` after the field assignments and
-     `Set{Dst,Src}Addr` calls (the `SetSrcAddr` ghost argument and/or code
-     adapted per §4.3); fold `ChecksumMem(scionL)` and then
+     `Set{Dst,Src}Addr` calls (the `SetSrcAddr` ghost argument flipped to
+     wildcard mode and the `SetDstAddr`/`SetSrcAddr` postconditions
+     strengthened per §4.3); fold `ChecksumMem(scionL)` and then
      `scmpH.Mem(nil)` after `SetNetworkLayerForChecksum`;
   3. discharge the `hdrLen` computation (`AddrHdrLen(nil, ...)`,
-     `Path.Len(nil)` through pure helper functions over `Mem(nil)`), and
-     the `MaxSCMPPacketLen` bound for §4.4's buffer-size precondition;
-  4. serialization calls per §4.5 Option B, restoring all predicates on
-     both success and error paths (possible thanks to the strengthened
-     error postconditions, §4.4);
+     `Path.Len(nil)` through pure helper functions over `Mem(nil)`);
+  4. build the ghost `layerBufs` sequence alongside `scmpLayers`
+     (`[nil, nil, nil]`, plus `quote` in the `cause != nil` branch) and
+     invoke `SerializeLayers` against the new trusted spec (§4.5); all
+     predicates come back on both success and error paths thanks to the
+     strengthened error postconditions (§4.4);
   5. at the end: unfold the fresh layers' predicates (they die with the
      function), apply the `SrcAddr()` magic wand, recombine all `ub`
      ranges to return `sl.Bytes(ub, 0, len(ub))` and
@@ -456,17 +575,24 @@ budget accordingly; perf regressions in `dataplane.go` are a real risk).
    proofs and `LayerPayload` specs. Small/medium; contained in
    `pkg/slayers`.
 2. **M2 — serialize-mode `*SCION.Mem`** (§4.2) + `ChecksumMem`
-   re-fractioning and the address-permission decision (§4.3). Medium;
-   touches many `SCION` lemmas' guards (`ub != nil`).
+   re-fractioning, the asymmetric address-byte amounts, and the
+   `SetDstAddr`/`SetSrcAddr` postcondition strengthening (§4.3). Medium;
+   touches many `SCION` lemmas' guards (`ub != nil`). Start with a smoke
+   test that a wildcard conjunct inside a predicate body folds/unfolds as
+   expected.
 3. **M3 — `(*SCION).SerializeTo`**: mode-split spec, `SerializeAddrHdr`
-   serialize-mode, verify the `FixLengths` branch (bounds!), add the §4.6
-   postcondition. This is the hardest single item. Large.
-4. **M4 — interface updates** in `writer.gobra` (§4.4) + re-verify the
-   closed set of implementers; adjust the `Payload`/`BFD` trusted stubs.
-   Small/medium.
+   serialize-mode, verify the `FixLengths` branch, prove the
+   hook postcondition of §4.6 (step 3). This is the hardest single item.
+   Large.
+4. **M4 — interface + `SerializeLayers` spec updates** in `writer.gobra`
+   (§4.4, §4.5, §4.6 steps 1–2, 4): relax `FixLengths`, strengthen error
+   postconditions, add the ghost hook, the gopacket-level
+   `IsSupportedRawPkt` twin + bridging lemma, and the quantified trusted
+   `SerializeLayers` spec; re-verify the closed set of implementers;
+   adjust the `Payload`/`BFD` trusted stubs. Medium.
 5. **M5 — `prepareSCMP` itself** (§5): spec extensions, call-site folds,
-   inlined serialization (§4.5 B), drop the `TODO()`. Large, but mostly
-   mechanical once M1–M4 are in; expect iteration on router CI time.
+   ghost `layerBufs`, drop the `TODO()`. Large, but mostly mechanical once
+   M1–M4 are in; expect iteration on router CI time.
 6. **M6 — cleanup**: remove `Unreachable()` from the `FixLengths` branch,
    revisit `bfdSend` (§8), document the serialize-mode idiom.
 
@@ -475,15 +601,25 @@ budget accordingly; perf regressions in `dataplane.go` are a real risk).
 * **Verification time** of `dataplane.go` (already the 6 h/`chop 10`
   package). Mitigate with `outline(...)` blocks and `opaque` helper
   functions for the new fold-heavy regions.
-* **`FixLengths` overflow bounds** require threading a buffer-size bound
-  through a *trusted-interface* boundary (`SerializeBuffer` is a trusted
-  spec); double-check `PrependBytes`' postconditions suffice to track
-  `len(UBuf())` across the four prepends.
+* **Wildcard permission amounts inside predicate bodies** (§4.3) and
+  wildcard-mode folds of `net.IPAddr.Mem()` are less-trodden Gobra
+  territory; validate with a small experiment before building M2 on them.
+  Fallback: keep the `RawSrcAddr` bytes *outside* the predicates entirely
+  and weaken `SerializeAddrHdr`/`computeChecksum`'s specs to take them as
+  separate wildcard clauses — workable because those specs are on concrete
+  methods, but it makes the serialize-mode `SCION.Mem` non-self-contained,
+  which conflicts with interface dispatch (§4.5); in that case the src
+  bytes would have to ride in a second, `slayers`-internal predicate
+  referenced from `Mem`'s serialize branch.
 * **Gobra interface-implementation proofs** with mode-split permission
-  amounts (`ubuf == nil ? full : R0`) are unusual; if the implementation
-  proof for `*SCION` becomes brittle, fall back to dropping
-  `*SCION implements gopacket.SerializableLayer` (safe under §4.5 B since
-  the only interface-dispatched uses are `scmpP` and the payload).
+  amounts (`ubuf == nil ? full : R0`) and ghost pure interface methods are
+  unusual; unlike in a design where the SCION call is concrete, `*SCION`
+  **must** remain a `SerializableLayer` implementer here, so brittleness
+  in the implementation proof has no cheap fallback — prototype early
+  (M4 before M3 completion is fine, the two are independent).
+* **The trusted `SerializeLayers` IO clause** (§4.6 step 4) is a genuine
+  (if small) soundness assumption about which layer is outermost; gate it
+  with the `IsNetworkHeaderLayer()` hook to keep it honest.
 * **`SrcAddr()`/`SetDstAddr` aliasing**: the `RawDstAddr` fraction
   originates from `acc(p.scionLayer.Mem(ub), R4)`-governed memory via a
   magic wand; getting the fraction arithmetic right (so that the wand can
