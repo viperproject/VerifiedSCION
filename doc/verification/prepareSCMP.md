@@ -656,11 +656,24 @@ budget accordingly; perf regressions in `dataplane.go` are a real risk).
      (`bfdSend.Send` is trusted, `prepareSCMP`'s call is behind the
      `TODO()`), so this lands without new obligations.
    The §4.3 items are also resolved on this branch:
-   * `SetDstAddr` (IP case) no longer applies packAddr's magic wand
-     internally; it exposes `acc(sl.Bytes(s.RawDstAddr, ...), R20)` plus
-     the wand `... --* acc(dst.Mem(), R20)` to the caller (its only
-     verified caller is prepareSCMP's currently-dead code, so the
-     post-shape change is safe), alongside `acc(dst.Mem(), R19+R20)`;
+   * ~~expose the `RawDstAddr` byte fraction through `SetDstAddr`'s
+     postcondition~~ — **attempted and reverted**: a wand whose assertion
+     dereferences a field (`s.RawDstAddr`) is not self-framing, so it can
+     neither be stated in the postcondition (Silicon cannot match it
+     against packAddr's variable-shaped instance: *"Magic wand instance
+     not found"*) nor re-`package`d (*"Permission to s.RawDstAddr might
+     not suffice"*), and a ghost out-parameter would force restructuring
+     the real `if err := ...` call sites. `SetDstAddr` keeps its original
+     `acc(dst.Mem(), R18)` contract. Instead, **prepareSCMP (M5) carves
+     the byte fraction caller-side**: unfold `acc(dst.Mem(), R20)`,
+     convert the element permissions of `dst.IP` into permissions over
+     `s.RawDstAddr` via the (active) pointwise aliasing postconditions of
+     `SetDstAddr` (`scion.go:678-685`, three cases: IPv4 direct,
+     IPv6-mapped at offset 12, IPv6 direct), fold
+     `sl.Bytes(s.RawDstAddr, ...)`, and package the restoring wand over
+     local variables — exactly the verified `addEndhostPort` pattern
+     (`router/dataplane.go:4734-4755`). This should live in a dedicated
+     slayers lemma so the case split is proven once;
    * `SetSrcAddr`'s wildcard mode needs **no** component-wise
      precondition after all: folding `net.IPAddr.Mem()` at wildcard
      amount is legal (precedent: the wildcard branches inside `packAddr`

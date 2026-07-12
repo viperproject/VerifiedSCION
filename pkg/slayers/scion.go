@@ -674,16 +674,7 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ ensures   res == nil && wildcard && isIP(dst) ==> acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), _)
 // @ ensures   res == nil && wildcard && isHostSVC(dst) ==> sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
 // @ ensures   res == nil && !wildcard && isHostSVC(dst) ==> sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
-// @ ensures   res == nil && !wildcard && isHostSVC(dst) ==> acc(dst.Mem(), R18)
-// (VerifiedSCION) In the IP case, a fraction of the bytes underlying
-// RawDstAddr is exposed to the caller (together with a magic wand to give
-// it back), instead of returning acc(dst.Mem(), R18) in one piece. This is
-// needed by the router's prepareSCMP, which must store that fraction in
-// the fresh header's MemSerialize/ChecksumMem predicates while serializing.
-// @ ensures   res == nil && !wildcard && isIP(dst) ==> acc(dst.Mem(), R19) && acc(dst.Mem(), R20)
-// @ ensures   res == nil && !wildcard && isIP(dst) ==>
-// @ 	acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20) &&
-// @ 	(acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20) --* acc(dst.Mem(), R20))
+// @ ensures   res == nil && !wildcard ==> acc(dst.Mem(), R18)
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && isConvertibleToIPv4(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[12+i]))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (!isIPv4(dst) && !isIPv6(dst) ==> forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> &s.RawDstAddr[i] == &dst.(*net.IPAddr).IP[i]))
@@ -699,19 +690,10 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 	var err error
 	var verScionTmp []byte
 	s.DstAddrType, verScionTmp, err = packAddr(dst /*@ , wildcard @*/)
-	// (VerifiedSCION) The magic wand returned by packAddr is deliberately
-	// not applied here: it is passed on to the caller (cf. the
-	// postconditions), so that the byte fraction of the raw address
-	// remains directly available during serialization. It is re-packaged
-	// below so that the instance held matches the shape stated in the
-	// postcondition (a wand over s.RawDstAddr instead of over packAddr's
-	// return value).
-	s.RawDstAddr = verScionTmp
 	// @ ghost if !wildcard && err == nil && isIP(dst) {
-	// @ 	package acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20) --* acc(dst.Mem(), R20) {
-	// @ 		apply acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(dst.Mem(), R20)
-	// @ 	}
+	// @   apply acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(dst.Mem(), R20)
 	// @ }
+	s.RawDstAddr = verScionTmp
 	return err
 }
 
