@@ -150,10 +150,11 @@ requires  sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
 requires  len(layerBufs) == len(layers)
 requires  0 < len(layers)
 requires  acc(layerBufs, R50)
-requires  forall i, j int :: { &layers[i], &layers[j] } 0 <= i && i < j && j < len(layers) ==>
-	layers[i] !== layers[j]
 requires  forall i int :: { &layers[i] } 0 <= i && i < len(layers) ==>
 	(acc(&layers[i], R50) && layers[i] != nil)
+// Due to Viper's very strict injectivity constraints (cf. decodeLayers):
+requires  forall i, j int :: { &layers[i], &layers[j] } 0 <= i && i < j && j < len(layers) ==>
+	layers[i] !== layers[j]
 requires  layers[0].MemSerialize()
 requires  forall i int :: { &layers[i] } 1 <= i && i < len(layers) ==>
 	layers[i].Mem(layerBufs[i])
