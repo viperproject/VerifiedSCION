@@ -18,6 +18,7 @@ package slayers
 
 import (
 	"net"
+	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
 	"github.com/scionproto/scion/pkg/addr"
 )
@@ -71,6 +72,10 @@ requires acc(&s.DstAddrType)
 requires acc(dst.Mem())
 func testDstSetter(s *SCION, dst *net.IPAddr) {
 	res := s.SetDstAddr(dst, false)
+	// SetDstAddr loans a fraction of the bytes underlying s.RawDstAddr to
+	// the caller; applying the returned magic wand gives it back, after
+	// which the full permission to dst.Mem() is restored.
+	apply acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20) --* acc(dst.Mem(), R20)
 	// unfolding dst.Mem() grants us permission to s.RawDstAddr since they are aliased
 	unfold dst.Mem()
 	assert forall i int :: { &s.RawDstAddr[i] } 0 <= i && i < len(s.RawDstAddr) ==> acc(&s.RawDstAddr[i])

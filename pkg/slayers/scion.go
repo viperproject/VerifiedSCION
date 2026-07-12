@@ -702,8 +702,16 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 	// (VerifiedSCION) The magic wand returned by packAddr is deliberately
 	// not applied here: it is passed on to the caller (cf. the
 	// postconditions), so that the byte fraction of the raw address
-	// remains directly available during serialization.
+	// remains directly available during serialization. It is re-packaged
+	// below so that the instance held matches the shape stated in the
+	// postcondition (a wand over s.RawDstAddr instead of over packAddr's
+	// return value).
 	s.RawDstAddr = verScionTmp
+	// @ ghost if !wildcard && err == nil && isIP(dst) {
+	// @ 	package acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20) --* acc(dst.Mem(), R20) {
+	// @ 		apply acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(dst.Mem(), R20)
+	// @ 	}
+	// @ }
 	return err
 }
 
