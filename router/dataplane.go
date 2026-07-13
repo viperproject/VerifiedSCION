@@ -5224,6 +5224,10 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// @ assert scionL.AddrHdrLenSpecInternal() <= 48
 		// @ revPath.LenSpecBound(nil)
 		// @ assert revPath.LenSpec(nil) <= 4 + 3*8 + 64*12
+		// The path length in hdrLen was computed through the path.Path
+		// interface; bridge it to the concrete *scion.Decoded bound.
+		// @ assert scionL.Path === revPath
+		// @ assert scionL.Path.LenSpec(nil) == revPath.LenSpec(nil)
 		maxQuoteLen := slayers.MaxSCMPPacketLen - hdrLen
 		// @ assert 0 <= maxQuoteLen
 		if len(quote) > maxQuoteLen {
