@@ -693,6 +693,11 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res error) {
 	var err error
 	var verScionTmp []byte
+	// (VerifiedSCION) packAddr takes the resources of wildcard IP
+	// addresses component-wise (cf. its precondition).
+	// @ ghost if wildcard && isIP(dst) {
+	// @ 	unfold acc(dst.Mem(), _)
+	// @ }
 	s.DstAddrType, verScionTmp, err = packAddr(dst /*@ , wildcard @*/)
 	// @ ghost if !wildcard && err == nil && isIP(dst) {
 	// @   apply acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(dst.Mem(), R20)
