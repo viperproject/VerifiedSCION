@@ -200,6 +200,27 @@ func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
 	fold d.Mem(ubuf2)
 }
 
+// LenSpecBound surfaces the upper bound on a decoded path's serialized
+// length that follows from the bounds stored in Base.Mem (NumINF <=
+// MaxINFs, NumHops <= MaxHops). It exists because the bound is buried two
+// predicate unfoldings deep and is not derivable from LenSpec's
+// definition alone at call sites.
+ghost
+requires d.Mem(ub)
+ensures  d.Mem(ub)
+ensures  d.LenSpec(ub) <= MetaLen + MaxINFs*path.InfoLen + MaxHops*path.HopLen
+decreases
+func (d *Decoded) LenSpecBound(ghost ub []byte) {
+	ghost l := d.LenSpec(ub)
+	unfold d.Mem(ub)
+	ghost numINF := unfolding d.Base.Mem() in d.Base.NumINF
+	ghost numHops := unfolding d.Base.Mem() in d.Base.NumHops
+	assert unfolding d.Base.Mem() in (numINF <= MaxINFs && numHops <= MaxHops)
+	assert d.Base.Len() == MetaLen + numINF*path.InfoLen + numHops*path.HopLen
+	assert l == d.Base.Len()
+	fold d.Mem(ub)
+}
+
 // The resources captured by Mem are independent of the buffer parameter,
 // so a Decoded path can be re-associated with an arbitrary other buffer,
 // in particular with nil. This is used to serialize a decoded path

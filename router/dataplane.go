@@ -5222,6 +5222,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// length to remain: the address header is at most 48 bytes long
 		// and the reversed path at most 796 bytes.
 		// @ assert scionL.AddrHdrLenSpecInternal() <= 48
+		// @ revPath.LenSpecBound(nil)
 		// @ assert revPath.LenSpec(nil) <= 4 + 3*8 + 64*12
 		maxQuoteLen := slayers.MaxSCMPPacketLen - hdrLen
 		// @ assert 0 <= maxQuoteLen
