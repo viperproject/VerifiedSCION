@@ -360,6 +360,7 @@ func (h HostSVC) Pack() (res []byte) {
 
 // @ requires pad >= 0
 // @ ensures acc(res)
+// @ ensures len(res) == HostLenSVC + pad
 // @ decreases
 func (h HostSVC) PackWithPad(pad int) (res []byte) {
 	out := make([]byte, HostLenSVC+pad)

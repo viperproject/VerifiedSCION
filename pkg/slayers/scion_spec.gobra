@@ -301,16 +301,24 @@ requires acc(&s.PathType) && 0 <= s.PathType && s.PathType < path.MaxPathType
 requires acc(&s.DstAddrType) && acc(&s.SrcAddrType)
 requires acc(&s.Path) && s.Path != nil && s.Path.Mem(nil)
 requires acc(&s.BaseLayer)
-requires acc(&s.DstIA, R20) && acc(&s.SrcIA, R20)
-requires acc(&s.RawDstAddr, R20) && acc(&s.RawSrcAddr, R20)
-requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// Exactly the amounts stored in MemSerialize and ChecksumMem are
+// consumed (R25 each), so that the caller keeps any remainder and can
+// recover the full fractions it started from by unfolding the two
+// predicates again.
+requires acc(&s.DstIA, R25) && acc(&s.SrcIA, R25)
+requires acc(&s.DstIA, R25) && acc(&s.SrcIA, R25)
+requires acc(&s.RawDstAddr, R25) && acc(&s.RawSrcAddr, R25)
+requires acc(&s.RawDstAddr, R25) && acc(&s.RawSrcAddr, R25)
+requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R25)
+requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R25)
 requires acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
 requires acc(&s.pathPool) && acc(&s.pathPoolRaw)
-requires PathPoolMem(s.pathPool, s.pathPoolRaw)
+requires s.pathPool == nil && s.pathPoolRaw == nil
 ensures  s.MemSerialize() && s.ChecksumMem()
 decreases
 func (s *SCION) FoldFreshMemSerializeWithChecksumMem() {
+	fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	fold s.MemSerialize()
 	fold s.ChecksumMem()
 }
@@ -330,6 +338,67 @@ pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
 	(ub != nil ==> (0 <= breakPoint && breakPoint <= len(ub) &&
 		b.Contents === ub[:breakPoint] &&
 		b.Payload  === ub[breakPoint:]))
+}
+
+// ExtractIPBytes converts a fraction of an IP-typed address' resources
+// into a byte predicate over `raw`, a slice that aliases the address'
+// underlying IP buffer as described by SetDstAddr's postconditions (either
+// the whole buffer or, for IPv4-in-IPv6 addresses, its 4-byte suffix).
+// The returned magic wand gives the fraction back. This follows the
+// pattern of the router's addEndhostPort.
+ghost
+requires typeOf(dst) == type[*net.IPAddr]
+requires acc(dst.Mem(), R20)
+requires unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==>
+	len(raw) == len(dst.(*net.IPAddr).IP) &&
+	(forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> &raw[i] == &dst.(*net.IPAddr).IP[i]))
+requires unfolding acc(dst.Mem(), R20) in ((isIPv6(dst) && isConvertibleToIPv4(dst)) ==>
+	len(dst.(*net.IPAddr).IP) == len(raw) + 12 &&
+	(forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> &raw[i] == &dst.(*net.IPAddr).IP[12+i]))
+requires unfolding acc(dst.Mem(), R20) in ((isIPv6(dst) && !isConvertibleToIPv4(dst)) ==>
+	len(dst.(*net.IPAddr).IP) == len(raw) &&
+	(forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> &raw[i] == &dst.(*net.IPAddr).IP[i]))
+requires unfolding acc(dst.Mem(), R20) in ((!isIPv4(dst) && !isIPv6(dst)) ==>
+	len(raw) == len(dst.(*net.IPAddr).IP) &&
+	(forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> &raw[i] == &dst.(*net.IPAddr).IP[i]))
+ensures  acc(sl.Bytes(raw, 0, len(raw)), R20)
+ensures  acc(sl.Bytes(raw, 0, len(raw)), R20) --* acc(dst.Mem(), R20)
+decreases
+func ExtractIPBytes(dst net.Addr, raw []byte) {
+	unfold acc(dst.Mem(), R20)
+	assert forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R20)
+	fold acc(sl.Bytes(raw, 0, len(raw)), R20)
+	package acc(sl.Bytes(raw, 0, len(raw)), R20) --* acc(dst.Mem(), R20) {
+		unfold acc(sl.Bytes(raw, 0, len(raw)), R20)
+		fold acc(dst.Mem(), R20)
+	}
+}
+
+// ExtractAccSrc is the analog of ExtractAcc for the source address.
+ghost
+requires acc(s.Mem(ub), R15)
+ensures  acc(s, R16)
+ensures  s.SrcAddrType == T4Svc ==> len(s.RawSrcAddr) >= addr.HostLenSVC
+ensures  0 <= start && start <= end && end <= len(ub)
+ensures  s.RawSrcAddr === ub[start:end]
+ensures  end - start == s.SrcAddrType.Length()
+ensures  s.SrcAddrType.Length() == 4 || s.SrcAddrType.Length() == 8 ||
+	s.SrcAddrType.Length() == 12 || s.SrcAddrType.Length() == 16
+ensures  acc(s, R16) --* acc(s.Mem(ub), R15)
+decreases
+func (s *SCION) ExtractAccSrc(ghost ub []byte) (start, end int) {
+	unfold acc(s.Mem(ub), R16)
+	unfold acc(s.HeaderMem(ub[CmnHdrLen:]), R16)
+	start = CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()
+	end = CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()
+	assert s.RawSrcAddr === ub[start:end]
+	package acc(s, R16) --* acc(s.Mem(ub), R15) {
+		unfold acc(s.Mem(ub), R16)
+		unfold acc(s.HeaderMem(ub[CmnHdrLen:]), R16)
+		fold acc(s.HeaderMem(ub[CmnHdrLen:]), R15)
+		fold acc(s.Mem(ub), R15)
+	}
+	return start, end
 }
 
 ghost

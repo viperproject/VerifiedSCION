@@ -435,3 +435,51 @@ func (s *SCMPPacketTooBig) FoldFreshMem() {
 	fold s.BaseLayer.Mem(nil, 4)
 	fold s.Mem(nil)
 }
+
+// FoldFreshSCMPPayloadMem folds the Mem(nil) predicate of a freshly
+// constructed SCMP payload layer held behind the SerializableLayer
+// interface. It exists because the router's packSCMP receives the payload
+// as an interface value constructed inline at its call sites, where no
+// fold can be performed. The supported types are exactly the ones the
+// router constructs.
+ghost
+requires scmpP != nil
+requires typeOf(scmpP) == type[*SCMPParameterProblem] ||
+	typeOf(scmpP) == type[*SCMPDestinationUnreachable] ||
+	typeOf(scmpP) == type[*SCMPTraceroute] ||
+	typeOf(scmpP) == type[*SCMPExternalInterfaceDown] ||
+	typeOf(scmpP) == type[*SCMPInternalConnectivityDown]
+requires typeOf(scmpP) == type[*SCMPParameterProblem] ==>
+	(acc(&scmpP.(*SCMPParameterProblem).Pointer) && acc(&scmpP.(*SCMPParameterProblem).BaseLayer) &&
+	scmpP.(*SCMPParameterProblem).Contents == nil && scmpP.(*SCMPParameterProblem).Payload == nil)
+requires typeOf(scmpP) == type[*SCMPDestinationUnreachable] ==>
+	(acc(&scmpP.(*SCMPDestinationUnreachable).BaseLayer) &&
+	scmpP.(*SCMPDestinationUnreachable).Contents == nil && scmpP.(*SCMPDestinationUnreachable).Payload == nil)
+requires typeOf(scmpP) == type[*SCMPTraceroute] ==>
+	(acc(&scmpP.(*SCMPTraceroute).Identifier) && acc(&scmpP.(*SCMPTraceroute).Sequence) &&
+	acc(&scmpP.(*SCMPTraceroute).IA) && acc(&scmpP.(*SCMPTraceroute).Interface) &&
+	acc(&scmpP.(*SCMPTraceroute).BaseLayer) &&
+	scmpP.(*SCMPTraceroute).Contents == nil && scmpP.(*SCMPTraceroute).Payload == nil)
+requires typeOf(scmpP) == type[*SCMPExternalInterfaceDown] ==>
+	(acc(&scmpP.(*SCMPExternalInterfaceDown).IA) && acc(&scmpP.(*SCMPExternalInterfaceDown).IfID) &&
+	acc(&scmpP.(*SCMPExternalInterfaceDown).BaseLayer) &&
+	scmpP.(*SCMPExternalInterfaceDown).Contents == nil && scmpP.(*SCMPExternalInterfaceDown).Payload == nil)
+requires typeOf(scmpP) == type[*SCMPInternalConnectivityDown] ==>
+	(acc(&scmpP.(*SCMPInternalConnectivityDown).IA) && acc(&scmpP.(*SCMPInternalConnectivityDown).Ingress) &&
+	acc(&scmpP.(*SCMPInternalConnectivityDown).Egress) && acc(&scmpP.(*SCMPInternalConnectivityDown).BaseLayer) &&
+	scmpP.(*SCMPInternalConnectivityDown).Contents == nil && scmpP.(*SCMPInternalConnectivityDown).Payload == nil)
+ensures  scmpP.Mem(nil)
+decreases
+func FoldFreshSCMPPayloadMem(scmpP gopacket.SerializableLayer) {
+	if typeOf(scmpP) == type[*SCMPParameterProblem] {
+		scmpP.(*SCMPParameterProblem).FoldFreshMem()
+	} else if typeOf(scmpP) == type[*SCMPDestinationUnreachable] {
+		scmpP.(*SCMPDestinationUnreachable).FoldFreshMem()
+	} else if typeOf(scmpP) == type[*SCMPTraceroute] {
+		scmpP.(*SCMPTraceroute).FoldFreshMem()
+	} else if typeOf(scmpP) == type[*SCMPExternalInterfaceDown] {
+		scmpP.(*SCMPExternalInterfaceDown).FoldFreshMem()
+	} else {
+		scmpP.(*SCMPInternalConnectivityDown).FoldFreshMem()
+	}
+}

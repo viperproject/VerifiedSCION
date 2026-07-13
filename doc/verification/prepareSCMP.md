@@ -708,6 +708,27 @@ budget accordingly; perf regressions in `dataplane.go` are a real risk).
 5. **M5 — `prepareSCMP` itself** (§5): spec extensions, call-site folds,
    ghost `layerBufs`, drop the `TODO()`. Large, but mostly mechanical once
    M1–M4 are in; expect iteration on router CI time.
+   **Status: implemented on this branch** (pending CI iteration): the
+   `TODO()` is gone. Key mechanisms beyond the plan text:
+   * `(*Decoded).ChangeUbuf` re-associates the reversed path with `nil`
+     (`Widen` requires a superslice and does not apply);
+   * `ExtractAccSrc` + `SrcAddr`'s wand carve the source-address bytes
+     out of `ub` (mirroring `resolveLocalDst`), and `ExtractIPBytes`
+     carves the destination-address byte fraction out of `srcA`;
+   * `SetSrcAddr` is called in wildcard mode with a component-wise
+     precondition (folding `net.IPAddr.Mem()` at a concrete amount is
+     impossible for the wildcard-held internal IP); `net.IP.Mem()`'s
+     length constraint (4 or 16) closes the checksum-evenness gap via
+     `getInternalIPMem`;
+   * `packSCMP` receives the payload's resources field-wise (the payload
+     is built inline at its ~13 call sites, where nothing can be folded)
+     and folds `Mem(nil)` via `slayers.FoldFreshSCMPPayloadMem`;
+   * `acc(&p.rawPkt, R51) && p.rawPkt === ub` is threaded through the ten
+     functions between `process`/`processPkt` (which already carry the
+     relation) and `packSCMP`, for the quote's byte fraction;
+   * `SerializeLayers`' ghost `layerBufs` became a `seq[[]byte]` (no
+     permissions needed) and the payload buffers are required only at
+     fraction R55, so the quote can be carved from the split `ub`.
 6. **M6 — cleanup**: remove `Unreachable()` from the `FixLengths` branch,
    revisit `bfdSend` (§8), document the serialize-mode idiom.
 

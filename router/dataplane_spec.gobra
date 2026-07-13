@@ -491,6 +491,21 @@ func (d *DataPlane) getInternal() {
 }
 
 ghost
+requires acc(d.Mem(), _)
+ensures  acc(&d.internalIP, _)
+ensures  d.internalIP != nil ==> (len(d.internalIP) == 4 || len(d.internalIP) == 16)
+ensures  d.internalIP != nil ==>
+	forall i int :: { &d.internalIP[i] } 0 <= i && i < len(d.internalIP) ==> acc(&d.internalIP[i], _)
+decreases
+func (d *DataPlane) getInternalIPMem() {
+	unfold acc(d.Mem(), _)
+	unfold acc(internalIPInv(d.internalIP), _)
+	ghost if d.internalIP != nil {
+		unfold acc(d.internalIP.Mem(), _)
+	}
+}
+
+ghost
 requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
 ensures  acc(sl.Bytes(*d.key, 0, len(*d.key)), _)

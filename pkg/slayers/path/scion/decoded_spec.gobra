@@ -200,4 +200,17 @@ func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
 	fold d.Mem(ubuf2)
 }
 
+// The resources captured by Mem are independent of the buffer parameter,
+// so a Decoded path can be re-associated with an arbitrary other buffer,
+// in particular with nil. This is used to serialize a decoded path
+// without an underlying buffer (cf. prepareSCMP in the router).
+ghost
+requires d.Mem(ubuf1)
+ensures  d.Mem(ubuf2)
+decreases
+func (d *Decoded) ChangeUbuf(ubuf1, ubuf2 []byte) {
+	unfold d.Mem(ubuf1)
+	fold d.Mem(ubuf2)
+}
+
 /**** End of Lemmas ****/
