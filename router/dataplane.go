@@ -2592,6 +2592,8 @@ func (p *scionPacketProcessor) validateIngressID( /*@ ghost ubScionL []byte, gho
 // @ ensures   reserr == nil ==> old(slayers.IsSupportedPkt(ubScionL)) == slayers.IsSupportedPkt(ubScionL)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isValUnsupported
+// @ requires  acc(&p.rawPkt, R51) && p.rawPkt === ubScionL
+// @ ensures   acc(&p.rawPkt, R51)
 // @ decreases
 func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	// @ assert unfolding acc(p.scionLayer.Mem(ubScionL), R56) in slayers.CmnHdrLen <= len(ubScionL)
@@ -3838,6 +3840,8 @@ func (p *scionPacketProcessor) validateEgressUp(
 // @ ensures   reserr == nil ==> old(slayers.IsSupportedPkt(ub)) == slayers.IsSupportedPkt(ub)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isValUnsupported
+// @ requires  acc(&p.rawPkt, R51) && p.rawPkt === ub
+// @ ensures   acc(&p.rawPkt, R51)
 // @ decreases
 func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	// @ reveal p.EqAbsHopField(absPkt(ub))
@@ -3968,6 +3972,8 @@ func (p *scionPacketProcessor) ingressRouterAlertFlag() (res *bool) {
 // @ ensures reserr == nil ==> old(slayers.IsSupportedPkt(ub)) == slayers.IsSupportedPkt(ub)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	absIO_val(respr.OutPkt, respr.EgressID).isValUnsupported
+// @ requires  acc(&p.rawPkt, R51) && p.rawPkt === ub
+// @ ensures   acc(&p.rawPkt, R51)
 // @ decreases
 func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, ghost ubLL []byte, ghost startLL int, ghost endLL int @*/ ) (respr processResult, reserr error) {
 	// @ reveal p.EqAbsHopField(absPkt(ub))
@@ -5150,7 +5156,10 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ revPath.ChangeUbuf(rawPath, nil)
 	scionL.PathType = revPath.Type( /*@ nil @*/ )
 	scionL.Path = revPath
+	// SrcIA's permission sits inside the folded HeaderMem sub-predicate.
+	// @ unfold acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4)
 	scionL.DstIA = p.scionLayer.SrcIA
+	// @ fold acc(p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]), R4)
 	// @ p.d.getLocalIA()
 	scionL.SrcIA = p.d.localIA
 	// @ fold acc(p.scionLayer.Mem(ub), R4)
