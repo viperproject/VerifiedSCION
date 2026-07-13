@@ -205,20 +205,21 @@ func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
 // MaxINFs, NumHops <= MaxHops). It exists because the bound is buried two
 // predicate unfoldings deep and is not derivable from LenSpec's
 // definition alone at call sites.
+// The lemma takes only a fraction so that the caller's retained fraction
+// anchors the predicate snapshot: the value of LenSpec then provably
+// survives the unfold/refold inside this lemma (cf. Len, which relates
+// its result to LenSpec under the same fraction).
 ghost
-requires d.Mem(ub)
-ensures  d.Mem(ub)
-ensures  d.LenSpec(ub) <= MetaLen + MaxINFs*path.InfoLen + MaxHops*path.HopLen
+preserves acc(d.Mem(ub), R50)
+ensures   d.LenSpec(ub) <= MetaLen + MaxINFs*path.InfoLen + MaxHops*path.HopLen
 decreases
 func (d *Decoded) LenSpecBound(ghost ub []byte) {
-	ghost l := d.LenSpec(ub)
-	unfold d.Mem(ub)
-	ghost numINF := unfolding d.Base.Mem() in d.Base.NumINF
-	ghost numHops := unfolding d.Base.Mem() in d.Base.NumHops
-	assert unfolding d.Base.Mem() in (numINF <= MaxINFs && numHops <= MaxHops)
+	unfold acc(d.Mem(ub), R50)
+	ghost numINF := unfolding acc(d.Base.Mem(), R50) in d.Base.NumINF
+	ghost numHops := unfolding acc(d.Base.Mem(), R50) in d.Base.NumHops
+	assert unfolding acc(d.Base.Mem(), R50) in (numINF <= MaxINFs && numHops <= MaxHops)
 	assert d.Base.Len() == MetaLen + numINF*path.InfoLen + numHops*path.HopLen
-	assert l == d.Base.Len()
-	fold d.Mem(ub)
+	fold acc(d.Mem(ub), R50)
 }
 
 // The resources captured by Mem are independent of the buffer parameter,
