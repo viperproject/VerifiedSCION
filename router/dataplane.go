@@ -5191,7 +5191,11 @@ func (p *scionPacketProcessor) prepareSCMP(
 		FixLengths:       true,
 	}
 	scmpLayers := []gopacket.SerializableLayer{&scionL, &scmpH, scmpP}
-	// @ ghost layerBufs := seq[[]byte]{ nil, nil, nil }
+	// (VerifiedSCION) Gobra's desugarer cannot type an untyped nil inside
+	// a seq composite literal, so the nil buffer is bound to a typed
+	// variable first.
+	// @ ghost var nilBuf []byte = nil
+	// @ ghost layerBufs := seq[[]byte]{ nilBuf, nilBuf, nilBuf }
 	// @ ghost quoteLen := 0
 	if cause != nil {
 		// add quote for errors.
