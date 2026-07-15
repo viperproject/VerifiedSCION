@@ -5237,7 +5237,12 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// @ sl.SplitRange_Bytes(ub, 0, len(quote), R55)
 		// @ ghost pld := gopacket.Payload(quote)
 		// @ fold pld.Mem(quote)
-		scmpLayers = append( /*@ noPerm, @*/ scmpLayers, gopacket.Payload(quote))
+		// (VerifiedSCION) scmpLayers is a length-3 literal (len == cap), so
+		// this append always reallocates and must copy the three existing
+		// elements; that copy needs positive read permission (noPerm, i.e.
+		// perm 0, does not suffice), and full access is held from the
+		// literal.
+		scmpLayers = append( /*@ writePerm, @*/ scmpLayers, gopacket.Payload(quote))
 		// @ layerBufs = layerBufs ++ seq[[]byte]{ quote }
 		// @ quoteLen = len(quote)
 	}
