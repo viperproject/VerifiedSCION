@@ -737,6 +737,7 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   (res == nil) == (typeOf(src) == type[*net.IPAddr] || typeOf(src) == type[addr.HostSVC])
 // @ ensures   res == nil && isIP(src) && s.SrcAddrType == T4Ip ==> len(s.RawSrcAddr) == 4
 // @ ensures   res == nil ==> s.SrcAddrType.Has3Bits()
+// @ ensures   res == nil && isIP(src) ==> s.SrcAddrType == T4Ip || s.SrcAddrType == T16Ip
 // @ ensures   res == nil && isHostSVC(src) ==> len(s.RawSrcAddr) == 4
 // @ ensures   res == nil && wildcard && isIP(src) && s.SrcAddrType == T16Ip ==>
 // @ 	len(s.RawSrcAddr) == old(len(src.(*net.IPAddr).IP))
@@ -830,6 +831,7 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 // @ ensures   (err == nil) == (typeOf(hostAddr) == type[*net.IPAddr] || typeOf(hostAddr) == type[addr.HostSVC])
 // @ ensures   err == nil && isIP(hostAddr) && addrtyp == T4Ip ==> len(b) == 4
 // @ ensures   err == nil ==> addrtyp.Has3Bits()
+// @ ensures   err == nil && isIP(hostAddr) ==> addrtyp == T4Ip || addrtyp == T16Ip
 // @ ensures   err == nil && isHostSVC(hostAddr) ==> len(b) == 4
 // @ ensures   err == nil && wildcard && isIP(hostAddr) && addrtyp == T16Ip ==>
 // @ 	len(b) == old(len(hostAddr.(*net.IPAddr).IP))
