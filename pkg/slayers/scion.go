@@ -741,6 +741,11 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   res == nil && isHostSVC(src) ==> len(s.RawSrcAddr) == 4
 // @ ensures   res == nil && wildcard && isIP(src) && s.SrcAddrType == T16Ip ==>
 // @ 	len(s.RawSrcAddr) == old(len(src.(*net.IPAddr).IP))
+// (VerifiedSCION) An even-length source IP yields an even-length raw
+// address (T4Ip gives length 4; T16Ip preserves the input length). Used
+// by the router's prepareSCMP to fold the checksum predicate.
+// @ ensures   res == nil && wildcard && isIP(src) && old(len(src.(*net.IPAddr).IP)) % 2 == 0 ==>
+// @ 	len(s.RawSrcAddr) % 2 == 0
 // @ decreases
 func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error) {
 	var err error

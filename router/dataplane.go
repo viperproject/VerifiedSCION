@@ -5178,16 +5178,18 @@ func (p *scionPacketProcessor) prepareSCMP(
 		return nil, serrors.Wrap(cannotRoute, err, "details", "setting dest addr")
 	}
 	// @ p.d.getInternalIPMem()
-	// The internal IP is 4 or 16 bytes; recording it before the call lets
-	// SetSrcAddr's T16Ip postcondition (len(RawSrcAddr) == old(len(IP)))
-	// transport the length, and hence its evenness, to the checksum fold.
-	// @ assert len(p.d.internalIP) == 4 || len(p.d.internalIP) == 16
+	// The internal IP has an even length (0 when unset, else 4 or 16), so
+	// SetSrcAddr's even-length postcondition transports the evenness of
+	// RawSrcAddr to the checksum fold below.
+	// @ ghost if p.d.internalIP != nil {
+	// @ 	assert len(p.d.internalIP) == 4 || len(p.d.internalIP) == 16
+	// @ }
+	// @ assert len(p.d.internalIP) % 2 == 0
 	if err := scionL.SetSrcAddr(&net.IPAddr{IP: p.d.internalIP} /*@ , true @*/); err != nil {
 		// An IP address is always supported by SetSrcAddr.
 		// @ Unreachable()
 		return nil, serrors.Wrap(cannotRoute, err, "details", "setting src addr")
 	}
-	// @ assert scionL.SrcAddrType == slayers.T4Ip || scionL.SrcAddrType == slayers.T16Ip
 	scionL.NextHdr = slayers.L4SCMP
 
 	typeCode := slayers.CreateSCMPTypeCode(typ, code)
