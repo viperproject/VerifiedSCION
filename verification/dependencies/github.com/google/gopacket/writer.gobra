@@ -145,29 +145,38 @@ func NewSerializeBuffer() (res SerializeBuffer)
 // and they are determined by the fields captured in the old state of its
 // MemSerialize (serialization does not change them; FixLengths only
 // assigns the header/payload lengths).
+//
+// (VerifiedSCION) The precondition is stated with per-index (rather than
+// quantified) clauses, specialized to the router's call shape of three or
+// four layers. This is because the router spreads a pre-built slice
+// (SerializeLayers(..., scmpLayers...)) instead of passing the layers as
+// separate arguments, so the resources must already hold over that slice;
+// individually folded layer predicates satisfy per-index clauses directly,
+// whereas a quantified permission cannot be assembled from them. The
+// per-index Mem/MemSerialize clauses also make the layers implicitly
+// distinct (a layer cannot provide its predicate twice), so no separate
+// injectivity clause is needed for soundness.
 requires  w != nil && w.Mem()
 requires  sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
 requires  len(layerBufs) == len(layers)
-requires  0 < len(layers)
-requires  forall i int :: { &layers[i] } 0 <= i && i < len(layers) ==>
-	(acc(&layers[i], R50) && layers[i] != nil)
-// Due to Viper's very strict injectivity constraints (cf. decodeLayers):
-requires  forall i, j int :: { &layers[i], &layers[j] } 0 <= i && i < j && j < len(layers) ==>
-	layers[i] !== layers[j]
-requires  layers[0].MemSerialize()
-requires  forall i int :: { &layers[i] } 1 <= i && i < len(layers) ==>
-	layers[i].Mem(layerBufs[i])
-// The buffers underlying the layers are only read during serialization,
-// so a fraction suffices.
-requires  forall i int :: { &layers[i] } 1 <= i && i < len(layers) ==>
-	acc(sl.Bytes(layerBufs[i], 0, len(layerBufs[i])), R55)
+requires  len(layers) == 3 || len(layers) == 4
+requires  acc(&layers[0], R50) && layers[0] != nil && layers[0].MemSerialize()
+requires  acc(&layers[1], R50) && layers[1] != nil && layers[1].Mem(layerBufs[1]) &&
+	acc(sl.Bytes(layerBufs[1], 0, len(layerBufs[1])), R55)
+requires  acc(&layers[2], R50) && layers[2] != nil && layers[2].Mem(layerBufs[2]) &&
+	acc(sl.Bytes(layerBufs[2], 0, len(layerBufs[2])), R55)
+requires  len(layers) == 4 ==> (acc(&layers[3], R50) && layers[3] != nil &&
+	layers[3].Mem(layerBufs[3]) &&
+	acc(sl.Bytes(layerBufs[3], 0, len(layerBufs[3])), R55))
 ensures   w.Mem() && sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
-ensures   forall i int :: { &layers[i] } 0 <= i && i < len(layers) ==> acc(&layers[i], R50)
-ensures   layers[0].MemSerialize()
-ensures   forall i int :: { &layers[i] } 1 <= i && i < len(layers) ==>
-	layers[i].Mem(layerBufs[i])
-ensures   forall i int :: { &layers[i] } 1 <= i && i < len(layers) ==>
-	acc(sl.Bytes(layerBufs[i], 0, len(layerBufs[i])), R55)
+ensures   acc(&layers[0], R50) && layers[0].MemSerialize()
+ensures   acc(&layers[1], R50) && layers[1].Mem(layerBufs[1]) &&
+	acc(sl.Bytes(layerBufs[1], 0, len(layerBufs[1])), R55)
+ensures   acc(&layers[2], R50) && layers[2].Mem(layerBufs[2]) &&
+	acc(sl.Bytes(layerBufs[2], 0, len(layerBufs[2])), R55)
+ensures   len(layers) == 4 ==> (acc(&layers[3], R50) &&
+	layers[3].Mem(layerBufs[3]) &&
+	acc(sl.Bytes(layerBufs[3], 0, len(layerBufs[3])), R55))
 ensures   err == nil ==>
 	IsSupportedRawPkt(w.View()) == old(layers[0].IsSupportedSerialization())
 ensures   err != nil ==> err.ErrorMem()
