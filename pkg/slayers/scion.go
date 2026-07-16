@@ -465,10 +465,13 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	assert sl.View(data[offset : offset+pathLen], 0, pathLen) ==
 	// @ 		sl.View(data, 0, len(data))[offset : offset+pathLen]
 	// @ 	unfold acc(s.Path.(*epic.Path).Mem(data[offset : offset+pathLen]), R55)
+	// unfolding the scion sub-path's Mem first exposes the sl.Bytes of
+	// the metadata-stripped slice, which the following ViewOfSubslice
+	// needs as its second predicate
+	// @ 	unfold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
 	// @ 	sl.ViewOfSubslice(data[offset : offset+pathLen], epic.MetadataLen, pathLen, R56)
 	// @ 	assert sl.View(data[offset : offset+pathLen][epic.MetadataLen:], 0, pathLen-epic.MetadataLen) ==
 	// @ 		sl.View(data[offset : offset+pathLen], 0, pathLen)[epic.MetadataLen:]
-	// @ 	unfold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
