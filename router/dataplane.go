@@ -5207,6 +5207,12 @@ func (p *scionPacketProcessor) prepareSCMP(
 		FixLengths:       true,
 	}
 	scmpLayers := []gopacket.SerializableLayer{&scionL, &scmpH, scmpP}
+	// (VerifiedSCION) Establish that every layer is non-nil (required by
+	// SerializeLayers). The three base layers are addresses of locals and
+	// the non-nil scmpP; the quote payload (added below) is a non-nil
+	// interface value. The quantified form is needed for the variadic call.
+	// @ assert scmpLayers[0] === &scionL && scmpLayers[1] === &scmpH && scmpLayers[2] === scmpP
+	// @ assert forall i int :: { &scmpLayers[i] } 0 <= i && i < len(scmpLayers) ==> scmpLayers[i] != nil
 	// (VerifiedSCION) Gobra's desugarer cannot type an untyped nil inside
 	// a seq composite literal, so the nil buffer is bound to a typed
 	// variable first.
@@ -5250,6 +5256,9 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// perm 0, does not suffice), and full access is held from the
 		// literal.
 		scmpLayers = append( /*@ writePerm, @*/ scmpLayers, gopacket.Payload(quote))
+		// @ assert scmpLayers[3] === gopacket.Payload(quote)
+		// @ assert gopacket.Payload(quote) != nil
+		// @ assert forall i int :: { &scmpLayers[i] } 0 <= i && i < len(scmpLayers) ==> scmpLayers[i] != nil
 		// @ layerBufs = layerBufs ++ seq[[]byte]{ quote }
 		// @ quoteLen = len(quote)
 	}
@@ -5267,6 +5276,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ fold sl.Bytes(nil, 0, 0)
 	// @ fold sl.Bytes(nil, 0, 0)
 	// @ assert !scionL.IsSupportedSerialization()
+	// @ assert forall i int :: { &scmpLayers[i] } 0 <= i && i < len(scmpLayers) ==> scmpLayers[i] != nil
 	err = gopacket.SerializeLayers(p.buffer, sopts /*@ , layerBufs @*/, scmpLayers...)
 	// @ unfold scmpH.Mem(nil)
 	// @ unfold scionL.ChecksumMem()
