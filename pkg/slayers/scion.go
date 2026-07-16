@@ -470,14 +470,11 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// needs as its second predicate
 	// @ 	unfold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
 	// the sl.Bytes exposed above is keyed on the open-ended sub-slice
-	// data[offset:offset+pathLen][epic.MetadataLen:]; ViewOfSubslice's
-	// second predicate is on the closed form [epic.MetadataLen:pathLen].
-	// They are the same slice value (len is pathLen), so bridge the two
-	// forms explicitly for the predicate instances to unify.
-	// @ 	assert len(data[offset : offset+pathLen]) == pathLen
-	// @ 	assert data[offset : offset+pathLen][epic.MetadataLen:] ===
-	// @ 		data[offset : offset+pathLen][epic.MetadataLen : pathLen]
-	// @ 	sl.ViewOfSubslice(data[offset : offset+pathLen], epic.MetadataLen, pathLen, R56)
+	// data[offset:offset+pathLen][epic.MetadataLen:], which desugars to
+	// [...][epic.MetadataLen : len(...)]. Call ViewOfSubslice with the
+	// same len(...) upper bound (not the separate pathLen variable) so
+	// the sub-slice predicate instance matches syntactically.
+	// @ 	sl.ViewOfSubslice(data[offset : offset+pathLen], epic.MetadataLen, len(data[offset : offset+pathLen]), R56)
 	// @ 	assert sl.View(data[offset : offset+pathLen][epic.MetadataLen:], 0, pathLen-epic.MetadataLen) ==
 	// @ 		sl.View(data[offset : offset+pathLen], 0, pathLen)[epic.MetadataLen:]
 	// @ 	assert reveal s.EqAbsHeader(data)
