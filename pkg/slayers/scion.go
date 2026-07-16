@@ -469,6 +469,14 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// the metadata-stripped slice, which the following ViewOfSubslice
 	// needs as its second predicate
 	// @ 	unfold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
+	// the sl.Bytes exposed above is keyed on the open-ended sub-slice
+	// data[offset:offset+pathLen][epic.MetadataLen:]; ViewOfSubslice's
+	// second predicate is on the closed form [epic.MetadataLen:pathLen].
+	// They are the same slice value (len is pathLen), so bridge the two
+	// forms explicitly for the predicate instances to unify.
+	// @ 	assert len(data[offset : offset+pathLen]) == pathLen
+	// @ 	assert data[offset : offset+pathLen][epic.MetadataLen:] ===
+	// @ 		data[offset : offset+pathLen][epic.MetadataLen : pathLen]
 	// @ 	sl.ViewOfSubslice(data[offset : offset+pathLen], epic.MetadataLen, pathLen, R56)
 	// @ 	assert sl.View(data[offset : offset+pathLen][epic.MetadataLen:], 0, pathLen-epic.MetadataLen) ==
 	// @ 		sl.View(data[offset : offset+pathLen], 0, pathLen)[epic.MetadataLen:]
