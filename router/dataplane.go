@@ -5246,8 +5246,12 @@ func (p *scionPacketProcessor) prepareSCMP(
 		}
 		// @ assert quote === ub[0:len(quote)]
 		// @ sl.SplitRange_Bytes(ub, 0, len(quote), R55)
-		// @ ghost pld := gopacket.Payload(quote)
-		// @ fold pld.Mem(quote)
+		// (VerifiedSCION) Capture the boxed payload layer in an
+		// interface-typed ghost var (cf. the append pattern in extn.go), so
+		// its identity survives the append and its Mem (Payload.Mem is just
+		// the slice identity) is available for SerializeLayers.
+		// @ ghost var pldElem gopacket.SerializableLayer = gopacket.Payload(quote)
+		// @ fold pldElem.Mem(quote)
 		// (VerifiedSCION) scmpLayers is a length-3 literal (len == cap), so
 		// this append always reallocates and must copy the three existing
 		// elements; that copy needs positive read permission (noPerm, i.e.
@@ -5256,7 +5260,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 		scmpLayers = append( /*@ writePerm, @*/ scmpLayers, gopacket.Payload(quote))
 		// append preserves the prefix and appends the (non-nil) payload.
 		// @ assert scmpLayers[0] === &scionL && scmpLayers[1] === &scmpH && scmpLayers[2] === scmpP
-		// @ assert scmpLayers[3] === gopacket.Payload(quote) && scmpLayers[3] != nil
+		// @ assert scmpLayers[3] === pldElem && scmpLayers[3] != nil
 		// @ layerBufs = layerBufs ++ seq[[]byte]{ quote }
 		// @ quoteLen = len(quote)
 	}
