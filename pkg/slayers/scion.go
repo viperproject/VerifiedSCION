@@ -328,7 +328,13 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // @ preserves acc(sl.Bytes(data, 0, len(data)), R40)
 // @ preserves df != nil && df.Mem()
 // @ ensures   res == nil ==> s.Mem(data)
-// @ ensures   res == nil && typeOf(s.GetPath(data)) == *scion.Raw ==>
+// @ ensures   res == nil && CmnHdrLen <= len(data) &&
+// @ 	typeOf(s.GetPath(data)) == *scion.Raw &&
+// @ 	path.Type(GetPathType(sl.View(data, 0, len(data)))) != epic.PathType ==>
+// @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
+// @ ensures   res == nil && CmnHdrLen <= len(data) &&
+// @ 	typeOf(s.GetPath(data)) == *epic.Path &&
+// @ 	path.Type(GetPathType(sl.View(data, 0, len(data)))) == epic.PathType ==>
 // @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
 // @ ensures   res == nil ==> s.EqPathType(data)
 // @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
@@ -445,7 +451,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
 	// @ fold acc(s.Mem(data), R54)
-	// @ ghost if(typeOf(s.GetPath(data)) == (*scion.Raw)) {
+	// @ ghost if typeOf(s.GetPath(data)) == (*scion.Raw) && path.Type(GetPathType(sl.View(data, 0, len(data)))) != epic.PathType {
 	// @ 	sl.ViewOfSubslice(data, offset, offset+pathLen, R56)
 	// @ 	assert sl.View(data[offset : offset+pathLen], 0, pathLen) ==
 	// @ 		sl.View(data, 0, len(data))[offset : offset+pathLen]
@@ -454,8 +460,27 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
 	// @ }
+	// @ ghost if typeOf(s.GetPath(data)) == (*epic.Path) && path.Type(GetPathType(sl.View(data, 0, len(data)))) == epic.PathType {
+	// @ 	sl.ViewOfSubslice(data, offset, offset+pathLen, R56)
+	// @ 	assert sl.View(data[offset : offset+pathLen], 0, pathLen) ==
+	// @ 		sl.View(data, 0, len(data))[offset : offset+pathLen]
+	// @ 	unfold acc(s.Path.(*epic.Path).Mem(data[offset : offset+pathLen]), R55)
+	// @ 	sl.ViewOfSubslice(data[offset : offset+pathLen], epic.MetadataLen, pathLen, R56)
+	// @ 	assert sl.View(data[offset : offset+pathLen][epic.MetadataLen:], 0, pathLen-epic.MetadataLen) ==
+	// @ 		sl.View(data[offset : offset+pathLen], 0, pathLen)[epic.MetadataLen:]
+	// @ 	unfold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
+	// @ 	assert reveal s.EqAbsHeader(data)
+	// @ 	assert reveal s.ValidScionInitSpec(data)
+	// @ 	fold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
+	// @ 	fold acc(s.Path.(*epic.Path).Mem(data[offset : offset+pathLen]), R55)
+	// @ }
 	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R41)
-	// @ assert typeOf(s.GetPath(data)) == *scion.Raw ==> s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
+	// @ assert CmnHdrLen <= len(data) && typeOf(s.GetPath(data)) == *scion.Raw &&
+	// @ 	path.Type(GetPathType(sl.View(data, 0, len(data)))) != epic.PathType ==>
+	// @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
+	// @ assert CmnHdrLen <= len(data) && typeOf(s.GetPath(data)) == *epic.Path &&
+	// @ 	path.Type(GetPathType(sl.View(data, 0, len(data)))) == epic.PathType ==>
+	// @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
 	// @ assert reveal s.EqPathType(data)
 	// @ fold acc(s.Mem(data), 1-R54)
 	return nil

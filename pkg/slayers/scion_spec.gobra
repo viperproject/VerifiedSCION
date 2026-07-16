@@ -400,12 +400,19 @@ pure func (s *SCION) EqAbsHeader(ub []byte) bool {
 		let v := sl.View(ub, 0, len(ub))     in
 		GetAddressOffset(v) == low_  &&
 		GetLength(v) == int(high)    &&
-		// Might be worth introducing EqAbsHeader as an interface method on Path
-		// to avoid doing these casts, especially when we add support for EPIC.
-		typeOf(s.Path) == (*scion.Raw) &&
-		unfolding s.Path.Mem(ub[low_:high]) in
-		s.Path.(*scion.Raw).Base.GetBase() ==
-			scion.RawBytesToBase(v[low_:high])
+		(typeOf(s.Path) == (*scion.Raw) || typeOf(s.Path) == (*epic.Path)) &&
+		((typeOf(s.Path) == (*epic.Path)) ==
+			(path.Type(GetPathType(v)) == epic.PathType)) &&
+		// The SCION path starts at the path offset, except for packets with
+		// an EPIC path, where it is prefixed by the EPIC metadata.
+		(typeOf(s.Path) == (*epic.Path) ?
+			(unfolding s.Path.Mem(ub[low_:high]) in
+			unfolding s.Path.(*epic.Path).ScionPath.Mem(ub[low_:high][epic.MetadataLen:]) in
+			s.Path.(*epic.Path).ScionPath.Base.GetBase() ==
+				scion.RawBytesToBase(v[low_ + epic.MetadataLen : high])) :
+			(unfolding s.Path.Mem(ub[low_:high]) in
+			s.Path.(*scion.Raw).Base.GetBase() ==
+				scion.RawBytesToBase(v[low_:high])))
 }
 
 // Describes a SCION packet that was successfully decoded by `DecodeFromBytes`.
@@ -419,8 +426,10 @@ pure func (s *SCION) ValidScionInitSpec(ub []byte) bool {
 		// parsing errors (since the SIF PR in Gobra, low is a keyword).
 		let low_ := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := s.HdrLen*LineLen                     in
-		typeOf(s.Path) == (*scion.Raw) &&
-		s.Path.(*scion.Raw).GetBase(ub[low_:high]).WeaklyValid()
+		(typeOf(s.Path) == (*scion.Raw) || typeOf(s.Path) == (*epic.Path)) &&
+		(typeOf(s.Path) == (*epic.Path) ?
+			s.Path.(*epic.Path).GetBase(ub[low_:high]).WeaklyValid() :
+			s.Path.(*scion.Raw).GetBase(ub[low_:high]).WeaklyValid())
 }
 
 // Checks if the common path header is valid in the serialized scion packet.
@@ -429,7 +438,7 @@ opaque
 decreases
 pure func ValidPktMetaHdr(raw seq[byte]) bool {
 	return CmnHdrLen <= len(raw) &&
-		let start  := GetAddressOffset(raw) in
+		let start  := GetScionPathOffset(raw) in
 		let end    := start+scion.MetaLen   in
 		0 <= start && end <= len(raw) &&
 		let length := GetLength(raw) in
@@ -467,6 +476,14 @@ func IsSupportedPktSubslice(raw seq[byte], idx int) {
 }
 
 ghost
+requires CmnHdrLen <= idx && idx <= len(raw)
+ensures  GetPathType(raw) == GetPathType(raw[:idx])
+decreases
+func GetPathTypeSubslice(raw seq[byte], idx int) {
+	assert raw[:idx][8] == raw[8]
+}
+
+ghost
 preserves acc(s.Mem(ub), R55)
 preserves acc(sl.Bytes(ub, 0, len(ub)), R55)
 preserves s.EqPathType(ub)
@@ -487,6 +504,27 @@ pure func GetAddressOffset(raw seq[byte]) int {
 	return let dstAddrLen := AddrType(raw[9] >> 4 & 0x7).Length() in
 		let srcAddrLen := AddrType(raw[9] & 0x7).Length()         in
 		CmnHdrLen + 2*addr.IABytes + dstAddrLen + srcAddrLen
+}
+
+// Computes the address offset from a view bounded by `length`. Since the
+// address offset is fully determined by the address-type nibbles at index 9,
+// this coincides with `GetAddressOffset(raw)`.
+ghost
+requires CmnHdrLen <= length && length <= len(raw)
+decreases
+pure func GetAddressOffsetWithinLength(raw seq[byte], length int) int {
+	return GetAddressOffset(raw)
+}
+
+// Returns the offset of the SCION path within the packet. This matches the
+// path offset, except for packets with an EPIC path, where the SCION path
+// is prefixed by the EPIC metadata.
+ghost
+requires CmnHdrLen <= len(raw)
+decreases
+pure func GetScionPathOffset(raw seq[byte]) int {
+	return GetAddressOffset(raw) +
+		(path.Type(GetPathType(raw)) == epic.PathType ? epic.MetadataLen : 0)
 }
 
 ghost

@@ -94,9 +94,10 @@ func absPktWidenLemma(raw seq[byte], length int) {
 
 	reveal slayers.ValidPktMetaHdr(raw)
 	reveal slayers.ValidPktMetaHdr(raw[:length])
-	headerOffset1 := slayers.GetAddressOffset(raw)
-	headerOffset2 := slayers.GetAddressOffset(raw[:length])
+	headerOffset1 := slayers.GetScionPathOffset(raw)
+	headerOffset2 := slayers.GetScionPathOffset(raw[:length])
 	assert raw[:length][9] == raw[9]
+	assert raw[:length][8] == raw[8]
 	assert headerOffset1 == headerOffset2
 	headerOffset := headerOffset1
 	headerOffsetWithMetaLen := headerOffset + scion.MetaLen

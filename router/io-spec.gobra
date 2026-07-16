@@ -36,7 +36,7 @@ requires slayers.ValidPktMetaHdr(raw)
 decreases
 pure func absPkt(raw seq[byte]) (res io.Pkt) {
 	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
-		let headerOffset := slayers.GetAddressOffset(raw) in
+		let headerOffset := slayers.GetScionPathOffset(raw) in
 		let headerOffsetWithMetaLen := headerOffset + scion.MetaLen in
 		let hdr := binary.BigEndian.Uint32Spec(raw[headerOffset],
 			raw[headerOffset+1], raw[headerOffset+2], raw[headerOffset+3]) in
