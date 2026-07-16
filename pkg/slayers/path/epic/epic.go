@@ -175,9 +175,14 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ ghost var base0 scion.Base
 	//@ ghost if ret == nil {
 	//@ 	base0 = p.ScionPath.GetBase(b[MetadataLen:])
-	//@ 	assert base0.EqAbsHeader(b[MetadataLen:])
+	//@ 	assert base0.EqAbsHeader(sl.View(b[MetadataLen:], 0, len(b[MetadataLen:])))
 	//@ 	assert base0.WeaklyValid()
 	//@ 	assert scion.MetaLen <= len(b) - MetadataLen
+	// pin the elementwise characterization of the sub-path view before exposing
+	// its bytes, retaining a positive fraction so the snapshot stays fixed
+	//@ 	sl.ViewElems(b[MetadataLen:], 0, len(b[MetadataLen:]), R56)
+	//@ 	assert forall i int :: { sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[i] } 0 <= i && i < scion.MetaLen ==>
+	//@ 		sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[i] == sl.GetByte(b[MetadataLen:], 0, len(b[MetadataLen:]), i)
 	//@ 	unfold acc(sl.Bytes(b[MetadataLen:], 0, len(b)-MetadataLen), R56)
 	//@ 	assert forall k int :: {&b[MetadataLen:][k]} 0 <= k && k < len(b)-MetadataLen ==>
 	//@ 		&b[MetadataLen:][k] == &b[MetadataLen + k]
@@ -188,8 +193,18 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ 	b2 = b[MetadataLen:][2]
 	//@ 	b3 = b[MetadataLen:][3]
 	//@ 	hdr0 = binary.BigEndian.Uint32(b[MetadataLen:][:scion.MetaLen])
-	//@ 	assert scion.RawBytesToMetaHdr(b[MetadataLen:]) == scion.DecodedFrom(hdr0)
-	//@ 	assert base0 == scion.RawBytesToBase(b[MetadataLen:])
+	// bridge the exposed bytes to the sub-path view: GetByte and the direct byte
+	// reads coincide (same locations), so the view agrees with the bytes and
+	// binary.BigEndian.Uint32 over the bytes equals Uint32Spec over the view
+	//@ 	assert forall i int :: { sl.GetByte(b[MetadataLen:], 0, len(b[MetadataLen:]), i) } 0 <= i && i < scion.MetaLen ==>
+	//@ 		sl.GetByte(b[MetadataLen:], 0, len(b[MetadataLen:]), i) == b[MetadataLen:][i]
+	//@ 	assert forall i int :: { sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[i] } 0 <= i && i < scion.MetaLen ==>
+	//@ 		sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[i] == b[MetadataLen:][i]
+	//@ 	assert hdr0 == binary.BigEndian.Uint32Spec(sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[0],
+	//@ 		sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[1], sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[2],
+	//@ 		sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[3])
+	//@ 	assert scion.RawBytesToMetaHdr(sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))) == scion.DecodedFrom(hdr0)
+	//@ 	assert base0 == scion.RawBytesToBase(sl.View(b[MetadataLen:], 0, len(b[MetadataLen:])))
 	//@ 	assert base0.PathMeta == scion.DecodedFrom(hdr0)
 	//@ 	assert base0.NumINF == io.CombineSegLens(int(base0.PathMeta.SegLen[0]),
 	//@ 		int(base0.PathMeta.SegLen[1]), int(base0.PathMeta.SegLen[2])).NumInfoFields()
