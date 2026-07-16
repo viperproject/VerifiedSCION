@@ -1715,7 +1715,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ }
 		// @ unfold acc(p.d.Mem(), _)
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
-		// @ assert !(reveal slayers.IsSupportedPkt(p.rawPkt))
+		// @ assert !(reveal slayers.IsSupportedPkt(sl.View(p.rawPkt, 0, len(p.rawPkt))))
 		// @ assert sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
 		// @ assert path.Type(slayers.GetPathType(sl.View(p.rawPkt, 0, len(p.rawPkt)))) == epic.PathType
 		// @ assert unfolding acc(p.scionLayer.Mem(p.rawPkt), R56) in slayers.CmnHdrLen <= len(p.rawPkt)
@@ -1974,19 +1974,19 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires p.scionLayer.EqPathType(p.rawPkt)
-// @ requires !slayers.IsSupportedPkt(p.rawPkt)
+// @ requires !slayers.IsSupportedPkt(sl.View(p.rawPkt, 0, len(p.rawPkt)))
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
 // @ requires  (typeOf(p.scionLayer.GetPath(ub)) == *epic.Path) ==>
 // @ 	p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidScionInitSpec(ub)
 // @ requires  acc(ioLock.LockP(), _)
 // @ requires  ioLock.LockInv() == SharedInv{dp, ioSharedArg}
-// @ requires  let absPkt := absIO_val(p.rawPkt, p.ingressID) in
+// @ requires  let absPkt := absIO_val(sl.View(p.rawPkt, 0, len(p.rawPkt)), p.ingressID) in
 // @ 	absPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(p.ingressID), absPkt.ValPkt_2)
 // @ ensures   reserr == nil && newAbsPkt.isValPkt ==>
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.ValPkt_1, newAbsPkt.ValPkt_2)
 // @ ensures   respr.OutPkt != nil ==>
-// @ 	newAbsPkt == absIO_val(respr.OutPkt, respr.EgressID)
+// @ 	newAbsPkt == absIO_val(sl.View(respr.OutPkt, 0, len(respr.OutPkt)), respr.EgressID)
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	newAbsPkt.isValUnsupported
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.ValUnit{})
