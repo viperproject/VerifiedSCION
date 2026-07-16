@@ -464,19 +464,16 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	sl.ViewOfSubslice(data, offset, offset+pathLen, R56)
 	// @ 	assert sl.View(data[offset : offset+pathLen], 0, pathLen) ==
 	// @ 		sl.View(data, 0, len(data))[offset : offset+pathLen]
+	// DecodedBaseMatchesView expresses the base of the scion sub-path as the
+	// metadata header located right after the EPIC metadata prefix, over the
+	// view of the whole sub-path bytes. The ViewOfSubslice above relates that
+	// view to the matching range of the whole-packet view, so the resulting
+	// equality is exactly what EqAbsHeader's EPIC branch demands. It is a pure
+	// value equality on the (shared) sub-path base, so it survives the unfolds
+	// below and can be consumed by the reveal.
+	// @ 	s.Path.(*epic.Path).DecodedBaseMatchesView(data[offset : offset+pathLen])
 	// @ 	unfold acc(s.Path.(*epic.Path).Mem(data[offset : offset+pathLen]), R55)
-	// unfolding the scion sub-path's Mem first exposes the sl.Bytes of
-	// the metadata-stripped slice, which the following ViewOfSubslice
-	// needs as its second predicate
 	// @ 	unfold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
-	// the sl.Bytes exposed above is keyed on the open-ended sub-slice
-	// data[offset:offset+pathLen][epic.MetadataLen:], which desugars to
-	// [...][epic.MetadataLen : len(...)]. Call ViewOfSubslice with the
-	// same len(...) upper bound (not the separate pathLen variable) so
-	// the sub-slice predicate instance matches syntactically.
-	// @ 	sl.ViewOfSubslice(data[offset : offset+pathLen], epic.MetadataLen, len(data[offset : offset+pathLen]), R56)
-	// @ 	assert sl.View(data[offset : offset+pathLen][epic.MetadataLen:], 0, pathLen-epic.MetadataLen) ==
-	// @ 		sl.View(data[offset : offset+pathLen], 0, pathLen)[epic.MetadataLen:]
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)

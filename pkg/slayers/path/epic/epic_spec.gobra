@@ -121,4 +121,49 @@ pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
 		p.ScionPath.Base.GetBase().WeaklyValid()
 }
 
+// DecodedBaseMatchesView lifts the byte-level characterization of a
+// successfully decoded EPIC path (as exposed by IsValidResultOfDecoding)
+// to the view-based form required by (*SCION).EqAbsHeader: the base of the
+// decoded scion sub-path equals the one obtained by decoding the metadata
+// header located right after the EPIC metadata prefix in the view of b.
+ghost
+requires  acc(p.Mem(b), R55)
+requires  acc(sl.Bytes(b, 0, len(b)), R55)
+requires  p.IsValidResultOfDecoding(b)
+ensures   acc(p.Mem(b), R55)
+ensures   acc(sl.Bytes(b, 0, len(b)), R55)
+ensures   MetadataLen + scion.MetaLen <= len(b)
+ensures   p.GetBase(b) == scion.RawBytesToBase(sl.View(b, 0, len(b))[MetadataLen:])
+decreases
+func (p *Path) DecodedBaseMatchesView(ghost b []byte) {
+	// exposed by IsValidResultOfDecoding
+	assert MetadataLen + scion.MetaLen <= len(b)
+	// pin the elementwise characterization of the view of b, retaining a
+	// positive fraction so the predicate snapshot (and hence the view) stays
+	// fixed; we refer to sl.View(b, 0, len(b)) directly so that the term is
+	// syntactically the one appearing in the postcondition
+	sl.ViewElems(b, 0, len(b), R56)
+	assert forall i int :: { sl.View(b, 0, len(b))[MetadataLen + i] } 0 <= i && i < scion.MetaLen ==>
+		sl.View(b, 0, len(b))[MetadataLen + i] == sl.GetByte(b, 0, len(b), MetadataLen + i)
+	// expose the raw metadata-header bytes; the retained folded fraction keeps
+	// the snapshot pinned, so GetByte, View, and IsValidResultOfDecoding stay
+	// evaluable and agree with the bytes read below
+	unfold acc(sl.Bytes(b, 0, len(b)), R56)
+	assert forall k int :: { &b[MetadataLen:][k] } 0 <= k && k < len(b) - MetadataLen ==>
+		&b[MetadataLen:][k] == &b[MetadataLen + k]
+	assert forall k int :: { &b[MetadataLen:][:scion.MetaLen][k] } 0 <= k && k < scion.MetaLen ==>
+		&b[MetadataLen:][:scion.MetaLen][k] == &b[MetadataLen:][k]
+	assert forall i int :: { sl.GetByte(b, 0, len(b), MetadataLen + i) } 0 <= i && i < scion.MetaLen ==>
+		sl.GetByte(b, 0, len(b), MetadataLen + i) == b[MetadataLen + i]
+	assert forall i int :: { sl.View(b, 0, len(b))[MetadataLen + i] } 0 <= i && i < scion.MetaLen ==>
+		sl.View(b, 0, len(b))[MetadataLen + i] == b[MetadataLen + i]
+	// binary.BigEndian.Uint32 over the raw bytes equals Uint32Spec over the view
+	assert binary.BigEndian.Uint32(b[MetadataLen:][:scion.MetaLen]) ==
+		binary.BigEndian.Uint32Spec(sl.View(b, 0, len(b))[MetadataLen], sl.View(b, 0, len(b))[MetadataLen + 1],
+			sl.View(b, 0, len(b))[MetadataLen + 2], sl.View(b, 0, len(b))[MetadataLen + 3])
+	// hence the decoded metadata headers, and therefore the bases, coincide
+	assert scion.RawBytesToBase(sl.View(b, 0, len(b))[MetadataLen:]) == p.GetBase(b)
+	fold acc(sl.Bytes(b, 0, len(b)), R56)
+}
+
 (*Path) implements path.Path
