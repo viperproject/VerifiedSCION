@@ -2286,12 +2286,20 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	// @ ghost ubPath := ub[startP:endP]
 	// @ ghost startScionP := p.scionLayer.PathScionStartIdx(ub)
 	// @ ghost endScionP := p.scionLayer.PathScionEndIdx(ub)
-	// the scion sub-path slice below needs its bounds; for an EPIC path
-	// startScionP is offset+epic.MetadataLen, and the (weakly) valid base
-	// guaranteed by ValidPathMetaData makes the sub-path long enough, so
-	// startScionP <= endScionP. Surface the bounds explicitly, since the
-	// view-based EqAbsHeader does not carry them as directly as the
-	// byte-based one did.
+	// the scion sub-path slice below needs its bounds. 0 <= startScionP and
+	// endScionP <= len(ub) follow from the SCION Mem; startScionP <= endScionP
+	// holds for a raw path directly (startScionP == startP <= endP), and for
+	// an EPIC path because epic.Path.Mem requires epic.MetadataLen <= len(ubPath),
+	// i.e. startP + epic.MetadataLen <= endP. The byte-based EqAbsHeader used
+	// to surface this; the view-based one does not, so derive it explicitly.
+	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ 	assert unfolding acc(p.scionLayer.Mem(ub), R56) in
+	// @ 		unfolding acc(p.scionLayer.Path.Mem(ubPath), R56) in
+	// @ 		epic.MetadataLen <= len(ubPath)
+	// @ 	assert len(ubPath) == endP - startP
+	// @ 	assert startScionP == startP + epic.MetadataLen
+	// @ 	assert endScionP == endP
+	// @ }
 	// @ assert 0 <= startScionP && startScionP <= endScionP && endScionP <= len(ub)
 	// @ ghost ubScionPath := ub[startScionP:endScionP]
 	// @ unfold acc(p.scionLayer.Mem(ub), R6)
