@@ -316,11 +316,18 @@ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
 requires acc(&s.pathPool) && acc(&s.pathPoolRaw)
 requires s.pathPool == nil && s.pathPoolRaw == nil
 ensures  s.MemSerialize() && s.ChecksumMem()
+// The supportedness hook is determined by NextHdr and PathType, which the
+// fold hides inside MemSerialize; expose it in terms of the pre-fold field
+// values so the caller (prepareSCMP) can conclude the SCMP reply is
+// unsupported (its NextHdr is L4SCMP).
+ensures  s.IsSupportedSerialization() == (old(s.PathType) == scion.PathType && old(s.NextHdr) != L4SCMP)
 decreases
 func (s *SCION) FoldFreshMemSerializeWithChecksumMem() {
 	fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	fold s.MemSerialize()
 	fold s.ChecksumMem()
+	assert unfolding acc(s.MemSerialize(), _) in
+		s.PathType == old(s.PathType) && s.NextHdr == old(s.NextHdr)
 }
 
 // A BaseLayer predicate instance is in one of two modes:
