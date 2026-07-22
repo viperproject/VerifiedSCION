@@ -268,7 +268,15 @@ pred (s *SCION) MemSerialize() {
 	acc(&s.BaseLayer) &&
 	acc(&s.DstIA, R25) && acc(&s.SrcIA, R25) &&
 	acc(&s.RawDstAddr, R25) && acc(&s.RawSrcAddr, R25) &&
-	acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R25) &&
+	// (VerifiedSCION) The destination address bytes are held at the full
+	// fraction the router's prepareSCMP loans (R20, cf. SetDstAddr /
+	// ExtractIPBytes), so that unfolding this predicate after serialization
+	// returns exactly what the address wand needs. The source address bytes
+	// are held at wildcard (the data-plane's internal IP is only available
+	// at wildcard). This layer also serves the upper layer's checksum: both
+	// addresses are present, so no separate ChecksumMem is needed during
+	// serialization (cf. the trusted gopacket.SerializeLayers contract).
+	acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20) &&
 	acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _) &&
 	acc(&s.pathPool) && acc(&s.pathPoolRaw) &&
 	PathPoolMem(s.pathPool, s.pathPoolRaw)
@@ -285,15 +293,29 @@ pure func (s *SCION) IsSupportedSerialization() bool {
 		s.PathType == scion.PathType && s.NextHdr != L4SCMP
 }
 
-// Folds MemSerialize together with a coexisting ChecksumMem instance for a
-// freshly constructed (i.e., not decoded) SCION header, from the resources
-// that the router's prepareSCMP holds after constructing the SCMP reply
-// header: full permissions to the header's own fields, the reversed path
-// re-associated with a nil buffer (cf. (*Decoded).Widen), an R20 fraction
-// of the destination address bytes (cf. SetDstAddr), and a wildcard
-// fraction of the source address bytes (cf. SetSrcAddr in wildcard mode).
-// This lemma is the machine-checked witness that the fraction accounting
-// of the two predicates works out.
+// Returns the raw destination-address slice held by MemSerialize. The
+// trusted gopacket.SerializeLayers preserves this value so that the router's
+// prepareSCMP can re-associate the address bytes it recovers after
+// serialization with the slice its SetDstAddr/ExtractIPBytes wand expects.
+ghost
+requires acc(s.MemSerialize(), _)
+decreases
+pure func (s *SCION) SerializeAddrView() (res []byte) {
+	return unfolding acc(s.MemSerialize(), _) in s.RawDstAddr
+}
+
+// Folds MemSerialize for a freshly constructed (i.e., not decoded) SCION
+// header, from the resources that the router's prepareSCMP holds after
+// constructing the SCMP reply header: full permissions to the header's own
+// fields, the reversed path re-associated with a nil buffer (cf.
+// (*Decoded).Widen), an R20 fraction of the destination address bytes (cf.
+// SetDstAddr / ExtractIPBytes), and a wildcard fraction of the source
+// address bytes (cf. SetSrcAddr in wildcard mode). MemSerialize alone
+// carries the address bytes needed both to serialize the header and to
+// compute the upper layer's checksum, so no separate ChecksumMem is folded:
+// the trusted gopacket.SerializeLayers takes those bytes from this predicate
+// (passed as its first layer) and returns it, letting prepareSCMP reclaim
+// the full R20 by a single unfold.
 ghost
 requires acc(&s.Version) && acc(&s.TrafficClass) && acc(&s.FlowID)
 requires acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen)
@@ -301,33 +323,30 @@ requires acc(&s.PathType) && 0 <= s.PathType && s.PathType < path.MaxPathType
 requires acc(&s.DstAddrType) && acc(&s.SrcAddrType)
 requires acc(&s.Path) && s.Path != nil && s.Path.Mem(nil)
 requires acc(&s.BaseLayer)
-// Exactly the amounts stored in MemSerialize and ChecksumMem are
-// consumed (R25 each), so that the caller keeps any remainder and can
-// recover the full fractions it started from by unfolding the two
-// predicates again.
-requires acc(&s.DstIA, R25) && acc(&s.SrcIA, R25)
 requires acc(&s.DstIA, R25) && acc(&s.SrcIA, R25)
 requires acc(&s.RawDstAddr, R25) && acc(&s.RawSrcAddr, R25)
-requires acc(&s.RawDstAddr, R25) && acc(&s.RawSrcAddr, R25)
-requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R25)
-requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R25)
+requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
 requires acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
 requires acc(&s.pathPool) && acc(&s.pathPoolRaw)
 requires s.pathPool == nil && s.pathPoolRaw == nil
-ensures  s.MemSerialize() && s.ChecksumMem()
+ensures  s.MemSerialize()
 // The supportedness hook is determined by NextHdr and PathType, which the
 // fold hides inside MemSerialize; expose it in terms of the pre-fold field
 // values so the caller (prepareSCMP) can conclude the SCMP reply is
 // unsupported (its NextHdr is L4SCMP).
 ensures  s.IsSupportedSerialization() == (old(s.PathType) == scion.PathType && old(s.NextHdr) != L4SCMP)
+// The destination-address slice is not changed by the fold; expose it so
+// the caller can tie the value recovered after serialization (preserved by
+// SerializeLayers via SerializeAddrView) back to the slice it captured.
+ensures  s.SerializeAddrView() === old(s.RawDstAddr)
 decreases
-func (s *SCION) FoldFreshMemSerializeWithChecksumMem() {
+func (s *SCION) FoldFreshMemSerialize() {
 	fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	fold s.MemSerialize()
-	fold s.ChecksumMem()
 	assert unfolding acc(s.MemSerialize(), _) in
-		s.PathType == old(s.PathType) && s.NextHdr == old(s.NextHdr)
+		s.PathType == old(s.PathType) && s.NextHdr == old(s.NextHdr) &&
+		s.RawDstAddr === old(s.RawDstAddr)
 }
 
 // A BaseLayer predicate instance is in one of two modes:

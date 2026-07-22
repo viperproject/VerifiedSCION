@@ -5281,26 +5281,30 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ }
 	// @ assert len(scionL.RawDstAddr) % 2 == 0
 	// @ assert len(scionL.RawSrcAddr) % 2 == 0
-	// @ scionL.FoldFreshMemSerializeWithChecksumMem()
-	// @ scmpH.FoldFreshMem()
-	// @ fold sl.Bytes(nil, 0, 0)
+	// @ assert scionL.RawDstAddr === rawDst
+	// (VerifiedSCION) Fold the fresh header's MemSerialize (holding the full
+	// R20 of the destination-address bytes) and the SCMP header's
+	// MemSerialize (holding only its 4-byte header fields). No ChecksumMem is
+	// produced: the checksum is computed by the trusted SerializeLayers from
+	// the first layer's address bytes, so the loaned bytes are never trapped
+	// in a predicate the caller cannot reclaim.
+	// @ scionL.FoldFreshMemSerialize()
+	// @ scmpH.FoldFreshMemSerialize()
 	// @ fold sl.Bytes(nil, 0, 0)
 	// @ assert !scionL.IsSupportedSerialization()
+	// @ assert scionL.SerializeAddrView() === rawDst
 	// @ assert len(scmpLayers) == 3 || len(scmpLayers) == 4
 	// @ assert scmpLayers[0] === &scionL && scmpLayers[1] === &scmpH && scmpLayers[2] === scmpP
 	err = gopacket.SerializeLayers(p.buffer, sopts /*@ , layerBufs @*/, scmpLayers...)
 	// (VerifiedSCION) Recover the destination-address bytes loaned to the
-	// fresh reply header for serialization. They were split R25/R25 between
-	// MemSerialize and the ChecksumMem nested in scmpH via scmpH.scn; the
-	// fold kept the remaining R20-2*R25 back. Unfolding both returned
-	// predicates reconstitutes exactly the R20 the ExtractIPBytes wand needs.
-	// ChecksumMem is reached through scmpH.scn, which SetNetworkLayerForchecksum
-	// set to &scionL and which the (layer-read-only) SerializeLayers preserves.
+	// fresh reply header. MemSerialize held the full R20, and SerializeLayers
+	// preserved the address slice (SerializeAddrView), so a single unfold
+	// returns exactly the R20 the ExtractIPBytes wand needs, over the same
+	// slice the wand's footprint is stated over.
+	// @ assert scmpLayers[0] === &scionL
+	// @ assert scionL.SerializeAddrView() === rawDst
 	// @ unfold scionL.MemSerialize()
-	// @ assert scmpLayers[1] === &scmpH
-	// @ unfold scmpH.Mem(nil)
-	// @ assert scmpH.scn === &scionL
-	// @ unfold scmpH.scn.ChecksumMem()
+	// @ assert scionL.RawDstAddr === rawDst
 	// @ ghost if typeOf(srcA) == type[*net.IPAddr] {
 	// @ 	apply acc(sl.Bytes(rawDst, 0, len(rawDst)), R20) --* acc(srcA.Mem(), R20)
 	// @ }

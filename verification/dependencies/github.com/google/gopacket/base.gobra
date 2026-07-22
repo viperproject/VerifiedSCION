@@ -85,6 +85,16 @@ func (p Payload) IsSupportedSerialization() bool {
 	return false
 }
 
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(p.MemSerialize(), _)
+decreases
+func (p Payload) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 Payload implements Layer
 Payload implements ApplicationLayer
 Payload implements SerializableLayer

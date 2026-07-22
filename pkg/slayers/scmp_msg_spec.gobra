@@ -65,6 +65,16 @@ func (s *SCMPExternalInterfaceDown) IsSupportedSerialization() bool {
 	return false
 }
 
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPExternalInterfaceDown) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPExternalInterfaceDown) implements gopacket.Layer
 (*SCMPExternalInterfaceDown) implements gopacket.SerializableLayer
 
@@ -121,6 +131,16 @@ pure
 decreases
 func (s *SCMPInternalConnectivityDown) IsSupportedSerialization() bool {
 	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPInternalConnectivityDown) SerializeAddrView() (res []byte) {
+	return nil
 }
 
 (*SCMPInternalConnectivityDown) implements gopacket.Layer
@@ -181,6 +201,16 @@ func (s *SCMPEcho) IsSupportedSerialization() bool {
 	return false
 }
 
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPEcho) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPEcho) implements gopacket.Layer
 (*SCMPEcho) implements gopacket.SerializableLayer
 
@@ -237,6 +267,16 @@ pure
 decreases
 func (s *SCMPParameterProblem) IsSupportedSerialization() bool {
 	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPParameterProblem) SerializeAddrView() (res []byte) {
+	return nil
 }
 
 (*SCMPParameterProblem) implements gopacket.Layer
@@ -302,6 +342,16 @@ func (s *SCMPTraceroute) IsSupportedSerialization() bool {
 	return false
 }
 
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPTraceroute) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPTraceroute) implements gopacket.Layer
 (*SCMPTraceroute) implements gopacket.SerializableLayer
 
@@ -361,6 +411,16 @@ func (s *SCMPDestinationUnreachable) IsSupportedSerialization() bool {
 	return false
 }
 
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPDestinationUnreachable) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPDestinationUnreachable) implements gopacket.Layer
 (*SCMPDestinationUnreachable) implements gopacket.SerializableLayer
 
@@ -417,6 +477,16 @@ pure
 decreases
 func (s *SCMPPacketTooBig) IsSupportedSerialization() bool {
 	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPPacketTooBig) SerializeAddrView() (res []byte) {
+	return nil
 }
 
 (*SCMPPacketTooBig) implements gopacket.Layer

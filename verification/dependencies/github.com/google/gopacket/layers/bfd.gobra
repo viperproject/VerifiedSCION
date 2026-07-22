@@ -230,4 +230,14 @@ func (d *BFD) IsSupportedSerialization() bool {
 	return false
 }
 
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(d.MemSerialize(), _)
+decreases
+func (d *BFD) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*BFD) implements gopacket.SerializableLayer
