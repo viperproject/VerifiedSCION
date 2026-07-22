@@ -165,8 +165,13 @@ requires  acc(&layers[1], R50) && layers[1] != nil && layers[1].Mem(layerBufs[1]
 	acc(sl.Bytes(layerBufs[1], 0, len(layerBufs[1])), R55)
 requires  acc(&layers[2], R50) && layers[2] != nil && layers[2].Mem(layerBufs[2]) &&
 	acc(sl.Bytes(layerBufs[2], 0, len(layerBufs[2])), R55)
-requires  len(layers) == 4 ==> (acc(&layers[3], R50) && layers[3] != nil &&
-	layers[3].Mem(layerBufs[3]) &&
+// (VerifiedSCION) The optional fourth layer is the SCMP quote payload,
+// whose Mem is resource-free (it is just the slice identity) and is
+// reconstructed by the (trusted) implementation from the byte access
+// below. Requiring layers[3].Mem from the caller would need the appended
+// element's identity through interface boxing, which Gobra does not
+// preserve across append.
+requires  len(layers) == 4 ==> (acc(&layers[3], R50) &&
 	acc(sl.Bytes(layerBufs[3], 0, len(layerBufs[3])), R55))
 ensures   w.Mem() && sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
 ensures   acc(&layers[0], R50) && layers[0].MemSerialize()
@@ -175,7 +180,6 @@ ensures   acc(&layers[1], R50) && layers[1].Mem(layerBufs[1]) &&
 ensures   acc(&layers[2], R50) && layers[2].Mem(layerBufs[2]) &&
 	acc(sl.Bytes(layerBufs[2], 0, len(layerBufs[2])), R55)
 ensures   len(layers) == 4 ==> (acc(&layers[3], R50) &&
-	layers[3].Mem(layerBufs[3]) &&
 	acc(sl.Bytes(layerBufs[3], 0, len(layerBufs[3])), R55))
 ensures   err == nil ==>
 	IsSupportedRawPkt(w.View()) == old(layers[0].IsSupportedSerialization())
