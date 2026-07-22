@@ -5172,6 +5172,11 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// @ apply acc(&p.scionLayer, R16) --* acc(p.scionLayer.Mem(ub), R15)
 		return nil, serrors.Wrap(cannotRoute, err, "details", "extracting src addr")
 	}
+	// (VerifiedSCION) Capture the raw source-address slice as a stable ghost
+	// term, matching SrcAddr's wand right-hand side (which is let-bound to
+	// p.scionLayer.RawSrcAddr at the call), so the wand can be matched and
+	// applied below. A heap-read expression there does not match the chunk.
+	// @ ghost rawSrc := p.scionLayer.RawSrcAddr
 	if err := scionL.SetDstAddr(srcA /*@ , false @*/); err != nil {
 		// The address returned by SrcAddr is always supported by SetDstAddr.
 		// @ Unreachable()
@@ -5294,8 +5299,8 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// ub[startSrc:endSrc]), otherwise Silicon cannot match the wand instance.
 	// The recovered bytes are then recombined into ub via the identity
 	// established by ExtractAccSrc.
-	// @ apply acc(srcA.Mem(), R15) --* acc(sl.Bytes(p.scionLayer.RawSrcAddr, 0, len(p.scionLayer.RawSrcAddr)), R15)
-	// @ assert p.scionLayer.RawSrcAddr === ub[startSrc:endSrc]
+	// @ apply acc(srcA.Mem(), R15) --* acc(sl.Bytes(rawSrc, 0, len(rawSrc)), R15)
+	// @ assert rawSrc === ub[startSrc:endSrc]
 	// @ sl.CombineRange_Bytes(ub, startSrc, endSrc, R15)
 	// @ apply acc(&p.scionLayer, R16) --* acc(p.scionLayer.Mem(ub), R15)
 	// @ ghost if cause != nil {
