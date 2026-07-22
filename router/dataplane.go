@@ -5300,10 +5300,6 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ assert scionL.SerializeAddrView() === rawDst
 	// @ assert len(scmpLayers) == 3 || len(scmpLayers) == 4
 	// @ assert scmpLayers[0] === &scionL && scmpLayers[1] === &scmpH && scmpLayers[2] === scmpP
-	// (VerifiedSCION) Materialize the (full) write-buffer byte permission that
-	// SerializeLayers consumes, so the chunk matcher does not have to recover it
-	// from the just-folded empty-byte predicates.
-	// @ assert acc(sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf())), writePerm)
 	err = gopacket.SerializeLayers(p.buffer, sopts /*@ , layerBufs @*/, scmpLayers...)
 	// (VerifiedSCION) Recover the destination-address bytes loaned to the
 	// fresh reply header. MemSerialize held the full R20, and SerializeLayers
