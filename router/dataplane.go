@@ -5317,13 +5317,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 	err = gopacket.SerializeLayers(p.buffer, sopts /*@ , layerBufs @*/, scmpLayers...)
 	// (VerifiedSCION) Recover the destination-address bytes loaned to the
 	// fresh reply header. MemSerialize held the full R20, and SerializeLayers
-	// preserved the address slice (SerializeAddrView), so a single unfold
-	// returns exactly the R20 the ExtractIPBytes wand needs, over the same
-	// slice the wand's footprint is stated over.
+	// preserved the address slice (SerializeAddrView); ReleaseSerializeDstBytes
+	// hands back exactly that R20 (over the same slice the ExtractIPBytes wand's
+	// footprint is stated over) while unfolding the bulky header predicate in an
+	// isolated context to keep this function's proof small.
 	// @ assert scmpLayers[0] === &scionL
-	// @ assert scionL.SerializeAddrView() === rawDst
-	// @ unfold scionL.MemSerialize()
-	// @ assert scionL.RawDstAddr === rawDst
+	// @ ghost recoveredDst := scionL.ReleaseSerializeDstBytes()
+	// @ assert recoveredDst === rawDst
 	// @ ghost if typeOf(srcA) == type[*net.IPAddr] {
 	// @ 	apply acc(sl.Bytes(rawDst, 0, len(rawDst)), R20) --* acc(srcA.Mem(), R20)
 	// @ }

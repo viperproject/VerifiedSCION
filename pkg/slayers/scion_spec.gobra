@@ -304,6 +304,27 @@ pure func (s *SCION) SerializeAddrView() (res []byte) {
 	return unfolding acc(s.MemSerialize(), _) in s.RawDstAddr
 }
 
+// ReleaseSerializeDstBytes consumes a freshly-serialized header's MemSerialize
+// and hands back only the R20 fraction of the destination-address bytes (the
+// amount the router's prepareSCMP loaned via SetDstAddr / ExtractIPBytes). The
+// remaining resources of MemSerialize (the path, the path pool, the source
+// address bytes, and the header fields) are intentionally leaked here: after
+// serialization prepareSCMP only needs the destination bytes to reclaim its
+// address wand, and unfolding the whole predicate at the call site would
+// materialize the (large) path memory into that already fold-heavy context,
+// blowing up its verification time. Performing the unfold in this isolated
+// lemma keeps prepareSCMP's proof context small.
+ghost
+requires s.MemSerialize()
+ensures  acc(sl.Bytes(res, 0, len(res)), R20)
+ensures  res === old(s.SerializeAddrView())
+decreases
+func (s *SCION) ReleaseSerializeDstBytes() (res []byte) {
+	unfold s.MemSerialize()
+	res = s.RawDstAddr
+	return res
+}
+
 // Folds MemSerialize for a freshly constructed (i.e., not decoded) SCION
 // header, from the resources that the router's prepareSCMP holds after
 // constructing the SCMP reply header: full permissions to the header's own
