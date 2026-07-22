@@ -196,7 +196,7 @@ requires  acc(&layers[2], R50) && layers[2] != nil && layers[2].Mem(layerBufs[2]
 requires  len(layers) == 4 ==> (acc(&layers[3], R50) &&
 	acc(sl.Bytes(layerBufs[3], 0, len(layerBufs[3])), R55))
 ensures   w.Mem() && sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
-ensures   acc(&layers[0], R50) && layers[0].MemSerialize()
+ensures   acc(&layers[0], R50) && layers[0] != nil && layers[0].MemSerialize()
 // (VerifiedSCION) Serialization does not reassign the network header's
 // address fields (FixLengths only sets the header/payload lengths), so the
 // raw destination-address slice is preserved. The router's prepareSCMP
