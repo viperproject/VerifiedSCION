@@ -5270,8 +5270,14 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// (VerifiedSCION) Extract a fraction of the bytes underlying the
 	// destination address (which alias srcA's IP buffer) and fold the
 	// fresh header's predicates for serialization.
+	// (VerifiedSCION) Capture the raw destination-address slice as a stable
+	// ghost term, matching the wand right-hand side produced by ExtractIPBytes
+	// (whose footprint is let-bound to the `raw` argument passed here), so the
+	// wand can be matched and applied after the serialization call below. A
+	// heap-read `scionL.RawDstAddr` there does not match the chunk.
+	// @ ghost rawDst := scionL.RawDstAddr
 	// @ ghost if typeOf(srcA) == type[*net.IPAddr] {
-	// @ 	slayers.ExtractIPBytes(srcA, scionL.RawDstAddr)
+	// @ 	slayers.ExtractIPBytes(srcA, rawDst)
 	// @ }
 	// @ assert len(scionL.RawDstAddr) % 2 == 0
 	// @ assert len(scionL.RawSrcAddr) % 2 == 0
@@ -5292,7 +5298,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// (trusted) SerializeLayers call.
 	// @ unfold scionL.MemSerialize()
 	// @ ghost if typeOf(srcA) == type[*net.IPAddr] {
-	// @ 	apply acc(sl.Bytes(scionL.RawDstAddr, 0, len(scionL.RawDstAddr)), R20) --* acc(srcA.Mem(), R20)
+	// @ 	apply acc(sl.Bytes(rawDst, 0, len(rawDst)), R20) --* acc(srcA.Mem(), R20)
 	// @ }
 	// (VerifiedSCION) Apply the SrcAddr wand with its exact stored shape
 	// (over p.scionLayer.RawSrcAddr, not the equal-but-structurally-distinct
