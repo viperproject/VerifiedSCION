@@ -5290,6 +5290,11 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// in a predicate the caller cannot reclaim.
 	// @ scionL.FoldFreshMemSerialize()
 	// @ scmpH.FoldFreshMemSerialize()
+	// (VerifiedSCION) Two empty-byte predicates: one discharges the byte
+	// access required for the (nil-buffer) SCMP message layer, the other keeps
+	// slack for the write buffer's own bytes when its cleared underlying slice
+	// aliases nil, which Gobra's chunk matcher would otherwise consume greedily.
+	// @ fold sl.Bytes(nil, 0, 0)
 	// @ fold sl.Bytes(nil, 0, 0)
 	// @ assert !scionL.IsSupportedSerialization()
 	// @ assert scionL.SerializeAddrView() === rawDst
