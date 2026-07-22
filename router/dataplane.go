@@ -5207,6 +5207,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 		// @ apply acc(&p.scionLayer, R16) --* acc(p.scionLayer.Mem(ub), R15)
 		return nil, err
 	}
+	// (VerifiedSCION) Capture the cleared write buffer as a stable ghost slice.
+	// Clear has just established len(p.buffer.UBuf()) == 0, but that fact and the
+	// value of UBuf() do not reliably survive the joins and folds before the
+	// SerializeLayers call below; the captured (immutable, length-0) slice lets
+	// us re-fold its empty byte predicate and reconnect UBuf() to it at the call.
+	// @ ghost emptyBuf := p.buffer.UBuf()
+	// @ assert len(emptyBuf) == 0
 	sopts := gopacket.SerializeOptions{
 		ComputeChecksums: true,
 		FixLengths:       true,
@@ -5300,6 +5307,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ assert scionL.SerializeAddrView() === rawDst
 	// @ assert len(scmpLayers) == 3 || len(scmpLayers) == 4
 	// @ assert scmpLayers[0] === &scionL && scmpLayers[1] === &scmpH && scmpLayers[2] === scmpP
+	// (VerifiedSCION) Re-establish the write buffer's (empty) byte permission for
+	// the SerializeLayers precondition. The buffer is unchanged since Clear, so
+	// its UBuf() still equals the captured empty slice; the length-0 byte
+	// predicate is folded from no field permissions, sidestepping the lost
+	// len(UBuf())==0 fact that the chunk matcher would otherwise need.
+	// @ fold sl.Bytes(emptyBuf, 0, 0)
+	// @ assert p.buffer.UBuf() === emptyBuf
 	err = gopacket.SerializeLayers(p.buffer, sopts /*@ , layerBufs @*/, scmpLayers...)
 	// (VerifiedSCION) Recover the destination-address bytes loaned to the
 	// fresh reply header. MemSerialize held the full R20, and SerializeLayers
