@@ -5289,7 +5289,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ ghost if typeOf(srcA) == type[*net.IPAddr] {
 	// @ 	apply acc(sl.Bytes(scionL.RawDstAddr, 0, len(scionL.RawDstAddr)), R20) --* acc(srcA.Mem(), R20)
 	// @ }
-	// @ apply acc(srcA.Mem(), R15) --* acc(sl.Bytes(ub[startSrc:endSrc], 0, len(ub[startSrc:endSrc])), R15)
+	// (VerifiedSCION) Apply the SrcAddr wand with its exact stored shape
+	// (over p.scionLayer.RawSrcAddr, not the equal-but-structurally-distinct
+	// ub[startSrc:endSrc]), otherwise Silicon cannot match the wand instance.
+	// The recovered bytes are then recombined into ub via the identity
+	// established by ExtractAccSrc.
+	// @ apply acc(srcA.Mem(), R15) --* acc(sl.Bytes(p.scionLayer.RawSrcAddr, 0, len(p.scionLayer.RawSrcAddr)), R15)
+	// @ assert p.scionLayer.RawSrcAddr === ub[startSrc:endSrc]
 	// @ sl.CombineRange_Bytes(ub, startSrc, endSrc, R15)
 	// @ apply acc(&p.scionLayer, R16) --* acc(p.scionLayer.Mem(ub), R15)
 	// @ ghost if cause != nil {
