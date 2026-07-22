@@ -5344,9 +5344,12 @@ func (p *scionPacketProcessor) prepareSCMP(
 	}
 	// The serialized packet is an SCMP reply and thus not a supported
 	// packet in the sense of IsSupportedPkt: its NextHdr byte is L4SCMP.
-	// @ slayers.IsSupportedRawPktEqGopacket(p.buffer.View())
-	// @ assert !(reveal slayers.IsSupportedRawPkt(p.buffer.View()))
-	// @ assert !(reveal slayers.IsSupportedPkt(p.buffer.UBuf()))
+	// The reveal-heavy bridge from the trusted call's gopacket-level
+	// unsupportedness to IsSupportedPkt lives in an isolated slayers lemma to
+	// keep its quantifier instantiations out of this proof context.
+	// @ assert p.buffer.View() == seqs.ToSeqByte(p.buffer.UBuf())
+	// @ slayers.UnsupportedRawPktImpliesUnsupportedPkt(p.buffer.UBuf())
+	// @ assert !slayers.IsSupportedPkt(p.buffer.UBuf())
 	// @ fold scmpError{TypeCode: typeCode, Cause: cause}.ErrorMem()
 	return p.buffer.Bytes(), scmpError{TypeCode: typeCode, Cause: cause}
 }

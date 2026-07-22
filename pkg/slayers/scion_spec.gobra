@@ -735,6 +735,33 @@ func IsSupportedRawPktEqGopacket(raw seq[byte]) {
 	assert CmnHdrLen == 12
 }
 
+// UnsupportedRawPktImpliesUnsupportedPkt bridges the gopacket-level
+// unsupportedness of a freshly serialized buffer's view (as ensured by the
+// trusted SerializeLayers for the router's SCMP replies) to the
+// slayers-level IsSupportedPkt over the buffer itself. Performing the
+// reveals of the opaque supportedness definitions -- and the byte-predicate
+// unfoldings they trigger -- in this isolated context keeps the associated
+// quantifier instantiations out of the router's (already fold-heavy)
+// prepareSCMP proof, whose context holds many byte predicates.
+ghost
+requires sl.Bytes(ubuf, 0, len(ubuf))
+requires !gopacket.IsSupportedRawPkt(seqs.ToSeqByte(ubuf))
+ensures  sl.Bytes(ubuf, 0, len(ubuf))
+ensures  !IsSupportedPkt(ubuf)
+decreases
+func UnsupportedRawPktImpliesUnsupportedPkt(ubuf []byte) {
+	view := seqs.ToSeqByte(ubuf)
+	IsSupportedRawPktEqGopacket(view)
+	assert !(reveal IsSupportedRawPkt(view))
+	// Connect the view's entries to the buffer's bytes at the two inspected
+	// offsets, so the solver can align the two definitions.
+	ghost if CmnHdrLen <= len(ubuf) {
+		assert view[8] == sl.GetByte(ubuf, 0, len(ubuf), 8)
+		assert view[4] == sl.GetByte(ubuf, 0, len(ubuf), 4)
+	}
+	assert !(reveal IsSupportedPkt(ubuf))
+}
+
 ghost
 requires  CmnHdrLen <= idx && idx <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
