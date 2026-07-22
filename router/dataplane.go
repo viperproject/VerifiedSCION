@@ -5256,7 +5256,9 @@ func (p *scionPacketProcessor) prepareSCMP(
 		scmpLayers = append( /*@ writePerm, @*/ scmpLayers, gopacket.Payload(quote))
 		// append preserves the prefix element identities.
 		// @ assert scmpLayers[0] === &scionL && scmpLayers[1] === &scmpH && scmpLayers[2] === scmpP
-		// @ layerBufs = layerBufs ++ seq[[]byte]{ quote }
+		// (VerifiedSCION) Build the four-element sequence directly rather
+		// than by concatenation; this keeps the evaluated term shallow.
+		// @ layerBufs = seq[[]byte]{ nilBuf, nilBuf, nilBuf, quote }
 		// @ quoteLen = len(quote)
 	}
 	// XXX(matzf) could we use iovec gather to avoid copying quote?
