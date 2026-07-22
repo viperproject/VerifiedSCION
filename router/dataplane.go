@@ -5278,8 +5278,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ assert len(scmpLayers) == 3 || len(scmpLayers) == 4
 	// @ assert scmpLayers[0] === &scionL && scmpLayers[1] === &scmpH && scmpLayers[2] === scmpP
 	err = gopacket.SerializeLayers(p.buffer, sopts /*@ , layerBufs @*/, scmpLayers...)
-	// @ unfold scmpH.Mem(nil)
-	// @ unfold scionL.ChecksumMem()
+	// (VerifiedSCION) Only MemSerialize is unfolded to recover the loaned
+	// destination-address bytes (it holds an R25 fraction, enough for the
+	// R20 wand below). scmpH.Mem and the scionL.ChecksumMem nested inside
+	// it are local resources that need not be returned, so they are simply
+	// dropped; extracting ChecksumMem would require knowing scmpH.scn ===
+	// &scionL, which the field value does not preserve across the
+	// (trusted) SerializeLayers call.
 	// @ unfold scionL.MemSerialize()
 	// @ ghost if typeOf(srcA) == type[*net.IPAddr] {
 	// @ 	apply acc(sl.Bytes(scionL.RawDstAddr, 0, len(scionL.RawDstAddr)), R20) --* acc(srcA.Mem(), R20)
