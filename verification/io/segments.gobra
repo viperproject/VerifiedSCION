@@ -19,7 +19,7 @@
 package io
 
 ghost type Ainfo ghost struct {
-	V uint
+	V integer
 }
 
 // Here, we already instantiated the type params, contrary to what
