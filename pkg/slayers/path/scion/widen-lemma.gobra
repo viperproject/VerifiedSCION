@@ -20,7 +20,7 @@ import (
 	sl "verification/utils/slices"
 	"verification/io"
 	. "verification/utils/definitions"
-	"verification/dependencies/encoding/binary"
+	"encoding/binary"
 	"github.com/scionproto/scion/pkg/slayers/path"
 )
 
@@ -38,13 +38,13 @@ ensures   CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset) ==
 	CurrSeg(raw[start:length], offset-start, currInfIdx, currHfIdx, segLen, headerOffset-start)
 decreases
 func WidenCurrSeg(raw []byte,
-	offset int,
-	currInfIdx int,
-	currHfIdx int,
-	segLen int,
-	headerOffset int,
-	start int,
-	length int) {
+	offset integer,
+	currInfIdx integer,
+	currHfIdx integer,
+	segLen integer,
+	headerOffset integer,
+	start integer,
+	length integer) {
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R53)
 	unfold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R53)
 
@@ -88,15 +88,15 @@ ensures  segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ==
 	segment(raw[start:length], offset-start, currHfIdx, ainfo, uinfo, consDir, peer, segLen)
 decreases
 func widenSegment(raw []byte,
-	offset int,
-	currHfIdx int,
+	offset integer,
+	currHfIdx integer,
 	ainfo io.Ainfo,
 	uinfo set[io.MsgTerm],
 	consDir bool,
 	peer bool,
-	segLen int,
-	start int,
-	length int) {
+	segLen integer,
+	start integer,
+	length integer) {
 	newP := (R52 + R53)/2
 	widenHopFields(raw, offset, 0, segLen, start, length, newP)
 }
@@ -112,7 +112,7 @@ preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), p)
 ensures   hopFields(raw, offset, currHfIdx, segLen) ==
 	hopFields(raw[start:length], offset-start, currHfIdx, segLen)
 decreases segLen - currHfIdx
-func widenHopFields(raw []byte, offset int, currHfIdx int, segLen int, start int, length int, p perm) {
+func widenHopFields(raw []byte, offset integer, currHfIdx integer, segLen integer, start integer, length integer, p perm) {
 	if (currHfIdx != segLen) {
 		path.WidenBytesHopField(raw, offset + path.HopLen * currHfIdx, start, length)
 		hf1 := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHfIdx, len(raw))
@@ -134,11 +134,11 @@ ensures   LeftSeg(raw, currInfIdx, segs, headerOffset) ==
 	LeftSeg(raw[start:length], currInfIdx, segs, headerOffset-start)
 decreases
 func WidenLeftSeg(raw []byte,
-	currInfIdx int,
+	currInfIdx integer,
 	segs io.SegLens,
-	headerOffset int,
-	start int,
-	length int) {
+	headerOffset integer,
+	start integer,
+	length integer) {
 	offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset)
 	if currInfIdx == 1 && segs.Seg2Len > 0 {
 		offsetWithHopfields := offset + path.HopLen * segs.Seg1Len
@@ -163,11 +163,11 @@ ensures   RightSeg(raw, currInfIdx, segs, headerOffset) ==
 	RightSeg(raw[start:length], currInfIdx, segs, headerOffset-start)
 decreases
 func WidenRightSeg(raw []byte,
-	currInfIdx int,
+	currInfIdx integer,
 	segs io.SegLens,
-	headerOffset int,
-	start int,
-	length int) {
+	headerOffset integer,
+	start integer,
+	length integer) {
 	offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset)
 	if currInfIdx == 1 && segs.Seg2Len > 0 && segs.Seg3Len > 0 {
 		offsetWithHopfields := offset + path.HopLen * segs.Seg1Len
@@ -191,11 +191,11 @@ ensures   MidSeg(raw, currInfIdx, segs, headerOffset) ==
 	MidSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
 decreases
 func WidenMidSeg(raw []byte,
-	currInfIdx int,
+	currInfIdx integer,
 	segs io.SegLens,
-	headerOffset int,
-	start int,
-	length int) {
+	headerOffset integer,
+	start integer,
+	length integer) {
 	offset := HopFieldOffset(segs.NumInfoFields(), 0, headerOffset)
 	if currInfIdx == 4 && segs.Seg2Len > 0 {
 		WidenCurrSeg(raw, offset, 0, segs.Seg1Len, segs.Seg1Len, headerOffset, start, length)
