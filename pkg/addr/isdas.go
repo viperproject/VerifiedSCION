@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	//@ "github.com/scionproto/scion/verification/utils/bitwise"
 )
 
 const (
@@ -54,10 +55,11 @@ func ParseISD(s string) (ISD, error) {
 	if err != nil {
 		return 0, serrors.WrapStr("parsing ISD", err)
 	}
+	// (VerifiedSCION) Establishes isd < 65536, which justifies the conversion below.
+	// @ strconv.Exp2_16()
 	return ISD(isd), nil
 }
 
-// @ requires isd >= 0
 // @ decreases
 func (isd ISD) String() string {
 	return strconv.FormatUint(uint64(isd), 10)
@@ -117,17 +119,9 @@ func asParseBGP(s string) (retAs AS, retErr error) {
 	if err != nil {
 		return 0, serrors.WrapStr("parsing BGP AS", err)
 	}
-	// (VerifiedSCION)
-	// The following assertions are needed to prove retAs.inRange().
-	// Gobra is not able to infer this automatically from the definition
-	// of strconv.Exp, unless we put a postcondition saying that the
-	// result is equal to the body.
-	// @ assert strconv.Exp(2, BGPASBits) == 2 * strconv.Exp(2, 31)
-	// @ assert strconv.Exp(2, BGPASBits) == 4 * strconv.Exp(2, 30)
-	// @ strconv.Exp2to10(30)
-	// @ strconv.Exp2to10(20)
-	// @ strconv.Exp2to10(10)
-	// @ assert _as < uint64(strconv.Exp(2, BGPASBits))
+	// (VerifiedSCION) Establishes _as < 4294967296 <= MaxAS + 1,
+	// which is needed to prove retAs.inRange().
+	// @ strconv.Exp2_32()
 	return AS(_as), nil
 }
 
@@ -216,6 +210,7 @@ func ParseIA(ia string) (IA, error) {
 
 // @ decreases
 func (ia IA) ISD() ISD {
+	//@ bitwise.ShiftRight48Bits(uint64(ia))
 	return ISD(ia >> ASBits)
 }
 
