@@ -285,10 +285,23 @@ pred (s *SCION) MemSerialize() {
 // Returns whether serializing this (freshly constructed) SCION header as
 // the outermost header yields a supported packet in the sense of
 // IsSupportedPkt/IsSupportedRawPkt, expressed over the header's fields.
+// The definition is hidden behind an opaque helper so that the many
+// mentions of this hook in the router's prepareSCMP (and in the trusted
+// SerializeLayers contract) do not expand the predicate-unfolding body into
+// that already large proof context; callers obtain its value equationally
+// from FoldFreshMemSerialize's postcondition.
 ghost
 requires acc(s.MemSerialize(), _)
 decreases
 pure func (s *SCION) IsSupportedSerialization() bool {
+	return isSupportedSerializationDef(s)
+}
+
+ghost
+opaque
+requires acc(s.MemSerialize(), _)
+decreases
+pure func isSupportedSerializationDef(s *SCION) bool {
 	return unfolding acc(s.MemSerialize(), _) in
 		s.PathType == scion.PathType && s.NextHdr != L4SCMP
 }
@@ -297,10 +310,21 @@ pure func (s *SCION) IsSupportedSerialization() bool {
 // trusted gopacket.SerializeLayers preserves this value so that the router's
 // prepareSCMP can re-associate the address bytes it recovers after
 // serialization with the slice its SetDstAddr/ExtractIPBytes wand expects.
+// The definition is hidden behind an opaque helper for the same reason as
+// IsSupportedSerialization; callers obtain its value equationally from
+// FoldFreshMemSerialize's and ReleaseSerializeDstBytes' postconditions.
 ghost
 requires acc(s.MemSerialize(), _)
 decreases
 pure func (s *SCION) SerializeAddrView() (res []byte) {
+	return serializeAddrViewDef(s)
+}
+
+ghost
+opaque
+requires acc(s.MemSerialize(), _)
+decreases
+pure func serializeAddrViewDef(s *SCION) (res []byte) {
 	return unfolding acc(s.MemSerialize(), _) in s.RawDstAddr
 }
 
@@ -320,6 +344,9 @@ ensures  acc(sl.Bytes(res, 0, len(res)), R20)
 ensures  res === old(s.SerializeAddrView())
 decreases
 func (s *SCION) ReleaseSerializeDstBytes() (res []byte) {
+	// Revealed before the unfold so the postcondition's old(SerializeAddrView())
+	// is connected to RawDstAddr in the pre-state, where MemSerialize still holds.
+	reveal serializeAddrViewDef(s)
 	unfold s.MemSerialize()
 	res = s.RawDstAddr
 	return res
@@ -365,6 +392,10 @@ decreases
 func (s *SCION) FoldFreshMemSerialize() {
 	fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	fold s.MemSerialize()
+	// The postconditions about the (opaque) hooks are proved here, once,
+	// so that callers never need to reveal the definitions themselves.
+	reveal isSupportedSerializationDef(s)
+	reveal serializeAddrViewDef(s)
 	assert unfolding acc(s.MemSerialize(), _) in
 		s.PathType == old(s.PathType) && s.NextHdr == old(s.NextHdr) &&
 		s.RawDstAddr === old(s.RawDstAddr)

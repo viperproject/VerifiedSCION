@@ -202,11 +202,15 @@ ensures   acc(&layers[0], R50) && layers[0] != nil && layers[0].MemSerialize()
 // raw destination-address slice is preserved. The router's prepareSCMP
 // relies on this to reclaim the address bytes it loaned via MemSerialize.
 ensures   layers[0].SerializeAddrView() === old(layers[0].SerializeAddrView())
-ensures   acc(&layers[1], R50) && layers[1].MemSerialize()
-ensures   acc(&layers[2], R50) && layers[2].Mem(layerBufs[2]) &&
-	acc(sl.Bytes(layerBufs[2], 0, len(layerBufs[2])), R55)
-ensures   len(layers) == 4 ==> (acc(&layers[3], R50) &&
-	acc(sl.Bytes(layerBufs[3], 0, len(layerBufs[3])), R55))
+// (VerifiedSCION) The predicates of the inner layers (the SCMP header and
+// the SCMP message payload) and the read fractions of the slice cells are
+// deliberately NOT returned, although the implementation does not consume
+// them: the router drops those local resources after the call anyway, and
+// not re-inhaling them keeps the caller's (very large) proof context small.
+// Only the quote payload's byte fraction is returned, because it is carved
+// out of the caller's packet buffer and must be recombined into it.
+ensures   len(layers) == 4 ==>
+	acc(sl.Bytes(layerBufs[3], 0, len(layerBufs[3])), R55)
 ensures   err == nil ==>
 	IsSupportedRawPkt(w.View()) == old(layers[0].IsSupportedSerialization())
 ensures   err != nil ==> err.ErrorMem()

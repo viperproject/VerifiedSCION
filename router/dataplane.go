@@ -5324,18 +5324,11 @@ func (p *scionPacketProcessor) prepareSCMP(
 	// @ assert scmpLayers[0] === &scionL
 	// @ ghost recoveredDst := scionL.ReleaseSerializeDstBytes()
 	// @ assert recoveredDst === rawDst
-	// @ ghost if typeOf(srcA) == type[*net.IPAddr] {
-	// @ 	apply acc(sl.Bytes(rawDst, 0, len(rawDst)), R20) --* acc(srcA.Mem(), R20)
-	// @ }
-	// (VerifiedSCION) Apply the SrcAddr wand with its exact stored shape
-	// (over p.scionLayer.RawSrcAddr, not the equal-but-structurally-distinct
-	// ub[startSrc:endSrc]), otherwise Silicon cannot match the wand instance.
-	// The recovered bytes are then recombined into ub via the identity
-	// established by ExtractAccSrc.
-	// @ apply acc(srcA.Mem(), R15) --* acc(sl.Bytes(rawSrc, 0, len(rawSrc)), R15)
-	// @ assert rawSrc === ub[startSrc:endSrc]
-	// @ sl.CombineRange_Bytes(ub, startSrc, endSrc, R15)
-	// @ apply acc(&p.scionLayer, R16) --* acc(p.scionLayer.Mem(ub), R15)
+	// (VerifiedSCION) The wand applications returning the loaned resources
+	// (dst bytes -> srcA -> raw source bytes -> ub -> p.scionLayer.Mem) are
+	// performed inside an extrinsic lemma, keeping the chunk matching and
+	// the address-type branching out of this proof context.
+	// @ p.reclaimScionMemAfterSerialize(srcA, rawDst, rawSrc, ub, startSrc, endSrc)
 	// @ ghost if cause != nil {
 	// @ 	sl.CombineRange_Bytes(ub, 0, quoteLen, R55)
 	// @ }
