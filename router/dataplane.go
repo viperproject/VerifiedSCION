@@ -2292,7 +2292,7 @@ func (p *scionPacketProcessor) parsePath( /*@ ghost ub []byte @*/ ) (respr proce
 	// an EPIC path because epic.Path.Mem requires epic.MetadataLen <= len(ubPath),
 	// i.e. startP + epic.MetadataLen <= endP. The byte-based EqAbsHeader used
 	// to surface this; the view-based one does not, so derive it explicitly.
-	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
+	// @ ghost if typeOf(p.scionLayer.GetPath(ub)) == *epic.Path {
 	// @ 	assert unfolding acc(p.scionLayer.Mem(ub), R56) in
 	// @ 		unfolding acc(p.scionLayer.Path.Mem(ubPath), R56) in
 	// @ 		epic.MetadataLen <= len(ubPath)
