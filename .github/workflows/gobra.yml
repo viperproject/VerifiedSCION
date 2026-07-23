@@ -120,7 +120,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
+          overflow: '1'
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           viperBackend: ${{ env.viperBackend }}
@@ -246,7 +246,7 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
+          overflow: '1'
           useZ3API: ${{ env.useZ3API }}
           disableNL: ${{ env.disableNL }}
           viperBackend: ${{ env.viperBackend }}

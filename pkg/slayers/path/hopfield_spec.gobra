@@ -24,7 +24,7 @@ import (
 )
 
 pred (h *HopField) Mem() {
-	acc(h) && h.ConsIngress >= 0 && h.ConsEgress >= 0
+	acc(h)
 }
 
 
@@ -35,6 +35,7 @@ pure func ifsToIO_ifs(ifs uint16) option[io.Ifs] {
 }
 
 ghost
+requires ifs != none[io.Ifs] ==> 0 <= get(ifs).V && get(ifs).V < 65536
 decreases
 pure func IO_ifsToIfs(ifs option[io.Ifs]) uint16 {
 	return ifs == none[io.Ifs] ? 0 : uint16(get(ifs).V)
