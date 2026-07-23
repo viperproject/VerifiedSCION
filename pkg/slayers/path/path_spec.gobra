@@ -74,8 +74,8 @@ pred PkgMem() {
 	registeredKeys.Inv()              &&
 	registeredKeys.Start == 0         &&
 	registeredKeys.End == maxPathType &&
-	(forall t Type :: { &registeredPaths[t].inUse }
-		registeredPaths[t].inUse == registeredKeys.FContains(int64(t))) &&
+	(forall t Type :: { &registeredPaths[t].inUse } registeredPaths[t].inUse ==
+		registeredKeys.FContains(int64(t))) &&
 	(forall t Type :: { &registeredPaths[t].inUse } registeredPaths[t].inUse ==>
 		registeredPaths[t].Metadata.New implements NewPathSpec)
 }
