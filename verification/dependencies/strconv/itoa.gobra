@@ -14,7 +14,6 @@ const fastSmalls = true // enable fast path for small integers
 // FormatUint returns the string representation of i in the given base,
 // for 2 <= base <= 36. The result uses the lower-case letters 'a' to 'z'
 // for digit values >= 10.
-requires i >= 0
 requires 2 <= base && base <= 36
 decreases
 func FormatUint(i uint64, base int) string
