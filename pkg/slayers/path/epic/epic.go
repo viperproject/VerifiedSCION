@@ -90,16 +90,16 @@ type Path struct {
 // @ decreases
 func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	if len(b) < p.Len( /*@ ubuf @*/ ) {
-		return serrors.New("buffer too small to serialize path.", "expected", int(p.Len( /*@ ubuf @*/ )),
+		return serrors.New("buffer too small to serialize path.", "expected", p.Len( /*@ ubuf @*/ ),
 			"actual", len(b))
 	}
 	//@ unfold acc(p.Mem(ubuf), R1)
 	//@ defer fold acc(p.Mem(ubuf), R1)
 	if len(p.PHVF) != HVFLen {
-		return serrors.New("invalid length of PHVF", "expected", int(HVFLen), "actual", int(len(p.PHVF)))
+		return serrors.New("invalid length of PHVF", "expected", HVFLen, "actual", len(p.PHVF))
 	}
 	if len(p.LHVF) != HVFLen {
-		return serrors.New("invalid length of LHVF", "expected", int(HVFLen), "actual", int(len(p.LHVF)))
+		return serrors.New("invalid length of LHVF", "expected", HVFLen, "actual", len(p.LHVF))
 	}
 	if p.ScionPath == nil {
 		return serrors.New("SCION path is nil")
@@ -145,7 +145,7 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	if len(b) < MetadataLen {
-		return serrors.New("EPIC Path raw too short", "expected", int(MetadataLen), "actual", int(len(b)))
+		return serrors.New("EPIC Path raw too short", "expected", MetadataLen, "actual", len(b))
 	}
 	//@ unfold p.NonInitMem()
 	//@ sl.SplitRange_Bytes(b, 0, PktIDLen, R42)
@@ -293,8 +293,6 @@ type PktID struct {
 // @ requires  len(raw) >= PktIDLen
 // @ preserves acc(i)
 // @ preserves acc(sl.Bytes(raw, 0, len(raw)), R42)
-// @ ensures   0 <= i.Timestamp
-// @ ensures   0 <= i.Counter
 // @ decreases
 func (i *PktID) DecodeFromBytes(raw []byte) {
 	//@ unfold acc(sl.Bytes(raw, 0, len(raw)), R42)
