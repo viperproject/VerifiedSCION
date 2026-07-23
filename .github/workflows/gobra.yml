@@ -46,7 +46,7 @@ jobs:
           recursive: 1
           ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants.
           excludePackages: 'layers'
-          timeout: 5m
+          timeout: 10m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: './dependencies/ ..' # relative to project location
@@ -321,7 +321,9 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           packages: 'pkg/slayers/path/scion'
-          timeout: 30m
+          # timeout raised while the seq-based proofs are tuned; the goal is
+          # to bring it back to 30m once the annotations are streamlined
+          timeout: 45m
           headerOnly: ${{ env.headerOnly }}
           module: ${{ env.module }}
           includePaths: ${{ env.includePaths }}

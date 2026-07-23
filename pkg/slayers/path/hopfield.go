@@ -79,13 +79,15 @@ type HopField struct {
 // @ preserves acc(sl.Bytes(raw, 0, HopLen), R45)
 // @ ensures   h.Mem()
 // @ ensures   err == nil
-// @ ensures  BytesToIO_HF(raw, 0, 0, HopLen) ==
+// @ ensures  BytesToIO_HF(sl.View(raw, 0, HopLen)) ==
 // @ 	unfolding acc(h.Mem(), R10) in h.Abs()
 // @ decreases
 func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < HopLen {
 		return serrors.New("HopField raw too short", "expected", HopLen, "actual", len(raw))
 	}
+	//@ ghost v := sl.View(raw, 0, HopLen)
+	//@ sl.ViewElems(raw, 0, HopLen, R46)
 	//@ unfold acc(sl.Bytes(raw, 0, HopLen), R46)
 	h.EgressRouterAlert = raw[0]&0x1 == 0x1
 	h.IngressRouterAlert = raw[0]&0x2 == 0x2
@@ -100,8 +102,14 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 	copy(h.Mac[:], raw[6:6+MacLen] /*@ , R47 @*/)
 	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == raw[6:6+MacLen][i]
 	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
-	//@ EqualBytesImplyEqualMac(raw[6:6+MacLen], h.Mac)
-	//@ assert BytesToIO_HF(raw, 0, 0, HopLen) == h.Abs()
+	//@ assert v[2] == raw[2] && v[3] == raw[3] && v[4] == raw[4] && v[5] == raw[5]
+	//@ assert forall i int :: { v[6:6+MacLen][i] } 0 <= i && i < MacLen ==>
+	//@ 	v[6:6+MacLen][i] == v[6+i]
+	//@ assert forall i int :: { &raw[6+i] } 0 <= i && i < MacLen ==> v[6+i] == raw[6+i]
+	//@ assert forall i int :: { h.Mac[i] } 0 <= i && i < MacLen ==>
+	//@ 	v[6:6+MacLen][i] == h.Mac[i]
+	//@ EqualSeqImplyEqualMac(v[6:6+MacLen], h.Mac)
+	//@ assert BytesToIO_HF(v) == h.Abs()
 	//@ fold acc(sl.Bytes(raw, 0, HopLen), R46)
 	//@ fold h.Mem()
 	return nil
@@ -113,7 +121,7 @@ func (h *HopField) DecodeFromBytes(raw []byte) (err error) {
 // @ preserves acc(h.Mem(), R10)
 // @ preserves sl.Bytes(b, 0, HopLen)
 // @ ensures   err == nil
-// @ ensures  BytesToIO_HF(b, 0, 0, HopLen) ==
+// @ ensures  BytesToIO_HF(sl.View(b, 0, HopLen)) ==
 // @ 	unfolding acc(h.Mem(), R10) in h.Abs()
 // @ decreases
 func (h *HopField) SerializeTo(b []byte) (err error) {
@@ -134,6 +142,8 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	binary.BigEndian.PutUint16(b[2:4], h.ConsIngress)
 	//@ assert &b[4:6][0] == &b[4] && &b[4:6][1] == &b[5]
 	binary.BigEndian.PutUint16(b[4:6], h.ConsEgress)
+	//@ assert binary.BigEndian.Uint16Spec(b[2], b[3]) == h.ConsIngress
+	//@ assert binary.BigEndian.Uint16Spec(b[4], b[5]) == h.ConsEgress
 	//@ assert forall i int :: { &b[i] } 0 <= i && i < HopLen ==> acc(&b[i])
 	//@ assert forall i int :: { &h.Mac[:][i] } 0 <= i && i < len(h.Mac) ==>
 	//@ 	&h.Mac[i] == &h.Mac[:][i]
@@ -141,9 +151,34 @@ func (h *HopField) SerializeTo(b []byte) (err error) {
 	copy(b[6:6+MacLen], h.Mac[:] /*@, R47 @*/)
 	//@ assert forall i int :: {&h.Mac[:][i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == b[6:6+MacLen][i]
 	//@ assert forall i int :: {&h.Mac[i]} 0 <= i && i < MacLen ==> h.Mac[:][i] == h.Mac[i]
-	//@ EqualBytesImplyEqualMac(b[6:6+MacLen], h.Mac)
+	//@ assert forall i int :: { &b[6+i] } 0 <= i && i < MacLen ==> b[6:6+MacLen][i] == b[6+i]
+	//@ ghost b2 := b[2]
+	//@ ghost b3 := b[3]
+	//@ ghost b4 := b[4]
+	//@ ghost b5 := b[5]
+	//@ ghost mac := seq[byte]{b[6], b[7], b[8], b[9], b[10], b[11]}
+	//@ assert forall i int :: { mac[i] } 0 <= i && i < MacLen ==> mac[i] == h.Mac[i]
 	//@ fold sl.Bytes(b, 0, HopLen)
-	//@ assert h.Abs() == BytesToIO_HF(b, 0, 0, HopLen)
+	// the GetByte terms instantiate the preservation postconditions of
+	// ViewElems, which carry the byte values across the lemma call
+	//@ assert sl.GetByte(b, 0, HopLen, 2) == b2 && sl.GetByte(b, 0, HopLen, 3) == b3
+	//@ assert sl.GetByte(b, 0, HopLen, 4) == b4 && sl.GetByte(b, 0, HopLen, 5) == b5
+	//@ assert sl.GetByte(b, 0, HopLen, 6) == mac[0] && sl.GetByte(b, 0, HopLen, 7) == mac[1]
+	//@ assert sl.GetByte(b, 0, HopLen, 8) == mac[2] && sl.GetByte(b, 0, HopLen, 9) == mac[3]
+	//@ assert sl.GetByte(b, 0, HopLen, 10) == mac[4] && sl.GetByte(b, 0, HopLen, 11) == mac[5]
+	//@ sl.ViewElems(b, 0, HopLen, writePerm)
+	//@ ghost v := sl.View(b, 0, HopLen)
+	//@ assert v[2] == sl.GetByte(b, 0, HopLen, 2) && v[3] == sl.GetByte(b, 0, HopLen, 3)
+	//@ assert v[4] == sl.GetByte(b, 0, HopLen, 4) && v[5] == sl.GetByte(b, 0, HopLen, 5)
+	//@ assert v[6] == mac[0] && v[7] == mac[1] && v[8] == mac[2]
+	//@ assert v[9] == mac[3] && v[10] == mac[4] && v[11] == mac[5]
+	//@ assert v[2] == b2 && v[3] == b3 && v[4] == b4 && v[5] == b5
+	//@ assert mac[0] == h.Mac[0] && mac[1] == h.Mac[1] && mac[2] == h.Mac[2]
+	//@ assert mac[3] == h.Mac[3] && mac[4] == h.Mac[4] && mac[5] == h.Mac[5]
+	//@ assert v[6:6+MacLen][0] == v[6] && v[6:6+MacLen][1] == v[7] && v[6:6+MacLen][2] == v[8]
+	//@ assert v[6:6+MacLen][3] == v[9] && v[6:6+MacLen][4] == v[10] && v[6:6+MacLen][5] == v[11]
+	//@ EqualSeqImplyEqualMac(v[6:6+MacLen], h.Mac)
+	//@ assert h.Abs() == BytesToIO_HF(v)
 	//@ fold acc(h.Mem(), R11)
 	return nil
 }

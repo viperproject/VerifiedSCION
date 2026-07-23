@@ -32,15 +32,14 @@ import (
 
 ghost
 opaque
-requires sl.Bytes(raw, 0, len(raw))
 requires slayers.ValidPktMetaHdr(raw)
 decreases
-pure func absPkt(raw []byte) (res io.Pkt) {
+pure func absPkt(raw seq[byte]) (res io.Pkt) {
 	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetScionPathOffset(raw) in
 		let headerOffsetWithMetaLen := headerOffset + scion.MetaLen in
-		let hdr := (unfolding sl.Bytes(raw, 0, len(raw)) in
-			binary.BigEndian.Uint32(raw[headerOffset:headerOffset+scion.MetaLen])) in
+		let hdr := binary.BigEndian.Uint32Spec(raw[headerOffset],
+			raw[headerOffset+1], raw[headerOffset+2], raw[headerOffset+3]) in
 		let metaHdr := scion.DecodedFrom(hdr)  in
 		let currInfIdx := int(metaHdr.CurrINF) in
 		let currHfIdx := int(metaHdr.CurrHF)   in
@@ -61,11 +60,10 @@ pure func absPkt(raw []byte) (res io.Pkt) {
 }
 
 ghost
-requires sl.Bytes(raw, 0, len(raw))
 ensures val.isValUnsupported
 ensures val.ValUnsupported_1 == path.ifsToIO_ifs(ingressID)
 decreases
-pure func absValUnsupported(raw []byte, ingressID uint16) (val io.Val) {
+pure func absValUnsupported(raw seq[byte], ingressID uint16) (val io.Val) {
 	return io.Val(io.ValUnsupported {
 		path.ifsToIO_ifs(ingressID),
 		io.Unit{},
@@ -74,22 +72,19 @@ pure func absValUnsupported(raw []byte, ingressID uint16) (val io.Val) {
 
 ghost
 opaque
-requires sl.Bytes(raw, 0, len(raw))
 ensures val.isValPkt || val.isValUnsupported
 decreases
-pure func absIO_val(raw []byte, ingressID uint16) (val io.Val) {
+pure func absIO_val(raw seq[byte], ingressID uint16) (val io.Val) {
 	return (reveal slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)) ?
 		io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw)}) :
 		absValUnsupported(raw, ingressID)
 }
 
 ghost
-requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 requires !slayers.IsSupportedPkt(raw)
-ensures  acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures  absIO_val(raw, ingressID).isValUnsupported
 decreases
-func AbsUnsupportedPktIsUnsupportedVal(raw []byte, ingressID uint16) {
+func AbsUnsupportedPktIsUnsupportedVal(raw seq[byte], ingressID uint16) {
 	reveal absIO_val(raw, ingressID)
 }
 
@@ -99,7 +94,7 @@ requires respr.OutPkt != nil ==>
 decreases
 pure func absReturnErr(respr processResult) (val io.Val) {
 	return respr.OutPkt == nil ? io.ValUnit{} :
-		absIO_val(respr.OutPkt, respr.EgressID)
+		absIO_val(sl.View(respr.OutPkt, 0, len(respr.OutPkt)), respr.EgressID)
 }
 
 ghost
@@ -210,5 +205,5 @@ requires sl.Bytes(msg.GetFstBuffer(), 0, len(msg.GetFstBuffer()))
 decreases
 pure func MsgToAbsVal(msg *ipv4.Message, ingressID uint16) (res io.Val) {
 	return unfolding msg.Mem() in
-		absIO_val(msg.Buffers[0], ingressID)
+		absIO_val(sl.View(msg.Buffers[0], 0, len(msg.Buffers[0])), ingressID)
 }

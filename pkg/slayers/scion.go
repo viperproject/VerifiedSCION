@@ -223,7 +223,7 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ ensures   e != nil ==> e.ErrorMem()
 // post for IO:
 // @ ensures   e == nil && old(s.EqPathType(ubuf)) ==>
-// @ 	IsSupportedRawPkt(b.View()) == old(IsSupportedPkt(ubuf))
+// @ 	IsSupportedPkt(b.View()) == old(IsSupportedPkt(sl.View(ubuf, 0, len(ubuf))))
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
 	// @ unfold acc(s.Mem(ubuf), R1)
@@ -263,55 +263,60 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	buf[9] = uint8(s.DstAddrType&0x7)<<4 | uint8(s.SrcAddrType&0x7)
 	// @ assert &buf[10:12][0] == &buf[10] && &buf[10:12][1] == &buf[11]
 	binary.BigEndian.PutUint16(buf[10:12], 0)
+	// @ assert &buf[4] == &uSerBufN[4] && &buf[8] == &uSerBufN[8]
+	// @ ghost b4 := buf[4]
+	// @ ghost b8 := buf[8]
 	// @ fold acc(sl.Bytes(uSerBufN, 0, len(uSerBufN)), writePerm)
+	// the GetByte terms below instantiate the preservation
+	// postconditions of ViewElems, which carry the byte values of the
+	// buffer across the lemma call
+	// @ assert sl.GetByte(uSerBufN, 0, len(uSerBufN), 4) == b4
+	// @ assert sl.GetByte(uSerBufN, 0, len(uSerBufN), 8) == b8
+	// @ sl.ViewElems(uSerBufN, 0, len(uSerBufN), writePerm)
+	// @ ghost vSer0 := sl.View(uSerBufN, 0, len(uSerBufN))
+	// @ assert vSer0[4] == sl.GetByte(uSerBufN, 0, len(uSerBufN), 4)
+	// @ assert vSer0[8] == sl.GetByte(uSerBufN, 0, len(uSerBufN), 8)
+	// @ assert vSer0[4] == b4 && vSer0[8] == b8
 	// @ ghost if s.EqPathType(ubuf) {
-	// @ 	assert reveal s.EqPathTypeWithBuffer(ubuf, uSerBufN)
-	// @ 	s.IsSupportedPktLemma(ubuf, uSerBufN)
+	// @ 	assert reveal s.EqPathTypeWithBuffer(ubuf, vSer0)
+	// @ 	s.IsSupportedPktLemma(ubuf, vSer0)
 	// @ }
+	// @ IsSupportedPktSubslice(vSer0, CmnHdrLen)
 
 	// Serialize address header.
-	// @ sl.SplitRange_Bytes(uSerBufN, CmnHdrLen, scnLen, HalfPerm)
-	// @ sl.Reslice_Bytes(uSerBufN, 0, CmnHdrLen, R54)
-	// @ IsSupportedPktSubslice(uSerBufN, CmnHdrLen)
-	// @ sl.SplitRange_Bytes(uSerBufN, CmnHdrLen, scnLen, HalfPerm)
+	// @ sl.SplitRange_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm)
 	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
 	if err := s.SerializeAddrHdr(buf[CmnHdrLen:] /*@ , ubuf[CmnHdrLen:] @*/); err != nil {
-		// @ sl.Unslice_Bytes(uSerBufN, 0, CmnHdrLen, R54)
 		// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm)
 		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
 		return err
 	}
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
 
-	// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, HalfPerm)
+	// @ sl.CombineRangeWithViews_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm, sl.View(uSerBufN, 0, CmnHdrLen), sl.View(uSerBufN[CmnHdrLen:scnLen], 0, (scnLen)-(CmnHdrLen)), sl.View(uSerBufN, scnLen, len(uSerBufN)))
 	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
-	// @ IsSupportedPktSubslice(uSerBufN, CmnHdrLen)
-	// @ sl.Unslice_Bytes(uSerBufN, 0, CmnHdrLen, R54)
-	// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, HalfPerm)
+	// @ ghost vSerA := sl.View(uSerBufN, 0, len(uSerBufN))
+	// @ assert vSerA[:CmnHdrLen] == vSer0[:CmnHdrLen]
+	// @ IsSupportedPktSubslice(vSerA, CmnHdrLen)
+	// @ assert IsSupportedPkt(vSerA) == IsSupportedPkt(vSer0)
 
 	// Serialize path header.
 	// @ ghost startP := int(CmnHdrLen+s.AddrHdrLenSpecInternal())
 	// @ ghost endP := int(s.HdrLen*LineLen)
 	// @ ghost pathSlice := ubuf[startP : endP]
-	// @ sl.SplitRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
-	// @ sl.SplitRange_Bytes(ubuf, startP, endP, HalfPerm)
-	// @ sl.Reslice_Bytes(uSerBufN, 0, offset, R54)
-	// @ sl.Reslice_Bytes(ubuf, 0, startP, R54)
-	// @ IsSupportedPktSubslice(uSerBufN, offset)
-	// @ IsSupportedPktSubslice(ubuf, startP)
-	// @ sl.SplitRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
-	// @ sl.SplitRange_Bytes(ubuf, startP, endP, HalfPerm)
+	// @ IsSupportedPktSubslice(vSerA, offset)
+	// @ sl.SplitRange_Bytes(uSerBufN, offset, scnLen, writePerm)
+	// @ sl.SplitRange_Bytes(ubuf, startP, endP, writePerm)
 	tmp := s.Path.SerializeTo(buf[offset:] /*@, pathSlice @*/)
-	// @ sl.CombineRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
-	// @ sl.CombineRange_Bytes(ubuf, startP, endP, HalfPerm)
-	// @ IsSupportedPktSubslice(uSerBufN, offset)
-	// @ IsSupportedPktSubslice(ubuf, startP)
-	// @ sl.Unslice_Bytes(uSerBufN, 0, offset, R54)
-	// @ sl.Unslice_Bytes(ubuf, 0, startP, R54)
-	// @ sl.CombineRange_Bytes(uSerBufN, offset, scnLen, HalfPerm)
-	// @ sl.CombineRange_Bytes(ubuf, startP, endP, HalfPerm)
-	// @ reveal IsSupportedPkt(uSerBufN)
-	// @ reveal IsSupportedRawPkt(b.View())
+	// @ sl.CombineRangeWithViews_Bytes(uSerBufN, offset, scnLen, writePerm, sl.View(uSerBufN, 0, offset), sl.View(uSerBufN[offset:scnLen], 0, (scnLen)-(offset)), sl.View(uSerBufN, scnLen, len(uSerBufN)))
+	// @ sl.CombineRange_Bytes(ubuf, startP, endP, writePerm)
+	// @ ghost vSer1 := sl.View(uSerBufN, 0, len(uSerBufN))
+	// @ assert vSer1[:offset] == vSerA[:offset]
+	// @ assert vSer1[:CmnHdrLen] == vSerA[:CmnHdrLen]
+	// @ IsSupportedPktSubslice(vSer1, offset)
+	// @ assert IsSupportedPkt(vSer1) == IsSupportedPkt(vSerA)
+	// @ assert b.View() == vSer1
+	// @ reveal IsSupportedPkt(b.View())
 	return tmp
 }
 
@@ -325,15 +330,16 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 // @ ensures   res == nil ==> s.Mem(data)
 // @ ensures   res == nil && CmnHdrLen <= len(data) &&
 // @ 	typeOf(s.GetPath(data)) == *scion.Raw &&
-// @ 	path.Type(GetPathType(data)) != epic.PathType ==>
+// @ 	path.Type(GetPathType(sl.View(data, 0, len(data)))) != epic.PathType ==>
 // @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
 // @ ensures   res == nil && CmnHdrLen <= len(data) &&
 // @ 	typeOf(s.GetPath(data)) == *epic.Path &&
-// @ 	path.Type(GetPathType(data)) == epic.PathType ==>
+// @ 	path.Type(GetPathType(sl.View(data, 0, len(data)))) == epic.PathType ==>
 // @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
 // @ ensures   res == nil ==> s.EqPathType(data)
 // @ ensures   res != nil ==> s.NonInitMem() && res.ErrorMem()
 // @ decreases
+// @ #backend[exhaleMode(1)]
 func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res error) {
 	// Decode common header.
 	if len(data) < CmnHdrLen {
@@ -359,14 +365,19 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ preserves CmnHdrLen <= len(data) && acc(sl.Bytes(data, 0, len(data)), R41)
 	// @ ensures   s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 	// @ ensures   0 <= s.PathType && s.PathType < 256
-	// @ ensures   path.Type(GetPathType(data)) == s.PathType
-	// @ ensures   L4ProtocolType(GetNextHdr(data)) == s.NextHdr
-	// @ ensures   GetLength(data) == int(s.HdrLen * LineLen)
-	// @ ensures   GetAddressOffset(data) ==
+	// @ ensures   path.Type(GetPathType(sl.View(data, 0, len(data)))) == s.PathType
+	// @ ensures   L4ProtocolType(GetNextHdr(sl.View(data, 0, len(data)))) == s.NextHdr
+	// @ ensures   GetLength(sl.View(data, 0, len(data))) == int(s.HdrLen * LineLen)
+	// @ ensures   GetAddressOffset(sl.View(data, 0, len(data))) ==
 	// @	CmnHdrLen + 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
 	// @ decreases
 	// @ outline(
-	// @ unfold acc(sl.Bytes(data, 0, len(data)), R41)
+	// @ ghost v := sl.View(data, 0, len(data))
+	// @ sl.ViewElems(data, 0, len(data), R42)
+	// unfolding only part of the held fraction pins the view of data:
+	// the retained instance is untouched, so the view after refolding
+	// is the same as the captured one
+	// @ unfold acc(sl.Bytes(data, 0, len(data)), R42)
 	s.NextHdr = L4ProtocolType(data[4])
 	s.HdrLen = data[5]
 	// @ assert &data[6:8][0] == &data[6] && &data[6:8][1] == &data[7]
@@ -378,7 +389,9 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ assert int(s.DstAddrType) == b.BitAnd7(int(data[9] >> 4))
 	s.SrcAddrType = AddrType(data[9] & 0x7)
 	// @ assert int(s.SrcAddrType) == b.BitAnd7(int(data[9]))
-	// @ fold acc(sl.Bytes(data, 0, len(data)), R41)
+	// @ assert v[4] == data[4] && v[5] == data[5] && v[8] == data[8] && v[9] == data[9]
+	// @ fold acc(sl.Bytes(data, 0, len(data)), R42)
+	// @ assert sl.View(data, 0, len(data)) == v
 	// @ )
 	// Decode address header.
 	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
@@ -438,34 +451,40 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
 	// @ fold acc(s.Mem(data), R54)
-	// @ ghost if typeOf(s.GetPath(data)) == (*scion.Raw) && path.Type(GetPathType(data)) != epic.PathType {
-	// @ 	unfold acc(sl.Bytes(data, 0, len(data)), R56)
-	// @ 	unfold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
+	// @ ghost if typeOf(s.GetPath(data)) == (*scion.Raw) && path.Type(GetPathType(sl.View(data, 0, len(data)))) != epic.PathType {
+	// @ 	sl.ViewOfSubslice(data, offset, offset+pathLen, R56)
+	// @ 	assert sl.View(data[offset : offset+pathLen], 0, pathLen) ==
+	// @ 		sl.View(data, 0, len(data))[offset : offset+pathLen]
 	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(data[offset : offset+pathLen]), R55)
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
-	// @ 	fold acc(sl.Bytes(data, 0, len(data)), R56)
-	// @ 	fold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ }
-	// @ ghost if typeOf(s.GetPath(data)) == (*epic.Path) && path.Type(GetPathType(data)) == epic.PathType {
-	// @ 	unfold acc(sl.Bytes(data, 0, len(data)), R56)
-	// @ 	unfold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
+	// @ ghost if typeOf(s.GetPath(data)) == (*epic.Path) && path.Type(GetPathType(sl.View(data, 0, len(data)))) == epic.PathType {
+	// @ 	sl.ViewOfSubslice(data, offset, offset+pathLen, R56)
+	// @ 	assert sl.View(data[offset : offset+pathLen], 0, pathLen) ==
+	// @ 		sl.View(data, 0, len(data))[offset : offset+pathLen]
+	// DecodedBaseMatchesView expresses the base of the scion sub-path as the
+	// metadata header located right after the EPIC metadata prefix, over the
+	// view of the whole sub-path bytes. The ViewOfSubslice above relates that
+	// view to the matching range of the whole-packet view, so the resulting
+	// equality is exactly what EqAbsHeader's EPIC branch demands. It is a pure
+	// value equality on the (shared) sub-path base, so it survives the unfolds
+	// below and can be consumed by the reveal.
+	// @ 	s.Path.(*epic.Path).DecodedBaseMatchesView(data[offset : offset+pathLen])
 	// @ 	unfold acc(s.Path.(*epic.Path).Mem(data[offset : offset+pathLen]), R55)
 	// @ 	unfold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
 	// @ 	fold acc(s.Path.(*epic.Path).Mem(data[offset : offset+pathLen]), R55)
-	// @ 	fold acc(sl.Bytes(data, 0, len(data)), R56)
-	// @ 	fold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ }
 	// @ sl.CombineRange_Bytes(data, offset, offset+pathLen, R41)
 	// @ assert CmnHdrLen <= len(data) && typeOf(s.GetPath(data)) == *scion.Raw &&
-	// @ 	path.Type(GetPathType(data)) != epic.PathType ==>
+	// @ 	path.Type(GetPathType(sl.View(data, 0, len(data)))) != epic.PathType ==>
 	// @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
 	// @ assert CmnHdrLen <= len(data) && typeOf(s.GetPath(data)) == *epic.Path &&
-	// @ 	path.Type(GetPathType(data)) == epic.PathType ==>
+	// @ 	path.Type(GetPathType(sl.View(data, 0, len(data)))) == epic.PathType ==>
 	// @ 	s.EqAbsHeader(data) && s.ValidScionInitSpec(data)
 	// @ assert reveal s.EqPathType(data)
 	// @ fold acc(s.Mem(data), 1-R54)

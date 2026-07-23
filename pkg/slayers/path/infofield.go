@@ -64,13 +64,15 @@ type InfoField struct {
 // @ preserves acc(inf)
 // @ preserves acc(slices.Bytes(raw, 0, len(raw)), R45)
 // @ ensures   err == nil
-// @ ensures   BytesToAbsInfoField(raw, 0) ==
+// @ ensures   BytesToAbsInfoField(slices.View(raw, 0, len(raw))[:InfoLen]) ==
 // @	inf.ToAbsInfoField()
 // @ decreases
 func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	if len(raw) < InfoLen {
 		return serrors.New("InfoField raw too short", "expected", InfoLen, "actual", len(raw))
 	}
+	//@ ghost v := slices.View(raw, 0, len(raw))
+	//@ slices.ViewElems(raw, 0, len(raw), R50)
 	//@ unfold acc(slices.Bytes(raw, 0, len(raw)), R50)
 	inf.ConsDir = raw[0]&0x1 == 0x1
 	inf.Peer = raw[0]&0x2 == 0x2
@@ -79,8 +81,10 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 	//@ assert &raw[4:8][0] == &raw[4] && &raw[4:8][1] == &raw[5]
 	//@ assert &raw[4:8][2] == &raw[6] && &raw[4:8][3] == &raw[7]
 	inf.Timestamp = binary.BigEndian.Uint32(raw[4:8])
+	//@ assert v[0] == raw[0] && v[2] == raw[2] && v[3] == raw[3]
+	//@ assert v[4] == raw[4] && v[5] == raw[5] && v[6] == raw[6] && v[7] == raw[7]
 	//@ fold acc(slices.Bytes(raw, 0, len(raw)), R50)
-	//@ assert reveal BytesToAbsInfoField(raw, 0) ==
+	//@ assert reveal BytesToAbsInfoField(v[:InfoLen]) ==
 	//@ 	inf.ToAbsInfoField()
 	return nil
 }
@@ -92,7 +96,7 @@ func (inf *InfoField) DecodeFromBytes(raw []byte) (err error) {
 // @ preserves slices.Bytes(b, 0, len(b))
 // @ ensures   err == nil
 // @ ensures   inf.ToAbsInfoField() ==
-// @ 	BytesToAbsInfoField(b, 0)
+// @ 	BytesToAbsInfoField(slices.View(b, 0, len(b))[:InfoLen])
 // @ decreases
 func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	if len(b) < InfoLen {
@@ -105,32 +109,47 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 	if inf.ConsDir {
 		b[0] |= 0x1
 	}
-	//@ ghost tmpInfo1 := BytesToAbsInfoFieldHelper(b, 0)
 	//@ bits.InfoFieldFirstByteSerializationLemmas()
-	//@ assert tmpInfo1.ConsDir == targetAbsInfo.ConsDir
+	//@ assert (b[0] & 0x1 == 0x1) == targetAbsInfo.ConsDir
 	//@ ghost firstByte := b[0]
 	if inf.Peer {
 		b[0] |= 0x2
 	}
-	//@ tmpInfo2 := BytesToAbsInfoFieldHelper(b, 0)
-	//@ assert tmpInfo2.Peer == (b[0] & 0x2 == 0x2)
-	//@ assert tmpInfo2.ConsDir == (b[0] & 0x1 == 0x1)
-	//@ assert tmpInfo2.Peer == targetAbsInfo.Peer
-	//@ assert tmpInfo2.ConsDir == tmpInfo1.ConsDir
-	//@ assert tmpInfo2.ConsDir == targetAbsInfo.ConsDir
+	//@ assert (b[0] & 0x2 == 0x2) == targetAbsInfo.Peer
+	//@ assert (b[0] & 0x1 == 0x1) == (firstByte & 0x1 == 0x1)
+	//@ assert (b[0] & 0x1 == 0x1) == targetAbsInfo.ConsDir
 	b[1] = 0 // reserved
 	//@ assert &b[2:4][0] == &b[2] && &b[2:4][1] == &b[3]
 	binary.BigEndian.PutUint16(b[2:4], inf.SegID)
-	//@ ghost tmpInfo3 := BytesToAbsInfoFieldHelper(b, 0)
-	//@ assert tmpInfo3.UInfo == targetAbsInfo.UInfo
+	//@ assert binary.BigEndian.Uint16Spec(b[2], b[3]) == inf.SegID
 	//@ assert &b[4:8][0] == &b[4] && &b[4:8][1] == &b[5]
 	//@ assert &b[4:8][2] == &b[6] && &b[4:8][3] == &b[7]
 	binary.BigEndian.PutUint32(b[4:8], inf.Timestamp)
-	//@ ghost tmpInfo4 := BytesToAbsInfoFieldHelper(b, 0)
-	//@ assert tmpInfo4.AInfo == targetAbsInfo.AInfo
+	//@ assert binary.BigEndian.Uint32Spec(b[4], b[5], b[6], b[7]) == inf.Timestamp
+	//@ ghost b0 := b[0]
+	//@ ghost b2 := b[2]
+	//@ ghost b3 := b[3]
+	//@ ghost b4 := b[4]
+	//@ ghost b5 := b[5]
+	//@ ghost b6 := b[6]
+	//@ ghost b7 := b[7]
 	//@ fold slices.Bytes(b, 0, len(b))
+	// the GetByte terms instantiate the preservation postconditions of
+	// ViewElems, which carry the byte values across the lemma call
+	//@ assert slices.GetByte(b, 0, len(b), 0) == b0
+	//@ assert slices.GetByte(b, 0, len(b), 2) == b2 && slices.GetByte(b, 0, len(b), 3) == b3
+	//@ assert slices.GetByte(b, 0, len(b), 4) == b4 && slices.GetByte(b, 0, len(b), 5) == b5
+	//@ assert slices.GetByte(b, 0, len(b), 6) == b6 && slices.GetByte(b, 0, len(b), 7) == b7
+	//@ slices.ViewElems(b, 0, len(b), writePerm)
+	//@ ghost v := slices.View(b, 0, len(b))
+	//@ assert v[0] == slices.GetByte(b, 0, len(b), 0)
+	//@ assert v[2] == slices.GetByte(b, 0, len(b), 2) && v[3] == slices.GetByte(b, 0, len(b), 3)
+	//@ assert v[4] == slices.GetByte(b, 0, len(b), 4) && v[5] == slices.GetByte(b, 0, len(b), 5)
+	//@ assert v[6] == slices.GetByte(b, 0, len(b), 6) && v[7] == slices.GetByte(b, 0, len(b), 7)
+	//@ assert v[0] == b0 && v[2] == b2 && v[3] == b3
+	//@ assert v[4] == b4 && v[5] == b5 && v[6] == b6 && v[7] == b7
 	//@ assert inf.ToAbsInfoField() ==
-	//@ 	reveal BytesToAbsInfoField(b, 0)
+	//@ 	reveal BytesToAbsInfoField(v[:InfoLen])
 	return nil
 }
 

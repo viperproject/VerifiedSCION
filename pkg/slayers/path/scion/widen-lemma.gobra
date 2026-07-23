@@ -16,28 +16,30 @@
 
 package scion
 
+// The lemmas in this file relate the abstract segments parsed from the
+// view of a packet buffer to the ones parsed from the view of a prefix
+// (or subrange) of that buffer. Since views are mathematical sequences,
+// these lemmas require no permissions at all: subslicing a view is
+// ordinary sequence slicing.
+
 import (
-	sl "verification/utils/slices"
 	"verification/io"
-	. "verification/utils/definitions"
-	"verification/dependencies/encoding/binary"
+	"verification/utils/seqs"
 	"github.com/scionproto/scion/pkg/slayers/path"
 )
 
 ghost
-requires  0 <= start && start <= headerOffset
-requires  path.InfoFieldOffset(currInfIdx, headerOffset) + path.InfoLen <= offset
-requires  0 < segLen
-requires  offset + path.HopLen * segLen <= length
-requires  length <= len(raw)
-requires  0 <= currHfIdx && currHfIdx <= segLen
-requires  0 <= currInfIdx && currInfIdx < 3
-preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset) ==
+requires 0 <= start && start <= headerOffset
+requires path.InfoFieldOffset(currInfIdx, headerOffset) + path.InfoLen <= offset
+requires 0 < segLen
+requires offset + path.HopLen * segLen <= length
+requires length <= len(raw)
+requires 0 <= currHfIdx && currHfIdx <= segLen
+requires 0 <= currInfIdx && currInfIdx < 3
+ensures  CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset) ==
 	CurrSeg(raw[start:length], offset-start, currInfIdx, currHfIdx, segLen, headerOffset-start)
 decreases
-func WidenCurrSeg(raw []byte,
+func WidenCurrSeg(raw seq[byte],
 	offset int,
 	currInfIdx int,
 	currHfIdx int,
@@ -45,35 +47,13 @@ func WidenCurrSeg(raw []byte,
 	headerOffset int,
 	start int,
 	length int) {
-	unfold acc(sl.Bytes(raw, 0, len(raw)), R53)
-	unfold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R53)
-
-	ainfo1 := path.Timestamp(raw, currInfIdx, headerOffset)
-	ainfo2 := path.Timestamp(raw[start:length], currInfIdx, headerOffset-start)
-	sl.AssertSliceOverlap(raw, start, length)
-	idxTimestamp := path.InfoFieldOffset(currInfIdx, headerOffset-start)+4
-	sl.AssertSliceOverlap(raw[start:length], idxTimestamp, idxTimestamp+4)
-	assert ainfo1 == ainfo2
-
-	uinfo1 := path.AbsUinfo(raw, currInfIdx, headerOffset)
-	uinfo2 := path.AbsUinfo(raw[start:length], currInfIdx, headerOffset-start)
-	idxUinfo := path.InfoFieldOffset(currInfIdx, headerOffset-start)+2
-	sl.AssertSliceOverlap(raw[start:length], idxUinfo, idxUinfo+2)
-	assert uinfo1 == uinfo2
-
-	consDir1 := path.ConsDir(raw, currInfIdx, headerOffset)
-	consDir2 := path.ConsDir(raw[start:length], currInfIdx, headerOffset-start)
-	assert consDir1 == consDir2
-
-	peer1 := path.Peer(raw, currInfIdx, headerOffset)
-	peer2 := path.Peer(raw[start:length], currInfIdx, headerOffset-start)
-	assert peer1 == peer2
-
-	widenSegment(raw, offset, currHfIdx, ainfo1, uinfo1, consDir1, peer1, segLen, start, length)
+	infOffset := path.InfoFieldOffset(currInfIdx, headerOffset)
+	seqs.SubSeqOfSubSeq(raw, infOffset, infOffset + path.InfoLen, start, length)
+	assert InfofieldBytes(raw, currInfIdx, headerOffset) ==
+		InfofieldBytes(raw[start:length], currInfIdx, headerOffset-start)
+	widenHopFields(raw, offset, 0, segLen, start, length)
 	reveal CurrSeg(raw, offset, currInfIdx, currHfIdx, segLen, headerOffset)
 	reveal CurrSeg(raw[start:length], offset-start, currInfIdx, currHfIdx, segLen, headerOffset-start)
-	fold acc(sl.Bytes(raw, 0, len(raw)), R53)
-	fold acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R53)
 }
 
 ghost
@@ -82,12 +62,10 @@ requires 0 < segLen
 requires 0 <= currHfIdx && currHfIdx <= segLen
 requires length <= len(raw)
 requires offset + path.HopLen * segLen <= length
-preserves acc(sl.Bytes(raw, 0, len(raw)), R52)
-preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R52)
 ensures  segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ==
 	segment(raw[start:length], offset-start, currHfIdx, ainfo, uinfo, consDir, peer, segLen)
 decreases
-func widenSegment(raw []byte,
+func widenSegment(raw seq[byte],
 	offset int,
 	currHfIdx int,
 	ainfo io.Ainfo,
@@ -97,43 +75,37 @@ func widenSegment(raw []byte,
 	segLen int,
 	start int,
 	length int) {
-	newP := (R52 + R53)/2
-	widenHopFields(raw, offset, 0, segLen, start, length, newP)
+	widenHopFields(raw, offset, 0, segLen, start, length)
 }
 
 ghost
-requires  R53 < p
-requires  0 <= start && start <= offset
-requires  0 <= currHfIdx && currHfIdx <= segLen
-requires  offset + path.HopLen * segLen <= length
-requires  length <= len(raw)
-preserves acc(sl.Bytes(raw, 0, len(raw)), p)
-preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), p)
-ensures   hopFields(raw, offset, currHfIdx, segLen) ==
+requires 0 <= start && start <= offset
+requires 0 <= currHfIdx && currHfIdx <= segLen
+requires offset + path.HopLen * segLen <= length
+requires length <= len(raw)
+ensures  hopFields(raw, offset, currHfIdx, segLen) ==
 	hopFields(raw[start:length], offset-start, currHfIdx, segLen)
 decreases segLen - currHfIdx
-func widenHopFields(raw []byte, offset int, currHfIdx int, segLen int, start int, length int, p perm) {
+func widenHopFields(raw seq[byte], offset int, currHfIdx int, segLen int, start int, length int) {
 	if (currHfIdx != segLen) {
-		path.WidenBytesHopField(raw, offset + path.HopLen * currHfIdx, start, length)
-		hf1 := path.BytesToIO_HF(raw, 0, offset + path.HopLen * currHfIdx, len(raw))
-		hf2 := path.BytesToIO_HF(raw[start:length], 0, offset + path.HopLen * currHfIdx - start, length - start)
-		newP := (p + R53)/2
-		widenHopFields(raw, offset, currHfIdx + 1, segLen, start, length, newP)
+		hfStart := offset + path.HopLen * currHfIdx
+		seqs.SubSeqOfSubSeq(raw, hfStart, hfStart + path.HopLen, start, length)
+		assert raw[hfStart:hfStart + path.HopLen] ==
+			raw[start:length][hfStart - start:hfStart - start + path.HopLen]
+		widenHopFields(raw, offset, currHfIdx + 1, segLen, start, length)
 	}
 }
 
 ghost
-requires  0 <= start && start <= headerOffset
-requires  segs.Valid()
-requires  0 <= length && length <= len(raw)
-requires  PktLen(segs, headerOffset) <= length
-requires  1 <= currInfIdx && currInfIdx < 4
-preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   LeftSeg(raw, currInfIdx, segs, headerOffset) ==
+requires 0 <= start && start <= headerOffset
+requires segs.Valid()
+requires 0 <= length && length <= len(raw)
+requires PktLen(segs, headerOffset) <= length
+requires 1 <= currInfIdx && currInfIdx < 4
+ensures  LeftSeg(raw, currInfIdx, segs, headerOffset) ==
 	LeftSeg(raw[start:length], currInfIdx, segs, headerOffset-start)
 decreases
-func WidenLeftSeg(raw []byte,
+func WidenLeftSeg(raw seq[byte],
 	currInfIdx int,
 	segs io.SegLens,
 	headerOffset int,
@@ -152,17 +124,15 @@ func WidenLeftSeg(raw []byte,
 }
 
 ghost
-requires  0 <= start && start <= headerOffset
-requires  segs.Valid()
-requires  0 <= length && length <= len(raw)
-requires  PktLen(segs, headerOffset) <= length
-requires  -1 <= currInfIdx && currInfIdx < 2
-preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   RightSeg(raw, currInfIdx, segs, headerOffset) ==
+requires 0 <= start && start <= headerOffset
+requires segs.Valid()
+requires 0 <= length && length <= len(raw)
+requires PktLen(segs, headerOffset) <= length
+requires -1 <= currInfIdx && currInfIdx < 2
+ensures  RightSeg(raw, currInfIdx, segs, headerOffset) ==
 	RightSeg(raw[start:length], currInfIdx, segs, headerOffset-start)
 decreases
-func WidenRightSeg(raw []byte,
+func WidenRightSeg(raw seq[byte],
 	currInfIdx int,
 	segs io.SegLens,
 	headerOffset int,
@@ -180,17 +150,15 @@ func WidenRightSeg(raw []byte,
 }
 
 ghost
-requires  0 <= start && start <= headerOffset
-requires  segs.Valid()
-requires  2 <= currInfIdx && currInfIdx < 5
-requires  0 <= length && length <= len(raw)
-requires  PktLen(segs, headerOffset) <= length
-preserves acc(sl.Bytes(raw, 0, len(raw)), R51)
-preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R51)
-ensures   MidSeg(raw, currInfIdx, segs, headerOffset) ==
+requires 0 <= start && start <= headerOffset
+requires segs.Valid()
+requires 2 <= currInfIdx && currInfIdx < 5
+requires 0 <= length && length <= len(raw)
+requires PktLen(segs, headerOffset) <= length
+ensures  MidSeg(raw, currInfIdx, segs, headerOffset) ==
 	MidSeg(raw[start:length], currInfIdx, segs, headerOffset - start)
 decreases
-func WidenMidSeg(raw []byte,
+func WidenMidSeg(raw seq[byte],
 	currInfIdx int,
 	segs io.SegLens,
 	headerOffset int,
