@@ -377,9 +377,6 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 	//@ unfold acc(s.Mem(ubuf), R9)
 	//@ unfold acc(s.Base.Mem(), R10)
 	idx := int(s.PathMeta.CurrINF)
-	// (VerifiedSCION) Cannot assert bounds of uint:
-	// https://github.com/viperproject/gobra/issues/192
-	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
 	//@ assert forall res path.InfoField :: { s.CorrectlyDecodedInf(ubuf, res) } s.GetBase(ubuf).ValidCurrInfSpec() ==>
@@ -512,9 +509,6 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 	//@ unfold acc(s.Mem(ubuf), R9)
 	//@ unfold acc(s.Base.Mem(), R10)
 	idx := int(s.PathMeta.CurrHF)
-	// (VerifiedSCION) Cannot assert bounds of uint:
-	// https://github.com/viperproject/gobra/issues/192
-	//@ assume 0 <= idx
 	//@ fold acc(s.Base.Mem(), R10)
 	//@ fold acc(s.Mem(ubuf), R9)
 	//@ assert forall res path.HopField :: { s.CorrectlyDecodedHf(ubuf, res) } s.GetBase(ubuf).ValidCurrHfSpec() ==>
@@ -548,9 +542,6 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	// we introduce a temporary variable to be able to call `path.AbsMacArrayCongruence()`.
 	tmpHopField /*@@@*/ := hop
 	//@ path.AbsMacArrayCongruence(hop.Mac, tmpHopField.Mac)
-	// (VerifiedSCION) Cannot assert bounds of uint:
-	// https://github.com/viperproject/gobra/issues/192
-	//@ assume 0 <= tmpHopField.ConsIngress && 0 <= tmpHopField.ConsEgress
 	//@ fold acc(tmpHopField.Mem(), R9)
 	//@ reveal validPktMetaHdr(ubuf)
 	//@ unfold acc(s.Mem(ubuf), R50)

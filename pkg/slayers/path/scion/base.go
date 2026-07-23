@@ -116,12 +116,12 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 	//@ invariant (i == 0 && s.NumINF != 0) ==> (
 	//@ 	2 <= s.NumINF && s.NumINF <= 3 &&
 	//@ 	(s.NumINF == 2 ==> s.NumHops == int(s.PathMeta.SegLen[1])) &&
-	//@ 	(s.NumINF == 3 ==> s.NumHops == int(s.PathMeta.SegLen[1] + s.PathMeta.SegLen[2])))
+	//@ 	(s.NumINF == 3 ==> s.NumHops == int(s.PathMeta.SegLen[1]) + int(s.PathMeta.SegLen[2])))
 	//@ invariant (i == -1 && s.NumINF == 0) ==> s.NumHops == 0
 	//@ invariant (i == -1 && s.NumINF != 0) ==> (
 	//@ 	(s.NumINF == 1 ==> s.NumHops == int(s.PathMeta.SegLen[0])) &&
-	//@ 	(s.NumINF == 2 ==> s.NumHops == int(s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1])) &&
-	//@ 	(s.NumINF == 3 ==> s.NumHops == int(s.PathMeta.SegLen[0] + s.PathMeta.SegLen[1] +  s.PathMeta.SegLen[2])))
+	//@ 	(s.NumINF == 2 ==> s.NumHops == int(s.PathMeta.SegLen[0]) + int(s.PathMeta.SegLen[1])) &&
+	//@ 	(s.NumINF == 3 ==> s.NumHops == int(s.PathMeta.SegLen[0]) + int(s.PathMeta.SegLen[1]) + int(s.PathMeta.SegLen[2])))
 	//@ invariant forall j int :: { s.PathMeta.SegLen[j] } i < j && j < s.NumINF ==>
 	//@ 	s.PathMeta.SegLen[j] != 0
 	//@ invariant forall j int :: { s.PathMeta.SegLen[j] } (s.NumINF <= j && i < j && j < MaxINFs) ==>
@@ -137,9 +137,6 @@ func (s *Base) DecodeFromBytes(data []byte) (r error) {
 		if s.PathMeta.SegLen[i] > 0 && s.NumINF == 0 {
 			s.NumINF = i + 1
 		}
-		// (VerifiedSCION) Cannot assert bounds of uint:
-		// https://github.com/viperproject/gobra/issues/192
-		//@ assume int(s.PathMeta.SegLen[i]) >= 0
 		s.NumHops += int(s.PathMeta.SegLen[i])
 	}
 	// We must check the validity of NumHops. It is possible to fit more than 64 hops in
@@ -258,8 +255,7 @@ type MetaHdr struct {
 // @ decreases
 func (m *MetaHdr) DecodeFromBytes(raw []byte) (e error) {
 	if len(raw) < MetaLen {
-		// (VerifiedSCION) added cast, otherwise Gobra cannot verify call
-		return serrors.New("MetaHdr raw too short", "expected", int(MetaLen), "actual", int(len(raw)))
+		return serrors.New("MetaHdr raw too short", "expected", MetaLen, "actual", len(raw))
 	}
 	//@ unfold acc(sl.Bytes(raw, 0, len(raw)), R50)
 	line := binary.BigEndian.Uint32(raw)
