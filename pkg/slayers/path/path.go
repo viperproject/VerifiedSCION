@@ -52,7 +52,6 @@ func init() {
 // Type indicates the type of the path contained in the SCION header.
 type Type uint8
 
-// @ requires 0 <= t && t < maxPathType
 // @ preserves acc(PkgMem(), R20)
 // @ decreases
 func (t Type) String() string {
@@ -148,7 +147,6 @@ type Metadata struct {
 
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
-// @ requires 0 <= pathMeta.Type && pathMeta.Type < maxPathType
 // @ requires PkgMem()
 // @ requires RegisteredTypes().DoesNotContain(int64(pathMeta.Type))
 // @ requires pathMeta.New implements NewPathSpec
@@ -186,7 +184,6 @@ func StrictDecoding(strict bool) {
 }
 
 // NewPath returns a new path object of pathType.
-// @ requires 0 <= pathType && pathType < maxPathType
 // @ requires acc(PkgMem(), _)
 // @ ensures  e != nil ==> e.ErrorMem()
 // @ ensures  e == nil ==> p != nil && p.NonInitMem()

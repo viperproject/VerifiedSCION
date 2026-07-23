@@ -22,12 +22,12 @@ ghost type Unit ghost struct{}
 
 // interface IDs
 ghost type Ifs ghost struct {
-	V uint16
+	V integer
 }
 
 // type of AS identifiers. Matches the type 'as' in Isabelle.
 ghost type AS ghost struct {
-	V uint
+	V integer
 }
 
 // msgTerms consist of terms from our term algebra.
@@ -39,7 +39,7 @@ ghost type MsgTerm adt {
 	}
 
 	MsgTerm_Num {
-		MsgTerm_Num_ uint // formallized as nat in Isabelle
+		MsgTerm_Num_ integer // formallized as nat in Isabelle
 	}
 
 	MsgTerm_Key {

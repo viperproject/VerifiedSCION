@@ -27,19 +27,19 @@ pure func if2term(ifs option[Ifs]) MsgTerm {
 		case none[Ifs]:
 			MsgTerm_Empty{}
 		default:
-			MsgTerm_AS{AS{uint(get(ifs).V)}}
+			MsgTerm_AS{AS{get(ifs).V}}
 	}
 }
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) hf_valid(d bool, ts uint, uinfo set[MsgTerm], hf HF) bool {
+pure func (dp DataPlaneSpec) hf_valid(d bool, ts integer, uinfo set[MsgTerm], hf HF) bool {
 	return hf_valid_impl(dp.Asid(), ts, uinfo, hf)
 }
 
 ghost
 decreases
-pure func hf_valid_impl(asid AS, ts uint, uinfo set[MsgTerm], hf HF) bool {
+pure func hf_valid_impl(asid AS, ts integer, uinfo set[MsgTerm], hf HF) bool {
 	return let inif := hf.InIF2 in
 		let egif := hf.EgIF2 in
 		let hvf := hf.HVF in
@@ -51,7 +51,7 @@ ghost
 opaque
 ensures result.extract_asid() == asid
 decreases
-pure func nextMsgtermSpec(asid AS, inif option[Ifs], egif option[Ifs], ts uint, uinfo set[MsgTerm]) (result MsgTerm) {
+pure func nextMsgtermSpec(asid AS, inif option[Ifs], egif option[Ifs], ts integer, uinfo set[MsgTerm]) (result MsgTerm) {
 	return let l := plaintextToMac(inif, egif, ts, uinfo) in
 		let res := mac(macKey(asidToKey(asid)), l) in
 		let _ := reveal res.extract_asid() in
@@ -60,7 +60,7 @@ pure func nextMsgtermSpec(asid AS, inif option[Ifs], egif option[Ifs], ts uint, 
 
 ghost
 decreases
-pure func plaintextToMac(inif option[Ifs], egif option[Ifs], ts uint, uinfo set[MsgTerm]) MsgTerm {
+pure func plaintextToMac(inif option[Ifs], egif option[Ifs], ts integer, uinfo set[MsgTerm]) MsgTerm {
 	return MsgTerm_L {
 		seq[MsgTerm]{
 			MsgTerm_Num{ts},

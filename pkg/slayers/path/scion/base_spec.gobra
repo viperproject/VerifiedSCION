@@ -43,15 +43,13 @@ pred (b *Base) Mem() {
 ghost
 decreases
 pure func (b Base) ValidCurrInfSpec() bool {
-	return 0 <= b.PathMeta.CurrINF &&
-		int(b.PathMeta.CurrINF) < b.NumINF
+	return int(b.PathMeta.CurrINF) < b.NumINF
 }
 
 ghost
 decreases
 pure func (b Base) ValidCurrHfSpec() bool {
-	return 0 <= b.PathMeta.CurrHF &&
-		int(b.PathMeta.CurrHF) < b.NumHops
+	return int(b.PathMeta.CurrHF) < b.NumHops
 }
 
 ghost
@@ -103,8 +101,8 @@ decreases
 pure func (b Base) NumsCompatibleWithSegLen() bool {
 	return 0 <= b.NumINF && b.NumINF <= 3 &&
 		(b.NumINF == 1 ==> b.NumHops == int(b.PathMeta.SegLen[0]))  &&
-		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1])) &&
-		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0] + b.PathMeta.SegLen[1] + b.PathMeta.SegLen[2])) &&
+		(b.NumINF == 2 ==> b.NumHops == int(b.PathMeta.SegLen[0]) + int(b.PathMeta.SegLen[1])) &&
+		(b.NumINF == 3 ==> b.NumHops == int(b.PathMeta.SegLen[0]) + int(b.PathMeta.SegLen[1]) + int(b.PathMeta.SegLen[2])) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } 0 <= i && i < b.NumINF ==>
 			b.PathMeta.SegLen[i] != 0) &&
 		(forall i int :: { b.PathMeta.SegLen[i] } b.NumINF <= i && i < MaxINFs ==>
@@ -122,7 +120,7 @@ pure func (b *Base) GetNumINF() (res int) {
 
 ghost
 requires b.Mem()
-ensures  0 <= res
+ensures  0 <= res && res <= MaxHops
 decreases
 pure func (b *Base) GetNumHops() (res int) {
 	return unfolding b.Mem() in

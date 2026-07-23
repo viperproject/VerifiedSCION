@@ -72,7 +72,7 @@ type Path struct {
 // @ decreases
 func (o *Path) DecodeFromBytes(data []byte) (r error) {
 	if len(data) < PathLen {
-		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
+		return serrors.New("buffer too short for OneHop path", "expected", PathLen, "actual",
 			len(data))
 	}
 	offset := 0
@@ -107,8 +107,8 @@ func (o *Path) DecodeFromBytes(data []byte) (r error) {
 // @ decreases
 func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	if len(b) < PathLen {
-		return serrors.New("buffer too short for OneHop path", "expected", int(PathLen), "actual",
-			int(len(b)))
+		return serrors.New("buffer too short for OneHop path", "expected", PathLen, "actual",
+			len(b))
 	}
 	offset := 0
 	//@ unfold acc(o.Mem(ubuf), R1)

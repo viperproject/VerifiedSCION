@@ -19,7 +19,7 @@ package epic
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
-	"github.com/scionproto/scion/verification/dependencies/encoding/binary"
+	"encoding/binary"
 	"github.com/scionproto/scion/verification/io"
 	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"

@@ -358,7 +358,7 @@ func (h HostSVC) Pack() (res []byte) {
 	return out
 }
 
-// @ requires pad >= 0
+// @ requires 0 <= pad && pad <= MAX_INT - HostLenSVC
 // @ ensures acc(res)
 // @ decreases
 func (h HostSVC) PackWithPad(pad int) (res []byte) {
