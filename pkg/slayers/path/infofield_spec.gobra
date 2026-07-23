@@ -19,14 +19,14 @@ package path
 import (
 	"verification/io"
 	sl "verification/utils/slices"
-	"verification/dependencies/encoding/binary"
+	"encoding/binary"
 	. "verification/utils/definitions"
 )
 
 ghost
 decreases
-pure func InfoFieldOffset(currINF, headerOffset int) int {
-	return headerOffset + InfoLen * currINF
+pure func InfoFieldOffset(currINF, headerOffset int) integer {
+	return integer(headerOffset) + InfoLen * integer(currINF)
 }
 
 ghost
@@ -76,7 +76,7 @@ pure func AbsUinfo(raw []byte, currINF int, headerOffset int) set[io.MsgTerm] {
 ghost
 opaque
 requires 0 <= middle
-requires middle+InfoLen <= len(raw)
+requires integer(middle) + InfoLen <= len(raw)
 requires sl.Bytes(raw, 0, len(raw))
 decreases
 pure func BytesToAbsInfoField(raw [] byte, middle int) (io.AbsInfoField) {
@@ -86,7 +86,7 @@ pure func BytesToAbsInfoField(raw [] byte, middle int) (io.AbsInfoField) {
 
 ghost
 requires 0 <= middle
-requires middle+InfoLen <= len(raw)
+requires integer(middle) + InfoLen <= len(raw)
 requires forall i int :: { &raw[i] } middle <= i && i < len(raw) ==>
 	acc(&raw[i])
 decreases
@@ -103,7 +103,7 @@ pure func BytesToAbsInfoFieldHelper(raw [] byte, middle int) (io.AbsInfoField) {
 
 ghost
 requires  0 <= middle
-requires  middle+InfoLen <= len(raw)
+requires  integer(middle) + InfoLen <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
 preserves acc(sl.Bytes(raw[middle:middle+InfoLen], 0, InfoLen), R55)
 ensures   BytesToAbsInfoField(raw, middle) ==
