@@ -22,7 +22,7 @@ package io
 //       ideally, we would use always op_i for every field, but Gobra currently complains if
 //       there are two constructors with a parameter that shares the name.
 
-type IO_val adt {
+ghost type IO_val adt {
 	// Unit
 	IO_val_Unit{}
 

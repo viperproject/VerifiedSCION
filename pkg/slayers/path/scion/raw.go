@@ -303,7 +303,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 // CurrINF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
-// @ ensures   (r == nil) == (s.GetCurrINF(ubuf) < s.GetNumINF(ubuf))
+// @ ensures   (r == nil) == (int(s.GetCurrINF(ubuf)) < s.GetNumINF(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoField, r error) {
@@ -413,7 +413,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 // CurrHF index in the path meta header.
 // @ preserves acc(s.Mem(ubuf), R8)
 // @ preserves acc(sl.AbsSlice_Bytes(ubuf, 0, len(ubuf)), R2)
-// @ ensures   (r == nil) == (s.GetCurrHF(ubuf) < s.GetNumHops(ubuf))
+// @ ensures   (r == nil) == (int(s.GetCurrHF(ubuf)) < s.GetNumHops(ubuf))
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
 func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField, r error) {

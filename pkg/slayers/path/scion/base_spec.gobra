@@ -50,13 +50,13 @@ pred (b *Base) Mem() {
 ghost
 decreases
 pure func (b Base) ValidCurrInfSpec() bool {
-	return 0 <= b.PathMeta.CurrINF && b.PathMeta.CurrINF < b.NumINF
+	return 0 <= b.PathMeta.CurrINF && int(b.PathMeta.CurrINF) < b.NumINF
 }
 
 ghost
 decreases
 pure func (b Base) ValidCurrHfSpec() bool {
-	return 0 <= b.PathMeta.CurrHF && b.PathMeta.CurrHF < b.NumHops
+	return 0 <= b.PathMeta.CurrHF && int(b.PathMeta.CurrHF) < b.NumHops
 }
 
 ghost
@@ -195,7 +195,7 @@ pure func (s Base) IncPathSpec() (res Base) {
 // we should find ways to streamline the definitions, ideally by having these defs only
 // for the abstraction type only.
 
-type AbsBase adt {
+ghost type AbsBase adt {
 	AbsBase_ {
 		PathMeta AbsMetaHdr
 		NumINF int
@@ -203,7 +203,7 @@ type AbsBase adt {
 	}
 }
 
-type AbsMetaHdr adt {
+ghost type AbsMetaHdr adt {
 	AbsMetaHdr_ {
 		// we should change the types of CurrINF and CurrHF to wider types,
 		// otherwise we might start getting overflow errors here when they
@@ -291,13 +291,13 @@ pure func (b AbsBase) ValidCurrIdxsSpec() bool {
 ghost
 decreases
 pure func (b AbsBase) ValidCurrInfSpec() bool {
-	return 0 <= b.PathMeta.CurrINF && b.PathMeta.CurrINF < b.NumINF
+	return 0 <= b.PathMeta.CurrINF && int(b.PathMeta.CurrINF) < b.NumINF
 }
 
 ghost
 decreases
 pure func (b AbsBase) ValidCurrHfSpec() bool {
-	return 0 <= b.PathMeta.CurrHF && b.PathMeta.CurrHF < b.NumHops
+	return 0 <= b.PathMeta.CurrHF && int(b.PathMeta.CurrHF) < b.NumHops
 }
 
 ghost
