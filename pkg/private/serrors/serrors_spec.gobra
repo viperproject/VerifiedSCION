@@ -61,6 +61,20 @@ func (m errOrMsg) Error() string {
 	return m.str
 }
 
+ghost
+requires  acc(e.ErrorMem(), _)
+decreases e.ErrorMem()
+pure func (e errOrMsg) IsDuplicableMem() bool {
+	return false
+}
+
+ghost
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
+decreases e.ErrorMem()
+func (e errOrMsg) Duplicate() {}
+
 type basicError struct {
 	msg    errOrMsg
 	fields map[string]interface{}
@@ -76,6 +90,20 @@ pred (e basicError) ErrorMem() {
 	(e.cause  != nil ==> e.cause.ErrorMem()) &&
 	(e.stack  != nil ==> (acc(e.stack) && acc(*(e.stack))))
 }
+
+ghost
+requires  acc(e.ErrorMem(), _)
+decreases e.ErrorMem()
+pure func (e basicError) IsDuplicableMem() bool {
+	return false
+}
+
+ghost
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
+decreases e.ErrorMem()
+func (e basicError) Duplicate() {}
 
 trusted
 preserves e.ErrorMem()
@@ -279,6 +307,20 @@ func (e List) Error() string {
 	}
 	return fmt.Sprintf("[ %s ]", strings.Join(s, "; "))
 }
+
+ghost
+requires  acc(e.ErrorMem(), _)
+decreases e.ErrorMem()
+pure func (e List) IsDuplicableMem() bool {
+	return false
+}
+
+ghost
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
+decreases e.ErrorMem()
+func (e List) Duplicate() {}
 
 // ToError returns the object as error interface implementation.
 trusted
