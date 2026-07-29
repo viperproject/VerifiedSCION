@@ -34,6 +34,7 @@ import (
 	"strings"
 
 	"github.com/scionproto/scion/pkg/private/serrors"
+	//@ "math"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
@@ -358,7 +359,10 @@ func (h HostSVC) Pack() (res []byte) {
 	return out
 }
 
-// @ requires pad >= 0
+// (VerifiedSCION) the upper bound on 'pad' is needed under the sound bounded-integer
+// semantics: without it, 'HostLenSVC + pad' may overflow and the length passed to 'make'
+// is then not known to be non-negative.
+// @ requires 0 <= pad && pad <= math.MaxInt64 - HostLenSVC
 // @ ensures acc(res)
 // @ decreases
 func (h HostSVC) PackWithPad(pad int) (res []byte) {
