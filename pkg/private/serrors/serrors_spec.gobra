@@ -61,6 +61,20 @@ func (m errOrMsg) Error() string {
 	return m.str
 }
 
+ghost
+requires  acc(e.ErrorMem(), _)
+decreases e.ErrorMem()
+pure func (e errOrMsg) IsDuplicableMem() bool {
+    return false
+}
+
+ghost
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
+decreases e.ErrorMem()
+func (e errOrMsg) Duplicate() {}
+
 type basicError struct {
 	msg    errOrMsg
 	fields map[string]interface{}
@@ -93,6 +107,20 @@ func (e basicError) Error() string {
 	return buf.String()
 }
 
+ghost
+requires  acc(e.ErrorMem(), _)
+decreases e.ErrorMem()
+pure func (e basicError) IsDuplicableMem() bool {
+    return false
+}
+
+ghost
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
+decreases e.ErrorMem()
+func (e basicError) Duplicate() {}
+
 requires  isComparable(err)
 decreases
 func (e basicError) Is(err error) bool {
@@ -107,11 +135,11 @@ func (e basicError) Is(err error) bool {
 	}
 }
 
-requires  as != nil
+requires  as_ != nil
 decreases
-func (e basicError) As(as interface{}) bool {
+func (e basicError) As(as_ interface{}) bool {
 	if e.msg.err != nil {
-		return errors.As(e.msg.err, as)
+		return errors.As(e.msg.err, as_)
 	}
 	return false
 }
@@ -276,6 +304,20 @@ func (e List) Error() string {
 	}
 	return fmt.Sprintf("[ %s ]", strings.Join(s, "; "))
 }
+
+ghost
+requires  acc(e.ErrorMem(), _)
+decreases e.ErrorMem()
+pure func (e List) IsDuplicableMem() bool {
+    return false
+}
+
+ghost
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
+decreases e.ErrorMem()
+func (e List) Duplicate() {}
 
 // ToError returns the object as error interface implementation.
 trusted
