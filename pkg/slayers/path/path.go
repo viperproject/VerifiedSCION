@@ -14,7 +14,7 @@
 
 // +gobra
 
-//@ initEnsures PathPackageMem()
+//@ // initEnsures PathPackageMem() // deprecated feature, removed for current Gobra
 package path
 
 import (
@@ -29,8 +29,8 @@ import (
 const maxPathType = 256
 
 var (
-	registeredPaths [maxPathType]metadata
-	strictDecoding  bool = true
+	registeredPaths /*@@@*/ [maxPathType]metadata
+	strictDecoding  /*@@@*/ bool = true
 )
 
 // Ghost initialization code to establish the PathPackageMem predicate.
