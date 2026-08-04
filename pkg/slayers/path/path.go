@@ -14,11 +14,13 @@
 
 // +gobra
 
-// @ initEnsures PathPackageMem()
+// (VerifiedSCION) both initEnsures clauses below are disabled: `initEnsures` is a
+// deprecated precursor to modular initialization, no longer supported by current Gobra.
+// initEnsures PathPackageMem()
 // Skipped the following post-condition due to performance reasons
 // initEnsures forall t Type :: 0 <= t && t < maxPathType ==> !Registered(t)
 // Instead, we have:
-// @ initEnsures !Registered(0) && !Registered(1) && !Registered(2) && !Registered(3)
+// initEnsures !Registered(0) && !Registered(1) && !Registered(2) && !Registered(3)
 package path
 
 import (
