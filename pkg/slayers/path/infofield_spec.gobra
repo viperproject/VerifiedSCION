@@ -79,7 +79,7 @@ pure func AbsUinfo(raw []byte, currINF int, headerOffset int) set[io.IO_msgterm]
 
 // This type simplifies the infoField, making it easier
 // to use than the IO_seg3 from the IO-spec.
-type IntermediateAbsInfoField adt {
+ghost type IntermediateAbsInfoField adt {
 	IntermediateAbsInfoField_ {
 		AInfo io.IO_ainfo
 		UInfo set[io.IO_msgterm]
