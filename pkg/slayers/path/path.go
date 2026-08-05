@@ -14,7 +14,7 @@
 
 // +gobra
 
-//@ initEnsures PathPackageMem()
+// //@ initEnsures PathPackageMem()
 package path
 
 import (
