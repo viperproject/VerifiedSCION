@@ -14,11 +14,11 @@
 
 // +gobra
 
-// @ initEnsures PathPackageMem()
+// initEnsures PathPackageMem()
 // Skipped the following post-condition due to performance reasons
 // initEnsures forall t Type :: 0 <= t && t < maxPathType ==> !Registered(t)
 // Instead, we have:
-// @ initEnsures !Registered(0) && !Registered(1) && !Registered(2) && !Registered(3)
+// initEnsures !Registered(0) && !Registered(1) && !Registered(2) && !Registered(3)
 package path
 
 import (
@@ -33,8 +33,8 @@ import (
 const maxPathType = 256
 
 var (
-	registeredPaths [maxPathType]metadata
-	strictDecoding  bool = true
+	registeredPaths /*@@@*/ [maxPathType]metadata
+	strictDecoding  /*@@@*/ bool = true
 )
 
 // Ghost initialization code to establish the PathPackageMem predicate.

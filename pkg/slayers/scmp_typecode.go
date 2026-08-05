@@ -14,7 +14,7 @@
 
 // +gobra
 
-//@ initEnsures SCMPTypeCodeMem()
+// initEnsures SCMPTypeCodeMem()
 package slayers
 
 
@@ -149,7 +149,7 @@ func CreateSCMPTypeCode(typ SCMPType, code SCMPCode) SCMPTypeCode {
 	return SCMPTypeCode(binary.BigEndian.Uint16([]byte{uint8(typ), uint8(code)}))
 }
 
-var scmpTypeCodeInfo = map[SCMPType]struct {
+var scmpTypeCodeInfo /*@@@*/ = map[SCMPType]struct {
 	name  string
 	codes map[SCMPCode]string
 }{
