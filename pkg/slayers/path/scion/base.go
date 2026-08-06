@@ -154,7 +154,7 @@ func (s *Base) IsXover() (r bool) {
 
 // @ preserves acc(s, definitions.ReadL11)
 // @ preserves 0 <= s.NumINF && s.NumINF <= 3 && 0 <= s.NumHops
-// @ ensures   0 < s.NumINF ==> (0 <= r && r < s.NumINF)
+// @ ensures   0 < s.NumINF ==> (0 <= r && r < uint8(s.NumINF))
 // @ decreases
 func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 	left := uint8(0)
