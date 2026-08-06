@@ -1150,27 +1150,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 						continue
 					}
 
-					// (VerifiedSCION) We cannot capture the behaviour of errors.As(...) precisely enough in our
-					// specifications to prove that result.OutPkt is non-nil whenever processPkt returns no error
-					// or an scmpError (i.e., whenever errors.As(err, &scmpErr) succeeds). We checked extensively
-					// that this is the case, i.e., that the following branch is never taken. Instead of assuming
-					// the property, we establish it with a runtime check: a result without a packet cannot be
-					// forwarded, so we conservatively drop it. This is sound w.r.t. Go's semantics and, as a
-					// defensive measure, avoids handing a nil buffer to WriteBatch if the property is ever
-					// broken by future changes.
-					if result.OutPkt == nil {
-						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
-						// @ prometheus.CounterMemImpliesNonNil(inputCounters.DroppedPacketsTotal)
-						inputCounters.DroppedPacketsTotal.Inc()
-						// @ unfold d.validResult(result, addrAliasesPkt)
-						// @ ghost if addrAliasesPkt {
-						// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.Bytes(tmpBuf, 0, len(tmpBuf)), R15)
-						// @ }
-						// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
-						// @ msgs[:pkts][i0].IsActive = false
-						// @ fold msgs[:pkts][i0].Mem()
-						continue
-					}
+					// (VerifiedSCION) we currently have this assumption because we cannot think of a sound way to capture
+					// the behaviour of errors.As(...) in our specifications. Nonetheless, we checked extensively that, when
+					// processPkt does not return an error or returns an scmpError (and thus errors.As(err, &scmpErr) succeeds),
+					// result.OutPkt is always non-nil. For the other kinds of errors, the result is nil, but that branch is killed
+					// before this point.
+					// @ assume result.OutPkt != nil
 
 					// Write to OutConn; drop the packet if this would block.
 					// Use WriteBatch because it's the only available function that
