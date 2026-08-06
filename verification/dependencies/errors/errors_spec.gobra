@@ -55,6 +55,7 @@ ensures   res ==> (
 	target.CanSet(nestedErr) &&
 	(nestedErr.ErrorMem() --* err.ErrorMem()))
 ensures   !res ==> err.ErrorMem()
+ensures   res ==> target.ChainMatch(err)
 decreases err.ErrorMem()
 func As(err error, target ErrorCell) (res bool)
 
@@ -87,4 +88,23 @@ type ErrorCell interface {
 	requires acc(Mem(), _)
 	decreases
 	CanSet(e error) bool
+
+	// ChainMatch is an abstraction of the success of As for this cell:
+	// whenever As(err, c) returns true, c.ChainMatch(err) holds. As succeeds
+	// iff err's chain — err itself, followed by the errors obtained by
+	// repeatedly calling Unwrap, together with any errors reachable through
+	// custom As methods — contains an error that matches the cell. An
+	// implementation of ChainMatch must therefore over-approximate this set
+	// of errors. Gobra cannot check this property, because the chain of an
+	// arbitrary error cannot be described in the specification language;
+	// implementations are trusted to satisfy it. Implementations that do not
+	// wish to make any claim about the chains of the errors their cell is
+	// used with can define ChainMatch to be true everywhere, which is
+	// trivially a sound over-approximation. Implementations may also leave
+	// ChainMatch abstract and expose (trusted) introduction or elimination
+	// lemmas for the classes of errors they are used with.
+	ghost
+	pure
+	decreases
+	ChainMatch(err error) bool
 }

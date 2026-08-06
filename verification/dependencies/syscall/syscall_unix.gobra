@@ -76,3 +76,12 @@ decreases
 pure func (s *Errno) CanSet(e error) bool {
 	return typeOf(e) == type[Errno]
 }
+
+// No claim is made about the unwrap chains of the errors this cell is used
+// with; `true` is trivially a sound over-approximation of the success of
+// errors.As (see the documentation of ChainMatch in errors.ErrorCell).
+ghost
+decreases
+pure func (s *Errno) ChainMatch(err error) bool {
+	return true
+}

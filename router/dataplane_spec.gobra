@@ -634,6 +634,23 @@ pure func (s *scmpError) CanSet(e error) bool {
 	return typeOf(e) == type[scmpError]
 }
 
+// ChainMatch must over-approximate the success of errors.As(err, s) (see the
+// documentation of ChainMatch in errors.ErrorCell): it must hold whenever err's
+// chain contains an scmpError. It is deliberately left abstract for now. Note
+// that no definition in terms of typeOf(err) alone would be sound: the errors
+// returned by processPkt may contain an scmpError either as the top-level error
+// itself (the results of packSCMP) or wrapped one level deep inside an error
+// produced by serrors.WithCtx (the "after xover" branches of process, on which
+// errors.As still succeeds because serrors' error type implements the custom
+// As method by delegating to the wrapped error). Eliminating the remaining
+// assumption about result.OutPkt in Run requires capturing the unwrap chains
+// of the errors produced by serrors in that package's specification, at which
+// point this function can be given a definition (or trusted introduction and
+// elimination lemmas) relating it to those chains.
+ghost
+decreases
+pure func (s *scmpError) ChainMatch(err error) bool
+
 /** spec for newPacketProcessor **/
 
 // initial state, established after allocating with newPacketProcessor.

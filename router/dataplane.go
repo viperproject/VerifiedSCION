@@ -1150,11 +1150,21 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 						continue
 					}
 
-					// (VerifiedSCION) we currently have this assumption because we cannot think of a sound way to capture
-					// the behaviour of errors.As(...) in our specifications. Nonetheless, we checked extensively that, when
-					// processPkt does not return an error or returns an scmpError (and thus errors.As(err, &scmpErr) succeeds),
-					// result.OutPkt is always non-nil. For the other kinds of errors, the result is nil, but that branch is killed
-					// before this point.
+					// (VerifiedSCION) We checked extensively that, when processPkt does not return an error
+					// or returns an error whose chain contains an scmpError (and thus errors.As(err, &scmpErr)
+					// succeeds), result.OutPkt is always non-nil; the other kinds of errors are dropped by the
+					// default branch above. The specification of errors.As now provides a sound hook to derive
+					// this: on success it ensures scmpErr.ChainMatch(err), i.e., that err's chain contains an
+					// scmpError. What is still missing is the corresponding postcondition of processPkt,
+					// namely `reserr != nil && respr.OutPkt == nil ==> !scmpErr.ChainMatch(reserr)` (and
+					// `reserr == nil && respr.OutConn != nil ==> respr.OutPkt != nil` for the error-free case).
+					// Establishing it requires capturing the unwrap chains of the errors produced by the
+					// serrors package in its specification: an scmpError can legitimately reach this point
+					// wrapped inside a serrors error (see the "after xover" branches of process, which wrap
+					// the results of validateHopExpiry and verifyCurrentMAC in serrors.WithCtx, and on which
+					// errors.As still succeeds via the custom As method of serrors' error type), so the
+					// property is genuinely about chains and cannot be phrased in terms of typeOf(reserr).
+					// Until then, we keep the assumption:
 					// @ assume result.OutPkt != nil
 
 					// Write to OutConn; drop the packet if this would block.
