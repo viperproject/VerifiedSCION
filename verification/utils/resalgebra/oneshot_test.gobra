@@ -42,13 +42,13 @@ func mkOneShot() (o *oneshot, ghost l LocName) {
 }
 
 requires m.LockP()
-requires m.LockInv() == oneshotInv!<o, l!>
+requires m.LockInv() == oneshotInv{o, l}
 requires n != 0
 func (o *oneshot) trySet(n int, m *sync.Mutex, ghost l LocName) bool {
 	m.Lock()
 	defer m.Unlock()
-	unfold oneshotInv!<o, l!>()
-	defer fold oneshotInv!<o, l!>()
+	unfold oneshotInv{o, l}()
+	defer fold oneshotInv{o, l}()
 	if o.isInit {
 		return false
 	}
@@ -60,10 +60,10 @@ func (o *oneshot) trySet(n int, m *sync.Mutex, ghost l LocName) bool {
 }
 
 requires m.LockP()
-requires m.LockInv() == oneshotInv!<o, l!>
+requires m.LockInv() == oneshotInv{o, l}
 func (o *oneshot) check(m *sync.Mutex, ghost l LocName) {
 	m.Lock()
-	unfold oneshotInv!<o, l!>()
+	unfold oneshotInv{o, l}()
 	y1 := o.V
 	ghost e1 := o.e
 	ghost isInit1 := o.isInit
@@ -74,11 +74,11 @@ func (o *oneshot) check(m *sync.Mutex, ghost l LocName) {
 		GhostOp1(l, OneShotRA, e1, e1)
 		assert GhostLocation(l, OneShotRA, e1) && GhostLocation(l, OneShotRA, e1)
 	}
-	fold oneshotInv!<o, l!>()
+	fold oneshotInv{o, l}()
 	m.Unlock()
 
 	m.Lock()
-	unfold oneshotInv!<o, l!>()
+	unfold oneshotInv{o, l}()
 	y2 := o.V
 	ghost e2 := o.e
 	ghost isInit2 := o.isInit
@@ -97,6 +97,6 @@ func (o *oneshot) check(m *sync.Mutex, ghost l LocName) {
 		GhostValid(l, OneShotRA, OneShotRA.Compose(e1, e2))
 		assert e1 == e2
 	}
-	fold oneshotInv!<o, l!>()
+	fold oneshotInv{o, l}()
 	m.Unlock()
 }

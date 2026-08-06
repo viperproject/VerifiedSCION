@@ -23,6 +23,7 @@ import (
 	"github.com/scionproto/scion/pkg/private/serrors"
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
+	//@ "github.com/scionproto/scion/verification/io"
 	//@ . "github.com/scionproto/scion/verification/utils/definitions"
 	//@ sl "github.com/scionproto/scion/verification/utils/slices"
 )
@@ -139,6 +140,7 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 // @ preserves acc(sl.Bytes(b, 0, len(b)), R42)
 // @ ensures   len(b) < MetadataLen ==> r != nil
 // @ ensures   r == nil ==> p.Mem(b)
+// @ ensures   r == nil ==> p.IsValidResultOfDecoding(b)
 // @ ensures   r != nil ==> p.NonInitMem() && r.ErrorMem()
 // @ decreases
 func (p *Path) DecodeFromBytes(b []byte) (r error) {
@@ -168,12 +170,64 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ fold acc(sl.Bytes(b, 0, len(b)), R42)
 	//@ sl.SplitRange_Bytes(b, MetadataLen, len(b), R42)
 	ret := p.ScionPath.DecodeFromBytes(b[MetadataLen:])
+	//@ ghost var hdr0 uint32
+	//@ ghost var b0, b1, b2, b3 byte
+	//@ ghost var base0 scion.Base
 	//@ ghost if ret == nil {
+	//@ 	base0 = p.ScionPath.GetBase(b[MetadataLen:])
+	//@ 	assert base0.EqAbsHeader(b[MetadataLen:])
+	//@ 	assert base0.WeaklyValid()
+	//@ 	assert scion.MetaLen <= len(b) - MetadataLen
+	//@ 	unfold acc(sl.Bytes(b[MetadataLen:], 0, len(b)-MetadataLen), R56)
+	//@ 	assert forall k int :: {&b[MetadataLen:][k]} 0 <= k && k < len(b)-MetadataLen ==>
+	//@ 		&b[MetadataLen:][k] == &b[MetadataLen + k]
+	//@ 	assert forall k int :: {&b[MetadataLen:][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+	//@ 		&b[MetadataLen:][:scion.MetaLen][k] == &b[MetadataLen:][k]
+	//@ 	b0 = b[MetadataLen:][0]
+	//@ 	b1 = b[MetadataLen:][1]
+	//@ 	b2 = b[MetadataLen:][2]
+	//@ 	b3 = b[MetadataLen:][3]
+	//@ 	hdr0 = binary.BigEndian.Uint32(b[MetadataLen:][:scion.MetaLen])
+	//@ 	assert scion.RawBytesToMetaHdr(b[MetadataLen:]) == scion.DecodedFrom(hdr0)
+	//@ 	assert base0 == scion.RawBytesToBase(b[MetadataLen:])
+	//@ 	assert base0.PathMeta == scion.DecodedFrom(hdr0)
+	//@ 	assert base0.NumINF == io.CombineSegLens(int(base0.PathMeta.SegLen[0]),
+	//@ 		int(base0.PathMeta.SegLen[1]), int(base0.PathMeta.SegLen[2])).NumInfoFields()
+	//@ 	assert base0.NumHops == io.CombineSegLens(int(base0.PathMeta.SegLen[0]),
+	//@ 		int(base0.PathMeta.SegLen[1]), int(base0.PathMeta.SegLen[2])).TotalHops()
+	//@ 	fold acc(sl.Bytes(b[MetadataLen:], 0, len(b)-MetadataLen), R56)
 	//@ 	fold p.Mem(b)
 	//@ } else {
 	//@ 	fold p.NonInitMem()
 	//@ }
-	//@ sl.CombineRange_Bytes(b, MetadataLen, len(b), R42)
+	//@ ghost if ret == nil {
+	// Combine only half of the permissions to the subslice, so that the
+	// retained half pins the byte values while both views of the buffer
+	// coexist below.
+	//@ 	sl.CombineRange_Bytes(b, MetadataLen, len(b), R42/2)
+	//@ 	unfold acc(p.Mem(b), R56)
+	//@ 	unfold acc(p.ScionPath.Mem(b[MetadataLen:]), R56)
+	//@ 	unfold acc(sl.Bytes(b, 0, len(b)), R56)
+	//@ 	unfold acc(sl.Bytes(b[MetadataLen:], 0, len(b)-MetadataLen), R56)
+	//@ 	assert forall k int :: {&b[MetadataLen:][k]} 0 <= k && k < len(b)-MetadataLen ==>
+	//@ 		&b[MetadataLen:][k] == &b[MetadataLen + k]
+	//@ 	assert forall k int :: {&b[MetadataLen:][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+	//@ 		&b[MetadataLen:][:scion.MetaLen][k] == &b[MetadataLen:][k]
+	//@ 	assert b[MetadataLen:][0] == b0
+	//@ 	assert b[MetadataLen:][1] == b1
+	//@ 	assert b[MetadataLen:][2] == b2
+	//@ 	assert b[MetadataLen:][3] == b3
+	//@ 	assert binary.BigEndian.Uint32(b[MetadataLen:][:scion.MetaLen]) == hdr0
+	//@ 	assert p.ScionPath.Base.GetBase() == base0
+	//@ 	fold acc(sl.Bytes(b[MetadataLen:], 0, len(b)-MetadataLen), R56)
+	//@ 	fold acc(sl.Bytes(b, 0, len(b)), R56)
+	//@ 	fold acc(p.ScionPath.Mem(b[MetadataLen:]), R56)
+	//@ 	fold acc(p.Mem(b), R56)
+	//@ 	assert p.IsValidResultOfDecoding(b)
+	//@ 	sl.CombineRange_Bytes(b, MetadataLen, len(b), R42/2)
+	//@ } else {
+	//@ 	sl.CombineRange_Bytes(b, MetadataLen, len(b), R42)
+	//@ }
 	return ret
 }
 

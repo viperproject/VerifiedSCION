@@ -162,7 +162,7 @@ requires  newPkt == AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)
 requires  AbsValidateIngressIDConstraint(oldPkt, ingressID)
 requires  AbsVerifyCurrentMACConstraint(newPkt, dp)
 requires  len(newPkt.CurrSeg.Future) == 1 || AbsValidateEgressIDConstraint(newPkt, true, dp)
-preserves Invariant(SharedInv!<dp, ioSharedArg!>)
+preserves Invariant(SharedInv{dp, ioSharedArg})
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func InternalEnterEvent(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
@@ -193,7 +193,7 @@ requires  AbsVerifyCurrentMACConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, 
 requires  AbsValidateEgressIDConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID), (ingressID != none[io.Ifs]), dp)
 requires  AbsEgressInterfaceConstraint(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID), egressID)
 requires  newPkt == AbsProcessEgress(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
-preserves Invariant(SharedInv!<dp, ioSharedArg!>)
+preserves Invariant(SharedInv{dp, ioSharedArg})
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func ExternalEnterOrExitEvent(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
@@ -234,7 +234,7 @@ requires  egressID == none[io.Ifs] ==>
 	newPkt == AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID))
 requires  egressID != none[io.Ifs] ==>
 	newPkt == AbsProcessEgress(AbsDoXover(AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)))
-preserves Invariant(SharedInv!<dp, ioSharedArg!>)
+preserves Invariant(SharedInv{dp, ioSharedArg})
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func XoverEvent(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioSharedArg SharedArg, dp io.DataPlaneSpec) {

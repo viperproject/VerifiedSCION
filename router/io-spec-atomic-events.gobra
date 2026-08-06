@@ -20,7 +20,6 @@
 package router
 
 import (
-	"sync"
 	io "verification/io"
 )
 
@@ -47,12 +46,12 @@ requires  dp.dp3s_forward(
 	},
 	newPkt,
 	egressID)
-preserves Invariant(SharedInv!<dp, ioSharedArg!>)
+preserves Invariant(SharedInv{dp, ioSharedArg})
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func AtomicEnter(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-	critical SharedInv!<dp, ioSharedArg!> (
-		unfold SharedInv!< dp, ioSharedArg !>()
+	critical SharedInv{dp, ioSharedArg} (
+		unfold SharedInv{dp, ioSharedArg}()
 		t, s := *ioSharedArg.Place, *ioSharedArg.State
 		ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
 		ghost pkt_internal := io.Val(io.ValInternal1{oldPkt, get(ingressID), newPkt, egressID})
@@ -65,7 +64,7 @@ func AtomicEnter(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressI
 		UpdateElemWitness(s.obuf, ioSharedArg.OBufY, egressID, newPkt)
 		ghost *ioSharedArg.State = io.dp3s_add_obuf(s, egressID, newPkt)
 		ghost *ioSharedArg.Place = tN
-		fold SharedInv!< dp, ioSharedArg !>()
+		fold SharedInv{dp, ioSharedArg}()
 	)
 }
 
@@ -77,12 +76,12 @@ requires  egressID != none[io.Ifs]
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
 requires  dp.dp3s_forward_ext(oldPkt, newPkt, get(egressID))
-preserves Invariant(SharedInv!<dp, ioSharedArg!>)
+preserves Invariant(SharedInv{dp, ioSharedArg})
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func AtomicExit(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-	critical SharedInv!<dp, ioSharedArg!> (
-		unfold SharedInv!< dp, ioSharedArg !>()
+	critical SharedInv{dp, ioSharedArg} (
+		unfold SharedInv{dp, ioSharedArg}()
 		t, s := *ioSharedArg.Place, *ioSharedArg.State
 		ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
 		ghost pkt_internal := io.Val(io.ValInternal2{oldPkt, newPkt, get(egressID)})
@@ -95,7 +94,7 @@ func AtomicExit(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID
 		UpdateElemWitness(s.obuf, ioSharedArg.OBufY, egressID, newPkt)
 		ghost *ioSharedArg.State = io.dp3s_add_obuf(s, egressID, newPkt)
 		ghost *ioSharedArg.Place = tN
-		fold SharedInv!< dp, ioSharedArg !>()
+		fold SharedInv{dp, ioSharedArg}()
 	)
 }
 
@@ -132,12 +131,12 @@ requires  dp.dp3s_forward_xover(
 	},
 	newPkt,
 	egressID)
-preserves Invariant(SharedInv!<dp, ioSharedArg!>)
+preserves Invariant(SharedInv{dp, ioSharedArg})
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
 func AtomicXover(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID option[io.Ifs], ioSharedArg SharedArg, dp io.DataPlaneSpec) {
-	critical SharedInv!<dp, ioSharedArg!> (
-		unfold SharedInv!< dp, ioSharedArg !>()
+	critical SharedInv{dp, ioSharedArg} (
+		unfold SharedInv{dp, ioSharedArg}()
 		t, s := *ioSharedArg.Place, *ioSharedArg.State
 		ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
 		ghost pkt_internal := io.Val(io.ValInternal1{oldPkt, get(ingressID), newPkt, egressID})
@@ -150,6 +149,6 @@ func AtomicXover(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressI
 		UpdateElemWitness(s.obuf, ioSharedArg.OBufY, egressID, newPkt)
 		ghost *ioSharedArg.State = io.dp3s_add_obuf(s, egressID, newPkt)
 		ghost *ioSharedArg.Place = tN
-		fold SharedInv!< dp, ioSharedArg !>()
+		fold SharedInv{dp, ioSharedArg}()
 	)
 }

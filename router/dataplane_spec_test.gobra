@@ -32,10 +32,21 @@ import (
 
 func foldMem_test() {
 	d@ := DataPlane{}
+	fold externalInv(d.external)
+	fold linkTypesInv(d.linkTypes)
+	fold neighborIAsInv(d.neighborIAs)
+	fold internalInv(d.internal)
+	fold internalIPInv(d.internalIP)
+	fold internalNextHopsInv(d.internalNextHops)
+	fold svcInv(d.svc)
+	fold macFactoryInv(d.macFactory, d.key)
+	fold bfdSessionsInv(d.bfdSessions)
+	fold metricsInv(d.Metrics)
+	fold forwardingMetricsInv(d.forwardingMetrics)
 	fold d.Mem()
-	fold MutexInvariant!<&d!>()
+	fold MutexInvariant{&d}()
 	// testing initialization with the operations from dataplane
-	d.mtx.SetInv(MutexInvariant!<&d!>)
+	d.mtx.SetInv(MutexInvariant{&d})
 	d.AddNeighborIA(uint16(1), addr.IA(10))
 	d.AddNeighborIA(uint16(2), addr.IA(11))
 }
@@ -66,6 +77,17 @@ func foldDataPlaneMem() (d *DataPlane) {
 	fold accBfdSession(d.bfdSessions)
 	d.forwardingMetrics = make(map[uint16]forwardingMetrics)
 	fold accForwardingMetrics(d.forwardingMetrics)
+	fold externalInv(d.external)
+	fold linkTypesInv(d.linkTypes)
+	fold neighborIAsInv(d.neighborIAs)
+	fold internalInv(d.internal)
+	fold internalIPInv(d.internalIP)
+	fold internalNextHopsInv(d.internalNextHops)
+	fold svcInv(d.svc)
+	fold macFactoryInv(d.macFactory, d.key)
+	fold bfdSessionsInv(d.bfdSessions)
+	fold metricsInv(d.Metrics)
+	fold forwardingMetricsInv(d.forwardingMetrics)
 	fold d.Mem()
 	fold MutexInvariant(d)
 }
@@ -210,6 +232,17 @@ func testRun(
 	assert d.dpSpecWellConfiguredNeighborIAs(dp)
 	assert d.dpSpecWellConfiguredLinkTypes(dp)
 
+	fold externalInv(d.external)
+	fold linkTypesInv(d.linkTypes)
+	fold neighborIAsInv(d.neighborIAs)
+	fold internalInv(d.internal)
+	fold internalIPInv(d.internalIP)
+	fold internalNextHopsInv(d.internalNextHops)
+	fold svcInv(d.svc)
+	fold macFactoryInv(d.macFactory, d.key)
+	fold bfdSessionsInv(d.bfdSessions)
+	fold metricsInv(d.Metrics)
+	fold forwardingMetricsInv(d.forwardingMetrics)
 	fold d.Mem()
 	assert d.getDomNeighborIAs() == reveal d.getDomExternal()
 	assert d.getDomNeighborIAs() == d.getDomLinkTypes()
@@ -218,16 +251,16 @@ func testRun(
 	assert reveal d.DpAgreesWithSpec(dp)
 
 	assert reveal d.PreWellConfigured()
-	fold MutexInvariant!< d !>()
+	fold MutexInvariant{d}()
 	// end of foldDataPlaneMem
 	assert !d.IsRunning()
 	assert d.InternalConnIsSet()
 	assert d.KeyIsSet()
 	assert d.SvcsAreSet()
 	assert d.MetricsAreSet()
-	d.mtx.SetInv(MutexInvariant!<d!>)
+	d.mtx.SetInv(MutexInvariant{d})
 	assert d.mtx.LockP()
-	assert d.mtx.LockInv() == MutexInvariant!<d!>
+	assert d.mtx.LockInv() == MutexInvariant{d}
 
 	// io-spec needs to be inhaled
 	inhale io.token(place)

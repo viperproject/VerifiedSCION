@@ -19,6 +19,8 @@ package epic
 import (
 	"github.com/scionproto/scion/pkg/slayers/path"
 	"github.com/scionproto/scion/pkg/slayers/path/scion"
+	"github.com/scionproto/scion/verification/dependencies/encoding/binary"
+	"github.com/scionproto/scion/verification/io"
 	. "github.com/scionproto/scion/verification/utils/definitions"
 	sl "github.com/scionproto/scion/verification/utils/slices"
 )
@@ -97,9 +99,26 @@ pure func (p *Path) GetUnderlyingScionPathBuf(buf []byte) []byte {
 }
 
 ghost
+requires p.Mem(b)
+requires sl.Bytes(b, 0, len(b))
 decreases
 pure func (p *Path) IsValidResultOfDecoding(b []byte) (res bool) {
-	return true
+	return unfolding p.Mem(b) in
+		unfolding p.ScionPath.Mem(b[MetadataLen:]) in
+		MetadataLen + scion.MetaLen <= len(b) &&
+		unfolding sl.Bytes(b, 0, len(b)) in
+		let _ := Asserting(forall k int :: {&b[MetadataLen:][k]} 0 <= k && k < len(b)-MetadataLen ==>
+			&b[MetadataLen:][k] == &b[MetadataLen + k]) in
+		let _ := Asserting(forall k int :: {&b[MetadataLen:][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+			&b[MetadataLen:][:scion.MetaLen][k] == &b[MetadataLen:][k]) in
+		let metaHdr := scion.DecodedFrom(binary.BigEndian.Uint32(b[MetadataLen:][:scion.MetaLen])) in
+		let seg1 := int(metaHdr.SegLen[0]) in
+		let seg2 := int(metaHdr.SegLen[1]) in
+		let seg3 := int(metaHdr.SegLen[2]) in
+		let segs := io.CombineSegLens(seg1, seg2, seg3) in
+		p.ScionPath.Base.GetBase() ==
+			scion.Base{metaHdr, segs.NumInfoFields(), segs.TotalHops()} &&
+		p.ScionPath.Base.GetBase().WeaklyValid()
 }
 
 (*Path) implements path.Path

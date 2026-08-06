@@ -37,7 +37,7 @@ pred SharedInv(ghost dp io.DataPlaneSpec, ghost y SharedArg) {
 // initialize the shared invariant:
 ghost
 requires io.token(p) && dp.dp3s_iospec_ordered(s, p)
-ensures  Invariant(SharedInv!<dp, y!>)
+ensures  Invariant(SharedInv{dp, y})
 decreases
 func InitSharedInv(
 	dp io.DataPlaneSpec,
@@ -48,8 +48,8 @@ func InitSharedInv(
 	yI := InitElemAuth(s.ibuf)
 	yO := InitElemAuth(s.obuf)
 	y := SharedArg{&pE, &sE, yI, yO}
-	fold SharedInv!<dp, y!>()
-	EstablishInvariant(SharedInv!<dp, y!>)
+	fold SharedInv{dp, y}()
+	EstablishInvariant(SharedInv{dp, y})
 	return y
 }
 

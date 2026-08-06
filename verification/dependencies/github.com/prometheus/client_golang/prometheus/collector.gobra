@@ -44,7 +44,7 @@ type Collector interface {
 	// If a Collector encounters an error while executing this method, it
 	// must send an invalid descriptor (created with NewInvalidDesc) to
 	// signal the error to the registry.
-	requires Mem() && acc(c.SendChannel(), _) && c.SendGivenPerm() == (*Desc).Mem!<_!>;
+	requires Mem() && acc(c.SendChannel(), _) && c.SendGivenPerm() == (*Desc).Mem{_};
 	ensures  Mem()
 	Describe(c chan<- *Desc)
 	// Collect is called by the Prometheus registry when collecting
@@ -59,7 +59,7 @@ type Collector interface {
 	// implemented in a concurrency safe way. Blocking occurs at the expense
 	// of total performance of rendering all registered metrics. Ideally,
 	// Collector implementations support concurrent readers.
-	requires Mem() && acc(c.SendChannel(), _) && c.SendGivenPerm() == Metric.Mem!<_!>;
+	requires Mem() && acc(c.SendChannel(), _) && c.SendGivenPerm() == Metric.Mem{_};
 	ensures  Mem()
 	Collect(c chan<- Metric)
 }
