@@ -14,11 +14,11 @@
 
 // +gobra
 
-// @ initEnsures acc(path.PathPackageMem(), _)
-// @ initEnsures path.Registered(empty.PathType)
-// @ initEnsures path.Registered(scion.PathType)
-// @ initEnsures path.Registered(onehop.PathType)
-// @ initEnsures path.Registered(epic.PathType)
+// initEnsures acc(path.PathPackageMem(), _)
+// initEnsures path.Registered(empty.PathType)
+// initEnsures path.Registered(scion.PathType)
+// initEnsures path.Registered(onehop.PathType)
+// initEnsures path.Registered(epic.PathType)
 package slayers
 
 import (
