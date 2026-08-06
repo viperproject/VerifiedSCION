@@ -89,7 +89,7 @@ pred PathPoolMemExceptOne(pathPool []path.Path, pathPoolRaw path.Path, pathType 
 	(pathType != epic.PathType ==> pathPool[epic.PathType].NonInitMem()) &&
 	// raw path
 	pathPoolRaw != nil &&
-	(pathType < len(pathPool) ==> pathPoolRaw.NonInitMem())
+	(int(pathType) < len(pathPool) ==> pathPoolRaw.NonInitMem())
 }
 
 ghost
@@ -154,8 +154,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 	// len of ubuf:
 	0 <= s.HdrLen &&
 	0 <= CmnHdrLen + s.AddrHdrLenSpecInternal() &&
-	s.HdrLen * LineLen <= len(ubuf) &&
-	CmnHdrLen + s.AddrHdrLenSpecInternal() <= s.HdrLen * LineLen &&
+	int(s.HdrLen) * LineLen <= len(ubuf) &&
+	CmnHdrLen + s.AddrHdrLenSpecInternal() <= int(s.HdrLen) * LineLen &&
 	// end of len of ubuf
 	acc(&s.Path) &&
 	s.Path != nil &&
