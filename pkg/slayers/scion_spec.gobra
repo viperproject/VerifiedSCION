@@ -97,7 +97,7 @@ pred (s *SCION) InitPathPoolExceptOne(pathType path.Type) {
 	(pathType != epic.PathType ==> s.pathPool[epic.PathType].NonInitMem()) &&
 	// raw path
 	s.pathPoolRaw != nil &&
-	(pathType < len(s.pathPool) ==> s.pathPoolRaw.NonInitMem())
+	(int(pathType) < len(s.pathPool) ==> s.pathPoolRaw.NonInitMem())
 }
 
 ghost
@@ -109,7 +109,7 @@ pure func (s *SCION)lenPathPool(pathType path.Type) int {
 
 ghost
 requires  s.InitPathPoolExceptOne(pathType)
-requires  0 <= pathType && pathType < s.lenPathPool(pathType)
+requires  0 <= pathType && int(pathType) < s.lenPathPool(pathType)
 decreases
 pure func (s *SCION)elemPathPool(pathType path.Type) path.Path {
 	return unfolding s.InitPathPoolExceptOne(pathType) in s.pathPool[pathType]
@@ -156,8 +156,8 @@ pred (s *SCION) Mem(ubuf []byte) {
 	// len of ubuf:
 	0 <= s.HdrLen &&
 	0 <= CmnHdrLen + s.AddrHdrLen(nil, true) &&
-	s.HdrLen * LineLen <= len(ubuf) &&
-	CmnHdrLen + s.AddrHdrLen(nil, true) <= s.HdrLen * LineLen &&
+	int(s.HdrLen) * LineLen <= len(ubuf) &&
+	CmnHdrLen + s.AddrHdrLen(nil, true) <= int(s.HdrLen) * LineLen &&
 	// end of len of ubuf
 	acc(&s.Path) &&
 	s.Path != nil &&
@@ -280,8 +280,8 @@ requires pathType == 0 ==> s.InitPathPool()
 requires 0 < pathType  ==> (
 	p.NonInitMem() &&
 	s.InitPathPoolExceptOne(pathType) &&
-	(pathType < s.lenPathPool(pathType) ==> p === s.elemPathPool(pathType)) &&
-	(s.lenPathPool(pathType) <= pathType ==> p === s.pathPoolRawPath(pathType)))
+	(int(pathType) < s.lenPathPool(pathType) ==> p === s.elemPathPool(pathType)) &&
+	(s.lenPathPool(pathType) <= int(pathType) ==> p === s.pathPoolRawPath(pathType)))
 ensures  s.InitPathPool()
 decreases
 func (s *SCION) InitPathPoolExchange(pathType path.Type, p path.Path) {
