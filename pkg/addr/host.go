@@ -15,9 +15,9 @@
 
 // +gobra
 
-// @ initEnsures acc(&ErrBadHostAddrType, _) && ErrBadHostAddrType.ErrorMem() && isComparable(ErrBadHostAddrType)
-// @ initEnsures acc(&ErrMalformedHostAddrType, _) && ErrMalformedHostAddrType.ErrorMem() && isComparable(ErrMalformedHostAddrType)
-// @ initEnsures acc(&ErrUnsupportedSVCAddress, _) && ErrUnsupportedSVCAddress.ErrorMem() && isComparable(ErrUnsupportedSVCAddress)
+// initEnsures acc(&ErrBadHostAddrType, _) && ErrBadHostAddrType.ErrorMem() && isComparable(ErrBadHostAddrType)
+// initEnsures acc(&ErrMalformedHostAddrType, _) && ErrMalformedHostAddrType.ErrorMem() && isComparable(ErrMalformedHostAddrType)
+// initEnsures acc(&ErrUnsupportedSVCAddress, _) && ErrUnsupportedSVCAddress.ErrorMem() && isComparable(ErrUnsupportedSVCAddress)
 package addr
 
 import (

@@ -19,11 +19,12 @@ package slayers
 pred SCMPTypeCodeMem() {
 	acc(&scmpTypeCodeInfo) &&
 	acc(scmpTypeCodeInfo) &&
-	forall i SCMPType :: { i in domain(scmpTypeCodeInfo) } i in domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
+	forall i SCMPType :: { i elem domain(scmpTypeCodeInfo) } i elem domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
 }
 
+mayInit
 requires acc(&scmpTypeCodeInfo) && acc(scmpTypeCodeInfo)
-requires forall i SCMPType :: { i in domain(scmpTypeCodeInfo) } i in domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
+requires forall i SCMPType :: { i elem domain(scmpTypeCodeInfo) } i elem domain(scmpTypeCodeInfo) ==> scmpTypeCodeInfo[i].codes != nil ==> acc(scmpTypeCodeInfo[i].codes)
 ensures SCMPTypeCodeMem()
 decreases
 func satisfyInitEnsures() int {
