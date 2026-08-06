@@ -14,11 +14,11 @@
 
 // +gobra
 
-// @ initEnsures acc(path.PathPackageMem(), _)
-// @ initEnsures path.Registered(empty.PathType)
-// @ initEnsures path.Registered(scion.PathType)
-// @ initEnsures path.Registered(onehop.PathType)
-// @ initEnsures path.Registered(epic.PathType)
+// initEnsures acc(path.PathPackageMem(), _)
+// initEnsures path.Registered(empty.PathType)
+// initEnsures path.Registered(scion.PathType)
+// initEnsures path.Registered(onehop.PathType)
+// initEnsures path.Registered(epic.PathType)
 package slayers
 
 import (
@@ -445,8 +445,8 @@ func (s *SCION) RecyclePaths() {
 // @ ensures  0 < pathType  ==> (
 // @ 	res.NonInitMem() &&
 // @ 	s.InitPathPoolExceptOne(pathType) &&
-// @ 	(pathType < s.lenPathPool(pathType) ==> res === s.elemPathPool(pathType)) &&
-// @	(s.lenPathPool(pathType) <= pathType ==> res === s.pathPoolRawPath(pathType)))
+// @ 	(int(pathType) < s.lenPathPool(pathType) ==> res === s.elemPathPool(pathType)) &&
+// @	(s.lenPathPool(pathType) <= int(pathType) ==> res === s.pathPoolRawPath(pathType)))
 // @ ensures  err == nil
 // @ decreases
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
