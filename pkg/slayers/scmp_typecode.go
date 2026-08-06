@@ -14,7 +14,7 @@
 
 // +gobra
 
-//@ initEnsures SCMPTypeCodeMem()
+// initEnsures SCMPTypeCodeMem()
 package slayers
 
 
