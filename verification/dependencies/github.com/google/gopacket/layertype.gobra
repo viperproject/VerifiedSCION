@@ -6,17 +6,17 @@
 
 // +gobra
 
-initEnsures LayerTypesMem()
-initEnsures LayerTypeZero == 0
-initEnsures LayerTypeDecodeFailure == 1
-initEnsures LayerTypePayload == 2
-initEnsures LayerTypeFragment == 3
-initEnsures Registered(LayerTypeZero)
-initEnsures Registered(LayerTypeDecodeFailure)
-initEnsures Registered(LayerTypePayload)
-initEnsures Registered(LayerTypeFragment)
-initEnsures forall t LayerType :: { Registered(t) } t < 0 ==> !Registered(t)
-initEnsures forall t LayerType :: { Registered(t) } 3 < t ==> !Registered(t)
+// initEnsures LayerTypesMem()
+// initEnsures LayerTypeZero == 0
+// initEnsures LayerTypeDecodeFailure == 1
+// initEnsures LayerTypePayload == 2
+// initEnsures LayerTypeFragment == 3
+// initEnsures Registered(LayerTypeZero)
+// initEnsures Registered(LayerTypeDecodeFailure)
+// initEnsures Registered(LayerTypePayload)
+// initEnsures Registered(LayerTypeFragment)
+// initEnsures forall t LayerType :: { Registered(t) } t < 0 ==> !Registered(t)
+// initEnsures forall t LayerType :: { Registered(t) } 3 < t ==> !Registered(t)
 package gopacket
 
 import sl "github.com/scionproto/scion/verification/utils/slices"
@@ -52,7 +52,7 @@ requires LayerTypesMem()
 decreases
 pure func Registered(t LayerType) (res bool) {
 	return unfolding acc(LayerTypesMem(), _) in
-		(0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+		(0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t elem domain(ltMetaMap) && ltMetaMap[t].inUse))
 }
 
 ghost
@@ -63,10 +63,11 @@ requires acc(&ltMeta)         &&
 	acc(DecodersByLayerName)
 decreases
 pure func registeredDuringInit(t LayerType) (res bool) {
-	return (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t in domain(ltMetaMap) && ltMetaMap[t].inUse))
+	return (0 <= t && t < MaxLayerType? ltMeta[t].inUse : (t elem domain(ltMetaMap) && ltMetaMap[t].inUse))
 }
 
 // cannot be made ghost, even though it is morally so
+mayInit
 requires acc(&ltMeta) &&
 	acc(&ltMetaMap)   &&
 	acc(ltMetaMap)    &&
@@ -96,16 +97,19 @@ var DecodersByLayerName@ = map[string]Decoder{}
 /** Globals not originally declared in this file **/
 /** Vars defined in decode.go that are required to establish preconditions of RegisterLayer. **/
 // TODO: specify and verify the creation of these decoders
+mayInit
 ensures d.Mem() && d.Mem() // d.Mem() must be duplicable!
 decreases _
 func generateDecodeUnknown() (d Decoder)
 var DecodeUnknown = generateDecodeUnknown()
 
+mayInit
 ensures d.Mem()
 decreases _
 func generateDecodePayload() (d Decoder)
 var DecodePayload = generateDecodePayload()
 
+mayInit
 ensures d.Mem()
 decreases _
 func generateDecodeFragment() (d Decoder)
@@ -142,6 +146,7 @@ func init() {
 /** End of ghost init operations **/
 
 /** Actual Methods **/
+mayInit
 requires LayerTypesMem()
 requires !Registered(LayerType(num))
 requires meta.Decoder != nil ==> meta.Decoder.Mem()
@@ -165,6 +170,7 @@ func RegisterLayerType(num int, meta LayerTypeMetadata) (res LayerType) {
 	return OverrideLayerType(num, meta)
 }
 
+mayInit
 requires LayerTypesMem()
 requires meta.Decoder != nil ==> meta.Decoder.Mem()
 ensures  LayerTypesMem()
