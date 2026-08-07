@@ -14,11 +14,11 @@
 
 // +gobra
 
-// @ initEnsures acc(path.PathPackageMem(), _)
-// @ initEnsures path.Registered(empty.PathType)
-// @ initEnsures path.Registered(scion.PathType)
-// @ initEnsures path.Registered(onehop.PathType)
-// @ initEnsures path.Registered(epic.PathType)
+// initEnsures acc(path.PathPackageMem(), _)
+// initEnsures path.Registered(empty.PathType)
+// initEnsures path.Registered(scion.PathType)
+// initEnsures path.Registered(onehop.PathType)
+// initEnsures path.Registered(epic.PathType)
 package slayers
 
 import (
@@ -732,7 +732,9 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 		verScionTmp := addr.HostSVC(binary.BigEndian.Uint16(raw[:addr.HostLenSVC]))
 		// @ fold acc(sl.Bytes(raw, 0, len(raw)), R15)
 		// @ fold acc(verScionTmp.Mem(), R15)
-		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* acc(sl.Bytes(raw, 0, len(raw)), R15)) { }
+		// @ package (acc((net.Addr)(verScionTmp).Mem(), R15) --* acc(sl.Bytes(raw, 0, len(raw)), R15)) {
+		// @ 	assert true
+		// @ }
 		return verScionTmp, nil
 	case T16Ip:
 		verScionTmp := &net.IPAddr{IP: net.IP(raw)}
