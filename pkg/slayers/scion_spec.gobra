@@ -352,21 +352,18 @@ func (s *SCION) GetPath(ub []byte) path.Path {
 
 ghost
 opaque
-pure
 requires acc(s.Mem(ub), _)
 requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
 decreases
-func (s *SCION) EqAbsHeader(ub []byte) bool {
-	return unfolding acc(s.Mem(ub), _) in
+pure func (s *SCION) EqAbsHeader(ub []byte) bool {
+	return unfolding s.Mem(ub) in
 		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
-		let high := s.HdrLen*LineLen in
+		let high := int(s.HdrLen)*LineLen in
 		GetAddressOffset(ub) == low &&
-		GetLength(ub) == int(high) &&
-		// Might be worth introducing EqAbsHeader as an interface method on Path
-		// to avoid doing these casts, especially when we add support for EPIC.
-		typeOf(s.Path) == (*scion.Raw)                               &&
-		unfolding acc(s.Path.Mem(ub[low:high]), _) in
-		unfolding acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _) in
+		GetLength(ub) == high &&
+		typeOf(s.Path) == type[*scion.Raw]                           &&
+		unfolding s.Path.Mem(ub[low:high]) in
+		unfolding sl.AbsSlice_Bytes(ub, 0, len(ub)) in
 		let _ := Asserting(forall k int :: {&ub[low:high][k]} 0 <= k && k < high ==>
 			&ub[low:high][k] == &ub[low + k]) in
 		let _ := Asserting(forall k int :: {&ub[low:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
