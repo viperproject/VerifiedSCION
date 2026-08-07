@@ -357,19 +357,19 @@ requires acc(sl.AbsSlice_Bytes(ub, 0, len(ub)), _)
 decreases
 pure func (s *SCION) EqAbsHeader(ub []byte) bool {
 	return unfolding s.Mem(ub) in
-		let low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
+		let _low := CmnHdrLen+s.AddrHdrLenSpecInternal() in
 		let high := int(s.HdrLen)*LineLen in
-		GetAddressOffset(ub) == low &&
+		GetAddressOffset(ub) == _low &&
 		GetLength(ub) == high &&
 		typeOf(s.Path) == type[*scion.Raw]                           &&
-		unfolding s.Path.Mem(ub[low:high]) in
+		unfolding s.Path.Mem(ub[_low:high]) in
 		unfolding sl.AbsSlice_Bytes(ub, 0, len(ub)) in
-		let _ := Asserting(forall k int :: {&ub[low:high][k]} 0 <= k && k < high ==>
-			&ub[low:high][k] == &ub[low + k]) in
-		let _ := Asserting(forall k int :: {&ub[low:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
-			&ub[low:high][:scion.MetaLen][k] == &ub[low:high][k]) in
+		let _ := Asserting(forall k int :: {&ub[_low:high][k]} 0 <= k && k < high ==>
+			&ub[_low:high][k] == &ub[_low + k]) in
+		let _ := Asserting(forall k int :: {&ub[_low:high][:scion.MetaLen][k]} 0 <= k && k < scion.MetaLen ==>
+			&ub[_low:high][:scion.MetaLen][k] == &ub[_low:high][k]) in
 		s.Path.(*scion.Raw).Base.GetMetaHdr() ==
-		scion.DecodedFrom(binary.BigEndian.Uint32(ub[low:high][:scion.MetaLen]))
+		scion.DecodedFrom(binary.BigEndian.Uint32(ub[_low:high][:scion.MetaLen]))
 }
 
 // Checks if the common path header is valid in the serialized scion packet.
