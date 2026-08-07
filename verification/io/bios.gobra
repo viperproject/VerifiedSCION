@@ -18,19 +18,19 @@
 
 package io
 
-type IO_bio3sIN adt {
+ghost type IO_bio3sIN adt {
 	IO_bio3s_enter{}
 	IO_bio3s_xover{}
 	IO_bio3s_exit{}
 }
 
-type IO_bio3sIO adt {
+ghost type IO_bio3sIO adt {
 	IO_bio3s_send{}
 	IO_bio3s_recv{}
 }
 
 // defined in Isabelle as (bios3sIN, bios3sIO) events
-type IO_bio3s adt {
+ghost type IO_bio3s adt {
 	IO_bio3s_IN {
 		IN IO_bio3sIN
 	}
