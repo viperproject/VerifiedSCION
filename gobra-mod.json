@@ -1,0 +1,17 @@
+{
+  "default_job_cfg": {
+    "project_root": ".",
+    "module": "github.com/scionproto/scion",
+    "includes": [".", "verification/dependencies"],
+    "backend": "SILICON",
+    "only_files_with_header": true,
+    "assume_injectivity_inhale": true,
+    "check_consistency": true,
+    "parallelize_branches": false,
+    "require_triggers": false,
+    "overflow": false,
+    "mce_mode": "od",
+    "chop": 1,
+    "other": ["--norespectFunctionPrePermAmounts", "--experimentalFriendClauses"]
+  }
+}
