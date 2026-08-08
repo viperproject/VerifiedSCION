@@ -13,19 +13,28 @@ name: Verify the router and its dependencies
 # Gobra, so the steps below only carry inputs that are not options of Gobra
 # (`timeout`, `imageVersion`, and `statsFile`).
 #
-# The layout of the configs is:
+# `configFile` accepts either a `gobra.json` or a directory containing one, and
+# the steps below always pass the directory of the package to be verified:
 #   - `gobra-mod.json` in the repository root holds the settings that are shared
 #     by every verification job, i.e. what used to be the `env` block of this
 #     workflow. `requireTriggers` remains disabled there, as it is unclear which
 #     triggers to provide to monoset in a way that does not severely affect perf.
-#   - `gobra.json` next to a package holds the settings in which that package
-#     deviates from the module defaults. Packages that use the module defaults
-#     unchanged do not need one; Gobra then verifies the package in the directory
-#     that `configFile` points at.
+#   - A `gobra.json` next to a package holds only the settings in which that
+#     package deviates from those module-wide defaults. Just three packages need
+#     one, and the steps that rely on it say so:
+#       * `verification/gobra.json`  -> recursive mode, excludes `layers`
+#       * `verification/dependencies/github.com/google/gopacket/layers/gobra.json`
+#                                    -> package lookup order of the include dirs
+#       * `router/gobra.json`        -> chopping, joins, permissions, MCE mode
+#   - Every other step points at a directory that has NO `gobra.json`. That is not
+#     an omission: Gobra then verifies the package in that directory with the
+#     module-wide defaults unchanged, which is what those packages used to get
+#     from the `env` block. Adding a `gobra.json` there is how a single package
+#     would opt out of a default.
 #
-# The same configs are what Gobra picks up locally, so a step below can be
-# reproduced with `gobra --config <package>`, and the configuration that Gobra
-# resolves for a package can be inspected with `gobra --config <package> --printConfig`.
+# These are the same configs that Gobra picks up locally, so a step below can be
+# reproduced with `gobra --config <package>`, and the options that Gobra resolves
+# for a package can be listed with `gobra --config <package> --printConfig`.
 
 on:
   push:
@@ -42,15 +51,22 @@ jobs:
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify the packages in the 'verification' directory
+      # 'verification/gobra.json' puts this step in recursive mode, so that all
+      # nested packages below 'verification' are verified. It also sets the project
+      # root and the include dirs relative to 'verification', because this step
+      # does not verify the repository root.
+      - name: Verify the packages in the 'verification' directory (recursive)
         uses: viperproject/gobra-action@main
         with:
           ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants,
-          ## which is why 'verification/gobra.json' excludes the 'layers' package.
+          ## which is why 'verification/gobra.json' excludes the 'layers' package via
+          ## '--excludePackages'.
           configFile: 'VerifiedSCION/verification'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
-      # due to the bug mention above, we need to verify this package separately
+      # due to the bug mention above, we need to verify this package separately.
+      # Its 'gobra.json' only reorders the include dirs, so that the packages below
+      # 'verification/dependencies' take precedence over those of the repository root.
       - name: Verify package 'verification/dependencies/github.com/google/gopacket/layers'
         uses: viperproject/gobra-action@main
         with:
@@ -76,6 +92,10 @@ jobs:
       # Github Workflow's interface and it allows more fine-grained
       # control over the settings applied to each package (which is
       # now expressed by the 'gobra.json' of the respective package).
+      #
+      # None of the packages below deviates from the module-wide defaults, so none
+      # of them has a 'gobra.json'; they are all verified with the settings from
+      # '/gobra-mod.json'.
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
@@ -191,6 +211,11 @@ jobs:
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
+      # 'router/gobra.json' raises the chopping bound and switches to the settings
+      # that this package needs to verify in a reasonable time ('--moreJoins impure',
+      # '--conditionalizePermissions' and '--mceMode on'). It applies to this package
+      # only, not to 'router/bfd' and 'router/control', which are verified above with
+      # the module-wide defaults.
       - name: Verify package 'router/'
         uses: viperproject/gobra-action@main
         with:
