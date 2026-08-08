@@ -190,6 +190,7 @@ pred (s *SCMPDestinationUnreachable) NonInitMem() {
 }
 
 pred (s *SCMPDestinationUnreachable) Mem(ub []byte) {
+	s != nil &&
 	s.BaseLayer.Mem(ub, 4)
 }
 
