@@ -388,3 +388,43 @@ jobs:
           configFile: 'router'
           timeout: 6h
           imageVersion: ${{ env.imageVersion }}
+  # TEMPORARY diagnostic job, to be removed before merge.
+  #
+  # Every step of this workflow currently finishes in ~2s and produces no Gobra
+  # output at all, while the same packages take 7s to 59min on master. This job
+  # runs 'pkg/log' (7s on master, the fastest package) twice: once with the old
+  # style inputs and once in config file mode. If both finish in ~2s, the Gobra
+  # image is at fault; if only the config file mode one does, the JSON configs or
+  # the config file mode of the Action are.
+  zz-temp-diagnose-config-mode:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: A - verify 'pkg/log' with the old style inputs
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/log'
+          timeout: 5m
+          headerOnly: '1'
+          module: 'github.com/scionproto/scion'
+          includePaths: '. verification/dependencies'
+          assumeInjectivityOnInhale: '1'
+          checkConsistency: '1'
+          parallelizeBranches: '0'
+          imageVersion: 'latest'
+          mceMode: 'od'
+          requireTriggers: '0'
+          overflow: '0'
+          useZ3API: '0'
+          disableNL: '0'
+          viperBackend: 'SILICON'
+          unsafeWildcardOptimization: '0'
+          respectFunctionPrePermAmounts: '0'
+          enableFriendClauses: '1'
+      - name: B - verify 'pkg/log' in config file mode
+        uses: viperproject/gobra-action@main
+        with:
+          configFile: 'pkg/log'
+          timeout: 5m
+          imageVersion: 'latest'
