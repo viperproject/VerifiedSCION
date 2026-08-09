@@ -23,7 +23,7 @@ package slices
 // - For each type, there might be two different types of operations: those that keep track
 //   of contents (the name of the operation ends in "C"), and those who do not.
 
-pred Bytes(s []byte, start int, end int) {
+pred Bytes(s []byte, start integer, end integer) {
 	// start inclusive
 	0 <= start &&
 	start <= end &&
@@ -32,10 +32,11 @@ pred Bytes(s []byte, start int, end int) {
 	forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i])
 }
 
+ghost
 requires Bytes(s, start, end)
 requires start <= i && i < end
 decreases
-pure func GetByte(s []byte, start int, end int, i int) byte {
+pure func GetByte(s []byte, start integer, end integer, i integer) byte {
 	return unfolding Bytes(s, start, end) in s[i]
 }
 
@@ -46,7 +47,7 @@ requires start <= idx && idx <= end
 ensures  acc(Bytes(s, start, idx), p)
 ensures  acc(Bytes(s, idx, end), p)
 decreases
-func SplitByIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
+func SplitByIndex_Bytes(s []byte, start integer, end integer, idx integer, p perm) {
 	unfold acc(Bytes(s, start, end), p)
 	fold   acc(Bytes(s, start, idx), p)
 	fold   acc(Bytes(s, idx, end), p)
@@ -58,7 +59,7 @@ requires acc(Bytes(s, start, idx), p)
 requires acc(Bytes(s, idx,   end), p)
 ensures  acc(Bytes(s, start, end), p)
 decreases
-func CombineAtIndex_Bytes(s []byte, start int, end int, idx int, p perm) {
+func CombineAtIndex_Bytes(s []byte, start integer, end integer, idx integer, p perm) {
 	unfold acc(Bytes(s, start, idx), p)
 	unfold acc(Bytes(s, idx,   end), p)
 	fold   acc(Bytes(s, start, end), p)
@@ -72,7 +73,7 @@ requires acc(Bytes(s, start, end), p)
 requires unfolding acc(Bytes(s, start, end), p) in true
 ensures  acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 decreases
-func Reslice_Bytes(s []byte, start int, end int, p perm) {
+func Reslice_Bytes(s []byte, start integer, end integer, p perm) {
 	unfold acc(Bytes(s, start, end), p)
 	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < (end-start) ==> &s[start:end][i] == &s[start + i]
 	fold  acc(Bytes(s[start:end], 0, len(s[start:end])), p)
@@ -84,7 +85,7 @@ requires 0 <= start && start <= end && end <= cap(s)
 requires acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 ensures  acc(Bytes(s, start, end), p)
 decreases
-func Unslice_Bytes(s []byte, start int, end int, p perm) {
+func Unslice_Bytes(s []byte, start integer, end integer, p perm) {
 	unfold acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 	assert 0 <= start && start <= end && end <= cap(s)
 	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
@@ -112,7 +113,7 @@ ensures  acc(Bytes(s[start:end], 0, end-start), p)
 ensures  acc(Bytes(s, 0, start), p)
 ensures  acc(Bytes(s, end, len(s)), p)
 decreases
-func SplitRange_Bytes(s []byte, start int, end int, p perm) {
+func SplitRange_Bytes(s []byte, start integer, end integer, p perm) {
 	SplitByIndex_Bytes(s, 0, len(s), start, p)
 	SplitByIndex_Bytes(s, start, len(s), end, p)
 	Reslice_Bytes(s, start, end, p)
@@ -126,7 +127,7 @@ requires acc(Bytes(s, 0, start), p)
 requires acc(Bytes(s, end, len(s)), p)
 ensures  acc(Bytes(s, 0, len(s)), p)
 decreases
-func CombineRange_Bytes(s []byte, start int, end int, p perm) {
+func CombineRange_Bytes(s []byte, start integer, end integer, p perm) {
 	Unslice_Bytes(s, start, end, p)
 	CombineAtIndex_Bytes(s, start, len(s), end, p)
 	CombineAtIndex_Bytes(s, 0, len(s), start, p)
@@ -187,6 +188,6 @@ requires subEnd <= cap(s)
 ensures  forall i int :: { &s[subStart:subEnd][i] } 0 <= i && i < len(s[subStart:subEnd]) ==>
 	&s[subStart:subEnd][i] == &s[subStart+i]
 decreases
-pure func AssertSliceOverlap(ghost s []byte, ghost subStart int, ghost subEnd int) Unit {
+pure func AssertSliceOverlap(ghost s []byte, ghost subStart integer, ghost subEnd integer) Unit {
 	return Unit{}
 }

@@ -155,8 +155,8 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
 	//@ invariant s.LenSpec(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenInfoFields(ubuf)
-	//@ invariant offset == MetaLen + i * path.InfoLen
-	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
+	//@ invariant integer(offset) == MetaLen + path.InfoLen * integer(i)
+	//@ invariant MetaLen + path.InfoLen * integer(s.getLenInfoFields(ubuf)) + path.HopLen * integer(s.getLenHopFields(ubuf)) <= len(b)
 	//@ decreases s.getLenInfoFields(ubuf) - i
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, info := range s.InfoFields {
@@ -182,8 +182,8 @@ func (s *Decoded) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	//@ invariant b !== ubuf ==> sl.Bytes(b, 0, len(b))
 	//@ invariant s.LenSpec(ubuf) <= len(b)
 	//@ invariant 0 <= i && i <= s.getLenHopFields(ubuf)
-	//@ invariant offset == MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + i * path.HopLen
-	//@ invariant MetaLen + s.getLenInfoFields(ubuf) * path.InfoLen + s.getLenHopFields(ubuf) * path.HopLen <= len(b)
+	//@ invariant integer(offset) == MetaLen + path.InfoLen * integer(s.getLenInfoFields(ubuf)) + path.HopLen * integer(i)
+	//@ invariant MetaLen + path.InfoLen * integer(s.getLenInfoFields(ubuf)) + path.HopLen * integer(s.getLenHopFields(ubuf)) <= len(b)
 	//@ decreases s.getLenHopFields(ubuf)-i
 	// (VerifiedSCION) TODO: reinstate the original range clause
 	// for _, hop := range s.HopFields {

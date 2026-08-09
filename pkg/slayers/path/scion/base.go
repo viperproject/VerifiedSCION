@@ -227,6 +227,7 @@ func (s *Base) infIndexForHF(hf uint8) (r uint8) {
 // @ pure
 // @ requires s.Mem()
 // @ ensures  r >= MetaLen
+// @ ensures  r <= MetaLen + MaxINFs * path.InfoLen + MaxHops * path.HopLen
 // @ decreases
 func (s *Base) Len() (r int) {
 	return /*@ unfolding s.Mem() in @*/ MetaLen + s.NumINF*path.InfoLen + s.NumHops*path.HopLen

@@ -45,7 +45,7 @@ requires 0 <= start && start <= middle
 requires middle + HopLen <= end && end <= len(raw)
 requires sl.Bytes(raw, start, end)
 decreases
-pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.HF) {
+pure func BytesToIO_HF(raw [] byte, start integer, middle integer, end integer) (io.HF) {
 	return let _ := sl.AssertSliceOverlap(raw, middle+2, middle+4)     in
 		let _ := sl.AssertSliceOverlap(raw, middle+4, middle+6)        in
 		let _ := sl.AssertSliceOverlap(raw, middle+6, middle+6+MacLen) in
@@ -73,7 +73,7 @@ preserves acc(sl.Bytes(raw[start:end], 0, len(raw[start:end])), R55)
 ensures   BytesToIO_HF(raw, 0, offset, len(raw)) ==
 	BytesToIO_HF(raw[start:end], 0, offset-start, end-start)
 decreases
-func WidenBytesHopField(raw []byte, offset int, start int, end int) {
+func WidenBytesHopField(raw []byte, offset integer, start integer, end integer) {
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.Bytes(raw[start:end], 0, len(raw[start:end])), R56)
 	hfBytes1 := BytesToIO_HF(raw, 0, offset, len(raw))
@@ -102,7 +102,7 @@ preserves acc(sl.Bytes(raw[offset:offset+HopLen], 0, HopLen), R55)
 ensures   BytesToIO_HF(raw, 0, offset, len(raw)) ==
 	BytesToIO_HF(raw[offset:offset+HopLen], 0, 0, HopLen)
 decreases
-func BytesToAbsHopFieldOffsetEq(raw [] byte, offset int) {
+func BytesToAbsHopFieldOffsetEq(raw [] byte, offset integer) {
 	WidenBytesHopField(raw, offset, offset, offset+HopLen)
 }
 
