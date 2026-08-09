@@ -401,3 +401,38 @@ jobs:
           configFile: 'router'
           timeout: 6h
           imageVersion: ${{ env.imageVersion }}
+  # TEMPORARY diagnostic job, to be removed before merge.
+  #
+  # 'pkg/slayers/path/scion' fails in config file mode with a proof failure
+  # ("Assertion pktView.CurrSeg.AInfo == infoView.AInfo might not hold" in
+  # raw_spec.gobra:716), even though every resolved option now matches what the
+  # workflow passed before the move to JSON configs. This step verifies the same
+  # package with the old style inputs on the same commit and the same Gobra image.
+  # If it fails too, the proof does not hold with the current 'latest' image and
+  # the failure is unrelated to the JSON configs; master last ran a month ago.
+  zz-temp-diagnose-scion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the VerifiedSCION repository
+        uses: actions/checkout@v3
+      - name: Verify 'pkg/slayers/path/scion' with the old style inputs
+        uses: viperproject/gobra-action@main
+        with:
+          packages: 'pkg/slayers/path/scion'
+          timeout: 30m
+          headerOnly: '1'
+          module: 'github.com/scionproto/scion'
+          includePaths: '. verification/dependencies'
+          assumeInjectivityOnInhale: '1'
+          checkConsistency: '1'
+          parallelizeBranches: '0'
+          imageVersion: 'latest'
+          mceMode: 'od'
+          requireTriggers: '0'
+          overflow: '0'
+          useZ3API: '0'
+          disableNL: '0'
+          viperBackend: 'SILICON'
+          unsafeWildcardOptimization: '0'
+          respectFunctionPrePermAmounts: '0'
+          enableFriendClauses: '1'
