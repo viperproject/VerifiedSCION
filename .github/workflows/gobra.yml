@@ -32,14 +32,16 @@ name: Verify the router and its dependencies
 #     from the `env` block. Adding a `gobra.json` there is how a single package
 #     would opt out of a default.
 #
-# A path in a JSON config is resolved against the directory of that config with
-# 'Path.resolve', which does NOT normalize the result: '.' yields '<dir>/.' and
-# '..' yields '<dir>/..'. Gobra compares such paths as strings when it matches the
-# relative package paths of a 'friendPkg' clause against the package it verifies,
-# so a '.' segment in an include dir silently withdraws friend permissions from
-# 'pkg/slayers' and 'layers' (both are friends of 'gopacket'). Use "" rather than
-# "." to refer to the directory of the config itself, and avoid giving a package
-# its own include dirs when the module-wide ones already resolve cleanly.
+# Two things about paths in these configs are easy to get wrong:
+#   - They are resolved against the directory of their config with 'Path.resolve',
+#     which does NOT normalize: "." yields '<dir>/.' and ".." yields '<dir>/..'.
+#     Use "" to refer to the directory of the config itself.
+#   - Gobra matches the relative package path of a 'friendPkg' clause against the
+#     package it verifies by string equality, and both sides are relative to the
+#     project root. Setting 'project_root' for a package that is a friend of
+#     another one ('pkg/slayers' and 'layers' are friends of 'gopacket') therefore
+#     changes whether the friend permissions apply at all. Only the recursive job
+#     sets it, which is what the workflow did before the move to JSON configs.
 #
 # These are the same configs that Gobra picks up locally, so a step below can be
 # reproduced with `gobra --config <package>`, and the options that Gobra resolves
