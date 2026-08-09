@@ -3,7 +3,6 @@
     "project_root": ".",
     "module": "github.com/scionproto/scion",
     "includes": [".", "verification/dependencies"],
-    "backend": "SILICON",
     "only_files_with_header": true,
     "assume_injectivity_inhale": true,
     "check_consistency": true,
