@@ -25,14 +25,21 @@ name: Verify the router and its dependencies
 #     package deviates from those module-wide defaults. Just three packages need
 #     one, and the steps that rely on it say so:
 #       * `verification/gobra.json`  -> recursive mode, excludes `layers`
-#       * `verification/dependencies/github.com/google/gopacket/layers/gobra.json`
-#                                    -> package lookup order of the include dirs
 #       * `router/gobra.json`        -> chopping, joins, permissions, MCE mode
 #   - Every other step points at a directory that has NO `gobra.json`. That is not
 #     an omission: Gobra then verifies the package in that directory with the
 #     module-wide defaults unchanged, which is what those packages used to get
 #     from the `env` block. Adding a `gobra.json` there is how a single package
 #     would opt out of a default.
+#
+# A path in a JSON config is resolved against the directory of that config with
+# 'Path.resolve', which does NOT normalize the result: '.' yields '<dir>/.' and
+# '..' yields '<dir>/..'. Gobra compares such paths as strings when it matches the
+# relative package paths of a 'friendPkg' clause against the package it verifies,
+# so a '.' segment in an include dir silently withdraws friend permissions from
+# 'pkg/slayers' and 'layers' (both are friends of 'gopacket'). Use "" rather than
+# "." to refer to the directory of the config itself, and avoid giving a package
+# its own include dirs when the module-wide ones already resolve cleanly.
 #
 # These are the same configs that Gobra picks up locally, so a step below can be
 # reproduced with `gobra --config <package>`, and the options that Gobra resolves
@@ -227,8 +234,12 @@ jobs:
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       # due to the bug mention above, we need to verify this package separately.
-      # Its 'gobra.json' only reorders the include dirs, so that the packages below
-      # 'verification/dependencies' take precedence over those of the repository root.
+      # It must use the include dirs of '/gobra-mod.json' unchanged: 'gopacket'
+      # grants it access with a relative 'friendPkg "./layers"', which only matches
+      # the package under verification if 'gopacket' is reached through a normalized
+      # include dir. Include dirs relative to this package would contain '..'
+      # segments, which Gobra does not normalize, and the friend clause stops
+      # applying.
       - name: Verify package 'verification/dependencies/github.com/google/gopacket/layers'
         uses: viperproject/gobra-action@main
         with:

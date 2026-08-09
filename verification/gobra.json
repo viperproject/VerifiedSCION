@@ -1,6 +1,6 @@
 {
   "recursive": true,
-  "project_root": ".",
-  "includes": ["./dependencies", ".."],
+  "project_root": "",
+  "includes": ["dependencies", ".."],
   "other": ["--excludePackages", "layers"]
 }

@@ -1,8 +1,8 @@
 {
   "default_job_cfg": {
-    "project_root": ".",
+    "project_root": "",
     "module": "github.com/scionproto/scion",
-    "includes": [".", "verification/dependencies"],
+    "includes": ["", "verification/dependencies"],
     "only_files_with_header": true,
     "assume_injectivity_inhale": true,
     "check_consistency": true,
