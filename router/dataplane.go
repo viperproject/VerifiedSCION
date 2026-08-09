@@ -270,7 +270,7 @@ func (e scmpError) Error() string {
 }
 
 // SetIA sets the local IA for the dataplane.
-// @ requires d != nil
+// @ requires  d != nil
 // @ requires  acc(d.Mem(), OutMutexPerm)
 // @ requires  !d.IsRunning()
 // @ requires  d.LocalIA().IsZero()
