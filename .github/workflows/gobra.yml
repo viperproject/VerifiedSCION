@@ -13,8 +13,10 @@ name: Verify the router and its dependencies
 # Gobra, so the steps below only carry inputs that are not options of Gobra
 # (`timeout`, `imageVersion`, and `statsFile`).
 #
-# `configFile` accepts either a `gobra.json` or a directory containing one, and
-# the steps below always pass the directory of the package to be verified:
+# `configFile` accepts either a `gobra.json` or a directory containing one, and is
+# resolved against the directory in which the repository is checked out, so the
+# steps below pass the path of the package to be verified as it appears in this
+# repository:
 #   - `gobra-mod.json` in the repository root holds the settings that are shared
 #     by every verification job, i.e. what used to be the `env` block of this
 #     workflow. `requireTriggers` remains disabled there, as it is unclear which
@@ -69,140 +71,140 @@ jobs:
       - name: Print the configuration of 'verification' (recursive)
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/verification'
+          configFile: 'verification'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'verification/dependencies/github.com/google/gopacket/layers'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/verification/dependencies/github.com/google/gopacket/layers'
+          configFile: 'verification/dependencies/github.com/google/gopacket/layers'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/addr'
+          configFile: 'pkg/addr'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/experimental/epic'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/experimental/epic'
+          configFile: 'pkg/experimental/epic'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/log'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/log'
+          configFile: 'pkg/log'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/private/serrors'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/private/serrors'
+          configFile: 'pkg/private/serrors'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/scrypto'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/scrypto'
+          configFile: 'pkg/scrypto'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/slayers'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers'
+          configFile: 'pkg/slayers'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path'
+          configFile: 'pkg/slayers/path'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/slayers/path/empty'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path/empty'
+          configFile: 'pkg/slayers/path/empty'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/slayers/path/epic'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path/epic'
+          configFile: 'pkg/slayers/path/epic'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/slayers/path/onehop'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path/onehop'
+          configFile: 'pkg/slayers/path/onehop'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path/scion'
+          configFile: 'pkg/slayers/path/scion'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'private/topology'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/private/topology'
+          configFile: 'private/topology'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'private/topology/underlay'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/private/topology/underlay'
+          configFile: 'private/topology/underlay'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'private/underlay/conn'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/private/underlay/conn'
+          configFile: 'private/underlay/conn'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'private/underlay/sockctrl'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/private/underlay/sockctrl'
+          configFile: 'private/underlay/sockctrl'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'router/bfd'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/router/bfd'
+          configFile: 'router/bfd'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'router/control'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/router/control'
+          configFile: 'router/control'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
       - name: Print the configuration of 'router/'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/router'
+          configFile: 'router'
           printConfig: '1'
           timeout: 2m
           imageVersion: ${{ env.imageVersion }}
@@ -221,7 +223,7 @@ jobs:
           ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants,
           ## which is why 'verification/gobra.json' excludes the 'layers' package via
           ## '--excludePackages'.
-          configFile: 'VerifiedSCION/verification'
+          configFile: 'verification'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       # due to the bug mention above, we need to verify this package separately.
@@ -230,7 +232,7 @@ jobs:
       - name: Verify package 'verification/dependencies/github.com/google/gopacket/layers'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/verification/dependencies/github.com/google/gopacket/layers'
+          configFile: 'verification/dependencies/github.com/google/gopacket/layers'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
   verify-deps:
@@ -239,6 +241,10 @@ jobs:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
       # Skip caching for now, the Github action right now is very limited.
+      # On top of that, the 'caching' input of the Action is not available in
+      # config file mode, as Gobra's JSON config has no field for '--cacheFile'
+      # and that option cannot be passed next to '--config'. Setting it would
+      # fail the step rather than be ignored.
       # - name: Cache the verification results
       #   uses: actions/cache@v3
       #   env:
@@ -259,105 +265,105 @@ jobs:
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/addr'
+          configFile: 'pkg/addr'
           timeout: 10m
           imageVersion: ${{ env.imageVersion }}
           statsFile: '/stats/stats_addr.json'
       - name: Verify package 'pkg/experimental/epic'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/experimental/epic'
+          configFile: 'pkg/experimental/epic'
           timeout: 7m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'pkg/log'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/log'
+          configFile: 'pkg/log'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'pkg/private/serrors'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/private/serrors'
+          configFile: 'pkg/private/serrors'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'pkg/scrypto'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/scrypto'
+          configFile: 'pkg/scrypto'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'pkg/slayers'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers'
+          configFile: 'pkg/slayers'
           timeout: 25m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path'
+          configFile: 'pkg/slayers/path'
           timeout: 10m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'pkg/slayers/path/empty'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path/empty'
+          configFile: 'pkg/slayers/path/empty'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'pkg/slayers/path/epic'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path/epic'
+          configFile: 'pkg/slayers/path/epic'
           # timeout increased; we were having frequent timeouts before
           timeout: 10m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'pkg/slayers/path/onehop'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path/onehop'
+          configFile: 'pkg/slayers/path/onehop'
           timeout: 10m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/pkg/slayers/path/scion'
+          configFile: 'pkg/slayers/path/scion'
           timeout: 30m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'private/topology'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/private/topology'
+          configFile: 'private/topology'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'private/topology/underlay'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/private/topology/underlay'
+          configFile: 'private/topology/underlay'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'private/underlay/conn'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/private/underlay/conn'
+          configFile: 'private/underlay/conn'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'private/underlay/sockctrl'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/private/underlay/sockctrl'
+          configFile: 'private/underlay/sockctrl'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'router/bfd'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/router/bfd'
+          configFile: 'router/bfd'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'router/control'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/router/control'
+          configFile: 'router/control'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
       - name: Upload the verification report
@@ -379,6 +385,6 @@ jobs:
       - name: Verify package 'router/'
         uses: viperproject/gobra-action@main
         with:
-          configFile: 'VerifiedSCION/router'
+          configFile: 'router'
           timeout: 6h
           imageVersion: ${{ env.imageVersion }}
