@@ -6,53 +6,16 @@
 
 name: Verify the router and its dependencies
 
-# The verification options are not spelled out in this workflow anymore. Instead,
-# every step points the Gobra Action at a JSON config with the `configFile` input,
-# and Gobra reads all of its options from `gobra-mod.json` and `gobra.json`.
-# Setting any other Gobra option next to `configFile` is reported as an error by
-# Gobra, so the steps below only carry inputs that are not options of Gobra
-# (`timeout`, `imageVersion`, and `statsFile`).
+# Gobra reads all of its options from `gobra-mod.json` in the repository root and,
+# where a package deviates from it, a `gobra.json` next to that package. A step
+# points at a package with `configFile` (relative to the repository root) and may
+# only carry inputs that are not Gobra options; anything else is an error.
+# Reproduce a step locally with `gobra --config <package>`.
 #
-# `configFile` accepts either a `gobra.json` or a directory containing one, and is
-# resolved against the directory in which the repository is checked out, so the
-# steps below pass the path of the package to be verified as it appears in this
-# repository:
-#   - `gobra-mod.json` in the repository root holds the settings that are shared
-#     by every verification job, i.e. what used to be the `env` block of this
-#     workflow. `requireTriggers` remains disabled there, as it is unclear which
-#     triggers to provide to monoset in a way that does not severely affect perf.
-#   - A `gobra.json` next to a package holds only the settings in which that
-#     package deviates from those module-wide defaults. Just three packages need
-#     one, and the steps that rely on it say so:
-#       * `verification/gobra.json`  -> recursive mode, excludes `layers`
-#       * `router/gobra.json`        -> chopping, joins, permissions, MCE mode
-#   - Every other step points at a directory that has NO `gobra.json`. That is not
-#     an omission: Gobra then verifies the package in that directory with the
-#     module-wide defaults unchanged, which is what those packages used to get
-#     from the `env` block. Adding a `gobra.json` there is how a single package
-#     would opt out of a default.
-#
-# Two things about paths in these configs are easy to get wrong:
-#   - They are resolved against the directory of their config with 'Path.resolve',
-#     which does NOT normalize: "." yields '<dir>/.' and ".." yields '<dir>/..'.
-#     Use "" to refer to the directory of the config itself.
-#   - Gobra matches the relative package path of a 'friendPkg' clause against the
-#     package it verifies by string equality, and both sides are relative to the
-#     project root. Setting 'project_root' for a package that is a friend of
-#     another one ('pkg/slayers' and 'layers' are friends of 'gopacket') therefore
-#     changes whether the friend permissions apply at all. Only the recursive job
-#     sets it, which is what the workflow did before the move to JSON configs.
-#
-# These are the same configs that Gobra picks up locally, so a step below can be
-# reproduced with `gobra --config <package>`, and the options that Gobra resolves
-# for a package can be listed with `gobra --config <package> --printConfig`.
-#
-# In config file mode, the Action itself runs Gobra once with '--printConfig'
-# before verifying, so the options a step ends up with are in its log without
-# having to merge '/gobra-mod.json' with a 'gobra.json' by hand. That run is
-# bounded by the same 'timeout' as the verification but is not counted towards
-# the verification time the Action reports, and a step fails without verifying
-# anything if its configuration does not resolve.
+# Two gotchas: paths in a config are resolved with `Path.resolve`, which does not
+# normalize, so use "" and not "." for the config's own directory; and `friendPkg`
+# clauses are matched relative to the project root, so setting `project_root`
+# withdraws the friend permissions `gopacket` grants `pkg/slayers` and `layers`.
 
 on:
   push:
@@ -69,23 +32,15 @@ jobs:
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      # 'verification/gobra.json' puts this step in recursive mode, so that all
-      # nested packages below 'verification' are verified. It also sets the project
-      # root and the include dirs relative to 'verification', because this step
-      # does not verify the repository root.
       - name: Verify the packages in the 'verification' directory (recursive)
         uses: viperproject/gobra-action@main
         with:
           ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants,
-          ## which is why 'verification/gobra.json' excludes the 'layers' package via
-          ## '--excludePackages'.
+          ## which is why 'verification/gobra.json' excludes the 'layers' package.
           configFile: 'verification'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
-      # due to the bug mention above, we need to verify this package separately.
-      # It has no 'gobra.json' of its own: the module-wide include dirs already
-      # cover it, and expressing them relative to this package would need '..'
-      # segments, which Gobra does not normalize.
+      # due to the bug mention above, we need to verify this package separately
       - name: Verify package 'verification/dependencies/github.com/google/gopacket/layers'
         uses: viperproject/gobra-action@main
         with:
@@ -98,10 +53,7 @@ jobs:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
       # Skip caching for now, the Github action right now is very limited.
-      # On top of that, the 'caching' input of the Action is not available in
-      # config file mode, as Gobra's JSON config has no field for '--cacheFile'
-      # and that option cannot be passed next to '--config'. Setting it would
-      # fail the step rather than be ignored.
+      # 'caching' is also unavailable in config file mode and would fail the step.
       # - name: Cache the verification results
       #   uses: actions/cache@v3
       #   env:
@@ -115,10 +67,6 @@ jobs:
       # Github Workflow's interface and it allows more fine-grained
       # control over the settings applied to each package (which is
       # now expressed by the 'gobra.json' of the respective package).
-      #
-      # None of the packages below deviates from the module-wide defaults, so none
-      # of them has a 'gobra.json'; they are all verified with the settings from
-      # '/gobra-mod.json'.
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
@@ -234,11 +182,6 @@ jobs:
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      # 'router/gobra.json' raises the chopping bound and switches to the settings
-      # that this package needs to verify in a reasonable time ('--moreJoins impure',
-      # '--conditionalizePermissions' and '--mceMode on'). It applies to this package
-      # only, not to 'router/bfd' and 'router/control', which are verified above with
-      # the module-wide defaults.
       - name: Verify package 'router/'
         uses: viperproject/gobra-action@main
         with:
