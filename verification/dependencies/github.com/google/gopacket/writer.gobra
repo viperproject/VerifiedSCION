@@ -10,7 +10,6 @@ package gopacket
 
 import . "verification/utils/definitions"
 import sl "verification/utils/slices"
-import "verification/utils/seqs"
 
 type SerializableLayer interface {
 	pred Mem(ubuf []byte)
@@ -49,7 +48,7 @@ type SerializeBuffer interface {
 	pure
 	requires acc(Mem(), _)
 	requires acc(sl.Bytes(UBuf(), 0, len(UBuf())), _)
-	ensures  res == seqs.ToSeqByte(UBuf())
+	ensures  res == unfolding acc(sl.Bytes(UBuf(), 0, len(UBuf())), _) in seq(UBuf())
 	decreases
 	View() (ghost res seq[byte])
 
