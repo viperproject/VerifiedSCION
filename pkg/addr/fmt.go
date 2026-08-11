@@ -33,11 +33,11 @@ func ParseFormattedIA(ia string, opts ...FormatOption) (IA, error) {
 	if err != nil {
 		return 0, serrors.WrapStr("parsing ISD part", err, "value", ia)
 	}
-	as, err := ParseFormattedAS(parts[1], opts...)
+	as_, err := ParseFormattedAS(parts[1], opts...)
 	if err != nil {
 		return 0, serrors.WrapStr("parsing AS part", err, "value", ia)
 	}
-	return MustIAFrom(isd, as), nil
+	return MustIAFrom(isd, as_), nil
 }
 
 // ParseFormattedISD parses an ISD number that was formatted with the FormatISD
@@ -56,26 +56,26 @@ func ParseFormattedISD(isd string, opts ...FormatOption) (ISD, error) {
 
 // ParseFormattedAS parses an AS number that was formatted with the FormatAS
 // function. The same options must be provided to successfully parse.
-func ParseFormattedAS(as string, opts ...FormatOption) (AS, error) {
+func ParseFormattedAS(as_ string, opts ...FormatOption) (AS, error) {
 	o := applyFormatOptions(opts)
 	if o.defaultPrefix {
-		trimmed := strings.TrimPrefix(as, "AS")
-		if trimmed == as {
-			return 0, serrors.New("prefix is missing", "prefix", "AS", "value", as)
+		trimmed := strings.TrimPrefix(as_, "AS")
+		if trimmed == as_ {
+			return 0, serrors.New("prefix is missing", "prefix", "AS", "value", as_)
 		}
-		as = trimmed
+		as_ = trimmed
 	}
-	return parseAS(as, o.separator)
+	return parseAS(as_, o.separator)
 }
 
 // FormatIA formats the ISD-AS.
 func FormatIA(ia IA, opts ...FormatOption) string {
 	o := applyFormatOptions(opts)
-	as := fmtAS(ia.AS(), o.separator)
+	as_ := fmtAS(ia.AS(), o.separator)
 	if o.defaultPrefix {
-		return fmt.Sprintf("ISD%d-AS%s", ia.ISD(), as)
+		return fmt.Sprintf("ISD%d-AS%s", ia.ISD(), as_)
 	}
-	return fmt.Sprintf("%d-%s", ia.ISD(), as)
+	return fmt.Sprintf("%d-%s", ia.ISD(), as_)
 }
 
 // FormatISD formats the ISD number.
@@ -88,24 +88,24 @@ func FormatISD(isd ISD, opts ...FormatOption) string {
 }
 
 // FormatAS formats the AS number.
-func FormatAS(as AS, opts ...FormatOption) string {
+func FormatAS(as_ AS, opts ...FormatOption) string {
 	o := applyFormatOptions(opts)
-	s := fmtAS(as, o.separator)
+	s := fmtAS(as_, o.separator)
 	if o.defaultPrefix {
 		return "AS" + s
 	}
 	return s
 }
 
-func fmtAS(as AS, sep string) string {
-	if !as.inRange() {
-		return fmt.Sprintf("%d [Illegal AS: larger than %d]", as, MaxAS)
+func fmtAS(as_ AS, sep string) string {
+	if !as_.inRange() {
+		return fmt.Sprintf("%d [Illegal AS: larger than %d]", as_, MaxAS)
 	}
-	// Format BGP ASes as decimal
-	if as <= MaxBGPAS {
-		return strconv.FormatUint(uint64(as), 10)
+	// Format BGP ASes as_ decimal
+	if as_ <= MaxBGPAS {
+		return strconv.FormatUint(uint64(as_), 10)
 	}
-	// Format all other ASes as 'sep'-separated hex.
+	// Format all other ASes as_ 'sep'-separated hex.
 	const maxLen = len("ffff:ffff:ffff")
 	var b strings.Builder
 	b.Grow(maxLen)
@@ -114,7 +114,7 @@ func fmtAS(as AS, sep string) string {
 			b.WriteString(sep)
 		}
 		shift := uint(asPartBits * (asParts - i - 1))
-		b.WriteString(strconv.FormatUint(uint64(as>>shift)&asPartMask, asPartBase))
+		b.WriteString(strconv.FormatUint(uint64(as_>>shift)&asPartMask, asPartBase))
 	}
 	return b.String()
 }
