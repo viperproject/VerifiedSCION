@@ -1,0 +1,6 @@
+// +gobra
+
+package util
+
+decreases
+func SecsToCompact(t uint32) string
