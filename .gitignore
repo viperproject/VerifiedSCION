@@ -92,6 +92,9 @@ node_modules
 # gobra
 #######
 logger.log
+# temporary copy of a 'gobra.json' that the Gobra Action generates next to the
+# original one to inject the options that cannot be passed next to '--config'
+.gobra-action-generated.json
 tmp/
 *.vpr
 *.debugType

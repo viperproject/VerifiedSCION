@@ -6,6 +6,17 @@
 
 name: Verify the router and its dependencies
 
+# Gobra reads all of its options from `gobra-mod.json` in the repository root and,
+# where a package deviates from it, a `gobra.json` next to that package. A step
+# points at a package with `configFile` (relative to the repository root) and may
+# only carry inputs that are not Gobra options; anything else is an error.
+# Reproduce a step locally with `gobra --config <package>`.
+#
+# Two gotchas: paths in a config are resolved with `Path.resolve`, which does not
+# normalize, so use "" and not "." for the config's own directory; and `friendPkg`
+# clauses are matched relative to the project root, so setting `project_root`
+# withdraws the friend permissions `gopacket` grants `pkg/slayers` and `layers`.
+
 on:
   push:
     branches:
@@ -13,25 +24,7 @@ on:
   pull_request: # run this workflow on every pull_request
 
 env:
-  headerOnly: 1
-  module: 'github.com/scionproto/scion'
-  includePaths: '. verification/dependencies'
-  assumeInjectivityOnInhale: '1'
-  parallelizeBranches: '0'
-  checkConsistency: '1'
   imageVersion: 'latest'
-  mceMode: 'od'
-  # disabled for now, as it is unclear which triggers to
-  # provide to monoset in a way that it does not severely
-  # affect perf.
-  requireTriggers: '0'
-  useZ3API: '0'
-  viperBackend: 'SILICON'
-  disableNL: '0'
-  unsafeWildcardOptimization: '0'
-  overflow: '0'
-  respectFunctionPrePermAmounts: '0'
-  enableFriendClauses: '1'
 
 jobs:
   verify-third-party-libs:
@@ -39,58 +32,28 @@ jobs:
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
-      - name: Verify the packages in the 'verification' directory
+      - name: Verify the packages in the 'verification' directory (recursive)
         uses: viperproject/gobra-action@main
         with:
-          projectLocation: 'VerifiedSCION/verification'
-          recursive: 1
-          ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants.
-          excludePackages: 'layers'
+          ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants,
+          ## which is why 'verification/gobra.json' excludes the 'layers' package.
+          configFile: 'verification'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: './dependencies/ ..' # relative to project location
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       # due to the bug mention above, we need to verify this package separately
       - name: Verify package 'verification/dependencies/github.com/google/gopacket/layers'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'verification/dependencies/github.com/google/gopacket/layers'
+          configFile: 'verification/dependencies/github.com/google/gopacket/layers'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: 'verification/dependencies/ .' # relative to project location
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
   verify-deps:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the VerifiedSCION repository
         uses: actions/checkout@v3
       # Skip caching for now, the Github action right now is very limited.
+      # 'caching' is also unavailable in config file mode and would fail the step.
       # - name: Cache the verification results
       #   uses: actions/cache@v3
       #   env:
@@ -98,372 +61,116 @@ jobs:
       #   with:
       #     path: ${{ runner.workspace }}/.gobra/cache.json
       #     key: ${{ env.cache-name }}
-    
+
       # We split the verification of the entire repository into
       # multiple steps. This provides a more fine-grained log in
       # Github Workflow's interface and it allows more fine-grained
-      # control over the settings applied to each package (this last
-      # point could be also be solved by adapting the action to allow
-      # per package config).
+      # control over the settings applied to each package (which is
+      # now expressed by the 'gobra.json' of the respective package).
       - name: Verify package 'pkg/addr'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/addr'
+          configFile: 'pkg/addr'
           timeout: 10m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          statsFile: '/stats/stats_addr.json'
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
+          statsFile: '/stats/stats_addr.json'
       - name: Verify package 'pkg/experimental/epic'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/experimental/epic'
+          configFile: 'pkg/experimental/epic'
           timeout: 7m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/log'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/log'
+          configFile: 'pkg/log'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/private/serrors'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/private/serrors'
+          configFile: 'pkg/private/serrors'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/scrypto'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/scrypto'
+          configFile: 'pkg/scrypto'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/slayers'
+          configFile: 'pkg/slayers'
           timeout: 25m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/slayers/path'
+          configFile: 'pkg/slayers/path'
           timeout: 10m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path/empty'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/slayers/path/empty'
+          configFile: 'pkg/slayers/path/empty'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path/epic'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/slayers/path/epic'
+          configFile: 'pkg/slayers/path/epic'
           # timeout increased; we were having frequent timeouts before
           timeout: 10m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path/onehop'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/slayers/path/onehop'
+          configFile: 'pkg/slayers/path/onehop'
           timeout: 10m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'pkg/slayers/path/scion'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'pkg/slayers/path/scion'
+          configFile: 'pkg/slayers/path/scion'
           timeout: 30m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'private/topology'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'private/topology'
+          configFile: 'private/topology'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'private/topology/underlay'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'private/topology/underlay'
+          configFile: 'private/topology/underlay'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'private/underlay/conn'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'private/underlay/conn'
+          configFile: 'private/underlay/conn'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'private/underlay/sockctrl'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'private/underlay/sockctrl'
+          configFile: 'private/underlay/sockctrl'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'router/bfd'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'router/bfd'
+          configFile: 'router/bfd'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Verify package 'router/control'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'router/control'
+          configFile: 'router/control'
           timeout: 5m
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: ${{ env.parallelizeBranches }}
           imageVersion: ${{ env.imageVersion }}
-          mceMode: ${{ env.mceMode }}
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: ${{ env.disableNL }}
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: ${{ env.unsafeWildcardOptimization }}
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
       - name: Upload the verification report
         uses: actions/upload-artifact@v4
         with:
@@ -478,24 +185,6 @@ jobs:
       - name: Verify package 'router/'
         uses: viperproject/gobra-action@main
         with:
-          packages: 'router/'
+          configFile: 'router'
           timeout: 6h
-          chop: 10
-          headerOnly: ${{ env.headerOnly }}
-          module: ${{ env.module }}
-          includePaths: ${{ env.includePaths }}
-          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
-          checkConsistency: ${{ env.checkConsistency }}
-          parallelizeBranches: '0'
-          conditionalizePermissions: '1'
-          moreJoins: 'impure'
           imageVersion: ${{ env.imageVersion }}
-          mceMode: 'on'
-          requireTriggers: ${{ env.requireTriggers }}
-          overflow: ${{ env.overflow }}
-          useZ3API: ${{ env.useZ3API }}
-          disableNL: '0'
-          viperBackend: ${{ env.viperBackend }}
-          unsafeWildcardOptimization: '0'
-          respectFunctionPrePermAmounts: ${{ env.respectFunctionPrePermAmounts }}
-          enableFriendClauses: ${{ env.enableFriendClauses }}
