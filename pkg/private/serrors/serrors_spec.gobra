@@ -49,6 +49,18 @@ pred (e errOrMsg) ErrorMem() {
 	e.err != nil ==> e.err.ErrorMem()
 }
 
+ghost
+requires  acc(e.ErrorMem(), _)
+decreases e.ErrorMem()
+pure func (e errOrMsg) IsDuplicableMem() bool { return false }
+
+ghost
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
+decreases e.ErrorMem()
+func (e errOrMsg) Duplicate() {}
+
 preserves m.ErrorMem()
 decreases _ // Gobra cannot prove termination of this function yet
 func (m errOrMsg) Error() string {
@@ -76,6 +88,18 @@ pred (e basicError) ErrorMem() {
 	(e.cause  != nil ==> e.cause.ErrorMem()) &&
 	(e.stack  != nil ==> (acc(e.stack) && acc(*(e.stack))))
 }
+
+ghost
+requires  acc(e.ErrorMem(), _)
+decreases e.ErrorMem()
+pure func (e basicError) IsDuplicableMem() bool { return false }
+
+ghost
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
+decreases e.ErrorMem()
+func (e basicError) Duplicate() {}
 
 trusted
 preserves e.ErrorMem()
@@ -107,11 +131,11 @@ func (e basicError) Is(err error) bool {
 	}
 }
 
-requires  as != nil
+requires  as_ != nil
 decreases
-func (e basicError) As(as interface{}) bool {
+func (e basicError) As(as_ interface{}) bool {
 	if e.msg.err != nil {
-		return errors.As(e.msg.err, as)
+		return errors.As(e.msg.err, as_)
 	}
 	return false
 }
@@ -261,6 +285,18 @@ List implements error
 pred (l List) ErrorMem() {
 	forall i int :: 0 <= i && i < len(l) ==> (acc(&l[i]) && l[i].ErrorMem())
 }
+
+ghost
+requires  acc(e.ErrorMem(), _)
+decreases e.ErrorMem()
+pure func (e List) IsDuplicableMem() bool { return false }
+
+ghost
+preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
+decreases e.ErrorMem()
+func (e List) Duplicate() {}
 
 // Error implements the error interface.
 trusted
