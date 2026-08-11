@@ -95,8 +95,8 @@ requires v.isIO_Internal_val1
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_enter_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return some(v.IO_Internal_val1_2) in domain(s.ibuf) &&
-		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 in ibuf_set)) &&
+	return some(v.IO_Internal_val1_2) elem domain(s.ibuf) &&
+		(let ibuf_set := s.ibuf[some(v.IO_Internal_val1_2)] in (v.IO_Internal_val1_1 elem ibuf_set)) &&
 		len(v.IO_Internal_val1_1.CurrSeg.Future) > 0 &&
 		let currseg := v.IO_Internal_val1_1.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
@@ -220,8 +220,8 @@ requires v.isIO_Internal_val2
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_exit_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return none[IO_ifs] in domain(s.ibuf) &&
-		(let ibuf_set := s.ibuf[none[IO_ifs]] in (v.IO_Internal_val2_1 in ibuf_set)) &&
+	return none[IO_ifs] elem domain(s.ibuf) &&
+		(let ibuf_set := s.ibuf[none[IO_ifs]] in (v.IO_Internal_val2_1 elem ibuf_set)) &&
 		len(v.IO_Internal_val2_1.CurrSeg.Future) > 0 &&
 		dp.dp3s_forward_ext(v.IO_Internal_val2_1, v.IO_Internal_val2_2, v.IO_Internal_val2_3)
 }
@@ -262,8 +262,8 @@ requires v.isIO_val_Pkt2
 requires dp.Valid()
 decreases
 pure func (dp DataPlaneSpec) dp3s_iospec_bio3s_send_guard(s IO_dp3s_state_local, t Place, v IO_val) bool {
-	return v.IO_val_Pkt2_1 in domain(s.obuf) &&
-		(let obuf_set := s.obuf[v.IO_val_Pkt2_1] in (v.IO_val_Pkt2_2 in obuf_set))
+	return v.IO_val_Pkt2_1 elem domain(s.obuf) &&
+		(let obuf_set := s.obuf[v.IO_val_Pkt2_1] in (v.IO_val_Pkt2_2 elem obuf_set))
 }
 
 pred (dp DataPlaneSpec) dp3s_iospec_bio3s_send(s IO_dp3s_state_local, t Place) {
