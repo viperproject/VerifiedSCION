@@ -20,6 +20,7 @@ package io
 
 type IO_ainfo = uint
 
+ghost
 type IO_seg2 adt {
 	// Here, we already instantiated the type params
 	IO_seg3_ {
@@ -34,4 +35,5 @@ type IO_seg2 adt {
 }
 
 // seg3 is the same as seg2 instantiated with type parameters
+ghost
 type IO_seg3 = IO_seg2
