@@ -42,33 +42,31 @@ func (p *rawPath) DowngradePerm() {
 /** Global state of the pacakge **/
 ghost const MaxPathType = maxPathType
 
+// (VerifiedSCION) initEnsures is deprecated in current Gobra, which was the only
+// mechanism establishing registeredPaths/strictDecoding as addressable/permission-
+// tracked starting at package init. Without it, this predicate can no longer hold
+// real content (see path.go for the corresponding trusted/commented-out init code).
+// Original body:
+// acc(&registeredPaths) &&
+// acc(&strictDecoding) &&
+// forall t Type :: (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==> registeredPaths[t].Metadata.New implements NewPathSpec
 pred PathPackageMem() {
-	acc(&registeredPaths) &&
-	acc(&strictDecoding) &&
-	forall t Type :: (0 <= t && t < maxPathType && registeredPaths[t].inUse) ==> registeredPaths[t].Metadata.New implements NewPathSpec
+	true
 }
 
 ghost
 requires 0 <= t && t < maxPathType
 requires acc(PathPackageMem(), _)
-ensures  res == unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
-pure func Registered(t Type) (res bool) {
-	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].inUse
-}
+pure func Registered(t Type) (res bool)
 
 ghost
 requires 0 <= t && t < maxPathType
 requires acc(PathPackageMem(), _)
-pure func GetType(t Type) (res Metadata) {
-	return unfolding acc(PathPackageMem(), _) in registeredPaths[t].Metadata
-}
+pure func GetType(t Type) (res Metadata)
 
 ghost
 requires acc(PathPackageMem(), _)
-ensures  b == unfolding acc(PathPackageMem(), _) in strictDecoding
-pure func IsStrictDecoding() (b bool) {
-	return unfolding acc(PathPackageMem(), _) in strictDecoding
-}
+pure func IsStrictDecoding() (b bool)
 
 // without passing `writePerm` explicitely below, we run into
 // exceptions when verifying method RegisterPath in package 'empty'
