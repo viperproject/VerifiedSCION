@@ -35,7 +35,7 @@ opaque
 requires sl.Bytes(raw, 0, len(raw))
 requires slayers.ValidPktMetaHdr(raw)
 decreases
-pure func absPkt(raw []byte) (res io.Pkt) {
+pure func AbsPkt(raw []byte) (res io.Pkt) {
 	return let _ := reveal slayers.ValidPktMetaHdr(raw) in
 		let headerOffset := slayers.GetScionPathOffset(raw) in
 		let headerOffsetWithMetaLen := headerOffset + scion.MetaLen in
@@ -63,11 +63,11 @@ pure func absPkt(raw []byte) (res io.Pkt) {
 ghost
 requires sl.Bytes(raw, 0, len(raw))
 ensures val.isValUnsupported
-ensures val.ValUnsupported_1 == path.ifsToIO_ifs(ingressID)
+ensures val.ValUnsupported_1 == path.IfsToIO_ifs(ingressID)
 decreases
 pure func absValUnsupported(raw []byte, ingressID uint16) (val io.Val) {
 	return io.Val(io.ValUnsupported {
-		path.ifsToIO_ifs(ingressID),
+		path.IfsToIO_ifs(ingressID),
 		io.Unit{},
 	})
 }
@@ -79,7 +79,7 @@ ensures val.isValPkt || val.isValUnsupported
 decreases
 pure func absIO_val(raw []byte, ingressID uint16) (val io.Val) {
 	return (reveal slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)) ?
-		io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw)}) :
+		io.Val(io.ValPkt{path.IfsToIO_ifs(ingressID), AbsPkt(raw)}) :
 		absValUnsupported(raw, ingressID)
 }
 

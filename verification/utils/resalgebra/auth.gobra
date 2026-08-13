@@ -82,15 +82,15 @@ pure func (ra TypeAuthRA) Compose(e1 Elem, e2 Elem) (res Elem) {
 	return let c1 := e1.(AuthCarrier) in
 		let c2 := e2.(AuthCarrier)    in
 		(c1.Fst === Bottom{} ?
-			AuthCarrier{c2.Fst, max(c1.Snd, c2.Snd)} :
+			AuthCarrier{c2.Fst, Max(c1.Snd, c2.Snd)} :
 			(c2.Fst === Bottom{} ?
-				AuthCarrier{c1.Fst, max(c1.Snd, c2.Snd)} :
-				AuthCarrier{Top{}, max(c1.Snd, c2.Snd)}))
+				AuthCarrier{c1.Fst, Max(c1.Snd, c2.Snd)} :
+				AuthCarrier{Top{}, Max(c1.Snd, c2.Snd)}))
 }
 
 ghost
 decreases
-pure func max(a int, b int) int {
+pure func Max(a int, b int) int {
 	return a > b ? a : b
 }
 

@@ -42,6 +42,7 @@ const InfoLen = 8
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //	|                           Timestamp                           |
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// @ comparable
 type InfoField struct {
 	// Peer is the peering flag. If set to true, then the forwarding path is built as a peering
 	// path, which requires special processing on the dataplane.
@@ -140,12 +141,12 @@ func (inf *InfoField) SerializeTo(b []byte) (err error) {
 // @ requires hf.HVF == AbsMac(hfMac)
 // @ preserves acc(&inf.SegID)
 // @ ensures AbsUInfoFromUint16(inf.SegID) ==
-// @ 	old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf))
+// @ 	old(io.Upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf))
 // @ decreases
 func (inf *InfoField) UpdateSegID(hfMac [MacLen]byte /* @, ghost hf io.HF @ */) {
 	//@ share hfMac
 	inf.SegID = inf.SegID ^ binary.BigEndian.Uint16(hfMac[:2])
-	// @ AssumeForIO(AbsUInfoFromUint16(inf.SegID) == old(io.upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf)))
+	// @ AssumeForIO(AbsUInfoFromUint16(inf.SegID) == old(io.Upd_uinfo(AbsUInfoFromUint16(inf.SegID), hf)))
 }
 
 // @ decreases

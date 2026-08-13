@@ -18,15 +18,15 @@
 
 package io
 
-ghost type Unit ghost struct{}
+ghost comparable type Unit ghost struct{}
 
 // interface IDs
-ghost type Ifs ghost struct {
+ghost comparable type Ifs ghost struct {
 	V uint16
 }
 
 // type of AS identifiers. Matches the type 'as' in Isabelle.
-ghost type AS ghost struct {
+ghost comparable type AS ghost struct {
 	V uint
 }
 
@@ -84,7 +84,7 @@ ghost type Key adt {
 }
 
 // "authenticated hop information"
-ghost type AHI ghost struct {
+ghost comparable type AHI ghost struct {
 	InIF option[Ifs]
 	EgIF option[Ifs]
 	ASID AS
@@ -92,15 +92,15 @@ ghost type AHI ghost struct {
 
 ghost
 decreases
-pure func (hf HF) extr_asid() AS {
-	return hf.HVF.extract_asid()
+pure func (hf HF) Extr_asid() AS {
+	return hf.HVF.Extract_asid()
 }
 
 // function 'toab' in Isabelle, originally of type HF_scheme -> aahi_scheme
 ghost
 decreases
 pure func (h HF) Toab() AHI {
-	return AHI{h.InIF2, h.EgIF2, h.HVF.extract_asid()}
+	return AHI{h.InIF2, h.EgIF2, h.HVF.Extract_asid()}
 }
 
 /* Link Types */
@@ -118,7 +118,7 @@ ghost
 requires dp.Valid()
 requires p1 == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) link_type(p1 AS, p2 Ifs) Link{
+pure func (dp DataPlaneSpec) Link_type(p1 AS, p2 Ifs) Link{
 	return p2 elem domain(dp.GetLinkTypes()) ? dp.GetLinkType(p2) : IO_NoLink{}
 }
 
@@ -126,8 +126,8 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) egif_prov2(hf1 HF, asid AS) bool{
-	return dp.egif2_type(hf1, asid, Link(IO_CustProv{}))
+pure func (dp DataPlaneSpec) Egif_prov2(hf1 HF, asid AS) bool{
+	return dp.Egif2_type(hf1, asid, Link(IO_CustProv{}))
 }
 
 
@@ -135,58 +135,58 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) egif_core2(hf1 HF, asid AS) bool{
-	return dp.egif2_type(hf1, asid, Link(IO_Core{}))
+pure func (dp DataPlaneSpec) Egif_core2(hf1 HF, asid AS) bool{
+	return dp.Egif2_type(hf1, asid, Link(IO_Core{}))
 }
 
 ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) egif_cust2(hf1 HF, asid AS) bool{
-	return dp.egif2_type(hf1, asid, Link(IO_ProvCust{}))
+pure func (dp DataPlaneSpec) Egif_cust2(hf1 HF, asid AS) bool{
+	return dp.Egif2_type(hf1, asid, Link(IO_ProvCust{}))
 }
 
 ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) inif_cust2(hf1 HF, asid AS) bool{
-	return dp.inif2_type(hf1, asid, Link(IO_ProvCust{}))
+pure func (dp DataPlaneSpec) Inif_cust2(hf1 HF, asid AS) bool{
+	return dp.Inif2_type(hf1, asid, Link(IO_ProvCust{}))
 }
 
 ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) inif_core2(hf1 HF, asid AS) bool{
-	return dp.inif2_type(hf1, asid, Link(IO_Core{}))
+pure func (dp DataPlaneSpec) Inif_core2(hf1 HF, asid AS) bool{
+	return dp.Inif2_type(hf1, asid, Link(IO_Core{}))
 }
 
 ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) inif_prov2(hf1 HF, asid AS) bool{
-	return dp.inif2_type(hf1, asid, Link(IO_CustProv{}))
+pure func (dp DataPlaneSpec) Inif_prov2(hf1 HF, asid AS) bool{
+	return dp.Inif2_type(hf1, asid, Link(IO_CustProv{}))
 }
 
 ghost
 requires dp.Valid()
 requires ifs != none[Ifs] ==> asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) if_type(asid AS, ifs option[Ifs], link Link) bool{
+pure func (dp DataPlaneSpec) If_type(asid AS, ifs option[Ifs], link Link) bool{
 	return match ifs {
 		case none[Ifs]:
 			false
 		default:
-			dp.link_type(asid, get(ifs)) == link
+			dp.Link_type(asid, get(ifs)) == link
 	}
 }
 
 ghost
 opaque
 decreases
-pure func (m MsgTerm) extract_asid() AS {
+pure func (m MsgTerm) Extract_asid() AS {
 	return m.MsgTerm_Hash_.MsgTerm_MPair_1.MsgTerm_Key_.Key_macK_
 }

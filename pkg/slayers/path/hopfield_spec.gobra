@@ -30,7 +30,7 @@ pred (h *HopField) Mem() {
 
 ghost
 decreases
-pure func ifsToIO_ifs(ifs uint16) option[io.Ifs] {
+pure func IfsToIO_ifs(ifs uint16) option[io.Ifs] {
 	return ifs == 0 ? none[io.Ifs] : some(io.Ifs{ifs})
 }
 
@@ -52,8 +52,8 @@ pure func BytesToIO_HF(raw [] byte, start int, middle int, end int) (io.HF) {
 		unfolding sl.Bytes(raw, start, end)                            in
 		let inif2 := binary.BigEndian.Uint16(raw[middle+2:middle+4])   in
 		let egif2 := binary.BigEndian.Uint16(raw[middle+4:middle+6])   in
-		let op_inif2 := ifsToIO_ifs(inif2)                             in
-		let op_egif2 := ifsToIO_ifs(egif2)                             in
+		let op_inif2 := IfsToIO_ifs(inif2)                             in
+		let op_egif2 := IfsToIO_ifs(egif2)                             in
 		io.HF {
 			InIF2: op_inif2,
 			EgIF2: op_egif2,
@@ -110,8 +110,8 @@ ghost
 decreases
 pure func (h HopField) Abs() (io.HF) {
 	return io.HF {
-		InIF2: ifsToIO_ifs(h.ConsIngress),
-		EgIF2: ifsToIO_ifs(h.ConsEgress),
+		InIF2: IfsToIO_ifs(h.ConsIngress),
+		EgIF2: IfsToIO_ifs(h.ConsEgress),
 		HVF: AbsMac(h.Mac),
 	}
 }

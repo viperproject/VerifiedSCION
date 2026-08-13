@@ -31,13 +31,13 @@ ghost type SharedArg ghost struct {
 
 pred SharedInv(ghost dp io.DataPlaneSpec, ghost y SharedArg) {
 	acc(y.Place) && acc(y.State) && // existentials are expressed using ghost pointers
-	io.token(*y.Place) && dp.dp3s_iospec_ordered(*y.State, *y.Place) &&
-	ElemAuth((*y.State).ibuf, y.IBufY) && ElemAuth((*y.State).obuf, y.OBufY)
+	io.Token(*y.Place) && dp.Dp3s_iospec_ordered(*y.State, *y.Place) &&
+	ElemAuth((*y.State).Ibuf, y.IBufY) && ElemAuth((*y.State).Obuf, y.OBufY)
 }
 
 // initialize the shared invariant:
 ghost
-requires io.token(p) && dp.dp3s_iospec_ordered(s, p)
+requires io.Token(p) && dp.Dp3s_iospec_ordered(s, p)
 ensures  m.LockP() && m.LockInv() == SharedInv{dp, y}
 decreases
 func InitSharedInv(
@@ -48,8 +48,8 @@ func InitSharedInv(
 	m = &mV
 	pE@ := p
 	sE@ := s
-	yI := InitElemAuth(s.ibuf)
-	yO := InitElemAuth(s.obuf)
+	yI := InitElemAuth(s.Ibuf)
+	yO := InitElemAuth(s.Obuf)
 	y := SharedArg{&pE, &sE, yI, yO}
 	fold SharedInv{dp, y}()
 	m.SetInv(SharedInv{dp, y})
@@ -70,7 +70,7 @@ func AllocProphecy() (expectedPkts int)
 
 pred MultiReadBio(ghost t io.Place, ghost expectedPkts int) {
 	(expectedPkts > 0 ==> io.CBioIO_bio3s_recv(t) &&
-	MultiReadBio(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1))
+	MultiReadBio(io.Dp3s_iospec_bio3s_recv_T(t), expectedPkts-1))
 }
 
 ghost
@@ -78,7 +78,7 @@ requires MultiReadBio(t, expectedPkts)
 decreases expectedPkts
 pure func MultiReadBioNext(t io.Place, expectedPkts int) (tn io.Place) {
 	return expectedPkts <= 0 ? t : unfolding MultiReadBio(t, expectedPkts) in
-		MultiReadBioNext(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1)
+		MultiReadBioNext(io.Dp3s_iospec_bio3s_recv_T(t), expectedPkts-1)
 }
 
 // Checks that all packets are received from the same interface (key).
@@ -90,14 +90,14 @@ pure func MultiReadBioCorrectIfs(
 	expectedPkts int,
 	k Key) bool {
 	return expectedPkts <= 0 || unfolding MultiReadBio(t, expectedPkts) in
-		match io.dp3s_iospec_bio3s_recv_R(t) {
+		match io.Dp3s_iospec_bio3s_recv_R(t) {
 			case io.ValUnsupported{?ifs, _}:
 				k == ifs
 			case io.ValPkt{?ifs, _ }:
 				k == ifs
 			default:
 				false
-		} && MultiReadBioCorrectIfs(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1, k)
+		} && MultiReadBioCorrectIfs(io.Dp3s_iospec_bio3s_recv_T(t), expectedPkts-1, k)
 }
 
 ghost
@@ -108,8 +108,8 @@ decreases expectedPkts
 pure func MultiReadBioIO_val(t io.Place, expectedPkts int) (res seq[io.Val]) {
 	return expectedPkts <= 0 ? seq[io.Val]{} :
 		unfolding MultiReadBio(t, expectedPkts) in
-		seq[io.Val]{io.dp3s_iospec_bio3s_recv_R(t)} ++ MultiReadBioIO_val(
-			io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1)
+		seq[io.Val]{io.Dp3s_iospec_bio3s_recv_R(t)} ++ MultiReadBioIO_val(
+			io.Dp3s_iospec_bio3s_recv_T(t), expectedPkts-1)
 }
 
 ghost
@@ -120,8 +120,8 @@ pure func MultiReadBioUpd(
 	expectedPkts int,
 	s io.Dp3sStateLocal) io.Dp3sStateLocal {
 	return expectedPkts <= 0 ? s : unfolding MultiReadBio(t, expectedPkts) in
-		MultiReadBioUpd(io.dp3s_iospec_bio3s_recv_T(t), expectedPkts-1,
-			addIbuf(s, io.dp3s_iospec_bio3s_recv_R(t)))
+		MultiReadBioUpd(io.Dp3s_iospec_bio3s_recv_T(t), expectedPkts-1,
+			addIbuf(s, io.Dp3s_iospec_bio3s_recv_R(t)))
 }
 
 ghost
@@ -130,40 +130,40 @@ decreases
 pure func addIbuf(s io.Dp3sStateLocal, val io.Val) io.Dp3sStateLocal {
  return match val {
 	case io.ValPkt{?ifs, ?pkt}:
-		io.dp3s_add_ibuf(s, ifs, pkt)
+		io.Dp3s_add_ibuf(s, ifs, pkt)
 	case io.ValUnsupported{_, _}:
 		s
 	default:
-		io.undefined()
+		io.Undefined()
  }
 }
 
 ghost
 decreases n
-requires dp.dp3s_iospec_ordered(s, t)
+requires dp.Dp3s_iospec_ordered(s, t)
 ensures MultiReadBio(t, n)
-ensures dp.dp3s_iospec_ordered(MultiReadBioUpd(t, n, s), MultiReadBioNext(t, n))
+ensures dp.Dp3s_iospec_ordered(MultiReadBioUpd(t, n, s), MultiReadBioNext(t, n))
 func ExtractMultiReadBio(
 	dp io.DataPlaneSpec,
 	t io.Place,
 	n int,
 	s io.Dp3sStateLocal) {
 	if n > 0 {
-		unfold dp.dp3s_iospec_ordered(s,t)
-		unfold dp.dp3s_iospec_bio3s_recv(s,t)
-		ExtractMultiReadBio(dp, io.dp3s_iospec_bio3s_recv_T(t), n-1, addIbuf(s, io.dp3s_iospec_bio3s_recv_R(t)))
+		unfold dp.Dp3s_iospec_ordered(s,t)
+		unfold dp.Dp3s_iospec_bio3s_recv(s,t)
+		ExtractMultiReadBio(dp, io.Dp3s_iospec_bio3s_recv_T(t), n-1, addIbuf(s, io.Dp3s_iospec_bio3s_recv_R(t)))
 	}
 	fold MultiReadBio(t,n)
 }
 
 ghost
 requires MultiReadBio(t, n)
-requires ElemAuth(s.ibuf, y.IBufY) && ElemAuth(s.obuf, y.OBufY)
+requires ElemAuth(s.Ibuf, y.IBufY) && ElemAuth(s.Obuf, y.OBufY)
 ensures  MultiReadBio(t, n)
 ensures  MultiReadBioUpd(t, n, s) == old(MultiReadBioUpd(t, n, s))
 ensures  MultiReadBioNext(t, n) == old(MultiReadBioNext(t, n))
-ensures  ElemAuth(MultiReadBioUpd(t, n, s).ibuf, y.IBufY)
-ensures  ElemAuth(MultiReadBioUpd(t, n, s).obuf, y.OBufY)
+ensures  ElemAuth(MultiReadBioUpd(t, n, s).Ibuf, y.IBufY)
+ensures  ElemAuth(MultiReadBioUpd(t, n, s).Obuf, y.OBufY)
 ensures  0 <= n && MultiReadBioCorrectIfs(t, n, k) ==>
 	MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
 decreases n
@@ -175,10 +175,10 @@ func MultiUpdateElemWitness(
 	y SharedArg) {
 	if n > 0 {
 		unfold MultiReadBio(t, n)
-		val := io.dp3s_iospec_bio3s_recv_R(t)
-		next := io.dp3s_iospec_bio3s_recv_T(t)
+		val := io.Dp3s_iospec_bio3s_recv_R(t)
+		next := io.Dp3s_iospec_bio3s_recv_T(t)
 		if val.isValPkt{
-			UpdateElemWitness(s.ibuf, y.IBufY, val.ValPkt_1, val.ValPkt_2)
+			UpdateElemWitness(s.Ibuf, y.IBufY, val.ValPkt_1, val.ValPkt_2)
 		}
 		MultiUpdateElemWitness(next, n-1, k, addIbuf(s, val), y)
 		fold MultiReadBio(t, n)
@@ -558,33 +558,33 @@ func ApplyElemWitness(m dict[Key]Val, y ElemRA, k Key, e Elem) {
 
 ghost
 requires ElemAuth(m, y)
-ensures  ElemAuth(io.insert(m, k, e), y)
+ensures  ElemAuth(io.Insert(m, k, e), y)
 ensures  ElemWitness(y, k, e)
 decreases
 func UpdateElemWitness(m dict[Key]Val, y ElemRA, k Key, e Elem) {
 	unfold ElemAuth(m, y)
 	d := Dict{dict[Key]Val{k: set[io.Pkt]{e}}}
-	c := (TypeAuthRA{}).Compose(AuthView(Dict{io.insert(m, k, e)}), FragView(d))
+	c := (TypeAuthRA{}).Compose(AuthView(Dict{io.Insert(m, k, e)}), FragView(d))
 	updateElemWitnessAuxLemma(m, k, e)
 	assert resalgebra.IsFramePreservingUpdate(TypeAuthRA{}, AuthView(Dict{m}), c)
 	resalgebra.GhostUpdate(y, TypeAuthRA{}, AuthView(Dict{m}), c)
 	assert resalgebra.GhostLocation(y, TypeAuthRA{}, c)
-	resalgebra.GhostOp1(y, TypeAuthRA{}, AuthView(Dict{io.insert(m, k, e)}), FragView(d))
-	fold ElemAuth(io.insert(m, k, e), y)
+	resalgebra.GhostOp1(y, TypeAuthRA{}, AuthView(Dict{io.Insert(m, k, e)}), FragView(d))
+	fold ElemAuth(io.Insert(m, k, e), y)
 	fold ElemWitness(y, k, e)
 }
 
 // by far, the slowest lemma to prove atm
 ghost
 ensures let d := Dict{dict[Key]Val{k: set[io.Pkt]{e}}} in
-	let c := (TypeAuthRA{}).Compose(AuthView(Dict{io.insert(m, k, e)}), FragView(d)) in
+	let c := (TypeAuthRA{}).Compose(AuthView(Dict{io.Insert(m, k, e)}), FragView(d)) in
 	resalgebra.IsFramePreservingUpdate(TypeAuthRA{}, AuthView(Dict{m}), c)
 decreases
 func updateElemWitnessAuxLemma(m dict[Key]Val, k Key, e Elem) {
 	ra := TypeAuthRA{}
 	a := AuthView(Dict{m})
 	d := Dict{dict[Key]Val{k: set[io.Pkt]{e}}}
-	c := ra.Compose(AuthView(Dict{io.insert(m, k, e)}), FragView(d))
+	c := ra.Compose(AuthView(Dict{io.Insert(m, k, e)}), FragView(d))
 	assert ra.IsValid(a) ==> ra.IsValid(c)
 	assert forall ee resalgebra.Elem :: ra.IsElem(ee) && ra.IsValid(ra.Compose(a, ee)) ==>
 		(let ae := ra.Compose(a, ee).(AuthCarrier) in
@@ -593,19 +593,19 @@ func updateElemWitnessAuxLemma(m dict[Key]Val, k Key, e Elem) {
 	assert forall ee resalgebra.Elem :: ra.IsElem(ee) && ra.IsValid(ra.Compose(a, ee)) ==>
 		ee.(AuthCarrier).fst === Bottom{}       &&
 		dictLessThan(ee.(AuthCarrier).snd.V, m) &&
-		dictLessThan(m, io.insert(m, k, e))     &&
-		dictLessThan(ee.(AuthCarrier).snd.V, io.insert(m, k, e))
+		dictLessThan(m, io.Insert(m, k, e))     &&
+		dictLessThan(ee.(AuthCarrier).snd.V, io.Insert(m, k, e))
 	assert forall ee resalgebra.Elem :: ra.IsElem(ee) && ra.IsValid(ra.Compose(a, ee)) ==>
 		ee.(AuthCarrier).fst === Bottom{}         &&
 		let ce := ra.Compose(c, ee).(AuthCarrier) in
-		ce.fst.(Dict).V === io.insert(m, k, e)
+		ce.fst.(Dict).V === io.Insert(m, k, e)
 	assert forall ee resalgebra.Elem :: ra.IsElem(ee) && ra.IsValid(ra.Compose(a, ee)) ==>
 		ee.(AuthCarrier).fst === Bottom{}         &&
 		let ce := ra.Compose(c, ee).(AuthCarrier) in
 		ce.snd.V == dictMax(d.V, ee.(AuthCarrier).snd.V) &&
-		dictLessThan(d.V, io.insert(m, k, e)) &&
-		dictLessThan(ee.(AuthCarrier).snd.V, io.insert(m, k, e)) &&
-		let _ := dictMaxIsLessThan(d.V, ee.(AuthCarrier).snd.V, io.insert(m, k, e)) in
+		dictLessThan(d.V, io.Insert(m, k, e)) &&
+		dictLessThan(ee.(AuthCarrier).snd.V, io.Insert(m, k, e)) &&
+		let _ := dictMaxIsLessThan(d.V, ee.(AuthCarrier).snd.V, io.Insert(m, k, e)) in
 		true
 }
 

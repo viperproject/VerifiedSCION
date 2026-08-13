@@ -48,8 +48,8 @@ func absIO_valWidenLemma(raw []byte, ingressID uint16, length int) {
 		assert slayers.IsSupportedPkt(raw)
 		absPktWidenLemma(raw, length)
 
-		ret1 = io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw)})
-		ret2 = io.Val(io.ValPkt{path.ifsToIO_ifs(ingressID), absPkt(raw[:length])})
+		ret1 = io.Val(io.ValPkt{path.IfsToIO_ifs(ingressID), AbsPkt(raw)})
+		ret2 = io.Val(io.ValPkt{path.IfsToIO_ifs(ingressID), AbsPkt(raw[:length])})
 		assert ret1 == reveal absIO_val(raw, ingressID)
 		assert ret2 == reveal absIO_val(raw[:length], ingressID)
 		assert ret1 == ret2
@@ -110,7 +110,7 @@ ensures  acc(sl.Bytes(raw, 0, len(raw)), R50)
 ensures  acc(sl.Bytes(raw[:length], 0, len(raw[:length])), R50)
 ensures  slayers.ValidPktMetaHdr(raw)
 ensures  slayers.ValidPktMetaHdr(raw[:length])
-ensures  absPkt(raw) == absPkt(raw[:length])
+ensures  AbsPkt(raw) == AbsPkt(raw[:length])
 decreases
 func absPktWidenLemma(raw []byte, length int) {
 
@@ -147,5 +147,5 @@ func absPktWidenLemma(raw []byte, length int) {
 	scion.WidenMidSeg(raw, currInfIdx + 2, segs, headerOffsetWithMetaLen, 0, length)
 	scion.WidenRightSeg(raw, currInfIdx - 1, segs, headerOffsetWithMetaLen, 0, length)
 
-	assert reveal absPkt(raw) == reveal absPkt(raw[:length])
+	assert reveal AbsPkt(raw) == reveal AbsPkt(raw[:length])
 }

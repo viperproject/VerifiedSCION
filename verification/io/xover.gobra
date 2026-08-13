@@ -34,7 +34,7 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) dp2_xover_guard(m Pkt,
+pure func (dp DataPlaneSpec) Dp2_xover_guard(m Pkt,
 	currseg Seg,
 	nextseg Seg,
 	traversedseg Seg,
@@ -50,46 +50,46 @@ pure func (dp DataPlaneSpec) dp2_xover_guard(m Pkt,
 			newpkt == Pkt{nextseg, m.MidSeg, m.RightSeg, some(traversedseg)} &&
 			currseg.Future == seq[HF]{hf1} &&
 			nextseg.Future == seq[HF]{hf2} ++ nextfut &&
-			dp.dp2_enter_interface(currseg.ConsDir, asid, hf1, recvif) &&
-			dp.xover2_link_type_dir(dp.Asid(), currseg.ConsDir, hf1, nextseg.ConsDir, hf2) &&
-			update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
-			inc_seg2(currseg, traversedseg, hf1, seq[HF]{}) &&
-			dp.hf_valid(currseg.ConsDir, currseg.AInfo.V, traversedseg.UInfo, hf1) &&
-			dp.hf_valid(nextseg.ConsDir, nextseg.AInfo.V, nextseg.UInfo, hf2) &&
-			hf1.extr_asid() == asid &&
-			hf2.extr_asid() == asid &&
-			same_other2(currseg, traversedseg)
+			dp.Dp2_enter_interface(currseg.ConsDir, asid, hf1, recvif) &&
+			dp.Xover2_link_type_dir(dp.Asid(), currseg.ConsDir, hf1, nextseg.ConsDir, hf2) &&
+			Update_uinfo(!currseg.ConsDir, currseg, traversedseg, hf1) &&
+			Inc_seg2(currseg, traversedseg, hf1, seq[HF]{}) &&
+			dp.Hf_valid(currseg.ConsDir, currseg.AInfo.V, traversedseg.UInfo, hf1) &&
+			dp.Hf_valid(nextseg.ConsDir, nextseg.AInfo.V, nextseg.UInfo, hf2) &&
+			hf1.Extr_asid() == asid &&
+			hf2.Extr_asid() == asid &&
+			Same_other2(currseg, traversedseg)
 }
 
 ghost
 requires dp.Valid()
 requires a == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) egif2_type(hf HF, a AS, link Link) bool {
-	return dp.if_type(a, hf.EgIF2, link)
+pure func (dp DataPlaneSpec) Egif2_type(hf HF, a AS, link Link) bool {
+	return dp.If_type(a, hf.EgIF2, link)
 }
 
 ghost
 requires dp.Valid()
 requires a == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) inif2_type(hf HF, a AS, link Link) bool {
-	return dp.if_type(a, hf.InIF2, link)
+pure func (dp DataPlaneSpec) Inif2_type(hf HF, a AS, link Link) bool {
+	return dp.If_type(a, hf.InIF2, link)
 }
 
 ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) xover2_link_type(asid AS, hf1 HF, hf2 HF) bool {
-	return (dp.inif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_ProvCust{})) ||
-		(dp.inif2_type(hf1, asid, IO_ProvCust{}) && dp.egif2_type(hf2, asid, IO_Core{})) ||
-		(dp.inif2_type(hf1, asid, IO_Core{}) && dp.egif2_type(hf2, asid, IO_ProvCust{}))
+pure func (dp DataPlaneSpec) Xover2_link_type(asid AS, hf1 HF, hf2 HF) bool {
+	return (dp.Inif2_type(hf1, asid, IO_ProvCust{}) && dp.Egif2_type(hf2, asid, IO_ProvCust{})) ||
+		(dp.Inif2_type(hf1, asid, IO_ProvCust{}) && dp.Egif2_type(hf2, asid, IO_Core{})) ||
+		(dp.Inif2_type(hf1, asid, IO_Core{}) && dp.Egif2_type(hf2, asid, IO_ProvCust{}))
 }
 
 ghost
 decreases
-pure func swap_if_dir2(hf HF, d bool) HF {
+pure func Swap_if_dir2(hf HF, d bool) HF {
 	return HF {
 		InIF2: d ? hf.InIF2 : hf.EgIF2,
 		EgIF2: d ? hf.EgIF2 : hf.InIF2,
@@ -101,8 +101,8 @@ ghost
 requires dp.Valid()
 requires asid == dp.Asid()
 decreases
-pure func (dp DataPlaneSpec) xover2_link_type_dir(asid AS, d1 bool, hf1 HF, d2 bool, hf2 HF) bool {
-	return dp.xover2_link_type(asid, swap_if_dir2(hf1, d1), swap_if_dir2(hf2, d2))
+pure func (dp DataPlaneSpec) Xover2_link_type_dir(asid AS, d1 bool, hf1 HF, d2 bool, hf2 HF) bool {
+	return dp.Xover2_link_type(asid, Swap_if_dir2(hf1, d1), Swap_if_dir2(hf2, d2))
 }
 
 
