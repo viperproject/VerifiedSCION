@@ -20,5 +20,6 @@ type tcpipPseudoHeader interface {
 
 	preserves acc(Mem(), 1/10000)
 	decreases
-	pseudoheaderChecksum() (uint32, error)
+	// (VerifiedSCION) interface members must have exported names.
+	PseudoheaderChecksum() (uint32, error)
 }

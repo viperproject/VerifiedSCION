@@ -807,7 +807,7 @@ requires forall i int :: { &a.(*net.IPAddr).IP[i] } 0 <= i && i < len(a.(*net.IP
 requires len(a.(*net.IPAddr).IP) == net.IPv6len
 decreases
 pure func IsConvertibleToIPv4(a net.Addr) bool {
-	return net.isZeros(a.(*net.IPAddr).IP[0:10]) &&
+	return net.IsZeros(a.(*net.IPAddr).IP[0:10]) &&
 		a.(*net.IPAddr).IP[10] == 255 &&
 		a.(*net.IPAddr).IP[11] == 255
 }
