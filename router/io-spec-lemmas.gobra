@@ -31,15 +31,15 @@ import (
 ghost
 preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
 ensures   slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw) ==>
-	absIO_val(raw, ingressID).isValPkt &&
-	absIO_val(raw, ingressID).ValPkt_2 == AbsPkt(raw) &&
+	AbsIO_val(raw, ingressID).isValPkt &&
+	AbsIO_val(raw, ingressID).ValPkt_2 == AbsPkt(raw) &&
 	AbsPkt(raw).PathNotFullyTraversed()
 decreases
 func absIO_valLemma(raw []byte, ingressID uint16) {
 	if(slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)){
-		absIO := reveal absIO_val(raw, ingressID)
+		absIO := reveal AbsIO_val(raw, ingressID)
 		assert absIO.isValPkt
-		assert absIO_val(raw, ingressID).ValPkt_2 == AbsPkt(raw)
+		assert AbsIO_val(raw, ingressID).ValPkt_2 == AbsPkt(raw)
 		absPktFutureLemma(raw)
 	}
 }
@@ -176,7 +176,7 @@ pure func (p *scionPacketProcessor) NoBouncingPkt(pkt io.Pkt) bool {
 	return let currseg := pkt.CurrSeg in
 		let OptEgressID := CurrSegIO_ifs(pkt, false)  in
 		let egressID := path.IO_ifsToIfs(OptEgressID) in
-		((egressID elem p.d.getDomExternal()) || p.ingressID != 0)
+		((egressID elem p.d.GetDomExternal()) || p.ingressID != 0)
 }
 
 ghost
@@ -184,7 +184,7 @@ requires acc(&p.d, R55) && acc(p.d.Mem(), _)
 requires acc(&p.ingressID, R55)
 requires pkt.PathNotFullyTraversed()
 requires AbsEgressInterfaceConstraint(pkt, path.IfsToIO_ifs(egressID))
-requires (egressID elem p.d.getDomExternal()) || p.ingressID != 0
+requires (egressID elem p.d.GetDomExternal()) || p.ingressID != 0
 ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
 ensures  acc(&p.ingressID, R55)
 ensures  p.NoBouncingPkt(pkt)
@@ -200,7 +200,7 @@ requires acc(&p.ingressID, R55)
 requires pkt.PathNotFullyTraversed()
 requires AbsEgressInterfaceConstraint(pkt, path.IfsToIO_ifs(egressID))
 requires p.NoBouncingPkt(pkt)
-requires !(egressID elem p.d.getDomExternal())
+requires !(egressID elem p.d.GetDomExternal())
 ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
 ensures  acc(&p.ingressID, R55)
 ensures  p.ingressID != 0

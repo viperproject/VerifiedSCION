@@ -244,10 +244,10 @@ func testRun(
 	fold metricsInv(d.Metrics)
 	fold forwardingMetricsInv(d.forwardingMetrics)
 	fold d.Mem()
-	assert d.getDomNeighborIAs() == reveal d.getDomExternal()
-	assert d.getDomNeighborIAs() == d.getDomLinkTypes()
-	assert !(0 elem d.getDomNeighborIAs())
-	assert reveal d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
+	assert d.GetDomNeighborIAs() == reveal d.GetDomExternal()
+	assert d.GetDomNeighborIAs() == d.GetDomLinkTypes()
+	assert !(0 elem d.GetDomNeighborIAs())
+	assert reveal d.GetDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 	assert reveal d.DpAgreesWithSpec(dp)
 
 	assert reveal d.PreWellConfigured()
