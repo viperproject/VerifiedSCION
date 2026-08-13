@@ -1499,7 +1499,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	}
 	// @ fold sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 	// @ fold sl.Bytes(p.macBuffers.epicInput, 0, len(p.macBuffers.epicInput))
-	// @ fold slayers.PathPoolMem(p.scionLayer.pathPool, p.scionLayer.pathPoolRaw)
+	// @ p.scionLayer.EstablishPathPoolMem()
 	p.scionLayer.RecyclePaths()
 	// @ fold p.scionLayer.NonInitMem()
 	// @ fold p.hbhLayer.NonInitMem()
@@ -2195,8 +2195,9 @@ func (p *scionPacketProcessor) packSCMP(
 	// check invoking packet was an SCMP error:
 	if p.lastLayer.NextLayerType( /*@ ubLL @*/ ) == slayers.LayerTypeSCMP {
 		// @ llIsScmp = true
-		var scmpLayer /*@@@*/ slayers.SCMP
-		// @ fold scmpLayer.NonInitMem()
+		// (VerifiedSCION) the layer's predicates cover its private state, so it has
+		// to be allocated through the constructor exported by 'slayers'.
+		scmpLayer := slayers.NewSCMP(0)
 		pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ubLL @*/ )
 		// @ sl.SplitRange_Bytes(ub, startLL, endLL, writePerm)
 		// @ maybeStartPld = start
@@ -4109,7 +4110,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 		return processResult{}, nil
 	}
 	// @ unfold scmpP.Mem(scmpH.Payload)
-	// @ unfold scmpP.BaseLayer.Mem(scmpH.Payload, 4+addr.IABytes+slayers.scmpRawInterfaceLen)
+	// @ unfold scmpP.BaseLayer.Mem(scmpH.Payload, 4+addr.IABytes+slayers.SCMPRawInterfaceLen)
 	// @ p.d.getLocalIA()
 	scmpP = slayers.SCMPTraceroute{
 		Identifier: scmpP.Identifier,
@@ -5085,7 +5086,10 @@ func (p *scionPacketProcessor) prepareSCMP(
 	scionL.NextHdr = slayers.L4SCMP
 
 	typeCode := slayers.CreateSCMPTypeCode(typ, code)
-	scmpH /*@@@*/ := slayers.SCMP{TypeCode: typeCode}
+	// (VerifiedSCION) the layer's predicates cover its private state, so it has
+	// to be allocated through the constructor exported by 'slayers'.
+	scmpH := slayers.NewSCMP(typeCode)
+	// @ unfold scmpH.NonInitMem()
 	scmpH.SetNetworkLayerForChecksum(&scionL)
 
 	if err := p.buffer.Clear(); err != nil {
@@ -5095,7 +5099,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 		ComputeChecksums: true,
 		FixLengths:       true,
 	}
-	scmpLayers := []gopacket.SerializableLayer{&scionL, &scmpH, scmpP}
+	scmpLayers := []gopacket.SerializableLayer{&scionL, scmpH, scmpP}
 	if cause != nil {
 		// add quote for errors.
 		hdrLen := slayers.CmnHdrLen + scionL.AddrHdrLen( /*@ nil, false @*/ ) + scionL.Path.Len( /*@ nil @*/ )
@@ -5295,9 +5299,9 @@ func nextHdr(layer gopacket.DecodingLayer /*@ , ghost ubuf []byte @*/) slayers.L
 	case *slayers.SCION:
 		return /*@ unfolding acc(v.Mem(ubuf), R20) in @*/ v.NextHdr
 	case *slayers.EndToEndExtnSkipper:
-		return /*@ unfolding acc(v.Mem(ubuf), R20) in (unfolding acc(v.extnBase.Mem(ubuf), R20) in @*/ v.NextHdr /*@ ) @*/
+		return /*@ unfolding acc(v.Mem(ubuf), R20) in @*/ v.NextHdr
 	case *slayers.HopByHopExtnSkipper:
-		return /*@ unfolding acc(v.Mem(ubuf), R20) in (unfolding acc(v.extnBase.Mem(ubuf), R20) in @*/ v.NextHdr /*@ ) @*/
+		return /*@ unfolding acc(v.Mem(ubuf), R20) in @*/ v.NextHdr
 	default:
 		return slayers.L4None
 	}

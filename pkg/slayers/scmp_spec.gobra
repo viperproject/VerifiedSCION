@@ -23,20 +23,28 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
+// ChecksumNetworkLayerMem holds the resources of the private state of an SCMP
+// layer, namely the SCION header that the layer uses to compute its checksum.
+// The predicate is closed because its body mentions a non-exported field;
+// importing packages may hold it, but they can neither fold nor unfold it. They
+// obtain it by allocating a layer with NewSCMP.
+closed pred (s *SCMP) ChecksumNetworkLayerMem() {
+	acc(&s.scn) &&
+	(s.scn != nil ==> s.scn.ChecksumMem())
+}
+
 pred (s *SCMP) NonInitMem() {
 	acc(&s.TypeCode) &&
 	acc(&s.Checksum) &&
 	acc(&s.BaseLayer) &&
-	acc(&s.scn) &&
-	(s.scn != nil ==> s.scn.ChecksumMem())
+	s.ChecksumNetworkLayerMem()
 }
 
 pred (s *SCMP) Mem(ub []byte) {
 	acc(&s.TypeCode) &&
 	acc(&s.Checksum) &&
 	s.BaseLayer.Mem(ub, 4) &&
-	acc(&s.scn) &&
-	(s.scn != nil ==> s.scn.ChecksumMem())
+	s.ChecksumNetworkLayerMem()
 }
 
 ghost

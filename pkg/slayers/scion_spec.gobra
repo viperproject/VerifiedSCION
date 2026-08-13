@@ -34,7 +34,7 @@ import (
 	"verification/utils/seqs"
 )
 
-pred PathPoolMem(pathPool []path.Path, pathPoolRaw path.Path) {
+pred pathPoolMem(pathPool []path.Path, pathPoolRaw path.Path) {
 	// non-initialized path pool:
 	(pathPool == nil ==> pathPoolRaw == nil) &&
 	// initialized path pool:
@@ -64,9 +64,9 @@ pred PathPoolMem(pathPool []path.Path, pathPoolRaw path.Path) {
 		pathPoolRaw.NonInitMem()))
 }
 
-// Captures the same obligations as PathPoolMem. Initially, I tried using a magic wand
+// Captures the same obligations as pathPoolMem. Initially, I tried using a magic wand
 // but they cause loads of additional problems (e.g., storing in a predicate is not possible)
-pred PathPoolMemExceptOne(pathPool []path.Path, pathPoolRaw path.Path, pathType path.Type) {
+pred pathPoolMemExceptOne(pathPool []path.Path, pathPoolRaw path.Path, pathType path.Type) {
 	pathPool != nil    &&
 	len(pathPool) == 4 &&
 	// entry per path type
@@ -95,6 +95,56 @@ pred PathPoolMemExceptOne(pathPool []path.Path, pathPoolRaw path.Path, pathType 
 	(int(pathType) < len(pathPool) ==> pathPoolRaw.NonInitMem())
 }
 
+// PathPoolMem holds the resources of the (private) path pool of a SCION layer.
+// Its body mentions non-exported fields, so the predicate is closed: importing
+// packages may hold it, but they can neither fold nor unfold it. They obtain it
+// from EstablishPathPoolMem.
+closed pred (s *SCION) PathPoolMem() {
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw) &&
+	pathPoolMem(s.pathPool, s.pathPoolRaw)
+}
+
+// PathPoolMemPart is the counterpart of PathPoolMem for a layer whose path
+// `p` of type `pathType` has been taken out of the pool. It is the part of
+// Mem that describes the private state of the layer.
+closed pred (s *SCION) PathPoolMemPart(pathType path.Type, p path.Path) {
+	acc(&s.pathPool) &&
+	acc(&s.pathPoolRaw) &&
+	(!s.pathPoolInitialized() ==> pathPoolMem(s.pathPool, s.pathPoolRaw)) &&
+	(s.pathPoolInitialized() ==> (s.pathPool != nil && s.pathPoolRaw != nil &&
+		pathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
+		p === s.getPathPure(pathType)))
+}
+
+// PathPoolInitialized holds iff the path pool of the layer has been allocated.
+ghost
+requires acc(s.PathPoolMem(), _)
+decreases
+closed
+pure func (s *SCION) PathPoolInitialized() bool {
+	return unfolding acc(s.PathPoolMem(), _) in s.pathPool != nil
+}
+
+// EstablishPathPoolMem packages the permission to the private path pool of a
+// freshly allocated SCION layer into the closed predicate PathPoolMem, which
+// importing packages cannot fold themselves.
+ghost
+requires acc(s)
+requires *s === SCION{}
+ensures  acc(&s.Version) && acc(&s.TrafficClass) && acc(&s.FlowID) &&
+	acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) &&
+	acc(&s.PathType) && acc(&s.DstAddrType) && acc(&s.SrcAddrType) &&
+	acc(&s.DstIA) && acc(&s.SrcIA) && acc(&s.RawDstAddr) && acc(&s.RawSrcAddr) &&
+	acc(&s.Path) && acc(&s.BaseLayer)
+ensures  s.PathPoolMem()
+ensures  !s.PathPoolInitialized()
+decreases
+func (s *SCION) EstablishPathPoolMem() {
+	fold pathPoolMem(s.pathPool, s.pathPoolRaw)
+	fold s.PathPoolMem()
+}
+
 ghost
 requires acc(&s.pathPool)
 decreases
@@ -105,20 +155,21 @@ pure func (s *SCION) pathPoolInitialized() bool {
 ghost
 requires s.NonInitMem()
 decreases
+closed
 pure func (s *SCION) PathPoolInitializedNonInitMem() bool {
 	return unfolding s.NonInitMem() in
-		s.pathPool != nil
+		s.PathPoolInitialized()
 }
 
 ghost
 requires 0 <= pathType && pathType < path.MaxPathType
 requires acc(&s.pathPool) && acc(&s.pathPoolRaw)
 requires s.pathPool != nil
-requires PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
+requires pathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 decreases
 pure func (s *SCION) getPathPure(pathType path.Type) path.Path {
 	return int(pathType) < len(s.pathPool)?
-		(unfolding PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) in s.pathPool[pathType]) :
+		(unfolding pathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) in s.pathPool[pathType]) :
 		s.pathPoolRaw
 }
 
@@ -139,9 +190,7 @@ pred (s *SCION) NonInitMem() {
 	acc(&s.Path) &&
 	acc(&s.BaseLayer) &&
 	// path pool properties
-	acc(&s.pathPool) &&
-	acc(&s.pathPoolRaw) &&
-	PathPoolMem(s.pathPool, s.pathPoolRaw)
+	s.PathPoolMem()
 }
 
 // TODO: simplify the body of the predicate when let expressions
@@ -174,11 +223,7 @@ pred (s *SCION) Mem(ubuf []byte) {
 	s.HeaderMem(ubuf[CmnHdrLen:]) &&
 	// path pool
 	0 <= s.PathType && s.PathType < path.MaxPathType &&
-	acc(&s.pathPool) &&
-	acc(&s.pathPoolRaw) &&
-	(!s.pathPoolInitialized() ==> PathPoolMem(s.pathPool, s.pathPoolRaw)) &&
-	(s.pathPoolInitialized() ==> (s.pathPool != nil && s.pathPoolRaw != nil &&
-		PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, s.PathType) && s.Path === s.getPathPure(s.PathType))) &&
+	s.PathPoolMemPart(s.PathType, s.Path) &&
 	// end of path pool
 	// helpful facts for other methods:
 	// - for router::updateScionLayer:
@@ -734,21 +779,18 @@ func (s *SCION) LayerContents() (res []byte) {
 }
 
 ghost
-requires  0 <= pathType && pathType < path.MaxPathType
-requires  acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
-requires  s.pathPoolInitialized() ==> (
-	p.NonInitMem() &&
-	PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
-	p === s.getPathPure(pathType))
-requires !s.pathPoolInitialized() ==> PathPoolMem(s.pathPool, s.pathPoolRaw)
-ensures  acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
-ensures  PathPoolMem(s.pathPool, s.pathPoolRaw)
+requires 0 <= pathType && pathType < path.MaxPathType
+requires s.PathPoolMemPart(pathType, p)
+requires p != nil ==> p.NonInitMem()
+ensures  s.PathPoolMem()
 decreases
 func (s *SCION) PathPoolMemExchange(pathType path.Type, p path.Path) {
+	unfold s.PathPoolMemPart(pathType, p)
 	if s.pathPoolInitialized() {
-		unfold PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
-		fold   PathPoolMem(s.pathPool, s.pathPoolRaw)
+		unfold pathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
+		fold   pathPoolMem(s.pathPool, s.pathPoolRaw)
 	}
+	fold s.PathPoolMem()
 }
 
 // gopacket subtyping
@@ -764,7 +806,7 @@ requires forall i int :: { &a.(*net.IPAddr).IP[i] } 0 <= i && i < len(a.(*net.IP
 	acc(&a.(*net.IPAddr).IP[i])
 requires len(a.(*net.IPAddr).IP) == net.IPv6len
 decreases
-pure func isConvertibleToIPv4(a net.Addr) bool {
+pure func IsConvertibleToIPv4(a net.Addr) bool {
 	return net.isZeros(a.(*net.IPAddr).IP[0:10]) &&
 		a.(*net.IPAddr).IP[10] == 255 &&
 		a.(*net.IPAddr).IP[11] == 255
@@ -774,7 +816,7 @@ ghost
 requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP)
 decreases
-pure func isIPv6(a net.Addr) bool {
+pure func IsIPv6(a net.Addr) bool {
 	return len(a.(*net.IPAddr).IP) == net.IPv6len
 }
 
@@ -782,19 +824,19 @@ ghost
 requires typeOf(a) == *net.IPAddr
 requires acc(&a.(*net.IPAddr).IP)
 decreases
-pure func isIPv4(a net.Addr) bool {
+pure func IsIPv4(a net.Addr) bool {
 	return len(a.(*net.IPAddr).IP) == net.IPv4len
 }
 
 ghost
 decreases
-pure func isIP(a net.Addr) bool {
+pure func IsIP(a net.Addr) bool {
 	return typeOf(a) == *net.IPAddr
 }
 
 ghost
 decreases
-pure func isHostSVC(a net.Addr) bool {
+pure func IsHostSVC(a net.Addr) bool {
 	return typeOf(a) == addr.HostSVC
 }
 
