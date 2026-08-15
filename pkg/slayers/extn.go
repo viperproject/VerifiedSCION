@@ -48,7 +48,9 @@ type tlvOption struct {
 	OptAlign     [2]uint8 // Xn+Y = [2]uint8{X, Y}
 }
 
-// @ preserves acc(o, R20)
+// @ requires  acc(o, R20)
+// @ requires  len(o.OptData) <= 255 // TLV option data length must fit in the uint8 OptDataLen wire field
+// @ ensures   acc(o, R20)
 // @ ensures   0 < res
 // @ ensures   o.OptType == OptTypePad1 ==> res == 1
 // @ ensures   o.OptType != OptTypePad1 ==> 2 <= res
@@ -104,6 +106,7 @@ func (o *tlvOption) serializeTo(data []byte, fixLengths bool) {
 // @ ensures   (err == nil && res.OptType != OptTypePad1) ==> (
 // @ 	2 <= res.ActualLength && res.ActualLength <= len(data) && res.OptData === data[2:res.ActualLength])
 // @ ensures   err == nil ==> 0 < res.ActualLength
+// @ ensures   (err == nil && res.OptType == OptTypePad1) ==> res.ActualLength == 1
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func decodeTLVOption(data []byte) (res *tlvOption, err error) {
@@ -336,7 +339,7 @@ func (h *HopByHopExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 	o := make([]*tlvOption, 0, len(h.Options))
 	for _, v := range h.Options {
-		o = append( /*@ perm(0/1), @*/ o, (*tlvOption)(v))
+		o = append( /*@ perm(0, 1), @*/ o, (*tlvOption)(v))
 	}
 
 	return h.extnBase.serializeToWithTLVOptions(b, opts, o)
@@ -376,7 +379,7 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	// @ invariant acc(sl.Bytes(data, 0, len(data)), R40)
 	// @ invariant h.BaseLayer.Contents === data[:h.ActualLen]
 	// @ invariant h.BaseLayer.Payload === data[h.ActualLen:]
-	// @ decreases h.ActualLen - offset
+	// @ decreases integer(h.ActualLen) - integer(offset)
 	for offset < h.ActualLen {
 		// @ sl.SplitRange_Bytes(data, offset, h.ActualLen, R40)
 		opt, err := decodeTLVOption(data[offset:h.ActualLen])
@@ -386,7 +389,7 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 			return err
 		}
 		// @ ghost tmp := (*HopByHopOption)(opt)
-		h.Options = append( /*@ perm(1/2), @*/ h.Options, (*HopByHopOption)(opt))
+		h.Options = append( /*@ perm(1, 2), @*/ h.Options, (*HopByHopOption)(opt))
 		offset += opt.ActualLength
 		// @ assert h.Options[lenOptions] === tmp
 		// @ fold tmp.Mem(lenOptions)
@@ -508,7 +511,7 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 	// @ invariant acc(sl.Bytes(data, 0, len(data)), R40)
 	// @ invariant e.BaseLayer.Contents === data[:e.ActualLen]
 	// @ invariant e.BaseLayer.Payload === data[e.ActualLen:]
-	// @ decreases e.ActualLen - offset
+	// @ decreases integer(e.ActualLen) - integer(offset)
 	for offset < e.ActualLen {
 		// @ sl.SplitRange_Bytes(data, offset, e.ActualLen, R40)
 		opt, err := decodeTLVOption(data[offset:e.ActualLen])
@@ -518,7 +521,7 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 			return err
 		}
 		// @ ghost tmp := (*EndToEndOption)(opt)
-		e.Options = append( /*@ perm(1/2), @*/ e.Options, (*EndToEndOption)(opt))
+		e.Options = append( /*@ perm(1, 2), @*/ e.Options, (*EndToEndOption)(opt))
 		offset += opt.ActualLength
 		// @ assert e.Options[lenOptions] === tmp
 		// @ fold tmp.Mem(lenOptions)
@@ -571,7 +574,7 @@ func (e *EndToEndExtn) SerializeTo(b gopacket.SerializeBuffer,
 
 	o := make([]*tlvOption, 0, len(e.Options))
 	for _, v := range e.Options {
-		o = append( /*@ perm(0/1), @*/ o, (*tlvOption)(v))
+		o = append( /*@ perm(0, 1), @*/ o, (*tlvOption)(v))
 	}
 
 	return e.extnBase.serializeToWithTLVOptions(b, opts, o)

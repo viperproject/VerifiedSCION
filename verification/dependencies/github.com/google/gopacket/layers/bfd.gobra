@@ -135,7 +135,7 @@ pred (b *BFDAuthHeader) Mem() {
 	acc(b) && sl.Bytes(b.Data, 0, len(b.Data))
 }
 
-preserves acc(h, 1/10000)
+preserves acc(h, perm(1, 10000))
 decreases
 func (h *BFDAuthHeader) Length() int {
 	switch h.AuthType {
@@ -176,7 +176,7 @@ pred (b *BFD) NonInitMem() {
 
 pred (b *BFD) Mem(ub []byte)
 
-preserves acc(d, 1/10000)
+preserves acc(d, perm(1, 10000))
 decreases
 func (d *BFD) Length() int
 

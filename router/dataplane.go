@@ -325,9 +325,9 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 	// @ unfold MutexInvariant{d}()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
-	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold acc(d.Mem(), perm(1, 2))
 	// @ d.keyIsSetEq()
-	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold acc(d.Mem(), perm(1, 2))
 	// @ unfold macFactoryInv(d.macFactory, d.key)
 	// @ defer fold MutexInvariant{d}()
 	// @ defer fold d.Mem()
@@ -387,9 +387,9 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 	// @ unfold MutexInvariant{d}()
 	// @ assert !d.IsRunning()
 	// @ d.isRunningEq()
-	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold acc(d.Mem(), perm(1, 2))
 	// @ d.internalIsSetEq()
-	// @ unfold acc(d.Mem(), 1/2)
+	// @ unfold acc(d.Mem(), perm(1, 2))
 	// @ unfold internalInv(d.internal)
 	// @ unfold internalIPInv(d.internalIP)
 	if d.running {
@@ -438,16 +438,16 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 		// @ Unreachable()
 		return emptyValue
 	}
-	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), 1/2) }
+	// @ ghost if d.external != nil { unfold acc(accBatchConn(d.external), perm(1, 2)) }
 	if _, existsB := d.external[ifID]; existsB {
 		// @ establishAlreadySet()
-		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
+		// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), perm(1, 2)) }
 		// @ fold externalInv(d.external)
 		// @ fold d.Mem()
 		// @ fold MutexInvariant{d}()
 		return serrors.WithCtx(alreadySet, "ifID", ifID)
 	}
-	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), 1/2) }
+	// @ ghost if d.external != nil { fold acc(accBatchConn(d.external), perm(1, 2)) }
 	if d.external == nil {
 		d.external = make(map[uint16]BatchConn)
 		// @ fold accBatchConn(d.external)

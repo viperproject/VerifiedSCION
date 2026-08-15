@@ -150,16 +150,18 @@ pure func (s SegLens) TotalHops() int {
 
 ghost
 decreases
-pure func (s SegLens) LengthOfCurrSeg(currHF int) int {
-	return s.Seg1Len > currHF ? s.Seg1Len : ((s.Seg1Len + s.Seg2Len) > currHF ? s.Seg2Len : s.Seg3Len)
+pure func (s SegLens) LengthOfCurrSeg(currHF integer) integer {
+	return integer(s.Seg1Len) > currHF ? integer(s.Seg1Len) :
+		(integer(s.Seg1Len) + integer(s.Seg2Len) > currHF ? integer(s.Seg2Len) : integer(s.Seg3Len))
 }
 
 ghost
 requires 0 <= currHF
 ensures  res <= currHF
 decreases
-pure func (s SegLens) LengthOfPrevSeg(currHF int) (res int) {
-	return s.Seg1Len > currHF ? 0 : ((s.Seg1Len + s.Seg2Len) > currHF ? s.Seg1Len : s.Seg1Len + s.Seg2Len)
+pure func (s SegLens) LengthOfPrevSeg(currHF integer) (res integer) {
+	return integer(s.Seg1Len) > currHF ? 0 :
+		(integer(s.Seg1Len) + integer(s.Seg2Len) > currHF ? integer(s.Seg1Len) : integer(s.Seg1Len) + integer(s.Seg2Len))
 }
 
 ghost
