@@ -202,7 +202,7 @@ pred MultiElemWitness(ghost y ElemRA, ghost k Key, ghost es seq[io.Val]) {
 	} && MultiElemWitness(y, k, es[1:])
 }
 
-pred MultiElemWitnessWithIndex(ghost y ElemRA, ghost k Key, ghost es seq[io.Val], i int) {
+pred MultiElemWitnessWithIndex(ghost y ElemRA, ghost k Key, ghost es seq[io.Val], i integer) {
 	0 <= i && i < len(es) ==> match es[i] {
 		case io.ValPkt{_, _}:
 			 ElemWitness(y, k, es[i].ValPkt_2)
@@ -227,7 +227,7 @@ requires MultiElemWitnessWithIndex(y, k, es, currIdx)
 ensures  es[currIdx].isValPkt ==> ElemWitness(y, k, es[currIdx].ValPkt_2)
 ensures  MultiElemWitnessWithIndex(y, k, es, currIdx + 1)
 decreases
-func MultiElemWitnessStep(y ElemRA, k Key, es seq[io.Val], currIdx int) {
+func MultiElemWitnessStep(y ElemRA, k Key, es seq[io.Val], currIdx integer) {
 	unfold MultiElemWitnessWithIndex(y, k, es, currIdx)
 }
 
@@ -236,7 +236,7 @@ requires i >= 0
 requires MultiElemWitness(y,k,es[i:])
 ensures  MultiElemWitnessWithIndex(y,k,es,i)
 decreases len(es)-i
-func multiElemWitnessConvAux(y ElemRA, k Key, es seq[io.Val], i int) {
+func multiElemWitnessConvAux(y ElemRA, k Key, es seq[io.Val], i integer) {
 	unfold MultiElemWitness(y,k,es[i:])
 	if i < len(es) {
 		multiElemWitnessConvAux(y,k,es,i+1)
