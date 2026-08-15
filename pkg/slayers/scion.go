@@ -229,8 +229,19 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// @ unfold acc(s.Mem(ubuf), R1)
 	// @ defer fold acc(s.Mem(ubuf), R1)
 	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(int(s.HdrLen)*LineLen), R10)
-	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : int(s.HdrLen)*LineLen] @*/ )
+	pathLen := s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : int(s.HdrLen)*LineLen] @*/ )
 	// @ sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLenSpecInternal()), int(int(s.HdrLen)*LineLen), R10)
+	// (VerifiedSCION) The path length is checked before it is added to the header offset.
+	// path.Path.LenSpec only guarantees non-negativity, and no uniform upper bound can be
+	// stated at the interface: *scion.Decoded may be longer than the buffer it was decoded
+	// from (see onehop.Path.ToSCIONDecoded), while *rawPath is only bounded by its own
+	// buffer. Without this check the sum below could overflow under bounded-integer
+	// semantics. A path failing it would be rejected by the MaxHdrLen check anyway.
+	if pathLen > MaxHdrLen {
+		return serrors.New("path length exceeds maximum",
+			"max", MaxHdrLen, "actual", pathLen)
+	}
+	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + pathLen
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
 			"max", MaxHdrLen, "actual", scnLen)
@@ -861,6 +872,7 @@ func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType
 // @ ensures   insideSlayers  ==> res == s.AddrHdrLenSpecInternal()
 // @ ensures   !insideSlayers ==> res == s.AddrHdrLenSpec(ubuf)
 // @ ensures   0 <= res
+// @ ensures   res <= 2*addr.IABytes + 8*LineLen
 // @ decreases
 func (s *SCION) AddrHdrLen( /*@ ghost ubuf []byte, ghost insideSlayers bool @*/ ) (res int) {
 	// @ ghost if !insideSlayers {

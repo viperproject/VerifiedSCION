@@ -681,6 +681,9 @@ ghost
 requires acc(&s.DstAddrType) && acc(&s.SrcAddrType)
 requires s.DstAddrType.Has3Bits() && s.SrcAddrType.Has3Bits()
 ensures  0 <= res
+// (VerifiedSCION) an explicit upper bound is needed under bounded-integer semantics,
+// so that adding this length to a header offset provably does not overflow.
+ensures  res <= 2*addr.IABytes + 8*LineLen
 decreases
 pure func (s *SCION) AddrHdrLenSpecInternal() (res int) {
 	return 2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
@@ -689,6 +692,7 @@ pure func (s *SCION) AddrHdrLenSpecInternal() (res int) {
 ghost
 requires s.Mem(ubuf)
 ensures  0 <= res
+ensures  res <= 2*addr.IABytes + 8*LineLen
 decreases
 pure func (s *SCION) AddrHdrLenSpec(ubuf []byte) (res int) {
 	return unfolding s.Mem(ubuf) in
