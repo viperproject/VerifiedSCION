@@ -374,6 +374,9 @@ ensures  acc(d.forwardingMetrics, _)
 ensures  acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
 decreases
 func (d *DataPlane) getForwardingMetricsMem(id uint16) {
+	// anchor: projects id to its integer image so that the quantified permissions over
+	// the map's uint16 keys (lowered over mathematical integers) instantiate at id
+	assert 0 <= id
 	unfold acc(d.Mem(), _)
 	unfold acc(forwardingMetricsInv(d.forwardingMetrics), _)
 	assert id elem d.getDomForwardingMetrics()
