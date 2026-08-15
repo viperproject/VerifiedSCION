@@ -59,7 +59,7 @@ func foldScionPacketProcessorInitMem_test() {
 	fold d.initMem()
 }
 
-ensures 0 < runningPerm
+ensures noPerm < runningPerm
 func runningPermIsPositive() {}
 
 ensures MutexInvariant(d) && acc(d.Mem(), OutMutexPerm)
