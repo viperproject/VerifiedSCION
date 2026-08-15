@@ -1554,7 +1554,7 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  p.sInitD() == old(p.sInitD())
 // @ ensures  p.getIngressID() == old(p.getIngressID())
 // @ ensures  p.sInitD().validResult(respr, addrAliasesPkt)
-// @ ensures  acc(sl.Bytes(rawPkt, 0, len(rawPkt)), 1 - R15)
+// @ ensures  acc(sl.Bytes(rawPkt, 0, len(rawPkt)), writePerm - R15)
 // @ ensures  addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
 // @ 	(acc(respr.OutAddr.Mem(), R15) --* acc(sl.Bytes(rawPkt, 0, len(rawPkt)), R15)))
@@ -1876,7 +1876,7 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ ensures   acc(&p.d, R5)
 // @ ensures   acc(&p.path)
 // @ ensures   acc(&p.rawPkt, R1)
-// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), 1 - R15)
+// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), writePerm - R15)
 // @ ensures   p.d.validResult(respr, addrAliasesPkt)
 // @ ensures   addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
@@ -1959,7 +1959,7 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ ensures   acc(&p.d, R5)
 // @ ensures   acc(&p.path)
 // @ ensures   acc(&p.rawPkt, R1)
-// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), 1 - R15)
+// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), writePerm - R15)
 // @ ensures   p.d.validResult(respr, addrAliasesPkt)
 // @ ensures   addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
@@ -3261,7 +3261,7 @@ func (p *scionPacketProcessor) verifyCurrentMAC( /*@ ghost dp io.DataPlaneSpec, 
 // @ ensures   reserr != nil ==> !addrAliasesUb
 // @ ensures   acc(&p.path, R20)
 // @ ensures   acc(p.scionLayer.Mem(ubScionL), R3)
-// @ ensures   acc(sl.Bytes(ubScionL, 0, len(ubScionL)), 1-R15)
+// @ ensures   acc(sl.Bytes(ubScionL, 0, len(ubScionL)), writePerm - R15)
 // @ ensures   acc(&p.buffer, R50) && p.buffer != nil && p.buffer.Mem()
 // @ ensures   sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
 // @ ensures   respr !== processResult{} ==>
@@ -3344,9 +3344,9 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ assert reveal p.scionLayer.EqAbsHeader(ub)
 	// @ assert (typeOf(p.scionLayer.GetPath(ub)) == *epic.Path) ==
 	// @ 	(path.Type(slayers.GetPathType(ub)) == epic.PathType)
-	// @ unfold acc(p.scionLayer.Mem(ub), 1-R55)
+	// @ unfold acc(p.scionLayer.Mem(ub), writePerm - R55)
 	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
-	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), 1-R55)
+	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), writePerm - R55)
 	// @ 	assert p.path === p.scionLayer.Path.(*epic.Path).ScionPath
 	// @ 	assert ubPath[epic.MetadataLen:] === ubScionPath
 	// @ }
@@ -3412,9 +3412,9 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ absPktFutureLemma(ub)
 	// @ assert absPkt(ub) == reveal AbsProcessEgress(old(absPkt(ub)))
 	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
-	// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), 1-R55)
+	// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), writePerm - R55)
 	// @ }
-	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
+	// @ fold acc(p.scionLayer.Mem(ub), writePerm - R55)
 	return nil
 }
 
@@ -3486,9 +3486,9 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ assert reveal p.scionLayer.EqAbsHeader(ub)
 	// @ assert (typeOf(p.scionLayer.GetPath(ub)) == *epic.Path) ==
 	// @ 	(path.Type(slayers.GetPathType(ub)) == epic.PathType)
-	// @ unfold acc(p.scionLayer.Mem(ub), 1-R55)
+	// @ unfold acc(p.scionLayer.Mem(ub), writePerm - R55)
 	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
-	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), 1-R55)
+	// @ 	unfold acc(p.scionLayer.Path.Mem(ubPath), writePerm - R55)
 	// @ 	assert p.path === p.scionLayer.Path.(*epic.Path).ScionPath
 	// @ 	assert ubPath[epic.MetadataLen:] === ubScionPath
 	// @ }
@@ -3558,9 +3558,9 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	if tmpHopField, err = p.path.GetCurrentHopField( /*@ ubScionPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startScionP, endScionP, HalfPerm)
 		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
-		// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), 1-R55)
+		// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), writePerm - R55)
 		// @ }
-		// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
+		// @ fold acc(p.scionLayer.Mem(ub), writePerm - R55)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
@@ -3574,9 +3574,9 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	if p.infoField, err = p.path.GetCurrentInfoField( /*@ ubScionPath @*/ ); err != nil {
 		// @ ghost sl.CombineRange_Bytes(ub, startScionP, endScionP, HalfPerm)
 		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
-		// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), 1-R55)
+		// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), writePerm - R55)
 		// @ }
-		// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
+		// @ fold acc(p.scionLayer.Mem(ub), writePerm - R55)
 		// @ p.scionLayer.DowngradePerm(ub)
 		// TODO parameter problem invalid path
 		return processResult{}, err
@@ -3592,9 +3592,9 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ assert reveal p.EqAbsInfoField(absPkt(ub))
 	// @ ghost sl.CombineRange_Bytes(ub, startScionP, endScionP, HalfPerm/2)
 	// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
-	// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), 1-R55)
+	// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), writePerm - R55)
 	// @ }
-	// @ fold acc(p.scionLayer.Mem(ub), 1-R55)
+	// @ fold acc(p.scionLayer.Mem(ub), writePerm - R55)
 	// @ assert currBase.IncPathSpec().Valid()
 	return processResult{}, nil
 }
@@ -4222,7 +4222,7 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ ensures   acc(&p.d, R5)
 // @ ensures   acc(&p.path, R10)
 // @ ensures   acc(&p.rawPkt, R1)
-// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), 1 - R15)
+// @ ensures   acc(sl.Bytes(ub, 0, len(ub)), writePerm - R15)
 // @ ensures   p.d.validResult(respr, addrAliasesPkt)
 // @ ensures   addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
@@ -4493,7 +4493,7 @@ func (p *scionPacketProcessor) process(
 // @ ensures   acc(&p.ingressID,  R15)
 // @ ensures   acc(&p.d,          R15)
 // @ ensures   p.d.validResult(respr, addrAliasesPkt)
-// @ ensures   acc(sl.Bytes(p.rawPkt, 0, len(p.rawPkt)), 1 - R15)
+// @ ensures   acc(sl.Bytes(p.rawPkt, 0, len(p.rawPkt)), writePerm - R15)
 // @ ensures   addrAliasesPkt ==> (
 // @ 	respr.OutAddr != nil &&
 // @ 	let rawPkt := p.rawPkt in
@@ -4586,11 +4586,11 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 				"actual", fmt.Sprintf("%x", ohp.FirstHop.Mac), "type", "ohp") /*@ , false, absReturnErr(processResult{}) @*/
 		}
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
-		// @ unfold acc(p.scionLayer.Mem(ubScionL), 1-R15)
-		// @ unfold acc(s.Path.Mem(ubPath), 1-R50)
+		// @ unfold acc(p.scionLayer.Mem(ubScionL), writePerm - R15)
+		// @ unfold acc(s.Path.Mem(ubPath), writePerm - R50)
 		ohp.Info.UpdateSegID(ohp.FirstHop.Mac /*@, ohp.FirstHop.Abs() @*/)
-		// @ fold acc(s.Path.Mem(ubPath), 1-R50)
-		// @ fold acc(p.scionLayer.Mem(ubScionL), 1-R15)
+		// @ fold acc(s.Path.Mem(ubPath), writePerm - R50)
+		// @ fold acc(p.scionLayer.Mem(ubScionL), writePerm - R15)
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 
 		// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the
@@ -4635,7 +4635,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 			"neighborIA", neighborIA, "srcIA", s.SrcIA) /*@ , false, absReturnErr(processResult{}) @*/
 	}
 	// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
-	// @ unfold acc(p.scionLayer.Mem(ubScionL), 1-R15)
+	// @ unfold acc(p.scionLayer.Mem(ubScionL), writePerm - R15)
 	// @ unfold s.Path.Mem(ubPath)
 	// @ unfold ohp.SecondHop.Mem()
 	ohp.SecondHop = path.HopField{
@@ -4651,7 +4651,7 @@ func (p *scionPacketProcessor) processOHP() (respr processResult, reserr error /
 	ohp.SecondHop.Mac = path.MAC(p.mac, ohp.Info, ohp.SecondHop, p.macBuffers.scionInput)
 	// @ fold ohp.SecondHop.Mem()
 	// @ fold s.Path.Mem(ubPath)
-	// @ fold acc(p.scionLayer.Mem(ubScionL), 1-R15)
+	// @ fold acc(p.scionLayer.Mem(ubScionL), writePerm - R15)
 	// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 
 	// (VerifiedSCION) the second parameter was changed from 's' to 'p.scionLayer' due to the

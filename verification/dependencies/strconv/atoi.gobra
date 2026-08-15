@@ -10,10 +10,13 @@
 package strconv
 
 // a to the power of b
+// (VerifiedSCION) stated over mathematical integers: the result of `base ** exp`
+// exceeds the range of any bounded integer type, and under bounded-integer
+// semantics the multiplication below would be opaque beyond that range.
 ghost
 requires exp >= 0
 decreases exp
-pure func Exp(base int, exp int) (res int) {
+pure func Exp(base integer, exp integer) (res integer) {
 	return exp == 0 ? 1 : (base * Exp(base, exp - 1))
 }
 
@@ -22,7 +25,7 @@ ghost
 requires exp >= 10
 ensures  Exp(2, exp) == 1024 * Exp(2, exp - 10)
 decreases
-func Exp2to10(exp int) {
+func Exp2to10(exp integer) {
 	assert Exp(2, exp) == 2 * Exp(2, exp - 1)
 	assert Exp(2, exp) == 4 * Exp(2, exp - 2)
 	assert Exp(2, exp) == 8 * Exp(2, exp - 3)
@@ -37,7 +40,7 @@ func Exp2to10(exp int) {
 // ParseUint is like ParseInt but for unsigned numbers.
 requires base == 0 || (2 <= base && base <= 36)
 requires bitSize > 0 && bitSize <= 64
-ensures retErr == nil ==> (ret >= 0 && ret < uint64(Exp(2, bitSize)))
+ensures retErr == nil ==> (ret >= 0 && integer(ret) < Exp(2, bitSize))
 ensures retErr != nil ==> retErr.ErrorMem()
 decreases _
 func ParseUint(s string, base int, bitSize int) (ret uint64, retErr error)

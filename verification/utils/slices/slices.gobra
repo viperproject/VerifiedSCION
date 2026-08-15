@@ -41,7 +41,7 @@ pure func GetByte(s []byte, start integer, end integer, i integer) byte {
 }
 
 ghost
-requires 0 < p
+requires noPerm < p
 requires acc(Bytes(s, start, end), p)
 requires start <= idx && idx <= end
 ensures  acc(Bytes(s, start, idx), p)
@@ -54,7 +54,7 @@ func SplitByIndex_Bytes(s []byte, start integer, end integer, idx integer, p per
 }
 
 ghost
-requires 0 < p
+requires noPerm < p
 requires acc(Bytes(s, start, idx), p)
 requires acc(Bytes(s, idx,   end), p)
 ensures  acc(Bytes(s, start, end), p)
@@ -66,7 +66,7 @@ func CombineAtIndex_Bytes(s []byte, start integer, end integer, idx integer, p p
 }
 
 ghost
-requires 0 < p
+requires noPerm < p
 requires acc(Bytes(s, start, end), p)
 // the following precondition convinces Gobra that
 // the slice operation is well-formed
@@ -80,7 +80,7 @@ func Reslice_Bytes(s []byte, start integer, end integer, p perm) {
 }
 
 ghost
-requires 0 < p
+requires noPerm < p
 requires 0 <= start && start <= end && end <= cap(s)
 requires acc(Bytes(s[start:end], 0, len(s[start:end])), p)
 ensures  acc(Bytes(s, start, end), p)
@@ -106,7 +106,7 @@ func Unslice_Bytes(s []byte, start integer, end integer, p perm) {
 }
 
 ghost
-requires 0 < p
+requires noPerm < p
 requires 0 <= start && start <= end && end <= len(s)
 requires acc(Bytes(s, 0, len(s)), p)
 ensures  acc(Bytes(s[start:end], 0, end-start), p)
@@ -120,7 +120,7 @@ func SplitRange_Bytes(s []byte, start integer, end integer, p perm) {
 }
 
 ghost
-requires 0 < p
+requires noPerm < p
 requires 0 <= start && start <= end && end <= len(s)
 requires acc(Bytes(s[start:end], 0, end-start), p)
 requires acc(Bytes(s, 0, start), p)
@@ -160,7 +160,7 @@ func PermsImplyIneqWithWildcard(s1 []byte, s2 []byte) {
 }
 
 ghost
-requires  0 < p
+requires  noPerm < p
 requires  len(s1) > 0 || len(s2) > 0
 preserves Bytes(s1, 0, len(s1))
 preserves acc(Bytes(s2, 0, len(s2)), p)
