@@ -26,8 +26,7 @@ import (
 // ChecksumNetworkLayerMem holds the resources of the private state of an SCMP
 // layer, namely the SCION header that the layer uses to compute its checksum.
 // The predicate is closed because its body mentions a non-exported field;
-// importing packages may hold it, but they can neither fold nor unfold it. They
-// obtain it by allocating a layer with NewSCMP.
+// importing packages may hold it, but they can neither fold nor unfold it.
 closed pred (s *SCMP) ChecksumNetworkLayerMem() {
 	acc(&s.scn) &&
 	(s.scn != nil ==> s.scn.ChecksumMem())
@@ -45,6 +44,19 @@ pred (s *SCMP) Mem(ub []byte) {
 	acc(&s.Checksum) &&
 	s.BaseLayer.Mem(ub, 4) &&
 	s.ChecksumNetworkLayerMem()
+}
+
+// EstablishNonInitMem packages full permission to a zero-valued SCMP layer into
+// its NonInitMem predicate. Importing packages cannot fold NonInitMem
+// themselves, since it covers the private state of the layer.
+ghost
+requires acc(s)
+requires *s === SCMP{}
+ensures  s.NonInitMem()
+decreases
+func (s *SCMP) EstablishNonInitMem() {
+	fold s.ChecksumNetworkLayerMem()
+	fold s.NonInitMem()
 }
 
 ghost

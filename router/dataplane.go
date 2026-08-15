@@ -1507,7 +1507,7 @@ func newPacketProcessor(d *DataPlane, ingressID uint16) (res *scionPacketProcess
 	}
 	// @ fold sl.Bytes(p.macBuffers.scionInput, 0, len(p.macBuffers.scionInput))
 	// @ fold sl.Bytes(p.macBuffers.epicInput, 0, len(p.macBuffers.epicInput))
-	// @ p.scionLayer.EstablishPathPoolMem()
+	// @ p.scionLayer.EstablishHiddenPathPoolMem()
 	p.scionLayer.RecyclePaths()
 	// @ fold p.scionLayer.NonInitMem()
 	// @ fold p.hbhLayer.NonInitMem()
@@ -2203,9 +2203,10 @@ func (p *scionPacketProcessor) packSCMP(
 	// check invoking packet was an SCMP error:
 	if p.lastLayer.NextLayerType( /*@ ubLL @*/ ) == slayers.LayerTypeSCMP {
 		// @ llIsScmp = true
-		// (VerifiedSCION) the layer's predicates cover its private state, so it has
-		// to be allocated through the constructor exported by 'slayers'.
-		scmpLayer := slayers.NewSCMP(0)
+		var scmpLayer /*@@@*/ slayers.SCMP
+		// (VerifiedSCION) NonInitMem covers the private state of the layer, so a
+		// client cannot fold it; it is established by the lemma below instead.
+		// @ scmpLayer.EstablishNonInitMem()
 		pld /*@ , start, end @*/ := p.lastLayer.LayerPayload( /*@ ubLL @*/ )
 		// @ sl.SplitRange_Bytes(ub, startLL, endLL, writePerm)
 		// @ maybeStartPld = start
@@ -5094,10 +5095,13 @@ func (p *scionPacketProcessor) prepareSCMP(
 	scionL.NextHdr = slayers.L4SCMP
 
 	typeCode := slayers.CreateSCMPTypeCode(typ, code)
-	// (VerifiedSCION) the layer's predicates cover its private state, so it has
-	// to be allocated through the constructor exported by 'slayers'.
-	scmpH := slayers.NewSCMP(typeCode)
+	// (VerifiedSCION) the layer is built from its zero value, because the lemma
+	// that establishes NonInitMem (which covers the private state of the layer,
+	// and can thus not be folded by a client) requires it.
+	scmpH /*@@@*/ := slayers.SCMP{}
+	// @ scmpH.EstablishNonInitMem()
 	// @ unfold scmpH.NonInitMem()
+	scmpH.TypeCode = typeCode
 	scmpH.SetNetworkLayerForChecksum(&scionL)
 
 	if err := p.buffer.Clear(); err != nil {
@@ -5107,7 +5111,7 @@ func (p *scionPacketProcessor) prepareSCMP(
 		ComputeChecksums: true,
 		FixLengths:       true,
 	}
-	scmpLayers := []gopacket.SerializableLayer{&scionL, scmpH, scmpP}
+	scmpLayers := []gopacket.SerializableLayer{&scionL, &scmpH, scmpP}
 	if cause != nil {
 		// add quote for errors.
 		hdrLen := slayers.CmnHdrLen + scionL.AddrHdrLen( /*@ nil, false @*/ ) + scionL.Path.Len( /*@ nil @*/ )

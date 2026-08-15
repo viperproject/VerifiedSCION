@@ -237,20 +237,6 @@ func (s *SCMP) SetNetworkLayerForChecksum(scn *SCION) {
 	// @ fold s.ChecksumNetworkLayerMem()
 }
 
-// NewSCMP allocates a new SCMP layer with the given type code. Importing
-// packages cannot establish the layer's predicates themselves, because those
-// cover the private state of the layer; this constructor is how they obtain a
-// usable layer.
-// @ ensures s != nil
-// @ ensures s.NonInitMem()
-// @ decreases
-func NewSCMP(typeCode SCMPTypeCode) (s *SCMP) {
-	s = &SCMP{TypeCode: typeCode}
-	// @ fold s.ChecksumNetworkLayerMem()
-	// @ fold s.NonInitMem()
-	return s
-}
-
 // @ requires  pb != nil
 // @ requires  sl.Bytes(data, 0, len(data))
 // @ preserves pb.Mem()

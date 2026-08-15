@@ -414,16 +414,16 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("provided buffer is too small", "expected", minLen, "actual", len(data))
 	}
 
-	// @ unfold s.PathPoolMem()
-	// @ assert unfolding pathPoolMem(s.pathPool, s.pathPoolRaw) in (s.pathPool == nil) == (s.pathPoolRaw == nil)
+	// @ unfold s.HiddenPathPoolMem()
+	// @ assert unfolding PathPoolMem(s.pathPool, s.pathPoolRaw) in (s.pathPool == nil) == (s.pathPoolRaw == nil)
 	s.Path, err = s.getPath(s.PathType)
 	if err != nil {
-		// @ fold s.PathPoolMem()
+		// @ fold s.HiddenPathPoolMem()
 		// @ unfold s.HeaderMem(data[CmnHdrLen:])
 		// @ fold s.NonInitMem()
 		return err
 	}
-	// @ fold s.PathPoolMemPart(s.PathType, s.Path)
+	// @ fold s.HiddenPathPoolMemExceptOne(s.PathType, s.Path)
 	// @ sl.SplitRange_Bytes(data, offset, offset+pathLen, R41)
 	err = s.Path.DecodeFromBytes(data[offset : offset+pathLen])
 	if err != nil {
@@ -480,12 +480,12 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 // When this is enabled, the Path instance may be overwritten in
 // DecodeFromBytes. No references to Path should be kept in use between
 // invocations of DecodeFromBytes.
-// @ preserves s.PathPoolMem()
+// @ preserves s.HiddenPathPoolMem()
 // @ ensures   s.PathPoolInitialized()
 // @ decreases
 func (s *SCION) RecyclePaths() {
-	// @ unfold s.PathPoolMem()
-	// @ unfold pathPoolMem(s.pathPool, s.pathPoolRaw)
+	// @ unfold s.HiddenPathPoolMem()
+	// @ unfold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	if s.pathPool == nil {
 		s.pathPool = []path.Path{
 			empty.PathType:  empty.Path{},
@@ -499,43 +499,43 @@ func (s *SCION) RecyclePaths() {
 		// @ assert s.pathPool[onehop.PathType].NonInitMem() && s.pathPool[scion.PathType].NonInitMem() && s.pathPool[epic.PathType].NonInitMem()
 		// @ fold s.pathPool[empty.PathType].NonInitMem()
 	}
-	// @ fold pathPoolMem(s.pathPool, s.pathPoolRaw)
-	// @ fold s.PathPoolMem()
+	// @ fold PathPoolMem(s.pathPool, s.pathPoolRaw)
+	// @ fold s.HiddenPathPoolMem()
 }
 
 // getPath returns a new or recycled path for pathType
 // @ requires  acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
-// @ requires  pathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ requires  PathPoolMem(s.pathPool, s.pathPoolRaw)
 // @ requires  0 <= pathType && pathType < path.MaxPathType
 // @ ensures   acc(&s.pathPool, R20) && acc(&s.pathPoolRaw, R20)
 // @ ensures   err == nil ==> res != nil
 // @ ensures   err == nil ==> res.NonInitMem()
-// @ ensures   (err == nil && !s.pathPoolInitialized()) ==> pathPoolMem(s.pathPool, s.pathPoolRaw)
+// @ ensures   (err == nil && !s.pathPoolInitialized()) ==> PathPoolMem(s.pathPool, s.pathPoolRaw)
 // @ ensures   (err == nil && s.pathPoolInitialized())  ==> (
-// @ 	pathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
+// @ 	PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType) &&
 // @    res === s.getPathPure(pathType))
-// @ ensures   err != nil ==> (pathPoolMem(s.pathPool, s.pathPoolRaw) && err.ErrorMem())
+// @ ensures   err != nil ==> (PathPoolMem(s.pathPool, s.pathPoolRaw) && err.ErrorMem())
 // @ decreases
 func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
-	// @ unfold pathPoolMem(s.pathPool, s.pathPoolRaw)
+	// @ unfold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	if s.pathPool == nil {
-		// @ ghost defer fold pathPoolMem(s.pathPool, s.pathPoolRaw)
+		// @ ghost defer fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 		// @ EstablishPathPkgMem()
 		return path.NewPath(pathType)
 	}
 	if int(pathType) < len(s.pathPool) {
 		tmp := s.pathPool[pathType]
 		// @ ghost if 0 < pathType {
-		// @ 	fold   pathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
+		// @ 	fold   PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 		// @ 	assert tmp.NonInitMem()
 		// @ } else {
-		// @ 	fold pathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
+		// @ 	fold PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 		// @ 	fold tmp.NonInitMem()
 		// @ }
 		return tmp, nil
 	}
 	tmp := s.pathPoolRaw
-	// @ fold   pathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
+	// @ fold   PathPoolMemExceptOne(s.pathPool, s.pathPoolRaw, pathType)
 	// @ assert tmp.NonInitMem()
 	return tmp, nil
 }
@@ -547,8 +547,8 @@ func (s *SCION) getPath(pathType path.Type) (res path.Path, err error) {
 // @ decreases
 func decodeSCION(data []byte, pb gopacket.PacketBuilder) (res error) {
 	scn := &SCION{}
-	// @ fold pathPoolMem(scn.pathPool, scn.pathPoolRaw)
-	// @ fold scn.PathPoolMem()
+	// @ fold PathPoolMem(scn.pathPool, scn.pathPoolRaw)
+	// @ fold scn.HiddenPathPoolMem()
 	// @ fold scn.NonInitMem()
 	err := scn.DecodeFromBytes(data, pb)
 	if err != nil {

@@ -47,21 +47,21 @@ func (x *Int) Uint64() (res uint64)
 // FitsInUint64 holds iff the magnitude of x is representable in a uint64. It
 // abstracts over the non-exported representation of an Int.
 ghost
-requires acc(x.Mem(), R13)
+requires x.Mem()
 decreases
 closed
 pure func (x *Int) FitsInUint64() bool {
-	return unfolding acc(x.Mem(), R13) in len(x.abs) * _W <= 64
+	return unfolding x.Mem() in len(x.abs) * _W <= 64
 }
 
 // AbsToInt is the magnitude of x. It abstracts over the non-exported
 // representation of an Int.
 ghost
-requires acc(x.Mem(), R13)
+requires x.Mem()
 decreases
 closed
 pure func (x *Int) AbsToInt() int {
-	return unfolding acc(x.Mem(), R13) in x.abs.toInt()
+	return unfolding x.Mem() in x.abs.toInt()
 }
 
 // TODO: This returns int when it should return a mathematical Integer

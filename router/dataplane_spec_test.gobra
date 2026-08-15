@@ -54,7 +54,7 @@ func foldMem_test() {
 
 func foldScionPacketProcessorInitMem_test() {
 	d := &scionPacketProcessor{}
-	d.scionLayer.EstablishPathPoolMem()
+	d.scionLayer.EstablishHiddenPathPoolMem()
 	d.scionLayer.RecyclePaths()
 	fold d.scionLayer.NonInitMem()
 	fold d.initMem()
