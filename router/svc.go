@@ -49,6 +49,10 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	defer s.mtx.Unlock()
 
 	//@ unfold internalLockInv{s}()
+	// anchor: projects svc to its integer image so that the permissions quantified over
+	// the map's addr.HostSVC (uint16) keys, which are lowered over mathematical
+	// integers, instantiate at svc
+	//@ assert 0 <= svc
 	addrs := s.m[svc]
 	//@ ghost if addrs == nil { fold validMapValue(svc, addrs) }
 	//@ unfold acc(validMapValue(svc, addrs), R10)
@@ -77,6 +81,10 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	defer s.mtx.Unlock()
 
 	//@ unfold internalLockInv{s}()
+	// anchor: projects svc to its integer image so that the permissions quantified over
+	// the map's addr.HostSVC (uint16) keys, which are lowered over mathematical
+	// integers, instantiate at svc
+	//@ assert 0 <= svc
 	addrs := s.m[svc]
 	//@ ghost if addrs == nil { fold validMapValue(svc, addrs) }
 	//@ assert validMapValue(svc, addrs)
@@ -111,6 +119,10 @@ func (s *services) Any(svc addr.HostSVC) (r *net.UDPAddr, b bool) {
 	defer s.mtx.Unlock()
 
 	//@ unfold internalLockInv{s}()
+	// anchor: projects svc to its integer image so that the permissions quantified over
+	// the map's addr.HostSVC (uint16) keys, which are lowered over mathematical
+	// integers, instantiate at svc
+	//@ assert 0 <= svc
 	addrs := s.m[svc]
 	if len(addrs) == 0 {
 		//@ fold internalLockInv{s}()
