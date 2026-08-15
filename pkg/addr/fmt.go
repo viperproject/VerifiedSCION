@@ -132,7 +132,8 @@ func fmtAS(as_ AS, sep string) string {
 	// @ b.ZeroBuilderIsReadyToUse()
 	b.Grow(maxLen)
 	// @ invariant b.Mem()
-	// @ decreases asParts - i
+	// @ invariant 0 <= i && i <= asParts
+	// @ decreases integer(asParts) - integer(i)
 	for i := 0; i < asParts; i++ {
 		if i > 0 {
 			b.WriteString(sep)

@@ -258,10 +258,14 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	// Calculate a multiple of 16 such that the input fits in
 	nrBlocks := int(math.Ceil((float64(23) + float64(l)) / float64(16)))
 	// (VerifiedSCION) The following assumptions cannot be currently proven due to Gobra's incomplete
-	// support for floats.
-	// @ assume 23 + l <= nrBlocks * 16
-	// @ assume nrBlocks * 16 <= 23 + l + 16
+	// support for floats. They are stated over mathematical integers because, under bounded-integer
+	// semantics, multiplication is opaque: from '16 * nrBlocks <= 55' stated on ints, Gobra could
+	// not derive 'nrBlocks <= 3' and hence not 'inputLength <= MACBufferSize'.
+	// @ assume 23 + integer(l) <= 16 * integer(nrBlocks)
+	// @ assume 16 * integer(nrBlocks) <= 23 + integer(l) + 16
 	inputLength := 16 * nrBlocks
+	// The bounds assumed above show that the multiplication does not overflow.
+	// @ assume integer(inputLength) == 16 * integer(nrBlocks)
 
 	// Fill input
 	// @ unfold sl.Bytes(inputBuffer, 0, len(inputBuffer))

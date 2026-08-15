@@ -358,7 +358,9 @@ func (h HostSVC) Pack() (res []byte) {
 	return out
 }
 
-// @ requires pad >= 0
+// (VerifiedSCION) the upper bound on 'pad' is needed because, under bounded-integer
+// semantics, 'HostLenSVC + pad' may otherwise overflow and yield a negative length.
+// @ requires 0 <= pad && pad <= 1 << 32
 // @ ensures acc(res)
 // @ decreases
 func (h HostSVC) PackWithPad(pad int) (res []byte) {
