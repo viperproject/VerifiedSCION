@@ -38,7 +38,7 @@ pred (dp DataPlaneSpec) Dp3s_iospec_ordered(s Dp3sStateLocal, t Place) {
 
 type Place int
 
-pred Token(t Place)
+pred IOToken(t Place)
 
 ghost
 decreases
@@ -302,20 +302,20 @@ pred (dp DataPlaneSpec) Dp3s_iospec_stop(s Dp3sStateLocal, t Place) {
 /** BIO operations **/
 ghost
 decreases
-requires Token(t) && CBio_IN_bio3s_enter(t, v)
-ensures  Token(old(CBio_IN_bio3s_enter_T(t, v)))
+requires IOToken(t) && CBio_IN_bio3s_enter(t, v)
+ensures  IOToken(old(CBio_IN_bio3s_enter_T(t, v)))
 func Enter(ghost t Place, ghost v Val)
 
 ghost
 decreases
-requires Token(t) && CBio_IN_bio3s_xover(t, v)
-ensures  Token(old(Dp3s_iospec_bio3s_xover_T(t, v)))
+requires IOToken(t) && CBio_IN_bio3s_xover(t, v)
+ensures  IOToken(old(Dp3s_iospec_bio3s_xover_T(t, v)))
 func Xover(ghost t Place, ghost v Val)
 
 ghost
 decreases
-requires Token(t) && CBio_IN_bio3s_exit(t, v)
-ensures  Token(old(Dp3s_iospec_bio3s_exit_T(t, v)))
+requires IOToken(t) && CBio_IN_bio3s_exit(t, v)
+ensures  IOToken(old(Dp3s_iospec_bio3s_exit_T(t, v)))
 func Exit(ghost t Place, ghost v Val)
 
 /** End of helper functions to perfrom BIO operations **/

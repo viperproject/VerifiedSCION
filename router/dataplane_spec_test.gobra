@@ -264,7 +264,7 @@ func testRun(
 	assert d.mtx.LockInv() == MutexInvariant{d}
 
 	// io-spec needs to be inhaled
-	inhale io.Token(place)
+	inhale io.IOToken(place)
 	inhale dp.Dp3s_iospec_ordered(state, place)
 
 	d.Run(ctx, place, state, dp)

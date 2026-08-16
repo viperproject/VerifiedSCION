@@ -31,13 +31,13 @@ ghost type SharedArg ghost struct {
 
 pred SharedInv(ghost dp io.DataPlaneSpec, ghost y SharedArg) {
 	acc(y.Place) && acc(y.State) && // existentials are expressed using ghost pointers
-	io.Token(*y.Place) && dp.Dp3s_iospec_ordered(*y.State, *y.Place) &&
+	io.IOToken(*y.Place) && dp.Dp3s_iospec_ordered(*y.State, *y.Place) &&
 	ElemAuth((*y.State).Ibuf, y.IBufY) && ElemAuth((*y.State).Obuf, y.OBufY)
 }
 
 // initialize the shared invariant:
 ghost
-requires io.Token(p) && dp.Dp3s_iospec_ordered(s, p)
+requires io.IOToken(p) && dp.Dp3s_iospec_ordered(s, p)
 ensures  m.LockP() && m.LockInv() == SharedInv{dp, y}
 decreases
 func InitSharedInv(
