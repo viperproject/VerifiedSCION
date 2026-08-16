@@ -39,15 +39,13 @@ ensures forall i int :: { res[i] } 0 <= i && i < size ==> res[i] == nil
 decreases _
 pure func NewSeqByteSlice(size int) (res seq[[]byte])
 
-// (VerifiedSCION) ToSeqByte is temporarily abstract again. Its body relies on Gobra's
-// slice-to-sequence conversion (viperproject/gobra#1088), which landed on Gobra's master
-// after the branch point of the bounded-integer PR (viperproject/gobra#1015) this file is
-// being verified against. Restore the body once that PR is rebased onto master; the
-// definition is unrelated to the permission syntax and the bounded-integer semantics.
 ghost
-requires acc(sl.Bytes(ub, 0, len(ub)), _)
+opaque
+requires sl.Bytes(ub, 0, len(ub))
 ensures len(res) == len(ub)
 ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
     res[i] == sl.GetByte(ub, 0, len(ub), i)
-decreases _
-pure func ToSeqByte(ub []byte) (res seq[byte])
+decreases
+pure func ToSeqByte(ub []byte) (res seq[byte]) {
+	return unfolding sl.Bytes(ub, 0, len(ub)) in seq(ub)
+}
