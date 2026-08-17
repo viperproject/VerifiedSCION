@@ -37,6 +37,11 @@ ensures 0 <= b && integer(b) < 256
 decreases
 func ByteValue(b byte) {}
 
+// BitAnd3 is the one lemma here that has to remain an axiom. It appears in the
+// postcondition of the pure function slayers.AddrType.Length, so it must be pure, and a
+// pure function can neither call a lemma nor carry a body: a body travels to every
+// importing package, which would then have to re-prove it without interpreted bitwise.
+// BitAnd3Lemma below is its machine-checked counterpart; keep the two in sync.
 ghost
 ensures 0 <= b & 0x3 && b & 0x3 <= 3
 ensures b == 0 ==> res == 0
@@ -44,35 +49,33 @@ ensures b == 3 ==> res == 3
 ensures b == 4 ==> res == 0
 ensures res == b & 0x3
 decreases
-pure func BitAnd3(b int) (res int) {
-	return b & 0x3
-}
+pure func BitAnd3(b int) (res int)
 
+// Discharges, in Gobra, exactly what the BitAnd3 axiom above assumes.
 ghost
+ensures 0 <= b & 0x3 && b & 0x3 <= 3
+ensures b == 0 ==> b & 0x3 == 0
+ensures b == 3 ==> b & 0x3 == 3
+ensures b == 4 ==> b & 0x3 == 0
+decreases
+func BitAnd3Lemma(b int) {}
+
 // byte-typed so the lemma's bitwise terms match the byte-kind operations that
 // real parsing code produces (bounded semantics gives each kind its own helpers)
-ensures 0 <= res && res <= 7
-ensures res == b & 0x7
+ghost
+ensures 0 <= b & 0x7 && b & 0x7 <= 7
 decreases
-pure func BitAnd7(b byte) (res byte) {
-	return b & 0x7
-}
+func BitAnd7(b byte) {}
 
 ghost
-ensures res == b >> 30
-ensures 0 <= res && res <= 3
+ensures 0 <= b >> 30 && b >> 30 <= 3
 decreases
-pure func Shift30LessThan4(b uint32) (res uint32) {
-	return b >> 30
-}
+func Shift30LessThan4(b uint32) {}
 
 ghost
-ensures res == b & 0x3F
-ensures 0 <= res && res < 64
+ensures 0 <= b & 0x3F && b & 0x3F < 64
 decreases
-pure func And3fAtMost64(b uint8) (res uint8) {
-	return b & 0x3F
-}
+func And3fAtMost64(b uint8) {}
 
 ghost
 // Under bounded integer semantics, facts about *constant* bitwise expressions are
@@ -87,18 +90,14 @@ ensures forall b byte :: { b | 1 } b & 2 == 0 ==> b | 1 == (b & 1 == 1 ? b : b +
 ensures forall b byte :: { b & 1 } b == 0 ==> b & 1 == 0
 ensures forall b byte :: { b & 2 } b == 0 ==> b & 2 == 0
 decreases
-pure func InfoFieldFirstByteSerializationLemmas() bool {
-	return true
-}
+func InfoFieldFirstByteSerializationLemmas() {}
 
 ghost
 ensures csum > 0xffff ==>
 	let newCsum := (csum >> 16) + (csum & 0xffff) in
 	newCsum < csum
 decreases
-pure func FoldChecksumLemma(csum uint32) struct{} {
-	return struct{}{}
-}
+func FoldChecksumLemma(csum uint32) {}
 
 /**** Functional specs for encoding/binary (BigEndian) ****/
 
