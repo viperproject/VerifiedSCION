@@ -71,14 +71,20 @@ const (
 )
 
 // Length returns the length of this AddrType value.
+// (VerifiedSCION) the low two bits are selected with '% 4' rather than '& 0x3'. AddrType
+// is a uint8, so the two agree, but the remainder is arithmetic: '0 <= int(tl) % 4 <= 3'
+// is provable directly, whereas the bound on a bitwise conjunction is only available to
+// packages verified with interpreted bitwise operations. Since this function is pure and
+// is used inside predicate bodies, that bound could otherwise only come from an axiom.
 // @ pure
-// @ ensures  res == LineLen * (1 + (b.BitAnd3(int(tl))))
+// @ ensures  res == LineLen * (1 + (int(tl) % 4))
+// @ ensures  LineLen <= res && res <= 4*LineLen
 // @ ensures  tl == T4Ip  ==> res == LineLen
 // @ ensures  tl == T4Svc ==> res == LineLen
 // @ ensures  tl == T16Ip ==> res == 4*LineLen
 // @ decreases
 func (tl AddrType) Length() (res int) {
-	return LineLen * (1 + (int(tl) & 0x3))
+	return LineLen * (1 + (int(tl) % 4))
 }
 
 // BaseLayer is a convenience struct which implements the LayerData and

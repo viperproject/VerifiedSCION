@@ -37,29 +37,6 @@ ensures 0 <= b && integer(b) < 256
 decreases
 func ByteValue(b byte) {}
 
-// BitAnd3 is the one lemma here that has to remain an axiom. It appears in the
-// postcondition of the pure function slayers.AddrType.Length, so it must be pure, and a
-// pure function can neither call a lemma nor carry a body: a body travels to every
-// importing package, which would then have to re-prove it without interpreted bitwise.
-// BitAnd3Lemma below is its machine-checked counterpart; keep the two in sync.
-ghost
-ensures 0 <= b & 0x3 && b & 0x3 <= 3
-ensures b == 0 ==> res == 0
-ensures b == 3 ==> res == 3
-ensures b == 4 ==> res == 0
-ensures res == b & 0x3
-decreases
-pure func BitAnd3(b int) (res int)
-
-// Discharges, in Gobra, exactly what the BitAnd3 axiom above assumes.
-ghost
-ensures 0 <= b & 0x3 && b & 0x3 <= 3
-ensures b == 0 ==> b & 0x3 == 0
-ensures b == 3 ==> b & 0x3 == 3
-ensures b == 4 ==> b & 0x3 == 0
-decreases
-func BitAnd3Lemma(b int) {}
-
 // byte-typed so the lemma's bitwise terms match the byte-kind operations that
 // real parsing code produces (bounded semantics gives each kind its own helpers)
 ghost
