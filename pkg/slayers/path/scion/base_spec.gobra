@@ -330,7 +330,11 @@ pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
 		s == DecodedFrom(binary.BigEndian.Uint32(ub[:MetaLen]))
 }
 
-/** Lemma proven in /VerifiedSCION/verification/utils/bitwise/proofs.dfy **/
+/**
+  * Axiomatized here because this package is verified with the uninterpreted encoding of
+  * bitwise operations. The corresponding fact is proven in verification/utils/bitwise
+  * (lemma SerializeAndDeserializeLemma), which is verified with 'interpret_bitwise'.
+  */
 ghost
 requires m.InBounds()
 ensures  let line1 := m.SerializedToLine() in

@@ -37,6 +37,8 @@ jobs:
         with:
           ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants,
           ## which is why 'verification/gobra.json' excludes the 'layers' package.
+          ## It also excludes 'bitwise', which is the only package verified with
+          ## interpreted bitwise operations and is therefore verified on its own below.
           configFile: 'verification'
           timeout: 5m
           imageVersion: ${{ env.imageVersion }}
@@ -46,6 +48,16 @@ jobs:
         with:
           configFile: 'verification/dependencies/github.com/google/gopacket/layers'
           timeout: 5m
+          imageVersion: ${{ env.imageVersion }}
+      # 'verification/utils/bitwise/gobra.json' sets 'interpret_bitwise', which defines the
+      # bitwise and shift operations over SMT bitvectors. That makes the lemmas in the package
+      # provable instead of axioms (they used to be discharged separately in Dafny), at the cost
+      # of a much slower run, hence the generous timeout. No other package uses the flag.
+      - name: Verify package 'verification/utils/bitwise'
+        uses: viperproject/gobra-action@main
+        with:
+          configFile: 'verification/utils/bitwise'
+          timeout: 60m
           imageVersion: ${{ env.imageVersion }}
   verify-deps:
     runs-on: ubuntu-latest

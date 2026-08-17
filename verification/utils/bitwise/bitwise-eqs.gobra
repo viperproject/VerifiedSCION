@@ -99,3 +99,149 @@ decreases
 pure func FoldChecksumLemma(csum uint32) struct{} {
 	return struct{}{}
 }
+
+/**** Functional specs for encoding/binary (BigEndian) ****/
+
+ghost
+decreases
+pure func FUint16Spec(b0, b1 byte) uint16 {
+	return uint16(b1) | (uint16(b0) << 8)
+}
+
+ghost
+decreases
+pure func FPutUint16Spec0(v uint16) byte {
+	return byte(v >> 8)
+}
+
+ghost
+decreases
+pure func FPutUint16Spec1(v uint16) byte {
+	return byte(v & 0xFF)
+}
+
+// Serializing a uint16 and reading it back yields the original value.
+ghost
+ensures FUint16Spec(FPutUint16Spec0(v), FPutUint16Spec1(v)) == v
+decreases
+func FUint16AfterFPutUint16(v uint16) {}
+
+// Reading a uint16 out of two bytes and serializing it back yields the original bytes.
+ghost
+ensures FPutUint16Spec0(FUint16Spec(b0, b1)) == b0
+ensures FPutUint16Spec1(FUint16Spec(b0, b1)) == b1
+decreases
+func FPutUint16AfterFUint16(b0, b1 byte) {}
+
+ghost
+decreases
+pure func FUint32Spec(b0, b1, b2, b3 byte) uint32 {
+	return uint32(b3) | (uint32(b2) << 8) | (uint32(b1) << 16) | (uint32(b0) << 24)
+}
+
+ghost
+decreases
+pure func FPutUint32Spec0(v uint32) byte {
+	return byte((v >> 24) & 0xFF)
+}
+
+ghost
+decreases
+pure func FPutUint32Spec1(v uint32) byte {
+	return byte((v >> 16) & 0xFF)
+}
+
+ghost
+decreases
+pure func FPutUint32Spec2(v uint32) byte {
+	return byte((v >> 8) & 0xFF)
+}
+
+ghost
+decreases
+pure func FPutUint32Spec3(v uint32) byte {
+	return byte(v & 0xFF)
+}
+
+// Serializing a uint32 and reading it back yields the original value.
+ghost
+ensures FUint32Spec(FPutUint32Spec0(v), FPutUint32Spec1(v), FPutUint32Spec2(v), FPutUint32Spec3(v)) == v
+decreases
+func FUint32AfterFPutUint32(v uint32) {}
+
+// Reading a uint32 out of four bytes and serializing it back yields the original bytes.
+ghost
+ensures FPutUint32Spec0(FUint32Spec(b0, b1, b2, b3)) == b0
+ensures FPutUint32Spec1(FUint32Spec(b0, b1, b2, b3)) == b1
+ensures FPutUint32Spec2(FUint32Spec(b0, b1, b2, b3)) == b2
+ensures FPutUint32Spec3(FUint32Spec(b0, b1, b2, b3)) == b3
+decreases
+func FPutUint32AfterFUint32(b0, b1, b2, b3 byte) {}
+
+/**** Serialization of the SCION path meta header ****/
+
+// The five fields of the path meta header, as they are packed into a single 32-bit line.
+type MetaHdr struct {
+	CurrINF byte
+	CurrHF  byte
+	SegLen0 byte
+	SegLen1 byte
+	SegLen2 byte
+}
+
+// Every field of a meta header fits in the number of bits reserved for it on the wire.
+// Each conjunct is essential for proving SerializeAndDeserializeMetaHdrLemma.
+ghost
+decreases
+pure func InBounds(m MetaHdr) bool {
+	return m.CurrINF <= 3 &&
+		m.CurrHF <= 63 &&
+		m.SegLen0 <= 63 &&
+		m.SegLen1 <= 63 &&
+		m.SegLen2 <= 63
+}
+
+ghost
+decreases
+pure func SerializedToLine(m MetaHdr) uint32 {
+	return (uint32(m.CurrINF) << 30) |
+		(uint32(m.CurrHF & 0x3F) << 24) |
+		(uint32(m.SegLen0 & 0x3F) << 12) |
+		(uint32(m.SegLen1 & 0x3F) << 6) |
+		uint32(m.SegLen2 & 0x3F)
+}
+
+ghost
+decreases
+pure func DecodedFrom(line uint32) MetaHdr {
+	return MetaHdr{
+		CurrINF: byte(line >> 30),
+		CurrHF:  byte((line >> 24) & 0x3F),
+		SegLen0: byte((line >> 12) & 0x3F),
+		SegLen1: byte((line >> 6) & 0x3F),
+		SegLen2: byte(line & 0x3F),
+	}
+}
+
+// Packing a meta header into a line and decoding it back yields the original header.
+ghost
+requires InBounds(m)
+ensures  DecodedFrom(SerializedToLine(m)) == m
+decreases
+func SerializeAndDeserializeMetaHdrLemma(m MetaHdr) {}
+
+// The same round trip, but going through the four bytes that the line is serialized to.
+ghost
+requires InBounds(m)
+requires let line := SerializedToLine(m) in
+	b0 == FPutUint32Spec0(line) &&
+	b1 == FPutUint32Spec1(line) &&
+	b2 == FPutUint32Spec2(line) &&
+	b3 == FPutUint32Spec3(line)
+ensures  DecodedFrom(FUint32Spec(b0, b1, b2, b3)) == m
+decreases
+func SerializeAndDeserializeLemma(m MetaHdr, b0, b1, b2, b3 byte) {
+	// the bytes reconstruct the line, which in turn decodes back to `m`
+	FUint32AfterFPutUint32(SerializedToLine(m))
+	SerializeAndDeserializeMetaHdrLemma(m)
+}
