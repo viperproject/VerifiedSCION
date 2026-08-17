@@ -2,5 +2,5 @@
   "recursive": true,
   "project_root": "",
   "includes": ["dependencies", ".."],
-  "other": ["--excludePackages", "layers"]
+  "other": ["--excludePackages", "layers", "bitwise"]
 }

@@ -15,15 +15,27 @@
 // +gobra
 
 // This package contains some lemmas that are useful to deal with bitwise
-// operations in a scalable way. Look at the file './proofs.dfy' before
-// exteding this file.
+// operations in a scalable way.
+//
+// These lemmas used to be axioms here, proven separately in Dafny (in a file
+// './proofs.dfy' that no longer exists), because Gobra could not reason about the
+// values of bitwise operations. It now can: this package is verified with
+// '--interpretBitwise' (see './gobra.json'), which gives the bitwise and shift
+// operations bodies defined over SMT bitvectors. The lemmas below therefore carry
+// bodies and are proven by Gobra itself.
+//
+// The rest of the repository is deliberately verified *without* that flag, since
+// bitvector reasoning is substantially more expensive. Client packages see only the
+// signatures below, whose postconditions relate the abstract (uninterpreted) bitwise
+// terms they do produce. Extend this file rather than reasoning about bit patterns
+// at the client side.
 
 package bitwise
 
 ghost
 ensures 0 <= b && integer(b) < 256
 decreases
-func ByteValue(b byte)
+func ByteValue(b byte) {}
 
 ghost
 ensures 0 <= b & 0x3 && b & 0x3 <= 3
@@ -32,7 +44,9 @@ ensures b == 3 ==> res == 3
 ensures b == 4 ==> res == 0
 ensures res == b & 0x3
 decreases
-pure func BitAnd3(b int) (res int)
+pure func BitAnd3(b int) (res int) {
+	return b & 0x3
+}
 
 ghost
 // byte-typed so the lemma's bitwise terms match the byte-kind operations that
@@ -40,19 +54,25 @@ ghost
 ensures 0 <= res && res <= 7
 ensures res == b & 0x7
 decreases
-pure func BitAnd7(b byte) (res byte)
+pure func BitAnd7(b byte) (res byte) {
+	return b & 0x7
+}
 
 ghost
 ensures res == b >> 30
 ensures 0 <= res && res <= 3
 decreases
-pure func Shift30LessThan4(b uint32) (res uint32)
+pure func Shift30LessThan4(b uint32) (res uint32) {
+	return b >> 30
+}
 
 ghost
 ensures res == b & 0x3F
 ensures 0 <= res && res < 64
 decreases
-pure func And3fAtMost64(b uint8) (res uint8)
+pure func And3fAtMost64(b uint8) (res uint8) {
+	return b & 0x3F
+}
 
 ghost
 // Under bounded integer semantics, facts about *constant* bitwise expressions are
@@ -67,11 +87,15 @@ ensures forall b byte :: { b | 1 } b & 2 == 0 ==> b | 1 == (b & 1 == 1 ? b : b +
 ensures forall b byte :: { b & 1 } b == 0 ==> b & 1 == 0
 ensures forall b byte :: { b & 2 } b == 0 ==> b & 2 == 0
 decreases
-pure func InfoFieldFirstByteSerializationLemmas() bool
+pure func InfoFieldFirstByteSerializationLemmas() bool {
+	return true
+}
 
 ghost
 ensures csum > 0xffff ==>
 	let newCsum := (csum >> 16) + (csum & 0xffff) in
 	newCsum < csum
 decreases
-pure func FoldChecksumLemma(csum uint32) struct{}
+pure func FoldChecksumLemma(csum uint32) struct{} {
+	return struct{}{}
+}
