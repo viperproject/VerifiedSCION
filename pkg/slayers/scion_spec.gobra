@@ -34,6 +34,11 @@ import (
 	"verification/utils/seqs"
 )
 
+// MaxAddrLen is the maximum length, in bytes, of a raw host address in a SCION header.
+// The length of an address is encoded in the two least significant bits of its AddrType
+// (cf. AddrType.Length), so it is always one of 4, 8, 12, or 16 bytes.
+const MaxAddrLen = 4 * LineLen
+
 pred PathPoolMem(pathPool []path.Path, pathPoolRaw path.Path) {
 	// non-initialized path pool:
 	(pathPool == nil ==> pathPoolRaw == nil) &&
@@ -208,7 +213,8 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	s.AddrHdrLenSpecInternal() <= len(ubuf) &&
 	// helper facts to deal with incompletnesses when establising the bounds of s.RawDstAddr and s.RawSrcAddr
 	s.AddrHdrLenSpecInternal() <= len(ubuf) &&
-	0 < s.DstAddrType.Length() && 0 < s.SrcAddrType.Length() &&
+	0 < s.DstAddrType.Length() && s.DstAddrType.Length() <= MaxAddrLen &&
+	0 < s.SrcAddrType.Length() && s.SrcAddrType.Length() <= MaxAddrLen &&
 	0 < 2*addr.IABytes &&
 	2*addr.IABytes < 2*addr.IABytes+s.DstAddrType.Length() &&
 	2*addr.IABytes+s.DstAddrType.Length() < 2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length() &&
@@ -218,7 +224,13 @@ pred (s *SCION) HeaderMem(ubuf []byte) {
 	// RawDstAddr & RawSrcAddr locations. The memory for these is kept
 	// outside of HeaderMem, together with access to the entire slice.
 	s.RawDstAddr === ubuf[2*addr.IABytes:2*addr.IABytes+s.DstAddrType.Length()] &&
-	s.RawSrcAddr === ubuf[2*addr.IABytes+s.DstAddrType.Length():2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()]
+	s.RawSrcAddr === ubuf[2*addr.IABytes+s.DstAddrType.Length():2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()] &&
+	// Bounds on the lengths of RawDstAddr and RawSrcAddr. These follow from the aliasing
+	// facts above and from the contract of AddrType.Length, but we state them explicitly
+	// so that clients do not have to redo the bitwise reasoning behind AddrType.Length
+	// every time they need to bound the size of an address.
+	0 < len(s.RawDstAddr) && len(s.RawDstAddr) <= MaxAddrLen &&
+	0 < len(s.RawSrcAddr) && len(s.RawSrcAddr) <= MaxAddrLen
 }
 
 ghost
@@ -694,6 +706,30 @@ pure func (s *SCION) AddrHdrLenSpec(ubuf []byte) (res int) {
 	return unfolding s.Mem(ubuf) in
 		unfolding s.HeaderMem(ubuf[CmnHdrLen:]) in
 		2*addr.IABytes + s.DstAddrType.Length() + s.SrcAddrType.Length()
+}
+
+// RawDstAddrLenSpec exposes the length of the raw destination address, and its bounds,
+// to clients that hold the Mem predicate but do not want to unfold it.
+ghost
+requires s.Mem(ubuf)
+ensures  0 < res && res <= MaxAddrLen
+decreases
+pure func (s *SCION) RawDstAddrLenSpec(ubuf []byte) (res int) {
+	return unfolding s.Mem(ubuf) in
+		unfolding s.HeaderMem(ubuf[CmnHdrLen:]) in
+		len(s.RawDstAddr)
+}
+
+// RawSrcAddrLenSpec exposes the length of the raw source address, and its bounds,
+// to clients that hold the Mem predicate but do not want to unfold it.
+ghost
+requires s.Mem(ubuf)
+ensures  0 < res && res <= MaxAddrLen
+decreases
+pure func (s *SCION) RawSrcAddrLenSpec(ubuf []byte) (res int) {
+	return unfolding s.Mem(ubuf) in
+		unfolding s.HeaderMem(ubuf[CmnHdrLen:]) in
+		len(s.RawSrcAddr)
 }
 
 // Morally ghost

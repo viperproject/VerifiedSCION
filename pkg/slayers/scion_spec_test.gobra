@@ -23,3 +23,17 @@ func foldNonInitMem_Test() {
 	fold PathPoolMem(s.pathPool, s.pathPoolRaw)
 	fold s.NonInitMem()
 }
+
+// Shows that the Mem predicate bounds the sizes of the raw addresses, both for clients
+// that unfold it and for those that only use the spec functions on top of it.
+ghost
+requires s.Mem(ub)
+decreases
+func rawAddrLenBounds_Test(s *SCION, ub []byte) {
+	assert 0 < s.RawDstAddrLenSpec(ub) && s.RawDstAddrLenSpec(ub) <= MaxAddrLen
+	assert 0 < s.RawSrcAddrLenSpec(ub) && s.RawSrcAddrLenSpec(ub) <= MaxAddrLen
+	unfold s.Mem(ub)
+	unfold s.HeaderMem(ub[CmnHdrLen:])
+	assert 0 < len(s.RawDstAddr) && len(s.RawDstAddr) <= MaxAddrLen
+	assert 0 < len(s.RawSrcAddr) && len(s.RawSrcAddr) <= MaxAddrLen
+}
