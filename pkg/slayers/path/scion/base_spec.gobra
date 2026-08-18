@@ -331,9 +331,9 @@ pure func (s MetaHdr) EqAbsHeader(ub []byte) bool {
 }
 
 /**
-  * Axiomatized here because this package is verified with the uninterpreted encoding of
-  * bitwise operations. The corresponding fact is proven in verification/utils/bitwise
-  * (lemma SerializeAndDeserializeLemma), which is verified with 'interpret_bitwise'.
+  * Axiomatized: this package is verified with the uninterpreted encoding of bitwise
+  * operations, so the round trip cannot be established here. It is not proven elsewhere
+  * either -- see the note at the end of verification/utils/bitwise/bitwise-eqs.gobra.
   */
 ghost
 requires m.InBounds()
