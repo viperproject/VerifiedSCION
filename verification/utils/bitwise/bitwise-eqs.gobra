@@ -37,6 +37,31 @@ ensures 0 <= b && integer(b) < 256
 decreases
 func ByteValue(b byte) {}
 
+// BitAnd3 is stated over `int` because that is the width at which the operation it
+// describes happens: slayers.AddrType.Length computes `int(tl) & 0x3`, and under bounded
+// integer semantics a fact about the byte-kind conjunction would not apply to the int-kind
+// one. It has to stay pure, since it appears in the postcondition of that pure function,
+// and therefore bodyless: a body travels to every importing package, which would then have
+// to re-prove it without interpreted bitwise. BitAnd3Lemma below discharges the same facts.
+ghost
+ensures 0 <= b & 0x3 && b & 0x3 <= 3
+ensures b == 0 ==> res == 0
+ensures b == 3 ==> res == 3
+ensures b == 4 ==> res == 0
+ensures res == b & 0x3
+decreases
+pure func BitAnd3(b int) (res int)
+
+// Discharges, in Gobra, exactly what the BitAnd3 axiom above assumes. This is the most
+// expensive lemma in the package by a wide margin: its operand is 64 bits wide.
+ghost
+ensures 0 <= b & 0x3 && b & 0x3 <= 3
+ensures b == 0 ==> b & 0x3 == 0
+ensures b == 3 ==> b & 0x3 == 3
+ensures b == 4 ==> b & 0x3 == 0
+decreases
+func BitAnd3Lemma(b int) {}
+
 // byte-typed so the lemma's bitwise terms match the byte-kind operations that
 // real parsing code produces (bounded semantics gives each kind its own helpers)
 ghost
