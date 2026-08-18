@@ -175,3 +175,32 @@ an idle machine, single sample each:
 | **total** | **688s** | **694s** | **655s** | **670s** |
 
 All cells pass. The spread is within single-sample noise on this machine.
+
+## Adopted configuration
+
+The 17 jobs that pass now opt in individually, through a `gobra.json` next to the
+package:
+
+```json
+{
+  "other": ["--disableNL"]
+}
+```
+
+`verification`, `private/underlay/conn` and `router` deliberately have no such
+entry and keep non-linear arithmetic.
+
+Opting in per package, rather than setting the flag once in `gobra-mod.json` and
+exempting the three, is forced by how the option is defined. `disableNL` is an
+`opt[Boolean]` with no `--nodisableNL` counterpart, and it is folded in with
+`disableNL || input.disableNL.value.contains(true)`, so once the module config
+sets it no job can clear it. The merge itself would allow an override — job and
+module configs are combined field-wise with `orElse`, and `toInputConfigOption`
+records a value only when the option `isSupplied`, which is also why a job
+`other` list does not disturb the module-level options it omits — but there is
+no way to *supply* `false`.
+
+A structured `disable_nl: Option[Boolean]` field in `VerificationJobCfg` would
+remove that restriction and shrink this to four files: one `true` in
+`gobra-mod.json` and three `false` overrides. That is a Gobra change, so it
+cannot land here first.
