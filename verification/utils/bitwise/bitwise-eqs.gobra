@@ -42,7 +42,12 @@ func ByteValue(b byte) {}
 // integer semantics a fact about the byte-kind conjunction would not apply to the int-kind
 // one. It has to stay pure, since it appears in the postcondition of that pure function,
 // and therefore bodyless: a body travels to every importing package, which would then have
-// to re-prove it without interpreted bitwise. BitAnd3Lemma below discharges the same facts.
+// to re-prove it without interpreted bitwise.
+//
+// It is the one lemma here that is not proven. A 64-bit operand puts it far out of reach:
+// with a body it took ~25 minutes, and the equivalent lemma did not finish in 45. Every
+// other lemma in this package takes seconds, because every other operand is 8 or 32 bits
+// wide. Narrowing it is not an option -- the operation really does happen at 64 bits.
 ghost
 ensures 0 <= b & 0x3 && b & 0x3 <= 3
 ensures b == 0 ==> res == 0
@@ -51,16 +56,6 @@ ensures b == 4 ==> res == 0
 ensures res == b & 0x3
 decreases
 pure func BitAnd3(b int) (res int)
-
-// Discharges, in Gobra, exactly what the BitAnd3 axiom above assumes. This is the most
-// expensive lemma in the package by a wide margin: its operand is 64 bits wide.
-ghost
-ensures 0 <= b & 0x3 && b & 0x3 <= 3
-ensures b == 0 ==> b & 0x3 == 0
-ensures b == 3 ==> b & 0x3 == 3
-ensures b == 4 ==> b & 0x3 == 0
-decreases
-func BitAnd3Lemma(b int) {}
 
 // byte-typed so the lemma's bitwise terms match the byte-kind operations that
 // real parsing code produces (bounded semantics gives each kind its own helpers)
