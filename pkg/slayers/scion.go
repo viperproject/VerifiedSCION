@@ -233,10 +233,11 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : int(s.HdrLen)*LineLen] @*/ )
 	// @ sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLenSpecInternal()), int(int(s.HdrLen)*LineLen), R10)
 	// (VerifiedSCION) Under bounded-integer semantics this sum can overflow to a negative
-	// value: path.Path.LenSpec only guarantees non-negativity, and no uniform upper bound
-	// holds at the interface, since *scion.Decoded may be longer than the buffer it was
-	// decoded from (see onehop.Path.ToSCIONDecoded) while *rawPath is bounded only by its
-	// own buffer. Assumed rather than established, to leave the implementation untouched.
+	// value: path.Path.LenSpec only guarantees non-negativity. It cannot be bounded by a
+	// precondition here, because *SCION must implement gopacket.SerializableLayer and an
+	// implementation may only weaken the interface's precondition. Bounding it instead as
+	// a conjunct of s.Mem would avoid this assumption, at the cost of discharging it at
+	// every fold of that predicate.
 	// @ assume 0 <= scnLen
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",

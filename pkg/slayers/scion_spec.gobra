@@ -835,6 +835,18 @@ pure func (s *SCION) MinSizeOfUbufWithOneHopOpenInv(ub []byte) int {
 		CmnHdrLen + s.AddrHdrLenSpecInternal() + pathLen
 }
 
+// PathLenSpec is the length the path claims to have, as seen from outside s.Mem.
+// (VerifiedSCION) Callers of SerializeTo bound it so that adding it to the header offset
+// provably does not overflow; path.Path.LenSpec on its own only guarantees non-negativity.
+ghost
+requires s.Mem(ub)
+ensures  0 <= res
+decreases
+pure func (s *SCION) PathLenSpec(ub []byte) (res int) {
+	return unfolding s.Mem(ub) in
+		s.Path.LenSpec(ub[CmnHdrLen+s.AddrHdrLenSpecInternal() : int(s.HdrLen)*LineLen])
+}
+
 ghost
 requires s.Mem(ub)
 decreases
