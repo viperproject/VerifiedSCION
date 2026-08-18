@@ -93,7 +93,7 @@ pure func FPutUint16Spec0(v uint16) byte {
 ghost
 decreases
 pure func FPutUint16Spec1(v uint16) byte {
-	return byte(v & 0xFF)
+	return byte(v)
 }
 
 // Serializing a uint16 and reading it back yields the original value.
@@ -118,25 +118,25 @@ pure func FUint32Spec(b0, b1, b2, b3 byte) uint32 {
 ghost
 decreases
 pure func FPutUint32Spec0(v uint32) byte {
-	return byte((v >> 24) & 0xFF)
+	return byte(v >> 24)
 }
 
 ghost
 decreases
 pure func FPutUint32Spec1(v uint32) byte {
-	return byte((v >> 16) & 0xFF)
+	return byte(v >> 16)
 }
 
 ghost
 decreases
 pure func FPutUint32Spec2(v uint32) byte {
-	return byte((v >> 8) & 0xFF)
+	return byte(v >> 8)
 }
 
 ghost
 decreases
 pure func FPutUint32Spec3(v uint32) byte {
-	return byte(v & 0xFF)
+	return byte(v)
 }
 
 // Serializing a uint32 and reading it back yields the original value.
