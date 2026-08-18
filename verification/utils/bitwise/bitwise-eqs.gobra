@@ -118,7 +118,7 @@ pure func FPutUint16Spec0(v uint16) byte {
 ghost
 decreases
 pure func FPutUint16Spec1(v uint16) byte {
-	return byte(v)
+	return byte(v & 0xFF)
 }
 
 // Serializing a uint16 and reading it back yields the original value.
@@ -143,25 +143,25 @@ pure func FUint32Spec(b0, b1, b2, b3 byte) uint32 {
 ghost
 decreases
 pure func FPutUint32Spec0(v uint32) byte {
-	return byte(v >> 24)
+	return byte((v >> 24) & 0xFF)
 }
 
 ghost
 decreases
 pure func FPutUint32Spec1(v uint32) byte {
-	return byte(v >> 16)
+	return byte((v >> 16) & 0xFF)
 }
 
 ghost
 decreases
 pure func FPutUint32Spec2(v uint32) byte {
-	return byte(v >> 8)
+	return byte((v >> 8) & 0xFF)
 }
 
 ghost
 decreases
 pure func FPutUint32Spec3(v uint32) byte {
-	return byte(v)
+	return byte(v & 0xFF)
 }
 
 // Serializing a uint32 and reading it back yields the original value.
@@ -214,7 +214,7 @@ func ShiftRight8IsDiv(v uint32) {}
 
 // Narrowing to a byte is a remainder.
 ghost
-ensures uint32(byte(v)) == v % (1 << 8)
+ensures uint32(byte(v & 0xFF)) == v % (1 << 8)
 decreases
 func ByteIsMod(v uint32) {}
 
@@ -317,10 +317,10 @@ pure func DecodedFrom(line uint32) MetaHdr {
 	// own bitwise helpers, so a fact about a uint32 mask would not apply to a byte one.
 	return MetaHdr{
 		CurrINF: byte(line >> 30),
-		CurrHF:  byte(line >> 24) & 0x3F,
-		SegLen0: byte(line >> 12) & 0x3F,
-		SegLen1: byte(line >> 6) & 0x3F,
-		SegLen2: byte(line) & 0x3F,
+		CurrHF:  byte((line >> 24) & 0x3F),
+		SegLen0: byte((line >> 12) & 0x3F),
+		SegLen1: byte((line >> 6) & 0x3F),
+		SegLen2: byte(line & 0x3F),
 	}
 }
 
