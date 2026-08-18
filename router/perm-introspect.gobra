@@ -35,8 +35,14 @@ import "net"
 // The map type below is specific to the dataplane, so this package, and not the
 // `net` stubs, is its natural home.
 //
+// Unlike `slices.PermIntrospectBytes`, which is proven from the primitives of
+// `permsintrospect`, the function below has to be an axiom: the permission to a
+// map is atomic, so there is nothing to unfold and introspect at a more
+// primitive level, and Gobra has no generics that would let `permsintrospect`
+// declare a single map primitive covering arbitrary key and value types.
+//
 // See the documentation of the `permsintrospect` package for why these functions
-// are axioms and what they may be assumed to provide.
+// may be assumed.
 
 // Names the permission held to a map of next hops. The nil case is admitted
 // because the dataplane consistently guards the permission to its maps by a nil

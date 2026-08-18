@@ -62,8 +62,15 @@
 // `verification/dependencies`) may import it without introducing an import
 // cycle, which Gobra rejects. As a consequence, a lemma whose signature mentions
 // a type or a predicate declared in another package Q cannot live here; it
-// belongs in Q instead, in a file named `perm-introspect.gobra`. See, for
-// instance, `verification/utils/slices/perm-introspect.gobra`.
+// belongs in Q instead, in a file named `perm-introspect.gobra`.
+//
+// Whenever possible, such a lemma should not be a new axiom, but should instead
+// be *proven* from the functions declared here. That is the case, for instance,
+// of `slices.PermIntrospectBytes`, which introspects the permission to a `Bytes`
+// predicate instance by unfolding it, introspecting the resulting permission to
+// the elements of the slice with `PermIntrospectBytes` below, and folding the
+// predicate back. Note that this makes `slices` a client of this package, so
+// importing `slices` from here would be a genuine import cycle.
 package permsintrospect
 
 ghost
@@ -111,9 +118,26 @@ func PermIntrospectUInt64(x *uint64) (p perm)
 
 // Introspects the permission to the slice header itself, not the permission to
 // the elements of the slice. To introspect the permission to the elements of a
-// `[]byte`, use `slices.PermIntrospectBytes` instead.
+// `[]byte`, use `PermIntrospectBytes` below.
 ghost
 requires acc(x, _)
 ensures  0 < p && acc(x, p)
 decreases
 func PermIntrospectByteSlice(x *[]byte) (p perm)
+
+// Introspects the permission to the elements of a byte slice in the range
+// [start, end). Unlike the functions above, which take a pointer, this one is
+// stated with a quantified permission, because that is how access to the
+// elements of a slice is expressed. A single amount `p` is returned for the
+// entire range, which is what makes this function usable to introspect the
+// permission to a predicate that abstracts over such a range, such as
+// `slices.Bytes`; `slices.PermIntrospectBytes` is proven from this function.
+ghost
+// the following precondition convinces Gobra that the indexing in the
+// quantifiers below is well-formed
+requires 0 <= start && start <= end && end <= cap(s)
+requires forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i], _)
+ensures  0 < p
+ensures  forall i int :: { &s[i] } start <= i && i < end ==> acc(&s[i], p)
+decreases
+func PermIntrospectBytes(s []byte, start int, end int) (p perm)
