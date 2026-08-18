@@ -1,0 +1,119 @@
+// Copyright 2026 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// Package permsintrospect provides *permission introspection*: given a wildcard
+// access `acc(x, _)`, the functions declared here name the permission amount that
+// is currently held, returning it as a symbolic value `p` about which nothing is
+// known except that it is positive.
+//
+// # Why this is needed
+//
+// A wildcard permission is enough to read a location, but several Gobra
+// operations insist on being given a permission *expression* and cannot be
+// applied with a wildcard, even when doing so would be perfectly sound. The most
+// common cases in this project are `copy`, `append`, and `range` loops. Before
+// this package existed, the codebase worked around the limitation by inhaling a
+// fixed permission amount whenever a wildcard was held, i.e. asserting
+// `acc(x, _)` and then inhaling `acc(x, R15)` to be able to name an amount.
+//
+// That workaround assumes strictly more than `acc(x, _)` justifies: it fixes a
+// concrete lower bound (here, R15) on the amount held, which nothing in the
+// program establishes, and the constant has to be picked so that it does not
+// clash with the other permissions to `x` that are floating around. Calling
+// `PermIntrospectInt(x)` instead assumes only what a wildcard already means, and
+// yields a symbolic amount `p` such that `0 < p` and `acc(x, p)` hold.
+//
+// # Trust
+//
+// The functions below have no body; they are axioms. They are semantically
+// justified: `acc(x, _)` denotes *some* positive permission amount, so a positive
+// `p` with `acc(x, p)` always exists. Viper simply has no way of binding that
+// amount to a program variable, which is the only reason why these functions
+// cannot be proven within the logic. Because `p` is a fresh symbolic constant
+// constrained only by `0 < p`, callers can never derive a concrete lower bound
+// from it, and in particular can never turn a read permission into a write
+// permission.
+//
+// Introspecting does not give up the wildcard that was introspected: exhaling a
+// wildcard leaves a positive amount behind, so `acc(x, _)` still holds after the
+// call, in addition to the freshly named `acc(x, p)`.
+//
+// # How to extend this file
+//
+// To support introspection for a type that is not listed below, add a function
+// following the same shape and name it `PermIntrospect` followed by the name of
+// the pointee type (e.g. `PermIntrospectInt` for `*int`).
+//
+// This package deliberately imports nothing, so that every other package
+// (including `slices`, `definitions`, and the stubs under
+// `verification/dependencies`) may import it without introducing an import
+// cycle, which Gobra rejects. As a consequence, a lemma whose signature mentions
+// a type or a predicate declared in another package Q cannot live here; it
+// belongs in Q instead, in a file named `perm-introspect.gobra`. See, for
+// instance, `verification/utils/slices/perm-introspect.gobra`.
+package permsintrospect
+
+ghost
+requires acc(x, _)
+ensures  0 < p && acc(x, p)
+decreases
+func PermIntrospectInt(x *int) (p perm)
+
+ghost
+requires acc(x, _)
+ensures  0 < p && acc(x, p)
+decreases
+func PermIntrospectBool(x *bool) (p perm)
+
+ghost
+requires acc(x, _)
+ensures  0 < p && acc(x, p)
+decreases
+func PermIntrospectString(x *string) (p perm)
+
+// Note that `byte` is an alias of `uint8`, so this function covers `*uint8` too.
+ghost
+requires acc(x, _)
+ensures  0 < p && acc(x, p)
+decreases
+func PermIntrospectByte(x *byte) (p perm)
+
+ghost
+requires acc(x, _)
+ensures  0 < p && acc(x, p)
+decreases
+func PermIntrospectUInt16(x *uint16) (p perm)
+
+ghost
+requires acc(x, _)
+ensures  0 < p && acc(x, p)
+decreases
+func PermIntrospectUInt32(x *uint32) (p perm)
+
+ghost
+requires acc(x, _)
+ensures  0 < p && acc(x, p)
+decreases
+func PermIntrospectUInt64(x *uint64) (p perm)
+
+// Introspects the permission to the slice header itself, not the permission to
+// the elements of the slice. To introspect the permission to the elements of a
+// `[]byte`, use `slices.PermIntrospectBytes` instead.
+ghost
+requires acc(x, _)
+ensures  0 < p && acc(x, p)
+decreases
+func PermIntrospectByteSlice(x *[]byte) (p perm)

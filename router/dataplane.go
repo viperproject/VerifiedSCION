@@ -1802,16 +1802,19 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	ifID := uint16(0)
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 
-	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission)
+	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission). We only hold a
+	// wildcard access to the map, so we introspect it to name the amount we already have instead of
+	// assuming a fixed one.
 	// (VerifiedSCION) TODO: Rewrite this to use regular loop instead to avoid complications with permissions.
 	// @ ghost m := p.d.internalNextHops
 	// @ assert m != nil ==> acc(m, _)
-	// @ inhale m != nil ==> acc(m, R19)
+	// @ ghost mPerm := PermIntrospectAddrsMap(m)
 
 	// @ invariant acc(&p.d, R20/2)
 	// @ invariant acc(&p.d.internalNextHops, _)
 	// @ invariant m === p.d.internalNextHops
-	// @ invariant m != nil ==> acc(m, R20)
+	// @ invariant 0 < mPerm
+	// @ invariant m != nil ==> acc(m, mPerm)
 	// @ invariant m != nil ==> forall a *net.UDPAddr :: { a elem range(m) } a elem range(m) ==> acc(a.Mem(), _)
 	// @ invariant acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 	// @ decreases len(p.d.internalNextHops) - len(keys)
@@ -1826,9 +1829,8 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 			break
 		}
 	}
-	// (VerifiedSCION) clean-up code to deal with range loop
-	// @ exhale m != nil ==> acc(m, R20)
-	// @ inhale m != nil ==> acc(m, _)
+	// (VerifiedSCION) No clean-up is needed after the range loop: introspecting the permission
+	// to `m` above did not consume the wildcard access to it, so `acc(m, _)` still holds here.
 
 	// @ assert acc(&p.d.bfdSessions, _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }

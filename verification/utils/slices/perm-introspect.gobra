@@ -1,0 +1,44 @@
+// Copyright 2026 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slices
+
+// Permission introspection for the predicates declared in this package.
+//
+// Ideally, the functions below would live in
+// `github.com/scionproto/scion/verification/utils/permsintrospect`, together with
+// all other permission introspection functions. That is not possible: their
+// signatures mention the predicates of this package, so `permsintrospect` would
+// have to import `slices`. `slices` sits at the very bottom of the dependency
+// graph of this project and must stay free to introspect permissions itself, so
+// the two packages would then import each other. Gobra rejects cyclical imports.
+//
+// The convention we follow is therefore: `permsintrospect` imports nothing and
+// only declares introspection functions for built-in types, while an
+// introspection function whose signature mentions a type or a predicate declared
+// in some other package Q lives in Q, in a file named `perm-introspect.gobra`.
+//
+// See the documentation of the `permsintrospect` package for why these functions
+// are axioms and what they may be assumed to provide.
+
+// How to extend this file: add one function per predicate declared in this
+// package, named `PermIntrospect` followed by the name of the predicate.
+
+ghost
+requires acc(Bytes(s, start, end), _)
+ensures  0 < p && acc(Bytes(s, start, end), p)
+decreases
+func PermIntrospectBytes(s []byte, start int, end int) (p perm)
