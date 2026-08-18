@@ -47,7 +47,7 @@ ensures  0 < p && acc(Bytes(s, start, end), p)
 decreases
 func PermIntrospectBytes(s []byte, start int, end int) (p perm) {
 	unfold acc(Bytes(s, start, end), _)
-	p = pi.PermIntrospectBytes(s, start, end)
+	p = pi.PermIntrospectBytesRange(s, start, end)
 	fold acc(Bytes(s, start, end), p)
 	return p
 }
