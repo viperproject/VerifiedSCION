@@ -120,15 +120,6 @@ ensures  0 < p && acc(x, p)
 decreases
 func PermIntrospectUInt64(x *uint64) (p perm)
 
-// Introspects the permission to the slice header itself, not the permission to
-// the elements of the slice. To introspect the permission to the elements of a
-// `[]byte`, use `PermIntrospectBytes` or `PermIntrospectBytesRange` below.
-ghost
-requires acc(x, _)
-ensures  0 < p && acc(x, p)
-decreases
-func PermIntrospectByteSlice(x *[]byte) (p perm)
-
 // Introspects the permission to a single element of a byte slice. Unlike the
 // functions above, which take a pointer, this one takes the slice and an index,
 // because that is how access to the elements of a slice is expressed.
