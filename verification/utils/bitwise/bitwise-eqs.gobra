@@ -170,6 +170,90 @@ ensures FUint32Spec(FPutUint32Spec0(v), FPutUint32Spec1(v), FPutUint32Spec2(v), 
 decreases
 func FUint32AfterFPutUint32(v uint32) {}
 
+/**** Bridging bitwise operations and arithmetic ****/
+
+// The solver copes badly with several independent bytes interacting inside one 32-bit word,
+// which is what a byte-wise round trip asks of it. The lemmas in this section each do one
+// small piece of bitvector reasoning in isolation; with them, the packing and unpacking of a
+// word become plain arithmetic on multiples of powers of two, which is cheap.
+
+// A shift left is a multiplication, as long as the bits shifted out are zero.
+ghost
+requires x < (1 << 8)
+ensures  x << 24 == x * (1 << 24)
+decreases
+func ShiftLeft24IsMul(x uint32) {}
+
+ghost
+requires x < (1 << 16)
+ensures  x << 16 == x * (1 << 16)
+decreases
+func ShiftLeft16IsMul(x uint32) {}
+
+ghost
+requires x < (1 << 24)
+ensures  x << 8 == x * (1 << 8)
+decreases
+func ShiftLeft8IsMul(x uint32) {}
+
+// A shift right is a division.
+ghost
+ensures v >> 24 == v / (1 << 24)
+decreases
+func ShiftRight24IsDiv(v uint32) {}
+
+ghost
+ensures v >> 16 == v / (1 << 16)
+decreases
+func ShiftRight16IsDiv(v uint32) {}
+
+ghost
+ensures v >> 8 == v / (1 << 8)
+decreases
+func ShiftRight8IsDiv(v uint32) {}
+
+// Narrowing to a byte is a remainder.
+ghost
+ensures uint32(byte(v)) == v % (1 << 8)
+decreases
+func ByteIsMod(v uint32) {}
+
+// When the operands occupy disjoint bit ranges, a disjunction is a sum.
+ghost
+requires x % (1 << 8) == 0 && y < (1 << 8)
+ensures  x | y == x + y
+ensures  y | x == x + y
+decreases
+func OrIsPlus8(x, y uint32) {}
+
+ghost
+requires x % (1 << 16) == 0 && y < (1 << 16)
+ensures  x | y == x + y
+ensures  y | x == x + y
+decreases
+func OrIsPlus16(x, y uint32) {}
+
+ghost
+requires x % (1 << 24) == 0 && y < (1 << 24)
+ensures  x | y == x + y
+ensures  y | x == x + y
+decreases
+func OrIsPlus24(x, y uint32) {}
+
+// The packed word, written arithmetically.
+ghost
+ensures FUint32Spec(b0, b1, b2, b3) ==
+	uint32(b0) * (1 << 24) + uint32(b1) * (1 << 16) + uint32(b2) * (1 << 8) + uint32(b3)
+decreases
+func FUint32SpecIsSum(b0, b1, b2, b3 byte) {
+	ShiftLeft8IsMul(uint32(b2))
+	ShiftLeft16IsMul(uint32(b1))
+	ShiftLeft24IsMul(uint32(b0))
+	OrIsPlus8(uint32(b2) << 8, uint32(b3))
+	OrIsPlus16(uint32(b1) << 16, uint32(b3) | uint32(b2) << 8)
+	OrIsPlus24(uint32(b0) << 24, uint32(b3) | uint32(b2) << 8 | uint32(b1) << 16)
+}
+
 // Reading a uint32 out of four bytes and serializing it back yields the original bytes.
 ghost
 ensures FPutUint32Spec0(FUint32Spec(b0, b1, b2, b3)) == b0
@@ -177,7 +261,18 @@ ensures FPutUint32Spec1(FUint32Spec(b0, b1, b2, b3)) == b1
 ensures FPutUint32Spec2(FUint32Spec(b0, b1, b2, b3)) == b2
 ensures FPutUint32Spec3(FUint32Spec(b0, b1, b2, b3)) == b3
 decreases
-func FPutUint32AfterFUint32(b0, b1, b2, b3 byte) {}
+func FPutUint32AfterFUint32(b0, b1, b2, b3 byte) {
+	// with the word written as a sum, extracting a byte is a division and a remainder
+	FUint32SpecIsSum(b0, b1, b2, b3)
+	v := FUint32Spec(b0, b1, b2, b3)
+	ShiftRight24IsDiv(v)
+	ShiftRight16IsDiv(v)
+	ShiftRight8IsDiv(v)
+	ByteIsMod(v >> 24)
+	ByteIsMod(v >> 16)
+	ByteIsMod(v >> 8)
+	ByteIsMod(v)
+}
 
 /**** Serialization of the SCION path meta header ****/
 
