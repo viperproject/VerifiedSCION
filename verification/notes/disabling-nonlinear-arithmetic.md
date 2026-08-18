@@ -152,12 +152,15 @@ plus `(* p1 p2) <= p2` when `p1 <= 1`, and the symmetric variant. Unlike the
 option above this is sound rather than an approximation, and costs nothing when
 NL is on. It would belong upstream in Silicon, gated on `disableNL`.
 
-Both mitigations fix the two smaller jobs under `--disableNL`:
+Both mitigations fix the two smaller jobs under `--disableNL`, and
+`unsafeWildcardOptimization` fixes `router` as well, so the approach is not
+limited to small proofs:
 
 | job | `--disableNL` | + `unsafeWildcardOptimization` | + preamble axioms |
 | --- | --- | --- | --- |
 | `private/underlay/conn` | FAIL (6) | PASS 40s | PASS 32s |
 | `verification` | FAIL (1) | PASS 98s | PASS 85s |
+| `router` | FAIL (8) | PASS 4442s | not measured |
 
 ## Performance
 
@@ -175,6 +178,24 @@ an idle machine, single sample each:
 | **total** | **688s** | **694s** | **655s** | **670s** |
 
 All cells pass. The spread is within single-sample noise on this machine.
+
+The router tells the same story. Switching non-linear arithmetic off does not
+make it cheaper -- the one configuration that both verifies and disables NL is
+slightly more expensive than what CI runs today:
+
+| router config | result | time |
+| --- | --- | --- |
+| current (NL on) | PASS | 4157s |
+| `--disableNL` | FAIL, 8 errors | 1264s (abandons members after the first error) |
+| `--disableNL --unsafeWildcardOptimization` | PASS | 4442s |
+
+Single samples, so +285s is better read as "no faster, perhaps a few percent
+slower" than as a precise figure. Either way there is no performance argument
+for disabling NL; the reasons to want it would be determinism or a stricter
+prover configuration.
+
+The run is also badly tail-bound: 9 of the 10 chop tasks finish in the first
+~20 minutes and one task accounts for the rest, in both configurations.
 
 ## Adopted configuration
 
