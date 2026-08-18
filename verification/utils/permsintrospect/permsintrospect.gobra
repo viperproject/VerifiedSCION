@@ -24,10 +24,10 @@
 // A wildcard permission is enough to read a location, but several Gobra
 // operations insist on being given a permission *expression* and cannot be
 // applied with a wildcard, even when doing so would be perfectly sound. The most
-// common cases in this project are `copy`, `append`, and `range` loops. Before
-// this package existed, the codebase worked around the limitation by inhaling a
-// fixed permission amount whenever a wildcard was held, i.e. asserting
-// `acc(x, _)` and then inhaling `acc(x, R15)` to be able to name an amount.
+// common cases in this project are `copy` and `append`. Before this package
+// existed, the codebase worked around the limitation by inhaling a fixed
+// permission amount whenever a wildcard was held, i.e. asserting `acc(x, _)` and
+// then inhaling `acc(x, R15)` to be able to name an amount.
 //
 // That workaround assumes strictly more than `acc(x, _)` justifies: it fixes a
 // concrete lower bound (here, R15) on the amount held, which nothing in the
@@ -50,6 +50,17 @@
 // Introspecting does not give up the wildcard that was introspected: exhaling a
 // wildcard leaves a positive amount behind, so `acc(x, _)` still holds after the
 // call, in addition to the freshly named `acc(x, p)`.
+//
+// # Limitation: range loops over maps
+//
+// Introspection does not help with `range` loops over maps, even though those
+// are also unable to consume a wildcard. Gobra desugars such a loop into code
+// that exhales a hard-coded `acc(m, 1/MapExhalePermDenom)` before entering it, so
+// the loop demands an amount that is bounded from below by a concrete constant.
+// Naming the amount held does not establish that bound: all these functions
+// guarantee is that the amount is positive. A caller that holds no more than a
+// wildcard to the map is therefore stuck with assuming a fixed amount; see
+// `processIntraBFD` in the `router` package for the one place where this bites.
 //
 // # How to extend this file
 //

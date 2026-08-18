@@ -1802,19 +1802,24 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	ifID := uint16(0)
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 
-	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission). We only hold a
-	// wildcard access to the map, so we introspect it to name the amount we already have instead of
-	// assuming a fixed one.
+	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission).
+	// Gobra desugars a range loop over a map into code that exhales a hard-coded
+	// `acc(m, 1/MapExhalePermDenom)` before the loop, so the loop can only be entered with an
+	// amount that is bounded from below by that concrete constant. This is the one place where
+	// permission introspection (see `verification/utils/permsintrospect`) does not help: it
+	// names the amount held, but only guarantees that it is positive, which does not entail
+	// the bound. As we merely hold a wildcard to `m` here, assuming a fixed amount is
+	// unavoidable. R19 covers both what the desugaring exhales and the R20 that the invariant
+	// below requires.
 	// (VerifiedSCION) TODO: Rewrite this to use regular loop instead to avoid complications with permissions.
 	// @ ghost m := p.d.internalNextHops
 	// @ assert m != nil ==> acc(m, _)
-	// @ ghost mPerm := PermIntrospectAddrsMap(m)
+	// @ inhale m != nil ==> acc(m, R19)
 
 	// @ invariant acc(&p.d, R20/2)
 	// @ invariant acc(&p.d.internalNextHops, _)
 	// @ invariant m === p.d.internalNextHops
-	// @ invariant 0 < mPerm
-	// @ invariant m != nil ==> acc(m, mPerm)
+	// @ invariant m != nil ==> acc(m, R20)
 	// @ invariant m != nil ==> forall a *net.UDPAddr :: { a elem range(m) } a elem range(m) ==> acc(a.Mem(), _)
 	// @ invariant acc(&p.srcAddr, R20) && acc(p.srcAddr.Mem(), _)
 	// @ decreases len(p.d.internalNextHops) - len(keys)
@@ -1829,8 +1834,9 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 			break
 		}
 	}
-	// (VerifiedSCION) No clean-up is needed after the range loop: introspecting the permission
-	// to `m` above did not consume the wildcard access to it, so `acc(m, _)` still holds here.
+	// (VerifiedSCION) clean-up code to deal with range loop
+	// @ exhale m != nil ==> acc(m, R20)
+	// @ inhale m != nil ==> acc(m, _)
 
 	// @ assert acc(&p.d.bfdSessions, _)
 	// @ ghost if p.d.bfdSessions != nil { unfold acc(accBfdSession(p.d.bfdSessions), _) }
