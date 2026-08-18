@@ -190,12 +190,17 @@ pure func SerializedToLine(m MetaHdr) uint32 {
 ghost
 decreases
 pure func DecodedFrom(line uint32) MetaHdr {
+	// Each field is narrowed to a byte *before* it is masked, exactly as the real decoder
+	// in scion.MetaHdr.DecodeFromBytes does. That keeps the masks at byte width, where the
+	// bitwise operations are far cheaper to interpret, and makes the terms here the same
+	// ones the decoding code produces -- under bounded-integer semantics each kind has its
+	// own bitwise helpers, so a fact about a uint32 mask would not apply to a byte one.
 	return MetaHdr{
 		CurrINF: byte(line >> 30),
-		CurrHF:  byte((line >> 24) & 0x3F),
-		SegLen0: byte((line >> 12) & 0x3F),
-		SegLen1: byte((line >> 6) & 0x3F),
-		SegLen2: byte(line & 0x3F),
+		CurrHF:  byte(line >> 24) & 0x3F,
+		SegLen0: byte(line >> 12) & 0x3F,
+		SegLen1: byte(line >> 6) & 0x3F,
+		SegLen2: byte(line) & 0x3F,
 	}
 }
 
