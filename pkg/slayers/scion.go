@@ -227,18 +227,18 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 // @ 	IsSupportedRawPkt(b.View()) == old(IsSupportedPkt(ubuf))
 // @ decreases
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
+	// (VerifiedSCION) Bounding the path length is what makes the sum below exact: without it,
+	// 'CmnHdrLen + AddrHdrLen() + Path.Len()' may overflow, and then nothing is known about
+	// scnLen, not even that it is at least CmnHdrLen. The bound cannot be a precondition,
+	// since *SCION must implement gopacket.SerializableLayer and an implementation may only
+	// weaken the interface's precondition; making it a conjunct of s.Mem would avoid the
+	// assumption, at the cost of discharging it at every fold of that predicate.
+	// @ assume s.PathLenSpec(ubuf) <= MaxHdrLen
 	// @ unfold acc(s.Mem(ubuf), R1)
 	// @ defer fold acc(s.Mem(ubuf), R1)
 	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(int(s.HdrLen)*LineLen), R10)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : int(s.HdrLen)*LineLen] @*/ )
 	// @ sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLenSpecInternal()), int(int(s.HdrLen)*LineLen), R10)
-	// (VerifiedSCION) Under bounded-integer semantics this sum can overflow to a negative
-	// value: path.Path.LenSpec only guarantees non-negativity. It cannot be bounded by a
-	// precondition here, because *SCION must implement gopacket.SerializableLayer and an
-	// implementation may only weaken the interface's precondition. Bounding it instead as
-	// a conjunct of s.Mem would avoid this assumption, at the cost of discharging it at
-	// every fold of that predicate.
-	// @ assume 0 <= scnLen
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
 			"max", MaxHdrLen, "actual", scnLen)
