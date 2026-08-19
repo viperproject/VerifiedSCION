@@ -1715,7 +1715,6 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ }
 		// @ unfold acc(p.d.Mem(), _)
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
-		// @ assert !(reveal slayers.IsSupportedPkt(p.rawPkt))
 		// @ assert sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
 		// @ assert path.Type(slayers.GetPathType(p.rawPkt)) == epic.PathType
 		// @ assert unfolding acc(p.scionLayer.Mem(p.rawPkt), R56) in slayers.CmnHdrLen <= len(p.rawPkt)
@@ -1974,7 +1973,6 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires p.scionLayer.EqPathType(p.rawPkt)
-// @ requires !slayers.IsSupportedPkt(p.rawPkt)
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
 // @ requires  (typeOf(p.scionLayer.GetPath(ub)) == *epic.Path) ==>
