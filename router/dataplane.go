@@ -4336,6 +4336,7 @@ func (p *scionPacketProcessor) process(
 	// @ 	absIO_valLemma(ub, p.ingressID)
 	// @ 	oldPkt = absIO_val(ub, p.ingressID).ValPkt_2
 	// @ } else {
+	// @ 	AbsUnsupportedPktIsUnsupportedVal(ub, p.ingressID)
 	// @ 	absPktFutureLemma(ub)
 	// @ 	oldPkt = absPkt(ub)
 	// @ }
