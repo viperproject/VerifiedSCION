@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Configuration flows from topology.json through control.IACtx.Configure into the DataPlane forwarding state; Run then spawns one read goroutine per interface plus the BFD sessions.">
+  <title>Border router startup and goroutines</title>
+  <desc>Configuration flows from topology.json through control.IACtx.Configure into the DataPlane forwarding state; Run then spawns one read goroutine per interface plus the BFD sessions.</desc>
+  <rect x="0" y="0" width="1600" height="900" rx="0" fill="#ffffff"/>
+  <text x="70" y="52" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="26" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">Startup: configure the DataPlane, then Run() spawns one receive loop per interface</text>
+  <text x="70" y="80" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">router/cmd/router/main.go  ·  router/control  ·  router/dataplane.go</text>
+  <line x1="70" y1="96" x2="1530" y2="96" stroke="#d7dfea" stroke-width="1.4"/>
+  <rect x="50" y="130" width="250" height="96" rx="10" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.6"/>
+  <text x="63" y="154.8" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">main() → realMain(ctx)</text>
+  <text x="63" y="173.4" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">router/cmd/router/main.go</text>
+  <text x="63" y="190.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">an errgroup owns every</text>
+  <text x="63" y="207" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">long-running task</text>
+  <polyline points="300,178 329,178" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="338,178 329,173.9 329,182.1" fill="#8fa0b8"/>
+  <rect x="340" y="130" width="300" height="118" rx="10" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.6"/>
+  <text x="353" y="154.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">control.LoadConfig(id, confDir)</text>
+  <text x="353" y="173" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">topology.json → interfaces,</text>
+  <text x="353" y="189.8" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">  neighbours, link types,</text>
+  <text x="353" y="206.6" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">  sibling BRs, services</text>
+  <text x="353" y="223.3" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">keys/master0.key → DeriveHFMacKey</text>
+  <polyline points="640,178 669,178" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="678,178 669,173.9 669,182.1" fill="#8fa0b8"/>
+  <rect x="680" y="130" width="300" height="220" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
+  <text x="693" y="154.8" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">control.IACtx.Configure()</text>
+  <text x="693" y="171.8" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">ConfigDataplane(dp, cfg) calls, in order:</text>
+  <text x="693" y="190.4" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">SetIA(ia)</text>
+  <text x="693" y="206.5" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">SetKey(masterKey)</text>
+  <text x="693" y="222.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">AddInternalInterface(conn, ip)</text>
+  <text x="693" y="238.7" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">AddExternalInterface(ifID, conn)</text>
+  <text x="693" y="254.8" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">AddNeighborIA(ifID, ia)</text>
+  <text x="693" y="270.9" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">AddLinkType(ifID, linkTo)</text>
+  <text x="693" y="287" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">AddNextHop(ifID, siblingBR)</text>
+  <text x="693" y="303.1" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">AddSvc(svc, addr)</text>
+  <text x="693" y="319.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">AddExternalInterfaceBFD(...)</text>
+  <text x="693" y="335.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">AddNextHopBFD(...)</text>
+  <polyline points="980,178 1009,178" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1018,178 1009,173.9 1009,182.1" fill="#8fa0b8"/>
+  <rect x="1020" y="130" width="530" height="244" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="1033" y="155.6" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="15" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">DataPlane — the forwarding state</text>
+  <text x="1033" y="172.6" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">d.mtx guards it; every setter refuses to run once d.running is true</text>
+  <text x="1033" y="192.1" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">external          map[uint16]BatchConn</text>
+  <text x="1033" y="209.1" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">internal          BatchConn</text>
+  <text x="1033" y="226.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">internalNextHops  map[uint16]*net.UDPAddr</text>
+  <text x="1033" y="243.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">neighborIAs       map[uint16]addr.IA</text>
+  <text x="1033" y="260.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">linkTypes         map[uint16]topology.LinkType</text>
+  <text x="1033" y="277.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">svc               *services</text>
+  <text x="1033" y="294.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">macFactory        func() hash.Hash</text>
+  <text x="1033" y="311.4" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">bfdSessions       map[uint16]bfdSession</text>
+  <text x="1033" y="328.4" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">localIA, internalIP, running</text>
+  <text x="1033" y="345.4" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">forwardingMetrics map[uint16]forwardingMetrics</text>
+  <polyline points="1285,374 1285,442 255,442 255,473" fill="none" stroke="#8fa0b8" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="255,482 259.1,473 250.9,473" fill="#8fa0b8"/>
+  <text x="770" y="434" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">configuration complete → DataPlane.Run(ctx)</text>
+  <rect x="50" y="482" width="420" height="250" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="63" y="509.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="17" fill="#0f3d22" text-anchor="start" font-weight="700" xml:space="preserve">DataPlane.Run(ctx)</text>
+  <text x="63" y="526.3" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">router/dataplane.go</text>
+  <text x="63" y="546.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">d.mtx.Lock(); d.running = true</text>
+  <text x="63" y="567.8" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">d.initMetrics()</text>
+  <text x="63" y="589.1" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">spawn the goroutines →</text>
+  <text x="63" y="610.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">d.mtx.Unlock()</text>
+  <text x="63" y="631.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">&lt;-ctx.Done()   // park until shutdown</text>
+  <line x1="63" y1="678.5" x2="457" y2="678.5" stroke="#cfd8e4" stroke-width="1.2"/>
+  <text x="63" y="699" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">Run() never touches a packet itself — it only starts</text>
+  <text x="63" y="720.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the loops and then blocks until the context is cancelled.</text>
+  <text x="530" y="508" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">goroutines started by Run()</text>
+  <rect x="530" y="530" width="500" height="84" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="543" y="554.8" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">go read(ifID, d.external[ifID])</text>
+  <text x="543" y="571.1" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">one per external interface · packets from a neighbour AS</text>
+  <rect x="530" y="634" width="500" height="84" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="543" y="658.8" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">go read(0, d.internal)</text>
+  <text x="543" y="675.1" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">exactly one · packets from inside the local AS</text>
+  <rect x="530" y="738" width="500" height="84" rx="10" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.6"/>
+  <text x="543" y="762.8" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#0b3b36" text-anchor="start" font-weight="700" xml:space="preserve">go bfdSession.Run(ctx)</text>
+  <text x="543" y="779.1" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">one per BFD session · liveness of links and sibling BRs</text>
+  <polyline points="470,572 521,572" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="530,572 521,568 521,576" fill="#7c3aed"/>
+  <polyline points="470,632 500,632 500,676 521,676" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="530,676 521,672 521,680" fill="#7c3aed"/>
+  <polyline points="470,692 500,692 500,780 521,780" fill="none" stroke="#0d9488" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="530,780 521,776 521,784" fill="#0d9488"/>
+  <rect x="1058" y="496" width="492" height="330" rx="12" fill="#fbfcfe" stroke="#c3cedd" stroke-width="1.4" stroke-dasharray="6 5"/>
+  <text x="1070" y="508" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">also started by realMain()'s errgroup</text>
+  <rect x="1070" y="530" width="468" height="84" rx="10" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.6"/>
+  <text x="1083" y="554.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">go Metrics.ServePrometheus(ctx)</text>
+  <text x="1083" y="570.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">scrape endpoint for the forwarding counters</text>
+  <rect x="1070" y="634" width="468" height="84" rx="10" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.6"/>
+  <text x="1083" y="658.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">go mgmtServer.ListenAndServe()</text>
+  <text x="1083" y="674.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">management API /api/v1: interfaces, config, log level</text>
+  <rect x="1070" y="738" width="468" height="84" rx="10" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.6"/>
+  <text x="1083" y="762.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">go cleanup.Do()</text>
+  <text x="1083" y="778.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">on ctx.Done(): close the management server</text>
+  <text x="530" y="858" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">Each read goroutine owns 64 receive buffers of 9000 B and one scionPacketProcessor, so the packet path allocates nothing.</text>
+</svg>

@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="After the ingress checks, process() delivers locally when DstIA is the local AS, otherwise it validates the cross-over and egress link and picks the external socket, the internal socket toward a sibling border router, or an SCMP error.">
+  <title>process(): the forwarding decision</title>
+  <desc>After the ingress checks, process() delivers locally when DstIA is the local AS, otherwise it validates the cross-over and egress link and picks the external socket, the internal socket toward a sibling border router, or an SCMP error.</desc>
+  <rect x="0" y="0" width="1600" height="900" rx="0" fill="#ffffff"/>
+  <text x="70" y="52" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="26" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">process(): where the packet goes</text>
+  <text x="70" y="80" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">The destination ISD-AS decides local delivery; otherwise the hop field's egress interface decides which socket the packet leaves on.</text>
+  <line x1="70" y1="96" x2="1530" y2="96" stroke="#d7dfea" stroke-width="1.4"/>
+  <rect x="560" y="112" width="480" height="48" rx="9" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="800" y="141.1" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14.5" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">the ingress checks passed</text>
+  <polyline points="800,160 800,181" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="800,190 804,181 796,181" fill="#8fa0b8"/>
+  <rect x="560" y="190" width="480" height="60" rx="9" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="800" y="225.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="16" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">p.scionLayer.DstIA == p.d.localIA ?</text>
+  <polyline points="560,220 350,220 350,259" fill="none" stroke="#16a34a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="350,268 354.1,259 345.9,259" fill="#16a34a"/>
+  <text x="470" y="210" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#16a34a" text-anchor="middle" font-weight="700" xml:space="preserve">yes</text>
+  <polyline points="1040,220 1120,220 1120,259" fill="none" stroke="#8fa0b8" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1120,268 1124,259 1116,259" fill="#8fa0b8"/>
+  <text x="1082" y="210" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#5b6b85" text-anchor="middle" font-weight="700" xml:space="preserve">no</text>
+  <rect x="70" y="270" width="570" height="246" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="83" y="296.4" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="16" fill="#0f3d22" text-anchor="start" font-weight="700" xml:space="preserve">Inbound — deliver inside this AS</text>
+  <text x="83" y="313.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">resolveInbound() → d.resolveLocalDst(&amp;p.scionLayer)</text>
+  <text x="83" y="332.9" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">a service address (CS, DS, ...):</text>
+  <text x="83" y="350.4" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">    d.svc.Any(svc.Base()) picks a registered instance</text>
+  <text x="83" y="368" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">a host address:</text>
+  <text x="83" y="385.5" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">    the host IP plus the fixed end-host port (topology.EndhostPort)</text>
+  <text x="83" y="420.5" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">result = { OutConn: d.internal, OutAddr: host, OutPkt: p.rawPkt }</text>
+  <text x="83" y="438" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">the path is not advanced — this router is the last hop</text>
+  <line x1="83" y1="487.5" x2="627" y2="487.5" stroke="#e9b7b7" stroke-width="1.2"/>
+  <text x="83" y="507.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">no registered SVC backend → SCMP DestinationUnreachable / NoRoute</text>
+  <rect x="70" y="532" width="570" height="74" rx="10" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.6"/>
+  <text x="83" y="556.3" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">how an SCMP error gets back</text>
+  <text x="83" y="575.8" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">packSCMP() returns an scmpError; the forwarding loop then sets</text>
+  <text x="83" y="593.3" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">OutAddr = srcAddr and OutConn = the ingress socket.</text>
+  <rect x="700" y="270" width="830" height="74" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
+  <text x="713" y="295.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">p.path.IsXover() ?</text>
+  <text x="713" y="315" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">yes → doXover(): move to the next path segment and set segmentChange, then re-run validateHopExpiry and verifyCurrentMAC on the new hop field</text>
+  <rect x="700" y="356" width="830" height="116" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
+  <text x="713" y="381.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">validateEgressID()</text>
+  <text x="713" y="398.6" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the (ingress link type → egress link type) pair must be allowed</text>
+  <text x="713" y="418.1" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">inside one segment:  internal → external,  core → core,  child → parent,  parent → child</text>
+  <text x="713" y="435.6" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">across a segment switch:  core → child,  child → core,  child → child</text>
+  <line x1="713" y1="443.5" x2="1517" y2="443.5" stroke="#e9b7b7" stroke-width="1.2"/>
+  <text x="713" y="463.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">otherwise → SCMP ParameterProblem / InvalidPath or InvalidSegmentChange</text>
+  <rect x="700" y="484" width="830" height="86" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
+  <text x="713" y="509.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">handleEgressRouterAlert()   ·   validateEgressUp()</text>
+  <text x="713" y="529" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">answer a traceroute aimed at the egress interface, then check its BFD session</text>
+  <line x1="713" y1="541.5" x2="1517" y2="541.5" stroke="#e9b7b7" stroke-width="1.2"/>
+  <text x="713" y="561.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">session down → SCMP ExternalInterfaceDown or InternalConnectivityDown</text>
+  <polyline points="1115,344 1115,345" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1115,354 1119,345 1111,345" fill="#8fa0b8"/>
+  <polyline points="1115,472 1115,473" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1115,482 1119,473 1111,473" fill="#8fa0b8"/>
+  <rect x="700" y="582" width="830" height="42" rx="8" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.5"/>
+  <text x="1115" y="608.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">egressID := p.egressInterface()</text>
+  <polyline points="1115,570 1115,571" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1115,580 1119,571 1111,571" fill="#8fa0b8"/>
+  <polyline points="1115,624 1115,629" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1115,638 1119,629 1111,629" fill="#8fa0b8"/>
+  <line x1="305" y1="638" x2="1295" y2="638" stroke="#8fa0b8" stroke-width="2"/>
+  <polyline points="305,638 305,651" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="305,660 309.1,651 300.9,651" fill="#8fa0b8"/>
+  <rect x="70" y="662" width="470" height="208" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="83" y="688" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="15.5" fill="#0f3d22" text-anchor="start" font-weight="700" xml:space="preserve">Outbound  ·  BR transit</text>
+  <text x="83" y="705.1" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">egressID is in d.external</text>
+  <text x="83" y="724.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">processEgress():</text>
+  <text x="83" y="741.9" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">   if infoField.ConsDir → UpdateSegID(hopField.Mac)</text>
+  <text x="83" y="759.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">   p.path.IncPath()  — advance to the next hop field</text>
+  <text x="83" y="777.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">scion.Raw writes both back into p.rawPkt in place</text>
+  <text x="83" y="812.7" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">result = { EgressID: egressID,</text>
+  <text x="83" y="830.4" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">           OutConn:  d.external[egressID],</text>
+  <text x="83" y="848.1" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">           OutPkt:   p.rawPkt }</text>
+  <polyline points="800,638 800,651" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="800,660 804,651 796,651" fill="#8fa0b8"/>
+  <rect x="565" y="662" width="470" height="208" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="578" y="688" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="15.5" fill="#0f3d22" text-anchor="start" font-weight="700" xml:space="preserve">AS transit</text>
+  <text x="578" y="705.1" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">egressID is in d.internalNextHops</text>
+  <text x="578" y="724.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">the egress interface belongs to a sibling border</text>
+  <text x="578" y="741.9" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">router in this AS, so the packet crosses the AS</text>
+  <text x="578" y="759.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">on the internal network first</text>
+  <text x="578" y="795" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">result = { OutConn: d.internal,</text>
+  <text x="578" y="812.7" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">           OutAddr: the sibling BR's underlay addr,</text>
+  <text x="578" y="830.4" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">           OutPkt:  p.rawPkt }</text>
+  <text x="578" y="848.1" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">the path is not advanced — the sibling BR does it</text>
+  <polyline points="1295,638 1295,651" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1295,660 1299,651 1291,651" fill="#8fa0b8"/>
+  <rect x="1060" y="662" width="470" height="208" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="1.6"/>
+  <text x="1073" y="688" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="15.5" fill="#a51c1c" text-anchor="start" font-weight="700" xml:space="preserve">unknown egress interface</text>
+  <text x="1073" y="705.1" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">in neither map</text>
+  <text x="1073" y="724.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">SCMP ParameterProblem with</text>
+  <text x="1073" y="741.9" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">   UnknownHopFieldEgress   (ConsDir)</text>
+  <text x="1073" y="759.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">   UnknownHopFieldIngress  (against ConsDir)</text>
+  <text x="1073" y="777.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">cause: cannotRoute</text>
+  <text x="1073" y="812.7" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">the packet is dropped and the SCMP error is</text>
+  <text x="1073" y="830.4" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="11.8" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">returned to the sender</text>
+</svg>

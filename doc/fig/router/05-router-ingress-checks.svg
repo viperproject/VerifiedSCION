@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="The nine ordered ingress checks in process(), each with the SCMP error or the silent drop it produces on failure.">
+  <title>process(): ingress validation chain</title>
+  <desc>The nine ordered ingress checks in process(), each with the SCMP error or the silent drop it produces on failure.</desc>
+  <rect x="0" y="0" width="1600" height="900" rx="0" fill="#ffffff"/>
+  <text x="70" y="52" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="26" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">process(): the ingress checks, in order</text>
+  <text x="70" y="80" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">Each step either returns cleanly and the chain continues, or it ends the packet — with an SCMP error built by packSCMP(), or with a silent drop.</text>
+  <line x1="70" y1="96" x2="1530" y2="96" stroke="#d7dfea" stroke-width="1.4"/>
+  <text x="52" y="118" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">in order</text>
+  <polyline points="52,128 52,797" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="52,806 56,797 48,797" fill="#8fa0b8"/>
+  <rect x="70" y="128" width="750" height="64" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <line x1="52" y1="160" x2="68" y2="160" stroke="#8fa0b8" stroke-width="1.4"/>
+  <circle cx="96" cy="160" r="13" fill="#dc2626"/>
+  <text x="96" y="164.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="700" xml:space="preserve">1</text>
+  <text x="122" y="154" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">parsePath()</text>
+  <text x="122" y="172" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">read CurrINF / CurrHF and load p.hopField and p.infoField from the raw path</text>
+  <polyline points="820,160 848,160" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="856,160 848,156.4 848,163.6" fill="#dc2626"/>
+  <rect x="860" y="128" width="670" height="64" rx="9" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="878" y="152" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#a51c1c" text-anchor="start" font-weight="700" xml:space="preserve">ends the packet</text>
+  <text x="878" y="173" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">malformedPath — dropped, no SCMP</text>
+  <rect x="70" y="206" width="750" height="64" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <line x1="52" y1="238" x2="68" y2="238" stroke="#8fa0b8" stroke-width="1.4"/>
+  <circle cx="96" cy="238" r="13" fill="#dc2626"/>
+  <text x="96" y="242.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="700" xml:space="preserve">2</text>
+  <text x="122" y="232" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">validateHopExpiry()</text>
+  <text x="122" y="250" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the hop field's ExpTime, relative to the info field timestamp, against now</text>
+  <polyline points="820,238 848,238" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="856,238 848,234.4 848,241.6" fill="#dc2626"/>
+  <rect x="860" y="206" width="670" height="64" rx="9" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="878" y="230" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#a51c1c" text-anchor="start" font-weight="700" xml:space="preserve">ends the packet</text>
+  <text x="878" y="251" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">SCMP ParameterProblem / PathExpired</text>
+  <rect x="70" y="284" width="750" height="64" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <line x1="52" y1="316" x2="68" y2="316" stroke="#8fa0b8" stroke-width="1.4"/>
+  <circle cx="96" cy="316" r="13" fill="#dc2626"/>
+  <text x="96" y="320.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="700" xml:space="preserve">3</text>
+  <text x="122" y="310" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">validateIngressID()</text>
+  <text x="122" y="328" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the hop field's ConsIngress (ConsEgress against construction direction) must be the</text>
+  <text x="122" y="343" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">interface the packet arrived on</text>
+  <polyline points="820,316 848,316" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="856,316 848,312.4 848,319.6" fill="#dc2626"/>
+  <rect x="860" y="284" width="670" height="64" rx="9" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="878" y="308" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#a51c1c" text-anchor="start" font-weight="700" xml:space="preserve">ends the packet</text>
+  <text x="878" y="329" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">SCMP ParameterProblem / UnknownHopFieldIngress | UnknownHopFieldEgress</text>
+  <rect x="70" y="362" width="750" height="64" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <line x1="52" y1="394" x2="68" y2="394" stroke="#8fa0b8" stroke-width="1.4"/>
+  <circle cx="96" cy="394" r="13" fill="#dc2626"/>
+  <text x="96" y="398.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="700" xml:space="preserve">4</text>
+  <text x="122" y="388" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">validatePktLen()</text>
+  <text x="122" y="406" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the SCION PayloadLen must match the number of bytes actually received</text>
+  <polyline points="820,394 848,394" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="856,394 848,390.4 848,397.6" fill="#dc2626"/>
+  <rect x="860" y="362" width="670" height="64" rx="9" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="878" y="386" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#a51c1c" text-anchor="start" font-weight="700" xml:space="preserve">ends the packet</text>
+  <text x="878" y="407" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">SCMP ParameterProblem / InvalidPacketSize</text>
+  <rect x="70" y="440" width="750" height="64" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <line x1="52" y1="472" x2="68" y2="472" stroke="#8fa0b8" stroke-width="1.4"/>
+  <circle cx="96" cy="472" r="13" fill="#dc2626"/>
+  <text x="96" y="476.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="700" xml:space="preserve">5</text>
+  <text x="122" y="466" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">validateTransitUnderlaySrc()</text>
+  <text x="122" y="484" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">a transit packet arriving on the internal interface must come from the sibling BR</text>
+  <text x="122" y="499" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">that owns the packet's ingress interface</text>
+  <polyline points="820,472 848,472" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="856,472 848,468.4 848,475.6" fill="#dc2626"/>
+  <rect x="860" y="440" width="670" height="64" rx="9" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="878" y="464" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#a51c1c" text-anchor="start" font-weight="700" xml:space="preserve">ends the packet</text>
+  <text x="878" y="485" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">invalidSrcAddrForTransit — dropped, no SCMP</text>
+  <rect x="70" y="518" width="750" height="64" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <line x1="52" y1="550" x2="68" y2="550" stroke="#8fa0b8" stroke-width="1.4"/>
+  <circle cx="96" cy="550" r="13" fill="#dc2626"/>
+  <text x="96" y="554.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="700" xml:space="preserve">6</text>
+  <text x="122" y="544" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">validateSrcDstIA()</text>
+  <text x="122" y="562" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">outbound: the first hop must have a local SrcIA and DstIA must not be local;</text>
+  <text x="122" y="577" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">inbound: SrcIA must not be local, and IsLastHop() must agree with a local DstIA</text>
+  <polyline points="820,550 848,550" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="856,550 848,546.4 848,553.6" fill="#dc2626"/>
+  <rect x="860" y="518" width="670" height="64" rx="9" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="878" y="542" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#a51c1c" text-anchor="start" font-weight="700" xml:space="preserve">ends the packet</text>
+  <text x="878" y="563" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">SCMP ParameterProblem / InvalidSourceAddress | InvalidDestinationAddress</text>
+  <rect x="70" y="596" width="750" height="64" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <line x1="52" y1="628" x2="68" y2="628" stroke="#8fa0b8" stroke-width="1.4"/>
+  <circle cx="96" cy="628" r="13" fill="#9aabc2"/>
+  <text x="96" y="632.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="700" xml:space="preserve">7</text>
+  <text x="122" y="622" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">updateNonConsDirIngressSegID()</text>
+  <text x="122" y="640" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">against construction direction, and not from inside the AS: SegID is updated with</text>
+  <text x="122" y="655" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the current hop field's MAC before it is checked</text>
+  <polyline points="820,628 848,628" fill="none" stroke="#9aabc2" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="856,628 848,624.4 848,631.6" fill="#9aabc2"/>
+  <rect x="860" y="596" width="670" height="64" rx="9" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.5"/>
+  <text x="878" y="620" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">continues</text>
+  <text x="878" y="641" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">no failure path — it only rewrites the info field</text>
+  <rect x="70" y="674" width="750" height="64" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <line x1="52" y1="706" x2="68" y2="706" stroke="#8fa0b8" stroke-width="1.4"/>
+  <circle cx="96" cy="706" r="13" fill="#dc2626"/>
+  <text x="96" y="710.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="700" xml:space="preserve">8</text>
+  <text x="122" y="700" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">verifyCurrentMAC()</text>
+  <text x="122" y="718" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">AES-CMAC over the info field and the hop field with the AS hop-field key, compared</text>
+  <text x="122" y="733" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">in constant time; the full MAC is cached for EPIC</text>
+  <polyline points="820,706 848,706" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="856,706 848,702.4 848,709.6" fill="#dc2626"/>
+  <rect x="860" y="674" width="670" height="64" rx="9" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="878" y="698" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#a51c1c" text-anchor="start" font-weight="700" xml:space="preserve">ends the packet</text>
+  <text x="878" y="719" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">SCMP ParameterProblem / InvalidHopFieldMAC</text>
+  <rect x="70" y="752" width="750" height="64" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <line x1="52" y1="784" x2="68" y2="784" stroke="#8fa0b8" stroke-width="1.4"/>
+  <circle cx="96" cy="784" r="13" fill="#2563eb"/>
+  <text x="96" y="788.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#ffffff" text-anchor="middle" font-weight="700" xml:space="preserve">9</text>
+  <text x="122" y="778" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">handleIngressRouterAlert()</text>
+  <text x="122" y="796" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.8" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">if the ingress router-alert flag is set for this direction: clear it and answer</text>
+  <polyline points="820,784 848,784" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="856,784 848,780.4 848,787.6" fill="#2563eb"/>
+  <rect x="860" y="752" width="670" height="64" rx="9" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="878" y="776" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">answered here</text>
+  <text x="878" y="797" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">SCMP traceroute reply, returned to srcAddr</text>
+  <rect x="70" y="836" width="1460" height="50" rx="9" fill="#dcfce7" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="800" y="867" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="15" fill="#0f3d22" text-anchor="middle" font-weight="700" xml:space="preserve">all nine checks passed  →  where does the packet go?  (diagram 6)</text>
+</svg>

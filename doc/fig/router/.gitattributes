@@ -1,0 +1,4 @@
+# The repository root sets "* text eol=lf", which rewrites CRLF byte pairs
+# inside binary files and corrupts them. Opt these out.
+*.png  binary
+*.pptx binary

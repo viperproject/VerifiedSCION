@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Crossbar view of a SCION border router: external and internal interfaces feed a single per-packet pipeline, which routes inbound, outbound, BR transit and AS transit traffic.">
+  <title>SCION border router at a glance</title>
+  <desc>Crossbar view of a SCION border router: external and internal interfaces feed a single per-packet pipeline, which routes inbound, outbound, BR transit and AS transit traffic.</desc>
+  <rect x="0" y="0" width="1600" height="900" rx="0" fill="#ffffff"/>
+  <text x="70" y="52" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="26" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">The SCION border router at a glance</text>
+  <text x="70" y="80" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">One process per border router, one UDP/IP socket per interface. Every packet enters on one interface, is validated, and leaves on the interface named by its hop field.</text>
+  <line x1="70" y1="96" x2="1530" y2="96" stroke="#d7dfea" stroke-width="1.4"/>
+  <rect x="250" y="132" width="1100" height="480" rx="16" fill="#fbfcfe" stroke="#c3cedd" stroke-width="1.8"/>
+  <text x="800" y="160" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14.5" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">border router process  ·  router/cmd/router → router.DataPlane</text>
+  <text x="415" y="205" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="middle" font-weight="700" xml:space="preserve">ingress</text>
+  <text x="1185" y="205" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="middle" font-weight="700" xml:space="preserve">egress</text>
+  <rect x="290" y="250" width="250" height="54" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="415" y="276" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">ext ifID 1</text>
+  <text x="415" y="292" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">socket to a neighbour AS</text>
+  <rect x="1060" y="250" width="250" height="54" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="1185" y="276" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">ext ifID 1</text>
+  <text x="1185" y="292" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">socket to a neighbour AS</text>
+  <rect x="290" y="340" width="250" height="54" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="415" y="366" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">ext ifID 2</text>
+  <text x="415" y="382" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">socket to a neighbour AS</text>
+  <rect x="1060" y="340" width="250" height="54" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="1185" y="366" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">ext ifID 2</text>
+  <text x="1185" y="382" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">socket to a neighbour AS</text>
+  <rect x="290" y="470" width="250" height="54" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.5"/>
+  <text x="415" y="496" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#0b3b36" text-anchor="middle" font-weight="700" xml:space="preserve">internal ifID 0</text>
+  <text x="415" y="512" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">socket inside the local AS</text>
+  <rect x="1060" y="470" width="250" height="54" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.5"/>
+  <text x="1185" y="496" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14" fill="#0b3b36" text-anchor="middle" font-weight="700" xml:space="preserve">internal ifID 0</text>
+  <text x="1185" y="512" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">socket inside the local AS</text>
+  <rect x="690" y="218" width="220" height="356" rx="14" fill="#dbeafe" stroke="#2563eb" stroke-width="1.8"/>
+  <text x="800" y="250" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15.5" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">processPkt()</text>
+  <text x="800" y="272" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">→ process()</text>
+  <line x1="706" y1="288" x2="894" y2="288" stroke="#9dbcf2" stroke-width="1.2"/>
+  <text x="800" y="538" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">one goroutine</text>
+  <text x="800" y="554" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">per ingress interface</text>
+  <polyline points="540,271 700,271 890,491 1050,491" fill="none" stroke="#16a34a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1060,491 1050,486.5 1050,495.5" fill="#16a34a"/>
+  <polyline points="540,283 700,283 890,355 1050,355" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1060,355 1050,350.5 1050,359.5" fill="#7c3aed"/>
+  <polyline points="540,379 700,379 890,503 1050,503" fill="none" stroke="#ea580c" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1060,503 1050,498.5 1050,507.5" fill="#ea580c"/>
+  <polyline points="540,491 700,491 890,367 1050,367" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1060,367 1050,362.5 1050,371.5" fill="#2563eb"/>
+  <rect x="40" y="250" width="190" height="54" rx="8" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <text x="135" y="276" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">Neighbour AS</text>
+  <text x="135" y="292" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">1-ff00:0:110 (parent link)</text>
+  <rect x="1370" y="250" width="190" height="54" rx="8" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <text x="1465" y="276" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">Neighbour AS</text>
+  <text x="1465" y="292" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">1-ff00:0:110 (parent link)</text>
+  <polyline points="230,277 280,277" fill="none" stroke="#8fa0b8" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="288,277 280,273.4 280,280.6" fill="#8fa0b8"/>
+  <polyline points="1312,277 1360,277" fill="none" stroke="#8fa0b8" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1368,277 1360,273.4 1360,280.6" fill="#8fa0b8"/>
+  <rect x="40" y="340" width="190" height="54" rx="8" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <text x="135" y="366" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">Neighbour AS</text>
+  <text x="135" y="382" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">1-ff00:0:112 (child link)</text>
+  <rect x="1370" y="340" width="190" height="54" rx="8" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <text x="1465" y="366" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">Neighbour AS</text>
+  <text x="1465" y="382" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">1-ff00:0:112 (child link)</text>
+  <polyline points="230,367 280,367" fill="none" stroke="#8fa0b8" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="288,367 280,363.4 280,370.6" fill="#8fa0b8"/>
+  <polyline points="1312,367 1360,367" fill="none" stroke="#8fa0b8" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1368,367 1360,363.4 1360,370.6" fill="#8fa0b8"/>
+  <rect x="40" y="470" width="190" height="54" rx="8" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <text x="135" y="496" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">Local AS</text>
+  <text x="135" y="512" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">end hosts · sibling BRs · CS</text>
+  <rect x="1370" y="470" width="190" height="54" rx="8" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <text x="1465" y="496" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">Local AS</text>
+  <text x="1465" y="512" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">end hosts · sibling BRs · CS</text>
+  <polyline points="230,497 280,497" fill="none" stroke="#8fa0b8" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="288,497 280,493.4 280,500.6" fill="#8fa0b8"/>
+  <polyline points="1312,497 1360,497" fill="none" stroke="#8fa0b8" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1368,497 1360,493.4 1360,500.6" fill="#8fa0b8"/>
+  <text x="70" y="664" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="15" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">four traffic patterns — process() picks the route through the crossbar</text>
+  <line x1="70" y1="690" x2="1530" y2="690" stroke="#d7dfea" stroke-width="1.2"/>
+  <rect x="70" y="712" width="30" height="11" rx="3" fill="#16a34a"/>
+  <text x="116" y="722" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">Inbound</text>
+  <text x="250" y="722" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">ext ifID N → internal ifID 0 → end host</text>
+  <text x="700" y="722" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">DstIA == d.localIA  →  resolveInbound() → resolveLocalDst()</text>
+  <line x1="70" y1="734" x2="1530" y2="734" stroke="#e6ebf2" stroke-width="1"/>
+  <rect x="70" y="756" width="30" height="11" rx="3" fill="#2563eb"/>
+  <text x="116" y="766" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">Outbound</text>
+  <text x="250" y="766" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">internal ifID 0 → ext ifID N</text>
+  <text x="700" y="766" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">ingressID == 0  and  egressID in d.external  → processEgress()</text>
+  <line x1="70" y1="778" x2="1530" y2="778" stroke="#e6ebf2" stroke-width="1"/>
+  <rect x="70" y="800" width="30" height="11" rx="3" fill="#7c3aed"/>
+  <text x="116" y="810" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">BR transit</text>
+  <text x="250" y="810" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">ext ifID A → ext ifID B</text>
+  <text x="700" y="810" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">egressID in d.external  → processEgress(): UpdateSegID + IncPath</text>
+  <line x1="70" y1="822" x2="1530" y2="822" stroke="#e6ebf2" stroke-width="1"/>
+  <rect x="70" y="844" width="30" height="11" rx="3" fill="#ea580c"/>
+  <text x="116" y="854" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">AS transit</text>
+  <text x="250" y="854" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">ext ifID N → internal ifID 0 → sibling BR</text>
+  <text x="700" y="854" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">egressID in d.internalNextHops  — the path is not advanced here</text>
+  <line x1="70" y1="866" x2="1530" y2="866" stroke="#e6ebf2" stroke-width="1"/>
+</svg>

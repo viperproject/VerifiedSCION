@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="processPkt resets the reusable processor, decodes the SCION header and extension headers, and dispatches on the path type to the BFD, one-hop, SCION or EPIC handler.">
+  <title>processPkt parsing and dispatch</title>
+  <desc>processPkt resets the reusable processor, decodes the SCION header and extension headers, and dispatches on the path type to the BFD, one-hop, SCION or EPIC handler.</desc>
+  <rect x="0" y="0" width="1600" height="900" rx="0" fill="#ffffff"/>
+  <text x="70" y="52" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="26" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">processPkt(): reset, parse the headers, dispatch on the path type</text>
+  <text x="70" y="80" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">decodeLayers() decodes the SCION header and then skips the hop-by-hop and end-to-end extension headers; the path type in the common header selects the handler.</text>
+  <line x1="70" y1="96" x2="1530" y2="96" stroke="#d7dfea" stroke-width="1.4"/>
+  <rect x="70" y="114" width="250" height="62" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="195" y="138" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13.5" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">SCION common hdr</text>
+  <text x="195" y="158" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">NextHdr · HdrLen · PayloadLen · PathType</text>
+  <rect x="322" y="114" width="258" height="62" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="451" y="138" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13.5" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">address header</text>
+  <text x="451" y="158" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">DstIA · SrcIA · DstAddr · SrcAddr</text>
+  <rect x="582" y="114" width="300" height="62" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="732" y="138" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13.5" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">path</text>
+  <text x="732" y="158" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">empty | scion.Raw | onehop | epic</text>
+  <rect x="884" y="114" width="160" height="62" rx="6" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.5"/>
+  <text x="964" y="138" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13.5" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">HBH extn</text>
+  <text x="964" y="158" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">skipped</text>
+  <rect x="1046" y="114" width="160" height="62" rx="6" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.5"/>
+  <text x="1126" y="138" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13.5" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">E2E extn</text>
+  <text x="1126" y="158" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">skipped</text>
+  <rect x="1208" y="114" width="322" height="62" rx="6" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <text x="1369" y="138" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13.5" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">payload</text>
+  <text x="1369" y="158" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">L4 · SCMP · BFD</text>
+  <text x="70" y="196" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">wire format, as parsed by decodeLayers(rawPkt, &amp;p.scionLayer, &amp;p.hbhLayer, &amp;p.e2eLayer)   —   pld := lastLayer.LayerPayload()</text>
+  <rect x="70" y="228" width="300" height="100" rx="10" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.6"/>
+  <text x="83" y="253.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">p.reset()</text>
+  <text x="83" y="272.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">clears rawPkt, path, hopField,</text>
+  <text x="83" y="289" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">infoField, segmentChange, the</text>
+  <text x="83" y="305.8" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">serialize buffer and the MAC</text>
+  <polyline points="370,278 399,278" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="408,278 399,273.9 399,282.1" fill="#8fa0b8"/>
+  <rect x="410" y="228" width="470" height="100" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="423" y="253.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">decodeLayers(rawPkt, ...)</text>
+  <text x="423" y="273" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">SCION header → HBH skipper → E2E skipper</text>
+  <text x="423" y="290.6" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">keeps lastLayer and its payload</text>
+  <line x1="423" y1="299.5" x2="867" y2="299.5" stroke="#e9b7b7" stroke-width="1.2"/>
+  <text x="423" y="319.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">a decode error ends the packet: dropped, no SCMP</text>
+  <polyline points="880,278 909,278" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="918,278 909,273.9 909,282.1" fill="#8fa0b8"/>
+  <rect x="920" y="228" width="610" height="100" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
+  <text x="933" y="253.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">switch p.scionLayer.PathType</text>
+  <text x="933" y="273" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the empty and onehop cases also test</text>
+  <text x="933" y="290.6" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">lastLayer.NextLayerType() == LayerTypeBFD</text>
+  <polyline points="1225,328 1225,343" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1225,352 1229,343 1221,343" fill="#8fa0b8"/>
+  <line x1="220" y1="352" x2="1450" y2="352" stroke="#8fa0b8" stroke-width="2"/>
+  <polyline points="215,352 215,369" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="215,378 219.1,369 210.9,369" fill="#8fa0b8"/>
+  <rect x="70" y="380" width="290" height="44" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.5"/>
+  <text x="215" y="407.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#0b3b36" text-anchor="middle" font-weight="700" xml:space="preserve">empty  (0)</text>
+  <rect x="70" y="444" width="290" height="278" rx="10" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.6"/>
+  <text x="83" y="468.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#0b3b36" text-anchor="start" font-weight="700" xml:space="preserve">p.processIntraBFD(pld)</text>
+  <text x="83" y="487" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">match srcAddr against</text>
+  <text x="83" y="504.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">d.internalNextHops to find ifID</text>
+  <text x="83" y="521.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">→ d.bfdSessions[ifID]</text>
+  <text x="83" y="538.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">      .ReceiveMessage(bfd)</text>
+  <text x="83" y="573.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">any other next header:</text>
+  <text x="83" y="590.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">unsupportedPathTypeNextHeader</text>
+  <rect x="70" y="738" width="290" height="54" rx="8" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.5"/>
+  <text x="215" y="769.4" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#0b3b36" text-anchor="middle" font-weight="700" xml:space="preserve">consumed · OutConn == nil</text>
+  <polyline points="535,352 535,369" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="535,378 539,369 531,369" fill="#8fa0b8"/>
+  <rect x="380" y="380" width="310" height="44" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+  <text x="535" y="407.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">onehop  (2)</text>
+  <rect x="380" y="444" width="310" height="278" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
+  <text x="393" y="468.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">processInterBFD / processOHP</text>
+  <text x="393" y="487" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">BFD → d.bfdSessions[ingressID]</text>
+  <text x="393" y="504.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">          .ReceiveMessage(bfd)</text>
+  <text x="393" y="538.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">otherwise p.processOHP()  (beaconing)</text>
+  <text x="393" y="556" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">ingress 0: check SrcIA and the</text>
+  <text x="393" y="573.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">   neighbour, verify the FirstHop MAC,</text>
+  <text x="393" y="590.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">   UpdateSegID, send on</text>
+  <text x="393" y="607.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">   d.external[ConsEgress]</text>
+  <text x="393" y="625" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">ingress != 0: fill SecondHop</text>
+  <text x="393" y="642.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">   {ConsIngress, ExpTime}, compute its</text>
+  <text x="393" y="659.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">   MAC, then deliver inside the AS</text>
+  <rect x="380" y="738" width="310" height="54" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="535" y="769.4" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#0f3d22" text-anchor="middle" font-weight="700" xml:space="preserve">forwarded, or consumed by BFD</text>
+  <polyline points="855,352 855,369" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="855,378 859,369 851,369" fill="#8fa0b8"/>
+  <rect x="710" y="380" width="290" height="44" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="855" y="407.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">scion  (1)</text>
+  <rect x="710" y="444" width="290" height="278" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="723" y="468.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">p.processSCION()</text>
+  <text x="723" y="487" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">p.path = scionLayer.Path.(*scion.Raw)</text>
+  <text x="723" y="504.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">not a *scion.Raw → malformedPath</text>
+  <text x="723" y="538.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">→ p.process()</text>
+  <text x="723" y="556" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the validation chain and the egress</text>
+  <text x="723" y="573.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">decision: diagrams 5 and 6</text>
+  <rect x="710" y="738" width="290" height="54" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="855" y="769.4" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#0f3d22" text-anchor="middle" font-weight="700" xml:space="preserve">processResult → forwarded</text>
+  <polyline points="1160,352 1160,369" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1160,378 1164,369 1156,369" fill="#8fa0b8"/>
+  <rect x="1020" y="380" width="280" height="44" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="1160" y="407.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">epic  (3)</text>
+  <rect x="1020" y="444" width="280" height="278" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="1033" y="468.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">p.processEPIC()</text>
+  <text x="1033" y="487" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">p.path = epicPath.ScionPath</text>
+  <text x="1033" y="504.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">→ p.process()   (the same chain)</text>
+  <text x="1033" y="538.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">then, only on the penultimate and</text>
+  <text x="1033" y="556" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the last hop:</text>
+  <text x="1033" y="573.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">  libepic.VerifyTimestamp(...)</text>
+  <text x="1033" y="590.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">  libepic.VerifyHVF(p.cachedMac,</text>
+  <text x="1033" y="607.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">     PktID, PHVF | LHVF)</text>
+  <text x="1033" y="625" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">reusing the MAC that</text>
+  <text x="1033" y="642.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">verifyCurrentMAC already computed</text>
+  <rect x="1020" y="738" width="280" height="54" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="1160" y="769.4" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#0f3d22" text-anchor="middle" font-weight="700" xml:space="preserve">processResult → forwarded</text>
+  <polyline points="1425,352 1425,369" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1425,378 1429,369 1421,369" fill="#8fa0b8"/>
+  <rect x="1320" y="380" width="210" height="44" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="1425" y="407.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#a51c1c" text-anchor="middle" font-weight="700" xml:space="preserve">default</text>
+  <rect x="1320" y="444" width="210" height="278" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="1.6"/>
+  <text x="1333" y="468.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#a51c1c" text-anchor="start" font-weight="700" xml:space="preserve">unsupportedPathType</text>
+  <text x="1333" y="487" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the path type is not one the</text>
+  <text x="1333" y="504.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="11.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">router knows how to forward</text>
+  <rect x="1320" y="738" width="210" height="54" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+  <text x="1425" y="769.4" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#a51c1c" text-anchor="middle" font-weight="700" xml:space="preserve">dropped</text>
+  <line x1="70" y1="820" x2="1530" y2="820" stroke="#d7dfea" stroke-width="1.2"/>
+  <text x="800" y="848" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#5b6b85" text-anchor="middle" font-weight="400" xml:space="preserve">Every branch returns processResult{ EgressID, OutConn, OutAddr, OutPkt } to the forwarding loop; an empty OutConn means the packet was consumed here.</text>
+</svg>

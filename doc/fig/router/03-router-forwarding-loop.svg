@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="The per-interface read loop: ReadBatch of up to 64 packets, per-packet counters, processPkt, error classification, non-blocking WriteBatch and output counters.">
+  <title>Border router forwarding loop</title>
+  <desc>The per-interface read loop: ReadBatch of up to 64 packets, per-packet counters, processPkt, error classification, non-blocking WriteBatch and output counters.</desc>
+  <rect x="0" y="0" width="1600" height="900" rx="0" fill="#ffffff"/>
+  <text x="70" y="52" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="26" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">read(ingressID, conn): the receive → process → send loop</text>
+  <text x="70" y="80" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">The closure that Run() spawns once per interface. All the loops run concurrently and share the read-only DataPlane.</text>
+  <line x1="70" y1="96" x2="1530" y2="96" stroke="#d7dfea" stroke-width="1.4"/>
+  <rect x="70" y="112" width="1460" height="52" rx="9" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.5"/>
+  <text x="800" y="144" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13" fill="#12203a" text-anchor="middle" font-weight="400" xml:space="preserve">allocated once, before the loop:   msgs := 64 × 9000 B buffers (inputBatchCnt × bufSize)   ·   writeMsgs   ·   processor := newPacketProcessor(d, ingressID)</text>
+  <rect x="70" y="188" width="660" height="44" rx="8" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="400" y="215.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">for d.running {</text>
+  <rect x="70" y="252" width="660" height="100" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="83" y="278" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">pkts, err := rd.ReadBatch(msgs)</text>
+  <text x="83" y="298.3" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">one syscall receives up to 64 packets into the pre-allocated buffers</text>
+  <line x1="83" y1="322.8" x2="717" y2="322.8" stroke="#e9b7b7" stroke-width="1.2"/>
+  <text x="83" y="343.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">err != nil → log.Debug("Failed to read batch")   ·   pkts == 0   → next batch</text>
+  <polyline points="400,232 400,241" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="400,250 404.1,241 395.9,241" fill="#8fa0b8"/>
+  <rect x="70" y="380" width="660" height="44" rx="8" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="400" y="407.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="middle" font-weight="700" xml:space="preserve">for i := 0; i &lt; pkts; i++ {</text>
+  <polyline points="400,352 400,369" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="400,378 404.1,369 395.9,369" fill="#8fa0b8"/>
+  <rect x="70" y="448" width="660" height="76" rx="10" fill="#e8edf4" stroke="#9aabc2" stroke-width="1.6"/>
+  <text x="83" y="472.8" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">input counters</text>
+  <text x="83" y="492.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">InputPacketsTotal++   ·   InputBytesTotal += p.N</text>
+  <text x="83" y="509.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">labelled with the ingress interface</text>
+  <polyline points="400,424 400,437" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="400,446 404.1,437 395.9,437" fill="#8fa0b8"/>
+  <rect x="70" y="552" width="660" height="196" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="83" y="577.2" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="14.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">result, err := processor.processPkt(rawPkt, srcAddr)</text>
+  <text x="83" y="596.6" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">rawPkt  = p.Buffers[0][:p.N]</text>
+  <text x="83" y="614.1" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">srcAddr = p.Addr.(*net.UDPAddr)</text>
+  <text x="83" y="649.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">the same scionPacketProcessor is reused for every packet on this</text>
+  <text x="83" y="666.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">interface, so parsing allocates nothing</text>
+  <text x="83" y="701.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">→ parsing and dispatch: diagram 4</text>
+  <polyline points="400,524 400,541" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="400,550 404.1,541 395.9,541" fill="#8fa0b8"/>
+  <polyline points="400,748 400,782 800,782 800,208 857,208" fill="none" stroke="#8fa0b8" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="866,208 857,203.9 857,212.1" fill="#8fa0b8"/>
+  <text x="812" y="470" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">result, err</text>
+  <rect x="870" y="180" width="660" height="164" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
+  <text x="883" y="205.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">classify err</text>
+  <text x="883" y="225" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">err == nil                 forward exactly as result says</text>
+  <text x="883" y="242.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">errors.As(err, &amp;scmpErr)   OutAddr = srcAddr; OutConn = rd</text>
+  <text x="883" y="260.1" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">                           an SCMP reply goes back the way</text>
+  <text x="883" y="277.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">                           the packet came in</text>
+  <line x1="883" y1="315.5" x2="1517" y2="315.5" stroke="#e9b7b7" stroke-width="1.2"/>
+  <text x="883" y="335.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">any other error → log.Debug, DroppedPacketsTotal++, next packet</text>
+  <rect x="870" y="376" width="660" height="80" rx="10" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.6"/>
+  <text x="883" y="401.6" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="15" fill="#0b3b36" text-anchor="start" font-weight="700" xml:space="preserve">result.OutConn == nil ?</text>
+  <text x="883" y="421" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">a BFD packet was consumed by its session — nothing to send, next packet</text>
+  <polyline points="1200,344 1200,365" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1200,374 1204,365 1196,365" fill="#8fa0b8"/>
+  <rect x="870" y="488" width="660" height="140" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="883" y="512.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="13.5" fill="#12203a" text-anchor="start" font-weight="700" xml:space="preserve">result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT)</text>
+  <text x="883" y="531.8" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">writeMsgs[0].Buffers[0] = result.OutPkt</text>
+  <text x="883" y="549.3" font-family="Consolas, DejaVu Sans Mono, Menlo, monospace" font-size="12" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">writeMsgs[0].Addr       = result.OutAddr   (nil on a connected socket)</text>
+  <line x1="883" y1="582" x2="1517" y2="582" stroke="#e9b7b7" stroke-width="1.2"/>
+  <text x="883" y="602" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">EAGAIN / EWOULDBLOCK → drop the packet.</text>
+  <text x="883" y="619.5" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#a51c1c" text-anchor="start" font-weight="400" xml:space="preserve">The forwarding loop must never block on a send.</text>
+  <polyline points="1200,456 1200,477" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1200,486 1204,477 1196,477" fill="#8fa0b8"/>
+  <rect x="870" y="660" width="660" height="76" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="883" y="684.8" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="14" fill="#0f3d22" text-anchor="start" font-weight="700" xml:space="preserve">output counters</text>
+  <text x="883" y="704.2" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">OutputPacketsTotal++   ·   OutputBytesTotal += len(result.OutPkt)</text>
+  <text x="883" y="721.7" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">labelled with result.EgressID</text>
+  <polyline points="1200,628 1200,649" fill="none" stroke="#8fa0b8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="1200,658 1204,649 1196,649" fill="#8fa0b8"/>
+  <polyline points="1200,736 1200,806 60,806 60,402 59,402" fill="none" stroke="#8fa0b8" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <polygon points="68,402 59,397.9 59,406.1" fill="#8fa0b8"/>
+  <text x="850" y="798" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="13" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">next packet in the batch, then the next batch</text>
+  <rect x="70" y="830" width="1460" height="56" rx="9" fill="#f3f6fa" stroke="#c3cedd" stroke-width="1.5"/>
+  <text x="88" y="852" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#12203a" text-anchor="start" font-weight="400" xml:space="preserve">Concurrency: a goroutine reads only its own socket, but it may write to any other interface's socket — the packet is sent by the goroutine that received it.</text>
+  <text x="88" y="872" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="12.5" fill="#5b6b85" text-anchor="start" font-weight="400" xml:space="preserve">Every DataPlane map is read-only once d.running is true, so the packet path takes no lock at all.</text>
+</svg>
