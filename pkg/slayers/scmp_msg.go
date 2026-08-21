@@ -67,6 +67,7 @@ func (i *SCMPExternalInterfaceDown) NextLayerType() gopacket.LayerType {
 // @ requires  sl.Bytes(data, 0, len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> addr.IABytes+scmpRawInterfaceLen <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -111,7 +112,7 @@ func (i *SCMPExternalInterfaceDown) DecodeFromBytes(data []byte,
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
 // @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
@@ -205,6 +206,7 @@ func (*SCMPInternalConnectivityDown) NextLayerType() gopacket.LayerType {
 // @ requires  i.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> addr.IABytes+2*scmpRawInterfaceLen <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -256,7 +258,7 @@ func (i *SCMPInternalConnectivityDown) DecodeFromBytes(data []byte,
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
 // @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
@@ -345,6 +347,7 @@ func (*SCMPEcho) NextLayerType() gopacket.LayerType {
 // @ requires  sl.Bytes(data, 0, len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 4 <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -421,7 +424,7 @@ func (i *SCMPEcho) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
 // @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
@@ -498,6 +501,7 @@ func (*SCMPParameterProblem) NextLayerType() gopacket.LayerType {
 // @ requires  sl.Bytes(data, 0, len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 2+2 <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -551,7 +555,7 @@ func (i *SCMPParameterProblem) DecodeFromBytes(data []byte, df gopacket.DecodeFe
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
 // @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
@@ -641,6 +645,7 @@ func (*SCMPTraceroute) NextLayerType() gopacket.LayerType {
 // @ preserves acc(sl.Bytes(data, 0, len(data)), R40)
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 2+2+addr.IABytes+scmpRawInterfaceLen <= len(data)
 // @ ensures   res != nil ==> i.NonInitMem()
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -731,7 +736,7 @@ func (i *SCMPTraceroute) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
 // @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
@@ -829,6 +834,7 @@ func (*SCMPDestinationUnreachable) NextLayerType() gopacket.LayerType {
 // @ requires  sl.Bytes(data, 0, len(data))
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 4 <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -862,7 +868,7 @@ func (i *SCMPDestinationUnreachable) DecodeFromBytes(data []byte,
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
 // @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {
@@ -929,6 +935,7 @@ func (*SCMPPacketTooBig) NextLayerType() gopacket.LayerType {
 // @ requires  i.NonInitMem()
 // @ preserves df.Mem()
 // @ ensures   res == nil ==> i.Mem(data)
+// @ ensures   res == nil ==> 2+2 <= len(data)
 // @ ensures   res != nil ==> (i.NonInitMem() && sl.Bytes(data, 0, len(data)))
 // @ ensures   res != nil ==> res.ErrorMem()
 // @ decreases
@@ -982,7 +989,7 @@ func (i *SCMPPacketTooBig) DecodeFromBytes(data []byte, df gopacket.DecodeFeedba
 // @ requires  i.Mem(ubufMem)
 // @ preserves b.Mem()
 // @ preserves sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-// @ ensures   err == nil ==> i.Mem(ubufMem)
+// @ ensures   i.Mem(ubufMem)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
 func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /*@, ghost ubufMem []byte @*/) (err error) {

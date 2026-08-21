@@ -200,4 +200,41 @@ func (d *Decoded) Widen(ubuf1, ubuf2 []byte) {
 	fold d.Mem(ubuf2)
 }
 
+// LenSpecBound surfaces the upper bound on a decoded path's serialized
+// length that follows from the bounds stored in Base.Mem (NumINF <=
+// MaxINFs, NumHops <= MaxHops). It exists because the bound is buried two
+// predicate unfoldings deep and is not derivable from LenSpec's
+// definition alone at call sites.
+// The lemma takes only a fraction so that the caller's retained fraction
+// anchors the predicate snapshot: the value of LenSpec then provably
+// survives the unfold/refold inside this lemma (cf. Len, which relates
+// its result to LenSpec under the same fraction). The body is kept
+// minimal because pkg/slayers/path/scion is close to its verification
+// time budget: InfoLen and HopLen are compile-time constants, so the two
+// exposed predicate bounds (NumINF <= MaxINFs, NumHops <= MaxHops)
+// discharge the postcondition without nonlinear reasoning.
+ghost
+preserves acc(d.Mem(ub), R50)
+ensures   d.LenSpec(ub) <= MetaLen + MaxINFs*path.InfoLen + MaxHops*path.HopLen
+decreases
+func (d *Decoded) LenSpecBound(ghost ub []byte) {
+	unfold acc(d.Mem(ub), R50)
+	unfold acc(d.Base.Mem(), R50)
+	fold acc(d.Base.Mem(), R50)
+	fold acc(d.Mem(ub), R50)
+}
+
+// The resources captured by Mem are independent of the buffer parameter,
+// so a Decoded path can be re-associated with an arbitrary other buffer,
+// in particular with nil. This is used to serialize a decoded path
+// without an underlying buffer (cf. prepareSCMP in the router).
+ghost
+requires d.Mem(ubuf1)
+ensures  d.Mem(ubuf2)
+decreases
+func (d *Decoded) ChangeUbuf(ubuf1, ubuf2 []byte) {
+	unfold d.Mem(ubuf1)
+	fold d.Mem(ubuf2)
+}
+
 /**** End of Lemmas ****/

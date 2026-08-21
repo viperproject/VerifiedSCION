@@ -194,8 +194,8 @@ func (d *BFD) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (err erro
 requires d.Mem(ub)
 requires b != nil && b.Mem()
 requires sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
-ensures  err == nil ==> d.Mem(ub) && b.Mem()
-ensures  err == nil ==> sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+ensures  d.Mem(ub) && b.Mem()
+ensures  sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 ensures  err != nil ==> err.ErrorMem()
 decreases
 func (d *BFD) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions, ghost ub []byte) (err error)
@@ -217,5 +217,27 @@ requires d.Mem(ub)
 ensures  d.NonInitMem()
 decreases
 func (d *BFD) DowngradePerm(ghost ub []byte)
+
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for BFD they are trivial.
+pred (d *BFD) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (d *BFD) IsSupportedSerialization() bool {
+	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(d.MemSerialize(), _)
+decreases
+func (d *BFD) SerializeAddrView() (res []byte) {
+	return nil
+}
 
 (*BFD) implements gopacket.SerializableLayer

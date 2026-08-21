@@ -309,7 +309,8 @@ func (h *HopByHopExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.Layer
 // @ preserves acc(h.Mem(ub), R20)
 // @ ensures   0 <= start && start <= end && end <= len(ub)
 // @ ensures   len(res) == end - start
-// @ ensures   res === ub[start:end]
+// @ ensures   ub != nil ==> res === ub[start:end]
+// @ ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 // @ decreases
 func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
 	// @ unfold acc(h.Mem(ub), R20)
@@ -458,7 +459,8 @@ func (e *EndToEndExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.Layer
 // @ preserves acc(e.Mem(ub), R20)
 // @ ensures   0 <= start && start <= end && end <= len(ub)
 // @ ensures   len(res) == end - start
-// @ ensures   res === ub[start:end]
+// @ ensures   ub != nil ==> res === ub[start:end]
+// @ ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 // @ decreases
 func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
 	// @ unfold acc(e.Mem(ub), R20)

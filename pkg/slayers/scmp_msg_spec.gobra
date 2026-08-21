@@ -40,20 +40,57 @@ func (b *SCMPExternalInterfaceDown) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPExternalInterfaceDown) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, addr.IABytes+scmpRawInterfaceLen)
-	start = addr.IABytes+scmpRawInterfaceLen
+	start = ub == nil ? 0 : addr.IABytes+scmpRawInterfaceLen
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
 }
 
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPExternalInterfaceDown they are trivial.
+pred (s *SCMPExternalInterfaceDown) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPExternalInterfaceDown) IsSupportedSerialization() bool {
+	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPExternalInterfaceDown) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPExternalInterfaceDown) implements gopacket.Layer
 (*SCMPExternalInterfaceDown) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPExternalInterfaceDown layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.IA) && acc(&s.IfID) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPExternalInterfaceDown) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, addr.IABytes+scmpRawInterfaceLen)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPInternalConnectivityDown) NonInitMem() {
 	acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && acc(&s.BaseLayer)
@@ -72,19 +109,56 @@ func (b *SCMPInternalConnectivityDown) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPInternalConnectivityDown) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, addr.IABytes+2*scmpRawInterfaceLen)
-	start = addr.IABytes+2*scmpRawInterfaceLen
+	start = ub == nil ? 0 : addr.IABytes+2*scmpRawInterfaceLen
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPInternalConnectivityDown they are trivial.
+pred (s *SCMPInternalConnectivityDown) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPInternalConnectivityDown) IsSupportedSerialization() bool {
+	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPInternalConnectivityDown) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPInternalConnectivityDown) implements gopacket.Layer
 (*SCMPInternalConnectivityDown) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPInternalConnectivityDown layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPInternalConnectivityDown) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, addr.IABytes+2*scmpRawInterfaceLen)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPEcho) NonInitMem() {
 	acc(&s.Identifier) && acc(&s.SeqNumber) && acc(&s.BaseLayer)
@@ -103,19 +177,56 @@ func (b *SCMPEcho) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPEcho) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPEcho they are trivial.
+pred (s *SCMPEcho) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPEcho) IsSupportedSerialization() bool {
+	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPEcho) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPEcho) implements gopacket.Layer
 (*SCMPEcho) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPEcho layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.Identifier) && acc(&s.SeqNumber) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPEcho) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPParameterProblem) NonInitMem() {
 	acc(&s.Pointer) && acc(&s.BaseLayer)
@@ -134,19 +245,56 @@ func (b *SCMPParameterProblem) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPParameterProblem) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPParameterProblem they are trivial.
+pred (s *SCMPParameterProblem) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPParameterProblem) IsSupportedSerialization() bool {
+	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPParameterProblem) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPParameterProblem) implements gopacket.Layer
 (*SCMPParameterProblem) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPParameterProblem layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.Pointer) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPParameterProblem) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPTraceroute) NonInitMem() {
 	acc(&s.Identifier) && acc(&s.Sequence) && acc(&s.IA) && acc(&s.Interface) && acc(&s.BaseLayer)
@@ -170,19 +318,56 @@ func (b *SCMPTraceroute) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPTraceroute) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4+addr.IABytes+scmpRawInterfaceLen)
-	start = 4+addr.IABytes+scmpRawInterfaceLen
+	start = ub == nil ? 0 : 4+addr.IABytes+scmpRawInterfaceLen
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPTraceroute they are trivial.
+pred (s *SCMPTraceroute) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPTraceroute) IsSupportedSerialization() bool {
+	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPTraceroute) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPTraceroute) implements gopacket.Layer
 (*SCMPTraceroute) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPTraceroute layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.Identifier) && acc(&s.Sequence) && acc(&s.IA) && acc(&s.Interface) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPTraceroute) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4+addr.IABytes+scmpRawInterfaceLen)
+	fold s.Mem(nil)
+}
 
 
 pred (s *SCMPDestinationUnreachable) NonInitMem() {
@@ -202,19 +387,56 @@ func (b *SCMPDestinationUnreachable) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPDestinationUnreachable) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPDestinationUnreachable they are trivial.
+pred (s *SCMPDestinationUnreachable) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPDestinationUnreachable) IsSupportedSerialization() bool {
+	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPDestinationUnreachable) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPDestinationUnreachable) implements gopacket.Layer
 (*SCMPDestinationUnreachable) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPDestinationUnreachable layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPDestinationUnreachable) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
+}
 
 pred (s *SCMPPacketTooBig) NonInitMem() {
 	acc(&s.MTU) && acc(&s.BaseLayer)
@@ -233,16 +455,101 @@ func (b *SCMPPacketTooBig) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMPPacketTooBig) LayerPayload(ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
 }
 
+// MemSerialize and IsSupportedSerialization are only meaningful for
+// network-header layers serialized as the outermost layer of a packet
+// (cf. gopacket.SerializableLayer); for SCMPPacketTooBig they are trivial.
+pred (s *SCMPPacketTooBig) MemSerialize() { true }
+
+ghost
+pure
+decreases
+func (s *SCMPPacketTooBig) IsSupportedSerialization() bool {
+	return false
+}
+
+// (VerifiedSCION) Not a network-header layer; holds no destination-address
+// bytes to reclaim, so SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMPPacketTooBig) SerializeAddrView() (res []byte) {
+	return nil
+}
+
 (*SCMPPacketTooBig) implements gopacket.Layer
 (*SCMPPacketTooBig) implements gopacket.SerializableLayer
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMPPacketTooBig layer with a nil underlying buffer. This is the
+// witness that fresh layers, as constructed by the callers of the router's
+// packSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.MTU) && acc(&s.BaseLayer)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.Mem(nil)
+decreases
+func (s *SCMPPacketTooBig) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
+}
+
+// FoldFreshSCMPPayloadMem folds the Mem(nil) predicate of a freshly
+// constructed SCMP payload layer held behind the SerializableLayer
+// interface. It exists because the router's packSCMP receives the payload
+// as an interface value constructed inline at its call sites, where no
+// fold can be performed. The supported types are exactly the ones the
+// router constructs.
+ghost
+requires scmpP != nil
+requires typeOf(scmpP) == type[*SCMPParameterProblem] ||
+	typeOf(scmpP) == type[*SCMPDestinationUnreachable] ||
+	typeOf(scmpP) == type[*SCMPTraceroute] ||
+	typeOf(scmpP) == type[*SCMPExternalInterfaceDown] ||
+	typeOf(scmpP) == type[*SCMPInternalConnectivityDown]
+requires typeOf(scmpP) == type[*SCMPParameterProblem] ==>
+	(acc(&scmpP.(*SCMPParameterProblem).Pointer) && acc(&scmpP.(*SCMPParameterProblem).BaseLayer) &&
+	scmpP.(*SCMPParameterProblem).Contents == nil && scmpP.(*SCMPParameterProblem).Payload == nil)
+requires typeOf(scmpP) == type[*SCMPDestinationUnreachable] ==>
+	(acc(&scmpP.(*SCMPDestinationUnreachable).BaseLayer) &&
+	scmpP.(*SCMPDestinationUnreachable).Contents == nil && scmpP.(*SCMPDestinationUnreachable).Payload == nil)
+requires typeOf(scmpP) == type[*SCMPTraceroute] ==>
+	(acc(&scmpP.(*SCMPTraceroute).Identifier) && acc(&scmpP.(*SCMPTraceroute).Sequence) &&
+	acc(&scmpP.(*SCMPTraceroute).IA) && acc(&scmpP.(*SCMPTraceroute).Interface) &&
+	acc(&scmpP.(*SCMPTraceroute).BaseLayer) &&
+	scmpP.(*SCMPTraceroute).Contents == nil && scmpP.(*SCMPTraceroute).Payload == nil)
+requires typeOf(scmpP) == type[*SCMPExternalInterfaceDown] ==>
+	(acc(&scmpP.(*SCMPExternalInterfaceDown).IA) && acc(&scmpP.(*SCMPExternalInterfaceDown).IfID) &&
+	acc(&scmpP.(*SCMPExternalInterfaceDown).BaseLayer) &&
+	scmpP.(*SCMPExternalInterfaceDown).Contents == nil && scmpP.(*SCMPExternalInterfaceDown).Payload == nil)
+requires typeOf(scmpP) == type[*SCMPInternalConnectivityDown] ==>
+	(acc(&scmpP.(*SCMPInternalConnectivityDown).IA) && acc(&scmpP.(*SCMPInternalConnectivityDown).Ingress) &&
+	acc(&scmpP.(*SCMPInternalConnectivityDown).Egress) && acc(&scmpP.(*SCMPInternalConnectivityDown).BaseLayer) &&
+	scmpP.(*SCMPInternalConnectivityDown).Contents == nil && scmpP.(*SCMPInternalConnectivityDown).Payload == nil)
+ensures  scmpP.Mem(nil)
+decreases
+func FoldFreshSCMPPayloadMem(scmpP gopacket.SerializableLayer) {
+	if typeOf(scmpP) == type[*SCMPParameterProblem] {
+		scmpP.(*SCMPParameterProblem).FoldFreshMem()
+	} else if typeOf(scmpP) == type[*SCMPDestinationUnreachable] {
+		scmpP.(*SCMPDestinationUnreachable).FoldFreshMem()
+	} else if typeOf(scmpP) == type[*SCMPTraceroute] {
+		scmpP.(*SCMPTraceroute).FoldFreshMem()
+	} else if typeOf(scmpP) == type[*SCMPExternalInterfaceDown] {
+		scmpP.(*SCMPExternalInterfaceDown).FoldFreshMem()
+	} else {
+		scmpP.(*SCMPInternalConnectivityDown).FoldFreshMem()
+	}
+}

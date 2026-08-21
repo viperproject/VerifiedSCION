@@ -37,6 +37,9 @@ requires acc(&s.RawSrcAddr)
 requires acc(&s.SrcAddrType)
 requires acc(src.Mem(), _)
 func testSrcSetterWildcard(s *SCION, src *net.IPAddr) {
+	// SetSrcAddr takes the resources of wildcard IP addresses
+	// component-wise (cf. its precondition).
+	unfold acc(src.Mem(), _)
 	res := s.SetSrcAddr(src, true)
 	// in the wildcard case we have wildcard access to the address in the SCION struct
 	assert acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)

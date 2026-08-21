@@ -104,9 +104,10 @@ func (b *BaseLayer) LayerContents() (res []byte) {
 
 // LayerPayload returns the bytes contained within the packet layer.
 // @ preserves acc(b.Mem(ub, bp), R20)
-// @ ensures   len(res) == len(ub) - bp
-// @ ensures   0 <= bp && bp <= len(ub)
-// @ ensures   res === ub[bp:]
+// @ ensures   ub != nil ==> len(res) == len(ub) - bp
+// @ ensures   ub != nil ==> (0 <= bp && bp <= len(ub))
+// @ ensures   ub != nil ==> res === ub[bp:]
+// @ ensures   ub == nil ==> res == nil
 // @ decreases
 func (b *BaseLayer) LayerPayload( /*@ ghost ub []byte, ghost bp int @*/ ) (res []byte) {
 	// @ unfold acc(b.Mem(ub, bp), R20)
@@ -650,6 +651,8 @@ func (s *SCION) DstAddr() (res net.Addr, err error) {
 // @ ensures   err == nil ==>
 // @ 	let rawSrcAddr := s.RawSrcAddr in
 // @ 	(acc(res.Mem(), R15) --* acc(sl.Bytes(rawSrcAddr, 0, len(rawSrcAddr)), R15))
+// @ ensures   err == nil && typeOf(res) == type[*net.IPAddr] ==>
+// @ 	unfolding acc(res.Mem(), R15) in len(res.(*net.IPAddr).IP) == len(s.RawSrcAddr)
 // @ ensures   err != nil ==>
 // @ 	acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R15)
 // @ ensures   err != nil ==> err.ErrorMem()
@@ -683,10 +686,18 @@ func (s *SCION) SrcAddr() (res net.Addr, err error) {
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (!isIPv4(dst) && !isIPv6(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
 // @ ensures   res == nil && !wildcard && isIP(dst) ==> (unfolding acc(dst.Mem(), R20) in (isIPv6(dst) && !isConvertibleToIPv4(dst) ==> len(dst.(*net.IPAddr).IP) == len(s.RawDstAddr)))
 // @ ensures   (res == nil) == (typeOf(dst) == type[*net.IPAddr] || typeOf(dst) == type[addr.HostSVC])
+// @ ensures   res == nil && isIP(dst) && s.DstAddrType == T4Ip ==> len(s.RawDstAddr) == 4
+// @ ensures   res == nil ==> s.DstAddrType.Has3Bits()
+// @ ensures   res == nil && isHostSVC(dst) ==> len(s.RawDstAddr) == 4
 // @ decreases
 func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res error) {
 	var err error
 	var verScionTmp []byte
+	// (VerifiedSCION) packAddr takes the resources of wildcard IP
+	// addresses component-wise (cf. its precondition).
+	// @ ghost if wildcard && isIP(dst) {
+	// @ 	unfold acc(dst.Mem(), _)
+	// @ }
 	s.DstAddrType, verScionTmp, err = packAddr(dst /*@ , wildcard @*/)
 	// @ ghost if !wildcard && err == nil && isIP(dst) {
 	// @   apply acc(sl.Bytes(verScionTmp, 0, len(verScionTmp)), R20) --* acc(dst.Mem(), R20)
@@ -700,7 +711,11 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // Changes to src might leave the layer in an inconsistent state.
 // @ requires  acc(&s.RawSrcAddr)
 // @ requires  acc(&s.SrcAddrType)
-// @ requires  wildcard ==> acc(src.Mem(), _)
+// (VerifiedSCION) See the corresponding remark on packAddr.
+// @ requires  wildcard && isIP(src) ==> acc(&src.(*net.IPAddr).IP, _) &&
+// @ 	(forall i int :: { &src.(*net.IPAddr).IP[i] } 0 <= i && i < len(src.(*net.IPAddr).IP) ==>
+// @ 		acc(&src.(*net.IPAddr).IP[i], _))
+// @ requires  wildcard && !isIP(src) ==> acc(src.Mem(), _)
 // @ requires  !wildcard ==> acc(src.Mem(), R18)
 // @ ensures   isIP(src) ==> res == nil
 // @ ensures   isHostSVC(src) ==> res == nil
@@ -720,6 +735,17 @@ func (s *SCION) SetDstAddr(dst net.Addr /*@ , ghost wildcard bool @*/) (res erro
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (!isIPv4(src) && !isIPv6(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
 // @ ensures   res == nil && !wildcard && isIP(src) ==> (unfolding acc(src.Mem(), R20) in (isIPv6(src) && !isConvertibleToIPv4(src) ==> len(src.(*net.IPAddr).IP) == len(s.RawSrcAddr)))
 // @ ensures   (res == nil) == (typeOf(src) == type[*net.IPAddr] || typeOf(src) == type[addr.HostSVC])
+// @ ensures   res == nil && isIP(src) && s.SrcAddrType == T4Ip ==> len(s.RawSrcAddr) == 4
+// @ ensures   res == nil ==> s.SrcAddrType.Has3Bits()
+// @ ensures   res == nil && isIP(src) ==> s.SrcAddrType == T4Ip || s.SrcAddrType == T16Ip
+// @ ensures   res == nil && isHostSVC(src) ==> len(s.RawSrcAddr) == 4
+// @ ensures   res == nil && wildcard && isIP(src) && s.SrcAddrType == T16Ip ==>
+// @ 	len(s.RawSrcAddr) == old(len(src.(*net.IPAddr).IP))
+// (VerifiedSCION) An even-length source IP yields an even-length raw
+// address (T4Ip gives length 4; T16Ip preserves the input length). Used
+// by the router's prepareSCMP to fold the checksum predicate.
+// @ ensures   res == nil && wildcard && isIP(src) && old(len(src.(*net.IPAddr).IP)) % 2 == 0 ==>
+// @ 	len(s.RawSrcAddr) % 2 == 0
 // @ decreases
 func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error) {
 	var err error
@@ -738,6 +764,8 @@ func (s *SCION) SetSrcAddr(src net.Addr /*@, ghost wildcard bool @*/) (res error
 // @ ensures  err == nil ==> typeOf(res) == *net.IPAddr || typeOf(res) == addr.HostSVC
 // @ ensures  err == nil ==>
 // @ 	(acc(res.Mem(), R15) --* acc(sl.Bytes(raw, 0, len(raw)), R15))
+// @ ensures  err == nil && typeOf(res) == type[*net.IPAddr] ==>
+// @ 	unfolding acc(res.Mem(), R15) in len(res.(*net.IPAddr).IP) == len(raw)
 // @ ensures  err != nil ==> acc(sl.Bytes(raw, 0, len(raw)), R15)
 // @ ensures  err != nil ==> err.ErrorMem()
 // @ decreases
@@ -775,7 +803,15 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 		"type", addrType, "len", addrType.Length())
 }
 
-// @ requires  wildcard ==> acc(hostAddr.Mem(), _)
+// (VerifiedSCION) In wildcard mode, the resources of an IP-typed address
+// are taken component-wise instead of as a folded Mem() predicate: the
+// caller may hold the bytes of the underlying IP only at wildcard amount
+// (e.g. the router's internal IP), in which case Mem() cannot be folded
+// at any concrete amount.
+// @ requires  wildcard && isIP(hostAddr) ==> acc(&hostAddr.(*net.IPAddr).IP, _) &&
+// @ 	(forall i int :: { &hostAddr.(*net.IPAddr).IP[i] } 0 <= i && i < len(hostAddr.(*net.IPAddr).IP) ==>
+// @ 		acc(&hostAddr.(*net.IPAddr).IP[i], _))
+// @ requires  wildcard && !isIP(hostAddr) ==> acc(hostAddr.Mem(), _)
 // @ requires  !wildcard ==> acc(hostAddr.Mem(), R19)
 // @ ensures   !wildcard ==> acc(hostAddr.Mem(), R20)
 // @ ensures   hostAddr === old(hostAddr)
@@ -798,13 +834,19 @@ func parseAddr(addrType AddrType, raw []byte) (res net.Addr, err error) {
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (!isIPv4(hostAddr) && !isIPv6(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
 // @ ensures   err == nil && !wildcard && isIP(hostAddr) ==> (unfolding acc(hostAddr.Mem(), R20) in (isIPv6(hostAddr) && !isConvertibleToIPv4(hostAddr) ==> len(hostAddr.(*net.IPAddr).IP) == len(b)))
 // @ ensures   (err == nil) == (typeOf(hostAddr) == type[*net.IPAddr] || typeOf(hostAddr) == type[addr.HostSVC])
+// @ ensures   err == nil && isIP(hostAddr) && addrtyp == T4Ip ==> len(b) == 4
+// @ ensures   err == nil ==> addrtyp.Has3Bits()
+// @ ensures   err == nil && isIP(hostAddr) ==> addrtyp == T4Ip || addrtyp == T16Ip
+// @ ensures   err == nil && isHostSVC(hostAddr) ==> len(b) == 4
+// @ ensures   err == nil && wildcard && isIP(hostAddr) && addrtyp == T16Ip ==>
+// @ 	len(b) == old(len(hostAddr.(*net.IPAddr).IP))
 // @ decreases
 func packAddr(hostAddr net.Addr /*@ , ghost wildcard bool @*/) (addrtyp AddrType, b []byte, err error) {
 	switch a := hostAddr.(type) {
 	case *net.IPAddr:
-		// @ ghost if wildcard {
-		// @ 	unfold acc(hostAddr.Mem(), _)
-		// @ } else {
+		// (VerifiedSCION) In wildcard mode the resources are already
+		// available component-wise (cf. the precondition).
+		// @ ghost if !wildcard {
 		// @ 	unfold acc(hostAddr.Mem(), R20)
 		// @ }
 		if ip := a.IP.To4( /*@ wildcard @*/ ); ip != nil {
@@ -977,16 +1019,19 @@ func (s *SCION) DecodeAddrHdr(data []byte) (res error) {
 }
 
 // computeChecksum computes the checksum with the SCION pseudo header.
-// @ requires  acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
+// (VerifiedSCION) The permission amounts for the raw addresses are chosen
+// so that they can be supplied from an unfolded ChecksumMem instance (which
+// holds them at R25, resp. at wildcard amount for RawSrcAddr's bytes).
+// @ requires  acc(&s.RawSrcAddr, R30) && acc(&s.RawDstAddr, R30)
 // @ requires  len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-// @ requires  acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ requires  acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
-// @ requires  acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// @ requires  acc(&s.SrcIA, R30) && acc(&s.DstIA, R30)
+// @ requires  acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ requires  acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 // @ preserves acc(sl.Bytes(upperLayer, 0, len(upperLayer)), R20)
-// @ ensures   acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
-// @ ensures   acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ ensures   acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
-// @ ensures   acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// @ ensures   acc(&s.RawSrcAddr, R30) && acc(&s.RawDstAddr, R30)
+// @ ensures   acc(&s.SrcIA, R30) && acc(&s.DstIA, R30)
+// @ ensures   acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ ensures   acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 // @ ensures   s == nil ==> err != nil
 // @ ensures   len(s.RawDstAddr) == 0 ==> err != nil
 // @ ensures   len(s.RawSrcAddr) == 0 ==> err != nil
@@ -1006,15 +1051,15 @@ func (s *SCION) computeChecksum(upperLayer []byte, protocol uint8) (res uint16, 
 	return folded, nil
 }
 
-// @ requires acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
+// @ requires acc(&s.RawSrcAddr, R30) && acc(&s.RawDstAddr, R30)
 // @ requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-// @ requires acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ requires acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
-// @ requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
-// @ ensures  acc(&s.RawSrcAddr, R20) && acc(&s.RawDstAddr, R20)
-// @ ensures  acc(&s.SrcIA, R20) && acc(&s.DstIA, R20)
-// @ ensures  acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
-// @ ensures  acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+// @ requires acc(&s.SrcIA, R30) && acc(&s.DstIA, R30)
+// @ requires acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
+// @ ensures  acc(&s.RawSrcAddr, R30) && acc(&s.RawDstAddr, R30)
+// @ ensures  acc(&s.SrcIA, R30) && acc(&s.DstIA, R30)
+// @ ensures  acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+// @ ensures  acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 // @ ensures  len(s.RawDstAddr) == 0 ==> err != nil
 // @ ensures  len(s.RawSrcAddr) == 0 ==> err != nil
 // @ ensures  err != nil ==> err.ErrorMem()
@@ -1044,43 +1089,43 @@ func (s *SCION) pseudoHeaderChecksum(length int, protocol uint8) (res uint32, er
 	}
 	// Address length is guaranteed to be a multiple of 2 by the protocol.
 	// @ ghost var rawSrcAddrLen int = len(s.RawSrcAddr)
-	// @ invariant acc(&s.RawSrcAddr, R20) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+	// @ invariant acc(&s.RawSrcAddr, R30) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 	// @ invariant len(s.RawSrcAddr) == rawSrcAddrLen
 	// @ invariant len(s.RawSrcAddr) % 2 == 0
 	// @ invariant i % 2 == 0
 	// @ invariant 0 <= i && i <= len(s.RawSrcAddr)
 	// @ decreases len(s.RawSrcAddr) - i
 	for i := 0; i < len(s.RawSrcAddr); i += 2 {
-		// @ requires acc(&s.RawSrcAddr, R20) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+		// @ requires acc(&s.RawSrcAddr, R30) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 		// @ requires 0 <= i && i < len(s.RawSrcAddr) && i % 2 == 0 && len(s.RawSrcAddr) % 2 == 0
-		// @ ensures acc(&s.RawSrcAddr, R20) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+		// @ ensures acc(&s.RawSrcAddr, R30) && acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 		// @ ensures s.RawSrcAddr === before(s.RawSrcAddr)
 		// @ decreases
 		// @ outline(
-		// @ unfold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+		// @ unfold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 		csum += uint32(s.RawSrcAddr[i]) << 8
 		csum += uint32(s.RawSrcAddr[i+1])
-		// @ fold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), R20)
+		// @ fold acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
 		// @ )
 	}
 	// @ ghost var rawDstAddrLen int = len(s.RawDstAddr)
-	// @ invariant acc(&s.RawDstAddr, R20) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+	// @ invariant acc(&s.RawDstAddr, R30) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 	// @ invariant len(s.RawDstAddr) == rawDstAddrLen
 	// @ invariant len(s.RawDstAddr) % 2 == 0
 	// @ invariant i % 2 == 0
 	// @ invariant 0 <= i && i <= len(s.RawDstAddr)
 	// @ decreases len(s.RawDstAddr) - i
 	for i := 0; i < len(s.RawDstAddr); i += 2 {
-		// @ requires acc(&s.RawDstAddr, R20) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+		// @ requires acc(&s.RawDstAddr, R30) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 		// @ requires 0 <= i && i < len(s.RawDstAddr) && i % 2 == 0 && len(s.RawDstAddr) % 2 == 0
-		// @ ensures acc(&s.RawDstAddr, R20) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+		// @ ensures acc(&s.RawDstAddr, R30) && acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 		// @ ensures s.RawDstAddr === before(s.RawDstAddr)
 		// @ decreases
 		// @ outline(
-		// @ unfold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+		// @ unfold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 		csum += uint32(s.RawDstAddr[i]) << 8
 		csum += uint32(s.RawDstAddr[i+1])
-		// @ fold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+		// @ fold acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R30)
 		// @ )
 	}
 	l := uint32(length)

@@ -58,15 +58,74 @@ func (b *SCMP) LayerContents() (res []byte) {
 preserves acc(b.Mem(ub), R20)
 ensures   0 <= start && start <= end && end <= len(ub)
 ensures   len(res) == end - start
-ensures   res === ub[start:end]
+ensures   ub != nil ==> res === ub[start:end]
+ensures   ub == nil ==> (res == nil && start == 0 && end == 0)
 decreases
 func (b *SCMP) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
 	res = b.BaseLayer.LayerPayload(ub, 4)
-	start = 4
+	start = ub == nil ? 0 : 4
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
+}
+
+// Folds the Mem predicate of a freshly constructed (i.e., not decoded)
+// SCMP layer with a nil underlying buffer. This is the witness that fresh
+// layers, as constructed by the router's prepareSCMP, satisfy Mem(nil).
+ghost
+requires acc(&s.TypeCode) && acc(&s.Checksum) && acc(&s.BaseLayer) && acc(&s.scn)
+requires s.Contents == nil && s.Payload == nil
+requires s.scn != nil ==> s.scn.ChecksumMem()
+ensures  s.Mem(nil)
+decreases
+func (s *SCMP) FoldFreshMem() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.Mem(nil)
+}
+
+// (VerifiedSCION) For the SCMP header, MemSerialize holds exactly the
+// resources needed to serialize its 4-byte header (TypeCode + Checksum) as
+// an inner layer: its own fields, with a nil underlying buffer. Unlike Mem,
+// it deliberately does NOT carry the network header's checksum resources
+// (s.scn.ChecksumMem): the router's prepareSCMP passes the SCMP header to
+// gopacket.SerializeLayers through this predicate, and the checksum is
+// computed from the network header (the first layer), whose MemSerialize
+// already holds the address bytes. This keeps those bytes out of a predicate
+// the caller cannot reclaim after the (trusted) call.
+pred (s *SCMP) MemSerialize() {
+	acc(&s.TypeCode) && acc(&s.Checksum) && s.BaseLayer.Mem(nil, 4) && acc(&s.scn)
+}
+
+// Folds MemSerialize for a freshly constructed (i.e., not decoded) SCMP
+// header, the witness that fresh SCMP headers satisfy MemSerialize for
+// serialization by the router's prepareSCMP.
+ghost
+requires acc(&s.TypeCode) && acc(&s.Checksum) && acc(&s.BaseLayer) && acc(&s.scn)
+requires s.Contents == nil && s.Payload == nil
+ensures  s.MemSerialize()
+decreases
+func (s *SCMP) FoldFreshMemSerialize() {
+	fold s.BaseLayer.Mem(nil, 4)
+	fold s.MemSerialize()
+}
+
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMP) IsSupportedSerialization() bool {
+	return false
+}
+
+// (VerifiedSCION) The SCMP header is not a network-header layer, so it holds
+// no destination-address bytes to reclaim; SerializeAddrView returns nil.
+ghost
+pure
+requires acc(s.MemSerialize(), _)
+decreases
+func (s *SCMP) SerializeAddrView() (res []byte) {
+	return nil
 }
 
 (*SCMP) implements gopacket.Layer

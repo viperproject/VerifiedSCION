@@ -15,16 +15,53 @@ import "verification/utils/seqs"
 type SerializableLayer interface {
 	pred Mem(ubuf []byte)
 
+	// (VerifiedSCION) Resources of a freshly constructed (i.e., not
+	// decoded) instance that is about to be serialized without an
+	// underlying buffer. Only meaningful for layers that SerializeLayers
+	// serializes as the outermost header of a packet (cf. slayers.SCION);
+	// all other layers may define it as true.
+	pred MemSerialize()
+
 	requires  !opts.FixLengths
 	requires  b != nil && b.Mem()
 	requires  sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 	requires  Mem(ubuf)
 	preserves sl.Bytes(ubuf, 0, len(ubuf))
-	ensures   err == nil ==> (Mem(ubuf) && b.Mem())
-	ensures   err == nil ==> sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
+	// The layer and the buffer survive also on error: all implementations
+	// fail without giving up Mem(ubuf) or the buffer resources. This is
+	// relied upon by callers that must restore their resources on the
+	// error path (e.g. the router's prepareSCMP).
+	ensures   Mem(ubuf) && b.Mem()
+	ensures   sl.Bytes(b.UBuf(), 0, len(b.UBuf()))
 	ensures   err != nil ==> err.ErrorMem()
 	decreases
 	SerializeTo(b SerializeBuffer, opts SerializeOptions, ghost ubuf []byte) (err error)
+
+	// (VerifiedSCION) Whether serializing this (freshly constructed)
+	// instance as the outermost header of a packet yields a supported
+	// packet in the sense of IsSupportedRawPkt. Only meaningful for
+	// network-header layers (cf. slayers.SCION); all other layers may
+	// define it as false.
+	ghost
+	pure
+	requires acc(MemSerialize(), _)
+	decreases
+	IsSupportedSerialization() bool
+
+	// (VerifiedSCION) The raw destination-address slice governed by
+	// MemSerialize. Only meaningful for the network-header layer (cf.
+	// slayers.SCION), whose address bytes are loaned to it for
+	// serialization and must be reclaimed afterwards; all other layers may
+	// return nil. SerializeLayers preserves this slice (serialization does
+	// not reassign the address fields), which lets the router's prepareSCMP
+	// re-associate the bytes recovered from the returned MemSerialize with
+	// the slice its address wand expects. This follows the identity-
+	// preserving idiom of SerializeBuffer.UBuf.
+	ghost
+	pure
+	requires acc(MemSerialize(), _)
+	decreases
+	SerializeAddrView() (res []byte)
 
 	pure
 	decreases
@@ -102,11 +139,80 @@ ensures sl.Bytes(res.UBuf(), 0, len(res.UBuf()))
 decreases
 func NewSerializeBuffer() (res SerializeBuffer)
 
-// TODO: requires changes to provide access to the underlying layers
-requires  false
+// SerializeLayers clears the given write buffer, then writes all layers
+// into it so they correctly wrap each other.
+//
+// (VerifiedSCION) This specification is trusted. It is justified against
+// the (unverified) implementation, which calls w.Clear() and then
+// layers[i].SerializeTo(w, opts) from the last layer to the first,
+// returning on the first error (plus PushLayer bookkeeping that is
+// unobservable through this package's specifications). It is specialized
+// to the call shape of the verified router: layers[0] is the freshly
+// constructed network-header layer of the packet (a *slayers.SCION), whose
+// resources are given by MemSerialize; all later layers are either freshly
+// constructed layers with a nil underlying buffer or a raw payload
+// aliasing layerBufs[i], with resources given by Mem(layerBufs[i]).
+//
+// The last postcondition is the trusted bridge for the router's
+// IO-level property that SCMP replies are unsupported packets: the header
+// layer is serialized last and prepended at the front of the buffer, so
+// the bytes inspected by IsSupportedRawPkt are exactly the ones it wrote,
+// and they are determined by the fields captured in the old state of its
+// MemSerialize (serialization does not change them; FixLengths only
+// assigns the header/payload lengths).
+//
+// (VerifiedSCION) The precondition is stated with per-index (rather than
+// quantified) clauses, specialized to the router's call shape of three or
+// four layers. This is because the router spreads a pre-built slice
+// (SerializeLayers(..., scmpLayers...)) instead of passing the layers as
+// separate arguments, so the resources must already hold over that slice;
+// individually folded layer predicates satisfy per-index clauses directly,
+// whereas a quantified permission cannot be assembled from them. The
+// per-index Mem/MemSerialize clauses also make the layers implicitly
+// distinct (a layer cannot provide its predicate twice), so no separate
+// injectivity clause is needed for soundness.
+requires  w != nil && w.Mem()
+requires  sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
 requires  len(layerBufs) == len(layers)
-preserves w.Mem()
-preserves acc(layerBufs, R20)
-preserves forall i int :: {&layers[i]} 0 <= i && i < len(layers) ==> acc(&layers[i]) && layers[i].Mem(layerBufs[i])
+requires  len(layers) == 3 || len(layers) == 4
+requires  acc(&layers[0], R50) && layers[0] != nil && layers[0].MemSerialize()
+// (VerifiedSCION) The second layer is the freshly constructed SCMP header
+// (a *slayers.SCMP with a nil underlying buffer). It is passed through its
+// MemSerialize (which holds only its header fields, e.g. TypeCode), not its
+// Mem: the checksum resources it would otherwise carry (via
+// SetNetworkLayerForChecksum) are the network header's own address bytes,
+// which are already available in layers[0].MemSerialize (that layer is the
+// SCMP's network header). Passing them a second time inside this layer would
+// trap them in a predicate the caller cannot reclaim after the call.
+requires  acc(&layers[1], R50) && layers[1] != nil && layers[1].MemSerialize()
+requires  acc(&layers[2], R50) && layers[2] != nil && layers[2].Mem(layerBufs[2]) &&
+	acc(sl.Bytes(layerBufs[2], 0, len(layerBufs[2])), R55)
+// (VerifiedSCION) The optional fourth layer is the SCMP quote payload,
+// whose Mem is resource-free (it is just the slice identity) and is
+// reconstructed by the (trusted) implementation from the byte access
+// below. Requiring layers[3].Mem from the caller would need the appended
+// element's identity through interface boxing, which Gobra does not
+// preserve across append.
+requires  len(layers) == 4 ==> (acc(&layers[3], R50) &&
+	acc(sl.Bytes(layerBufs[3], 0, len(layerBufs[3])), R55))
+ensures   w.Mem() && sl.Bytes(w.UBuf(), 0, len(w.UBuf()))
+ensures   acc(&layers[0], R50) && layers[0] != nil && layers[0].MemSerialize()
+// (VerifiedSCION) Serialization does not reassign the network header's
+// address fields (FixLengths only sets the header/payload lengths), so the
+// raw destination-address slice is preserved. The router's prepareSCMP
+// relies on this to reclaim the address bytes it loaned via MemSerialize.
+ensures   layers[0].SerializeAddrView() === old(layers[0].SerializeAddrView())
+// (VerifiedSCION) The predicates of the inner layers (the SCMP header and
+// the SCMP message payload) and the read fractions of the slice cells are
+// deliberately NOT returned, although the implementation does not consume
+// them: the router drops those local resources after the call anyway, and
+// not re-inhaling them keeps the caller's (very large) proof context small.
+// Only the quote payload's byte fraction is returned, because it is carved
+// out of the caller's packet buffer and must be recombined into it.
+ensures   len(layers) == 4 ==>
+	acc(sl.Bytes(layerBufs[3], 0, len(layerBufs[3])), R55)
+ensures   err == nil ==>
+	IsSupportedRawPkt(w.View()) == old(layers[0].IsSupportedSerialization())
+ensures   err != nil ==> err.ErrorMem()
 decreases
-func SerializeLayers(w SerializeBuffer, opts SerializeOptions, ghost layerBufs []([]byte), layers ...SerializableLayer) error
+func SerializeLayers(w SerializeBuffer, opts SerializeOptions, ghost layerBufs seq[[]byte], layers ...SerializableLayer) (err error)

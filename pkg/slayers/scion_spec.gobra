@@ -233,19 +233,250 @@ func (s *SCION) DowngradePerm(ghost ub []byte) {
 	fold s.NonInitMem()
 }
 
+// ChecksumMem holds the resources of a SCION header that are needed to
+// compute an upper layer's checksum (cf. computeChecksum). An instance is
+// handed to the upper layer via SetNetworkLayerForChecksum and must be able
+// to coexist with the same header's own memory predicate (cf. MemSerialize
+// and the router's prepareSCMP), so all permission amounts are fractional.
+// The bytes of RawSrcAddr are held at wildcard amount because prepareSCMP
+// can obtain the buffer underlying the source address (the data-plane's
+// internal IP) only at wildcard amount itself.
 pred (s *SCION) ChecksumMem() {
-	acc(&s.RawSrcAddr) && acc(&s.RawDstAddr) &&
+	acc(&s.RawSrcAddr, R25) && acc(&s.RawDstAddr, R25) &&
 	len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0 &&
-	acc(&s.SrcIA) && acc(&s.DstIA) &&
-	sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)) &&
-	sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr))
+	acc(&s.SrcIA, R25) && acc(&s.DstIA, R25) &&
+	acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _) &&
+	acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R25)
 }
 
+// MemSerialize is the memory predicate of a freshly constructed (i.e., not
+// decoded) SCION layer that is about to be serialized, e.g. the SCMP reply
+// header built by the router's prepareSCMP. Unlike Mem, it does not tie the
+// layer to an underlying buffer: the path is held with a nil buffer (which
+// *scion.Decoded supports, cf. (*Decoded).Widen), and the raw addresses are
+// held fractionally so that a ChecksumMem instance for the same header can
+// coexist with it during serialization. The bytes of RawSrcAddr are held at
+// wildcard amount for the same reason as in ChecksumMem. Deliberately, no
+// facts are stated about HdrLen and PayloadLen: they are computed during
+// serialization (SerializeOptions.FixLengths).
+pred (s *SCION) MemSerialize() {
+	acc(&s.Version) && acc(&s.TrafficClass) && acc(&s.FlowID) &&
+	acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen) &&
+	acc(&s.PathType) && 0 <= s.PathType && s.PathType < path.MaxPathType &&
+	acc(&s.DstAddrType) && acc(&s.SrcAddrType) &&
+	acc(&s.Path) && s.Path != nil && s.Path.Mem(nil) &&
+	acc(&s.BaseLayer) &&
+	acc(&s.DstIA, R25) && acc(&s.SrcIA, R25) &&
+	acc(&s.RawDstAddr, R25) && acc(&s.RawSrcAddr, R25) &&
+	// (VerifiedSCION) The destination address bytes are held at the full
+	// fraction the router's prepareSCMP loans (R20, cf. SetDstAddr /
+	// ExtractIPBytes), so that unfolding this predicate after serialization
+	// returns exactly what the address wand needs. The source address bytes
+	// are held at wildcard (the data-plane's internal IP is only available
+	// at wildcard). This layer also serves the upper layer's checksum: both
+	// addresses are present, so no separate ChecksumMem is needed during
+	// serialization (cf. the trusted gopacket.SerializeLayers contract).
+	acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20) &&
+	acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _) &&
+	acc(&s.pathPool) && acc(&s.pathPoolRaw) &&
+	PathPoolMem(s.pathPool, s.pathPoolRaw)
+}
+
+// Returns whether serializing this (freshly constructed) SCION header as
+// the outermost header yields a supported packet in the sense of
+// IsSupportedPkt/IsSupportedRawPkt, expressed over the header's fields.
+// The definition is hidden behind an opaque helper so that the many
+// mentions of this hook in the router's prepareSCMP (and in the trusted
+// SerializeLayers contract) do not expand the predicate-unfolding body into
+// that already large proof context; callers obtain its value equationally
+// from FoldFreshMemSerialize's postcondition.
+ghost
+requires acc(s.MemSerialize(), _)
+decreases
+pure func (s *SCION) IsSupportedSerialization() bool {
+	return isSupportedSerializationDef(s)
+}
+
+ghost
+opaque
+requires acc(s.MemSerialize(), _)
+decreases
+pure func isSupportedSerializationDef(s *SCION) bool {
+	return unfolding acc(s.MemSerialize(), _) in
+		s.PathType == scion.PathType && s.NextHdr != L4SCMP
+}
+
+// Returns the raw destination-address slice held by MemSerialize. The
+// trusted gopacket.SerializeLayers preserves this value so that the router's
+// prepareSCMP can re-associate the address bytes it recovers after
+// serialization with the slice its SetDstAddr/ExtractIPBytes wand expects.
+// The definition is hidden behind an opaque helper for the same reason as
+// IsSupportedSerialization; callers obtain its value equationally from
+// FoldFreshMemSerialize's and ReleaseSerializeDstBytes' postconditions.
+ghost
+requires acc(s.MemSerialize(), _)
+decreases
+pure func (s *SCION) SerializeAddrView() (res []byte) {
+	return serializeAddrViewDef(s)
+}
+
+ghost
+opaque
+requires acc(s.MemSerialize(), _)
+decreases
+pure func serializeAddrViewDef(s *SCION) (res []byte) {
+	return unfolding acc(s.MemSerialize(), _) in s.RawDstAddr
+}
+
+// ReleaseSerializeDstBytes consumes a freshly-serialized header's MemSerialize
+// and hands back only the R20 fraction of the destination-address bytes (the
+// amount the router's prepareSCMP loaned via SetDstAddr / ExtractIPBytes). The
+// remaining resources of MemSerialize (the path, the path pool, the source
+// address bytes, and the header fields) are intentionally leaked here: after
+// serialization prepareSCMP only needs the destination bytes to reclaim its
+// address wand, and unfolding the whole predicate at the call site would
+// materialize the (large) path memory into that already fold-heavy context,
+// blowing up its verification time. Performing the unfold in this isolated
+// lemma keeps prepareSCMP's proof context small.
+ghost
+requires s.MemSerialize()
+ensures  acc(sl.Bytes(res, 0, len(res)), R20)
+ensures  res === old(s.SerializeAddrView())
+decreases
+func (s *SCION) ReleaseSerializeDstBytes() (res []byte) {
+	// Revealed before the unfold so the postcondition's old(SerializeAddrView())
+	// is connected to RawDstAddr in the pre-state, where MemSerialize still holds.
+	reveal serializeAddrViewDef(s)
+	unfold s.MemSerialize()
+	res = s.RawDstAddr
+	return res
+}
+
+// Folds MemSerialize for a freshly constructed (i.e., not decoded) SCION
+// header, from the resources that the router's prepareSCMP holds after
+// constructing the SCMP reply header: full permissions to the header's own
+// fields, the reversed path re-associated with a nil buffer (cf.
+// (*Decoded).Widen), an R20 fraction of the destination address bytes (cf.
+// SetDstAddr / ExtractIPBytes), and a wildcard fraction of the source
+// address bytes (cf. SetSrcAddr in wildcard mode). MemSerialize alone
+// carries the address bytes needed both to serialize the header and to
+// compute the upper layer's checksum, so no separate ChecksumMem is folded:
+// the trusted gopacket.SerializeLayers takes those bytes from this predicate
+// (passed as its first layer) and returns it, letting prepareSCMP reclaim
+// the full R20 by a single unfold.
+ghost
+requires acc(&s.Version) && acc(&s.TrafficClass) && acc(&s.FlowID)
+requires acc(&s.NextHdr) && acc(&s.HdrLen) && acc(&s.PayloadLen)
+requires acc(&s.PathType) && 0 <= s.PathType && s.PathType < path.MaxPathType
+requires acc(&s.DstAddrType) && acc(&s.SrcAddrType)
+requires acc(&s.Path) && s.Path != nil && s.Path.Mem(nil)
+requires acc(&s.BaseLayer)
+requires acc(&s.DstIA, R25) && acc(&s.SrcIA, R25)
+requires acc(&s.RawDstAddr, R25) && acc(&s.RawSrcAddr, R25)
+requires acc(sl.Bytes(s.RawDstAddr, 0, len(s.RawDstAddr)), R20)
+requires acc(sl.Bytes(s.RawSrcAddr, 0, len(s.RawSrcAddr)), _)
+requires len(s.RawSrcAddr) % 2 == 0 && len(s.RawDstAddr) % 2 == 0
+requires acc(&s.pathPool) && acc(&s.pathPoolRaw)
+requires s.pathPool == nil && s.pathPoolRaw == nil
+ensures  s.MemSerialize()
+// The supportedness hook is determined by NextHdr and PathType, which the
+// fold hides inside MemSerialize; expose it in terms of the pre-fold field
+// values so the caller (prepareSCMP) can conclude the SCMP reply is
+// unsupported (its NextHdr is L4SCMP).
+ensures  s.IsSupportedSerialization() == (old(s.PathType) == scion.PathType && old(s.NextHdr) != L4SCMP)
+// The destination-address slice is not changed by the fold; expose it so
+// the caller can tie the value recovered after serialization (preserved by
+// SerializeLayers via SerializeAddrView) back to the slice it captured.
+ensures  s.SerializeAddrView() === old(s.RawDstAddr)
+decreases
+func (s *SCION) FoldFreshMemSerialize() {
+	fold PathPoolMem(s.pathPool, s.pathPoolRaw)
+	fold s.MemSerialize()
+	// The postconditions about the (opaque) hooks are proved here, once,
+	// so that callers never need to reveal the definitions themselves.
+	reveal isSupportedSerializationDef(s)
+	reveal serializeAddrViewDef(s)
+	assert unfolding acc(s.MemSerialize(), _) in
+		s.PathType == old(s.PathType) && s.NextHdr == old(s.NextHdr) &&
+		s.RawDstAddr === old(s.RawDstAddr)
+}
+
+// A BaseLayer predicate instance is in one of two modes:
+//   - decoded mode (ub != nil): the layer was obtained via DecodeFromBytes
+//     and Contents and Payload alias the underlying buffer ub around
+//     breakPoint (this is the original meaning of this predicate);
+//   - fresh mode (ub == nil): the layer was freshly constructed (e.g. to be
+//     serialized, cf. prepareSCMP in the router) and has no underlying
+//     buffer; Contents and Payload are still zero-valued.
+// The fresh mode is what makes Mem(nil) foldable for freshly constructed
+// layers, which is impossible in decoded mode whenever breakPoint > 0.
 pred (b *BaseLayer) Mem(ghost ub []byte, ghost breakPoint int) {
-	0 <= breakPoint && breakPoint <= len(ub) &&
 	acc(b) &&
-	b.Contents === ub[:breakPoint] &&
-	b.Payload  === ub[breakPoint:]
+	(ub == nil ==> (b.Contents == nil && b.Payload == nil)) &&
+	(ub != nil ==> (0 <= breakPoint && breakPoint <= len(ub) &&
+		b.Contents === ub[:breakPoint] &&
+		b.Payload  === ub[breakPoint:]))
+}
+
+// ExtractIPBytes converts a fraction of an IP-typed address' resources
+// into a byte predicate over `raw`, a slice that aliases the address'
+// underlying IP buffer as described by SetDstAddr's postconditions (either
+// the whole buffer or, for IPv4-in-IPv6 addresses, its 4-byte suffix).
+// The returned magic wand gives the fraction back. This follows the
+// pattern of the router's addEndhostPort.
+ghost
+requires typeOf(dst) == type[*net.IPAddr]
+requires acc(dst.Mem(), R20)
+requires unfolding acc(dst.Mem(), R20) in (isIPv4(dst) ==>
+	len(raw) == len(dst.(*net.IPAddr).IP) &&
+	(forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> &raw[i] == &dst.(*net.IPAddr).IP[i]))
+requires unfolding acc(dst.Mem(), R20) in ((isIPv6(dst) && isConvertibleToIPv4(dst)) ==>
+	len(dst.(*net.IPAddr).IP) == len(raw) + 12 &&
+	(forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> &raw[i] == &dst.(*net.IPAddr).IP[12+i]))
+requires unfolding acc(dst.Mem(), R20) in ((isIPv6(dst) && !isConvertibleToIPv4(dst)) ==>
+	len(dst.(*net.IPAddr).IP) == len(raw) &&
+	(forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> &raw[i] == &dst.(*net.IPAddr).IP[i]))
+requires unfolding acc(dst.Mem(), R20) in ((!isIPv4(dst) && !isIPv6(dst)) ==>
+	len(raw) == len(dst.(*net.IPAddr).IP) &&
+	(forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> &raw[i] == &dst.(*net.IPAddr).IP[i]))
+ensures  acc(sl.Bytes(raw, 0, len(raw)), R20)
+ensures  acc(sl.Bytes(raw, 0, len(raw)), R20) --* acc(dst.Mem(), R20)
+decreases
+func ExtractIPBytes(dst net.Addr, raw []byte) {
+	unfold acc(dst.Mem(), R20)
+	assert forall i int :: { &raw[i] } 0 <= i && i < len(raw) ==> acc(&raw[i], R20)
+	fold acc(sl.Bytes(raw, 0, len(raw)), R20)
+	package acc(sl.Bytes(raw, 0, len(raw)), R20) --* acc(dst.Mem(), R20) {
+		unfold acc(sl.Bytes(raw, 0, len(raw)), R20)
+		fold acc(dst.Mem(), R20)
+	}
+}
+
+// ExtractAccSrc is the analog of ExtractAcc for the source address.
+ghost
+requires acc(s.Mem(ub), R15)
+ensures  acc(s, R16)
+ensures  s.SrcAddrType == T4Svc ==> len(s.RawSrcAddr) >= addr.HostLenSVC
+ensures  0 <= start && start <= end && end <= len(ub)
+ensures  s.RawSrcAddr === ub[start:end]
+ensures  end - start == s.SrcAddrType.Length()
+ensures  s.SrcAddrType.Length() == 4 || s.SrcAddrType.Length() == 8 ||
+	s.SrcAddrType.Length() == 12 || s.SrcAddrType.Length() == 16
+ensures  acc(s, R16) --* acc(s.Mem(ub), R15)
+decreases
+func (s *SCION) ExtractAccSrc(ghost ub []byte) (start, end int) {
+	unfold acc(s.Mem(ub), R16)
+	unfold acc(s.HeaderMem(ub[CmnHdrLen:]), R16)
+	start = CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()
+	end = CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()+s.SrcAddrType.Length()
+	assert s.RawSrcAddr === ub[start:end]
+	package acc(s, R16) --* acc(s.Mem(ub), R15) {
+		unfold acc(s.Mem(ub), R16)
+		unfold acc(s.HeaderMem(ub[CmnHdrLen:]), R16)
+		fold acc(s.HeaderMem(ub[CmnHdrLen:]), R15)
+		fold acc(s.Mem(ub), R15)
+	}
+	return start, end
 }
 
 ghost
@@ -521,6 +752,49 @@ pure func IsSupportedRawPkt(raw seq[byte]) bool {
 		let nextHdr  := L4ProtocolType(raw[4]) in
 		(pathType == scion.PathType || pathType == epic.PathType) &&
 		nextHdr != L4SCMP
+}
+
+// gopacket.IsSupportedRawPkt is a twin of IsSupportedRawPkt, defined in the
+// gopacket stubs because gopacket cannot import slayers. This lemma keeps
+// the two definitions in sync; it is the bridge through which
+// supportedness facts established by (trusted) gopacket-level specs (e.g.
+// SerializeLayers) become available in terms of the slayers definitions.
+ghost
+ensures gopacket.IsSupportedRawPkt(raw) == IsSupportedRawPkt(raw)
+decreases
+func IsSupportedRawPktEqGopacket(raw seq[byte]) {
+	reveal gopacket.IsSupportedRawPkt(raw)
+	reveal IsSupportedRawPkt(raw)
+	assert scion.PathType == path.Type(1)
+	assert L4SCMP == L4ProtocolType(202)
+	assert CmnHdrLen == 12
+}
+
+// UnsupportedRawPktImpliesUnsupportedPkt bridges the gopacket-level
+// unsupportedness of a freshly serialized buffer's view (as ensured by the
+// trusted SerializeLayers for the router's SCMP replies) to the
+// slayers-level IsSupportedPkt over the buffer itself. Performing the
+// reveals of the opaque supportedness definitions -- and the byte-predicate
+// unfoldings they trigger -- in this isolated context keeps the associated
+// quantifier instantiations out of the router's (already fold-heavy)
+// prepareSCMP proof, whose context holds many byte predicates.
+ghost
+requires sl.Bytes(ubuf, 0, len(ubuf))
+requires !gopacket.IsSupportedRawPkt(seqs.ToSeqByte(ubuf))
+ensures  sl.Bytes(ubuf, 0, len(ubuf))
+ensures  !IsSupportedPkt(ubuf)
+decreases
+func UnsupportedRawPktImpliesUnsupportedPkt(ubuf []byte) {
+	view := seqs.ToSeqByte(ubuf)
+	IsSupportedRawPktEqGopacket(view)
+	assert !(reveal IsSupportedRawPkt(view))
+	// Connect the view's entries to the buffer's bytes at the two inspected
+	// offsets, so the solver can align the two definitions.
+	ghost if CmnHdrLen <= len(ubuf) {
+		assert view[8] == sl.GetByte(ubuf, 0, len(ubuf), 8)
+		assert view[4] == sl.GetByte(ubuf, 0, len(ubuf), 4)
+	}
+	assert !(reveal IsSupportedPkt(ubuf))
 }
 
 ghost

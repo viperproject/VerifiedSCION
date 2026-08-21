@@ -491,6 +491,21 @@ func (d *DataPlane) getInternal() {
 }
 
 ghost
+requires acc(d.Mem(), _)
+ensures  acc(&d.internalIP, _)
+ensures  d.internalIP != nil ==> (len(d.internalIP) == 4 || len(d.internalIP) == 16)
+ensures  d.internalIP != nil ==>
+	forall i int :: { &d.internalIP[i] } 0 <= i && i < len(d.internalIP) ==> acc(&d.internalIP[i], _)
+decreases
+func (d *DataPlane) getInternalIPMem() {
+	unfold acc(d.Mem(), _)
+	unfold acc(internalIPInv(d.internalIP), _)
+	ghost if d.internalIP != nil {
+		unfold acc(d.internalIP.Mem(), _)
+	}
+}
+
+ghost
 requires acc(d.Mem(), _) && d.getMacFactory() != nil
 ensures  acc(&d.macFactory, _) && acc(&d.key, _) && acc(d.key, _)
 ensures  acc(sl.Bytes(*d.key, 0, len(*d.key)), _)
@@ -802,4 +817,48 @@ pure func (d *DataPlane) DomainForwardingMetrics() set[uint16] {
 			unfolding accForwardingMetrics(d.forwardingMetrics) in
 				domain(d.forwardingMetrics) :
 			set[uint16]{}
+}
+
+// reclaimScionMemAfterSerialize gives the source-address resources loaned
+// out by prepareSCMP back to the packet buffer and the SCION layer, after
+// the SCMP reply has been serialized. It composes, in one extrinsic step:
+// the return of the destination-address byte fraction to the source address
+// (via the wand produced by slayers.ExtractIPBytes; only when the source
+// address is an IP address, matching where that wand was created), the
+// application of the SrcAddr wand recovering the raw source-address bytes,
+// their recombination into ub, and the application of the ExtractAccSrc
+// wand restoring the SCION layer's memory predicate. Performing these
+// wand applications inside this lemma keeps the associated chunk matching
+// and the type-based branching out of prepareSCMP's (very large) proof
+// context.
+ghost
+requires 0 <= startSrc && startSrc <= endSrc && endSrc <= len(ub)
+requires rawSrc === ub[startSrc:endSrc]
+requires typeOf(srcA) == type[*net.IPAddr] ==> (
+	acc(sl.Bytes(rawDst, 0, len(rawDst)), R20) &&
+	(acc(sl.Bytes(rawDst, 0, len(rawDst)), R20) --* acc(srcA.Mem(), R20)) &&
+	acc(srcA.Mem(), R15 - R20))
+requires typeOf(srcA) != type[*net.IPAddr] ==> acc(srcA.Mem(), R15)
+requires acc(srcA.Mem(), R15) --* acc(sl.Bytes(rawSrc, 0, len(rawSrc)), R15)
+requires acc(sl.Bytes(ub, 0, startSrc), R15)
+requires acc(sl.Bytes(ub, endSrc, len(ub)), R15)
+requires acc(&p.scionLayer, R16)
+requires acc(&p.scionLayer, R16) --* acc(p.scionLayer.Mem(ub), R15)
+ensures  acc(sl.Bytes(ub, 0, len(ub)), R15)
+ensures  acc(p.scionLayer.Mem(ub), R15)
+decreases
+func (p *scionPacketProcessor) reclaimScionMemAfterSerialize(
+	srcA net.Addr,
+	rawDst []byte,
+	rawSrc []byte,
+	ub []byte,
+	startSrc int,
+	endSrc int,
+) {
+	ghost if typeOf(srcA) == type[*net.IPAddr] {
+		apply acc(sl.Bytes(rawDst, 0, len(rawDst)), R20) --* acc(srcA.Mem(), R20)
+	}
+	apply acc(srcA.Mem(), R15) --* acc(sl.Bytes(rawSrc, 0, len(rawSrc)), R15)
+	sl.CombineRange_Bytes(ub, startSrc, endSrc, R15)
+	apply acc(&p.scionLayer, R16) --* acc(p.scionLayer.Mem(ub), R15)
 }
