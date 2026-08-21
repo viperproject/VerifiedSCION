@@ -18,7 +18,7 @@
 
 package io
 
-ghost type Dp3sStateLocal ghost struct {
-	ibuf dict[option[Ifs]](set[Pkt])
-	obuf dict[option[Ifs]](set[Pkt])
+ghost comparable type Dp3sStateLocal ghost struct {
+	Ibuf dict[option[Ifs]](set[Pkt])
+	Obuf dict[option[Ifs]](set[Pkt])
 }

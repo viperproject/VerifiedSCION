@@ -47,13 +47,14 @@ func foldMem_test() {
 	fold MutexInvariant{&d}()
 	// testing initialization with the operations from dataplane
 	d.mtx.SetInv(MutexInvariant{&d})
+	fold (&d).MtxInv()
 	d.AddNeighborIA(uint16(1), addr.IA(10))
 	d.AddNeighborIA(uint16(2), addr.IA(11))
 }
 
 func foldScionPacketProcessorInitMem_test() {
 	d := &scionPacketProcessor{}
-	fold slayers.PathPoolMem(d.scionLayer.pathPool, d.scionLayer.pathPoolRaw)
+	d.scionLayer.EstablishHiddenPathPoolMem()
 	d.scionLayer.RecyclePaths()
 	fold d.scionLayer.NonInitMem()
 	fold d.initMem()
@@ -163,18 +164,18 @@ func testRun(
 	// `===` for ghost structs
 	ensures dp != io.DataPlaneSpec{}
 	ensures dp == io.DataPlaneSpec {
-		linkTypes: dict[io.Ifs]io.Link{
+		LinkTypes: dict[io.Ifs]io.Link{
 			io.Ifs{1}: io.IO_ProvCust{},
 			io.Ifs{2}: io.IO_ProvCust{},
 			io.Ifs{3}: io.IO_ProvCust{},
 		},
-		neighborIAs: dict[io.Ifs]io.AS{
+		NeighborIAs: dict[io.Ifs]io.AS{
 			io.Ifs{1}: io.AS{1001},
 			io.Ifs{2}: io.AS{1002},
 			io.Ifs{3}: io.AS{1000},
 		},
-		localIA: io.AS{1000},
-		links:  dict[io.AsIfsPair]io.AsIfsPair {
+		LocalIA: io.AS{1000},
+		Links:  dict[io.AsIfsPair]io.AsIfsPair {
 			io.AsIfsPair{io.AS{1000}, io.Ifs{1}}: io.AsIfsPair{io.AS{1001}, io.Ifs{7}},
 			io.AsIfsPair{io.AS{1000}, io.Ifs{2}}: io.AsIfsPair{io.AS{1002}, io.Ifs{8}},
 			io.AsIfsPair{io.AS{1000}, io.Ifs{3}}: io.AsIfsPair{io.AS{1000}, io.Ifs{3}},
@@ -188,18 +189,18 @@ func testRun(
 	pair5 := io.AsIfsPair{io.AS{1002}, io.Ifs{8}}
 
 	dp := io.DataPlaneSpec {
-		linkTypes: dict[io.Ifs]io.Link{
+		LinkTypes: dict[io.Ifs]io.Link{
 			io.Ifs{1}: io.IO_ProvCust{},
 			io.Ifs{2}: io.IO_ProvCust{},
 			io.Ifs{3}: io.IO_ProvCust{},
 		},
-		neighborIAs: dict[io.Ifs]io.AS{
+		NeighborIAs: dict[io.Ifs]io.AS{
 			io.Ifs{1}: io.AS{1001},
 			io.Ifs{2}: io.AS{1002},
 			io.Ifs{3}: io.AS{1000},
 		},
-		localIA: io.AS{1000},
-		links:  dict[io.AsIfsPair]io.AsIfsPair {
+		LocalIA: io.AS{1000},
+		Links:  dict[io.AsIfsPair]io.AsIfsPair {
 			pair1: pair4,
 			pair2: pair5,
 			pair3: pair3,
@@ -212,17 +213,17 @@ func testRun(
 	assert dp.Lookup(dp.Lookup(pair4)) == pair4
 	assert dp.Lookup(dp.Lookup(pair5)) == pair5
 
-	assert forall ifs io.Ifs :: {ifs elem domain(dp.neighborIAs)} ifs elem domain(dp.neighborIAs) ==>
-		io.AsIfsPair{dp.localIA, ifs} elem domain(dp.links)
-	assert forall ifs io.Ifs :: {ifs elem domain(dp.neighborIAs)} ifs elem domain(dp.neighborIAs) ==>
-		dp.Lookup(io.AsIfsPair{dp.localIA, ifs}).asid == dp.neighborIAs[ifs]
-	assert forall ifs io.Ifs :: {ifs elem domain(dp.neighborIAs)} io.AsIfsPair{dp.localIA, ifs} elem domain(dp.links) ==>
-		ifs elem domain(dp.neighborIAs)
-	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair elem domain(dp.links) ==>
+	assert forall ifs io.Ifs :: {ifs elem domain(dp.NeighborIAs)} ifs elem domain(dp.NeighborIAs) ==>
+		io.AsIfsPair{dp.LocalIA, ifs} elem domain(dp.Links)
+	assert forall ifs io.Ifs :: {ifs elem domain(dp.NeighborIAs)} ifs elem domain(dp.NeighborIAs) ==>
+		dp.Lookup(io.AsIfsPair{dp.LocalIA, ifs}).Asid == dp.NeighborIAs[ifs]
+	assert forall ifs io.Ifs :: {ifs elem domain(dp.NeighborIAs)} io.AsIfsPair{dp.LocalIA, ifs} elem domain(dp.Links) ==>
+		ifs elem domain(dp.NeighborIAs)
+	assert forall pair io.AsIfsPair :: {dp.Lookup(pair)} pair elem domain(dp.Links) ==>
 			let next_pair := dp.Lookup(pair) in
-			(next_pair elem domain(dp.links)) &&
+			(next_pair elem domain(dp.Links)) &&
 			dp.Lookup(next_pair) == pair
-	assert domain(dp.linkTypes) == domain(dp.neighborIAs)
+	assert domain(dp.LinkTypes) == domain(dp.NeighborIAs)
 	assert reveal dp.Valid()
 	)
 
@@ -244,10 +245,10 @@ func testRun(
 	fold metricsInv(d.Metrics)
 	fold forwardingMetricsInv(d.forwardingMetrics)
 	fold d.Mem()
-	assert d.getDomNeighborIAs() == reveal d.getDomExternal()
-	assert d.getDomNeighborIAs() == d.getDomLinkTypes()
-	assert !(0 elem d.getDomNeighborIAs())
-	assert reveal d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
+	assert d.GetDomNeighborIAs() == reveal d.GetDomExternal()
+	assert d.GetDomNeighborIAs() == d.GetDomLinkTypes()
+	assert !(0 elem d.GetDomNeighborIAs())
+	assert reveal d.GetDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 	assert reveal d.DpAgreesWithSpec(dp)
 
 	assert reveal d.PreWellConfigured()
@@ -263,8 +264,8 @@ func testRun(
 	assert d.mtx.LockInv() == MutexInvariant{d}
 
 	// io-spec needs to be inhaled
-	inhale io.token(place)
-	inhale dp.dp3s_iospec_ordered(state, place)
+	inhale io.IOToken(place)
+	inhale dp.Dp3s_iospec_ordered(state, place)
 
 	d.Run(ctx, place, state, dp)
 }

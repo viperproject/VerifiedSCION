@@ -50,6 +50,7 @@ const expTimeUnit = MaxTTL / 256 // ~5m38s
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
 //	|                              MAC                              |
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// @ comparable
 type HopField struct {
 	// IngressRouterAlert flag. If the IngressRouterAlert is set, the ingress router (in
 	// construction direction) will process the L4 payload in the packet.

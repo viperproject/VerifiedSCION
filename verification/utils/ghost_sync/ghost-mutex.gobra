@@ -29,7 +29,7 @@ import . "verification/utils/definitions"
 // Currently, Gobra does not check any of these two properties. Property (1) could be done
 // by using obligations.
 
-type GhostMutex struct {
+comparable type GhostMutex struct {
 	privateField PrivateField
 }
 

@@ -22,9 +22,9 @@ package io
 ghost
 requires len(currseg.Future) > 0
 decreases
-pure func establishGuardTraversedseg(currseg Seg, direction bool) Seg {
+pure func EstablishGuardTraversedseg(currseg Seg, direction bool) Seg {
 	return let uinfo := direction ?
-		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
+		Upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
 		Seg {
 			AInfo: currseg.AInfo,
@@ -41,9 +41,9 @@ pure func establishGuardTraversedseg(currseg Seg, direction bool) Seg {
 ghost
 requires len(currseg.Future) > 0
 decreases
-pure func establishGuardTraversedsegInc(currseg Seg, direction bool) Seg {
+pure func EstablishGuardTraversedsegInc(currseg Seg, direction bool) Seg {
 	return let uinfo := direction ?
-		upd_uinfo(currseg.UInfo, currseg.Future[0]) :
+		Upd_uinfo(currseg.UInfo, currseg.Future[0]) :
 		currseg.UInfo in
 		Seg {
 			AInfo: currseg.AInfo,
@@ -102,7 +102,7 @@ pure func (pkt Pkt) UpdateInfoField(info AbsInfoField) Pkt {
 
 // This type simplifies the infoField, making it easier
 // to use than the Seg from the IO-spec.
-ghost type AbsInfoField ghost struct {
+ghost comparable type AbsInfoField ghost struct {
 	AInfo Ainfo
 	UInfo set[MsgTerm]
 	ConsDir bool
@@ -112,7 +112,7 @@ ghost type AbsInfoField ghost struct {
 // The segment lengths of a packet are frequently used together.
 // This type combines them into a single structure to simplify
 // their specification.
-ghost type SegLens ghost struct {
+ghost comparable type SegLens ghost struct {
 	Seg1Len int
 	Seg2Len int
 	Seg3Len int

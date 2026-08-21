@@ -26,7 +26,9 @@ type BoundedMonotonicSet struct {
 	ghost End int64
 }
 
-pred (b BoundedMonotonicSet) Inv() {
+// The body of this predicate exposes the private representation of the set, so
+// importing packages may observe the predicate but not unfold it.
+closed pred (b BoundedMonotonicSet) Inv() {
 	(b.Start <= b.End) &&
 	(forall i int64 :: b.Start <= i && i <= b.End ==>
 		(i elem domain(b.valuesMap) && acc(b.valuesMap[i], 1/2))) &&
@@ -39,6 +41,7 @@ ghost
 requires b.Inv()
 requires b.Start <= i && i <= b.End
 decreases
+closed
 pure func (b BoundedMonotonicSet) FContains(i int64) bool {
 	// extra indirection avoids a type-checking bug of Gobra.
 	return unfolding acc(b.Inv(), _) in
@@ -54,7 +57,7 @@ pure func (b BoundedMonotonicSet) fcontainshelper(i int64) bool {
 }
 
 
-pred (b BoundedMonotonicSet) Contains(i int64) {
+closed pred (b BoundedMonotonicSet) Contains(i int64) {
 	b.Start <= i && i <= b.End &&
 	i elem domain(b.valuesMap) &&
 	acc(b.valuesMap[i], _)     &&
@@ -80,7 +83,7 @@ func (b BoundedMonotonicSet) PromoteContains(i int64) {
 	fold   b.Contains(i)
 }
 
-pred (b BoundedMonotonicSet) DoesNotContain(i int64) {
+closed pred (b BoundedMonotonicSet) DoesNotContain(i int64) {
 	b.Start <= i && i <= b.End &&
 	i elem domain(b.valuesMap) &&
 	acc(b.valuesMap[i], 1/2) &&
@@ -173,7 +176,8 @@ func Alloc(start, end int64) (res BoundedMonotonicSet) {
 }
 
 ghost
-opaque // make this closed when that is supported
+opaque
+closed
 requires b.Inv()
 decreases
 pure func (b BoundedMonotonicSet) ToSet() set[int64] {
