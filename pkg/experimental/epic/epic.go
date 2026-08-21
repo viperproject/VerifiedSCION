@@ -305,13 +305,14 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	// @ unfold acc(postInitInvariant(), _)
 	// @ assert acc(sl.Bytes(zeroInitVector[:], 0, 16), _)
 	// (VerifiedSCION) From the package invariant, we learn that we have a wildcard access to zeroInitVector.
-	// Unfortunately, it is not possible to call `copy` with a wildcard amount, even though
-	// that would be perfectly fine. The spec of `copy` would need to be adapted to allow for that case.
-	// @ inhale acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), R55)
-	// @ unfold acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), R55)
+	// Unfortunately, it is not possible to call `copy` with a wildcard amount, even though that would be
+	// perfectly fine. Instead of assuming a fixed permission amount, we introspect the one we already
+	// hold and pass the resulting symbolic, positive amount to `copy`.
+	// @ ghost zeroPerm := sl.PermIntrospectBytes(zeroInitVector[:], 0, len(zeroInitVector[:]))
+	// @ unfold acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), zeroPerm)
 	// @ assert forall i int :: { &zeroInitVector[:][i] } 0 <= i && i < len(zeroInitVector[:]) ==>
 	// @ 	&zeroInitVector[:][i] == &zeroInitVector[i]
-	copy(inputBuffer[offset:inputLength], zeroInitVector[:] /*@ , R55 @*/)
+	copy(inputBuffer[offset:inputLength], zeroInitVector[:] /*@ , zeroPerm @*/)
 	// @ fold sl.Bytes(inputBuffer, 0, len(inputBuffer))
 	return inputLength, nil
 }
