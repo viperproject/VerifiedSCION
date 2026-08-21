@@ -40,6 +40,7 @@ func newServices() (s *services) {
 	return tmp
 }
 
+// @ requires s != nil
 // @ preserves acc(s.Mem(), R50)
 // @ requires  acc(a.Mem(), R10)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
@@ -68,6 +69,7 @@ func (s *services) AddSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ fold acc(s.Mem(), R50)
 }
 
+// @ requires s != nil
 // @ preserves acc(s.Mem(), R50)
 // @ preserves acc(a.Mem(), R10)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
@@ -101,6 +103,7 @@ func (s *services) DelSvc(svc addr.HostSVC, a *net.UDPAddr) {
 	//@ fold acc(s.Mem(), R50)
 }
 
+// @ requires s != nil
 // @ requires acc(s.Mem(), _)
 // @ ensures  !b ==> r == nil
 // @ ensures  b  ==> acc(r.Mem(), _)
