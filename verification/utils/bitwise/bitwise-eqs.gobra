@@ -35,10 +35,12 @@ decreases
 pure func BitAnd3(b int) (res int)
 
 ghost
-ensures 0 <= b & 0x7 && b & 0x7 <= 7
+// byte-typed so the lemma's bitwise terms match the byte-kind operations that
+// real parsing code produces (bounded semantics gives each kind its own helpers)
+ensures 0 <= res && res <= 7
 ensures res == b & 0x7
 decreases
-pure func BitAnd7(b int) (res int)
+pure func BitAnd7(b byte) (res byte)
 
 ghost
 ensures res == b >> 30
@@ -53,17 +55,17 @@ decreases
 pure func And3fAtMost64(b uint8) (res uint8)
 
 ghost
-ensures 0 | 1 == 1
-ensures 0 | 2 == 2
-ensures 1 | 2 == 3
-ensures 0 & 1 == 0
-ensures 0 & 2 == 0
-ensures 1 & 1 == 1
-ensures 1 & 2 == 0
-ensures 2 & 1 == 0
-ensures 2 & 2 == 2
-ensures 3 & 1 == 1
-ensures 3 & 2 == 2
+// Under bounded integer semantics, facts about *constant* bitwise expressions are
+// constant-folded away and never connect to the abstract bitwise helper terms that
+// runtime operations produce. The lemmas are therefore stated as quantified facts
+// over byte-typed operands, with triggers on the bitwise terms themselves.
+ensures forall b byte :: { b | 1 } (b | 1) & 1 == 1
+ensures forall b byte :: { b | 2 } (b | 2) & 2 == 2
+ensures forall b byte :: { b | 1 } (b | 1) & 2 == b & 2
+ensures forall b byte :: { b | 2 } (b | 2) & 1 == b & 1
+ensures forall b byte :: { b | 1 } b & 2 == 0 ==> b | 1 == (b & 1 == 1 ? b : b + 1)
+ensures forall b byte :: { b & 1 } b == 0 ==> b & 1 == 0
+ensures forall b byte :: { b & 2 } b == 0 ==> b & 2 == 0
 decreases
 pure func InfoFieldFirstByteSerializationLemmas() bool
 

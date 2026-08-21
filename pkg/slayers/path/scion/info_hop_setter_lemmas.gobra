@@ -57,12 +57,12 @@ ghost
 requires segs.Valid()
 requires 0 <= currInfIdx
 decreases
-pure func HopfieldsStartIdx(currInfIdx int, segs io.SegLens) int {
+pure func HopfieldsStartIdx(currInfIdx int, segs io.SegLens) integer {
 	return let numInf := segs.NumInfoFields() in
 		let infOffset := path.InfoFieldOffset(numInf, MetaLen) in
 		(currInfIdx == 0 || currInfIdx == 4) ? infOffset :
-		currInfIdx == 1 ? infOffset + segs.Seg1Len * path.HopLen :
-		infOffset + (segs.Seg1Len + segs.Seg2Len) * path.HopLen
+		currInfIdx == 1 ? infOffset + integer(segs.Seg1Len) * path.HopLen :
+		infOffset + (integer(segs.Seg1Len) + integer(segs.Seg2Len)) * path.HopLen
 }
 
 // HopfieldsStartIdx returns index of the last byte of the hopfields of a segment
@@ -74,12 +74,12 @@ ghost
 requires segs.Valid()
 requires 0 <= currInfIdx
 decreases
-pure func HopfieldsEndIdx(currInfIdx int, segs io.SegLens) int {
+pure func HopfieldsEndIdx(currInfIdx int, segs io.SegLens) integer {
 	return let numInf := segs.NumInfoFields() in
 		let infOffset := path.InfoFieldOffset(numInf, MetaLen) in
-		(currInfIdx == 0 || currInfIdx == 4) ? infOffset + segs.Seg1Len * path.HopLen :
-		currInfIdx == 1 ? infOffset + (segs.Seg1Len + segs.Seg2Len) * path.HopLen :
-		infOffset + (segs.Seg1Len + segs.Seg2Len + segs.Seg3Len) * path.HopLen
+		(currInfIdx == 0 || currInfIdx == 4) ? infOffset + integer(segs.Seg1Len) * path.HopLen :
+		currInfIdx == 1 ? infOffset + (integer(segs.Seg1Len) + integer(segs.Seg2Len)) * path.HopLen :
+		infOffset + (integer(segs.Seg1Len) + integer(segs.Seg2Len) + integer(segs.Seg3Len)) * path.HopLen
 }
 
 // HopfieldsStartIdx returns returns the byte slice of the hopfields of a segment
@@ -223,7 +223,7 @@ requires 0 <= currHfIdx && currHfIdx <= SegLen
 requires SegLen * path.HopLen == len(hopfields)
 requires sl.Bytes(hopfields, 0, len(hopfields))
 decreases
-pure func CurrSegWithInfo(hopfields []byte, currHfIdx int, SegLen int, inf io.AbsInfoField) io.Seg {
+pure func CurrSegWithInfo(hopfields []byte, currHfIdx integer, SegLen integer, inf io.AbsInfoField) io.Seg {
 	return segment(hopfields, 0, currHfIdx, inf.AInfo, inf.UInfo, inf.ConsDir, inf.Peer, SegLen)
 }
 
@@ -314,7 +314,7 @@ pure func MidSegWithInfo(
 ghost
 requires  path.InfoFieldOffset(currInfIdx, MetaLen) + path.InfoLen <= offset
 requires  0 < SegLen
-requires  offset + path.HopLen * SegLen <= len(raw)
+requires  offset + path.HopLen * (SegLen) <= len(raw)
 requires  0 <= currHfIdx && currHfIdx <= SegLen
 requires  0 <= currInfIdx && currInfIdx < 3
 preserves acc(sl.Bytes(raw, 0, len(raw)), R50)
@@ -324,7 +324,7 @@ ensures   let inf := path.BytesToAbsInfoField(InfofieldByteSlice(raw, currInfIdx
 	CurrSegWithInfo(raw[offset:offset + SegLen * path.HopLen], currHfIdx, SegLen, inf) ==
 	CurrSeg(raw, offset, currInfIdx, currHfIdx, SegLen, MetaLen)
 decreases
-func CurrSegEquality(raw []byte, offset int, currInfIdx int, currHfIdx int, SegLen int) {
+func CurrSegEquality(raw []byte, offset integer, currInfIdx int, currHfIdx integer, SegLen integer) {
 	infoBytes := InfofieldByteSlice(raw, currInfIdx)
 	inf := reveal path.BytesToAbsInfoField(infoBytes, 0)
 	infOffset := path.InfoFieldOffset(currInfIdx, MetaLen)
@@ -366,7 +366,7 @@ preserves acc(sl.Bytes(raw, 0, len(raw)), R50)
 ensures   CurrSegWithInfo(raw, currHfIdx, SegLen, inf1).UpdateCurrSeg(inf2) ==
 	CurrSegWithInfo(raw, currHfIdx, SegLen, inf2)
 decreases
-func UpdateCurrSegInfo(raw []byte, currHfIdx int, SegLen int,
+func UpdateCurrSegInfo(raw []byte, currHfIdx integer, SegLen integer,
 	inf1 io.AbsInfoField, inf2 io.AbsInfoField) {
 	seg1 := reveal CurrSegWithInfo(raw, currHfIdx, SegLen, inf1)
 	seg2 := reveal CurrSegWithInfo(raw, currHfIdx, SegLen, inf2)
@@ -574,7 +574,7 @@ requires let currHfStart := currHfIdx * path.HopLen in
 	sl.Bytes(hopfields[currHfStart:currHfEnd], 0, path.HopLen) &&
 	sl.Bytes(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen)
 decreases
-pure func BytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) bool {
+pure func BytesStoreCurrSeg(hopfields []byte, currHfIdx integer, segLen integer, inf io.AbsInfoField) bool {
 	return let currseg := CurrSegWithInfo(hopfields, currHfIdx, segLen, inf) in
 		let currHfStart := currHfIdx * path.HopLen                           in
 		let currHfEnd := currHfStart + path.HopLen                           in
@@ -605,7 +605,7 @@ preserves let currHfStart := currHfIdx * path.HopLen in
 	acc(sl.Bytes(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen), R49)
 ensures  BytesStoreCurrSeg(hopfields, currHfIdx, segLen, inf)
 decreases
-func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) {
+func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx integer, segLen integer, inf io.AbsInfoField) {
 	currseg := reveal CurrSegWithInfo(hopfields, currHfIdx, segLen, inf)
 	currHfStart := currHfIdx * path.HopLen
 	currHfEnd := currHfStart + path.HopLen
@@ -633,7 +633,7 @@ ensures  let currHfStart := currHfIdx * path.HopLen in
 	acc(sl.Bytes(hopfields[currHfStart:currHfEnd], 0, path.HopLen), p) &&
 	acc(sl.Bytes(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen), p)
 decreases
-func SplitHopfields(hopfields []byte, currHfIdx int, segLen int, p perm) {
+func SplitHopfields(hopfields []byte, currHfIdx integer, segLen integer, p perm) {
 	currHfStart := currHfIdx * path.HopLen
 	currHfEnd := currHfStart + path.HopLen
 	sl.SplitByIndex_Bytes(hopfields, 0, len(hopfields), currHfStart, p)
@@ -657,7 +657,7 @@ requires let currHfStart := currHfIdx * path.HopLen in
 	acc(sl.Bytes(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen), p)
 ensures  acc(sl.Bytes(hopfields, 0, len(hopfields)), p)
 decreases
-func CombineHopfields(hopfields []byte, currHfIdx int, segLen int, p perm) {
+func CombineHopfields(hopfields []byte, currHfIdx integer, segLen integer, p perm) {
 	currHfStart := currHfIdx * path.HopLen
 	currHfEnd := currHfStart + path.HopLen
 	sl.Unslice_Bytes(hopfields, currHfEnd, len(hopfields), p)

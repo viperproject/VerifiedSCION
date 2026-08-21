@@ -61,7 +61,7 @@ type SerializeBuffer interface {
 	preserves Mem()
 	requires  num >= 0
 	preserves sl.Bytes(UBuf(), 0, len(UBuf()))
-	ensures   err == nil ==> len(UBuf()) == len(old(UBuf())) + num
+	ensures   err == nil ==> integer(len(UBuf())) == integer(len(old(UBuf()))) + integer(num)
 	ensures   err == nil ==> len(res) == num
 	ensures   err == nil ==> res === UBuf()[:num]
 	ensures   err == nil ==> old(View()) == View()[num:]
@@ -73,7 +73,7 @@ type SerializeBuffer interface {
 	preserves Mem()
 	requires  num >= 0
 	preserves sl.Bytes(UBuf(), 0, len(UBuf()))
-	ensures   err == nil ==> len(UBuf()) == len(old(UBuf())) + num
+	ensures   err == nil ==> integer(len(UBuf())) == integer(len(old(UBuf()))) + integer(num)
 	ensures   err == nil ==> len(res) == num
 	ensures   err == nil ==> res === UBuf()[len(UBuf()) - num:]
 	ensures   err != nil ==> UBuf() === old(UBuf())

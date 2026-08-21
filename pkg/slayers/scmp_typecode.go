@@ -117,6 +117,9 @@ func (a SCMPTypeCode) String() string {
 	t, c := a.Type(), a.Code()
 	//@ unfold acc(SCMPTypeCodeMem(), R10)
 	//@ defer fold acc(SCMPTypeCodeMem(), R10)
+	// anchor: projects t to its integer image so the quantified permissions over
+	// SCMPType keys (lowered over mathematical integers) instantiate at t
+	//@ assert 0 <= t
 	info, ok := scmpTypeCodeInfo[t]
 	if !ok {
 		return fmt.Sprintf("%d(%d)", t, c)

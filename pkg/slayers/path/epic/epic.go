@@ -312,9 +312,9 @@ func (i *PktID) DecodeFromBytes(raw []byte) {
 // @ decreases
 func (i *PktID) SerializeTo(b []byte) {
 	//@ unfold sl.Bytes(b, 0, len(b))
-	//@ assert forall j int :: { &b[:4][j] } 0 <= 4 ==> &b[:4][j] == &b[j]
+	//@ assert forall j int :: { &b[:4][j] } 0 <= j && j < 4 ==> &b[:4][j] == &b[j]
 	binary.BigEndian.PutUint32(b[:4], i.Timestamp)
-	//@ assert forall j int :: { &b[4:8][j] } 0 <= 4 ==> &b[4:8][j] == &b[4 + j]
+	//@ assert forall j int :: { &b[4:8][j] } 0 <= j && j < 4 ==> &b[4:8][j] == &b[4 + j]
 	binary.BigEndian.PutUint32(b[4:8], i.Counter)
 	//@ fold sl.Bytes(b, 0, len(b))
 }

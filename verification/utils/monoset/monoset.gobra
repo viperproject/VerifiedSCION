@@ -138,7 +138,7 @@ func Alloc(start, end int64) (res BoundedMonotonicSet) {
 		acc(b.valuesMap[j])
 	invariant forall j int64 :: start <= j && j < i ==>
 		!(*b.valuesMap[j])
-	decreases end - i
+	decreases integer(end) - integer(i)
 	for i = start; i < end; i += 1 {
 		b.valuesMap[i] = new(bool)
 	}
@@ -161,7 +161,7 @@ func Alloc(start, end int64) (res BoundedMonotonicSet) {
 		b.DoesNotContain(j)
 	invariant forall j int64 :: start <= j && j < i ==>
 		!b.fcontainshelper(j)
-	decreases end - i
+	decreases integer(end) - integer(i)
 	for i = start; i < end; i += 1 {
 		fold b.DoesNotContain(i)
 	}
@@ -184,7 +184,7 @@ pure func (b BoundedMonotonicSet) ToSet() set[int64] {
 ghost
 requires b.Inv()
 requires b.Start <= start && start <= b.End
-decreases b.End - start
+decreases integer(b.End) - integer(start)
 pure func (b BoundedMonotonicSet) toSetAux(start int64) set[int64] {
 	return unfolding b.Inv() in
 		let part1 := (*b.valuesMap[start] ? set[int64]{start} : set[int64]{}) in
@@ -215,7 +215,7 @@ func (b BoundedMonotonicSet) ContainsImpliesAbstractContains(v int64, p perm) {
 	invariant part1 union part2 == b.ToSet()
 	invariant i <= b.End ==>
 		part2 == unfolding acc(b.Inv(), _) in ((*b.valuesMap[i] ? set[int64]{i} : set[int64]{}) union (i < b.End ? b.toSetAux(i+1) : set[int64]{}))
-	decreases b.End - i
+	decreases integer(b.End) - integer(i)
 	for i = b.Start; i < b.End; i += 1 {
 		newpart1 := part1 union unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{})
 		newpart2 := i < b.End ? b.toSetAux(i+1) : set[int64]{}
@@ -266,7 +266,7 @@ func (b BoundedMonotonicSet) DoesNotContainsImpliesAbstractDoesNotContain(v int6
 		part2 == unfolding acc(b.Inv(), _) in ((*b.valuesMap[i] ? set[int64]{i} : set[int64]{}) union (i < b.End ? b.toSetAux(i+1) : set[int64]{}))
 	invariant i == b.End ==>
 		part2 == unfolding acc(b.Inv(), _) in (*b.valuesMap[b.End] ? set[int64]{b.End} : set[int64]{})
-	decreases b.End - i
+	decreases integer(b.End) - integer(i)
 	for i = b.Start; i < b.End; i += 1 {
 		newpart1 := part1 union unfolding acc(b.Inv(), _) in (*b.valuesMap[i] ? set[int64]{i} : set[int64]{})
 		newpart2 := i < b.End ? b.toSetAux(i+1) : set[int64]{}

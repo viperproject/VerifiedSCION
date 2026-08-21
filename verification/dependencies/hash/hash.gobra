@@ -39,7 +39,9 @@ type Hash interface {
 	ensures   0 <= n && n <= len(p)
 	// the last conjunct comes from the spec of io.Writer
 	ensures   err == nil && n == len(p)
-	ensures   Size() == old(Size()) + len(p)
+	// stated in mathematical integers: under bounded semantics the bounded addition
+	// would be opaque (possibly overflowing), making the size unusable at call sites
+	ensures   integer(Size()) == old(integer(Size())) + integer(len(p))
 	decreases
 	Write(p []byte) (n int, err error)
 
@@ -47,7 +49,7 @@ type Hash interface {
 	// It does not change the underlying hash state.
 	preserves acc(Mem(), 1/1000)
 	requires acc(b)
-	ensures  acc(res) && len(res) == len(b) + Size()
+	ensures  acc(res) && integer(len(res)) == integer(len(b)) + integer(Size())
 	decreases
 	Sum(b []byte) (res []byte)
 
