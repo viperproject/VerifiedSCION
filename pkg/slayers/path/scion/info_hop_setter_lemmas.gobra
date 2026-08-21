@@ -102,7 +102,7 @@ pure func HopfieldsByteSlice(raw []byte, currInfIdx int, segs io.SegLens) ([]byt
 
 // SliceBytesIntoSegments splits the raw bytes of a packet into its hopfield segments
 ghost
-requires 0 < p
+requires noPerm < p
 requires segs.Valid()
 requires PktLen(segs, MetaLen) <= len(raw)
 requires acc(sl.Bytes(raw, 0, len(raw)), p)
@@ -126,7 +126,7 @@ func SliceBytesIntoSegments(raw []byte, segs io.SegLens, p perm) {
 
 // CombineBytesFromSegments combines the three hopfield segments of a packet into a single slice of bytes.
 ghost
-requires 0 < p
+requires noPerm < p
 requires segs.Valid()
 requires PktLen(segs, MetaLen) <= len(raw)
 requires acc(sl.Bytes(raw[:HopfieldsStartIdx(0, segs)], 0, HopfieldsStartIdx(0, segs)), p)
@@ -150,7 +150,7 @@ func CombineBytesFromSegments(raw []byte, segs io.SegLens, p perm) {
 
 // SliceBytesIntoInfoFields splits the raw bytes of a packet into its infofields
 ghost
-requires 0 < p
+requires noPerm < p
 requires segs.Valid()
 requires MetaLen + numInf * path.InfoLen <= len(raw)
 requires numInf == segs.NumInfoFields()
@@ -182,7 +182,7 @@ func SliceBytesIntoInfoFields(raw []byte, numInf int, segs io.SegLens, p perm) {
 
 // CombineBytesFromInfoFields combines the infofields of a packet into a single slice of bytes.
 ghost
-requires 0 < p
+requires noPerm < p
 requires segs.Valid()
 requires MetaLen + numInf * path.InfoLen <= len(raw)
 requires numInf == segs.NumInfoFields()
@@ -623,7 +623,7 @@ func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf
 // to the subslice containing all past hopfields, to the sublice containing the current hopfield,
 // and to another containing all future hopfields.
 ghost
-requires 0 < p
+requires noPerm < p
 requires 0 <= currHfIdx && currHfIdx < segLen
 requires segLen * path.HopLen == len(hopfields)
 requires acc(sl.Bytes(hopfields, 0, len(hopfields)), p)
@@ -647,7 +647,7 @@ func SplitHopfields(hopfields []byte, currHfIdx int, segLen int, p perm) {
 // current hopfield, and future hopfields of a segment into a single permission to the slice
 // containing all hopfields of that segment.
 ghost
-requires 0 < p
+requires noPerm < p
 requires 0 <= currHfIdx && currHfIdx < segLen
 requires segLen * path.HopLen == len(hopfields)
 requires let currHfStart := currHfIdx * path.HopLen in

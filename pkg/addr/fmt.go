@@ -119,9 +119,6 @@ func fmtAS(as_ AS, sep string) string {
 	}
 	// Format BGP ASes as decimal
 	if as_ <= MaxBGPAS {
-		// (VerifiedSCION) the following property is guaranteed by the type system,
-		// but Gobra cannot infer it yet
-		// @ assume 0 <= as_
 		return strconv.FormatUint(uint64(as_), 10)
 	}
 	// Format all other ASes as 'sep'-separated hex.
@@ -131,6 +128,7 @@ func fmtAS(as_ AS, sep string) string {
 	var b /*@@@*/ strings.Builder
 	// @ b.ZeroBuilderIsReadyToUse()
 	b.Grow(maxLen)
+	// @ invariant 0 <= i && i <= asParts
 	// @ invariant b.Mem()
 	// @ decreases asParts - i
 	for i := 0; i < asParts; i++ {
@@ -138,9 +136,6 @@ func fmtAS(as_ AS, sep string) string {
 			b.WriteString(sep)
 		}
 		shift := uint(asPartBits * (asParts - i - 1))
-		// (VerifiedSCION) the following property is guaranteed by the type system,
-		// but Gobra cannot infer it yet
-		// @ assume 0 <= uint64(as_>>shift)&asPartMask
 		b.WriteString(strconv.FormatUint(uint64(as_>>shift)&asPartMask, asPartBase))
 	}
 	return b.String()

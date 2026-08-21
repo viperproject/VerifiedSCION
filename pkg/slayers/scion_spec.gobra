@@ -332,7 +332,7 @@ pure func (s *SCION) PathScionEndIdx(ub []byte) int {
 }
 
 ghost
-requires  0 < p
+requires  noPerm < p
 preserves acc(s.Mem(ub), p)
 ensures   let start := s.PathStartIdx(ub) in
 	let end := s.PathEndIdx(ub) in

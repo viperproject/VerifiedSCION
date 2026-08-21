@@ -21,7 +21,10 @@
 package bitwise
 
 ghost
-ensures 0 <= b && b < 256
+// (VerifiedSCION) stated over the mathematical integers: under the sound bounded-integer
+// semantics '256' is not a valid 'byte' constant, so 'b < 256' no longer type-checks.
+// The property itself now holds by typing, so callers need this lemma only to name it.
+ensures 0 <= integer(b) && integer(b) < 256
 decreases
 func ByteValue(b byte)
 
