@@ -130,15 +130,21 @@ func testRun(
 	}
 	fold accBatchConn(d.external)
 
+	// Interfaces 1, 2, and 3 are terminated by this router, whereas interface 4 is
+	// terminated by a sibling router of the same AS. The link type and the neighboring
+	// IA are known for all four of them, as the control plane provides a router with
+	// this information for every interface of its AS.
 	d.linkTypes = map[uint16]topology.LinkType{
 		uint16(1): topology.Child,
 		uint16(2): topology.Child,
 		uint16(3): topology.Child,
+		uint16(4): topology.Child,
 	}
 	d.neighborIAs = map[uint16]addr.IA{
 		uint16(1): 1001,
 		uint16(2): 1002,
 		uint16(3): 1000,
+		uint16(4): 1003,
 	}
 
 	a1 := allocateUDPAddr()
@@ -167,36 +173,45 @@ func testRun(
 			io.Ifs{1}: io.IO_ProvCust{},
 			io.Ifs{2}: io.IO_ProvCust{},
 			io.Ifs{3}: io.IO_ProvCust{},
+			io.Ifs{4}: io.IO_ProvCust{},
 		},
 		neighborIAs: dict[io.Ifs]io.AS{
 			io.Ifs{1}: io.AS{1001},
 			io.Ifs{2}: io.AS{1002},
 			io.Ifs{3}: io.AS{1000},
+			io.Ifs{4}: io.AS{1003},
 		},
 		localIA: io.AS{1000},
 		links:  dict[io.AsIfsPair]io.AsIfsPair {
 			io.AsIfsPair{io.AS{1000}, io.Ifs{1}}: io.AsIfsPair{io.AS{1001}, io.Ifs{7}},
 			io.AsIfsPair{io.AS{1000}, io.Ifs{2}}: io.AsIfsPair{io.AS{1002}, io.Ifs{8}},
 			io.AsIfsPair{io.AS{1000}, io.Ifs{3}}: io.AsIfsPair{io.AS{1000}, io.Ifs{3}},
+			io.AsIfsPair{io.AS{1000}, io.Ifs{4}}: io.AsIfsPair{io.AS{1003}, io.Ifs{9}},
 			io.AsIfsPair{io.AS{1001}, io.Ifs{7}}: io.AsIfsPair{io.AS{1000}, io.Ifs{1}},
-			io.AsIfsPair{io.AS{1002}, io.Ifs{8}}: io.AsIfsPair{io.AS{1000}, io.Ifs{2}}}}
+			io.AsIfsPair{io.AS{1002}, io.Ifs{8}}: io.AsIfsPair{io.AS{1000}, io.Ifs{2}},
+			io.AsIfsPair{io.AS{1003}, io.Ifs{9}}: io.AsIfsPair{io.AS{1000}, io.Ifs{4}}}}
 	outline(
 	pair1 := io.AsIfsPair{io.AS{1000}, io.Ifs{1}}
 	pair2 := io.AsIfsPair{io.AS{1000}, io.Ifs{2}}
 	pair3 := io.AsIfsPair{io.AS{1000}, io.Ifs{3}}
 	pair4 := io.AsIfsPair{io.AS{1001}, io.Ifs{7}}
 	pair5 := io.AsIfsPair{io.AS{1002}, io.Ifs{8}}
+	// interface 4 of the local AS is terminated by a sibling router
+	pair6 := io.AsIfsPair{io.AS{1000}, io.Ifs{4}}
+	pair7 := io.AsIfsPair{io.AS{1003}, io.Ifs{9}}
 
 	dp := io.DataPlaneSpec {
 		linkTypes: dict[io.Ifs]io.Link{
 			io.Ifs{1}: io.IO_ProvCust{},
 			io.Ifs{2}: io.IO_ProvCust{},
 			io.Ifs{3}: io.IO_ProvCust{},
+			io.Ifs{4}: io.IO_ProvCust{},
 		},
 		neighborIAs: dict[io.Ifs]io.AS{
 			io.Ifs{1}: io.AS{1001},
 			io.Ifs{2}: io.AS{1002},
 			io.Ifs{3}: io.AS{1000},
+			io.Ifs{4}: io.AS{1003},
 		},
 		localIA: io.AS{1000},
 		links:  dict[io.AsIfsPair]io.AsIfsPair {
@@ -204,13 +219,17 @@ func testRun(
 			pair2: pair5,
 			pair3: pair3,
 			pair4: pair1,
-			pair5: pair2}}
+			pair5: pair2,
+			pair6: pair7,
+			pair7: pair6}}
 
 	assert dp.Lookup(dp.Lookup(pair1)) == pair1
 	assert dp.Lookup(dp.Lookup(pair2)) == pair2
 	assert dp.Lookup(dp.Lookup(pair3)) == pair3
 	assert dp.Lookup(dp.Lookup(pair4)) == pair4
 	assert dp.Lookup(dp.Lookup(pair5)) == pair5
+	assert dp.Lookup(dp.Lookup(pair6)) == pair6
+	assert dp.Lookup(dp.Lookup(pair7)) == pair7
 
 	assert forall ifs io.Ifs :: {ifs elem domain(dp.neighborIAs)} ifs elem domain(dp.neighborIAs) ==>
 		io.AsIfsPair{dp.localIA, ifs} elem domain(dp.links)
@@ -244,7 +263,9 @@ func testRun(
 	fold metricsInv(d.Metrics)
 	fold forwardingMetricsInv(d.forwardingMetrics)
 	fold d.Mem()
-	assert d.getDomNeighborIAs() == reveal d.getDomExternal()
+	reveal d.getDomExternal()
+	assert d.getDomExternal() subset d.getDomNeighborIAs()
+	assert d.GetDomInternalNextHops() subset d.getDomNeighborIAs()
 	assert d.getDomNeighborIAs() == d.getDomLinkTypes()
 	assert !(0 elem d.getDomNeighborIAs())
 	assert reveal d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}

@@ -344,26 +344,98 @@ pure func (d *DataPlane) getDomLinkTypes() set[uint16] {
 			set[uint16]{} : domain(d.linkTypes)
 }
 
+// (VerifiedSCION) An AS may be served by more than one border router, in which case
+// every router terminates only a subset of the interfaces of the AS. The interfaces
+// that are terminated by this router form the domain of 'external'; the remaining
+// interfaces of the AS are terminated by sibling routers and are reached through the
+// internal interface, forming the domain of 'internalNextHops'.
+//
+// Even though a router terminates only its own interfaces, the control plane provides
+// it with the link type and the neighboring IA of *all* the interfaces of the AS: the
+// loop in 'control.confExternalInterfaces' visits every interface of the topology and
+// calls 'Connector.AddExternalInterface', which registers both before it splits on
+// whether the interface is owned by this router. The router needs this information for
+// the interfaces of its siblings as well, because 'validateEgressID' checks the link
+// types of the ingress/egress pair of a packet before handing it over to the sibling
+// router that terminates the egress interface.
+//
+// For this reason, we do not require 'external' and 'neighborIAs' to have the same
+// domain; instead, the interfaces of this router and those of its siblings are all
+// contained in the domain of 'neighborIAs' and 'linkTypes'. Note that this predicate
+// does not itself state that 'external' and 'internalNextHops' are disjoint, even
+// though they are in any configuration the control plane produces; that conjunct is
+// part of 'PreWellConfigured', which is where it is needed.
 ghost
 opaque
 requires d.Mem()
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
-	return d.getDomNeighborIAs() == d.getDomExternal() &&
+	return d.getDomExternal() subset d.getDomNeighborIAs() &&
+		d.GetDomInternalNextHops() subset d.getDomNeighborIAs() &&
 		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
 		!(0 elem d.getDomNeighborIAs()) &&
 		d.getDomExternal() subset d.getDomForwardingMetrics()
 }
 
+// The configuration assumed by 'Run' before the forwarding metrics are initialized.
+// It is not established by any verified code: 'Connector' and 'control' are not
+// verified, so this is a trusted assumption about the configuration that the control
+// plane hands to a router, and 'testRun' in 'dataplane_spec_test.gobra' is the only
+// witness that it is satisfiable. In addition to what 'WellConfigured' requires, an
+// interface is owned by exactly one router of the AS, so the interfaces terminated by
+// this router are disjoint from those terminated by its siblings.
 ghost
 opaque
 requires d.Mem()
 decreases
 pure func (d *DataPlane) PreWellConfigured() bool {
-	return d.getDomNeighborIAs() == d.getDomExternal() &&
-		d.getDomExternal() == d.getDomLinkTypes() &&
+	return d.getDomExternal() subset d.getDomNeighborIAs() &&
+		d.GetDomInternalNextHops() subset d.getDomNeighborIAs() &&
+		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
 		!(0 elem d.getDomNeighborIAs()) &&
 		d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
+}
+
+// Every interface of the AS is known to the router, whether the router terminates it
+// itself (it is then in the domain of 'external') or one of its siblings does (it is
+// then in the domain of 'internalNextHops'). In both cases, the router knows the link
+// type and the neighboring IA of the interface, which is what allows 'validateEgressID'
+// to validate the ingress/egress pair of a packet that leaves the AS through a
+// sibling router.
+ghost
+requires acc(d.Mem(), _) && d.WellConfigured()
+requires id elem d.getDomExternal() || id elem d.GetDomInternalNextHops()
+ensures  acc(d.Mem(), _)
+ensures  id elem d.getDomLinkTypes()
+ensures  id elem d.getDomNeighborIAs()
+ensures  id != 0
+decreases
+func (d *DataPlane) KnownIfIDLemma(id uint16) {
+	reveal d.WellConfigured()
+}
+
+// Relates 'GetDomInternalNextHops' with the domain of the 'internalNextHops' field,
+// analogously to what 'getDomExternalLemma' does for the 'external' field.
+ghost
+requires acc(d.Mem(), _)
+requires acc(&d.internalNextHops, _)
+requires d.internalNextHops != nil ==> acc(d.internalNextHops, _)
+ensures  acc(d.Mem(), _)
+ensures  acc(&d.internalNextHops, _)
+ensures  d.internalNextHops != nil ==> acc(d.internalNextHops, _)
+ensures  d.GetDomInternalNextHops() == domain(d.internalNextHops)
+decreases
+func (d *DataPlane) getDomInternalNextHopsLemma() {
+	if (d.internalNextHops != nil) {
+		assert d.GetDomInternalNextHops() == unfolding acc(d.Mem(), _) in
+			(unfolding acc(internalNextHopsInv(d.internalNextHops), _) in
+				(unfolding acc(accAddr(d.internalNextHops), _) in
+					domain(d.internalNextHops)))
+	} else {
+		assert d.GetDomInternalNextHops() ==
+			unfolding acc(d.Mem(), _) in
+				(unfolding acc(internalNextHopsInv(d.internalNextHops), _) in set[uint16]{})
+	}
 }
 
 ghost
