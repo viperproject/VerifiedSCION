@@ -50,6 +50,7 @@ pred (e errOrMsg) ErrorMem() {
 }
 
 preserves m.ErrorMem()
+ensures   m.IsDuplicableMem() == old(m.IsDuplicableMem())
 decreases _ // Gobra cannot prove termination of this function yet
 func (m errOrMsg) Error() string {
 	if m.err != nil {
@@ -73,7 +74,8 @@ func (e errOrMsg) IsDuplicableMem() (res bool) {
 ghost
 trusted // marked as trusted, otherwise Gobra complains about termination despite the termination measure
 preserves e.ErrorMem()
-ensures   e.IsDuplicableMem() ==> e.ErrorMem() 
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
 decreases _ // Gobra cannot prove termination of this function yet
 func (e errOrMsg) Duplicate() {
 	if e.IsDuplicableMem() {
@@ -115,7 +117,8 @@ func (e basicError) IsDuplicableMem() (res bool) {
 ghost
 trusted
 preserves e.ErrorMem()
-ensures   e.IsDuplicableMem() ==> e.ErrorMem() 
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
+ensures   e.IsDuplicableMem() ==> e.ErrorMem()
 decreases _ // Gobra cannot prove termination of this function yet
 func (e basicError) Duplicate() {
 	if e.IsDuplicableMem() {
@@ -130,6 +133,7 @@ func (e basicError) Duplicate() {
 
 trusted
 preserves e.ErrorMem()
+ensures   e.IsDuplicableMem() == old(e.IsDuplicableMem())
 decreases _
 func (e basicError) Error() string {
 	var buf bytes.Buffer

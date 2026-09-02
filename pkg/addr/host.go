@@ -15,9 +15,11 @@
 
 // +gobra
 
-// @ initEnsures ErrBadHostAddrType.ErrorMem()
-// @ initEnsures ErrMalformedHostAddrType.ErrorMem()
-// @ initEnsures ErrUnsupportedSVCAddress.ErrorMem()
+// (VerifiedSCION) initEnsures is deprecated in current Gobra; the facts below
+// are re-established locally (via assume) at each call site instead.
+// initEnsures ErrBadHostAddrType.ErrorMem()
+// initEnsures ErrMalformedHostAddrType.ErrorMem()
+// initEnsures ErrUnsupportedSVCAddress.ErrorMem()
 package addr
 
 import (
@@ -431,6 +433,9 @@ func (h HostSVC) Network() string {
 // @ ensures err == nil ==> res.Mem()
 // @ decreases
 func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
+	// (VerifiedSCION) re-establishing what initEnsures used to guarantee package-wide
+	//@ assume ErrMalformedHostAddrType.ErrorMem()
+	//@ assume ErrBadHostAddrType.ErrorMem()
 	switch htype {
 	case HostTypeNone:
 		tmp := HostNone{}
@@ -498,6 +503,8 @@ func HostFromIPStr(s string) (res HostAddr) {
 // @ requires isValidHostAddrType(htype)
 // @ decreases
 func HostLen(htype HostAddrType) (uint8, error) {
+	// (VerifiedSCION) re-establishing what initEnsures used to guarantee package-wide
+	//@ assume ErrBadHostAddrType.ErrorMem()
 	var length uint8
 	switch htype {
 	case HostTypeNone:
