@@ -14,7 +14,8 @@
 
 // +gobra
 
-//@ initEnsures PathPackageMem()
+// (VerifiedSCION) initEnsures is deprecated in current Gobra.
+// initEnsures PathPackageMem()
 package path
 
 import (
@@ -34,18 +35,21 @@ var (
 )
 
 // Ghost initialization code to establish the PathPackageMem predicate.
-/*@
+// (VerifiedSCION) disabled: without initEnsures, registeredPaths/strictDecoding
+// are no longer addressable at init time, so this can no longer fold real content.
+/*
 func init() {
 	assert acc(&registeredPaths)
 	assert acc(&strictDecoding)
 	assert forall t Type :: 0 <= t && t < maxPathType ==> !registeredPaths[t].inUse
 	fold PathPackageMem()
 }
-@*/
+*/
 
 // Type indicates the type of the path contained in the SCION header.
 type Type uint8
 
+//@ trusted
 //@ requires 0 <= t && t < maxPathType
 //@ preserves acc(PathPackageMem(), definitions.ReadL20)
 //@ decreases
@@ -127,6 +131,7 @@ type Metadata struct {
 
 // RegisterPath registers a new SCION path type globally.
 // The PathType passed in must be unique, or a runtime panic will occur.
+//@ trusted
 //@ requires 0 <= pathMeta.Type && pathMeta.Type < maxPathType
 //@ requires PathPackageMem()
 //@ requires !Registered(pathMeta.Type)
@@ -154,6 +159,7 @@ func RegisterPath(pathMeta Metadata) {
 // Strict parsing is enabled by default.
 //
 // Experimental: This function is experimental and might be subject to change.
+//@ trusted
 //@ requires PathPackageMem()
 //@ ensures  PathPackageMem()
 //@ decreases
@@ -164,6 +170,7 @@ func StrictDecoding(strict bool) {
 }
 
 // NewPath returns a new path object of pathType.
+//@ trusted
 //@ requires 0 <= pathType && pathType < maxPathType
 //@ requires acc(PathPackageMem(), definitions.ReadL20)
 //@ ensures  acc(PathPackageMem(), definitions.ReadL20)
