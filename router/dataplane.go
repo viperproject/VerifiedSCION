@@ -4360,8 +4360,18 @@ func (p *scionPacketProcessor) process(
 		// @ ghost currBase := p.path.GetBase(ubScionPath)
 		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
 		// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), R3)
+		// @ 	fold acc(p.scionLayer.Mem(ub), R3)
+		// @ 	// Establish doXover's precondition in each branch: under the default
+		// @ 	// exhale mode the relation between currBase and the value read through
+		// @ 	// the re-folded predicates does not survive the join.
+		// @ 	assert unfolding acc(p.scionLayer.Mem(ub), _) in
+		// @ 		unfolding acc(p.scionLayer.Path.Mem(ubPath), _) in
+		// @ 		p.path.GetBase(ubScionPath) == currBase
+		// @ } else {
+		// @ 	fold acc(p.scionLayer.Mem(ub), R3)
+		// @ 	assert unfolding acc(p.scionLayer.Mem(ub), _) in
+		// @ 		p.path.GetBase(ubScionPath) == currBase
 		// @ }
-		// @ fold acc(p.scionLayer.Mem(ub), R3)
 		if r, err := p.doXover( /*@ ub, currBase @*/ ); err != nil {
 			// @ fold p.d.validResult(processResult{}, false)
 			return r, err /*@, false, absReturnErr(r) @*/
