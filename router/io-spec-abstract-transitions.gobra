@@ -151,10 +151,11 @@ pure func AbsVerifyCurrentMACConstraint(pkt io.Pkt, dp io.DataPlaneSpec) bool {
 
 /**** Abstract packet update performed by the router ****/
 
-// AbsProcessXover describes the segment switch performed by
-// (*scionPacketProcessor).doXover. It is applied exactly when the abstract
-// xover guard holds for `pkt`, i.e., when `pkt` reached the end of the segment
-// that it was traversing and a further segment is left.
+// AbsProcessXover describes how a packet switches from the segment that it is
+// currently traversing to the next one. The switch is performed exactly when the
+// xover guard holds for `pkt`, i.e., when `pkt` has reached the end of its
+// current segment and a well-formed segment is left to switch to. Otherwise,
+// `pkt` is left unchanged.
 ghost
 requires pkt.PathNotFullyTraversed()
 ensures  res.PathNotFullyTraversed()
@@ -163,11 +164,10 @@ pure func AbsProcessXover(pkt io.Pkt) (res io.Pkt) {
 	return pkt.IsXover() ? AbsDoXover(pkt) : pkt
 }
 
-// AbsProcessEgressIfExternal describes the effect of
-// (*scionPacketProcessor).processEgress. It is applied exactly when the packet
-// leaves the AS, i.e., when the guard `egressID != none[io.Ifs]` holds. Packets
-// that are forwarded to another border router of the same AS are left
-// untouched, as it is the next border router that advances their path.
+// AbsProcessEgressIfExternal describes how the path of a packet is advanced when
+// the packet leaves the AS through the interface `egressID`. A packet that stays
+// within the AS (`egressID == none[io.Ifs]`) is left unchanged; its path is
+// advanced by the border router that eventually forwards it out of the AS.
 ghost
 requires pkt.PathNotFullyTraversed()
 decreases
@@ -175,19 +175,17 @@ pure func AbsProcessEgressIfExternal(pkt io.Pkt, egressID option[io.Ifs]) (res i
 	return egressID == none[io.Ifs] ? pkt : AbsProcessEgress(pkt)
 }
 
-// PktUpdate is the abstract counterpart of the packet transformation performed
-// by (*scionPacketProcessor).process on a packet received on the interface
-// `ingressID` and forwarded on the interface `egressID` (`none[io.Ifs]` whenever
-// the packet does not leave the AS). It applies each of the transitions in which
-// `process` modifies the packet, and it applies each of them exactly when the
-// guard of that transition holds:
-//   - AbsUpdateNonConsDirIngressSegID (performed by updateNonConsDirIngressSegID)
-//     updates the segment identifier of packets received from another AS, i.e.,
-//     under the guard `ingressID != none[io.Ifs]` that it checks itself;
-//   - AbsProcessXover (performed by doXover) switches segments under the
-//     abstract xover guard `(io.Pkt).IsXover`;
-//   - AbsProcessEgress (performed by processEgress) advances the path of packets
-//     that leave the AS, i.e., under the guard `egressID != none[io.Ifs]`.
+// PktUpdate describes the abstract packet that an AS forwards when it receives
+// `pkt` on the interface `ingressID` and forwards it on the interface `egressID`
+// (`none[io.Ifs]` whenever the packet does not leave the AS). It applies, in
+// order, the three transitions that a packet may undergo while it traverses an
+// AS, each of them exactly when its own guard holds:
+//   - its segment identifier is updated when it was received from another AS
+//     (see AbsUpdateNonConsDirIngressSegID);
+//   - it switches segments when it has reached the end of the segment that it
+//     was traversing (see AbsProcessXover);
+//   - its path is advanced when it leaves the AS (see
+//     AbsProcessEgressIfExternal).
 ghost
 opaque
 requires pkt.PathNotFullyTraversed()

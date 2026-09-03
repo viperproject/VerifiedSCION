@@ -1737,9 +1737,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ unfold acc(p.d.Mem(), _)
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 		// @ assert sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
-		// @ AbsUnsupportedPktIsUnsupportedVal(p.rawPkt, p.ingressID)
 		// @ assert absIO_val(p.rawPkt, p.ingressID) == oldAbsVal
-		// @ assert oldAbsVal.isValUnsupported
 		// @ assert path.Type(slayers.GetPathType(p.rawPkt)) == epic.PathType
 		// @ assert unfolding acc(p.scionLayer.Mem(p.rawPkt), R56) in slayers.CmnHdrLen <= len(p.rawPkt)
 		// @ assert typeOf(p.scionLayer.GetPath(p.rawPkt)) == *epic.Path ==>
@@ -2024,6 +2022,18 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	newAbsPkt.isValUnsupported
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.ValUnit{})
+// @ ensures   reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(ub, p.ingressID)).isValPkt ==>
+// @ 	old(absIO_val(ub, p.ingressID)).ValPkt_2.PathNotFullyTraversed()
+// The abstract packet that is forwarded is obtained by applying PktUpdate to
+// the abstract packet that was received (see (*scionPacketProcessor).process).
+// @ ensures   reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(ub, p.ingressID)).isValPkt ==>
+// @ 	newAbsPkt.isValPkt &&
+// @ 	newAbsPkt.ValPkt_2 == PktUpdate(
+// @ 		old(absIO_val(ub, p.ingressID)).ValPkt_2,
+// @ 		path.ifsToIO_ifs(p.ingressID),
+// @ 		newAbsPkt.ValPkt_1)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, ghost addrAliasesPkt bool, ghost newAbsPkt io.Val @*/) {
 	// @ unfold acc(p.scionLayer.Mem(ub), R10)
