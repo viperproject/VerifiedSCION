@@ -394,10 +394,10 @@ ensures  acc(sl.Bytes(ub, 0, length), R55)
 ensures  s.ValidHeaderOffset(ub, len(ub))
 decreases
 func (s *SCION) ValidHeaderOffsetFromSubSliceLemma(ub []byte, length int) {
-	reveal s.ValidHeaderOffset(ub, len(ub))
+	reveal s.ValidHeaderOffset(ub, length)
 	unfold acc(sl.Bytes(ub, 0, len(ub)), R56)
 	unfold acc(sl.Bytes(ub, 0, length), R56)
-	assert reveal s.ValidHeaderOffset(ub, length)
+	assert reveal s.ValidHeaderOffset(ub, len(ub))
 	fold acc(sl.Bytes(ub, 0, len(ub)), R56)
 	fold acc(sl.Bytes(ub, 0, length), R56)
 }
@@ -532,6 +532,12 @@ decreases
 func IsSupportedPktSubslice(raw []byte, idx int) {
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.Bytes(raw[:idx], 0, idx), R56)
+	// The two calls of IsSupportedPkt read the next header and the path type
+	// through different sl.Bytes predicates. Reading both locations through
+	// both slices while the predicates are unfolded is what makes their
+	// snapshots agree on them.
+	assert raw[:idx][4] == raw[4]
+	assert raw[:idx][8] == raw[8]
 	reveal IsSupportedPkt(raw)
 	reveal IsSupportedPkt(raw[:idx])
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
@@ -547,6 +553,9 @@ decreases
 func GetPathTypeSubslice(raw []byte, idx int) {
 	unfold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	unfold acc(sl.Bytes(raw[:idx], 0, idx), R56)
+	// Relates the two sl.Bytes snapshots on the byte holding the path type,
+	// which is the only one the two calls of GetPathType read.
+	assert raw[:idx][8] == raw[8]
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	fold acc(sl.Bytes(raw[:idx], 0, idx), R56)
 }
