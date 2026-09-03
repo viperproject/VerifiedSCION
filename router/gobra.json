@@ -1,6 +1,5 @@
 {
   "chop": 10,
-  "mce_mode": "on",
   "more_joins": "impure",
   "conditionalize_permissions": true,
   "parallelize_branches": false
