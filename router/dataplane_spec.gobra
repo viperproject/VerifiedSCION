@@ -378,11 +378,8 @@ pure func (d *DataPlane) WellConfigured() bool {
 }
 
 // The configuration assumed by 'Run' before the forwarding metrics are initialized.
-// It is not established by any verified code: 'Connector' and 'control' are not
-// verified, so this is a trusted assumption about the configuration that the control
-// plane hands to a router, and 'testRun' in 'dataplane_spec_test.gobra' is the only
-// witness that it is satisfiable. In addition to what 'WellConfigured' requires, an
-// interface is owned by exactly one router of the AS, so the interfaces terminated by
+// In addition to what 'WellConfigured' requires, an interface is owned
+// by exactly one router of the AS, so the interfaces terminated by
 // this router are disjoint from those terminated by its siblings.
 ghost
 opaque
