@@ -1385,6 +1385,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // @ ensures   d.DpAgreesWithSpec(dp)
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
+// The postcondition of this method cannot be exhaled under the package-wide
+// more complete exhale: Silicon summarises the whole heap once per lookup and
+// per consumed conjunct, and the prover grows until it is killed. On demand is
+// enough here, so it is requested for this member alone.
+// @ #backend[exhaleMode(2)]
 func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ assert reveal d.PreWellConfigured()
 	// @ reveal d.getDomExternal()
@@ -1585,11 +1590,28 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ ensures  newAbsPkt.isValPkt ==>
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.ValPkt_1, newAbsPkt.ValPkt_2)
 // @ ensures  reserr != nil && respr.OutPkt != nil ==> newAbsPkt.isValUnsupported
+// @ ensures  reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(rawPkt, p.getIngressID())).isValPkt ==>
+// @ 	old(absIO_val(rawPkt, p.getIngressID())).ValPkt_2.PathNotFullyTraversed()
+// The abstract packet that is forwarded is obtained by applying PktUpdate to
+// the abstract packet that was received (see (*scionPacketProcessor).process).
+// @ ensures  reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(rawPkt, p.getIngressID())).isValPkt ==>
+// @ 	newAbsPkt.isValPkt &&
+// @ 	newAbsPkt.ValPkt_2 == PktUpdate(
+// @ 		old(absIO_val(rawPkt, p.getIngressID())).ValPkt_2,
+// @ 		path.ifsToIO_ifs(p.getIngressID()),
+// @ 		newAbsPkt.ValPkt_1)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 // @ #backend[moreJoins(1)]
 func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 	srcAddr *net.UDPAddr /*@, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (respr processResult, reserr error /*@ , ghost addrAliasesPkt bool, ghost newAbsPkt io.Val @*/) {
 
+	// `oldAbsVal` is the abstract value of the packet that was received. It is
+	// introduced here because `p.getIngressID()` is not available in the states
+	// in which `p.sInit()` is unfolded.
+	// @ ghost oldAbsVal := absIO_val(rawPkt, p.getIngressID())
+	// @ assert oldAbsVal == old(absIO_val(rawPkt, p.getIngressID()))
 	if err := p.reset(); err != nil {
 		// @ fold p.sInitD().validResult(processResult{}, false)
 		return processResult{}, err /*@, false, io.ValUnit{} @*/
@@ -1697,6 +1719,9 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ unfold acc(p.d.Mem(), _)
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 		// @ assert !(reveal slayers.IsSupportedPkt(p.rawPkt))
+		// @ AbsUnsupportedPktIsUnsupportedVal(p.rawPkt, p.ingressID)
+		// @ assert absIO_val(p.rawPkt, p.ingressID) == oldAbsVal
+		// @ assert oldAbsVal.isValUnsupported
 		v1, v2 /*@, aliasesPkt, newAbsPkt @*/ := p.processOHP()
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, true, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
@@ -1710,6 +1735,7 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ assert sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
 		// @ assert path.Type(slayers.GetPathType(p.rawPkt)) != epic.PathType
+		// @ assert absIO_val(p.rawPkt, p.ingressID) == oldAbsVal
 		v1, v2 /*@ , addrAliasesPkt, newAbsPkt @*/ := p.processSCION( /*@ p.rawPkt, ub == nil, llStart, llEnd, ioLock, ioSharedArg, dp @*/ )
 		// @ ResetDecodingLayers(&p.scionLayer, &p.hbhLayer, &p.e2eLayer, ubScionLayer, ubHbhLayer, ubE2eLayer, v2 == nil, hasHbhLayer, hasE2eLayer)
 		// @ fold p.sInit()
@@ -1724,8 +1750,8 @@ func (p *scionPacketProcessor) processPkt(rawPkt []byte,
 		// @ }
 		// @ unfold acc(p.d.Mem(), _)
 		// @ assert reveal p.scionLayer.EqPathType(p.rawPkt)
-		// @ assert !(reveal slayers.IsSupportedPkt(p.rawPkt))
 		// @ assert sl.Bytes(p.rawPkt, 0, len(p.rawPkt))
+		// @ assert absIO_val(p.rawPkt, p.ingressID) == oldAbsVal
 		// @ assert path.Type(slayers.GetPathType(p.rawPkt)) == epic.PathType
 		// @ assert unfolding acc(p.scionLayer.Mem(p.rawPkt), R56) in slayers.CmnHdrLen <= len(p.rawPkt)
 		// @ assert typeOf(p.scionLayer.GetPath(p.rawPkt)) == *epic.Path ==>
@@ -1915,6 +1941,18 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	newAbsPkt.isValUnsupported
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.ValUnit{})
+// @ ensures   reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(ub, p.ingressID)).isValPkt ==>
+// @ 	old(absIO_val(ub, p.ingressID)).ValPkt_2.PathNotFullyTraversed()
+// The abstract packet that is forwarded is obtained by applying PktUpdate to
+// the abstract packet that was received (see (*scionPacketProcessor).process).
+// @ ensures   reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(ub, p.ingressID)).isValPkt ==>
+// @ 	newAbsPkt.isValPkt &&
+// @ 	newAbsPkt.ValPkt_2 == PktUpdate(
+// @ 		old(absIO_val(ub, p.ingressID)).ValPkt_2,
+// @ 		path.ifsToIO_ifs(p.ingressID),
+// @ 		newAbsPkt.ValPkt_1)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@ , ghost addrAliasesPkt bool, ghost newAbsPkt io.Val @*/) {
 
@@ -1983,7 +2021,6 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ ensures   reserr != nil ==> reserr.ErrorMem()
 // contracts for IO-spec
 // @ requires p.scionLayer.EqPathType(p.rawPkt)
-// @ requires !slayers.IsSupportedPkt(p.rawPkt)
 // @ requires  p.d.DpAgreesWithSpec(dp)
 // @ requires  dp.Valid()
 // @ requires  (typeOf(p.scionLayer.GetPath(ub)) == *epic.Path) ==>
@@ -1999,6 +2036,18 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	newAbsPkt.isValUnsupported
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.ValUnit{})
+// @ ensures   reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(ub, p.ingressID)).isValPkt ==>
+// @ 	old(absIO_val(ub, p.ingressID)).ValPkt_2.PathNotFullyTraversed()
+// The abstract packet that is forwarded is obtained by applying PktUpdate to
+// the abstract packet that was received (see (*scionPacketProcessor).process).
+// @ ensures   reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(ub, p.ingressID)).isValPkt ==>
+// @ 	newAbsPkt.isValPkt &&
+// @ 	newAbsPkt.ValPkt_2 == PktUpdate(
+// @ 		old(absIO_val(ub, p.ingressID)).ValPkt_2,
+// @ 		path.ifsToIO_ifs(p.ingressID),
+// @ 		newAbsPkt.ValPkt_1)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 func (p *scionPacketProcessor) processEPIC( /*@ ghost ub []byte, ghost llIsNil bool, ghost startLL int, ghost endLL int, ghost ioLock gpointer[gsync.GhostMutex], ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/ ) (respr processResult, reserr error /*@, ghost addrAliasesPkt bool, ghost newAbsPkt io.Val @*/) {
 	// @ unfold acc(p.scionLayer.Mem(ub), R10)
@@ -2618,8 +2667,10 @@ func (p *scionPacketProcessor) validateSrcDstIA( /*@ ghost ubScionL []byte, ghos
 		}
 		// @ ghost if(p.path.IsLastHopSpec(ubScionPath)) {
 		// @ 	p.path.LastHopLemma(ubScionPath)
+		// @ 	p.path.LastHopNotXoverLemma(ubScionPath)
 		// @ 	p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ubScionL, startScionP)
 		// @ 	p.SubSliceAbsPktToAbsPkt(ubScionL, startScionP, endScionP)
+		// @ 	assert !absPkt(ubScionL).IsXover()
 		// @ }
 	}
 	// @ fold p.d.validResult(processResult{}, false)
@@ -3078,6 +3129,10 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		// @ 	old(io.upd_uinfo(path.AbsUInfoFromUint16(p.infoField.SegID), p.hopField.Abs()))
 		// @ assert reveal p.EqAbsInfoField(absPkt(ub))
 		// @ assert reveal p.EqAbsHopField(absPkt(ub))
+		// Updating the info field does not change the segments that the packet
+		// still has to traverse, and thus preserves its xover guard.
+		// @ assert absPkt(ub).LeftSeg == old(absPkt(ub)).LeftSeg
+		// @ assert len(absPkt(ub).CurrSeg.Future) == len(old(absPkt(ub)).CurrSeg.Future)
 		// @ assert reveal p.LastHopLen(ub)
 	}
 	// @ assert absPkt(ub) == reveal AbsUpdateNonConsDirIngressSegID(old(absPkt(ub)), path.ifsToIO_ifs(p.ingressID))
@@ -3860,6 +3915,10 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startScionP, endScionP)
 	// @ absPktFutureLemma(ub)
 	// @ assert reveal p.EqAbsHopField(absPkt(ub))
+	// Updating the current hop field does not change the segments that the
+	// packet still has to traverse, and thus preserves its xover guard.
+	// @ assert absPkt(ub).LeftSeg == old(absPkt(ub)).LeftSeg
+	// @ assert len(absPkt(ub).CurrSeg.Future) == len(old(absPkt(ub)).CurrSeg.Future)
 	// @ assert reveal p.LastHopLen(ub)
 	// @ assert p.scionLayer.EqAbsHeader(ub)
 	// @ sl.CombineRange_Bytes(ub, startScionP, endScionP, HalfPerm)
@@ -4263,6 +4322,19 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ ensures   reserr != nil && respr.OutPkt != nil ==>
 // @ 	newAbsPkt.isValUnsupported
 // @ ensures (respr.OutPkt == nil) == (newAbsPkt == io.ValUnit{})
+// @ ensures   reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(ub, p.ingressID)).isValPkt ==>
+// @ 	old(absIO_val(ub, p.ingressID)).ValPkt_2.PathNotFullyTraversed()
+// The abstract packet that is forwarded is obtained by applying PktUpdate to
+// the abstract packet that was received, i.e., the concrete packet transformation
+// performed by this method refines the abstract one described by the IO-spec.
+// @ ensures   reserr == nil && respr.OutPkt != nil &&
+// @ 	old(absIO_val(ub, p.ingressID)).isValPkt ==>
+// @ 	newAbsPkt.isValPkt &&
+// @ 	newAbsPkt.ValPkt_2 == PktUpdate(
+// @ 		old(absIO_val(ub, p.ingressID)).ValPkt_2,
+// @ 		path.ifsToIO_ifs(p.ingressID),
+// @ 		newAbsPkt.ValPkt_1)
 // @ decreases 0 if sync.IgnoreBlockingForTermination()
 // @ #backend[stateConsolidationMode(6)]
 func (p *scionPacketProcessor) process(
@@ -4286,10 +4358,14 @@ func (p *scionPacketProcessor) process(
 	// @ 	absIO_valLemma(ub, p.ingressID)
 	// @ 	oldPkt = absIO_val(ub, p.ingressID).ValPkt_2
 	// @ } else {
+	// @ 	AbsUnsupportedPktIsUnsupportedVal(ub, p.ingressID)
 	// @ 	absPktFutureLemma(ub)
 	// @ 	oldPkt = absPkt(ub)
 	// @ }
 	// @ nextPkt := oldPkt
+	// @ assert oldPkt.PathNotFullyTraversed()
+	// @ assert old(absIO_val(ub, p.ingressID)).isValPkt ==>
+	// @ 	old(absIO_val(ub, p.ingressID)).ValPkt_2 == oldPkt
 	if r, err := p.validateHopExpiry( /*@ ub, ubLL, startLL, endLL @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
 		return r, err /*@, false, absReturnErr(r) @*/
@@ -4319,6 +4395,7 @@ func (p *scionPacketProcessor) process(
 	}
 	// @ assert absPkt(ub) == AbsUpdateNonConsDirIngressSegID(oldPkt, path.ifsToIO_ifs(p.ingressID))
 	// @ nextPkt = absPkt(ub)
+	// @ afterIngressPkt := nextPkt
 	// @ AbsValidateIngressIDLemma(oldPkt, nextPkt, path.ifsToIO_ifs(p.ingressID))
 	if r, err := p.verifyCurrentMAC( /*@ dp, ub, ubLL, startLL, endLL @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
@@ -4353,10 +4430,18 @@ func (p *scionPacketProcessor) process(
 		// @ 	InternalEnterEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, none[io.Ifs], ioLock, ioSharedArg, dp)
 		// @ }
 		// @ newAbsPkt = reveal absIO_val(p.rawPkt, 0)
+		// The destination of the packet is this AS, so it is at the last hop of
+		// its path and its xover guard is false.
+		// @ assert !afterIngressPkt.IsXover()
+		// @ assert nextPkt == AbsProcessXover(afterIngressPkt)
+		// @ reveal PktUpdate(oldPkt, path.ifsToIO_ifs(p.ingressID), none[io.Ifs])
+		// @ assert nextPkt == PktUpdate(oldPkt, path.ifsToIO_ifs(p.ingressID), none[io.Ifs])
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, aliasesUb, newAbsPkt @*/
 	}
 	// Outbound: pkts leaving the local IA.
 	// BRTransit: pkts leaving from the same BR different interface.
+	// @ p.AbsIsXoverLemma(ub)
+	// @ assert nextPkt.IsXover() == p.GetIsXoverSpec(ub)
 	// @ unfold acc(p.scionLayer.Mem(ub), R3)
 	// @ ghost ubPath := p.scionLayer.UBPath(ub)
 	// @ ghost ubScionPath := p.scionLayer.UBScionPath(ub)
@@ -4366,6 +4451,7 @@ func (p *scionPacketProcessor) process(
 	// @ 	assert p.path === p.scionLayer.Path.(*epic.Path).ScionPath
 	// @ 	assert ubPath[epic.MetadataLen:] === ubScionPath
 	// @ }
+	// @ assert afterIngressPkt.IsXover() == p.path.GetBase(ubScionPath).IsXoverSpec()
 	if p.path.IsXover( /*@ ubScionPath @*/ ) {
 		// @ assert p.GetIsXoverSpec(ub)
 		// @ ghost currBase := p.path.GetBase(ubScionPath)
@@ -4382,6 +4468,8 @@ func (p *scionPacketProcessor) process(
 		// @ assert absPkt(ub) == AbsDoXover(nextPkt)
 		// @ AbsValidateIngressIDXoverLemma(nextPkt, AbsDoXover(nextPkt), path.ifsToIO_ifs(p.ingressID))
 		// @ nextPkt = absPkt(ub)
+		// @ assert afterIngressPkt.IsXover()
+		// @ assert nextPkt == AbsProcessXover(afterIngressPkt)
 		if r, err := p.validateHopExpiry( /*@ ub, ubLL, startLL, endLL @*/ ); err != nil {
 			// @ p.scionLayer.DowngradePerm(ub)
 			return r, serrors.WithCtx(err, "info", "after xover") /*@, false, absReturnErr(r) @*/
@@ -4403,6 +4491,7 @@ func (p *scionPacketProcessor) process(
 	// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), R3)
 	// @ }
 	// @ fold acc(p.scionLayer.Mem(ub), R3)
+	// @ assert nextPkt == AbsProcessXover(afterIngressPkt)
 	// @ assert p.segmentChange ==> nextPkt.RightSeg != none[io.Seg]
 	if r, err := p.validateEgressID( /*@ dp, ub, ubLL, startLL, endLL @*/ ); err != nil {
 		// @ p.scionLayer.DowngradePerm(ub)
@@ -4437,6 +4526,7 @@ func (p *scionPacketProcessor) process(
 		// @ p.d.InDomainExternalInForwardingMetrics(egressID)
 		// @ assert absPkt(ub) == AbsProcessEgress(nextPkt)
 		// @ nextPkt = absPkt(ub)
+		// @ assert nextPkt == AbsProcessEgress(AbsProcessXover(afterIngressPkt))
 		// @ ghost if(slayers.IsSupportedPkt(ub)) {
 		// @ 	ghost if(!p.segmentChange) {
 		// @ 		ExternalEnterOrExitEvent(oldPkt, path.ifsToIO_ifs(p.ingressID), nextPkt, path.ifsToIO_ifs(egressID), ioLock, ioSharedArg, dp)
@@ -4445,6 +4535,10 @@ func (p *scionPacketProcessor) process(
 		// @ 	}
 		// @ }
 		// @ newAbsPkt = reveal absIO_val(p.rawPkt, egressID)
+		// @ assert path.ifsToIO_ifs(egressID) != none[io.Ifs]
+		// @ reveal PktUpdate(oldPkt, path.ifsToIO_ifs(p.ingressID), path.ifsToIO_ifs(egressID))
+		// @ assert nextPkt ==
+		// @ 	PktUpdate(oldPkt, path.ifsToIO_ifs(p.ingressID), path.ifsToIO_ifs(egressID))
 		// @ fold p.d.validResult(processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, false)
 		return processResult{EgressID: egressID, OutConn: c, OutPkt: p.rawPkt}, nil /*@, false, newAbsPkt @*/
 	}
@@ -4463,6 +4557,8 @@ func (p *scionPacketProcessor) process(
 		// @ 	}
 		// @ }
 		// @ newAbsPkt = reveal absIO_val(p.rawPkt, 0)
+		// @ reveal PktUpdate(oldPkt, path.ifsToIO_ifs(p.ingressID), none[io.Ifs])
+		// @ assert nextPkt == PktUpdate(oldPkt, path.ifsToIO_ifs(p.ingressID), none[io.Ifs])
 		// @ fold p.d.validResult(processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, false)
 		return processResult{OutConn: p.d.internal, OutAddr: a, OutPkt: p.rawPkt}, nil /*@, false, newAbsPkt @*/
 	}
