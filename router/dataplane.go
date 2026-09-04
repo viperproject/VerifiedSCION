@@ -1376,6 +1376,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // @ ensures   d.DpAgreesWithSpec(dp)
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
+// The postcondition of this method cannot be exhaled under the package-wide
+// more complete exhale: Silicon summarises the whole heap once per lookup and
+// per consumed conjunct, and the prover grows until it is killed. On demand is
+// enough here, so it is requested for this member alone.
+// @ #backend[exhaleMode(2)]
 func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ assert reveal d.PreWellConfigured()
 	// @ reveal d.getDomExternal()
@@ -4360,18 +4365,8 @@ func (p *scionPacketProcessor) process(
 		// @ ghost currBase := p.path.GetBase(ubScionPath)
 		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path {
 		// @ 	fold acc(p.scionLayer.Path.Mem(ubPath), R3)
-		// @ 	fold acc(p.scionLayer.Mem(ub), R3)
-		// @ 	// Establish doXover's precondition in each branch: under the default
-		// @ 	// exhale mode the relation between currBase and the value read through
-		// @ 	// the re-folded predicates does not survive the join.
-		// @ 	assert unfolding acc(p.scionLayer.Mem(ub), _) in
-		// @ 		unfolding acc(p.scionLayer.Path.Mem(ubPath), _) in
-		// @ 		p.path.GetBase(ubScionPath) == currBase
-		// @ } else {
-		// @ 	fold acc(p.scionLayer.Mem(ub), R3)
-		// @ 	assert unfolding acc(p.scionLayer.Mem(ub), _) in
-		// @ 		p.path.GetBase(ubScionPath) == currBase
 		// @ }
+		// @ fold acc(p.scionLayer.Mem(ub), R3)
 		if r, err := p.doXover( /*@ ub, currBase @*/ ); err != nil {
 			// @ fold p.d.validResult(processResult{}, false)
 			return r, err /*@, false, absReturnErr(r) @*/

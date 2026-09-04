@@ -251,15 +251,11 @@ func (p* scionPacketProcessor) EstablishEqAbsHeader(ub []byte, start int, end in
 			&ub[startP:end][epic.MetadataLen:][k] == &ub[start + k]
 		assert forall k int :: {&ub[start:end][k]} 0 <= k && k < end-start ==>
 			&ub[start:end][k] == &ub[start + k]
-		// Establish this in both branches: under the default exhale mode the
-		// branch-local facts relating ub[start:end] to ub do not survive the join.
-		assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 		fold acc(p.scionLayer.Path.Mem(ub[startP:end]), R56)
 	} else {
 		assert p.path === p.scionLayer.Path
 		assert start == p.scionLayer.PathStartIdx(ub)
 		assert end == p.scionLayer.PathEndIdx(ub)
-		assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	}
 	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.path.Mem(ub[start:end]), R56)
@@ -313,15 +309,11 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 			&ub[startP:end][epic.MetadataLen:][k] == &ub[start + k]
 		assert forall k int :: {&ub[start:end][k]} 0 <= k && k < end-start ==>
 			&ub[start:end][k] == &ub[start + k]
-		// Establish this in both branches: under the default exhale mode the
-		// branch-local facts relating ub[start:end] to ub do not survive the join.
-		assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 		fold acc(p.scionLayer.Path.Mem(ub[startP:end]), R56)
 	} else {
 		assert p.path === p.scionLayer.Path
 		assert start == p.scionLayer.PathStartIdx(ub)
 		assert end == p.scionLayer.PathEndIdx(ub)
-		assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	}
 	assert p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 	fold acc(p.scionLayer.Mem(ub), R56)
