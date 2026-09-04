@@ -38,7 +38,9 @@ jobs:
           ## Due to a bug, we cannot use the recursive mode with friend pacakge invariants,
           ## which is why 'verification/gobra.json' excludes the 'layers' package.
           configFile: 'verification'
-          timeout: 5m
+          # the slices package carries the view lemmas of this branch, which
+          # need more than the 5m that master's version of the package needs
+          timeout: 10m
           imageVersion: ${{ env.imageVersion }}
       # due to the bug mention above, we need to verify this package separately
       - name: Verify package 'verification/dependencies/github.com/google/gopacket/layers'
