@@ -1,6 +1,7 @@
 {
   "default_job_cfg": {
     "module": "github.com/scionproto/scion",
+    "assert_timeout": 45000,
     "includes": ["", "verification/dependencies"],
     "only_files_with_header": true,
     "assume_injectivity_inhale": true,
