@@ -605,19 +605,24 @@ preserves let currHfStart := currHfIdx * path.HopLen in
 	acc(sl.Bytes(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen), R49)
 ensures  BytesStoreCurrSeg(hopfields, currHfIdx, segLen, inf)
 decreases
-func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) {
-	currseg := reveal CurrSegWithInfo(hopfields, currHfIdx, segLen, inf)
-	currHfStart := currHfIdx * path.HopLen
-	currHfEnd := currHfStart + path.HopLen
-
-	HopsFromSuffixOfRawMatchSuffixOfHops(hopfields, 0, 0, segLen, currHfIdx)
-	AlignHopsOfRawWithOffsetAndIndex(hopfields, 0, currHfIdx + 1, segLen, currHfIdx + 1)
-	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx + 1)
-	HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx)
-	widenHopFields(hopfields, 0, 0, currHfIdx, 0, currHfStart, R52)
-	widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, currHfEnd, segLen * path.HopLen, R52)
-	widenHopFields(hopfields, currHfStart, 0, 1, currHfStart, currHfEnd, R52)
-}
+func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField)
+// {
+	// BISECT-COMMENTED-OUT: same fix as da-path-scion-97c98ffcd / da-path-scion-74d17fd54,
+	// applied here without re-running verification (per instructions). This lemma
+	// (together with SetHopField's body in raw.go, also commented out) was identified there
+	// as the cause of --dependencyAnalysis hanging / exhausting the JVM heap.
+	// currseg := reveal CurrSegWithInfo(hopfields, currHfIdx, segLen, inf)
+	// currHfStart := currHfIdx * path.HopLen
+	// currHfEnd := currHfStart + path.HopLen
+	//
+	// HopsFromSuffixOfRawMatchSuffixOfHops(hopfields, 0, 0, segLen, currHfIdx)
+	// AlignHopsOfRawWithOffsetAndIndex(hopfields, 0, currHfIdx + 1, segLen, currHfIdx + 1)
+	// HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx + 1)
+	// HopsFromPrefixOfRawMatchPrefixOfHops(hopfields, 0, 0, segLen, currHfIdx)
+	// widenHopFields(hopfields, 0, 0, currHfIdx, 0, currHfStart, R52)
+	// widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, currHfEnd, segLen * path.HopLen, R52)
+	// widenHopFields(hopfields, currHfStart, 0, 1, currHfStart, currHfEnd, R52)
+// }
 
 // `SplitHopfields` splits the permission to the raw bytes of a segment into the permission
 // to the subslice containing all past hopfields, to the sublice containing the current hopfield,

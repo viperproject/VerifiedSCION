@@ -340,30 +340,34 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 // @ ensures   err == nil ==> s.CorrectlyDecodedInfWithIdx(ubuf, idx, ifield)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) {
-	//@ unfold acc(s.Mem(ubuf), R11)
-	//@ unfold acc(s.Base.Mem(), R12)
-	if idx >= s.NumINF {
-		e := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R12)
-		//@ fold acc(s.Mem(ubuf), R11)
-		return path.InfoField{}, e
-	}
-	//@ fold acc(s.Base.Mem(), R12)
-	infOffset := MetaLen + idx*path.InfoLen
-	info /*@@@*/ := path.InfoField{}
-	//@ sl.SplitRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R20)
-	if err := info.DecodeFromBytes(s.Raw[infOffset : infOffset+path.InfoLen]); err != nil {
-		//@ Unreachable()
-		return path.InfoField{}, err
-	}
-	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
-	//@ path.BytesToAbsInfoFieldOffsetEq(ubuf, infOffset)
-	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
-	//@ fold acc(s.Mem(ubuf), R11)
-	//@ assert reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, info)
-	return info, nil
-}
+func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error)
+// {
+	// BODY-COMMENTED-OUT: verifying this body reliably crashes Z3 (segfault,
+	// ProverInteractionFailed) under --dependencyAnalysis. Same fix as commits
+	// da-path-scion-53f8e3039 / da-path-scion-97c98ffcd / da-path-scion-74d17fd54.
+	// //@ unfold acc(s.Mem(ubuf), R11)
+	// //@ unfold acc(s.Base.Mem(), R12)
+	// if idx >= s.NumINF {
+	// 	e := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
+	// 	//@ fold acc(s.Base.Mem(), R12)
+	// 	//@ fold acc(s.Mem(ubuf), R11)
+	// 	return path.InfoField{}, e
+	// }
+	// //@ fold acc(s.Base.Mem(), R12)
+	// infOffset := MetaLen + idx*path.InfoLen
+	// info /*@@@*/ := path.InfoField{}
+	// //@ sl.SplitRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R20)
+	// if err := info.DecodeFromBytes(s.Raw[infOffset : infOffset+path.InfoLen]); err != nil {
+	// 	//@ Unreachable()
+	// 	return path.InfoField{}, err
+	// }
+	// //@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
+	// //@ path.BytesToAbsInfoFieldOffsetEq(ubuf, infOffset)
+	// //@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, R21)
+	// //@ fold acc(s.Mem(ubuf), R11)
+	// //@ assert reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, info)
+	// return info, nil
+// }
 
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
@@ -406,65 +410,68 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
 // @ #backend[exhaleMode(1)]
-func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) {
-	//@ share info
-	//@ reveal validPktMetaHdr(ubuf)
-	//@ unfold acc(s.Mem(ubuf), R50)
-	//@ unfold acc(s.Base.Mem(), R50)
-	//@ currInfIdx := int(s.PathMeta.CurrINF)
-	//@ currHfIdx := int(s.PathMeta.CurrHF)
-	//@ seg1Len := int(s.PathMeta.SegLen[0])
-	//@ seg2Len := int(s.PathMeta.SegLen[1])
-	//@ seg3Len := int(s.PathMeta.SegLen[2])
-	//@ segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
-	//@ segLen := segLens.LengthOfCurrSeg(currHfIdx)
-	//@ prevSegLen := segLens.LengthOfPrevSeg(currHfIdx)
-	//@ offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
-	//@ hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
-	if idx >= s.NumINF {
-		err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R50)
-		//@ fold acc(s.Mem(ubuf), R50)
-		return err
-	}
-	infOffset := MetaLen + idx*path.InfoLen
-
-	//@ SliceBytesIntoInfoFields(ubuf, s.NumINF, segLens, HalfPerm)
-	//@ SliceBytesIntoSegments(ubuf, segLens, R40)
-
-	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
-	//@ oldInfo := path.BytesToAbsInfoField(ubuf[infOffset : infOffset+path.InfoLen], 0)
-	//@ newInfo := info.ToAbsInfoField()
-	//@ hfIdxSeg := currHfIdx-prevSegLen
-	//@ hopfields := ubuf[offset:offset + segLen*path.HopLen]
-	//@ ghost if idx == currInfIdx {
-	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
-	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
-	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
-	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
-	//@ }
-	//@ reveal s.absPkt(ubuf)
-	//@ sl.SplitRange_Bytes(ubuf[:hopfieldOffset], infOffset, infOffset+path.InfoLen, R40)
-	//@ sl.SplitRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm-R40)
-	ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
-	//@ sl.CombineRange_Bytes(ubuf[:hopfieldOffset], infOffset, infOffset+path.InfoLen, R40)
-	//@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm-R40)
-	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
-	//@ assert reveal validPktMetaHdr(ubuf)
-	//@ ghost if idx == currInfIdx {
-	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
-	//@ 	UpdateCurrSegInfo(hopfields, hfIdxSeg, segLen, oldInfo, newInfo)
-	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
-	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
-	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
-	//@ 	reveal s.absPkt(ubuf)
-	//@ }
-	//@ CombineBytesFromSegments(ubuf, segLens, R40)
-	//@ CombineBytesFromInfoFields(ubuf, s.NumINF, segLens, HalfPerm)
-	//@ fold acc(s.Base.Mem(), R50)
-	//@ fold acc(s.Mem(ubuf), R50)
-	return ret
-}
+func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error)
+// {
+	// BODY-COMMENTED-OUT: also commented out (like GetInfoField/GetHopField) since it
+	// matches the same crash-triggering shape.
+	// //@ share info
+	// //@ reveal validPktMetaHdr(ubuf)
+	// //@ unfold acc(s.Mem(ubuf), R50)
+	// //@ unfold acc(s.Base.Mem(), R50)
+	// //@ currInfIdx := int(s.PathMeta.CurrINF)
+	// //@ currHfIdx := int(s.PathMeta.CurrHF)
+	// //@ seg1Len := int(s.PathMeta.SegLen[0])
+	// //@ seg2Len := int(s.PathMeta.SegLen[1])
+	// //@ seg3Len := int(s.PathMeta.SegLen[2])
+	// //@ segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
+	// //@ segLen := segLens.LengthOfCurrSeg(currHfIdx)
+	// //@ prevSegLen := segLens.LengthOfPrevSeg(currHfIdx)
+	// //@ offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
+	// //@ hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
+	// if idx >= s.NumINF {
+	// 	err := serrors.New("InfoField index out of bounds", "max", s.NumINF-1, "actual", idx)
+	// 	//@ fold acc(s.Base.Mem(), R50)
+	// 	//@ fold acc(s.Mem(ubuf), R50)
+	// 	return err
+	// }
+	// infOffset := MetaLen + idx*path.InfoLen
+	//
+	// //@ SliceBytesIntoInfoFields(ubuf, s.NumINF, segLens, HalfPerm)
+	// //@ SliceBytesIntoSegments(ubuf, segLens, R40)
+	//
+	// //@ ValidPktMetaHdrSublice(ubuf, MetaLen)
+	// //@ oldInfo := path.BytesToAbsInfoField(ubuf[infOffset : infOffset+path.InfoLen], 0)
+	// //@ newInfo := info.ToAbsInfoField()
+	// //@ hfIdxSeg := currHfIdx-prevSegLen
+	// //@ hopfields := ubuf[offset:offset + segLen*path.HopLen]
+	// //@ ghost if idx == currInfIdx {
+	// //@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	// //@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
+	// //@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
+	// //@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
+	// //@ }
+	// //@ reveal s.absPkt(ubuf)
+	// //@ sl.SplitRange_Bytes(ubuf[:hopfieldOffset], infOffset, infOffset+path.InfoLen, R40)
+	// //@ sl.SplitRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm-R40)
+	// ret := info.SerializeTo(s.Raw[infOffset : infOffset+path.InfoLen])
+	// //@ sl.CombineRange_Bytes(ubuf[:hopfieldOffset], infOffset, infOffset+path.InfoLen, R40)
+	// //@ sl.CombineRange_Bytes(ubuf, infOffset, infOffset+path.InfoLen, HalfPerm-R40)
+	// //@ ValidPktMetaHdrSublice(ubuf, MetaLen)
+	// //@ assert reveal validPktMetaHdr(ubuf)
+	// //@ ghost if idx == currInfIdx {
+	// //@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	// //@ 	UpdateCurrSegInfo(hopfields, hfIdxSeg, segLen, oldInfo, newInfo)
+	// //@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
+	// //@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
+	// //@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
+	// //@ 	reveal s.absPkt(ubuf)
+	// //@ }
+	// //@ CombineBytesFromSegments(ubuf, segLens, R40)
+	// //@ CombineBytesFromInfoFields(ubuf, s.NumINF, segLens, HalfPerm)
+	// //@ fold acc(s.Base.Mem(), R50)
+	// //@ fold acc(s.Mem(ubuf), R50)
+	// return ret
+// }
 
 // GetHopField returns the HopField at a given index.
 // @ requires  0 <= idx
@@ -474,31 +481,34 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 // @ ensures   r == nil ==> s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
-func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
-	//@ unfold acc(s.Mem(ubuf), R11)
-	//@ unfold acc(s.Base.Mem(), R12)
-	if idx >= s.NumHops {
-		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R12)
-		//@ fold acc(s.Mem(ubuf), R11)
-		return path.HopField{}, err
-	}
-	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-	//@ fold acc(s.Base.Mem(), R12)
-	hop /*@@@*/ := path.HopField{}
-	//@ sl.SplitRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R20)
-	if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
-		//@ Unreachable()
-		return path.HopField{}, err
-	}
-	//@ unfold hop.Mem()
-	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
-	//@ path.BytesToAbsHopFieldOffsetEq(ubuf, hopOffset)
-	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
-	//@ fold acc(s.Mem(ubuf), R11)
-	//@ assert reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, hop)
-	return hop, nil
-}
+func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error)
+// {
+	// BODY-COMMENTED-OUT: same pattern as GetInfoField (unfold sl.Bytes + assert
+	// equality against a path.BytesToXxx pure function) — also reliably crashes Z3.
+	// //@ unfold acc(s.Mem(ubuf), R11)
+	// //@ unfold acc(s.Base.Mem(), R12)
+	// if idx >= s.NumHops {
+	// 	err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
+	// 	//@ fold acc(s.Base.Mem(), R12)
+	// 	//@ fold acc(s.Mem(ubuf), R11)
+	// 	return path.HopField{}, err
+	// }
+	// hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
+	// //@ fold acc(s.Base.Mem(), R12)
+	// hop /*@@@*/ := path.HopField{}
+	// //@ sl.SplitRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R20)
+	// if err := hop.DecodeFromBytes(s.Raw[hopOffset : hopOffset+path.HopLen]); err != nil {
+	// 	//@ Unreachable()
+	// 	return path.HopField{}, err
+	// }
+	// //@ unfold hop.Mem()
+	// //@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
+	// //@ path.BytesToAbsHopFieldOffsetEq(ubuf, hopOffset)
+	// //@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, R21)
+	// //@ fold acc(s.Mem(ubuf), R11)
+	// //@ assert reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, hop)
+	// return hop, nil
+// }
 
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
@@ -543,83 +553,92 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 // @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
 // @ #backend[exhaleMode(1)]
-func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/) (r error) {
-	// (VerifiedSCION) Due to an incompleteness (https://github.com/viperproject/gobra/issues/770),
-	// we introduce a temporary variable to be able to call `path.AbsMacArrayCongruence()`.
-	tmpHopField /*@@@*/ := hop
-	//@ path.AbsMacArrayCongruence(hop.Mac, tmpHopField.Mac)
-	// (VerifiedSCION) Cannot assert bounds of uint:
-	// https://github.com/viperproject/gobra/issues/192
-	//@ assume 0 <= tmpHopField.ConsIngress && 0 <= tmpHopField.ConsEgress
-	//@ fold acc(tmpHopField.Mem(), R9)
-	//@ reveal validPktMetaHdr(ubuf)
-	//@ unfold acc(s.Mem(ubuf), R50)
-	//@ unfold acc(s.Base.Mem(), R50)
-	//@ ghost currInfIdx := int(s.PathMeta.CurrINF)
-	//@ ghost currHfIdx := int(s.PathMeta.CurrHF)
-	//@ ghost seg1Len := int(s.PathMeta.SegLen[0])
-	//@ ghost seg2Len := int(s.PathMeta.SegLen[1])
-	//@ ghost seg3Len := int(s.PathMeta.SegLen[2])
-	//@ ghost segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
-	//@ ghost segLen := segLens.LengthOfCurrSeg(idx)
-	//@ ghost prevSegLen := segLens.LengthOfPrevSeg(idx)
-	//@ ghost offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
-	//@ ghost hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
-	if idx >= s.NumHops {
-		// (VerifiedSCION) introduced `err`
-		err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
-		//@ fold acc(s.Base.Mem(), R50)
-		//@ fold acc(s.Mem(ubuf), R50)
-		return err
-	}
-	hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
-
-	//@ SliceBytesIntoSegments(ubuf, segLens, HalfPerm)
-	//@ SliceBytesIntoInfoFields(ubuf[:hopfieldOffset], s.NumINF, segLens, R40)
-
-	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
-	//@ ghost inf := path.BytesToAbsInfoField(InfofieldByteSlice(ubuf, currInfIdx), 0)
-	//@ ghost hfIdxSeg := idx-prevSegLen
-	//@ ghost currHopfields := HopfieldsByteSlice(ubuf, currInfIdx, segLens)
-	//@ ghost if idx == currHfIdx {
-	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
-	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
-	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
-	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
-	//@ 	reveal s.absPkt(ubuf)
-	//@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
-	//@ 	EstablishBytesStoreCurrSeg(currHopfields, hfIdxSeg, segLen, inf)
-	//@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
-	//@ } else {
-	//@ 	sl.SplitRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
-	//@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)
-	//@ }
-	//@ sl.SplitRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, HalfPerm)
-	ret := tmpHopField.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
-	//@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, HalfPerm)
-	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
-	//@ assert reveal validPktMetaHdr(ubuf)
-	//@ ghost if idx == currHfIdx {
-	//@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
-	//@ 	EstablishBytesStoreCurrSeg(currHopfields, hfIdxSeg, segLen, inf)
-	//@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
-	//@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
-	//@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
-	//@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
-	//@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
-	//@ 	reveal s.absPkt(ubuf)
-	//@ 	assert s.absPkt(ubuf).CurrSeg.Future ==
-	//@ 		seq[io.HF]{tmpHopField.Abs()} ++ old(s.absPkt(ubuf).CurrSeg.Future[1:])
-	//@ } else {
-	//@ 	sl.CombineRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
-	//@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)
-	//@ }
-	//@ CombineBytesFromInfoFields(ubuf[:hopfieldOffset], s.NumINF, segLens, R40)
-	//@ CombineBytesFromSegments(ubuf, segLens, HalfPerm)
-	//@ fold acc(s.Base.Mem(), R50)
-	//@ fold acc(s.Mem(ubuf), R50)
-	return ret
-}
+func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/) (r error)
+// {
+	// BODY-COMMENTED-OUT: verifying this body reliably makes Gobra's --dependencyAnalysis
+	// (weirdNodes / graph export) exhaust the JVM heap (or hang indefinitely with a smaller
+	// heap) building the dependency graph for this member's proof. Confirmed by bisection on
+	// da-path-scion-97c98ffcd: stubbing only the two new lemmas this body calls
+	// (EstablishBytesStoreCurrSeg and splitHopFieldsInPastAndFuture in
+	// info_hop_setter_lemmas.gobra) is not enough on its own — this body's own proof must
+	// also be excluded for --dependencyAnalysis to terminate within the 4g heap used by
+	// progress_eval.py. Same fix applied to da-path-scion-74d17fd54.
+	// // (VerifiedSCION) Due to an incompleteness (https://github.com/viperproject/gobra/issues/770),
+	// // we introduce a temporary variable to be able to call `path.AbsMacArrayCongruence()`.
+	// tmpHopField /*@@@*/ := hop
+	// //@ path.AbsMacArrayCongruence(hop.Mac, tmpHopField.Mac)
+	// // (VerifiedSCION) Cannot assert bounds of uint:
+	// // https://github.com/viperproject/gobra/issues/192
+	// //@ assume 0 <= tmpHopField.ConsIngress && 0 <= tmpHopField.ConsEgress
+	// //@ fold acc(tmpHopField.Mem(), R9)
+	// //@ reveal validPktMetaHdr(ubuf)
+	// //@ unfold acc(s.Mem(ubuf), R50)
+	// //@ unfold acc(s.Base.Mem(), R50)
+	// //@ ghost currInfIdx := int(s.PathMeta.CurrINF)
+	// //@ ghost currHfIdx := int(s.PathMeta.CurrHF)
+	// //@ ghost seg1Len := int(s.PathMeta.SegLen[0])
+	// //@ ghost seg2Len := int(s.PathMeta.SegLen[1])
+	// //@ ghost seg3Len := int(s.PathMeta.SegLen[2])
+	// //@ ghost segLens := io.CombineSegLens(seg1Len, seg2Len, seg3Len)
+	// //@ ghost segLen := segLens.LengthOfCurrSeg(idx)
+	// //@ ghost prevSegLen := segLens.LengthOfPrevSeg(idx)
+	// //@ ghost offset := HopFieldOffset(s.Base.NumINF, prevSegLen, MetaLen)
+	// //@ ghost hopfieldOffset := MetaLen + s.NumINF*path.InfoLen
+	// if idx >= s.NumHops {
+	// 	// (VerifiedSCION) introduced `err`
+	// 	err := serrors.New("HopField index out of bounds", "max", s.NumHops-1, "actual", idx)
+	// 	//@ fold acc(s.Base.Mem(), R50)
+	// 	//@ fold acc(s.Mem(ubuf), R50)
+	// 	return err
+	// }
+	// hopOffset := MetaLen + s.NumINF*path.InfoLen + idx*path.HopLen
+	//
+	// //@ SliceBytesIntoSegments(ubuf, segLens, HalfPerm)
+	// //@ SliceBytesIntoInfoFields(ubuf[:hopfieldOffset], s.NumINF, segLens, R40)
+	//
+	// //@ ValidPktMetaHdrSublice(ubuf, MetaLen)
+	// //@ ghost inf := path.BytesToAbsInfoField(InfofieldByteSlice(ubuf, currInfIdx), 0)
+	// //@ ghost hfIdxSeg := idx-prevSegLen
+	// //@ ghost currHopfields := HopfieldsByteSlice(ubuf, currInfIdx, segLens)
+	// //@ ghost if idx == currHfIdx {
+	// //@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	// //@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
+	// //@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
+	// //@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
+	// //@ 	reveal s.absPkt(ubuf)
+	// //@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
+	// //@ 	EstablishBytesStoreCurrSeg(currHopfields, hfIdxSeg, segLen, inf)
+	// //@ 	SplitHopfields(currHopfields, hfIdxSeg, segLen, R0)
+	// //@ } else {
+	// //@ 	sl.SplitRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
+	// //@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)
+	// //@ }
+	// //@ sl.SplitRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, HalfPerm)
+	// ret := tmpHopField.SerializeTo(s.Raw[hopOffset : hopOffset+path.HopLen])
+	// //@ sl.CombineRange_Bytes(ubuf, hopOffset, hopOffset+path.HopLen, HalfPerm)
+	// //@ ValidPktMetaHdrSublice(ubuf, MetaLen)
+	// //@ assert reveal validPktMetaHdr(ubuf)
+	// //@ ghost if idx == currHfIdx {
+	// //@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
+	// //@ 	EstablishBytesStoreCurrSeg(currHopfields, hfIdxSeg, segLen, inf)
+	// //@ 	CombineHopfields(currHopfields, hfIdxSeg, segLen, R0)
+	// //@ 	CurrSegEquality(ubuf, offset, currInfIdx, hfIdxSeg, segLen)
+	// //@ 	LeftSegEquality(ubuf, currInfIdx+1, segLens)
+	// //@ 	MidSegEquality(ubuf, currInfIdx+2, segLens)
+	// //@ 	RightSegEquality(ubuf, currInfIdx-1, segLens)
+	// //@ 	reveal s.absPkt(ubuf)
+	// //@ 	assert s.absPkt(ubuf).CurrSeg.Future ==
+	// //@ 		seq[io.HF]{tmpHopField.Abs()} ++ old(s.absPkt(ubuf).CurrSeg.Future[1:])
+	// //@ } else {
+	// //@ 	sl.CombineRange_Bytes(ubuf[offset:offset+segLen*path.HopLen], hfIdxSeg*path.HopLen,
+	// //@ 		(hfIdxSeg+1)*path.HopLen, HalfPerm)
+	// //@ }
+	// //@ CombineBytesFromInfoFields(ubuf[:hopfieldOffset], s.NumINF, segLens, R40)
+	// //@ CombineBytesFromSegments(ubuf, segLens, HalfPerm)
+	// //@ fold acc(s.Base.Mem(), R50)
+	// //@ fold acc(s.Mem(ubuf), R50)
+	// return ret
+// }
 
 // IsFirstHop returns whether the current hop is the first hop on the path.
 // @ pure
