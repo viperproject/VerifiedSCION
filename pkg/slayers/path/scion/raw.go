@@ -152,10 +152,7 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ assert validIdxs ==> base.Valid()
 	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
 
-	// (VerifiedSCION) In this method, many slice operations are done in two
-	// steps to preserve framming information.
-	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
-	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
+	//@ sl.SplitRange_Bytes(ubuf, 0, MetaLen, writePerm)
 	// Serialize PathMeta to ensure potential changes are reflected Raw.
 	if err := s.PathMeta.SerializeTo(s.Raw[:MetaLen]); err != nil {
 		// @ Unreachable()
@@ -172,54 +169,44 @@ func (s *Raw) ToDecoded( /*@ ghost ubuf []byte @*/ ) (d *Decoded, err error) {
 	//@ ghost b3 := vMeta[3]
 	//@ assert let line := s.PathMeta.SerializedToLine() in binary.BigEndian.PutUint32Spec(b0, b1, b2, b3, line)
 	//@ assert s.Raw[:MetaLen] === ubuf[:MetaLen]
-	//@ sl.CombineRangeWithViews_Bytes(ubuf, 0, MetaLen, HalfPerm, sl.View(ubuf, 0, 0), vMeta, sl.View(ubuf, MetaLen, len(ubuf)))
-	//@ assert sl.View(ubuf, 0, len(ubuf))[0:MetaLen] == vMeta
-	//@ sl.CombineRangeWithViews_Bytes(ubuf, 0, MetaLen, HalfPerm, sl.View(ubuf, 0, 0), vMeta, sl.View(ubuf, MetaLen, len(ubuf)))
+	//@ sl.CombineRangeWithViews_Bytes(ubuf, 0, MetaLen, writePerm, sl.View(ubuf, 0, 0), vMeta, sl.View(ubuf, MetaLen, len(ubuf)))
 	//@ assert sl.View(ubuf, 0, len(ubuf))[0:MetaLen] == vMeta
 	decoded := &Decoded{}
 	//@ fold decoded.Base.NonInitMem()
 	//@ fold decoded.NonInitMem()
-	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
-	//@ assert sl.View(ubuf, 0, len(s.Raw))[0:MetaLen] == vMeta
-	//@ sl.SplitByIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
-	//@ sl.Reslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
+	//@ sl.SplitRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ assert sl.View(ubuf[:len(s.Raw)], 0, len(s.Raw))[0:MetaLen] == vMeta
-	//@ sl.Reslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
 	//@ assert s.Raw === ubuf[:len(s.Raw)]
 	//@ assert sl.View(s.Raw, 0, len(s.Raw))[0] == b0 && sl.View(s.Raw, 0, len(s.Raw))[1] == b1
 	//@ assert sl.View(s.Raw, 0, len(s.Raw))[2] == b2 && sl.View(s.Raw, 0, len(s.Raw))[3] == b3
-	if err := decoded.DecodeFromBytes(s.Raw); err != nil {
-		//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), writePerm)
-		//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), writePerm)
-		//@ fold acc(s.Base.Mem(), R6)
-		//@ fold acc(s.Mem(ubuf), R6)
-		return nil, err
-	}
-	//@ ghost lenR := len(s.Raw) // TODO: move to the top and rewrite body
+	err = decoded.DecodeFromBytes(s.Raw)
 	// the postcondition of decoded.DecodeFromBytes characterizes the
 	// meta header through GetByte; ViewElems bridges those terms to the
 	// view elements, which the asserts before the call related to the
-	// serialized bytes
-	//@ sl.ViewElems(s.Raw, 0, len(s.Raw), R43)
-	//@ assert sl.View(s.Raw, 0, len(s.Raw))[0] == sl.GetByte(s.Raw, 0, len(s.Raw), 0)
-	//@ assert sl.View(s.Raw, 0, len(s.Raw))[1] == sl.GetByte(s.Raw, 0, len(s.Raw), 1)
-	//@ assert sl.View(s.Raw, 0, len(s.Raw))[2] == sl.GetByte(s.Raw, 0, len(s.Raw), 2)
-	//@ assert sl.View(s.Raw, 0, len(s.Raw))[3] == sl.GetByte(s.Raw, 0, len(s.Raw), 3)
-	//@ assert sl.GetByte(s.Raw, 0, len(s.Raw), 0) == b0
-	//@ assert sl.GetByte(s.Raw, 0, len(s.Raw), 1) == b1
-	//@ assert sl.GetByte(s.Raw, 0, len(s.Raw), 2) == b2
-	//@ assert sl.GetByte(s.Raw, 0, len(s.Raw), 3) == b3
-	//@ ghost if validIdxs {
-	//@ 	s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
-	//@ 	assert pathMeta == decoded.GetMetaHdr(s.Raw)
-	//@ 	assert decoded.GetBase(s.Raw).Valid()
+	// serialized bytes. This needs the instance of Bytes(s.Raw), so it
+	// must precede the combine below.
+	//@ ghost if err == nil {
+	//@ 	sl.ViewElems(s.Raw, 0, len(s.Raw), R43)
+	//@ 	assert sl.View(s.Raw, 0, len(s.Raw))[0] == sl.GetByte(s.Raw, 0, len(s.Raw), 0)
+	//@ 	assert sl.View(s.Raw, 0, len(s.Raw))[1] == sl.GetByte(s.Raw, 0, len(s.Raw), 1)
+	//@ 	assert sl.View(s.Raw, 0, len(s.Raw))[2] == sl.GetByte(s.Raw, 0, len(s.Raw), 2)
+	//@ 	assert sl.View(s.Raw, 0, len(s.Raw))[3] == sl.GetByte(s.Raw, 0, len(s.Raw), 3)
+	//@ 	assert sl.GetByte(s.Raw, 0, len(s.Raw), 0) == b0
+	//@ 	assert sl.GetByte(s.Raw, 0, len(s.Raw), 1) == b1
+	//@ 	assert sl.GetByte(s.Raw, 0, len(s.Raw), 2) == b2
+	//@ 	assert sl.GetByte(s.Raw, 0, len(s.Raw), 3) == b3
+	//@ 	if validIdxs {
+	//@ 		s.PathMeta.SerializeAndDeserializeLemma(b0, b1, b2, b3)
+	//@ 		assert pathMeta == decoded.GetMetaHdr(s.Raw)
+	//@ 		assert decoded.GetBase(s.Raw).Valid()
+	//@ 	}
 	//@ }
-	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
-	//@ sl.Unslice_Bytes(ubuf, 0, len(s.Raw), HalfPerm)
-	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
-	//@ sl.CombineAtIndex_Bytes(ubuf, 0, len(ubuf), len(s.Raw), HalfPerm)
+	//@ sl.CombineRange_Bytes(ubuf, 0, len(s.Raw), writePerm)
 	//@ fold acc(s.Base.Mem(), R6)
 	//@ fold acc(s.Mem(ubuf), R6)
+	if err != nil {
+		return nil, err
+	}
 	return decoded, nil
 }
 

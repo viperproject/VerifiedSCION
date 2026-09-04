@@ -114,14 +114,14 @@ func (o *Path) SerializeTo(b []byte /*@, ubuf []byte @*/) (err error) {
 	//@ unfold acc(o.Mem(ubuf), R1)
 	//@ sl.SplitRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 	if err := o.Info.SerializeTo(b[:offset+path.InfoLen]); err != nil {
-		//@ sl.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
+		// @ Unreachable()
 		return err
 	}
 	//@ sl.CombineRange_Bytes(b, 0, offset+path.InfoLen, writePerm)
 	offset += path.InfoLen
 	//@ sl.SplitRange_Bytes(b, offset, offset+path.HopLen, writePerm)
 	if err := o.FirstHop.SerializeTo(b[offset : offset+path.HopLen]); err != nil {
-		//@ sl.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)
+		// @ Unreachable()
 		return err
 	}
 	//@ sl.CombineRange_Bytes(b, offset, offset+path.HopLen, writePerm)

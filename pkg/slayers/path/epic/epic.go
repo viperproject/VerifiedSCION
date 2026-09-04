@@ -104,31 +104,24 @@ func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	if p.ScionPath == nil {
 		return serrors.New("SCION path is nil")
 	}
-	//@ sl.SplitByIndex_Bytes(b, 0, len(b), PktIDLen, writePerm)
-	//@ sl.Reslice_Bytes(b, 0, PktIDLen, writePerm)
+	//@ sl.SplitRange_Bytes(b, 0, PktIDLen, writePerm)
 	p.PktID.SerializeTo(b[:PktIDLen])
-	//@ sl.Unslice_Bytes(b, 0, PktIDLen, writePerm)
-	//@ sl.SplitByIndex_Bytes(b, PktIDLen, len(b), PktIDLen+HVFLen, writePerm)
-	//@ sl.Reslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
-	//@ unfold sl.Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen)
+	//@ sl.CombineRange_Bytes(b, 0, PktIDLen, writePerm)
+	// the two copies below only need the element permissions of the
+	// metadata prefix, so the prefix is unfolded once and the copied
+	// subslices are related to its elements
+	//@ sl.SplitRange_Bytes(b, MetadataLen, len(b), writePerm)
+	//@ unfold sl.Bytes(b, 0, MetadataLen)
 	//@ unfold acc(sl.Bytes(p.PHVF, 0, len(p.PHVF)), R2)
+	//@ sl.AssertSliceOverlap(b, PktIDLen, PktIDLen+HVFLen)
 	copy(b[PktIDLen:(PktIDLen+HVFLen)], p.PHVF /*@, R3 @*/)
-	//@ fold sl.Bytes(b[PktIDLen:(PktIDLen+HVFLen)], 0, HVFLen)
 	//@ fold acc(sl.Bytes(p.PHVF, 0, len(p.PHVF)), R2)
-	//@ sl.Unslice_Bytes(b, PktIDLen, PktIDLen+HVFLen, writePerm)
-	//@ sl.CombineAtIndex_Bytes(b, 0, PktIDLen+HVFLen, PktIDLen, writePerm)
-	//@ sl.SplitByIndex_Bytes(b, PktIDLen+HVFLen, len(b), MetadataLen, writePerm)
-	//@ sl.Reslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
 	//@ unfold acc(sl.Bytes(p.LHVF, 0, len(p.LHVF)), R3)
-	//@ unfold sl.Bytes(b[(PktIDLen+HVFLen):MetadataLen], 0, HVFLen)
+	//@ sl.AssertSliceOverlap(b, PktIDLen+HVFLen, MetadataLen)
 	copy(b[(PktIDLen+HVFLen):MetadataLen], p.LHVF /*@, R3 @*/)
-	//@ fold sl.Bytes(b[(PktIDLen+HVFLen):MetadataLen], 0, HVFLen)
 	//@ fold acc(sl.Bytes(p.LHVF, 0, len(p.LHVF)), R3)
-	//@ sl.Unslice_Bytes(b, PktIDLen+HVFLen, MetadataLen, writePerm)
-	//@ sl.CombineAtIndex_Bytes(b, 0, MetadataLen, PktIDLen+HVFLen, writePerm)
-	//@ sl.Reslice_Bytes(b, MetadataLen, len(b), writePerm)
-	//@ ghost defer sl.CombineAtIndex_Bytes(b, 0, len(b), MetadataLen, writePerm)
-	//@ ghost defer sl.Unslice_Bytes(b, MetadataLen, len(b), writePerm)
+	//@ fold sl.Bytes(b, 0, MetadataLen)
+	//@ ghost defer sl.CombineRange_Bytes(b, MetadataLen, len(b), writePerm)
 	//@ sl.SplitRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	//@ ghost defer sl.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	return p.ScionPath.SerializeTo(b[MetadataLen:] /*@, ubuf[MetadataLen:] @*/)
@@ -263,11 +256,10 @@ func (p *Path) Reverse( /*@ ghost ubuf []byte @*/ ) (ret path.Path, r error) {
 	}
 	//@ sl.SplitRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	revScion, err := p.ScionPath.Reverse( /*@ ubuf[MetadataLen:] @*/ )
+	//@ sl.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	if err != nil {
-		// @ sl.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 		return nil, err
 	}
-	//@ sl.CombineRange_Bytes(ubuf, MetadataLen, len(ubuf), writePerm)
 	ScionPath, ok := revScion.(*scion.Raw)
 	if !ok {
 		return nil, serrors.New("reversed path of type scion.Raw must not change type")
