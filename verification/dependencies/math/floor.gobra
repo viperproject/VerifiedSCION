@@ -12,6 +12,8 @@ decreases
 func Floor(x float64) (res float64)
 
 // Ceil returns the least integer value greater than or equal to x.
+// (VerifiedSCION) Ceil is marked as pure so that it may be mentioned in
+// specifications; it is a deterministic, side-effect free function.
 ensures x <= res
 decreases
-func Ceil(x float64) (res float64)
+pure func Ceil(x float64) (res float64)
