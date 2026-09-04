@@ -18,7 +18,9 @@
 
 package io
 
-ghost comparable type Dp3sStateLocal ghost struct {
+
+// TODO(gobra#1092): comparable
+ghost type Dp3sStateLocal ghost struct {
 	Ibuf dict[option[Ifs]](set[Pkt])
 	Obuf dict[option[Ifs]](set[Pkt])
 }

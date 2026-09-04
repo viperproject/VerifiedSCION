@@ -18,15 +18,19 @@
 
 package io
 
-ghost comparable type Unit ghost struct{}
+
+// TODO(gobra#1092): comparable
+ghost type Unit ghost struct{}
 
 // interface IDs
-ghost comparable type Ifs ghost struct {
+// TODO(gobra#1092): comparable
+ghost type Ifs ghost struct {
 	V uint16
 }
 
 // type of AS identifiers. Matches the type 'as' in Isabelle.
-ghost comparable type AS ghost struct {
+// TODO(gobra#1092): comparable
+ghost type AS ghost struct {
 	V uint
 }
 
@@ -84,7 +88,8 @@ ghost type Key adt {
 }
 
 // "authenticated hop information"
-ghost comparable type AHI ghost struct {
+// TODO(gobra#1092): comparable
+ghost type AHI ghost struct {
 	InIF option[Ifs]
 	EgIF option[Ifs]
 	ASID AS

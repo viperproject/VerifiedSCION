@@ -42,7 +42,7 @@ const InfoLen = 8
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 //	|                           Timestamp                           |
 //	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// @ comparable
+// TODO(gobra#1092): comparable
 type InfoField struct {
 	// Peer is the peering flag. If set to true, then the forwarding path is built as a peering
 	// path, which requires special processing on the dataplane.

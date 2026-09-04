@@ -27,7 +27,8 @@ import (
 // layer, namely the SCION header that the layer uses to compute its checksum.
 // The predicate is closed because its body mentions a non-exported field;
 // importing packages may hold it, but they can neither fold nor unfold it.
-closed pred (s *SCMP) ChecksumNetworkLayerMem() {
+// TODO(gobra#1092): closed
+pred (s *SCMP) ChecksumNetworkLayerMem() {
 	acc(&s.scn) &&
 	(s.scn != nil ==> s.scn.ChecksumMem())
 }

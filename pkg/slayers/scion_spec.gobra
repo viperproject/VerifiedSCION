@@ -99,7 +99,8 @@ pred PathPoolMemExceptOne(pathPool []path.Path, pathPoolRaw path.Path, pathType 
 // layer. The predicate is closed because its body mentions non-exported fields;
 // importing packages may hold it, but they can neither fold nor unfold it. They
 // obtain it from EstablishHiddenPathPoolMem.
-closed pred (s *SCION) HiddenPathPoolMem() {
+// TODO(gobra#1092): closed
+pred (s *SCION) HiddenPathPoolMem() {
 	acc(&s.pathPool) &&
 	acc(&s.pathPoolRaw) &&
 	PathPoolMem(s.pathPool, s.pathPoolRaw)
@@ -108,7 +109,8 @@ closed pred (s *SCION) HiddenPathPoolMem() {
 // HiddenPathPoolMemExceptOne is the counterpart of HiddenPathPoolMem for a layer
 // whose path `p` of type `pathType` has been taken out of the pool. It is the
 // part of Mem that describes the private state of the layer.
-closed pred (s *SCION) HiddenPathPoolMemExceptOne(pathType path.Type, p path.Path) {
+// TODO(gobra#1092): closed
+pred (s *SCION) HiddenPathPoolMemExceptOne(pathType path.Type, p path.Path) {
 	acc(&s.pathPool) &&
 	acc(&s.pathPoolRaw) &&
 	(!s.pathPoolInitialized() ==> PathPoolMem(s.pathPool, s.pathPoolRaw)) &&
@@ -121,7 +123,7 @@ closed pred (s *SCION) HiddenPathPoolMemExceptOne(pathType path.Type, p path.Pat
 ghost
 requires s.HiddenPathPoolMem()
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (s *SCION) PathPoolInitialized() bool {
 	return unfolding s.HiddenPathPoolMem() in s.pathPool != nil
 }
@@ -155,7 +157,7 @@ pure func (s *SCION) pathPoolInitialized() bool {
 ghost
 requires s.NonInitMem()
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (s *SCION) PathPoolInitializedNonInitMem() bool {
 	return unfolding s.NonInitMem() in
 		s.PathPoolInitialized()

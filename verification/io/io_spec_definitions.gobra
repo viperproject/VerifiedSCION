@@ -102,7 +102,8 @@ pure func (pkt Pkt) UpdateInfoField(info AbsInfoField) Pkt {
 
 // This type simplifies the infoField, making it easier
 // to use than the Seg from the IO-spec.
-ghost comparable type AbsInfoField ghost struct {
+// TODO(gobra#1092): comparable
+ghost type AbsInfoField ghost struct {
 	AInfo Ainfo
 	UInfo set[MsgTerm]
 	ConsDir bool
@@ -112,7 +113,8 @@ ghost comparable type AbsInfoField ghost struct {
 // The segment lengths of a packet are frequently used together.
 // This type combines them into a single structure to simplify
 // their specification.
-ghost comparable type SegLens ghost struct {
+// TODO(gobra#1092): comparable
+ghost type SegLens ghost struct {
 	Seg1Len int
 	Seg2Len int
 	Seg3Len int

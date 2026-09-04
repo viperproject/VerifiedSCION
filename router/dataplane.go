@@ -5095,13 +5095,11 @@ func (p *scionPacketProcessor) prepareSCMP(
 	scionL.NextHdr = slayers.L4SCMP
 
 	typeCode := slayers.CreateSCMPTypeCode(typ, code)
-	// (VerifiedSCION) the layer is built from its zero value, because the lemma
-	// that establishes NonInitMem (which covers the private state of the layer,
-	// and can thus not be folded by a client) requires it.
-	scmpH /*@@@*/ := slayers.SCMP{}
-	// @ scmpH.EstablishNonInitMem()
-	// @ unfold scmpH.NonInitMem()
-	scmpH.TypeCode = typeCode
+	scmpH /*@@@*/ := slayers.SCMP{TypeCode: typeCode}
+	// (VerifiedSCION) TODO: once gobra#1092 lands and ChecksumNetworkLayerMem
+	// becomes closed, a client can no longer fold it. This layer will then have
+	// to be built from its zero value and handed to scmpH.EstablishNonInitMem().
+	// @ fold scmpH.ChecksumNetworkLayerMem()
 	scmpH.SetNetworkLayerForChecksum(&scionL)
 
 	if err := p.buffer.Clear(); err != nil {

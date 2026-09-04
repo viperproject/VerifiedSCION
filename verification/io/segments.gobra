@@ -18,14 +18,17 @@
 
 package io
 
-ghost comparable type Ainfo ghost struct {
+
+// TODO(gobra#1092): comparable
+ghost type Ainfo ghost struct {
 	V uint
 }
 
 // Here, we already instantiated the type params, contrary to what
 // is done in Isabelle, where they are left generic.
 //Ccorresponds to the isabelle types seg2 and seg3.
-ghost comparable type Seg ghost struct {
+// TODO(gobra#1092): comparable
+ghost type Seg ghost struct {
 	AInfo Ainfo // nat in Isabelle
 	UInfo set[MsgTerm]
 	ConsDir bool

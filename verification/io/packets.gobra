@@ -21,7 +21,8 @@ package io
 // this type stands for the Isabelle type pkt2 instantiated with all its type paramenters, i.e., pkt3
 // Here, we already instantiated the type params, instead of
 // leaving them generic as done in Isabelle.
-ghost comparable type Pkt ghost struct {
+// TODO(gobra#1092): comparable
+ghost type Pkt ghost struct {
 	CurrSeg  Seg
 	LeftSeg  option[Seg]
 	MidSeg   option[Seg]

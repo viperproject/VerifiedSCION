@@ -23,7 +23,9 @@ type EndpointType int64
 decreases
 func RegisterEndpointType(num int, meta EndpointTypeMetadata) EndpointType
 
-comparable type Flow struct {
+
+// TODO(gobra#1092): comparable
+type Flow struct {
 	typ        EndpointType
 	slen, dlen int
 	src, dst   [MaxEndpointSize]byte
@@ -34,29 +36,29 @@ comparable type Flow struct {
 
 ghost
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (f Flow) GetEndpointType() EndpointType { return f.typ }
 
 ghost
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (f Flow) SrcLen() int { return f.slen }
 
 ghost
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (f Flow) DstLen() int { return f.dlen }
 
 ghost
 requires 0 <= i && i < MaxEndpointSize
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (f Flow) SrcByte(i int) byte { return f.src[i] }
 
 ghost
 requires 0 <= i && i < MaxEndpointSize
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (f Flow) DstByte(i int) byte { return f.dst[i] }
 
 preserves acc(sl.Bytes(src, 0, len(src)), 1/10000) && acc(sl.Bytes(dst, 0, len(dst)), 1/10000)

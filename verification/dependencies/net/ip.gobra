@@ -98,7 +98,7 @@ pure func isZeros(s []byte) bool
 ghost
 requires forall i int :: { &s[i] } 0 <= i && i < len(s) ==> acc(&s[i])
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func IsZeros(s []byte) bool {
 	return isZeros(s)
 }

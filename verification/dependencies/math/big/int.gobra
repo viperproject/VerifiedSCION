@@ -27,7 +27,8 @@ type Int struct {
 
 // The body exposes the non-exported representation of an Int, so importing
 // packages may hold this predicate but cannot unfold it.
-closed pred (i *Int) Mem() {
+// TODO(gobra#1092): closed
+pred (i *Int) Mem() {
 	acc(i) && i.abs.Mem()
 }
 
@@ -49,7 +50,7 @@ func (x *Int) Uint64() (res uint64)
 ghost
 requires x.Mem()
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (x *Int) FitsInUint64() bool {
 	return unfolding x.Mem() in len(x.abs) * _W <= 64
 }
@@ -59,7 +60,7 @@ pure func (x *Int) FitsInUint64() bool {
 ghost
 requires x.Mem()
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (x *Int) AbsToInt() int {
 	return unfolding x.Mem() in x.abs.toInt()
 }
@@ -68,7 +69,7 @@ pure func (x *Int) AbsToInt() int {
 ghost
 requires i.Mem()
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (i *Int) ToInt() int {
 	return (unfolding i.Mem() in i.neg) ? -((unfolding i.Mem() in i.abs.toInt())) : (unfolding i.Mem() in i.abs.toInt())
 }

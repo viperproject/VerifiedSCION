@@ -19,14 +19,17 @@ package io
 // links: representation of the network topology as a graph.
 //     `links[(a1,x)] == (a2,y)` means that the interface x of AS a1 is connected
 //     to the interface y of AS a2.
-ghost comparable type DataPlaneSpec ghost struct {
+// TODO(gobra#1092): comparable
+ghost type DataPlaneSpec ghost struct {
 	LinkTypes   dict[Ifs]Link
 	NeighborIAs dict[Ifs]AS
 	LocalIA     AS
 	Links       dict[AsIfsPair]AsIfsPair
 }
 
-ghost comparable type AsIfsPair ghost struct {
+
+// TODO(gobra#1092): comparable
+ghost type AsIfsPair ghost struct {
 	Asid AS
 	Ifs  Ifs
 }

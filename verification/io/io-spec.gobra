@@ -19,7 +19,8 @@
 package io
 
 // called BogusTrigger instead of Unit here because the name Unit is already in use.
-comparable type BogusTrigger struct{}
+// TODO(gobra#1092): comparable
+type BogusTrigger struct{}
 
 // Unlike the original IO-spec from Isabelle, we need additional information about the network topology.
 // To ensure the well-formedness of all map accesses we require an additional conjunction

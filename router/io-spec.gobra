@@ -77,7 +77,7 @@ opaque
 requires sl.Bytes(raw, 0, len(raw))
 ensures val.isValPkt || val.isValUnsupported
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func AbsIO_val(raw []byte, ingressID uint16) (val io.Val) {
 	return (reveal slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)) ?
 		io.Val(io.ValPkt{path.IfsToIO_ifs(ingressID), AbsPkt(raw)}) :
@@ -144,7 +144,7 @@ ghost
 opaque
 requires d.Mem()
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func (d *DataPlane) DpAgreesWithSpec(dp io.DataPlaneSpec) bool {
 	return unfolding d.Mem() in
 		unfolding neighborIAsInv(d.neighborIAs) in

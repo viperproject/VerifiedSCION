@@ -262,7 +262,9 @@ Dict implements DictWithTopBot
 
 ghost type TypeAuthRA ghost struct{}
 
-ghost comparable type AuthCarrier ghost struct {
+
+// TODO(gobra#1092): comparable
+ghost type AuthCarrier ghost struct {
 	Fst DictWithTopBot
 	Snd Dict
 }
@@ -323,7 +325,7 @@ pure func dictMaxIsLessThan(d1 dict[Key]Val, d2 dict[Key]Val, d3 dict[Key]Val) U
 
 ghost
 decreases
-closed
+// TODO(gobra#1092): closed
 pure func DictMax(d1 dict[Key]Val, d2 dict[Key]Val) dict[Key]Val {
 	// logically redundant but it simplifies automated reasoning when
 	// either DictLessThan(d1, d2) or DictLessThan(d2, d1) is known.

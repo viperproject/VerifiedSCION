@@ -18,7 +18,8 @@ package slayers
 
 // The body of this predicate describes private global state of the package, so
 // importing packages may hold it, but they cannot unfold it.
-closed pred SCMPTypeCodeMem() {
+// TODO(gobra#1092): closed
+pred SCMPTypeCodeMem() {
 	// We don't use a trigger here since triggers of the form scmpTypeCodeInfo[i].codes would generate a ternary expression
 	// The default trigger generated is: { (i_V0 elem domain((getMap(scmpTypeCodeInfo_e8d3837_G().underlyingMapField): Map[Int,Tuple2[Int, Ref]]))) }
 	acc(scmpTypeCodeInfo) &&
