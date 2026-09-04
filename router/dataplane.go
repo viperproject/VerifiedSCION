@@ -1376,6 +1376,11 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 // @ ensures   d.DpAgreesWithSpec(dp)
 // @ ensures   d.getValForwardingMetrics() != nil
 // @ decreases
+// The postcondition of this method cannot be exhaled under the package-wide
+// more complete exhale: Silicon summarises the whole heap once per lookup and
+// per consumed conjunct, and the prover grows until it is killed. On demand is
+// enough here, so it is requested for this member alone.
+// @ #backend[exhaleMode(2)]
 func (d *DataPlane) initMetrics( /*@ ghost dp io.DataPlaneSpec @*/ ) {
 	// @ assert reveal d.PreWellConfigured()
 	// @ reveal d.getDomExternal()
