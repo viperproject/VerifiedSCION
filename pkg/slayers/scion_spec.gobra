@@ -462,7 +462,7 @@ pure func IsSupportedPkt(raw seq[byte]) bool {
 	return CmnHdrLen <= len(raw) &&
 		let pathType := path.Type(raw[8])      in
 		let nextHdr  := L4ProtocolType(raw[4]) in
-		pathType == scion.PathType &&
+		(pathType == scion.PathType || pathType == epic.PathType) &&
 		nextHdr != L4SCMP
 }
 

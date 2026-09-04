@@ -63,7 +63,8 @@ func SubSeqOfSubSeq(raw seq[byte], a int, b int, start int, length int) {
 // Deprecated: use sl.View directly. ToSeqByte is kept as an alias for
 // the view of a whole slice while its remaining clients are migrated.
 ghost
-requires acc(sl.Bytes(ub, 0, len(ub)), _)
+opaque
+requires sl.Bytes(ub, 0, len(ub))
 ensures len(res) == len(ub)
 decreases
 pure func ToSeqByte(ub []byte) (res seq[byte]) {
