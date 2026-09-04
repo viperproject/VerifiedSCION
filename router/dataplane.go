@@ -3111,8 +3111,6 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		// (VerifiedSCION) the following property is guaranteed by the type system, but Gobra cannot infer it yet
 		// @ assume 0 <= p.path.GetCurrINF(ubScionPath)
 		// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, HalfPerm)
-		// @ sl.SplitByIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
-		// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 		// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 		// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 		// the view of the left piece is pinned across the modification of
@@ -3126,8 +3124,6 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		// @ assert sl.View(ub, 0, len(ub))[:startScionP] == sl.View(ub, 0, startScionP)
 		// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, HalfPerm)
 		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubScionPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF) /*@ ) , ubScionPath, @*/); err != nil {
-			// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-			// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 			// @ ghost sl.CombineRangeWithViews_Bytes(ub, startScionP, endScionP, writePerm, sl.View(ub, 0, startScionP), sl.View(ub[startScionP:endScionP], 0, (endScionP)-(startScionP)), sl.View(ub, endScionP, len(ub)))
 			return serrors.WrapStr("update info field", err)
 		}
@@ -3137,8 +3133,6 @@ func (p *scionPacketProcessor) updateNonConsDirIngressSegID( /*@ ghost ub []byte
 		// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 		// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 		// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
-		// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-		// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 		// @ assert sl.View(ub, 0, len(ub))[:startScionP] == sl.View(ub, 0, startScionP)
 		// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, sl.View(ub, 0, len(ub)), startScionP)
 		// @ p.SubSliceAbsPktToAbsPkt(ub, startScionP, endScionP)
@@ -3434,8 +3428,6 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ 	assert ubPath[epic.MetadataLen:] === ubScionPath
 	// @ }
 	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, HalfPerm)
-	// @ sl.SplitByIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
-	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// the view of the left piece is pinned across the modification of
@@ -3464,8 +3456,6 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 		// @ assume 0 <= p.path.GetCurrINF(ubScionPath)
 		if err := p.path.SetInfoField(p.infoField, int( /*@ unfolding acc(p.path.Mem(ubScionPath), R45) in (unfolding acc(p.path.Base.Mem(), R50) in @*/ p.path.PathMeta.CurrINF /*@ ) @*/) /*@ , ubScionPath @*/); err != nil {
 			// TODO parameter problem invalid path
-			// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-			// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 			// @ ghost sl.CombineRange_Bytes(ub, startScionP, endScionP, writePerm)
 			// @ p.path.DowngradePerm(ubScionPath)
 			// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path { fold p.scionLayer.Path.NonInitMem() }
@@ -3476,8 +3466,6 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 		}
 	}
 	if err := p.path.IncPath( /*@ ubScionPath @*/ ); err != nil {
-		// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-		// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 		// @ ghost sl.CombineRange_Bytes(ub, startScionP, endScionP, writePerm)
 		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path { fold p.scionLayer.Path.NonInitMem() }
 		// @ p.scionLayer.PathPoolMemExchange(p.scionLayer.PathType, p.scionLayer.Path)
@@ -3497,8 +3485,6 @@ func (p *scionPacketProcessor) processEgress( /*@ ghost ub []byte @*/ ) (reserr 
 	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
-	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-	// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 	// @ assert sl.View(ub, 0, len(ub))[:startScionP] == sl.View(ub, 0, startScionP)
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, sl.View(ub, 0, len(ub)), startScionP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startScionP, endScionP)
@@ -3587,8 +3573,6 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ 	assert ubPath[epic.MetadataLen:] === ubScionPath
 	// @ }
 	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, HalfPerm)
-	// @ sl.SplitByIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
-	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// the view of the left piece is pinned across the modification of
@@ -3617,8 +3601,6 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	if err := p.path.IncPath( /*@ ubScionPath @*/ ); err != nil {
 		// TODO parameter problem invalid path
 		// (VerifiedSCION) we currently expose a lot of internal information from slayers here. Can we avoid it?
-		// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-		// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 		// @ ghost sl.CombineRange_Bytes(ub, startScionP, endScionP, writePerm)
 		// @ unfold p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:])
 		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path { fold p.scionLayer.Path.NonInitMem() }
@@ -3639,8 +3621,6 @@ func (p *scionPacketProcessor) doXover( /*@ ghost ub []byte, ghost currBase scio
 	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
-	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-	// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 	// @ assert p.path === p.scionLayer.GetScionPath(ub)
 	// @ assert sl.View(ub, 0, len(ub))[:startScionP] == sl.View(ub, 0, startScionP)
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, sl.View(ub, 0, len(ub)), startScionP)
@@ -3931,8 +3911,6 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ assume 0 <= p.path.GetCurrHF(ubScionPath)
 	// @ reveal p.LastHopLen(ub)
 	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, HalfPerm)
-	// @ sl.SplitByIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
-	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// the view of the left piece is pinned across the modification of
@@ -3946,8 +3924,6 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ assert sl.View(ub, 0, len(ub))[:startScionP] == sl.View(ub, 0, startScionP)
 	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, HalfPerm)
 	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubScionPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubScionPath @*/); err != nil {
-		// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-		// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 		// @ sl.CombineRangeWithViews_Bytes(ub, startScionP, endScionP, writePerm, sl.View(ub, 0, startScionP), sl.View(ub[startScionP:endScionP], 0, (endScionP)-(startScionP)), sl.View(ub, endScionP, len(ub)))
 		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path { fold acc(p.scionLayer.Path.Mem(ubPath), R20) }
 		// @ fold acc(p.scionLayer.Mem(ub), R20)
@@ -3960,8 +3936,6 @@ func (p *scionPacketProcessor) handleIngressRouterAlert( /*@ ghost ub []byte, gh
 	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
-	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-	// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 	// @ assert sl.View(ub, 0, len(ub))[:startScionP] == sl.View(ub, 0, startScionP)
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, sl.View(ub, 0, len(ub)), startScionP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startScionP, endScionP)
@@ -4080,8 +4054,6 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	// but Gobra cannot prove it yet
 	// @ assume 0 <= p.path.GetCurrHF(ubScionPath)
 	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, HalfPerm)
-	// @ sl.SplitByIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
-	// @ sl.Reslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// the view of the left piece is pinned across the modification of
@@ -4095,8 +4067,6 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	// @ assert sl.View(ub, 0, len(ub))[:startScionP] == sl.View(ub, 0, startScionP)
 	// @ sl.SplitRange_Bytes(ub, startScionP, endScionP, HalfPerm)
 	if err := p.path.SetHopField(p.hopField, int( /*@ unfolding acc(p.path.Mem(ubScionPath), R50) in (unfolding acc(p.path.Base.Mem(), R55) in @*/ p.path.PathMeta.CurrHF /*@ ) @*/) /*@ , ubScionPath @*/); err != nil {
-		// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-		// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 		// @ sl.CombineRangeWithViews_Bytes(ub, startScionP, endScionP, writePerm, sl.View(ub, 0, startScionP), sl.View(ub[startScionP:endScionP], 0, (endScionP)-(startScionP)), sl.View(ub, endScionP, len(ub)))
 		// @ ghost if typeOf(p.scionLayer.Path) == *epic.Path { fold acc(p.scionLayer.Path.Mem(ubPath), R20) }
 		// @ fold acc(p.scionLayer.Mem(ub), R20)
@@ -4109,8 +4079,6 @@ func (p *scionPacketProcessor) handleEgressRouterAlert( /*@ ghost ub []byte, gho
 	// @ assert sl.View(ub, 0, len(ub))[:slayers.CmnHdrLen] == vHdrPre[:slayers.CmnHdrLen]
 	// @ slayers.IsSupportedPktSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
 	// @ slayers.GetPathTypeSubslice(sl.View(ub, 0, len(ub)), slayers.CmnHdrLen)
-	// @ sl.Unslice_Bytes(ub, 0, slayers.CmnHdrLen, R54)
-	// @ sl.CombineAtIndex_Bytes(ub, 0, startScionP, slayers.CmnHdrLen, R54)
 	// @ assert sl.View(ub, 0, len(ub))[:startScionP] == sl.View(ub, 0, startScionP)
 	// @ p.scionLayer.ValidHeaderOffsetFromSubSliceLemma(ub, sl.View(ub, 0, len(ub)), startScionP)
 	// @ p.SubSliceAbsPktToAbsPkt(ub, startScionP, endScionP)
