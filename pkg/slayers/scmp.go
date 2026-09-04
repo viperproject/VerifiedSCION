@@ -122,14 +122,15 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		return err
 	}
 	// @ unfold s.Mem(ubufMem)
-	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
-	// @ unfold sl.Bytes(underlyingBufRes, 0, 2)
-	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 2 ==> &bytes[i] == &underlyingBufRes[i]
+	// @ assert bytes === underlyingBufRes[:4]
+	// TypeCode.SerializeTo needs sl.Bytes(bytes, 0, 2), which is folded out of the
+	// element permissions of the unfolded buffer and unfolded back into them
+	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
+	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
 	// @ fold sl.Bytes(bytes, 0, 2)
 	s.TypeCode.SerializeTo(bytes)
 	// @ unfold sl.Bytes(bytes, 0, 2)
-	// @ fold sl.Bytes(underlyingBufRes, 0, 2)
-	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
+	// @ fold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
 
 	if opts.ComputeChecksums {
 		if s.scn == nil {
@@ -137,13 +138,13 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 			return serrors.New("can not calculate checksum without SCION header")
 		}
 		// zero out checksum bytes
-		// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-		// @ unfold sl.Bytes(underlyingBufRes, 0, 4)
+		// the writes only need element permissions, but computeChecksum needs the
+		// folded buffer, so it is folded back before the call
+		// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
 		// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
 		bytes[2] = 0
 		bytes[3] = 0
-		// @ fold sl.Bytes(underlyingBufRes, 0, 4)
-		// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
+		// @ fold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
 		verScionTmp := b.Bytes()
 		// @ unfold s.scn.ChecksumMem()
 		s.Checksum, err = s.scn.computeChecksum(verScionTmp, uint8(L4SCMP))
@@ -154,13 +155,12 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		}
 
 	}
-	// @ sl.SplitByIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
-	// @ unfold sl.Bytes(underlyingBufRes, 0, 4)
+	// the write only needs element permissions, so the buffer is unfolded once
+	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
 	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
 	// @ assert forall i int :: { &bytes[2:][i] } 0 <= i && i < 2 ==> &bytes[2:][i] == &bytes[i + 2]
 	binary.BigEndian.PutUint16(bytes[2:], s.Checksum)
-	// @ fold sl.Bytes(underlyingBufRes, 0, 4)
-	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 4, writePerm)
+	// @ fold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
 	// @ fold s.Mem(ubufMem)
 	return nil
 }
@@ -179,33 +179,12 @@ func (s *SCMP) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res err
 		return serrors.New("SCMP layer length is less then 4 bytes", "minimum", 4, "actual", size)
 	}
 	// @ unfold s.NonInitMem()
-	// @ requires len(data) >= 4
-	// @ requires acc(sl.Bytes(data, 0, len(data)), R40)
-	// @ preserves acc(&s.TypeCode)
-	// @ ensures acc(sl.Bytes(data, 2, len(data)), R40)
-	// @ ensures acc(sl.Bytes(data, 0, 2), R40)
-	// @ decreases
-	// @ outline (
-	// @ sl.SplitByIndex_Bytes(data, 0, len(data), 2, R40)
-	// @ unfold acc(sl.Bytes(data, 0, 2), R40)
+	// the reads only need element permissions, so the buffer is unfolded once
+	// @ unfold acc(sl.Bytes(data, 0, len(data)), R40)
 	s.TypeCode = CreateSCMPTypeCode(SCMPType(data[0]), SCMPCode(data[1]))
-	// @ fold acc(sl.Bytes(data, 0, 2), R40)
-	// @ )
-	// @ requires len(data) >= 4
-	// @ requires acc(sl.Bytes(data, 0, 2), R40)
-	// @ requires acc(sl.Bytes(data, 2, len(data)), R40)
-	// @ preserves acc(&s.Checksum)
-	// @ ensures acc(sl.Bytes(data, 0, len(data)), R40)
-	// @ decreases
-	// @ outline (
-	// @ sl.SplitByIndex_Bytes(data, 2, len(data), 4, R40)
-	// @ unfold acc(sl.Bytes(data, 2, 4), R40)
 	// @ assert forall i int :: { &data[2:4][i] } 0 <= i && i < 2 ==> &data[2 + i] == &data[2:4][i]
 	s.Checksum = binary.BigEndian.Uint16(data[2:4])
-	// @ fold acc(sl.Bytes(data, 2, 4), R40)
-	// @ sl.CombineAtIndex_Bytes(data, 0, 4, 2, R40)
-	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), 4, R40)
-	// @ )
+	// @ fold acc(sl.Bytes(data, 0, len(data)), R40)
 	s.BaseLayer = BaseLayer{Contents: data[:4], Payload: data[4:]}
 	// @ fold s.BaseLayer.Mem(data, 4)
 	// @ fold s.Mem(data)

@@ -228,9 +228,7 @@ func (s *SCION) NetworkFlow() (res gopacket.Flow) {
 func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOptions /* @ , ghost ubuf []byte @*/) (e error) {
 	// @ unfold acc(s.Mem(ubuf), R1)
 	// @ defer fold acc(s.Mem(ubuf), R1)
-	// @ sl.SplitRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLen(nil, true)), int(s.HdrLen*LineLen), R10)
 	scnLen := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ ) + s.Path.Len( /*@ ubuf[CmnHdrLen+s.AddrHdrLen(nil, true) : s.HdrLen*LineLen] @*/ )
-	// @ sl.CombineRange_Bytes(ubuf, int(CmnHdrLen+s.AddrHdrLenSpecInternal()), int(s.HdrLen*LineLen), R10)
 	if scnLen > MaxHdrLen {
 		return serrors.New("header length exceeds maximum",
 			"max", MaxHdrLen, "actual", scnLen)
@@ -286,15 +284,14 @@ func (s *SCION) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeO
 	// Serialize address header.
 	// @ sl.SplitRange_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm)
 	// @ sl.SplitRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
-	if err := s.SerializeAddrHdr(buf[CmnHdrLen:] /*@ , ubuf[CmnHdrLen:] @*/); err != nil {
-		// @ sl.CombineRange_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm)
-		// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
-		return err
+	errAddr := s.SerializeAddrHdr(buf[CmnHdrLen:] /*@ , ubuf[CmnHdrLen:] @*/)
+	// @ sl.CombineRangeWithViews_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm, sl.View(uSerBufN, 0, CmnHdrLen), sl.View(uSerBufN[CmnHdrLen:scnLen], 0, (scnLen)-(CmnHdrLen)), sl.View(uSerBufN, scnLen, len(uSerBufN)))
+	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
+	if errAddr != nil {
+		return errAddr
 	}
 	offset := CmnHdrLen + s.AddrHdrLen( /*@ nil, true @*/ )
 
-	// @ sl.CombineRangeWithViews_Bytes(uSerBufN, CmnHdrLen, scnLen, writePerm, sl.View(uSerBufN, 0, CmnHdrLen), sl.View(uSerBufN[CmnHdrLen:scnLen], 0, (scnLen)-(CmnHdrLen)), sl.View(uSerBufN, scnLen, len(uSerBufN)))
-	// @ sl.CombineRange_Bytes(ubuf, CmnHdrLen, len(ubuf), R10)
 	// @ ghost vSerA := sl.View(uSerBufN, 0, len(uSerBufN))
 	// @ assert vSerA[:CmnHdrLen] == vSer0[:CmnHdrLen]
 	// @ IsSupportedPktSubslice(vSerA, CmnHdrLen)
@@ -347,15 +344,15 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 		return serrors.New("packet is shorter than the common header length",
 			"min", CmnHdrLen, "actual", len(data))
 	}
-	// @ sl.SplitRange_Bytes(data, 0, 4, R41)
-	// @ preserves 4 <= len(data) && acc(sl.Bytes(data[:4], 0, 4), R41)
+	// @ preserves 4 <= len(data) && acc(sl.Bytes(data, 0, len(data)), R41)
 	// @ decreases
 	// @ outline(
-	// @ unfold acc(sl.Bytes(data[:4], 0, 4), R41)
+	// @ unfold acc(sl.Bytes(data, 0, len(data)), R41)
+	// @ assert &data[:4][0] == &data[0] && &data[:4][1] == &data[1] &&
+	// @ 	&data[:4][2] == &data[2] && &data[:4][3] == &data[3]
 	firstLine := binary.BigEndian.Uint32(data[:4])
-	// @ fold acc(sl.Bytes(data[:4], 0, 4), R41)
+	// @ fold acc(sl.Bytes(data, 0, len(data)), R41)
 	// @ )
-	// @ sl.CombineRange_Bytes(data, 0, 4, R41)
 	// @ unfold s.NonInitMem()
 	s.Version = uint8(firstLine >> 28)
 	s.TrafficClass = uint8((firstLine >> 20) & 0xFF)
@@ -394,17 +391,14 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ assert sl.View(data, 0, len(data)) == v
 	// @ )
 	// Decode address header.
-	// @ sl.SplitByIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
-	// @ sl.Reslice_Bytes(data, CmnHdrLen, len(data), R41)
-	if err := s.DecodeAddrHdr(data[CmnHdrLen:]); err != nil {
+	// @ sl.SplitRange_Bytes(data, CmnHdrLen, len(data), R41)
+	errAddr := s.DecodeAddrHdr(data[CmnHdrLen:])
+	// @ sl.CombineRange_Bytes(data, CmnHdrLen, len(data), R41)
+	if errAddr != nil {
 		// @ fold s.NonInitMem()
-		// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), R41)
-		// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
 		df.SetTruncated()
-		return err
+		return errAddr
 	}
-	// @ sl.Unslice_Bytes(data, CmnHdrLen, len(data), R41)
-	// @ sl.CombineAtIndex_Bytes(data, 0, len(data), CmnHdrLen, R41)
 	// (VerifiedSCION) the first ghost parameter to AddrHdrLen is ignored when the second
 	//                 is set to nil. As such, we pick the easiest possible value as a placeholder.
 	addrHdrLen := s.AddrHdrLen( /*@ nil, true @*/ )
@@ -451,19 +445,16 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	s.Contents = data[:hdrBytes]
 	s.Payload = data[hdrBytes:]
 	// @ fold acc(s.Mem(data), R54)
+	// @ sl.ViewOfSubslice(data, offset, offset+pathLen, R56)
+	// @ assert sl.View(data[offset : offset+pathLen], 0, pathLen) ==
+	// @ 	sl.View(data, 0, len(data))[offset : offset+pathLen]
 	// @ ghost if typeOf(s.GetPath(data)) == (*scion.Raw) && path.Type(GetPathType(sl.View(data, 0, len(data)))) != epic.PathType {
-	// @ 	sl.ViewOfSubslice(data, offset, offset+pathLen, R56)
-	// @ 	assert sl.View(data[offset : offset+pathLen], 0, pathLen) ==
-	// @ 		sl.View(data, 0, len(data))[offset : offset+pathLen]
 	// @ 	unfold acc(s.Path.(*scion.Raw).Mem(data[offset : offset+pathLen]), R55)
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.Mem(data[offset : offset+pathLen]), R55)
 	// @ }
 	// @ ghost if typeOf(s.GetPath(data)) == (*epic.Path) && path.Type(GetPathType(sl.View(data, 0, len(data)))) == epic.PathType {
-	// @ 	sl.ViewOfSubslice(data, offset, offset+pathLen, R56)
-	// @ 	assert sl.View(data[offset : offset+pathLen], 0, pathLen) ==
-	// @ 		sl.View(data, 0, len(data))[offset : offset+pathLen]
 	// DecodedBaseMatchesView expresses the base of the scion sub-path as the
 	// metadata header located right after the EPIC metadata prefix, over the
 	// view of the whole sub-path bytes. The ViewOfSubslice above relates that
@@ -915,43 +906,28 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err er
 	dstAddrBytes := s.DstAddrType.Length()
 	srcAddrBytes := s.SrcAddrType.Length()
 	offset := 0
-	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
-	// @ unfold sl.Bytes(buf[offset:], 0, len(buf[offset:]))
+	// The writes and copies below only need permission to the individual
+	// bytes, so both buffers are unfolded once instead of being split
+	// around every field.
+	// @ unfold sl.Bytes(buf, 0, len(buf))
+	// @ unfold acc(sl.Bytes(ubuf, 0, len(ubuf)), R10)
+	// @ assert forall i int :: { &buf[offset:][i] } 0 <= i && i < len(buf[offset:]) ==>
+	// @ 	&buf[offset:][i] == &buf[offset+i]
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.DstIA))
-	// @ fold sl.Bytes(buf[offset:], 0, len(buf[offset:]))
-	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	offset += addr.IABytes
-	// @ sl.SplitRange_Bytes(buf, offset, len(buf), writePerm)
-	// @ unfold sl.Bytes(buf[offset:], 0, len(buf[offset:]))
+	// @ assert forall i int :: { &buf[offset:][i] } 0 <= i && i < len(buf[offset:]) ==>
+	// @ 	&buf[offset:][i] == &buf[offset+i]
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.SrcIA))
-	// @ fold sl.Bytes(buf[offset:], 0, len(buf[offset:]))
-	// @ sl.CombineRange_Bytes(buf, offset, len(buf), writePerm)
 	offset += addr.IABytes
-	// @ sl.SplitRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
-	// @ sl.SplitRange_Bytes(ubuf, offset, offset+dstAddrBytes, R10)
-
-	// @ unfold sl.Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
-	// @ unfold acc(sl.Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), R10)
+	// @ sl.AssertSliceOverlap(buf, offset, offset+dstAddrBytes)
+	// @ sl.AssertSliceOverlap(ubuf, offset, offset+dstAddrBytes)
 	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@ , R10 @*/)
-	// @ fold sl.Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
-	// @ fold acc(sl.Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), R10)
-	// @ sl.CombineRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
-	// @ sl.CombineRange_Bytes(ubuf, offset, offset+dstAddrBytes, R10)
-
 	offset += dstAddrBytes
-	// @ sl.SplitRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
-	// @ sl.SplitRange_Bytes(ubuf, offset, offset+srcAddrBytes, R10)
-
-	// @ unfold sl.Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
-	// @ unfold acc(sl.Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), R10)
-
+	// @ sl.AssertSliceOverlap(buf, offset, offset+srcAddrBytes)
+	// @ sl.AssertSliceOverlap(ubuf, offset, offset+srcAddrBytes)
 	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@ , R10 @*/)
-
-	// @ fold sl.Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
-	// @ fold acc(sl.Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), R10)
-	// @ sl.CombineRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
-	// @ sl.CombineRange_Bytes(ubuf, offset, offset+srcAddrBytes, R10)
-
+	// @ fold sl.Bytes(buf, 0, len(buf))
+	// @ fold acc(sl.Bytes(ubuf, 0, len(ubuf)), R10)
 	return nil
 }
 

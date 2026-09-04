@@ -439,19 +439,6 @@ pure func validPktMetaHdr(raw seq[byte]) bool {
 		PktLen(segs, MetaLen) <= len(raw)
 }
 
-// The meta header of a packet only depends on its first MetaLen bytes.
-ghost
-requires MetaLen <= idx && idx <= len(raw)
-ensures  RawBytesToMetaHdr(raw) == RawBytesToMetaHdr(raw[:idx])
-ensures  RawBytesToBase(raw) == RawBytesToBase(raw[:idx])
-decreases
-func ValidPktMetaHdrSublice(raw seq[byte], idx int) {
-	assert raw[:idx][0] == raw[0] &&
-		raw[:idx][1] == raw[1]    &&
-		raw[:idx][2] == raw[2]    &&
-		raw[:idx][3] == raw[3]
-}
-
 ghost
 requires acc(s.Mem(ub), R54)
 requires acc(sl.Bytes(ub, 0, len(ub)), R55)
