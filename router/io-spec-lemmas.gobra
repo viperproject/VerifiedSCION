@@ -113,6 +113,11 @@ pure func (p *scionPacketProcessor) DstIsLocalIngressID(ub []byte) bool {
 			p.ingressID != 0
 }
 
+// LastHopLen states that a packet destined to this AS is at the last hop of its
+// path: not only is its current hop field the last one of the segment being
+// traversed, but there is also no segment left to switch to. The latter is what
+// allows `process` to deliver such packets to the local host without performing
+// a segment switch first.
 ghost
 opaque
 requires p.scionLayer.Mem(ub)
@@ -124,7 +129,8 @@ decreases
 pure func (p *scionPacketProcessor) LastHopLen(ub []byte) bool {
 	return (unfolding p.scionLayer.Mem(ub) in
 		(unfolding p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]) in p.scionLayer.DstIA) == (unfolding p.d.Mem() in p.d.localIA)) ==>
-			len(AbsPkt(ub).CurrSeg.Future) == 1
+			len(AbsPkt(ub).CurrSeg.Future) == 1 &&
+			!AbsPkt(ub).IsXover()
 }
 
 //TODO: Does not work with --disableNL --unsafeWildcardoptimization
@@ -146,6 +152,7 @@ ensures  acc(sl.Bytes(ub, 0, len(ub)), R56)
 ensures  slayers.ValidPktMetaHdr(ub)
 ensures  p.ingressID != 0
 ensures  len(AbsPkt(ub).CurrSeg.Future) == 1
+ensures  !AbsPkt(ub).IsXover()
 decreases
 func (p* scionPacketProcessor) LocalDstLemma(ub []byte) {
 	reveal p.DstIsLocalIngressID(ub)
@@ -452,4 +459,46 @@ pure func (p* scionPacketProcessor) EqAbsInfoField(pkt io.Pkt) bool {
 		absInf.UInfo == currseg.UInfo     &&
 		absInf.ConsDir == currseg.ConsDir &&
 		absInf.Peer == currseg.Peer
+}
+// AbsIsXoverLemma shows that the abstract xover guard of the packet stored in
+// `ub` agrees with the concrete check that `process` performs, via
+// (*scion.Raw).IsXover, to decide whether a segment switch must be carried out.
+// All permissions are fractional so that callers keep enough permission to frame
+// `AbsPkt(ub)` and `p.GetIsXoverSpec(ub)` across the call.
+ghost
+requires acc(&p.path, R54)
+requires acc(p.scionLayer.Mem(ub), R53)
+requires p.path === p.scionLayer.GetScionPath(ub)
+requires acc(sl.Bytes(ub, 0, len(ub)), R49)
+requires slayers.ValidPktMetaHdr(ub)
+requires p.scionLayer.EqAbsHeader(ub)
+ensures  acc(&p.path, R54)
+ensures  acc(p.scionLayer.Mem(ub), R53)
+ensures  p.path === p.scionLayer.GetScionPath(ub)
+ensures  acc(sl.Bytes(ub, 0, len(ub)), R49)
+ensures  slayers.ValidPktMetaHdr(ub)
+ensures  p.scionLayer.EqAbsHeader(ub)
+ensures  AbsPkt(ub).IsXover() == p.GetIsXoverSpec(ub)
+decreases
+func (p *scionPacketProcessor) AbsIsXoverLemma(ub []byte) {
+	ubPath := p.scionLayer.UBPath(ub)
+	ubScionPath := p.scionLayer.UBScionPath(ub)
+	startScionP := p.scionLayer.PathScionStartIdx(ub)
+	endScionP := p.scionLayer.PathScionEndIdx(ub)
+	unfold acc(p.scionLayer.Mem(ub), R53 - R55)
+	if typeOf(p.scionLayer.Path) == *epic.Path {
+		unfold acc(p.scionLayer.Path.Mem(ubPath), R53 - R55)
+		assert p.path === p.scionLayer.Path.(*epic.Path).ScionPath
+		assert ubPath[epic.MetadataLen:] === ubScionPath
+	}
+	sl.SplitRange_Bytes(ub, startScionP, endScionP, R50)
+	p.AbsPktToSubSliceAbsPkt(ub, startScionP, endScionP)
+	p.path.IsXoverLemma(ubScionPath)
+	assert AbsPkt(ub).IsXover() == p.path.GetBase(ubScionPath).IsXoverSpec()
+	sl.CombineRange_Bytes(ub, startScionP, endScionP, R50)
+	if typeOf(p.scionLayer.Path) == *epic.Path {
+		fold acc(p.scionLayer.Path.Mem(ubPath), R53 - R55)
+	}
+	fold acc(p.scionLayer.Mem(ub), R53 - R55)
+	assert AbsPkt(ub).IsXover() == p.GetIsXoverSpec(ub)
 }

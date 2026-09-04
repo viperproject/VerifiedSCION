@@ -451,6 +451,11 @@ func ValidPktMetaHdrSublice(raw []byte, idx int) {
 	unfold acc(sl.Bytes(raw[:idx], 0, idx), R56)
 	assert forall i int :: { &raw[:MetaLen][i] } 0 <= i && i < MetaLen ==>
 		&raw[:MetaLen][i] == &raw[:idx][:MetaLen][i]
+	// Sharing the locations is not enough: the two calls of RawBytesToMetaHdr
+	// read the meta header through different sl.Bytes predicates, so their
+	// snapshots must be related on those bytes as well.
+	assert forall i int :: { &raw[:MetaLen][i] } 0 <= i && i < MetaLen ==>
+		raw[:MetaLen][i] == raw[:idx][:MetaLen][i]
 	fold acc(sl.Bytes(raw, 0, len(raw)), R56)
 	fold acc(sl.Bytes(raw[:idx], 0, idx), R56)
 }

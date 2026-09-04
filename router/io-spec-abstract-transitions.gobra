@@ -149,6 +149,52 @@ pure func AbsVerifyCurrentMACConstraint(pkt io.Pkt, dp io.DataPlaneSpec) bool {
 		dp.Hf_valid(d, ts.V, uinfo, hf)
 }
 
+/**** Abstract packet update performed by the router ****/
+
+// AbsProcessXover describes how a packet switches from the segment that it is
+// currently traversing to the next one. The switch is performed exactly when the
+// xover guard holds for `pkt`, i.e., when `pkt` has reached the end of its
+// current segment and a well-formed segment is left to switch to. Otherwise,
+// `pkt` is left unchanged.
+ghost
+requires pkt.PathNotFullyTraversed()
+ensures  res.PathNotFullyTraversed()
+decreases
+pure func AbsProcessXover(pkt io.Pkt) (res io.Pkt) {
+	return pkt.IsXover() ? AbsDoXover(pkt) : pkt
+}
+
+// AbsProcessEgressIfExternal describes how the path of a packet is advanced when
+// the packet leaves the AS through the interface `egressID`. A packet that stays
+// within the AS (`egressID == none[io.Ifs]`) is left unchanged; its path is
+// advanced by the border router that eventually forwards it out of the AS.
+ghost
+requires pkt.PathNotFullyTraversed()
+decreases
+pure func AbsProcessEgressIfExternal(pkt io.Pkt, egressID option[io.Ifs]) (res io.Pkt) {
+	return egressID == none[io.Ifs] ? pkt : AbsProcessEgress(pkt)
+}
+
+// PktUpdate describes the abstract packet that an AS forwards when it receives
+// `pkt` on the interface `ingressID` and forwards it on the interface `egressID`
+// (`none[io.Ifs]` whenever the packet does not leave the AS). It applies, in
+// order, the three transitions that a packet may undergo while it traverses an
+// AS, each of them exactly when its own guard holds:
+//   - its segment identifier is updated when it was received from another AS
+//     (see AbsUpdateNonConsDirIngressSegID);
+//   - it switches segments when it has reached the end of the segment that it
+//     was traversing (see AbsProcessXover);
+//   - its path is advanced when it leaves the AS (see
+//     AbsProcessEgressIfExternal).
+ghost
+opaque
+requires pkt.PathNotFullyTraversed()
+decreases
+pure func PktUpdate(pkt io.Pkt, ingressID option[io.Ifs], egressID option[io.Ifs]) (res io.Pkt) {
+	return let afterIngress := AbsUpdateNonConsDirIngressSegID(pkt, ingressID) in
+		AbsProcessEgressIfExternal(AbsProcessXover(afterIngress), egressID)
+}
+
 // This executes the IO enter event whenever a pkt was received
 // from a different AS (ingressID != none[io.Ifs])
 // and will be forwarded to another border router within the AS (egressID == none[io.Ifs])

@@ -169,3 +169,17 @@ decreases
 pure func (pkt Pkt) PathNotFullyTraversed() bool {
 	return len(pkt.CurrSeg.Future) > 0
 }
+
+// IsXover is the abstract guard of the segment switch: it holds iff `pkt` has
+// reached the end of the segment that it is currently traversing and there is a
+// well-formed segment left to switch to. These are exactly the conditions under
+// which the transition described by AbsDoXover may be applied. It is the
+// abstract counterpart of (scion.Base).IsXoverSpec.
+ghost
+decreases
+pure func (pkt Pkt) IsXover() bool {
+	return len(pkt.CurrSeg.Future) == 1  &&
+		pkt.LeftSeg != none[Seg]         &&
+		len(get(pkt.LeftSeg).Future) > 0 &&
+		len(get(pkt.LeftSeg).History) == 0
+}
