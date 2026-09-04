@@ -308,7 +308,7 @@ func (d *DataPlane) SetIA(ia addr.IA) (e error) {
 
 // SetKey sets the key used for MAC verification. The key provided here should
 // already be derived as in scrypto.HFMacFactory.
-// @ requires d != nil
+// @ requires  d != nil
 // @ requires  acc(d.Mem(), OutMutexPerm)
 // @ requires  !d.IsRunning()
 // @ requires  !d.KeyIsSet()
@@ -373,7 +373,7 @@ func (d *DataPlane) SetKey(key []byte) (res error) {
 // send/receive traffic in the local AS. This can only be called once; future
 // calls will return an error. This can only be called on a not yet running
 // dataplane.
-// @ requires d != nil
+// @ requires  d != nil
 // @ requires  acc(d.Mem(), OutMutexPerm)
 // @ requires  !d.IsRunning()
 // @ requires  !d.InternalConnIsSet()
@@ -419,7 +419,7 @@ func (d *DataPlane) AddInternalInterface(conn BatchConn, ip net.IP) error {
 // AddExternalInterface adds the inter AS connection for the given interface ID.
 // If a connection for the given ID is already set this method will return an
 // error. This can only be called on a not yet running dataplane.
-// @ requires d != nil
+// @ requires  d != nil
 // @ requires  conn != nil && conn.Mem()
 // @ preserves acc(d.Mem(), OutMutexPerm)
 // @ preserves !d.IsRunning()
@@ -468,7 +468,7 @@ func (d *DataPlane) AddExternalInterface(ifID uint16, conn BatchConn) error {
 // AddNeighborIA adds the neighboring IA for a given interface ID. If an IA for
 // the given ID is already set, this method will return an error. This can only
 // be called on a yet running dataplane.
-// @ requires d != nil
+// @ requires  d != nil
 // @ requires  !remote.IsZero()
 // @ preserves acc(d.Mem(), OutMutexPerm)
 // @ preserves !d.IsRunning()
@@ -635,7 +635,7 @@ func (d *DataPlane) addBFDController(ifID uint16, s *bfdSend, cfg control.BFD,
 // AddSvc adds the address for the given service. This can be called multiple
 // times for the same service, with the address added to the list of addresses
 // that provide the service.
-// @ requires d != nil
+// @ requires  d != nil
 // @ requires  a != nil && acc(a.Mem(), R10)
 // @ preserves acc(d.Mem(), OutMutexPerm)
 // @ preserves !d.IsRunning()
@@ -697,7 +697,7 @@ func (d *DataPlane) AddSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // absence of race conditions. To specify that the router is not running,
 // we need to pass perms to d.Mem(), but if we do this, then we don't need
 // the lock invariant to perform the operations in this function.
-// @ requires d != nil
+// @ requires  d != nil
 // @ requires  a != nil && acc(a.Mem(), R10)
 // @ preserves acc(d.Mem(), OutMutexPerm/2)
 // @ preserves d.mtx.LockP()
@@ -731,7 +731,7 @@ func (d *DataPlane) DelSvc(svc addr.HostSVC, a *net.UDPAddr) error {
 // AddNextHop sets the next hop address for the given interface ID. If the
 // interface ID already has an address associated this operation fails. This can
 // only be called on a not yet running dataplane.
-// @ requires d != nil
+// @ requires  d != nil
 // @ requires  a != nil && a.Mem()
 // @ preserves acc(d.Mem(), OutMutexPerm)
 // @ preserves !d.IsRunning()
