@@ -18,6 +18,8 @@
 
 package floats
 
+import "math"
+
 ghost
 requires  l <= h
 ensures   float64(l) <= float64(h)
@@ -28,3 +30,16 @@ ghost
 ensures float64(0) < float64(1)
 decreases _
 func ZeroLessOne64()
+
+// ExperimentalEpicBoundsLemma states that the number of 16 byte blocks computed
+// by prepareMacInput in pkg/experimental/epic is the ceiling of (23 + l)/16.
+// This holds because 23 + l and the resulting number of blocks are small enough
+// to be represented exactly as float64s, so neither the addition, nor the
+// division, nor the conversions introduce any rounding error.
+ghost
+requires  0 <= l && l <= 16
+ensures   res == int(math.Ceil((float64(23) + float64(l)) / float64(16)))
+ensures   23 + l <= res * 16
+ensures   res * 16 <= 23 + l + 16
+decreases _
+func ExperimentalEpicBoundsLemma(l int) (res int)
