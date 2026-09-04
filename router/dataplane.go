@@ -2965,6 +2965,11 @@ func (p *scionPacketProcessor) validateEgressID( /*@ ghost dp io.DataPlaneSpec, 
 	}
 	// @ p.d.getDomExternalLemma()
 	// @ p.EstablishNoBouncingPkt(oldPkt, pktEgressID)
+	// (VerifiedSCION) at this point, the egress interface is either terminated by this
+	// router or by one of its siblings in the same AS. In both cases, the router knows
+	// its link type, which is what the checks below rely on.
+	// @ p.d.getDomInternalNextHopsLemma()
+	// @ p.d.KnownIfIDLemma(pktEgressID)
 	// @ p.d.getLinkTypesMem()
 	ingress, egress := p.d.linkTypes[p.ingressID], p.d.linkTypes[pktEgressID]
 	// @ p.d.LinkTypesLemma(dp)
