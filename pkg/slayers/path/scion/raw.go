@@ -333,7 +333,8 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 // @ ensures   err == nil ==> s.CorrectlyDecodedInfWithIdx(ubuf, idx, ifield)
 // @ ensures   err != nil ==> err.ErrorMem()
 // @ decreases
-func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) {
+func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.InfoField, err error) 
+// {
 	// BODY-COMMENTED-OUT: verifying this body reliably crashes Z3 (segfault,
 	// ProverInteractionFailed) under --dependencyAnalysis. Same fix as commit
 	// da-path-scion-53f8e3039, see da-evaluation/scratch/widen-lemma-bisection.md.
@@ -366,8 +367,7 @@ func (s *Raw) GetInfoField(idx int /*@, ghost ubuf []byte @*/) (ifield path.Info
 	// //@ fold acc(s.Mem(ubuf), R11)
 	// //@ assert reveal s.CorrectlyDecodedInfWithIdx(ubuf, idx, info)
 	// return info, nil
-	return
-}
+// }
 
 // GetCurrentInfoField is a convenience method that returns the current hop field pointed to by the
 // CurrINF index in the path meta header.
@@ -410,7 +410,8 @@ func (s *Raw) GetCurrentInfoField( /*@ ghost ubuf []byte @*/ ) (res path.InfoFie
 // @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
 // @ #backend[exhaleMode(1)]
-func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) {
+func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @*/) (r error) 
+// {
 	// BODY-COMMENTED-OUT: also commented out (like GetInfoField/GetHopField) since it
 	// matches the same crash-triggering shape. See da-evaluation/scratch/widen-lemma-bisection.md.
 	// //@ share info
@@ -470,8 +471,7 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 	// //@ fold acc(s.Base.Mem(), R50)
 	// //@ fold acc(s.Mem(ubuf), R50)
 	// return ret
-	return
-}
+// }
 
 // GetHopField returns the HopField at a given index.
 // @ requires  0 <= idx
@@ -481,7 +481,8 @@ func (s *Raw) SetInfoField(info path.InfoField, idx int /*@, ghost ubuf []byte @
 // @ ensures   r == nil ==> s.CorrectlyDecodedHfWithIdx(ubuf, idx, res)
 // @ ensures   r != nil ==> r.ErrorMem()
 // @ decreases
-func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) {
+func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField, r error) 
+// {
 	// BODY-COMMENTED-OUT: same pattern as GetInfoField (unfold sl.Bytes + assert
 	// equality against a path.BytesToXxx pure function) — also reliably crashes Z3.
 	// //@ unfold acc(s.Mem(ubuf), R11)
@@ -512,8 +513,7 @@ func (s *Raw) GetHopField(idx int /*@, ghost ubuf []byte @*/) (res path.HopField
 	// //@ fold acc(s.Mem(ubuf), R11)
 	// //@ assert reveal s.CorrectlyDecodedHfWithIdx(ubuf, idx, hop)
 	// return hop, nil
-	return
-}
+// }
 
 // GetCurrentHopField is a convenience method that returns the current hop field pointed to by the
 // CurrHF index in the path meta header.
@@ -558,7 +558,8 @@ func (s *Raw) GetCurrentHopField( /*@ ghost ubuf []byte @*/ ) (res path.HopField
 // @ 	s.absPkt(ubuf) == newPkt
 // @ decreases
 // @ #backend[exhaleMode(1)]
-func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/) (r error) {
+func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/) (r error) 
+// {
 	// BODY-COMMENTED-OUT: verifying this body reliably makes Gobra's --dependencyAnalysis
 	// (weirdNodes / graph export) exhaust the JVM heap (or hang indefinitely with a smaller
 	// heap) building the dependency graph for this member's proof. Confirmed by bisection:
@@ -641,8 +642,7 @@ func (s *Raw) SetHopField(hop path.HopField, idx int /*@, ghost ubuf []byte @*/)
 	// //@ fold acc(s.Base.Mem(), R50)
 	// //@ fold acc(s.Mem(ubuf), R50)
 	// return ret
-	return
-}
+// }
 
 // IsFirstHop returns whether the current hop is the first hop on the path.
 // @ pure

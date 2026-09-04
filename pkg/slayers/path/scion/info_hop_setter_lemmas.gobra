@@ -589,7 +589,8 @@ preserves let currHfStart := currHfIdx * path.HopLen in
 	acc(sl.Bytes(hopfields[currHfEnd:], 0, (segLen - currHfIdx - 1) * path.HopLen), R49)
 ensures  BytesStoreCurrSeg(hopfields, currHfIdx, segLen, inf)
 decreases
-func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) {
+func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf io.AbsInfoField) 
+// {
 	// BISECT-COMMENTED-OUT: testing whether this body (new in upstream commit 97c98ffcd)
 	// is the cause of the --dependencyAnalysis hang.
 	// currseg := reveal CurrSegWithInfo(hopfields, currHfIdx, segLen, inf)
@@ -611,7 +612,7 @@ func EstablishBytesStoreCurrSeg(hopfields []byte, currHfIdx int, segLen int, inf
 	// assert currseg.History == segHistory(hopFields(hopfields[:currHfStart], 0, 0, currHfIdx))
 	// fold acc(sl.Bytes(hopfields[currHfStart:currHfEnd], 0, path.HopLen), R56)
 	// fold acc(sl.Bytes(hopfields, 0, len(hopfields)), R56)
-}
+// }
 
 // `splitHopFieldsInPastAndFuture` shows that the raw bytes containing all hopfields
 // can be split into two slices, one that exclusively contains all past hopfields and another
@@ -633,7 +634,8 @@ ensures   let currHfStart := currHfIdx * path.HopLen in
 	hopFields(hopfields, 0, 0, segLen)[currHfIdx + 1:]  ==
 		hopFields(hopfields[currHfEnd:], 0, 0, segLen - currHfIdx - 1)
 decreases
-func splitHopFieldsInPastAndFuture(hopfields []byte, currHfIdx int, segLen int) {
+func splitHopFieldsInPastAndFuture(hopfields []byte, currHfIdx int, segLen int) 
+// {
 	// BISECT-COMMENTED-OUT: testing whether this body (new in upstream commit 97c98ffcd)
 	// is the cause of the --dependencyAnalysis hang.
 	// currHfStart := currHfIdx * path.HopLen
@@ -652,7 +654,7 @@ func splitHopFieldsInPastAndFuture(hopfields []byte, currHfIdx int, segLen int) 
 	// reveal hopFieldsBytePositions(hopfields, currHfEnd, 0, segLen - currHfIdx - 1, hfFuture)
 	// widenHopFields(hopfields, currHfEnd, 0, segLen - currHfIdx - 1,
 	// 	currHfEnd, segLen * path.HopLen, R52)
-}
+// }
 
 // `SplitHopfields` splits the permission to the raw bytes of a segment into the permission
 // to the subslice containing all past hopfields, to the sublice containing the current hopfield,
