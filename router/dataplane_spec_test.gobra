@@ -262,6 +262,7 @@ func testRun(
 	d.mtx.SetInv(MutexInvariant{d})
 	assert d.mtx.LockP()
 	assert d.mtx.LockInv() == MutexInvariant{d}
+	fold d.MtxInv()
 
 	// io-spec needs to be inhaled
 	inhale io.IOToken(place)

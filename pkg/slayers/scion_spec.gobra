@@ -111,6 +111,9 @@ pred (s *SCION) HiddenPathPoolMem() {
 // part of Mem that describes the private state of the layer.
 // TODO(gobra#1092): closed
 pred (s *SCION) HiddenPathPoolMemExceptOne(pathType path.Type, p path.Path) {
+	// (VerifiedSCION) this bound used to be provided by an earlier conjunct of Mem;
+	// it is needed here to call getPathPure below.
+	0 <= pathType && pathType < path.MaxPathType &&
 	acc(&s.pathPool) &&
 	acc(&s.pathPoolRaw) &&
 	(!s.pathPoolInitialized() ==> PathPoolMem(s.pathPool, s.pathPoolRaw)) &&

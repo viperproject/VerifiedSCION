@@ -4148,7 +4148,7 @@ func (p *scionPacketProcessor) handleSCMPTraceRouteRequest(
 	// @ }
 	// @ gopacket.AssertInvariantNilDecodeFeedback()
 	var scmpH /*@@@*/ slayers.SCMP
-	// @ fold scmpH.NonInitMem()
+	// @ scmpH.EstablishNonInitMem()
 	if err := scmpH.DecodeFromBytes(scionPld, gopacket.NilDecodeFeedback); err != nil {
 		log.Debug("Parsing SCMP header of router alert", "err", err)
 		// @ ghost if !scionPldIsNil { sl.CombineRange_Bytes(ubLL, start, end, R1) }
