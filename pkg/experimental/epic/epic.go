@@ -30,6 +30,7 @@ import (
 	"github.com/scionproto/scion/pkg/slayers"
 	"github.com/scionproto/scion/pkg/slayers/path/epic"
 	// @ . "github.com/scionproto/scion/verification/utils/definitions"
+	// @ fl "github.com/scionproto/scion/verification/utils/floats"
 	// @ sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
@@ -256,11 +257,11 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	l := len(srcAddr)
 
 	// Calculate a multiple of 16 such that the input fits in
+	// (VerifiedSCION) Gobra does not axiomatize float arithmetic, so the bounds on nrBlocks
+	// are established by fl.ExperimentalEpicBoundsLemma instead.
+	// @ ghost nrBlocksSpec := fl.ExperimentalEpicBoundsLemma(l)
 	nrBlocks := int(math.Ceil((float64(23) + float64(l)) / float64(16)))
-	// (VerifiedSCION) The following assumptions cannot be currently proven due to Gobra's incomplete
-	// support for floats.
-	// @ assume 23 + l <= nrBlocks * 16
-	// @ assume nrBlocks * 16 <= 23 + l + 16
+	// @ assert nrBlocks == nrBlocksSpec
 	inputLength := 16 * nrBlocks
 
 	// Fill input
