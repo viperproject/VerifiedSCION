@@ -309,12 +309,22 @@ decreases
 func (s *SCION) ExtractAcc(ghost ub []byte) (start, end int) {
 	unfold acc(s.Mem(ub), R16)
 	unfold acc(s.HeaderMem(ub[CmnHdrLen:]), R16)
+	// (VerifiedSCION) the permissions to the fields of the path pool are held by
+	// HiddenPathPoolMemExceptOne; they have to be exposed here because the
+	// postcondition grants access to the entire layer.
+	unfold acc(s.HiddenPathPoolMemExceptOne(s.PathType, s.Path), R16)
 	start = CmnHdrLen+2*addr.IABytes
 	end = CmnHdrLen+2*addr.IABytes+s.DstAddrType.Length()
 	assert s.RawDstAddr === ub[start:end]
 	package acc(s, R16) --* acc(s.Mem(ub), R15) {
 		unfold acc(s.Mem(ub), R16)
 		unfold acc(s.HeaderMem(ub[CmnHdrLen:]), R16)
+		// (VerifiedSCION) this assertion makes the facts that the unfold above
+		// provides about the fields of the layer available for the permissions to
+		// them that come from the left-hand side of the wand.
+		assert 0 <= s.PathType && s.PathType < path.MaxPathType
+		unfold acc(s.HiddenPathPoolMemExceptOne(s.PathType, s.Path), R16)
+		fold acc(s.HiddenPathPoolMemExceptOne(s.PathType, s.Path), R15)
 		fold acc(s.HeaderMem(ub[CmnHdrLen:]), R15)
 		fold acc(s.Mem(ub), R15)
 	}
