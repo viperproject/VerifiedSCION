@@ -65,9 +65,8 @@ func InitSharedInv(
 // invariant open; they are instead assumed to be performed inside `ReadBatch` itself (see the
 // comment on its contract). These definitions remain here because they specify precisely the
 // effect that `ReadBatch` is assumed to have on the shared invariant, and because
-// `ExtractMultiReadBio` and `MultiUpdateElemWitness` below show that every step of that effect,
-// except for the `recv` events themselves (which *are* the physical read), follows from the
-// shared invariant alone.
+// `ExtractRecvPermissions` below discharges every part of that effect that does not require
+// physically receiving a packet.
 
 pred MultiReadBio(ghost t io.Place, ghost expectedPkts int) {
 	(expectedPkts > 0 ==> io.CBioIO_bio3s_recv(t) &&
@@ -189,6 +188,49 @@ func MultiUpdateElemWitness(
 		reveal MultiReadBioIO_val(t, n)
 		fold MultiElemWitness(y.IBufY, k, MultiReadBioIO_val(t, n))
 	}
+}
+
+// Shows that the permission to receive an arbitrary number `n` of packets can always be
+// extracted from the IO permissions of the shared invariant. Given the contents of
+// `SharedInv{dp, y}` for the place `t` and the local state `s`, this lemma yields the permission
+// to perform `n` consecutive `recv` transitions, the abstract values `ioValSeq` of the packets
+// that are received, the place `tN` and the local state `sN` that result from performing them,
+// and, provided that all of these packets are received from the interface `k`, a witness for
+// every one of them. Notice that the invariant cannot be closed again by this lemma, as the IO
+// token is still at the place `t`; that is why the lemma operates on the contents of the
+// invariant instead of on `Invariant(SharedInv{dp, y})` itself.
+//
+// This lemma is the proof obligation underlying the IO specification that is assumed for
+// `BatchConn.ReadBatch` (cf. the comment on its contract): every part of the effect that
+// `ReadBatch` is assumed to have on the shared invariant follows from the invariant alone,
+// with the single exception of advancing the IO token from `t` to `tN`, which is the physical
+// reception of the packets and thus cannot be discharged by a ghost lemma. The lemma is not
+// applied by the router itself, because `ReadBatch` may not be marked as `atomic` and thus
+// performs all of these steps internally.
+ghost
+requires 0 <= n
+requires dp.dp3s_iospec_ordered(s, t)
+requires ElemAuth(s.ibuf, y.IBufY) && ElemAuth(s.obuf, y.OBufY)
+ensures  MultiReadBio(t, n)
+ensures  sN == MultiReadBioUpd(t, n, s)
+ensures  tN == MultiReadBioNext(t, n)
+ensures  ioValSeq == MultiReadBioIO_val(t, n) && len(ioValSeq) == n
+ensures  dp.dp3s_iospec_ordered(sN, tN)
+ensures  ElemAuth(sN.ibuf, y.IBufY) && ElemAuth(sN.obuf, y.OBufY)
+ensures  MultiReadBioCorrectIfs(t, n, k) ==> MultiElemWitness(y.IBufY, k, ioValSeq)
+decreases
+func ExtractRecvPermissions(
+	dp io.DataPlaneSpec,
+	t io.Place,
+	n int,
+	s io.Dp3sStateLocal,
+	k Key,
+	y SharedArg) (ioValSeq seq[io.Val], sN io.Dp3sStateLocal, tN io.Place) {
+	ExtractMultiReadBio(dp, t, n, s)
+	MultiUpdateElemWitness(t, n, k, s, y)
+	ioValSeq = MultiReadBioIO_val(t, n)
+	sN = MultiReadBioUpd(t, n, s)
+	tN = MultiReadBioNext(t, n)
 }
 
 // Every well-formed packet is accompanied by a witness. Establishing the MultiElemWitness

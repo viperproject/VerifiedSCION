@@ -160,6 +160,9 @@ type BatchConn interface {
 	// were received, together with a witness for each of them. Notice that this models the
 	// underlying socket more faithfully than treating the entire batch read as a single atomic
 	// operation, given that the packets of a batch are genuinely received one at a time.
+	//
+	// The lemma `ExtractRecvPermissions` discharges every part of this assumption except for
+	// advancing the IO token, which is the physical reception of the packets.
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].Mem()
