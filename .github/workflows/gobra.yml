@@ -135,9 +135,7 @@ jobs:
         uses: viperproject/gobra-action@main
         with:
           configFile: 'pkg/slayers/path/scion'
-          # timeout raised while the seq-based proofs are tuned; the goal is
-          # to bring it back to 30m once the annotations are streamlined
-          timeout: 45m
+          timeout: 30m
           imageVersion: ${{ env.imageVersion }}
       - name: Verify package 'private/topology'
         uses: viperproject/gobra-action@main
