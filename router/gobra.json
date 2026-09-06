@@ -3,5 +3,6 @@
   "mce_mode": "on",
   "more_joins": "impure",
   "conditionalize_permissions": true,
-  "parallelize_branches": false
+  "parallelize_branches": false,
+  "assert_timeout": 120000
 }
