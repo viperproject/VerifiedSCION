@@ -148,15 +148,23 @@ type bfdSession interface {
 type BatchConn interface {
 	// @ pred Mem()
 
-	// @ atomic
+	// (VerifiedSCION) Gobra does not allow interface methods to be marked as `atomic`, so a
+	// call to `ReadBatch` may not occur inside a critical region and, thus, the caller cannot
+	// perform the `recv` transitions of the IO specification atomically with the physical read.
+	// Instead, we assume here that `ReadBatch` performs them itself: for every packet that it
+	// receives, it opens the shared invariant `SharedInv{dp, ioSharedArg}` and performs the
+	// corresponding `recv` transition atomically with the physical reception of that packet.
+	// This is why the contract below takes the invariant (instead of the `io.token` and the
+	// `MultiReadBio` permissions, which are now held by the invariant throughout the call) and,
+	// in exchange, yields the sequence `ioValSeq` with the abstract values of the packets that
+	// were received, together with a witness for each of them. Notice that this models the
+	// underlying socket more faithfully than treating the entire batch read as a single atomic
+	// operation, given that the packets of a batch are genuinely received one at a time.
 	// @ requires  acc(Mem(), _)
 	// @ requires  forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	msgs[i].Mem()
 	// @ requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
 	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
-	// contracts for IO-spec
-	// @ requires  Prophecy(prophecyM)
-	// @ requires  io.token(place) && MultiReadBio(place, prophecyM)
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr())
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
@@ -170,21 +178,29 @@ type BatchConn interface {
 	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
 	// @ ensures   err != nil ==> err.ErrorMem()
 	// contracts for IO-spec
-	// @ ensures   err != nil ==> prophecyM == 0
-	// @ ensures   err == nil ==> prophecyM == n
-	// @ ensures   io.token(old(MultiReadBioNext(place, prophecyM)))
-	// @ ensures   old(MultiReadBioCorrectIfs(place, prophecyM, path.ifsToIO_ifs(ingressID)))
+	// @ requires  dp.Valid()
+	// @ preserves Invariant(SharedInv{dp, ioSharedArg})
+	// @ ensures   err == nil ==> len(ioValSeq) == n
+	// @ ensures   err == nil ==>
+	// @ 	MultiElemWitness(ioSharedArg.IBufY, path.ifsToIO_ifs(ingressID), ioValSeq)
 	// @ ensures   err == nil ==>
 	// @ 	forall i int :: { &msgs[i] } 0 <= i && i < n ==>
-	// @ 		MsgToAbsVal(&msgs[i], ingressID) == old(MultiReadBioIO_val(place, n)[i])
-	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost prophecyM int, ghost place io.Place @*/) (n int, err error)
+	// @ 		MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]
+	ReadBatch(msgs underlayconn.Messages /*@, ghost ingressID uint16, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (n int, err error /*@, ghost ioValSeq seq[io.Val] @*/)
 	// @ requires  acc(addr.Mem(), _)
 	// @ requires  acc(Mem(), _)
 	// @ preserves acc(sl.Bytes(b, 0, len(b)), R10)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(b)
 	// @ ensures   err != nil ==> err.ErrorMem()
 	WriteTo(b []byte, addr *net.UDPAddr) (n int, err error)
-	// @ atomic
+	// (VerifiedSCION) As for `ReadBatch`, `WriteBatch` cannot be marked as `atomic` because it
+	// is an interface method. We assume instead that it opens the shared invariant
+	// `SharedInv{dp, ioSharedArg}` itself and performs the `send` transition of the IO
+	// specification atomically with the physical write. The `ElemWitness` required below is
+	// what an implementation needs in order to establish the guard of that transition, namely
+	// that the packet being sent is in the output buffer of the model. The transition is
+	// performed even when the write fails; otherwise, the router could not continue after
+	// failing to send a packet.
 	// @ requires  acc(Mem(), _)
 	// (VerifiedSCION) opted for less reusable spec for WriteBatch for
 	// performance reasons.
@@ -192,17 +208,17 @@ type BatchConn interface {
 	// @ requires  acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
 	// @ requires  acc(sl.Bytes(msgs[0].GetFstBuffer(), 0, len(msgs[0].GetFstBuffer())), R50)
 	// preconditions for IO-spec:
+	// @ requires  dp.Valid()
 	// @ requires  MsgToAbsVal(&msgs[0], egressID) == ioAbsPkts
-	// @ requires  io.token(place) && io.CBioIO_bio3s_send(place, ioAbsPkts)
+	// @ requires  ioAbsPkts.isValPkt || ioAbsPkts.isValUnsupported
+	// @ requires  ioAbsPkts.isValPkt ==>
+	// @ 	ElemWitness(ioSharedArg.OBufY, ioAbsPkts.ValPkt_1, ioAbsPkts.ValPkt_2)
+	// @ preserves Invariant(SharedInv{dp, ioSharedArg})
 	// @ ensures   acc(msgs[0].Mem(), R50) && msgs[0].HasActiveAddr()
 	// @ ensures   acc(sl.Bytes(msgs[0].GetFstBuffer(), 0, len(msgs[0].GetFstBuffer())), R50)
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
 	// @ ensures   err != nil ==> err.ErrorMem()
-	// postconditions for IO-spec:
-	// (VerifiedSCION) the permission to the protocol must always be returned,
-	// otherwise the router cannot continue after failing to send a packet.
-	// @ ensures   io.token(old(io.dp3s_iospec_bio3s_send_T(place, ioAbsPkts)))
-	WriteBatch(msgs underlayconn.Messages, flags int /*@, ghost egressID uint16, ghost place io.Place, ghost ioAbsPkts io.Val @*/) (n int, err error)
+	WriteBatch(msgs underlayconn.Messages, flags int /*@, ghost egressID uint16, ghost ioAbsPkts io.Val, ghost ioSharedArg SharedArg, ghost dp io.DataPlaneSpec @*/) (n int, err error)
 	// @ requires Mem()
 	// @ ensures  err != nil ==> err.ErrorMem()
 	// @ decreases
@@ -973,34 +989,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 			// @ invariant d.DpAgreesWithSpec(dp) && dp.Valid()
 			for d.running {
 				// @ ghost ioIngressID := path.ifsToIO_ifs(ingressID)
-				// Multi recv event
-				// @ critical SharedInv{dp, ioSharedArg} (
-				// @ unfold SharedInv{dp, ioSharedArg}()
-				// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
-				// @ ghost numberOfReceivedPacketsProphecy := AllocProphecy()
-				// @ ExtractMultiReadBio(dp, t, numberOfReceivedPacketsProphecy, s)
-				// @ MultiUpdateElemWitness(t, numberOfReceivedPacketsProphecy, ioIngressID, s, ioSharedArg)
-				// @ ghost ioValSeq := MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)
-
-				// @ ghost sN := MultiReadBioUpd(t, numberOfReceivedPacketsProphecy, s)
-				// @ ghost tN := MultiReadBioNext(t, numberOfReceivedPacketsProphecy)
-				// @ assert dp.dp3s_iospec_ordered(sN, tN)
-				// @ BeforeReadBatch:
-				pkts, err := rd.ReadBatch(msgs /*@, ingressID, numberOfReceivedPacketsProphecy, t @*/)
-				// @ assert old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)) == ioValSeq
-				// @ assert err == nil ==>
-				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
-				// @ 		ioValSeq[i] == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
-				// @ assert err == nil ==>
-				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==> MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]
-				// @ ghost *ioSharedArg.State = sN
-				// @ ghost *ioSharedArg.Place = tN
-				// @ assert err == nil ==>
-				// @ 	forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
-				// @ 		MsgToAbsVal(&msgs[i], ingressID) == old[BeforeReadBatch](MultiReadBioIO_val(t, numberOfReceivedPacketsProphecy)[i])
-				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
-				// @ fold SharedInv{dp, ioSharedArg}()
-				// @ )
+				// Multi recv event.
+				// The `recv` transitions of the IO specification are performed inside
+				// `ReadBatch`, which opens the shared invariant itself (cf. the comment on
+				// the contract of `BatchConn.ReadBatch`). This is why no critical region is
+				// opened here.
+				pkts, err /*@, ioValSeq @*/ := rd.ReadBatch(msgs /*@, ingressID, ioSharedArg, dp @*/)
 				// End of multi recv event
 
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
@@ -1011,10 +1005,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// error metric
 					continue
 				}
+				// @ MultiElemWitnessConv(ioSharedArg.IBufY, ioIngressID, ioValSeq)
 				if pkts == 0 {
 					continue
 				}
 				// @ assert pkts <= len(msgs)
+				// @ assert pkts == len(ioValSeq)
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	!msgs[i].HasWildcardPermAddr()
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
@@ -1182,23 +1178,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ 	absIO_val(writeMsgs[0].Buffers[0], result.EgressID)
 					// @ assert result.OutPkt != nil ==> newAbsPkt ==
 					// @ 	absIO_val(writeMsgs[0].Buffers[0], result.EgressID)
+					// @ assert newAbsPkt.isValPkt || newAbsPkt.isValUnsupported
 					// @ fold acc(writeMsgs[0].Mem(), R50)
-					// @ critical SharedInv{dp, ioSharedArg} (
-					// @ unfold SharedInv{dp, ioSharedArg}()
-					// @ ghost t, s := *ioSharedArg.Place, *ioSharedArg.State
-					// @ ghost if(newAbsPkt.isValPkt) {
-					// @ 	ApplyElemWitness(s.obuf, ioSharedArg.OBufY, newAbsPkt.ValPkt_1, newAbsPkt.ValPkt_2)
-					// @ 	assert newAbsPkt.ValPkt_2 elem AsSet(s.obuf[newAbsPkt.ValPkt_1])
-					// @ 	assert dp.dp3s_iospec_bio3s_send_guard(s, t, newAbsPkt)
-					// @ } else { assert newAbsPkt.isValUnsupported }
-					// @ unfold dp.dp3s_iospec_ordered(s, t)
-					// @ unfold dp.dp3s_iospec_bio3s_send(s, t)
-					// @ io.TriggerBodyIoSend(newAbsPkt)
-					// @ ghost tN := io.dp3s_iospec_bio3s_send_T(t, newAbsPkt)
-					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@, result.EgressID, t, newAbsPkt @*/)
-					// @ ghost *ioSharedArg.Place = tN
-					// @ fold SharedInv{dp, ioSharedArg}()
-					// @ )
+					// The `send` transition of the IO specification is performed inside
+					// `WriteBatch` (cf. the comment on the contract of `BatchConn.WriteBatch`),
+					// which is why no critical region is opened here.
+					_, err = result.OutConn.WriteBatch(writeMsgs, syscall.MSG_DONTWAIT /*@, result.EgressID, newAbsPkt, ioSharedArg, dp @*/)
 					// @ unfold acc(writeMsgs[0].Mem(), R50)
 					// @ ghost if addrAliasesPkt && result.OutAddr != nil {
 					// @ 	apply acc(result.OutAddr.Mem(), R15) --* acc(sl.Bytes(tmpBuf, 0, len(tmpBuf)), R15)

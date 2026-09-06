@@ -53,18 +53,21 @@ func InitSharedInv(
 	return y
 }
 
-/////////////////////////////////////// Prophecies ///////////////////////////////////////
-// To establish permission for incoming packets, we need to predict the quantity.
-// The return value of AllocProphecy is assumed to be identical to the actual number
-// of received packets.
-pred Prophecy(int)
-
-ghost
-ensures 0 <= expectedPkts && Prophecy(expectedPkts)
-decreases
-func AllocProphecy() (expectedPkts int)
-
 /////////////////////////////////////// MultiBio ///////////////////////////////////////
+// The definitions in this section describe the effect that receiving a batch of
+// `expectedPkts` packets has on the state of the model: `MultiReadBio` is the permission to
+// perform that many consecutive `recv` transitions, `MultiReadBioNext` and `MultiReadBioUpd`
+// compute the place and the local state that result from performing them, and
+// `MultiReadBioIO_val` collects the abstract values of the packets that are received.
+//
+// Because Gobra does not allow interface methods to be marked as `atomic`, these transitions
+// can no longer be performed by the caller of `BatchConn.ReadBatch` while holding the shared
+// invariant open; they are instead assumed to be performed inside `ReadBatch` itself (see the
+// comment on its contract). These definitions remain here because they specify precisely the
+// effect that `ReadBatch` is assumed to have on the shared invariant, and because
+// `ExtractMultiReadBio` and `MultiUpdateElemWitness` below show that every step of that effect,
+// except for the `recv` events themselves (which *are* the physical read), follows from the
+// shared invariant alone.
 
 pred MultiReadBio(ghost t io.Place, ghost expectedPkts int) {
 	(expectedPkts > 0 ==> io.CBioIO_bio3s_recv(t) &&
