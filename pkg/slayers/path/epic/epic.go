@@ -177,7 +177,11 @@ func (p *Path) DecodeFromBytes(b []byte) (r error) {
 	//@ 	assert scion.MetaLen <= len(b) - MetadataLen
 	// pin the elementwise characterization of the sub-path view before exposing
 	// its bytes, retaining a positive fraction so the snapshot stays fixed
-	//@ 	sl.ViewElems(b[MetadataLen:], 0, len(b[MetadataLen:]), R56)
+	// the sub-path is bound to a ghost variable, so that the old()
+	// postconditions of ViewElems are instantiated with a variable and not
+	// with a slice expression, which makes the prover crash
+	//@ 	ghost subPath := b[MetadataLen:]
+	//@ 	sl.ViewElems(subPath, 0, len(subPath), R56)
 	//@ 	assert forall i int :: { sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[i] } 0 <= i && i < scion.MetaLen ==>
 	//@ 		sl.View(b[MetadataLen:], 0, len(b[MetadataLen:]))[i] == sl.GetByte(b[MetadataLen:], 0, len(b[MetadataLen:]), i)
 	//@ 	unfold acc(sl.Bytes(b[MetadataLen:], 0, len(b)-MetadataLen), R56)
