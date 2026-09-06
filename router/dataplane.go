@@ -1202,6 +1202,12 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					// @ msgs[:pkts][i0].IsActive = false
 					// @ fold msgs[:pkts][i0].Mem()
+					// (VerifiedSCION) The OOB buffers of `msgs` and of `writeMsgs` are all nil, so
+					// every `Mem()` instance above and `writeMsgInv` share the single instance
+					// `sl.Bytes(nil, 0, 0)`. Gobra occasionally fails to add up the shares of that
+					// instance that are held here; the call below provides a fresh one, which is
+					// sound because the predicate protects no memory when the slice is empty.
+					// @ sl.NilAcc_Bytes()
 					// @ fold writeMsgInv(writeMsgs)
 					if err != nil {
 						// @ requires err != nil && err.ErrorMem()
