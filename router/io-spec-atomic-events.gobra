@@ -29,17 +29,17 @@ requires  dp.Valid()
 requires  ingressID != none[io.Ifs]
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
-requires  dp.dp2_enter_guard(
+requires  dp.Dp2_enter_guard(
 	oldPkt,
 	oldPkt.CurrSeg,
-	io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
+	io.EstablishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
 	dp.Asid(),
 	oldPkt.CurrSeg.Future[0],
 	get(ingressID),
 	oldPkt.CurrSeg.Future[1:])
-requires  dp.dp3s_forward(
+requires  dp.Dp3s_forward(
 	io.Pkt {
-		io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
+		io.EstablishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
 		oldPkt.LeftSeg,
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
@@ -53,16 +53,16 @@ func AtomicEnter(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressI
 	critical SharedInv{dp, ioSharedArg} (
 		unfold SharedInv{dp, ioSharedArg}()
 		t, s := *ioSharedArg.Place, *ioSharedArg.State
-		ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
+		ApplyElemWitness(s.Ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
 		ghost pkt_internal := io.Val(io.ValInternal1{oldPkt, get(ingressID), newPkt, egressID})
-		assert dp.dp3s_iospec_bio3s_enter_guard(s, t, pkt_internal)
-		unfold dp.dp3s_iospec_ordered(s, t)
-		unfold dp.dp3s_iospec_bio3s_enter(s, t)
+		assert dp.Dp3s_iospec_bio3s_enter_guard(s, t, pkt_internal)
+		unfold dp.Dp3s_iospec_ordered(s, t)
+		unfold dp.Dp3s_iospec_bio3s_enter(s, t)
 		io.TriggerBodyIoEnter(pkt_internal)
 		ghost tN := io.CBio_IN_bio3s_enter_T(t, pkt_internal)
 		io.Enter(t, pkt_internal) //Event
-		UpdateElemWitness(s.obuf, ioSharedArg.OBufY, egressID, newPkt)
-		ghost *ioSharedArg.State = io.dp3s_add_obuf(s, egressID, newPkt)
+		UpdateElemWitness(s.Obuf, ioSharedArg.OBufY, egressID, newPkt)
+		ghost *ioSharedArg.State = io.Dp3s_add_obuf(s, egressID, newPkt)
 		ghost *ioSharedArg.Place = tN
 		fold SharedInv{dp, ioSharedArg}()
 	)
@@ -75,7 +75,7 @@ requires  ingressID == none[io.Ifs]
 requires  egressID != none[io.Ifs]
 requires  len(oldPkt.CurrSeg.Future) > 0
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
-requires  dp.dp3s_forward_ext(oldPkt, newPkt, get(egressID))
+requires  dp.Dp3s_forward_ext(oldPkt, newPkt, get(egressID))
 preserves Invariant(SharedInv{dp, ioSharedArg})
 ensures   ElemWitness(ioSharedArg.OBufY, egressID, newPkt)
 decreases
@@ -83,16 +83,16 @@ func AtomicExit(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressID
 	critical SharedInv{dp, ioSharedArg} (
 		unfold SharedInv{dp, ioSharedArg}()
 		t, s := *ioSharedArg.Place, *ioSharedArg.State
-		ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
+		ApplyElemWitness(s.Ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
 		ghost pkt_internal := io.Val(io.ValInternal2{oldPkt, newPkt, get(egressID)})
-		assert dp.dp3s_iospec_bio3s_exit_guard(s, t, pkt_internal)
-		unfold dp.dp3s_iospec_ordered(s, t)
-		unfold dp.dp3s_iospec_bio3s_exit(s, t)
+		assert dp.Dp3s_iospec_bio3s_exit_guard(s, t, pkt_internal)
+		unfold dp.Dp3s_iospec_ordered(s, t)
+		unfold dp.Dp3s_iospec_bio3s_exit(s, t)
 		io.TriggerBodyIoExit(pkt_internal)
-		ghost tN := io.dp3s_iospec_bio3s_exit_T(t, pkt_internal)
+		ghost tN := io.Dp3s_iospec_bio3s_exit_T(t, pkt_internal)
 		io.Exit(t, pkt_internal) //Event
-		UpdateElemWitness(s.obuf, ioSharedArg.OBufY, egressID, newPkt)
-		ghost *ioSharedArg.State = io.dp3s_add_obuf(s, egressID, newPkt)
+		UpdateElemWitness(s.Obuf, ioSharedArg.OBufY, egressID, newPkt)
+		ghost *ioSharedArg.State = io.Dp3s_add_obuf(s, egressID, newPkt)
 		ghost *ioSharedArg.Place = tN
 		fold SharedInv{dp, ioSharedArg}()
 	)
@@ -106,28 +106,28 @@ requires  len(oldPkt.CurrSeg.Future) > 0
 requires  len(get(oldPkt.LeftSeg).Future) > 0
 requires  ingressID != none[io.Ifs]
 requires  ElemWitness(ioSharedArg.IBufY, ingressID, oldPkt)
-requires  dp.dp2_xover_guard(
+requires  dp.Dp2_xover_guard(
 	oldPkt,
 	oldPkt.CurrSeg,
 	get(oldPkt.LeftSeg),
-	io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
+	io.EstablishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
 	io.Pkt {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
-		some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir)),
+		some(io.EstablishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir)),
 	},
 	oldPkt.CurrSeg.Future[0],
 	get(oldPkt.LeftSeg).Future[0],
 	get(oldPkt.LeftSeg).Future[1:],
 	dp.Asid(),
 	get(ingressID))
-requires  dp.dp3s_forward_xover(
+requires  dp.Dp3s_forward_xover(
 	io.Pkt {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
-		some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir)),
+		some(io.EstablishGuardTraversedsegInc(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir)),
 	},
 	newPkt,
 	egressID)
@@ -138,16 +138,16 @@ func AtomicXover(oldPkt io.Pkt, ingressID option[io.Ifs], newPkt io.Pkt, egressI
 	critical SharedInv{dp, ioSharedArg} (
 		unfold SharedInv{dp, ioSharedArg}()
 		t, s := *ioSharedArg.Place, *ioSharedArg.State
-		ApplyElemWitness(s.ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
+		ApplyElemWitness(s.Ibuf, ioSharedArg.IBufY, ingressID, oldPkt)
 		ghost pkt_internal := io.Val(io.ValInternal1{oldPkt, get(ingressID), newPkt, egressID})
-		assert dp.dp3s_iospec_bio3s_xover_guard(s, t, pkt_internal)
-		unfold dp.dp3s_iospec_ordered(s, t)
-		unfold dp.dp3s_iospec_bio3s_xover(s, t)
+		assert dp.Dp3s_iospec_bio3s_xover_guard(s, t, pkt_internal)
+		unfold dp.Dp3s_iospec_ordered(s, t)
+		unfold dp.Dp3s_iospec_bio3s_xover(s, t)
 		io.TriggerBodyIoXover(pkt_internal)
-		ghost tN := io.dp3s_iospec_bio3s_xover_T(t, pkt_internal)
+		ghost tN := io.Dp3s_iospec_bio3s_xover_T(t, pkt_internal)
 		io.Xover(t, pkt_internal) //Event
-		UpdateElemWitness(s.obuf, ioSharedArg.OBufY, egressID, newPkt)
-		ghost *ioSharedArg.State = io.dp3s_add_obuf(s, egressID, newPkt)
+		UpdateElemWitness(s.Obuf, ioSharedArg.OBufY, egressID, newPkt)
+		ghost *ioSharedArg.State = io.Dp3s_add_obuf(s, egressID, newPkt)
 		ghost *ioSharedArg.Place = tN
 		fold SharedInv{dp, ioSharedArg}()
 	)

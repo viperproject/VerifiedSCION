@@ -39,6 +39,17 @@ ghost const MutexPerm perm = 1/4
 ghost const OutMutexPerm perm = 3/4
 ghost const runningPerm perm = 1/2
 
+// MtxInv wraps the resources of, and the facts about, the non-exported mutex
+// that protects the dataplane. The contracts of the exported methods of
+// DataPlane use it so that they do not mention the non-exported field 'mtx'.
+// TODO(gobra#1092): closed
+pred (d *DataPlane) MtxInv() {
+	d.mtx.LockP() && d.mtx.LockInv() == MutexInvariant{d}
+}
+
+// The body of this predicate describes the private state of the dataplane, so
+// it is closed.
+// TODO(gobra#1092): closed
 pred MutexInvariant(d *DataPlane) {
 	acc(&d.running, runningPerm) &&
 	(!d.running ==> acc(d.Mem(), MutexPerm))
@@ -55,6 +66,9 @@ pred MutexInvariant(d *DataPlane) {
 // Note that the '...Inv' predicates take the relevant field by value, which
 // keeps them self-framing without holding the permission to the field itself
 // (that permission remains in 'Mem').
+// The body of this predicate describes the private state of the dataplane, so
+// it is closed.
+// TODO(gobra#1092): closed
 pred (d *DataPlane) Mem() {
 	// access to the field 'mtx' ommited
 	acc(&d.external)                          &&
@@ -290,7 +304,8 @@ pure func (d *DataPlane) getMacFactory() func() hash.Hash {
 ghost
 requires d.Mem()
 decreases
-pure func (d *DataPlane) getDomForwardingMetrics() set[uint16] {
+// TODO(gobra#1092): closed
+pure func (d *DataPlane) GetDomForwardingMetrics() set[uint16] {
 	return unfolding d.Mem() in
 		unfolding forwardingMetricsInv(d.forwardingMetrics) in
 		d.forwardingMetrics == nil ?
@@ -302,6 +317,7 @@ pure func (d *DataPlane) getDomForwardingMetrics() set[uint16] {
 ghost
 requires d.Mem()
 decreases
+// TODO(gobra#1092): closed
 pure func (d *DataPlane) GetDomInternalNextHops() set[uint16] {
 	return unfolding d.Mem() in
 		unfolding internalNextHopsInv(d.internalNextHops) in
@@ -315,7 +331,8 @@ ghost
 opaque
 requires d.Mem()
 decreases
-pure func (d *DataPlane) getDomExternal() set[uint16] {
+// TODO(gobra#1092): closed
+pure func (d *DataPlane) GetDomExternal() set[uint16] {
 	return unfolding d.Mem() in
 		unfolding externalInv(d.external) in
 		d.external == nil ?
@@ -327,7 +344,8 @@ pure func (d *DataPlane) getDomExternal() set[uint16] {
 ghost
 requires d.Mem()
 decreases
-pure func (d *DataPlane) getDomNeighborIAs() set[uint16] {
+// TODO(gobra#1092): closed
+pure func (d *DataPlane) GetDomNeighborIAs() set[uint16] {
 	return unfolding d.Mem() in
 		unfolding neighborIAsInv(d.neighborIAs) in
 		d.neighborIAs == nil ?
@@ -337,7 +355,8 @@ pure func (d *DataPlane) getDomNeighborIAs() set[uint16] {
 ghost
 requires d.Mem()
 decreases
-pure func (d *DataPlane) getDomLinkTypes() set[uint16] {
+// TODO(gobra#1092): closed
+pure func (d *DataPlane) GetDomLinkTypes() set[uint16] {
 	return unfolding d.Mem() in
 		unfolding linkTypesInv(d.linkTypes) in
 		d.linkTypes == nil ?
@@ -370,11 +389,11 @@ opaque
 requires d.Mem()
 decreases
 pure func (d *DataPlane) WellConfigured() bool {
-	return d.getDomExternal() subset d.getDomNeighborIAs() &&
-		d.GetDomInternalNextHops() subset d.getDomNeighborIAs() &&
-		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
-		!(0 elem d.getDomNeighborIAs()) &&
-		d.getDomExternal() subset d.getDomForwardingMetrics()
+	return d.GetDomExternal() subset d.GetDomNeighborIAs() &&
+		d.GetDomInternalNextHops() subset d.GetDomNeighborIAs() &&
+		d.GetDomNeighborIAs() == d.GetDomLinkTypes() &&
+		!(0 elem d.GetDomNeighborIAs()) &&
+		d.GetDomExternal() subset d.GetDomForwardingMetrics()
 }
 
 // The configuration assumed by 'Run' before the forwarding metrics are initialized.
@@ -386,11 +405,11 @@ opaque
 requires d.Mem()
 decreases
 pure func (d *DataPlane) PreWellConfigured() bool {
-	return d.getDomExternal() subset d.getDomNeighborIAs() &&
-		d.GetDomInternalNextHops() subset d.getDomNeighborIAs() &&
-		d.getDomNeighborIAs() == d.getDomLinkTypes() &&
-		!(0 elem d.getDomNeighborIAs()) &&
-		d.getDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
+	return d.GetDomExternal() subset d.GetDomNeighborIAs() &&
+		d.GetDomInternalNextHops() subset d.GetDomNeighborIAs() &&
+		d.GetDomNeighborIAs() == d.GetDomLinkTypes() &&
+		!(0 elem d.GetDomNeighborIAs()) &&
+		d.GetDomExternal() intersection d.GetDomInternalNextHops() == set[uint16]{}
 }
 
 // Every interface of the AS is known to the router, whether the router terminates it
@@ -401,10 +420,10 @@ pure func (d *DataPlane) PreWellConfigured() bool {
 // sibling router.
 ghost
 requires acc(d.Mem(), _) && d.WellConfigured()
-requires id elem d.getDomExternal() || id elem d.GetDomInternalNextHops()
+requires id elem d.GetDomExternal() || id elem d.GetDomInternalNextHops()
 ensures  acc(d.Mem(), _)
-ensures  id elem d.getDomLinkTypes()
-ensures  id elem d.getDomNeighborIAs()
+ensures  id elem d.GetDomLinkTypes()
+ensures  id elem d.GetDomNeighborIAs()
 ensures  id != 0
 decreases
 func (d *DataPlane) KnownIfIDLemma(id uint16) {
@@ -437,7 +456,7 @@ func (d *DataPlane) getDomInternalNextHopsLemma() {
 
 ghost
 requires acc(d.Mem(), _)
-requires id elem d.getDomForwardingMetrics()
+requires id elem d.GetDomForwardingMetrics()
 ensures  acc(&d.forwardingMetrics, _)
 ensures  acc(d.forwardingMetrics, _)
 ensures  acc(forwardingMetricsMem(d.forwardingMetrics[id], id), _)
@@ -445,8 +464,8 @@ decreases
 func (d *DataPlane) getForwardingMetricsMem(id uint16) {
 	unfold acc(d.Mem(), _)
 	unfold acc(forwardingMetricsInv(d.forwardingMetrics), _)
-	assert id elem d.getDomForwardingMetrics()
-	assert d.getDomForwardingMetrics() == (d.forwardingMetrics == nil ?
+	assert id elem d.GetDomForwardingMetrics()
+	assert d.GetDomForwardingMetrics() == (d.forwardingMetrics == nil ?
 		set[uint16]{} :
 		(unfolding acc(accForwardingMetrics(d.forwardingMetrics), _) in
 				domain(d.forwardingMetrics)))
@@ -534,6 +553,7 @@ pure func (d *DataPlane) getValSvc() *services {
 ghost
 requires d.Mem()
 decreases
+// TODO(gobra#1092): closed
 pure func (d *DataPlane) SvcsAreSet() bool {
 	return unfolding d.Mem() in
 		d.svc != nil
@@ -577,6 +597,7 @@ type Unit struct{}
 ghost
 requires d.Mem()
 decreases
+// TODO(gobra#1092): closed
 pure func (d *DataPlane) IsRunning() bool {
 	return unfolding d.Mem() in
 		d.running
@@ -596,6 +617,7 @@ pure func (d *DataPlane) isRunningEq() Unit {
 ghost
 requires d.Mem()
 decreases
+// TODO(gobra#1092): closed
 pure func (d *DataPlane) InternalConnIsSet() bool {
 	return unfolding d.Mem() in
 		d.internal != nil
@@ -623,6 +645,7 @@ pure func (d *DataPlane) internalIsSetEq() Unit {
 ghost
 requires d.Mem()
 decreases
+// TODO(gobra#1092): closed
 pure func (d *DataPlane) KeyIsSet() bool {
 	return unfolding d.Mem() in
 		d.macFactory != nil
@@ -642,6 +665,7 @@ pure func (d *DataPlane) keyIsSetEq() Unit {
 ghost
 requires d.Mem()
 decreases
+// TODO(gobra#1092): closed
 pure func (d *DataPlane) LocalIA() addr.IA {
 	return unfolding d.Mem() in
 		d.localIA
@@ -817,7 +841,7 @@ func ResetDecodingLayers(
 pred (d *DataPlane) validResult(result processResult, addrAliasesPkt bool) {
 	acc(d.Mem(), _)    &&
 	// EgressID
-	(result.EgressID != 0 ==> result.EgressID elem d.getDomForwardingMetrics()) &&
+	(result.EgressID != 0 ==> result.EgressID elem d.GetDomForwardingMetrics()) &&
 	// OutConn
 	(result.OutConn != nil ==> acc(result.OutConn.Mem(), _)) &&
 	// OutAddr
@@ -828,9 +852,9 @@ pred (d *DataPlane) validResult(result processResult, addrAliasesPkt bool) {
 
 ghost
 requires acc(d.Mem(), _) && d.WellConfigured()
-requires id elem d.getDomExternal()
+requires id elem d.GetDomExternal()
 ensures  acc(d.Mem(), _)
-ensures  id elem d.getDomForwardingMetrics()
+ensures  id elem d.GetDomForwardingMetrics()
 decreases
 func (d *DataPlane) InDomainExternalInForwardingMetrics(id uint16) {
 	reveal d.WellConfigured()
@@ -842,11 +866,11 @@ requires acc(&d.external, _) && acc(d.external, R55)
 requires id elem domain(d.external)
 ensures  acc(d.Mem(), _)
 ensures  acc(&d.external, _) && acc(d.external, R55)
-ensures  id elem d.getDomForwardingMetrics()
+ensures  id elem d.GetDomForwardingMetrics()
 decreases
-func (d *DataPlane) InDomainExternalInForwardingMetrics3(id uint16) {
+func (d *DataPlane) inDomainExternalInForwardingMetrics3(id uint16) {
 	reveal d.WellConfigured()
-	reveal d.getDomExternal()
+	reveal d.GetDomExternal()
 	assert unfolding acc(d.Mem(), _) in
 		(unfolding acc(externalInv(d.external), _) in
 			(unfolding acc(accBatchConn(d.external), _) in true))
@@ -864,6 +888,7 @@ pure func (d *DataPlane) domainForwardingMetrics() set[uint16] {
 ghost
 requires d.Mem()
 decreases
+// TODO(gobra#1092): closed
 pure func (d *DataPlane) DomainForwardingMetrics() set[uint16] {
 	return unfolding d.Mem() in
 		unfolding forwardingMetricsInv(d.forwardingMetrics) in

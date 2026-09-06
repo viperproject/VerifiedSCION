@@ -41,7 +41,7 @@ ensures  len(newPkt.CurrSeg.Future) == len(oldPkt.CurrSeg.Future)
 decreases
 pure func AbsUpdateNonConsDirIngressSegID(oldPkt io.Pkt, ingressID option[io.Ifs]) (newPkt io.Pkt) {
 	return ingressID == none[io.Ifs] ? oldPkt : io.Pkt {
-		io.establishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
+		io.EstablishGuardTraversedseg(oldPkt.CurrSeg, !oldPkt.CurrSeg.ConsDir),
 		oldPkt.LeftSeg,
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
@@ -85,7 +85,7 @@ requires pkt.PathNotFullyTraversed()
 decreases
 pure func AbsValidateEgressIDConstraint(pkt io.Pkt, enter bool, dp io.DataPlaneSpec) bool {
 	return let currseg := pkt.CurrSeg in
-		(enter ==> dp.dp2_check_interface_top(currseg.ConsDir, dp.Asid(), currseg.Future[0]))
+		(enter ==> dp.Dp2_check_interface_top(currseg.ConsDir, dp.Asid(), currseg.Future[0]))
 }
 
 ghost
@@ -95,7 +95,7 @@ ensures  len(newPkt.CurrSeg.Future) >= 0
 decreases
 pure func AbsProcessEgress(oldPkt io.Pkt) (newPkt io.Pkt) {
 	return io.Pkt {
-		io.establishGuardTraversedsegInc(oldPkt.CurrSeg, oldPkt.CurrSeg.ConsDir),
+		io.EstablishGuardTraversedsegInc(oldPkt.CurrSeg, oldPkt.CurrSeg.ConsDir),
 		oldPkt.LeftSeg,
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
@@ -117,7 +117,7 @@ pure func AbsDoXover(oldPkt io.Pkt) (newPkt io.Pkt) {
 		get(oldPkt.LeftSeg),
 		oldPkt.MidSeg,
 		oldPkt.RightSeg,
-		some(io.establishGuardTraversedsegInc(oldPkt.CurrSeg, false)),
+		some(io.EstablishGuardTraversedsegInc(oldPkt.CurrSeg, false)),
 	}
 }
 
@@ -131,7 +131,7 @@ decreases
 pure func AbsValidateEgressIDConstraintXover(pkt io.Pkt, dp io.DataPlaneSpec) bool {
 	return let currseg := pkt.CurrSeg     in
 		let rightseg := get(pkt.RightSeg) in
-		dp.xover2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
+		dp.Xover2_link_type_dir(dp.Asid(), rightseg.ConsDir, rightseg.Past[0],
 			currseg.ConsDir, currseg.Future[0])
 }
 
@@ -145,7 +145,7 @@ pure func AbsVerifyCurrentMACConstraint(pkt io.Pkt, dp io.DataPlaneSpec) bool {
 		let ts := currseg.AInfo       in
 		let hf := currseg.Future[0]   in
 		let uinfo := currseg.UInfo    in
-		dp.hf_valid(d, ts.V, uinfo, hf)
+		dp.Hf_valid(d, ts.V, uinfo, hf)
 }
 
 /**** Abstract packet update performed by the router ****/

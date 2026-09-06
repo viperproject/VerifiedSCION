@@ -21,5 +21,6 @@ import sl "github.com/scionproto/scion/verification/utils/slices"
 func foldNonInitMem_Test() {
 	s@ := SCION{}
 	fold PathPoolMem(s.pathPool, s.pathPoolRaw)
+	fold s.HiddenPathPoolMem()
 	fold s.NonInitMem()
 }

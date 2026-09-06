@@ -20,9 +20,9 @@ import (
 ghost
 preserves acc(s.Mem(ubuf), R55)
 preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-preserves validPktMetaHdr(ubuf)
+preserves ValidPktMetaHdr(ubuf)
 preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
-ensures   s.absPkt(ubuf).IsXover() == s.GetBase(ubuf).IsXoverSpec()
+ensures   s.AbsPkt(ubuf).IsXover() == s.GetBase(ubuf).IsXoverSpec()
 decreases
 func (s *Raw) IsXoverLemma(ubuf []byte) {
 	if s.GetBase(ubuf).IsXoverSpec() {
@@ -32,7 +32,7 @@ func (s *Raw) IsXoverLemma(ubuf []byte) {
 		// not the last one of the segment being traversed, in which case the
 		// future of the current segment contains more than one hop field, or
 		// there is no segment left to switch to, in which case LeftSeg is none.
-		reveal validPktMetaHdr(ubuf)
+		reveal ValidPktMetaHdr(ubuf)
 		metaHdr := RawBytesToMetaHdr(ubuf)
 		currInfIdx := int(metaHdr.CurrINF)
 		currHfIdx := int(metaHdr.CurrHF)
@@ -44,7 +44,7 @@ func (s *Raw) IsXoverLemma(ubuf []byte) {
 		prevSegLen := segs.LengthOfPrevSeg(currHfIdx)
 		numINF := segs.NumInfoFields()
 		offset := HopFieldOffset(numINF, prevSegLen, MetaLen)
-		pkt := reveal s.absPkt(ubuf)
+		pkt := reveal s.AbsPkt(ubuf)
 		assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset, currInfIdx, currHfIdx - prevSegLen, segLen, MetaLen)
 		assert pkt.LeftSeg == reveal LeftSeg(ubuf, currInfIdx + 1, segs, MetaLen)
 		assert len(pkt.CurrSeg.Future) == segLen - (currHfIdx - prevSegLen)
@@ -60,12 +60,12 @@ ghost
 preserves acc(s.Mem(ubuf), R55)
 preserves s.IsLastHopSpec(ubuf)
 preserves acc(sl.Bytes(ubuf, 0, len(ubuf)), R56)
-preserves validPktMetaHdr(ubuf)
+preserves ValidPktMetaHdr(ubuf)
 preserves s.GetBase(ubuf).EqAbsHeader(ubuf)
-ensures   !s.absPkt(ubuf).IsXover()
+ensures   !s.AbsPkt(ubuf).IsXover()
 decreases
 func (s *Raw) LastHopNotXoverLemma(ubuf []byte) {
-	reveal validPktMetaHdr(ubuf)
+	reveal ValidPktMetaHdr(ubuf)
 	metaHdr := RawBytesToMetaHdr(ubuf)
 	currInfIdx := int(metaHdr.CurrINF)
 	currHfIdx := int(metaHdr.CurrHF)
@@ -77,7 +77,7 @@ func (s *Raw) LastHopNotXoverLemma(ubuf []byte) {
 	prevSegLen := segs.LengthOfPrevSeg(currHfIdx)
 	numINF := segs.NumInfoFields()
 	offset := HopFieldOffset(numINF, prevSegLen, MetaLen)
-	pkt := reveal s.absPkt(ubuf)
+	pkt := reveal s.AbsPkt(ubuf)
 	assert pkt.CurrSeg == reveal CurrSeg(ubuf, offset, currInfIdx, currHfIdx - prevSegLen, segLen, MetaLen)
 	// A segment that could be switched to only exists when the current segment
 	// is not the last one, which contradicts `currHfIdx == segs.TotalHops() - 1`.
