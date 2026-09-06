@@ -1590,8 +1590,8 @@ func (p *scionPacketProcessor) reset() (err error) {
 // @ requires dp.Valid()
 // @ requires acc(ioLock.LockP(), _)
 // @ requires ioLock.LockInv() == SharedInv{dp, ioSharedArg}
-// @ requires let AbsPkt := AbsIO_val(rawPkt, p.getIngressID()) in
-// @ 	AbsPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.IfsToIO_ifs(p.getIngressID()), AbsPkt.ValPkt_2)
+// @ requires let absPkt := AbsIO_val(rawPkt, p.getIngressID()) in
+// @ 	absPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.IfsToIO_ifs(p.getIngressID()), absPkt.ValPkt_2)
 // @ ensures  respr.OutPkt != nil ==>
 // @ 	newAbsPkt == AbsIO_val(respr.OutPkt, respr.EgressID)
 // @ ensures  (respr.OutPkt == nil) == (newAbsPkt == io.ValUnit{})
@@ -1940,8 +1940,8 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 // @ requires  p.scionLayer.EqPathType(ub)
 // @ requires  acc(ioLock.LockP(), _)
 // @ requires  ioLock.LockInv() == SharedInv{dp, ioSharedArg}
-// @ requires  let AbsPkt := AbsIO_val(p.rawPkt, p.ingressID) in
-// @ 	AbsPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.IfsToIO_ifs(p.ingressID), AbsPkt.ValPkt_2)
+// @ requires  let absPkt := AbsIO_val(p.rawPkt, p.ingressID) in
+// @ 	absPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.IfsToIO_ifs(p.ingressID), absPkt.ValPkt_2)
 // @ ensures   reserr == nil && newAbsPkt.isValPkt ==>
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.ValPkt_1, newAbsPkt.ValPkt_2)
 // @ ensures   respr.OutPkt != nil ==>
@@ -2035,8 +2035,8 @@ func (p *scionPacketProcessor) processSCION( /*@ ghost ub []byte, ghost llIsNil 
 // @ 	p.scionLayer.EqAbsHeader(ub) && p.scionLayer.ValidScionInitSpec(ub)
 // @ requires  acc(ioLock.LockP(), _)
 // @ requires  ioLock.LockInv() == SharedInv{dp, ioSharedArg}
-// @ requires  let AbsPkt := AbsIO_val(p.rawPkt, p.ingressID) in
-// @ 	AbsPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.IfsToIO_ifs(p.ingressID), AbsPkt.ValPkt_2)
+// @ requires  let absPkt := AbsIO_val(p.rawPkt, p.ingressID) in
+// @ 	absPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.IfsToIO_ifs(p.ingressID), absPkt.ValPkt_2)
 // @ ensures   reserr == nil && newAbsPkt.isValPkt ==>
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.ValPkt_1, newAbsPkt.ValPkt_2)
 // @ ensures   respr.OutPkt != nil ==>
@@ -4328,8 +4328,8 @@ func (p *scionPacketProcessor) validatePktLen( /*@ ghost ubScionL []byte, ghost 
 // @ requires  p.scionLayer.EqAbsHeader(ub) && p.scionLayer.EqPathType(ub) && p.scionLayer.ValidScionInitSpec(ub)
 // @ requires  acc(ioLock.LockP(), _)
 // @ requires  ioLock.LockInv() == SharedInv{dp, ioSharedArg}
-// @ requires  let AbsPkt := AbsIO_val(ub, p.ingressID) in
-// @ 	AbsPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.IfsToIO_ifs(p.ingressID), AbsPkt.ValPkt_2)
+// @ requires  let absPkt := AbsIO_val(ub, p.ingressID) in
+// @ 	absPkt.isValPkt ==> ElemWitness(ioSharedArg.IBufY, path.IfsToIO_ifs(p.ingressID), absPkt.ValPkt_2)
 // @ ensures   reserr == nil && newAbsPkt.isValPkt ==>
 // @ 	ElemWitness(ioSharedArg.OBufY, newAbsPkt.ValPkt_1, newAbsPkt.ValPkt_2)
 // @ ensures   respr.OutPkt != nil ==>

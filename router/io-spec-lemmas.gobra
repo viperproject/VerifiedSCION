@@ -181,8 +181,8 @@ requires pkt.PathNotFullyTraversed()
 decreases
 pure func (p *scionPacketProcessor) NoBouncingPkt(pkt io.Pkt) bool {
 	return let currseg := pkt.CurrSeg in
-		let OptEgressID := CurrSegIO_ifs(pkt, false)  in
-		let egressID := path.IO_ifsToIfs(OptEgressID) in
+		let optEgressID := CurrSegIO_ifs(pkt, false)  in
+		let egressID := path.IO_ifsToIfs(optEgressID) in
 		((egressID elem p.d.GetDomExternal()) || p.ingressID != 0)
 }
 
