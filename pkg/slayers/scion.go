@@ -906,11 +906,12 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err er
 	dstAddrBytes := s.DstAddrType.Length()
 	srcAddrBytes := s.SrcAddrType.Length()
 	offset := 0
-	// The writes and copies below only need permission to the individual
-	// bytes, so both buffers are unfolded once instead of being split
-	// around every field.
+	// The two ISD-AS fields only need permission to the individual bytes,
+	// so the buffer is unfolded once for both writes. The address copies
+	// below hand their permissions back through the copied subslices, which
+	// the whole-buffer predicate cannot be folded from directly, so they
+	// still go through the split subslice predicates.
 	// @ unfold sl.Bytes(buf, 0, len(buf))
-	// @ unfold acc(sl.Bytes(ubuf, 0, len(ubuf)), R10)
 	// @ assert forall i int :: { &buf[offset:][i] } 0 <= i && i < len(buf[offset:]) ==>
 	// @ 	&buf[offset:][i] == &buf[offset+i]
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.DstIA))
@@ -918,16 +919,27 @@ func (s *SCION) SerializeAddrHdr(buf []byte /*@ , ghost ubuf []byte @*/) (err er
 	// @ assert forall i int :: { &buf[offset:][i] } 0 <= i && i < len(buf[offset:]) ==>
 	// @ 	&buf[offset:][i] == &buf[offset+i]
 	binary.BigEndian.PutUint64(buf[offset:], uint64(s.SrcIA))
-	offset += addr.IABytes
-	// @ sl.AssertSliceOverlap(buf, offset, offset+dstAddrBytes)
-	// @ sl.AssertSliceOverlap(ubuf, offset, offset+dstAddrBytes)
-	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@ , R10 @*/)
-	offset += dstAddrBytes
-	// @ sl.AssertSliceOverlap(buf, offset, offset+srcAddrBytes)
-	// @ sl.AssertSliceOverlap(ubuf, offset, offset+srcAddrBytes)
-	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@ , R10 @*/)
 	// @ fold sl.Bytes(buf, 0, len(buf))
-	// @ fold acc(sl.Bytes(ubuf, 0, len(ubuf)), R10)
+	offset += addr.IABytes
+	// @ sl.SplitRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
+	// @ sl.SplitRange_Bytes(ubuf, offset, offset+dstAddrBytes, R10)
+	// @ unfold sl.Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
+	// @ unfold acc(sl.Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), R10)
+	copy(buf[offset:offset+dstAddrBytes], s.RawDstAddr /*@ , R10 @*/)
+	// @ fold sl.Bytes(buf[offset:offset+dstAddrBytes], 0, len(buf[offset:offset+dstAddrBytes]))
+	// @ fold acc(sl.Bytes(ubuf[offset:offset+dstAddrBytes], 0, len(ubuf[offset:offset+dstAddrBytes])), R10)
+	// @ sl.CombineRange_Bytes(buf, offset, offset+dstAddrBytes, writePerm)
+	// @ sl.CombineRange_Bytes(ubuf, offset, offset+dstAddrBytes, R10)
+	offset += dstAddrBytes
+	// @ sl.SplitRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
+	// @ sl.SplitRange_Bytes(ubuf, offset, offset+srcAddrBytes, R10)
+	// @ unfold sl.Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
+	// @ unfold acc(sl.Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), R10)
+	copy(buf[offset:offset+srcAddrBytes], s.RawSrcAddr /*@ , R10 @*/)
+	// @ fold sl.Bytes(buf[offset:offset+srcAddrBytes], 0, len(buf[offset:offset+srcAddrBytes]))
+	// @ fold acc(sl.Bytes(ubuf[offset:offset+srcAddrBytes], 0, len(ubuf[offset:offset+srcAddrBytes])), R10)
+	// @ sl.CombineRange_Bytes(buf, offset, offset+srcAddrBytes, writePerm)
+	// @ sl.CombineRange_Bytes(ubuf, offset, offset+srcAddrBytes, R10)
 	return nil
 }
 

@@ -121,7 +121,7 @@ func (i *SCMPExternalInterfaceDown) SerializeTo(b gopacket.SerializeBuffer, opts
 	// @ assert buf === underlyingBufRes[:addr.IABytes+scmpRawInterfaceLen]
 	// the writes only need element permissions, so the buffer is unfolded once
 	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-	// @ assert forall k int :: { &buf[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
+	// @ assert forall k int :: { &buf[k] } { &underlyingBufRes[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
 	// @ assert forall k int :: { &buf[offset:][k] } 0 <= k && k < len(buf[offset:]) ==>
 	// @ 	&buf[offset:][k] == &buf[offset+k]
 	binary.BigEndian.PutUint64(buf[offset:], uint64(i.IA))
@@ -253,7 +253,7 @@ func (i *SCMPInternalConnectivityDown) SerializeTo(b gopacket.SerializeBuffer, o
 	// @ assert buf === underlyingBufRes[:addr.IABytes+2*scmpRawInterfaceLen]
 	// the writes only need element permissions, so the buffer is unfolded once
 	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-	// @ assert forall k int :: { &buf[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
+	// @ assert forall k int :: { &buf[k] } { &underlyingBufRes[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
 	// @ assert forall k int :: { &buf[offset:][k] } 0 <= k && k < len(buf[offset:]) ==>
 	// @ 	&buf[offset:][k] == &buf[offset+k]
 	binary.BigEndian.PutUint64(buf[offset:], uint64(i.IA))
@@ -369,7 +369,7 @@ func (i *SCMPEcho) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.Seriali
 	// @ assert buf === underlyingBufRes[:4]
 	// the writes only need element permissions, so the buffer is unfolded once
 	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-	// @ assert forall k int :: { &buf[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
+	// @ assert forall k int :: { &buf[k] } { &underlyingBufRes[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
 	// @ assert &buf[:2][0] == &buf[0] && &buf[:2][1] == &buf[1]
 	binary.BigEndian.PutUint16(buf[:2], i.Identifier)
 	offset += 2
@@ -473,7 +473,7 @@ func (i *SCMPParameterProblem) SerializeTo(b gopacket.SerializeBuffer, opts gopa
 	// @ assert buf === underlyingBufRes[:2+2]
 	// the writes only need element permissions, so the buffer is unfolded once
 	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-	// @ assert forall k int :: { &buf[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
+	// @ assert forall k int :: { &buf[k] } { &underlyingBufRes[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
 	// @ assert &buf[0:2][0] == &buf[0] && &buf[0:2][1] == &buf[1]
 	binary.BigEndian.PutUint16(buf[0:2], uint16(0)) //Reserved
 	// @ assert &buf[2:4][0] == &buf[2]
@@ -603,7 +603,7 @@ func (i *SCMPTraceroute) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.S
 	// @ assert buf === underlyingBufRes[:2+2+addr.IABytes+scmpRawInterfaceLen]
 	// the writes only need element permissions, so the buffer is unfolded once
 	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-	// @ assert forall k int :: { &buf[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
+	// @ assert forall k int :: { &buf[k] } { &underlyingBufRes[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
 	// @ assert &buf[:2][0] == &buf[0] && &buf[:2][1] == &buf[1]
 	binary.BigEndian.PutUint16(buf[:2], i.Identifier)
 	offset += 2
@@ -715,7 +715,7 @@ func (i *SCMPDestinationUnreachable) SerializeTo(b gopacket.SerializeBuffer, opt
 	// @ assert buf === underlyingBufRes[:4]
 	// the copy only needs element permissions, so the buffer is unfolded once
 	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-	// @ assert forall k int :: { &buf[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
+	// @ assert forall k int :: { &buf[k] } { &underlyingBufRes[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
 	copy(buf, make([]byte, 4) /*@, writePerm@*/)
 	// @ fold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
 	return nil
@@ -815,7 +815,7 @@ func (i *SCMPPacketTooBig) SerializeTo(b gopacket.SerializeBuffer, opts gopacket
 	// @ assert buf === underlyingBufRes[:2+2]
 	// the writes only need element permissions, so the buffer is unfolded once
 	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-	// @ assert forall k int :: { &buf[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
+	// @ assert forall k int :: { &buf[k] } { &underlyingBufRes[k] } 0 <= k && k < len(buf) ==> &buf[k] == &underlyingBufRes[k]
 	// @ assert &buf[0:2][0] == &buf[0] && &buf[0:2][1] == &buf[1]
 	binary.BigEndian.PutUint16(buf[0:2], uint16(0)) //Reserved
 	// @ assert &buf[2:4][0] == &buf[2]

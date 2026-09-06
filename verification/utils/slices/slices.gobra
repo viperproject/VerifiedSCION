@@ -337,26 +337,30 @@ ensures  acc(Bytes(s, start, end), p)
 ensures  View(s, start, end) == v
 decreases
 func UnsliceWithView_Bytes(s []byte, start int, end int, p perm, ghost v seq[byte]) {
-	assert v == reveal View(s[start:end], 0, end - start)
-	unfold acc(Bytes(s[start:end], 0, len(s[start:end])), p)
+	// the subslice is bound to a local variable, so that the old()
+	// postconditions of the lemmas called below are instantiated with a
+	// variable instead of a slice expression, which makes the prover crash
+	sub := s[start:end]
+	assert v == reveal View(sub, 0, end - start)
+	unfold acc(Bytes(sub, 0, len(sub)), p)
 	assert 0 <= start && start <= end && end <= cap(s)
-	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
-	assert forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	assert v == ViewAux(s[start:end], 0, end - start)
-	ViewAuxElems(s[start:end], 0, end - start, p)
-	assert v == ViewAux(s[start:end], 0, end - start)
-	assert forall i int :: { &s[start:end][i] } 0 <= i && i < len(s[start:end]) ==> s[start:end][i] == v[i]
+	assert forall i int :: { &sub[i] } 0 <= i && i < len(sub) ==> acc(&sub[i], p)
+	assert forall i int :: { &sub[i] }{ &s[start + i] } 0 <= i && i < len(sub) ==> &sub[i] == &s[start + i]
+	assert v == ViewAux(sub, 0, end - start)
+	ViewAuxElems(sub, 0, end - start, p)
+	assert v == ViewAux(sub, 0, end - start)
+	assert forall i int :: { &sub[i] } 0 <= i && i < len(sub) ==> sub[i] == v[i]
 
-	invariant 0 <= j && j <= len(s[start:end])
-	invariant forall i int :: { &s[start:end][i] } j <= i && i < len(s[start:end]) ==> acc(&s[start:end][i], p)
-	invariant forall i int :: { &s[start:end][i] }{ &s[start + i] } 0 <= i && i < len(s[start:end]) ==> &s[start:end][i] == &s[start + i]
-	invariant forall i int :: { &s[start:end][i] } j <= i && i < len(s[start:end]) ==> s[start:end][i] == v[i]
+	invariant 0 <= j && j <= len(sub)
+	invariant forall i int :: { &sub[i] } j <= i && i < len(sub) ==> acc(&sub[i], p)
+	invariant forall i int :: { &sub[i] }{ &s[start + i] } 0 <= i && i < len(sub) ==> &sub[i] == &s[start + i]
+	invariant forall i int :: { &sub[i] } j <= i && i < len(sub) ==> sub[i] == v[i]
 	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
 	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> s[i] == v[i - start]
-	decreases len(s[start:end]) - j
-	for j := 0; j < len(s[start:end]); j++ {
+	decreases len(sub) - j
+	for j := 0; j < len(sub); j++ {
 		assert forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
-		assert &s[start:end][j] == &s[start + j]
+		assert &sub[j] == &s[start + j]
 		assert acc(&s[start + j], p)
 		assert s[start + j] == v[j]
 		assert forall i int :: { &s[i] } start <= i && i <= start+j ==> acc(&s[i], p)

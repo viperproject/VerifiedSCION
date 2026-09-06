@@ -126,7 +126,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// TypeCode.SerializeTo needs sl.Bytes(bytes, 0, 2), which is folded out of the
 	// element permissions of the unfolded buffer and unfolded back into them
 	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
+	// @ assert forall i int :: { &bytes[i] } { &underlyingBufRes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
 	// @ fold sl.Bytes(bytes, 0, 2)
 	s.TypeCode.SerializeTo(bytes)
 	// @ unfold sl.Bytes(bytes, 0, 2)
@@ -141,7 +141,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		// the writes only need element permissions, but computeChecksum needs the
 		// folded buffer, so it is folded back before the call
 		// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-		// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
+		// @ assert forall i int :: { &bytes[i] } { &underlyingBufRes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
 		bytes[2] = 0
 		bytes[3] = 0
 		// @ fold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
@@ -157,7 +157,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	}
 	// the write only needs element permissions, so the buffer is unfolded once
 	// @ unfold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
-	// @ assert forall i int :: { &bytes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
+	// @ assert forall i int :: { &bytes[i] } { &underlyingBufRes[i] } 0 <= i && i < 4 ==> &bytes[i] == &underlyingBufRes[i]
 	// @ assert forall i int :: { &bytes[2:][i] } 0 <= i && i < 2 ==> &bytes[2:][i] == &bytes[i + 2]
 	binary.BigEndian.PutUint16(bytes[2:], s.Checksum)
 	// @ fold sl.Bytes(underlyingBufRes, 0, len(underlyingBufRes))
