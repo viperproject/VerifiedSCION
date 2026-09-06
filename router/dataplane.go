@@ -1204,9 +1204,10 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ fold msgs[:pkts][i0].Mem()
 					// (VerifiedSCION) The OOB buffers of `msgs` and of `writeMsgs` are all nil, so
 					// every `Mem()` instance above and `writeMsgInv` share the single instance
-					// `sl.Bytes(nil, 0, 0)`. Gobra occasionally fails to add up the shares of that
-					// instance that are held here; the call below provides a fresh one, which is
-					// sound because the predicate protects no memory when the slice is empty.
+					// `sl.Bytes(nil, 0, 0)`, of which we hold the two symbolic shares R50 and
+					// 1-R50 at this point. The call below makes a full share available directly,
+					// which keeps the fold below from timing out. It is sound because the body of
+					// `sl.Bytes` is vacuous for an empty slice.
 					// @ sl.NilAcc_Bytes()
 					// @ fold writeMsgInv(writeMsgs)
 					if err != nil {
