@@ -132,7 +132,9 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 	// @ sl.CombineAtIndex_Bytes(underlyingBufRes, 0, len(underlyingBufRes), 2, writePerm)
 
 	if opts.ComputeChecksums {
+		// @ unfold s.ChecksumNetworkLayerMem()
 		if s.scn == nil {
+			// @ fold s.ChecksumNetworkLayerMem()
 			// @ fold s.Mem(ubufMem)
 			return serrors.New("can not calculate checksum without SCION header")
 		}
@@ -148,6 +150,7 @@ func (s *SCMP) SerializeTo(b gopacket.SerializeBuffer, opts gopacket.SerializeOp
 		// @ unfold s.scn.ChecksumMem()
 		s.Checksum, err = s.scn.computeChecksum(verScionTmp, uint8(L4SCMP))
 		// @ fold s.scn.ChecksumMem()
+		// @ fold s.ChecksumNetworkLayerMem()
 		if err != nil {
 			// @ fold s.Mem(ubufMem)
 			return err
@@ -221,11 +224,17 @@ func (s *SCMP) String() string {
 
 // SetNetworkLayerForChecksum tells this layer which network layer is wrapping it.
 // This is needed for computing the checksum when serializing,
-// @ preserves acc(&s.scn)
-// @ ensures   s.scn == scn
+// (VerifiedSCION) the network layer is stored in a non-exported field, so the
+// contract of this exported method describes it through the closed predicate
+// ChecksumNetworkLayerMem instead of mentioning the field directly.
+// @ requires  s.ChecksumNetworkLayerMem()
+// @ requires  scn != nil ==> scn.ChecksumMem()
+// @ ensures   s.ChecksumNetworkLayerMem()
 // @ decreases
 func (s *SCMP) SetNetworkLayerForChecksum(scn *SCION) {
+	// @ unfold s.ChecksumNetworkLayerMem()
 	s.scn = scn
+	// @ fold s.ChecksumNetworkLayerMem()
 }
 
 // @ requires  pb != nil
@@ -235,6 +244,7 @@ func (s *SCMP) SetNetworkLayerForChecksum(scn *SCION) {
 // @ decreases
 func decodeSCMP(data []byte, pb gopacket.PacketBuilder) (res error) {
 	scmp := &SCMP{}
+	// @ fold scmp.ChecksumNetworkLayerMem()
 	// @ fold scmp.NonInitMem()
 	err := scmp.DecodeFromBytes(data, pb)
 	if err != nil {

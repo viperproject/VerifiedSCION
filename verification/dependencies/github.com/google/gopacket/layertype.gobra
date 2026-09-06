@@ -54,6 +54,9 @@ ghost var RegisteredTypes = ms.Alloc(AbsMinLayerType, AbsMaxLayerType)
 /** End of Constants **/
 
 /** Predicates and ghost helper members **/
+// PkgMem describes the private global state of this package. Importing
+// packages may hold (fractions of) it, but they cannot unfold it.
+// TODO(gobra#1092): closed
 pred PkgMem() {
 	acc(&ltMeta)                               &&
 	acc(&ltMetaMap)                            &&
@@ -74,6 +77,7 @@ pred PkgMem() {
 ghost
 requires PkgMem()
 decreases
+// TODO(gobra#1092): closed
 pure func Registered(t LayerType) (res bool) {
 	return unfolding acc(PkgMem(), _) in
 		0 <= t && t < MaxLayerType?

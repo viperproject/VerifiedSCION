@@ -64,10 +64,16 @@ ghost const MaxPathType = maxPathType
 
 ghost
 decreases
+// The body mentions the package's private state, so it is hidden from importers,
+// which only rely on the abstract set returned here.
+// TODO(gobra#1092): closed
 pure func RegisteredTypes() monoset.BoundedMonotonicSet {
 	return registeredKeys
 }
 
+// PkgMem describes the private global state of this package. Importing packages
+// may hold (fractions of) this predicate, but they cannot unfold it.
+// TODO(gobra#1092): closed
 pred PkgMem() {
 	acc(&registeredPaths)             &&
 	acc(&strictDecoding)              &&
@@ -81,18 +87,20 @@ pred PkgMem() {
 }
 
 ghost
-requires 0 <= t && t < maxPathType
+requires 0 <= t && t < MaxPathType
 requires PkgMem()
 decreases
+// TODO(gobra#1092): closed
 pure func Registered(t Type) (res bool) {
 	return unfolding PkgMem() in
 		registeredPaths[t].inUse
 }
 
 ghost
-requires 0 <= t && t < maxPathType
+requires 0 <= t && t < MaxPathType
 requires PkgMem()
 decreases
+// TODO(gobra#1092): closed
 pure func GetType(t Type) (res Metadata) {
 	return unfolding PkgMem() in
 		registeredPaths[t].Metadata
@@ -101,6 +109,7 @@ pure func GetType(t Type) (res Metadata) {
 ghost
 requires PkgMem()
 decreases
+// TODO(gobra#1092): closed
 pure func IsStrictDecoding() (b bool) {
 	return unfolding PkgMem() in strictDecoding
 }

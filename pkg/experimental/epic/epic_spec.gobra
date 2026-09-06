@@ -18,7 +18,10 @@ package epic
 
 import sl "github.com/scionproto/scion/verification/utils/slices"
 
-pred postInitInvariant() {
+// The body describes the private global state of this package, so the predicate
+// is closed: importing packages may hold it, but they cannot unfold it.
+// TODO(gobra#1092): closed
+pred PostInitInvariant() {
 	acc(&zeroInitVector) &&
 	len(zeroInitVector[:]) == 16 &&
 	acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])))
@@ -26,7 +29,7 @@ pred postInitInvariant() {
 
 // learn the invariant established by init
 ghost
-ensures acc(postInitInvariant(), _)
+ensures acc(PostInitInvariant(), _)
 decreases
 func establishPostInitInvariant() {
 	openDupPkgInv

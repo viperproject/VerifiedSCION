@@ -23,12 +23,18 @@ import (
 	"github.com/scionproto/scion/verification/utils/slices"
 )
 
+// SCMPRawInterfaceLen is the exported, ghost counterpart of the non-exported
+// constant scmpRawInterfaceLen. Contracts of exported members and bodies of
+// fully-public predicates may only mention exported names, so they use this
+// constant instead.
+ghost const SCMPRawInterfaceLen = scmpRawInterfaceLen
+
 pred (s *SCMPExternalInterfaceDown) NonInitMem() {
 	acc(&s.IA) && acc(&s.IfID) && acc(&s.BaseLayer)
 }
 
 pred (s *SCMPExternalInterfaceDown) Mem(ub []byte) {
-	acc(&s.IA) && acc(&s.IfID) && s.BaseLayer.Mem(ub, addr.IABytes+scmpRawInterfaceLen)
+	acc(&s.IA) && acc(&s.IfID) && s.BaseLayer.Mem(ub, addr.IABytes+SCMPRawInterfaceLen)
 }
 
 requires false
@@ -44,8 +50,8 @@ ensures   res === ub[start:end]
 decreases
 func (b *SCMPExternalInterfaceDown) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
-	res = b.BaseLayer.LayerPayload(ub, addr.IABytes+scmpRawInterfaceLen)
-	start = addr.IABytes+scmpRawInterfaceLen
+	res = b.BaseLayer.LayerPayload(ub, addr.IABytes+SCMPRawInterfaceLen)
+	start = addr.IABytes+SCMPRawInterfaceLen
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
@@ -60,7 +66,7 @@ pred (s *SCMPInternalConnectivityDown) NonInitMem() {
 }
 
 pred (s *SCMPInternalConnectivityDown) Mem(ub []byte) {
-	acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && s.BaseLayer.Mem(ub, addr.IABytes+2*scmpRawInterfaceLen)
+	acc(&s.IA) && acc(&s.Ingress) && acc(&s.Egress) && s.BaseLayer.Mem(ub, addr.IABytes+2*SCMPRawInterfaceLen)
 }
 
 requires false
@@ -76,8 +82,8 @@ ensures   res === ub[start:end]
 decreases
 func (b *SCMPInternalConnectivityDown) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
-	res = b.BaseLayer.LayerPayload(ub, addr.IABytes+2*scmpRawInterfaceLen)
-	start = addr.IABytes+2*scmpRawInterfaceLen
+	res = b.BaseLayer.LayerPayload(ub, addr.IABytes+2*SCMPRawInterfaceLen)
+	start = addr.IABytes+2*SCMPRawInterfaceLen
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end
@@ -157,7 +163,7 @@ pred (s *SCMPTraceroute) Mem(ub []byte) {
 	acc(&s.Sequence) &&
 	acc(&s.IA) &&
 	acc(&s.Interface) &&
-	s.BaseLayer.Mem(ub, 4+addr.IABytes+scmpRawInterfaceLen)
+	s.BaseLayer.Mem(ub, 4+addr.IABytes+SCMPRawInterfaceLen)
 }
 
 requires false
@@ -174,8 +180,8 @@ ensures   res === ub[start:end]
 decreases
 func (b *SCMPTraceroute) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(b.Mem(ub), R20)
-	res = b.BaseLayer.LayerPayload(ub, 4+addr.IABytes+scmpRawInterfaceLen)
-	start = 4+addr.IABytes+scmpRawInterfaceLen
+	res = b.BaseLayer.LayerPayload(ub, 4+addr.IABytes+SCMPRawInterfaceLen)
+	start = 4+addr.IABytes+SCMPRawInterfaceLen
 	end = len(ub)
 	fold acc(b.Mem(ub), R20)
 	return res, start, end

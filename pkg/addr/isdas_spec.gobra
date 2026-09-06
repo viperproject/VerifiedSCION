@@ -67,3 +67,12 @@ pred (_as *AS) Mem() { acc(_as) }
 		fold ia.Mem()
 	}
 }
+
+// InRange is the ghost counterpart of the (non-exported) method AS.inRange. It is
+// part of the contracts of exported members of this package, which may not
+// mention non-exported members.
+ghost
+decreases
+pure func (_as AS) InRange() bool {
+	return _as <= MaxAS
+}

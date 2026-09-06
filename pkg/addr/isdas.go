@@ -71,13 +71,13 @@ type AS uint64
 
 // ParseAS parses an AS from a decimal (in the case of the 32bit BGP AS number
 // space) or ipv6-style hex (in the case of SCION-only AS numbers) string.
-// @ ensures retErr == nil ==> retAs.inRange()
+// @ ensures retErr == nil ==> retAs.InRange()
 // @ decreases
 func ParseAS(_as string) (retAs AS, retErr error) {
 	return parseAS(_as, ":")
 }
 
-// @ ensures retErr == nil ==> retAs.inRange()
+// @ ensures retErr == nil ==> retAs.InRange()
 // @ decreases
 func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	parts := strings.Split(_as, sep)
@@ -110,7 +110,7 @@ func parseAS(_as string, sep string) (retAs AS, retErr error) {
 	return parsed, nil
 }
 
-// @ ensures retErr == nil ==> retAs.inRange()
+// @ ensures retErr == nil ==> retAs.InRange()
 // @ decreases
 func asParseBGP(s string) (retAs AS, retErr error) {
 	_as, err := strconv.ParseUint(s, 10, BGPASBits)
@@ -118,7 +118,7 @@ func asParseBGP(s string) (retAs AS, retErr error) {
 		return 0, serrors.WrapStr("parsing BGP AS", err)
 	}
 	// (VerifiedSCION)
-	// The following assertions are needed to prove retAs.inRange().
+	// The following assertions are needed to prove retAs.InRange().
 	// Gobra is not able to infer this automatically from the definition
 	// of strconv.Exp, unless we put a postcondition saying that the
 	// result is equal to the body.
@@ -131,7 +131,7 @@ func asParseBGP(s string) (retAs AS, retErr error) {
 	return AS(_as), nil
 }
 
-// @ requires _as.inRange()
+// @ requires _as.InRange()
 // @ decreases
 func (_as AS) String() string {
 	return fmtAS(_as, ":")
@@ -175,7 +175,7 @@ type IA uint64
 // MustIAFrom creates an IA from the ISD and AS number. It panics if any error
 // is encountered. Callers must ensure that the values passed to this function
 // are valid.
-// @ requires _as.inRange()
+// @ requires _as.InRange()
 // @ decreases
 func MustIAFrom(isd ISD, _as AS) IA {
 	ia, err := IAFrom(isd, _as)
@@ -186,7 +186,7 @@ func MustIAFrom(isd ISD, _as AS) IA {
 }
 
 // IAFrom creates an IA from the ISD and AS number.
-// @ requires _as.inRange()
+// @ requires _as.InRange()
 // @ ensures err == nil
 // @ decreases
 func IAFrom(isd ISD, _as AS) (ia IA, err error) {
