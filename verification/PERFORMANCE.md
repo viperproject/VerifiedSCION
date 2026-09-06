@@ -41,7 +41,13 @@ worse, so the slowness is not a misconfiguration:
 |---|---|
 | `mce_mode: "od"` instead of `"on"` (the module default) | `processOHP` still running when the baseline had finished |
 | `#backend[moreJoins()]` on `doXover`, i.e. join every branch | more than twice as slow |
+| `#backend[moreJoins()]` on `process` | ≥ 8446 s against a 7737 s baseline under the same load |
 | `#backend[exhaleModeQP(2)]` on `doXover` | no improvement |
+
+Joining is the interesting one, because the profile below says `process` explores
+its whole tail once per side of the `IsXover` branch. Joining does remove that
+duplication — and still loses, because merging two copies of a heap this
+fragmented costs more than exploring it twice.
 
 `mce_mode: "on"` in particular is not a leftover: with on-demand exhale, Silicon
 first tries a greedy exhale and only retries with the complete one when that
@@ -66,8 +72,28 @@ of cuts gives a profile of the member. For `doXover`:
 | the whole body, without the final `return` | 566 |
 | the whole member | 707 |
 
-Two things stand out. The block of assertions in the middle and the two field
-decodings are free — the facts they restate are already in the path condition.
+And for `process`:
+
+| what runs | s |
+|---|---|
+| nothing (contract only) | 237 |
+| … `parsePath` | 307 |
+| … the next four validators | 446 |
+| … `verifyCurrentMAC`, `handleIngressRouterAlert` | 487 |
+| … the whole inbound branch, `InternalEnterEvent` included | 630 |
+| … the whole xover branch, `doXover` included | 1319 |
+| the whole member | 6548 |
+
+Four fifths of `process` is therefore in its last 130 lines: `validateEgressUp`,
+`egressInterface`, the two egress branches with their IO-spec events, the three
+`reveal PktUpdate(…)`/`reveal absIO_val(…)`, and the three exits. That tail sits
+after the `if p.path.IsXover(…)` branch, which *rejoins*; since `more_joins:
+"impure"` does not join `if` statements, everything in the tail is explored once
+per side of that branch, and again per side of each `ghost if
+slayers.IsSupportedPkt(ub)` and `ghost if !p.segmentChange` inside it.
+
+Back to `doXover`: two things stand out. The block of assertions in the middle
+and the two field decodings are free — the facts they restate are already in the path condition.
 And after subtracting the front end, roughly 60 % of the remaining time is spent
 on `doXover`'s *own contract*: ~210 s proving that its 26 `ensures` clauses are
 well defined before the body starts, and at least ~140 s exhaling them at the
@@ -106,49 +132,74 @@ re-established on every iteration.
   conditionals inside assertions; `if` statements are only joined under
   `moreJoins(all)`, which `Run` and `rc` opt into and the others do not. So
   `process`'s seventeen error exits each exhale its postcondition (25 `ensures`
-  plus 11 `preserves`, so 36 clauses once encoded) separately. Turning joining
-  on is worse, though — see the table above.
+  plus 11 `preserves`, so 36 clauses once encoded) separately, and — far more
+  expensive — its whole tail is explored once per side of the `IsXover` branch
+  that precedes it. Joining is not a free win: on `doXover` it was more than
+  twice as slow.
 * **`old(...)` in leaf contracts.** The contracts of the members that `process`
   calls contain 61 `old(...)` applications and 88 applications of `absPkt`,
   which forces Silicon to keep querying the pre-state heap as well.
 
-## What is worth trying
+## What was tried, and did not work
 
-Roughly in decreasing order of expected value per unit of work.
+Rewriting the specifications locally does not help either. Each of these was
+implemented, verified (0 errors) and timed:
 
-1. **Thread the abstract packet through ghost parameters instead of naming
-   `absPkt(ub)` in leaf contracts.** `process` and `processPkt` already do this
-   (`ghost newAbsPkt io.Val`); `doXover` and the validators do not, and pay for
-   it: `doXover` alone mentions `absPkt` nine times and `old(...)` nine times in
-   its contract. Passing the abstract packet in as a ghost parameter and out as
-   a ghost result would reduce that to two mentions and remove the `old`
-   applications entirely.
-2. **Bundle the resource footprint that the validators share into a predicate.**
-   The eleven clauses common to nine of `process`'s callees can become a single
-   predicate that each of them `preserves`, unfolding it once on entry. That
-   replaces ~17 × 2 × 8 clause exchanges along `process`'s path by a predicate
-   chunk each way. This is the same transformation that #424 applied to
-   `DataPlane.Mem()`.
-3. **Bundle the per-message resources in `rc`'s loop invariants** in the same
+| change | result |
+|---|---|
+| delete the assertions `doXover` repeats (`p.path === …GetScionPath(ub)` 6×, `…GetBase(ubScionPath) == nextBase` 5×) | no change; the profile says they were already free |
+| replace `doXover`'s eight repeated `ghost if typeOf(…) == *epic.Path` by one local ghost boolean | 841 s against a 707 s solo baseline — worse |
+| thread the abstract packet through ghost parameters in `doXover`, removing nine `absPkt(ub)` and five `old(absPkt(ub))` from its contract | 892 s vs 915 s in a fair A/B — a wash |
+| give `XoverEvent` and `ExternalEnterOrExitEvent` the intermediate abstract packets as parameters, instead of writing `AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)` nine times and `AbsDoXover(…)` five times inside it | `process` 7537 s with the machine to itself, against a 6548 s baseline that shared it — no gain |
+
+The last two are the informative failures. Silicon evaluates a heap-dependent
+function once per heap snapshot, not once per mention, so collapsing repeated
+applications buys nothing; what the contract costs is the *number of distinct
+states* in which its clauses have to be framed, and the `unfolding`-heavy
+accessors (`UBPath`, `UBScionPath`, `GetPath`, `GetScionPath`,
+`ValidPathMetaData`, `EqAbsHeader`, …) that each open `p.scionLayer.Mem(ub)`
+again.
+
+Taken together with the backend options above: six interventions, none of which
+moved the number. The cost is spread thinly over a very large number of
+individually expensive queries, and it is the *size and fragmentation of the
+symbolic state* that makes each of them expensive. Anything that leaves the
+state alone — reordering clauses, naming subterms, deleting assertions, changing
+how branches are explored — leaves the cost alone too.
+
+A corollary worth keeping in mind before the next attempt: measure in pairs.
+Several of the differences above are smaller than the effect of sharing the
+machine with a second Gobra run (a second run inflates a `process` measurement
+from 6548 s to 7737 s), so a variant timed on its own against a baseline timed
+under load will look like a win that is not there.
+
+## What is left to try
+
+That points at the changes that make the state itself smaller. They are real
+refactors rather than annotations, which is why they were not attempted here.
+
+1. **Bundle the resource footprint that the validators share into a predicate.**
+   The eleven clauses common to nine of `process`'s callees — permission to
+   `p.d`, `p.path`, `p.buffer`, `p.buffer.UBuf()`, `p.lastLayer`, plus
+   `p.d.validResult` and two impure implications about `p.lastLayer` — can
+   become a single predicate that each of them `preserves` and unfolds only on
+   the paths that build an SCMP reply. That replaces roughly 17 × 2 × 8 clause
+   exchanges along `process`'s path by one predicate chunk in each direction.
+   This is the transformation that #424 applied to `DataPlane.Mem()`, and it
+   attacks the state size rather than the specification text.
+2. **Bundle the per-message resources in `rc`'s loop invariants** in the same
    way, so that an iteration exchanges one predicate instead of six quantified
-   assertions over `msgs`.
-4. **Hide the `(typeOf(…) == *epic.Path ? unfolding … in X : X)` idiom behind an
-   opaque pure function.** Both branches of that conditional denote the same
-   value; the case split exists only to frame the path's bytes. It appears in
-   the contracts of `doXover` and `process` and eight times inside `doXover`'s
-   body. Note that hoisting it into a local ghost boolean inside `doXover` was
-   measured and did not help (841 s, against a 707 s baseline that had the
-   machine to itself), so the win has to come from removing the expression from
-   the contracts, not from the body.
-5. **Outline the branches of `process`.** `Run` uses seven `outline` blocks;
-   `process` and `processPkt` use none. Outlining the inbound, xover and egress
-   branches would give each of them a small contract of its own instead of
-   re-exhaling `process`'s 36-clause postcondition on every path.
-6. **Delete assertions that restate something already proved.** `doXover`
-   repeats `assert p.path === p.scionLayer.GetScionPath(ub)` six times and
-   `assert p.path.GetBase(ubScionPath) == nextBase` five times. The profile
-   above shows these are nearly free, so this is housekeeping rather than a
-   speed-up — but it makes the proofs easier to read and to re-time.
+   assertions over the 64-message batch. This needs a range predicate with
+   take/put lemmas, since the body still has to get at one message at a time.
+3. **Reduce the number of distinct permission amounts.** `p.scionLayer.Mem(..)`
+   is currently used at 18 of them, and the `unfold acc(P, 1-R55)` /
+   `unfold acc(P, R55)` idiom exists only so that a pure function can be
+   evaluated in between. Every extra fraction is another chunk for the complete
+   exhale to summarise.
+4. **Outline the branches of `process`.** `Run` uses seven `outline` blocks;
+   `process` and `processPkt` use none. An outlined block is verified as its own
+   Viper method, so the state that the rest of `process` carries past it is
+   whatever the outline's contract says, not everything the branch touched.
 
 ## Reproducing
 
