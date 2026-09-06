@@ -9,10 +9,16 @@
 
 package layers
 
+import def "github.com/scionproto/scion/verification/utils/definitions"
+
 type UDP struct {
 	BaseLayer
 	SrcPort, DstPort UDPPort
 	Length           uint16
 	Checksum         uint16
 	sPort, dPort     []byte
+	// (VerifiedSCION) stands for the embedded 'tcpipchecksum', whose type declares a
+	// non-exported interface method. Nothing in this repository uses layers.UDP, so
+	// the embedding is modelled as opaque private state, as done for other types.
+	privateFields def.PrivateField
 }
