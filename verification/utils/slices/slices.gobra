@@ -325,9 +325,9 @@ func Reslice_Bytes(s []byte, start int, end int, p perm) {
 // UnsliceWithView_Bytes turns the predicate instance of the subslice
 // s[start:end] into the instance of the range [start, end) of s, and
 // relates their views. The view of the subslice is passed as a ghost
-// parameter bound by the precondition: an old() expression over the
-// view of a subslice, i.e. over a slice expression evaluated in the
-// old state, makes the prover crash.
+// parameter bound by the precondition, in the style of
+// CombineRangeWithViews_Bytes, so that the contract needs no old()
+// expression over the view of the subslice.
 ghost
 requires 0 < p
 requires 0 <= start && start <= end && end <= cap(s)
@@ -337,34 +337,20 @@ ensures  acc(Bytes(s, start, end), p)
 ensures  View(s, start, end) == v
 decreases
 func UnsliceWithView_Bytes(s []byte, start int, end int, p perm, ghost v seq[byte]) {
-	// the subslice is bound to a local variable, so that the old()
-	// postconditions of the lemmas called below are instantiated with a
-	// variable instead of a slice expression, which makes the prover crash
 	sub := s[start:end]
 	assert v == reveal View(sub, 0, end - start)
 	unfold acc(Bytes(sub, 0, len(sub)), p)
-	assert 0 <= start && start <= end && end <= cap(s)
-	assert forall i int :: { &sub[i] } 0 <= i && i < len(sub) ==> acc(&sub[i], p)
-	assert forall i int :: { &sub[i] }{ &s[start + i] } 0 <= i && i < len(sub) ==> &sub[i] == &s[start + i]
 	assert v == ViewAux(sub, 0, end - start)
 	ViewAuxElems(sub, 0, end - start, p)
-	assert v == ViewAux(sub, 0, end - start)
-	assert forall i int :: { &sub[i] } 0 <= i && i < len(sub) ==> sub[i] == v[i]
-
-	invariant 0 <= j && j <= len(sub)
-	invariant forall i int :: { &sub[i] } j <= i && i < len(sub) ==> acc(&sub[i], p)
-	invariant forall i int :: { &sub[i] }{ &s[start + i] } 0 <= i && i < len(sub) ==> &sub[i] == &s[start + i]
-	invariant forall i int :: { &sub[i] } j <= i && i < len(sub) ==> sub[i] == v[i]
-	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
-	invariant forall i int :: { &s[i] } start <= i && i < start+j ==> s[i] == v[i - start]
-	decreases len(sub) - j
-	for j := 0; j < len(sub); j++ {
-		assert forall i int :: { &s[i] } start <= i && i < start+j ==> acc(&s[i], p)
-		assert &sub[j] == &s[start + j]
-		assert acc(&s[start + j], p)
-		assert s[start + j] == v[j]
-		assert forall i int :: { &s[i] } start <= i && i <= start+j ==> acc(&s[i], p)
-	}
+	assert forall i int :: { &sub[i] } 0 <= i && i < end - start ==> sub[i] == v[i]
+	// From here on, the permissions to the elements of the subslice are
+	// looked up through the elements of s. The encoding of slicing only
+	// rewrites an element of the subslice into the element of s, so the
+	// aliasing is stated with the elements of s as the trigger, which is
+	// the form in which the lemma below and the fold look them up.
+	assert forall k int :: { &s[k] } start <= k && k < end ==> &s[k] == &sub[k - start]
+	assert forall k int :: { &s[k] } start <= k && k < end ==> acc(&s[k], p)
+	assert forall k int :: { &s[k] } start <= k && k < end ==> s[k] == v[k - start]
 	ViewAuxElems(s, start, end, p)
 	assert forall k int :: { ViewAux(s, start, end)[k] } 0 <= k && k < end - start ==>
 		ViewAux(s, start, end)[k] == v[k]
