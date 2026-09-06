@@ -1837,7 +1837,15 @@ func (p *scionPacketProcessor) processIntraBFD(data []byte) (res error) {
 	ifID := uint16(0)
 	// @ ghost if p.d.internalNextHops != nil { unfold acc(accAddr(p.d.internalNextHops), _) }
 
-	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission)
+	// (VerifiedSCION) establish ability to use range loop (requires a fixed permission).
+	// Gobra desugars a range loop over a map into code that exhales a hard-coded
+	// `acc(m, 1/MapExhalePermDenom)` before the loop, so the loop can only be entered with an
+	// amount that is bounded from below by that concrete constant. This is the one place where
+	// permission introspection (see `verification/utils/permsintrospect`) does not help: it
+	// names the amount held, but only guarantees that it is positive, which does not entail
+	// the bound. As we merely hold a wildcard to `m` here, assuming a fixed amount is
+	// unavoidable. R19 covers both what the desugaring exhales and the R20 that the invariant
+	// below requires.
 	// (VerifiedSCION) TODO: Rewrite this to use regular loop instead to avoid complications with permissions.
 	// @ ghost m := p.d.internalNextHops
 	// @ assert m != nil ==> acc(m, _)
