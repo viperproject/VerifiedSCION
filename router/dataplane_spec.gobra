@@ -211,6 +211,33 @@ pred (p *scionPacketProcessor) LastLayerMem(ub []byte, ubLL []byte, startLL int,
 	(&p.scionLayer === p.lastLayer ==> ub === ubLL)
 }
 
+// (VerifiedSCION) The buffer that an SCMP reply is serialized into. Like the
+// last layer, every check along 'process's path has to carry it even though only
+// 'packSCMP' writes to it, so the three assertions that describe it travel in
+// both directions across each of the seventeen calls.
+//
+// The permission to the buffer's *bytes* deliberately stays outside: the results
+// that alias them are described by postconditions such as
+// 'absIO_val(respr.OutPkt, respr.EgressID).isValUnsupported', whose
+// well-definedness needs 'sl.Bytes(respr.OutPkt, ..)' to be framed by the
+// contract itself. Hiding it inside the predicate would make those clauses
+// ill-defined, and stating them under an 'unfolding' would cost more than the
+// bundling saves.
+pred (p *scionPacketProcessor) SCMPBufMem() {
+	acc(&p.buffer, R10) && p.buffer != nil && p.buffer.Mem()
+}
+
+// The bytes of that buffer. A check that answers with an SCMP message returns a
+// result that aliases them, and says so with this function rather than by
+// opening the predicate. It mirrors 'sInitBufferUBuf', which does the same one
+// level up, through 'sInit'.
+ghost
+requires acc(p.SCMPBufMem(), _)
+decreases
+pure func (p *scionPacketProcessor) OutBuf() []byte {
+	return unfolding acc(p.SCMPBufMem(), _) in p.buffer.UBuf()
+}
+
 pred (p *scionPacketProcessor) initMem() {
 	acc(&p.d)                                    &&
 	acc(&p.ingressID)                            &&
