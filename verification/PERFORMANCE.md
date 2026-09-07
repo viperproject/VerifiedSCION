@@ -24,6 +24,9 @@ each of them is Gobra's front end, which the isolated runs cannot avoid.
 | the `rc` closure of `Run` (`closureCall$rc_Run…`) | 26 min | 2.5 min |
 | `process` | 109 min | 4 min |
 
+(`process` is now 62 min — see *What did work* below. The rest of the table, and
+the whole analysis, describes the state before that change.)
+
 The "contract alone" column comes from cutting the body at its first statement
 (see below): it is what the run still costs when the member has no body left.
 Since the front end alone is ~2.5 min, `Run` and `processPkt`/`processOHP` are
@@ -165,7 +168,8 @@ moved the number. The cost is spread thinly over a very large number of
 individually expensive queries, and it is the *size and fragmentation of the
 symbolic state* that makes each of them expensive. Anything that leaves the
 state alone — reordering clauses, naming subterms, deleting assertions, changing
-how branches are explored — leaves the cost alone too.
+how branches are explored — leaves the cost alone too. The next section is what
+happens when the state itself gets smaller.
 
 A corollary worth keeping in mind before the next attempt: measure in pairs.
 Several of the differences above are smaller than the effect of sharing the
@@ -173,24 +177,60 @@ machine with a second Gobra run (a second run inflates a `process` measurement
 from 6548 s to 7737 s), so a variant timed on its own against a baseline timed
 under load will look like a win that is not there.
 
+## What did work: `LastLayerMem`
+
+Shrinking the state does move the number. `process` went from **7854 s to
+3729 s — 2.1× — in a paired A/B**, both arms reporting 0 errors.
+
+The change is `(p *scionPacketProcessor).LastLayerMem(ub, ubLL, startLL, endLL)`
+in `dataplane_spec.gobra`. It bundles the description of the last decoded layer,
+which used to be spelled out as four clauses in the contract of fourteen
+members:
+
+```
+preserves ubLL == nil || ubLL === ubScionL[startLL:endLL]
+preserves acc(&p.lastLayer, R55) && p.lastLayer != nil
+preserves &p.scionLayer !== p.lastLayer ==> acc(p.lastLayer.Mem(ubLL), R15)
+preserves &p.scionLayer === p.lastLayer ==> ubScionL === ubLL
+```
+
+Two of those are impure implications, which Silicon branches on and re-joins at
+every exhale and every inhale. `process` carries the same thing in an even
+worse spelling — an implication nested inside an implication, keyed on a
+`llIsNil` flag — and exchanges it twice at each of the seventeen calls along its
+path. As a predicate it is one chunk each way, and only `packSCMP`, the one
+member that actually reads the last layer, ever unfolds it.
+
+Nothing is proved that was not proved before: the predicate body is the same
+conjunction, and the `llIsNil` case split was only a second spelling of
+`p.lastLayer.Mem(ubLL)` with `ubLL == nil` folded into the flag. The one clause
+that was dropped rather than moved is `startLL == 0 && endLL == len(ub)` in
+`process`'s SCION-layer case, which no caller used.
+
+**Where the fold goes is the whole trick.** Folding inside `process` — the
+obvious place, since that is who holds the resources across the calls — costs
+about 1200 s on its own, because the predicate then has to be re-derived from
+the `llIsNil` parameterisation, including a slice identity `ub[0:len(ub)] === ub`.
+Folding in `processPkt` instead, right after `decodeLayers` has produced the
+layer and the facts about it are still immediate, is free (350 s against a
+342 s baseline). `process`, `processSCION` and `processEPIC` then just take the
+predicate as a parameter and never open it.
+
 ## What is left to try
 
-That points at the changes that make the state itself smaller. They are real
-refactors rather than annotations, which is why they were not attempted here.
+Same recipe, other resources.
 
-1. **Bundle the resource footprint that the validators share into a predicate.**
-   The eleven clauses common to nine of `process`'s callees — permission to
-   `p.d`, `p.path`, `p.buffer`, `p.buffer.UBuf()`, `p.lastLayer`, plus
-   `p.d.validResult` and two impure implications about `p.lastLayer` — can
-   become a single predicate that each of them `preserves` and unfolds only on
-   the paths that build an SCMP reply. That replaces roughly 17 × 2 × 8 clause
-   exchanges along `process`'s path by one predicate chunk in each direction.
-   This is the transformation that #424 applied to `DataPlane.Mem()`, and it
-   attacks the state size rather than the specification text.
-2. **Bundle the per-message resources in `rc`'s loop invariants** in the same
-   way, so that an iteration exchanges one predicate instead of six quantified
-   assertions over the 64-message batch. This needs a range predicate with
-   take/put lemmas, since the body still has to get at one message at a time.
+1. **Bundle the rest of the footprint the validators share.** Three more clauses
+   are common to all of them — `acc(&p.buffer, R50) && p.buffer != nil &&
+   p.buffer.Mem()`, `sl.Bytes(p.buffer.UBuf(), …)` and `respr !==
+   processResult{} ==> respr.OutPkt === p.buffer.UBuf()` — plus permission to
+   `p.d` and `p.path`. The buffer is harder than the last layer, because that
+   last clause mentions `p.buffer.UBuf()` and would need an `unfolding` or an
+   opaque getter.
+2. **Bundle the per-message resources in `rc`'s loop invariants**, so that an
+   iteration exchanges one predicate instead of six quantified assertions over
+   the 64-message batch. This needs a range predicate with take/put lemmas,
+   since the body still has to get at one message at a time.
 3. **Reduce the number of distinct permission amounts.** `p.scionLayer.Mem(..)`
    is currently used at 18 of them, and the `unfold acc(P, 1-R55)` /
    `unfold acc(P, R55)` idiom exists only so that a pure function can be

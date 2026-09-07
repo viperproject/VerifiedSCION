@@ -189,6 +189,28 @@ func liftForwardingMetricsNonInjectiveMem(v forwardingMetrics, id uint16) {
 	fold acc(forwardingMetricsMem(v, id), _)
 }
 
+// (VerifiedSCION) The last layer that was decoded out of the packet, which is
+// what 'packSCMP' reads when a check answers with an SCMP message. Every check
+// that 'process' performs has to carry it, even though almost none of them look
+// at it: they only hand it on to 'packSCMP'.
+//
+// Spelled out, this is four clauses - two of them impure implications, which
+// Silicon branches on and re-joins at every exhale and every inhale - repeated
+// in the contract of fourteen members and exchanged twice at each of the
+// seventeen calls along 'process's path. As a predicate it is a single chunk,
+// and only the two members that read it - 'packSCMP' and
+// 'handleSCMPTraceRouteRequest' - ever unfold it.
+//
+// 'ubLL' is the last layer's buffer, 'nil' when there is none; it is a slice of
+// 'ub' and coincides with it when the last layer is the SCION layer itself.
+pred (p *scionPacketProcessor) LastLayerMem(ub []byte, ubLL []byte, startLL int, endLL int) {
+	0 <= startLL && startLL <= endLL && endLL <= len(ub)                &&
+	acc(&p.lastLayer, R10) && p.lastLayer != nil                        &&
+	(ubLL == nil || ubLL === ub[startLL:endLL])                         &&
+	(&p.scionLayer !== p.lastLayer ==> acc(p.lastLayer.Mem(ubLL), R10)) &&
+	(&p.scionLayer === p.lastLayer ==> ub === ubLL)
+}
+
 pred (p *scionPacketProcessor) initMem() {
 	acc(&p.d)                                    &&
 	acc(&p.ingressID)                            &&

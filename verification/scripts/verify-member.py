@@ -22,7 +22,9 @@ mirroring what the configuration files say.
 
 The Gobra binary is taken from ``$GOBRA``; it may be either an executable or a
 ``.jar`` (in which case it is run with ``java -jar``).  ``$Z3_EXE`` is forwarded
-to Gobra when it is set.
+to Gobra when it is set, and ``$GOBRA_HEAP`` overrides the JVM heap size (8g by
+default) - useful when running several members at once, since each of them can
+take several gigabytes.
 """
 
 import argparse
@@ -139,7 +141,7 @@ def gobra_command():
     if not binary:
         sys.exit("Set $GOBRA to the Gobra executable or to gobra.jar.")
     if binary.endswith(".jar"):
-        return ["java", "-Xss1g", "-Xmx8g", "-jar", binary]
+        return ["java", "-Xss1g", "-Xmx" + os.environ.get("GOBRA_HEAP", "8g"), "-jar", binary]
     return [binary]
 
 
