@@ -157,9 +157,7 @@ type BatchConn interface {
 	// This is why the contract below takes the invariant (instead of the `io.IOToken` and the
 	// `MultiReadBio` permissions, which are now held by the invariant throughout the call) and,
 	// in exchange, yields the sequence `ioValSeq` with the abstract values of the packets that
-	// were received, together with a witness for each of them. Notice that this models the
-	// underlying socket more faithfully than treating the entire batch read as a single atomic
-	// operation, given that the packets of a batch are genuinely received one at a time.
+	// were received, together with a witness for each of them.
 	//
 	// The lemma `ExtractRecvPermissions` discharges every part of this assumption except for
 	// advancing the IO token, which is the physical reception of the packets.
@@ -168,6 +166,9 @@ type BatchConn interface {
 	// @ 	msgs[i].Mem()
 	// @ requires forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
 	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
+	// preconditions for IO-spec:
+	// @ requires  dp.Valid()
+	// @ preserves Invariant(SharedInv{dp, ioSharedArg})
 	// @ ensures   forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
 	// @ 	(msgs[i].Mem() && msgs[i].HasActiveAddr())
 	// @ ensures   err == nil ==> 0 <= n && n <= len(msgs)
@@ -180,9 +181,7 @@ type BatchConn interface {
 	// @ ensures forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
 	// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
 	// @ ensures   err != nil ==> err.ErrorMem()
-	// contracts for IO-spec
-	// @ requires  dp.Valid()
-	// @ preserves Invariant(SharedInv{dp, ioSharedArg})
+	// postconditions for IO-spec:
 	// @ ensures   err == nil ==> len(ioValSeq) == n
 	// @ ensures   err == nil ==>
 	// @ 	MultiElemWitness(ioSharedArg.IBufY, path.IfsToIO_ifs(ingressID), ioValSeq)
