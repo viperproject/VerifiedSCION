@@ -1021,13 +1021,16 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ assert forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
 				// @ 	MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]
+				// @ fold MsgsMem(msgs, 0, pkts, ingressID, ioValSeq)
 
 				// (VerifiedSCION) using regular for loop instead of range loop to avoid unnecessary
 				// complications with permissions
 				// @ invariant acc(&scmpErr)
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==> msgs[i].Mem()
-				// @ invariant forall j int :: { &msgs[j] } 0 <= j && j < len(msgs) ==>
-				// @ 	sl.Bytes(msgs[j].GetFstBuffer(), 0, len(msgs[j].GetFstBuffer()))
+				// (VerifiedSCION) the six quantified invariants that described the batch
+				// - two permissions and the four pure facts only they can frame - are
+				// bundled into this predicate, so that the exhale at the end of the body
+				// hands over one chunk. 'TakeMsg' and 'PutMsg' open and close it.
+				// @ invariant MsgsMem(msgs, i0, pkts, ingressID, ioValSeq)
 				// @ invariant writeMsgInv(writeMsgs)
 				// @ invariant acc(dPtr, _) && *dPtr === d
 				// @ invariant acc(d.Mem(), _) && d.WellConfigured()
@@ -1038,12 +1041,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant acc(rd.Mem(), _)
 				// @ invariant pkts <= len(msgs)
 				// @ invariant 0 <= i0 && i0 <= pkts
-				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
-				// @ 	msgs[i].HasActiveAddr()
-				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
-				// @ 	typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr]
-				// @ invariant forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
-				// @ 	msgs[i].GetN() <= len(msgs[i].GetFstBuffer())
 				// @ invariant processor.sInit() && processor.sInitD() === d
 				// @ invariant let ubuf := processor.sInitBufferUBuf() in
 				// @	acc(sl.Bytes(ubuf, 0, len(ubuf)), writePerm)
@@ -1054,12 +1051,14 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 				// @ invariant ioIngressID == path.ifsToIO_ifs(ingressID)
 				// @ invariant acc(ioLock.LockP(), _)
 				// @ invariant ioLock.LockInv() == SharedInv{dp, ioSharedArg}
-				// @ invariant forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
-				// @ 	MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]
 				// @ invariant MultiElemWitnessWithIndex(ioSharedArg.IBufY, ioIngressID, ioValSeq, i0)
 				// @ decreases pkts - i0
 				for i0 := 0; i0 < pkts; i0++ {
 					// @ assert &msgs[:pkts][i0] == &msgs[i0]
+					// (VerifiedSCION) take this message out of the batch. Doing it with a
+					// lemma rather than an 'unfold' keeps the quantified reasoning over the
+					// batch out of this body, which is the whole point of the predicate.
+					// @ ghost excl := TakeMsg(msgs, i0, pkts, ingressID, ioValSeq)
 					// @ preserves 0 <= i0 && i0 < pkts && pkts <= len(msgs)
 					// @ preserves acc(msgs[i0].Mem(), R1)
 					// @ ensures   p === msgs[:pkts][i0].GetMessage()
@@ -1105,11 +1104,6 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ assert sl.Bytes(tmpBuf, 0, p.N)
 					// @ assert sl.Bytes(tmpBuf, 0, len(tmpBuf))
 					result, err /*@ , addrAliasesPkt, newAbsPkt @*/ := processor.processPkt(tmpBuf, srcAddr /*@, ioLock, ioSharedArg, dp @*/)
-					// (VerifiedSCION) This assertion is crucial to keep verification stable. Without it,
-					// the fold operation in the branch protected by the condition `result.OutConn == nil`
-					// may fail non-deterministically.
-					// @ assert forall i int :: { &msgs[i] } i0 < i && i < pkts ==>
-					// @ 	MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]
 					// @ fold scmpErr.Mem()
 
 					switch {
@@ -1141,6 +1135,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 						// @ assert 0 <= m.N
 						// @ msgs[:pkts][i0].IsActive = false
 						// @ fold msgs[:pkts][i0].Mem()
+						// @ PutMsg(msgs, i0, pkts, ingressID, ioValSeq, excl)
 						log.Debug("Error processing packet", "err", err)
 						// @ assert acc(inputCounters.DroppedPacketsTotal.Mem(), _)
 						// @ prometheus.CounterMemImpliesNonNil(inputCounters.DroppedPacketsTotal)
@@ -1156,6 +1151,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 						// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 						// @ msgs[:pkts][i0].IsActive = false
 						// @ fold msgs[:pkts][i0].Mem()
+						// @ PutMsg(msgs, i0, pkts, ingressID, ioValSeq, excl)
 						continue
 					}
 
@@ -1207,6 +1203,7 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					// @ sl.CombineRange_Bytes(p.Buffers[0], 0, p.N, writePerm)
 					// @ msgs[:pkts][i0].IsActive = false
 					// @ fold msgs[:pkts][i0].Mem()
+					// @ PutMsg(msgs, i0, pkts, ingressID, ioValSeq, excl)
 					// @ fold writeMsgInv(writeMsgs)
 					if err != nil {
 						// @ requires err != nil && err.ErrorMem()
@@ -1246,6 +1243,9 @@ func (d *DataPlane) Run(ctx context.Context /*@, ghost place io.Place, ghost sta
 					outputCounters.OutputBytesTotal.Add(float64(len(result.OutPkt)))
 					// @ )
 				}
+				// (VerifiedSCION) the batch goes back to the outer loop, and to the next
+				// ReadBatch, as the two quantified permissions they are stated with.
+				// @ unfold MsgsMem(msgs, pkts, pkts, ingressID, ioValSeq)
 			}
 		}
 	// @ unfold acc(d.Mem(), R1)
