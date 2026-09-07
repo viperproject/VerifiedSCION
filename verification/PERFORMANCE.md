@@ -216,27 +216,72 @@ layer and the facts about it are still immediate, is free (350 s against a
 342 s baseline). `process`, `processSCION` and `processEPIC` then just take the
 predicate as a parameter and never open it.
 
+## The same recipe on the SCMP buffer: no gain, and why
+
+The obvious next target was the other thing every validator carries and almost
+none of them touches: the buffer that `packSCMP` serialises an SCMP reply into.
+It is four clauses — two `requires`, two `ensures` — in the contract of
+seventeen members:
+
+```
+requires acc(&p.buffer, R50) && p.buffer != nil && p.buffer.Mem()
+requires sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
+ensures  acc(&p.buffer, R50) && p.buffer != nil && p.buffer.Mem()
+ensures  sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
+```
+
+This was implemented as `SCMPBufMem()` plus an `OutBuf()` getter, all seventeen
+members verified with 0 errors, and it bought **nothing**: 2497 s against 2490 s
+for `process` in a paired A/B. It was reverted (`e0d004b`). Two things are worth
+knowing before anyone tries it again.
+
+**Only the implications were ever the cost.** `LastLayerMem` won because two of
+the four clauses it absorbed were impure implications, which Silicon branches on
+and re-joins at every exhale *and* every inhale. The buffer clauses are plain
+conjunctions: one field chunk, one predicate chunk. Turning them into a single
+predicate chunk changes the constant, not the shape, and the measurement says
+the constant is not where the time is. This is the same lesson as the failures
+above, in a case where the change did shrink the contract: the number of clauses
+is not the cost — the number of *branches* is.
+
+**The permission to the bytes cannot move into a predicate at all.** Postconditions
+such as
+
+```
+ensures respr.OutPkt != nil ==> !slayers.IsSupportedPkt(respr.OutPkt)
+ensures reserr != nil && respr.OutPkt != nil ==>
+	absIO_val(respr.OutPkt, respr.EgressID).isValUnsupported
+```
+
+are stated over the *result*, which aliases the buffer, and both `IsSupportedPkt`
+and `absIO_val` require `sl.Bytes(raw, 0, len(raw))` at write permission. A
+predicate cannot frame a clause stated outside itself, so hiding
+`sl.Bytes(p.buffer.UBuf(), …)` inside `SCMPBufMem()` makes those clauses
+ill-defined at fifteen sites — which is what the first attempt did, and it fails
+with `Precondition of call slayers.IsSupportedPkt(respr.OutPkt) might not hold`.
+Restating each of them under `unfolding p.SCMPBufMem() in …` would work and
+would cost more than the bundling saves. The permission therefore has to stay a
+contract clause, which by itself caps how much of the buffer's footprint can be
+bundled.
+
 ## What is left to try
 
-Same recipe, other resources.
-
-1. **Bundle the rest of the footprint the validators share.** Three more clauses
-   are common to all of them — `acc(&p.buffer, R50) && p.buffer != nil &&
-   p.buffer.Mem()`, `sl.Bytes(p.buffer.UBuf(), …)` and `respr !==
-   processResult{} ==> respr.OutPkt === p.buffer.UBuf()` — plus permission to
-   `p.d` and `p.path`. The buffer is harder than the last layer, because that
-   last clause mentions `p.buffer.UBuf()` and would need an `unfolding` or an
-   opaque getter.
-2. **Bundle the per-message resources in `rc`'s loop invariants**, so that an
-   iteration exchanges one predicate instead of six quantified assertions over
+1. **Bundle the per-message resources in `rc`'s loop invariants**, so that an
+   iteration exchanges one predicate instead of seven quantified assertions over
    the 64-message batch. This needs a range predicate with take/put lemmas,
-   since the body still has to get at one message at a time.
-3. **Reduce the number of distinct permission amounts.** `p.scionLayer.Mem(..)`
+   since the body still has to get at one message at a time. Note that the same
+   framing wall is waiting: the invariants
+   `forall i :: i0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr()) == …` and
+   `forall i :: MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]` are pure facts
+   framed by the `msgs[i].Mem()` in the invariant next to them, so they have to
+   enter the predicate together with it, and the body's assertions over the
+   `i0 < i < pkts` range then need a way to see them again.
+2. **Reduce the number of distinct permission amounts.** `p.scionLayer.Mem(..)`
    is currently used at 18 of them, and the `unfold acc(P, 1-R55)` /
    `unfold acc(P, R55)` idiom exists only so that a pure function can be
    evaluated in between. Every extra fraction is another chunk for the complete
    exhale to summarise.
-4. **Outline the branches of `process`.** `Run` uses seven `outline` blocks;
+3. **Outline the branches of `process`.** `Run` uses seven `outline` blocks;
    `process` and `processPkt` use none. An outlined block is verified as its own
    Viper method, so the state that the rest of `process` carries past it is
    whatever the outline's contract says, not everything the branch touched.
