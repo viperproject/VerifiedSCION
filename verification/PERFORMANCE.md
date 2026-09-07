@@ -24,8 +24,9 @@ each of them is Gobra's front end, which the isolated runs cannot avoid.
 | the `rc` closure of `Run` (`closureCall$rc_Run…`) | 26 min | 2.5 min |
 | `process` | 109 min | 4 min |
 
-(`process` is now 62 min — see *What did work* below. The rest of the table, and
-the whole analysis, describes the state before that change.)
+(`process` and `rc` are now 62 min and 6.4 min — see the two *What did work*
+sections below. The rest of the table, and the whole analysis, describes the
+state before those changes.)
 
 The "contract alone" column comes from cutting the body at its first statement
 (see below): it is what the run still costs when the member has no body left.
@@ -295,36 +296,61 @@ would cost more than the bundling saves. The permission therefore has to stay a
 contract clause, which by itself caps how much of the buffer's footprint can be
 bundled.
 
+## What did work: `MsgsMem`
+
+Same recipe, applied where the profile said the money was, and it paid: the `rc`
+closure went from **1538 s to 384 s - 4.0x - in a paired A/B**, both arms
+reporting 0 errors.
+
+`MsgsMem(msgs, i0, pkts, ingressID, ioValSeq)` in `msgs-spec.gobra` bundles the
+six invariants of the inner loop that are quantified over the 64-message batch:
+the two permissions, `msgs[i].Mem()` and `sl.Bytes(msgs[i].GetFstBuffer(), ...)`,
+and the four pure facts that only those permissions can frame. The one expensive
+exhale now hands over a single chunk.
+
+**The lemmas are the point, not the predicate.** Opening the batch with an
+`unfold` at the top of the loop body and closing it with a `fold` at the bottom
+would buy nothing: the fold would re-do the same quantified work in the same
+large state, which is precisely what the invariant exhale was doing. `TakeMsg`
+and `PutMsg` are lemmas, so the loop body exchanges two predicate chunks and the
+quantified reasoning happens inside members whose state holds nothing but the
+batch. Entering and leaving the loop is a plain `fold`/`unfold`, which is free -
+the profile above shows the whole region around `ReadBatch` at the front-end
+floor.
+
+**`PutMsg` gives back less than `TakeMsg` handed out.** The body consumes the
+message's address and forwards its bytes, so neither `HasActiveAddr` nor the
+agreement with `ioValSeq` still holds for that message. That is what the index
+`i0` is for: those two facts are claimed only from the current position on, and
+`PutMsg` closes the predicate at `i0+1`. It also retires the assertion that was
+marked "crucial to keep verification stable" - it existed only to re-establish
+the invariant for the next iteration, which `PutMsg` now proves.
+
+**Taking a message out breaks buffer injectivity, and that has to be repaired
+explicitly.** Both quantified permissions are keyed on `msgs[i].GetFstBuffer()`,
+so every fold obliges Silicon to show that no two messages share a buffer.
+Inside the batch that fact is free, because `--assumeInjectivityOnInhale`
+asserts it whenever the quantified permission is inhaled - but the message that
+has been taken out is no longer part of any such inhale, so putting it back
+leaves its buffer unrelated to the rest and `PutMsg`'s fold fails with
+`Quantified resource ... might not be injective`. `MsgsMemHole` therefore takes
+the extracted buffer as a parameter and carries the one missing inequality
+across the hole.
+
+An earlier attempt keyed the permissions on `&msgs[i]` instead, by bundling
+`Mem()` and the bytes into a per-element `MsgAndBuf` predicate. That is injective
+by construction and `PutMsg` goes through - but the obligation simply moves to
+the lemma that has to convert back for the next `ReadBatch`, which is stated in
+terms of the buffer-keyed quantifiers. Naming the buffer is the shorter way out.
+
 ## What is left to try
 
-1. **Bundle the per-message resources in `rc`'s loop invariants**, so that the
-   one expensive exhale hands over a single predicate instead of seven
-   quantified assertions over the 64-message batch. The profile above makes this
-   the best-motivated candidate left in the package: half of `rc` is that one
-   step.
-
-   The bundling only pays if the predicate is *not* folded in the loop body,
-   because a `fold` would re-do the same quantified work in the same large
-   state. It has to be closed by a lemma — `MsgsMemHole(msgs, i0, …)` plus the
-   one message that was taken out, giving back `MsgsMem(msgs, i0+1, …)` — so
-   that the quantified reasoning happens once, inside a member whose state holds
-   nothing but the batch. The body then pays two predicate chunks per iteration.
-
-   The framing wall from the buffer is waiting here too: the invariants
-   `forall i :: i0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr()) == …` and
-   `forall i :: MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]` are pure facts
-   framed by the `msgs[i].Mem()` next to them, so they have to enter the
-   predicate together with it. That is affordable here, unlike in the buffer
-   case: the one body assertion that reads them back — the `forall i :: i0 < i
-   && i < pkts ==> MsgToAbsVal(…) == ioValSeq[i]` marked as "crucial to keep
-   verification stable" — exists only to re-establish the invariant for the next
-   iteration, which is exactly what the closing lemma would prove instead.
-2. **Reduce the number of distinct permission amounts.** `p.scionLayer.Mem(..)`
+1. **Reduce the number of distinct permission amounts.** `p.scionLayer.Mem(..)`
    is currently used at 18 of them, and the `unfold acc(P, 1-R55)` /
    `unfold acc(P, R55)` idiom exists only so that a pure function can be
    evaluated in between. Every extra fraction is another chunk for the complete
    exhale to summarise.
-3. **Outline the branches of `process`.** `Run` uses seven `outline` blocks;
+2. **Outline the branches of `process`.** `Run` uses seven `outline` blocks;
    `process` and `processPkt` use none. An outlined block is verified as its own
    Viper method, so the state that the rest of `process` carries past it is
    whatever the outline's contract says, not everything the branch touched.
