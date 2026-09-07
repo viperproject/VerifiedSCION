@@ -116,11 +116,42 @@ identical* clauses (permission to `p.d`, `p.path`, `p.buffer`,
 `p.buffer.UBuf()`, `p.lastLayer`, and `p.d.validResult`).
 
 The `rc` closure has no postcondition at all, and cutting its body away brings
-its run down to the front end alone (152 s): all 26 minutes are the two
-nested loops, whose invariants carry quantified assertions over the 64-message
-batch — including `forall i :: MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]`,
-which unfolds the whole packet abstraction for every message — and are
-re-established on every iteration.
+its run down to the front end alone (152 s), so all of its time is in the two
+nested loops. Cutting inside them says exactly where:
+
+| what runs | s |
+|---|---|
+| the outer loop entered, its body skipped | 178 |
+| the outer body, up to the inner loop entered with its body skipped | 177 |
+| … the inner body up to the `processPkt` call | 229 |
+| … including the `processPkt` call | 230 |
+| … up to `WriteBatch` | 432 |
+| the whole inner body, but not the invariant exhale that follows it | 1027 |
+| the whole closure | 2186 |
+
+Three things follow, and the first two are the opposite of what one would guess.
+
+**The invariants are cheap to establish and cheap to inhale.** The outer loop's
+eighteen and the inner loop's twenty-five together cost nothing measurable: the
+run with both loops entered and both bodies skipped is still at the front-end
+floor. So is the whole read-batch block, with its prophecy variable, its
+`MultiReadBio` unfoldings and its four quantified assertions over the batch.
+
+**The call to `processPkt` is free** — 229 s before it, 230 s after it — even
+though its contract is one of the largest in the package. Inhaling a big
+postcondition into a state this small is not what costs.
+
+**One exhale accounts for half of the closure.** The difference between the last
+two rows, ~1160 s, is a single step: exhaling the inner loop's twenty-five
+invariants on the fall-through path at the end of the body. The same exhale on
+the four `continue` paths, which happen earlier and in a smaller state, is
+included in the rows above it and is far cheaper. Seven of those invariants are
+quantified over the 64-message batch — `msgs[i].Mem()`,
+`sl.Bytes(msgs[i].GetFstBuffer(), …)`, and five pure facts about `msgs[i]`
+including `MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]`, which unfolds the
+whole packet abstraction for every message — and they have to be re-established
+over everything the body has accumulated by then: the packet's byte ranges split
+and recombined, the write-message permissions, the IO-spec place and state.
 
 ## Contributing factors
 
@@ -266,16 +297,28 @@ bundled.
 
 ## What is left to try
 
-1. **Bundle the per-message resources in `rc`'s loop invariants**, so that an
-   iteration exchanges one predicate instead of seven quantified assertions over
-   the 64-message batch. This needs a range predicate with take/put lemmas,
-   since the body still has to get at one message at a time. Note that the same
-   framing wall is waiting: the invariants
+1. **Bundle the per-message resources in `rc`'s loop invariants**, so that the
+   one expensive exhale hands over a single predicate instead of seven
+   quantified assertions over the 64-message batch. The profile above makes this
+   the best-motivated candidate left in the package: half of `rc` is that one
+   step.
+
+   The bundling only pays if the predicate is *not* folded in the loop body,
+   because a `fold` would re-do the same quantified work in the same large
+   state. It has to be closed by a lemma — `MsgsMemHole(msgs, i0, …)` plus the
+   one message that was taken out, giving back `MsgsMem(msgs, i0+1, …)` — so
+   that the quantified reasoning happens once, inside a member whose state holds
+   nothing but the batch. The body then pays two predicate chunks per iteration.
+
+   The framing wall from the buffer is waiting here too: the invariants
    `forall i :: i0 <= i && i < pkts ==> typeOf(msgs[i].GetAddr()) == …` and
    `forall i :: MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]` are pure facts
-   framed by the `msgs[i].Mem()` in the invariant next to them, so they have to
-   enter the predicate together with it, and the body's assertions over the
-   `i0 < i < pkts` range then need a way to see them again.
+   framed by the `msgs[i].Mem()` next to them, so they have to enter the
+   predicate together with it. That is affordable here, unlike in the buffer
+   case: the one body assertion that reads them back — the `forall i :: i0 < i
+   && i < pkts ==> MsgToAbsVal(…) == ioValSeq[i]` marked as "crucial to keep
+   verification stable" — exists only to re-establish the invariant for the next
+   iteration, which is exactly what the closing lemma would prove instead.
 2. **Reduce the number of distinct permission amounts.** `p.scionLayer.Mem(..)`
    is currently used at 18 of them, and the `unfold acc(P, 1-R55)` /
    `unfold acc(P, R55)` idiom exists only so that a pure function can be
