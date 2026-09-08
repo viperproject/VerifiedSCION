@@ -1,0 +1,379 @@
+# Where the router's verification time goes
+
+`router/` is by far the most expensive package to verify: the CI gives it a six
+hour budget, while every other package gets between five and thirty minutes.
+Most of that budget is consumed by a handful of members. This note records how
+the cost is distributed, what was measured, and which changes are likely to pay
+off, so that the next person to look at this does not have to rediscover it.
+
+Everything below was measured with `verification/scripts/verify-member.py`,
+which verifies **one member at a time** using Gobra's isolation
+(`-i router/dataplane.go@<line>`, after which the chopper keeps only the slice
+of the program that the member needs) and the options that the CI uses. Numbers
+are wall clock for the whole Gobra run on a 4-core machine; roughly 140 s of
+each of them is Gobra's front end, which the isolated runs cannot avoid.
+
+## Cost per member
+
+| member | isolated run | of which: the contract alone |
+|---|---|---|
+| `Run` itself, for reference | 2.8 min | — |
+| `processOHP` | 5.5 min | — |
+| `processPkt` | 5.7 min | — |
+| `doXover` | 12 min | 6 min |
+| the `rc` closure of `Run` (`closureCall$rc_Run…`) | 26 min | 2.5 min |
+| `process` | 109 min | 4 min |
+
+(`process` and `rc` are now 62 min and 6.4 min — see the two *What did work*
+sections below. The rest of the table, and the whole analysis, describes the
+state before those changes.)
+
+The "contract alone" column comes from cutting the body at its first statement
+(see below): it is what the run still costs when the member has no body left.
+Since the front end alone is ~2.5 min, `Run` and `processPkt`/`processOHP` are
+in fact only a couple of minutes of solving each; the cost is concentrated in
+`process`, in the `rc` closure and, to a lesser extent, in `doXover`. That `Run`
+itself is cheap while the closure it declares is not is expected: `Run`'s body
+is broken up by seven `outline` blocks, and the packet loop lives in `rc`.
+
+## The backend options are not the problem
+
+Every deviation from what `router/gobra.json` already asks for made things
+worse, so the slowness is not a misconfiguration:
+
+| change | effect |
+|---|---|
+| `mce_mode: "od"` instead of `"on"` (the module default) | `processOHP` still running when the baseline had finished |
+| `#backend[moreJoins()]` on `doXover`, i.e. join every branch | more than twice as slow |
+| `#backend[moreJoins()]` on `process` | ≥ 8446 s against a 7737 s baseline under the same load |
+| `#backend[exhaleModeQP(2)]` on `doXover` | no improvement |
+
+Joining is the interesting one, because the profile below says `process` explores
+its whole tail once per side of the `IsXover` branch. Joining does remove that
+duplication — and still loses, because merging two copies of a heap this
+fragmented costs more than exploring it twice.
+
+`mce_mode: "on"` in particular is not a leftover: with on-demand exhale, Silicon
+first tries a greedy exhale and only retries with the complete one when that
+fails. In this package the greedy attempt fails often enough that the retries
+cost more than always being complete. Note also that Gobra never passes
+`--exhaleModeQP`, and Silicon's default for it is the complete mode regardless
+of `--exhaleMode`, so quantified permissions are always exhaled completely.
+
+## Where the time goes inside a member
+
+The body of a member can be cut short by inserting `TODO()` (which is
+`ensures false`), making everything after the cut unreachable. Timing a sequence
+of cuts gives a profile of the member. For `doXover`:
+
+| what runs | s |
+|---|---|
+| nothing (contract only) | 351 |
+| … up to the range splits and `XoverLemma` | 417 |
+| … up to and including `IncPath` | 465 |
+| … including the block of 14 assertions | 464 |
+| … including both hop/info field decodings | 458 |
+| the whole body, without the final `return` | 566 |
+| the whole member | 707 |
+
+And for `process`:
+
+| what runs | s |
+|---|---|
+| nothing (contract only) | 237 |
+| … `parsePath` | 307 |
+| … the next four validators | 446 |
+| … `verifyCurrentMAC`, `handleIngressRouterAlert` | 487 |
+| … the whole inbound branch, `InternalEnterEvent` included | 630 |
+| … the whole xover branch, `doXover` included | 1319 |
+| the whole member | 6548 |
+
+Four fifths of `process` is therefore in its last 130 lines: `validateEgressUp`,
+`egressInterface`, the two egress branches with their IO-spec events, the three
+`reveal PktUpdate(…)`/`reveal absIO_val(…)`, and the three exits. That tail sits
+after the `if p.path.IsXover(…)` branch, which *rejoins*; since `more_joins:
+"impure"` does not join `if` statements, everything in the tail is explored once
+per side of that branch, and again per side of each `ghost if
+slayers.IsSupportedPkt(ub)` and `ghost if !p.segmentChange` inside it.
+
+Back to `doXover`: two things stand out. The block of assertions in the middle
+and the two field decodings are free — the facts they restate are already in the path condition.
+And after subtracting the front end, roughly 60 % of the remaining time is spent
+on `doXover`'s *own contract*: ~210 s proving that its 26 `ensures` clauses are
+well defined before the body starts, and at least ~140 s exhaling them at the
+single successful exit. Dropping any one clause changes little (removing the
+largest one saves 4 %); the cost is spread evenly over clauses that each mention
+`absPkt(ub)` or `old(absPkt(ub))` and therefore drag in
+`CurrSeg`/`LeftSeg`/`MidSeg`/`RightSeg` → `segment` → the recursive `hopFields`,
+all of which have to be framed against the current `sl.Bytes(ub, …)` snapshot.
+
+`process` is expensive for the opposite reason: its contract costs about 100 s
+of solver time out of 109 minutes. Its body calls seventeen methods whose
+specifications total
+**568 clauses**, each of which is exhaled and then inhaled again over a heap
+that holds `p.scionLayer.Mem(ub)`, a fragmented `sl.Bytes(ub, …)` and the
+`absPkt(ub)` function stack. Nine of those callees share eleven *literally
+identical* clauses (permission to `p.d`, `p.path`, `p.buffer`,
+`p.buffer.UBuf()`, `p.lastLayer`, and `p.d.validResult`).
+
+The `rc` closure has no postcondition at all, and cutting its body away brings
+its run down to the front end alone (152 s), so all of its time is in the two
+nested loops. Cutting inside them says exactly where:
+
+| what runs | s |
+|---|---|
+| the outer loop entered, its body skipped | 178 |
+| the outer body, up to the inner loop entered with its body skipped | 177 |
+| … the inner body up to the `processPkt` call | 229 |
+| … including the `processPkt` call | 230 |
+| … up to `WriteBatch` | 432 |
+| the whole inner body, but not the invariant exhale that follows it | 1027 |
+| the whole closure | 2186 |
+
+Three things follow, and the first two are the opposite of what one would guess.
+
+**The invariants are cheap to establish and cheap to inhale.** The outer loop's
+eighteen and the inner loop's twenty-five together cost nothing measurable: the
+run with both loops entered and both bodies skipped is still at the front-end
+floor. So is the whole read-batch block, with its prophecy variable, its
+`MultiReadBio` unfoldings and its four quantified assertions over the batch.
+
+**The call to `processPkt` is free** — 229 s before it, 230 s after it — even
+though its contract is one of the largest in the package. Inhaling a big
+postcondition into a state this small is not what costs.
+
+**One exhale accounts for half of the closure.** The difference between the last
+two rows, ~1160 s, is a single step: exhaling the inner loop's twenty-five
+invariants on the fall-through path at the end of the body. The same exhale on
+the four `continue` paths, which happen earlier and in a smaller state, is
+included in the rows above it and is far cheaper. Seven of those invariants are
+quantified over the 64-message batch — `msgs[i].Mem()`,
+`sl.Bytes(msgs[i].GetFstBuffer(), …)`, and five pure facts about `msgs[i]`
+including `MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]`, which unfolds the
+whole packet abstraction for every message — and they have to be re-established
+over everything the body has accumulated by then: the packet's byte ranges split
+and recombined, the write-message permissions, the IO-spec place and state.
+
+## Contributing factors
+
+* **Permission fragmentation.** `p.scionLayer.Mem(..)` is used at 18 distinct
+  permission amounts in `dataplane.go`, `p.scionLayer.Path.Mem(..)` at 11,
+  `d.Mem(..)` at 8. There are 136 calls to the `sl.*_Bytes` split/combine
+  lemmas at 11 distinct amounts. Each of them folds or unfolds a predicate whose
+  body is a quantified `forall i :: acc(&s[i])`, so each creates or consumes
+  quantified-permission chunks. Under the complete exhale that this package
+  needs, every subsequent heap lookup summarises all of them.
+* **Branches are not joined.** `more_joins: "impure"` only joins impure
+  conditionals inside assertions; `if` statements are only joined under
+  `moreJoins(all)`, which `Run` and `rc` opt into and the others do not. So
+  `process`'s seventeen error exits each exhale its postcondition (25 `ensures`
+  plus 11 `preserves`, so 36 clauses once encoded) separately, and — far more
+  expensive — its whole tail is explored once per side of the `IsXover` branch
+  that precedes it. Joining is not a free win: on `doXover` it was more than
+  twice as slow.
+* **`old(...)` in leaf contracts.** The contracts of the members that `process`
+  calls contain 61 `old(...)` applications and 88 applications of `absPkt`,
+  which forces Silicon to keep querying the pre-state heap as well.
+
+## What was tried, and did not work
+
+Rewriting the specifications locally does not help either. Each of these was
+implemented, verified (0 errors) and timed:
+
+| change | result |
+|---|---|
+| delete the assertions `doXover` repeats (`p.path === …GetScionPath(ub)` 6×, `…GetBase(ubScionPath) == nextBase` 5×) | no change; the profile says they were already free |
+| replace `doXover`'s eight repeated `ghost if typeOf(…) == *epic.Path` by one local ghost boolean | 841 s against a 707 s solo baseline — worse |
+| thread the abstract packet through ghost parameters in `doXover`, removing nine `absPkt(ub)` and five `old(absPkt(ub))` from its contract | 892 s vs 915 s in a fair A/B — a wash |
+| give `XoverEvent` and `ExternalEnterOrExitEvent` the intermediate abstract packets as parameters, instead of writing `AbsUpdateNonConsDirIngressSegID(oldPkt, ingressID)` nine times and `AbsDoXover(…)` five times inside it | `process` 7537 s with the machine to itself, against a 6548 s baseline that shared it — no gain |
+
+The last two are the informative failures. Silicon evaluates a heap-dependent
+function once per heap snapshot, not once per mention, so collapsing repeated
+applications buys nothing; what the contract costs is the *number of distinct
+states* in which its clauses have to be framed, and the `unfolding`-heavy
+accessors (`UBPath`, `UBScionPath`, `GetPath`, `GetScionPath`,
+`ValidPathMetaData`, `EqAbsHeader`, …) that each open `p.scionLayer.Mem(ub)`
+again.
+
+Taken together with the backend options above: six interventions, none of which
+moved the number. The cost is spread thinly over a very large number of
+individually expensive queries, and it is the *size and fragmentation of the
+symbolic state* that makes each of them expensive. Anything that leaves the
+state alone — reordering clauses, naming subterms, deleting assertions, changing
+how branches are explored — leaves the cost alone too. The next section is what
+happens when the state itself gets smaller.
+
+A corollary worth keeping in mind before the next attempt: measure in pairs.
+Several of the differences above are smaller than the effect of sharing the
+machine with a second Gobra run (a second run inflates a `process` measurement
+from 6548 s to 7737 s), so a variant timed on its own against a baseline timed
+under load will look like a win that is not there.
+
+## What did work: `LastLayerMem`
+
+Shrinking the state does move the number. `process` went from **7854 s to
+3729 s — 2.1× — in a paired A/B**, both arms reporting 0 errors.
+
+The change is `(p *scionPacketProcessor).LastLayerMem(ub, ubLL, startLL, endLL)`
+in `dataplane_spec.gobra`. It bundles the description of the last decoded layer,
+which used to be spelled out as four clauses in the contract of fourteen
+members:
+
+```
+preserves ubLL == nil || ubLL === ubScionL[startLL:endLL]
+preserves acc(&p.lastLayer, R55) && p.lastLayer != nil
+preserves &p.scionLayer !== p.lastLayer ==> acc(p.lastLayer.Mem(ubLL), R15)
+preserves &p.scionLayer === p.lastLayer ==> ubScionL === ubLL
+```
+
+Two of those are impure implications, which Silicon branches on and re-joins at
+every exhale and every inhale. `process` carries the same thing in an even
+worse spelling — an implication nested inside an implication, keyed on a
+`llIsNil` flag — and exchanges it twice at each of the seventeen calls along its
+path. As a predicate it is one chunk each way, and only `packSCMP`, the one
+member that actually reads the last layer, ever unfolds it.
+
+Nothing is proved that was not proved before: the predicate body is the same
+conjunction, and the `llIsNil` case split was only a second spelling of
+`p.lastLayer.Mem(ubLL)` with `ubLL == nil` folded into the flag. The one clause
+that was dropped rather than moved is `startLL == 0 && endLL == len(ub)` in
+`process`'s SCION-layer case, which no caller used.
+
+**Where the fold goes is the whole trick.** Folding inside `process` — the
+obvious place, since that is who holds the resources across the calls — costs
+about 1200 s on its own, because the predicate then has to be re-derived from
+the `llIsNil` parameterisation, including a slice identity `ub[0:len(ub)] === ub`.
+Folding in `processPkt` instead, right after `decodeLayers` has produced the
+layer and the facts about it are still immediate, is free (350 s against a
+342 s baseline). `process`, `processSCION` and `processEPIC` then just take the
+predicate as a parameter and never open it.
+
+## The same recipe on the SCMP buffer: no gain, and why
+
+The obvious next target was the other thing every validator carries and almost
+none of them touches: the buffer that `packSCMP` serialises an SCMP reply into.
+It is four clauses — two `requires`, two `ensures` — in the contract of
+seventeen members:
+
+```
+requires acc(&p.buffer, R50) && p.buffer != nil && p.buffer.Mem()
+requires sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
+ensures  acc(&p.buffer, R50) && p.buffer != nil && p.buffer.Mem()
+ensures  sl.Bytes(p.buffer.UBuf(), 0, len(p.buffer.UBuf()))
+```
+
+This was implemented as `SCMPBufMem()` plus an `OutBuf()` getter, all seventeen
+members verified with 0 errors, and it bought **nothing**: 2497 s against 2490 s
+for `process` in a paired A/B. It was reverted (`e0d004b`). Two things are worth
+knowing before anyone tries it again.
+
+**Only the implications were ever the cost.** `LastLayerMem` won because two of
+the four clauses it absorbed were impure implications, which Silicon branches on
+and re-joins at every exhale *and* every inhale. The buffer clauses are plain
+conjunctions: one field chunk, one predicate chunk. Turning them into a single
+predicate chunk changes the constant, not the shape, and the measurement says
+the constant is not where the time is. This is the same lesson as the failures
+above, in a case where the change did shrink the contract: the number of clauses
+is not the cost — the number of *branches* is.
+
+**The permission to the bytes cannot move into a predicate at all.** Postconditions
+such as
+
+```
+ensures respr.OutPkt != nil ==> !slayers.IsSupportedPkt(respr.OutPkt)
+ensures reserr != nil && respr.OutPkt != nil ==>
+	absIO_val(respr.OutPkt, respr.EgressID).isValUnsupported
+```
+
+are stated over the *result*, which aliases the buffer, and both `IsSupportedPkt`
+and `absIO_val` require `sl.Bytes(raw, 0, len(raw))` at write permission. A
+predicate cannot frame a clause stated outside itself, so hiding
+`sl.Bytes(p.buffer.UBuf(), …)` inside `SCMPBufMem()` makes those clauses
+ill-defined at fifteen sites — which is what the first attempt did, and it fails
+with `Precondition of call slayers.IsSupportedPkt(respr.OutPkt) might not hold`.
+Restating each of them under `unfolding p.SCMPBufMem() in …` would work and
+would cost more than the bundling saves. The permission therefore has to stay a
+contract clause, which by itself caps how much of the buffer's footprint can be
+bundled.
+
+## What did work: `MsgsMem`
+
+Same recipe, applied where the profile said the money was, and it paid: the `rc`
+closure went from **1538 s to 384 s - 4.0x - in a paired A/B**, both arms
+reporting 0 errors.
+
+`MsgsMem(msgs, i0, pkts, ingressID, ioValSeq)` in `msgs-spec.gobra` bundles the
+six invariants of the inner loop that are quantified over the 64-message batch:
+the two permissions, `msgs[i].Mem()` and `sl.Bytes(msgs[i].GetFstBuffer(), ...)`,
+and the four pure facts that only those permissions can frame. The one expensive
+exhale now hands over a single chunk.
+
+**The lemmas are the point, not the predicate.** Opening the batch with an
+`unfold` at the top of the loop body and closing it with a `fold` at the bottom
+would buy nothing: the fold would re-do the same quantified work in the same
+large state, which is precisely what the invariant exhale was doing. `TakeMsg`
+and `PutMsg` are lemmas, so the loop body exchanges two predicate chunks and the
+quantified reasoning happens inside members whose state holds nothing but the
+batch. Entering and leaving the loop is a plain `fold`/`unfold`, which is free -
+the profile above shows the whole region around `ReadBatch` at the front-end
+floor.
+
+**`PutMsg` gives back less than `TakeMsg` handed out.** The body consumes the
+message's address and forwards its bytes, so neither `HasActiveAddr` nor the
+agreement with `ioValSeq` still holds for that message. That is what the index
+`i0` is for: those two facts are claimed only from the current position on, and
+`PutMsg` closes the predicate at `i0+1`. It also retires the assertion that was
+marked "crucial to keep verification stable" - it existed only to re-establish
+the invariant for the next iteration, which `PutMsg` now proves.
+
+**Taking a message out breaks buffer injectivity, and that has to be repaired
+explicitly.** Both quantified permissions are keyed on `msgs[i].GetFstBuffer()`,
+so every fold obliges Silicon to show that no two messages share a buffer.
+Inside the batch that fact is free, because `--assumeInjectivityOnInhale`
+asserts it whenever the quantified permission is inhaled - but the message that
+has been taken out is no longer part of any such inhale, so putting it back
+leaves its buffer unrelated to the rest and `PutMsg`'s fold fails with
+`Quantified resource ... might not be injective`. `MsgsMemHole` therefore takes
+the extracted buffer as a parameter and carries the one missing inequality
+across the hole.
+
+An earlier attempt keyed the permissions on `&msgs[i]` instead, by bundling
+`Mem()` and the bytes into a per-element `MsgAndBuf` predicate. That is injective
+by construction and `PutMsg` goes through - but the obligation simply moves to
+the lemma that has to convert back for the next `ReadBatch`, which is stated in
+terms of the buffer-keyed quantifiers. Naming the buffer is the shorter way out.
+
+## What is left to try
+
+1. **Reduce the number of distinct permission amounts.** `p.scionLayer.Mem(..)`
+   is currently used at 18 of them, and the `unfold acc(P, 1-R55)` /
+   `unfold acc(P, R55)` idiom exists only so that a pure function can be
+   evaluated in between. Every extra fraction is another chunk for the complete
+   exhale to summarise.
+2. **Outline the branches of `process`.** `Run` uses seven `outline` blocks;
+   `process` and `processPkt` use none. An outlined block is verified as its own
+   Viper method, so the state that the rest of `process` carries past it is
+   whatever the outline's contract says, not everything the branch touched.
+
+## Reproducing
+
+```sh
+export GOBRA=/path/to/gobra.jar Z3_EXE=/path/to/z3
+./verification/scripts/verify-member.py --list router          # member -> line
+./verification/scripts/verify-member.py router doXover
+./verification/scripts/verify-member.py router rc              # a closure of Run
+```
+
+Two Gobra limitations get in the way and are worth fixing upstream:
+
+* Member isolation cannot be expressed in the JSON configuration that the CI now
+  uses. `input_files` makes Gobra abort with
+  `Logic error: the configuration mode should be one of file, package, recursive
+  or config` (`InputConfig.fromVerificationJobCfg` fills in `input` but not
+  `cutInputWithIdxs`, which is what `InputConfig.rawConfig` dispatches on), and
+  `-i` inside `other` is rejected outright. Hence the script builds a full
+  command line instead.
+* `gobra --config router` from the repository root fails with
+  `Could not find module configuration file gobra-mod.json …`, because the
+  search for the module config walks `getParentFile()` on the *relative* path
+  and stops immediately. An absolute path works.

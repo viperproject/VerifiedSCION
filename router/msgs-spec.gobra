@@ -1,0 +1,134 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package router
+
+import (
+	"net"
+
+	"golang.org/x/net/ipv4"
+
+	"verification/io"
+	sl "verification/utils/slices"
+	. "verification/utils/definitions"
+)
+
+// (VerifiedSCION) The per-message resources of one read batch, as the loop that
+// processes the batch carries them.
+//
+// Measuring the packet loop says that half of its cost is a single step:
+// exhaling the twenty-five invariants of the inner loop on the fall-through
+// path at the end of its body, over everything that body has accumulated by
+// then. Six of those invariants are quantified over the whole 64-message batch,
+// and they are what make that exhale expensive: two carry permission, and the
+// other four are pure facts that only the first two can frame, so they have to
+// travel together. Bundled here, the exhale hands over one chunk.
+//
+// 'i0' is the index the loop is about to process. Messages before it have been
+// consumed - their address is no longer guaranteed live, and their abstraction
+// no longer has to agree with the IO specification - while messages from 'i0'
+// on are still exactly as 'ReadBatch' left them.
+pred MsgsMem(msgs []ipv4.Message, i0 int, pkts int, ingressID uint16, ioValSeq seq[io.Val]) {
+	0 <= i0 && i0 <= pkts && pkts <= len(msgs) && pkts <= len(ioValSeq) &&
+	(forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+		msgs[i].Mem()) &&
+	(forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) ==>
+		sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer()))) &&
+	(forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) ==>
+		msgs[i].HasActiveAddr()) &&
+	(forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
+		typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr]) &&
+	(forall i int :: { &msgs[i] } 0 <= i && i < pkts ==>
+		msgs[i].GetN() <= len(msgs[i].GetFstBuffer())) &&
+	(forall i int :: { &msgs[i] } i0 <= i && i < pkts ==>
+		MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i])
+}
+
+// The same, with message 'i0' taken out. This is what the body of the loop
+// holds on to while it works on that one message.
+//
+// 'excl' is that message's buffer, and the last conjunct is the only reason the
+// predicate needs it. Both quantified permissions above are keyed on
+// 'msgs[i].GetFstBuffer()', so folding either one obliges Silicon to show that
+// no two messages share a buffer. Inside the batch that fact comes for free -
+// '--assumeInjectivityOnInhale' asserts it every time the quantified permission
+// is inhaled - but the message that has been taken out is no longer part of any
+// such inhale, so putting it back would leave its buffer unrelated to the rest.
+// Naming the buffer here carries the one missing inequality across the hole.
+pred MsgsMemHole(msgs []ipv4.Message, i0 int, pkts int, ingressID uint16, ioValSeq seq[io.Val], excl []byte) {
+	0 <= i0 && i0 < pkts && pkts <= len(msgs) && pkts <= len(ioValSeq) &&
+	(forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) && i != i0 ==>
+		msgs[i].Mem()) &&
+	(forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) && i != i0 ==>
+		sl.Bytes(msgs[i].GetFstBuffer(), 0, len(msgs[i].GetFstBuffer()))) &&
+	(forall i int :: { &msgs[i] } i0 <= i && i < len(msgs) && i != i0 ==>
+		msgs[i].HasActiveAddr()) &&
+	(forall i int :: { &msgs[i] } i0 <= i && i < pkts && i != i0 ==>
+		typeOf(msgs[i].GetAddr()) == type[*net.UDPAddr]) &&
+	(forall i int :: { &msgs[i] } 0 <= i && i < pkts && i != i0 ==>
+		msgs[i].GetN() <= len(msgs[i].GetFstBuffer())) &&
+	(forall i int :: { &msgs[i] } i0 <= i && i < pkts && i != i0 ==>
+		MsgToAbsVal(&msgs[i], ingressID) == ioValSeq[i]) &&
+	(forall i int :: { &msgs[i] } 0 <= i && i < len(msgs) && i != i0 ==>
+		msgs[i].GetFstBuffer() !== excl)
+}
+
+// Take message 'i0' out of the batch.
+//
+// The point of doing this in a lemma rather than with an 'unfold' in the loop
+// body is that the quantified reasoning then happens here, in a member whose
+// state holds nothing but the batch, instead of in the body, where it would run
+// over the packet's split byte ranges, the write-message permissions and the
+// IO-spec place and state as well. Unfolding the predicate in the body would
+// give back exactly the six invariants this is meant to replace.
+ghost
+requires MsgsMem(msgs, i0, pkts, ingressID, ioValSeq)
+requires 0 <= i0 && i0 < pkts && pkts <= len(msgs) && pkts <= len(ioValSeq)
+ensures  MsgsMemHole(msgs, i0, pkts, ingressID, ioValSeq, excl)
+ensures  msgs[i0].Mem()
+ensures  sl.Bytes(msgs[i0].GetFstBuffer(), 0, len(msgs[i0].GetFstBuffer()))
+ensures  excl === msgs[i0].GetFstBuffer()
+ensures  msgs[i0].HasActiveAddr()
+ensures  typeOf(msgs[i0].GetAddr()) == type[*net.UDPAddr]
+ensures  msgs[i0].GetN() <= len(msgs[i0].GetFstBuffer())
+ensures  MsgToAbsVal(&msgs[i0], ingressID) == ioValSeq[i0]
+decreases
+func TakeMsg(msgs []ipv4.Message, i0 int, pkts int, ingressID uint16, ioValSeq seq[io.Val]) (excl []byte) {
+	unfold MsgsMem(msgs, i0, pkts, ingressID, ioValSeq)
+	excl = msgs[i0].GetFstBuffer()
+	fold MsgsMemHole(msgs, i0, pkts, ingressID, ioValSeq, excl)
+}
+
+// Put message 'i0' back and move on to the next one.
+//
+// What comes back is deliberately weaker than what 'TakeMsg' handed out: the
+// loop body consumes the message's address and forwards its bytes, so neither
+// 'HasActiveAddr' nor the agreement with 'ioValSeq' still holds for 'i0'. That
+// is exactly why the predicate is indexed by 'i0': those two facts are only
+// claimed from the current index on.
+ghost
+requires MsgsMemHole(msgs, i0, pkts, ingressID, ioValSeq, excl)
+requires 0 <= i0 && i0 < pkts && pkts <= len(msgs) && pkts <= len(ioValSeq)
+requires msgs[i0].Mem()
+requires sl.Bytes(msgs[i0].GetFstBuffer(), 0, len(msgs[i0].GetFstBuffer()))
+requires excl === msgs[i0].GetFstBuffer()
+requires msgs[i0].GetN() <= len(msgs[i0].GetFstBuffer())
+ensures  MsgsMem(msgs, i0+1, pkts, ingressID, ioValSeq)
+decreases
+func PutMsg(msgs []ipv4.Message, i0 int, pkts int, ingressID uint16, ioValSeq seq[io.Val], excl []byte) {
+	unfold MsgsMemHole(msgs, i0, pkts, ingressID, ioValSeq, excl)
+	fold MsgsMem(msgs, i0+1, pkts, ingressID, ioValSeq)
+}
