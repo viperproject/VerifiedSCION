@@ -23,7 +23,7 @@ package io
 
 ghost
 decreases
-pure func inc_seg2(currseg, traversedseg Seg, hf1 HF, fut seq[HF]) bool {
+pure func Inc_seg2(currseg, traversedseg Seg, hf1 HF, fut seq[HF]) bool {
 	return currseg.Future === seq[HF]{hf1} ++ fut &&
 		traversedseg.Future === fut &&
 		traversedseg.Past === seq[HF]{hf1} ++ currseg.Past &&
@@ -32,7 +32,7 @@ pure func inc_seg2(currseg, traversedseg Seg, hf1 HF, fut seq[HF]) bool {
 
 ghost
 decreases
-pure func same_segment2(currseg, traversedseg Seg) bool {
+pure func Same_segment2(currseg, traversedseg Seg) bool {
 	return traversedseg.Future === currseg.Future &&
 		traversedseg.Past    === currseg.Past &&
 		traversedseg.History === currseg.History
@@ -40,25 +40,25 @@ pure func same_segment2(currseg, traversedseg Seg) bool {
 
 ghost
 decreases
-pure func update_uinfo2(currseg, traversedseg Seg, hf1 HF) bool {
-	return traversedseg.UInfo === upd_uinfo(currseg.UInfo, hf1)
+pure func Update_uinfo2(currseg, traversedseg Seg, hf1 HF) bool {
+	return traversedseg.UInfo === Upd_uinfo(currseg.UInfo, hf1)
 }
 
 ghost
 decreases
-pure func same_uinfo2(currseg, traversedseg Seg) bool {
+pure func Same_uinfo2(currseg, traversedseg Seg) bool {
 	return currseg.UInfo === traversedseg.UInfo
 }
 
 ghost
 decreases
-pure func  update_uinfo(condition bool, currseg, traversedseg Seg, hf1 HF) bool {
-	return condition? update_uinfo2(currseg, traversedseg, hf1) : same_uinfo2(currseg, traversedseg)
+pure func  Update_uinfo(condition bool, currseg, traversedseg Seg, hf1 HF) bool {
+	return condition? Update_uinfo2(currseg, traversedseg, hf1) : Same_uinfo2(currseg, traversedseg)
 }
 
 ghost
 decreases
-pure func same_other2(currseg, traversedseg Seg) bool {
+pure func Same_other2(currseg, traversedseg Seg) bool {
 	return traversedseg.AInfo === currseg.AInfo &&
 		traversedseg.ConsDir === currseg.ConsDir &&
 		traversedseg.Peer === currseg.Peer

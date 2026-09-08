@@ -303,7 +303,7 @@ func (h *HopByHopExtn) CanDecode() (res gopacket.LayerClass) {
 // @ preserves acc(h.Mem(ubuf), R20)
 // @ decreases
 func (h *HopByHopExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerTypeAfterHBH( /*@ unfolding acc(h.Mem(ubuf), R20) in (unfolding acc(h.extnBase.Mem(ubuf), R20) in @*/ h.NextHdr /*@ ) @*/)
+	return scionNextLayerTypeAfterHBH( /*@ unfolding acc(h.Mem(ubuf), R20) in @*/ h.NextHdr)
 }
 
 // @ preserves acc(h.Mem(ub), R20)
@@ -313,14 +313,12 @@ func (h *HopByHopExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.Layer
 // @ decreases
 func (h *HopByHopExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
 	// @ unfold acc(h.Mem(ub), R20)
-	// @ unfold acc(h.extnBase.Mem(ub), R20)
-	// @ ghost base := &h.extnBase.BaseLayer
+	// @ ghost base := &h.BaseLayer
 	// @ unfold acc(base.Mem(ub, h.ActualLen), R20)
 	tmp := h.Payload
 	// @ start = h.ActualLen
 	// @ end = len(ub)
 	// @ fold acc(base.Mem(ub, h.ActualLen), R20)
-	// @ fold acc(h.extnBase.Mem(ub), R20)
 	// @ fold acc(h.Mem(ub), R20)
 	return tmp /*@ , start, end @*/
 }
@@ -392,8 +390,7 @@ func (h *HopByHopExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 		// @ fold tmp.Mem(lenOptions)
 		// @ lenOptions += 1
 	}
-	// @ fold h.extnBase.BaseLayer.Mem(data, h.extnBase.ActualLen)
-	// @ fold h.extnBase.Mem(data)
+	// @ fold h.BaseLayer.Mem(data, h.ActualLen)
 	// @ fold h.Mem(data)
 	return nil
 }
@@ -411,7 +408,7 @@ func decodeHopByHopExtn(data []byte, p gopacket.PacketBuilder) (res error) {
 	if err != nil {
 		return err
 	}
-	nextTmp := scionNextLayerTypeAfterHBH(( /*@ unfolding h.Mem(data) in (unfolding h.extnBase.Mem(data) in @*/ h.NextHdr /*@ ) @*/))
+	nextTmp := scionNextLayerTypeAfterHBH(( /*@ unfolding h.Mem(data) in @*/ h.NextHdr))
 	// @ fold nextTmp.Mem()
 	return p.NextDecoder(nextTmp)
 }
@@ -452,7 +449,7 @@ func (e *EndToEndExtn) CanDecode() (res gopacket.LayerClass) {
 // @ preserves acc(e.Mem(ubuf), R20)
 // @ decreases
 func (e *EndToEndExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerTypeAfterE2E( /*@ unfolding acc(e.Mem(ubuf), R20) in (unfolding acc(e.extnBase.Mem(ubuf), R20) in @*/ e.NextHdr /*@ ) @*/)
+	return scionNextLayerTypeAfterE2E( /*@ unfolding acc(e.Mem(ubuf), R20) in @*/ e.NextHdr)
 }
 
 // @ preserves acc(e.Mem(ub), R20)
@@ -462,14 +459,12 @@ func (e *EndToEndExtn) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.Layer
 // @ decreases
 func (e *EndToEndExtn) LayerPayload( /*@ ghost ub []byte @*/ ) (res []byte /*@ , ghost start int, ghost end int @*/) {
 	// @ unfold acc(e.Mem(ub), R20)
-	// @ unfold acc(e.extnBase.Mem(ub), R20)
-	// @ ghost base := &e.extnBase.BaseLayer
+	// @ ghost base := &e.BaseLayer
 	// @ unfold acc(base.Mem(ub, e.ActualLen), R20)
 	tmp := e.Payload
 	// @ start = e.ActualLen
 	// @ end = len(ub)
 	// @ fold acc(base.Mem(ub, e.ActualLen), R20)
-	// @ fold acc(e.extnBase.Mem(ub), R20)
 	// @ fold acc(e.Mem(ub), R20)
 	return tmp /*@ , start, end @*/
 }
@@ -524,8 +519,7 @@ func (e *EndToEndExtn) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) 
 		// @ fold tmp.Mem(lenOptions)
 		// @ lenOptions += 1
 	}
-	// @ fold e.extnBase.BaseLayer.Mem(data, e.ActualLen)
-	// @ fold e.extnBase.Mem(data)
+	// @ fold e.BaseLayer.Mem(data, e.ActualLen)
 	// @ fold e.Mem(data)
 	return nil
 }
@@ -543,7 +537,7 @@ func decodeEndToEndExtn(data []byte, p gopacket.PacketBuilder) (res error) {
 	if err != nil {
 		return err
 	}
-	nextTmp := scionNextLayerTypeAfterE2E( /*@ unfolding e.Mem(data) in (unfolding e.extnBase.Mem(data) in @*/ e.NextHdr /*@ ) @*/)
+	nextTmp := scionNextLayerTypeAfterE2E( /*@ unfolding e.Mem(data) in @*/ e.NextHdr)
 	// @ fold nextTmp.Mem()
 	return p.NextDecoder(nextTmp)
 }
@@ -617,9 +611,8 @@ func (s *HopByHopExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFee
 		// @ fold s.NonInitMem()
 		return err
 	}
-	// @ ghost contentsLen := s.extnBase.ActualLen
-	// @ fold s.extnBase.BaseLayer.Mem(data, s.ActualLen)
-	// @ fold s.extnBase.Mem(data)
+	// @ ghost contentsLen := s.ActualLen
+	// @ fold s.BaseLayer.Mem(data, s.ActualLen)
 	// @ fold s.Mem(data)
 	return nil
 }
@@ -641,7 +634,7 @@ func (s *HopByHopExtnSkipper) CanDecode() (res gopacket.LayerClass) {
 // @ preserves acc(h.Mem(ubuf), R20)
 // @ decreases
 func (h *HopByHopExtnSkipper) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerTypeAfterHBH( /*@ unfolding acc(h.Mem(ubuf), R20) in (unfolding acc(h.extnBase.Mem(ubuf), R20) in @*/ h.NextHdr /*@ ) @*/)
+	return scionNextLayerTypeAfterHBH( /*@ unfolding acc(h.Mem(ubuf), R20) in @*/ h.NextHdr)
 }
 
 // EndToEndExtnSkipper is a DecodingLayer which decodes an EndToEnd extension
@@ -672,9 +665,8 @@ func (s *EndToEndExtnSkipper) DecodeFromBytes(data []byte, df gopacket.DecodeFee
 		// @ fold s.NonInitMem()
 		return err
 	}
-	// @ ghost contentsLen := s.extnBase.ActualLen
-	// @ fold s.extnBase.BaseLayer.Mem(data, s.ActualLen)
-	// @ fold s.extnBase.Mem(data)
+	// @ ghost contentsLen := s.ActualLen
+	// @ fold s.BaseLayer.Mem(data, s.ActualLen)
 	// @ fold s.Mem(data)
 	return nil
 }
@@ -696,5 +688,5 @@ func (s *EndToEndExtnSkipper) CanDecode() (res gopacket.LayerClass) {
 // @ preserves acc(e.Mem(ubuf), R20)
 // @ decreases
 func (e *EndToEndExtnSkipper) NextLayerType( /*@ ghost ubuf []byte @*/ ) gopacket.LayerType {
-	return scionNextLayerTypeAfterE2E( /*@ unfolding acc(e.Mem(ubuf), R20) in (unfolding acc(e.extnBase.Mem(ubuf), R20) in @*/ e.NextHdr /*@ ) @*/)
+	return scionNextLayerTypeAfterE2E( /*@ unfolding acc(e.Mem(ubuf), R20) in @*/ e.NextHdr)
 }

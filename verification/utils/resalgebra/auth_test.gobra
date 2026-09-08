@@ -24,6 +24,9 @@ type MonoCounter struct {
 	ghost loc LocName
 }
 
+// The body exposes the private state of MonoCounter, so the predicate is only
+// fully visible inside this package.
+// TODO(gobra#1092): closed
 pred (c *MonoCounter) Mem() {
 	acc(c) &&
 	c.authRes === AuthView(c.val)  &&
@@ -35,6 +38,7 @@ pred (c *MonoCounter) Mem() {
 ghost
 requires c.Mem()
 decreases
+// TODO(gobra#1092): closed
 pure func (c *MonoCounter) GetLocName() LocName {
 	return unfolding c.Mem() in c.loc
 }

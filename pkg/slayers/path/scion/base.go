@@ -66,6 +66,7 @@ func RegisterPath() {
 }
 
 // Base holds the basic information that is used by both raw and fully decoded paths.
+// TODO(gobra#1092): comparable
 type Base struct {
 	// PathMeta is the SCION path meta header. It is always instantiated when
 	// decoding a path from bytes.
@@ -241,6 +242,7 @@ func (s *Base) Type() (t path.Type) {
 }
 
 // MetaHdr is the PathMetaHdr of a SCION (data-plane) path type.
+// TODO(gobra#1092): comparable
 type MetaHdr struct {
 	CurrINF uint8
 	CurrHF  uint8

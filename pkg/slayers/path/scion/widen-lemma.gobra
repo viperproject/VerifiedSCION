@@ -84,8 +84,8 @@ requires length <= len(raw)
 requires offset + path.HopLen * segLen <= length
 preserves acc(sl.Bytes(raw, 0, len(raw)), R52)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), R52)
-ensures  segment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ==
-	segment(raw[start:length], offset-start, currHfIdx, ainfo, uinfo, consDir, peer, segLen)
+ensures  AbsSegment(raw, offset, currHfIdx, ainfo, uinfo, consDir, peer, segLen) ==
+	AbsSegment(raw[start:length], offset-start, currHfIdx, ainfo, uinfo, consDir, peer, segLen)
 decreases
 func widenSegment(raw []byte,
 	offset int,
@@ -109,8 +109,8 @@ requires  offset + path.HopLen * segLen <= length
 requires  length <= len(raw)
 preserves acc(sl.Bytes(raw, 0, len(raw)), p)
 preserves acc(sl.Bytes(raw[start:length], 0, len(raw[start:length])), p)
-ensures   hopFields(raw, offset, currHfIdx, segLen) ==
-	hopFields(raw[start:length], offset-start, currHfIdx, segLen)
+ensures   AbsHopFields(raw, offset, currHfIdx, segLen) ==
+	AbsHopFields(raw[start:length], offset-start, currHfIdx, segLen)
 decreases segLen - currHfIdx
 func widenHopFields(raw []byte, offset int, currHfIdx int, segLen int, start int, length int, p perm) {
 	if (currHfIdx != segLen) {

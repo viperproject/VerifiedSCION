@@ -21,10 +21,10 @@ var Reader io.Reader
 // Int returns a uniform random value in [0, max). It panics if max <= 0.
 preserves rand.Mem()
 requires acc(max.Mem(), R13)
-requires max.toInt() > 0
+requires max.ToInt() > 0
 ensures acc(max.Mem(), R13)
 ensures err != nil ==> err.ErrorMem()
 ensures err == nil ==> n.Mem()
-ensures err == nil ==> n.toInt() >= 0 && n.toInt() < max.toInt()
+ensures err == nil ==> n.ToInt() >= 0 && n.ToInt() < max.ToInt()
 decreases _
 func Int(rand io.Reader, max *big.Int) (n *big.Int, err error)

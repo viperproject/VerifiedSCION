@@ -22,7 +22,7 @@ package io
 
 ghost
 decreases
-pure func if2term(ifs option[Ifs]) MsgTerm {
+pure func If2term(ifs option[Ifs]) MsgTerm {
 	return match ifs {
 		case none[Ifs]:
 			MsgTerm_Empty{}
@@ -33,39 +33,39 @@ pure func if2term(ifs option[Ifs]) MsgTerm {
 
 ghost
 decreases
-pure func (dp DataPlaneSpec) hf_valid(d bool, ts uint, uinfo set[MsgTerm], hf HF) bool {
-	return hf_valid_impl(dp.Asid(), ts, uinfo, hf)
+pure func (dp DataPlaneSpec) Hf_valid(d bool, ts uint, uinfo set[MsgTerm], hf HF) bool {
+	return Hf_valid_impl(dp.Asid(), ts, uinfo, hf)
 }
 
 ghost
 decreases
-pure func hf_valid_impl(asid AS, ts uint, uinfo set[MsgTerm], hf HF) bool {
+pure func Hf_valid_impl(asid AS, ts uint, uinfo set[MsgTerm], hf HF) bool {
 	return let inif := hf.InIF2 in
 		let egif := hf.EgIF2 in
 		let hvf := hf.HVF in
-		let next := nextMsgtermSpec(asid, inif, egif, ts, uinfo) in
+		let next := NextMsgtermSpec(asid, inif, egif, ts, uinfo) in
 		hvf == next
 }
 
 ghost
 opaque
-ensures result.extract_asid() == asid
+ensures result.Extract_asid() == asid
 decreases
-pure func nextMsgtermSpec(asid AS, inif option[Ifs], egif option[Ifs], ts uint, uinfo set[MsgTerm]) (result MsgTerm) {
-	return let l := plaintextToMac(inif, egif, ts, uinfo) in
-		let res := mac(macKey(asidToKey(asid)), l) in
-		let _ := reveal res.extract_asid() in
+pure func NextMsgtermSpec(asid AS, inif option[Ifs], egif option[Ifs], ts uint, uinfo set[MsgTerm]) (result MsgTerm) {
+	return let l := PlaintextToMac(inif, egif, ts, uinfo) in
+		let res := Mac(MacKey(AsidToKey(asid)), l) in
+		let _ := reveal res.Extract_asid() in
 		res
 }
 
 ghost
 decreases
-pure func plaintextToMac(inif option[Ifs], egif option[Ifs], ts uint, uinfo set[MsgTerm]) MsgTerm {
+pure func PlaintextToMac(inif option[Ifs], egif option[Ifs], ts uint, uinfo set[MsgTerm]) MsgTerm {
 	return MsgTerm_L {
 		seq[MsgTerm]{
 			MsgTerm_Num{ts},
-			if2term(inif),
-			if2term(egif),
+			If2term(inif),
+			If2term(egif),
 			MsgTerm_FS{uinfo},
 		},
 	}
@@ -73,13 +73,13 @@ pure func plaintextToMac(inif option[Ifs], egif option[Ifs], ts uint, uinfo set[
 
 ghost
 decreases
-pure func macKey(key Key) MsgTerm {
+pure func MacKey(key Key) MsgTerm {
 	return MsgTerm_Key{key}
 }
 
 ghost
 decreases
-pure func mac(fst MsgTerm, snd MsgTerm) MsgTerm {
+pure func Mac(fst MsgTerm, snd MsgTerm) MsgTerm {
 	return MsgTerm_Hash {
 		MsgTerm_Hash_: MsgTerm_MPair {
 			MsgTerm_MPair_1: fst,
@@ -91,55 +91,48 @@ pure func mac(fst MsgTerm, snd MsgTerm) MsgTerm {
 // helper function, not defined in IO spec
 ghost
 decreases
-pure func asidToKey(asid AS) Key {
+pure func AsidToKey(asid AS) Key {
 	return Key_macK{asid}
 }
 
 ghost
 decreases
-pure func upd_uinfo(segid set[MsgTerm], hf HF) set[MsgTerm] {
+pure func Upd_uinfo(segid set[MsgTerm], hf HF) set[MsgTerm] {
 	return let setHVF := set[MsgTerm]{hf.HVF} in
 		(segid union setHVF) setminus (segid intersection setHVF)
 }
-
-ghost
-decreases
-pure func (dp DataPlaneSpec) asid() AS {
-	return dp.Asid()
-}
-
 
 // This function is provided as locale in the Isabelle formalization.
 ghost
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) is_target(asid AS, nextif Ifs, a2 AS, i2 Ifs) bool {
+pure func (dp DataPlaneSpec) Is_target(asid AS, nextif Ifs, a2 AS, i2 Ifs) bool {
 	return AsIfsPair{asid, nextif} elem domain(dp.GetLinks()) &&
 		dp.Lookup(AsIfsPair{asid, nextif}) == AsIfsPair{a2, i2}
 }
 
 ghost
 decreases
-pure func dp3s_add_ibuf(s Dp3sStateLocal, i option[Ifs], pkt Pkt) Dp3sStateLocal {
+pure func Dp3s_add_ibuf(s Dp3sStateLocal, i option[Ifs], pkt Pkt) Dp3sStateLocal {
 	return Dp3sStateLocal {
-		ibuf: insert(s.ibuf, i, pkt),
-		obuf: s.obuf,
+		Ibuf: Insert(s.Ibuf, i, pkt),
+		Obuf: s.Obuf,
 	}
 }
 
 ghost
 decreases
-pure func dp3s_add_obuf(s Dp3sStateLocal, i option[Ifs], pkt Pkt) Dp3sStateLocal {
+pure func Dp3s_add_obuf(s Dp3sStateLocal, i option[Ifs], pkt Pkt) Dp3sStateLocal {
 	return Dp3sStateLocal {
-		ibuf: s.ibuf,
-		obuf: insert(s.obuf, i, pkt),
+		Ibuf: s.Ibuf,
+		Obuf: Insert(s.Obuf, i, pkt),
 	}
 }
 
 // helper func
 ghost
 decreases
-pure func insert(buf dict[option[Ifs]](set[Pkt]), k option[Ifs], v Pkt) dict[option[Ifs]](set[Pkt]) {
+pure func Insert(buf dict[option[Ifs]](set[Pkt]), k option[Ifs], v Pkt) dict[option[Ifs]](set[Pkt]) {
 	return let newSet := (k elem domain(buf) ? (let pre := buf[k] in pre union set[Pkt]{v}) : set[Pkt]{v}) in
 		buf[k = newSet]
 }
@@ -148,44 +141,44 @@ ghost
 requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_forward_ext(m Pkt, newpkt Pkt, nextif Ifs) bool {
+pure func (dp DataPlaneSpec) Dp3s_forward_ext(m Pkt, newpkt Pkt, nextif Ifs) bool {
 	return let _ := reveal dp.Valid() in
 		let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in
-		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		dp.Dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
 		(nextif elem domain(dp.GetNeighborIAs())) &&
 		let a2 := dp.GetNeighborIA(nextif) in
-		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
-		dp.is_target(dp.Asid(), nextif, a2, i2)
+		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).Ifs in
+		dp.Is_target(dp.Asid(), nextif, a2, i2)
 }
 
 ghost
 requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_forward_ext_xover(m Pkt, newpkt Pkt, nextif Ifs) bool {
+pure func (dp DataPlaneSpec) Dp3s_forward_ext_xover(m Pkt, newpkt Pkt, nextif Ifs) bool {
 	return let _ := reveal dp.Valid() in
 		let currseg := m.CurrSeg in
 		let hf1, fut := currseg.Future[0], currseg.Future[1:] in
 		let traversedseg := newpkt.CurrSeg in
-		dp.dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
+		dp.Dp2_forward_ext_guard(dp.Asid(), m, nextif, currseg, traversedseg, newpkt, fut, hf1) &&
 		(nextif elem domain(dp.GetNeighborIAs())) &&
 		let a2 := dp.GetNeighborIA(nextif) in
-		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).ifs in
-		dp.is_target(dp.Asid(), nextif, a2, i2)
+		let i2 := dp.Lookup(AsIfsPair{dp.Asid(), nextif}).Ifs in
+		dp.Is_target(dp.Asid(), nextif, a2, i2)
 }
 
 ghost
 requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_forward(m Pkt, newpkt Pkt, nextif option[Ifs]) bool {
+pure func (dp DataPlaneSpec) Dp3s_forward(m Pkt, newpkt Pkt, nextif option[Ifs]) bool {
 	return match nextif {
 		case none[Ifs]:
 			newpkt == m
 		default:
-			dp.dp3s_forward_ext(m, newpkt, get(nextif))
+			dp.Dp3s_forward_ext(m, newpkt, get(nextif))
 	}
 }
 
@@ -193,12 +186,12 @@ ghost
 requires len(m.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_forward_xover(m Pkt, newpkt Pkt, nextif option[Ifs]) bool {
+pure func (dp DataPlaneSpec) Dp3s_forward_xover(m Pkt, newpkt Pkt, nextif option[Ifs]) bool {
 	return match nextif {
 		case none[Ifs]:
 			newpkt == m
 		default:
-			dp.dp3s_forward_ext_xover(m, newpkt, get(nextif))
+			dp.Dp3s_forward_ext_xover(m, newpkt, get(nextif))
 	}
 }
 
@@ -206,7 +199,7 @@ ghost
 requires len(intermediatepkt.CurrSeg.Future) > 0
 requires dp.Valid()
 decreases
-pure func (dp DataPlaneSpec) dp3s_xover_guard(
+pure func (dp DataPlaneSpec) Dp3s_xover_guard(
 	s Dp3sStateLocal,
 	m Pkt,
 	currseg Seg,
@@ -222,8 +215,8 @@ pure func (dp DataPlaneSpec) dp3s_xover_guard(
 	) bool {
 		// the first conjunct was added to Gobra, even though it was not in the original isabelle spec.
 		// this is because of the way math. maps are implemented, we can only obtain a key that is in the map before.
-		return some(recvif) elem domain(s.ibuf) &&
-			(let lookupRes := s.ibuf[some(recvif)] in (m elem lookupRes)) &&
-			dp.dp2_xover_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, nextfut, dp.Asid(), recvif) &&
-			dp.dp3s_forward_xover(intermediatepkt, newpkt, nextif)
+		return some(recvif) elem domain(s.Ibuf) &&
+			(let lookupRes := s.Ibuf[some(recvif)] in (m elem lookupRes)) &&
+			dp.Dp2_xover_guard(m, currseg, nextseg, traversedseg, intermediatepkt, hf1, hf2, nextfut, dp.Asid(), recvif) &&
+			dp.Dp3s_forward_xover(intermediatepkt, newpkt, nextif)
 }

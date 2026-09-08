@@ -14,7 +14,7 @@
 
 // +gobra
 
-// @ dup pkgInvariant acc(postInitInvariant(), _)
+// @ dup pkgInvariant acc(PostInitInvariant(), _)
 package epic
 
 import (
@@ -52,7 +52,7 @@ var zeroInitVector /*@@@*/ [16]byte
 // ghost init
 // @ func init() {
 // @ 	fold acc(sl.Bytes(zeroInitVector[:], 0, len(zeroInitVector[:])), _)
-// @ 	fold acc(postInitInvariant(), _)
+// @ 	fold acc(PostInitInvariant(), _)
 // @ }
 
 // CreateTimestamp returns the epic timestamp, which encodes the current time (now) relative to the
@@ -217,7 +217,7 @@ func initEpicMac(key []byte) (res cipher.BlockMode, reserr error) {
 	}
 
 	// @ establishPostInitInvariant()
-	// @ unfold acc(postInitInvariant(), _)
+	// @ unfold acc(PostInitInvariant(), _)
 	// CBC-MAC = CBC-Encryption with zero initialization vector
 	mode := cipher.NewCBCEncrypter(block, zeroInitVector[:])
 	return mode, nil
@@ -303,7 +303,7 @@ func prepareMacInput(pktID epic.PktID, s *slayers.SCION, timestamp uint32,
 	// @ assert forall i int :: { &inputBuffer[offset:inputLength][i] } 0 <= i && i < len(inputBuffer[offset:inputLength]) ==>
 	// @ 	acc(&inputBuffer[offset:inputLength][i])
 	// @ establishPostInitInvariant()
-	// @ unfold acc(postInitInvariant(), _)
+	// @ unfold acc(PostInitInvariant(), _)
 	// @ assert acc(sl.Bytes(zeroInitVector[:], 0, 16), _)
 	// (VerifiedSCION) From the package invariant, we learn that we have a wildcard access to zeroInitVector.
 	// Unfortunately, it is not possible to call `copy` with a wildcard amount, even though

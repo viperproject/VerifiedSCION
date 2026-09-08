@@ -83,10 +83,10 @@ type Path struct {
 // @ preserves sl.Bytes(ubuf, 0, len(ubuf))
 // @ preserves sl.Bytes(b, 0, len(b))
 // @ ensures   r != nil ==> r.ErrorMem()
-// @ ensures   !old(p.hasScionPath(ubuf)) ==> r != nil
+// @ ensures   !old(p.HasScionPath(ubuf)) ==> r != nil
 // @ ensures   len(b) < old(p.LenSpec(ubuf)) ==> r != nil
-// @ ensures   old(p.getPHVFLen(ubuf)) != HVFLen ==> r != nil
-// @ ensures   old(p.getLHVFLen(ubuf)) != HVFLen ==> r != nil
+// @ ensures   old(p.GetPHVFLen(ubuf)) != HVFLen ==> r != nil
+// @ ensures   old(p.GetLHVFLen(ubuf)) != HVFLen ==> r != nil
 // @ decreases
 func (p *Path) SerializeTo(b []byte /*@, ghost ubuf []byte @*/) (r error) {
 	if len(b) < p.Len( /*@ ubuf @*/ ) {

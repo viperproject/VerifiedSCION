@@ -23,20 +23,11 @@ import (
 	// sl "github.com/scionproto/scion/verification/utils/slices"
 )
 
-/** start of extnBase **/
-
-pred (e *extnBase) NonInitMem() {
-	acc(e)
-}
-
-pred (e *extnBase) Mem(ubuf []byte) {
-	acc(&e.NextHdr)   &&
-	acc(&e.ExtLen)    &&
-	acc(&e.ActualLen) &&
-	e.BaseLayer.Mem(ubuf, e.ActualLen)
-}
-
-/** end of extnBase **/
+// The memory of the (non-exported) extnBase embedded in every extension header.
+// It is spelled out in the predicates below instead of being factored out into a
+// predicate of extnBase: the bodies of the fully-public predicates of the
+// exported extension headers may only mention exported members, and importing
+// packages must be able to unfold them to reach the promoted fields.
 
 /** start of HopByHopExtn **/
 pred (h *HopByHopExtn) NonInitMem() {
@@ -44,7 +35,10 @@ pred (h *HopByHopExtn) NonInitMem() {
 }
 
 pred (h *HopByHopExtn) Mem(ubuf []byte) {
-	h.extnBase.Mem(ubuf) &&
+	acc(&h.NextHdr)   &&
+	acc(&h.ExtLen)    &&
+	acc(&h.ActualLen) &&
+	h.BaseLayer.Mem(ubuf, h.ActualLen) &&
 	acc(&h.Options) &&
 	forall i int :: { &h.Options[i] } 0 <= i && i < len(h.Options) ==>
 		(acc(&h.Options[i]) && h.Options[i].Mem(i))
@@ -64,7 +58,6 @@ ensures  s.NonInitMem()
 decreases
 func (s *HopByHopExtn) DowngradePerm(ghost ub []byte) {
 	unfold s.Mem(ub)
-	unfold s.extnBase.Mem(ub)
 	unfold s.BaseLayer.Mem(ub, s.ActualLen)
 	fold   s.NonInitMem()
 }
@@ -80,7 +73,10 @@ pred (h *HopByHopExtnSkipper) NonInitMem() {
 }
 
 pred (h *HopByHopExtnSkipper) Mem(ubuf []byte) {
-	h.extnBase.Mem(ubuf)
+	acc(&h.NextHdr)   &&
+	acc(&h.ExtLen)    &&
+	acc(&h.ActualLen) &&
+	h.BaseLayer.Mem(ubuf, h.ActualLen)
 }
 
 // Gobra is not able to infer that HopByHopExtnSkipper is "inheriting"
@@ -100,12 +96,10 @@ ensures   res === ub[start:end]
 decreases
 func (h *HopByHopExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(h.Mem(ub), R20)
-	unfold acc(h.extnBase.Mem(ub), R20)
-	ghost base := &h.extnBase.BaseLayer
+	ghost base := &h.BaseLayer
 	res = base.LayerPayload(ub, h.ActualLen)
 	start = h.ActualLen
 	end = len(ub)
-	fold acc(h.extnBase.Mem(ub), R20)
 	fold acc(h.Mem(ub), R20)
 	return res, start, end
 }
@@ -116,7 +110,6 @@ ensures  s.NonInitMem()
 decreases
 func (s *HopByHopExtnSkipper) DowngradePerm(ghost ub []byte) {
 	unfold s.Mem(ub)
-	unfold s.extnBase.Mem(ub)
 	unfold s.BaseLayer.Mem(ub, s.ActualLen)
 	fold   s.NonInitMem()
 }
@@ -132,7 +125,10 @@ pred (e *EndToEndExtn) NonInitMem() {
 }
 
 pred (e *EndToEndExtn) Mem(ubuf []byte) {
-	e.extnBase.Mem(ubuf) &&
+	acc(&e.NextHdr)   &&
+	acc(&e.ExtLen)    &&
+	acc(&e.ActualLen) &&
+	e.BaseLayer.Mem(ubuf, e.ActualLen) &&
 	acc(&e.Options) &&
 	forall i int :: { &e.Options[i] } 0 <= i && i < len(e.Options) ==>
 		(acc(&e.Options[i]) && e.Options[i].Mem(i))
@@ -152,7 +148,6 @@ ensures  s.NonInitMem()
 decreases
 func (s *EndToEndExtn) DowngradePerm(ghost ub []byte) {
 	unfold s.Mem(ub)
-	unfold s.extnBase.Mem(ub)
 	unfold s.BaseLayer.Mem(ub, s.ActualLen)
 	fold   s.NonInitMem()
 }
@@ -170,7 +165,10 @@ pred (e *EndToEndExtnSkipper) NonInitMem() {
 }
 
 pred (e *EndToEndExtnSkipper) Mem(ubuf []byte)  {
-	e.extnBase.Mem(ubuf)
+	acc(&e.NextHdr)   &&
+	acc(&e.ExtLen)    &&
+	acc(&e.ActualLen) &&
+	e.BaseLayer.Mem(ubuf, e.ActualLen)
 }
 
 // Gobra is not able to infer that EndToEndExtnSkipper is "inheriting"
@@ -190,12 +188,10 @@ ensures   res === ub[start:end]
 decreases
 func (e *EndToEndExtnSkipper) LayerPayload(ghost ub []byte) (res []byte, ghost start int, ghost end int) {
 	unfold acc(e.Mem(ub), R20)
-	unfold acc(e.extnBase.Mem(ub), R20)
-	ghost base := &e.extnBase.BaseLayer
+	ghost base := &e.BaseLayer
 	res = base.LayerPayload(ub, e.ActualLen)
 	start = e.ActualLen
 	end = len(ub)
-	fold acc(e.extnBase.Mem(ub), R20)
 	fold acc(e.Mem(ub), R20)
 	return res, start, end
 }
@@ -206,7 +202,6 @@ ensures  s.NonInitMem()
 decreases
 func (s *EndToEndExtnSkipper) DowngradePerm(ghost ub []byte) {
 	unfold s.Mem(ub)
-	unfold s.extnBase.Mem(ub)
 	unfold s.BaseLayer.Mem(ub, s.ActualLen)
 	fold   s.NonInitMem()
 }

@@ -47,7 +47,7 @@ const (
 	HostTypeSVC
 )
 
-// @ requires isValidHostAddrType(t)
+// @ requires IsValidHostAddrType(t)
 // @ decreases
 func (t HostAddrType) String() string {
 	switch t {
@@ -433,8 +433,8 @@ func (h HostSVC) Network() string {
 }
 
 // @ requires acc(b)
-// @ requires isValidHostAddrType(htype)
-// @ requires len(b) == sizeOfHostAddrType(htype)
+// @ requires IsValidHostAddrType(htype)
+// @ requires len(b) == SizeOfHostAddrType(htype)
 // @ ensures err == nil ==> res.Mem()
 // @ decreases
 func HostFromRaw(b []byte, htype HostAddrType) (res HostAddr, err error) {
@@ -502,7 +502,7 @@ func HostFromIPStr(s string) (res HostAddr) {
 	return HostFromIP(ip)
 }
 
-// @ requires isValidHostAddrType(htype)
+// @ requires IsValidHostAddrType(htype)
 // @ decreases
 func HostLen(htype HostAddrType) (uint8, error) {
 	var length uint8

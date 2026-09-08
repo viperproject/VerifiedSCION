@@ -31,15 +31,15 @@ import (
 ghost
 preserves acc(sl.Bytes(raw, 0, len(raw)), R55)
 ensures   slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw) ==>
-	absIO_val(raw, ingressID).isValPkt &&
-	absIO_val(raw, ingressID).ValPkt_2 == absPkt(raw) &&
-	absPkt(raw).PathNotFullyTraversed()
+	AbsIO_val(raw, ingressID).isValPkt &&
+	AbsIO_val(raw, ingressID).ValPkt_2 == AbsPkt(raw) &&
+	AbsPkt(raw).PathNotFullyTraversed()
 decreases
 func absIO_valLemma(raw []byte, ingressID uint16) {
 	if(slayers.ValidPktMetaHdr(raw) && slayers.IsSupportedPkt(raw)){
-		absIO := reveal absIO_val(raw, ingressID)
+		absIO := reveal AbsIO_val(raw, ingressID)
 		assert absIO.isValPkt
-		assert absIO_val(raw, ingressID).ValPkt_2 == absPkt(raw)
+		assert AbsIO_val(raw, ingressID).ValPkt_2 == AbsPkt(raw)
 		absPktFutureLemma(raw)
 	}
 }
@@ -49,7 +49,7 @@ requires acc(sl.Bytes(raw, 0, len(raw)), R56)
 requires slayers.ValidPktMetaHdr(raw)
 ensures  acc(sl.Bytes(raw, 0, len(raw)), R56)
 ensures  slayers.ValidPktMetaHdr(raw)
-ensures  absPkt(raw).PathNotFullyTraversed()
+ensures  AbsPkt(raw).PathNotFullyTraversed()
 decreases
 func absPktFutureLemma(raw []byte) {
 	reveal slayers.ValidPktMetaHdr(raw)
@@ -69,7 +69,7 @@ func absPktFutureLemma(raw []byte) {
 	prevSegLen := segs.LengthOfPrevSeg(currHfIdx)
 	numINF := segs.NumInfoFields()
 	offset := scion.HopFieldOffset(numINF, prevSegLen, headerOffsetWithMetaLen)
-	pkt := reveal absPkt(raw)
+	pkt := reveal AbsPkt(raw)
 	assert pkt.CurrSeg == reveal scion.CurrSeg(raw, offset, currInfIdx, currHfIdx-prevSegLen, segLen, headerOffsetWithMetaLen)
 	assert pkt.PathNotFullyTraversed()
 }
@@ -129,8 +129,8 @@ decreases
 pure func (p *scionPacketProcessor) LastHopLen(ub []byte) bool {
 	return (unfolding p.scionLayer.Mem(ub) in
 		(unfolding p.scionLayer.HeaderMem(ub[slayers.CmnHdrLen:]) in p.scionLayer.DstIA) == (unfolding p.d.Mem() in p.d.localIA)) ==>
-			len(absPkt(ub).CurrSeg.Future) == 1 &&
-			!absPkt(ub).IsXover()
+			len(AbsPkt(ub).CurrSeg.Future) == 1 &&
+			!AbsPkt(ub).IsXover()
 }
 
 //TODO: Does not work with --disableNL --unsafeWildcardoptimization
@@ -151,8 +151,8 @@ ensures  acc(&p.ingressID, R55)
 ensures  acc(sl.Bytes(ub, 0, len(ub)), R56)
 ensures  slayers.ValidPktMetaHdr(ub)
 ensures  p.ingressID != 0
-ensures  len(absPkt(ub).CurrSeg.Future) == 1
-ensures  !absPkt(ub).IsXover()
+ensures  len(AbsPkt(ub).CurrSeg.Future) == 1
+ensures  !AbsPkt(ub).IsXover()
 decreases
 func (p* scionPacketProcessor) LocalDstLemma(ub []byte) {
 	reveal p.DstIsLocalIngressID(ub)
@@ -181,23 +181,23 @@ requires pkt.PathNotFullyTraversed()
 decreases
 pure func (p *scionPacketProcessor) NoBouncingPkt(pkt io.Pkt) bool {
 	return let currseg := pkt.CurrSeg in
-		let OptEgressID := CurrSegIO_ifs(pkt, false)  in
-		let egressID := path.IO_ifsToIfs(OptEgressID) in
-		((egressID elem p.d.getDomExternal()) || p.ingressID != 0)
+		let optEgressID := CurrSegIO_ifs(pkt, false)  in
+		let egressID := path.IO_ifsToIfs(optEgressID) in
+		((egressID elem p.d.GetDomExternal()) || p.ingressID != 0)
 }
 
 ghost
 requires acc(&p.d, R55) && acc(p.d.Mem(), _)
 requires acc(&p.ingressID, R55)
 requires pkt.PathNotFullyTraversed()
-requires AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
-requires (egressID elem p.d.getDomExternal()) || p.ingressID != 0
+requires AbsEgressInterfaceConstraint(pkt, path.IfsToIO_ifs(egressID))
+requires (egressID elem p.d.GetDomExternal()) || p.ingressID != 0
 ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
 ensures  acc(&p.ingressID, R55)
 ensures  p.NoBouncingPkt(pkt)
 decreases
 func (p *scionPacketProcessor) EstablishNoBouncingPkt(pkt io.Pkt, egressID uint16) {
-	reveal AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+	reveal AbsEgressInterfaceConstraint(pkt, path.IfsToIO_ifs(egressID))
 	reveal p.NoBouncingPkt(pkt)
 }
 
@@ -205,15 +205,15 @@ ghost
 requires acc(&p.d, R55) && acc(p.d.Mem(), _)
 requires acc(&p.ingressID, R55)
 requires pkt.PathNotFullyTraversed()
-requires AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+requires AbsEgressInterfaceConstraint(pkt, path.IfsToIO_ifs(egressID))
 requires p.NoBouncingPkt(pkt)
-requires !(egressID elem p.d.getDomExternal())
+requires !(egressID elem p.d.GetDomExternal())
 ensures  acc(&p.d, R55) && acc(p.d.Mem(), _)
 ensures  acc(&p.ingressID, R55)
 ensures  p.ingressID != 0
 decreases
 func (p *scionPacketProcessor) IngressIDNotZeroLemma(pkt io.Pkt, egressID uint16) {
-	reveal AbsEgressInterfaceConstraint(pkt, path.ifsToIO_ifs(egressID))
+	reveal AbsEgressInterfaceConstraint(pkt, path.IfsToIO_ifs(egressID))
 	reveal p.NoBouncingPkt(pkt)
 }
 
@@ -293,18 +293,18 @@ ensures  end == p.scionLayer.PathScionEndIdx(ub)
 ensures  p.scionLayer.GetPath(ub) === old(p.scionLayer.GetPath(ub))
 ensures  typeOf(p.scionLayer.GetPath(ub)) != (*epic.Path) ==>
 	p.path === p.scionLayer.GetPath(ub)
-ensures  scion.validPktMetaHdr(ub[start:end])
+ensures  scion.ValidPktMetaHdr(ub[start:end])
 ensures  p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
 ensures  p.path === p.scionLayer.GetScionPath(ub)
-ensures  absPkt(ub) == p.path.absPkt(ub[start:end])
+ensures  AbsPkt(ub) == p.path.AbsPkt(ub[start:end])
 decreases
 func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end int) {
 	unfold acc(sl.Bytes(ub, 0, len(ub)), R56)
 	unfold acc(sl.Bytes(ub[start:end], 0, len(ub[start:end])), R56)
 	reveal slayers.ValidPktMetaHdr(ub)
 	reveal p.scionLayer.EqAbsHeader(ub)
-	assert reveal scion.validPktMetaHdr(ub[start:end])
+	assert reveal scion.ValidPktMetaHdr(ub[start:end])
 	unfold acc(p.scionLayer.Mem(ub), R56)
 	reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
 	if typeOf(p.scionLayer.Path) == *epic.Path {
@@ -349,7 +349,7 @@ func (p* scionPacketProcessor) AbsPktToSubSliceAbsPkt(ub []byte, start int, end 
 	scion.WidenLeftSeg(ub, currInfIdx + 1, segs, headerOffsetWithMetaLen, start, end)
 	scion.WidenMidSeg(ub, currInfIdx + 2, segs, headerOffsetWithMetaLen, start, end)
 	scion.WidenRightSeg(ub, currInfIdx - 1, segs, headerOffsetWithMetaLen, start, end)
-	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
+	assert reveal AbsPkt(ub) == reveal p.path.AbsPkt(ub[start:end])
 }
 
 ghost
@@ -359,7 +359,7 @@ requires acc(sl.Bytes(ub, 0, len(ub)), R50)
 requires acc(sl.Bytes(ub[start:end], 0, len(ub[start:end])), R50)
 requires acc(&p.path, R55) && acc(p.path.Mem(ub[start:end]), R55)
 requires p.path === p.scionLayer.GetScionPath(ub)
-requires scion.validPktMetaHdr(ub[start:end])
+requires scion.ValidPktMetaHdr(ub[start:end])
 requires start == p.scionLayer.PathScionStartIdx(ub)
 requires end == p.scionLayer.PathScionEndIdx(ub)
 requires p.path.GetBase(ub[start:end]).EqAbsHeader(ub[start:end])
@@ -377,10 +377,10 @@ ensures  end == p.scionLayer.PathScionEndIdx(ub)
 ensures  p.scionLayer.GetPath(ub) === old(p.scionLayer.GetPath(ub))
 ensures  typeOf(p.scionLayer.GetPath(ub)) != (*epic.Path) ==>
 	p.path === p.scionLayer.GetPath(ub)
-ensures  scion.validPktMetaHdr(ub[start:end])
+ensures  scion.ValidPktMetaHdr(ub[start:end])
 ensures  p.scionLayer.EqAbsHeader(ub)
 ensures  p.path === p.scionLayer.GetScionPath(ub)
-ensures  absPkt(ub) == p.path.absPkt(ub[start:end])
+ensures  AbsPkt(ub) == p.path.AbsPkt(ub[start:end])
 ensures  p.scionLayer.ValidHeaderOffset(ub, len(ub))
 decreases
 func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end int){
@@ -389,7 +389,7 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	unfold acc(p.scionLayer.Mem(ub), R56)
 	unfold acc(p.path.Mem(ub[start:end]), R56)
 	reveal p.scionLayer.ValidHeaderOffset(ub, len(ub))
-	reveal scion.validPktMetaHdr(ub[start:end])
+	reveal scion.ValidPktMetaHdr(ub[start:end])
 	if typeOf(p.scionLayer.Path) == *epic.Path {
 		startP := p.scionLayer.PathStartIdx(ub)
 		unfold acc(p.scionLayer.Path.Mem(ub[startP:end]), R56)
@@ -434,7 +434,7 @@ func (p* scionPacketProcessor) SubSliceAbsPktToAbsPkt(ub []byte, start int, end 
 	scion.WidenLeftSeg(ub, currInfIdx + 1, segs, headerOffsetWithMetaLen, start, end)
 	scion.WidenMidSeg(ub, currInfIdx + 2, segs, headerOffsetWithMetaLen, start, end)
 	scion.WidenRightSeg(ub, currInfIdx - 1, segs, headerOffsetWithMetaLen, start, end)
-	assert reveal absPkt(ub) == reveal p.path.absPkt(ub[start:end])
+	assert reveal AbsPkt(ub) == reveal p.path.AbsPkt(ub[start:end])
 }
 
 ghost
@@ -464,7 +464,7 @@ pure func (p* scionPacketProcessor) EqAbsInfoField(pkt io.Pkt) bool {
 // `ub` agrees with the concrete check that `process` performs, via
 // (*scion.Raw).IsXover, to decide whether a segment switch must be carried out.
 // All permissions are fractional so that callers keep enough permission to frame
-// `absPkt(ub)` and `p.GetIsXoverSpec(ub)` across the call.
+// `AbsPkt(ub)` and `p.GetIsXoverSpec(ub)` across the call.
 ghost
 requires acc(&p.path, R54)
 requires acc(p.scionLayer.Mem(ub), R53)
@@ -478,7 +478,7 @@ ensures  p.path === p.scionLayer.GetScionPath(ub)
 ensures  acc(sl.Bytes(ub, 0, len(ub)), R49)
 ensures  slayers.ValidPktMetaHdr(ub)
 ensures  p.scionLayer.EqAbsHeader(ub)
-ensures  absPkt(ub).IsXover() == p.GetIsXoverSpec(ub)
+ensures  AbsPkt(ub).IsXover() == p.GetIsXoverSpec(ub)
 decreases
 func (p *scionPacketProcessor) AbsIsXoverLemma(ub []byte) {
 	ubPath := p.scionLayer.UBPath(ub)
@@ -494,11 +494,11 @@ func (p *scionPacketProcessor) AbsIsXoverLemma(ub []byte) {
 	sl.SplitRange_Bytes(ub, startScionP, endScionP, R50)
 	p.AbsPktToSubSliceAbsPkt(ub, startScionP, endScionP)
 	p.path.IsXoverLemma(ubScionPath)
-	assert absPkt(ub).IsXover() == p.path.GetBase(ubScionPath).IsXoverSpec()
+	assert AbsPkt(ub).IsXover() == p.path.GetBase(ubScionPath).IsXoverSpec()
 	sl.CombineRange_Bytes(ub, startScionP, endScionP, R50)
 	if typeOf(p.scionLayer.Path) == *epic.Path {
 		fold acc(p.scionLayer.Path.Mem(ubPath), R53 - R55)
 	}
 	fold acc(p.scionLayer.Mem(ub), R53 - R55)
-	assert absPkt(ub).IsXover() == p.GetIsXoverSpec(ub)
+	assert AbsPkt(ub).IsXover() == p.GetIsXoverSpec(ub)
 }
