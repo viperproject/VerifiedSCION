@@ -1,0 +1,53 @@
+// Copyright 2026 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package slices
+
+import pi "github.com/scionproto/scion/verification/utils/permsintrospect"
+
+// Permission introspection for the predicates declared in this package.
+//
+// Ideally, the functions below would live in
+// `github.com/scionproto/scion/verification/utils/permsintrospect`, together with
+// all other permission introspection functions. That is not possible: their
+// signatures mention the predicates of this package, so `permsintrospect` would
+// have to import `slices`, while this file makes `slices` a client of
+// `permsintrospect`. Gobra rejects such cyclical imports.
+//
+// The convention we follow is therefore: `permsintrospect` imports nothing and
+// only declares introspection functions for built-in types, while an
+// introspection function whose signature mentions a type or a predicate declared
+// in some other package Q lives in Q, in a file named `perm-introspect.gobra`.
+//
+// Unlike the functions of `permsintrospect`, the ones here are not axioms: a
+// predicate instance held with a wildcard amount can be unfolded, introspected
+// at the level of the built-in types it gives access to, and folded back with
+// the amount that was named. See the documentation of the `permsintrospect`
+// package for why the functions it declares may be assumed.
+
+// How to extend this file: add one function per predicate declared in this
+// package, named `PermIntrospect` followed by the name of the predicate.
+
+ghost
+requires acc(Bytes(s, start, end), _)
+ensures  0 < p && acc(Bytes(s, start, end), p)
+decreases
+func PermIntrospectBytes(s []byte, start int, end int) (p perm) {
+	unfold acc(Bytes(s, start, end), _)
+	p = pi.PermIntrospectBytesRange(s, start, end)
+	fold acc(Bytes(s, start, end), p)
+	return p
+}
