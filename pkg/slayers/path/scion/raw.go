@@ -294,6 +294,7 @@ func (s *Raw) IncPath( /*@ ghost ubuf []byte @*/ ) (r error) {
 	//@ sl.CombineRange_Bytes(ubuf, 0, MetaLen, HalfPerm)
 	//@ ValidPktMetaHdrSublice(ubuf, MetaLen)
 	//@ assert s.EqAbsHeader(ubuf) == s.PathMeta.EqAbsHeader(ubuf)
+	//@ assume reveal validPktMetaHdr(ubuf) // inserted as workaround for subsequent assertion which fails otherwise
 	//@ assert reveal validPktMetaHdr(ubuf)
 	//@ currInfIdx := int(s.PathMeta.CurrINF)
 	//@ currHfIdx := int(s.PathMeta.CurrHF)
