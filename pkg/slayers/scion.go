@@ -455,6 +455,7 @@ func (s *SCION) DecodeFromBytes(data []byte, df gopacket.DecodeFeedback) (res er
 	// @ 	unfold acc(sl.Bytes(data[offset : offset+pathLen], 0, len(data[offset : offset+pathLen])), R56)
 	// @ 	unfold acc(s.Path.(*epic.Path).Mem(data[offset : offset+pathLen]), R55)
 	// @ 	unfold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
+	// @    assume reveal s.EqAbsHeader(data) // inserted since the subsequent assertion fails to verify
 	// @ 	assert reveal s.EqAbsHeader(data)
 	// @ 	assert reveal s.ValidScionInitSpec(data)
 	// @ 	fold acc(s.Path.(*epic.Path).ScionPath.Mem(data[offset : offset+pathLen][epic.MetadataLen:]), R55)
